@@ -733,7 +733,7 @@ struct GenericAtomicRMWOpLowering
     rewriter.setInsertionPointToStart(loopBlock);
 
     // Clone the GenericAtomicRMWOp region and extract the result.
-    auto loopArgument = loopBlock->getArgument(0);
+    Value loopArgument = loopBlock->getArgument(0);
     IRMapping mapping;
     mapping.map(atomicOp.getCurrentValue(), loopArgument);
     Block &entryBlock = atomicOp.body().front();
@@ -741,7 +741,15 @@ struct GenericAtomicRMWOpLowering
       Operation *clone = rewriter.clone(nestedOp, mapping);
       mapping.map(nestedOp.getResults(), clone->getResults());
     }
-    Value result = mapping.lookup(entryBlock.getTerminator()->getOperand(0));
+    Value result =
+        mapping.lookupOrDefault(entryBlock.getTerminator()->getOperand(0));
+    if (isa<FloatType>(valueType)) {
+      unsigned width = valueType.getIntOrFloatBitWidth();
+      Type intType = rewriter.getIntegerType(width);
+      loopArgument =
+          LLVM::BitcastOp::create(rewriter, loc, intType, loopArgument);
+      result = LLVM::BitcastOp::create(rewriter, loc, intType, result);
+    }
 
     // Prepare the epilog of the loop block.
     // Append the cmpxchg op to the end of the loop block.
@@ -753,6 +761,8 @@ struct GenericAtomicRMWOpLowering
     // Extract the %new_loaded and %ok values from the pair.
     Value newLoaded = LLVM::ExtractValueOp::create(rewriter, loc, cmpxchg, 0);
     Value ok = LLVM::ExtractValueOp::create(rewriter, loc, cmpxchg, 1);
+    if (isa<FloatType>(valueType))
+      newLoaded = LLVM::BitcastOp::create(rewriter, loc, valueType, newLoaded);
 
     // Conditionally branch to the end or back to the loop depending on %ok.
     LLVM::CondBrOp::create(rewriter, loc, ok, endBlock, ArrayRef<Value>(),
