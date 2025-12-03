@@ -18,7 +18,7 @@ using namespace dependencies;
 
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS)
     : Service(Service) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   // We need to read object files from PCH built outside the scanner.
@@ -28,19 +28,11 @@ DependencyScanningWorker::DependencyScanningWorker(
   PCHContainerOps->registerWriter(std::make_unique<RawPCHContainerWriter>());
 
   if (Service.shouldTraceVFS())
-    FS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(std::move(FS));
+    BaseFS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(
+        std::move(BaseFS));
 
-  switch (Service.getMode()) {
-  case ScanningMode::DependencyDirectivesScan:
-    DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
-        Service.getSharedCache(), FS);
-    BaseFS = DepFS;
-    break;
-  case ScanningMode::CanonicalPreprocessing:
-    DepFS = nullptr;
-    BaseFS = FS;
-    break;
-  }
+  DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
+      Service.getSharedCache(), std::move(BaseFS));
 }
 
 DependencyScanningWorker::~DependencyScanningWorker() = default;
@@ -84,34 +76,41 @@ static bool createAndRunToolInvocation(
     DependencyScanningAction &Action,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     std::shared_ptr<clang::PCHContainerOperations> &PCHContainerOps,
-    DiagnosticsEngine &Diags, DependencyConsumer &Consumer) {
+    DiagnosticsEngine &Diags) {
   auto Invocation = createCompilerInvocation(CommandLine, Diags);
   if (!Invocation)
     return false;
 
-  if (!Action.runInvocation(std::move(Invocation), std::move(FS),
-                            PCHContainerOps, Diags.getClient()))
-    return false;
-
-  std::vector<std::string> Args = Action.takeLastCC1Arguments();
-  Consumer.handleBuildCommand({CommandLine[0], std::move(Args)});
-  return true;
+  return Action.runInvocation(CommandLine[0], std::move(Invocation),
+                              std::move(FS), PCHContainerOps,
+                              Diags.getClient());
 }
 
 bool DependencyScanningWorker::scanDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
     DiagnosticConsumer &DC,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = DepFS;
+  if (OverlayFS) {
+#ifndef NDEBUG
+    bool SawDepFS = false;
+    OverlayFS->visit(
+        [&](llvm::vfs::FileSystem &VFS) { SawDepFS |= &VFS == DepFS.get(); });
+    assert(SawDepFS && "OverlayFS not based on DepFS");
+#endif
+    FS = std::move(OverlayFS);
+  }
+
   DignosticsEngineWithDiagOpts DiagEngineWithCmdAndOpts(CommandLine, FS, DC);
   DependencyScanningAction Action(Service, WorkingDirectory, Consumer,
                                   Controller, DepFS);
 
   bool Success = false;
   if (CommandLine[1] == "-cc1") {
-    Success = createAndRunToolInvocation(
-        CommandLine, Action, FS, PCHContainerOps,
-        *DiagEngineWithCmdAndOpts.DiagEngine, Consumer);
+    Success =
+        createAndRunToolInvocation(CommandLine, Action, FS, PCHContainerOps,
+                                   *DiagEngineWithCmdAndOpts.DiagEngine);
   } else {
     Success = forEachDriverJob(
         CommandLine, *DiagEngineWithCmdAndOpts.DiagEngine, FS,
@@ -125,7 +124,7 @@ bool DependencyScanningWorker::scanDependencies(
             return true;
           }
 
-          // Insert -cc1 comand line options into Argv
+          // Insert -cc1 command line options into Argv
           std::vector<std::string> Argv;
           Argv.push_back(Cmd.getExecutable());
           llvm::append_range(Argv, Cmd.getArguments());
@@ -136,7 +135,7 @@ bool DependencyScanningWorker::scanDependencies(
           // dependency scanning filesystem.
           return createAndRunToolInvocation(
               std::move(Argv), Action, FS, PCHContainerOps,
-              *DiagEngineWithCmdAndOpts.DiagEngine, Consumer);
+              *DiagEngineWithCmdAndOpts.DiagEngine);
         });
   }
 
@@ -158,13 +157,13 @@ bool DependencyScanningWorker::computeDependencies(
     DiagnosticConsumer &DC, std::optional<llvm::MemoryBufferRef> TUBuffer) {
   if (TUBuffer) {
     auto [FinalFS, FinalCommandLine] = initVFSForTUBufferScanning(
-        BaseFS, CommandLine, WorkingDirectory, *TUBuffer);
+        DepFS, CommandLine, WorkingDirectory, *TUBuffer);
     return scanDependencies(WorkingDirectory, FinalCommandLine, Consumer,
                             Controller, DC, FinalFS);
   } else {
-    BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
+    DepFS->setCurrentWorkingDirectory(WorkingDirectory);
     return scanDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
-                            DC, BaseFS);
+                            DC);
   }
 }
 

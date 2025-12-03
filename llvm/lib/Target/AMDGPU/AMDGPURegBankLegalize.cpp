@@ -435,7 +435,8 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
     unsigned Opc = MI->getOpcode();
     // Insert point for use operands needs some calculation.
     if (Opc == AMDGPU::G_PHI) {
-      RBLHelper.applyMappingPHI(*MI);
+      if (!RBLHelper.applyMappingPHI(*MI))
+        return false;
       continue;
     }
 
@@ -466,7 +467,8 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
       // S1 rules are in RegBankLegalizeRules.
     }
 
-    RBLHelper.findRuleAndApplyMapping(*MI);
+    if (!RBLHelper.findRuleAndApplyMapping(*MI))
+      return false;
   }
 
   // Sgpr S1 clean up combines:
