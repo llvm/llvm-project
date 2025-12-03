@@ -3415,7 +3415,17 @@ void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
 }
 
 static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
-  enum class IsLocal { Unknown, True, False };
+  enum class IsLocal {
+    Unknown, // Structure of the llvm::Value is not one of the recognizable
+             // structures, and so it's unknown if the llvm::Value is the
+             // address of a local function at runtime.
+    True,    // We can statically prove that all runtime values of the
+             // llvm::Value is an address of a local function.
+    False    // We can statically prove that one of the runtime values of the
+             // llvm::Value is the address of a non-local function; it could be
+             // the case that at runtime the non-local function is never
+             // selected but we don't care.
+  };
   auto Combine = [](IsLocal LHS, IsLocal RHS) -> IsLocal {
     if (LHS == IsLocal::False || RHS == IsLocal::False)
       return IsLocal::False;
