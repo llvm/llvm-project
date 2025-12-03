@@ -4557,6 +4557,26 @@ static SDValue lowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG,
   return DAG.getMergeValues({Sum, OutFlag}, DL);
 }
 
+static SDValue lowerIntNeonIntrinsic(SDValue Op, unsigned Opcode,
+                                     SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  auto getFloatVT = [](EVT VT) {
+    assert((VT == MVT::i32 || VT == MVT::i64) && "Unexpected VT");
+    return VT == MVT::i32 ? MVT::f32 : MVT::f64;
+  };
+  auto bitcastToFloat = [&](SDValue Val) {
+    return DAG.getBitcast(getFloatVT(Val.getValueType()), Val);
+  };
+  SmallVector<SDValue, 2> NewOps;
+  NewOps.reserve(Op.getNumOperands() - 1);
+
+  for (unsigned I = 1, E = Op.getNumOperands(); I < E; ++I)
+    NewOps.push_back(bitcastToFloat(Op.getOperand(I)));
+  EVT OrigVT = Op.getValueType();
+  SDValue OpNode = DAG.getNode(Opcode, DL, getFloatVT(OrigVT), NewOps);
+  return DAG.getBitcast(OrigVT, OpNode);
+}
+
 static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
   // Let legalize expand this if it isn't a legal type yet.
   if (!DAG.getTargetLoweringInfo().isTypeLegal(Op.getValueType()))
@@ -6403,26 +6423,46 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
     return SDValue();
+  case Intrinsic::aarch64_neon_sqrshl:
+    if (Op.getValueType().isVector())
+      return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQRSHL, DAG);
+  case Intrinsic::aarch64_neon_sqshl:
+    if (Op.getValueType().isVector())
+      return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQSHL, DAG);
+  case Intrinsic::aarch64_neon_uqrshl:
+    if (Op.getValueType().isVector())
+      return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::UQRSHL, DAG);
+  case Intrinsic::aarch64_neon_uqshl:
+    if (Op.getValueType().isVector())
+      return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::UQSHL, DAG);
   case Intrinsic::aarch64_neon_sqadd:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::SADDSAT, DL, Op.getValueType(), Op.getOperand(1),
                          Op.getOperand(2));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQADD, DAG);
+
   case Intrinsic::aarch64_neon_sqsub:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::SSUBSAT, DL, Op.getValueType(), Op.getOperand(1),
                          Op.getOperand(2));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQSUB, DAG);
+
   case Intrinsic::aarch64_neon_uqadd:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::UADDSAT, DL, Op.getValueType(), Op.getOperand(1),
                          Op.getOperand(2));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::UQADD, DAG);
   case Intrinsic::aarch64_neon_uqsub:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::USUBSAT, DL, Op.getValueType(), Op.getOperand(1),
                          Op.getOperand(2));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::UQSUB, DAG);
+  case Intrinsic::aarch64_neon_sqdmulls_scalar:
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQDMULL, DAG);
   case Intrinsic::aarch64_sve_whilelt:
     return optimizeIncrementingWhile(Op.getNode(), DAG, /*IsSigned=*/true,
                                      /*IsEqual=*/false);
