@@ -1653,6 +1653,23 @@ func.func @acc_reduc_test(%a : memref<i64>) -> () {
 // CHECK:         %[[REDUCTION_A:.*]] = acc.reduction varPtr(%[[ARG0]] : memref<i64>) recipe(@reduction_add_memref_i64) -> memref<i64>
 // CHECK-NEXT:    acc.serial reduction(%[[REDUCTION_A]] : memref<i64>)
 
+// -----
+
+acc.reduction.recipe @reduction_add_memref_i64 : memref<i64> reduction_operator <add> init {
+^bb0(%arg0: memref<i64>):
+  %c0_i64 = arith.constant 0 : i64
+  %alloca = memref.alloca() : memref<i64>
+  memref.store %c0_i64, %alloca[] : memref<i64>
+  acc.yield %alloca : memref<i64>
+} combiner {
+^bb0(%arg0: memref<i64>, %arg1: memref<i64>):
+  %0 = memref.load %arg0[] : memref<i64>
+  %1 = memref.load %arg1[] : memref<i64>
+  %2 = arith.addi %0, %1 : i64
+  memref.store %2, %arg0[] : memref<i64>
+  acc.yield %arg0 : memref<i64>
+}
+
 func.func @acc_kernels_reduc_test(%a : memref<i64>) -> () {
   %reduction_a = acc.reduction varPtr(%a : memref<i64>) recipe(@reduction_add_memref_i64) -> memref<i64>
   acc.kernels reduction(%reduction_a : memref<i64>) {
