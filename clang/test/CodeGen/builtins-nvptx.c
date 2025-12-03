@@ -1520,8 +1520,8 @@ __device__ void nvvm_min_max_sm86() {
   // CHECK: ret void
 }
 
-// CHECK-LABEL: nvvm_add_sub_fma_f32_sat
-__device__ void nvvm_add_sub_fma_f32_sat() {
+// CHECK-LABEL: nvvm_add_fma_f32_sat
+__device__ void nvvm_add_fma_f32_sat() {
   // CHECK: call float @llvm.nvvm.add.rn.sat.f
   __nvvm_add_rn_sat_f(1.0f, 2.0f);
   // CHECK: call float @llvm.nvvm.add.rn.ftz.sat.f
@@ -1539,23 +1539,6 @@ __device__ void nvvm_add_sub_fma_f32_sat() {
   // CHECK: call float @llvm.nvvm.add.rp.ftz.sat.f
   __nvvm_add_rp_ftz_sat_f(1.0f, 2.0f);
 
-  // CHECK: call float @llvm.nvvm.sub.rn.sat.f
-  __nvvm_sub_rn_sat_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.sub.rn.ftz.sat.f
-  __nvvm_sub_rn_ftz_sat_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.sub.rz.sat.f
-  __nvvm_sub_rz_sat_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.sub.rz.ftz.sat.f
-  __nvvm_sub_rz_ftz_sat_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.sub.rm.sat.f
-  __nvvm_sub_rm_sat_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.sub.rm.ftz.sat.f
-  __nvvm_sub_rm_ftz_sat_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.sub.rp.sat.f
-  __nvvm_sub_rp_sat_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.sub.rp.ftz.sat.f
-  __nvvm_sub_rp_ftz_sat_f(1.0f, 2.0f);
-
   // CHECK: call float @llvm.nvvm.fma.rn.sat.f
   __nvvm_fma_rn_sat_f(1.0f, 2.0f, 3.0f);
   // CHECK: call float @llvm.nvvm.fma.rn.ftz.sat.f
@@ -1572,42 +1555,6 @@ __device__ void nvvm_add_sub_fma_f32_sat() {
   __nvvm_fma_rp_sat_f(1.0f, 2.0f, 3.0f);
   // CHECK: call float @llvm.nvvm.fma.rp.ftz.sat.f
   __nvvm_fma_rp_ftz_sat_f(1.0f, 2.0f, 3.0f);
-
-  // CHECK: ret void
-}
-
-// CHECK-LABEL: nvvm_sub_f32
-__device__ void nvvm_sub_f32() {
-  // CHECK: call float @llvm.nvvm.sub.rn.f
-  __nvvm_sub_rn_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.sub.rn.ftz.f
-  __nvvm_sub_rn_ftz_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.sub.rz.f
-  __nvvm_sub_rz_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.sub.rz.ftz.f
-  __nvvm_sub_rz_ftz_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.sub.rm.f
-  __nvvm_sub_rm_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.sub.rm.ftz.f
-  __nvvm_sub_rm_ftz_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.sub.rp.f
-  __nvvm_sub_rp_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.sub.rp.ftz.f
-  __nvvm_sub_rp_ftz_f(1.0f, 2.0f);
-
-  // CHECK: ret void
-}
-
-// CHECK-LABEL: nvvm_sub_f64
-__device__ void nvvm_sub_f64() {
-  // CHECK: call double @llvm.nvvm.sub.rn.d
-  __nvvm_sub_rn_d(1.0f, 2.0f);
-  // CHECK: call double @llvm.nvvm.sub.rz.d 
-  __nvvm_sub_rz_d(1.0f, 2.0f);
-  // CHECK: call double @llvm.nvvm.sub.rm.d
-  __nvvm_sub_rm_d(1.0f, 2.0f);
-  // CHECK: call double @llvm.nvvm.sub.rp.d
-  __nvvm_sub_rp_d(1.0f, 2.0f);
 
   // CHECK: ret void
 }

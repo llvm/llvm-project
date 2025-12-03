@@ -866,14 +866,28 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
 
   // We have some custom DAG combine patterns for these nodes
-  setTargetDAGCombine(
-      {ISD::ADD,          ISD::AND,           ISD::EXTRACT_VECTOR_ELT,
-       ISD::FADD,         ISD::FMAXNUM,       ISD::FMINNUM,
-       ISD::FMAXIMUM,     ISD::FMINIMUM,      ISD::FMAXIMUMNUM,
-       ISD::FMINIMUMNUM,  ISD::MUL,           ISD::SHL,
-       ISD::SREM,         ISD::UREM,          ISD::VSELECT,
-       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST, ISD::LOAD,
-       ISD::STORE,        ISD::ZERO_EXTEND,   ISD::SIGN_EXTEND});
+  setTargetDAGCombine({ISD::ADD,
+                       ISD::AND,
+                       ISD::EXTRACT_VECTOR_ELT,
+                       ISD::FADD,
+                       ISD::FMAXNUM,
+                       ISD::FMINNUM,
+                       ISD::FMAXIMUM,
+                       ISD::FMINIMUM,
+                       ISD::FMAXIMUMNUM,
+                       ISD::FMINIMUMNUM,
+                       ISD::MUL,
+                       ISD::SHL,
+                       ISD::SREM,
+                       ISD::UREM,
+                       ISD::VSELECT,
+                       ISD::BUILD_VECTOR,
+                       ISD::ADDRSPACECAST,
+                       ISD::LOAD,
+                       ISD::STORE,
+                       ISD::ZERO_EXTEND,
+                       ISD::SIGN_EXTEND,
+                       ISD::INTRINSIC_WO_CHAIN});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -6504,6 +6518,143 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
   }
 }
 
+static std::optional<unsigned> getSubF32Opc(Intrinsic::ID AddIntrinsicID) {
+  switch (AddIntrinsicID) {
+  default:
+    break;
+  case Intrinsic::nvvm_add_rn_f:
+    return NVPTXISD::SUB_RN_F;
+  case Intrinsic::nvvm_add_rn_sat_f:
+    return NVPTXISD::SUB_RN_SAT_F;
+  case Intrinsic::nvvm_add_rn_ftz_f:
+    return NVPTXISD::SUB_RN_FTZ_F;
+  case Intrinsic::nvvm_add_rn_ftz_sat_f:
+    return NVPTXISD::SUB_RN_FTZ_SAT_F;
+  case Intrinsic::nvvm_add_rz_f:
+    return NVPTXISD::SUB_RZ_F;
+  case Intrinsic::nvvm_add_rz_sat_f:
+    return NVPTXISD::SUB_RZ_SAT_F;
+  case Intrinsic::nvvm_add_rz_ftz_f:
+    return NVPTXISD::SUB_RZ_FTZ_F;
+  case Intrinsic::nvvm_add_rz_ftz_sat_f:
+    return NVPTXISD::SUB_RZ_FTZ_SAT_F;
+  case Intrinsic::nvvm_add_rm_f:
+    return NVPTXISD::SUB_RM_F;
+  case Intrinsic::nvvm_add_rm_sat_f:
+    return NVPTXISD::SUB_RM_SAT_F;
+  case Intrinsic::nvvm_add_rm_ftz_f:
+    return NVPTXISD::SUB_RM_FTZ_F;
+  case Intrinsic::nvvm_add_rm_ftz_sat_f:
+    return NVPTXISD::SUB_RM_FTZ_SAT_F;
+  case Intrinsic::nvvm_add_rp_f:
+    return NVPTXISD::SUB_RP_F;
+  case Intrinsic::nvvm_add_rp_sat_f:
+    return NVPTXISD::SUB_RP_SAT_F;
+  case Intrinsic::nvvm_add_rp_ftz_f:
+    return NVPTXISD::SUB_RP_FTZ_F;
+  case Intrinsic::nvvm_add_rp_ftz_sat_f:
+    return NVPTXISD::SUB_RP_FTZ_SAT_F;
+  }
+  llvm_unreachable("Invalid add intrinsic ID");
+  return std::nullopt;
+}
+
+static std::optional<unsigned> getSubF64Opc(Intrinsic::ID AddIntrinsicID) {
+  switch (AddIntrinsicID) {
+  default:
+    return std::nullopt;
+  case Intrinsic::nvvm_add_rn_d:
+    return NVPTXISD::SUB_RN_D;
+  case Intrinsic::nvvm_add_rz_d:
+    return NVPTXISD::SUB_RZ_D;
+  case Intrinsic::nvvm_add_rm_d:
+    return NVPTXISD::SUB_RM_D;
+  case Intrinsic::nvvm_add_rp_d:
+    return NVPTXISD::SUB_RP_D;
+  }
+  llvm_unreachable("Invalid add intrinsic ID");
+  return std::nullopt;
+}
+
+static SDValue combineF32AddWithNeg(SDNode *N, SelectionDAG &DAG,
+                                    Intrinsic::ID AddIntrinsicID,
+                                    unsigned PTXVersion, unsigned SmVersion) {
+  SDValue Op2 = N->getOperand(2);
+
+  if (Op2.getOpcode() != ISD::FNEG)
+    return SDValue();
+
+  // If PTX > 8.6 and SM >= 100, when Op1 is a fpextend from f16 or bf16, don't
+  // fold this pattern as this will be folded to a mixed precision instruction
+  // later on.
+  SDValue Op1 = N->getOperand(1);
+  if (PTXVersion >= 86 && SmVersion >= 100 &&
+      Op1.getOpcode() == ISD::FP_EXTEND) {
+    if (Op1.getOperand(0).getSimpleValueType() == MVT::f16 ||
+        Op1.getOperand(0).getSimpleValueType() == MVT::bf16)
+      return SDValue();
+  }
+
+  std::optional<unsigned> Opc = getSubF32Opc(AddIntrinsicID);
+  if (!Opc)
+    return SDValue();
+
+  SDLoc DL(N);
+  return DAG.getNode(*Opc, DL, N->getValueType(0), N->getOperand(1),
+                     Op2.getOperand(0));
+}
+
+static SDValue combineF64AddWithNeg(SDNode *N, SelectionDAG &DAG,
+                                    Intrinsic::ID AddIntrinsicID) {
+  SDValue Op2 = N->getOperand(2);
+
+  if (Op2.getOpcode() != ISD::FNEG)
+    return SDValue();
+
+  std::optional<unsigned> Opc = getSubF64Opc(AddIntrinsicID);
+  if (!Opc)
+    return SDValue();
+
+  SDLoc DL(N);
+  return DAG.getNode(*Opc, DL, N->getValueType(0), N->getOperand(1),
+                     Op2.getOperand(0));
+}
+
+static SDValue combineIntrinsicWOChain(SDNode *N,
+                                       TargetLowering::DAGCombinerInfo &DCI,
+                                       const NVPTXSubtarget &STI) {
+  unsigned IntID = N->getConstantOperandVal(0);
+
+  switch (IntID) {
+  default:
+    break;
+  case Intrinsic::nvvm_add_rn_f:
+  case Intrinsic::nvvm_add_rn_sat_f:
+  case Intrinsic::nvvm_add_rn_ftz_f:
+  case Intrinsic::nvvm_add_rn_ftz_sat_f:
+  case Intrinsic::nvvm_add_rz_f:
+  case Intrinsic::nvvm_add_rz_sat_f:
+  case Intrinsic::nvvm_add_rz_ftz_f:
+  case Intrinsic::nvvm_add_rz_ftz_sat_f:
+  case Intrinsic::nvvm_add_rm_f:
+  case Intrinsic::nvvm_add_rm_sat_f:
+  case Intrinsic::nvvm_add_rm_ftz_f:
+  case Intrinsic::nvvm_add_rm_ftz_sat_f:
+  case Intrinsic::nvvm_add_rp_f:
+  case Intrinsic::nvvm_add_rp_sat_f:
+  case Intrinsic::nvvm_add_rp_ftz_f:
+  case Intrinsic::nvvm_add_rp_ftz_sat_f:
+    return combineF32AddWithNeg(N, DCI.DAG, IntID, STI.getPTXVersion(),
+                                STI.getSmVersion());
+  case Intrinsic::nvvm_add_rn_d:
+  case Intrinsic::nvvm_add_rz_d:
+  case Intrinsic::nvvm_add_rm_d:
+  case Intrinsic::nvvm_add_rp_d:
+    return combineF64AddWithNeg(N, DCI.DAG, IntID);
+  }
+  return SDValue();
+}
+
 static SDValue combineProxyReg(SDNode *N,
                                TargetLowering::DAGCombinerInfo &DCI) {
 
@@ -6570,6 +6721,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return combineSTORE(N, DCI, STI);
   case ISD::VSELECT:
     return PerformVSELECTCombine(N, DCI);
+  case ISD::INTRINSIC_WO_CHAIN:
+    return combineIntrinsicWOChain(N, DCI, STI);
   }
   return SDValue();
 }

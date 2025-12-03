@@ -1910,27 +1910,25 @@ let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
 // Sub
 //
 
-def INT_NVVM_SUB_RN_FTZ_F : F_MATH_2<"sub.rn.ftz.f32", B32, B32, B32, int_nvvm_sub_rn_ftz_f>;
-def INT_NVVM_SUB_RN_SAT_FTZ_F : F_MATH_2<"sub.rn.sat.ftz.f32", B32, B32, B32, int_nvvm_sub_rn_ftz_sat_f>;
-def INT_NVVM_SUB_RN_F : F_MATH_2<"sub.rn.f32", B32, B32, B32, int_nvvm_sub_rn_f>;
-def INT_NVVM_SUB_RN_SAT_F : F_MATH_2<"sub.rn.sat.f32", B32, B32, B32, int_nvvm_sub_rn_sat_f>;
-def INT_NVVM_SUB_RZ_FTZ_F : F_MATH_2<"sub.rz.ftz.f32", B32, B32, B32, int_nvvm_sub_rz_ftz_f>;
-def INT_NVVM_SUB_RZ_SAT_FTZ_F : F_MATH_2<"sub.rz.sat.ftz.f32", B32, B32, B32, int_nvvm_sub_rz_ftz_sat_f>;
-def INT_NVVM_SUB_RZ_F : F_MATH_2<"sub.rz.f32", B32, B32, B32, int_nvvm_sub_rz_f>;
-def INT_NVVM_SUB_RZ_SAT_F : F_MATH_2<"sub.rz.sat.f32", B32, B32, B32, int_nvvm_sub_rz_sat_f>;
-def INT_NVVM_SUB_RM_FTZ_F : F_MATH_2<"sub.rm.ftz.f32", B32, B32, B32, int_nvvm_sub_rm_ftz_f>;
-def INT_NVVM_SUB_RM_SAT_FTZ_F : F_MATH_2<"sub.rm.sat.ftz.f32", B32, B32, B32, int_nvvm_sub_rm_ftz_sat_f>;
-def INT_NVVM_SUB_RM_F : F_MATH_2<"sub.rm.f32", B32, B32, B32, int_nvvm_sub_rm_f>;
-def INT_NVVM_SUB_RM_SAT_F : F_MATH_2<"sub.rm.sat.f32", B32, B32, B32, int_nvvm_sub_rm_sat_f>;
-def INT_NVVM_SUB_RP_FTZ_F : F_MATH_2<"sub.rp.ftz.f32", B32, B32, B32, int_nvvm_sub_rp_ftz_f>;
-def INT_NVVM_SUB_RP_SAT_FTZ_F : F_MATH_2<"sub.rp.sat.ftz.f32", B32, B32, B32, int_nvvm_sub_rp_ftz_sat_f>;
-def INT_NVVM_SUB_RP_F : F_MATH_2<"sub.rp.f32", B32, B32, B32, int_nvvm_sub_rp_f>;
-def INT_NVVM_SUB_RP_SAT_F : F_MATH_2<"sub.rp.sat.f32", B32, B32, B32, int_nvvm_sub_rp_sat_f>;
-
-def INT_NVVM_SUB_RN_D : F_MATH_2<"sub.rn.f64", B64, B64, B64, int_nvvm_sub_rn_d>;
-def INT_NVVM_SUB_RZ_D : F_MATH_2<"sub.rz.f64", B64, B64, B64, int_nvvm_sub_rz_d>;
-def INT_NVVM_SUB_RM_D : F_MATH_2<"sub.rm.f64", B64, B64, B64, int_nvvm_sub_rm_d>;
-def INT_NVVM_SUB_RP_D : F_MATH_2<"sub.rp.f64", B64, B64, B64, int_nvvm_sub_rp_d>;
+foreach rnd = ["_RN", "_RZ", "_RM", "_RP"] in {
+  foreach ftz = ["", "_FTZ"] in {
+    foreach sat = ["", "_SAT"] in {
+      def SUB_ # rnd # ftz # sat # _F : 
+        SDNode<"NVPTXISD::SUB" # rnd # ftz # sat # "_F", SDTFPBinOp>;
+      def INT_NVVM_SUB # rnd # ftz # sat # _F : 
+        BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+          !tolower(!subst("_", ".", "sub" # rnd # ftz # sat # "_f32")),
+          [(set f32:$dst, 
+           (!cast<SDNode>("SUB_" # rnd # ftz # sat # "_F") f32:$a, f32:$b))]>;
+    }
+  }
+  
+  def SUB_ # rnd # _D : SDNode<"NVPTXISD::SUB" # rnd # "_D", SDTFPBinOp>;
+  def INT_NVVM_SUB # rnd # _D : BasicNVPTXInst<(outs B64:$dst), (ins B64:$a, B64:$b),
+    !tolower(!subst("_", ".", "sub" # rnd # "_f64")),
+    [(set f64:$dst, 
+     (!cast<SDNode>("SUB_" # rnd # "_D") f64:$a, f64:$b))]>;
+}
 
 foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
   foreach sat = ["", "_sat"] in {
@@ -1939,9 +1937,9 @@ foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
         BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B32:$b),
           !subst("_", ".", "sub" # rnd # sat # "_f32_" # type),
           [(set f32:$dst, 
-           (!cast<Intrinsic>("int_nvvm_sub" # rnd # sat # "_f") 
+           (!cast<Intrinsic>("int_nvvm_add" # rnd # sat # "_f") 
              (f32 (fpextend type:$a)),
-             f32:$b))]>,
+             (f32 (fneg f32:$b))))]>,
         Requires<[hasSM<100>, hasPTX<86>]>;
     }
   }
@@ -6236,3 +6234,4 @@ foreach sp = [0, 1] in {
     }
   }
 }
+

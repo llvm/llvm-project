@@ -159,16 +159,30 @@ define float @test_sub_f32_f16_1(half %a, float %b) {
 ; CHECK-NEXT:    ret;
   %r0 = fpext half %a to float
 
-  %r1 = call float @llvm.nvvm.sub.rn.f(float %r0, float %b)
-  %r2 = call float @llvm.nvvm.sub.rz.f(float %r0, float %r1)
-  %r3 = call float @llvm.nvvm.sub.rm.f(float %r0, float %r2)
-  %r4 = call float @llvm.nvvm.sub.rm.f(float %r0, float %r3)
+  %f0 = fneg float %b
+  %r1 = call float @llvm.nvvm.add.rn.f(float %r0, float %f0)
+
+  %f1 = fneg float %r1
+  %r2 = call float @llvm.nvvm.add.rz.f(float %r0, float %f1)
+
+  %f2 = fneg float %r2
+  %r3 = call float @llvm.nvvm.add.rm.f(float %r0, float %f2)
+
+  %f3 = fneg float %r3
+  %r4 = call float @llvm.nvvm.add.rm.f(float %r0, float %f3)
 
   ; SAT
-  %r5 = call float @llvm.nvvm.sub.rn.sat.f(float %r0, float %r4)
-  %r6 = call float @llvm.nvvm.sub.rz.sat.f(float %r0, float %r5)
-  %r7 = call float @llvm.nvvm.sub.rm.sat.f(float %r0, float %r6)
-  %r8 = call float @llvm.nvvm.sub.rp.sat.f(float %r0, float %r7)
+  %f4 = fneg float %r4
+  %r5 = call float @llvm.nvvm.add.rn.sat.f(float %r0, float %f4)
+
+  %f5 = fneg float %r5
+  %r6 = call float @llvm.nvvm.add.rz.sat.f(float %r0, float %f5)
+
+  %f6 = fneg float %r6
+  %r7 = call float @llvm.nvvm.add.rm.sat.f(float %r0, float %f6)
+
+  %f7 = fneg float %r7
+  %r8 = call float @llvm.nvvm.add.rp.sat.f(float %r0, float %f7)
 
   ret float %r7
 }
@@ -225,16 +239,30 @@ define float @test_sub_f32_bf16_1(bfloat %a, float %b) {
 ; CHECK-NEXT:    ret;
   %r0 = fpext bfloat %a to float
 
-  %r1 = call float @llvm.nvvm.sub.rn.f(float %r0, float %b)
-  %r2 = call float @llvm.nvvm.sub.rz.f(float %r0, float %r1)
-  %r3 = call float @llvm.nvvm.sub.rm.f(float %r0, float %r2)
-  %r4 = call float @llvm.nvvm.sub.rp.f(float %r0, float %r3)
+  %f0 = fneg float %b
+  %r1 = call float @llvm.nvvm.add.rn.f(float %r0, float %f0)
+
+  %f1 = fneg float %r1
+  %r2 = call float @llvm.nvvm.add.rz.f(float %r0, float %f1)
+
+  %f2 = fneg float %r2
+  %r3 = call float @llvm.nvvm.add.rm.f(float %r0, float %f2)
+
+  %f3 = fneg float %r3
+  %r4 = call float @llvm.nvvm.add.rp.f(float %r0, float %f3)
 
   ; SAT
-  %r5 = call float @llvm.nvvm.sub.rn.sat.f(float %r0, float %r4)
-  %r6 = call float @llvm.nvvm.sub.rz.sat.f(float %r0, float %r5)
-  %r7 = call float @llvm.nvvm.sub.rm.sat.f(float %r0, float %r6)
-  %r8 = call float @llvm.nvvm.sub.rp.sat.f(float %r0, float %r7)
+  %f4 = fneg float %r4
+  %r5 = call float @llvm.nvvm.add.rn.sat.f(float %r0, float %f4)
+
+  %f5 = fneg float %r5
+  %r6 = call float @llvm.nvvm.add.rz.sat.f(float %r0, float %f5)
+
+  %f6 = fneg float %r6
+  %r7 = call float @llvm.nvvm.add.rm.sat.f(float %r0, float %f6)
+
+  %f7 = fneg float %r7
+  %r8 = call float @llvm.nvvm.add.rp.sat.f(float %r0, float %f7)
 
   ret float %r8
 }
