@@ -859,11 +859,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FPTOSI_SAT:
   case TargetOpcode::G_FPTOUI_SAT:
   case TargetOpcode::G_FPTOSI:
-  case TargetOpcode::G_FPTOUI:
-  case TargetOpcode::G_INTRINSIC_LRINT:
-  case TargetOpcode::G_INTRINSIC_LLRINT:
-  case TargetOpcode::G_LROUND:
-  case TargetOpcode::G_LLROUND: {
+  case TargetOpcode::G_FPTOUI: {
     LLT DstType = MRI.getType(MI.getOperand(0).getReg());
     if (DstType.isVector())
       break;
@@ -884,6 +880,12 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
     break;
   }
+  case TargetOpcode::G_INTRINSIC_LRINT:
+  case TargetOpcode::G_INTRINSIC_LLRINT:
+    if (MRI.getType(MI.getOperand(0).getReg()).isVector())
+      break;
+    OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
+    break;
   case TargetOpcode::G_FCMP: {
     // If the result is a vector, it must use a FPR.
     AArch64GenRegisterBankInfo::PartialMappingIdx Idx0 =
@@ -1221,6 +1223,12 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     }
+    break;
+  }
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND: {
+    // Source is always floating point and destination is always integer.
+    OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
     break;
   }
   }
