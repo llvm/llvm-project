@@ -77,20 +77,14 @@ static bool createAndRunToolInvocation(
     DependencyScanningAction &Action,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     std::shared_ptr<clang::PCHContainerOperations> &PCHContainerOps,
-    DiagnosticsEngine &Diags, DependencyConsumer &Consumer) {
+    DiagnosticsEngine &Diags) {
   auto Invocation = createCompilerInvocation(CommandLine, Diags);
   if (!Invocation)
     return false;
 
-  if (!Action.runInvocation(std::move(Invocation), std::move(FS),
-                            PCHContainerOps, Diags.getClient()))
-    return false;
-
-  std::vector<std::string> Args = Action.takeLastCC1Arguments();
-  std::optional<std::string> CacheKey = Action.takeLastCC1CacheKey();
-  Consumer.handleBuildCommand(
-      {CommandLine[0], std::move(Args), std::move(CacheKey)});
-  return true;
+  return Action.runInvocation(CommandLine[0], std::move(Invocation),
+                              std::move(FS), PCHContainerOps,
+                              Diags.getClient());
 }
 
 bool DependencyScanningWorker::scanDependencies(
@@ -116,9 +110,9 @@ bool DependencyScanningWorker::scanDependencies(
       /*DiagGenerationAsCompilation=*/false, getCASOpts());
   bool Success = false;
   if (CommandLine[1] == "-cc1") {
-    Success = createAndRunToolInvocation(
-        CommandLine, Action, FS, PCHContainerOps,
-        *DiagEngineWithCmdAndOpts.DiagEngine, Consumer);
+    Success =
+        createAndRunToolInvocation(CommandLine, Action, FS, PCHContainerOps,
+                                   *DiagEngineWithCmdAndOpts.DiagEngine);
   } else {
     Success = forEachDriverJob(
         CommandLine, *DiagEngineWithCmdAndOpts.DiagEngine, FS,
@@ -133,7 +127,7 @@ bool DependencyScanningWorker::scanDependencies(
             return true;
           }
 
-          // Insert -cc1 comand line options into Argv
+          // Insert -cc1 command line options into Argv
           std::vector<std::string> Argv;
           Argv.push_back(Cmd.getExecutable());
           llvm::append_range(Argv, Cmd.getArguments());
@@ -144,7 +138,7 @@ bool DependencyScanningWorker::scanDependencies(
           // dependency scanning filesystem.
           return createAndRunToolInvocation(
               std::move(Argv), Action, FS, PCHContainerOps,
-              *DiagEngineWithCmdAndOpts.DiagEngine, Consumer);
+              *DiagEngineWithCmdAndOpts.DiagEngine);
         });
   }
 
@@ -214,8 +208,8 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
   // Ignore result; we're just collecting dependencies.
   //
   // FIXME: will clients other than -cc1scand care?
-  (void)Action.runInvocation(std::move(Invocation), DepFS, PCHContainerOps,
-                             &DiagsConsumer);
+  (void)Action.runInvocation("<clang>", std::move(Invocation), DepFS,
+                             PCHContainerOps, &DiagsConsumer);
 }
 
 llvm::Error
