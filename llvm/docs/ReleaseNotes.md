@@ -249,6 +249,8 @@ Changes to the LLVM tools
 * `llvm-objdump` now supports using `--mcpu=help` and `--mattr=help` with the `--triple` option
   without requiring an input file or the `-d` (disassemble) flag.
 
+* `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+
 Changes to LLDB
 ---------------------------------
 
