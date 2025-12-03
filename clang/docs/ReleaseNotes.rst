@@ -448,6 +448,8 @@ Improvements to Clang's diagnostics
 - A new warning ``-Wenum-compare-typo`` has been added to detect potential erroneous
   comparison operators when mixed with bitwise operators in enum value initializers.
   This can be locally disabled by explicitly casting the initializer value.
+- Clang now provides correct caret placement when attributes appear before
+  `enum class` (#GH163224).
 
 - A new warning ``-Wshadow-header`` has been added to detect when a header file
   is found in multiple search directories (excluding system paths).
