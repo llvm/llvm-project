@@ -19,6 +19,49 @@
 #include "test_range.h"
 #include "../types.h"
 
+struct NonEqIter {
+  using value_type       = int;
+  using difference_type  = std::ptrdiff_t;
+  using iterator_concept = std::input_iterator_tag;
+
+  int* p = nullptr;
+
+  int& operator*() const { return *p; }
+  NonEqIter& operator++() {
+    ++p;
+    return *this;
+  }
+  void operator++(int) { ++p; }
+};
+
+struct NonEqSentinel {
+  int* end = nullptr;
+
+  friend bool operator==(const NonEqIter& it, const NonEqSentinel& s) { return it.p == s.end; }
+  friend bool operator==(const NonEqSentinel& s, const NonEqIter& it) { return it.p == s.end; }
+};
+
+struct BasicViewWithNonEqIter : std::ranges::view_base {
+  int* b_ = nullptr;
+  int* e_ = nullptr;
+
+  using Sentinel = sentinel_wrapper<NonEqIter>;
+
+  BasicViewWithNonEqIter() = default;
+  BasicViewWithNonEqIter(int* b, int* e) : b_(b), e_(e) {}
+
+  NonEqIter begin() const { return {b_}; }
+  NonEqSentinel end() const { return {e_}; }
+};
+
+using ConcatWithNoIterNotComparable = std::ranges::concat_view<BasicViewWithNonEqIter, BasicViewWithNonEqIter>;
+using NonComparabeIter              = std::ranges::iterator_t<ConcatWithNoIterNotComparable>;
+
+template <typename Iterator>
+concept Comparable = requires(Iterator a, Iterator b) {
+  { a == b } -> std::same_as<bool>;
+};
+
 template <class Iterator>
 constexpr void test() {
   using Sentinel   = sentinel_wrapper<Iterator>;
@@ -121,6 +164,9 @@ constexpr bool tests() {
   test<random_access_iterator<int const*>>();
   test<contiguous_iterator<int const*>>();
   test<int const*>();
+
+  static_assert(!std::equality_comparable<NonEqIter>);
+  static_assert(!Comparable<NonComparabeIter>);
 
   return true;
 }
