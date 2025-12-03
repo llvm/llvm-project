@@ -680,6 +680,7 @@ void bad_prevents_redeclaration4() {
 #define I2 i2
 #define MY_IF(cond, stmt) if (cond) {stmt}
 #define MY_ONE_STMT_SWITCH(tag, stmt) switch (tag) { case 0 : { stmt; break; } };
+#define MY_VAR_DECL(type, name, val) type name = val
 
 void bad_macro1() {
     int i1 = 0;
@@ -869,6 +870,60 @@ void bad_macro11() {
 // CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
 // CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
 // CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        do_some();
+    )
+}
+
+void bad_macro12() {
+    MY_VAR_DECL(int, i1, 0); DUMMY_TOKEN
+    if (i1 == 0) {
+// CHECK-MESSAGES: [[@LINE-2]]:17: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (MY_VAR_DECL(int, i1, 0); i1 == 0) {
+        do_some();
+    }
+    MY_VAR_DECL(int, i2, 0); DUMMY_TOKEN
+    switch (i2) {
+// CHECK-MESSAGES: [[@LINE-2]]:17: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (MY_VAR_DECL(int, i2, 0); i2) {
+        case 0:
+            do_some();
+            break;
+    }
+}
+
+void bad_macro13() {
+    MY_VAR_DECL(int, i1, 0);
+    MY_IF (i1 == 0,
+// CHECK-MESSAGES: [[@LINE-2]]:17: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        do_some();
+    )
+    MY_VAR_DECL(int, i2, 0);
+    MY_ONE_STMT_SWITCH (i2,
+// CHECK-MESSAGES: [[@LINE-2]]:17: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        do_some();
+    )
+}
+
+#define MY_VAR_DECL_IF(type, name, val, cond, stmt) MY_VAR_DECL(type, name, val); MY_IF(cond, stmt)
+#define MY_VAR_DECL_SWITCH(type, name, val, tag, stmt) MY_VAR_DECL(type, name, val); MY_ONE_STMT_SWITCH(tag, stmt)
+
+void bad_macro14() {
+    MY_VAR_DECL_IF(int, i1, 0, i1 == 0,
+// CHECK-MESSAGES: [[@LINE-1]]:20: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+        do_some();
+    )
+    MY_VAR_DECL_SWITCH(int, i2, 0, i2,
+// CHECK-MESSAGES: [[@LINE-1]]:24: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
         do_some();
     )
 }
