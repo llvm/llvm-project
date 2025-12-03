@@ -412,7 +412,7 @@ def : Pat<(int_ppc_cmpxchg_i128 ForceXForm:$ptr,
                            g8rc:$new_hi))>;
 
 let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
-def STDAT : X_RD5_RS5_IM5<31, 742, (outs), (ins g8rc:$RST, g8rc:$RA, u5imm:$RB),
+def STDAT : X_RD5_RS5_IM5<31, 742, (outs), (ins g8rc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
                           "stdat $RST, $RA, $RB", IIC_LdStStore>, isPPC64,
             Requires<[IsISA3_0]>;
 

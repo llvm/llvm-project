@@ -2157,7 +2157,7 @@ def STWCX : XForm_1_memOp<31, 150, (outs), (ins gprc:$RST, (memrr $RA, $RB):$add
 }
 
 let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
-def STWAT : X_RD5_RS5_IM5<31, 710, (outs), (ins gprc:$RST, gprc:$RA, u5imm:$RB),
+def STWAT : X_RD5_RS5_IM5<31, 710, (outs), (ins gprc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
                           "stwat $RST, $RA, $RB", IIC_LdStStore>,
             Requires<[IsISA3_0]>;
 

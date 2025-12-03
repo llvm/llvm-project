@@ -11508,6 +11508,30 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getStore(DAG.getEntryNode(), DL, Op.getOperand(ArgStart + 2),
                         Op.getOperand(ArgStart + 1), MachinePointerInfo());
   }
+  case Intrinsic::ppc_amo_stwat:
+  case Intrinsic::ppc_amo_stdat: {
+    SDLoc dl(Op);
+    SDValue Chain = Op.getOperand(0);
+    SDValue Ptr = Op.getOperand(ArgStart + 1);
+    SDValue Val = Op.getOperand(ArgStart + 2);
+    SDValue FC = Op.getOperand(ArgStart + 3);
+
+    bool IsStwat =
+        Op.getConstantOperandVal(ArgStart) == Intrinsic::ppc_amo_stwat;
+    if (isa<ConstantSDNode>(Val)) {
+      MVT VT = IsStwat ? MVT::i32 : MVT::i64;
+      MachineFunction &MF = DAG.getMachineFunction();
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+      Register ValReg = MRI.createVirtualRegister(getRegClassFor(VT));
+
+      // Materialize constant Val using CopyToReg/CopyFromReg.
+      SDValue CopyChain = DAG.getCopyToReg(Chain, dl, ValReg, Val);
+      Val = DAG.getCopyFromReg(CopyChain, dl, ValReg, VT);
+    }
+    MachineSDNode *MNode = DAG.getMachineNode(IsStwat ? PPC::STWAT : PPC::STDAT,
+                                              dl, MVT::Other, {Val, Ptr, FC});
+    return SDValue(MNode, 0);
+  }
   default:
     break;
   }
