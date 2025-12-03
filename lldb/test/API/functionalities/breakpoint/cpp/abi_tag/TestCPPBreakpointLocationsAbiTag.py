@@ -15,7 +15,6 @@ class Case(TypedDict, total=True):
 
 @skipIfWindows  # abi_tags is not supported
 class TestCPPBreakpointLocationsAbiTag(TestBase):
-
     def verify_breakpoint_names(self, target: lldb.SBTarget, bp_dict: Case):
         name = bp_dict["name"]
         matches = bp_dict["matches"]
