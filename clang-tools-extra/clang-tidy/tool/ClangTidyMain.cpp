@@ -104,8 +104,7 @@ Configuration files:
 )");
 
 const char DefaultChecks[] = // Enable these checks by default:
-    "clang-diagnostic-*,"    //   * compiler diagnostics
-    "clang-analyzer-*";      //   * Static Analyzer checks
+    "clang-diagnostic-*";    //   * compiler diagnostics
 
 static cl::opt<std::string> Checks("checks", desc(R"(
 Comma-separated list of globs with optional '-'
