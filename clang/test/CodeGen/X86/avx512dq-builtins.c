@@ -378,11 +378,16 @@ unsigned int test_cvtmask8_u32(__m512i A, __m512i B) {
   return _cvtmask8_u32(_mm512_cmpneq_epu64_mask(A, B));
 }
 
+TEST_CONSTEXPR(_cvtmask8_u32((__mmask8)0x5A) == 0x5A);
+
 __mmask8 test_cvtu32_mask8(__m512i A, __m512i B, unsigned int C) {
   // CHECK-LABEL: test_cvtu32_mask8
   // CHECK: trunc i32 %{{.*}} to i8
   return _mm512_mask_cmpneq_epu64_mask(_cvtu32_mask8(C), A, B);
 }
+
+TEST_CONSTEXPR(_cvtu32_mask8(0xB7) == (__mmask8)0xB7);
+TEST_CONSTEXPR(_cvtu32_mask8(_cvtmask8_u32((__mmask8)0xDE)) == (__mmask8)0xDE);
 
 __mmask8 test_load_mask8(__mmask8 *A, __m512i B, __m512i C) {
   // CHECK-LABEL: test_load_mask8
@@ -1359,6 +1364,8 @@ __mmask16 test_mm512_movepi32_mask(__m512i __A) {
   return _mm512_movepi32_mask(__A); 
 }
 
+TEST_CONSTEXPR(_mm512_movepi32_mask(((__m512i)(__v16si){0, 1, -1, 3, 4, 5, 6, 7,8, 9, 10, 11, 12, 13, 14, -1})) == (__mmask16)0x8004);
+
 __m512i test_mm512_movm_epi32(__mmask16 __A) {
   // CHECK-LABEL: test_mm512_movm_epi32
   // CHECK: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
@@ -1378,6 +1385,8 @@ __mmask8 test_mm512_movepi64_mask(__m512i __A) {
   // CHECK: [[CMP:%.*]] = icmp slt <8 x i64> %{{.*}}, zeroinitializer
   return _mm512_movepi64_mask(__A); 
 }
+
+TEST_CONSTEXPR(_mm512_movepi64_mask(((__m512i)(__v8di){0, 1, -1, 3, 4, 5, 6, -1})) == (__mmask8)0x84);
 
 __m512 test_mm512_broadcast_f32x2(__m128 __A) {
   // CHECK-LABEL: test_mm512_broadcast_f32x2

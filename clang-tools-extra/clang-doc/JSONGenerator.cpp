@@ -12,9 +12,10 @@ class JSONGenerator : public Generator {
 public:
   static const char *Format;
 
-  Error generateDocs(StringRef RootDir,
-                     llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                     const ClangDocContext &CDCtx) override;
+  Error generateDocumentation(StringRef RootDir,
+                              llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+                              const ClangDocContext &CDCtx,
+                              std::string DirName) override;
   Error createResources(ClangDocContext &CDCtx) override;
   Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                            const ClangDocContext &CDCtx) override;
@@ -596,9 +597,9 @@ static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
   return FileName;
 }
 
-Error JSONGenerator::generateDocs(
+Error JSONGenerator::generateDocumentation(
     StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-    const ClangDocContext &CDCtx) {
+    const ClangDocContext &CDCtx, std::string DirName) {
   StringSet<> CreatedDirs;
   StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {

@@ -534,9 +534,7 @@ for.end:                                          ; preds = %for.body
 ;;    for (long unsigned j = 0; j < 2147483640; j++)
 ;;      if (i < 3000000000)
 ;;        A[i] = 0;
-;
-; FIXME: DependenceAnalysis fails to detect the dependency between A[i] and
-; itself, and the issue is not caused by the Strong SIV.
+
 define void @strong11(ptr %A) nounwind uwtable ssp {
 ; CHECK-ALL-LABEL: 'strong11'
 ; CHECK-ALL-NEXT:  Src: store i32 0, ptr %arrayidx, align 4 --> Dst: store i32 0, ptr %arrayidx, align 4

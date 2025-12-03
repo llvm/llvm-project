@@ -1197,30 +1197,22 @@ define <2 x half> @vec_round_f16(<2 x fp128> %val) {
 ;
 ; CHECK-GI-LABEL: vec_round_f16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sub sp, sp, #64
-; CHECK-GI-NEXT:    str x30, [sp, #48] // 8-byte Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-GI-NEXT:    sub sp, sp, #48
+; CHECK-GI-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    mov v2.d[0], x8
 ; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Spill
-; CHECK-GI-NEXT:    mov v2.d[1], x8
-; CHECK-GI-NEXT:    str q2, [sp, #32] // 16-byte Spill
 ; CHECK-GI-NEXT:    bl __trunctfhf2
 ; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-GI-NEXT:    bl __trunctfhf2
+; CHECK-GI-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-GI-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
-; CHECK-GI-NEXT:    bl __trunctfhf2
-; CHECK-GI-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
-; CHECK-GI-NEXT:    bl __trunctfhf2
-; CHECK-GI-NEXT:    ldp q1, q0, [sp] // 32-byte Folded Reload
-; CHECK-GI-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    add sp, sp, #64
+; CHECK-GI-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    add sp, sp, #48
 ; CHECK-GI-NEXT:    ret
   %dst = fptrunc <2 x fp128> %val to <2 x half>
   ret <2 x half> %dst

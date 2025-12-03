@@ -938,6 +938,14 @@ public:
 
   CompilerType GetTypeForFormatters(void *type) override;
 
+  // DIL
+
+  bool IsPromotableIntegerType(lldb::opaque_compiler_type_t type) override;
+
+  llvm::Expected<CompilerType>
+  DoIntegralPromotion(CompilerType from,
+                      ExecutionContextScope *exe_scope) override;
+
 #define LLDB_INVALID_DECL_LEVEL UINT32_MAX
   // LLDB_INVALID_DECL_LEVEL is returned by CountDeclLevels if child_decl_ctx
   // could not be found in decl_ctx.

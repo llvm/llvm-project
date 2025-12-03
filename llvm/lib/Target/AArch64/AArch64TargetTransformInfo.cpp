@@ -375,8 +375,13 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   assert(K != TargetTransformInfo::RGK_Scalar);
-  return (K == TargetTransformInfo::RGK_FixedWidthVector &&
-          ST->isNeonAvailable());
+
+  if (K == TargetTransformInfo::RGK_FixedWidthVector && ST->isNeonAvailable())
+    return true;
+
+  return K == TargetTransformInfo::RGK_ScalableVector &&
+         ST->isSVEorStreamingSVEAvailable() &&
+         !ST->disableMaximizeScalableBandwidth();
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper
@@ -921,8 +926,20 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (ICA.getArgs().empty())
       break;
 
-    // TODO: Add handling for fshl where third argument is not a constant.
     const TTI::OperandValueInfo OpInfoZ = TTI::getOperandInfo(ICA.getArgs()[2]);
+
+    // ROTR / ROTL is a funnel shift with equal first and second operand. For
+    // ROTR on integer registers (i32/i64) this can be done in a single ror
+    // instruction. A fshl with a non-constant shift uses a neg + ror.
+    if (RetTy->isIntegerTy() && ICA.getArgs()[0] == ICA.getArgs()[1] &&
+        (RetTy->getPrimitiveSizeInBits() == 32 ||
+         RetTy->getPrimitiveSizeInBits() == 64)) {
+      InstructionCost NegCost =
+          (ICA.getID() == Intrinsic::fshl && !OpInfoZ.isConstant()) ? 1 : 0;
+      return 1 + NegCost;
+    }
+
+    // TODO: Add handling for fshl where third argument is not a constant.
     if (!OpInfoZ.isConstant())
       break;
 
@@ -4730,12 +4747,12 @@ bool AArch64TTIImpl::prefersVectorizedAddressing() const {
 }
 
 InstructionCost
-AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
-                                      Align Alignment, unsigned AddressSpace,
+AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                       TTI::TargetCostKind CostKind) const {
+  Type *Src = MICA.getDataType();
+
   if (useNeonVector(Src))
-    return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                        CostKind);
+    return BaseT::getMaskedMemoryOpCost(MICA, CostKind);
   auto LT = getTypeLegalizationCost(Src);
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
@@ -4777,12 +4794,21 @@ static unsigned getSVEGatherScatterOverhead(unsigned Opcode,
   }
 }
 
-InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
-    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
+InstructionCost
+AArch64TTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                       TTI::TargetCostKind CostKind) const {
+
+  unsigned Opcode = (MICA.getID() == Intrinsic::masked_gather ||
+                     MICA.getID() == Intrinsic::vp_gather)
+                        ? Instruction::Load
+                        : Instruction::Store;
+
+  Type *DataTy = MICA.getDataType();
+  Align Alignment = MICA.getAlignment();
+  const Instruction *I = MICA.getInst();
+
   if (useNeonVector(DataTy) || !isLegalMaskedGatherScatter(DataTy))
-    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
+    return BaseT::getGatherScatterOpCost(MICA, CostKind);
   auto *VT = cast<VectorType>(DataTy);
   auto LT = getTypeLegalizationCost(DataTy);
   if (!LT.first.isValid())
@@ -6000,6 +6026,15 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
     SrcTy = DstTy;
   }
 
+  // Check for identity masks, which we can treat as free for both fixed and
+  // scalable vector paths.
+  if (!Mask.empty() && LT.second.isFixedLengthVector() &&
+      (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
+      all_of(enumerate(Mask), [](const auto &M) {
+        return M.value() < 0 || M.value() == (int)M.index();
+      }))
+    return 0;
+
   // Segmented shuffle matching.
   if (Kind == TTI::SK_PermuteSingleSrc && isa<FixedVectorType>(SrcTy) &&
       !Mask.empty() && SrcTy->getPrimitiveSizeInBits().isNonZero() &&
@@ -6047,21 +6082,13 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
       all_of(Mask, [](int E) { return E < 8; }))
     return getPerfectShuffleCost(Mask);
 
-  // Check for identity masks, which we can treat as free.
-  if (!Mask.empty() && LT.second.isFixedLengthVector() &&
-      (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
-      all_of(enumerate(Mask), [](const auto &M) {
-        return M.value() < 0 || M.value() == (int)M.index();
-      }))
-    return 0;
-
   // Check for other shuffles that are not SK_ kinds but we have native
   // instructions for, for example ZIP and UZP.
   unsigned Unused;
   if (LT.second.isFixedLengthVector() &&
       LT.second.getVectorNumElements() == Mask.size() &&
       (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
-      (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+      (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused, Unused) ||
        isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        isREVMask(Mask, LT.second.getScalarSizeInBits(),
                  LT.second.getVectorNumElements(), 16) ||

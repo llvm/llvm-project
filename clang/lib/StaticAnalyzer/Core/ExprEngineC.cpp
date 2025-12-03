@@ -560,6 +560,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_VectorSplat:
       case CK_HLSLElementwiseCast:
       case CK_HLSLAggregateSplatCast:
+      case CK_HLSLMatrixTruncation:
       case CK_HLSLVectorTruncation: {
         QualType resultType = CastE->getType();
         if (CastE->isGLValue())
