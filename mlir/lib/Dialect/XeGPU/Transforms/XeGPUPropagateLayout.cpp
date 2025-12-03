@@ -581,15 +581,12 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
   // Only consider vector to vector broadcasts for now.
   VectorType resultTy = broadcast.getResultVectorType();
   VectorType sourceTy = dyn_cast<VectorType>(broadcast.getSourceType());
-  if (!sourceTy) {
-    broadcast.emitWarning("Expecting source type to be a vector type.");
+  // skip layout propagation for non-vector source operand.
+  if (!sourceTy)
     return;
-  }
 
-  // Only consider nD -> nD broadcast.
+  // Hanlding broadcast from low-rank to high-rank (e.g., 1D to 2D) case.
   if (sourceTy.getRank() != resultTy.getRank()) {
-    //  broadcast.emitWarning("Expecting source and result to have same rank.");
-
     auto sourceDims = sourceTy.getShape();
     auto resultDims = resultTy.getShape();
     // adding the missing leading missing dims
