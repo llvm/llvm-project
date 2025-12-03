@@ -2705,6 +2705,47 @@ struct AMDGPUMakeDmaDescriptorLowering
   }
 };
 
+template <typename SourceOp, typename TargetD2Op, typename TargetOp>
+struct AMDGPUTensorLoadStoreOpLowering
+    : public ConvertOpToLLVMPattern<SourceOp> {
+  using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
+  using Adaptor = typename ConvertOpToLLVMPattern<SourceOp>::OneToNOpAdaptor;
+  AMDGPUTensorLoadStoreOpLowering(const LLVMTypeConverter &converter,
+                                  Chipset chipset)
+      : ConvertOpToLLVMPattern<SourceOp>(converter), chipset(chipset) {}
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(SourceOp op, Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op->emitOpError("is only supported on gfx1250");
+
+    ValueRange desc = adaptor.getDesc();
+    uint32_t temporalHint = static_cast<uint32_t>(op.getTemporalHint());
+    bool nonVolatile = static_cast<bool>(op.getNonVolatile());
+    uint32_t cacheScope = static_cast<uint32_t>(op.getCacheScope());
+    int32_t cachePolicy = cacheScope | temporalHint << 2 | nonVolatile << 5;
+
+    if (op.getDesc().getType().getSize() == 2) {
+      rewriter.replaceOpWithNewOp<TargetD2Op>(op, desc[0], desc[1],
+                                              cachePolicy,
+                                              /*alias_scopes=*/nullptr,
+                                              /*noalias_scopes=*/nullptr,
+                                              /*tbaa=*/nullptr);
+      return success();
+    }
+
+    rewriter.replaceOpWithNewOp<TargetOp>(op, desc[0], desc[1], desc[2],
+                                          desc[3], cachePolicy,
+                                          /*alias_scopes=*/nullptr,
+                                          /*noalias_scopes=*/nullptr,
+                                          /*tbaa=*/nullptr);
+
+    return success();
+  }
+};
+
 struct ConvertAMDGPUToROCDLPass
     : public impl::ConvertAMDGPUToROCDLPassBase<ConvertAMDGPUToROCDLPass> {
   using Base::Base;
@@ -2723,6 +2764,30 @@ struct ConvertAMDGPUToROCDLPass
       Type i32 = IntegerType::get(type.getContext(), 32);
       return converter.convertType(VectorType::get(4, i32));
     });
+    converter.addConversion(
+        [&](TDMDescriptorType type,
+            SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+          Type i32 = IntegerType::get(type.getContext(), 32);
+          Type v4i32 = converter.convertType(VectorType::get(4, i32));
+          Type v8i32 = converter.convertType(VectorType::get(8, i32));
+          result.push_back(v4i32);
+          result.push_back(v8i32);
+          if (type.getSize() != 2) {
+            result.push_back(v4i32);
+            result.push_back(v4i32);
+          }
+          return success();
+        });
+
+    auto addUnrealizedCast = [](OpBuilder &builder, TypeRange types,
+                                ValueRange inputs,
+                                Location loc) -> SmallVector<Value> {
+      auto cast =
+          UnrealizedConversionCastOp::create(builder, loc, types, inputs);
+      return cast.getResults();
+    };
+
+    converter.addTargetMaterialization(addUnrealizedCast);
 
     populateAMDGPUToROCDLConversionPatterns(converter, patterns, *maybeChipset);
     LLVMConversionTarget target(getContext());
@@ -2779,7 +2844,13 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
       ScaledExtPackedOpLowering, PackedScaledTruncOpLowering,
       PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
       GatherToLDSOpLowering, TransposeLoadOpLowering, AMDGPUPermlaneLowering,
-      AMDGPUMakeDmaBaseLowering, AMDGPUMakeDmaDescriptorLowering>(converter,
-                                                                  chipset);
+      AMDGPUMakeDmaBaseLowering, AMDGPUMakeDmaDescriptorLowering,
+      AMDGPUTensorLoadStoreOpLowering<TensorLoadToLDSOp,
+                                      ROCDL::TensorLoadToLDSD2Op,
+                                      ROCDL::TensorLoadToLDSOp>,
+      AMDGPUTensorLoadStoreOpLowering<TensorStoreFromLDSOp,
+                                      ROCDL::TensorStoreFromLDSD2Op,
+                                      ROCDL::TensorStoreFromLDSOp>>(converter,
+                                                                    chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }

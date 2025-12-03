@@ -80,6 +80,97 @@ def AMDGPU_AddressSpaceAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_AddressSpace,
   let assemblyFormat = "`<` $value `>`";
 }
 
+def AMDGPU_TemporalLoadHints : I32EnumAttr<"TemporalLoadHints",
+    "AMDGPU-specific temporal load hints",
+    [
+      I32EnumAttrCase<"RegularTemporal",        0, "regular">,
+      I32EnumAttrCase<"NonTemporal",            1, "nontemporal">,
+      I32EnumAttrCase<"HighPriorityTemporal",   2, "highpriority">,
+      I32EnumAttrCase<"LastUse",                3, "lastuse">,
+      I32EnumAttrCase<"NT_RT",                  4, "nontemporal_regular">,
+      I32EnumAttrCase<"RT_NT",                  5, "regular_nontemporal">,
+      I32EnumAttrCase<"NT_HT",                  6, "nontemporal_highpriority">,
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_TemporalLoadHintsAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_TemporalLoadHints,
+    "temporal_load_hint"> {
+  let description = [{
+    AMDGPU-specific temporal load hints.
+
+    - `regular_temporal` (default).
+    - `nontemporal`: re-use is not expected.
+    - `highpriority`: precedence over `regular_temporal`.
+    - `lastuse`: last-use.
+    - `nontemporal_regular`: non-temporal for near cache(s) and regular for far caches.
+    - `regular_nontemporal`: regular for near cache(s) and non-temporal for far caches.
+    - `nontemporal_highpriority`: non-temporal for near cache(s) and high priority for far caches.
+  }];
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def AMDGPU_TemporalStoreHints : I32EnumAttr<"TemporalStoreHints",
+    "AMDGPU-specific temporal store hints",
+    [
+      I32EnumAttrCase<"RegularTemporal",        0, "regular">,
+      I32EnumAttrCase<"NonTemporal",            1, "nontemporal">,
+      I32EnumAttrCase<"HighPriorityTemporal",   2, "highpriority">,
+      I32EnumAttrCase<"WriteBack",              3, "writeback">,
+      I32EnumAttrCase<"NT_RT",                  4, "nontemporal_regular">,
+      I32EnumAttrCase<"RT_NT",                  5, "regular_nontemporal">,
+      I32EnumAttrCase<"NT_HT",                  6, "nontemporal_highpriority">,
+      I32EnumAttrCase<"NT_WB",                  7, "nontemporal_writeback">,
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_TemporalStoreHintsAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_TemporalStoreHints,
+    "temporal_store_hint"> {
+  let description = [{
+    AMDGPU-specific temporal load hints.
+
+    - `regular_temporal` (default).
+    - `nontemporal`: re-use is not expected.
+    - `highpriority`: precedence over `regular_temporal`.
+    - `writeback`: same as "HT" but also overrides wr-rinse in far cache where it forces to stay dirty in cache.
+    - `nontemporal_regular`: non-temporal for near cache(s) and regular for far caches.
+    - `regular_nontemporal`: regular for near cache(s) and non-temporal for far caches.
+    - `nontemporal_highpriority`: non-temporal for near cache(s) and high priority for far caches.
+    - `nontemporal_writeback`: non-temporal for near cache(s) and WB for far cache.
+  }];
+
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def AMDGPU_CacheScope : I32EnumAttr<"CacheScope",
+    "Cache scope control enums.",
+    [
+      I32EnumAttrCase<"Workgroup",              0, "workgroup">,
+      I32EnumAttrCase<"ShaderEngine",           1, "shader_engine">,
+      I32EnumAttrCase<"Device",                 2, "device">,
+      I32EnumAttrCase<"System",                 3, "system">,
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_CacheScopeAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_CacheScope,
+    "cache_scope"> {
+  let description = [{
+    AMDGPU cache scope control enums.
+
+    - `workgroup` coherent among all VMEM threads in a workgroup.
+    - `shader_engine`: coeherent among all client (threads) sharing a SE-cache.
+    - `device`: coherent among all threads on the same device.
+    - `system`: system
+  }];
+
+  let assemblyFormat = "`<` $value `>`";
+}
+
 //===----------------------------------------------------------------------===//
 // AMDGPU Type definitions
 //===----------------------------------------------------------------------===//
@@ -1392,6 +1483,43 @@ def AMDGPU_MakeDmaDescriptorOp :
 
   let hasVerifier = 1;
   let hasFolder = 1;
+}
+
+def AMDGPU_TensorLoadToLDSOp :
+  AMDGPU_Op<"tensor_load_to_lds", [MemoryEffects<[MemWrite]>, MemoryEffects<[MemRead]>]>,
+  Arguments<(ins AMDGPU_TDMDescriptorType: $desc,
+                 DefaultValuedOptionalAttr<AMDGPU_CacheScopeAttr, "CacheScope::Workgroup">: $cache_scope,
+                 DefaultValuedOptionalAttr<AMDGPU_TemporalLoadHintsAttr, "TemporalLoadHints::RegularTemporal">: $temporal_hint,
+                 DefaultValuedOptionalAttr<BoolAttr, "false">: $non_volatile)> {
+  let summary = "Load tensors from global memory to LDS.";
+  let description = [{
+    Load tensors of up to five dimensions from global memory to LDS.
+
+    This operation was introduced in gfx1250.
+  }];
+
+  let assemblyFormat = [{
+    $desc attr-dict `:` qualified(type($desc))
+  }];
+}
+
+def AMDGPU_TensorStoreFromLDSOp :
+  AMDGPU_Op<"tensor_store_from_lds", [MemoryEffects<[MemWrite]>, MemoryEffects<[MemRead]>]>,
+  Arguments<(ins AMDGPU_TDMDescriptorType: $desc,
+                 DefaultValuedOptionalAttr<AMDGPU_CacheScopeAttr, "CacheScope::Workgroup">: $cache_scope,
+                 DefaultValuedOptionalAttr<AMDGPU_TemporalStoreHintsAttr, "TemporalStoreHints::RegularTemporal">: $temporal_hint,
+                 DefaultValuedOptionalAttr<BoolAttr, "false">: $non_volatile)> {
+
+  let summary = "Store tensors from LDS to global memory.";
+  let description = [{
+    Store tensors of up to five dimensions from LDS to global memory.
+
+    This operation was introduced in gfx1250.
+  }];
+
+  let assemblyFormat = [{
+    $desc attr-dict `:` qualified(type($desc))
+  }];
 }
 
 #endif // AMDGPU

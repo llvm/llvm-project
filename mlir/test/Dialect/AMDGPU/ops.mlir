@@ -731,7 +731,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: i16, %tim
         sharedSize [64, 64]
         // CHECK-SAME: workgroupMask %[[WG_MASK]]
         workgroupMask %wg_mask
-        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor<2>
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
@@ -745,7 +745,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: i16, %tim
         workgroupMask %wg_mask
         // CHECK-SAME: earlyTimeout %[[TIMEOUT]]
         earlyTimeout %timeout
-        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor<2>
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
