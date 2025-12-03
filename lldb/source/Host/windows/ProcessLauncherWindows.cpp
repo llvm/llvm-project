@@ -106,7 +106,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
       ::CloseHandle(stderr_handle);
   });
 
-  auto inherited_handles_or_err = GetInheritedHandlesW(
+  auto inherited_handles_or_err = GetInheritedHandles(
       launch_info, startupinfoex, stdout_handle, stderr_handle, stdin_handle);
   if (!inherited_handles_or_err) {
     error = Status(inherited_handles_or_err.getError());
