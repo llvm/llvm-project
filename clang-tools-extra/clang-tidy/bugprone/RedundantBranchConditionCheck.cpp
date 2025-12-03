@@ -132,7 +132,7 @@ void RedundantBranchConditionCheck::check(
 
     // If the other side has side effects then keep it.
     if (OtherSide && OtherSide->HasSideEffects(*Result.Context)) {
-      auto NextToken = Lexer::findNextToken(
+      const auto NextToken = Lexer::findNextToken(
           OtherSide->getEndLoc(), *Result.SourceManager, getLangOpts());
       if (NextToken) {
         const SourceLocation BeforeOtherSide =
@@ -167,7 +167,7 @@ void RedundantBranchConditionCheck::check(
       Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
           CondOp->getLHS()->getBeginLoc(), BeforeRHS));
     } else {
-      auto NextToken = Lexer::findNextToken(
+      const auto NextToken = Lexer::findNextToken(
           CondOp->getLHS()->getEndLoc(), *Result.SourceManager, getLangOpts());
       if (NextToken) {
         const SourceLocation AfterLHS = NextToken->getLocation();

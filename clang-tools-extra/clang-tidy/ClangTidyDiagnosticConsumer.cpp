@@ -239,13 +239,20 @@ static bool parseFileExtensions(llvm::ArrayRef<std::string> AllFileExtensions,
 void ClangTidyContext::setCurrentFile(StringRef File) {
   CurrentFile = std::string(File);
   CurrentOptions = getOptionsForFile(CurrentFile);
-  CheckFilter = std::make_unique<CachedGlobList>(*getOptions().Checks);
-  WarningAsErrorFilter =
-      std::make_unique<CachedGlobList>(*getOptions().WarningsAsErrors);
-  if (!parseFileExtensions(*getOptions().HeaderFileExtensions,
+  CheckFilter = std::make_unique<CachedGlobList>(
+      getOptions().Checks ? StringRef(*getOptions().Checks) : StringRef(""));
+  WarningAsErrorFilter = std::make_unique<CachedGlobList>(
+      getOptions().WarningsAsErrors ? StringRef(*getOptions().WarningsAsErrors)
+                                    : StringRef(""));
+  static const std::vector<std::string> EmptyFileExtensions;
+  if (!parseFileExtensions(getOptions().HeaderFileExtensions
+                               ? *getOptions().HeaderFileExtensions
+                               : EmptyFileExtensions,
                            HeaderFileExtensions))
     this->configurationDiag("Invalid header file extensions");
-  if (!parseFileExtensions(*getOptions().ImplementationFileExtensions,
+  if (!parseFileExtensions(getOptions().ImplementationFileExtensions
+                               ? *getOptions().ImplementationFileExtensions
+                               : EmptyFileExtensions,
                            ImplementationFileExtensions))
     this->configurationDiag("Invalid implementation file extensions");
 }
@@ -569,7 +576,7 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
     return;
   }
 
-  if (!*Context.getOptions().SystemHeaders &&
+  if (!Context.getOptions().SystemHeaders.value_or(false) &&
       (Sources.isInSystemHeader(Location) || Sources.isInSystemMacro(Location)))
     return;
 
@@ -600,15 +607,19 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
 
 llvm::Regex *ClangTidyDiagnosticConsumer::getHeaderFilter() {
   if (!HeaderFilter)
-    HeaderFilter =
-        std::make_unique<llvm::Regex>(*Context.getOptions().HeaderFilterRegex);
+    HeaderFilter = std::make_unique<llvm::Regex>(
+        Context.getOptions().HeaderFilterRegex
+            ? StringRef(*Context.getOptions().HeaderFilterRegex)
+            : StringRef(""));
   return HeaderFilter.get();
 }
 
 llvm::Regex *ClangTidyDiagnosticConsumer::getExcludeHeaderFilter() {
   if (!ExcludeHeaderFilter)
     ExcludeHeaderFilter = std::make_unique<llvm::Regex>(
-        *Context.getOptions().ExcludeHeaderFilterRegex);
+        Context.getOptions().ExcludeHeaderFilterRegex
+            ? StringRef(*Context.getOptions().ExcludeHeaderFilterRegex)
+            : StringRef(""));
   return ExcludeHeaderFilter.get();
 }
 

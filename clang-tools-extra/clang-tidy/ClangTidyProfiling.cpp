@@ -57,6 +57,7 @@ void ClangTidyProfiling::printAsJSON(llvm::raw_ostream &OS,
 
 void ClangTidyProfiling::storeProfileData(llvm::TimerGroup &TG,
                                           const StorageParams &Storage) {
+  assert(this->Storage && "We should have a filename.");
   llvm::SmallString<256> OutputDirectory(Storage.StoreFilename);
   llvm::sys::path::remove_filename(OutputDirectory);
   if (const std::error_code EC =
