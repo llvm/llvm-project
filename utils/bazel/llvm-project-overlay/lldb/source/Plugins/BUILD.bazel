@@ -2143,11 +2143,14 @@ cc_library(
         ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:CoreHeaders",
         "//lldb:Host",
         "//lldb:InterpreterHeaders",
+        "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
