@@ -795,7 +795,7 @@ private:
     // frame's file.
     if (auto maybe_file_and_line =
             target.GetSourceManager().GetDefaultFileAndLine()) {
-      file = maybe_file_and_line->support_file_sp->GetSpecOnly();
+      file = maybe_file_and_line->support_file_nsp->GetSpecOnly();
       return true;
     }
 

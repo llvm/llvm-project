@@ -174,7 +174,7 @@ getAllDBDirs(StringRef Path, bool IncludeCorrupt = false) {
     return createFileError(Path, EC);
 
   llvm::sort(FoundDBDirs, [](const DBDir &LHS, const DBDir &RHS) -> bool {
-    return LHS.Order <= RHS.Order;
+    return LHS.Order < RHS.Order;
   });
 
   SmallVector<std::string, 4> DBDirs;
@@ -330,8 +330,6 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
   if (BootTime == 0)
     if (Error E = getBootTime().moveInto(BootTime))
       return std::move(E);
-
-  std::string LogValidationError;
 
   if (ValidationBootTime == BootTime && !ForceValidation)
     return ValidationResult::Skipped;

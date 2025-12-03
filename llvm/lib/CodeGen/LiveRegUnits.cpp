@@ -20,10 +20,10 @@
 using namespace llvm;
 
 void LiveRegUnits::removeRegsNotPreserved(const uint32_t *RegMask) {
-  for (unsigned U = 0, E = TRI->getNumRegUnits(); U != E; ++U) {
+  for (MCRegUnit U : TRI->regunits()) {
     for (MCRegUnitRootIterator RootReg(U, TRI); RootReg.isValid(); ++RootReg) {
       if (MachineOperand::clobbersPhysReg(RegMask, *RootReg)) {
-        Units.reset(U);
+        Units.reset(static_cast<unsigned>(U));
         break;
       }
     }
@@ -31,10 +31,10 @@ void LiveRegUnits::removeRegsNotPreserved(const uint32_t *RegMask) {
 }
 
 void LiveRegUnits::addRegsInMask(const uint32_t *RegMask) {
-  for (unsigned U = 0, E = TRI->getNumRegUnits(); U != E; ++U) {
+  for (MCRegUnit U : TRI->regunits()) {
     for (MCRegUnitRootIterator RootReg(U, TRI); RootReg.isValid(); ++RootReg) {
       if (MachineOperand::clobbersPhysReg(RegMask, *RootReg)) {
-        Units.set(U);
+        Units.set(static_cast<unsigned>(U));
         break;
       }
     }

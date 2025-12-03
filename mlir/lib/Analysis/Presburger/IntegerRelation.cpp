@@ -1112,15 +1112,29 @@ unsigned IntegerRelation::gaussianEliminateVars(unsigned posStart,
   return posLimit - posStart;
 }
 
+static std::optional<unsigned>
+findEqualityWithNonZeroAfterRow(IntegerRelation &rel, unsigned fromRow,
+                                unsigned colIdx) {
+  assert(fromRow < rel.getNumEqualities() && colIdx < rel.getNumCols() &&
+         "position out of bounds");
+  for (unsigned rowIdx = fromRow, e = rel.getNumEqualities(); rowIdx < e;
+       ++rowIdx) {
+    if (rel.atEq(rowIdx, colIdx) != 0)
+      return rowIdx;
+  }
+  return std::nullopt;
+}
+
 bool IntegerRelation::gaussianEliminate() {
   gcdTightenInequalities();
   unsigned firstVar = 0, vars = getNumVars();
   unsigned nowDone, eqs;
   std::optional<unsigned> pivotRow;
   for (nowDone = 0, eqs = getNumEqualities(); nowDone < eqs; ++nowDone) {
-    // Finds the first non-empty column.
+    // Finds the first non-empty column that we haven't dealt with.
     for (; firstVar < vars; ++firstVar) {
-      if ((pivotRow = findConstraintWithNonZeroAt(firstVar, /*isEq=*/true)))
+      if ((pivotRow =
+               findEqualityWithNonZeroAfterRow(*this, nowDone, firstVar)))
         break;
     }
     // The matrix has been normalized to row echelon form.
@@ -1143,6 +1157,10 @@ bool IntegerRelation::gaussianEliminate() {
       inequalities.normalizeRow(i);
     }
     gcdTightenInequalities();
+
+    // The column is finished. Tell the next iteration to start at the next
+    // column.
+    firstVar++;
   }
 
   // No redundant rows.
@@ -2265,11 +2283,11 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
     newLb[d] = lbFloorDivisor;
     newUb[d] = -lbFloorDivisor;
     // Copy over the symbolic part + constant term.
-    std::copy(minLb.begin(), minLb.end(), newLb.begin() + getNumDimVars());
+    llvm::copy(minLb, newLb.begin() + getNumDimVars());
     std::transform(newLb.begin() + getNumDimVars(), newLb.end(),
                    newLb.begin() + getNumDimVars(),
                    std::negate<DynamicAPInt>());
-    std::copy(maxUb.begin(), maxUb.end(), newUb.begin() + getNumDimVars());
+    llvm::copy(maxUb, newUb.begin() + getNumDimVars());
 
     boundingLbs.emplace_back(newLb);
     boundingUbs.emplace_back(newUb);

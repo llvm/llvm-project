@@ -4456,6 +4456,10 @@ public:
       NamedDecl *New, Decl *Old,
       AvailabilityMergeKind AMK = AvailabilityMergeKind::Redeclaration);
 
+  /// CheckAttributesOnDeducedType - Calls Sema functions for attributes that
+  /// requires the type to be deduced.
+  void CheckAttributesOnDeducedType(Decl *D);
+
   /// MergeTypedefNameDecl - We just parsed a typedef 'New' which has the
   /// same name and scope as a previous declaration 'Old'.  Figure out
   /// how to resolve this situation, merging decls or emitting
@@ -4759,6 +4763,8 @@ private:
   // linkage. Callers should verify at the end of the TU if it D has external
   // linkage or not.
   static bool mightHaveNonExternalLinkage(const DeclaratorDecl *FD);
+
+#include "clang/Sema/AttrIsTypeDependent.inc"
 
   ///@}
 
@@ -5104,6 +5110,11 @@ public:
   /// been delayed in the current context instead of in the given pool.
   /// Essentially, this just moves them to the current pool.
   void redelayDiagnostics(sema::DelayedDiagnosticPool &pool);
+
+  /// Check that the type is a plain record with one field being a pointer
+  /// type and the other field being an integer. This matches the common
+  /// implementation of std::span or sized_allocation_t in P0901R11.
+  bool CheckSpanLikeType(const AttributeCommonInfo &CI, const QualType &Ty);
 
   /// Check if IdxExpr is a valid parameter index for a function or
   /// instance method D.  May output an error.
@@ -6755,6 +6766,11 @@ public:
     /// and block literals if the normal declaration context does not
     /// suffice, e.g., in a default function argument.
     Decl *ManglingContextDecl;
+
+    /// Declaration for initializer if one is currently being
+    /// parsed. Used when an expression has a possibly unreachable
+    /// diagnostic to reference the declaration as a whole.
+    VarDecl *DeclForInitializer = nullptr;
 
     /// If we are processing a decltype type, a set of call expressions
     /// for which we have deferred checking the completeness of the return type.
@@ -8704,10 +8720,6 @@ public:
   QualType CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
                                        ExprResult &RHS,
                                        SourceLocation QuestionLoc);
-
-  QualType CheckSizelessVectorConditionalTypes(ExprResult &Cond,
-                                               ExprResult &LHS, ExprResult &RHS,
-                                               SourceLocation QuestionLoc);
 
   //// Determines if a type is trivially relocatable
   /// according to the C++26 rules.
@@ -15462,6 +15474,8 @@ public:
   /// optional on error.
   std::optional<FunctionEffectMode>
   ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName);
+
+  void ActOnCleanupAttr(Decl *D, const Attr *A);
 
 private:
   /// The implementation of RequireCompleteType

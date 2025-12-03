@@ -23,16 +23,13 @@
 #include "gtest/gtest.h"
 
 #include <algorithm>
-#include <optional>
 #include <string>
 #include <vector>
 
 using namespace llvm;
 using namespace llvm::orc;
 
-// Disabled due to test setup issue — YAML to shared library creation seems
-// invalid on some build bots. (PR #165360) Not related to code logic.
-#if 0
+#if defined(__APPLE__) || defined(__linux__)
 // TODO: Add COFF (Windows) support for these tests.
 // this facility also works correctly on Windows (COFF),
 // so we should eventually enable and run these tests for that platform as well.
@@ -105,8 +102,9 @@ public:
     if (!sys::fs::exists(InputDirPath))
       return;
 
-    SmallString<128> UniqueDir;
-    sys::path::append(UniqueDir, InputDirPath);
+    SmallString<512> ExecPath(sys::fs::getMainExecutable(nullptr, nullptr));
+    sys::path::remove_filename(ExecPath);
+    SmallString<128> UniqueDir(ExecPath);
     std::error_code EC = sys::fs::createUniqueDirectory(UniqueDir, DirPath);
 
     if (EC)

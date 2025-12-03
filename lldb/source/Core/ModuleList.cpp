@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/ModuleList.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -28,6 +29,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-defines.h"
+#include "llvm/Support/ThreadPool.h"
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h"
@@ -1380,4 +1382,22 @@ void ModuleList::Swap(ModuleList &other) {
   std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lock(
       m_modules_mutex, other.m_modules_mutex);
   m_modules.swap(other.m_modules);
+}
+
+void ModuleList::PreloadSymbols(bool parallelize) const {
+  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+
+  if (!parallelize) {
+    for (const ModuleSP &module_sp : m_modules)
+      module_sp->PreloadSymbols();
+    return;
+  }
+
+  llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
+  for (const ModuleSP &module_sp : m_modules)
+    task_group.async([module_sp] {
+      if (module_sp)
+        module_sp->PreloadSymbols();
+    });
+  task_group.wait();
 }
