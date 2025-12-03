@@ -4473,7 +4473,7 @@ class Config:
                 "LIBCLANG_LIBRARY_PATH or call Config.set_library_path(). "
                 "Alternatively, you can specify the exact library file using "
                 "LIBCLANG_LIBRARY_FILE or Config.set_library_file()."
-             )
+            )
             raise LibclangError(msg)
 
         return library

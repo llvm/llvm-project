@@ -6,7 +6,6 @@ from clang.cindex import Config
 
 
 class TestEnvironementVariable(unittest.TestCase):
-
     def test_working_libclang_library_file(self):
         ref_libclang_library_file = Config().get_filename()
         with unittest.mock.patch.dict(
