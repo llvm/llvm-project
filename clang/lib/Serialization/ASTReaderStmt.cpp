@@ -1777,20 +1777,10 @@ void ASTStmtReader::VisitCXXDependentExpansionStmtPattern(
   S->setExpansionInitializer(Record.readSubExpr());
 }
 
-void ASTStmtReader::VisitCXXExpansionInitListExpr(CXXExpansionInitListExpr *E) {
-  VisitExpr(E);
-  assert(Record.peekInt() == E->getNumExprs() && "NumExprFields is wrong ?");
-  Record.skipInts(1);
-  E->LBraceLoc = readSourceLocation();
-  E->RBraceLoc = readSourceLocation();
-  for (unsigned I = 0; I < E->getNumExprs(); ++I)
-    E->getExprs()[I] = Record.readSubExpr();
-}
-
 void ASTStmtReader::VisitCXXExpansionInitListSelectExpr(
     CXXExpansionInitListSelectExpr *E) {
   VisitExpr(E);
-  E->setRangeExpr(cast<CXXExpansionInitListExpr>(Record.readSubExpr()));
+  E->setRangeExpr(cast<InitListExpr>(Record.readSubExpr()));
   E->setIndexExpr(Record.readSubExpr());
 }
 
@@ -4536,11 +4526,6 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) ConceptSpecializationExpr(Empty);
       break;
     }
-
-    case EXPR_CXX_EXPANSION_INIT_LIST:
-      S = CXXExpansionInitListExpr::CreateEmpty(
-          Context, Empty, Record[ASTStmtReader::NumExprFields]);
-      break;
 
     case EXPR_CXX_EXPANSION_INIT_LIST_SELECT:
       S = new (Context) CXXExpansionInitListSelectExpr(Empty);

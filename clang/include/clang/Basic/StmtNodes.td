@@ -187,7 +187,6 @@ def ConceptSpecializationExpr : StmtNode<Expr>;
 def RequiresExpr : StmtNode<Expr>;
 
 // C++26 Expansion statement support expressions
-def CXXExpansionInitListExpr : StmtNode<Expr>;
 def CXXExpansionInitListSelectExpr : StmtNode<Expr>;
 def CXXDestructuringExpansionSelectExpr : StmtNode<Expr>;
 

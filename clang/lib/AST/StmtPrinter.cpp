@@ -490,13 +490,6 @@ void StmtPrinter::VisitCXXExpansionStmtInstantiation(
   llvm_unreachable("should never be printed");
 }
 
-void StmtPrinter::VisitCXXExpansionInitListExpr(
-    CXXExpansionInitListExpr *Node) {
-  OS << "{ ";
-  llvm::interleaveComma(Node->getExprs(), OS, [&](Expr *E) { PrintExpr(E); });
-  OS << " }";
-}
-
 void StmtPrinter::VisitCXXExpansionInitListSelectExpr(
     CXXExpansionInitListSelectExpr *Node) {
   PrintExpr(Node->getRangeExpr());

@@ -162,28 +162,6 @@ VarDecl *CXXExpansionStmtPattern::getExpansionVariable() {
   return cast<VarDecl>(LV);
 }
 
-bool CXXExpansionStmtPattern::hasDependentSize() const {
-  if (isa<CXXEnumeratingExpansionStmtPattern>(this))
-    return cast<CXXExpansionInitListSelectExpr>(
-               getExpansionVariable()->getInit())
-        ->getRangeExpr()
-        ->containsPackExpansion();
-
-  if (auto *Iterating = dyn_cast<CXXIteratingExpansionStmtPattern>(this)) {
-    const Expr *Begin = Iterating->getBeginVar()->getInit();
-    const Expr *End = Iterating->getEndVar()->getInit();
-    return Begin->isInstantiationDependent() || End->isInstantiationDependent();
-  }
-
-  if (isa<CXXDestructuringExpansionStmtPattern>(this))
-    return false;
-
-  if (isa<CXXDependentExpansionStmtPattern>(this))
-    return true;
-
-  llvm_unreachable("Invalid expansion statement class");
-}
-
 CXXIteratingExpansionStmtPattern::CXXIteratingExpansionStmtPattern(
     EmptyShell Empty)
     : CXXExpansionStmtPattern(CXXIteratingExpansionStmtPatternClass, Empty) {}

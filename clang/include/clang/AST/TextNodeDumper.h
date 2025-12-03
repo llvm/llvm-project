@@ -314,7 +314,6 @@ public:
   VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *Node);
   void VisitCXXDestructuringExpansionSelectExpr(
       const CXXDestructuringExpansionSelectExpr *Node);
-  void VisitCXXExpansionInitListExpr(const CXXExpansionInitListExpr *Node);
   void VisitObjCAtCatchStmt(const ObjCAtCatchStmt *Node);
   void VisitObjCEncodeExpr(const ObjCEncodeExpr *Node);
   void VisitObjCMessageExpr(const ObjCMessageExpr *Node);

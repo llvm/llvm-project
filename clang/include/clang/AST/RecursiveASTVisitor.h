@@ -3130,7 +3130,6 @@ DEF_TRAVERSE_STMT(CXXIteratingExpansionStmtPattern, {})
 DEF_TRAVERSE_STMT(CXXDestructuringExpansionStmtPattern, {})
 DEF_TRAVERSE_STMT(CXXDependentExpansionStmtPattern, {})
 DEF_TRAVERSE_STMT(CXXExpansionStmtInstantiation, {})
-DEF_TRAVERSE_STMT(CXXExpansionInitListExpr, {})
 DEF_TRAVERSE_STMT(CXXExpansionInitListSelectExpr, {})
 DEF_TRAVERSE_STMT(CXXDestructuringExpansionSelectExpr, {})
 

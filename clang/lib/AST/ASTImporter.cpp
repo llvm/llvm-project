@@ -711,7 +711,6 @@ namespace clang {
     VisitSubstNonTypeTemplateParmPackExpr(SubstNonTypeTemplateParmPackExpr *E);
     ExpectedStmt VisitPseudoObjectExpr(PseudoObjectExpr *E);
     ExpectedStmt VisitCXXParenListInitExpr(CXXParenListInitExpr *E);
-    ExpectedStmt VisitCXXExpansionInitListExpr(CXXExpansionInitListExpr *E);
     ExpectedStmt
     VisitCXXExpansionInitListSelectExpr(CXXExpansionInitListSelectExpr *E);
     ExpectedStmt VisitCXXDestructuringExpansionSelectExpr(
@@ -9478,22 +9477,6 @@ ASTNodeImporter::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
   return CXXParenListInitExpr::Create(Importer.getToContext(), ToArgs, ToType,
                                       E->getUserSpecifiedInitExprs().size(),
                                       ToInitLoc, ToBeginLoc, ToEndLoc);
-}
-
-ExpectedStmt
-ASTNodeImporter::VisitCXXExpansionInitListExpr(CXXExpansionInitListExpr *E) {
-  Error Err = Error::success();
-  SmallVector<Expr *> ToExprs;
-  auto ToLBraceLoc = importChecked(Err, E->getLBraceLoc());
-  auto ToRBraceLoc = importChecked(Err, E->getRBraceLoc());
-  for (Expr *FromInst : E->getExprs())
-    ToExprs.push_back(importChecked(Err, FromInst));
-
-  if (Err)
-    return std::move(Err);
-
-  return CXXExpansionInitListExpr::Create(Importer.getToContext(), ToExprs,
-                                          ToLBraceLoc, ToRBraceLoc);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXExpansionInitListSelectExpr(

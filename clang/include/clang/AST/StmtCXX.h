@@ -586,8 +586,6 @@ public:
     return getBody() ? getBody()->getEndLoc() : RParenLoc;
   }
 
-  bool hasDependentSize() const;
-
   CXXExpansionStmtDecl *getDecl() { return ParentDecl; }
   const CXXExpansionStmtDecl *getDecl() const { return ParentDecl; }
 
@@ -632,7 +630,7 @@ public:
 /// an initializer list, but it isn't actually an expression in and of itself
 /// (in that it is never evaluated or emitted) and instead is just treated as
 /// a group of expressions. The expansion initializer of this is always a
-/// 'CXXExpansionInitListExpr'.
+/// syntactic-form 'InitListExpr'.
 ///
 /// Example:
 /// \verbatim
@@ -644,7 +642,7 @@ public:
 /// Note that the expression-list may also contain pack expansions, e.g.
 /// '{ 1, xs... }', in which case the expansion size is dependent.
 ///
-/// Here, the '{ 1, 2, 3 }' is parsed as a 'CXXExpansionInitListExpr'. This node
+/// Here, the '{ 1, 2, 3 }' is parsed as an 'InitListExpr'. This node
 /// handles storing (and pack-expanding) the individual expressions.
 ///
 /// Sema then wraps this with a 'CXXExpansionInitListSelectExpr', which also

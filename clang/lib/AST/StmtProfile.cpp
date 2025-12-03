@@ -2431,11 +2431,6 @@ void StmtProfiler::VisitSourceLocExpr(const SourceLocExpr *E) {
 
 void StmtProfiler::VisitEmbedExpr(const EmbedExpr *E) { VisitExpr(E); }
 
-void StmtProfiler::VisitCXXExpansionInitListExpr(
-    const CXXExpansionInitListExpr *E) {
-  VisitExpr(E);
-}
-
 void StmtProfiler::VisitCXXExpansionInitListSelectExpr(
     const CXXExpansionInitListSelectExpr *E) {
   VisitExpr(E);

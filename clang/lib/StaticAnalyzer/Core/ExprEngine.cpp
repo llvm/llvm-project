@@ -1757,7 +1757,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CXXDestructuringExpansionStmtPatternClass:
     case Stmt::CXXDependentExpansionStmtPatternClass:
     case Stmt::CXXExpansionStmtInstantiationClass:
-    case Stmt::CXXExpansionInitListExprClass:
     case Stmt::CXXExpansionInitListSelectExprClass:
     case Stmt::CXXDestructuringExpansionSelectExprClass:
     case Stmt::OMPCanonicalLoopClass:

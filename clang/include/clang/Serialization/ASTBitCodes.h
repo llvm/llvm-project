@@ -1942,7 +1942,6 @@ enum StmtCode {
   EXPR_CXX_FOLD,                           // CXXFoldExpr
   EXPR_CONCEPT_SPECIALIZATION,             // ConceptSpecializationExpr
   EXPR_REQUIRES,                           // RequiresExpr
-  EXPR_CXX_EXPANSION_INIT_LIST,            // CXXExpansionInitListExpr
   EXPR_CXX_EXPANSION_INIT_LIST_SELECT,     // CXXExpansionInitListSelectExpr
   EXPR_CXX_DESTRUCTURING_EXPANSION_SELECT, // CXXDestructuringExpansionSelectExpr
 

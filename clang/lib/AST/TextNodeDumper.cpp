@@ -1839,12 +1839,6 @@ void TextNodeDumper::VisitCXXDependentScopeMemberExpr(
   OS << " " << (Node->isArrow() ? "->" : ".") << Node->getMember();
 }
 
-void TextNodeDumper::VisitCXXExpansionInitListExpr(
-    const CXXExpansionInitListExpr *Node) {
-  if (Node->containsPackExpansion())
-    OS << " contains_pack";
-}
-
 void TextNodeDumper::VisitCXXDestructuringExpansionSelectExpr(
     const CXXDestructuringExpansionSelectExpr *Node) {
   dumpDeclRef(Node->getDecompositionDecl());

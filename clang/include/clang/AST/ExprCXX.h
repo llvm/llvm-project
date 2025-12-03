@@ -5499,79 +5499,6 @@ public:
   }
 };
 
-/// Represents an expansion-init-list of an enumerating expansion statement.
-///
-/// For example, in
-/// \verbatim
-///   template for (auto x : { 1, 2, 3 }) {
-///     // ...
-///   }
-/// \endverbatim
-///
-/// the '{ 1, 2, 3 }' part is parsed and stored as a 'CXXExpansionInitListExpr';
-/// syntactically, this *looks* very similar to an initializer list, but it
-/// isn't actually an expression: '{ 1, 2, 3 }' as a whole is never evaluated
-/// or emitted, only the individual expressions '1', '2', and '3' are. We still
-/// represent it as an expression in the AST for simplicity.
-///
-/// \see CXXEnumeratingExpansionStmtPattern
-class CXXExpansionInitListExpr final
-    : public Expr,
-      llvm::TrailingObjects<CXXExpansionInitListExpr, Expr *> {
-  friend class ASTStmtReader;
-  friend TrailingObjects;
-
-  const unsigned NumExprs;
-  SourceLocation LBraceLoc;
-  SourceLocation RBraceLoc;
-
-  CXXExpansionInitListExpr(EmptyShell ES, unsigned NumExprs);
-  CXXExpansionInitListExpr(ArrayRef<Expr *> Exprs, SourceLocation LBraceLoc,
-                           SourceLocation RBraceLoc);
-
-public:
-  static CXXExpansionInitListExpr *Create(const ASTContext &C,
-                                          ArrayRef<Expr *> Exprs,
-                                          SourceLocation LBraceLoc,
-                                          SourceLocation RBraceLoc);
-
-  static CXXExpansionInitListExpr *
-  CreateEmpty(const ASTContext &C, EmptyShell Empty, unsigned NumExprs);
-
-  ArrayRef<Expr *> getExprs() const { return getTrailingObjects(NumExprs); }
-  MutableArrayRef<Expr *> getExprs() { return getTrailingObjects(NumExprs); }
-  unsigned getNumExprs() const { return NumExprs; }
-
-  bool containsPackExpansion() const;
-
-  SourceLocation getBeginLoc() const { return getLBraceLoc(); }
-  SourceLocation getEndLoc() const { return getRBraceLoc(); }
-
-  SourceLocation getLBraceLoc() const { return LBraceLoc; }
-  SourceLocation getRBraceLoc() const { return RBraceLoc; }
-
-  child_range children() {
-    const_child_range CCR =
-        const_cast<const CXXExpansionInitListExpr *>(this)->children();
-    return child_range(cast_away_const(CCR.begin()),
-                       cast_away_const(CCR.end()));
-  }
-
-  const_child_range children() const {
-    Stmt **Stmts = getTrailingStmts();
-    return const_child_range(Stmts, Stmts + NumExprs);
-  }
-
-  static bool classof(const Stmt *T) {
-    return T->getStmtClass() == CXXExpansionInitListExprClass;
-  }
-
-private:
-  Stmt **getTrailingStmts() const {
-    return reinterpret_cast<Stmt **>(const_cast<Expr **>(getTrailingObjects()));
-  }
-};
-
 /// Helper that selects an expression from an expansion init list depending
 /// on the current expansion index.
 ///
@@ -5585,17 +5512,17 @@ class CXXExpansionInitListSelectExpr : public Expr {
 public:
   CXXExpansionInitListSelectExpr(EmptyShell Empty);
   CXXExpansionInitListSelectExpr(const ASTContext &C,
-                                 CXXExpansionInitListExpr *Range, Expr *Idx);
+                                 InitListExpr *Range, Expr *Idx);
 
-  CXXExpansionInitListExpr *getRangeExpr() {
-    return cast<CXXExpansionInitListExpr>(SubExprs[RANGE]);
+  InitListExpr *getRangeExpr() {
+    return cast<InitListExpr>(SubExprs[RANGE]);
   }
 
-  const CXXExpansionInitListExpr *getRangeExpr() const {
-    return cast<CXXExpansionInitListExpr>(SubExprs[RANGE]);
+  const InitListExpr *getRangeExpr() const {
+    return cast<InitListExpr>(SubExprs[RANGE]);
   }
 
-  void setRangeExpr(CXXExpansionInitListExpr *E) { SubExprs[RANGE] = E; }
+  void setRangeExpr(InitListExpr *E) { SubExprs[RANGE] = E; }
 
   Expr *getIndexExpr() { return SubExprs[INDEX]; }
   const Expr *getIndexExpr() const { return SubExprs[INDEX]; }
