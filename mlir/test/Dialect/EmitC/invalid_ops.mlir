@@ -914,3 +914,19 @@ func.func @test_for_unmatch_type(%arg0: index) {
   ) : (index, index, index) -> ()
   return
 }
+
+// -----
+
+func.func @address_of(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.address_of"(%arg0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i8>
+  return
+}
+
+// -----
+
+func.func @dereference(%arg0: !emitc.ptr<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.dereference"(%arg0) : (!emitc.ptr<i32>) -> !emitc.lvalue<i8>
+  return
+}

@@ -227,6 +227,10 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
       }
     }
 
+    // If inst is a barrier, do not propagate state to the next instruction.
+    if (inst.IsBarrier())
+      continue;
+
     // Were there any changes to the CFI while evaluating this instruction?
     if (m_curr_row_modified) {
       // Save the modified row if we don't already have a CFI row in the
@@ -530,19 +534,19 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
   case EmulateInstruction::eContextAbsoluteBranchRegister:
   case EmulateInstruction::eContextRelativeBranchImmediate: {
     if (context.GetInfoType() == EmulateInstruction::eInfoTypeISAAndImmediate &&
-        context.info.ISAAndImmediate.unsigned_data32 > 0) {
+        context.info.ISAAndImmediate.unsigned_data32 != 0) {
       m_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeISAAndImmediateSigned &&
-               context.info.ISAAndImmediateSigned.signed_data32 > 0) {
+               context.info.ISAAndImmediateSigned.signed_data32 != 0) {
       m_branch_offset = context.info.ISAAndImmediateSigned.signed_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeImmediate &&
-               context.info.unsigned_immediate > 0) {
+               context.info.unsigned_immediate != 0) {
       m_branch_offset = context.info.unsigned_immediate;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeImmediateSigned &&
-               context.info.signed_immediate > 0) {
+               context.info.signed_immediate != 0) {
       m_branch_offset = context.info.signed_immediate;
     }
   } break;
