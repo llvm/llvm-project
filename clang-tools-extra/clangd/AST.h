@@ -258,7 +258,6 @@ bool isExpandedFromParameterPack(const ParmVarDecl *D);
 /// function (e.g. `make_unique`).
 bool isLikelyForwardingFunction(FunctionTemplateDecl *FT);
 
-
 class ForwardingToConstructorVisitor
     : public RecursiveASTVisitor<ForwardingToConstructorVisitor> {
 public:
