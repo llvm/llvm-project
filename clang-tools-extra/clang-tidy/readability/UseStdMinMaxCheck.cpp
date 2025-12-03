@@ -183,6 +183,10 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
       }
     };
 
+    // Captures:
+    // if (cond) // Comment A
+    // if (cond) /* Comment A */ { ... }
+    // if (cond) /* Comment A */ x = y;
     AppendNormalized(Lexer::getSourceText(
         CharSourceRange::getCharRange(
             Lexer::getLocForEndOfToken(If->getRParenLoc(), 0, Source, LO),
@@ -191,18 +195,27 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
 
     if (const auto *CS = dyn_cast<CompoundStmt>(If->getThen())) {
       const Stmt *Inner = CS->body_front();
+
+      // Captures:
+      // if (cond) { // Comment B ... }
+      // if (cond) { /* Comment B */ x = y; }
       AppendNormalized(Lexer::getSourceText(
           CharSourceRange::getCharRange(
               Lexer::getLocForEndOfToken(CS->getBeginLoc(), 0, Source, LO),
               Inner->getBeginLoc()),
           Source, LO));
 
+      // Captures:
+      // if (cond) { x = y; // Comment C }
+      // if (cond) { x = y; /* Comment C */ }
       llvm::StringRef PostInner = Lexer::getSourceText(
           CharSourceRange::getCharRange(
               Lexer::getLocForEndOfToken(Inner->getEndLoc(), 0, Source, LO),
               CS->getEndLoc()),
           Source, LO);
 
+      // Strip the trailing semicolon to avoid fixes like:
+      // x = std::min(x, y);; // comment
       const size_t Semi = PostInner.find(';');
       if (Semi != llvm::StringRef::npos &&
           PostInner.take_front(Semi).trim().empty()) {
