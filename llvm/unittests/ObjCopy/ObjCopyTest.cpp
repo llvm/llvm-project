@@ -98,6 +98,24 @@ Sections:
 ...
 )";
 
+const char *SimpleFileELFWithSymbolYAML = R"(
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+    Size: 0x10
+Symbols:
+  - Name: foo
+    Type: STT_FUNC
+    Value: 0x1
+    Section: .foo
+...
+)";
+
 // Create ObjectFile from \p YamlCreationString and do validation using \p
 // IsValidFormat checker. \p Storage is a storage for data. \returns created
 // ObjectFile.
@@ -319,6 +337,14 @@ TEST(UpdateSection, ELF) {
   addOrUpdateSectionToFileImpl(
       SimpleFileELFYAML, [](const Binary &File) { return File.isELF(); },
       ".text", "1234", UpdateSection);
+}
+
+TEST(UpdateSectionKeepSymbols, ELF) {
+  SCOPED_TRACE("updateSectionToFileELFKeepSymbols");
+
+  addOrUpdateSectionToFileImpl(
+      SimpleFileELFWithSymbolYAML, [](const Binary &File) { return File.isELF(); },
+      ".foo", "1234", UpdateSection);
 }
 
 TEST(UpdateSection, MachO) {
