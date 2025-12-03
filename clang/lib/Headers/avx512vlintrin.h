@@ -1791,30 +1791,30 @@ _mm256_maskz_cvtpd_epi32 (__mmask8 __U, __m256d __A) {
                                              (__v4si)_mm_setzero_si128());
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128
-_mm_mask_cvtpd_ps (__m128 __W, __mmask8 __U, __m128d __A) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_mask_cvtpd_ps(__m128 __W, __mmask8 __U, __m128d __A) {
   return (__m128) __builtin_ia32_cvtpd2ps_mask ((__v2df) __A,
             (__v4sf) __W,
             (__mmask8) __U);
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128
-_mm_maskz_cvtpd_ps (__mmask8 __U, __m128d __A) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_maskz_cvtpd_ps(__mmask8 __U, __m128d __A) {
   return (__m128) __builtin_ia32_cvtpd2ps_mask ((__v2df) __A,
             (__v4sf)
             _mm_setzero_ps (),
             (__mmask8) __U);
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS256
-_mm256_mask_cvtpd_ps (__m128 __W, __mmask8 __U, __m256d __A) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_mask_cvtpd_ps(__m128 __W, __mmask8 __U, __m256d __A) {
   return (__m128)__builtin_ia32_selectps_128((__mmask8)__U,
                                              (__v4sf)_mm256_cvtpd_ps(__A),
                                              (__v4sf)__W);
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS256
-_mm256_maskz_cvtpd_ps (__mmask8 __U, __m256d __A) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_maskz_cvtpd_ps(__mmask8 __U, __m256d __A) {
   return (__m128)__builtin_ia32_selectps_128((__mmask8)__U,
                                              (__v4sf)_mm256_cvtpd_ps(__A),
                                              (__v4sf)_mm_setzero_ps());
