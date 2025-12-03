@@ -1523,9 +1523,9 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
 
       // Skip recipes that aren't single scalars and don't just have their first
       // lane used.
-      if ((!vputils::isSingleScalar(RepOrWidenR) &&
-           !vputils::onlyFirstLaneUsed(RepOrWidenR)) ||
-          RepOrWidenR->getNumUsers() == 0)
+      if (!vputils::isSingleScalar(RepOrWidenR) &&
+          (!vputils::onlyFirstLaneUsed(RepOrWidenR) ||
+           RepOrWidenR->getNumUsers() == 0))
         continue;
 
       // Skip recipes for which conversion to single-scalar does introduce
