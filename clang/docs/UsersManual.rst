@@ -2371,32 +2371,34 @@ are listed below.
    or because all objects are instances of the same class/type.
 
    Ex of IR before the optimization:
-  .. code-block:: llvm
-    %vtable = load ptr, ptr %BV, align 8, !tbaa !6
-    %0 = tail call i1 @llvm.public.type.test(ptr %vtable, metadata !"_ZTS4Base")
-    tail call void @llvm.assume(i1 %0)
-    %0 = load ptr, ptr %vtable, align 8
-    tail call void %0(ptr noundef nonnull align 8 dereferenceable(8) %BV)
-    ret void
 
-  IR after the optimization:
-  .. code-block:: llvm
-    %vtable = load ptr, ptr %BV, align 8, !tbaa !12
-      %0 = load ptr, ptr %vtable, align 8
-      %1 = icmp eq ptr %0, @_ZN4Base17virtual_function1Ev
-      br i1 %1, label %if.true.direct_targ, label %if.false.orig_indirect, !prof !15
-    if.true.direct_targ:                              ; preds = %entry
-      tail call void @_ZN4Base17virtual_function1Ev(ptr noundef nonnull align 8 dereferenceable(8) %BV)
-      br label %if.end.icp
-    if.false.orig_indirect:                           ; preds = %entry
-      tail call void %0(ptr noundef nonnull align 8 dereferenceable(8) %BV)
-      br label %if.end.icp
+   .. code-block:: llvm
+     %vtable = load ptr, ptr %BV, align 8, !tbaa !6
+     %0 = tail call i1 @llvm.public.type.test(ptr %vtable, metadata !"_ZTS4Base")
+     tail call void @llvm.assume(i1 %0)
+     %0 = load ptr, ptr %vtable, align 8
+     tail call void %0(ptr noundef nonnull align 8 dereferenceable(8) %BV)
+     ret void
 
-    if.end.icp:                                       ; preds = %if.false.orig_indirect, %if.true.direct_targ
-      ret void
-  This feature is temporarily ignored at the LLVM side when LTO is enabled.
-  TODO: Update the comment when the LLVM side supports this feature for LTO.
-  This feature is turned off by default.
+   IR after the optimization:
+
+   .. code-block:: llvm
+     %vtable = load ptr, ptr %BV, align 8, !tbaa !12
+     %0 = load ptr, ptr %vtable, align 8
+     %1 = icmp eq ptr %0, @_ZN4Base17virtual_function1Ev
+     br i1 %1, label %if.true.direct_targ, label %if.false.orig_indirect, !prof !15
+     if.true.direct_targ:                              ; preds = %entry
+       tail call void @_ZN4Base17virtual_function1Ev(ptr noundef nonnull align 8 dereferenceable(8) %BV)
+       br label %if.end.icp
+     if.false.orig_indirect:                           ; preds = %entry
+       tail call void %0(ptr noundef nonnull align 8 dereferenceable(8) %BV)
+       br label %if.end.icp
+     if.end.icp:                                       ; preds = %if.false.orig_indirect, %if.true.direct_targ
+       ret void
+
+   This feature is temporarily ignored at the LLVM side when LTO is enabled.
+   TODO: Update the comment when the LLVM side supports this feature for LTO.
+   This feature is turned off by default.
 
 .. option:: -f[no-]unique-source-file-names
 
