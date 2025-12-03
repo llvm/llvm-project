@@ -554,14 +554,14 @@ public:
 /// Here, the '{ 1, 2, 3 }' is parsed as an 'InitListExpr'. This node
 /// handles storing (and pack-expanding) the individual expressions.
 ///
-/// Sema then wraps this with a 'CXXExpansionInitListSelectExpr', which also
+/// Sema then wraps this with a 'CXXExpansionSelectExpr', which also
 /// contains a reference to an integral NTTP that is used as the expansion
 /// index; this index is either dependent (if the expansion-size is dependent),
 /// or set to a value of I in the I-th expansion during the expansion process.
 ///
-/// The actual expansion is done by 'BuildCXXExpansionInitListSelectExpr()': for
+/// The actual expansion is done by 'BuildCXXExpansionSelectExpr()': for
 /// example, during the 2nd expansion of '{ a, b, c }', I is equal to 1, and
-/// BuildCXXExpansionInitListSelectExpr(), when called via TreeTransform,
+/// BuildCXXExpansionSelectExpr(), when called via TreeTransform,
 /// 'instantiates' the expression '{ a, b, c }' to just 'b'.
 ///
 /// 2. Represents an unexpanded iterating expansion statement.
@@ -601,9 +601,8 @@ public:
 ///   }
 /// \endverbatim
 ///
-/// Sema wraps the initializer with a CXXDestructuringExpansionSelectExpr, which
-/// selects a binding based on the current expansion index; this is analogous to
-/// how 'CXXExpansionInitListSelectExpr' is used.
+/// Sema wraps the initializer with a CXXExpansionSelectExpr, which selects a
+/// binding based on the current expansion index.
 ///
 /// 4. Represents an expansion statement whose expansion-initializer is
 /// type-dependent.

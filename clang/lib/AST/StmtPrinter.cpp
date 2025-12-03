@@ -461,6 +461,8 @@ void StmtPrinter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *Node) {
     PrintExpr(Node->getRangeVar()->getInit());
   else if (Node->isDependent())
     PrintExpr(Node->getExpansionInitializer());
+  else if (Node->isDestructuring())
+    PrintExpr(Node->getDecompositionDecl()->getInit());
   else
     PrintExpr(Node->getExpansionVariable()->getInit());
 
@@ -473,14 +475,9 @@ void StmtPrinter::VisitCXXExpansionStmtInstantiation(
   llvm_unreachable("should never be printed");
 }
 
-void StmtPrinter::VisitCXXExpansionInitListSelectExpr(
-    CXXExpansionInitListSelectExpr *Node) {
+void StmtPrinter::VisitCXXExpansionSelectExpr(
+    CXXExpansionSelectExpr *Node) {
   PrintExpr(Node->getRangeExpr());
-}
-
-void StmtPrinter::VisitCXXDestructuringExpansionSelectExpr(
-    CXXDestructuringExpansionSelectExpr *Node) {
-  PrintExpr(Node->getDecompositionDecl()->getInit());
 }
 
 void StmtPrinter::VisitMSDependentExistsStmt(MSDependentExistsStmt *Node) {

@@ -313,8 +313,6 @@ public:
   void VisitSizeOfPackExpr(const SizeOfPackExpr *Node);
   void
   VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *Node);
-  void VisitCXXDestructuringExpansionSelectExpr(
-      const CXXDestructuringExpansionSelectExpr *Node);
   void VisitObjCAtCatchStmt(const ObjCAtCatchStmt *Node);
   void VisitObjCEncodeExpr(const ObjCEncodeExpr *Node);
   void VisitObjCMessageExpr(const ObjCMessageExpr *Node);

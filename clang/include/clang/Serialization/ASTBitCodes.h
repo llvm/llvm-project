@@ -1923,18 +1923,17 @@ enum StmtCode {
   EXPR_TYPE_TRAIT,                  // TypeTraitExpr
   EXPR_ARRAY_TYPE_TRAIT,            // ArrayTypeTraitIntExpr
 
-  EXPR_PACK_EXPANSION,                     // PackExpansionExpr
-  EXPR_PACK_INDEXING,                      // PackIndexingExpr
-  EXPR_SIZEOF_PACK,                        // SizeOfPackExpr
-  EXPR_SUBST_NON_TYPE_TEMPLATE_PARM,       // SubstNonTypeTemplateParmExpr
-  EXPR_SUBST_NON_TYPE_TEMPLATE_PARM_PACK,  // SubstNonTypeTemplateParmPackExpr
-  EXPR_FUNCTION_PARM_PACK,                 // FunctionParmPackExpr
-  EXPR_MATERIALIZE_TEMPORARY,              // MaterializeTemporaryExpr
-  EXPR_CXX_FOLD,                           // CXXFoldExpr
-  EXPR_CONCEPT_SPECIALIZATION,             // ConceptSpecializationExpr
-  EXPR_REQUIRES,                           // RequiresExpr
-  EXPR_CXX_EXPANSION_INIT_LIST_SELECT,     // CXXExpansionInitListSelectExpr
-  EXPR_CXX_DESTRUCTURING_EXPANSION_SELECT, // CXXDestructuringExpansionSelectExpr
+  EXPR_PACK_EXPANSION,                    // PackExpansionExpr
+  EXPR_PACK_INDEXING,                     // PackIndexingExpr
+  EXPR_SIZEOF_PACK,                       // SizeOfPackExpr
+  EXPR_SUBST_NON_TYPE_TEMPLATE_PARM,      // SubstNonTypeTemplateParmExpr
+  EXPR_SUBST_NON_TYPE_TEMPLATE_PARM_PACK, // SubstNonTypeTemplateParmPackExpr
+  EXPR_FUNCTION_PARM_PACK,                // FunctionParmPackExpr
+  EXPR_MATERIALIZE_TEMPORARY,             // MaterializeTemporaryExpr
+  EXPR_CXX_FOLD,                          // CXXFoldExpr
+  EXPR_CONCEPT_SPECIALIZATION,            // ConceptSpecializationExpr
+  EXPR_REQUIRES,                          // RequiresExpr
+  EXPR_CXX_EXPANSION_SELECT,              // CXXExpansionSelectExpr
 
   // CUDA
   EXPR_CUDA_KERNEL_CALL, // CUDAKernelCallExpr

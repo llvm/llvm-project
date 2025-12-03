@@ -9307,14 +9307,8 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtInstantiation(
 }
 
 template <typename Derived>
-ExprResult TreeTransform<Derived>::TransformCXXExpansionInitListSelectExpr(
-    CXXExpansionInitListSelectExpr *E) {
-  llvm_unreachable("TOOD");
-}
-
-template <typename Derived>
-ExprResult TreeTransform<Derived>::TransformCXXDestructuringExpansionSelectExpr(
-    CXXDestructuringExpansionSelectExpr *E) {
+ExprResult TreeTransform<Derived>::TransformCXXExpansionSelectExpr(
+    CXXExpansionSelectExpr *E) {
   llvm_unreachable("TOOD");
 }
 

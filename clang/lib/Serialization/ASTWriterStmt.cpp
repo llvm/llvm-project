@@ -1729,20 +1729,12 @@ void ASTStmtWriter::VisitCXXExpansionStmtInstantiation(
   Code = serialization::STMT_CXX_EXPANSION_INSTANTIATION;
 }
 
-void ASTStmtWriter::VisitCXXExpansionInitListSelectExpr(
-    CXXExpansionInitListSelectExpr *E) {
+void ASTStmtWriter::VisitCXXExpansionSelectExpr(
+    CXXExpansionSelectExpr *E) {
   VisitExpr(E);
   Record.AddStmt(E->getRangeExpr());
   Record.AddStmt(E->getIndexExpr());
-  Code = serialization::EXPR_CXX_EXPANSION_INIT_LIST_SELECT;
-}
-
-void ASTStmtWriter::VisitCXXDestructuringExpansionSelectExpr(
-    CXXDestructuringExpansionSelectExpr *E) {
-  VisitExpr(E);
-  Record.AddDeclRef(E->getDecompositionDecl());
-  Record.AddStmt(E->getIndexExpr());
-  Code = serialization::EXPR_CXX_DESTRUCTURING_EXPANSION_SELECT;
+  Code = serialization::EXPR_CXX_EXPANSION_SELECT;
 }
 
 void ASTStmtWriter::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {

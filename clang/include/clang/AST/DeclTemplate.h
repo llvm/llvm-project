@@ -3375,16 +3375,8 @@ public:
 /// 'CXXExpansionStmtInstantiation' is. The latter is also what's used for
 /// codegen and constant evaluation.
 ///
-/// There are three kinds of expansion statements; they correspond to three
-/// derived classes of 'CXXExpansionStmtPattern'. There is also a fourth derived
-/// class that is used if we don't know what kind of expansion statement we're
-/// dealing with (because the thing we're expanding is dependent). See the
-/// comment on those classes for more information about how they work:
-///
-///   1. CXXEnumeratingExpansionStmtPattern
-///   2. CXXIteratingExpansionStmtPattern
-///   3. CXXDestructuringExpansionStmtPattern
-///   4. CXXDependentExpansionStmtPattern
+/// There are different kinds of expansion statements; see the comment on
+/// 'CXXExpansionStmtPattern' for more information.
 ///
 /// As an example, if the user writes the following expansion statement:
 /// \verbatim
@@ -3394,10 +3386,9 @@ public:
 ///   }
 /// \endverbatim
 ///
-/// The 'CXXExpansionStmtPattern' of this particular 'CXXExpansionStmtDecl' is a
-/// 'CXXDestructuringExpansionStmtPattern', which stores, amongst other things,
-/// the declaration of the variable 'x' as well as the expansion-initializer
-/// 'a'.
+/// The 'CXXExpansionStmtPattern' of this particular 'CXXExpansionStmtDecl'
+/// stores, amongst other things, the declaration of the variable 'x' as well
+/// as the expansion-initializer 'a'.
 ///
 /// After expansion, we end up with a 'CXXExpansionStmtInstantiation' that
 /// is *equivalent* to the AST shown below. Note that only the inner '{}' (i.e.

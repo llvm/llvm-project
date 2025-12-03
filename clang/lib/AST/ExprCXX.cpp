@@ -2021,26 +2021,14 @@ CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
   setDependence(computeDependence(this));
 }
 
-CXXExpansionInitListSelectExpr::CXXExpansionInitListSelectExpr(EmptyShell Empty)
-    : Expr(CXXExpansionInitListSelectExprClass, Empty) {}
+CXXExpansionSelectExpr::CXXExpansionSelectExpr(EmptyShell Empty)
+    : Expr(CXXExpansionSelectExprClass, Empty) {}
 
-CXXExpansionInitListSelectExpr::CXXExpansionInitListSelectExpr(
+CXXExpansionSelectExpr::CXXExpansionSelectExpr(
     const ASTContext &C, InitListExpr *Range, Expr *Idx)
-    : Expr(CXXExpansionInitListSelectExprClass, C.DependentTy, VK_PRValue,
+    : Expr(CXXExpansionSelectExprClass, C.DependentTy, VK_PRValue,
            OK_Ordinary) {
   setDependence(ExprDependence::TypeValueInstantiation);
   SubExprs[RANGE] = Range;
   SubExprs[INDEX] = Idx;
-}
-
-CXXDestructuringExpansionSelectExpr::CXXDestructuringExpansionSelectExpr(
-    EmptyShell Empty)
-    : Expr(CXXDestructuringExpansionSelectExprClass, Empty) {}
-
-CXXDestructuringExpansionSelectExpr::CXXDestructuringExpansionSelectExpr(
-    const ASTContext &C, DecompositionDecl *Decomposition, Expr *Index)
-    : Expr(CXXDestructuringExpansionSelectExprClass, C.DependentTy, VK_PRValue,
-           OK_Ordinary),
-      Decomposition(Decomposition), Index(Index) {
-  setDependence(ExprDependence::TypeValueInstantiation);
 }

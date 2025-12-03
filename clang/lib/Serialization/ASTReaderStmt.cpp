@@ -1752,17 +1752,10 @@ void ASTStmtReader::VisitCXXExpansionStmtInstantiation(
   S->setShouldApplyLifetimeExtensionToSharedStmts(Record.readBool());
 }
 
-void ASTStmtReader::VisitCXXExpansionInitListSelectExpr(
-    CXXExpansionInitListSelectExpr *E) {
+void ASTStmtReader::VisitCXXExpansionSelectExpr(
+    CXXExpansionSelectExpr *E) {
   VisitExpr(E);
   E->setRangeExpr(cast<InitListExpr>(Record.readSubExpr()));
-  E->setIndexExpr(Record.readSubExpr());
-}
-
-void ASTStmtReader::VisitCXXDestructuringExpansionSelectExpr(
-    CXXDestructuringExpansionSelectExpr *E) {
-  VisitExpr(E);
-  E->setDecompositionDecl(cast<DecompositionDecl>(Record.readDeclRef()));
   E->setIndexExpr(Record.readSubExpr());
 }
 
@@ -4493,12 +4486,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     }
 
-    case EXPR_CXX_EXPANSION_INIT_LIST_SELECT:
-      S = new (Context) CXXExpansionInitListSelectExpr(Empty);
-      break;
-
-    case EXPR_CXX_DESTRUCTURING_EXPANSION_SELECT:
-      S = new (Context) CXXDestructuringExpansionSelectExpr(Empty);
+    case EXPR_CXX_EXPANSION_SELECT:
+      S = new (Context) CXXExpansionSelectExpr(Empty);
       break;
 
     case STMT_OPENACC_COMPUTE_CONSTRUCT: {

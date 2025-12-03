@@ -704,10 +704,7 @@ namespace clang {
     VisitSubstNonTypeTemplateParmPackExpr(SubstNonTypeTemplateParmPackExpr *E);
     ExpectedStmt VisitPseudoObjectExpr(PseudoObjectExpr *E);
     ExpectedStmt VisitCXXParenListInitExpr(CXXParenListInitExpr *E);
-    ExpectedStmt
-    VisitCXXExpansionInitListSelectExpr(CXXExpansionInitListSelectExpr *E);
-    ExpectedStmt VisitCXXDestructuringExpansionSelectExpr(
-        CXXDestructuringExpansionSelectExpr *E);
+    ExpectedStmt VisitCXXExpansionSelectExpr(CXXExpansionSelectExpr *E);
 
     // Helper for chaining together multiple imports. If an error is detected,
     // subsequent imports will return default constructed nodes, so that failure
@@ -9457,8 +9454,8 @@ ASTNodeImporter::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
                                       ToInitLoc, ToBeginLoc, ToEndLoc);
 }
 
-ExpectedStmt ASTNodeImporter::VisitCXXExpansionInitListSelectExpr(
-    CXXExpansionInitListSelectExpr *E) {
+ExpectedStmt ASTNodeImporter::VisitCXXExpansionSelectExpr(
+    CXXExpansionSelectExpr *E) {
   Error Err = Error::success();
   auto ToRange = importChecked(Err, E->getRangeExpr());
   auto ToIndex = importChecked(Err, E->getIndexExpr());
@@ -9466,19 +9463,7 @@ ExpectedStmt ASTNodeImporter::VisitCXXExpansionInitListSelectExpr(
     return std::move(Err);
 
   return new (Importer.getToContext())
-      CXXExpansionInitListSelectExpr(Importer.getToContext(), ToRange, ToIndex);
-}
-
-ExpectedStmt ASTNodeImporter::VisitCXXDestructuringExpansionSelectExpr(
-    CXXDestructuringExpansionSelectExpr *E) {
-  Error Err = Error::success();
-  auto ToDecompositionDecl = importChecked(Err, E->getDecompositionDecl());
-  auto ToIndex = importChecked(Err, E->getIndexExpr());
-  if (Err)
-    return std::move(Err);
-
-  return new (Importer.getToContext()) CXXDestructuringExpansionSelectExpr(
-      Importer.getToContext(), ToDecompositionDecl, ToIndex);
+      CXXExpansionSelectExpr(Importer.getToContext(), ToRange, ToIndex);
 }
 
 Error ASTNodeImporter::ImportOverriddenMethods(CXXMethodDecl *ToMethod,

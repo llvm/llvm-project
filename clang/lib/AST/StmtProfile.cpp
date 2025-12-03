@@ -2411,15 +2411,9 @@ void StmtProfiler::VisitSourceLocExpr(const SourceLocExpr *E) {
 
 void StmtProfiler::VisitEmbedExpr(const EmbedExpr *E) { VisitExpr(E); }
 
-void StmtProfiler::VisitCXXExpansionInitListSelectExpr(
-    const CXXExpansionInitListSelectExpr *E) {
+void StmtProfiler::VisitCXXExpansionSelectExpr(
+    const CXXExpansionSelectExpr *E) {
   VisitExpr(E);
-}
-
-void StmtProfiler::VisitCXXDestructuringExpansionSelectExpr(
-    const CXXDestructuringExpansionSelectExpr *E) {
-  VisitExpr(E);
-  VisitDecl(E->getDecompositionDecl());
 }
 
 void StmtProfiler::VisitRecoveryExpr(const RecoveryExpr *E) { VisitExpr(E); }
