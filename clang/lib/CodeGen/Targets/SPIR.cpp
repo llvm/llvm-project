@@ -77,8 +77,6 @@ public:
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
                                  llvm::PointerType *T,
                                  QualType QT) const override;
-  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &M) const override;
 };
 class SPIRVTargetCodeGenInfo : public CommonSPIRTargetCodeGenInfo {
 public:
@@ -292,22 +290,6 @@ CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::ConstantPointerNull::get(NPT), PT);
 }
 
-void CommonSPIRTargetCodeGenInfo::setTargetAttributes(
-    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-  if (M.getLangOpts().OpenCL || GV->isDeclaration())
-    return;
-
-  const FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
-  if (!FD)
-    return;
-
-  llvm::Function *F = dyn_cast<llvm::Function>(GV);
-  assert(F && "Expected GlobalValue to be a Function");
-
-  if (FD->hasAttr<DeviceKernelAttr>())
-    F->setCallingConv(getDeviceKernelCallingConv());
-}
-
 LangAS
 SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
                                                  const VarDecl *D) const {
@@ -341,9 +323,6 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
 
   llvm::Function *F = dyn_cast<llvm::Function>(GV);
   assert(F && "Expected GlobalValue to be a Function");
-
-  if (FD->hasAttr<DeviceKernelAttr>())
-    F->setCallingConv(getDeviceKernelCallingConv());
 
   if (!M.getLangOpts().HIP ||
       M.getTarget().getTriple().getVendor() != llvm::Triple::AMD)

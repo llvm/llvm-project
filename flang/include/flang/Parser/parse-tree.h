@@ -3384,6 +3384,12 @@ struct CompilerDirective {
     std::tuple<common::Indirection<Designator>, uint64_t> t;
   };
   EMPTY_CLASS(VectorAlways);
+  struct VectorLength {
+    TUPLE_CLASS_BOILERPLATE(VectorLength);
+    ENUM_CLASS(Kind, Auto, Fixed, Scalable);
+
+    std::tuple<std::uint64_t, Kind> t;
+  };
   struct NameValue {
     TUPLE_CLASS_BOILERPLATE(NameValue);
     std::tuple<Name, std::optional<std::uint64_t>> t;
@@ -3408,9 +3414,9 @@ struct CompilerDirective {
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
-      VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized,
-      NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline, NoInline,
-      Prefetch, IVDep>
+      VectorAlways, VectorLength, std::list<NameValue>, Unroll, UnrollAndJam,
+      Unrecognized, NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline,
+      NoInline, Prefetch, IVDep>
       u;
 };
 
