@@ -7200,9 +7200,11 @@ template <bool AllowNullValueInfo>
 std::pair<ValueInfo, GlobalValue::GUID>
 ModuleSummaryIndexBitcodeReader::getValueInfoFromValueId(unsigned ValueId) {
   auto VGI = ValueIdToValueInfoMap[ValueId];
-  // We can have a null value info for memprof callsite info records in
-  // distributed ThinLTO index files when the callee function summary is not
-  // included in the index. The bitcode writer records 0 in that case,
+  // We can have a null value info in distributed ThinLTO index files:
+  // - For memprof callsite info records when the callee function summary is not
+  //   included in the index.
+  // - For alias summary when its aliasee summary is not included in the index.
+  // The bitcode writer records 0 in these cases,
   // and the caller of this helper will set AllowNullValueInfo to true.
   assert(AllowNullValueInfo || std::get<0>(VGI));
   return VGI;
@@ -7990,10 +7992,13 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       LastSeenSummary = AS.get();
       AS->setModulePath(ModuleIdMap[ModuleId]);
 
-      auto AliaseeVI = std::get<0>(getValueInfoFromValueId(AliaseeValueId));
-      auto AliaseeInModule = TheIndex.findSummaryInModule(AliaseeVI, AS->modulePath());
-      AS->setAliasee(AliaseeVI, AliaseeInModule);
-
+      auto AliaseeVI = std::get<0>(
+          getValueInfoFromValueId</*AllowNullValueInfo*/ true>(AliaseeValueId));
+      if (AliaseeVI) {
+        auto AliaseeInModule =
+            TheIndex.findSummaryInModule(AliaseeVI, AS->modulePath());
+        AS->setAliasee(AliaseeVI, AliaseeInModule);
+      }
       ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
       LastSeenGUID = VI.getGUID();
       TheIndex.addGlobalValueSummary(VI, std::move(AS));
