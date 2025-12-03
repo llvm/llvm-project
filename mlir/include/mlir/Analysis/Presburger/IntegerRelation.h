@@ -206,29 +206,16 @@ public:
     return inequalities(i, j);
   }
 
+  unsigned getNumConstraints() const {
+    return getNumInequalities() + getNumEqualities();
+  }
+
   /// Unified indexing into the constraints. Index into the inequalities
   /// if i < getNumInequalities() and into the equalities otherwise.
   inline int64_t atConstraint64(unsigned i, unsigned j) const {
     assert(i < getNumConstraints());
     unsigned numIneqs = getNumInequalities();
     return i < numIneqs ? atIneq64(i, j) : atEq64(i - numIneqs, j);
-  }
-  inline DynamicAPInt &atConstraint(unsigned i, unsigned j) {
-    assert(i < getNumConstraints());
-    unsigned numIneqs = getNumInequalities();
-    return i < numIneqs ? atIneq(i, j) : atEq(i - numIneqs, j);
-  }
-
-  unsigned getNumConstraints() const {
-    return getNumInequalities() + getNumEqualities();
-  }
-
-  // Unified indexing into the constraints. Index into the inequalities
-  // if i < getNumInequalities() and into the equalities otherwise.
-  inline DynamicAPInt atConstraint(unsigned i, unsigned j) const {
-    assert(i < getNumConstraints());
-    unsigned numIneqs = getNumInequalities();
-    return i < numIneqs ? atIneq(i, j) : atEq(i - numIneqs, j);
   }
   inline DynamicAPInt &atConstraint(unsigned i, unsigned j) {
     assert(i < getNumConstraints());
