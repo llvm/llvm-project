@@ -41,6 +41,7 @@ using llvm::SmallVector;
 #ifdef OMPT_SUPPORT
 using namespace llvm::omp::target::ompt;
 #endif
+using namespace llvm::omp::target::debug;
 
 int AsyncInfoTy::synchronize() {
   int Result = OFFLOAD_SUCCESS;
@@ -200,10 +201,11 @@ static int32_t getParentIndex(int64_t Type) {
 
 void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                           const char *Name) {
-  DP("Call to %s for device %d requesting %zu bytes\n", Name, DeviceNum, Size);
+  ODBG(ODT_Interface) << "Call to " << Name << " for device " << DeviceNum
+                      << " requesting " << Size << " bytes";
 
   if (Size <= 0) {
-    DP("Call to %s with non-positive length\n", Name);
+    ODBG(ODT_Interface) << "Call to " << Name << " with non-positive length";
     return NULL;
   }
 
@@ -211,7 +213,7 @@ void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
 
   if (DeviceNum == omp_get_initial_device()) {
     Rc = malloc(Size);
-    DP("%s returns host ptr " DPxMOD "\n", Name, DPxPTR(Rc));
+    ODBG(ODT_Interface) << Name << " returns host ptr " << Rc;
     return Rc;
   }
 
@@ -220,23 +222,23 @@ void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
   Rc = DeviceOrErr->allocData(Size, nullptr, Kind);
-  DP("%s returns device ptr " DPxMOD "\n", Name, DPxPTR(Rc));
+  ODBG(ODT_Interface) << Name << " returns device ptr " << Rc;
   return Rc;
 }
 
 void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
                         const char *Name) {
-  DP("Call to %s for device %d and address " DPxMOD "\n", Name, DeviceNum,
-     DPxPTR(DevicePtr));
+  ODBG(ODT_Interface) << "Call to " << Name << " for device " << DeviceNum
+                      << " and address " << DevicePtr;
 
   if (!DevicePtr) {
-    DP("Call to %s with NULL ptr\n", Name);
+    ODBG(ODT_Interface) << "Call to " << Name << " with NULL ptr";
     return;
   }
 
   if (DeviceNum == omp_get_initial_device()) {
     free(DevicePtr);
-    DP("%s deallocated host ptr\n", Name);
+    ODBG(ODT_Interface) << Name << " deallocated host ptr";
     return;
   }
 
@@ -249,15 +251,16 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
                   "Failed to deallocate device ptr. Set "
                   "OFFLOAD_TRACK_ALLOCATION_TRACES=1 to track allocations.");
 
-  DP("omp_target_free deallocated device ptr\n");
+  ODBG(ODT_Interface) << "omp_target_free deallocated device ptr";
 }
 
 void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
                          const char *Name) {
-  DP("Call to %s for device %d locking %zu bytes\n", Name, DeviceNum, Size);
+  ODBG(ODT_Interface) << "Call to " << Name << " for device " << DeviceNum
+                      << " locking " << Size << " bytes";
 
   if (Size <= 0) {
-    DP("Call to %s with non-positive length\n", Name);
+    ODBG(ODT_Interface) << "Call to " << Name << " with non-positive length";
     return NULL;
   }
 
@@ -270,22 +273,23 @@ void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
   int32_t Err = 0;
   Err = DeviceOrErr->RTL->data_lock(DeviceNum, HostPtr, Size, &RC);
   if (Err) {
-    DP("Could not lock ptr %p\n", HostPtr);
+    ODBG(ODT_Interface) << "Could not lock ptr " << HostPtr;
     return nullptr;
   }
-  DP("%s returns device ptr " DPxMOD "\n", Name, DPxPTR(RC));
+  ODBG(ODT_Interface) << Name << " returns device ptr " << RC;
   return RC;
 }
 
 void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
-  DP("Call to %s for device %d unlocking\n", Name, DeviceNum);
+  ODBG(ODT_Interface) << "Call to " << Name << " for device " << DeviceNum
+                      << " unlocking";
 
   auto DeviceOrErr = PM->getDevice(DeviceNum);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
   DeviceOrErr->RTL->data_unlock(DeviceNum, HostPtr);
-  DP("%s returns\n", Name);
+  ODBG(ODT_Interface) << Name << " returns";
 }
 
 /// Call the user-defined mapper function followed by the appropriate
@@ -295,7 +299,7 @@ int targetDataMapper(ident_t *Loc, DeviceTy &Device, void *ArgBase, void *Arg,
                      void *ArgMapper, AsyncInfoTy &AsyncInfo,
                      TargetDataFuncPtrTy TargetDataFunction,
                      AttachInfoTy *AttachInfo = nullptr) {
-  DP("Calling the mapper function " DPxMOD "\n", DPxPTR(ArgMapper));
+  ODBG(ODT_Interface) << "Calling the mapper function " << ArgMapper;
 
   // The mapper function fills up Components.
   MapperComponentsTy MapperComponents;
@@ -368,12 +372,11 @@ static void *calculateTargetPointeeBase(void *HstPteeBase, void *HstPteeBegin,
   void *TgtPteeBase = reinterpret_cast<void *>(
       reinterpret_cast<uint64_t>(TgtPteeBegin) - Delta);
 
-  DP("HstPteeBase: " DPxMOD ", HstPteeBegin: " DPxMOD
-     ", Delta (HstPteeBegin - HstPteeBase): %" PRIu64 ".\n",
-     DPxPTR(HstPteeBase), DPxPTR(HstPteeBegin), Delta);
-  DP("TgtPteeBase (TgtPteeBegin - Delta): " DPxMOD ", TgtPteeBegin : " DPxMOD
-     "\n",
-     DPxPTR(TgtPteeBase), DPxPTR(TgtPteeBegin));
+  ODBG(ODT_Mapping) << "HstPteeBase: " << HstPteeBase
+                    << ", HstPteeBegin: " << HstPteeBegin
+                    << ", Delta (HstPteeBegin - HstPteeBase): " << Delta << "\n"
+                    << "TgtPteeBase (TgtPteeBegin - Delta): " << TgtPteeBase
+                    << ", TgtPteeBegin: " << TgtPteeBegin;
 
   return TgtPteeBase;
 }
@@ -453,8 +456,8 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
   // Add shadow pointer tracking
   if (!PtrTPR.getEntry()->addShadowPointer(
           ShadowPtrInfoTy{HstPtrAddr, TgtPtrAddr, TgtPteeBase, HstPtrSize})) {
-    DP("Pointer " DPxMOD " is already attached to " DPxMOD "\n",
-       DPxPTR(TgtPtrAddr), DPxPTR(TgtPteeBase));
+    ODBG(ODT_Mapping) << "Pointer " << TgtPtrAddr << " is already attached to "
+                      << TgtPteeBase;
     return OFFLOAD_SUCCESS;
   }
 
@@ -464,7 +467,7 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
   // Lambda to handle submitData result and perform final steps.
   auto HandleSubmitResult = [&](int SubmitResult) -> int {
     if (SubmitResult != OFFLOAD_SUCCESS) {
-      REPORT("Failed to update pointer on device.\n");
+      REPORT() << "Failed to update pointer on device.";
       return OFFLOAD_FAIL;
     }
 
@@ -532,8 +535,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                                 targetDataBegin, AttachInfo);
 
       if (Rc != OFFLOAD_SUCCESS) {
-        REPORT("Call to targetDataBegin via targetDataMapper for custom mapper"
-               " failed.\n");
+        REPORT() << "Call to targetDataBegin via targetDataMapper for custom "
+                    "mapper failed";
         return OFFLOAD_FAIL;
       }
 
@@ -575,9 +578,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       int64_t Alignment = getPartialStructRequiredAlignment(HstPtrBase);
       TgtPadding = (int64_t)HstPtrBegin % Alignment;
       if (TgtPadding) {
-        DP("Using a padding of %" PRId64 " bytes for begin address " DPxMOD
-           "\n",
-           TgtPadding, DPxPTR(HstPtrBegin));
+        ODBG(ODT_Mapping) << "Using a padding of " << TgtPadding
+                          << " bytes for begin address " << HstPtrBegin;
       }
     }
 
@@ -602,7 +604,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     MappingInfoTy::HDTTMapAccessorTy HDTTMap =
         Device.getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ) {
-      DP("Has a pointer entry: \n");
+      ODBG(ODT_Mapping) << "Has a pointer entry";
       // Base is address of pointer.
       //
       // Usually, the pointer is already allocated by this time.  For example:
@@ -625,9 +627,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       PointerTgtPtrBegin = PointerTpr.TargetPointer;
       IsHostPtr = PointerTpr.Flags.IsHostPointer;
       if (!PointerTgtPtrBegin) {
-        REPORT("Call to getTargetPointer returned null pointer (%s).\n",
-               HasPresentModifier ? "'present' map type modifier"
-                                  : "device failure or illegal mapping");
+        REPORT() << "Call to getTargetPointer returned null pointer ("
+                 << (HasPresentModifier ? "'present' map type modifier"
+                                        : "device failure or illegal mapping")
+                 << ")";
         return OFFLOAD_FAIL;
       }
 
@@ -660,9 +663,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // If data_size==0, then the argument could be a zero-length pointer to
     // NULL, so getOrAlloc() returning NULL is not an error.
     if (!TgtPtrBegin && (DataSize || HasPresentModifier)) {
-      REPORT("Call to getTargetPointer returned null pointer (%s).\n",
-             HasPresentModifier ? "'present' map type modifier"
-                                : "device failure or illegal mapping");
+      REPORT() << "Call to getTargetPointer returned null pointer ("
+               << (HasPresentModifier ? "'present' map type modifier"
+                                      : "device failure or illegal mapping")
+               << ").";
       return OFFLOAD_FAIL;
     }
 
@@ -868,7 +872,7 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
       DP("Inserting a data fence before the first pointer attachment.\n");
       Ret = Device.dataFence(AsyncInfo);
       if (Ret != OFFLOAD_SUCCESS) {
-        REPORT("Failed to insert data fence.\n");
+        REPORT() << "Failed to insert data fence.";
         return OFFLOAD_FAIL;
       }
     }
@@ -1040,8 +1044,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                              targetDataEnd);
 
       if (Ret != OFFLOAD_SUCCESS) {
-        REPORT("Call to targetDataEnd via targetDataMapper for custom mapper"
-               " failed.\n");
+        REPORT() << "Call to targetDataEnd via targetDataMapper for custom "
+                    "mapper failed.";
         return OFFLOAD_FAIL;
       }
 
@@ -1123,7 +1127,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, DataSize, AsyncInfo,
                                 TPR.getEntry());
       if (Ret != OFFLOAD_SUCCESS) {
-        REPORT("Copying data from device failed.\n");
+        REPORT() << "Copying data from device failed.";
         return OFFLOAD_FAIL;
       }
 
@@ -1185,7 +1189,7 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     int Ret = Device.submitData(TgtPtrBegin, HstPtrBegin, ArgSize, AsyncInfo,
                                 TPR.getEntry());
     if (Ret != OFFLOAD_SUCCESS) {
-      REPORT("Copying data to device failed.\n");
+      REPORT() << "Copying data to device failed.";
       return OFFLOAD_FAIL;
     }
     if (TPR.getEntry()) {
@@ -1208,7 +1212,7 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
                                     ShadowPtr.TgtPtrContent.data(),
                                     ShadowPtr.PtrSize, AsyncInfo);
             if (Ret != OFFLOAD_SUCCESS) {
-              REPORT("Copying data to device failed.\n");
+              REPORT() << "Copying data to device failed.";
               return OFFLOAD_FAIL;
             }
             return OFFLOAD_SUCCESS;
@@ -1226,7 +1230,7 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     int Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, ArgSize, AsyncInfo,
                                   TPR.getEntry());
     if (Ret != OFFLOAD_SUCCESS) {
-      REPORT("Copying data from device failed.\n");
+      REPORT() << "Copying data from device failed.";
       return OFFLOAD_FAIL;
     }
 
@@ -1334,8 +1338,8 @@ int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                                  targetDataUpdate);
 
       if (Ret != OFFLOAD_SUCCESS) {
-        REPORT("Call to targetDataUpdate via targetDataMapper for custom mapper"
-               " failed.\n");
+        REPORT() << "Call to targetDataUpdate via targetDataMapper for custom "
+                    "mapper failed.";
         return OFFLOAD_FAIL;
       }
 
@@ -1814,7 +1818,7 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                             ArgTypes, ArgNames, ArgMappers, AsyncInfo,
                             &AttachInfo, false /*FromMapper=*/);
   if (Ret != OFFLOAD_SUCCESS) {
-    REPORT("Call to targetDataBegin failed, abort target.\n");
+    REPORT() << "Call to targetDataBegin failed, abort target.";
     return OFFLOAD_FAIL;
   }
 
@@ -1822,7 +1826,7 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
   if (!AttachInfo.AttachEntries.empty()) {
     Ret = processAttachEntries(*DeviceOrErr, AttachInfo, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
-      REPORT("Failed to process ATTACH entries.\n");
+      REPORT() << "Failed to process ATTACH entries.";
       return OFFLOAD_FAIL;
     }
   }
@@ -1873,7 +1877,7 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
             DeviceOrErr->submitData(TgtPtrBegin, &PointerTgtPtrBegin,
                                     sizeof(void *), AsyncInfo, TPR.getEntry());
         if (Ret != OFFLOAD_SUCCESS) {
-          REPORT("Copying data to device failed.\n");
+          REPORT() << "Copying data to device failed.";
           return OFFLOAD_FAIL;
         }
       }
@@ -1936,9 +1940,10 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
           /*TgtArgsIndex=*/TgtArgs.size(), HstPtrName, AllocImmediately,
           HstPteeBase, HstPteeBegin, /*IsCorrespondingPointerInit=*/IsAttach);
       if (Ret != OFFLOAD_SUCCESS) {
-        REPORT("Failed to process %s%sprivate argument " DPxMOD "\n",
-               IsAttach ? "corresponding-pointer-initialization " : "",
-               (IsFirstPrivate ? "first-" : ""), DPxPTR(HstPtrBegin));
+        REPORT() << "Failed to process "
+                 << (IsAttach ? "corresponding-pointer-initialization " : "")
+                 << (IsFirstPrivate ? "first-" : "") << "private argument "
+                 << HstPtrBegin << ".";
         return OFFLOAD_FAIL;
       }
     } else {
@@ -1991,7 +1996,7 @@ static int processDataAfter(ident_t *Loc, int64_t DeviceId, void *HostPtr,
   int Ret = targetDataEnd(Loc, *DeviceOrErr, ArgNum, ArgBases, Args, ArgSizes,
                           ArgTypes, ArgNames, ArgMappers, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
-    REPORT("Call to targetDataEnd failed, abort target.\n");
+    REPORT() << "Call to targetDataEnd failed, abort target.";
     return OFFLOAD_FAIL;
   }
 
@@ -2003,7 +2008,7 @@ static int processDataAfter(ident_t *Loc, int64_t DeviceId, void *HostPtr,
            std::move(PrivateArgumentManager)]() mutable -> int {
         int Ret = PrivateArgumentManager.free();
         if (Ret != OFFLOAD_SUCCESS) {
-          REPORT("Failed to deallocate target memory for private args\n");
+          REPORT() << "Failed to deallocate target memory for private args";
           return OFFLOAD_FAIL;
         }
         return Ret;
@@ -2066,7 +2071,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                             KernelArgs.ArgNames, KernelArgs.ArgMappers, TgtArgs,
                             TgtOffsets, PrivateArgumentManager, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
-      REPORT("Failed to process data before launching the kernel.\n");
+      REPORT() << "Failed to process data before launching the kernel.";
       return OFFLOAD_FAIL;
     }
 
@@ -2118,7 +2123,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                            KernelArgs.ArgNames, KernelArgs.ArgMappers,
                            PrivateArgumentManager, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
-      REPORT("Failed to process data after launching the kernel.\n");
+      REPORT() << "Failed to process data after launching the kernel.";
       return OFFLOAD_FAIL;
     }
   }
