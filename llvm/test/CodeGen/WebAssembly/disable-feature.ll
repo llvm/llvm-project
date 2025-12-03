@@ -13,8 +13,6 @@ define i8 @not_use_extend8_s(i8 %v, i8 %x) {
 ; CHECK-NEXT:    i32.const 24
 ; CHECK-NEXT:    i32.shr_s
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 255
-; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.shr_s
 ; CHECK-NEXT:    # fallthrough-return
   %a = ashr i8 %v, %x
