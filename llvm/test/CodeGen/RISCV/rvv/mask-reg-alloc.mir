@@ -24,8 +24,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:vr = COPY $v0
     %1:vr = COPY $v1
-    %2:vr = COPY $v2
-    %3:vr = COPY $v3
+    %2:vrnov0 = COPY $v2
+    %3:vrnov0 = COPY $v3
     %4:vmv0 = COPY %0
     %5:vrnov0 = PseudoVMERGE_VIM_M1 undef $noreg, killed %2, 1, %4, 1, 3
     %6:vmv0 = COPY %1
