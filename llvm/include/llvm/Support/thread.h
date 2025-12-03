@@ -51,7 +51,11 @@ class thread {
 public:
 #ifdef LLVM_ON_UNIX
   using native_handle_type = pthread_t;
+#ifdef __MVS__
+  using id = unsigned long long;
+#else
   using id = pthread_t;
+#endif
   using start_routine_type = void *(*)(void *);
 
   template <typename CalleeTuple> static void *ThreadProxy(void *Ptr) {
@@ -97,7 +101,13 @@ public:
     return *this;
   }
 
-  bool joinable() const noexcept { return Thread != native_handle_type(); }
+  bool is_null() const noexcept {
+    return get_id() == 0;
+  }
+
+  bool joinable() const noexcept {
+    return !is_null();
+  }
 
   inline id get_id() const noexcept;
 
@@ -133,7 +143,7 @@ thread::thread(std::optional<unsigned> StackSizeInBytes, Function &&f,
 
   Thread = llvm_execute_on_thread_impl(ThreadProxy<CalleeTuple>, Callee.get(),
                                        StackSizeInBytes);
-  if (Thread != native_handle_type())
+  if (!is_null())
     Callee.release();
 }
 
