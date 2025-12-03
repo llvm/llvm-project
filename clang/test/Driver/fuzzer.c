@@ -50,6 +50,8 @@
 // CHECK-SHARED-LIBSAN: -lm
 // RUN: %clang -fsanitize=fuzzer -static-libsan --target=x86_64-linux-gnu %s -### 2>&1 | FileCheck --check-prefixes=CHECK-STATIC-LIBSAN %s
 // CHECK-STATIC-LIBSAN: -lm
+// RUN: %clang -fsanitize=fuzzer --target=x86_64-linux-gnu %s -### 2>&1 | FileCheck --check-prefixes=CHECK-DEFAULT-LIBSAN %s
+// CHECK-DEFAULT-LIBSAN: -lm
 
 int LLVMFuzzerTestOneInput(const char *Data, long Size) {
   return 0;
