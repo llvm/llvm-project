@@ -9581,6 +9581,15 @@ __mmask16 test_kshiftri_mask16(__m512i A, __m512i B, __m512i C, __m512i D) {
   return _mm512_mask_cmpneq_epu32_mask(_kshiftri_mask16(_mm512_cmpneq_epu32_mask(A, B), 1), C, D);
 }
 
+TEST_CONSTEXPR(_kshiftli_mask16(0x0001, 1) == 0x0002);
+TEST_CONSTEXPR(_kshiftli_mask16(0x0001, 15) == 0x8000);
+TEST_CONSTEXPR(_kshiftli_mask16(0x0001, 16) == 0x0000);
+TEST_CONSTEXPR(_kshiftli_mask16(0x00FF, 4) == 0x0FF0);
+TEST_CONSTEXPR(_kshiftri_mask16(0x8000, 1) == 0x4000);
+TEST_CONSTEXPR(_kshiftri_mask16(0x8000, 15) == 0x0001);
+TEST_CONSTEXPR(_kshiftri_mask16(0x8000, 16) == 0x0000);
+TEST_CONSTEXPR(_kshiftri_mask16(0xFF00, 4) == 0x0FF0);
+
 unsigned int test_cvtmask16_u32(__m512i A, __m512i B) {
   // CHECK-LABEL: test_cvtmask16_u32
   // CHECK: bitcast <16 x i1> %{{.*}} to i16

@@ -372,6 +372,15 @@ __mmask8 test_kshiftri_mask8(__m512i A, __m512i B, __m512i C, __m512i D) {
   return _mm512_mask_cmpneq_epu64_mask(_kshiftri_mask8(_mm512_cmpneq_epu64_mask(A, B), 2), C, D);
 }
 
+TEST_CONSTEXPR(_kshiftli_mask8(0x01, 1) == 0x02);
+TEST_CONSTEXPR(_kshiftli_mask8(0x01, 7) == 0x80);
+TEST_CONSTEXPR(_kshiftli_mask8(0x01, 8) == 0x00);
+TEST_CONSTEXPR(_kshiftli_mask8(0x0F, 2) == 0x3C);
+TEST_CONSTEXPR(_kshiftri_mask8(0x80, 1) == 0x40);
+TEST_CONSTEXPR(_kshiftri_mask8(0x80, 7) == 0x01);
+TEST_CONSTEXPR(_kshiftri_mask8(0x80, 8) == 0x00);
+TEST_CONSTEXPR(_kshiftri_mask8(0xF0, 2) == 0x3C);
+
 unsigned int test_cvtmask8_u32(__m512i A, __m512i B) {
   // CHECK-LABEL: test_cvtmask8_u32
   // CHECK: zext i8 %{{.*}} to i32
