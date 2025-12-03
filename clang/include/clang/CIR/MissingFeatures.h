@@ -190,6 +190,10 @@ struct MissingFeatures {
   static bool globalCtorAssociatedData() { return false; }
 
   // Misc
+  static bool aarch64SIMDIntrinsics() { return false; }
+  static bool aarch64SMEIntrinsics() { return false; }
+  static bool aarch64SVEIntrinsics() { return false; }
+  static bool aarch64TblBuiltinExpr() { return false; }
   static bool abiArgInfo() { return false; }
   static bool addAutoInitAnnotation() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
@@ -293,6 +297,7 @@ struct MissingFeatures {
   static bool metaDataNode() { return false; }
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
+  static bool neonSISDIntrinsics() { return false; }
   static bool nrvo() { return false; }
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }

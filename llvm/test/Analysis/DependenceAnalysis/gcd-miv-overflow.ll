@@ -24,7 +24,9 @@
 define void @gcdmiv_coef_ovfl(ptr %A, i64 %m) {
 ; CHECK-ALL-LABEL: 'gcdmiv_coef_ovfl'
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - consistent output [0]!
+; CHECK-ALL-NEXT:    Runtime Assumptions:
+; CHECK-ALL-NEXT:    Compare predicate: (3 * %m) ne) 0
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
