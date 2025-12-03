@@ -5259,10 +5259,13 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
         return {LargestIntTy, true, nullptr};
 
       // If there are only intrinsic users, try to represent as a legal integer
-      // type because we are probably just copying data around and the integer can
-      // be promoted.
+      // type because we are probably just copying data around and the integer
+      // can be promoted.
       if (OnlyIntrinsicUsers && DL.isLegalInteger(P.size() * 8))
-        return {Type::getIntNTy(*C, P.size() * 8), isIntegerWideningViable(P, Type::getIntNTy(*C, P.size() * 8), DL), nullptr};
+        return {
+            Type::getIntNTy(*C, P.size() * 8),
+            isIntegerWideningViable(P, Type::getIntNTy(*C, P.size() * 8), DL),
+            nullptr};
 
       // Fallback to TypePartitionTy and we probably won't promote.
       return {TypePartitionTy, false, nullptr};
