@@ -288,6 +288,16 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
 
 static constexpr const llvm::StringLiteral kUndefLocation = "undef";
 static constexpr const llvm::StringLiteral kUndefLocationFormatted = "<undef>";
+static void
+AddVariableAnnotationToVector(std::vector<VariableAnnotation> &annotations,
+                              VariableAnnotation annotation_entity,
+                              const bool is_live) {
+  annotation_entity.is_live = is_live;
+  if (!is_live) {
+    annotation_entity.location_description = kUndefLocation;
+  }
+  annotations.push_back(std::move(annotation_entity));
+}
 
 // For each instruction, this block attempts to resolve in-scope variables
 // and determine if the current PC falls within their
@@ -330,12 +340,8 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
 
   // If we lost module context, mark all live variables as UndefLocation.
   if (!module_sp) {
-    for (const auto &KV : m_live_vars) {
-      VariableAnnotation annotation_entity = KV.second;
-      annotation_entity.is_live = false;
-      annotation_entity.location_description = kUndefLocation;
-      annotations.push_back(std::move(annotation_entity));
-    }
+    for (const auto &KV : m_live_vars)
+      AddVariableAnnotationToVector(annotations, KV.second, false);
     m_live_vars.clear();
     return annotations;
   }
@@ -347,12 +353,8 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
   if (!module_sp->ResolveSymbolContextForAddress(iaddr, mask, sc) ||
       !sc.function) {
     // No function context: everything dies here.
-    for (const auto &KV : m_live_vars) {
-      VariableAnnotation annotation_entity = KV.second;
-      annotation_entity.is_live = false;
-      annotation_entity.location_description = kUndefLocation;
-      annotations.push_back(std::move(annotation_entity));
-    }
+    for (const auto &KV : m_live_vars)
+      AddVariableAnnotationToVector(annotations, KV.second, false);
     m_live_vars.clear();
     return annotations;
   }
@@ -437,15 +439,11 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
     auto it = m_live_vars.find(KV.first);
     if (it == m_live_vars.end()) {
       // Newly live.
-      VariableAnnotation annotation_entity = KV.second;
-      annotation_entity.is_live = true;
-      annotations.push_back(std::move(annotation_entity));
+      AddVariableAnnotationToVector(annotations, KV.second, true);
     } else if (it->second.location_description !=
                KV.second.location_description) {
       // Location changed.
-      VariableAnnotation annotation_entity = KV.second;
-      annotation_entity.is_live = true;
-      annotations.push_back(std::move(annotation_entity));
+      AddVariableAnnotationToVector(annotations, KV.second, true);
     }
   }
 
@@ -453,10 +451,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
   // UndefLocation.
   for (const auto &KV : m_live_vars)
     if (!current_vars.count(KV.first)) {
-      auto annotation_entity = KV.second;
-      annotation_entity.is_live = false;
-      annotation_entity.location_description = kUndefLocation;
-      annotations.push_back(std::move(annotation_entity));
+      AddVariableAnnotationToVector(annotations, KV.second, false);
     }
 
   // Commit new state.
