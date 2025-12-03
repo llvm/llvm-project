@@ -5,10 +5,11 @@ during its initialization.
 
 import os
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import TestBase
 from lldbsuite.test import lldbutil
 
-
+@skipIf(oslist=["linux"], archs=["arm$"])
 class FrameProviderCircularDependencyTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
