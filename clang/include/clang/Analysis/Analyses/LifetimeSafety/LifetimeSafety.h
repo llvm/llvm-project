@@ -26,8 +26,6 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
-#include "llvm/Support/raw_ostream.h"
-#include <string>
 
 namespace clang::lifetimes {
 

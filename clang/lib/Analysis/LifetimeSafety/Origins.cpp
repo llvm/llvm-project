@@ -30,27 +30,25 @@ class MissingOriginCollector
 public:
   MissingOriginCollector(
       const llvm::DenseMap<const clang::Expr *, OriginID> &ExprToOriginId,
-      llvm::StringMap<unsigned> &ExprStmtClassToMissingOriginCount,
-      llvm::StringMap<unsigned> &ExprTypeToMissingOriginCount)
-      : ExprToOriginId(ExprToOriginId),
-        ExprStmtClassToMissingOriginCount(ExprStmtClassToMissingOriginCount),
-        ExprTypeToMissingOriginCount(ExprTypeToMissingOriginCount) {}
+      LifetimeSafetyStats &LSStats)
+      : ExprToOriginId(ExprToOriginId), LSStats(LSStats) {}
   bool VisitExpr(Expr *E) {
     if (!hasOrigin(E))
       return true;
     // Check if we have an origin for this expression.
     if (!ExprToOriginId.contains(E)) {
       // No origin found: count this as missing origin.
-      ExprTypeToMissingOriginCount[std::string(E->getType().getAsString())]++;
-      ExprStmtClassToMissingOriginCount[std::string(E->getStmtClassName())]++;
+      LSStats.ExprTypeToMissingOriginCount[std::string(
+          E->getType().getAsString())]++;
+      LSStats.ExprStmtClassToMissingOriginCount[std::string(
+          E->getStmtClassName())]++;
     }
     return true;
   }
 
 private:
   const llvm::DenseMap<const clang::Expr *, OriginID> &ExprToOriginId;
-  llvm::StringMap<unsigned> &ExprStmtClassToMissingOriginCount;
-  llvm::StringMap<unsigned> &ExprTypeToMissingOriginCount;
+  LifetimeSafetyStats &LSStats;
 };
 } // namespace
 
@@ -137,9 +135,7 @@ void OriginManager::collectMissingOrigins(Stmt *FunctionBody,
   if (!FunctionBody)
     return;
 
-  MissingOriginCollector Collector(this->ExprToOriginID,
-                                   LSStats.ExprStmtClassToMissingOriginCount,
-                                   LSStats.ExprTypeToMissingOriginCount);
+  MissingOriginCollector Collector(this->ExprToOriginID, LSStats);
   Collector.TraverseStmt(const_cast<Stmt *>(FunctionBody));
 }
 
