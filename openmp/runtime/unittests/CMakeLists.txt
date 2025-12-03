@@ -1,34 +1,68 @@
 add_custom_target(OpenMPUnitTests)
 set_target_properties(OpenMPUnitTests PROPERTIES FOLDER "OpenMP/Tests")
 
-if(NOT TARGET llvm_gtest)
-  message(WARNING "OpenMP unittests disabled due to GTest being unavailable; "
-                  "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
-  return()
-endif()
-if(NOT TARGET omp_testing)
-  message(WARNING "OpenMP unittests disabled due to omp_testing library being unavailable")
+if(WIN32 OR STUBS_LIBRARY)
+  message(WARNING "OpenMP unittests disabled due to stub library or Windows")
   return()
 endif()
 
-function(add_openmp_unittest test_filename)
-  add_unittest(OpenMPUnitTests ${test_filename} ${ARGN})
+# Build a testing version of libomp that exports all symbols for unit tests.
+# This library uses the same compiled objects as libomp, but with all symbols
+# exported to allow testing internal functions.
+
+libomp_get_ldflags(LIBOMP_TEST_LDFLAGS)
+libomp_get_libflags(LIBOMP_TEST_LIBFLAGS)
+# Replace the libomp exports with the test exports exporting all symbols.
+if(LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  string(REPLACE "${LIBOMP_SRC_DIR}/exports_so.txt"
+                  "${LIBOMP_SRC_DIR}/exports_test_so.txt"
+                  LIBOMP_TEST_LDFLAGS "${LIBOMP_TEST_LDFLAGS}")
+endif()
+# Duplicate setting of LIBOMP_LINKER_LANGUAGE to match libomp.
+if(NOT ${LIBOMP_USE_STDCPPLIB})
+  set(LIBOMP_LINKER_LANGUAGE C)
+  set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES)
+else()
+  set(LIBOMP_LINKER_LANGUAGE CXX)
+endif()
+
+# Create the testing library from the same objects as libomp.
+add_library(omp_testing SHARED $<TARGET_OBJECTS:obj.omp>)
+set_property(TARGET omp_testing PROPERTY FOLDER "OpenMP/Libraries")
+target_link_libraries(omp_testing PUBLIC default_gtest)
+target_link_libraries(omp_testing PUBLIC ${LIBOMP_TEST_LIBFLAGS} ${LIBOMP_DL_LIBS})
+set_target_properties(omp_testing PROPERTIES
+  PREFIX "" SUFFIX "" OUTPUT_NAME "libomp_testing${LIBOMP_LIBRARY_SUFFIX}"
+  LINK_FLAGS "${LIBOMP_TEST_LDFLAGS}"
+  LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
+  EXCLUDE_FROM_ALL TRUE  # Don't build by default, only when tests need it
+)
+target_include_directories(omp_testing PUBLIC
+  ${LIBOMP_INCLUDE_DIR}
+  ${LIBOMP_SRC_DIR}
+)
+
+# Make the targets default_gtest and default_gtest_main available.
+build_gtest()
+
+function(add_openmp_unittest test_name)
+  add_unittest(OpenMPUnitTests ${test_name} ${ARGN})
 
   # Link against the testing library which exports all symbols.
-  target_link_libraries(${test_filename} PRIVATE omp_testing)
-  add_dependencies(${test_filename} omp_testing)
+  target_link_libraries(${test_name} PRIVATE omp_testing)
 
-  target_include_directories(${test_filename} PRIVATE
-    ${LIBOMP_INCLUDE_DIR}
-    ${LIBOMP_SRC_DIR}
-  )
+  if(TARGET default_gtest)
+    target_link_libraries(${test_name} PRIVATE default_gtest_main default_gtest)
+  else ()
+    target_link_libraries(${test_name} PRIVATE llvm_gtest_main llvm_gtest)
+  endif ()
 endfunction()
 
 configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_SOURCE_DIR}/../test/Unit/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
   MAIN_CONFIG
-  ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/../test/Unit/lit.cfg.py
 )
 
 add_openmp_testsuite(
@@ -36,7 +70,7 @@ add_openmp_testsuite(
   "Running libomp unit tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   EXCLUDE_FROM_CHECK_ALL
-  DEPENDS OpenMPUnitTests omp
+  DEPENDS OpenMPUnitTests
 )
 
-add_subdirectory(src)
+add_subdirectory(String)
