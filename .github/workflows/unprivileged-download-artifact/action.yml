@@ -76,7 +76,7 @@ runs:
 
             artifact_ids.push(artifact_to_download.id)
             artifact_urls.push('"' + url_response.url + '"')
-            artifact_names.push(artifact_to_download.name)
+            artifact_names.push('"' + artifact_to_download.name + '"')
           }
 
           core.setOutput("urls", artifact_urls.join(" "));
@@ -96,7 +96,7 @@ runs:
     - shell: bash
       if: steps.artifact-url.outputs.names != ''
       run: |
-        artifact_names (${{ steps.artifact-url.outputs.names }})
+        artifact_names=(${{ steps.artifact-url.outputs.names }})
         for name in "${artifact_urls[@]}"; do
           unzip "${name}.zip"
         done
