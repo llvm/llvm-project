@@ -2999,11 +2999,11 @@ bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
   InstructionCost OldCost =
       TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0), CostKind) +
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleDstTy,
-                         IntrinsicSrcTy, Mask, CostKind);
+                         IntrinsicSrcTy, Mask, CostKind, 0, nullptr, {V0, V1},
+                         &I);
 
   SmallVector<Type *> NewArgsTy;
   InstructionCost NewCost = 0;
-
   for (unsigned I = 0, E = II0->arg_size(); I != E; ++I) {
     if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
       NewArgsTy.push_back(II0->getArgOperand(I)->getType());
@@ -3013,7 +3013,8 @@ bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
                                          ShuffleDstTy->getNumElements());
       NewArgsTy.push_back(ArgTy);
       NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
-                                    ArgTy, VecTy, Mask, CostKind);
+                                    ArgTy, VecTy, Mask, CostKind, 0, nullptr,
+                                    {II0->getArgOperand(I)});
     }
   }
   IntrinsicCostAttributes NewAttr(IID, ShuffleDstTy, NewArgsTy);

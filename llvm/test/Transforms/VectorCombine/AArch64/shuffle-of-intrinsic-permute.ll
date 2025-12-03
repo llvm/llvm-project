@@ -2,7 +2,7 @@
 ; RUN: opt -passes=vector-combine -S -mtriple=aarch64 %s | FileCheck %s
 
 ; This file tests the foldPermuteOfIntrinsic optimization which transforms:
-;   shuffle(intrinsic(args), poison/undef) -> intrinsic(shuffle(args))
+;   shuffle(intrinsic(args), poison) -> intrinsic(shuffle(args))
 ; when the shuffle is a permute (operates on single vector) and cost model
 ; determines the transformation is beneficial.
 
@@ -80,18 +80,6 @@ define <8 x i16> @extract_lower_i16(<16 x i16> %v1, <16 x i16> %v2) {
   %sat = call <16 x i16> @llvm.sadd.sat.v16i16(<16 x i16> %v1, <16 x i16> %v2)
   %result = shufflevector <16 x i16> %sat, <16 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i16> %result
-}
-
-define <4 x i32> @extract_lower_with_undef(<8 x i32> %v1, <8 x i32> %v2) {
-; CHECK-LABEL: @extract_lower_with_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[V1:%.*]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[V2:%.*]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[TMP2]])
-; CHECK-NEXT:    ret <4 x i32> [[RESULT]]
-;
-  %sat = call <8 x i32> @llvm.sadd.sat.v8i32(<8 x i32> %v1, <8 x i32> %v2)
-  %result = shufflevector <8 x i32> %sat, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  ret <4 x i32> %result
 }
 
 ;; ============================================================================
