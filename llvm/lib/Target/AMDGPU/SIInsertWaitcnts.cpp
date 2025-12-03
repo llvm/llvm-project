@@ -785,6 +785,8 @@ private:
       auto STy = getSgprScoresIdx(T);
       for (MCRegUnit RU : regunits(Reg))
         SGPRs[RU].Scores[STy] = Val;
+    } else {
+      llvm_unreachable("Register cannot be tracked/unknown register!");
     }
   }
 
@@ -808,7 +810,7 @@ private:
   // The score tracking logic is fragmented as follows:
   // - VMem: VGPR RegUnits and LDS DMA IDs, see the VMEMID encoding.
   // - SGPRs: SGPR RegUnits
-  // - SCC
+  // - SCC: Non-allocatable and not general purpose: not a SGPR.
   //
   // For the VMem case, if the key is within the range of LDS DMA IDs,
   // then the corresponding index into the `LDSDMAStores` vector below is:
