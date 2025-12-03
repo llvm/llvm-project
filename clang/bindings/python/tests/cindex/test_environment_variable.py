@@ -46,10 +46,16 @@ class TestEnvironementVariable(unittest.TestCase):
         with unittest.mock.patch.dict(
             os.environ, {"LIBCLANG_LIBRARY_PATH": ref_libclang_library_path}
         ):
+            # Remove LIBCLANG_LIBRARY_FILE to avoid it taking precedence if set by the user
+            # Need to be in the mocked environement
+            os.environ.pop("LIBCLANG_LIBRARY_FILE", None)
             reset_import_and_get_frech_config().lib
 
     @unittest.mock.patch.dict("os.environ", {"LIBCLANG_LIBRARY_PATH": "not_a_real_dir"})
-    def _test_non_working_libclang_library_path(self):
+    def test_non_working_libclang_library_path(self):
+        # Remove LIBCLANG_LIBRARY_FILE to avoid it taking precedence if set by the user
+        os.environ.pop("LIBCLANG_LIBRARY_FILE", None)
+
         config = reset_import_and_get_frech_config()
         import clang.cindex
 
