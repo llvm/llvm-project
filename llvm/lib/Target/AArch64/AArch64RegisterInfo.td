@@ -1341,6 +1341,10 @@ def Z_q  : RegisterOperand<ZPR,  "printTypedVectorList<0,'q'>"> {
   let ParserMatchClass = ZPRVectorList<128, 1>;
 }
 
+def ZZ_Any  : RegisterOperand<ZPR2, "printTypedVectorList<0,0>"> {
+  let ParserMatchClass = ZPRVectorList<0, 2>;
+}
+
 def ZZ_b  : RegisterOperand<ZPR2, "printTypedVectorList<0,'b'>"> {
   let ParserMatchClass = ZPRVectorList<8, 2>;
 }
@@ -1359,6 +1363,10 @@ def ZZ_d  : RegisterOperand<ZPR2, "printTypedVectorList<0,'d'>"> {
 
 def ZZ_q  : RegisterOperand<ZPR2, "printTypedVectorList<0,'q'>"> {
   let ParserMatchClass = ZPRVectorList<128, 2>;
+}
+
+def ZZZ_Any  : RegisterOperand<ZPR3, "printTypedVectorList<0,0>"> {
+  let ParserMatchClass = ZPRVectorList<0, 3>;
 }
 
 def ZZZ_b  : RegisterOperand<ZPR3, "printTypedVectorList<0,'b'>"> {

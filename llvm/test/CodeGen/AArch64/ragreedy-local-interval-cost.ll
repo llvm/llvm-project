@@ -81,7 +81,7 @@ define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-NEXT:    stp q7, q23, [sp, #32] // 32-byte Folded Spill
 ; CHECK-NEXT:    ldr x14, [x14, #8]
 ; CHECK-NEXT:    mul x0, x17, x17
-; CHECK-NEXT:    ldr q23, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q23, [sp, #80] // 16-byte Reload
 ; CHECK-NEXT:    mov v9.16b, v30.16b
 ; CHECK-NEXT:    mov v30.16b, v25.16b
 ; CHECK-NEXT:    mov v25.16b, v20.16b
@@ -114,7 +114,7 @@ define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-NEXT:    fmov d5, x20
 ; CHECK-NEXT:    mul x6, x15, x15
 ; CHECK-NEXT:    add v23.2d, v23.2d, v0.2d
-; CHECK-NEXT:    ldr q0, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #64] // 16-byte Reload
 ; CHECK-NEXT:    mov v1.d[1], x3
 ; CHECK-NEXT:    mul x7, x15, x5
 ; CHECK-NEXT:    add v0.2d, v0.2d, v15.2d
@@ -123,19 +123,19 @@ define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-NEXT:    fmov d4, x6
 ; CHECK-NEXT:    mul x19, x16, x5
 ; CHECK-NEXT:    stp q0, q23, [sp, #64] // 32-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #96] // 16-byte Reload
 ; CHECK-NEXT:    fmov d3, x7
-; CHECK-NEXT:    ldr q23, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q23, [sp, #48] // 16-byte Reload
 ; CHECK-NEXT:    mul x17, x2, x15
 ; CHECK-NEXT:    add v0.2d, v0.2d, v15.2d
-; CHECK-NEXT:    ldr q15, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q15, [sp] // 16-byte Reload
 ; CHECK-NEXT:    mov v5.d[1], x0
 ; CHECK-NEXT:    mov v4.d[1], x6
 ; CHECK-NEXT:    mul x16, x16, x15
 ; CHECK-NEXT:    mov v3.d[1], x7
 ; CHECK-NEXT:    add v15.2d, v15.2d, v1.2d
 ; CHECK-NEXT:    mov v2.d[1], x19
-; CHECK-NEXT:    str q0, [sp, #96] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #96] // 16-byte Spill
 ; CHECK-NEXT:    mov v1.16b, v6.16b
 ; CHECK-NEXT:    mul x14, x14, x15
 ; CHECK-NEXT:    mov v6.16b, v20.16b
@@ -188,7 +188,7 @@ define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-NEXT:    ldp x20, x19, [sp, #176] // 16-byte Folded Reload
 ; CHECK-NEXT:    stp q10, q13, [x8, #64]
 ; CHECK-NEXT:    stp q28, q18, [x8]
-; CHECK-NEXT:    ldr q18, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q18, [sp, #96] // 16-byte Reload
 ; CHECK-NEXT:    stp q29, q12, [x8, #96]
 ; CHECK-NEXT:    ldp d13, d12, [sp, #128] // 16-byte Folded Reload
 ; CHECK-NEXT:    stp q18, q15, [x8, #32]

@@ -131,6 +131,9 @@ struct FindHostArray
     return (*this)(x.base());
   }
   Result operator()(const Symbol &symbol) const {
+    if (symbol.IsFuncResult()) {
+      return nullptr;
+    }
     if (const auto *details{
             symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
       if (details->IsArray() &&

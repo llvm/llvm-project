@@ -210,11 +210,9 @@ void ProcessGDBRemote::Terminate() {
 lldb::ProcessSP ProcessGDBRemote::CreateInstance(
     lldb::TargetSP target_sp, ListenerSP listener_sp,
     const FileSpec *crash_file_path, bool can_connect) {
-  lldb::ProcessSP process_sp;
-  if (crash_file_path == nullptr)
-    process_sp = std::shared_ptr<ProcessGDBRemote>(
-        new ProcessGDBRemote(target_sp, listener_sp));
-  return process_sp;
+  if (crash_file_path)
+    return nullptr; // Cannot create a GDBRemote process from a crash_file
+  return lldb::ProcessSP(new ProcessGDBRemote(target_sp, listener_sp));
 }
 
 void ProcessGDBRemote::DumpPluginHistory(Stream &s) {
@@ -3672,6 +3670,12 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     }
   }
 #endif
+
+  if (!FileSystem::Instance().Exists(debugserver_path))
+    return Status::FromErrorString("could not find '" DEBUGSERVER_BASENAME
+                                   "'. Please ensure it is properly installed "
+                                   "and available in your PATH");
+
   debugserver_launch_info.SetExecutableFile(debugserver_path,
                                             /*add_exe_file_as_first_arg=*/true);
 

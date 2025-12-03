@@ -13,8 +13,12 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
-; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[DATA]], align 8
-; VF2-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[DATA]], align 8
+; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[DATA]], align 8
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
+; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+; VF2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[STRIDED_VEC]], <2 x i64> [[STRIDED_VEC1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[DATA]], align 8
 ; VF2-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br label %[[EXIT:.*]]

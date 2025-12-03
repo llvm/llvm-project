@@ -247,6 +247,9 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // Set to true if the builtin has a parameter that models floating-point
   // rounding mode control
   bit HasFRMRoundModeOp = false;
+
+  // TWiden for XSfmm.
+  int TWiden = 0;
 }
 
 // This is the code emitted in the header.

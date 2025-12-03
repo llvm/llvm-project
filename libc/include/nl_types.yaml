@@ -1,7 +1,11 @@
 header: nl_types.h
 standards:
   - posix
-macros: []
+macros:
+  - macro_name: NL_SETD
+    macro_header: nl-types-macros.h
+  - macro_name: NL_CAT_LOCALE
+    macro_header: nl-types-macros.h
 types:
   - type_name: nl_catd
 enums: []

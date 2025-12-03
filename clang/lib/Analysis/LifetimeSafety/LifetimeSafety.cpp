@@ -41,6 +41,7 @@ void LifetimeSafetyAnalysis::run() {
   const CFG &Cfg = *AC.getCFG();
   DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
                                        /*ShowColors=*/true));
+  FactMgr.init(Cfg);
 
   FactsGenerator FactGen(FactMgr, AC);
   FactGen.run();

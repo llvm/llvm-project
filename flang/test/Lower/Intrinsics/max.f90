@@ -31,8 +31,8 @@ module max_test
     ! CHECK:    fir.result %[[VAL_36]] : !fir.array<?xi32>
     ! CHECK:  }
       print *, max(a, b, c)
-    end subroutine 
-    
+    end subroutine
+
     ! CHECK-LABEL: func @_QMmax_testPdynamic_optional_array_expr_scalar_optional(
     ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"},
     ! CHECK-SAME:  %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"},
@@ -60,8 +60,8 @@ module max_test
     ! CHECK:    %[[VAL_30:.*]] = fir.array_update %[[VAL_21]], %[[VAL_26]], %[[VAL_20]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
     ! CHECK:    fir.result %[[VAL_30]] : !fir.array<?xi32>
     ! CHECK:  }
-    end subroutine 
-    
+    end subroutine
+
     ! CHECK-LABEL: func @_QMmax_testPdynamic_optional_scalar(
     ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "a"},
     ! CHECK-SAME:  %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "b"},
@@ -84,8 +84,8 @@ module max_test
     ! CHECK:    fir.result %[[VAL_12]] : i32
     ! CHECK:  }
     ! CHECK:  fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[VAL_13]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
-    end subroutine 
-    
+    end subroutine
+
     ! CHECK-LABEL: func @_QMmax_testPdynamic_optional_weird(
     ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "a"},
     ! CHECK-SAME:  %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "b"},
@@ -123,9 +123,9 @@ module max_test
     ! CHECK:    fir.result %[[VAL_23]] : i32
     ! CHECK:  }
     ! CHECK:  fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[VAL_24]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
-    end subroutine 
+    end subroutine
     end module
-    
+
       use :: max_test
       integer :: a(4) = [1,12,23, 34]
       integer :: b(4) = [31,22,13, 4]

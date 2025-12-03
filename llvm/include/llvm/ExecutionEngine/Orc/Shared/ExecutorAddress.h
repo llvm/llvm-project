@@ -34,7 +34,7 @@ using ExecutorAddrDiff = uint64_t;
 class ExecutorAddr {
 public:
   /// A wrap/unwrap function that leaves pointers unmodified.
-  using rawPtr = llvm::identity_cxx20;
+  using rawPtr = llvm::identity;
 
 #if __has_feature(ptrauth_calls)
   template <typename T> class PtrauthSignDefault {

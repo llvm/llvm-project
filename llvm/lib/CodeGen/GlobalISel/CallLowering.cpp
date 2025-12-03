@@ -196,6 +196,10 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
     assert(Info.CFIType->getType()->isIntegerTy(32) && "Invalid CFI type");
   }
 
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_deactivation_symbol)) {
+    Info.DeactivationSymbol = cast<GlobalValue>(Bundle->Inputs[0]);
+  }
+
   Info.CB = &CB;
   Info.KnownCallees = CB.getMetadata(LLVMContext::MD_callees);
   Info.CallConv = CallConv;
@@ -292,7 +296,8 @@ void CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   LLVMContext &Ctx = OrigArg.Ty->getContext();
 
   SmallVector<EVT, 4> SplitVTs;
-  ComputeValueVTs(*TLI, DL, OrigArg.Ty, SplitVTs, Offsets, 0);
+  ComputeValueVTs(*TLI, DL, OrigArg.Ty, SplitVTs, /*MemVTs=*/nullptr, Offsets,
+                  0);
 
   if (SplitVTs.size() == 0)
     return;
@@ -996,7 +1001,7 @@ void CallLowering::insertSRetLoads(MachineIRBuilder &MIRBuilder, Type *RetTy,
 
   SmallVector<EVT, 4> SplitVTs;
   SmallVector<uint64_t, 4> Offsets;
-  ComputeValueVTs(*TLI, DL, RetTy, SplitVTs, &Offsets, 0);
+  ComputeValueVTs(*TLI, DL, RetTy, SplitVTs, /*MemVTs=*/nullptr, &Offsets, 0);
 
   assert(VRegs.size() == SplitVTs.size());
 
@@ -1028,7 +1033,7 @@ void CallLowering::insertSRetStores(MachineIRBuilder &MIRBuilder, Type *RetTy,
 
   SmallVector<EVT, 4> SplitVTs;
   SmallVector<uint64_t, 4> Offsets;
-  ComputeValueVTs(*TLI, DL, RetTy, SplitVTs, &Offsets, 0);
+  ComputeValueVTs(*TLI, DL, RetTy, SplitVTs, /*MemVTs=*/nullptr, &Offsets, 0);
 
   assert(VRegs.size() == SplitVTs.size());
 

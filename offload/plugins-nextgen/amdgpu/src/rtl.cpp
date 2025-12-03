@@ -2083,6 +2083,20 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
     ComputeUnitKind = GPUName;
 
+    // From the ROCm HSA documentation:
+    // Query the UUID of the agent. The value is an Ascii string with a maximum
+    // of 21 chars including NUL. The string value consists of two parts: header
+    // and body. The header identifies the device type (GPU, CPU, DSP) while the
+    // body encodes the UUID as a 16 digit hex string.
+    //
+    // Agents that do not support UUID will return the string "GPU-XX" or
+    // "CPU-XX" or "DSP-XX" depending on their device type.
+    char UUID[24] = {0};
+    if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_UUID, UUID))
+      return Err;
+    if (!StringRef(UUID).ends_with("-XX"))
+      setDeviceUidFromVendorUid(UUID);
+
     // Get the wavefront size.
     uint32_t WavefrontSize = 0;
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_WAVEFRONT_SIZE, WavefrontSize))
@@ -2171,6 +2185,16 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // detect if device is an APU.
     if (auto Err = checkIfAPU())
       return Err;
+
+    // Retrieve the size of the group memory.
+    for (const auto *Pool : AllMemoryPools) {
+      if (Pool->isGroup()) {
+        if (auto Err = Pool->getAttr(HSA_AMD_MEMORY_POOL_INFO_SIZE,
+                                     MaxBlockSharedMemSize))
+          return Err;
+        break;
+      }
+    }
 
     return Plugin::success();
   }
@@ -2909,6 +2933,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (Status == HSA_STATUS_SUCCESS)
       Info.add("Cacheline Size", TmpUInt);
 
+    Info.add("Max Shared Memory per Work Group", MaxBlockSharedMemSize, "bytes",
+             DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
+
     Status = getDeviceAttrRaw(HSA_AMD_AGENT_INFO_MAX_CLOCK_FREQUENCY, TmpUInt);
     if (Status == HSA_STATUS_SUCCESS)
       Info.add("Max Clock Freq", TmpUInt, "MHz",
@@ -3062,6 +3089,30 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return ((IsAPU || OMPX_ApuMaps) && IsXnackEnabled);
   }
 
+  Expected<bool> isAccessiblePtrImpl(const void *Ptr, size_t Size) override {
+    hsa_amd_pointer_info_t Info;
+    Info.size = sizeof(hsa_amd_pointer_info_t);
+
+    hsa_agent_t *Agents = nullptr;
+    uint32_t Count = 0;
+    hsa_status_t Status =
+        hsa_amd_pointer_info(Ptr, &Info, malloc, &Count, &Agents);
+
+    if (auto Err = Plugin::check(Status, "error in hsa_amd_pointer_info: %s"))
+      return std::move(Err);
+
+    // Checks if the pointer is known by HSA and accessible by the device
+    for (uint32_t i = 0; i < Count; i++) {
+      if (Agents[i].handle == getAgent().handle)
+        return Info.sizeInBytes >= Size;
+    }
+
+    // If the pointer is unknown to HSA it's assumed a host pointer
+    // in that case the device can access it on unified memory support is
+    // enabled
+    return IsXnackEnabled;
+  }
+
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
     Value = StackSize;
@@ -3069,17 +3120,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
   Error setDeviceStackSize(uint64_t Value) override {
     StackSize = Value;
-    return Plugin::success();
-  }
-  Error getDeviceHeapSize(uint64_t &Value) override {
-    Value = DeviceMemoryPoolSize;
-    return Plugin::success();
-  }
-  Error setDeviceHeapSize(uint64_t Value) override {
-    for (DeviceImageTy *Image : LoadedImages)
-      if (auto Err = setupDeviceMemoryPool(Plugin, *Image, Value))
-        return Err;
-    DeviceMemoryPoolSize = Value;
     return Plugin::success();
   }
   Error getDeviceMemorySize(uint64_t &Value) override {
@@ -3282,9 +3322,6 @@ private:
 
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;
-
-  /// The current size of the global device memory pool (managed by us).
-  uint64_t DeviceMemoryPoolSize = 1L << 29L /*512MB=*/;
 
   /// The current size of the stack that will be used in cases where it could
   /// not be statically determined.

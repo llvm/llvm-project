@@ -99,6 +99,7 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -130,6 +131,8 @@ STATISTIC(NumUniqueRetVal, "Number of unique return value optimizations");
 STATISTIC(NumVirtConstProp1Bit,
           "Number of 1 bit virtual constant propagations");
 STATISTIC(NumVirtConstProp, "Number of virtual constant propagations");
+DEBUG_COUNTER(CallsToDevirt, "calls-to-devirt",
+              "Controls how many calls should be devirtualized.");
 
 namespace llvm {
 
@@ -218,14 +221,6 @@ static cl::opt<bool> WholeProgramDevirtKeepUnreachableFunction(
     "wholeprogramdevirt-keep-unreachable-function",
     cl::desc("Regard unreachable functions as possible devirtualize targets."),
     cl::Hidden, cl::init(true));
-
-/// If explicitly specified, the devirt module pass will stop transformation
-/// once the total number of devirtualizations reach the cutoff value. Setting
-/// this option to 0 explicitly will do 0 devirtualization.
-static cl::opt<unsigned> WholeProgramDevirtCutoff(
-    "wholeprogramdevirt-cutoff",
-    cl::desc("Max number of devirtualizations for devirt module pass"),
-    cl::init(0));
 
 /// Mechanism to add runtime checking of devirtualization decisions, optionally
 /// trapping or falling back to indirect call on any that are not correct.
@@ -376,9 +371,6 @@ VirtualCallTarget::VirtualCallTarget(GlobalValue *Fn, const TypeMemberInfo *TM)
       WasDevirt(false) {}
 
 namespace {
-
-// Tracks the number of devirted calls in the IR transformation.
-static unsigned NumDevirtCalls = 0;
 
 // A slot in a set of virtual tables. The TypeID identifies the set of virtual
 // tables, and the ByteOffset is the offset in bytes from the address point to
@@ -948,16 +940,16 @@ void llvm::updateVCallVisibilityInIndex(
     // linker, as we have no information on their eventual use.
     if (DynamicExportSymbols.count(P.first))
       continue;
+    // With validation enabled, we want to exclude symbols visible to regular
+    // objects. Local symbols will be in this group due to the current
+    // implementation but those with VCallVisibilityTranslationUnit will have
+    // already been marked in clang so are unaffected.
+    if (VisibleToRegularObjSymbols.count(P.first))
+      continue;
     for (auto &S : P.second.getSummaryList()) {
       auto *GVar = dyn_cast<GlobalVarSummary>(S.get());
       if (!GVar ||
           GVar->getVCallVisibility() != GlobalObject::VCallVisibilityPublic)
-        continue;
-      // With validation enabled, we want to exclude symbols visible to regular
-      // objects. Local symbols will be in this group due to the current
-      // implementation but those with VCallVisibilityTranslationUnit will have
-      // already been marked in clang so are unaffected.
-      if (VisibleToRegularObjSymbols.count(P.first))
         continue;
       GVar->setVCallVisibility(GlobalObject::VCallVisibilityLinkageUnit);
     }
@@ -1161,14 +1153,10 @@ bool DevirtIndex::tryFindVirtualCallTargets(
     // and therefore the same GUID. This can happen if there isn't enough
     // distinguishing path when compiling the source file. In that case we
     // conservatively return false early.
+    if (P.VTableVI.hasLocal() && P.VTableVI.getSummaryList().size() > 1)
+      return false;
     const GlobalVarSummary *VS = nullptr;
-    bool LocalFound = false;
     for (const auto &S : P.VTableVI.getSummaryList()) {
-      if (GlobalValue::isLocalLinkage(S->linkage())) {
-        if (LocalFound)
-          return false;
-        LocalFound = true;
-      }
       auto *CurVS = cast<GlobalVarSummary>(S->getBaseObject());
       if (!CurVS->vTableFuncs().empty() ||
           // Previously clang did not attach the necessary type metadata to
@@ -1184,6 +1172,7 @@ bool DevirtIndex::tryFindVirtualCallTargets(
         // with public LTO visibility.
         if (VS->getVCallVisibility() == GlobalObject::VCallVisibilityPublic)
           return false;
+        break;
       }
     }
     // There will be no VS if all copies are available_externally having no
@@ -1219,15 +1208,13 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         continue;
 
       // Stop when the number of devirted calls reaches the cutoff.
-      if (WholeProgramDevirtCutoff.getNumOccurrences() > 0 &&
-          NumDevirtCalls >= WholeProgramDevirtCutoff)
-        return;
+      if (!DebugCounter::shouldExecute(CallsToDevirt))
+        continue;
 
       if (RemarksEnabled)
         VCallSite.emitRemark("single-impl",
                              TheFn->stripPointerCasts()->getName(), OREGetter);
       NumSingleImpl++;
-      NumDevirtCalls++;
       auto &CB = VCallSite.CB;
       assert(!CB.getCalledFunction() && "devirtualizing direct call?");
       IRBuilder<> Builder(&CB);
@@ -1411,9 +1398,8 @@ bool DevirtIndex::trySingleImplDevirt(MutableArrayRef<ValueInfo> TargetsForSlot,
 
   // If the summary list contains multiple summaries where at least one is
   // a local, give up, as we won't know which (possibly promoted) name to use.
-  for (const auto &S : TheFn.getSummaryList())
-    if (GlobalValue::isLocalLinkage(S->linkage()) && Size > 1)
-      return false;
+  if (TheFn.hasLocal() && Size > 1)
+    return false;
 
   // Collect functions devirtualized at least for one call site for stats.
   if (PrintSummaryDevirt || AreStatisticsEnabled())
@@ -2590,6 +2576,11 @@ bool DevirtModule::run() {
 void DevirtIndex::run() {
   if (ExportSummary.typeIdCompatibleVtableMap().empty())
     return;
+
+  // Assert that we haven't made any changes that would affect the hasLocal()
+  // flag on the GUID summary info.
+  assert(!ExportSummary.withInternalizeAndPromote() &&
+         "Expect index-based WPD to run before internalization and promotion");
 
   DenseMap<GlobalValue::GUID, std::vector<StringRef>> NameByGUID;
   for (const auto &P : ExportSummary.typeIdCompatibleVtableMap()) {

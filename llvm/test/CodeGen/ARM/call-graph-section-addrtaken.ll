@@ -14,7 +14,6 @@ entry:
 }
 
 ; CHECK: _ZL10myCallbacki:
-; CHECK-NEXT: [[LABEL_FUNC:\.Lfunc_begin[0-9]+]]:
 define internal void @_ZL10myCallbacki(i32 %value) !type !2 {
 entry:
   %sink = alloca i32, align 4
@@ -27,13 +26,13 @@ entry:
 !1 = !{i64 0, !"_ZTSFivE.generalized"}
 !2 = !{i64 0, !"_ZTSFviE.generalized"}
 
-; CHECK: .section .llvm.callgraph,"o",%progbits,.text
+; CHECK: .section .llvm.callgraph,"o",%llvm_call_graph,.text
 ;; Version
 ; CHECK-NEXT: .byte   0
 ;; Flags -- Potential indirect target so LSB is set to 1. Other bits are 0.
 ; CHECK-NEXT: .byte   1
 ;; Function Entry PC
-; CHECK-NEXT: .long   [[LABEL_FUNC]]
+; CHECK-NEXT: .long _ZL10myCallbacki
 ;; Function type ID -5212364466660467813
 ; CHECK-NEXT: .long	1154849691
 ; CHECK-NEXT: .long	3081369122

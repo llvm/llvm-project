@@ -304,13 +304,6 @@
 // AMX-COMPLEX: "-target-feature" "+amx-complex"
 // NO-AMX-COMPLEX: "-target-feature" "-amx-complex"
 
-// RUN: %clang --target=x86_64-unknown-linux-gnu -mamx-transpose %s \
-// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-TRANSPOSE %s
-// RUN: %clang --target=x86_64-unknown-linux-gnu -mno-amx-transpose %s \
-// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-TRANSPOSE %s
-// AMX-TRANSPOSE: "-target-feature" "+amx-transpose"
-// NO-AMX-TRANSPOSE: "-target-feature" "-amx-transpose"
-
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mamx-avx512 %s \
 // RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-AVX512 %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mno-amx-avx512 %s \

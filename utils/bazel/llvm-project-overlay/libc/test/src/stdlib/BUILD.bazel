@@ -174,6 +174,7 @@ libc_test_library(
     deps = [
         "//libc:__support_cpp_type_traits",
         "//libc:__support_fputil_fp_bits",
+        "//libc:__support_macros_properties_architectures",
         "//libc/test/UnitTest:LibcUnitTest",
     ],
 )

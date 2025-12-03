@@ -25,8 +25,8 @@ export namespace std {
 
     using std::chrono::duration_values;
 
-    // using std::chrono::is_clock;
-    // using std::chrono::is_clock_v;
+    using std::chrono::is_clock;
+    using std::chrono::is_clock_v;
 
     // [time.duration.nonmember], duration arithmetic
     using std::chrono::operator+;

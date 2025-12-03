@@ -43,8 +43,8 @@ namespace llvm {
   template <typename T>
   class Registry {
   public:
-    typedef T type;
-    typedef SimpleRegistryEntry<T> entry;
+    using type = T;
+    using entry = SimpleRegistryEntry<T>;
 
     class node;
     class iterator;

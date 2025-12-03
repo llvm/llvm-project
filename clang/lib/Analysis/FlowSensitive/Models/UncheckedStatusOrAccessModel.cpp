@@ -137,6 +137,81 @@ static auto valueOperatorCall() {
                     isStatusOrOperatorCallWithName("->")));
 }
 
+static clang::ast_matchers::TypeMatcher statusType() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return hasCanonicalType(qualType(hasDeclaration(statusClass())));
+}
+
+static auto isComparisonOperatorCall(llvm::StringRef operator_name) {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxOperatorCallExpr(
+      hasOverloadedOperatorName(operator_name), argumentCountIs(2),
+      hasArgument(0, anyOf(hasType(statusType()), hasType(statusOrType()))),
+      hasArgument(1, anyOf(hasType(statusType()), hasType(statusOrType()))));
+}
+
+static auto isOkStatusCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return callExpr(callee(functionDecl(hasName("::absl::OkStatus"))));
+}
+
+static auto isNotOkStatusCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return callExpr(callee(functionDecl(hasAnyName(
+      "::absl::AbortedError", "::absl::AlreadyExistsError",
+      "::absl::CancelledError", "::absl::DataLossError",
+      "::absl::DeadlineExceededError", "::absl::FailedPreconditionError",
+      "::absl::InternalError", "::absl::InvalidArgumentError",
+      "::absl::NotFoundError", "::absl::OutOfRangeError",
+      "::absl::PermissionDeniedError", "::absl::ResourceExhaustedError",
+      "::absl::UnauthenticatedError", "::absl::UnavailableError",
+      "::absl::UnimplementedError", "::absl::UnknownError"))));
+}
+
+static auto isPointerComparisonOperatorCall(std::string operator_name) {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return binaryOperator(hasOperatorName(operator_name),
+                        hasLHS(hasType(hasCanonicalType(pointerType(
+                            pointee(anyOf(statusOrType(), statusType())))))),
+                        hasRHS(hasType(hasCanonicalType(pointerType(
+                            pointee(anyOf(statusOrType(), statusType())))))));
+}
+
+// The nullPointerConstant in the two matchers below is to support
+// absl::StatusOr<void*> X = nullptr.
+// nullptr does not match the bound type.
+// TODO: be less restrictive around convertible types in general.
+static auto isStatusOrValueAssignmentCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxOperatorCallExpr(
+      hasOverloadedOperatorName("="),
+      callee(cxxMethodDecl(ofClass(statusOrClass()))),
+      hasArgument(1, anyOf(hasType(hasUnqualifiedDesugaredType(
+                               type(equalsBoundNode("T")))),
+                           nullPointerConstant())));
+}
+
+static auto isStatusOrValueConstructor() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxConstructExpr(
+      hasType(statusOrType()),
+      hasArgument(0,
+                  anyOf(hasType(hasCanonicalType(type(equalsBoundNode("T")))),
+                        nullPointerConstant(),
+                        hasType(namedDecl(hasAnyName("absl::in_place_t",
+                                                     "std::in_place_t"))))));
+}
+
+static auto isStatusOrConstructor() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxConstructExpr(hasType(statusOrType()));
+}
+
+static auto isStatusConstructor() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxConstructExpr(hasType(statusType()));
+}
+
 static auto
 buildDiagnoseMatchSwitch(const UncheckedStatusOrAccessModelOptions &Options) {
   return CFGMatchSwitchBuilder<const Environment,
@@ -312,6 +387,222 @@ static void transferStatusUpdateCall(const CXXMemberCallExpr *Expr,
   State.Env.setValue(locForOk(*ThisLoc), NewVal);
 }
 
+static BoolValue *evaluateStatusEquality(RecordStorageLocation &LhsStatusLoc,
+                                         RecordStorageLocation &RhsStatusLoc,
+                                         Environment &Env) {
+  auto &A = Env.arena();
+  // Logically, a Status object is composed of an error code that could take one
+  // of multiple possible values, including the "ok" value. We track whether a
+  // Status object has an "ok" value and represent this as an `ok` bit. Equality
+  // of Status objects compares their error codes. Therefore, merely comparing
+  // the `ok` bits isn't sufficient: when two Status objects are assigned non-ok
+  // error codes the equality of their respective error codes matters. Since we
+  // only track the `ok` bits, we can't make any conclusions about equality when
+  // we know that two Status objects have non-ok values.
+
+  auto &LhsOkVal = valForOk(LhsStatusLoc, Env);
+  auto &RhsOkVal = valForOk(RhsStatusLoc, Env);
+
+  auto &Res = Env.makeAtomicBoolValue();
+
+  // lhs && rhs => res (a.k.a. !res => !lhs || !rhs)
+  Env.assume(A.makeImplies(A.makeAnd(LhsOkVal.formula(), RhsOkVal.formula()),
+                           Res.formula()));
+  // res => (lhs == rhs)
+  Env.assume(A.makeImplies(
+      Res.formula(), A.makeEquals(LhsOkVal.formula(), RhsOkVal.formula())));
+
+  return &Res;
+}
+
+static BoolValue *
+evaluateStatusOrEquality(RecordStorageLocation &LhsStatusOrLoc,
+                         RecordStorageLocation &RhsStatusOrLoc,
+                         Environment &Env) {
+  auto &A = Env.arena();
+  // Logically, a StatusOr<T> object is composed of two values - a Status and a
+  // value of type T. Equality of StatusOr objects compares both values.
+  // Therefore, merely comparing the `ok` bits of the Status values isn't
+  // sufficient. When two StatusOr objects are engaged, the equality of their
+  // respective values of type T matters. Similarly, when two StatusOr objects
+  // have Status values that have non-ok error codes, the equality of the error
+  // codes matters. Since we only track the `ok` bits of the Status values, we
+  // can't make any conclusions about equality when we know that two StatusOr
+  // objects are engaged or when their Status values contain non-ok error codes.
+  auto &LhsOkVal = valForOk(locForStatus(LhsStatusOrLoc), Env);
+  auto &RhsOkVal = valForOk(locForStatus(RhsStatusOrLoc), Env);
+  auto &res = Env.makeAtomicBoolValue();
+
+  // res => (lhs == rhs)
+  Env.assume(A.makeImplies(
+      res.formula(), A.makeEquals(LhsOkVal.formula(), RhsOkVal.formula())));
+  return &res;
+}
+
+static BoolValue *evaluateEquality(const Expr *LhsExpr, const Expr *RhsExpr,
+                                   Environment &Env) {
+  // Check the type of both sides in case an operator== is added that admits
+  // different types.
+  if (isStatusOrType(LhsExpr->getType()) &&
+      isStatusOrType(RhsExpr->getType())) {
+    auto *LhsStatusOrLoc = Env.get<RecordStorageLocation>(*LhsExpr);
+    if (LhsStatusOrLoc == nullptr)
+      return nullptr;
+    auto *RhsStatusOrLoc = Env.get<RecordStorageLocation>(*RhsExpr);
+    if (RhsStatusOrLoc == nullptr)
+      return nullptr;
+
+    return evaluateStatusOrEquality(*LhsStatusOrLoc, *RhsStatusOrLoc, Env);
+  }
+  if (isStatusType(LhsExpr->getType()) && isStatusType(RhsExpr->getType())) {
+    auto *LhsStatusLoc = Env.get<RecordStorageLocation>(*LhsExpr);
+    if (LhsStatusLoc == nullptr)
+      return nullptr;
+
+    auto *RhsStatusLoc = Env.get<RecordStorageLocation>(*RhsExpr);
+    if (RhsStatusLoc == nullptr)
+      return nullptr;
+
+    return evaluateStatusEquality(*LhsStatusLoc, *RhsStatusLoc, Env);
+  }
+  return nullptr;
+}
+
+static void transferComparisonOperator(const CXXOperatorCallExpr *Expr,
+                                       LatticeTransferState &State,
+                                       bool IsNegative) {
+  auto *LhsAndRhsVal =
+      evaluateEquality(Expr->getArg(0), Expr->getArg(1), State.Env);
+  if (LhsAndRhsVal == nullptr)
+    return;
+
+  if (IsNegative)
+    State.Env.setValue(*Expr, State.Env.makeNot(*LhsAndRhsVal));
+  else
+    State.Env.setValue(*Expr, *LhsAndRhsVal);
+}
+
+static RecordStorageLocation *getPointeeLocation(const Expr &Expr,
+                                                 Environment &Env) {
+  if (auto *PointerVal = Env.get<PointerValue>(Expr))
+    return dyn_cast<RecordStorageLocation>(&PointerVal->getPointeeLoc());
+  return nullptr;
+}
+
+static BoolValue *evaluatePointerEquality(const Expr *LhsExpr,
+                                          const Expr *RhsExpr,
+                                          Environment &Env) {
+  assert(LhsExpr->getType()->isPointerType());
+  assert(RhsExpr->getType()->isPointerType());
+  RecordStorageLocation *LhsStatusLoc = nullptr;
+  RecordStorageLocation *RhsStatusLoc = nullptr;
+  if (isStatusOrType(LhsExpr->getType()->getPointeeType()) &&
+      isStatusOrType(RhsExpr->getType()->getPointeeType())) {
+    auto *LhsStatusOrLoc = getPointeeLocation(*LhsExpr, Env);
+    auto *RhsStatusOrLoc = getPointeeLocation(*RhsExpr, Env);
+    if (LhsStatusOrLoc == nullptr || RhsStatusOrLoc == nullptr)
+      return nullptr;
+    LhsStatusLoc = &locForStatus(*LhsStatusOrLoc);
+    RhsStatusLoc = &locForStatus(*RhsStatusOrLoc);
+  } else if (isStatusType(LhsExpr->getType()->getPointeeType()) &&
+             isStatusType(RhsExpr->getType()->getPointeeType())) {
+    LhsStatusLoc = getPointeeLocation(*LhsExpr, Env);
+    RhsStatusLoc = getPointeeLocation(*RhsExpr, Env);
+  }
+  if (LhsStatusLoc == nullptr || RhsStatusLoc == nullptr)
+    return nullptr;
+  auto &LhsOkVal = valForOk(*LhsStatusLoc, Env);
+  auto &RhsOkVal = valForOk(*RhsStatusLoc, Env);
+  auto &Res = Env.makeAtomicBoolValue();
+  auto &A = Env.arena();
+  Env.assume(A.makeImplies(
+      Res.formula(), A.makeEquals(LhsOkVal.formula(), RhsOkVal.formula())));
+  return &Res;
+}
+
+static void transferPointerComparisonOperator(const BinaryOperator *Expr,
+                                              LatticeTransferState &State,
+                                              bool IsNegative) {
+  auto *LhsAndRhsVal =
+      evaluatePointerEquality(Expr->getLHS(), Expr->getRHS(), State.Env);
+  if (LhsAndRhsVal == nullptr)
+    return;
+
+  if (IsNegative)
+    State.Env.setValue(*Expr, State.Env.makeNot(*LhsAndRhsVal));
+  else
+    State.Env.setValue(*Expr, *LhsAndRhsVal);
+}
+
+static void transferOkStatusCall(const CallExpr *Expr,
+                                 const MatchFinder::MatchResult &,
+                                 LatticeTransferState &State) {
+  auto &OkVal =
+      initializeStatus(State.Env.getResultObjectLocation(*Expr), State.Env);
+  State.Env.assume(OkVal.formula());
+}
+
+static void transferNotOkStatusCall(const CallExpr *Expr,
+                                    const MatchFinder::MatchResult &,
+                                    LatticeTransferState &State) {
+  auto &OkVal =
+      initializeStatus(State.Env.getResultObjectLocation(*Expr), State.Env);
+  auto &A = State.Env.arena();
+  State.Env.assume(A.makeNot(OkVal.formula()));
+}
+
+static void transferEmplaceCall(const CXXMemberCallExpr *Expr,
+                                const MatchFinder::MatchResult &,
+                                LatticeTransferState &State) {
+  RecordStorageLocation *StatusOrLoc =
+      getImplicitObjectLocation(*Expr, State.Env);
+  if (StatusOrLoc == nullptr)
+    return;
+
+  auto &OkVal = valForOk(locForStatus(*StatusOrLoc), State.Env);
+  State.Env.assume(OkVal.formula());
+}
+
+static void transferValueAssignmentCall(const CXXOperatorCallExpr *Expr,
+                                        const MatchFinder::MatchResult &,
+                                        LatticeTransferState &State) {
+  assert(Expr->getNumArgs() > 1);
+
+  auto *StatusOrLoc = State.Env.get<RecordStorageLocation>(*Expr->getArg(0));
+  if (StatusOrLoc == nullptr)
+    return;
+
+  auto &OkVal = initializeStatusOr(*StatusOrLoc, State.Env);
+  State.Env.assume(OkVal.formula());
+}
+
+static void transferValueConstructor(const CXXConstructExpr *Expr,
+                                     const MatchFinder::MatchResult &,
+                                     LatticeTransferState &State) {
+  auto &OkVal =
+      initializeStatusOr(State.Env.getResultObjectLocation(*Expr), State.Env);
+  State.Env.assume(OkVal.formula());
+}
+
+static void transferStatusOrConstructor(const CXXConstructExpr *Expr,
+                                        const MatchFinder::MatchResult &,
+                                        LatticeTransferState &State) {
+  RecordStorageLocation &StatusOrLoc = State.Env.getResultObjectLocation(*Expr);
+  RecordStorageLocation &StatusLoc = locForStatus(StatusOrLoc);
+
+  if (State.Env.getValue(locForOk(StatusLoc)) == nullptr)
+    initializeStatusOr(StatusOrLoc, State.Env);
+}
+
+static void transferStatusConstructor(const CXXConstructExpr *Expr,
+                                      const MatchFinder::MatchResult &,
+                                      LatticeTransferState &State) {
+  RecordStorageLocation &StatusLoc = State.Env.getResultObjectLocation(*Expr);
+
+  if (State.Env.getValue(locForOk(StatusLoc)) == nullptr)
+    initializeStatus(StatusLoc, State.Env);
+}
+
 CFGMatchSwitch<LatticeTransferState>
 buildTransferMatchSwitch(ASTContext &Ctx,
                          CFGMatchSwitchBuilder<LatticeTransferState> Builder) {
@@ -325,6 +616,52 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                                         transferStatusOkCall)
       .CaseOfCFGStmt<CXXMemberCallExpr>(isStatusMemberCallWithName("Update"),
                                         transferStatusUpdateCall)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isComparisonOperatorCall("=="),
+          [](const CXXOperatorCallExpr *Expr, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            transferComparisonOperator(Expr, State,
+                                       /*IsNegative=*/false);
+          })
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isComparisonOperatorCall("!="),
+          [](const CXXOperatorCallExpr *Expr, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            transferComparisonOperator(Expr, State,
+                                       /*IsNegative=*/true);
+          })
+      .CaseOfCFGStmt<BinaryOperator>(
+          isPointerComparisonOperatorCall("=="),
+          [](const BinaryOperator *Expr, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            transferPointerComparisonOperator(Expr, State,
+                                              /*IsNegative=*/false);
+          })
+      .CaseOfCFGStmt<BinaryOperator>(
+          isPointerComparisonOperatorCall("!="),
+          [](const BinaryOperator *Expr, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            transferPointerComparisonOperator(Expr, State,
+                                              /*IsNegative=*/true);
+          })
+      .CaseOfCFGStmt<CallExpr>(isOkStatusCall(), transferOkStatusCall)
+      .CaseOfCFGStmt<CallExpr>(isNotOkStatusCall(), transferNotOkStatusCall)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isStatusOrMemberCallWithName("emplace"),
+                                        transferEmplaceCall)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(isStatusOrValueAssignmentCall(),
+                                          transferValueAssignmentCall)
+      .CaseOfCFGStmt<CXXConstructExpr>(isStatusOrValueConstructor(),
+                                       transferValueConstructor)
+      // N.B. These need to come after all other CXXConstructExpr.
+      // These are there to make sure that every Status and StatusOr object
+      // have their ok boolean initialized when constructed. If we were to
+      // lazily initialize them when we first access them, we can produce
+      // false positives if that first access is in a control flow statement.
+      // You can comment out these two constructors and see tests fail.
+      .CaseOfCFGStmt<CXXConstructExpr>(isStatusOrConstructor(),
+                                       transferStatusOrConstructor)
+      .CaseOfCFGStmt<CXXConstructExpr>(isStatusConstructor(),
+                                       transferStatusConstructor)
       .Build();
 }
 
