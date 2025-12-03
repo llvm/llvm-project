@@ -79,9 +79,9 @@ runs:
             artifact_names.push(artifact_to_download.name)
           }
 
-          core.setOutput("urls", " ".join(artifact_urls));
-          core.setOutput("ids", " ".join(artifact_ids));
-          core.setOutput("names", " ".join(artifact_names));
+          core.setOutput("urls", artifact_urls.join(" "));
+          core.setOutput("ids", artifact_ids.join(" "));
+          core.setOutput("names", artifact_names.join(" "));
 
     - shell: bash
       if: steps.artifact-url.outputs.urls != ''
