@@ -2864,8 +2864,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     // 2. C2 > 0: Range [C, C+C2) must imply extension.
     // 3. No Signed Overflow: Merged upper bound (C + C2) must be safe.
     const APInt *C;
-    if (I.hasOneUse() && I.hasNoSignedWrap() &&
-        match(X, m_APInt(C)) && C->isNonNegative()) {
+    if (I.hasOneUse() && I.hasNoSignedWrap() && match(X, m_APInt(C)) &&
+        C->isNonNegative()) {
       const APInt *C2;
       CmpPredicate Pred;
       Instruction *MustICmp = cast<Instruction>(I.user_back());
