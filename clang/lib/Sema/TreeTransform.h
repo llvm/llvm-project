@@ -9339,6 +9339,21 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtPattern(
         SemaRef.Context, NewESD, Init, ExpansionVarStmt,
         Range.getAs<DeclStmt>(), Begin.getAs<DeclStmt>(), End.getAs<DeclStmt>(),
         S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc());
+  } else if (S->isDependent()) {
+    ExprResult ExpansionInitializer =
+        getDerived().TransformExpr(S->getExpansionInitializer());
+    if (ExpansionInitializer.isInvalid())
+      return StmtError();
+
+    StmtResult Res = SemaRef.BuildNonEnumeratingCXXExpansionStmtPattern(
+        NewESD, Init, ExpansionVarStmt, ExpansionInitializer.get(),
+        S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc(),
+        /*LifetimeExtendTemps=*/{});
+
+    if (Res.isInvalid())
+      return StmtError();
+
+    NewPattern = cast<CXXExpansionStmtPattern>(Res.get());
   } else {
     llvm_unreachable("TODO");
   }
