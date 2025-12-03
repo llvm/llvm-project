@@ -271,17 +271,17 @@ constexpr void test_perfect_forwarding_call_wrapper() {
 
   { // Test perfect forwarding when various overloads are available
     struct X {
-      Tag<0> operator()(int&, char) const;
-      Tag<1> operator()(const int&, char) const;
-      Tag<2> operator()(int&&, char) const;
-      Tag<3> operator()(const int&&, char) const;
+      constexpr Tag<0> operator()(int&, char) const { return {}; }
+      constexpr Tag<1> operator()(const int&, char) const { return {}; }
+      constexpr Tag<2> operator()(int&&, char) const { return {}; }
+      constexpr Tag<3> operator()(const int&&, char) const { return {}; }
     };
 
-    using F = decltype(std::bind_front<X{}>(0));
-    static_assert(std::same_as<std::invoke_result_t<F&, char>, Tag<0>>);
-    static_assert(std::same_as<std::invoke_result_t<const F&, char>, Tag<1>>);
-    static_assert(std::same_as<std::invoke_result_t<F, char>, Tag<2>>);
-    static_assert(std::same_as<std::invoke_result_t<const F, char>, Tag<3>>);
+    auto f                      = std::bind_front<X{}>(0);
+    std::same_as<Tag<0>> auto _ = f('a');
+    std::same_as<Tag<1>> auto _ = std::as_const(f)('a');
+    std::same_as<Tag<2>> auto _ = std::move(f)('a');
+    std::same_as<Tag<3>> auto _ = std::move(std::as_const(f))('a');
   }
 
   { // Test perfect forwarding
