@@ -202,6 +202,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::abs:
   case Intrinsic::atan2:
   case Intrinsic::fshl:
+  case Intrinsic::fshr:
   case Intrinsic::exp:
   case Intrinsic::is_fpclass:
   case Intrinsic::log:
@@ -658,6 +659,7 @@ static Value *expandAtan2Intrinsic(CallInst *Orig) {
   return Result;
 }
 
+template <bool LeftFunnel>
 static Value *expandFunnelShiftIntrinsic(CallInst *Orig) {
   Type *Ty = Orig->getType();
   Value *A = Orig->getOperand(0);
@@ -671,11 +673,13 @@ static Value *expandFunnelShiftIntrinsic(CallInst *Orig) {
   Constant *Size = ConstantInt::get(Ty, BitWidth);
 
   // The shift is not required to be masked as DXIL op will do so automatically
-  Value *Left = Builder.CreateShl(A, Shift);
+  Value *Left =
+      LeftFunnel ? Builder.CreateShl(A, Shift) : Builder.CreateLShr(B, Shift);
 
   Value *MaskedShift = Builder.CreateAnd(Shift, Mask);
   Value *InverseShift = Builder.CreateSub(Size, MaskedShift);
-  Value *Right = Builder.CreateLShr(B, InverseShift);
+  Value *Right = LeftFunnel ? Builder.CreateLShr(B, InverseShift)
+                            : Builder.CreateShl(A, InverseShift);
 
   Value *Result = Builder.CreateOr(Left, Right);
   return Result;
@@ -1021,7 +1025,10 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     Result = expandAtan2Intrinsic(Orig);
     break;
   case Intrinsic::fshl:
-    Result = expandFunnelShiftIntrinsic(Orig);
+    Result = expandFunnelShiftIntrinsic<true>(Orig);
+    break;
+  case Intrinsic::fshr:
+    Result = expandFunnelShiftIntrinsic<false>(Orig);
     break;
   case Intrinsic::exp:
     Result = expandExpIntrinsic(Orig);
