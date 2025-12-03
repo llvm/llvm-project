@@ -76,8 +76,6 @@
 #include "gtest/gtest.h"
 #include <filesystem>
 #include <fstream>
-#include <iostream>
-#include <regex>
 
 #include "AMDGPUNextUseAnalysis.h"
 
@@ -85,7 +83,11 @@ using namespace llvm;
 
 namespace {
 
-// Helper wrapper to store analysis results for unit testing
+// Helper wrapper to store analysis results for unit testing.
+// NOTE: Static result storage is intentional for unit tests.
+// The legacy PassManager doesn't expose the pass instance after run(),
+// so we capture the result here. Unit tests run sequentially in gtest,
+// so this doesn't cause isolation issues.
 class NextUseAnalysisTestWrapper : public AMDGPUNextUseAnalysisWrapper {
 public:
   static std::unique_ptr<NextUseResult> Captured;
@@ -100,6 +102,55 @@ public:
 
 std::unique_ptr<NextUseResult> NextUseAnalysisTestWrapper::Captured;
 
+// ============================================================================
+// String Parsing Utilities
+// ============================================================================
+// These functions replace std::regex for ~100-1000x faster pattern matching.
+// StringRef operations are direct pointer arithmetic with no regex overhead.
+
+/// Parse "CHECK: Vreg: %N:subreg[ D ]" or "CHECK: Vreg: %N[ D ]" pattern.
+/// Returns true if matched, fills RegNum, SubRegName, Distance.
+bool parseVregPattern(StringRef Line, unsigned &RegNum,
+                      StringRef &SubRegName, unsigned &Distance) {
+  if (!Line.consume_front("CHECK:"))
+    return false;
+  Line = Line.ltrim();
+
+  if (!Line.consume_front("Vreg:"))
+    return false;
+  Line = Line.ltrim();
+
+  if (!Line.consume_front("%"))
+    return false;
+
+  // Parse register number
+  size_t NumLen = Line.find_first_not_of("0123456789");
+  if (NumLen == 0)
+    return false;
+  if (Line.substr(0, NumLen).getAsInteger(10, RegNum))
+    return false;
+  Line = Line.drop_front(NumLen);
+
+  // Optional sub-register: ":subreg_name"
+  SubRegName = StringRef();
+  if (Line.consume_front(":")) {
+    size_t SubEnd = Line.find('[');
+    if (SubEnd == StringRef::npos)
+      return false;
+    SubRegName = Line.substr(0, SubEnd);
+    Line = Line.drop_front(SubEnd);
+  }
+
+  // Parse "[ D ]"
+  if (!Line.consume_front("["))
+    return false;
+  Line = Line.ltrim();
+
+  size_t DistLen = Line.find_first_not_of("0123456789");
+  if (DistLen == 0)
+    return false;
+  return !Line.substr(0, DistLen).getAsInteger(10, Distance);
+}
 
 class NextUseAnalysisTestBase : public testing::Test {
 protected:
@@ -112,13 +163,12 @@ protected:
   const SIRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
 
-  // Helper function to convert MachineInstr to string representation
-  std::string machineInstrToString(const MachineInstr &MI) {
-    std::string Str;
-    raw_string_ostream OS(Str);
+  // Helper to print MachineInstr into a reusable buffer (avoids allocation)
+  void printMachineInstr(const MachineInstr &MI, SmallVectorImpl<char> &Buf) {
+    Buf.clear();
+    raw_svector_ostream OS(Buf);
     MI.print(OS, /*IsStandalone=*/false, /*SkipOpers=*/false,
              /*SkipDebugLoc=*/true, /*AddNewLine=*/false);
-    return OS.str();
   }
 
   inline unsigned getSubRegIndexForLaneMask(LaneBitmask Mask,
@@ -131,8 +181,8 @@ protected:
   }
 
   // Helper function to map sub-register names to LaneBitmask values using LLVM
-  // API
-  LaneBitmask getSubRegLaneMask(const std::string &SubRegName, Register VReg,
+  // API. SubRegName may be empty for full register.
+  LaneBitmask getSubRegLaneMask(StringRef SubRegName, Register VReg,
                                 const SIRegisterInfo *TRI,
                                 const MachineRegisterInfo *MRI) {
     if (SubRegName.empty()) {
@@ -150,116 +200,95 @@ protected:
     return MRI->getMaxLaneMaskForVReg(VReg);
   }
 
-  // Helper function to parse expected distances from CHECK patterns
+  // Parse expected distances from CHECK patterns for a specific instruction.
+  // Uses StringRef-based parsing for performance (avoids std::regex overhead).
   llvm::DenseMap<VRegMaskPair, unsigned>
   parseExpectedDistances(const std::vector<std::string> &CheckPatterns,
-                         const std::string &InstrString,
+                         StringRef InstrRef,
                          const SIRegisterInfo *TRI,
                          const MachineRegisterInfo *MRI) {
     llvm::DenseMap<VRegMaskPair, unsigned> ExpectedDistances;
 
-    // Clean up the instruction string - remove newlines and extra spaces
-    std::string CleanInstrString = InstrString;
-    CleanInstrString.erase(
-        std::remove(CleanInstrString.begin(), CleanInstrString.end(), '\n'),
-        CleanInstrString.end());
+    // Trim the instruction (handles whitespace and \n at ends)
+    InstrRef = InstrRef.trim();
 
-    // Find the CHECK pattern that matches this instruction
+    // Extract instruction core (everything after first space)
+    size_t SpacePos = InstrRef.find(' ');
+    StringRef InstrCore = SpacePos == StringRef::npos
+                              ? InstrRef
+                              : InstrRef.drop_front(SpacePos + 1);
+
+    // Find matching CHECK pattern index
+    size_t MatchIdx = StringRef::npos;
     for (size_t I = 0; I < CheckPatterns.size(); ++I) {
-      const std::string &Pattern = CheckPatterns[I];
+      StringRef Pattern = CheckPatterns[I];
 
-      // Look for instruction patterns like "CHECK: Instr: %9:vgpr_32 = COPY
-      // killed $vgpr1"
-      if (Pattern.find("CHECK: Instr:") != std::string::npos) {
-        // Extract the instruction part after "Instr: "
-        size_t InstrPos = Pattern.find("Instr: ") + 7;
-        std::string CheckInstr = Pattern.substr(InstrPos);
+      size_t InstrPos = Pattern.find("CHECK: Instr:");
+      if (InstrPos == StringRef::npos)
+        continue;
 
-        // Matching: compare the actual instruction content
-        // Remove leading/trailing whitespace from both
-        CheckInstr =
-            std::regex_replace(CheckInstr, std::regex("^\\s+|\\s+$"), "");
-        std::string TrimmedInstrString =
-            std::regex_replace(CleanInstrString, std::regex("^\\s+|\\s+$"), "");
+      // Extract and trim the CHECK instruction
+      StringRef CheckInstr = Pattern.drop_front(InstrPos + 13).trim();
 
-        // Extract the core instruction (everything after the first space)
-        size_t FirstSpace = CheckInstr.find(' ');
-        size_t InstrFirstSpace = TrimmedInstrString.find(' ');
+      // Extract CHECK instruction core
+      size_t CheckSpacePos = CheckInstr.find(' ');
+      StringRef CheckCore = CheckSpacePos == StringRef::npos
+                                ? CheckInstr
+                                : CheckInstr.drop_front(CheckSpacePos + 1);
 
-        if (FirstSpace != std::string::npos &&
-            InstrFirstSpace != std::string::npos) {
-          std::string CheckCore = CheckInstr.substr(FirstSpace + 1);
-          std::string InstrCore =
-              TrimmedInstrString.substr(InstrFirstSpace + 1);
+      if (CheckCore != InstrCore)
+        continue;
 
-          // Match if the core instruction parts are identical
-          if (CheckCore == InstrCore) {
-            // Also verify the destination register matches
-            std::regex DestRegex(R"(^(%\d+:[a-zA-Z_0-9]+)\s*=)");
-            std::smatch CheckMatch, InstrMatch;
-
-            if (std::regex_search(CheckInstr, CheckMatch, DestRegex) &&
-                std::regex_search(TrimmedInstrString, InstrMatch, DestRegex) &&
-                CheckMatch[1].str() == InstrMatch[1].str()) {
-
-              // Found exact match, look for subsequent Vreg distance patterns
-              // Track all mask/distance pairs per VReg for overlap computation
-              llvm::DenseMap<Register, SmallVector<std::pair<LaneBitmask, unsigned>, 4>> 
-                  AllMaskDistances;
-              
-              for (size_t J = I + 1; J < CheckPatterns.size(); ++J) {
-                const std::string &DistPattern = CheckPatterns[J];
-
-                // Stop if we hit another instruction or non-Vreg pattern
-                if (DistPattern.find("CHECK: Instr:") != std::string::npos ||
-                    DistPattern.find("CHECK: ---") != std::string::npos ||
-                    DistPattern.find("CHECK-LABEL:") != std::string::npos ||
-                    DistPattern.find("Block End Distances:") != std::string::npos) {
-                  break;
-                }
-
-                // Enhanced regex to capture sub-register patterns like "CHECK:
-                // Vreg: %15:sub0[ 22 ]" Group 1: register number, Group 2: full
-                // sub-register part (optional), Group 3: sub-register name,
-                // Group 4: distance
-                std::regex VregRegex(
-                    R"(CHECK:\s*Vreg:\s*%(\d+)(:([a-zA-Z_0-9]+))?\[\s*(\d+)\s*\])");
-                std::smatch VregMatch;
-
-                if (std::regex_search(DistPattern, VregMatch, VregRegex) &&
-                    VregMatch.size() >= 5) {
-                  unsigned RegNum = std::stoul(VregMatch[1].str());
-                  std::string SubRegName =
-                      VregMatch[3].str(); // May be empty for full register
-                  unsigned Distance = std::stoul(VregMatch[4].str());                  
-                  Register VReg = Register::index2VirtReg(RegNum);
-                  LaneBitmask Mask = getSubRegLaneMask(SubRegName, VReg, TRI, MRI);
-                  
-                  // Record this mask/distance pair for later overlap computation
-                  AllMaskDistances[VReg].push_back({Mask, Distance});
-                }
-              }
-              
-              // Now build ExpectedDistances using overlap semantics:
-              // For each recorded VMP, find the minimum distance among all
-              // stored masks that overlap with it (matching getFromSortedRecords logic)
-              for (auto &[VReg, MaskDistPairs] : AllMaskDistances) {
-                for (auto &[QueryMask, _] : MaskDistPairs) {
-                  unsigned MinDist = std::numeric_limits<unsigned>::max();
-                  for (auto &[StoredMask, Dist] : MaskDistPairs) {
-                    // Check for any overlap (same as getFromSortedRecords)
-                    if ((QueryMask & StoredMask).any()) {
-                      MinDist = std::min(MinDist, Dist);
-                    }
-                  }
-                  VRegMaskPair VMP(VReg, QueryMask);
-                  ExpectedDistances[VMP] = MinDist;
-                }
-              }
-              break;
-            }
-          }
+      // Verify destination register matches (prefix up to '=')
+      size_t CheckEq = CheckInstr.find('=');
+      size_t InstrEq = InstrRef.find('=');
+      if (CheckEq != StringRef::npos && InstrEq != StringRef::npos) {
+        StringRef CheckDest = CheckInstr.substr(0, CheckEq).trim();
+        StringRef InstrDest = InstrRef.substr(0, InstrEq).trim();
+        if (CheckDest == InstrDest) {
+          MatchIdx = I;
+          break;
         }
+      }
+    }
+
+    if (MatchIdx == StringRef::npos)
+      return ExpectedDistances;
+
+    // Collect Vreg patterns following the matched instruction
+    llvm::DenseMap<Register, SmallVector<std::pair<LaneBitmask, unsigned>, 4>>
+        AllMaskDistances;
+
+    for (size_t J = MatchIdx + 1; J < CheckPatterns.size(); ++J) {
+      StringRef DistPattern = CheckPatterns[J];
+
+      // Stop at next instruction or section marker
+      if (DistPattern.contains("CHECK: Instr:") ||
+          DistPattern.contains("CHECK: ---") ||
+          DistPattern.contains("CHECK-LABEL:") ||
+          DistPattern.contains("Block End Distances:")) {
+        break;
+      }
+
+      unsigned RegNum, Distance;
+      StringRef SubRegName;
+      if (parseVregPattern(DistPattern, RegNum, SubRegName, Distance)) {
+        Register VReg = Register::index2VirtReg(RegNum);
+        LaneBitmask Mask = getSubRegLaneMask(SubRegName, VReg, TRI, MRI);
+        AllMaskDistances[VReg].push_back({Mask, Distance});
+      }
+    }
+
+    // Build ExpectedDistances using overlap semantics:
+    // For each VMP, find minimum distance among all overlapping masks
+    for (const auto &[VReg, MaskDistPairs] : AllMaskDistances) {
+      for (const auto &[QueryMask, _] : MaskDistPairs) {
+        unsigned MinDist = std::numeric_limits<unsigned>::max();
+        for (const auto &[StoredMask, Dist] : MaskDistPairs) {
+          if ((QueryMask & StoredMask).any())
+            MinDist = std::min(MinDist, Dist);
+        }
+        ExpectedDistances[VRegMaskPair(VReg, QueryMask)] = MinDist;
       }
     }
 
@@ -496,14 +525,16 @@ TEST_P(NextUseAnalysisParameterizedTest, ProcessMirFile) {
     // Run NextUseAnalysis
     NextUseResult &NU = runNextUseAnalysis(*MF, PM);
 
+    // Reusable buffer for instruction printing (avoids allocation per instr)
+    SmallString<256> InstrBuf;
+
     for (auto &MBB : *MF) {
       for (auto &MI : MBB) {
-        // Convert MachineInstr to string for pattern matching
-        std::string InstrString = machineInstrToString(MI);
+        // Print MachineInstr into reusable buffer
+        printMachineInstr(MI, InstrBuf);
 
         // Parse expected distances from CHECK patterns for this instruction
-        auto ExpectedDistances =
-            parseExpectedDistances(CheckPatterns, InstrString, TRI, MRI);
+        auto ExpectedDistances = parseExpectedDistances(CheckPatterns, InstrBuf, TRI, MRI);
 
         // Validate each expected distance
         for (const auto &Expected : ExpectedDistances) {
@@ -518,7 +549,7 @@ TEST_P(NextUseAnalysisParameterizedTest, ProcessMirFile) {
               << printReg(VMP.getVReg(), TRI,
                           getSubRegIndexForLaneMask(VMP.getLaneMask(), TRI),
                           MRI)
-              << " in instruction: " << InstrString.substr(0, 50) << "..."
+              << " in instruction: " << StringRef(InstrBuf).substr(0, 50) << "..."
               << " Expected: " << ExpectedDistance
               << " Actual: " << ActualDistance;
         }
@@ -644,10 +675,6 @@ body: |
 
   EXPECT_TRUE(FoundSub0First) << "sub0 (furthest use) should appear first in "
                                  "getSortedSubregUses result";
-
-  // Verify that we got results
-  ASSERT_FALSE(SortedUses.empty())
-      << "getSortedSubregUses should return sub-register uses";
 
   // Verify we have exactly 8 sub-register uses (sub0, sub1, sub2, sub3, sub28,
   // sub29, sub30, sub31)
