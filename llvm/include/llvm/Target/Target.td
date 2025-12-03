@@ -1352,6 +1352,13 @@ def COPY : StandardPseudoInstruction {
   let isAsCheapAsAMove = true;
   let hasNoSchedulingInfo = false;
 }
+def COPY_LANEMASK : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src, unknown:$lanemask);
+  let AsmString = "";
+  let hasSideEffects = false;
+  let isAsCheapAsAMove = true;
+}
 def BUNDLE : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);
