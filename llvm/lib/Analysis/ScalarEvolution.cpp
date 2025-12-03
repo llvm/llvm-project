@@ -3490,7 +3490,6 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
           }
           /// Get a canonical UDivExpr for a recurrence.
           /// {X,+,N}/C => {Y,+,N}/C where Y=X-(X%N). Safe when C%N=0.
-          // We can currently only fold X%N if X is constant.
           const APInt *StartRem;
           if (!DivInt.urem(StepInt) && match(getURemExpr(AR->getStart(), Step),
                                              m_scev_APInt(StartRem))) {
