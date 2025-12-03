@@ -64,7 +64,7 @@ emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII, uint32_t Label,
       .addImm(Label);
 }
 
-static bool isCallReturnTwice(MachineOperand &MOp) {
+static bool isCallReturnTwice(const MachineOperand &MOp) {
   if (!MOp.isGlobal())
     return false;
   auto *CalleeFn = dyn_cast<Function>(MOp.getGlobal());
