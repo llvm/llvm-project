@@ -782,7 +782,7 @@ static bool maybeUpdateDynamicIndexList(
     SmallVector<Value> dynamicElements, SmallVector<int64_t> &newStaticElements,
     SmallVector<Value> &newDynamicElements) {
   bool changed = false;
-  int index = 0;
+  int64_t index = 0;
 
   for (int64_t static_element : staticElements) {
     if (ShapedType::isStatic(static_element)) {

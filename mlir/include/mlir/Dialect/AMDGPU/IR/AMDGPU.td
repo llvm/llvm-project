@@ -1353,7 +1353,7 @@ def AMDGPU_MakeDmaDescriptorOp :
   }];
 
   let extraClassDeclaration = [{
-    int getRank() {
+    int64_t getRank() {
       return getGlobalStaticSizes().size();
     }
 

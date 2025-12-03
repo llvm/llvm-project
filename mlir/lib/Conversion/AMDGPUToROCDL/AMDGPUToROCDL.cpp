@@ -2598,7 +2598,7 @@ struct AMDGPUMakeDmaDescriptorLowering
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
     Value sgprs[8];
-    for (int i = 0; i < 8; i++) {
+    for (int64_t i = 0; i < 8; i++) {
       sgprs[i] = consts[0];
     }
 
@@ -2654,7 +2654,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     assert(v4i32);
 
     SmallVector<Value> consts;
-    for (int i = 0; i < 8; i++)
+    for (int64_t i = 0; i < 8; i++)
       consts.push_back(createI32Constant(rewriter, loc, i));
 
     Value dgroup0 = this->getDGroup0(adaptor);
