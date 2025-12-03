@@ -1224,9 +1224,7 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   Align Alignment = MICA.getAlignment();
   const Instruction *I = MICA.getInst();
 
-  if (((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
-       !isLegalStridedLoadStore(DataTy, Alignment)) ||
-      (Opcode != Instruction::Load && Opcode != Instruction::Store))
+  if (!isLegalStridedLoadStore(DataTy, Alignment))
     return BaseT::getStridedMemoryOpCost(MICA, CostKind);
 
   if (CostKind == TTI::TCK_CodeSize)
