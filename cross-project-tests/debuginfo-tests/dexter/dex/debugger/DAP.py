@@ -763,23 +763,39 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
 
         launch_request = self._get_launch_params(cmdline)
 
-        # Per DAP protocol, the correct sequence is:
+        # Per DAP protocol, we follow the sequence:
         # 1. Send launch request
-        # 2. Wait for launch response and "initialized" event
-        # 3. Set breakpoints
-        # 4. Send configurationDone to start the process
+        # 2. Set breakpoints
+        # 3. Send configurationDone to start the process
+        # 4. Wait for launch and configurationDone responses, and a "process" event, to confirm successful launch
+        # NB: Technically, we should also wait for the "initialized" event before sending the launch request, but in
+        # practice there are DAP implementations that do not send the initialized event until post-launch, and all
+        # adapters seem to accept us not waiting for the initialized event, so ignoring it gives maximum compatibility.
         launch_req_id = self.send_message(self.make_request("launch", launch_request))
-        launch_response = self._await_response(launch_req_id)
-        if not launch_response["success"]:
-            raise DebuggerException(
-                f"failure launching debugger: \"{launch_response['body']['error']['format']}\""
-            )
+
+        # Wait for the initialized event; for LLDB, this will be sent after the launch request has been processed;
+        # for other debuggers, it will have been sent some time after the initialize response was sent.
+        # NB: In all current cases this timeout is never hit because the initialized event is received almost
+        # immediately after either the initialize response or the launch request/response; if this starts being hit, we
+        # probably need to parameterize this.
+        initialize_timeout = Timeout(3)
+        while not self._debugger_state.initialized:
+            if initialize_timeout.timed_out():
+                raise TimeoutError(
+                    f"Timed out while waiting for initialized event from DAP"
+                )
+            time.sleep(0.001)
 
         # Set breakpoints after receiving launch response but before configurationDone.
         self._flush_breakpoints()
 
         # Send configurationDone to allow the process to start running.
         config_done_req_id = self.send_message(self.make_request("configurationDone"))
+        launch_response = self._await_response(launch_req_id)
+        if not launch_response["success"]:
+            raise DebuggerException(
+                f"failure launching debugger: \"{launch_response['body']['error']['format']}\""
+            )
         config_done_response = self._await_response(config_done_req_id)
         assert config_done_response["success"]
 
