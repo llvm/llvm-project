@@ -32,7 +32,7 @@ void S::key() {}
 // OGCG:      @_ZTV1S = unnamed_addr constant { [4 x ptr] } { [4 x ptr]
 // OGCG-SAME:      [ptr null, ptr null, ptr @_ZN1S3keyEv, ptr @_ZN1S6nonKeyEv] }
 
-// CHECK: cir.func dso_local @_ZN1S3keyEv
+// CHECK: cir.func {{.*}} @_ZN1S3keyEv
 
 // The reference from the vtable should result in nonKey being emitted.
-// CHECK: cir.func comdat linkonce_odr @_ZN1S6nonKeyEv
+// CHECK: cir.func no_inline comdat linkonce_odr @_ZN1S6nonKeyEv
