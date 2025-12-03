@@ -678,7 +678,8 @@ void bad_prevents_redeclaration4() {
 #define MY_INT int
 #define I1 i1
 #define I2 i2
-
+#define MY_IF(cond, stmt) if (cond) {stmt}
+#define MY_ONE_STMT_SWITCH(tag, stmt) switch (tag) { case 0 : { stmt; break; } };
 
 void bad_macro1() {
     int i1 = 0;
@@ -853,4 +854,21 @@ void bad_macro10() {
             do_some();
             break;
     }
+}
+
+void bad_macro11() {
+    int i1 = 0;
+    MY_IF (i1 == 0,
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        do_some();
+    )
+    int i2 = 0;
+    MY_ONE_STMT_SWITCH (i2,
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        do_some();
+    )
 }

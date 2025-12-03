@@ -281,7 +281,8 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
 
   const std::string NewInitStmtOpt =
       extractDeclStmtText(PrevDecl, Result.SourceManager, getLangOpts());
-  const bool CanFix = !NewInitStmtOpt.empty() && !Conflict;
+  const bool CanFix = !NewInitStmtOpt.empty() && !Conflict &&
+                      !Statement->getBeginLoc().isMacroID();
 
   if (CanFix) {
     const SourceRange RemovalRange = PrevDecl->getSourceRange();
