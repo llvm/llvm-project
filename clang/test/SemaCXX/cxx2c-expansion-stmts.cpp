@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks -Wno-vla-cxx-extension -verify
+// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks -Wno-vla-cxx-extension -fconstexpr-steps=1000 -verify
 namespace std {
 template <typename T>
 struct initializer_list {
@@ -153,8 +153,12 @@ struct NegativeSize {
 
 void negative_size() {
   static constexpr NegativeSize n;
-  template for (auto x : n) g(x); // expected-error {{expansion size must not be negative (was -3)}}
-  template for (constexpr auto x : n) g(x); // expected-error {{expansion size must not be negative (was -3)}}
+  template for (auto x : n) g(x); // expected-error {{expansion size is not a constant expression}} \
+                                     expected-note {{constexpr evaluation hit maximum step limit}} \
+                                     expected-note {{in call to}}
+  template for (constexpr auto x : n) g(x); // expected-error {{expansion size is not a constant expression}} \
+                                               expected-note {{constexpr evaluation hit maximum step limit}} \
+                                               expected-note {{in call to}}
 }
 
 template <typename T, __SIZE_TYPE__ size>
@@ -236,11 +240,11 @@ static_assert(Protected::member_func() == 6);
 struct SizeNotICE {
   struct iterator {
     friend constexpr iterator operator+(iterator a, __PTRDIFF_TYPE__) { return a; }
+    constexpr iterator operator++() { return *this; }
     int constexpr operator*() const { return 7; }
 
     // NOT constexpr!
-    friend int operator-(iterator, iterator) { return 7; } // expected-note {{declared here}}
-    friend int operator!=(iterator, iterator) { return 7; }
+    friend int operator!=(iterator, iterator) { return 7; } // expected-note {{declared here}}
   };
   constexpr iterator begin() const { return {}; }
   constexpr iterator end() const { return {}; }
@@ -248,6 +252,7 @@ struct SizeNotICE {
 
 struct PlusMissing {
   struct iterator {
+    constexpr iterator operator++() { return *this; }
     int constexpr operator*() const { return 7; }
   };
   constexpr iterator begin() const { return {}; }
@@ -267,10 +272,9 @@ void missing_funcs() {
   static constexpr PlusMissing s2;
   static constexpr DerefMissing s3;
 
-  // TODO: This message should start complaining about '!=' once we support the
-  // proper way of computing the size.
   template for (auto x : s1) g(x); // expected-error {{expansion size is not a constant expression}} \
-                                      expected-note {{non-constexpr function 'operator-' cannot be used in a constant expression}}
+                                      expected-note {{non-constexpr function 'operator!=' cannot be used in a constant expression}} \
+                                      expected-note {{in call to}}
 
   template for (auto x : s2) g(x); // expected-error {{invalid operands to binary expression}}
   template for (auto x : s3) g(x); // expected-error {{indirection requires pointer operand ('iterator' invalid)}}
@@ -631,9 +635,10 @@ consteval int f() {
   // expected-error@#invalid-ref {{constexpr variable '__end1' must be initialized by a constant expression}}
   // expected-error@#invalid-ref {{expansion size is not a constant expression}}
   // expected-note@#invalid-ref 2 {{member call on variable '__range1' whose value is not known}}
-  // expected-note@#invalid-ref 1 {{initializer of '__end1' is not a constant expression}}
+  // expected-note@#invalid-ref {{initializer of '__begin1' is not a constant expression}}
   // expected-note@#invalid-ref 3 {{declared here}}
   // expected-note@#invalid-ref {{reference to 'arr' is not a constant expression}}
+  // expected-note@#invalid-ref {{in call to}}
   template for (constexpr int s : arr) { // #invalid-ref                // OK, iterating expansion statement
     result += sizeof(char[s]);
   }
