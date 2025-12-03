@@ -3,8 +3,6 @@
 
 ; Check that invalid IR is not produced on a vector typed
 ; getelementptr with a scalar alloca pointer base.
-; Also check if GEP with dynamic index is rejected above
-; threshold # of elements.
 
 define amdgpu_kernel void @scalar_alloca_ptr_with_vector_gep_offset() {
 ; CHECK-LABEL: define amdgpu_kernel void @scalar_alloca_ptr_with_vector_gep_offset() {
