@@ -3238,7 +3238,7 @@ _mm256_permutevar8x32_epi32(__m256i __a, __m256i __b) {
 ///    \a M[1:0] specifies the index in \a a for element 0 of the result,
 ///    \a M[3:2] specifies the index for element 1, and so forth.
 /// \returns A 256-bit vector of [4 x double] containing the result.
-#define _mm256_permute4x64_pd(V, M)                                            \
+#define _mm256_permute4x64_pd(V, M) \
   ((__m256d)__builtin_ia32_permdf256((__v4df)(__m256d)(V), (int)(M)))
 
 /// Sets the result's 256-bit vector of [8 x float] to copies of elements of
@@ -3295,7 +3295,7 @@ _mm256_permutevar8x32_ps(__m256 __a, __m256i __b) {
 ///    \a M[1:0] specifies the index in \a a for element 0 of the result,
 ///    \a M[3:2] specifies the index for element 1, and so forth.
 /// \returns A 256-bit vector of [4 x i64] containing the result.
-#define _mm256_permute4x64_epi64(V, M)                                         \
+#define _mm256_permute4x64_epi64(V, M) \
   ((__m256i)__builtin_ia32_permdi256((__v4di)(__m256i)(V), (int)(M)))
 
 /// Sets each half of the 256-bit result either to zero or to one of the
