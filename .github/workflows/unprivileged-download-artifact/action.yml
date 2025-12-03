@@ -100,3 +100,5 @@ runs:
         for name in "${artifact_urls[@]}"; do
           unzip "${name}.zip"
         done
+
+        ls
