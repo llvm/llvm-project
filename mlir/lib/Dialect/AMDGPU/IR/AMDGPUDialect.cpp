@@ -759,8 +759,8 @@ LogicalResult MakeDmaDescriptorOp::verify() {
   if (rank != sharedStaticSizes.size())
     return emitOpError("tensor must have same rank as tile.");
 
-  int elementTypeWidth = getElementTypeWidth();
-  if (!llvm::is_contained({8, 16, 32, 64}, elementTypeWidth))
+  unsigned elementTypeWidth = getElementTypeWidth();
+  if (!llvm::is_contained<unsigned>({8, 16, 32, 64}, elementTypeWidth))
     return emitOpError(
                "element type width must be 1, 2, 4 or 8 bytes, but was ")
            << elementTypeWidth << " bits long";
