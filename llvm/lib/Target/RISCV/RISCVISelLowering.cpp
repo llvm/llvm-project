@@ -16607,6 +16607,38 @@ static SDValue performANDCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
 
   SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  // Sometimes a mask is applied after a shift. If that shift was fed by a
+  // load, there is sometimes the opportunity to narrow the load, which is
+  // hidden by the intermediate shift. Detect that case and commute the
+  // shift/and in order to enable load narrowing.
+  if (N0.getOpcode() == ISD::SHL && N0.hasOneUse() && isa<ConstantSDNode>(N1) &&
+      isa<ConstantSDNode>(N0.getOperand(1))) {
+
+    EVT VT = N->getValueType(0);
+    auto *MaskC = cast<ConstantSDNode>(N1);
+    auto *ShiftC = cast<ConstantSDNode>(N0.getOperand(1));
+
+    uint64_t ShiftAmt = ShiftC->getZExtValue();
+    APInt MaskVal = MaskC->getAPIntValue();
+    // Calculate the mask if it were applied before the shift.
+    APInt InnerMask = MaskVal.lshr(ShiftAmt);
+
+    bool IsNarrowable =
+        InnerMask == 0xff || InnerMask == 0xffff || (InnerMask == 0xffffffff);
+
+    if (IsNarrowable && isa<LoadSDNode>(N0.getOperand(0))) {
+      // AND the loaded value and change the shift appropriately, allowing
+      // the load to be narrowed.
+      SDLoc DL(N);
+      SDValue LoadNode = N0.getOperand(0);
+      SDValue InnerAnd = DAG.getNode(ISD::AND, DL, VT, LoadNode,
+                                     DAG.getConstant(InnerMask, DL, VT));
+      return DAG.getNode(ISD::SHL, DL, VT, InnerAnd, N0.getOperand(1));
+    }
+  }
+
   // Pre-promote (i32 (and (srl X, Y), 1)) on RV64 with Zbs without zero
   // extending X. This is safe since we only need the LSB after the shift and
   // shift amounts larger than 31 would produce poison. If we wait until
