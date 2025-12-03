@@ -774,6 +774,34 @@ func.func private @some_func_operating_on_memref(%m: memref<2xf32>) -> () {
 
 // -----
 
+// Test case: to_buffer after linalg.fill requires copy insertion
+// This test verifies that when a new tensor (from linalg.fill) is converted
+// to a memref via to_buffer, and then the memref is written to while the
+// original tensor is read from, a copy is inserted to maintain tensor
+// immutability.
+// CHECK-LABEL: func @test_fill_to_buffer_requires_copy(
+func.func @test_fill_to_buffer_requires_copy() {
+  %0 = tensor.empty() : tensor<10xf32>
+  %cst = arith.constant 5.0 : f32
+  %cst2 = arith.constant 6.0 : f32
+  %c0 = arith.constant 0 : index
+  %2 = linalg.fill ins(%cst : f32) outs(%0 : tensor<10xf32>) -> tensor<10xf32>
+  %3 = bufferization.to_buffer %2 : tensor<10xf32> to memref<10xf32>
+  memref.store %cst2, %3[%c0] : memref<10xf32>
+  %4 = tensor.extract %2 [%c0] : tensor<10xf32>
+  vector.print %4 : f32
+  return
+}
+// CHECK: %[[alloc:.*]] = memref.alloc
+// CHECK: linalg.fill ins(%{{.*}} : f32) outs(%[[alloc]]
+// CHECK: %[[alloc_copy:.*]] = memref.alloc
+// CHECK: memref.copy %[[alloc]], %[[alloc_copy]]
+// CHECK: memref.store %{{.*}}, %[[alloc_copy]]
+// CHECK: memref.load %[[alloc]]
+// CHECK: vector.print
+
+// -----
+
 // Note: The cf.br canonicalizes away, so there's nothing to check here. There
 // is a detailed test in ControlFlow/bufferize.mlir.
 
