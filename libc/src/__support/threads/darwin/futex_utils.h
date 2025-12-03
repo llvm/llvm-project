@@ -1,10 +1,10 @@
-//===--- Futex utils for Darwin ------------------------*- C++-*-===//
+//===--- Futex utils for Darwin ----------------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_DARWIN_FUTEX_UTILS_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_DARWIN_FUTEX_UTILS_H
@@ -47,9 +47,8 @@ struct Futex : public cpp::Atomic<FutexWordType> {
             reinterpret_cast<void *>(this), static_cast<uint64_t>(val),
             sizeof(FutexWordType), OS_SYNC_WAIT_ON_ADDRESS_NONE);
       }
-      if ((ret < 0) && (errno == ETIMEDOUT)) {
+      if ((ret < 0) && (errno == ETIMEDOUT))
         return -ETIMEDOUT;
-      }
       // case when os_sync returns early with an error. retry.
       if ((ret < 0) && ((errno == EINTR) || (errno == EFAULT))) {
         continue;
