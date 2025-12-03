@@ -2368,25 +2368,9 @@ struct AMDGPUMakeDmaDescriptorLowering
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr0, ArrayRef<Value> consts) const {
     // Compute data_size.
-    int elementTypeWidthInBytes = op.getElementTypeWidth() / 8;
-
-    int dataSize;
-    switch (elementTypeWidthInBytes) {
-    case 1:
-      dataSize = 0;
-      break;
-    case 2:
-      dataSize = 1;
-      break;
-    case 4:
-      dataSize = 2;
-      break;
-    case 8:
-      dataSize = 3;
-      break;
-    default:
-      llvm_unreachable("Invalid element size.");
-    }
+    int elementTypeWidthInBits = op.getElementTypeWidth();
+    assert(llvm::is_contained({8, 16, 32, 64}, elementTypeWidthInBits));
+    int dataSize = llvm::Log2_32(elementTypeWidthInBits / 8);
     return createI32Constant(rewriter, loc, dataSize << 16);
   }
 
