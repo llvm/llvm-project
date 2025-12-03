@@ -5866,6 +5866,10 @@ public:
   /// list should be strictly ascending, but we ensure that only when we
   /// actually translate the list of offsets to a RangeList.
   struct OffsetInfo {
+    // We need a container which provides the following
+    // 1.) Unique Elements
+    // 2.) Sort the elements of the container
+    // 3.) In place mutation of the elements (for performance)
     using VecTy = SmallVector<AA::RangeTy>;
     using OriginTy = SmallPtrSet<Value *, 4>;
     // A map to store depth 1 predecessors per offset.
