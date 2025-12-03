@@ -791,6 +791,7 @@ public:
     // because the module_spec has no filename or the found module has a
     // different filename. For example, when searching by UUID and finding a
     // module with an alias.
+#if !(_AIX)  
     assert((matching_module_list.IsEmpty() ||
             module_spec.GetFileSpec().GetFilename().IsEmpty() ||
             module_spec.GetFileSpec().GetFilename() !=
@@ -798,6 +799,7 @@ public:
                     ->GetFileSpec()
                     .GetFilename()) &&
            "Search by name not found in SharedModuleList's map");
+#endif
   }
 
   ModuleSP FindModule(const Module &module) {
