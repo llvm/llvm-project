@@ -40,15 +40,9 @@
 // few global locks. So, to avoid static initialization order fiasco, we
 // want the constructors of the Mutex classes to be constexprs.
 
-<<<<<<< HEAD
-#if defined(__linux__)
-#include "src/__support/threads/linux/mutex.h"
-#endif // __linux__
-=======
 #if defined(__linux__) || defined(__APPLE__)
 #include "src/__support/threads/unix_mutex.h"
 #endif
->>>>>>> c35b95c04bf7 ([libc] Add Darwin mutex support via os_sync primitives)
 
 #elif LIBC_THREAD_MODE == LIBC_THREAD_MODE_SINGLE
 
