@@ -1848,6 +1848,25 @@ public:
             [&](const CompilerDirective::VectorAlways &valways) {
               Word("!DIR$ VECTOR ALWAYS");
             },
+            [&](const CompilerDirective::VectorLength &vlength) {
+              using Kind = CompilerDirective::VectorLength::Kind;
+              std::uint64_t length = std::get<std::uint64_t>(vlength.t);
+              Kind kind = std::get<Kind>(vlength.t);
+
+              Word("!DIR$ VECTOR VECTORLENGTH (");
+              // || kind == Kind::Auto handles the case of VECTORLENGTH(0) so we
+              // don't print nothing
+              if (length != 0 || kind == Kind::Auto) {
+                Walk(length);
+              }
+              if (length != 0 && kind != Kind::Auto) {
+                Word(", ");
+              }
+              if (kind != Kind::Auto) {
+                Word(CompilerDirective::VectorLength::EnumToString(kind));
+              }
+              Word(")");
+            },
             [&](const std::list<CompilerDirective::NameValue> &names) {
               Walk("!DIR$ ", names, " ");
             },
@@ -2370,7 +2389,7 @@ public:
       }
     }
   }
-  void Unparse(const OmpLoopRangeClause &x) {
+  void Unparse(const OmpLooprangeClause &x) {
     Word("LOOPRANGE(");
     Walk(std::get<0>(x.t));
     Put(", ");

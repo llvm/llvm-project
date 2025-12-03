@@ -287,9 +287,92 @@ void CIRGenModule::emitGlobalOpenACCDeclareDecl(const OpenACCDeclareDecl *d) {
 }
 
 void CIRGenFunction::emitOpenACCRoutine(const OpenACCRoutineDecl &d) {
-  getCIRGenModule().errorNYI(d.getSourceRange(), "OpenACC Routine Construct");
+  // Do nothing here. The OpenACCRoutineDeclAttr handles the implicit name
+  // cases, and the end-of-TU handling manages the named cases. This is
+  // necessary because these references aren't necessarily emitted themselves,
+  // but can be named anywhere.
 }
 
 void CIRGenModule::emitGlobalOpenACCRoutineDecl(const OpenACCRoutineDecl *d) {
-  errorNYI(d->getSourceRange(), "OpenACC Global Routine Construct");
+  // Do nothing here. The OpenACCRoutineDeclAttr handles the implicit name
+  // cases, and the end-of-TU handling manages the named cases. This is
+  // necessary because these references aren't necessarily emitted themselves,
+  // but can be named anywhere.
+}
+
+namespace {
+class OpenACCRoutineClauseEmitter final
+    : public OpenACCClauseVisitor<OpenACCRoutineClauseEmitter> {
+  CIRGen::CIRGenBuilderTy &builder;
+  mlir::acc::RoutineOp routineOp;
+  llvm::SmallVector<mlir::acc::DeviceType> lastDeviceTypeValues;
+
+public:
+  OpenACCRoutineClauseEmitter(CIRGen::CIRGenBuilderTy &builder,
+                              mlir::acc::RoutineOp routineOp)
+      : builder(builder), routineOp(routineOp) {}
+
+  void emitClauses(ArrayRef<const OpenACCClause *> clauses) {
+    this->VisitClauseList(clauses);
+  }
+
+  void VisitClause(const OpenACCClause &clause) {
+    llvm_unreachable("Invalid OpenACC clause on routine");
+  }
+
+  void VisitSeqClause(const OpenACCSeqClause &clause) {
+    routineOp.addSeq(builder.getContext(), lastDeviceTypeValues);
+  }
+  void VisitWorkerClause(const OpenACCWorkerClause &clause) {
+    routineOp.addWorker(builder.getContext(), lastDeviceTypeValues);
+  }
+  void VisitVectorClause(const OpenACCVectorClause &clause) {
+    routineOp.addVector(builder.getContext(), lastDeviceTypeValues);
+  }
+
+  void VisitNoHostClause(const OpenACCNoHostClause &clause) {
+    routineOp.setNohost(/*attrValue=*/true);
+  }
+};
+} // namespace
+
+void CIRGenModule::emitOpenACCRoutineDecl(
+    const clang::FunctionDecl *funcDecl, cir::FuncOp func,
+    SourceLocation pragmaLoc, ArrayRef<const OpenACCClause *> clauses) {
+  mlir::OpBuilder::InsertionGuard guardCase(builder);
+  // These need to appear at the global module.
+  builder.setInsertionPointToEnd(&getModule().getBodyRegion().front());
+
+  mlir::Location routineLoc = getLoc(pragmaLoc);
+
+  std::stringstream routineNameSS;
+  // This follows the same naming format as Flang.
+  routineNameSS << "acc_routine_" << routineCounter++;
+  std::string routineName = routineNameSS.str();
+
+  // There isn't a good constructor for RoutineOp that just takes a location +
+  // name + function, so we use one that creates an otherwise RoutineOp and
+  // count on the visitor/emitter to fill these in.
+  auto routineOp = mlir::acc::RoutineOp::create(
+      builder, routineLoc, routineName,
+      mlir::SymbolRefAttr::get(builder.getContext(), func.getName()),
+      /*implicit=*/false);
+
+  // We have to add a pointer going the other direction via an acc.routine_info,
+  // from the func to the routine.
+  llvm::SmallVector<mlir::SymbolRefAttr> funcRoutines;
+  if (auto routineInfo =
+          func.getOperation()->getAttrOfType<mlir::acc::RoutineInfoAttr>(
+              mlir::acc::getRoutineInfoAttrName()))
+    funcRoutines.append(routineInfo.getAccRoutines().begin(),
+                        routineInfo.getAccRoutines().end());
+
+  funcRoutines.push_back(
+      mlir::SymbolRefAttr::get(builder.getContext(), routineName));
+  func.getOperation()->setAttr(
+      mlir::acc::getRoutineInfoAttrName(),
+      mlir::acc::RoutineInfoAttr::get(func.getContext(), funcRoutines));
+
+  OpenACCRoutineClauseEmitter emitter{builder, routineOp};
+  emitter.emitClauses(clauses);
 }
