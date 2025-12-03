@@ -668,6 +668,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   LLVM_DEBUG(llvm::dbgs() << "Analysing " << op << "\n");
 
   const fir::AliasAnalysis::Source &source = state.getSource(memref);
+  LLVM_DEBUG(llvm::dbgs() << "Got source " << source << "\n");
 
   // Process the scopes, if not processed yet.
   state.processFunctionScopes(func);
@@ -829,8 +830,13 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
                  << "\n");
     } else if (source.isPointer() && state.attachLocalAllocTag()) {
       LLVM_DEBUG(llvm::dbgs().indent(2)
-                 << "Found reference to allocation at " << *op << "\n");
+                 << "Found reference to POINTER allocation at " << *op << "\n");
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
+    } else if (source.isTarget() && state.attachLocalAllocTag()) {
+      LLVM_DEBUG(llvm::dbgs().indent(2)
+                 << "Found reference to TARGET allocation at " << *op << "\n");
+      tag = state.getFuncTreeWithScope(func, scopeOp)
+                .targetDataTree.getTag(*name);
     } else if (name && state.attachLocalAllocTag()) {
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to allocation "
                                         << name << " at " << *op << "\n");

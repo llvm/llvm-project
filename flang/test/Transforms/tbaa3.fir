@@ -91,9 +91,9 @@
 // ALL: #[[DUMMYASVAR:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtest1Edummyas", members = {<#[[DUMMYDATA]], 0>}>
 // ALL: #[[DUMMYAVAR:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtest1Edummya", members = {<#[[DUMMYDATA]], 0>}>
 // ALL: #[[LOCALVAR:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFtest1Elocal", members = {<#[[LOCALDATA]], 0>}>
-// ALL: #[[LOCALTVAR:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFtest1Elocalt", members = {<#[[LOCALDATA]], 0>}>
+// ALL: #[[LOCALTVAR:.+]] = #llvm.tbaa_type_desc<id = "target data/_QFtest1Elocalt", members = {<#[[TARGETDATA]], 0>}>
 // ALL: #[[LOCALAVAR:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFtest1Elocala", members = {<#[[LOCALDATA]], 0>}>
-// ALL: #[[LOCALATVAR:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFtest1Elocalat", members = {<#[[LOCALDATA]], 0>}>
+// ALL: #[[LOCALATVAR:.+]] = #llvm.tbaa_type_desc<id = "target data/_QFtest1Elocalat", members = {<#[[TARGETDATA]], 0>}>
 
 // ALL: #[[GLOBTAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLOBVAR]], access_type = #[[GLOBVAR]], offset = 0>
 // ALL: #[[GLOBTTAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLOBTVAR]], access_type = #[[GLOBTVAR]], offset = 0>
