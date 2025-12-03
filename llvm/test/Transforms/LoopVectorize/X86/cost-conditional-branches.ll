@@ -865,12 +865,9 @@ define i32 @cost_ashr_with_op_known_invariant_via_scev(i8 %a) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[CMP_I]], <32 x i32> zeroinitializer, <32 x i32> poison
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <32 x i32> [[PREDPHI]], i32 0
 ; CHECK-NEXT:    [[TMP36:%.*]] = ashr i32 [[CONV5_I]], [[TMP35]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT63:%.*]] = insertelement <32 x i32> poison, i32 [[TMP36]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT64:%.*]] = shufflevector <32 x i32> [[BROADCAST_SPLATINSERT63]], <32 x i32> poison, <32 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP37:%.*]] = icmp eq <32 x i32> [[BROADCAST_SPLAT64]], zeroinitializer
+; CHECK-NEXT:    [[TMP40:%.*]] = icmp eq i32 [[TMP36]], 0
 ; CHECK-NEXT:    [[TMP38:%.*]] = shl <32 x i32> [[PREDPHI]], splat (i32 24)
 ; CHECK-NEXT:    [[TMP39:%.*]] = ashr exact <32 x i32> [[TMP38]], splat (i32 24)
-; CHECK-NEXT:    [[TMP40:%.*]] = extractelement <32 x i1> [[TMP37]], i32 0
 ; CHECK-NEXT:    [[TMP41:%.*]] = select i1 [[TMP40]], <32 x i32> [[TMP39]], <32 x i32> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI65:%.*]] = select <32 x i1> [[TMP34]], <32 x i32> [[TMP41]], <32 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
@@ -891,35 +888,32 @@ define i32 @cost_ashr_with_op_known_invariant_via_scev(i8 %a) {
 ; CHECK-NEXT:    [[INDEX68:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT81:%.*]], [[PRED_UREM_CONTINUE76:%.*]] ]
 ; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <4 x i1> [[TMP44]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP45]], label [[PRED_UREM_IF69:%.*]], label [[PRED_UREM_CONTINUE70:%.*]]
-; CHECK:       pred.urem.if69:
+; CHECK:       pred.urem.if67:
 ; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE70]]
+; CHECK:       pred.urem.continue68:
+; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x i1> [[TMP44]], i32 1
+; CHECK-NEXT:    br i1 [[TMP48]], label [[PRED_UREM_IF70:%.*]], label [[PRED_UREM_CONTINUE71:%.*]]
+; CHECK:       pred.urem.if69:
+; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE71]]
 ; CHECK:       pred.urem.continue70:
-; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <4 x i1> [[TMP44]], i32 1
+; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <4 x i1> [[TMP44]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP46]], label [[PRED_UREM_IF71:%.*]], label [[PRED_UREM_CONTINUE72:%.*]]
 ; CHECK:       pred.urem.if71:
 ; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE72]]
 ; CHECK:       pred.urem.continue72:
-; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <4 x i1> [[TMP44]], i32 2
-; CHECK-NEXT:    br i1 [[TMP47]], label [[PRED_UREM_IF73:%.*]], label [[PRED_UREM_CONTINUE74:%.*]]
+; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <4 x i1> [[TMP44]], i32 3
+; CHECK-NEXT:    br i1 [[TMP47]], label [[PRED_UREM_IF73:%.*]], label [[PRED_UREM_CONTINUE76]]
 ; CHECK:       pred.urem.if73:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE74]]
-; CHECK:       pred.urem.continue74:
-; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x i1> [[TMP44]], i32 3
-; CHECK-NEXT:    br i1 [[TMP48]], label [[PRED_UREM_IF75:%.*]], label [[PRED_UREM_CONTINUE76]]
-; CHECK:       pred.urem.if75:
 ; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE76]]
-; CHECK:       pred.urem.continue76:
+; CHECK:       pred.urem.continue74:
 ; CHECK-NEXT:    [[TMP49:%.*]] = select <4 x i1> [[TMP44]], <4 x i1> poison, <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP50:%.*]] = or <4 x i1> [[TMP49]], [[BROADCAST_SPLAT67]]
 ; CHECK-NEXT:    [[PREDPHI77:%.*]] = select i1 [[CMP_I]], <4 x i32> zeroinitializer, <4 x i32> poison
 ; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <4 x i32> [[PREDPHI77]], i32 0
 ; CHECK-NEXT:    [[TMP52:%.*]] = ashr i32 [[CONV5_I]], [[TMP51]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT78:%.*]] = insertelement <4 x i32> poison, i32 [[TMP52]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT79:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT78]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP53:%.*]] = icmp eq <4 x i32> [[BROADCAST_SPLAT79]], zeroinitializer
+; CHECK-NEXT:    [[TMP56:%.*]] = icmp eq i32 [[TMP52]], 0
 ; CHECK-NEXT:    [[TMP54:%.*]] = shl <4 x i32> [[PREDPHI77]], splat (i32 24)
 ; CHECK-NEXT:    [[TMP55:%.*]] = ashr exact <4 x i32> [[TMP54]], splat (i32 24)
-; CHECK-NEXT:    [[TMP56:%.*]] = extractelement <4 x i1> [[TMP53]], i32 0
 ; CHECK-NEXT:    [[TMP57:%.*]] = select i1 [[TMP56]], <4 x i32> [[TMP55]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI80:%.*]] = select <4 x i1> [[TMP50]], <4 x i32> [[TMP57]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDEX_NEXT81]] = add nuw i32 [[INDEX68]], 4

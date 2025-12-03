@@ -34,36 +34,29 @@ define void @legalize_multiple_ptr_inductions(ptr %p, ptr noalias %q) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[REC_Q_INIT]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI3:%.*]] = phi ptr [ [[REC_P_INIT]], %[[VECTOR_PH]] ], [ [[PTR_IND6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP28:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 16 x i64> @llvm.stepvector.nxv16i64()
-; CHECK-NEXT:    [[TMP13:%.*]] = mul <vscale x 16 x i64> [[TMP12]], splat (i64 -1)
-; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI3]], <vscale x 16 x i64> [[TMP13]]
-; CHECK-NEXT:    [[VECTOR_GEP4:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 16 x i64> [[TMP13]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, <vscale x 16 x ptr> [[VECTOR_GEP]], i64 -1
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 0, [[INDEX]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[REC_Q_INIT]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[OFFSET_IDX3:%.*]] = sub i64 0, [[INDEX]]
+; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[REC_P_INIT]], i64 [[OFFSET_IDX3]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[NEXT_GEP4]], i64 -1
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul i64 0, [[TMP6]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 -1, [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <vscale x 16 x ptr> [[TMP14]], i32 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP18]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP19]], i64 [[TMP17]]
 ; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8> zeroinitializer)
 ; CHECK-NEXT:    store <vscale x 16 x i8> [[REVERSE]], ptr [[TMP20]], align 1
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, <vscale x 16 x ptr> [[VECTOR_GEP4]], i64 -1
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 -1
 ; CHECK-NEXT:    [[TMP22:%.*]] = mul i64 0, [[TMP6]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = sub i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = mul i64 -1, [[TMP23]]
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <vscale x 16 x ptr> [[TMP21]], i32 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP25]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP26]], i64 [[TMP24]]
 ; CHECK-NEXT:    [[REVERSE5:%.*]] = call <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8> zeroinitializer)
 ; CHECK-NEXT:    store <vscale x 16 x i8> [[REVERSE5]], ptr [[TMP27]], align 1
 ; CHECK-NEXT:    [[TMP28]] = or <vscale x 16 x i32> [[VEC_PHI]], splat (i32 1)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP29:%.*]] = mul i64 -1, [[TMP6]]
-; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP29]]
-; CHECK-NEXT:    [[PTR_IND6]] = getelementptr i8, ptr [[POINTER_PHI3]], i64 [[TMP29]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP30]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
