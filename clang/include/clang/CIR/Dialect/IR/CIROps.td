@@ -1174,6 +1174,35 @@ def CIR_SwitchOp : CIR_Op<"switch", [
 }
 
 //===----------------------------------------------------------------------===//
+// IsConstantOp
+//===----------------------------------------------------------------------===//
+
+def CIR_IsConstantOp : CIR_Op<"is_constant", [Pure]> {
+  let summary = "Test for manifest compile-time constant";
+  let description = [{
+    Returns `true` if the argument is known to be a manifest compile-time
+    constant otherwise returns `false`. If the argument is a constant expression
+    which refers to a global (the address of which _is_ a constant, but not
+    manifest during the compile), then the intrinsic evaluates to `false`.
+
+    This is used to represent `__builtin_constant_p` in cases where the argument
+    isn't known to be constant during initial translation of the source code but
+    might be proven to be constant after later optimizations.
+
+    Example:
+    ```
+    %1 = cir.is_constant %2 : !s32i -> !cir.bool
+    ```
+  }];
+  let arguments = (ins CIR_AnyType:$val);
+  let results = (outs CIR_BoolType:$result);
+
+  let assemblyFormat = [{
+    $val `:` qualified(type($val)) `->` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // SwitchFlatOp
 //===----------------------------------------------------------------------===//
 
