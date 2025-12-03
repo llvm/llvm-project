@@ -2796,11 +2796,19 @@ def : Pat<(f32 (fminnum_ieee f32:$A, f32:$B)),
           (f32 FpMinMax.F32Min)>;
 def : Pat<(f32 (fmaxnum_ieee f32:$A, f32:$B)),
           (f32 FpMinMax.F32Max)>;
+def : Pat<(f32 (fminnum f32:$A, f32:$B)),
+          (f32 FpMinMax.F32Min)>;
+def : Pat<(f32 (fmaxnum f32:$A, f32:$B)),
+          (f32 FpMinMax.F32Max)>;
 def : Pat<(f32 (fcanonicalize f32:$A)),
           (f32 FpMinMax.F32Can)>;
 def : Pat<(f64 (fminnum_ieee f64:$A, f64:$B)),
           (f64 (XSMINDP $A, $B))>;
 def : Pat<(f64 (fmaxnum_ieee f64:$A, f64:$B)),
+          (f64 (XSMAXDP $A, $B))>;
+def : Pat<(f64 (fminnum f64:$A, f64:$B)),
+          (f64 (XSMINDP $A, $B))>;
+def : Pat<(f64 (fmaxnum f64:$A, f64:$B)),
           (f64 (XSMAXDP $A, $B))>;
 def : Pat<(f64 (fcanonicalize f64:$A)),
           (f64 (XSMAXDP $A, $A))>;

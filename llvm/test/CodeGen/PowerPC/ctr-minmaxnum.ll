@@ -22,7 +22,6 @@ define void @test1(float %f, ptr %fp) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltisw 2, 1
-; CHECK-NEXT:    xsmaxdp 1, 1, 1
 ; CHECK-NEXT:    li 3, 2
 ; CHECK-NEXT:    xvcvsxwdp 0, 34
 ; CHECK-NEXT:    xsmindp 0, 1, 0
@@ -60,12 +59,11 @@ loop_exit:
 define void @test1v(<4 x float> %f, ptr %fp) {
 ; CHECK-LABEL: test1v:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmaxsp 0, 34, 34
 ; CHECK-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI1_0@toc@l
-; CHECK-NEXT:    lxvw4x 1, 0, 3
+; CHECK-NEXT:    lxvw4x 0, 0, 3
 ; CHECK-NEXT:    li 3, 4
-; CHECK-NEXT:    xvminsp 0, 0, 1
+; CHECK-NEXT:    xvminsp 0, 34, 0
 ; CHECK-NEXT:    stxvw4x 0, 0, 5
 ; CHECK-NEXT:    mtctr 3
 ; CHECK-NEXT:    .p2align 4
@@ -100,7 +98,6 @@ define void @test1a(float %f, ptr %fp) {
 ; CHECK-LABEL: test1a:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltisw 2, 1
-; CHECK-NEXT:    xsmaxdp 1, 1, 1
 ; CHECK-NEXT:    li 3, 2
 ; CHECK-NEXT:    xvcvsxwdp 0, 34
 ; CHECK-NEXT:    xsmindp 0, 1, 0
@@ -139,7 +136,6 @@ define void @test2(float %f, ptr %fp) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltisw 2, 1
-; CHECK-NEXT:    xsmaxdp 1, 1, 1
 ; CHECK-NEXT:    li 3, 2
 ; CHECK-NEXT:    xvcvsxwdp 0, 34
 ; CHECK-NEXT:    xsmaxdp 0, 1, 0
@@ -177,17 +173,15 @@ loop_exit:
 define void @test2v(<4 x double> %f, ptr %fp) {
 ; CHECK-LABEL: test2v:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmaxdp 0, 34, 34
-; CHECK-NEXT:    xvmaxdp 2, 35, 35
 ; CHECK-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI4_0@toc@l
-; CHECK-NEXT:    lxvd2x 1, 0, 3
+; CHECK-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-NEXT:    li 3, 16
-; CHECK-NEXT:    xvmaxdp 0, 0, 1
-; CHECK-NEXT:    xvmaxdp 1, 2, 1
-; CHECK-NEXT:    stxvd2x 1, 7, 3
+; CHECK-NEXT:    xvmaxdp 1, 34, 0
+; CHECK-NEXT:    xvmaxdp 0, 35, 0
+; CHECK-NEXT:    stxvd2x 0, 7, 3
 ; CHECK-NEXT:    li 3, 4
-; CHECK-NEXT:    stxvd2x 0, 0, 7
+; CHECK-NEXT:    stxvd2x 1, 0, 7
 ; CHECK-NEXT:    mtctr 3
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_1: # %loop_body
@@ -222,7 +216,6 @@ define void @test2a(float %f, ptr %fp) {
 ; CHECK-LABEL: test2a:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltisw 2, 1
-; CHECK-NEXT:    xsmaxdp 1, 1, 1
 ; CHECK-NEXT:    li 3, 2
 ; CHECK-NEXT:    xvcvsxwdp 0, 34
 ; CHECK-NEXT:    xsmaxdp 0, 1, 0
@@ -261,10 +254,9 @@ define void @test3(double %f, ptr %fp) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltisw 2, 1
-; CHECK-NEXT:    xsmaxdp 0, 1, 1
 ; CHECK-NEXT:    li 3, 2
-; CHECK-NEXT:    xvcvsxwdp 1, 34
-; CHECK-NEXT:    xsmindp 0, 0, 1
+; CHECK-NEXT:    xvcvsxwdp 0, 34
+; CHECK-NEXT:    xsmindp 0, 1, 0
 ; CHECK-NEXT:    stfd 0, 0(4)
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB6_1: # %loop_body
@@ -300,10 +292,9 @@ define void @test3a(double %f, ptr %fp) {
 ; CHECK-LABEL: test3a:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltisw 2, 1
-; CHECK-NEXT:    xsmaxdp 0, 1, 1
 ; CHECK-NEXT:    li 3, 2
-; CHECK-NEXT:    xvcvsxwdp 1, 34
-; CHECK-NEXT:    xsmindp 0, 0, 1
+; CHECK-NEXT:    xvcvsxwdp 0, 34
+; CHECK-NEXT:    xsmindp 0, 1, 0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB7_1: # %loop_body
 ; CHECK-NEXT:    #
@@ -339,10 +330,9 @@ define void @test4(double %f, ptr %fp) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltisw 2, 1
-; CHECK-NEXT:    xsmaxdp 0, 1, 1
 ; CHECK-NEXT:    li 3, 2
-; CHECK-NEXT:    xvcvsxwdp 1, 34
-; CHECK-NEXT:    xsmaxdp 0, 0, 1
+; CHECK-NEXT:    xvcvsxwdp 0, 34
+; CHECK-NEXT:    xsmaxdp 0, 1, 0
 ; CHECK-NEXT:    stfd 0, 0(4)
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB8_1: # %loop_body
@@ -378,10 +368,9 @@ define void @test4a(double %f, ptr %fp) {
 ; CHECK-LABEL: test4a:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltisw 2, 1
-; CHECK-NEXT:    xsmaxdp 0, 1, 1
 ; CHECK-NEXT:    li 3, 2
-; CHECK-NEXT:    xvcvsxwdp 1, 34
-; CHECK-NEXT:    xsmaxdp 0, 0, 1
+; CHECK-NEXT:    xvcvsxwdp 0, 34
+; CHECK-NEXT:    xsmaxdp 0, 1, 0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB9_1: # %loop_body
 ; CHECK-NEXT:    #
