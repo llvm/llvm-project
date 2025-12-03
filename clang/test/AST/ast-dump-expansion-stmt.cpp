@@ -18,14 +18,14 @@ void foo(int);
 template <typename T>
 void test(T t) {
   // CHECK:      CXXExpansionStmtDecl
-  // CHECK-NEXT:   CXXEnumeratingExpansionStmtPattern
+  // CHECK-NEXT:   CXXExpansionStmtPattern {{.*}} enumerating
   // CHECK:        CXXExpansionStmtInstantiation
   template for (auto x : {1, 2, 3}) {
     foo(x);
   }
 
   // CHECK:      CXXExpansionStmtDecl
-  // CHECK-NEXT:   CXXIteratingExpansionStmtPattern
+  // CHECK-NEXT:   CXXExpansionStmtPattern {{.*}} iterating
   // CHECK:        CXXExpansionStmtInstantiation
   static constexpr Array<int, 3> a;
   template for (auto x : a) {
@@ -33,7 +33,7 @@ void test(T t) {
   }
 
   // CHECK:      CXXExpansionStmtDecl
-  // CHECK-NEXT:   CXXDestructuringExpansionStmtPattern
+  // CHECK-NEXT:   CXXExpansionStmtPattern {{.*}} destructuring
   // CHECK:        CXXExpansionStmtInstantiation
   int arr[3]{1, 2, 3};
   template for (auto x : arr) {
@@ -41,7 +41,7 @@ void test(T t) {
   }
 
   // CHECK:      CXXExpansionStmtDecl
-  // CHECK-NEXT:   CXXDependentExpansionStmtPattern
+  // CHECK-NEXT:   CXXExpansionStmtPattern {{.*}} dependent
   // CHECK-NOT:    CXXExpansionStmtInstantiation
   template for (auto x : t) {
     foo(x);
