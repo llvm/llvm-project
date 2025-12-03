@@ -3979,6 +3979,13 @@ mlir::LogicalResult CIRToLLVMGetBitfieldOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMIsConstantOpLowering::matchAndRewrite(
+    cir::IsConstantOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::IsConstantOp>(op, adaptor.getVal());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
     cir::InlineAsmOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -4058,6 +4065,18 @@ mlir::LogicalResult CIRToLLVMVAEndOpLowering::matchAndRewrite(
   auto vaList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
                                               adaptor.getArgList());
   rewriter.replaceOpWithNewOp<mlir::LLVM::VaEndOp>(op, vaList);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVACopyOpLowering::matchAndRewrite(
+    cir::VACopyOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto opaquePtr = mlir::LLVM::LLVMPointerType::get(getContext());
+  auto dstList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
+                                               adaptor.getDstList());
+  auto srcList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
+                                               adaptor.getSrcList());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::VaCopyOp>(op, dstList, srcList);
   return mlir::success();
 }
 

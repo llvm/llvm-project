@@ -449,6 +449,9 @@ Improvements to Clang's diagnostics
   comparison operators when mixed with bitwise operators in enum value initializers.
   This can be locally disabled by explicitly casting the initializer value.
 
+- A new warning ``-Wshadow-header`` has been added to detect when a header file
+  is found in multiple search directories (excluding system paths).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -563,6 +566,7 @@ Bug Fixes to C++ Support
 - Fix for clang incorrectly rejecting the default construction of a union with
   nontrivial member when another member has an initializer. (#GH81774)
 - Fixed a template depth issue when parsing lambdas inside a type constraint. (#GH162092)
+- Fix the support of zero-length arrays in SFINAE context. (#GH170040)
 - Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
 - Fix a crash when extracting unavailable member type from alias in template deduction. (#GH165560)
 - Fix incorrect diagnostics for lambdas with init-captures inside braced initializers. (#GH163498)
@@ -640,6 +644,9 @@ RISC-V Support
 
 - `__GCC_CONSTRUCTIVE_SIZE` and `__GCC_DESTRUCTIVE_SIZE` are changed to 64. These values are
   unstable according to `Clang's documentation <https://clang.llvm.org/docs/LanguageExtensions.html#gcc-destructive-size-and-gcc-constructive-size>`_.
+
+- DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the RISC-V platform.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
