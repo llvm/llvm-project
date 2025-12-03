@@ -423,6 +423,11 @@ TEST_F(FormatTestVerilog, Declaration) {
   verifyFormat("wire (strong1, pull0) mynet, mynet1 = enable;");
   verifyFormat("wire (strong1, pull0) mynet, //\n"
                "                      mynet1 = enable;");
+
+  // The type or variable can be a C++ keyword.
+  verifyFormat("private mynet;");
+  verifyFormat("switch mynet;");
+  verifyFormat("wire try;");
 }
 
 TEST_F(FormatTestVerilog, Delay) {

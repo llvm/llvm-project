@@ -18484,17 +18484,21 @@ CreateNewDecl:
                            cast_or_null<EnumDecl>(PrevDecl), ScopedEnum,
                            ScopedEnumUsesClassTag, IsFixed);
 
+    EnumDecl *ED = cast<EnumDecl>(New);
+    ED->setEnumKeyRange(SourceRange(
+        KWLoc, ScopedEnumKWLoc.isValid() ? ScopedEnumKWLoc : KWLoc));
+
     if (isStdAlignValT && (!StdAlignValT || getStdAlignValT()->isImplicit()))
       StdAlignValT = cast<EnumDecl>(New);
 
     // If this is an undefined enum, warn.
     if (TUK != TagUseKind::Definition && !Invalid) {
       TagDecl *Def;
-      if (IsFixed && cast<EnumDecl>(New)->isFixed()) {
+      if (IsFixed && ED->isFixed()) {
         // C++0x: 7.2p2: opaque-enum-declaration.
         // Conflicts are diagnosed above. Do nothing.
-      }
-      else if (PrevDecl && (Def = cast<EnumDecl>(PrevDecl)->getDefinition())) {
+      } else if (PrevDecl &&
+                 (Def = cast<EnumDecl>(PrevDecl)->getDefinition())) {
         Diag(Loc, diag::ext_forward_ref_enum_def)
           << New;
         Diag(Def->getLocation(), diag::note_previous_definition);
