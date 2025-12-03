@@ -183,15 +183,20 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
       }
     };
 
+    const auto GetSourceText = [&](SourceLocation StartLoc,
+                                   SourceLocation EndLoc) {
+      return Lexer::getSourceText(
+          CharSourceRange::getCharRange(
+              Lexer::getLocForEndOfToken(StartLoc, 0, Source, LO), EndLoc),
+          Source, LO);
+    };
+
     // Captures:
     // if (cond) // Comment A
     // if (cond) /* Comment A */ { ... }
     // if (cond) /* Comment A */ x = y;
-    AppendNormalized(Lexer::getSourceText(
-        CharSourceRange::getCharRange(
-            Lexer::getLocForEndOfToken(If->getRParenLoc(), 0, Source, LO),
-            If->getThen()->getBeginLoc()),
-        Source, LO));
+    AppendNormalized(
+        GetSourceText(If->getRParenLoc(), If->getThen()->getBeginLoc()));
 
     if (const auto *CS = dyn_cast<CompoundStmt>(If->getThen())) {
       const Stmt *Inner = CS->body_front();
@@ -199,20 +204,13 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
       // Captures:
       // if (cond) { // Comment B ... }
       // if (cond) { /* Comment B */ x = y; }
-      AppendNormalized(Lexer::getSourceText(
-          CharSourceRange::getCharRange(
-              Lexer::getLocForEndOfToken(CS->getBeginLoc(), 0, Source, LO),
-              Inner->getBeginLoc()),
-          Source, LO));
+      AppendNormalized(GetSourceText(CS->getBeginLoc(), Inner->getBeginLoc()));
 
       // Captures:
       // if (cond) { x = y; // Comment C }
       // if (cond) { x = y; /* Comment C */ }
-      llvm::StringRef PostInner = Lexer::getSourceText(
-          CharSourceRange::getCharRange(
-              Lexer::getLocForEndOfToken(Inner->getEndLoc(), 0, Source, LO),
-              CS->getEndLoc()),
-          Source, LO);
+      llvm::StringRef PostInner =
+          GetSourceText(Inner->getEndLoc(), CS->getEndLoc());
 
       // Strip the trailing semicolon to avoid fixes like:
       // x = std::min(x, y);; // comment
