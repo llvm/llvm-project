@@ -15713,9 +15713,6 @@ public:
 
   ExprResult BuildCXXExpansionSelectExpr(InitListExpr *Range, Expr *Idx);
 
-  ExprResult BuildCXXDestructuringExpansionSelectExpr(DecompositionDecl *DD,
-                                                      Expr *Idx);
-
   std::optional<uint64_t>
   ComputeExpansionSize(CXXExpansionStmtPattern *Expansion);
   ///@}

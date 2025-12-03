@@ -428,7 +428,19 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
   if (DD->isInvalidDecl())
     return StmtError();
 
-  ExprResult Select = BuildCXXDestructuringExpansionSelectExpr(DD, Index);
+  // Synthesise an InitListExpr to store DREs to the BindingDecls; this
+  // essentially lets us desugar the expansion of a destructuring expansion
+  // statement to that of an enumerating expansion statement.
+  SmallVector<Expr *> Bindings;
+  for (BindingDecl *BD : DD->bindings()) {
+    auto *HVD = BD->getHoldingVar();
+    Bindings.push_back(HVD ? HVD->getInit() : BD->getBinding());
+  }
+
+  ExprResult Select = BuildCXXExpansionSelectExpr(
+      new (Context) InitListExpr(Context, ColonLoc, Bindings, ColonLoc),
+      Index);
+
   if (Select.isInvalid()) {
     ActOnInitializerError(ExpansionVar);
     return StmtError();
@@ -480,6 +492,8 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
     Shared.push_back(Expansion->getEndVarStmt());
   } else if (Expansion->isDestructuring()) {
     Shared.push_back(Expansion->getDecompositionDeclStmt());
+    MarkAnyDeclReferenced(Exp->getBeginLoc(), Expansion->getDecompositionDecl(),
+                          true);
   }
 
   // Return an empty statement if the range is empty.
@@ -538,23 +552,6 @@ ExprResult Sema::BuildCXXExpansionSelectExpr(InitListExpr *Range, Expr *Idx) {
 
   uint64_t I = ER.Val.getInt().getZExtValue();
   return Range->getInit(I);
-}
-
-ExprResult Sema::BuildCXXDestructuringExpansionSelectExpr(DecompositionDecl *DD,
-                                                          Expr *Idx) {
-  if (Idx->isValueDependent())
-    return new (Context) CXXDestructuringExpansionSelectExpr(Context, DD, Idx);
-
-  Expr::EvalResult ER;
-  if (!Idx->EvaluateAsInt(ER, Context))
-    llvm_unreachable("Failed to evaluate expansion index");
-
-  uint64_t I = ER.Val.getInt().getZExtValue();
-  MarkAnyDeclReferenced(Idx->getBeginLoc(), DD, true);
-  if (auto *BD = DD->bindings()[I]; auto *HVD = BD->getHoldingVar())
-    return HVD->getInit();
-  else
-    return BD->getBinding();
 }
 
 std::optional<uint64_t>
