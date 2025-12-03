@@ -1963,6 +1963,10 @@ MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
     BuildMI(MBB, MI, DL, get(AMDGPU::S_CBRANCH_EXECNZ)).addMBB(TrapBB);
     MF->push_back(TrapBB);
     MBB.addSuccessor(TrapBB);
+  } else {
+    // Since we're adding HaltLoopBB and modifying the CFG, we must return a
+    // different block to signal the change.
+    ContBB = HaltLoopBB;
   }
 
   // Start with a `s_trap 2`, if we're in PRIV=1 and we need the workaround this
@@ -2934,7 +2938,7 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   auto ApplyHazardWorkarounds = [this, &MBB, &I, &DL, FlushSGPRWrites]() {
     if (FlushSGPRWrites)
       BuildMI(MBB, I, DL, get(AMDGPU::S_WAITCNT_DEPCTR))
-          .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
+          .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0, ST));
   };
 
   // We need to compute the offset relative to the instruction immediately after
@@ -5518,9 +5522,10 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         Desc.getNumOperands() + Desc.implicit_uses().size();
     const unsigned NumImplicitOps = IsDst ? 2 : 1;
 
-    // Allow additional implicit operands. This allows a fixup done by the post
-    // RA scheduler where the main implicit operand is killed and implicit-defs
-    // are added for sub-registers that remain live after this instruction.
+    // Require additional implicit operands. This allows a fixup done by the
+    // post RA scheduler where the main implicit operand is killed and
+    // implicit-defs are added for sub-registers that remain live after this
+    // instruction.
     if (MI.getNumOperands() < StaticNumOps + NumImplicitOps) {
       ErrInfo = "missing implicit register operands";
       return false;
@@ -6251,6 +6256,18 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
       (int)OpIdx == AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0) &&
       RI.isSGPRReg(MRI, MO.getReg()))
     return false;
+
+  if (ST.hasFlatScratchHiInB64InstHazard() &&
+      MO.getReg() == AMDGPU::SRC_FLAT_SCRATCH_BASE_HI && isSALU(MI)) {
+    if (const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::sdst)) {
+      if (AMDGPU::getRegBitWidth(*RI.getRegClassForReg(MRI, Dst->getReg())) ==
+          64)
+        return false;
+    }
+    if (Opc == AMDGPU::S_BITCMP0_B64 || Opc == AMDGPU::S_BITCMP1_B64)
+      return false;
+  }
+
   return true;
 }
 

@@ -40,6 +40,51 @@ using namespace lldb_private;
 using namespace llvm::dwarf;
 
 namespace {
+/// A mock implementation of DWARFExpression::Delegate for testing.
+/// This class provides default implementations of all delegate methods,
+/// with the DWARF version being configurable via the constructor.
+class MockDwarfDelegate : public DWARFExpression::Delegate {
+public:
+  static constexpr uint16_t DEFAULT_DWARF_VERSION = 5;
+  static MockDwarfDelegate Dwarf5() { return MockDwarfDelegate(5); }
+  static MockDwarfDelegate Dwarf2() { return MockDwarfDelegate(2); }
+
+  MockDwarfDelegate() : MockDwarfDelegate(DEFAULT_DWARF_VERSION) {}
+  explicit MockDwarfDelegate(uint16_t version) : m_dwarf_version(version) {}
+
+  uint16_t GetVersion() const override { return m_dwarf_version; }
+
+  dw_addr_t GetBaseAddress() const override { return 0; }
+
+  uint8_t GetAddressByteSize() const override { return 4; }
+
+  llvm::Expected<std::pair<uint64_t, bool>>
+  GetDIEBitSizeAndSign(uint64_t relative_die_offset) const override {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "GetDIEBitSizeAndSign not implemented");
+  }
+
+  dw_addr_t ReadAddressFromDebugAddrSection(uint32_t index) const override {
+    return 0;
+  }
+
+  lldb::offset_t GetVendorDWARFOpcodeSize(const DataExtractor &data,
+                                          const lldb::offset_t data_offset,
+                                          const uint8_t op) const override {
+    return LLDB_INVALID_OFFSET;
+  }
+
+  bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+                              lldb::offset_t &offset, RegisterContext *reg_ctx,
+                              lldb::RegisterKind reg_kind,
+                              DWARFExpression::Stack &stack) const override {
+    return false;
+  }
+
+private:
+  uint16_t m_dwarf_version;
+};
+
 /// Mock memory implementation for testing.
 /// Stores predefined memory contents indexed by {address, size} pairs.
 class MockMemory {
@@ -189,11 +234,12 @@ private:
 
 static llvm::Expected<Value> Evaluate(llvm::ArrayRef<uint8_t> expr,
                                       lldb::ModuleSP module_sp = {},
-                                      DWARFUnit *unit = nullptr,
+                                      DWARFExpression::Delegate *unit = nullptr,
                                       ExecutionContext *exe_ctx = nullptr,
                                       RegisterContext *reg_ctx = nullptr) {
-  DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
-                          /*addr_size*/ 4);
+  DataExtractor extractor(
+      expr.data(), expr.size(), lldb::eByteOrderLittle,
+      /*addr_size*/ exe_ctx ? exe_ctx->GetAddressByteSize() : 4);
 
   return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, extractor, unit,
                                    lldb::eRegisterKindLLDB,
@@ -532,6 +578,23 @@ DWARF:
 
 TEST(DWARFExpression, DW_OP_stack_value) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_stack_value}), llvm::Failed());
+}
+
+// This test shows that the dwarf version is used by the expression evaluation.
+// Note that the different behavior tested here is not meant to imply that this
+// is the correct interpretation of dwarf2 vs. dwarf5, but rather it was picked
+// as an easy example that evaluates differently based on the dwarf version.
+TEST(DWARFExpression, dwarf_version) {
+  MockDwarfDelegate dwarf2 = MockDwarfDelegate::Dwarf2();
+  MockDwarfDelegate dwarf5 = MockDwarfDelegate::Dwarf5();
+
+  // In dwarf2 the constant on top of the stack is treated as a value.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1}, {}, &dwarf2), ExpectScalar(1));
+
+  // In dwarf5 the constant on top of the stack is implicitly converted to an
+  // address.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1}, {}, &dwarf5),
+                       ExpectLoadAddress(1));
 }
 
 TEST(DWARFExpression, DW_OP_piece) {
@@ -1153,4 +1216,108 @@ TEST_F(DWARFExpressionMockProcessTestWithAArch, DW_op_deref_no_ptr_fixing) {
   uint8_t expr_deref[] = {DW_OP_breg22, 0, DW_OP_deref};
   llvm::Expected<Value> result_deref = evaluate_expr(expr_deref);
   EXPECT_THAT_EXPECTED(result_deref, ExpectLoadAddress(expected_value));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, deref_register) {
+  TestContext test_ctx;
+  constexpr uint32_t reg_r0 = 0x504;
+  MockMemory::Map memory = {
+      {{0x004, 4}, {0x1, 0x2, 0x3, 0x4}},
+      {{0x504, 4}, {0xa, 0xb, 0xc, 0xd}},
+      {{0x505, 4}, {0x5, 0x6, 0x7, 0x8}},
+  };
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux",
+                                RegisterValue(reg_r0), memory, memory));
+
+  ExecutionContext exe_ctx(test_ctx.process_sp);
+  MockDwarfDelegate delegate = MockDwarfDelegate::Dwarf5();
+  auto Eval = [&](llvm::ArrayRef<uint8_t> expr_data) {
+    ExecutionContext exe_ctx(test_ctx.process_sp);
+    return Evaluate(expr_data, {}, &delegate, &exe_ctx,
+                    test_ctx.reg_ctx_sp.get());
+  };
+
+  // Reads from the register r0.
+  // Sets the context to RegisterInfo so we know this is a register location.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_reg0}),
+                       ExpectScalar(reg_r0, Value::ContextType::RegisterInfo));
+
+  // Reads from the location(register r0).
+  // Clears the context so we know this is a value not a location.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_reg0, DW_OP_deref}),
+                       ExpectLoadAddress(reg_r0, Value::ContextType::Invalid));
+
+  // Reads from the location(register r0) and adds the value to the host buffer.
+  // The evaluator should implicitly convert it to a memory location when
+  // added to a composite value and should add the contents of memory[r0]
+  // to the host buffer.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_reg0, DW_OP_deref, DW_OP_piece, 4}),
+                       ExpectHostAddress({0xa, 0xb, 0xc, 0xd}));
+
+  // Reads from the location(register r0) and truncates the value to one byte.
+  // Clears the context so we know this is a value not a location.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_reg0, DW_OP_deref_size, 1}),
+      ExpectLoadAddress(reg_r0 & 0xff, Value::ContextType::Invalid));
+
+  // Reads from the location(register r0) and truncates to one byte then adds
+  // the value to the host buffer. The evaluator should implicitly convert it to
+  // a memory location when added to a composite value and should add the
+  // contents of memory[r0 & 0xff] to the host buffer.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_reg0, DW_OP_deref_size, 1, DW_OP_piece, 4}),
+                       ExpectHostAddress({0x1, 0x2, 0x3, 0x4}));
+
+  // Reads from the register r0 + 1.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_breg0, 1}),
+      ExpectLoadAddress(reg_r0 + 1, Value::ContextType::Invalid));
+
+  // Reads from address r0 + 1, which contains the bytes [5,6,7,8].
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_breg0, 1, DW_OP_deref}),
+      ExpectLoadAddress(0x08070605, Value::ContextType::Invalid));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, deref_implicit_value) {
+  TestContext test_ctx;
+  MockMemory::Map memory = {
+      {{0x4, 1}, {0x1}},
+      {{0x4, 4}, {0x1, 0x2, 0x3, 0x4}},
+  };
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux", {}, memory));
+
+  ExecutionContext exe_ctx(test_ctx.process_sp);
+  MockDwarfDelegate delegate = MockDwarfDelegate::Dwarf5();
+  auto Eval = [&](llvm::ArrayRef<uint8_t> expr_data) {
+    ExecutionContext exe_ctx(test_ctx.process_sp);
+    return Evaluate(expr_data, {}, &delegate, &exe_ctx,
+                    test_ctx.reg_ctx_sp.get());
+  };
+
+  // Creates an implicit location with a value of 4.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4, DW_OP_stack_value}),
+                       ExpectScalar(0x4));
+
+  // Creates an implicit location with a value of 4. The deref reads the value
+  // out of the location and implicitly converts it to a load address.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4, DW_OP_stack_value, DW_OP_deref}),
+                       ExpectLoadAddress(0x4));
+
+  // Creates an implicit location with a value of 0x504 (uleb128(0x504) =
+  // 0xa84). The deref reads the low byte out of the location and implicitly
+  // converts it to a load address.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_constu, 0x84, 0xa, DW_OP_stack_value, DW_OP_deref_size, 1}),
+      ExpectLoadAddress(0x4));
+
+  // The tests below are similar to the ones above, but there is no implicit
+  // location created by a stack_value operation. They are provided here as a
+  // reference to contrast with the above tests.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4}), ExpectLoadAddress(0x4));
+
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4, DW_OP_deref}),
+                       ExpectLoadAddress(0x04030201));
+
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4, DW_OP_deref_size, 1}),
+                       ExpectLoadAddress(0x01));
 }

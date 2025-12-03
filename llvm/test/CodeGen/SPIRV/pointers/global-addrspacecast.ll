@@ -7,13 +7,16 @@
 ; CHECK-DAG: %[[#value:]] = OpConstant %[[#type]] 456
 ; CHECK-DAG:   %[[#var:]] = OpVariable %[[#ptrty]] Private %[[#value]]
 
+@G = internal global i32 0
+
 define hidden spir_func void @Foo() {
   %p = addrspacecast ptr addrspace(10) @PrivInternal to ptr
   %v = load i32, ptr %p, align 4
+  store i32 %v, ptr @G
   ret void
 ; CHECK:      OpLabel
-; CHECK-NEXT: OpLoad %[[#type]] %[[#var]] Aligned 4
-; CHECK-Next: OpReturn
+; CHECK: OpLoad %[[#type]] %[[#var]] Aligned 4
+; CHECK: OpReturn
 }
 
 define void @main() #1 {

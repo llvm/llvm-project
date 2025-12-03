@@ -203,6 +203,22 @@ public:
     return convertType(getContext().getTypeDeclType(t));
   }
 
+  /// Get integer from a mlir::Value that is an int constant or a constant op.
+  static int64_t getSExtIntValueFromConstOp(mlir::Value val) {
+    auto constOp = val.getDefiningOp<cir::ConstantOp>();
+    assert(constOp && "getIntValueFromConstOp call with non ConstantOp");
+    return constOp.getIntValue().getSExtValue();
+  }
+
+  /// Get zero-extended integer from a mlir::Value that is an int constant or a
+  /// constant op.
+  static int64_t getZExtIntValueFromConstOp(mlir::Value val) {
+    auto constOp = val.getDefiningOp<cir::ConstantOp>();
+    assert(constOp &&
+           "getZeroExtendedIntValueFromConstOp call with non ConstantOp");
+    return constOp.getIntValue().getZExtValue();
+  }
+
   ///  Return the cir::TypeEvaluationKind of QualType \c type.
   static cir::TypeEvaluationKind getEvaluationKind(clang::QualType type);
 
@@ -498,6 +514,10 @@ public:
     VlaSizePair(mlir::Value num, QualType ty) : numElts(num), type(ty) {}
   };
 
+  /// Return the number of elements for a single dimension
+  /// for the given array type.
+  VlaSizePair getVLAElements1D(const VariableArrayType *vla);
+
   /// Returns an MLIR::Value+QualType pair that corresponds to the size,
   /// in non-variably-sized elements, of a variable length array type,
   /// plus that largest non-variably-sized element type.  Assumes that
@@ -530,6 +550,8 @@ public:
   /// this statement is not executed normally, it not containing a label means
   /// that we can just remove the code.
   bool containsLabel(const clang::Stmt *s, bool ignoreCaseStmts = false);
+
+  Address emitExtVectorElementLValue(LValue lv, mlir::Location loc);
 
   class ConstantEmission {
     // Cannot use mlir::TypedAttr directly here because of bit availability.
@@ -1416,6 +1438,7 @@ public:
   cir::CallOp emitCoroAllocBuiltinCall(mlir::Location loc);
   cir::CallOp emitCoroBeginBuiltinCall(mlir::Location loc,
                                        mlir::Value coroframeAddr);
+  RValue emitCoroutineFrame();
 
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
 
@@ -1809,7 +1832,7 @@ public:
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
-  mlir::Value emitX86BuiltinExpr(unsigned builtinID, const CallExpr *e);
+  mlir::Value emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr);
 
   /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
   /// nonnull, if 1\p LHS is marked _Nonnull.
@@ -1968,25 +1991,23 @@ public:
 private:
   template <typename Op>
   Op emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
-                   SourceLocation dirLoc,
                    llvm::ArrayRef<const OpenACCClause *> clauses);
   // Function to do the basic implementation of an operation with an Associated
   // Statement.  Models AssociatedStmtConstruct.
   template <typename Op, typename TermOp>
-  mlir::LogicalResult emitOpenACCOpAssociatedStmt(
-      mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
-      SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
-      const Stmt *associatedStmt);
+  mlir::LogicalResult
+  emitOpenACCOpAssociatedStmt(mlir::Location start, mlir::Location end,
+                              OpenACCDirectiveKind dirKind,
+                              llvm::ArrayRef<const OpenACCClause *> clauses,
+                              const Stmt *associatedStmt);
 
   template <typename Op, typename TermOp>
   mlir::LogicalResult emitOpenACCOpCombinedConstruct(
       mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
-      SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
-      const Stmt *loopStmt);
+      llvm::ArrayRef<const OpenACCClause *> clauses, const Stmt *loopStmt);
 
   template <typename Op>
   void emitOpenACCClauses(Op &op, OpenACCDirectiveKind dirKind,
-                          SourceLocation dirLoc,
                           ArrayRef<const OpenACCClause *> clauses);
   // The second template argument doesn't need to be a template, since it should
   // always be an mlir::acc::LoopOp, but as this is a template anyway, we make
@@ -1996,7 +2017,7 @@ private:
   // instantiated 3x.
   template <typename ComputeOp, typename LoopOp>
   void emitOpenACCClauses(ComputeOp &op, LoopOp &loopOp,
-                          OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
+                          OpenACCDirectiveKind dirKind,
                           ArrayRef<const OpenACCClause *> clauses);
 
   // The OpenACC LoopOp requires that we have auto, seq, or independent on all

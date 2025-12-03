@@ -69,7 +69,7 @@ Potentially Breaking Changes
   - `CharTypdefsToIgnore` to `CharTypedefsToIgnore` in
     :doc:`bugprone-signed-char-misuse
     <clang-tidy/checks/bugprone/signed-char-misuse>`
-  
+
 - Modified the custom message format of :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` by assigning a special meaning
   to the character ``>`` at the start of the value of the option
@@ -394,7 +394,7 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
-  
+
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check by hiding the default
   suffix when the reason starts with the character `>` in the `CustomFunctions`
@@ -424,6 +424,11 @@ Changes in existing checks
   adding an option to allow pointer arithmetic via prefix/postfix increment or
   decrement operators.
 
+- Improved :doc:`cppcoreguidelines-pro-type-member-init
+  <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check to
+  correctly ignore ``std::array`` and other array-like containers when
+  `IgnoreArrays` option is set to `true`.
+
 - Improved :doc:`google-readability-casting
   <clang-tidy/checks/google/readability-casting>` check by adding fix-it
   notes for downcasts and casts to void pointer.
@@ -447,7 +452,8 @@ Changes in existing checks
   positives when pointers is transferred to non-const references
   and avoid false positives of function pointer and fix false
   positives on return of non-const pointer and fix false positives on
-  pointer-to-member operator.
+  pointer-to-member operator and avoid false positives when the address
+  of a variable is taken to be passed to a function.
 
 - Improved :doc:`misc-coroutine-hostile-raii
   <clang-tidy/checks/misc/coroutine-hostile-raii>` check by adding the option
@@ -497,7 +503,8 @@ Changes in existing checks
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to correctly match
   when the format string is converted to a different type by an implicit
-  constructor call.
+  constructor call, and fixed a crash when handling format strings
+  containing non-ASCII characters.
 
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
