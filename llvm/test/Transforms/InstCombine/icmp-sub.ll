@@ -9,8 +9,7 @@ declare i8 @llvm.umin.i8(i8, i8)
 ; Basic valid case
 define i1 @test_basic_opt(i8 %x) {
 ; CHECK-LABEL: @test_basic_opt(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 118
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], -108
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 30
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %min = call i8 @llvm.umin.i8(i8 %x, i8 10)
@@ -34,8 +33,7 @@ define i1 @test_c_is_zero(i8 %x) {
 ; Boundary case - Sum is exactly SMAX (127)
 define i1 @test_sum_is_smax(i8 %x) {
 ; CHECK-LABEL: @test_sum_is_smax(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 28
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], -101
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X:%.*]], 127
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %min = call i8 @llvm.umin.i8(i8 %x, i8 100)
@@ -409,8 +407,7 @@ define i1 @subC_nsw_ne(i32 %x) {
 ; CHECK-LABEL: @subC_nsw_ne(
 ; CHECK-NEXT:    [[SUBX:%.*]] = sub nsw i32 -2147483647, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[SUBX]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[X]], 2147483603
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %subx = sub nsw i32 -2147483647, %x
   call void @use(i32 %subx)
