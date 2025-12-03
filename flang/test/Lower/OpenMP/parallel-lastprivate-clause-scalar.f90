@@ -18,10 +18,10 @@
 !CHECK: %[[ARG1_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG1_PVT]] typeparams %[[FIVE]] {uniq_name = "_QFlastprivate_characterEarg1"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 !CHECK: %[[UNIT:.*]] = arith.constant 6 : i32
 !CHECK-NEXT: %[[ADDR:.*]] = fir.address_of(@_QQclX
-!CHECK-NEXT: %[[CVT0:.*]] = fir.convert %[[ADDR]] 
+!CHECK-NEXT: %[[CVT0:.*]] = fir.convert %[[ADDR]]
 !CHECK-NEXT: %[[CNST:.*]] = arith.constant
 !CHECK-NEXT: %[[CALL_BEGIN_IO:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[UNIT]], %[[CVT0]], %[[CNST]]) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-!CHECK-NEXT: %[[CVT_0_1:.*]] = fir.convert %[[ARG1_PVT_DECL]]#0 
+!CHECK-NEXT: %[[CVT_0_1:.*]] = fir.convert %[[ARG1_PVT_DECL]]#0
 !CHECK-NEXT: %[[CVT_0_2:.*]] = fir.convert %[[FIVE]]
 !CHECK-NEXT: %[[CALL_OP_ASCII:.*]] = fir.call @_FortranAioOutputAscii(%[[CALL_BEGIN_IO]], %[[CVT_0_1]], %[[CVT_0_2]])
 !CHECK-NEXT: %[[CALL_END_IO:.*]] = fir.call @_FortranAioEndIoStatement(%[[CALL_BEGIN_IO]])
@@ -45,7 +45,7 @@
 
 subroutine lastprivate_character(arg1)
         character(5) :: arg1
-!$OMP PARALLEL 
+!$OMP PARALLEL
 !$OMP DO LASTPRIVATE(arg1)
 do n = 1, 5
         arg1(n:n) = 'c'
@@ -82,7 +82,7 @@ end subroutine
 
 subroutine lastprivate_int(arg1)
         integer :: arg1
-!$OMP PARALLEL 
+!$OMP PARALLEL
 !$OMP DO LASTPRIVATE(arg1)
 do n = 1, 5
         arg1 = 2
@@ -123,7 +123,7 @@ end subroutine
 
 subroutine mult_lastprivate_int(arg1, arg2)
         integer :: arg1, arg2
-!$OMP PARALLEL 
+!$OMP PARALLEL
 !$OMP DO LASTPRIVATE(arg1) LASTPRIVATE(arg2)
 do n = 1, 5
         arg1 = 2
@@ -165,7 +165,7 @@ end subroutine
 
 subroutine mult_lastprivate_int2(arg1, arg2)
         integer :: arg1, arg2
-!$OMP PARALLEL 
+!$OMP PARALLEL
 !$OMP DO LASTPRIVATE(arg1, arg2)
 do n = 1, 5
         arg1 = 2
@@ -207,7 +207,7 @@ end subroutine
 
 subroutine firstpriv_lastpriv_int(arg1, arg2)
         integer :: arg1, arg2
-!$OMP PARALLEL 
+!$OMP PARALLEL
 !$OMP DO FIRSTPRIVATE(arg1) LASTPRIVATE(arg2)
 do n = 1, 5
         arg1 = 2
@@ -250,7 +250,7 @@ end subroutine
 
 subroutine firstpriv_lastpriv_int2(arg1)
         integer :: arg1
-!$OMP PARALLEL 
+!$OMP PARALLEL
 !$OMP DO FIRSTPRIVATE(arg1) LASTPRIVATE(arg1)
 do n = 1, 5
         arg1 = 2
