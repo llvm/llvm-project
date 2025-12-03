@@ -3393,21 +3393,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OmpClause::Sizes &c) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_sizes);
-  for (const parser::Cosubscript &v : c.v)
-    RequiresPositiveParameter(llvm::omp::Clause::OMPC_sizes, v,
-        /*paramName=*/"parameter", /*allowZero=*/false);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_looprange);
-  auto &first = std::get<0>(x.v.t);
-  auto &count = std::get<1>(x.v.t);
-  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, count);
-  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, first);
-}
-
 // Restrictions specific to each clause are implemented apart from the
 // generalized restrictions.
 
