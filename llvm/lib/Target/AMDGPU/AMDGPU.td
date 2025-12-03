@@ -905,25 +905,25 @@ def FeatureCubeInsts : SubtargetFeature<"cube-insts",
   "HasCubeInsts",
   "true",
   "Has v_cube* instructions"
->; 
+>;
 
 def FeatureLerpInst : SubtargetFeature<"lerp-inst",
   "HasLerpInst",
   "true",
   "Has v_lerp_u8 instruction"
->; 
+>;
 
 def FeatureSadInsts : SubtargetFeature<"sad-insts",
   "HasSadInsts",
   "true",
   "Has v_sad* instructions"
->; 
+>;
 
 def FeatureQsadInsts : SubtargetFeature<"qsad-insts",
   "HasQsadInsts",
   "true",
   "Has v_qsad* instructions"
->; 
+>;
 
 def FeatureCvtNormInsts : SubtargetFeature<"cvt-norm-insts",
   "HasCvtNormInsts",
@@ -1568,8 +1568,8 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
    FeatureUnalignedBufferAccess, FeatureImageInsts, FeatureGDS, FeatureGWS,
-   FeatureDefaultComponentZero, FeatureVmemWriteVgprInOrder, FeatureCubeInsts, 
-   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts, 
+   FeatureDefaultComponentZero, FeatureVmemWriteVgprInOrder, FeatureCubeInsts,
+   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts,
    FeatureCvtPkNormVOP2Insts
   ]
 >;
@@ -1590,8 +1590,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
    FeatureUnalignedDSAccess, FeatureNegativeScratchOffsetBug, FeatureGWS,
    FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad,
-   FeatureCubeInsts, FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts, 
-   FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts, 
+   FeatureCubeInsts, FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts,
+   FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts
   ]
 >;
@@ -1616,9 +1616,9 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureDefaultComponentZero, FeatureMaxHardClauseLength63,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
-   FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad, FeatureCubeInsts, 
-   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts, 
-   FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts, 
+   FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad, FeatureCubeInsts,
+   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts,
+   FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts
   ]
 >;
@@ -1643,7 +1643,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureDefaultComponentZero, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureVmemWriteVgprInOrder, FeatureCubeInsts, FeatureLerpInst,
-   FeatureSadInsts, FeatureQsadInsts, FeatureCvtNormInsts, 
+   FeatureSadInsts, FeatureQsadInsts, FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts, FeatureCvtPkNormVOP3Insts
   ]
 >;
@@ -2125,11 +2125,11 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureWaitsBeforeSystemScopeStores,
    FeatureD16Writes32BitVgpr,
    FeatureCubeInsts,
-   FeatureLerpInst, 
+   FeatureLerpInst,
    FeatureSadInsts,
-   FeatureQsadInsts, 
-   FeatureCvtNormInsts, 
-   FeatureCvtPkNormVOP2Insts, 
+   FeatureQsadInsts,
+   FeatureCvtNormInsts,
+   FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts
    ]>;
 
@@ -2206,11 +2206,11 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
    FeatureCubeInsts,
-   FeatureLerpInst, 
-   FeatureSadInsts, 
-   FeatureQsadInsts, 
-   FeatureCvtNormInsts, 
-   FeatureCvtPkNormVOP2Insts, 
+   FeatureLerpInst,
+   FeatureSadInsts,
+   FeatureQsadInsts,
+   FeatureCvtNormInsts,
+   FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts
 ]>;
 
