@@ -885,6 +885,23 @@ void bad_macro12() {
     }
 }
 
+#define MY_VAR_DECL_WITH_EXTRA(type, name, val) do_some(); type name = val;
+
+void bad_macro12_extra() {
+    MY_VAR_DECL_WITH_EXTRA(int, i1, 0); DUMMY_TOKEN
+    if (i1 == 0) {
+// CHECK-MESSAGES-NOT: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+        do_some();
+    }
+    MY_VAR_DECL_WITH_EXTRA(int, i2, 0); DUMMY_TOKEN
+    switch (i2) {
+// CHECK-MESSAGES-NOT: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+        case 0:
+            do_some();
+            break;
+    }
+}
+
 void bad_macro13() {
     MY_VAR_DECL(int, i1, 0);
     MY_IF (i1 == 0,
