@@ -22,6 +22,10 @@ jobs:
   build-windows-release:
     runs-on: ${{ matrix.runs-on }}
     if: github.repository_owner == 'llvm'
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+      artifact-id: ${{ steps.artifact-upload.outputs.artifact-id }}
+      installer-name: ${{ steps.variables.outputs.installer-name }}
     strategy:
       fail-fast: false
       matrix:
@@ -32,15 +36,7 @@ jobs:
       - name: Setup crlf
         shell: bash
         run: |
-          #for f in `find /c/hostedtoolcache/windows/Python/3.9.13/x64/ -iname pyconfig.h`; do
-          #  cat $f
-          #done
           git config --global core.autocrlf false
-#      - name: Setup Python
-#        id: setup-python
-#        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-#        with:
-#          python-version: '3.9'
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1A
         with:
           ref: ${{ (inputs.release-version && format('llvmorg-{0}', inputs.release-version)) || github.sha }}
@@ -83,15 +79,41 @@ jobs:
           mv llvm_package_${{ steps.variables.outputs.version-string}}\${{ steps.variables.outputs.installer-dir }}\${{ steps.variables.outputs.installer-name }} ${{ github.workspace }}
           mv llvm_package_${{ steps.variables.outputs.version-string}}\${{ steps.variables.outputs.tar-name }} ${{ github.workspace }}
 
-      - name: Upload Installer
-        uses: ./.github/workflows/upload-release-artifact
-        with:
-          files: ${{ steps.variables.outputs.installer-name }}
-          upload: false
-      
-      - name: Upload Tar
-        uses: ./.github/workflows/upload-release-artifact
-        with:
-          files: ${{ steps.variables.outputs.tar-name }}
-          upload: false
+      - name: Generate sha256 digest for binaries
+        id: digest
+        run: |
+          echo "digest=$(cat ${{ steps.variables.outputs.tar-name }} ${{ steps.variables.outputs.installer-name }} | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
+      - name: Release Binary Artifact
+        id: artifact-upload
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: windows-release-binaries-${{ steps.variables.outputs.version-string }}
+          path: |
+            ${{ steps.variables.outputs.installer-name }}
+            ${{ steps.variables.outputs.tar-name }}
+
+  upload-windows-release:
+    runs-on: windows-2022
+    if: github.repository_owner == 'llvm' &&
+        github.event_name != 'pull_request'
+    needs:
+      - build-windows-release
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout Release Scripts
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          sparse-checkout: |
+            .github/workflows/upload-release-artifact
+            llvm/utils/release/github-upload-release.py
+            llvm/utils/git/requirements.txt
+          sparse-checkout-cone-mode: false
+      - name: Upload Artifacts
+        uses: ./.github/workflows/upload-release-artifact
+        with:
+          artifact-id: ${{ needs.build-windows-release.outputs.artifact-id }}
+          attestation-name: ${{ needs.build-windows-release.outputs.installer-name }}
+          digest: ${{ needs.build-windows-release.outputs.digest }}
