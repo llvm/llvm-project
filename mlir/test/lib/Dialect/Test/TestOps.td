@@ -2352,6 +2352,24 @@ def IsolatedGraphRegionOp : TEST_Op<"isolated_graph_region",  [
   let assemblyFormat = "attr-dict-with-keyword $region";
 }
 
+def ManyRegionsOp : TEST_Op<"many_regions", []> {
+  let summary = "operation created with move-only objects";
+  let description = [{
+    Test op with multiple regions with a `create` function that
+    takes parameters containing move-only objects.
+  }];
+
+  let regions = (region VariadicRegion<AnyRegion>:$regions);
+  let builders =
+      [OpBuilder<(ins "::std::unique_ptr<::mlir::Region>":$singleRegion), [{
+      $_state.addRegion(std::move(singleRegion));
+      build($_builder, $_state, {}, /*regionsCount=*/1);
+    }]>,
+       // Define in TestOps.cpp.
+       OpBuilder<(ins "::llvm::SmallVectorImpl<::std::unique_ptr<::mlir::"
+                      "Region>>&&":$regions)>];
+}
+
 def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
   let summary =  "affine scope operation";
   let description = [{
