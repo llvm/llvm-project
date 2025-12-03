@@ -6708,8 +6708,9 @@ inline bool isTRNMask(ArrayRef<int> M, unsigned NumElts,
   if (NumElts % 2 != 0)
     return false;
 
-  // "Variant" refers to the distinction bwetween trn1 and trn2, while
-  // "Order" refers to sequence of input registers (matching vs flipped).
+  // "Result" corresponds to "WhichResultOut", selecting between trn1 and trn2.
+  // "Order" corresponds to "OperandOrderOut", selecting the order of operands
+  // for the instruction (flipped or not).
   bool Result0Order0 = true; // WhichResultOut = 0, OperandOrderOut = 0
   bool Result1Order0 = true; // WhichResultOut = 1, OperandOrderOut = 0
   bool Result0Order1 = true; // WhichResultOut = 0, OperandOrderOut = 1
