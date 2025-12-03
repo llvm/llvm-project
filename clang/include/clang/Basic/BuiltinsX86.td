@@ -580,11 +580,12 @@ let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] i
   def permti256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>, _Constant int)">;
 }
 
-let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
-  def permdf256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Constant int)">;
+let Features = "avx2",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
+  def permdf256
+      : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Constant int)">;
   def permdi256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Constant int)">;
 }
-
 
 let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def pmovmskb256 : X86Builtin<"int(_Vector<32, char>)">;
