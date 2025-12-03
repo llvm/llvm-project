@@ -220,7 +220,7 @@ TryBuildIterableExpansionStmtInitializer(Sema &S, Expr *ExpansionInitializer,
   return Data;
 }
 
-static StmtResult BuildDestructuringCXXExpansionStmt(
+static StmtResult BuildDestructuringDecompositionDecl(
     Sema &S, Expr *ExpansionInitializer, SourceLocation ColonLoc,
     bool VarIsConstexpr,
     ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
@@ -415,7 +415,7 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
   }
 
   // If not, try destructuring.
-  StmtResult DecompDeclStmt = BuildDestructuringCXXExpansionStmt(
+  StmtResult DecompDeclStmt = BuildDestructuringDecompositionDecl(
       *this, ExpansionInitializer, ColonLoc, ExpansionVar->isConstexpr(),
       LifetimeExtendTemps);
   if (DecompDeclStmt.isInvalid()) {
@@ -428,9 +428,9 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
   if (DD->isInvalidDecl())
     return StmtError();
 
-  // Synthesise an InitListExpr to store DREs to the BindingDecls; this
-  // essentially lets us desugar the expansion of a destructuring expansion
-  // statement to that of an enumerating expansion statement.
+  // Synthesise an InitListExpr to store the bindings; this essentially lets us
+  // desugar the expansion of a destructuring expansion statement to that of an
+  // enumerating expansion statement.
   SmallVector<Expr *> Bindings;
   for (BindingDecl *BD : DD->bindings()) {
     auto *HVD = BD->getHoldingVar();
