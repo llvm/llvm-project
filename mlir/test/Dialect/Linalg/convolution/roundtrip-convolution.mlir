@@ -5,8 +5,9 @@
 // RUN: mlir-opt %s -linalg-generalize-named-ops | mlir-opt --linalg-specialize-generic-ops | FileCheck %s --implicit-check-not=linalg.generic
 
 // -----------------------------
-// Convolution ops.
+// Convolution ops - 1D.
 // -----------------------------
+
 func.func @conv_1d(%in : tensor<?xf32>, %filter : tensor<?xf32>, %out : tensor<?xf32>) -> tensor<?xf32> {
   %0 = linalg.conv_1d
          ins(%in, %filter : tensor<?xf32>, tensor<?xf32>)
@@ -43,6 +44,10 @@ func.func @conv_1d_ncw_fcw(%input: tensor<?x?x?xf32>, %filter: tensor<?x?x?xf32>
 // CHECK-SAME:      dilations = dense<3> : tensor<1xi64>, strides = dense<2> : tensor<1xi64>
 
 // -----
+
+// -----------------------------
+// Convolution ops - 2D.
+// -----------------------------
 
 func.func @conv_2d(%in : tensor<?x?xf32>, %filter : tensor<?x?xf32>, %out : tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.conv_2d
@@ -198,6 +203,10 @@ func.func @conv_2d_nhwgc_gfhwc_q(%input: tensor<?x?x?x?x?xi8>, %filter: tensor<?
 
 // -----
 
+// -----------------------------
+// Convolution ops - 3D.
+// -----------------------------
+
 func.func @conv_3d(%in : tensor<?x?x?xf32>, %filter : tensor<?x?x?xf32>, %out : tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
   %0 = linalg.conv_3d
          ins(%in, %filter : tensor<?x?x?xf32>, tensor<?x?x?xf32>)
@@ -209,9 +218,10 @@ func.func @conv_3d(%in : tensor<?x?x?xf32>, %filter : tensor<?x?x?xf32>, %out : 
 
 // -----
 
-// -----------------------------
-// Depthwise Convolution ops.
-// -----------------------------
+// -------------------------------
+// Depthwise Convolution ops - 1D.
+// -------------------------------
+
 func.func @depthwise_conv_1d_ncw_cw(%input: tensor<?x?x?xf32>, %filter: tensor<?x?xf32>, %output: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
   %0 = linalg.depthwise_conv_1d_ncw_cw
          {dilations = dense<3> : tensor<1xi64>, strides = dense<2> : tensor<1xi64>}
@@ -250,6 +260,10 @@ func.func @depthwise_conv_1d_nwc_wcm(%input: tensor<?x?x?xf32>, %filter: tensor<
 // CHECK-SAME:      dilations = dense<1> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>
 
 // -----
+
+// -------------------------------
+// Depthwise Convolution ops - 2D.
+// -------------------------------
 
 func.func @depthwise_conv_2d_nchw_chw(%input: tensor<?x?x?x?xf16>, %filter: tensor<?x?x?xf16>, %output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   %0 = linalg.depthwise_conv_2d_nchw_chw
@@ -316,6 +330,10 @@ func.func @depthwise_conv_2d_nhwc_hwcm_q(%input: tensor<?x?x?x?xi8>, %filter: te
 
 // -----
 
+// -------------------------------
+// Depthwise Convolution ops - 3D.
+// -------------------------------
+
 func.func @depthwise_conv_3d_ndhwc_dhwcm(%input: tensor<?x?x?x?x?xf32>, %filter: tensor<?x?x?x?x?xf32>, %output: tensor<?x?x?x?x?x?xf32>) -> tensor<?x?x?x?x?x?xf32> {
   %0 = linalg.depthwise_conv_3d_ndhwc_dhwcm
          {dilations = dense<1> : tensor<3xi64>, strides = dense<1> : tensor<3xi64>}
@@ -332,6 +350,7 @@ func.func @depthwise_conv_3d_ndhwc_dhwcm(%input: tensor<?x?x?x?x?xf32>, %filter:
 // -----------------------------
 // Pooling ops.
 // -----------------------------
+
 func.func @pooling_nhwc_max(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?xf32>, %output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   %0 = linalg.pooling_nhwc_max
          {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}

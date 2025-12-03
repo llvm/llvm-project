@@ -256,42 +256,62 @@ static BlockArgument getBlockArgumentWithOptionalCastOps(Value val) {
   return dyn_cast<BlockArgument>(defOp->getOperand(0));
 }
 
-/// Utility function to match the zero point offset body of convolution ops.
-/// It takes input the addition op and multiplication op expected in every
-/// convolution op and matches the following for both operands of multiplication
-/// op :-
-///     %a - %b
-///   where, %a and %b can have optional upcast operation.
+/// Utility function to match the zero point offset body of quantized
+/// convolution ops.
+///
+/// Quantized convolutions have a body of the form:
+///   %out + ((%input - %inputZp) * (%filter - %filterZp))
+/// where:
+///   - %input is the input tensor element (block arg 0)
+///   - %filter is the filter tensor element (block arg 1)
+///   - %inputZp is the input zero-point scalar (block arg 2)
+///   - %filterZp is the filter zero-point scalar (block arg 3)
+///   - %out is the output accumulator (block arg 4)
+///
+/// This function verifies that the multiplication operands are subtraction
+/// operations matching this pattern.
 static bool bodyMatcherForZeroPointOffsets(Operation *addOp, Operation *mulOp,
                                            Block *body) {
-  Operation *subOp1 = mulOp->getOperand(0).getDefiningOp();
-  if (!isa_and_present<arith::SubIOp, arith::SubFOp>(subOp1))
+  // The multiplication should have two subtraction operands:
+  // one for (input - inputZp) and one for (filter - filterZp).
+  Operation *inputSubOp = mulOp->getOperand(0).getDefiningOp();
+  if (!isa_and_present<arith::SubIOp, arith::SubFOp>(inputSubOp))
     return false;
-  Operation *subOp2 = mulOp->getOperand(1).getDefiningOp();
-  if (!isa_and_present<arith::SubIOp, arith::SubFOp>(subOp2))
+
+  Operation *filterSubOp = mulOp->getOperand(1).getDefiningOp();
+  if (!isa_and_present<arith::SubIOp, arith::SubFOp>(filterSubOp))
     return false;
+
+  // Extract block arguments from subtraction operands.
   BlockArgument inputBlockArg =
-      getBlockArgumentWithOptionalCastOps(subOp1->getOperand(0));
-  BlockArgument inputScalarBlockArg =
-      getBlockArgumentWithOptionalCastOps(subOp1->getOperand(1));
+      getBlockArgumentWithOptionalCastOps(inputSubOp->getOperand(0));
+  BlockArgument inputZpBlockArg =
+      getBlockArgumentWithOptionalCastOps(inputSubOp->getOperand(1));
   BlockArgument filterBlockArg =
-      getBlockArgumentWithOptionalCastOps(subOp2->getOperand(0));
-  BlockArgument filterScalarBlockArg =
-      getBlockArgumentWithOptionalCastOps(subOp2->getOperand(1));
+      getBlockArgumentWithOptionalCastOps(filterSubOp->getOperand(0));
+  BlockArgument filterZpBlockArg =
+      getBlockArgumentWithOptionalCastOps(filterSubOp->getOperand(1));
   BlockArgument outBlockArg =
       getBlockArgumentWithOptionalCastOps(addOp->getOperand(0));
-  if (!inputBlockArg || !inputScalarBlockArg || !filterBlockArg ||
-      !filterScalarBlockArg || !outBlockArg ||
-      inputBlockArg.getOwner() != body ||
-      inputScalarBlockArg.getOwner() != body ||
-      filterBlockArg.getOwner() != body ||
-      filterScalarBlockArg.getOwner() != body ||
-      outBlockArg.getOwner() != body || inputBlockArg.getArgNumber() != 0 ||
-      inputScalarBlockArg.getArgNumber() != 2 ||
-      filterBlockArg.getArgNumber() != 1 ||
-      filterScalarBlockArg.getArgNumber() != 3 ||
-      outBlockArg.getArgNumber() != 4)
+
+  // Verify all block arguments are valid.
+  if (!inputBlockArg || !inputZpBlockArg || !filterBlockArg ||
+      !filterZpBlockArg || !outBlockArg)
     return false;
+
+  // Verify all block arguments belong to the convolution body.
+  if (inputBlockArg.getOwner() != body || inputZpBlockArg.getOwner() != body ||
+      filterBlockArg.getOwner() != body ||
+      filterZpBlockArg.getOwner() != body || outBlockArg.getOwner() != body)
+    return false;
+
+  // Verify block arguments have expected indices:
+  // arg0: input, arg1: filter, arg2: inputZp, arg3: filterZp, arg4: output
+  if (inputBlockArg.getArgNumber() != 0 || filterBlockArg.getArgNumber() != 1 ||
+      inputZpBlockArg.getArgNumber() != 2 ||
+      filterZpBlockArg.getArgNumber() != 3 || outBlockArg.getArgNumber() != 4)
+    return false;
+
   return true;
 }
 
