@@ -64,11 +64,11 @@ jobs:
     name: Package Release Sources
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-24.04
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+      artifact-id: ${{ steps.artifact-upload.outputs.artifact-id }}
     needs:
       - inputs
-    permissions:
-      id-token: write
-      attestations: write
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -83,14 +83,43 @@ jobs:
         run: |
           ./llvm/utils/release/export.sh ${{ needs.inputs.outputs.export-args }}
 
-      - name: Store Tarball Names
-        id: filenames
+      - name: Generate sha256 digest for sources
+        id: digest
         run: |
-          echo "filenames=*.xz" >> $GITHUB_OUTPUT
+          echo "digest=$(cat *.xz | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+    
+      - name: Release Sources Artifact
+        id: artifact-upload
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: ${{ needs.inputs.outputs.ref }}-sources
+          path: |
+            *.xz
+
+  attest-release-sources:
+    name: Attest Release Sources
+    runs-on: ubuntu-24.04
+    if: github.event_name != 'pull_request'
+    needs:
+      - inputs
+      - release-sources
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout Release Scripts
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          sparse-checkout: |
+            .github/workflows/upload-release-artifact
+            llvm/utils/release/github-upload-release.py
+            llvm/utils/git/requirements.txt
+          sparse-checkout-cone-mode: false
 
       - name: Upload Artifacts
         uses: ./.github/workflows/upload-release-artifact
         with:
-          files: ${{ steps.filenames.outputs.filenames }}
-          attestation-name: ${{ needs.inputs.outputs.ref }}-sources
+          artifact-id: ${{ needs.release-sources.outputs.artifact-id }}
+          attestation-name: ${{ needs.inputs.outputs.ref }}-sources-attestation
+          digest: ${{ needs.release-sources.outputs.digest }}
           upload: false

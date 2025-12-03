@@ -3,10 +3,6 @@ description: >-
   Upload release artifact along with an attestation.  The action assumes that
   the llvm-project repository has already been checked out.
 inputs:
-  files:
-    description: >-
-      Files to be uploaded. This can contain bash wildcards.
-    required: true
   release-version:
     description: >-
       The release where the artifact will be attached.
@@ -31,43 +27,58 @@ inputs:
       $attestation-name.jsonl.  If this is not set, it will default
       to the falue of `files`.
     required: false
+  artifact-id:
+    description: >-
+      Artifact id of the artifact with the files to upload.
+    required: true
+  digest:
+    description: >-
+      sha256 digest to verify the authenticity of the files being uploaded.
+    required: true
 
 runs:
   using: "composite"
   steps:
-    - name: Collect Variables
-      id: vars
+    - name: Download Artifact
+      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      id: download-artifact
+      with:
+        artifact-ids: ${{ inputs.artifact-id }}
+        path: downloads
+
+    # In theory github artifacts are immutable so we could just rely on using
+    # the artifact-id to download it, but just to be extra safe we want to
+    # generated a digest for the files we are uploading so we can verify it
+    # when downloading.
+    # See also: https://irsl.medium.com/github-artifact-immutability-is-a-lie-9b6244095694
+    - name: Verify Files
       shell: bash
       env:
-        INPUTS_ATTESTATION_NAME: ${{ inputs.attestation-name }}
-        INPUTS_FILES: ${{ inputs.files }}
+        INPUTS_DIGEST: ${{ inputs.digest }}
       run: |
-        if [ -z "$INPUTS_ATTESTATION_NAME" ]; then
-          name="$INPUTS_FILES"
-        else
-          name="$INPUTS_ATTESTATION_NAME"
-        fi
-        echo "attestation-name=$name" >> $GITHUB_OUTPUT
+        digest_file="sha256"
+        echo "$INPUTS_DIGEST -" > $digest_file
+        cat ${{ steps.download-artifact.outputs.download-path }}/* | sha256sum -c $digest_file
+
     - name: Attest Build Provenance
-      if: inputs.upload == 'true'
       id: provenance
       uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
       with:
-        subject-path: ${{ inputs.files }}
+        subject-path: ${{ steps.download-artifact.outputs.download-path }}/*
 
     - name: Rename attestation file
-      if: inputs.upload == 'true'
       shell: bash
+      env:
+        INPUTS_ATTESTATION_NAME: ${{ inputs.attestation-name }}
       run: |
-        mv ${{ steps.provenance.outputs.bundle-path }} ${{ steps.vars.outputs.attestation-name }}.jsonl
+        mv ${{ steps.provenance.outputs.bundle-path }} "$INPUTS_ATTESTATION_NAME".jsonl
 
     - name: Upload Build Provenance
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
-        name: ${{ steps.vars.outputs.attestation-name }}
+        name: ${{ inputs.attestation-name }}
         path: |
-          ${{ inputs.files }}
-          ${{(inputs.upload == 'true' && format('{0}.jsonl', steps.vars.outputs.attestation-name)) || '' }}
+          ${{ inputs.attestation-name }}.jsonl
 
     - name: Install Python Requirements
       if: inputs.upload == 'true'
@@ -91,4 +102,4 @@ runs:
         --token ${{ github.token }} \
         --release ${{ inputs.release-version }} \
         upload \
-        --files ${{ inputs.files }} ${{ steps.vars.outputs.attestation-name}}.jsonl
+        --files ${{ steps.download-artifact.outputs.download-path }}/* ${{ steps.vars.outputs.attestation-name}}.jsonl
