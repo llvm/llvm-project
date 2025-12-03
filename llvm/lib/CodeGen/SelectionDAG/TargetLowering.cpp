@@ -10877,7 +10877,7 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   assert(VT == RHS.getValueType() && "Expected operands to be the same type");
   assert(VT.isInteger() && "Expected operands to be integers");
 
-  // usub.sat(a, 1) -> a - zext(a != 0)
+  // usub.sat(a, 1) -> sub(a, zext(a != 0))
   if (Opcode == ISD::USUBSAT && !VT.isVector() && isOneConstant(RHS)) {
     SDValue Zero = DAG.getConstant(0, dl, VT);
     EVT BoolVT =
