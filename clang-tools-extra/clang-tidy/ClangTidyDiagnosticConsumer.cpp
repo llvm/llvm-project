@@ -478,11 +478,10 @@ bool ClangTidyDiagnosticConsumer::passesLineFilter(StringRef FileName,
     if (FileName.ends_with(Filter.Name)) {
       if (Filter.LineRanges.empty())
         return true;
-      for (const FileFilter::LineRange &Range : Filter.LineRanges) {
-        if (Range.first <= LineNumber && LineNumber <= Range.second)
-          return true;
-      }
-      return false;
+      return llvm::any_of(
+          Filter.LineRanges, [&](const FileFilter::LineRange &Range) {
+            return Range.first <= LineNumber && LineNumber <= Range.second;
+          });
     }
   }
   return false;
