@@ -724,6 +724,8 @@ Crash and bug fixes
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 - Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
 - Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
+- Fixed a crash when evaluating nested requirements in requires-expressions that
+  reference invented parameters. (#GH166325)
 
 Improvements
 ^^^^^^^^^^^^
