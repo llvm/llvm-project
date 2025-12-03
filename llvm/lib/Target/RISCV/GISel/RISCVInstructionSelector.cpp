@@ -1001,10 +1001,7 @@ bool RISCVInstructionSelector::selectExtractSubvector(
   if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
     return false;
 
-  MachineInstr *CopyMI = MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {})
-                             .addReg(SrcReg, 0, SubRegIdx);
-  if (!constrainSelectedInstRegOperands(*CopyMI, TII, TRI, RBI))
-    return false;
+  MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {}).addReg(SrcReg, 0, SubRegIdx);
 
   MI.eraseFromParent();
   return true;
