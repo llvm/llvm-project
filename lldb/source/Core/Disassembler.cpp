@@ -315,7 +315,8 @@ std::vector<std::string> VariableAnnotator::Annotate(Instruction &inst) {
              ? llvm::StringRef(kUndefLocationFormatted)
              : llvm::StringRef(annotation.location_description));
 
-    events.push_back(llvm::formatv("{0} = {1}", annotation.variable_name, location).str());
+    events.push_back(
+        llvm::formatv("{0} = {1}", annotation.variable_name, location).str());
   }
 
   return events;
