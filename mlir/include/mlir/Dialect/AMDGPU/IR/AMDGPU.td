@@ -1355,11 +1355,9 @@ def AMDGPU_MakeDmaDescriptorOp :
 
     int getElementTypeWidth() {
       Type elementType = getBase().getType().getElementType();
-      int width;
-      if (auto floatType = dyn_cast<FloatType>(elementType)) {
-        width = floatType.getWidth();
-      } else if (auto intType = dyn_cast<IntegerType>(elementType)) {
-        width = intType.getWidth();
+      unsigned width;
+      if (elementType.isIntOrFloat()) {
+        width = elementType.getIntOrFloatBitWidth();
       } else {
         llvm_unreachable("element type must have getWidth interface");
       }
