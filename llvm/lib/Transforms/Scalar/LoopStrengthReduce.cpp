@@ -2624,15 +2624,11 @@ LSRInstance::OptimizeLoopTermCond() {
       continue;
 
     Instruction *Cond = dyn_cast<Instruction>(TermBr->getCondition());
-    bool CondImmediatelyBeforeTerm = Cond && Cond->getNextNode() == TermBr;
     // If the argument to TermBr is an extractelement, then the source of that
     // instruction is what's generated the condition.
     auto *Extract = dyn_cast_or_null<ExtractElementInst>(Cond);
-    if (Extract) {
+    if (Extract)
       Cond = dyn_cast<Instruction>(Extract->getVectorOperand());
-      if (Cond && CondImmediatelyBeforeTerm)
-        CondImmediatelyBeforeTerm = Cond->getNextNode() == Extract;
-    }
     // FIXME: We could do more here, like handling logical operations where one
     // side is a cmp that uses an induction variable.
     if (!Cond)
@@ -2715,7 +2711,8 @@ LSRInstance::OptimizeLoopTermCond() {
     // It's possible for the setcc instruction to be anywhere in the loop, and
     // possible for it to have multiple users.  If it is not immediately before
     // the exiting block branch, move it.
-    if (!CondImmediatelyBeforeTerm && isa<CmpInst>(Cond) && !Extract) {
+    if (isa_and_nonnull<CmpInst>(Cond) && Cond->getNextNode() != TermBr &&
+        !Extract) {
       if (Cond->hasOneUse()) {
         Cond->moveBefore(TermBr->getIterator());
       } else {
