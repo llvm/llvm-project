@@ -9,6 +9,7 @@
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Host/windows/windows.h"
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
