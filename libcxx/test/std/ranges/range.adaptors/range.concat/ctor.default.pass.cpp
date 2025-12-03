@@ -12,6 +12,8 @@
 #include <ranges>
 #include <type_traits>
 
+int buff[4] = {0, 1, 2, 3};
+
 struct DefaultConstructibleView : std::ranges::view_base {
   constexpr DefaultConstructibleView() : begin_(buff), end_(buff + 4) {}
   constexpr int const* begin() const { return begin_; }
@@ -40,8 +42,8 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  tests();
-  static_assert(tests());
+  test();
+  static_assert(test());
 
   return 0;
 }

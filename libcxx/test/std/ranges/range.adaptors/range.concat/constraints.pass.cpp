@@ -24,6 +24,7 @@ concept WellFormedView = requires(T& a) {
 };
 
 struct X {};
+struct Y {};
 
 struct BadIter {
   using value_type = int;
@@ -61,6 +62,102 @@ struct InputRange {
 private:
   int* begin_;
   int* end_;
+};
+
+struct RefOnlyRange1 : std::ranges::view_base {
+  X* begin() const;
+  X* end() const;
+};
+
+struct RefOnlyRange2 : std::ranges::view_base {
+  Y* begin() const;
+  Y* end() const;
+};
+
+namespace std {
+template <template <class> class TQual, template <class> class UQual>
+struct basic_common_reference< X, Y, TQual, UQual> {
+  using type = X;
+};
+
+template <template <class> class TQual, template <class> class UQual>
+struct basic_common_reference< Y, X, TQual, UQual> {
+  using type = X;
+};
+} // namespace std
+
+struct R1 : std::ranges::view_base {
+  int* first = nullptr;
+  int* last  = nullptr;
+
+  R1() = default;
+  R1(int* f, int* l) : first(f), last(l) {}
+
+  struct iterator {
+    using value_type       = int;
+    using difference_type  = std::ptrdiff_t;
+    using iterator_concept = std::forward_iterator_tag;
+
+    int* p = nullptr;
+
+    int& operator*() const { return *p; }
+    iterator& operator++() {
+      ++p;
+      return *this;
+    }
+    iterator operator++(int) {
+      auto tmp = *this;
+      ++*this;
+      return tmp;
+    }
+
+    friend bool operator==(const iterator& x, const iterator& y) { return x.p == y.p; }
+
+    friend X iter_move(const iterator& it) {
+      (void)it;
+      return X{};
+    }
+  };
+
+  iterator begin() const { return iterator{first}; }
+  iterator end() const { return iterator{last}; }
+};
+
+struct R2 : std::ranges::view_base {
+  int* first = nullptr;
+  int* last  = nullptr;
+
+  R2() = default;
+  R2(int* f, int* l) : first(f), last(l) {}
+
+  struct iterator {
+    using value_type       = int;
+    using difference_type  = std::ptrdiff_t;
+    using iterator_concept = std::forward_iterator_tag;
+
+    int* p = nullptr;
+
+    int& operator*() const { return *p; }
+    iterator& operator++() {
+      ++p;
+      return *this;
+    }
+    iterator operator++(int) {
+      auto tmp = *this;
+      ++*this;
+      return tmp;
+    }
+
+    friend bool operator==(const iterator& x, const iterator& y) { return x.p == y.p; }
+
+    friend Y iter_move(const iterator& it) {
+      (void)it;
+      return Y{};
+    }
+  };
+
+  iterator begin() const { return iterator{first}; }
+  iterator end() const { return iterator{last}; }
 };
 
 template <typename... Ts>
@@ -121,8 +218,17 @@ int main(int, char**) {
     }
 
     {
+      // concat-value-t is ill-formed but concat-reference-t is valid
+      static_assert(!ConcatViewConstraintsPass<RefOnlyRange1, RefOnlyRange2>);
+    }
+
+    {
+      // concat-rvalue-reference-t is ill-formed
+      static_assert(!ConcatViewConstraintsPass<R1, R2>);
+    }
+
+    {
       // concat-indirectly-readable is ill-formed
-      //   since iter_move of BadIter returns an unrelated type
       static_assert(!ConcatViewConstraintsPass<BadView, BadView>);
     }
   }
