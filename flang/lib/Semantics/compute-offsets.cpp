@@ -152,8 +152,7 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   // disjoint EQUIVALENCE storage sequence.
   for (auto &[symbol, dep] : dependents_) {
     dep = Resolve(dep);
-    //CHECK(symbol->size() == 0);
-    CHECK(!symbol->sizeOpt().has_value());
+    CHECK(symbol->size() == 0);
     auto symInfo{GetSizeAndAlignment(*symbol, true)};
     symbol->set_size(symInfo.size);
     Symbol &base{*dep.symbol};
@@ -212,10 +211,8 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
     }
   }
   for (auto &[symbol, dep] : dependents_) {
-    if (!dep.symbol->offsetOpt().has_value()) {
-      llvm::errs() << "Symbol " << dep.symbol->name() << " has no offset\n";
-    }
-    CHECK(dep.symbol->offsetOpt().has_value());
+    // We are occassionally relying offset here to return zero when
+    // it has not been set yet.
     symbol->set_offset(dep.symbol->offset() + dep.offset);
     if (const auto *block{FindCommonBlockContaining(*dep.symbol)}) {
       symbol->get<ObjectEntityDetails>().set_commonBlock(*block);
@@ -307,7 +304,7 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
 
 void ComputeOffsetsHelper::DoEquivalenceBlockBase(
     Symbol &symbol, SizeAndAlignment &blockInfo) {
-  if (symbol.sizeOpt().has_value() && symbol.size() > blockInfo.size) {
+  if (symbol.size() > blockInfo.size) {
     blockInfo.size = symbol.size();
   }
 }
@@ -405,8 +402,8 @@ std::size_t ComputeOffsetsHelper::DoSymbol(
   }
   SizeAndAlignment s{GetSizeAndAlignment(symbol, true)};
   if (s.size == 0) {
-    symbol.set_size(0);
-    symbol.set_offset(offset_);
+    // FIXME: Errors that prevent us from computing the symbols size or
+    // variables that really require no storage should be set here.
     return 0;
   }
   std::size_t previousOffset{offset_};
