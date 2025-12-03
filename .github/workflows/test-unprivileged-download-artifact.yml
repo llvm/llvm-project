@@ -55,7 +55,7 @@ jobs:
         id: download-artifact
         with:
           run-id: ${{ github.run_id }}
-          artifact-name: workflow-args
+          artifact-name: artifact-name-
       - name: Assert That Contents are the Same
         run: |
           cat comment1
