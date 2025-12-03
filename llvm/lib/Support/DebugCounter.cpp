@@ -185,11 +185,6 @@ DebugCounter &DebugCounter::instance() { return *Owner; }
 void DebugCounter::push_back(const std::string &Val) {
   if (Val.empty())
     return;
-#ifdef NDEBUG
-  // isCountingEnabled is hardcoded to false in NDEBUG.
-  errs() << "Requested --debug-counter in LLVM build without assertions. This "
-            "is a no-op.\n";
-#endif
 
   // The strings should come in as counter=chunk_list
   auto CounterPair = StringRef(Val).split('=');

@@ -271,11 +271,11 @@ gpu.module @xevm_module{
 // CHECK: %[[C2:.*]] = arith.constant 2 : index
 // CHECK: %[[C8:.*]] = arith.constant 8 : index
 // CHECK: %[[LANE_ID:.*]] = gpu.lane_id
-// CHECK: %[[REMU1:.*]] = index.remu %[[LANE_ID]], %[[C8]]
-// CHECK: %[[DIVU:.*]] = index.divu %[[LANE_ID]], %[[C8]]
-// CHECK: %[[REMU2:.*]] = index.remu %[[DIVU]], %[[C2]]
-// CHECK: %[[REMU3:.*]] = index.remu %[[REMU2]], %[[C2]]
-// CHECK: %[[REMU4:.*]] = index.remu %[[REMU1]], %[[C8]]
+// CHECK: %[[REMU1:.*]] = arith.remui %[[LANE_ID]], %[[C8]]
+// CHECK: %[[DIVU:.*]] = arith.divui %[[LANE_ID]], %[[C8]]
+// CHECK: %[[REMU2:.*]] = arith.remui %[[DIVU]], %[[C2]]
+// CHECK: %[[REMU3:.*]] = arith.remui %[[REMU2]], %[[C2]]
+// CHECK: %[[REMU4:.*]] = arith.remui %[[REMU1]], %[[C8]]
 // CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%[[REMU3]], %[[REMU4]]] : !xegpu.mem_desc<32x32xf32>, index, index -> vector<1x1xf32>
 // CHECK: xegpu.store_matrix %[[MAT]], %arg0[%[[REMU3]], %[[REMU4]]] : vector<1x1xf32>, !xegpu.mem_desc<32x32xf32>, index, index
 gpu.module @xevm_module{
@@ -294,13 +294,13 @@ gpu.module @xevm_module{
 // CHECK: %[[C4:.*]] = arith.constant 4 : index
 // CHECK: %[[C1:.*]] = arith.constant 1 : index
 // CHECK: %[[LANE_ID:.*]] = gpu.lane_id
-// CHECK: %[[REMU1:.*]] = index.remu %[[LANE_ID]], %[[C4]]
-// CHECK: %[[DIVU:.*]] = index.divu %[[LANE_ID]], %[[C4]]
-// CHECK: %[[REMU2:.*]] = index.remu %[[DIVU]], %[[C4]]
-// CHECK: %[[MUL:.*]] = index.mul %[[REMU2]], %[[C2]]
-// CHECK: %[[REMU3:.*]] = index.remu %[[MUL]], %[[C8]]
-// CHECK: %[[REMU4:.*]] = index.remu %[[REMU1]], %[[C4]]
-// CHECK: %[[ADD:.*]] = index.add %[[REMU4]], %[[C1]]
+// CHECK: %[[REMU1:.*]] = arith.remui %[[LANE_ID]], %[[C4]]
+// CHECK: %[[DIVU:.*]] = arith.divui %[[LANE_ID]], %[[C4]]
+// CHECK: %[[REMU2:.*]] = arith.remui %[[DIVU]], %[[C4]]
+// CHECK: %[[MUL:.*]] = arith.muli %[[REMU2]], %[[C2]]
+// CHECK: %[[REMU3:.*]] = arith.remui %[[MUL]], %[[C8]]
+// CHECK: %[[REMU4:.*]] = arith.remui %[[REMU1]], %[[C4]]
+// CHECK: %[[ADD:.*]] = arith.addi %[[REMU4]], %[[C1]]
 // CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%[[REMU3]], %[[ADD]]] : !xegpu.mem_desc<32x32xf32>, index, index -> vector<2x1xf32>
 // CHECK: xegpu.store_matrix %[[MAT]], %arg0[%[[REMU3]], %[[ADD]]] : vector<2x1xf32>, !xegpu.mem_desc<32x32xf32>, index, index
 gpu.module @xevm_module{
