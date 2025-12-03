@@ -22,6 +22,10 @@ typedef __INTPTR_TYPE__ intptr_t;
 static_assert(sizeof(int) == 4);
 static_assert(sizeof(long long) == 8);
 
+
+constexpr bool test_bad_bool = __builtin_bit_cast(bool, (char)0xff); // both-error {{must be initialized by a constant expression}} \
+                                                                     // both-note {{value 255 cannot be represented in type 'bool'}}
+
 template <class To, class From>
 constexpr To bit_cast(const From &from) {
   static_assert(sizeof(To) == sizeof(From));
@@ -525,3 +529,64 @@ constexpr const intptr_t &returns_local() { return 0L; }
 // both-error@+2 {{constexpr variable 'test_nullptr_bad' must be initialized by a constant expression}}
 // both-note@+1 {{read of temporary whose lifetime has ended}}
 constexpr nullptr_t test_nullptr_bad = __builtin_bit_cast(nullptr_t, returns_local());
+
+#ifdef __SIZEOF_INT128__
+namespace VectorCast {
+  typedef unsigned X          __attribute__ ((vector_size (64)));
+  typedef unsigned __int128 Y __attribute__ ((vector_size (64)));
+  constexpr int test() {
+    X x = {0};
+    Y y = x;
+
+    X x2 = y;
+
+    return 0;
+  }
+  static_assert(test() == 0);
+
+  typedef int X2      __attribute__ ((vector_size (64)));
+  typedef __int128 Y2 __attribute__ ((vector_size (64)));
+  constexpr int test2() {
+    X2 x = {0};
+    Y2 y = x;
+
+    X2 x2 = y;
+
+    return 0;
+  }
+  static_assert(test2() == 0);
+
+  /// On s390x, S is only 8 bytes.
+#if !defined(__s390x__)
+  struct S {
+    unsigned __int128 a : 3;
+  };
+  constexpr S s = __builtin_bit_cast(S, (__int128)12); // ref-error {{must be initialized by a constant expression}} \
+                                                       // ref-note {{constexpr bit_cast involving bit-field is not yet supported}} \
+                                                       // ref-note {{declared here}}
+#if LITTLE_END
+  static_assert(s.a == 4); // ref-error {{not an integral constant expression}} \
+                           // ref-note {{initializer of 's' is not a constant expression}}
+#else
+  static_assert(s.a == 0); // ref-error {{not an integral constant expression}} \
+                           // ref-note {{initializer of 's' is not a constant expression}}
+#endif
+#endif
+}
+#endif
+
+namespace ToPrimPtrs {
+  struct S { int foo () { return 0; } };
+  auto ptr  = __builtin_bit_cast(int *, ((__INTPTR_TYPE__) 0));
+  auto nptr = __builtin_bit_cast(nullptr_t, ((__INTPTR_TYPE__)0));
+
+  constexpr auto cptr  = __builtin_bit_cast(int *, ((__INTPTR_TYPE__) 0)); // both-error {{must be initialized by a constant expression}} \
+                                                                           // both-note {{bit_cast to a pointer type is not allowed in a constant expression}}
+  constexpr auto cnptr = __builtin_bit_cast(nullptr_t, ((__INTPTR_TYPE__)0));
+
+#if !defined(_WIN32)
+  auto memptr = __builtin_bit_cast(int S::*, ((__INTPTR_TYPE__) 0));
+  constexpr auto cmemptr = __builtin_bit_cast(int S::*, ((__INTPTR_TYPE__) 0)); // both-error {{must be initialized by a constant expression}} \
+                                                                                // both-note {{bit_cast to a member pointer type is not allowed in a constant expression}}
+#endif
+}

@@ -8,6 +8,7 @@
 
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
@@ -140,7 +141,7 @@ TYPED_TEST(ThreadPoolTest, AsyncBarrier) {
 
   std::atomic_int checked_in{0};
 
-  DefaultThreadPool Pool;
+  TypeParam Pool;
   for (size_t i = 0; i < 5; ++i) {
     Pool.async([this, &checked_in] {
       this->waitForMainThread();
@@ -181,6 +182,56 @@ TYPED_TEST(ThreadPoolTest, Async) {
   this->setMainThreadReady();
   Pool.wait();
   ASSERT_EQ(2, i.load());
+}
+
+TYPED_TEST(ThreadPoolTest, AsyncMoveOnly) {
+  CHECK_UNSUPPORTED();
+  DefaultThreadPool Pool;
+  std::promise<int> p;
+  std::future<int> f = p.get_future();
+  Pool.async([this, p = std::move(p)]() mutable {
+    this->waitForMainThread();
+    p.set_value(42);
+  });
+  this->setMainThreadReady();
+  Pool.wait();
+  ASSERT_EQ(42, f.get());
+}
+
+TYPED_TEST(ThreadPoolTest, AsyncRAIICaptures) {
+  CHECK_UNSUPPORTED();
+  DefaultThreadPool Pool(hardware_concurrency(2));
+
+  // We use a task group and a non-atomic value to stress test that the chaining
+  // of tasks via a captured RAII object in fact chains and synchronizes within
+  // a group.
+  ThreadPoolTaskGroup Group(Pool);
+  int value = 0;
+
+  // Create an RAII object that when destroyed schedules more work. This makes
+  // it easy to check that the RAII is resolved at the same point as a task runs
+  // on the thread pool.
+  auto schedule_next = llvm::make_scope_exit([&Group, &value] {
+    // We sleep before scheduling the final task to make it much more likely
+    // that an incorrect implementation actually exbitits a bug. Without the
+    // sleep, we may get "lucky" and have the second task finish before the
+    // assertion below fails even with an incorrect implementaiton. The
+    // sleep is making _failures_ more reliable, it is not needed for
+    // correctness and this test should only flakily _pass_, never flakily
+    // fail.
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    Group.async([&value] { value = 42; });
+  });
+
+  // Now schedule the initial task, moving the RAII object to schedule the final
+  // task into its captures.
+  Group.async([schedule_next = std::move(schedule_next)]() {
+    // Nothing to do here, the captured RAII object does the work.
+  });
+
+  // Both tasks should complete here, synchronizing with the read of value.
+  Group.wait();
+  ASSERT_EQ(42, value);
 }
 
 TYPED_TEST(ThreadPoolTest, GetFuture) {
@@ -453,15 +504,19 @@ TYPED_TEST(ThreadPoolTest, AffinityMask) {
                         [](auto &T) { return T.getData().front() < 16UL; }) &&
            "Threads ran on more CPUs than expected! The affinity mask does not "
            "seem to work.");
-    GTEST_SKIP();
+    return;
   }
   std::string Executable =
       sys::fs::getMainExecutable(TestMainArgv0, &ThreadPoolTestStringArg1);
-  StringRef argv[] = {Executable, "--gtest_filter=ThreadPoolTest.AffinityMask"};
+  const auto *TestInfo = testing::UnitTest::GetInstance()->current_test_info();
+  std::string Arg = (Twine("--gtest_filter=") + TestInfo->test_suite_name() +
+                     "." + TestInfo->name())
+                        .str();
+  StringRef argv[] = {Executable, Arg};
 
   // Add environment variable to the environment of the child process.
   int Res = setenv("LLVM_THREADPOOL_AFFINITYMASK", "1", false);
-  ASSERT_EQ(Res, 0);
+  ASSERT_EQ(0, Res);
 
   std::string Error;
   bool ExecutionFailed;
@@ -470,6 +525,8 @@ TYPED_TEST(ThreadPoolTest, AffinityMask) {
   Affinity.set(0, 4); // Use CPUs 0,1,2,3.
   int Ret = sys::ExecuteAndWait(Executable, argv, {}, {}, 0, 0, &Error,
                                 &ExecutionFailed, nullptr, &Affinity);
+  Res = setenv("LLVM_THREADPOOL_AFFINITYMASK", "", false);
+  ASSERT_EQ(0, Res);
   ASSERT_EQ(0, Ret);
 }
 

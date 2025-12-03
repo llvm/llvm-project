@@ -1,6 +1,6 @@
 ; RUN: opt -mtriple=amdgcn-- -S -structurizecfg -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=OPT %s
 ; RUN: opt -mtriple=amdgcn-- -S -passes=structurizecfg,si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=OPT %s
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
 
 ; OPT-LABEL: @annotate_unreachable_noloop(
 ; OPT-NOT: call i1 @llvm.amdgcn.loop

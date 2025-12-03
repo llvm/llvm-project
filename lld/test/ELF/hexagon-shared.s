@@ -88,7 +88,7 @@ pvar:
 # PLT-NEXT: jumpr r28 }
 
 # TEXT:  bc 00 01 00 000100bc
-# TEXT: { 	call 0x10300 }
+# TEXT: { 	call 0x10300 <bar@plt> }
 # TEXT: if (p0) jump:nt 0x10300
 # TEXT: r0 = #0 ; jump 0x10300
 # TEXT: r0 = add(r1,##-65548)

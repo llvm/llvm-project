@@ -25,6 +25,7 @@
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/UniqueBBID.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -99,13 +100,6 @@ template <> struct DenseMapInfo<MBBSectionID> {
   }
 };
 
-// This structure represents the information for a basic block pertaining to
-// the basic block sections profile.
-struct UniqueBBID {
-  unsigned BaseID;
-  unsigned CloneID;
-};
-
 template <> struct ilist_traits<MachineInstr> {
 private:
   friend class MachineBasicBlock; // Set by the owning MachineBasicBlock.
@@ -135,7 +129,7 @@ public:
     MCRegister PhysReg;
     LaneBitmask LaneMask;
 
-    RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
+    RegisterMaskPair(MCRegister PhysReg, LaneBitmask LaneMask)
         : PhysReg(PhysReg), LaneMask(LaneMask) {}
 
     bool operator==(const RegisterMaskPair &other) const {
@@ -277,18 +271,33 @@ public:
   /// of a terminator, exception-handling target, or jump table. This is
   /// either the result of an IR-level "blockaddress", or some form
   /// of target-specific branch lowering.
+  ///
+  /// The name of this function `hasAddressTaken` implies that the address of
+  /// the block is known and used in a general sense, but not necessarily that
+  /// the address is used by an indirect branch instruction. So branch target
+  /// enforcement need not put a BTI instruction (or equivalent) at the start
+  /// of a block just because this function returns true. The decision about
+  /// whether to add a BTI can be more subtle than that, and depends on the
+  /// more detailed checks that this function aggregates together.
   bool hasAddressTaken() const {
-    return MachineBlockAddressTaken || AddressTakenIRBlock;
+    return MachineBlockAddressTaken || AddressTakenIRBlock ||
+           IsInlineAsmBrIndirectTarget;
   }
 
   /// Test whether this block is used as something other than the target of a
   /// terminator, exception-handling target, jump table, or IR blockaddress.
   /// For example, its address might be loaded into a register, or
   /// stored in some branch table that isn't part of MachineJumpTableInfo.
+  ///
+  /// If this function returns true, it _does_ mean that branch target
+  /// enforcement needs to put a BTI or equivalent at the start of the block.
   bool isMachineBlockAddressTaken() const { return MachineBlockAddressTaken; }
 
   /// Test whether this block is the target of an IR BlockAddress.  (There can
   /// more than one MBB associated with an IR BB where the address is taken.)
+  ///
+  /// If this function returns true, it _does_ mean that branch target
+  /// enforcement needs to put a BTI or equivalent at the start of the block.
   bool isIRBlockAddressTaken() const { return AddressTakenIRBlock; }
 
   /// Retrieves the BasicBlock which corresponds to this MachineBasicBlock.
@@ -314,10 +323,11 @@ public:
   const MachineFunction *getParent() const { return xParent; }
   MachineFunction *getParent() { return xParent; }
 
-  /// Returns true if the original IR terminator is an `indirectbr`. This
-  /// typically corresponds to a `goto` in C, rather than jump tables.
-  bool terminatorIsComputedGoto() const {
-    return back().isIndirectBranch() &&
+  /// Returns true if the original IR terminator is an `indirectbr` with
+  /// successor blocks. This typically corresponds to a `goto` in C, rather than
+  /// jump tables.
+  bool terminatorIsComputedGotoWithSuccessors() const {
+    return back().isIndirectBranch() && !succ_empty() &&
            llvm::all_of(successors(), [](const MachineBasicBlock *Succ) {
              return Succ->isIRBlockAddressTaken();
            });
@@ -495,6 +505,11 @@ public:
   LLVM_ABI void removeLiveIn(MCRegister Reg,
                              LaneBitmask LaneMask = LaneBitmask::getAll());
 
+  /// Remove the specified register from any overlapped live in. The method is
+  /// subreg-aware and removes Reg and its subregs from the live in set. It also
+  /// clears the corresponding bitmask from its live-in super registers.
+  LLVM_ABI void removeLiveInOverlappedWith(MCRegister Reg);
+
   /// Return true if the specified register is in the live in set.
   LLVM_ABI bool isLiveIn(MCRegister Reg,
                          LaneBitmask LaneMask = LaneBitmask::getAll()) const;
@@ -532,8 +547,8 @@ public:
     using pointer = const RegisterMaskPair *;
     using reference = const RegisterMaskPair &;
 
-    liveout_iterator(const MachineBasicBlock &MBB, MCPhysReg ExceptionPointer,
-                     MCPhysReg ExceptionSelector, bool End)
+    liveout_iterator(const MachineBasicBlock &MBB, MCRegister ExceptionPointer,
+                     MCRegister ExceptionSelector, bool End)
         : ExceptionPointer(ExceptionPointer),
           ExceptionSelector(ExceptionSelector), BlockI(MBB.succ_begin()),
           BlockEnd(MBB.succ_end()) {
@@ -543,8 +558,8 @@ public:
         LiveRegI = (*BlockI)->livein_begin();
         if (!advanceToValidPosition())
           return;
-        if (LiveRegI->PhysReg == ExceptionPointer ||
-            LiveRegI->PhysReg == ExceptionSelector)
+        if ((*BlockI)->isEHPad() && (LiveRegI->PhysReg == ExceptionPointer ||
+                                     LiveRegI->PhysReg == ExceptionSelector))
           ++(*this);
       }
     }
@@ -598,7 +613,7 @@ public:
       return true;
     }
 
-    MCPhysReg ExceptionPointer, ExceptionSelector;
+    MCRegister ExceptionPointer, ExceptionSelector;
     const_succ_iterator BlockI;
     const_succ_iterator BlockEnd;
     livein_iterator LiveRegI;
@@ -1025,7 +1040,9 @@ public:
   /// Succ, can be split. If this returns true a subsequent call to
   /// SplitCriticalEdge is guaranteed to return a valid basic block if
   /// no changes occurred in the meantime.
-  LLVM_ABI bool canSplitCriticalEdge(const MachineBasicBlock *Succ) const;
+  LLVM_ABI bool
+  canSplitCriticalEdge(const MachineBasicBlock *Succ,
+                       const MachineLoopInfo *MLI = nullptr) const;
 
   void pop_front() { Insts.pop_front(); }
   void pop_back() { Insts.pop_back(); }
@@ -1276,6 +1293,15 @@ public:
 
   // Helper function for MIRPrinter.
   LLVM_ABI bool canPredictBranchProbabilities() const;
+
+  /// Iterate over block PHI instructions and remove all incoming values for
+  /// PredMBB.
+  ///
+  /// Method does not erase PHI instructions even if they have single income or
+  /// do not have incoming values ar all. It is a caller responsibility to make
+  /// decision how to process PHI instructions after incoming values removal.
+  LLVM_ABI void
+  removePHIsIncomingValuesForPredecessor(const MachineBasicBlock &PredMBB);
 
 private:
   /// Return probability iterator corresponding to the I successor iterator.

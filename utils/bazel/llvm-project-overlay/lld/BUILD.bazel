@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load(
     "//:vars.bzl",
     "LLVM_VERSION",
@@ -49,7 +50,6 @@ cc_library(
         "//llvm:CodeGen",
         "//llvm:Core",
         "//llvm:DebugInfoDWARF",
-        "//llvm:IRPrinter",
         "//llvm:Option",
         "//llvm:ProfileData",
         "//llvm:Support",
@@ -72,9 +72,8 @@ gentbl_cc_library(
 cc_library(
     name = "ELF",
     srcs = glob([
-        "ELF/*.cpp",
-        "ELF/*.h",
-        "ELF/Arch/*.cpp",
+        "ELF/**/*.cpp",
+        "ELF/**/*.h",
     ]),
     includes = ["ELF"],
     textual_hdrs = [
@@ -106,8 +105,8 @@ cc_library(
         "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:config",
-        "@llvm_zlib//:zlib",
-        "@llvm_zstd//:zstd",
+        "//third-party:zlib",
+        "//third-party:zstd",
     ],
 )
 
@@ -153,7 +152,6 @@ cc_library(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:Symbolize",
-        "//llvm:Target",
         "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:WindowsDriver",
@@ -210,15 +208,11 @@ cc_library(
         "//llvm:BitReader",
         "//llvm:BitWriter",
         "//llvm:CGData",
-        "//llvm:Core",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
         "//llvm:LTO",
-        "//llvm:MC",
-        "//llvm:ObjCARC",
         "//llvm:Object",
         "//llvm:Option",
-        "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:TextAPI",

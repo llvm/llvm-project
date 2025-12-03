@@ -14,6 +14,9 @@
         .syntax unified
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_memset)
+#if defined(__ARM_FEATURE_BTI_DEFAULT)
+        bti
+#endif
         mov     r3, r1
         mov     r1, r2
         mov     r2, r3
@@ -31,6 +34,9 @@ DEFINE_AEABI_FUNCTION_ALIAS(__aeabi_memset8, __aeabi_memset)
 
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_memclr)
+#if defined(__ARM_FEATURE_BTI_DEFAULT)
+        bti
+#endif
         mov     r2, r1
         movs    r1, #0
 #ifdef USE_THUMB_1

@@ -1,6 +1,9 @@
 header: string.h
-header_template: string.h.def
-macros: []
+standards:
+  - stdc
+macros:
+  - macro_name: "NULL"
+    macro_header: null-macro.h
 types:
   - type_name: locale_t
   - type_name: size_t
@@ -9,7 +12,7 @@ objects: []
 functions:
   - name: memccpy
     standards:
-      - POSIX
+      - posix
     return_type: void *
     arguments:
       - type: void *__restrict
@@ -59,7 +62,7 @@ functions:
       - type: size_t
   - name: mempcpy
     standards:
-      - POSIX
+      - posix
     return_type: void *
     arguments:
       - type: void *__restrict
@@ -91,14 +94,14 @@ functions:
       - type: size_t
   - name: stpcpy
     standards:
-      - POSIX
+      - posix
     return_type: char *
     arguments:
       - type: char *__restrict
       - type: const char *__restrict
   - name: stpncpy
     standards:
-      - POSIX
+      - posix
     return_type: char *
     arguments:
       - type: char *__restrict
@@ -241,7 +244,7 @@ functions:
       - type: size_t
   - name: strnlen
     standards:
-      - POSIX
+      - posix
     return_type: size_t
     arguments:
       - type: const char *
@@ -269,7 +272,7 @@ functions:
       - type: const char *__restrict
   - name: strsignal
     standards:
-      - POSIX
+      - posix
     return_type: char *
     arguments:
       - type: int
@@ -296,7 +299,7 @@ functions:
       - type: const char *__restrict
   - name: strtok_r
     standards:
-      - POSIX
+      - posix
     return_type: char *
     arguments:
       - type: char *__restrict

@@ -31,6 +31,10 @@ def SDT_LoongArchSelectCC : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
                                                  SDTCisSameAs<0, 4>,
                                                  SDTCisSameAs<4, 5>]>;
 
+def SDT_LoongArchBrCC : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
+                                             SDTCisVT<2, OtherVT>,
+                                             SDTCisVT<3, OtherVT>]>;
+
 def SDT_LoongArchBStrIns: SDTypeProfile<1, 4, [
   SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<3>,
   SDTCisSameAs<3, 4>
@@ -57,6 +61,13 @@ def SDT_LoongArchMovgr2fcsr : SDTypeProfile<0, 2, [SDTCisVT<0, GRLenVT>,
                                                    SDTCisSameAs<0, 1>]>;
 def SDT_LoongArchMovfcsr2gr : SDTypeProfile<1, 1, [SDTCisVT<0, GRLenVT>,
                                                    SDTCisSameAs<0, 1>]>;
+
+def SDT_LoongArchBuildPairF64 : SDTypeProfile<1, 2, [SDTCisVT<0, f64>,
+                                                     SDTCisVT<1, i32>,
+                                                     SDTCisSameAs<1, 2>]>;
+def SDT_LoongArchSplitPairF64 : SDTypeProfile<2, 1, [SDTCisVT<0, i32>,
+                                                     SDTCisVT<1, i32>,
+                                                     SDTCisVT<2, f64>]>;
 
 // TODO: Add LoongArch specific DAG Nodes
 // Target-independent nodes, but with target-specific formats.
@@ -87,14 +98,24 @@ def loongarch_tail_large : SDNode<"LoongArchISD::TAIL_LARGE", SDT_LoongArchCall,
                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                    SDNPVariadic]>;
 def loongarch_selectcc : SDNode<"LoongArchISD::SELECT_CC", SDT_LoongArchSelectCC>;
+def loongarch_brcc : SDNode<"LoongArchISD::BR_CC", SDT_LoongArchBrCC,
+                            [SDNPHasChain]>;
+
+// 32-bit shifts, directly matching the semantics of the named LoongArch
+// instructions.
 def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
+
 def loongarch_rotr_w : SDNode<"LoongArchISD::ROTR_W", SDT_LoongArchIntBinOpW>;
+
+// unsigned 32-bit integer division
 def loongarch_div_w : SDNode<"LoongArchISD::DIV_W", SDT_LoongArchIntBinOpW>;
 def loongarch_div_wu : SDNode<"LoongArchISD::DIV_WU", SDT_LoongArchIntBinOpW>;
 def loongarch_mod_w : SDNode<"LoongArchISD::MOD_W", SDT_LoongArchIntBinOpW>;
 def loongarch_mod_wu : SDNode<"LoongArchISD::MOD_WU", SDT_LoongArchIntBinOpW>;
+
+// CRC check operations
 def loongarch_crc_w_b_w
     : SDNode<"LoongArchISD::CRC_W_B_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
 def loongarch_crc_w_h_w
@@ -111,37 +132,63 @@ def loongarch_crcc_w_w_w : SDNode<"LoongArchISD::CRCC_W_W_W",
                                   SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
 def loongarch_crcc_w_d_w : SDNode<"LoongArchISD::CRCC_W_D_W",
                                   SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
+
 def loongarch_bstrins
     : SDNode<"LoongArchISD::BSTRINS", SDT_LoongArchBStrIns>;
 def loongarch_bstrpick
     : SDNode<"LoongArchISD::BSTRPICK", SDT_LoongArchBStrPick>;
+
+// Byte-swapping and bit-reversal
 def loongarch_revb_2h : SDNode<"LoongArchISD::REVB_2H", SDTUnaryOp>;
 def loongarch_revb_2w : SDNode<"LoongArchISD::REVB_2W", SDTUnaryOp>;
 def loongarch_bitrev_4b : SDNode<"LoongArchISD::BITREV_4B", SDTUnaryOp>;
 def loongarch_bitrev_8b : SDNode<"LoongArchISD::BITREV_8B", SDTUnaryOp>;
 def loongarch_bitrev_w : SDNode<"LoongArchISD::BITREV_W", SDTUnaryOp>;
+
+// Bit counting operations
 def loongarch_clzw : SDNode<"LoongArchISD::CLZ_W", SDTIntBitCountUnaryOp>;
 def loongarch_ctzw : SDNode<"LoongArchISD::CTZ_W", SDTIntBitCountUnaryOp>;
+
 def loongarch_dbar : SDNode<"LoongArchISD::DBAR", SDT_LoongArchVI,
                              [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_ibar : SDNode<"LoongArchISD::IBAR", SDT_LoongArchVI,
                              [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_break : SDNode<"LoongArchISD::BREAK", SDT_LoongArchVI,
                               [SDNPHasChain, SDNPSideEffect]>;
+
+// FPR<->GPR transfer operations
 def loongarch_movfcsr2gr : SDNode<"LoongArchISD::MOVFCSR2GR",
                                   SDT_LoongArchMovfcsr2gr, [SDNPHasChain]>;
 def loongarch_movgr2fcsr : SDNode<"LoongArchISD::MOVGR2FCSR",
                                   SDT_LoongArchMovgr2fcsr,
                                   [SDNPHasChain, SDNPSideEffect]>;
+
 def loongarch_syscall : SDNode<"LoongArchISD::SYSCALL", SDT_LoongArchVI,
                                 [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_csrrd : SDNode<"LoongArchISD::CSRRD", SDT_LoongArchCsrrd,
                               [SDNPHasChain, SDNPSideEffect]>;
+
+// Write new value to CSR and return old value.
+// Operand 0: A chain pointer.
+// Operand 1: The new value to write.
+// Operand 2: The address of the required CSR.
+// Result 0: The old value of the CSR.
+// Result 1: The new chain pointer.
 def loongarch_csrwr : SDNode<"LoongArchISD::CSRWR", SDT_LoongArchCsrwr,
                               [SDNPHasChain, SDNPSideEffect]>;
+
+// Similar to CSRWR but with a write mask.
+// Operand 0: A chain pointer.
+// Operand 1: The new value to write.
+// Operand 2: The write mask.
+// Operand 3: The address of the required CSR.
+// Result 0: The old value of the CSR.
+// Result 1: The new chain pointer.
 def loongarch_csrxchg : SDNode<"LoongArchISD::CSRXCHG",
                                 SDT_LoongArchCsrxchg,
                                 [SDNPHasChain, SDNPSideEffect]>;
+
+// IOCSR access operations
 def loongarch_iocsrrd_b : SDNode<"LoongArchISD::IOCSRRD_B", SDTUnaryOp,
                                   [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_iocsrrd_h : SDNode<"LoongArchISD::IOCSRRD_H", SDTUnaryOp,
@@ -162,8 +209,16 @@ def loongarch_iocsrwr_w : SDNode<"LoongArchISD::IOCSRWR_W",
 def loongarch_iocsrwr_d : SDNode<"LoongArchISD::IOCSRWR_D",
                                   SDT_LoongArchIocsrwr,
                                   [SDNPHasChain, SDNPSideEffect]>;
+
+// Read CPU configuration information operation
 def loongarch_cpucfg : SDNode<"LoongArchISD::CPUCFG", SDTUnaryOp,
                                [SDNPHasChain]>;
+
+// Build and split F64 pair
+def loongarch_build_pair_f64 : SDNode<"LoongArchISD::BUILD_PAIR_F64",
+                                      SDT_LoongArchBuildPairF64>;
+def loongarch_split_pair_f64 : SDNode<"LoongArchISD::SPLIT_PAIR_F64",
+                                      SDT_LoongArchSplitPairF64>;
 
 def to_fclass_mask: SDNodeXForm<timm, [{
   uint64_t Check = N->getZExtValue();
@@ -925,7 +980,7 @@ let Predicates = [IsLA64] in {
 def ADD_D : ALU_3R<0x00108000>;
 def SUB_D : ALU_3R<0x00118000>;
 // ADDI_D isn't always rematerializable, but isReMaterializable will be used as
-// a hint which is verified in isReallyTriviallyReMaterializable.
+// a hint which is verified in isReMaterializableImpl.
 // See LoongArchInstrInfo::isAsCheapAsAMove for more details.
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def ADDI_D : ALU_2RI12<0x02c00000, simm12_addlike>;
@@ -1525,47 +1580,29 @@ def : Pat<(select GPR:$cond, GPR:$t, GPR:$f),
 
 /// Branches and jumps
 
-class BccPat<PatFrag CondOp, LAInst Inst>
-    : Pat<(brcond (GRLenVT (CondOp GPR:$rj, GPR:$rd)), bb:$imm16),
-          (Inst GPR:$rj, GPR:$rd, bb:$imm16)>;
-
-def : BccPat<seteq, BEQ>;
-def : BccPat<setne, BNE>;
-def : BccPat<setlt, BLT>;
-def : BccPat<setge, BGE>;
-def : BccPat<setult, BLTU>;
-def : BccPat<setuge, BGEU>;
-
-class BccSwapPat<PatFrag CondOp, LAInst InstBcc>
-    : Pat<(brcond (GRLenVT (CondOp GPR:$rd, GPR:$rj)), bb:$imm16),
-          (InstBcc GPR:$rj, GPR:$rd, bb:$imm16)>;
-
-// Condition codes that don't have matching LoongArch branch instructions, but
-// are trivially supported by swapping the two input operands.
-def : BccSwapPat<setgt, BLT>;
-def : BccSwapPat<setle, BGE>;
-def : BccSwapPat<setugt, BLTU>;
-def : BccSwapPat<setule, BGEU>;
-
 let Predicates = [Has32S] in {
-// An extra pattern is needed for a brcond without a setcc (i.e. where the
-// condition was calculated elsewhere).
-def : Pat<(brcond GPR:$rj, bb:$imm21), (BNEZ GPR:$rj, bb:$imm21)>;
+class BccZeroPat<CondCode Cond, LAInst Inst>
+    : Pat<(loongarch_brcc (GRLenVT GPR:$rj), 0, Cond, bb:$imm21),
+           (Inst GPR:$rj, bb:$imm21)>;
 
-def : Pat<(brcond (GRLenVT (seteq GPR:$rj, 0)), bb:$imm21),
-          (BEQZ GPR:$rj, bb:$imm21)>;
-def : Pat<(brcond (GRLenVT (setne GPR:$rj, 0)), bb:$imm21),
-          (BNEZ GPR:$rj, bb:$imm21)>;
+def : BccZeroPat<SETEQ, BEQZ>;
+def : BccZeroPat<SETNE, BNEZ>;
 } // Predicates = [Has32S]
 
-// An extra pattern is needed for a brcond without a setcc (i.e. where the
-// condition was calculated elsewhere).
-def : Pat<(brcond GPR:$rj, bb:$imm16), (BNE GPR:$rj, R0, bb:$imm16)>;
+multiclass BccPat<CondCode Cond, LAInst Inst> {
+  def : Pat<(loongarch_brcc (GRLenVT GPR:$rj), GPR:$rd, Cond, bb:$imm16),
+            (Inst GPR:$rj, GPR:$rd, bb:$imm16)>;
+  // Explicitly select 0 to R0. The register coalescer doesn't always do it.
+  def : Pat<(loongarch_brcc (GRLenVT GPR:$rj), 0, Cond, bb:$imm16),
+            (Inst GPR:$rj, (GRLenVT R0), bb:$imm16)>;
+}
 
-def : Pat<(brcond (GRLenVT (seteq GPR:$rj, 0)), bb:$imm16),
-          (BEQ GPR:$rj, R0, bb:$imm16)>;
-def : Pat<(brcond (GRLenVT (setne GPR:$rj, 0)), bb:$imm16),
-          (BNE GPR:$rj, R0, bb:$imm16)>;
+defm : BccPat<SETEQ, BEQ>;
+defm : BccPat<SETNE, BNE>;
+defm : BccPat<SETLT, BLT>;
+defm : BccPat<SETGE, BGE>;
+defm : BccPat<SETULT, BLTU>;
+defm : BccPat<SETUGE, BGEU>;
 
 let isBarrier = 1, isBranch = 1, isTerminator = 1 in
 def PseudoBR : Pseudo<(outs), (ins simm26_b:$imm26), [(br bb:$imm26)]>,
@@ -2055,6 +2092,10 @@ def PseudoAtomicLoadSub32 : PseudoAM;
 def PseudoAtomicLoadAnd32 : PseudoAM;
 def PseudoAtomicLoadOr32 : PseudoAM;
 def PseudoAtomicLoadXor32 : PseudoAM;
+def PseudoAtomicLoadUMax32 : PseudoAM;
+def PseudoAtomicLoadUMin32 : PseudoAM;
+def PseudoAtomicLoadMax32 : PseudoAM;
+def PseudoAtomicLoadMin32 : PseudoAM;
 
 multiclass PseudoBinPat<string Op, Pseudo BinInst> {
   def : Pat<(!cast<PatFrag>(Op#"_monotonic") GPR:$addr, GPR:$incr),
@@ -2253,6 +2294,22 @@ def : Pat<(atomic_cmp_swap_i64 GPR:$addr, GPR:$cmp, GPR:$new),
           (AMCAS__DB_D GPR:$cmp, GPR:$new, GPR:$addr)>;
 }
 
+// Ordering constants must be kept in sync with the AtomicOrdering enum in
+// AtomicOrdering.h.
+multiclass PseudoCmpXchgPat<string Op, Pseudo CmpXchgInst,
+                            ValueType vt = GRLenVT> {
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_monotonic") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 2)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_acquire") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 4)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_release") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 5)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_acq_rel") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 6)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_seq_cst") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 7)>;
+}
+
 let Predicates = [IsLA64] in {
 defm : binary_atomic_op_wd<"AMSWAP", "atomic_swap">;
 defm : binary_atomic_op_wd<"AMADD", "atomic_load_add">;
@@ -2288,23 +2345,6 @@ def : AtomicPat<int_loongarch_masked_atomicrmw_umax_i64,
 def : AtomicPat<int_loongarch_masked_atomicrmw_umin_i64,
                 PseudoMaskedAtomicLoadUMin32>;
 
-// Ordering constants must be kept in sync with the AtomicOrdering enum in
-// AtomicOrdering.h.
-multiclass PseudoCmpXchgPat<string Op, Pseudo CmpXchgInst,
-                            ValueType vt = GRLenVT> {
-  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_monotonic") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 2)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_acquire") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 4)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_release") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 5)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_acq_rel") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 6)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_seq_cst") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 7)>;
-}
-
-defm : PseudoCmpXchgPat<"atomic_cmp_swap_i32", PseudoCmpXchg32>;
 defm : PseudoCmpXchgPat<"atomic_cmp_swap_i64", PseudoCmpXchg64, i64>;
 def : Pat<(int_loongarch_masked_cmpxchg_i64
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$fail_order),
@@ -2317,6 +2357,7 @@ def : PseudoMaskedAMMinMaxPat<int_loongarch_masked_atomicrmw_min_i64,
                               PseudoMaskedAtomicLoadMin32>;
 } // Predicates = [IsLA64]
 
+defm : PseudoCmpXchgPat<"atomic_cmp_swap_i32", PseudoCmpXchg32>;
 defm : PseudoBinPat<"atomic_load_nand_i32", PseudoAtomicLoadNand32>;
 
 let Predicates = [IsLA32] in {
@@ -2329,11 +2370,30 @@ def : AtomicPat<int_loongarch_masked_atomicrmw_sub_i32,
                 PseudoMaskedAtomicLoadSub32>;
 def : AtomicPat<int_loongarch_masked_atomicrmw_nand_i32,
                 PseudoMaskedAtomicLoadNand32>;
+def : AtomicPat<int_loongarch_masked_atomicrmw_umax_i32,
+                PseudoMaskedAtomicLoadUMax32>;
+def : AtomicPat<int_loongarch_masked_atomicrmw_umin_i32,
+                PseudoMaskedAtomicLoadUMin32>;
+
+def : PseudoMaskedAMMinMaxPat<int_loongarch_masked_atomicrmw_max_i32,
+                              PseudoMaskedAtomicLoadMax32>;
+def : PseudoMaskedAMMinMaxPat<int_loongarch_masked_atomicrmw_min_i32,
+                              PseudoMaskedAtomicLoadMin32>;
+
+def : Pat<(int_loongarch_masked_cmpxchg_i32
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$fail_order),
+          (PseudoMaskedCmpXchg32
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$fail_order)>;
+
 defm : PseudoBinPat<"atomic_load_add_i32", PseudoAtomicLoadAdd32>;
 defm : PseudoBinPat<"atomic_load_sub_i32", PseudoAtomicLoadSub32>;
 defm : PseudoBinPat<"atomic_load_and_i32", PseudoAtomicLoadAnd32>;
 defm : PseudoBinPat<"atomic_load_or_i32", PseudoAtomicLoadOr32>;
 defm : PseudoBinPat<"atomic_load_xor_i32", PseudoAtomicLoadXor32>;
+defm : PseudoBinPat<"atomic_load_umax_i32", PseudoAtomicLoadUMax32>;
+defm : PseudoBinPat<"atomic_load_umin_i32", PseudoAtomicLoadUMin32>;
+defm : PseudoBinPat<"atomic_load_max_i32", PseudoAtomicLoadMax32>;
+defm : PseudoBinPat<"atomic_load_min_i32", PseudoAtomicLoadMin32>;
 } // Predicates = [IsLA32]
 
 /// Intrinsics

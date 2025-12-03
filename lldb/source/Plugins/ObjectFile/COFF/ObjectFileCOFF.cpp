@@ -191,19 +191,15 @@ void ObjectFileCOFF::CreateSections(lldb_private::SectionList &sections) {
 
   auto SectionType = [](StringRef Name,
                         const coff_section *Section) -> lldb::SectionType {
-    lldb::SectionType type =
-        StringSwitch<lldb::SectionType>(Name)
-            // DWARF Debug Sections
-            .Case(".debug_abbrev", eSectionTypeDWARFDebugAbbrev)
-            .Case(".debug_info", eSectionTypeDWARFDebugInfo)
-            .Case(".debug_line", eSectionTypeDWARFDebugLine)
-            .Case(".debug_pubnames", eSectionTypeDWARFDebugPubNames)
-            .Case(".debug_pubtypes", eSectionTypeDWARFDebugPubTypes)
-            .Case(".debug_str", eSectionTypeDWARFDebugStr)
-            // CodeView Debug Sections: .debug$S, .debug$T
-            .StartsWith(".debug$", eSectionTypeDebug)
-            .Case("clangast", eSectionTypeOther)
-            .Default(eSectionTypeInvalid);
+    // DWARF Debug Sections
+    if (Name.consume_front(".debug_"))
+      return GetDWARFSectionTypeFromName(Name);
+
+    lldb::SectionType type = StringSwitch<lldb::SectionType>(Name)
+                                 // CodeView Debug Sections: .debug$S, .debug$T
+                                 .StartsWith(".debug$", eSectionTypeDebug)
+                                 .Case("clangast", eSectionTypeOther)
+                                 .Default(eSectionTypeInvalid);
     if (type != eSectionTypeInvalid)
       return type;
 
@@ -304,8 +300,8 @@ bool ObjectFileCOFF::ParseHeader() {
 
   std::lock_guard<std::recursive_mutex> guard(module->GetMutex());
 
-  m_data.SetByteOrder(eByteOrderLittle);
-  m_data.SetAddressByteSize(GetAddressByteSize());
+  m_data_nsp->SetByteOrder(eByteOrderLittle);
+  m_data_nsp->SetAddressByteSize(GetAddressByteSize());
 
   return true;
 }

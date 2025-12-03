@@ -23,7 +23,7 @@ declare void @effecting()
 ; Place dead instruction(s) before the terminator
 define void @call_effecting() {
 ; CHECK-LABEL: define void @call_effecting() {
-; CHECK-NEXT:  bb15160:
+; CHECK-NEXT:  bb14885:
 ; CHECK-NEXT:    call void @effecting()
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 0, 1
 ; CHECK-NEXT:    ret void
@@ -51,7 +51,7 @@ exit:
 
 define void @dont_move_above_alloca() {
 ; CHECK-LABEL: define void @dont_move_above_alloca() {
-; CHECK-NEXT:  bb15160:
+; CHECK-NEXT:  bb14885:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @effecting()
 ; CHECK-NEXT:    ret void
@@ -65,7 +65,7 @@ declare void @effecting1()
 
 define void @dont_reorder_effecting() {
 ; CHECK-LABEL: define void @dont_reorder_effecting() {
-; CHECK-NEXT:  bb10075:
+; CHECK-NEXT:  bb45003:
 ; CHECK-NEXT:    call void @effecting()
 ; CHECK-NEXT:    call void @effecting1()
 ; CHECK-NEXT:    ret void
@@ -79,7 +79,7 @@ declare void @effecting2(i32)
 
 define void @dont_reorder_effecting1() {
 ; CHECK-LABEL: define void @dont_reorder_effecting1() {
-; CHECK-NEXT:  bb10075:
+; CHECK-NEXT:  bb45003:
 ; CHECK-NEXT:    [[ONE:%.*]] = add i32 1, 1
 ; CHECK-NEXT:    call void @effecting2(i32 [[ONE]])
 ; CHECK-NEXT:    [[TWO:%.*]] = add i32 2, 2

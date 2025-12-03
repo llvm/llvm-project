@@ -11,7 +11,7 @@
 
 @g = weak dso_local local_unnamed_addr global i8 2, align 1, !dbg !0
 ; Function Attrs: norecurse nounwind readonly
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !11 {
+define dso_local i32 @test() local_unnamed_addr !dbg !11 {
 entry:
   %0 = load i8, ptr @g, align 1, !dbg !15, !tbaa !16
   %conv = sext i8 %0 to i32, !dbg !15
@@ -36,9 +36,6 @@ entry:
 ; CHECK:             .ascii  "char"                  # string offset=55
 ; CHECK:             .byte   103                     # string offset=60
 ; CHECK:             .ascii  ".data"                 # string offset=62
-
-
-attributes #0 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!7, !8, !9}

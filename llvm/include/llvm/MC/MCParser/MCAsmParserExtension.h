@@ -12,6 +12,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 
 namespace llvm {
@@ -21,7 +22,7 @@ class Twine;
 /// Generic interface for extending the MCAsmParser,
 /// which is implemented by target and object file assembly parser
 /// implementations.
-class MCAsmParserExtension {
+class LLVM_ABI MCAsmParserExtension {
   MCAsmParser *Parser = nullptr;
 
 protected:
@@ -118,6 +119,14 @@ public:
 
   /// @}
 };
+
+MCAsmParserExtension *createDarwinAsmParser();
+MCAsmParserExtension *createELFAsmParser();
+MCAsmParserExtension *createCOFFAsmParser();
+MCAsmParserExtension *createCOFFMasmParser();
+MCAsmParserExtension *createGOFFAsmParser();
+MCAsmParserExtension *createXCOFFAsmParser();
+MCAsmParserExtension *createWasmAsmParser();
 
 } // end namespace llvm
 

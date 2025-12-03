@@ -26,8 +26,7 @@ include "mlir/IR/BuiltinAttributes.td"
 class cuf_Op<string mnemonic, list<Trait> traits>
     : Op<CUFDialect, mnemonic, traits>;
 
-def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments,
-    MemoryEffects<[MemAlloc]>]> {
+def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments]> {
   let summary = "Allocate an object on device";
 
   let description = [{
@@ -47,7 +46,9 @@ def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments,
     cuf_DataAttributeAttr:$data_attr
   );
 
-  let results = (outs fir_ReferenceType:$ptr);
+  // Value-scoped Allocate on the returned reference
+  let results =
+      (outs Res<fir_ReferenceType, "", [MemAlloc<DefaultResource>]>:$ptr);
 
   let assemblyFormat = [{
     $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
@@ -349,15 +350,14 @@ def cuf_SharedMemoryOp
   let arguments = (ins TypeAttr:$in_type, OptionalAttr<StrAttr>:$uniq_name,
       OptionalAttr<StrAttr>:$bindc_name, Variadic<AnyIntegerType>:$typeparams,
       Variadic<AnyIntegerType>:$shape,
-      Optional<AnyIntegerType>:$offset // offset in bytes from the shared memory
-                                       // base address.
-  );
+      // offset in bytes from the shared memory base address.
+      Optional<AnyIntegerType>:$offset, OptionalAttr<I64Attr>:$alignment);
 
   let results = (outs fir_ReferenceType:$ptr);
 
   let assemblyFormat = [{
       (`[` $offset^ `:` type($offset) `]`)? $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
-        (`,` $shape^ `:` type($shape) )?  attr-dict `->` qualified(type($ptr))
+        (`,` $shape^ `:` type($shape) )?  (`align` $alignment^ )? attr-dict `->` qualified(type($ptr))
   }];
 
   let builders = [OpBuilder<(ins "mlir::Type":$inType,

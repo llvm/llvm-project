@@ -67,12 +67,7 @@ private:
 public:
   GlobalObject(const GlobalObject &) = delete;
 
-  /// FIXME: Remove this function once transition to Align is over.
-  uint64_t getAlignment() const {
-    MaybeAlign Align = getAlign();
-    return Align ? Align->value() : 0;
-  }
-
+protected:
   /// Returns the alignment of the given variable or function.
   ///
   /// Note that for functions this is the alignment of the code, not the
@@ -103,6 +98,7 @@ public:
     assert(getGlobalObjectSubClassData() == Val && "representation error");
   }
 
+public:
   /// Check if this global has a custom object file section.
   ///
   /// This is more efficient than calling getSection() and checking for an empty
@@ -125,8 +121,10 @@ public:
   /// appropriate default object file section.
   LLVM_ABI void setSection(StringRef S);
 
-  /// Set the section prefix for this global object.
-  LLVM_ABI void setSectionPrefix(StringRef Prefix);
+  /// If existing prefix is different from \p Prefix, set it to \p Prefix. If \p
+  /// Prefix is empty, the set clears the existing metadata. Returns true if
+  /// section prefix changed and false otherwise.
+  LLVM_ABI bool setSectionPrefix(StringRef Prefix);
 
   /// Get the section prefix for this global object.
   LLVM_ABI std::optional<StringRef> getSectionPrefix() const;

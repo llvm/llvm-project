@@ -1,22 +1,29 @@
 add_lldb_unittest(DAPTests
+  ClientLauncherTest.cpp
+  DAPErrorTest.cpp
+  DAPSessionManagerTest.cpp
   DAPTest.cpp
+  DAPTypesTest.cpp
   FifoFilesTest.cpp
   Handler/DisconnectTest.cpp
   Handler/ContinueTest.cpp
   JSONUtilsTest.cpp
   LLDBUtilsTest.cpp
+  ProtocolRequestsTest.cpp
   ProtocolTypesTest.cpp
+  ProtocolUtilsTest.cpp
   TestBase.cpp
-  TransportTest.cpp
   VariablesTest.cpp
 
+  SBAPITEST
+
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     liblldb
     lldbDAP
     lldbUtilityHelpers
     LLVMTestingSupport
-  LINK_COMPONENTS
-    Support
   )
 
 set(test_inputs

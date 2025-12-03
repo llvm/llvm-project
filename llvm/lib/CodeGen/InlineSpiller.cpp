@@ -473,7 +473,7 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   MachineInstrSpan MIS(MII, MBB);
   // Insert spill without kill flag immediately after def.
   TII.storeRegToStackSlot(*MBB, MII, SrcReg, false, StackSlot,
-                          MRI.getRegClass(SrcReg), &TRI, Register());
+                          MRI.getRegClass(SrcReg), Register());
   LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
   for (const MachineInstr &MI : make_range(MIS.begin(), MII))
     getVDefInterval(MI, LIS);
@@ -642,8 +642,12 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   SmallVector<std::pair<MachineInstr *, unsigned>, 8> Ops;
   VirtRegInfo RI = AnalyzeVirtRegInBundle(MI, VirtReg.reg(), &Ops);
 
-  if (!RI.Reads)
+  // Defs without reads will be deleted if unused after remat is
+  // completed for other users of the virtual register.
+  if (!RI.Reads) {
+    LLVM_DEBUG(dbgs() << "\tskipping remat of def " << MI);
     return false;
+  }
 
   SlotIndex UseIdx = LIS.getInstructionIndex(MI).getRegSlot(true);
   VNInfo *ParentVNI = VirtReg.getVNInfoAt(UseIdx.getBaseIndex());
@@ -657,15 +661,32 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
     return true;
   }
 
-  if (SnippetCopies.count(&MI))
+  // Snippets copies are ignored for remat, and will be deleted if they
+  // don't feed a live user after rematerialization completes.
+  if (SnippetCopies.count(&MI)) {
+    LLVM_DEBUG(dbgs() << "\tskipping remat snippet copy for " << UseIdx << '\t'
+                      << MI);
     return false;
+  }
 
   LiveInterval &OrigLI = LIS.getInterval(Original);
   VNInfo *OrigVNI = OrigLI.getVNInfoAt(UseIdx);
-  LiveRangeEdit::Remat RM(ParentVNI);
-  RM.OrigMI = LIS.getInstructionFromIndex(OrigVNI->def);
+  assert(OrigVNI && "corrupted sub-interval");
+  MachineInstr *DefMI = LIS.getInstructionFromIndex(OrigVNI->def);
+  // This can happen if for two reasons: 1) This could be a phi valno,
+  // or 2) the remat def has already been removed from the original
+  // live interval; this happens if we rematted to all uses, and
+  // then further split one of those live ranges.
+  if (!DefMI) {
+    markValueUsed(&VirtReg, ParentVNI);
+    LLVM_DEBUG(dbgs() << "\tcannot remat missing def for " << UseIdx << '\t'
+                      << MI);
+    return false;
+  }
 
-  if (!Edit->canRematerializeAt(RM, OrigVNI, UseIdx)) {
+  LiveRangeEdit::Remat RM(ParentVNI);
+  RM.OrigMI = DefMI;
+  if (!Edit->canRematerializeAt(RM, UseIdx)) {
     markValueUsed(&VirtReg, ParentVNI);
     LLVM_DEBUG(dbgs() << "\tcannot remat for " << UseIdx << '\t' << MI);
     return false;
@@ -700,6 +721,9 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Allocate a new register for the remat.
   Register NewVReg = Edit->createFrom(Original);
 
+  // Constrain it to the register class of MI.
+  MRI.constrainRegClass(NewVReg, MRI.getRegClass(VirtReg.reg()));
+
   // Finally we can rematerialize OrigMI before MI.
   SlotIndex DefIdx =
       Edit->rematerializeAt(*MI.getParent(), MI, NewVReg, RM, TRI);
@@ -730,9 +754,6 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
 /// reMaterializeAll - Try to rematerialize as many uses as possible,
 /// and trim the live ranges after.
 void InlineSpiller::reMaterializeAll() {
-  if (!Edit->anyRematerializable())
-    return;
-
   UsedValues.clear();
 
   // Try to remat before all uses of snippets.
@@ -1098,7 +1119,7 @@ void InlineSpiller::insertReload(Register NewVReg,
 
   MachineInstrSpan MIS(MI, &MBB);
   TII.loadRegFromStackSlot(MBB, MI, NewVReg, StackSlot,
-                           MRI.getRegClass(NewVReg), &TRI, Register());
+                           MRI.getRegClass(NewVReg), Register());
 
   LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MI);
 
@@ -1134,7 +1155,7 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
 
   if (IsRealSpill)
     TII.storeRegToStackSlot(MBB, SpillBefore, NewVReg, isKill, StackSlot,
-                            MRI.getRegClass(NewVReg), &TRI, Register());
+                            MRI.getRegClass(NewVReg), Register());
   else
     // Don't spill undef value.
     // Anything works for undef, in particular keeping the memory
@@ -1657,7 +1678,7 @@ void HoistSpillHelper::hoistAllSpills() {
   for (unsigned i = 0, e = MRI.getNumVirtRegs(); i != e; ++i) {
     Register Reg = Register::index2VirtReg(i);
     Register Original = VRM.getPreSplitReg(Reg);
-    if (!MRI.def_empty(Reg))
+    if (!MRI.def_empty(Reg) && Original.isValid())
       Virt2SiblingsMap[Original].insert(Reg);
   }
 
@@ -1708,7 +1729,7 @@ void HoistSpillHelper::hoistAllSpills() {
       MachineBasicBlock::iterator MII = IPA.getLastInsertPointIter(OrigLI, *BB);
       MachineInstrSpan MIS(MII, BB);
       TII.storeRegToStackSlot(*BB, MII, LiveReg, false, Slot,
-                              MRI.getRegClass(LiveReg), &TRI, Register());
+                              MRI.getRegClass(LiveReg), Register());
       LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
       for (const MachineInstr &MI : make_range(MIS.begin(), MII))
         getVDefInterval(MI, LIS);

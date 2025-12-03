@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_SOURCEMGR_H
 #define LLVM_SUPPORT_SOURCEMGR_H
 
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -22,6 +23,10 @@
 #include <vector>
 
 namespace llvm {
+
+namespace vfs {
+class FileSystem;
+} // end namespace vfs
 
 class raw_ostream;
 class SMDiagnostic;
@@ -91,15 +96,25 @@ private:
   DiagHandlerTy DiagHandler = nullptr;
   void *DiagContext = nullptr;
 
+  // Optional file system for finding include files.
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
+
   bool isValidBufferID(unsigned i) const { return i && i <= Buffers.size(); }
 
 public:
-  SourceMgr() = default;
+  /// Create new source manager without support for include files.
+  LLVM_ABI SourceMgr();
+  /// Create new source manager with the capability of finding include files
+  /// via the provided file system.
+  explicit SourceMgr(IntrusiveRefCntPtr<vfs::FileSystem> FS);
   SourceMgr(const SourceMgr &) = delete;
   SourceMgr &operator=(const SourceMgr &) = delete;
-  SourceMgr(SourceMgr &&) = default;
-  SourceMgr &operator=(SourceMgr &&) = default;
-  ~SourceMgr() = default;
+  SourceMgr(SourceMgr &&);
+  SourceMgr &operator=(SourceMgr &&);
+  LLVM_ABI ~SourceMgr();
+
+  IntrusiveRefCntPtr<vfs::FileSystem> getVirtualFileSystem() const;
+  LLVM_ABI void setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS);
 
   /// Return the include directories of this source manager.
   ArrayRef<std::string> getIncludeDirs() const { return IncludeDirectories; }

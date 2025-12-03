@@ -5,7 +5,7 @@ define void @test(ptr %p, i40 %a) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[P:%.*]], i40 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -91,24 +91,7 @@ define void @test(ptr %p, i40 %a) {
 ; CHECK:       pred.store.continue30:
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i40 [[A]], 24
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr i40 [[SHL]], 28
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i40 [[ASHR]] to i32
-; CHECK-NEXT:    [[ICMP_EQ:%.*]] = icmp eq i32 [[TRUNC]], 0
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[ICMP_EQ]] to i32
-; CHECK-NEXT:    [[ICMP_ULT:%.*]] = icmp ult i32 0, [[ZEXT]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ICMP_ULT]], true
-; CHECK-NEXT:    [[ICMP_SGT:%.*]] = icmp sgt i1 [[OR]], false
-; CHECK-NEXT:    store i1 [[ICMP_SGT]], ptr [[P]], align 1
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[IV_NEXT]], 10
-; CHECK-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[EXIT]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -133,8 +116,3 @@ for.body:                                         ; preds = %for.body, %entry
 exit:                                             ; preds = %for.body
   ret void
 }
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
-;.

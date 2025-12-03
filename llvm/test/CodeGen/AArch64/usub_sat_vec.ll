@@ -156,14 +156,12 @@ define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-LABEL: v2i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldrb w8, [x0]
-; CHECK-SD-NEXT:    ldrb w9, [x1]
-; CHECK-SD-NEXT:    ldrb w10, [x0, #1]
-; CHECK-SD-NEXT:    ldrb w11, [x1, #1]
-; CHECK-SD-NEXT:    fmov s0, w8
-; CHECK-SD-NEXT:    fmov s1, w9
-; CHECK-SD-NEXT:    mov v0.s[1], w10
-; CHECK-SD-NEXT:    mov v1.s[1], w11
+; CHECK-SD-NEXT:    ldr h0, [x0]
+; CHECK-SD-NEXT:    ldr h1, [x1]
+; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    uqsub v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str b0, [x2]
@@ -208,14 +206,10 @@ define void @v4i16(ptr %px, ptr %py, ptr %pz) nounwind {
 define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-LABEL: v2i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldrh w8, [x0]
-; CHECK-SD-NEXT:    ldrh w9, [x1]
-; CHECK-SD-NEXT:    ldrh w10, [x0, #2]
-; CHECK-SD-NEXT:    ldrh w11, [x1, #2]
-; CHECK-SD-NEXT:    fmov s0, w8
-; CHECK-SD-NEXT:    fmov s1, w9
-; CHECK-SD-NEXT:    mov v0.s[1], w10
-; CHECK-SD-NEXT:    mov v1.s[1], w11
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ldr s1, [x1]
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    uqsub v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [x2]
@@ -436,11 +430,9 @@ define <16 x i32> @v16i32(<16 x i32> %x, <16 x i32> %y) nounwind {
 define void @v1i64(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-LABEL: v1i64:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr x8, [x1]
-; CHECK-SD-NEXT:    ldr x9, [x0]
-; CHECK-SD-NEXT:    subs x8, x9, x8
-; CHECK-SD-NEXT:    csel x8, xzr, x8, lo
-; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    ldr d1, [x1]
+; CHECK-SD-NEXT:    uqsub d0, d0, d1
 ; CHECK-SD-NEXT:    str d0, [x2]
 ; CHECK-SD-NEXT:    ret
 ;

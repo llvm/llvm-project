@@ -117,6 +117,7 @@ get_property(LINK_LIBS GLOBAL PROPERTY CLANG_UNITTEST_LINK_LIBS)
 get_property(LLVM_COMPONENTS GLOBAL PROPERTY CLANG_UNITTEST_LLVM_COMPONENTS)
 add_distinct_clang_unittest(AllClangUnitTests
   ${SRCS}
+  AllClangUnitTests.cpp
   CLANG_LIBS
   ${CLANG_LIBS}
   LINK_LIBS

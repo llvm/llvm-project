@@ -17,11 +17,13 @@ using namespace llvm;
 
 // Wrapper so we don't have to constantly init and shutdown Offload in every
 // test, while having sensible lifetime for the platform environment
+#ifndef DISABLE_WRAPPER
 struct OffloadInitWrapper {
   OffloadInitWrapper() { olInit(); }
   ~OffloadInitWrapper() { olShutDown(); }
 };
 static OffloadInitWrapper Wrapper{};
+#endif
 
 static cl::opt<std::string>
     SelectedPlatform("platform", cl::desc("Only test the specified platform"),
@@ -39,9 +41,9 @@ raw_ostream &operator<<(raw_ostream &Out,
 
 raw_ostream &operator<<(raw_ostream &Out, const ol_device_handle_t &Device) {
   size_t Size;
-  olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NAME, &Size);
+  olGetDeviceInfoSize(Device, OL_DEVICE_INFO_PRODUCT_NAME, &Size);
   std::vector<char> Name(Size);
-  olGetDeviceInfo(Device, OL_DEVICE_INFO_NAME, Size, Name.data());
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_PRODUCT_NAME, Size, Name.data());
   Out << Name.data();
   return Out;
 }
@@ -126,6 +128,9 @@ const std::vector<TestEnvironment::Device> &TestEnvironment::getDevices() {
           &Devices);
     }
   }
+
+  if (Devices.size() == 0)
+    errs() << "Warning: No devices found for OffloadAPI tests.\n";
 
   return Devices;
 }

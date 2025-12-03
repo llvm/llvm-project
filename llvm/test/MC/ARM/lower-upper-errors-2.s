@@ -8,11 +8,11 @@
 // For errors that are reported earlier, when initially reading the
 // instructions, see lower-upper-errors.s.
 
-// CHECK: [[@LINE+1]]:1: error: unsupported relocation
+// CHECK: [[@LINE+1]]:15: error: unsupported relocation
 adds r0, r0, #foo
 
-// CHECK: [[@LINE+1]]:1: error: unsupported relocation
+// CHECK: [[@LINE+1]]:[[#]]: error: unsupported relocation
 add r9, r0, #foo
 
-// CHECK: [[@LINE+1]]:1: error: expected relocatable expression
+// CHECK: [[@LINE+1]]:11: error: expected relocatable expression
 movs r11, :upper8_15:#foo

@@ -47,6 +47,7 @@ static const unsigned ARM64AddrSpaceMap[] = {
     0, // hlsl_constant
     0, // hlsl_private
     0, // hlsl_device
+    0, // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -65,6 +66,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
 
   unsigned FPU = FPUMode;
   bool HasCRC = false;
+  bool HasCSSC = false;
   bool HasAES = false;
   bool HasSHA2 = false;
   bool HasSHA3 = false;
@@ -73,7 +75,6 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasDotProd = false;
   bool HasFP16FML = false;
   bool HasMTE = false;
-  bool HasTME = false;
   bool HasPAuth = false;
   bool HasLS64 = false;
   bool HasRandGen = false;
@@ -133,6 +134,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
 
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 
+protected:
   std::string ABI;
 
 public:
@@ -150,13 +152,11 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool setCPU(const std::string &Name) override;
 
-  uint64_t getFMVPriority(ArrayRef<StringRef> Features) const override;
+  llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }
-
-  void setArchFeatures();
 
   void getTargetDefinesARMV81A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
@@ -190,13 +190,15 @@ public:
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV96A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
+  void getTargetDefinesARMV97A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts, bool IsArmStreamingFunction,
+  getVScaleRange(const LangOptions &LangOpts, ArmStreamingKind Mode,
                  llvm::StringMap<bool> *FeatureMap = nullptr) const override;
   bool doesFeatureAffectCodeGen(StringRef Name) const override;
   bool validateCpuSupports(StringRef FeatureStr) const override;
@@ -276,6 +278,16 @@ public:
 private:
   void setDataLayout() override;
 };
+
+template <>
+inline bool
+LinuxTargetInfo<AArch64leTargetInfo>::setABI(const std::string &Name) {
+  if (Name == "pauthtest") {
+    ABI = Name;
+    return true;
+  }
+  return AArch64leTargetInfo::setABI(Name);
+}
 
 class LLVM_LIBRARY_VISIBILITY WindowsARM64TargetInfo
     : public WindowsTargetInfo<AArch64leTargetInfo> {

@@ -11,7 +11,7 @@ define i32 @vscale_known_nonzero() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    negw a1, a0
+; CHECK-NEXT:    neg a1, a0
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    slli a1, a0, 6
 ; CHECK-NEXT:    slli a2, a0, 8
@@ -19,16 +19,16 @@ define i32 @vscale_known_nonzero() {
 ; CHECK-NEXT:    slli a4, a0, 12
 ; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    slli a2, a0, 16
-; CHECK-NEXT:    subw a3, a3, a4
+; CHECK-NEXT:    sub a3, a3, a4
 ; CHECK-NEXT:    slli a4, a0, 18
-; CHECK-NEXT:    subw a2, a2, a4
+; CHECK-NEXT:    sub a2, a2, a4
 ; CHECK-NEXT:    slli a4, a0, 4
-; CHECK-NEXT:    subw a4, a0, a4
+; CHECK-NEXT:    sub a4, a0, a4
 ; CHECK-NEXT:    add a1, a4, a1
 ; CHECK-NEXT:    slli a4, a0, 14
-; CHECK-NEXT:    subw a3, a3, a4
+; CHECK-NEXT:    sub a3, a3, a4
 ; CHECK-NEXT:    slli a4, a0, 23
-; CHECK-NEXT:    subw a2, a2, a4
+; CHECK-NEXT:    sub a2, a2, a4
 ; CHECK-NEXT:    slli a0, a0, 27
 ; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    add a0, a2, a0

@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -225,7 +224,7 @@ bool DefaultEvictionAdvisor::canEvictHintInterference(
     const LiveInterval &VirtReg, MCRegister PhysReg,
     const SmallVirtRegSet &FixedRegisters) const {
   EvictionCost MaxCost;
-  MaxCost.setBrokenHints(1);
+  MaxCost.setBrokenHints(MRI->getRegClass(VirtReg.reg())->getCopyCost());
   return canEvictInterferenceBasedOnCost(VirtReg, PhysReg, true, MaxCost,
                                          FixedRegisters);
 }
@@ -301,15 +300,17 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
           return false;
         // We permit breaking cascades for urgent evictions. It should be the
         // last resort, though, so make it really expensive.
-        Cost.BrokenHints += 10;
+        Cost.BrokenHints += 10 * MRI->getRegClass(Intf->reg())->getCopyCost();
       }
       // Would this break a satisfied hint?
       bool BreaksHint = VRM->hasPreferredPhys(Intf->reg());
       // Update eviction cost.
-      Cost.BrokenHints += BreaksHint;
+      if (BreaksHint)
+        Cost.BrokenHints += MRI->getRegClass(Intf->reg())->getCopyCost();
+
       Cost.MaxWeight = std::max(Cost.MaxWeight, Intf->weight());
       // Abort if this would be too expensive.
-      if (!(Cost < MaxCost))
+      if (Cost >= MaxCost)
         return false;
       if (Urgent)
         continue;

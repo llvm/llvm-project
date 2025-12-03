@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IncrementalParser.h"
+#include "IncrementalAction.h"
 #include "InterpreterUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -26,14 +26,331 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
+#include <cmath>
+#include <cstdarg>
+#include <sstream>
 #include <string>
 
-#include <cstdarg>
+#define DEBUG_TYPE "interp-value"
+
+using namespace clang;
+
+static std::string DeclTypeToString(const QualType &QT, NamedDecl *D) {
+  std::string Str;
+  llvm::raw_string_ostream SS(Str);
+  if (QT.hasQualifiers())
+    SS << QT.getQualifiers().getAsString() << " ";
+  SS << D->getQualifiedNameAsString();
+  return Str;
+}
+
+static std::string QualTypeToString(ASTContext &Ctx, QualType QT) {
+  PrintingPolicy Policy(Ctx.getPrintingPolicy());
+  // Print the Allocator in STL containers, for instance.
+  Policy.SuppressDefaultTemplateArgs = false;
+  Policy.SuppressUnwrittenScope = true;
+  // Print 'a<b<c> >' rather than 'a<b<c>>'.
+  Policy.SplitTemplateClosers = true;
+
+  struct LocalPrintingPolicyRAII {
+    ASTContext &Context;
+    PrintingPolicy Policy;
+
+    LocalPrintingPolicyRAII(ASTContext &Ctx, PrintingPolicy &PP)
+        : Context(Ctx), Policy(Ctx.getPrintingPolicy()) {
+      Context.setPrintingPolicy(PP);
+    }
+    ~LocalPrintingPolicyRAII() { Context.setPrintingPolicy(Policy); }
+  } X(Ctx, Policy);
+
+  const QualType NonRefTy = QT.getNonReferenceType();
+
+  if (const auto *TTy = llvm::dyn_cast<TagType>(NonRefTy))
+    return DeclTypeToString(NonRefTy, TTy->getDecl());
+
+  if (const auto *TRy = dyn_cast<RecordType>(NonRefTy))
+    return DeclTypeToString(NonRefTy, TRy->getDecl());
+
+  const QualType Canon = NonRefTy.getCanonicalType();
+
+  // FIXME: How a builtin type can be a function pointer type?
+  if (Canon->isBuiltinType() && !NonRefTy->isFunctionPointerType() &&
+      !NonRefTy->isMemberPointerType())
+    return Canon.getAsString(Ctx.getPrintingPolicy());
+
+  if (const auto *TDTy = dyn_cast<TypedefType>(NonRefTy)) {
+    // FIXME: TemplateSpecializationType & SubstTemplateTypeParmType checks
+    // are predominately to get STL containers to print nicer and might be
+    // better handled in GetFullyQualifiedName.
+    //
+    // std::vector<Type>::iterator is a TemplateSpecializationType
+    // std::vector<Type>::value_type is a SubstTemplateTypeParmType
+    //
+    QualType SSDesugar = TDTy->getLocallyUnqualifiedSingleStepDesugaredType();
+    if (llvm::isa<SubstTemplateTypeParmType>(SSDesugar))
+      return GetFullTypeName(Ctx, Canon);
+    else if (llvm::isa<TemplateSpecializationType>(SSDesugar))
+      return GetFullTypeName(Ctx, NonRefTy);
+    return DeclTypeToString(NonRefTy, TDTy->getDecl());
+  }
+  return GetFullTypeName(Ctx, NonRefTy);
+}
+
+static std::string EnumToString(const Value &V) {
+  std::string Str;
+  llvm::raw_string_ostream SS(Str);
+  ASTContext &Ctx = const_cast<ASTContext &>(V.getASTContext());
+
+  uint64_t Data = V.convertTo<uint64_t>();
+  bool IsFirst = true;
+  llvm::APSInt AP = Ctx.MakeIntValue(Data, V.getType());
+
+  auto *ED = V.getType()->castAsEnumDecl();
+  for (auto I = ED->enumerator_begin(), E = ED->enumerator_end(); I != E; ++I) {
+    if (I->getInitVal() == AP) {
+      if (!IsFirst)
+        SS << " ? ";
+      SS << "(" + I->getQualifiedNameAsString() << ")";
+      IsFirst = false;
+    }
+  }
+  llvm::SmallString<64> APStr;
+  AP.toString(APStr, /*Radix=*/10);
+  SS << " : " << QualTypeToString(Ctx, ED->getIntegerType()) << " " << APStr;
+  return Str;
+}
+
+static std::string FunctionToString(const Value &V, const void *Ptr) {
+  std::string Str;
+  llvm::raw_string_ostream SS(Str);
+  SS << "Function @" << Ptr;
+
+  const DeclContext *PTU = V.getASTContext().getTranslationUnitDecl();
+  // Find the last top-level-stmt-decl. This is a forward iterator but the
+  // partial translation unit should not be large.
+  const TopLevelStmtDecl *TLSD = nullptr;
+  for (const Decl *D : PTU->noload_decls())
+    if (isa<TopLevelStmtDecl>(D))
+      TLSD = cast<TopLevelStmtDecl>(D);
+
+  // Get __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void
+  // *OpaqueType, void *Val);
+  const FunctionDecl *FD = nullptr;
+  if (auto *InterfaceCall = llvm::dyn_cast<CallExpr>(TLSD->getStmt())) {
+    const auto *Arg = InterfaceCall->getArg(/*Val*/ 3);
+    // Get rid of cast nodes.
+    while (const CastExpr *CastE = llvm::dyn_cast<CastExpr>(Arg))
+      Arg = CastE->getSubExpr();
+    if (const DeclRefExpr *DeclRefExp = llvm::dyn_cast<DeclRefExpr>(Arg))
+      FD = llvm::dyn_cast<FunctionDecl>(DeclRefExp->getDecl());
+
+    if (FD) {
+      SS << '\n';
+      const clang::FunctionDecl *FDef;
+      if (FD->hasBody(FDef))
+        FDef->print(SS);
+    }
+  }
+  return Str;
+}
+
+static std::string VoidPtrToString(const void *Ptr) {
+  std::string Str;
+  llvm::raw_string_ostream SS(Str);
+  SS << Ptr;
+  return Str;
+}
+
+static std::string CharPtrToString(const char *Ptr) {
+  if (!Ptr)
+    return "0";
+
+  std::string Result = "\"";
+  Result += Ptr;
+  Result += '"';
+  return Result;
+}
 
 namespace clang {
 
+struct ValueRef : public Value {
+  ValueRef(const Interpreter *In, void *Ty) : Value(In, Ty) {
+    // Tell the base class to not try to deallocate if it manages the value.
+    IsManuallyAlloc = false;
+  }
+};
+
+std::string Interpreter::ValueDataToString(const Value &V) const {
+  Sema &S = getCompilerInstance()->getSema();
+  ASTContext &Ctx = S.getASTContext();
+
+  QualType QT = V.getType();
+
+  if (const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(QT)) {
+    QualType ElemTy = CAT->getElementType();
+    size_t ElemCount = Ctx.getConstantArrayElementCount(CAT);
+    const Type *BaseTy = CAT->getBaseElementTypeUnsafe();
+    size_t ElemSize = Ctx.getTypeSizeInChars(BaseTy).getQuantity();
+
+    // Treat null terminated char arrays as strings basically.
+    if (ElemTy->isCharType()) {
+      char last = *(char *)(((uintptr_t)V.getPtr()) + ElemCount * ElemSize - 1);
+      if (last == '\0')
+        return CharPtrToString((char *)V.getPtr());
+    }
+
+    std::string Result = "{ ";
+    for (unsigned Idx = 0, N = CAT->getZExtSize(); Idx < N; ++Idx) {
+      ValueRef InnerV = ValueRef(this, ElemTy.getAsOpaquePtr());
+      if (ElemTy->isBuiltinType()) {
+        // Single dim arrays, advancing.
+        uintptr_t Offset = (uintptr_t)V.getPtr() + Idx * ElemSize;
+        InnerV.setRawBits((void *)Offset, ElemSize * 8);
+      } else {
+        // Multi dim arrays, position to the next dimension.
+        size_t Stride = ElemCount / N;
+        uintptr_t Offset = ((uintptr_t)V.getPtr()) + Idx * Stride * ElemSize;
+        InnerV.setPtr((void *)Offset);
+      }
+
+      Result += ValueDataToString(InnerV);
+
+      // Skip the \0 if the char types
+      if (Idx < N - 1)
+        Result += ", ";
+    }
+    Result += " }";
+    return Result;
+  }
+
+  QualType DesugaredTy = QT.getDesugaredType(Ctx);
+  QualType NonRefTy = DesugaredTy.getNonReferenceType();
+
+  // FIXME: Add support for user defined printers.
+  // LookupResult R = LookupUserDefined(S, QT);
+  // if (!R.empty())
+  //   return CallUserSpecifiedPrinter(R, V);
+
+  // If it is a builtin type dispatch to the builtin overloads.
+  if (auto *BT = DesugaredTy.getCanonicalType()->getAs<BuiltinType>()) {
+
+    auto formatFloating = [](auto Val, char Suffix = '\0') -> std::string {
+      std::string Out;
+      llvm::raw_string_ostream SS(Out);
+
+      if (std::isnan(Val) || std::isinf(Val)) {
+        SS << llvm::format("%g", Val);
+        return SS.str();
+      }
+      if (Val == static_cast<decltype(Val)>(static_cast<int64_t>(Val)))
+        SS << llvm::format("%.1f", Val);
+      else if (std::abs(Val) < 1e-4 || std::abs(Val) > 1e6 || Suffix == 'f')
+        SS << llvm::format("%#.6g", Val);
+      else if (Suffix == 'L')
+        SS << llvm::format("%#.12Lg", Val);
+      else
+        SS << llvm::format("%#.8g", Val);
+
+      if (Suffix != '\0')
+        SS << Suffix;
+      return SS.str();
+    };
+
+    std::string Str;
+    llvm::raw_string_ostream SS(Str);
+    switch (BT->getKind()) {
+    default:
+      return "{ error: unknown builtin type '" + std::to_string(BT->getKind()) +
+             " '}";
+    case clang::BuiltinType::Bool:
+      SS << ((V.getBool()) ? "true" : "false");
+      return Str;
+    case clang::BuiltinType::Char_S:
+      SS << '\'' << V.getChar_S() << '\'';
+      return Str;
+    case clang::BuiltinType::SChar:
+      SS << '\'' << V.getSChar() << '\'';
+      return Str;
+    case clang::BuiltinType::Char_U:
+      SS << '\'' << V.getChar_U() << '\'';
+      return Str;
+    case clang::BuiltinType::UChar:
+      SS << '\'' << V.getUChar() << '\'';
+      return Str;
+    case clang::BuiltinType::Short:
+      SS << V.getShort();
+      return Str;
+    case clang::BuiltinType::UShort:
+      SS << V.getUShort();
+      return Str;
+    case clang::BuiltinType::Int:
+      SS << V.getInt();
+      return Str;
+    case clang::BuiltinType::UInt:
+      SS << V.getUInt();
+      return Str;
+    case clang::BuiltinType::Long:
+      SS << V.getLong();
+      return Str;
+    case clang::BuiltinType::ULong:
+      SS << V.getULong();
+      return Str;
+    case clang::BuiltinType::LongLong:
+      SS << V.getLongLong();
+      return Str;
+    case clang::BuiltinType::ULongLong:
+      SS << V.getULongLong();
+      return Str;
+    case clang::BuiltinType::Float:
+      return formatFloating(V.getFloat(), /*suffix=*/'f');
+
+    case clang::BuiltinType::Double:
+      return formatFloating(V.getDouble());
+
+    case clang::BuiltinType::LongDouble:
+      return formatFloating(V.getLongDouble(), /*suffix=*/'L');
+    }
+  }
+
+  if ((NonRefTy->isPointerType() || NonRefTy->isMemberPointerType()) &&
+      NonRefTy->getPointeeType()->isFunctionProtoType())
+    return FunctionToString(V, V.getPtr());
+
+  if (NonRefTy->isFunctionType())
+    return FunctionToString(V, &V);
+
+  if (NonRefTy->isEnumeralType())
+    return EnumToString(V);
+
+  if (NonRefTy->isNullPtrType())
+    return "nullptr\n";
+
+  // FIXME: Add support for custom printers in C.
+  if (NonRefTy->isPointerType()) {
+    if (NonRefTy->getPointeeType()->isCharType())
+      return CharPtrToString((char *)V.getPtr());
+
+    return VoidPtrToString(V.getPtr());
+  }
+
+  // Fall back to printing just the address of the unknown object.
+  return "@" + VoidPtrToString(V.getPtr());
+}
+
+std::string Interpreter::ValueTypeToString(const Value &V) const {
+  ASTContext &Ctx = const_cast<ASTContext &>(V.getASTContext());
+  QualType QT = V.getType();
+
+  std::string QTStr = QualTypeToString(Ctx, QT);
+
+  if (QT->isReferenceType())
+    QTStr += " &";
+
+  return QTStr;
+}
+
 llvm::Expected<llvm::orc::ExecutorAddr>
-Interpreter::CompileDtorCall(CXXRecordDecl *CXXRD) {
+Interpreter::CompileDtorCall(CXXRecordDecl *CXXRD) const {
   assert(CXXRD && "Cannot compile a destructor for a nullptr");
   if (auto Dtor = Dtors.find(CXXRD); Dtor != Dtors.end())
     return Dtor->getSecond();
@@ -45,7 +362,7 @@ Interpreter::CompileDtorCall(CXXRecordDecl *CXXRD) {
       getCompilerInstance()->getSema().LookupDestructor(CXXRD);
 
   llvm::StringRef Name =
-      getCodeGen()->GetMangledName(GlobalDecl(DtorRD, Dtor_Base));
+      Act->getCodeGen()->GetMangledName(GlobalDecl(DtorRD, Dtor_Base));
   auto AddrOrErr = getSymbolAddress(Name);
   if (!AddrOrErr)
     return AddrOrErr.takeError();
@@ -83,7 +400,7 @@ public:
     return InterfaceKind::CopyArray;
   }
 
-  InterfaceKind VisitFunctionProtoType(const FunctionProtoType *Ty) {
+  InterfaceKind VisitFunctionType(const FunctionType *Ty) {
     HandlePtrType(Ty);
     return InterfaceKind::NoAlloc;
   }
@@ -94,7 +411,8 @@ public:
   }
 
   InterfaceKind VisitReferenceType(const ReferenceType *Ty) {
-    ExprResult AddrOfE = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, E);
+    ExprResult AddrOfE = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf,
+                                                E->IgnoreImpCasts());
     assert(!AddrOfE.isInvalid() && "Can not create unary expression");
     Args.push_back(AddrOfE.get());
     return InterfaceKind::NoAlloc;
@@ -143,9 +461,14 @@ private:
   }
 };
 
+static constexpr llvm::StringRef VPName[] = {
+    "__clang_Interpreter_SetValueNoAlloc",
+    "__clang_Interpreter_SetValueWithAlloc",
+    "__clang_Interpreter_SetValueCopyArr", "__ci_newtag"};
+
 // This synthesizes a call expression to a speciall
 // function that is responsible for generating the Value.
-// In general, we transform:
+// In general, we transform c++:
 //   clang-repl> x
 // To:
 //   // 1. If x is a built-in type like int, float.
@@ -156,7 +479,7 @@ private:
 //   // 3. If x is a struct, but a rvalue.
 //   new (__clang_Interpreter_SetValueWithAlloc(ThisInterp, OpaqueValue,
 //   xQualType)) (x);
-llvm::Expected<Expr *> Interpreter::ExtractValueFromExpr(Expr *E) {
+llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
   Sema &S = getCompilerInstance()->getSema();
   ASTContext &Ctx = S.getASTContext();
 
@@ -178,23 +501,21 @@ llvm::Expected<Expr *> Interpreter::ExtractValueFromExpr(Expr *E) {
       Interface = S.BuildDeclarationNameExpr(CSS, R, /*ADL=*/false).get();
       return llvm::Error::success();
     };
-    static constexpr llvm::StringRef Builtin[] = {
-        "__clang_Interpreter_SetValueNoAlloc",
-        "__clang_Interpreter_SetValueWithAlloc",
-        "__clang_Interpreter_SetValueCopyArr", "__ci_newtag"};
     if (llvm::Error Err =
-            LookupInterface(ValuePrintingInfo[NoAlloc], Builtin[NoAlloc]))
+            LookupInterface(ValuePrintingInfo[NoAlloc], VPName[NoAlloc]))
+      return std::move(Err);
+
+    if (llvm::Error Err =
+            LookupInterface(ValuePrintingInfo[CopyArray], VPName[CopyArray]))
+      return std::move(Err);
+
+    if (llvm::Error Err =
+            LookupInterface(ValuePrintingInfo[WithAlloc], VPName[WithAlloc]))
       return std::move(Err);
 
     if (Ctx.getLangOpts().CPlusPlus) {
       if (llvm::Error Err =
-              LookupInterface(ValuePrintingInfo[WithAlloc], Builtin[WithAlloc]))
-        return std::move(Err);
-      if (llvm::Error Err =
-              LookupInterface(ValuePrintingInfo[CopyArray], Builtin[CopyArray]))
-        return std::move(Err);
-      if (llvm::Error Err =
-              LookupInterface(ValuePrintingInfo[NewTag], Builtin[NewTag]))
+              LookupInterface(ValuePrintingInfo[NewTag], VPName[NewTag]))
         return std::move(Err);
     }
   }
@@ -213,11 +534,11 @@ llvm::Expected<Expr *> Interpreter::ExtractValueFromExpr(Expr *E) {
   if (auto *EWC = llvm::dyn_cast_if_present<ExprWithCleanups>(E))
     E = EWC->getSubExpr();
 
-  QualType Ty = E->getType();
+  QualType Ty = E->IgnoreImpCasts()->getType();
   QualType DesugaredTy = Ty.getDesugaredType(Ctx);
 
   // For lvalue struct, we treat it as a reference.
-  if (DesugaredTy->isRecordType() && E->isLValue()) {
+  if (DesugaredTy->isRecordType() && E->IgnoreImpCasts()->isLValue()) {
     DesugaredTy = Ctx.getLValueReferenceType(DesugaredTy);
     Ty = Ctx.getLValueReferenceType(Ty);
   }
@@ -235,13 +556,16 @@ llvm::Expected<Expr *> Interpreter::ExtractValueFromExpr(Expr *E) {
   InterfaceKind Kind = V.computeInterfaceKind(DesugaredTy);
   switch (Kind) {
   case InterfaceKind::WithAlloc:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case InterfaceKind::CopyArray: {
     // __clang_Interpreter_SetValueWithAlloc.
     ExprResult AllocCall =
         S.ActOnCallExpr(Scope, ValuePrintingInfo[InterfaceKind::WithAlloc],
                         E->getBeginLoc(), AdjustedArgs, E->getEndLoc());
-    assert(!AllocCall.isInvalid() && "Can't create runtime interface call!");
+    if (AllocCall.isInvalid())
+      return llvm::make_error<llvm::StringError>(
+          "Cannot call to " + VPName[WithAlloc],
+          llvm::inconvertibleErrorCode());
 
     TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ty, SourceLocation());
 
@@ -255,14 +579,23 @@ llvm::Expected<Expr *> Interpreter::ExtractValueFromExpr(Expr *E) {
 
     // __clang_Interpreter_SetValueCopyArr.
     if (Kind == InterfaceKind::CopyArray) {
-      const auto *ConstantArrTy =
-          cast<ConstantArrayType>(DesugaredTy.getTypePtr());
-      size_t ArrSize = Ctx.getConstantArrayElementCount(ConstantArrTy);
+      const auto *CATy = cast<ConstantArrayType>(DesugaredTy.getTypePtr());
+      size_t ArrSize = Ctx.getConstantArrayElementCount(CATy);
+
+      if (!Ctx.getLangOpts().CPlusPlus)
+        ArrSize *= Ctx.getTypeSizeInChars(CATy->getBaseElementTypeUnsafe())
+                       .getQuantity();
+
       Expr *ArrSizeExpr = IntegerLiteralExpr(Ctx, ArrSize);
       Expr *Args[] = {E, AllocCall.get(), ArrSizeExpr};
       SetValueE =
           S.ActOnCallExpr(Scope, ValuePrintingInfo[InterfaceKind::CopyArray],
                           SourceLocation(), Args, SourceLocation());
+      if (SetValueE.isInvalid())
+        return llvm::make_error<llvm::StringError>(
+            "Cannot call to " + VPName[CopyArray],
+            llvm::inconvertibleErrorCode());
+      break;
     }
     Expr *Args[] = {AllocCall.get(), ValuePrintingInfo[InterfaceKind::NewTag]};
     ExprResult CXXNewCall = S.BuildCXXNew(
@@ -272,8 +605,10 @@ llvm::Expected<Expr *> Interpreter::ExtractValueFromExpr(Expr *E) {
         /*TypeIdParens=*/SourceRange(), TSI->getType(), TSI, std::nullopt,
         E->getSourceRange(), E);
 
-    assert(!CXXNewCall.isInvalid() &&
-           "Can't create runtime placement new call!");
+    if (CXXNewCall.isInvalid())
+      return llvm::make_error<llvm::StringError>(
+          "Cannot build a call to placement new",
+          llvm::inconvertibleErrorCode());
 
     SetValueE = S.ActOnFinishFullExpr(CXXNewCall.get(),
                                       /*DiscardedValue=*/false);
@@ -302,6 +637,7 @@ llvm::Expected<Expr *> Interpreter::ExtractValueFromExpr(Expr *E) {
 using namespace clang;
 
 // Temporary rvalue struct that need special care.
+extern "C" {
 REPL_EXTERNAL_VISIBILITY void *
 __clang_Interpreter_SetValueWithAlloc(void *This, void *OutVal,
                                       void *OpaqueType) {
@@ -310,8 +646,9 @@ __clang_Interpreter_SetValueWithAlloc(void *This, void *OutVal,
   return VRef.getPtr();
 }
 
-extern "C" void REPL_EXTERNAL_VISIBILITY __clang_Interpreter_SetValueNoAlloc(
-    void *This, void *OutVal, void *OpaqueType, ...) {
+REPL_EXTERNAL_VISIBILITY void
+__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
+                                    ...) {
   Value &VRef = *(Value *)OutVal;
   Interpreter *I = static_cast<Interpreter *>(This);
   VRef = Value(I, OpaqueType);
@@ -325,8 +662,8 @@ extern "C" void REPL_EXTERNAL_VISIBILITY __clang_Interpreter_SetValueNoAlloc(
   if (VRef.getKind() == Value::K_PtrOrObj) {
     VRef.setPtr(va_arg(args, void *));
   } else {
-    if (const auto *ET = QT->getAs<EnumType>())
-      QT = ET->getDecl()->getIntegerType();
+    if (const auto *ED = QT->getAsEnumDecl())
+      QT = ED->getIntegerType();
     switch (QT->castAs<BuiltinType>()->getKind()) {
     default:
       llvm_unreachable("unknown type kind!");
@@ -385,6 +722,7 @@ extern "C" void REPL_EXTERNAL_VISIBILITY __clang_Interpreter_SetValueNoAlloc(
     }
   }
   va_end(args);
+}
 }
 
 // A trampoline to work around the fact that operator placement new cannot

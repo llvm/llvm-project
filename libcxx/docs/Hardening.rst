@@ -39,6 +39,8 @@ modes are:
 
    Enabling hardening has no impact on the ABI.
 
+.. _notes-for-users:
+
 Notes for users
 ---------------
 
@@ -71,6 +73,10 @@ to control the level by passing **one** of the following options to the compiler
    vendor, setting this macro will have no impact on the hardening mode for the
    pre-built components. Most libc++ code is header-based, so a user-provided
    value for ``_LIBCPP_HARDENING_MODE`` will be mostly respected.
+
+In some cases, users might want to override the assertion semantic used by the
+library. This can be done similarly to setting the hardening mode; please refer
+to the :ref:`relevant section <assertion-semantics>`.
 
 Notes for vendors
 -----------------
@@ -260,6 +266,82 @@ output. This is less secure and increases the size of the binary (among other
 things, it has to store the error message strings) but makes the failure easier
 to debug. It also allows testing the error messages in our test suite.
 
+This default behavior can be customized by users via :ref:`assertion semantics
+<assertion-semantics>`; it can also be completely overridden by vendors by
+providing a :ref:`custom assertion failure handler
+<override-assertion-handler>`.
+
+.. _assertion-semantics:
+
+Assertion semantics
+-------------------
+
+.. warning::
+
+  Assertion semantics are currently an experimental feature.
+
+.. note::
+
+  Assertion semantics are not available in the C++03 mode.
+
+What happens when an assertion fails depends on the assertion semantic being
+used. Four assertion semantics are available, based on C++26 Contracts
+evaluation semantics:
+
+- ``ignore`` evaluates the assertion but has no effect if it fails (note that it
+  differs from the Contracts ``ignore`` semantic which would not evaluate
+  the assertion at all);
+- ``observe`` logs an error (indicating, if possible on the platform, that the
+  error is fatal) but continues execution;
+- ``quick-enforce`` terminates the program as fast as possible via a trap
+  instruction. It is the default semantic for the production modes (``fast`` and
+  ``extensive``);
+- ``enforce`` logs an error and then terminates the program. It is the default
+  semantic for the ``debug`` mode.
+
+Notes:
+
+- Continuing execution after a hardening check fails results in undefined
+  behavior; the ``observe`` semantic is meant to make adopting hardening easier
+  but should not be used outside of the adoption period;
+- C++26 wording for Library Hardening precludes a conforming Hardened
+  implementation from using the Contracts ``ignore`` semantic when evaluating
+  hardened preconditions in the Library. Libc++ allows using this semantic for
+  hardened preconditions, but please be aware that using ``ignore`` does not
+  produce a conforming "Hardened" implementation, unlike the other semantics
+  above.
+
+The default assertion semantics are as follows:
+
+- ``fast``: ``quick-enforce``;
+- ``extensive``: ``quick-enforce``;
+- ``debug``: ``enforce``.
+
+The default assertion semantics can be overridden by passing **one** of the
+following options to the compiler:
+
+- ``-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_IGNORE``
+- ``-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_OBSERVE``
+- ``-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE``
+- ``-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_ENFORCE``
+
+All the :ref:`same notes <notes-for-users>` apply to setting this macro as for
+setting ``_LIBCPP_HARDENING_MODE``.
+
+Notes for vendors
+-----------------
+
+Similarly to hardening modes, vendors can set the default assertion semantic by
+providing ``LIBCXX_ASSERTION_SEMANTIC`` as a configuration option, with the
+possible values of ``hardening_dependent``, ``ignore``, ``observe``,
+``quick_enforce`` and ``enforce``. The default value is ``hardening_dependent``
+which is a special value that instructs the library to select the semantic based
+on the hardening mode in effect (the mapping is described in
+:ref:`the main section on assertion semantics <assertion-semantics>`).
+
+This option controls both the assertion semantic that the precompiled library is
+built with and the default assertion semantic that users will build with.
+
 .. _override-assertion-handler:
 
 Overriding the assertion failure handler
@@ -378,6 +460,13 @@ The first character of an ABI tag encodes the hardening mode:
 - ``s`` -- extensive ("[s]afe") mode;
 - ``d`` -- [d]ebug mode;
 - ``n`` -- [n]one mode.
+
+The second character of an ABI tag encodes the assertion semantic:
+
+- ``i`` -- [i]gnore semantic;
+- ``o`` -- [o]bserve semantic;
+- ``q`` -- [q]uick-enforce semantic;
+- ``e`` -- [e]nforce semantic.
 
 Hardened containers status
 ==========================

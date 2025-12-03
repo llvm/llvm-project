@@ -42,7 +42,7 @@ subroutine test_scalar_volatile()
   ! Deferred-length characters
   allocate(character(20) :: c1)
   c1 = "volatile character"
-  
+
   ! Allocation with components
   allocate(v3)
   deallocate(v1, v2, v3, c1)
@@ -53,24 +53,24 @@ subroutine test_volatile_asynchronous()
   use derived_types
   class(base_type), allocatable, volatile, asynchronous :: v1(:)
   integer, allocatable, volatile, asynchronous :: i1(:)
-  
+
   allocate(v1(4))
   allocate(i1(4), source=[1, 2, 3, 4])
-  
+
   deallocate(v1, i1)
 end subroutine
 
 subroutine test_select_base_type_volatile()
   use derived_types
   class(base_type), allocatable, volatile :: v(:)
-  
+
   allocate(v(2))
-  
+
   select type(v)
   class is (base_type)
     v(1)%i = 100
   end select
-  
+
   deallocate(v)
 end subroutine
 
@@ -79,12 +79,12 @@ subroutine test_mold_allocation()
   use derived_types
   type(comp_type) :: template
   type(comp_type), allocatable, volatile :: v(:)
-  
+
   template%str = "mold test"
   template%arr = [5, 6]
-  
+
   allocate(v(3), mold=template)
-  
+
   deallocate(v)
 end subroutine
 
@@ -93,28 +93,28 @@ subroutine test_unlimited_polymorphic()
   use derived_types
   class(*), allocatable, volatile :: up
   class(*), allocatable, volatile :: upa(:)
-  
+
   ! Scalar allocation
   allocate(integer :: up)
   select type(up)
     type is (integer)
       up = 123
   end select
-  
+
   ! Array allocation with source
   allocate(character(10) :: up)
   select type(up)
     type is (character(*))
       up = "class(*)"
   end select
-  
+
   ! Array allocation
   allocate(real :: upa(3))
   select type(upa)
     type is (real)
       upa = [1.1, 2.2, 3.3]
   end select
-  
+
   deallocate(up, upa)
 end subroutine
 
@@ -127,8 +127,8 @@ end subroutine
 ! CHECK:           %{{.+}} = fir.call @_FortranAAllocatableAllocate(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:           fir.call @_FortranAAllocatableInitDerivedForAllocate(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> ()
 ! CHECK:           %{{.+}} = fir.call @_FortranAAllocatableAllocate(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
-! CHECK:           %{{.+}}:2 = hlfir.declare %{{.+}} {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFtest_scalar_volatileEv1"} : (!fir.box<!fir.heap<!fir.type<{{.*}}>>, volatile>) -> (!fir.box<!fir.heap<!fir.type<{{.*}}>>, volatile>, !fir.box<!fir.heap<!fir.type<{{.*}}>>, volatile>)
-! CHECK:           %{{.+}} = hlfir.designate %{{.+}}#0{"j"}   : (!fir.box<!fir.heap<!fir.type<{{.*}}>>, volatile>) -> !fir.ref<i32, volatile>
+! CHECK:           %{{.+}}:2 = hlfir.declare %{{.+}} {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFtest_scalar_volatileEv1"} : (!fir.box<!fir.heap<!fir.type<{{.*}}>>, volatile>) -> (!fir.box<!fir.type<{{.*}}>, volatile>, !fir.box<!fir.type<{{.*}}>, volatile>)
+! CHECK:           %{{.+}} = hlfir.designate %{{.+}}#0{"j"}   : (!fir.box<!fir.type<{{.*}}>, volatile>) -> !fir.ref<i32, volatile>
 ! CHECK:           %{{.+}}:2 = hlfir.declare %{{.+}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QMderived_typesText_type.0"} : (!fir.ref<!fir.type<{{.*}}>>) -> (!fir.ref<!fir.type<{{.*}}>>, !fir.ref<!fir.type<{{.*}}>>)
 ! CHECK:           %{{.+}} = fir.call @_FortranAAllocatableAllocateSource(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:           %{{.+}}:2 = hlfir.declare %{{.+}} typeparams %{{.+}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX766F6C6174696C6520636861726163746572"} : (!fir.ref<!fir.char<1,18>>, index) -> (!fir.ref<!fir.char<1,18>>, !fir.ref<!fir.char<1,18>>)
@@ -156,8 +156,8 @@ end subroutine
 ! CHECK:           fir.call @_FortranAAllocatableSetBounds(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:           %{{.+}} = fir.call @_FortranAAllocatableAllocate(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:           %{{.+}} = fir.call @_FortranAClassIs(%{{.+}}, %{{.+}}) : (!fir.box<none>, !fir.ref<none>) -> i1
-! CHECK:           %{{.+}}:2 = hlfir.declare %{{.+}}(%{{.+}}) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFtest_select_base_type_volatileEv"} : (!fir.class<!fir.heap<!fir.array<?x!fir.type<{{.*}}>>>, volatile>, !fir.shift<1>) -> (!fir.class<!fir.heap<!fir.array<?x!fir.type<{{.*}}>>>, volatile>, !fir.class<!fir.heap<!fir.array<?x!fir.type<{{.*}}>>>, volatile>)
-! CHECK:           %{{.+}} = hlfir.designate %{{.+}}#0 (%{{.+}})  : (!fir.class<!fir.heap<!fir.array<?x!fir.type<{{.*}}>>>, volatile>, index) -> !fir.class<!fir.type<{{.*}}>, volatile>
+! CHECK:           %{{.+}}:2 = hlfir.declare %{{.+}}(%{{.+}}) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFtest_select_base_type_volatileEv"} : (!fir.class<!fir.heap<!fir.array<?x!fir.type<{{.*}}>>>, volatile>, !fir.shift<1>) -> (!fir.class<!fir.array<?x!fir.type<{{.*}}>>, volatile>, !fir.class<!fir.array<?x!fir.type<{{.*}}>>, volatile>)
+! CHECK:           %{{.+}} = hlfir.designate %{{.+}}#0 (%{{.+}})  : (!fir.class<!fir.array<?x!fir.type<{{.*}}>>, volatile>, index) -> !fir.class<!fir.type<{{.*}}>, volatile>
 ! CHECK:           %{{.+}} = hlfir.designate %{{.+}}{"i"}   : (!fir.class<!fir.type<{{.*}}>, volatile>) -> !fir.ref<i32, volatile>
 ! CHECK:           %{{.+}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:           %{{.+}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -186,7 +186,7 @@ end subroutine
 ! CHECK:           fir.call @_FortranAAllocatableInitIntrinsicForAllocate(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i32, i32, i32) -> ()
 ! CHECK:           fir.call @_FortranAAllocatableSetBounds(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:           %{{.+}} = fir.call @_FortranAAllocatableAllocate(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
-! CHECK:           %{{.+}}:2 = hlfir.declare %{{.+}}(%{{.+}}) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFtest_unlimited_polymorphicEupa"} : (!fir.box<!fir.heap<!fir.array<?xf32>>, volatile>, !fir.shift<1>) -> (!fir.box<!fir.heap<!fir.array<?xf32>>, volatile>, !fir.box<!fir.heap<!fir.array<?xf32>>, volatile>)
+! CHECK:           %{{.+}}:2 = hlfir.declare %{{.+}}(%{{.+}}) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFtest_unlimited_polymorphicEupa"} : (!fir.box<!fir.heap<!fir.array<?xf32>>, volatile>, !fir.shift<1>) -> (!fir.box<!fir.array<?xf32>, volatile>, !fir.box<!fir.array<?xf32>, volatile>)
 ! CHECK:           %{{.+}}:2 = hlfir.declare %{{.+}}(%{{.+}}) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.3xr4.3"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
 ! CHECK:           %{{.+}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:           %{{.+}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32

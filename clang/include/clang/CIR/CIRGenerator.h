@@ -76,8 +76,16 @@ public:
   ~CIRGenerator() override;
   void Initialize(clang::ASTContext &astContext) override;
   bool HandleTopLevelDecl(clang::DeclGroupRef group) override;
+  void HandleTranslationUnit(clang::ASTContext &astContext) override;
   void HandleInlineFunctionDefinition(clang::FunctionDecl *d) override;
+  void HandleTagDeclDefinition(clang::TagDecl *d) override;
+  void HandleTagDeclRequiredDefinition(const clang::TagDecl *D) override;
+  void HandleCXXStaticMemberVarInstantiation(clang::VarDecl *D) override;
+  void
+  HandleOpenACCRoutineReference(const clang::FunctionDecl *FD,
+                                const clang::OpenACCRoutineDecl *RD) override;
   void CompleteTentativeDefinition(clang::VarDecl *d) override;
+  void HandleVTable(clang::CXXRecordDecl *rd) override;
 
   mlir::ModuleOp getModule() const;
   mlir::MLIRContext &getMLIRContext() { return *mlirContext; };

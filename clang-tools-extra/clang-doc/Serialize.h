@@ -16,10 +16,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SERIALIZE_H
 
 #include "Representation.h"
-#include "clang/AST/AST.h"
-#include "clang/AST/CommentVisitor.h"
 #include <string>
-#include <vector>
 
 using namespace clang::comments;
 
@@ -66,6 +63,14 @@ emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const TypeAliasDecl *D, const FullComment *FC, Location Loc,
+         bool PublicOnly);
+
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const ConceptDecl *D, const FullComment *FC, const Location &Loc,
+         bool PublicOnly);
+
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const VarDecl *D, const FullComment *FC, const Location &Loc,
          bool PublicOnly);
 
 // Function to hash a given USR value for storage.

@@ -155,12 +155,10 @@ LLVM_ABI bool isTriviallyDead(const MachineInstr &MI,
 /// Report an ISel error as a missed optimization remark to the LLVMContext's
 /// diagnostic stream.  Set the FailedISel MachineFunction property.
 LLVM_ABI void reportGISelFailure(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  MachineOptimizationRemarkMissed &R);
 
 LLVM_ABI void reportGISelFailure(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  const char *PassName, StringRef Msg,
                                  const MachineInstr &MI);
@@ -168,7 +166,6 @@ LLVM_ABI void reportGISelFailure(MachineFunction &MF,
 /// Report an ISel warning as a missed optimization remark to the LLVMContext's
 /// diagnostic stream.
 LLVM_ABI void reportGISelWarning(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  MachineOptimizationRemarkMissed &R);
 
@@ -459,11 +456,25 @@ LLVM_ABI bool isBuildVectorConstantSplat(const Register Reg,
                                          const MachineRegisterInfo &MRI,
                                          int64_t SplatValue, bool AllowUndef);
 
+/// Return true if the specified register is defined by G_BUILD_VECTOR or
+/// G_BUILD_VECTOR_TRUNC where all of the elements are \p SplatValue or undef.
+LLVM_ABI bool isBuildVectorConstantSplat(const Register Reg,
+                                         const MachineRegisterInfo &MRI,
+                                         const APInt &SplatValue,
+                                         bool AllowUndef);
+
 /// Return true if the specified instruction is a G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are \p SplatValue or undef.
 LLVM_ABI bool isBuildVectorConstantSplat(const MachineInstr &MI,
                                          const MachineRegisterInfo &MRI,
                                          int64_t SplatValue, bool AllowUndef);
+
+/// Return true if the specified instruction is a G_BUILD_VECTOR or
+/// G_BUILD_VECTOR_TRUNC where all of the elements are \p SplatValue or undef.
+LLVM_ABI bool isBuildVectorConstantSplat(const MachineInstr &MI,
+                                         const MachineRegisterInfo &MRI,
+                                         const APInt &SplatValue,
+                                         bool AllowUndef);
 
 /// Return true if the specified instruction is a G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are 0 or undef.
@@ -616,6 +627,10 @@ LLVM_ABI bool isGuaranteedNotToBeUndef(Register Reg,
 /// Get the type back from LLT. It won't be 100 percent accurate but returns an
 /// estimate of the type.
 LLVM_ABI Type *getTypeForLLT(LLT Ty, LLVMContext &C);
+
+/// Returns true if the instruction \p MI is one of the assert
+/// instructions.
+LLVM_ABI bool isAssertMI(const MachineInstr &MI);
 
 /// An integer-like constant.
 ///

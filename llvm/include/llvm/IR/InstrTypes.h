@@ -601,11 +601,9 @@ public:
       Instruction::CastOps firstOpcode,  ///< Opcode of first cast
       Instruction::CastOps secondOpcode, ///< Opcode of second cast
       Type *SrcTy,                       ///< SrcTy of 1st cast
-      Type *MidTy,       ///< DstTy of 1st cast & SrcTy of 2nd cast
-      Type *DstTy,       ///< DstTy of 2nd cast
-      Type *SrcIntPtrTy, ///< Integer type corresponding to Ptr SrcTy, or null
-      Type *MidIntPtrTy, ///< Integer type corresponding to Ptr MidTy, or null
-      Type *DstIntPtrTy  ///< Integer type corresponding to Ptr DstTy, or null
+      Type *MidTy,         ///< DstTy of 1st cast & SrcTy of 2nd cast
+      Type *DstTy,         ///< DstTy of 2nd cast
+      const DataLayout *DL ///< Optional data layout
   );
 
   /// Return the opcode of this CastInst
@@ -1343,7 +1341,8 @@ public:
   Use &getCalledOperandUse() { return Op<CalledOperandOpEndIdx>(); }
 
   /// Returns the function called, or null if this is an indirect function
-  /// invocation or the function signature does not match the call signature.
+  /// invocation or the function signature does not match the call signature, or
+  /// the call target is an alias.
   Function *getCalledFunction() const {
     if (auto *F = dyn_cast_or_null<Function>(getCalledOperand()))
       if (F->getValueType() == getFunctionType())

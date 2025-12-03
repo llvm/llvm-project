@@ -9,99 +9,6 @@
 #ifndef _OPENCL_BASE_H_
 #define _OPENCL_BASE_H_
 
-// Define extension macros
-
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
-// For SPIR and SPIR-V all extensions are supported.
-#if defined(__SPIR__) || defined(__SPIRV__)
-#define cl_khr_subgroup_extended_types 1
-#define cl_khr_subgroup_non_uniform_vote 1
-#define cl_khr_subgroup_ballot 1
-#define cl_khr_subgroup_non_uniform_arithmetic 1
-#define cl_khr_subgroup_shuffle 1
-#define cl_khr_subgroup_shuffle_relative 1
-#define cl_khr_subgroup_clustered_reduce 1
-#define cl_khr_subgroup_rotate 1
-#define cl_khr_extended_bit_ops 1
-#define cl_khr_integer_dot_product 1
-#define __opencl_c_integer_dot_product_input_4x8bit 1
-#define __opencl_c_integer_dot_product_input_4x8bit_packed 1
-#define cl_ext_float_atomics 1
-#ifdef cl_khr_fp16
-#define __opencl_c_ext_fp16_global_atomic_load_store 1
-#define __opencl_c_ext_fp16_local_atomic_load_store 1
-#define __opencl_c_ext_fp16_global_atomic_add 1
-#define __opencl_c_ext_fp16_local_atomic_add 1
-#define __opencl_c_ext_fp16_global_atomic_min_max 1
-#define __opencl_c_ext_fp16_local_atomic_min_max 1
-#endif
-#ifdef cl_khr_fp64
-#define __opencl_c_ext_fp64_global_atomic_add 1
-#define __opencl_c_ext_fp64_local_atomic_add 1
-#define __opencl_c_ext_fp64_global_atomic_min_max 1
-#define __opencl_c_ext_fp64_local_atomic_min_max 1
-#endif
-#define __opencl_c_ext_fp32_global_atomic_add 1
-#define __opencl_c_ext_fp32_local_atomic_add 1
-#define __opencl_c_ext_fp32_global_atomic_min_max 1
-#define __opencl_c_ext_fp32_local_atomic_min_max 1
-#define __opencl_c_ext_image_raw10_raw12 1
-#define __opencl_c_ext_image_unorm_int_2_101010 1
-#define __opencl_c_ext_image_unsigned_10x6_12x4_14x2 1
-#define cl_khr_kernel_clock 1
-#define __opencl_c_kernel_clock_scope_device 1
-#define __opencl_c_kernel_clock_scope_work_group 1
-#define __opencl_c_kernel_clock_scope_sub_group 1
-
-#endif // defined(__SPIR__) || defined(__SPIRV__)
-#endif // (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
-
-// Define feature macros for OpenCL C 2.0
-#if (__OPENCL_CPP_VERSION__ == 100 || __OPENCL_C_VERSION__ == 200)
-#define __opencl_c_pipes 1
-#define __opencl_c_generic_address_space 1
-#define __opencl_c_work_group_collective_functions 1
-#define __opencl_c_atomic_order_acq_rel 1
-#define __opencl_c_atomic_order_seq_cst 1
-#define __opencl_c_atomic_scope_device 1
-#define __opencl_c_atomic_scope_all_devices 1
-#define __opencl_c_device_enqueue 1
-#define __opencl_c_read_write_images 1
-#define __opencl_c_program_scope_global_variables 1
-#define __opencl_c_images 1
-#endif
-
-// Define header-only feature macros for OpenCL C 3.0.
-#if (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
-// For the SPIR and SPIR-V target all features are supported.
-#if defined(__SPIR__) || defined(__SPIRV__)
-#define __opencl_c_work_group_collective_functions 1
-#define __opencl_c_atomic_order_seq_cst 1
-#define __opencl_c_atomic_scope_device 1
-#define __opencl_c_atomic_scope_all_devices 1
-#define __opencl_c_read_write_images 1
-#endif // defined(__SPIR__)
-
-// Undefine any feature macros that have been explicitly disabled using
-// an __undef_<feature> macro.
-#ifdef __undef___opencl_c_work_group_collective_functions
-#undef __opencl_c_work_group_collective_functions
-#endif
-#ifdef __undef___opencl_c_atomic_order_seq_cst
-#undef __opencl_c_atomic_order_seq_cst
-#endif
-#ifdef __undef___opencl_c_atomic_scope_device
-#undef __opencl_c_atomic_scope_device
-#endif
-#ifdef __undef___opencl_c_atomic_scope_all_devices
-#undef __opencl_c_atomic_scope_all_devices
-#endif
-#ifdef __undef___opencl_c_read_write_images
-#undef __opencl_c_read_write_images
-#endif
-
-#endif // (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
-
 #if !defined(__opencl_c_generic_address_space)
 // Internal feature macro to provide named (global, local, private) address
 // space overloads for builtin functions that take a pointer argument.
@@ -697,7 +604,16 @@ template <typename _Tp> struct __remove_address_space<__constant _Tp> {
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
 // OpenCL v1.2 s6.12.13, v2.0 s6.13.13 - printf
 
-int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)));
+#ifdef __OPENCL_CPP_VERSION__
+#define CLINKAGE extern "C"
+#else
+#define CLINKAGE
+#endif
+
+CLINKAGE int printf(__constant const char *st, ...)
+    __attribute__((format(printf, 1, 2)));
+
+#undef CLINKAGE
 #endif
 
 #ifdef cl_intel_device_side_avc_motion_estimation

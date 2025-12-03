@@ -18,6 +18,9 @@ write_cmake_config("clang-tidy-config") {
     values += [ "CLANG_TIDY_ENABLE_STATIC_ANALYZER=" ]
   }
 
+  # FIXME: Add option for this?
+  values += [ "CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS=1" ]
+
   # Let targets depending on this find the generated file.
   public_configs = [ ":clang-tidy-config_Config" ]
 }
@@ -73,6 +76,7 @@ group("all-checks") {
     "//clang-tools-extra/clang-tidy/cert",
     "//clang-tools-extra/clang-tidy/concurrency",
     "//clang-tools-extra/clang-tidy/cppcoreguidelines",
+    "//clang-tools-extra/clang-tidy/custom",
     "//clang-tools-extra/clang-tidy/darwin",
     "//clang-tools-extra/clang-tidy/fuchsia",
     "//clang-tools-extra/clang-tidy/google",

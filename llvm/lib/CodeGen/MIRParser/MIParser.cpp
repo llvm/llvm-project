@@ -1072,6 +1072,7 @@ bool MIParser::parse(MachineInstr *&MI) {
          Token.isNot(MIToken::kw_heap_alloc_marker) &&
          Token.isNot(MIToken::kw_pcsections) &&
          Token.isNot(MIToken::kw_cfi_type) &&
+         Token.isNot(MIToken::kw_deactivation_symbol) &&
          Token.isNot(MIToken::kw_debug_location) &&
          Token.isNot(MIToken::kw_debug_instr_number) &&
          Token.isNot(MIToken::coloncolon) && Token.isNot(MIToken::lbrace)) {
@@ -1120,6 +1121,14 @@ bool MIParser::parse(MachineInstr *&MI) {
       lex();
   }
 
+  GlobalValue *DS = nullptr;
+  if (Token.is(MIToken::kw_deactivation_symbol)) {
+    lex();
+    if (parseGlobalValue(DS))
+      return true;
+    lex();
+  }
+
   unsigned InstrNum = 0;
   if (Token.is(MIToken::kw_debug_instr_number)) {
     lex();
@@ -1161,6 +1170,8 @@ bool MIParser::parse(MachineInstr *&MI) {
       MemOperands.push_back(MemOp);
       if (Token.isNewlineOrEOF())
         break;
+      if (OpCode == TargetOpcode::BUNDLE && Token.is(MIToken::lbrace))
+        break;
       if (Token.isNot(MIToken::comma))
         return error("expected ',' before the next machine memory operand");
       lex();
@@ -1194,6 +1205,8 @@ bool MIParser::parse(MachineInstr *&MI) {
     MI->setPCSections(MF, PCSections);
   if (CFIType)
     MI->setCFIType(MF, CFIType);
+  if (DS)
+    MI->setDeactivationSymbol(MF, DS);
   if (!MemOperands.empty())
     MI->setMemRefs(MF, MemOperands);
   if (InstrNum)
@@ -1477,7 +1490,8 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
          Token.is(MIToken::kw_nneg) ||
          Token.is(MIToken::kw_disjoint) ||
          Token.is(MIToken::kw_nusw) ||
-         Token.is(MIToken::kw_samesign)) {
+         Token.is(MIToken::kw_samesign) ||
+         Token.is(MIToken::kw_inbounds)) {
     // clang-format on
     // Mine frame and fast math flags
     if (Token.is(MIToken::kw_frame_setup))
@@ -1518,6 +1532,8 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
       Flags |= MachineInstr::NoUSWrap;
     if (Token.is(MIToken::kw_samesign))
       Flags |= MachineInstr::SameSign;
+    if (Token.is(MIToken::kw_inbounds))
+      Flags |= MachineInstr::InBounds;
 
     lex();
   }
@@ -2785,6 +2801,9 @@ bool MIParser::parseShuffleMaskOperand(MachineOperand &Dest) {
   if (expectAndConsume(MIToken::rparen))
     return error("shufflemask should be terminated by ')'.");
 
+  if (ShufMask.size() < 2)
+    return error("shufflemask should have > 1 element");
+
   ArrayRef<int> MaskAlloc = MF.allocateShuffleMask(ShufMask);
   Dest = MachineOperand::CreateShuffleMask(MaskAlloc);
   return false;
@@ -3482,6 +3501,11 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
       if (parseMDNode(AAInfo.NoAlias))
         return true;
       break;
+    case MIToken::md_noalias_addrspace:
+      lex();
+      if (parseMDNode(AAInfo.NoAliasAddrSpace))
+        return true;
+      break;
     case MIToken::md_range:
       lex();
       if (parseMDNode(Range))
@@ -3490,7 +3514,7 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     // TODO: Report an error on duplicate metadata nodes.
     default:
       return error("expected 'align' or '!tbaa' or '!alias.scope' or "
-                   "'!noalias' or '!range'");
+                   "'!noalias' or '!range' or '!noalias.addrspace'");
     }
   }
   if (expectAndConsume(MIToken::rparen))

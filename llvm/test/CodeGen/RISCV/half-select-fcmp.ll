@@ -874,3 +874,89 @@ define signext i32 @select_fcmp_uge_1_2(half %a, half %b) nounwind {
   %2 = select i1 %1, i32 1, i32 2
   ret i32 %2
 }
+
+define half @CascadedSelect(half noundef %a) {
+; CHECK-LABEL: CascadedSelect:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, 15
+; CHECK-NEXT:    slli a0, a0, 10
+; CHECK-NEXT:    fmv.h.x fa5, a0
+; CHECK-NEXT:    flt.h a0, fa5, fa0
+; CHECK-NEXT:    bnez a0, .LBB20_3
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    flt.h a0, fa0, fa5
+; CHECK-NEXT:    bnez a0, .LBB20_3
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    fmv.h fa5, fa0
+; CHECK-NEXT:  .LBB20_3: # %entry
+; CHECK-NEXT:    fmv.h fa0, fa5
+; CHECK-NEXT:    ret
+;
+; CHECKIZHINX-LABEL: CascadedSelect:
+; CHECKIZHINX:       # %bb.0: # %entry
+; CHECKIZHINX-NEXT:    li a1, 15
+; CHECKIZHINX-NEXT:    slli a1, a1, 10
+; CHECKIZHINX-NEXT:    flt.h a2, a1, a0
+; CHECKIZHINX-NEXT:    bnez a2, .LBB20_3
+; CHECKIZHINX-NEXT:  # %bb.1: # %entry
+; CHECKIZHINX-NEXT:    flt.h a2, a0, zero
+; CHECKIZHINX-NEXT:    li a1, 0
+; CHECKIZHINX-NEXT:    bnez a2, .LBB20_3
+; CHECKIZHINX-NEXT:  # %bb.2: # %entry
+; CHECKIZHINX-NEXT:    mv a1, a0
+; CHECKIZHINX-NEXT:  .LBB20_3: # %entry
+; CHECKIZHINX-NEXT:    mv a0, a1
+; CHECKIZHINX-NEXT:    ret
+;
+; CHECKIZFHMIN-LABEL: CascadedSelect:
+; CHECKIZFHMIN:       # %bb.0: # %entry
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKIZFHMIN-NEXT:    lui a0, 260096
+; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, zero
+; CHECKIZFHMIN-NEXT:    flt.s a1, fa5, fa4
+; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
+; CHECKIZFHMIN-NEXT:    flt.s a0, fa4, fa5
+; CHECKIZFHMIN-NEXT:    bnez a1, .LBB20_3
+; CHECKIZFHMIN-NEXT:  # %bb.1: # %entry
+; CHECKIZFHMIN-NEXT:    bnez a0, .LBB20_4
+; CHECKIZFHMIN-NEXT:  .LBB20_2: # %entry
+; CHECKIZFHMIN-NEXT:    ret
+; CHECKIZFHMIN-NEXT:  .LBB20_3:
+; CHECKIZFHMIN-NEXT:    fmv.h.x fa0, zero
+; CHECKIZFHMIN-NEXT:    beqz a0, .LBB20_2
+; CHECKIZFHMIN-NEXT:  .LBB20_4:
+; CHECKIZFHMIN-NEXT:    li a0, 15
+; CHECKIZFHMIN-NEXT:    slli a0, a0, 10
+; CHECKIZFHMIN-NEXT:    fmv.h.x fa0, a0
+; CHECKIZFHMIN-NEXT:    ret
+;
+; CHECKIZHINXMIN-LABEL: CascadedSelect:
+; CHECKIZHINXMIN:       # %bb.0: # %entry
+; CHECKIZHINXMIN-NEXT:    mv a1, a0
+; CHECKIZHINXMIN-NEXT:    li a0, 0
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a2, a1
+; CHECKIZHINXMIN-NEXT:    lui a3, 260096
+; CHECKIZHINXMIN-NEXT:    flt.s a4, a2, zero
+; CHECKIZHINXMIN-NEXT:    flt.s a2, a3, a2
+; CHECKIZHINXMIN-NEXT:    beqz a4, .LBB20_3
+; CHECKIZHINXMIN-NEXT:  # %bb.1: # %entry
+; CHECKIZHINXMIN-NEXT:    bnez a2, .LBB20_4
+; CHECKIZHINXMIN-NEXT:  .LBB20_2: # %entry
+; CHECKIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
+; CHECKIZHINXMIN-NEXT:    ret
+; CHECKIZHINXMIN-NEXT:  .LBB20_3: # %entry
+; CHECKIZHINXMIN-NEXT:    mv a0, a1
+; CHECKIZHINXMIN-NEXT:    beqz a2, .LBB20_2
+; CHECKIZHINXMIN-NEXT:  .LBB20_4:
+; CHECKIZHINXMIN-NEXT:    li a0, 15
+; CHECKIZHINXMIN-NEXT:    slli a0, a0, 10
+; CHECKIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
+; CHECKIZHINXMIN-NEXT:    ret
+entry:
+  %cmp = fcmp ogt half %a, 1.000000e+00
+  %cmp1 = fcmp olt half %a, 0.000000e+00
+  %.a = select i1 %cmp1, half 0.000000e+00, half %a
+  %retval.0 = select i1 %cmp, half 1.000000e+00, half %.a
+  ret half %retval.0
+}

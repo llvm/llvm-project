@@ -287,13 +287,10 @@ void SIScheduleBlock::fastSchedule() {
 static bool isDefBetween(Register Reg, SlotIndex First, SlotIndex Last,
                          const MachineRegisterInfo *MRI,
                          const LiveIntervals *LIS) {
-  for (MachineRegisterInfo::def_instr_iterator
-       UI = MRI->def_instr_begin(Reg),
-       UE = MRI->def_instr_end(); UI != UE; ++UI) {
-    const MachineInstr* MI = &*UI;
-    if (MI->isDebugValue())
+  for (const MachineInstr &MI : MRI->def_instructions(Reg)) {
+    if (MI.isDebugValue())
       continue;
-    SlotIndex InstSlot = LIS->getInstructionIndex(*MI).getRegSlot();
+    SlotIndex InstSlot = LIS->getInstructionIndex(MI).getRegSlot();
     if (InstSlot >= First && InstSlot <= Last)
       return true;
   }
@@ -326,8 +323,8 @@ void SIScheduleBlock::initRegPressure(MachineBasicBlock::iterator BeginBlock,
 
   // Do not Track Physical Registers, because it messes up.
   for (const auto &RegMaskPair : RPTracker.getPressure().LiveInRegs) {
-    if (RegMaskPair.RegUnit.isVirtual())
-      LiveInRegs.insert(RegMaskPair.RegUnit);
+    if (RegMaskPair.VRegOrUnit.isVirtualReg())
+      LiveInRegs.insert(RegMaskPair.VRegOrUnit.asVirtualReg());
   }
   LiveOutRegs.clear();
   // There is several possibilities to distinguish:
@@ -353,12 +350,13 @@ void SIScheduleBlock::initRegPressure(MachineBasicBlock::iterator BeginBlock,
   // Comparing to LiveInRegs is not sufficient to differentiate 4 vs 5, 7
   // The use of findDefBetween removes the case 4.
   for (const auto &RegMaskPair : RPTracker.getPressure().LiveOutRegs) {
-    Register Reg = RegMaskPair.RegUnit;
-    if (Reg.isVirtual() &&
-        isDefBetween(Reg, LIS->getInstructionIndex(*BeginBlock).getRegSlot(),
+    VirtRegOrUnit VRegOrUnit = RegMaskPair.VRegOrUnit;
+    if (VRegOrUnit.isVirtualReg() &&
+        isDefBetween(VRegOrUnit.asVirtualReg(),
+                     LIS->getInstructionIndex(*BeginBlock).getRegSlot(),
                      LIS->getInstructionIndex(*EndBlock).getRegSlot(), MRI,
                      LIS)) {
-      LiveOutRegs.insert(Reg);
+      LiveOutRegs.insert(VRegOrUnit.asVirtualReg());
     }
   }
 
@@ -581,11 +579,11 @@ void SIScheduleBlock::printDebug(bool full) {
            << LiveOutPressure[AMDGPU::RegisterPressureSets::VGPR_32] << "\n\n";
     dbgs() << "LiveIns:\n";
     for (Register Reg : LiveInRegs)
-      dbgs() << printVRegOrUnit(Reg, DAG->getTRI()) << ' ';
+      dbgs() << printReg(Reg, DAG->getTRI()) << ' ';
 
     dbgs() << "\nLiveOuts:\n";
     for (Register Reg : LiveOutRegs)
-      dbgs() << printVRegOrUnit(Reg, DAG->getTRI()) << ' ';
+      dbgs() << printReg(Reg, DAG->getTRI()) << ' ';
   }
 
   dbgs() << "\nInstructions:\n";
@@ -1449,23 +1447,24 @@ SIScheduleBlockScheduler::SIScheduleBlockScheduler(SIScheduleDAGMI *DAG,
   }
 #endif
 
-  std::set<Register> InRegs = DAG->getInRegs();
+  std::set<VirtRegOrUnit> InRegs = DAG->getInRegs();
   addLiveRegs(InRegs);
 
   // Increase LiveOutRegsNumUsages for blocks
   // producing registers consumed in another
   // scheduling region.
-  for (Register Reg : DAG->getOutRegs()) {
+  for (VirtRegOrUnit VRegOrUnit : DAG->getOutRegs()) {
     for (unsigned i = 0, e = Blocks.size(); i != e; ++i) {
       // Do reverse traversal
       int ID = BlocksStruct.TopDownIndex2Block[Blocks.size()-1-i];
       SIScheduleBlock *Block = Blocks[ID];
       const std::set<Register> &OutRegs = Block->getOutRegs();
 
-      if (OutRegs.find(Reg) == OutRegs.end())
+      if (!VRegOrUnit.isVirtualReg() ||
+          OutRegs.find(VRegOrUnit.asVirtualReg()) == OutRegs.end())
         continue;
 
-      ++LiveOutRegsNumUsages[ID][Reg];
+      ++LiveOutRegsNumUsages[ID][VRegOrUnit.asVirtualReg()];
       break;
     }
   }
@@ -1568,15 +1567,18 @@ SIScheduleBlock *SIScheduleBlockScheduler::pickBlock() {
     maxVregUsage = VregCurrentUsage;
   if (SregCurrentUsage > maxSregUsage)
     maxSregUsage = SregCurrentUsage;
-  LLVM_DEBUG(dbgs() << "Picking New Blocks\n"; dbgs() << "Available: ";
-             for (SIScheduleBlock *Block : ReadyBlocks)
-               dbgs() << Block->getID() << ' ';
-             dbgs() << "\nCurrent Live:\n";
-             for (Register Reg : LiveRegs)
-               dbgs() << printVRegOrUnit(Reg, DAG->getTRI()) << ' ';
-             dbgs() << '\n';
-             dbgs() << "Current VGPRs: " << VregCurrentUsage << '\n';
-             dbgs() << "Current SGPRs: " << SregCurrentUsage << '\n';);
+  LLVM_DEBUG({
+    dbgs() << "Picking New Blocks\n";
+    dbgs() << "Available: ";
+    for (SIScheduleBlock *Block : ReadyBlocks)
+      dbgs() << Block->getID() << ' ';
+    dbgs() << "\nCurrent Live:\n";
+    for (Register Reg : LiveRegs)
+      dbgs() << printReg(Reg, DAG->getTRI()) << ' ';
+    dbgs() << '\n';
+    dbgs() << "Current VGPRs: " << VregCurrentUsage << '\n';
+    dbgs() << "Current SGPRs: " << SregCurrentUsage << '\n';
+  });
 
   Cand.Block = nullptr;
   for (std::vector<SIScheduleBlock*>::iterator I = ReadyBlocks.begin(),
@@ -1628,13 +1630,13 @@ SIScheduleBlock *SIScheduleBlockScheduler::pickBlock() {
 
 // Tracking of currently alive registers to determine VGPR Usage.
 
-void SIScheduleBlockScheduler::addLiveRegs(std::set<Register> &Regs) {
-  for (Register Reg : Regs) {
+void SIScheduleBlockScheduler::addLiveRegs(std::set<VirtRegOrUnit> &Regs) {
+  for (VirtRegOrUnit VRegOrUnit : Regs) {
     // For now only track virtual registers.
-    if (!Reg.isVirtual())
+    if (!VRegOrUnit.isVirtualReg())
       continue;
     // If not already in the live set, then add it.
-    (void) LiveRegs.insert(Reg);
+    (void)LiveRegs.insert(VRegOrUnit.asVirtualReg());
   }
 }
 
@@ -1665,7 +1667,7 @@ void SIScheduleBlockScheduler::releaseBlockSuccs(SIScheduleBlock *Parent) {
 
 void SIScheduleBlockScheduler::blockScheduled(SIScheduleBlock *Block) {
   decreaseLiveRegs(Block, Block->getInRegs());
-  addLiveRegs(Block->getOutRegs());
+  LiveRegs.insert(Block->getOutRegs().begin(), Block->getOutRegs().end());
   releaseBlockSuccs(Block);
   for (const auto &RegP : LiveOutRegsNumUsages[Block->getID()]) {
     // We produce this register, thus it must not be previously alive.
@@ -1692,7 +1694,7 @@ SIScheduleBlockScheduler::checkRegUsageImpact(std::set<Register> &InRegs,
       continue;
     if (LiveRegsConsumers[Reg] > 1)
       continue;
-    PSetIterator PSetI = DAG->getMRI()->getPressureSets(Reg);
+    PSetIterator PSetI = DAG->getMRI()->getPressureSets(VirtRegOrUnit(Reg));
     for (; PSetI.isValid(); ++PSetI) {
       DiffSetPressure[*PSetI] -= PSetI.getWeight();
     }
@@ -1702,7 +1704,7 @@ SIScheduleBlockScheduler::checkRegUsageImpact(std::set<Register> &InRegs,
     // For now only track virtual registers.
     if (!Reg.isVirtual())
       continue;
-    PSetIterator PSetI = DAG->getMRI()->getPressureSets(Reg);
+    PSetIterator PSetI = DAG->getMRI()->getPressureSets(VirtRegOrUnit(Reg));
     for (; PSetI.isValid(); ++PSetI) {
       DiffSetPressure[*PSetI] += PSetI.getWeight();
     }
@@ -1849,7 +1851,7 @@ SIScheduleDAGMI::fillVgprSgprCost(_Iterator First, _Iterator End,
     // For now only track virtual registers
     if (!Reg.isVirtual())
       continue;
-    PSetIterator PSetI = MRI.getPressureSets(Reg);
+    PSetIterator PSetI = MRI.getPressureSets(VirtRegOrUnit(Reg));
     for (; PSetI.isValid(); ++PSetI) {
       if (*PSetI == AMDGPU::RegisterPressureSets::VGPR_32)
         VgprUsage += PSetI.getWeight();

@@ -61,6 +61,24 @@ namespace cwg2819 { // cwg2819: 19 c++26
 #endif
 } // namespace cwg2819
 
+namespace cwg2823 { // cwg2823: no
+#if __cplusplus >= 201103L
+  constexpr int *p = 0;
+  constexpr int *q1 = &*p;
+  // expected-error@-1 {{constexpr variable 'q1' must be initialized by a constant expression}}
+  //   expected-note@-2 {{dereferencing a null pointer is not allowed in a constant expression}}
+  // FIXME: invalid: dereferencing a null pointer.
+  constexpr int *q2 = &p[0];
+
+  int arr[32];
+  constexpr int *r = arr;
+  // FIXME: invalid: dereferencing a past-the-end pointer.
+  constexpr int *s1 = &*(r + 32);
+  // FIXME: invalid: dereferencing a past-the-end pointer.
+  constexpr int *s2 = &r[32];
+#endif
+}
+
 namespace cwg2847 { // cwg2847: 19 review 2024-03-01
 
 #if __cplusplus >= 202002L
@@ -227,12 +245,12 @@ void f() {
   auto L2 = [&](this auto&& self) { (void) &x; };
   O1<decltype(L1)>{L1, L1}();
   /* since-cxx23-error-re@-1 {{inaccessible due to ambiguity:
-    struct cwg2881::O1<class (lambda at {{.+}})> -> A<(lambda at {{.+}})> -> class (lambda at {{.+}})
-    struct cwg2881::O1<class (lambda at {{.+}})> -> B<(lambda at {{.+}})> -> class (lambda at {{.+}})}}*/
+    struct cwg2881::O1<class (lambda at {{.+}})> -> A<class (lambda at {{.+}})> -> class (lambda at {{.+}})
+    struct cwg2881::O1<class (lambda at {{.+}})> -> B<class (lambda at {{.+}})> -> class (lambda at {{.+}})}}*/
   O1<decltype(L2)>{L2, L2}();
   /* since-cxx23-error-re@-1 {{inaccessible due to ambiguity:
-    struct cwg2881::O1<class (lambda at {{.+}})> -> A<(lambda at {{.+}})> -> class (lambda at {{.+}})
-    struct cwg2881::O1<class (lambda at {{.+}})> -> B<(lambda at {{.+}})> -> class (lambda at {{.+}})}}*/
+    struct cwg2881::O1<class (lambda at {{.+}})> -> A<class (lambda at {{.+}})> -> class (lambda at {{.+}})
+    struct cwg2881::O1<class (lambda at {{.+}})> -> B<class (lambda at {{.+}})> -> class (lambda at {{.+}})}}*/
   O2{L1}();
   // since-cxx23-error-re@-1 {{invalid explicit object parameter type 'cwg2881::O2<(lambda at {{.+}})>' in lambda with capture; the type must derive publicly from the lambda}}
   //   since-cxx23-note@#cwg2881-O2 {{declared protected here}}
@@ -277,7 +295,7 @@ struct Indirect : T {
 template<typename T>
 struct Ambiguous : Indirect<T>, T {
 /* since-cxx23-warning-re@-1 {{direct base '(lambda at {{.+}})' is inaccessible due to ambiguity:
-    struct cwg2881::Ambiguous<class (lambda at {{.+}})> -> Indirect<(lambda at {{.+}})> -> class (lambda at {{.+}})
+    struct cwg2881::Ambiguous<class (lambda at {{.+}})> -> Indirect<class (lambda at {{.+}})> -> class (lambda at {{.+}})
     struct cwg2881::Ambiguous<class (lambda at {{.+}})> -> class (lambda at {{.+}})}}*/
 //   since-cxx23-note-re@#cwg2881-f4 {{in instantiation of template class 'cwg2881::Ambiguous<(lambda at {{.+}})>' requested here}}
 //   since-cxx34-note-re@#cwg2881-f4-call {{while substituting deduced template arguments into function template 'f4' [with L = (lambda at {{.+}})]}}
@@ -303,7 +321,7 @@ void g() {
   // expected-error@-1 {{no matching function for call to 'f4'}}
   //   expected-note-re@-2 {{while substituting deduced template arguments into function template 'f4' [with L = (lambda at {{.+}})]}}
   /*   expected-note-re@#cwg2881-f4 {{candidate template ignored: substitution failure [with L = (lambda at {{.+}})]: lambda '(lambda at {{.+}})' is inaccessible due to ambiguity:
-    struct cwg2881::Ambiguous<class (lambda at {{.+}})> -> Indirect<(lambda at {{.+}})> -> class (lambda at {{.+}})
+    struct cwg2881::Ambiguous<class (lambda at {{.+}})> -> Indirect<class (lambda at {{.+}})> -> class (lambda at {{.+}})
     struct cwg2881::Ambiguous<class (lambda at {{.+}})> -> class (lambda at {{.+}})}}*/
   static_assert(!is_callable<Private<decltype(lambda)>>);
   static_assert(!is_callable<Ambiguous<decltype(lambda)>>);

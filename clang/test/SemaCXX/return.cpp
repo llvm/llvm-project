@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -std=c++11 -fcxx-exceptions -fexceptions -fsyntax-only -Wignored-qualifiers -verify
+// RUN: %clang_cc1 %s -std=c++14 -fcxx-exceptions -fexceptions -fsyntax-only -Wignored-qualifiers -verify
 
 int test1() {
   throw;
@@ -130,5 +131,29 @@ void cxx_unresolved_expr() {
   // CXXUnresolvedConstructExpr, and the missing ')' gives it an invalid source
   // location for its rparen.  Check that emitting a diag on the range of the
   // expr doesn't assert.
-  return int(undeclared, 4; // expected-error {{expected ')'}} expected-note{{to match this '('}} expected-error {{use of undeclared identifier 'undeclared'}}
+  return int(undeclared, 4; // expected-error {{use of undeclared identifier 'undeclared'}}
 }
+
+#if __cplusplus >= 201402L
+namespace GH43054 {
+struct S{};
+const auto foo() { return 0; } // expected-warning {{'const' type qualifier on return type has no effect}}
+const auto bar() { return S{}; }
+template <typename T>
+const auto baz() { return T{}; }
+
+void test() {
+  baz<int>();
+  baz<S>();
+
+  []() -> const auto { // expected-warning {{'const' type qualifier on return type has no effect}}
+    return 0;
+  }();
+
+  []() -> const auto {
+    return S{};
+  }();
+}
+}
+
+#endif

@@ -60,7 +60,7 @@ TEST(TypePrinter, TemplateId) {
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = false; }));
 
   ASSERT_TRUE(PrintedTypeMatches(
-      Code, {}, Matcher, "const Type<T> &",
+      Code, {}, Matcher, "const N::Type<T> &",
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
 }
 
@@ -97,7 +97,7 @@ TEST(TypePrinter, ParamsUglified) {
                                  "const f<Tp &> *", Clean));
 }
 
-TEST(TypePrinter, SuppressElaboration) {
+TEST(TypePrinter, TemplateSpecializationFullyQualified) {
   llvm::StringLiteral Code = R"cpp(
     namespace shared {
     namespace a {
@@ -115,13 +115,10 @@ TEST(TypePrinter, SuppressElaboration) {
                                  hasType(qualType().bind("id")));
   ASSERT_TRUE(PrintedTypeMatches(
       Code, {}, Matcher, "a::S<b::Foo>",
+      [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = false; }));
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {}, Matcher, "shared::a::S<shared::b::Foo>",
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
-  ASSERT_TRUE(PrintedTypeMatches(Code, {}, Matcher,
-                                 "shared::a::S<shared::b::Foo>",
-                                 [](PrintingPolicy &Policy) {
-                                   Policy.SuppressElaboration = true;
-                                   Policy.FullyQualifiedName = true;
-                                 }));
 }
 
 TEST(TypePrinter, TemplateIdWithNTTP) {
@@ -297,4 +294,69 @@ TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
     EXPECT_FALSE(clang::isSubstitutedDefaultArgument(
         Ctx, Arg, Param, ArgList.asArray(), Params->getDepth()));
   }
+}
+
+TEST(TypePrinter, NestedNameSpecifiers) {
+  constexpr char Code[] = R"cpp(
+    void level1() {
+      struct Inner {
+        Inner(int) {
+          struct {
+            union {} u;
+          } imem;
+        }
+      };
+    }
+  )cpp";
+
+  // Types scoped immediately inside a function don't print the function name in
+  // their scope.
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {}, varDecl(hasName("imem"), hasType(qualType().bind("id"))),
+      "struct (unnamed)", [](PrintingPolicy &Policy) {
+        Policy.FullyQualifiedName = true;
+        Policy.AnonymousTagLocations = false;
+      }));
+
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {}, varDecl(hasName("imem"), hasType(qualType().bind("id"))),
+      "struct (unnamed)", [](PrintingPolicy &Policy) {
+        Policy.FullyQualifiedName = false;
+        Policy.AnonymousTagLocations = false;
+      }));
+
+  // Further levels of nesting print the entire scope.
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {}, fieldDecl(hasName("u"), hasType(qualType().bind("id"))),
+      "union level1()::Inner::Inner(int)::(anonymous struct)::(unnamed)",
+      [](PrintingPolicy &Policy) {
+        Policy.FullyQualifiedName = true;
+        Policy.AnonymousTagLocations = false;
+      }));
+
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {}, fieldDecl(hasName("u"), hasType(qualType().bind("id"))),
+      "union (unnamed)", [](PrintingPolicy &Policy) {
+        Policy.FullyQualifiedName = false;
+        Policy.AnonymousTagLocations = false;
+      }));
+}
+
+TEST(TypePrinter, NestedNameSpecifiersTypedef) {
+  constexpr char Code[] = R"cpp(
+    typedef union {
+      struct {
+        struct {
+          unsigned int baz;
+        } bar;
+      };
+    } foo;
+  )cpp";
+
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {}, fieldDecl(hasName("bar"), hasType(qualType().bind("id"))),
+      "struct foo::(anonymous struct)::(unnamed)", [](PrintingPolicy &Policy) {
+        Policy.FullyQualifiedName = true;
+        Policy.AnonymousTagLocations = false;
+      }));
 }

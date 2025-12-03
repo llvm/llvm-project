@@ -1,4 +1,8 @@
+# Not run on Windows because we are not able to break on all the required functions.
+# Even if we could, function.name* formatting also does not work correctly:
+# https://github.com/llvm/llvm-project/issues/143149
 # UNSUPPORTED: system-windows
+
 # Test different name formats.
 
 # RUN: %build %S/Inputs/names.cpp --std c++17 -o %t.out

@@ -43,15 +43,13 @@
 ;; single data fragment. (Check that we see one data fragment, then no more
 ;; fragments until the next section).
 ;
-; FRAGMENTS:       <MCSection Name:.debug_line Fragments:[
-; FRAGMENTS-NEXT:    <MCDataFragment<MCFragment
-; FRAGMENTS-NEXT:      Contents:[
-; FRAGMENTS-NEXT:      Fixups:[
+; FRAGMENTS:       Section Name:.debug_line
+; FRAGMENTS-NEXT:    Data
+; FRAGMENTS-NEXT:      Fixup
 ;
-; FRAGMENTS-NOT: MCDataFragment
-; FRAGMENTS-NOT: MCFragment
+; FRAGMENTS-NOT:     Data
 ;
-; FRAGMENTS:     <MCSection Name:.debug_line_str Fragments:[
+; FRAGMENTS:       Section Name:.debug_line_str
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

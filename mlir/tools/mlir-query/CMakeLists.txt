@@ -1,5 +1,3 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-
 if(MLIR_INCLUDE_TESTS)
   set(test_libs
     MLIRTestDialect
@@ -12,8 +10,8 @@ add_mlir_tool(mlir-query
 llvm_update_compile_flags(mlir-query)
 mlir_target_link_libraries(mlir-query
   PRIVATE
-  ${dialect_libs}
   MLIRQueryLib
+  MLIRRegisterAllDialects
   )
 target_link_libraries(mlir-query PRIVATE ${test_libs})
 

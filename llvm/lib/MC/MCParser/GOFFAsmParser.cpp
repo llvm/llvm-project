@@ -32,8 +32,4 @@ public:
 
 } // namespace
 
-namespace llvm {
-
-MCAsmParserExtension *createGOFFAsmParser() { return new GOFFAsmParser; }
-
-} // namespace llvm
+MCAsmParserExtension *llvm::createGOFFAsmParser() { return new GOFFAsmParser; }

@@ -14,19 +14,34 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 #define LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 
+#include "hdr/limits_macros.h"
+#include "hdr/stdint_proxy.h" // uintptr_t
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/CPP/type_traits.h" // cpp::is_same_v
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/string/memory_utils/inline_bzero.h"
 #include "src/string/memory_utils/inline_memcpy.h"
+
+#if defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
+#if LIBC_HAS_VECTOR_TYPE
+#include "src/string/memory_utils/generic/inline_strlen.h"
+#elif defined(LIBC_TARGET_ARCH_IS_X86)
+#include "src/string/memory_utils/x86_64/inline_strlen.h"
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_NEON)
+#include "src/string/memory_utils/aarch64/inline_strlen.h"
+#else
+namespace string_length_impl = LIBC_NAMESPACE::wide_read;
+#endif
+#endif // defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
-  constexpr size_t BITS_IN_BYTE = 8;
+  static_assert(CHAR_BIT == 8, "repeat_byte assumes a byte is 8 bits.");
+  constexpr size_t BITS_IN_BYTE = CHAR_BIT;
   constexpr size_t BYTE_MASK = 0xff;
   Word result = 0;
   byte = byte & BYTE_MASK;
@@ -52,7 +67,7 @@ template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
 // high bit set will no longer have it set, narrowing the list of bytes which
 // result in non-zero values to just the zero byte.
 template <typename Word> LIBC_INLINE constexpr bool has_zeroes(Word block) {
-  constexpr Word LOW_BITS = repeat_byte<Word>(0x01);
+  constexpr unsigned int LOW_BITS = repeat_byte<Word>(0x01);
   constexpr Word HIGH_BITS = repeat_byte<Word>(0x80);
   Word subtracted = block - LOW_BITS;
   Word inverted = ~block;
@@ -80,33 +95,40 @@ LIBC_INLINE size_t string_length_wide_read(const char *src) {
   return static_cast<size_t>(char_ptr - src);
 }
 
-// Returns the length of a string, denoted by the first occurrence
-// of a null terminator.
-template <typename T> LIBC_INLINE size_t string_length(const T *src) {
-#ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
+namespace wide_read {
+LIBC_INLINE size_t string_length(const char *src) {
   // Unsigned int is the default size for most processors, and on x86-64 it
   // performs better than larger sizes when the src pointer can't be assumed to
   // be aligned to a word boundary, so it's the size we use for reading the
   // string a block at a time.
+  return string_length_wide_read<unsigned int>(src);
+}
+
+} // namespace wide_read
+
+// Returns the length of a string, denoted by the first occurrence
+// of a null terminator.
+template <typename T> LIBC_INLINE size_t string_length(const T *src) {
+#ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
   if constexpr (cpp::is_same_v<T, char>)
-    return string_length_wide_read<unsigned int>(src);
-#else
+    return string_length_impl::string_length(src);
+#endif
   size_t length;
   for (length = 0; *src; ++src, ++length)
     ;
   return length;
-#endif
 }
 
 template <typename Word>
-LIBC_INLINE void *find_first_character_wide_read(const unsigned char *src,
-                                                 unsigned char ch, size_t n) {
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE void *
+find_first_character_wide_read(const unsigned char *src, unsigned char ch,
+                               size_t n) {
   const unsigned char *char_ptr = src;
   size_t cur = 0;
 
   // Step 1: read 1 byte at a time to align to block size
-  for (; reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0 && cur < n;
-       ++char_ptr, ++cur) {
+  for (; cur < n && reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0;
+       ++cur, ++char_ptr) {
     if (*char_ptr == ch)
       return const_cast<unsigned char *>(char_ptr);
   }
@@ -114,18 +136,18 @@ LIBC_INLINE void *find_first_character_wide_read(const unsigned char *src,
   const Word ch_mask = repeat_byte<Word>(ch);
 
   // Step 2: read blocks
-  for (const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
-       !has_zeroes<Word>((*block_ptr) ^ ch_mask) && cur < n;
-       ++block_ptr, cur += sizeof(Word)) {
-    char_ptr = reinterpret_cast<const unsigned char *>(block_ptr);
-  }
+  const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
+  for (; cur < n && !has_zeroes<Word>((*block_ptr) ^ ch_mask);
+       cur += sizeof(Word), ++block_ptr)
+    ;
+  char_ptr = reinterpret_cast<const unsigned char *>(block_ptr);
 
   // Step 3: find the match in the block
-  for (; *char_ptr != ch && cur < n; ++char_ptr, ++cur) {
+  for (; cur < n && *char_ptr != ch; ++cur, ++char_ptr) {
     ;
   }
 
-  if (*char_ptr != ch || cur >= n)
+  if (cur >= n || *char_ptr != ch)
     return static_cast<void *>(nullptr);
 
   return const_cast<unsigned char *>(char_ptr);
@@ -184,34 +206,36 @@ LIBC_INLINE size_t complementary_span(const char *src, const char *segment) {
 template <bool SkipDelim = true>
 LIBC_INLINE char *string_token(char *__restrict src,
                                const char *__restrict delimiter_string,
-                               char **__restrict saveptr) {
-  // Return nullptr immediately if both src AND saveptr are nullptr
-  if (LIBC_UNLIKELY(src == nullptr && ((src = *saveptr) == nullptr)))
+                               char **__restrict context) {
+  // Return nullptr immediately if both src AND context are nullptr
+  if (LIBC_UNLIKELY(src == nullptr && ((src = *context) == nullptr)))
     return nullptr;
 
-  static_assert(sizeof(char) == sizeof(cpp::byte),
-                "bitset of 256 assumes char is 8 bits");
-  cpp::bitset<256> delimiter_set;
+  static_assert(CHAR_BIT == 8, "bitset of 256 assumes char is 8 bits");
+  cpp::bitset<256> delims;
   for (; *delimiter_string != '\0'; ++delimiter_string)
-    delimiter_set.set(static_cast<size_t>(*delimiter_string));
+    delims.set(*reinterpret_cast<const unsigned char *>(delimiter_string));
 
+  unsigned char *tok_start = reinterpret_cast<unsigned char *>(src);
   if constexpr (SkipDelim)
-    for (; *src != '\0' && delimiter_set.test(static_cast<size_t>(*src)); ++src)
-      ;
-  if (*src == '\0') {
-    *saveptr = src;
+    while (*tok_start != '\0' && delims.test(*tok_start))
+      ++tok_start;
+  if (*tok_start == '\0' && SkipDelim) {
+    *context = nullptr;
     return nullptr;
   }
-  char *token = src;
-  for (; *src != '\0'; ++src) {
-    if (delimiter_set.test(static_cast<size_t>(*src))) {
-      *src = '\0';
-      ++src;
-      break;
-    }
+
+  unsigned char *tok_end = tok_start;
+  while (*tok_end != '\0' && !delims.test(*tok_end))
+    ++tok_end;
+
+  if (*tok_end == '\0') {
+    *context = nullptr;
+  } else {
+    *tok_end = '\0';
+    *context = reinterpret_cast<char *>(tok_end + 1);
   }
-  *saveptr = src;
-  return token;
+  return reinterpret_cast<char *>(tok_start);
 }
 
 LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,

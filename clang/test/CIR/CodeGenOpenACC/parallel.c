@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
 void acc_parallel(int cond) {
-  // CHECK: cir.func @acc_parallel(%[[ARG:.*]]: !s32i{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_parallel(%[[ARG:.*]]: !s32i{{.*}}) {
   // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
   // CHECK-NEXT: cir.store %[[ARG]], %[[COND]] : !s32i, !cir.ptr<!s32i>
 #pragma acc parallel
@@ -28,7 +28,7 @@ void acc_parallel(int cond) {
   // CHECK-NEXT: cir.scope {
   // CHECK-NEXT: cir.while {
   // CHECK-NEXT: %[[INT:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[CAST:.*]] = cir.cast(int_to_bool, %[[INT]] :
+  // CHECK-NEXT: %[[CAST:.*]] = cir.cast int_to_bool %[[INT]]
   // CHECK-NEXT: cir.condition(%[[CAST]])
   // CHECK-NEXT: } do {
   // CHECK-NEXT: cir.yield
@@ -48,7 +48,7 @@ void acc_parallel(int cond) {
 #pragma acc parallel self(cond)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast(int_to_bool, %[[COND_LOAD]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[COND_LOAD]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.parallel self(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.yield
@@ -57,7 +57,7 @@ void acc_parallel(int cond) {
 #pragma acc parallel self(0)
   {}
   // CHECK-NEXT: %[[ZERO_LITERAL:.*]] = cir.const #cir.int<0> : !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast(int_to_bool, %[[ZERO_LITERAL]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[ZERO_LITERAL]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.parallel self(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.yield
@@ -66,7 +66,7 @@ void acc_parallel(int cond) {
 #pragma acc parallel if(cond)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast(int_to_bool, %[[COND_LOAD]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[COND_LOAD]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.parallel if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.yield
@@ -75,7 +75,7 @@ void acc_parallel(int cond) {
 #pragma acc parallel if(1)
   {}
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast(int_to_bool, %[[ONE_LITERAL]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[ONE_LITERAL]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.parallel if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.yield
@@ -443,3 +443,94 @@ void acc_parallel(int cond) {
 
   // CHECK-NEXT: cir.return
 }
+
+void acc_parallel_data_clauses(int *arg1, int *arg2) {
+  // CHECK: cir.func{{.*}} @acc_parallel_data_clauses(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {
+  // CHECK-NEXT: %[[ARG1:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg1", init]
+  // CHECK-NEXT: %[[ARG2:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg2", init]
+  // CHECK-NEXT: cir.store %[[ARG1_PARAM]], %[[ARG1]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK-NEXT: cir.store %[[ARG2_PARAM]], %[[ARG2]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+
+#pragma acc parallel deviceptr(arg1)
+  ;
+  // CHECK-NEXT: %[[DEVPTR1:.*]] = acc.deviceptr varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: acc.parallel dataOperands(%[[DEVPTR1]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+#pragma acc parallel deviceptr(arg1, arg2)
+  ;
+  // CHECK-NEXT: %[[DEVPTR1:.*]] = acc.deviceptr varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: %[[DEVPTR2:.*]] = acc.deviceptr varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.parallel dataOperands(%[[DEVPTR1]], %[[DEVPTR2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc parallel deviceptr(arg1) async
+  ;
+  // CHECK-NEXT: %[[DEVPTR1:.*]] = acc.deviceptr varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) async -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: acc.parallel dataOperands(%[[DEVPTR1]] : !cir.ptr<!cir.ptr<!s32i>>) async {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+#pragma acc parallel deviceptr(arg1, arg2) device_type(radeon) async
+  ;
+  // CHECK-NEXT: %[[DEVPTR1:.*]] = acc.deviceptr varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: %[[DEVPTR2:.*]] = acc.deviceptr varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.parallel dataOperands(%[[DEVPTR1]], %[[DEVPTR2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc parallel no_create(arg1)
+  ;
+  // CHECK-NEXT: %[[NOCREATE1:.*]] = acc.nocreate varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: acc.parallel dataOperands(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_no_create>, name = "arg1"}
+
+#pragma acc parallel no_create(arg1, arg2) device_type(radeon) async
+  ;
+  // CHECK-NEXT: %[[NOCREATE1:.*]] = acc.nocreate varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: %[[NOCREATE2:.*]] = acc.nocreate varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.parallel dataOperands(%[[NOCREATE1]], %[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {dataClause = #acc<data_clause acc_no_create>, name = "arg2"}
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {dataClause = #acc<data_clause acc_no_create>, name = "arg1"}
+
+#pragma acc parallel present(arg1)
+  ;
+  // CHECK-NEXT: %[[PRESENT1:.*]] = acc.present varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: acc.parallel dataOperands(%[[PRESENT1]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT1]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_present>, name = "arg1"}
+
+#pragma acc parallel present(arg1, arg2) device_type(radeon) async
+  ;
+  // CHECK-NEXT: %[[PRESENT1:.*]] = acc.present varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: %[[PRESENT2:.*]] = acc.present varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.parallel dataOperands(%[[PRESENT1]], %[[PRESENT2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {dataClause = #acc<data_clause acc_present>, name = "arg2"}
+  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {dataClause = #acc<data_clause acc_present>, name = "arg1"}
+
+#pragma acc parallel attach(arg1)
+  ;
+  // CHECK-NEXT: %[[ATTACH1:.*]] = acc.attach varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: acc.parallel dataOperands(%[[ATTACH1]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH1]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_attach>, name = "arg1"}
+
+#pragma acc parallel attach(arg1, arg2) device_type(radeon) async
+  ;
+  // CHECK-NEXT: %[[ATTACH1:.*]] = acc.attach varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: %[[ATTACH2:.*]] = acc.attach varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.parallel dataOperands(%[[ATTACH1]], %[[ATTACH2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {dataClause = #acc<data_clause acc_attach>, name = "arg2"}
+  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {dataClause = #acc<data_clause acc_attach>, name = "arg1"}
+}
+

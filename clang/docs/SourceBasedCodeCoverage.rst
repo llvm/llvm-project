@@ -66,17 +66,17 @@ supported. Uninstrumented code simply won't be accounted for in reports.
 
 To compile code with Modified Condition/Decision Coverage (MC/DC) enabled,
 pass ``-fcoverage-mcdc`` in addition to the clang options specified above.
-MC/DC is an advanced form of code coverage most applicable in the embedded
+MC/DC is an advanced form of code coverage most applicable to the embedded
 space.
 
 Running the instrumented program
 ================================
 
-The next step is to run the instrumented program. When the program exits it
+The next step is to run the instrumented program. When the program exits, it
 will write a **raw profile** to the path specified by the ``LLVM_PROFILE_FILE``
 environment variable. If that variable does not exist, the profile is written
 to ``default.profraw`` in the current directory of the program. If
-``LLVM_PROFILE_FILE`` contains a path to a non-existent directory, the missing
+``LLVM_PROFILE_FILE`` specifies a path to a non-existent directory, the missing
 directory structure will be created.  Additionally, the following special
 **pattern strings** are rewritten:
 
@@ -97,7 +97,7 @@ directory structure will be created.  Additionally, the following special
 * "%b" expands out to the binary ID (build ID). It can be used with "%Nm" to
   avoid binary signature collisions. To use it, the program should be compiled
   with the build ID linker option (``--build-id`` for GNU ld or LLD,
-  ``/build-id`` for lld-link on Windows). Linux, Windows and AIX are supported.
+  ``/build-id`` for lld-link on Windows). Linux, Windows, and AIX are supported.
 
 * "%c" expands out to nothing, but enables a mode in which profile counter
   updates are continuously synced to a file. This means that if the
@@ -128,7 +128,7 @@ and set bias to the offset between the original and the new counter location,
 at which point every subsequent counter access will be to the new location,
 which allows updating profile directly akin to the continuous mode.
 
-The advantage of this approach is that doesn't require any special OS support.
+The advantage of this approach is that it doesn't require any special OS support.
 The disadvantage is the extra overhead due to additional instructions required
 for each counter access (overhead both in terms of binary size and performance)
 plus duplication of counters (i.e. one copy in the binary itself and another
@@ -137,7 +137,7 @@ other platforms by passing the ``-runtime-counter-relocation`` option to the
 backend during compilation.
 
 For a program such as the `Lit <https://llvm.org/docs/CommandGuide/lit.html>`_
-testing tool which invokes other programs, it may be necessary to set
+testing tool, which invokes other programs, it may be necessary to set
 ``LLVM_PROFILE_FILE`` for each invocation. The pattern strings "%p" or "%Nm"
 may help to avoid corruption due to concurrency. Note that "%p" is also a Lit
 token and needs to be escaped as "%%p".
@@ -149,7 +149,7 @@ token and needs to be escaped as "%%p".
 Creating coverage reports
 =========================
 
-Raw profiles have to be **indexed** before they can be used to generate
+Raw profiles must be **indexed** before they can be used to generate
 coverage reports. This is done using the "merge" tool in ``llvm-profdata``
 (which can combine multiple raw profiles and index them at the same time):
 
@@ -240,13 +240,13 @@ line-oriented report, try:
     TOTAL                   13                 0   100.00%           3                 0   100.00%          13                 0   100.00%           12                  2    83.33%
 
 The ``llvm-cov`` tool supports specifying a custom demangler, writing out
-reports in a directory structure, and generating html reports. For the full
+reports in a directory structure, and generating HTML reports. For the full
 list of options, please refer to the `command guide
 <https://llvm.org/docs/CommandGuide/llvm-cov.html>`_.
 
 A few final notes:
 
-* The ``-sparse`` flag is optional but can result in dramatically smaller
+* The ``-sparse`` flag is optional but can produce dramatically smaller
   indexed profiles. This option should not be used if the indexed profile will
   be reused for PGO.
 
@@ -255,7 +255,7 @@ A few final notes:
   information directly into an existing raw profile on disk. The details are
   out of scope.
 
-* The ``llvm-profdata`` tool can be used to merge together multiple raw or
+* The ``llvm-profdata`` tool can be used to merge multiple raw or
   indexed profiles. To combine profiling data from multiple runs of a program,
   try e.g:
 
@@ -299,7 +299,7 @@ There are six statistics tracked in a coverage summary:
   source code that may each evaluate to either "true" or "false".  These
   conditions may comprise larger boolean expressions linked by boolean logical
   operators. For example, "x = (y == 2) || (z < 10)" is a boolean expression
-  that is comprised of two individual conditions, each of which evaluates to
+  comprised of two individual conditions, each of which evaluates to
   either true or false, producing four total branch outcomes.
 
 * Modified Condition/Decision Coverage (MC/DC) is the percentage of individual
@@ -316,7 +316,7 @@ There are six statistics tracked in a coverage summary:
   ``-show-mcdc-summary`` option as long as code was also compiled using the
   clang option ``-fcoverage-mcdc``.
 
-  * Boolean expressions that are only comprised of one condition (and therefore
+  * Boolean expressions comprised of only one condition (and therefore
     have no logical operators) are not included in MC/DC analysis and are
     trivially deducible using branch coverage.
 
@@ -366,7 +366,7 @@ By default the compiler runtime uses a static initializer to determine the
 profile output path and to register a writer function. To collect profiles
 without using static initializers, do this manually:
 
-* Export a ``int __llvm_profile_runtime`` symbol from each instrumented shared
+* Export an ``int __llvm_profile_runtime`` symbol from each instrumented shared
   library and executable. When the linker finds a definition of this symbol, it
   knows to skip loading the object which contains the profiling runtime's
   static initializer.
@@ -380,7 +380,7 @@ without using static initializers, do this manually:
   to ``__llvm_profile_write_file``.
 
 * Forward-declare ``int __llvm_profile_write_file(void)`` and call it to write
-  out a profile. This function returns 0 when it succeeds, and a non-zero value
+  out a profile. This function returns 0 on success, and a non-zero value
   otherwise. Calling this function multiple times appends profile data to an
   existing on-disk raw profile.
 
@@ -418,7 +418,7 @@ Collecting coverage reports for the llvm project
 ================================================
 
 To prepare a coverage report for llvm (and any of its sub-projects), add
-``-DLLVM_BUILD_INSTRUMENTED_COVERAGE=On`` to the cmake configuration. Raw
+``-DLLVM_BUILD_INSTRUMENTED_COVERAGE=On`` to the CMake configuration. Raw
 profiles will be written to ``$BUILD_DIR/profiles/``. To prepare an html
 report, run ``llvm/utils/prepare-code-coverage-artifact.py``.
 
@@ -429,7 +429,7 @@ To specify an alternate directory for raw profiles, use
 Drawbacks and limitations
 =========================
 
-* Prior to version 2.26, the GNU binutils BFD linker is not able link programs
+* Prior to version 2.26, the GNU binutils BFD linker cannot link programs
   compiled with ``-fcoverage-mapping`` in its ``--gc-sections`` mode.  Possible
   workarounds include disabling ``--gc-sections``, upgrading to a newer version
   of BFD, or using the Gold linker.

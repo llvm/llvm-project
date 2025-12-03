@@ -44,7 +44,8 @@ class ARMBaseInstrInfo : public ARMGenInstrInfo {
 
 protected:
   // Can be only subclassed.
-  explicit ARMBaseInstrInfo(const ARMSubtarget &STI);
+  explicit ARMBaseInstrInfo(const ARMSubtarget &STI,
+                            const ARMBaseRegisterInfo &TRI);
 
   void expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
                                 unsigned LoadImmOpc, unsigned LoadOpc) const;
@@ -125,7 +126,11 @@ public:
   // if there is not such an opcode.
   virtual unsigned getUnindexedOpcode(unsigned Opc) const = 0;
 
-  virtual const ARMBaseRegisterInfo &getRegisterInfo() const = 0;
+  const ARMBaseRegisterInfo &getRegisterInfo() const {
+    return static_cast<const ARMBaseRegisterInfo &>(
+        TargetInstrInfo::getRegisterInfo());
+  }
+
   const ARMSubtarget &getSubtarget() const { return Subtarget; }
 
   ScheduleHazardRecognizer *
@@ -211,14 +216,13 @@ public:
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
@@ -227,16 +231,14 @@ public:
 
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig,
-                     const TargetRegisterInfo &TRI) const override;
+                     const MachineInstr &Orig) const override;
 
   MachineInstr &
   duplicate(MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
             const MachineInstr &Orig) const override;
 
   const MachineInstrBuilder &AddDReg(MachineInstrBuilder &MIB, unsigned Reg,
-                                     unsigned SubIdx, unsigned State,
-                                     const TargetRegisterInfo *TRI) const;
+                                     unsigned SubIdx, unsigned State) const;
 
   bool produceSameValue(const MachineInstr &MI0, const MachineInstr &MI1,
                         const MachineRegisterInfo *MRI) const override;
@@ -479,7 +481,7 @@ private:
   MachineInstr *canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
                                  const TargetInstrInfo *TII) const;
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
 private:
   /// Modeling special VFP / NEON fp MLA / MLS hazards.

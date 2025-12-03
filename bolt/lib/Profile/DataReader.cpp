@@ -85,6 +85,7 @@ void FuncBranchData::appendFrom(const FuncBranchData &FBD, uint64_t Offset) {
   }
   llvm::stable_sort(Data);
   ExecutionCount += FBD.ExecutionCount;
+  ExternEntryCount += FBD.ExternEntryCount;
   for (auto I = FBD.EntryData.begin(), E = FBD.EntryData.end(); I != E; ++I) {
     assert(I->To.Name == FBD.Name);
     auto NewElmt = EntryData.insert(EntryData.end(), *I);
@@ -269,6 +270,7 @@ Error DataReader::preprocessProfile(BinaryContext &BC) {
     if (FuncBranchData *FuncData = getBranchDataForNames(Function.getNames())) {
       setBranchData(Function, FuncData);
       Function.ExecutionCount = FuncData->ExecutionCount;
+      Function.ExternEntryCount = FuncData->ExternEntryCount;
       FuncData->Used = true;
     }
   }
@@ -419,6 +421,7 @@ void DataReader::matchProfileData(BinaryFunction &BF) {
       if (fetchProfileForOtherEntryPoints(BF)) {
         BF.ProfileMatchRatio = evaluateProfileData(BF, *FBD);
         BF.ExecutionCount = FBD->ExecutionCount;
+        BF.ExternEntryCount = FBD->ExternEntryCount;
         BF.RawSampleCount = FBD->getNumExecutedBranches();
       }
       return;
@@ -449,6 +452,7 @@ void DataReader::matchProfileData(BinaryFunction &BF) {
     setBranchData(BF, NewBranchData);
     NewBranchData->Used = true;
     BF.ExecutionCount = NewBranchData->ExecutionCount;
+    BF.ExternEntryCount = NewBranchData->ExternEntryCount;
     BF.ProfileMatchRatio = 1.0f;
     break;
   }
@@ -566,7 +570,7 @@ void DataReader::readBasicSampleData(BinaryFunction &BF) {
   if (!SampleDataOrErr)
     return;
 
-  // Basic samples mode territory (without LBR info)
+  // Basic samples mode territory (without brstack info)
   // First step is to assign BB execution count based on samples from perf
   BF.ProfileMatchRatio = 1.0f;
   BF.removeTagsFromProfile();
@@ -574,8 +578,8 @@ void DataReader::readBasicSampleData(BinaryFunction &BF) {
   bool NormalizeByCalls = usesEvent("branches");
   static bool NagUser = true;
   if (NagUser) {
-    outs()
-        << "BOLT-INFO: operating with basic samples profiling data (no LBR).\n";
+    outs() << "BOLT-INFO: operating with basic samples profiling data (no "
+              "brstack).\n";
     if (NormalizeByInsnCount)
       outs() << "BOLT-INFO: normalizing samples by instruction count.\n";
     else if (NormalizeByCalls)
@@ -903,7 +907,7 @@ ErrorOr<uint64_t> DataReader::parseHexField(char EndChar, bool EndNl) {
   StringRef NumStr = NumStrRes.get();
   uint64_t Num;
   if (NumStr.getAsInteger(16, Num)) {
-    reportError("expected hexidecimal number");
+    reportError("expected hexadecimal number");
     Diag << "Found: " << NumStr << "\n";
     return make_error_code(llvm::errc::io_error);
   }
@@ -1190,6 +1194,8 @@ std::error_code DataReader::parse() {
     if (BI.To.IsSymbol && BI.To.Offset == 0) {
       I = GetOrCreateFuncEntry(BI.To.Name);
       I->second.ExecutionCount += BI.Branches;
+      if (!BI.From.IsSymbol)
+        I->second.ExternEntryCount += BI.Branches;
     }
   }
 

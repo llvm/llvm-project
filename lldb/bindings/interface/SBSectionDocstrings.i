@@ -4,7 +4,7 @@
 SBSection supports iteration through its subsection, represented as SBSection
 as well.  For example, ::
 
-    for sec in exe_module:
+    for sec in exe_module.section_iter():
         if sec.GetName() == '__TEXT':
             print sec
             break

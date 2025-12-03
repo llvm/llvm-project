@@ -30,7 +30,7 @@ mlir::Value fir::runtime::genMoveAlloc(fir::FirOpBuilder &builder,
         mlir::dyn_cast<fir::ClassType>(fir::dyn_cast_ptrEleTy(from.getType()));
     mlir::Type derivedType = fir::unwrapInnerType(clTy.getEleTy());
     declaredTypeDesc =
-        builder.create<fir::TypeDescOp>(loc, mlir::TypeAttr::get(derivedType));
+        fir::TypeDescOp::create(builder, loc, mlir::TypeAttr::get(derivedType));
   } else {
     declaredTypeDesc = builder.createNullConstant(loc);
   }
@@ -38,7 +38,7 @@ mlir::Value fir::runtime::genMoveAlloc(fir::FirOpBuilder &builder,
       builder, loc, fTy, to, from, declaredTypeDesc, hasStat, errMsg,
       sourceFile, sourceLine)};
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 void fir::runtime::genAllocatableApplyMold(fir::FirOpBuilder &builder,
@@ -52,7 +52,7 @@ void fir::runtime::genAllocatableApplyMold(fir::FirOpBuilder &builder,
       builder.createIntegerConstant(loc, fTy.getInput(2), rank);
   llvm::SmallVector<mlir::Value> args{
       fir::runtime::createArguments(builder, loc, fTy, desc, mold, rankVal)};
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genAllocatableSetBounds(fir::FirOpBuilder &builder,
@@ -66,7 +66,7 @@ void fir::runtime::genAllocatableSetBounds(fir::FirOpBuilder &builder,
   mlir::FunctionType fTy{func.getFunctionType()};
   llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, desc, dimIndex, lowerBound, upperBound)};
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genAllocatableAllocate(fir::FirOpBuilder &builder,
@@ -84,10 +84,10 @@ void fir::runtime::genAllocatableAllocate(fir::FirOpBuilder &builder,
     hasStat = builder.createBool(loc, false);
   if (!errMsg) {
     mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
-    errMsg = builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+    errMsg = fir::AbsentOp::create(builder, loc, boxNoneTy).getResult();
   }
   llvm::SmallVector<mlir::Value> args{
       fir::runtime::createArguments(builder, loc, fTy, desc, asyncObject,
                                     hasStat, errMsg, sourceFile, sourceLine)};
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }

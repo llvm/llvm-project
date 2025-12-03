@@ -23,12 +23,12 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi ir<33>, vp<[[FOR1_SPLICE:%.+]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.ptr>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%gep.ptr>
 ; CHECK-NEXT:     WIDEN ir<%for.1.next> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     EMIT vp<[[FOR1_SPLICE]]> = first-order splice ir<%for.1>, ir<%for.1.next>
 ; CHECK-NEXT:     EMIT vp<[[FOR2_SPLICE:%.+]]> = first-order splice ir<%for.2>, vp<[[FOR1_SPLICE]]>
 ; CHECK-NEXT:     WIDEN ir<%add> = add vp<[[FOR1_SPLICE]]>, vp<[[FOR2_SPLICE]]>
-; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%gep.ptr>
+; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer inbounds ir<%gep.ptr>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR2]]>, ir<%add>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
@@ -47,9 +47,9 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph
-; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_1_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
-; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_2_P:%.*]]>.1 = resume-phi vp<[[RESUME_2]]>.1, ir<33>
-; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_IV:%.*]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_1_P:%.*]]> = phi [ vp<[[RESUME_1]]>, middle.block ], [ ir<22>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_2_P:%.*]]>.1 = phi [ vp<[[RESUME_2]]>.1, middle.block ], [ ir<33>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_IV:%.*]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -101,14 +101,14 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.3> = phi ir<33>, vp<[[FOR2_SPLICE:%.+]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.ptr>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%gep.ptr>
 ; CHECK-NEXT:     WIDEN ir<%for.1.next> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     EMIT vp<[[FOR1_SPLICE]]> = first-order splice ir<%for.1>, ir<%for.1.next>
 ; CHECK-NEXT:     EMIT vp<[[FOR2_SPLICE]]> = first-order splice ir<%for.2>, vp<[[FOR1_SPLICE]]>
 ; CHECK-NEXT:     EMIT vp<[[FOR3_SPLICE:%.+]]> = first-order splice ir<%for.3>, vp<[[FOR2_SPLICE]]>
 ; CHECK-NEXT:     WIDEN ir<%add.1> = add vp<[[FOR1_SPLICE]]>, vp<[[FOR2_SPLICE]]>
 ; CHECK-NEXT:     WIDEN ir<%add.2> = add ir<%add.1>, vp<[[FOR3_SPLICE]]>
-; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%gep.ptr>
+; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer inbounds ir<%gep.ptr>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR2]]>, ir<%add.2>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
@@ -128,10 +128,10 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph
-; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_1_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
-; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_2_P:%.*]]>.1 = resume-phi vp<[[RESUME_2]]>.1, ir<33>
-; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_3_P:%.*]]>.2 = resume-phi vp<[[RESUME_3]]>.2, ir<33>
-; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_IV:%.*]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_1_P:%.*]]> = phi [ vp<[[RESUME_1]]>, middle.block ], [ ir<22>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_2_P:%.*]]>.1 = phi [ vp<[[RESUME_2]]>.1, middle.block ], [ ir<33>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_3_P:%.*]]>.2 = phi [ vp<[[RESUME_3]]>.2, middle.block ], [ ir<33>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_IV:%.*]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -180,7 +180,7 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
-; CHECK-NEXT:   WIDEN ir<%for.x.next> = mul ir<%x>, ir<2>
+; CHECK-NEXT:   CLONE ir<%for.x.next> = mul ir<%x>, ir<2>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -213,9 +213,9 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.*]]> = resume-phi vp<[[VTC]]>, ir<0>
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_X:%.+]]> = resume-phi vp<[[EXT_X]]>, ir<0>
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_Y:%.+]]>.1 = resume-phi vp<[[EXT_Y]]>.1, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.*]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_X:%.+]]> = phi [ vp<[[EXT_X]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_Y:%.+]]>.1 = phi [ vp<[[EXT_Y]]>.1, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
@@ -292,9 +292,9 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.*]]> = resume-phi vp<[[VTC]]>, ir<0>
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_X:%.+]]> = resume-phi vp<[[EXT_X]]>, ir<0>
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_Y:%.+]]>.1 = resume-phi vp<[[EXT_Y]]>.1, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.*]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_X:%.+]]> = phi [ vp<[[EXT_X]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_Y:%.+]]>.1 = phi [ vp<[[EXT_Y]]>.1, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:

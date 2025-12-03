@@ -57,3 +57,15 @@ void m_fn2() {
 } // namespace Regression2
 
 }
+
+namespace GH147650 {
+
+template <int> int b;
+template <int b>
+void f()
+    requires requires { [] { (void)b; }; } {}
+void test() {
+    f<42>();
+}
+// CHECK-LABEL:define {{.*}} void @"??$f@$0CK@@GH147650@@YAXXZ"()
+}

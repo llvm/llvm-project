@@ -29,6 +29,7 @@ namespace tooling {
 namespace dependencies {
 
 class DependencyScanningWorkerFilesystem;
+class CompilerInstanceWithContext;
 
 /// A command-line tool invocation that is part of building a TU.
 ///
@@ -59,6 +60,8 @@ public:
 
   virtual void handleDirectModuleDependency(ModuleID MD) = 0;
 
+  virtual void handleVisibleModule(std::string ModuleName) = 0;
+
   virtual void handleContextHash(std::string Hash) = 0;
 };
 
@@ -87,6 +90,8 @@ public:
   DependencyScanningWorker(DependencyScanningService &Service,
                            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
+  ~DependencyScanningWorker();
+
   /// Run the dependency scanning tool for a given clang driver command-line,
   /// and report the discovered dependencies to the provided consumer. If
   /// TUBuffer is not nullopt, it is used as TU input for the dependency
@@ -102,18 +107,6 @@ public:
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
 
   /// Run the dependency scanning tool for a given clang driver command-line
-  /// for a specific module.
-  ///
-  /// \returns false if clang errors occurred (with diagnostics reported to
-  /// \c DiagConsumer), true otherwise.
-  bool computeDependencies(StringRef WorkingDirectory,
-                           const std::vector<std::string> &CommandLine,
-                           DependencyConsumer &DepConsumer,
-                           DependencyActionController &Controller,
-                           DiagnosticConsumer &DiagConsumer,
-                           StringRef ModuleName);
-
-  /// Run the dependency scanning tool for a given clang driver command-line
   /// for a specific translation unit via file system or memory buffer.
   ///
   /// \returns A \c StringError with the diagnostic output if clang errors
@@ -123,16 +116,46 @@ public:
       DependencyConsumer &Consumer, DependencyActionController &Controller,
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
 
-  /// Run the dependency scanning tool for a given clang driver command-line
-  /// for a specific module.
-  ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, success otherwise.
-  llvm::Error computeDependencies(StringRef WorkingDirectory,
-                                  const std::vector<std::string> &CommandLine,
-                                  DependencyConsumer &Consumer,
-                                  DependencyActionController &Controller,
-                                  StringRef ModuleName);
+  /// The three method below implements a new interface for by name
+  /// dependency scanning. They together enable the dependency scanning worker
+  /// to more effectively perform scanning for a sequence of modules
+  /// by name when the CWD and CommandLine do not change across the queries.
+
+  /// @brief Initializing the context and the compiler instance.
+  /// @param CWD The current working directory used during the scan.
+  /// @param CommandLine The commandline used for the scan.
+  /// @return Error if the initializaiton fails.
+  llvm::Error initializeCompilerInstanceWithContextOrError(
+      StringRef CWD, const std::vector<std::string> &CommandLine);
+
+  /// @brief Performaces dependency scanning for the module whose name is
+  ///        specified.
+  /// @param ModuleName  The name of the module whose dependency will be
+  ///                    scanned.
+  /// @param Consumer The dependency consumer that stores the results.
+  /// @param Controller The controller for the dependency scanning action.
+  /// @return Error if the scanner incurs errors.
+  llvm::Error computeDependenciesByNameWithContextOrError(
+      StringRef ModuleName, DependencyConsumer &Consumer,
+      DependencyActionController &Controller);
+
+  /// @brief Finalizes the diagnostics engine and deletes the compiler instance.
+  /// @return Error if errors occur during finalization.
+  llvm::Error finalizeCompilerInstanceWithContextOrError();
+
+  /// The three methods below provides the same functionality as the
+  /// three methods above. Instead of returning `llvm::Error`s, these
+  /// three methods return a flag to indicate if the call is successful.
+  /// The initialization function asks the client for a DiagnosticsConsumer
+  /// that it direct the diagnostics to.
+  bool initializeCompilerInstanceWithContext(
+      StringRef CWD, const std::vector<std::string> &CommandLine,
+      DiagnosticConsumer *DC = nullptr);
+  bool
+  computeDependenciesByNameWithContext(StringRef ModuleName,
+                                       DependencyConsumer &Consumer,
+                                       DependencyActionController &Controller);
+  bool finalizeCompilerInstance();
 
   llvm::vfs::FileSystem &getVFS() const { return *BaseFS; }
 
@@ -149,14 +172,16 @@ private:
   /// (passed in the constructor).
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
 
+  friend CompilerInstanceWithContext;
+  std::unique_ptr<CompilerInstanceWithContext> CIWithContext;
+
   /// Private helper functions.
   bool scanDependencies(StringRef WorkingDirectory,
                         const std::vector<std::string> &CommandLine,
                         DependencyConsumer &Consumer,
                         DependencyActionController &Controller,
                         DiagnosticConsumer &DC,
-                        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                        std::optional<StringRef> ModuleName);
+                        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 };
 
 } // end namespace dependencies

@@ -86,7 +86,7 @@ instead of computing "``x+3``" twice.
 
 Unfortunately, no amount of local analysis will be able to detect and
 correct this. This requires two transformations: reassociation of
-expressions (to make the add's lexically identical) and Common
+expressions (to make the adds lexically identical) and Common
 Subexpression Elimination (CSE) to delete the redundant add instruction.
 Fortunately, LLVM provides a broad range of optimizations that you can
 use, in the form of "passes".

@@ -2,7 +2,7 @@
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
+// expected-error@+1 {{gang, worker or vector cannot appear with seq}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
@@ -12,7 +12,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
+// expected-error@+1 {{gang, worker or vector cannot appear with seq}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
@@ -22,7 +22,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
+// expected-error@+1 {{gang, worker or vector cannot appear with seq}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
@@ -32,7 +32,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
+// expected-error@+1 {{gang, worker or vector cannot appear with seq}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
@@ -42,7 +42,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
+// expected-error@+1 {{gang, worker or vector cannot appear with seq}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
@@ -52,7 +52,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
+// expected-error@+1 {{gang, worker or vector cannot appear with seq}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
@@ -62,7 +62,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
+// expected-error@+1 {{gang, worker or vector cannot appear with seq}}
 acc.loop {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
@@ -72,7 +72,7 @@ acc.loop {
 
 // expected-error@+1 {{expected non-empty body.}}
 acc.loop {
-}
+} attributes {independent = [#acc.device_type<none>]}
 
 // -----
 
@@ -99,7 +99,7 @@ acc.loop {
 
 %1 = arith.constant 1 : i32
 %2 = arith.constant 10 : i32
-// expected-error@+1 {{only one of "auto", "independent", "seq" can be present at the same time}}
+// expected-error@+1 {{only one of auto, independent, seq can be present at the same time}}
 acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   acc.yield
 } attributes {auto_ = [#acc.device_type<none>], seq = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
@@ -168,7 +168,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32){
 // expected-error@+1 {{'acc.init' op cannot be nested in a compute operation}}
   acc.init
   acc.yield
-} attributes {inclusiveUpperbound = array<i1: true>}
+} attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
 // -----
 
@@ -186,7 +186,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 // expected-error@+1 {{'acc.shutdown' op cannot be nested in a compute operation}}
   acc.shutdown
   acc.yield
-} attributes {inclusiveUpperbound = array<i1: true>}
+} attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
 // -----
 
@@ -198,7 +198,7 @@ acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
     acc.shutdown
   }) : () -> ()
   acc.yield
-} attributes {inclusiveUpperbound = array<i1: true>}
+} attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
 // -----
 
@@ -483,12 +483,12 @@ acc.loop gang({static=%i64Value: i64, ) control(%iv : i32) = (%1 : i32) to (%2 :
 
 // -----
 
-func.func @fct1(%0 : !llvm.ptr) -> () {
-  // expected-error@+1 {{expected symbol reference @privatization_i32 to point to a private declaration}}
-  acc.serial private(@privatization_i32 -> %0 : !llvm.ptr) {
-  }
-  return
-}
+%i1 = arith.constant 1 : i32
+%i2 = arith.constant 10 : i32
+// expected-error@+1 {{unstructured acc.loop must not have induction variables}}
+acc.loop control(%iv : i32) = (%i1 : i32) to (%i2 : i32) step (%i1 : i32) {
+  acc.yield
+} attributes {independent = [#acc.device_type<none>], unstructured}
 
 // -----
 
@@ -797,7 +797,7 @@ func.func @acc_loop_container() {
         scf.yield
     }
     acc.yield
-  } attributes { collapse = [2], collapseDeviceType = [#acc.device_type<none>] }
+  } attributes { collapse = [2], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>]}
   return
 }
 
@@ -816,6 +816,105 @@ func.func @acc_loop_container() {
       scf.yield
     }
     acc.yield
-  } attributes { collapse = [3], collapseDeviceType = [#acc.device_type<none>] }
+  } attributes { collapse = [3], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>]}
+  return
+}
+
+// -----
+
+%value = memref.alloc() : memref<f32>
+// expected-error @below {{no data clause modifiers are allowed}}
+%0 = acc.private varPtr(%value : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier zero>}
+
+// -----
+
+%value = memref.alloc() : memref<f32>
+// expected-error @below {{invalid data clause modifiers: readonly}}
+%0 = acc.create varPtr(%value : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier readonly,zero,capture,always>}
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{expected symbol reference @privatization_i32 to point to a private declaration}}
+  %priv = acc.private varPtr(%0 : !llvm.ptr) varType(i32) recipe(@privatization_i32) -> !llvm.ptr
+  return
+}
+
+// -----
+
+acc.private.recipe @privatization_i32 : !llvm.ptr init {
+^bb0(%arg0: !llvm.ptr):
+  %c1 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  llvm.store %c0, %0 : i32, !llvm.ptr
+  acc.yield %0 : !llvm.ptr
+}
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  %priv = acc.private varPtr(%0 : !llvm.ptr) varType(i32) recipe(@privatization_i32) -> !llvm.ptr
+  // expected-error @below {{expected firstprivate as defining op}}
+  acc.serial firstprivate(%priv : !llvm.ptr) {
+  }
+  return
+}
+
+// -----
+
+acc.private.recipe @privatization_i32 : !llvm.ptr init {
+^bb0(%arg0: !llvm.ptr):
+  %c1 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  llvm.store %c0, %0 : i32, !llvm.ptr
+  acc.yield %0 : !llvm.ptr
+}
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  %priv = acc.private varPtr(%0 : !llvm.ptr) varType(i32) recipe(@privatization_i32) -> !llvm.ptr
+  // expected-error @below {{op private operand appears more than once}}
+  acc.serial private(%priv, %priv : !llvm.ptr, !llvm.ptr) {
+  }
+  return
+}
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{op recipe expected for private}}
+  %priv = acc.private varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr
+  return
+}
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{op recipe expected for firstprivate}}
+  %priv = acc.firstprivate varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr
+  return
+}
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{op recipe expected for reduction}}
+  %priv = acc.reduction varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr
+  return
+}
+
+// -----
+
+func.func @verify_declare_enter(%arg0 : memref<i32>) {
+// expected-error @below {{expect valid declare data entry operation or acc.getdeviceptr as defining op}}
+  %0 = acc.declare_enter dataOperands(%arg0 : memref<i32>)
+  acc.declare_exit token(%0) dataOperands(%arg0 : memref<i32>)
+  return
+}
+
+func.func @verify_data(%arg0 : memref<i32>) {
+// expected-error @below {{expect data entry/exit operation or acc.getdeviceptr as defining op}}
+  acc.data dataOperands(%arg0 : memref<i32>) {
+    acc.terminator
+  }
   return
 }
