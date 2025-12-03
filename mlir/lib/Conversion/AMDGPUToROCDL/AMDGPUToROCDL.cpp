@@ -2369,7 +2369,8 @@ struct AMDGPUMakeDmaDescriptorLowering
                     Value sgpr0, ArrayRef<Value> consts) const {
     // Compute data_size.
     int elementTypeWidthInBits = op.getElementTypeWidth();
-    assert(llvm::is_contained({8, 16, 32, 64}, elementTypeWidthInBits) && "expected type width to be 8, 16, 32, or 64.");
+    assert(llvm::is_contained({8, 16, 32, 64}, elementTypeWidthInBits) &&
+           "expected type width to be 8, 16, 32, or 64.");
     int dataSize = llvm::Log2_32(elementTypeWidthInBits / 8);
     return createI32Constant(rewriter, loc, dataSize << 16);
   }
