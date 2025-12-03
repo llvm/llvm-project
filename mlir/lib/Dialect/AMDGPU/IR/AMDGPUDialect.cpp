@@ -720,15 +720,13 @@ LogicalResult MakeDmaBaseOp::verify() {
         "global memref must have global address space attribute.");
 
   Type elementType = ldsType.getElementType();
-  int width;
-  if (auto intType = dyn_cast<IntegerType>(elementType))
-    width = intType.getWidth();
-  else if (auto floatType = dyn_cast<FloatType>(elementType))
-    width = floatType.getWidth();
+  unsigned width;
+  if (elementType.isIntOrFloat())
+    width = elementType.getIntOrFloatBitWidth();
   else
     return emitOpError("element type must have type width");
 
-  if (!llvm::is_contained({8, 16, 32, 64}, width))
+  if (!llvm::is_contained<unsigned>({8, 16, 32, 64}, width))
     return emitOpError(
                "element type must be 1, 2, 4, or 8 bytes long but type was ")
            << width << " bits long.";
