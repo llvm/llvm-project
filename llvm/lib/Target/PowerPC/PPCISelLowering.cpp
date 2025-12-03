@@ -7385,7 +7385,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
 
   if (isVarArg) {
     int VAListIndex = 0;
-    // If some of the non-fixed arguments are passed in register then the fixed
+    // If any of the optional arguments are passed in register then the fixed
     // stack object we spill into is not immutable. Create a fixed stack object
     // that overlaps the remainder of the parameter save area.
     if (CCInfo.getStackSize() < (LinkageSize + MinParameterSaveArea)) {
