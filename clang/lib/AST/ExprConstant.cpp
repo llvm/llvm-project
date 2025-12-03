@@ -11770,6 +11770,10 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
       Elements.push_back(Val.getVectorElt(I));
     return Success(Elements, E);
   }
+  case CK_HLSLMatrixTruncation: {
+    // TODO: See #168935. Add matrix truncation support to expr constant.
+    return Error(E);
+  }
   case CK_HLSLAggregateSplatCast: {
     APValue Val;
     QualType ValTy;
@@ -17040,6 +17044,16 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
   }
 
+  case X86::BI__builtin_ia32_kmovb:
+  case X86::BI__builtin_ia32_kmovw:
+  case X86::BI__builtin_ia32_kmovd:
+  case X86::BI__builtin_ia32_kmovq: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+    return Success(Val, E);
+  }
+
   case clang::X86::BI__builtin_ia32_vec_ext_v4hi:
   case clang::X86::BI__builtin_ia32_vec_ext_v16qi:
   case clang::X86::BI__builtin_ia32_vec_ext_v8hi:
@@ -18573,6 +18587,10 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return Error(E);
     return Success(Val.getVectorElt(0), E);
   }
+  case CK_HLSLMatrixTruncation: {
+    // TODO: See #168935. Add matrix truncation support to expr constant.
+    return Error(E);
+  }
   case CK_HLSLElementwiseCast: {
     SmallVector<APValue> SrcVals;
     SmallVector<QualType> SrcTypes;
@@ -19166,6 +19184,10 @@ bool FloatExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return Error(E);
     return Success(Val.getVectorElt(0), E);
   }
+  case CK_HLSLMatrixTruncation: {
+    // TODO: See #168935. Add matrix truncation support to expr constant.
+    return Error(E);
+  }
   case CK_HLSLElementwiseCast: {
     SmallVector<APValue> SrcVals;
     SmallVector<QualType> SrcTypes;
@@ -19323,6 +19345,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for complex value");
