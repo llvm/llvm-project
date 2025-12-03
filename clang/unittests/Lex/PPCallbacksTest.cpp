@@ -437,6 +437,7 @@ TEST_F(PPCallbacksTest, FileNotFoundSkipped) {
   PreprocessorOptions PPOpts;
   HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
 
+  unsigned int NumCalls = 0;
   DiagnosticConsumer *DiagConsumer = new DiagnosticConsumer;
   DiagnosticsEngine FileNotFoundDiags(DiagID, DiagOpts, DiagConsumer);
   Preprocessor PP(PPOpts, FileNotFoundDiags, LangOpts, SourceMgr, HeaderInfo,
@@ -445,21 +446,23 @@ TEST_F(PPCallbacksTest, FileNotFoundSkipped) {
 
   class FileNotFoundCallbacks : public PPCallbacks {
   public:
-    unsigned int NumCalls = 0;
+    unsigned int &NumCalls;
+
+    FileNotFoundCallbacks(unsigned int &NumCalls) : NumCalls(NumCalls) {}
+
     bool FileNotFound(StringRef FileName) override {
       NumCalls++;
       return FileName == "skipped.h";
     }
   };
 
-  auto *Callbacks = new FileNotFoundCallbacks;
-  PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(Callbacks));
+  PP.addPPCallbacks(std::make_unique<FileNotFoundCallbacks>(NumCalls));
 
   // Lex source text.
   PP.EnterMainSourceFile();
   PP.LexTokensUntilEOF();
 
-  ASSERT_EQ(1u, Callbacks->NumCalls);
+  ASSERT_EQ(1u, NumCalls);
   ASSERT_EQ(0u, DiagConsumer->getNumErrors());
 }
 
@@ -470,6 +473,7 @@ TEST_F(PPCallbacksTest, EmbedFileNotFoundChained) {
       llvm::MemoryBuffer::getMemBuffer(SourceText);
   SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
 
+  unsigned int NumCalls = 0;
   HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModLoader;
   PreprocessorOptions PPOpts;
@@ -484,16 +488,26 @@ TEST_F(PPCallbacksTest, EmbedFileNotFoundChained) {
 
   class EmbedFileNotFoundCallbacks : public PPCallbacks {
   public:
-    bool EmbedFileNotFound(StringRef FileName) override { return true; }
+    unsigned int &NumCalls;
+
+    EmbedFileNotFoundCallbacks(unsigned int &NumCalls) : NumCalls(NumCalls) {}
+
+    bool EmbedFileNotFound(StringRef FileName) override {
+      NumCalls++;
+      return true;
+    }
   };
 
-  PP.addPPCallbacks(std::make_unique<EmbedFileNotFoundCallbacks>());
-  PP.addPPCallbacks(std::make_unique<EmbedFileNotFoundCallbacks>());
+  // Add two instances of `EmbedFileNotFoundCallbacks` to ensure the
+  // preprocessor is using an instance of `PPChainedCallbaks`.
+  PP.addPPCallbacks(std::make_unique<EmbedFileNotFoundCallbacks>(NumCalls));
+  PP.addPPCallbacks(std::make_unique<EmbedFileNotFoundCallbacks>(NumCalls));
 
   // Lex source text.
   PP.EnterMainSourceFile();
   PP.LexTokensUntilEOF();
 
+  ASSERT_EQ(2u, NumCalls);
   ASSERT_EQ(0u, DiagConsumer->getNumErrors());
 }
 

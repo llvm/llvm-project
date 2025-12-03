@@ -1398,8 +1398,8 @@ void Preprocessor::HandleDirective(Token &Result) {
     case tok::pp_sccs:
       return HandleIdentSCCSDirective(Result);
     case tok::pp_embed: {
-      if (auto *CurrentFileLexer = getCurrentFileLexer())
-        if (auto FERef = CurrentFileLexer->getFileEntry())
+      if (PreprocessorLexer *CurrentFileLexer = getCurrentFileLexer())
+        if (OptionalFileEntryRef FERef = CurrentFileLexer->getFileEntry())
           return HandleEmbedDirective(SavedHash.getLocation(), Result, *FERef);
       return HandleEmbedDirective(SavedHash.getLocation(), Result, nullptr);
     }
