@@ -47,14 +47,21 @@ static auto InitListContainsPack(const InitListExpr *ILE) {
                       [](const Expr *E) { return isa<PackExpansionExpr>(E); });
 }
 
-static bool HasDependentSize(const CXXExpansionStmtPattern* pattern) {
-  if (isa<CXXEnumeratingExpansionStmtPattern>(pattern)) {
+static bool HasDependentSize(const CXXExpansionStmtPattern *Pattern) {
+  switch (Pattern->getKind()) {
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Enumerating: {
     auto *SelectExpr = cast<CXXExpansionInitListSelectExpr>(
-        pattern->getExpansionVariable()->getInit());
+        Pattern->getExpansionVariable()->getInit());
     return InitListContainsPack(SelectExpr->getRangeExpr());
   }
 
-  llvm_unreachable("Invalid expansion statement class");
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Iterating:
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Destructuring:
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Dependent:
+    llvm_unreachable("TODO");
+  }
+
+  llvm_unreachable("invalid pattern kind");
 }
 
 CXXExpansionStmtDecl *
@@ -134,9 +141,9 @@ StmtResult Sema::ActOnCXXExpansionStmtPattern(
 StmtResult Sema::BuildCXXEnumeratingExpansionStmtPattern(
     Decl *ESD, Stmt *Init, Stmt *ExpansionVar, SourceLocation LParenLoc,
     SourceLocation ColonLoc, SourceLocation RParenLoc) {
-  return new (Context) CXXEnumeratingExpansionStmtPattern(
-      cast<CXXExpansionStmtDecl>(ESD), Init, cast<DeclStmt>(ExpansionVar),
-      LParenLoc, ColonLoc, RParenLoc);
+  return CXXExpansionStmtPattern::CreateEnumerating(
+      Context, cast<CXXExpansionStmtDecl>(ESD), Init,
+      cast<DeclStmt>(ExpansionVar), LParenLoc, ColonLoc, RParenLoc);
 }
 
 StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
@@ -161,15 +168,14 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
   if (Expansion->getInit())
     Shared.push_back(Expansion->getInit());
 
-  assert(isa<CXXEnumeratingExpansionStmtPattern>(Expansion) && "TODO");
+  assert(Expansion->isEnumerating() && "TODO");
 
   // Return an empty statement if the range is empty.
   if (*NumInstantiations == 0) {
     Expansion->getDecl()->setInstantiations(
         CXXExpansionStmtInstantiation::Create(
             Context, Expansion->getBeginLoc(), Expansion->getEndLoc(),
-            /*Instantiations=*/{}, Shared,
-            isa<CXXDestructuringExpansionStmtPattern>(Expansion)));
+            /*Instantiations=*/{}, Shared, Expansion->isDestructuring()));
     return Expansion;
   }
 
@@ -207,7 +213,7 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
 
   auto *InstantiationsStmt = CXXExpansionStmtInstantiation::Create(
       Context, Expansion->getBeginLoc(), Expansion->getEndLoc(), Instantiations,
-      Shared, isa<CXXDestructuringExpansionStmtPattern>(Expansion));
+      Shared, Expansion->isDestructuring());
 
   Expansion->getDecl()->setInstantiations(InstantiationsStmt);
   return Expansion;
@@ -233,7 +239,7 @@ std::optional<uint64_t>
 Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
   assert(!HasDependentSize(Expansion));
 
-  if (isa<CXXEnumeratingExpansionStmtPattern>(Expansion))
+  if (Expansion->isEnumerating())
     return cast<CXXExpansionInitListSelectExpr>(
                Expansion->getExpansionVariable()->getInit())
         ->getRangeExpr()
