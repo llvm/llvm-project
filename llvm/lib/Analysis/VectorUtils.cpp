@@ -224,6 +224,10 @@ bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(
     return TTI->isTargetIntrinsicWithStructReturnOverloadAtField(ID, RetIdx);
 
   switch (ID) {
+  case Intrinsic::modf:
+  case Intrinsic::sincos:
+  case Intrinsic::sincospi:
+    return false;
   case Intrinsic::frexp:
     return RetIdx == 0 || RetIdx == 1;
   default:

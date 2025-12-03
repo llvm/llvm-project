@@ -4139,7 +4139,11 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       Type *ScalarTy = TypeInfo.inferScalarType(ToCheck);
       if (!Visited.insert({ScalarTy}).second)
         continue;
-      Type *WideTy = toVectorizedTy(ScalarTy, VF);
+      unsigned IID = 0;
+      if (auto *WI = dyn_cast<VPWidenIntrinsicRecipe>(&R))
+        WI->getVectorIntrinsicID();
+      Type *WideTy = toVectorizedTy(ScalarTy, VF, IID);
+
       if (any_of(getContainedTypes(WideTy), WillGenerateTargetVectors))
         return true;
     }
