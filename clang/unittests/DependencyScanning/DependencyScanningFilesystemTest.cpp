@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
+#include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
-using namespace clang::tooling::dependencies;
+using namespace clang::dependencies;
 
 TEST(DependencyScanningFilesystem, OpenFileAndGetBufferRepeatedly) {
   auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
