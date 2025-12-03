@@ -314,6 +314,17 @@ struct VPlanTransforms {
   ///      (branch-on-cond eq AVLNext, 0)
   static void canonicalizeEVLLoops(VPlan &Plan);
 
+  /// Applies to early-exit loops that use FFLoad. FFLoad may yield fewer active
+  /// lanes than VF. To prevent branch-on-poison and over-reads past the vector
+  /// trip count, use the returned VL for both stepping and exit computation.
+  /// Implemented by:
+  ///  - adjustFFLoadEarlyExitForPoisonSafety: replace AnyOf with vp.reduce.or
+  ///    over the first VL lanes; set AVL = min(VF, remainder).
+  ///  - convertFFLoadEarlyExitToVLStepping: after region dissolution, convert
+  ///    early-exit loops to variable-length stepping.
+  static void adjustFFLoadEarlyExitForPoisonSafety(VPlan &Plan);
+  static void convertFFLoadEarlyExitToVLStepping(VPlan &Plan);
+
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
 

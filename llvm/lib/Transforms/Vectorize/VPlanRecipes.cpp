@@ -464,6 +464,8 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::Store:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
+  case VPInstruction::ExtractScalarValue:
+  case VPInstruction::ExtractVectorValue:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::PtrAdd:
@@ -835,6 +837,13 @@ Value *VPInstruction::generate(VPTransformState &State) {
     if (isa<ExtractElementInst>(Res))
       Res->setName(Name);
     return Res;
+  }
+  case VPInstruction::ExtractVectorValue:
+  case VPInstruction::ExtractScalarValue: {
+    assert(getNumOperands() == 2 && "expected single level extractvalue");
+    Value *Op = State.get(getOperand(0));
+    auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
+    return Builder.CreateExtractValue(Op, CI->getZExtValue());
   }
   case VPInstruction::LogicalAnd: {
     Value *A = State.get(getOperand(0));
@@ -1273,6 +1282,7 @@ bool VPInstruction::isVectorToScalar() const {
 bool VPInstruction::isSingleScalar() const {
   switch (getOpcode()) {
   case Instruction::PHI:
+  case VPInstruction::ExtractScalarValue:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::VScale:
@@ -1489,6 +1499,12 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
+    break;
+  case VPInstruction::ExtractScalarValue:
+    O << "extract-scalar-value";
+    break;
+  case VPInstruction::ExtractVectorValue:
+    O << "extract-vector-value";
     break;
   case VPInstruction::ComputeAnyOfResult:
     O << "compute-anyof-result";
@@ -1937,6 +1953,14 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
 InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
                                                     VPCostContext &Ctx) const {
   SmallVector<const VPValue *> ArgOps(operands());
+  if (VectorIntrinsicID == Intrinsic::vp_load_ff) {
+    auto *StructTy = cast<StructType>(ResultTy);
+    Type *DataTy = toVectorizedTy(StructTy->getStructElementType(0), VF);
+    // TODO: Infer alignment from pointer.
+    Align Alignment;
+    return Ctx.TTI.getMemIntrinsicInstrCost(
+        {VectorIntrinsicID, DataTy, Alignment}, Ctx.CostKind);
+  }
   return getCostForIntrinsics(VectorIntrinsicID, ArgOps, *this, VF, Ctx);
 }
 

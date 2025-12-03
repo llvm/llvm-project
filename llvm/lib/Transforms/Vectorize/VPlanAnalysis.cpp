@@ -130,6 +130,13 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
     return Type::getVoidTy(Ctx);
+  case VPInstruction::ExtractScalarValue:
+  case VPInstruction::ExtractVectorValue: {
+    assert(R->getNumOperands() == 2 && "expected single level extractvalue");
+    auto *StructTy = cast<StructType>(inferScalarType(R->getOperand(0)));
+    auto *CI = cast<ConstantInt>(R->getOperand(1)->getLiveInIRValue());
+    return StructTy->getTypeAtIndex(CI->getZExtValue());
+  }
   default:
     break;
   }

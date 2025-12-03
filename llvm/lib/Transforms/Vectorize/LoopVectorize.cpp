@@ -399,6 +399,12 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
+static cl::opt<bool>
+    EnableEarlyExitWithFFLoads("enable-early-exit-with-ffload", cl::init(false),
+                               cl::Hidden,
+                               cl::desc("Enable vectorization of early-exit "
+                                        "loops with fault-only-first loads."));
+
 static cl::opt<bool> ConsiderRegPressure(
     "vectorizer-consider-reg-pressure", cl::init(false), cl::Hidden,
     cl::desc("Discard VFs if their register pressure is too high."));
@@ -3571,6 +3577,15 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return FixedScalableVFPair::getNone();
   }
 
+  if (!Legal->getPotentiallyFaultingLoads().empty() && UserIC > 1) {
+    reportVectorizationFailure("Auto-vectorization of loops with potentially "
+                               "faulting loads is not supported when the "
+                               "interleave count is more than 1",
+                               "CantInterleaveLoopWithPotentiallyFaultingLoads",
+                               ORE, TheLoop);
+    return FixedScalableVFPair::getNone();
+  }
+
   ScalarEvolution *SE = PSE.getSE();
   ElementCount TC = getSmallConstantTripCount(SE, TheLoop);
   unsigned MaxTC = PSE.getSmallConstantMaxTripCount();
@@ -4645,6 +4660,10 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
 
   // We used the distance for the interleave count.
   if (!Legal->isSafeForAnyVectorWidth())
+    return 1;
+
+  // No interleaving for potentially faulting loads.
+  if (!Legal->getPotentiallyFaultingLoads().empty())
     return 1;
 
   // We don't attempt to perform interleaving for loops with uncountable early
@@ -7444,11 +7463,12 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Regions are dissolved after optimizing for VF and UF, which completely
   // removes unneeded loop regions first.
   VPlanTransforms::dissolveLoopRegions(BestVPlan);
+  VPlanTransforms::convertFFLoadEarlyExitToVLStepping(BestVPlan);
+  // Canonicalize EVL loops after regions are dissolved.
+  VPlanTransforms::canonicalizeEVLLoops(BestVPlan);
   // Expand BranchOnTwoConds after dissolution, when latch has direct access to
   // its successors.
   VPlanTransforms::expandBranchOnTwoConds(BestVPlan);
-  // Canonicalize EVL loops after regions are dissolved.
-  VPlanTransforms::canonicalizeEVLLoops(BestVPlan);
   VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
   VPlanTransforms::materializeVectorTripCount(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
@@ -7737,6 +7757,22 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
     }
     Builder.insert(VectorPtr);
     Ptr = VectorPtr;
+  }
+
+  if (Legal->getPotentiallyFaultingLoads().contains(I)) {
+    auto *I32Ty = IntegerType::getInt32Ty(Plan.getContext());
+    auto *RetTy = StructType::get(I->getType(), I32Ty);
+    DebugLoc DL = I->getDebugLoc();
+    if (!Mask)
+      Mask = Plan.getOrAddLiveIn(
+          ConstantInt::getTrue(IntegerType::getInt1Ty(Plan.getContext())));
+    auto *FFLoad = new VPWidenIntrinsicRecipe(Intrinsic::vp_load_ff,
+                                              {Ptr, Mask, &Plan.getVF()}, RetTy,
+                                              *VPI, *VPI, DL);
+    Builder.insert(FFLoad);
+    VPValue *Zero = Plan.getConstantInt(32, 0);
+    return new VPInstruction(VPInstruction::ExtractVectorValue, {FFLoad, Zero},
+                             {}, {}, DL);
   }
 
   if (VPI->getOpcode() == Instruction::Load) {
@@ -8583,6 +8619,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   if (!VPlanTransforms::runPass(VPlanTransforms::handleMultiUseReductions,
                                 *Plan))
     return nullptr;
+
+  VPlanTransforms::adjustFFLoadEarlyExitForPoisonSafety(*Plan);
+
   // Apply mandatory transformation to handle FP maxnum/minnum reduction with
   // NaNs if possible, bail out otherwise.
   if (!VPlanTransforms::runPass(VPlanTransforms::handleMaxMinNumReductions,
@@ -9755,7 +9794,14 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (!LVL.getPotentiallyFaultingLoads().empty()) {
+  if (EnableEarlyExitWithFFLoads) {
+    if (LVL.getPotentiallyFaultingLoads().size() > 1) {
+      reportVectorizationFailure("Auto-vectorization of loops with more than 1 "
+                                 "potentially faulting load is not enabled",
+                                 "MoreThanOnePotentiallyFaultingLoad", ORE, L);
+      return false;
+    }
+  } else if (!LVL.getPotentiallyFaultingLoads().empty()) {
     reportVectorizationFailure("Auto-vectorization of loops with potentially "
                                "faulting load is not supported",
                                "PotentiallyFaultingLoadsNotSupported", ORE, L);
