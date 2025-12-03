@@ -511,7 +511,7 @@ def simm12_plus1 : ImmLeaf<XLenVT,
 
 // A 6-bit constant greater than 32.
 def uimm6gt32 : ImmLeaf<XLenVT, [{
-  return Imm >= 33 && Imm <= 63;
+  return isUInt<6>(Imm) && Imm > 32;
 }]>;
 
 // Addressing modes.

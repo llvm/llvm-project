@@ -32,7 +32,7 @@ def qc_insb : RVSDNode<"QC_INSB", SDTypeProfile<1, 4, [SDTCisSameAs<0, 1>,
 def qc_e_li : RVSDNode<"QC_E_LI", SDTIntUnaryOp>;
 
 def uimm5nonzero : RISCVOp<XLenVT>,
-                   ImmLeaf<XLenVT, [{return Imm >= 1 && Imm <= 31;}]> {
+                   ImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5, "NonZero">;
   let DecoderMethod = "decodeUImmNonZeroOperand<5>";
   let OperandType = "OPERAND_UIMM5_NONZERO";
@@ -40,20 +40,20 @@ def uimm5nonzero : RISCVOp<XLenVT>,
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return Imm >= 1 && Imm <= 31;
+    return (Imm != 0) && isUInt<5>(Imm);;
   }];
 }
 
-def tuimm5nonzero : TImmLeaf<XLenVT, [{return Imm >= 1 && Imm <= 31;}]>;
+def tuimm5nonzero : TImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<5>(Imm);}]>;
 
 def uimm5gt3 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
-  [{return Imm >= 4 && Imm <= 31;}]> {
+  [{return (Imm > 3) && isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5, "GT3">;
   let DecoderMethod = "decodeUImmOperandGE<5, 4>";
   let OperandType = "OPERAND_UIMM5_GT3";
 }
 
-def tuimm5gt3 : TImmLeaf<XLenVT, [{return Imm >= 4 && Imm <= 31;}]>;
+def tuimm5gt3 : TImmLeaf<XLenVT, [{return (Imm > 3) && isUInt<5>(Imm);}]>;
 
 def UImm5Plus1AsmOperand : AsmOperandClass {
   let Name = "UImm5Plus1";
@@ -129,7 +129,7 @@ def uimm14lsb00 : RISCVOp,
 }
 
 def uimm16nonzero : RISCVOp<XLenVT>,
-                    ImmLeaf<XLenVT, [{return Imm >= 1 && Imm <= 65535;}]> {
+                    ImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<16>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<16, "NonZero">;
   let DecoderMethod = "decodeUImmNonZeroOperand<16>";
   let OperandType = "OPERAND_UIMM16_NONZERO";

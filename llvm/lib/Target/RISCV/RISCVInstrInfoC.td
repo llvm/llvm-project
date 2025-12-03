@@ -17,7 +17,9 @@ def UImmLog2XLenNonZeroAsmOperand : AsmOperandClass {
 }
 
 def uimmlog2xlennonzero : RISCVOp, ImmLeaf<XLenVT, [{
-  return Imm >= 1 && Imm <= (Subtarget->is64Bit() ? 63 : 31);
+  if (Subtarget->is64Bit())
+    return isUInt<6>(Imm) && (Imm != 0);
+  return isUInt<5>(Imm) && (Imm != 0);
 }]> {
   let ParserMatchClass = UImmLog2XLenNonZeroAsmOperand;
   let DecoderMethod = "decodeUImmLog2XLenNonZeroOperand";
@@ -26,11 +28,9 @@ def uimmlog2xlennonzero : RISCVOp, ImmLeaf<XLenVT, [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    if (Imm <= 0)
-      return false;
     if (STI.getTargetTriple().isArch64Bit())
-      return Imm <= 63;
-    return Imm <= 31;
+      return  isUInt<6>(Imm) && (Imm != 0);
+    return isUInt<5>(Imm) && (Imm != 0);
   }];
 }
 
@@ -70,8 +70,9 @@ def CLUIImmAsmOperand : AsmOperandClass {
 // bit 17. Therefore, this 6-bit immediate can represent values in the ranges
 // [1, 31] and [0xfffe0, 0xfffff].
 def c_lui_imm : RISCVOp,
-                ImmLeaf<XLenVT, [{return (Imm >= 1 && Imm <= 31) ||
-                                  (Imm >= 0xfffe0 && Imm <= 0xfffff);}]> {
+                ImmLeaf<XLenVT, [{return (Imm != 0) &&
+                                 (isUInt<5>(Imm) ||
+                                  (Imm >= 0xfffe0 && Imm <= 0xfffff));}]> {
   let ParserMatchClass = CLUIImmAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeCLUIImmOperand";
@@ -80,8 +81,8 @@ def c_lui_imm : RISCVOp,
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return (Imm >= 1 && Imm <= 31) ||
-           (Imm >= 0xfffe0 && Imm <= 0xfffff);
+    return (Imm != 0) && (isUInt<5>(Imm) ||
+           (Imm >= 0xfffe0 && Imm <= 0xfffff));
   }];
 }
 

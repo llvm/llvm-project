@@ -12,7 +12,7 @@
 
 // A 5-bit unsigned immediate representing 1-31 and -1. 00000 represents -1.
 def imm5_zibi : RISCVOp<XLenVT>, ImmLeaf<XLenVT, [{
-    return Imm != 0 && Imm >= -1 && Imm <= 31;
+    return (Imm != 0 && isUInt<5>(Imm)) || Imm == -1;
 }]> {
   let ParserMatchClass = ImmAsmOperand<"", 5, "Zibi">;
   let EncoderMethod = "getImmOpValueZibi";
