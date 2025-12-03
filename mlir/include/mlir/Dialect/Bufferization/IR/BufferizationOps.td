@@ -569,29 +569,28 @@ def Bufferization_ToBufferOp : Bufferization_Op<"to_buffer", [
 
     bool bufferizesToMemoryWrite(OpOperand &opOperand,
                                  const AnalysisState &state) {
-      // The returned memref may be written through later memref ops, but
-      // ToBufferOp itself does not perform a write. The write semantics are
-      // modeled on the users of the memref result, not on this op.
-      return false;
+      return !getReadOnly();
     }
 
     bool resultBufferizesToMemoryWrite(OpResult opResult,
                                        const AnalysisState &state) {
       // The ToBufferOp result is a memref view of an existing tensor buffer.
       // The op itself does not perform a memory write; any writes are modeled
-      // on the users of the memref. Override the default implementation to
-      // avoid treating the result as an implicit write in tensor-only analysis.
-      return false;
+      // on the users of the memref. However, we need to indicate that the result
+      // may be written to if read_only is not set, so that proper copy insertion
+      // happens. Since the result is a memref (not a tensor), we cannot use
+      // getAliasingOpOperands which expects tensor types.
+      return !getReadOnly();
     }
 
     AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state) const {
-      // ToBufferOp does not produce a tensor result, so from the perspective
-      // of tensor-based BufferizableOpInterface analysis there is no tensor
-      // value that aliases with its tensor operand. The aliasing relationship
-      // between the tensor operand and the memref result is modeled separately
-      // in OneShotAnalysis via explicit alias set unions.
-      return {};
+      // The result memref aliases with the input tensor. However, getAliasingValues
+      // only returns tensor Values, so we cannot return the memref result here.
+      // The alias relationship is established in OneShotAnalysis via unionAliasSets.
+      // Returning the input tensor itself ensures that RaW conflicts are detected
+      // when the result memref is written to and the input tensor is read from.
+      return {{opOperand.get(), BufferRelation::Equivalent}};
     }
 
     LogicalResult bufferize(RewriterBase &rewriter,

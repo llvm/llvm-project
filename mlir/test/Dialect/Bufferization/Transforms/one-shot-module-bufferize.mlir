@@ -730,7 +730,7 @@ func.func @test_to_buffer_copy(
 // Test case: to_tensor without restrict works correctly
 // Verify that to_tensor without restrict can be used without errors
 // CHECK-LABEL: func @test_to_tensor_without_restrict_works(
-//  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32,
+// CHECK-SAME:     %[[arg0:.*]]: memref<?xf32>, %[[arg1:.*]]: index
 func.func @test_to_tensor_without_restrict_works(
     %m: memref<?xf32>, %idx: index) -> f32 {
   // to_tensor without restrict should work with alias analysis
