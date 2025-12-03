@@ -2595,50 +2595,41 @@ struct AMDGPUMakeDmaDescriptorLowering
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
 
-    Value sgpr0, sgpr1, sgpr2, sgpr3, sgpr4, sgpr5, sgpr6, sgpr7;
-    sgpr0 = sgpr1 = sgpr2 = sgpr3 = sgpr4 = sgpr5 = sgpr6 = sgpr7 = consts[0];
+    Value sgprs[8];
+    for (int i = 0; i < 8; i++) {
+      sgprs[i] = consts[0];
+    }
 
-    sgpr0 = setDataSize(op, adaptor, rewriter, loc, sgpr0, consts);
-    sgpr0 = setAtomicBarrier(op, adaptor, rewriter, loc, sgpr0, consts);
-    sgpr0 = setIterateEnable(op, adaptor, rewriter, loc, sgpr0, consts);
-    sgpr0 = setPadEnable(op, adaptor, rewriter, loc, sgpr0, consts);
-    sgpr0 = setPadInterval(op, adaptor, rewriter, loc, sgpr0, consts);
-    sgpr0 = setPadAmount(op, adaptor, rewriter, loc, sgpr0, consts);
+    sgprs[0] = setDataSize(op, adaptor, rewriter, loc, sgprs[0], consts);
+    sgprs[0] = setAtomicBarrier(op, adaptor, rewriter, loc, sgprs[0], consts);
+    sgprs[0] = setIterateEnable(op, adaptor, rewriter, loc, sgprs[0], consts);
+    sgprs[0] = setPadEnable(op, adaptor, rewriter, loc, sgprs[0], consts);
+    sgprs[0] = setPadInterval(op, adaptor, rewriter, loc, sgprs[0], consts);
+    sgprs[0] = setPadAmount(op, adaptor, rewriter, loc, sgprs[0], consts);
 
-    sgpr1 = setAtomicBarrierAddress(op, adaptor, rewriter, loc, sgpr1, consts);
-    std::tie(sgpr1, sgpr2) =
-        setTensorDim0(op, adaptor, rewriter, loc, sgpr1, sgpr2, consts);
-    std::tie(sgpr2, sgpr3) =
-        setTensorDim1(op, adaptor, rewriter, loc, sgpr2, sgpr3, consts);
+    sgprs[1] =
+        setAtomicBarrierAddress(op, adaptor, rewriter, loc, sgprs[1], consts);
+    std::tie(sgprs[1], sgprs[2]) =
+        setTensorDim0(op, adaptor, rewriter, loc, sgprs[1], sgprs[2], consts);
+    std::tie(sgprs[2], sgprs[3]) =
+        setTensorDim1(op, adaptor, rewriter, loc, sgprs[2], sgprs[3], consts);
 
-    sgpr3 = setTileDim0(op, adaptor, rewriter, loc, sgpr3, consts);
-    sgpr4 = setTileDim1(op, adaptor, rewriter, loc, sgpr4, consts);
-    sgpr4 = setTileDim2(op, adaptor, rewriter, loc, sgpr4, consts);
-    std::tie(sgpr5, sgpr6) =
-        setTensorDim0Stride(op, adaptor, rewriter, loc, sgpr5, sgpr6, consts);
-    std::tie(sgpr6, sgpr7) =
-        setTensorDim1Stride(op, adaptor, rewriter, loc, sgpr6, sgpr7, consts);
+    sgprs[3] = setTileDim0(op, adaptor, rewriter, loc, sgprs[3], consts);
+    sgprs[4] = setTileDim1(op, adaptor, rewriter, loc, sgprs[4], consts);
+    sgprs[4] = setTileDim2(op, adaptor, rewriter, loc, sgprs[4], consts);
+    std::tie(sgprs[5], sgprs[6]) = setTensorDim0Stride(
+        op, adaptor, rewriter, loc, sgprs[5], sgprs[6], consts);
+    std::tie(sgprs[6], sgprs[7]) = setTensorDim1Stride(
+        op, adaptor, rewriter, loc, sgprs[6], sgprs[7], consts);
 
     IntegerType i32 = rewriter.getI32Type();
     Type v8i32 = this->typeConverter->convertType(VectorType::get(8, i32));
     Value dgroup1 = LLVM::UndefOp::create(rewriter, loc, v8i32);
 
-    dgroup1 =
-        LLVM::InsertElementOp::create(rewriter, loc, dgroup1, sgpr0, consts[0]);
-    dgroup1 =
-        LLVM::InsertElementOp::create(rewriter, loc, dgroup1, sgpr1, consts[1]);
-    dgroup1 =
-        LLVM::InsertElementOp::create(rewriter, loc, dgroup1, sgpr2, consts[2]);
-    dgroup1 =
-        LLVM::InsertElementOp::create(rewriter, loc, dgroup1, sgpr3, consts[3]);
-    dgroup1 =
-        LLVM::InsertElementOp::create(rewriter, loc, dgroup1, sgpr4, consts[4]);
-    dgroup1 =
-        LLVM::InsertElementOp::create(rewriter, loc, dgroup1, sgpr5, consts[5]);
-    dgroup1 =
-        LLVM::InsertElementOp::create(rewriter, loc, dgroup1, sgpr6, consts[6]);
-    dgroup1 =
-        LLVM::InsertElementOp::create(rewriter, loc, dgroup1, sgpr7, consts[7]);
+    for (auto [sgpr, constant] : llvm::zip_equal(sgprs, consts)) {
+      dgroup1 =
+          LLVM::InsertElementOp::create(rewriter, loc, dgroup1, sgpr, constant);
+    }
 
     return dgroup1;
   }
