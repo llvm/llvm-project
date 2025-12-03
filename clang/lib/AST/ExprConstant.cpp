@@ -13269,6 +13269,19 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(R, E);
   }
 
+  case X86::BI__builtin_ia32_permdf256:
+  case X86::BI__builtin_ia32_permdi256: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R, [](unsigned DstIdx, unsigned Control) {
+          // permute4x64 operates on 4 64-bit elements
+          // For element i (0-3), extract bits [2*i+1:2*i] from Control
+          unsigned Index = (Control >> (2 * DstIdx)) & 0x3;
+          return std::make_pair(0, static_cast<int>(Index));
+        }))
+      return false;
+    return Success(R, E);
+  }
+
   case X86::BI__builtin_ia32_vpermilvarps:
   case X86::BI__builtin_ia32_vpermilvarps256:
   case X86::BI__builtin_ia32_vpermilvarps512: {
