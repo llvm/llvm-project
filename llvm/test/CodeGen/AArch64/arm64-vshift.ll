@@ -2,50 +2,48 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=0 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=1 -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:    warning: Instruction selection used fallback path for sqshrun1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli1d
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli1d_imm0
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli2d
+; CHECK-GI:    warning: Instruction selection used fallback path for sqrshrn1s
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrn8b
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrn4h
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrn2s
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrn16b
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrn8h
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrn4s
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrun1s
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrun8b
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrun4h
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrun2s
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrun16b
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrun8h
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrun4s
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqrshrn1s
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqrshrn8b
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqrshrn4h
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqrshrn2s
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqrshrn16b
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqrshrn8h
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqrshrn4s
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqshrn1s
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqshrn8b
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqshrn4h
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqshrn2s
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqshrn16b
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqshrn8h
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqshrn4s
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for neon_ushl_vscalar_constant_shift
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for neon_ushl_scalar_constant_shift
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for neon_sshll_vscalar_constant_shift
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for neon_sshll_scalar_constant_shift
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for neon_sshll_scalar_constant_shift_m1
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli8b
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli4h
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli2s
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli1d
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli1d_imm0
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli16b
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli8h
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli4s
+; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli2d
 
 define <8 x i8> @sqshl8b(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sqshl8b:
