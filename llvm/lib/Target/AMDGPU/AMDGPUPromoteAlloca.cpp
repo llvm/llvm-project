@@ -927,8 +927,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         return RejectUser(Inst, "cannot compute vector index for GEP");
 
       if (!isa<ConstantInt>(Index)) {
-        bool UsedInLoad = llvm::any_of(GEP->users(), 
-            [&](const auto *U){ return isa<LoadInst>(U); });
+        bool UsedInLoad = llvm::any_of(
+            GEP->users(), [&](const auto *U){ return isa<LoadInst>(U); });
         if (auto *UserVecTy =
                 dyn_cast<FixedVectorType>(GEP->getSourceElementType())) {
           if (UsedInLoad &&
