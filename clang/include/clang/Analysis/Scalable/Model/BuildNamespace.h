@@ -21,7 +21,7 @@ enum class BuildNamespaceKind : unsigned short {
   LinkUnit
 };
 
-std::string toString(BuildNamespaceKind BNK);
+llvm::StringRef toString(BuildNamespaceKind BNK);
 
 std::optional<BuildNamespaceKind> parseBuildNamespaceKind(llvm::StringRef Str);
 

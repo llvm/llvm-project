@@ -11,7 +11,7 @@
 
 namespace clang::ssaf {
 
-std::string toString(BuildNamespaceKind BNK) {
+llvm::StringRef toString(BuildNamespaceKind BNK) {
   switch(BNK) {
     case BuildNamespaceKind::CompilationUnit: return "compilation_unit";
     case BuildNamespaceKind::LinkUnit: return "link_unit";
