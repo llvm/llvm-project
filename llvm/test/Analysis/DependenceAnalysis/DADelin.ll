@@ -13,11 +13,11 @@ target triple = "thumbv8m.main-arm-none-eabi"
 define void @t1(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-LABEL: 't1'
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - input [* * *]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - consistent anti [0 0 0|<]!
+; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* * *]!
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
@@ -78,7 +78,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 define void @t2(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-LABEL: 't2'
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - input [* * *]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
@@ -145,7 +145,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 define void @t3(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-LABEL: 't3'
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - input [* * *]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
@@ -212,7 +212,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 define void @t4(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-LABEL: 't4'
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - input [* * *]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
@@ -279,7 +279,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 define void @t5(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-LABEL: 't5'
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - input [* * *]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
@@ -346,11 +346,11 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 define void @t6(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-LABEL: 't6'
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - input [* * *]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
-; CHECK-NEXT:    da analyze - consistent anti [-1 0 0]!
+; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* * *]!
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
@@ -414,11 +414,11 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 define void @t7(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-LABEL: 't7'
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - input [* * *]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
-; CHECK-NEXT:    da analyze - consistent anti [1 0 0]!
+; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* * *]!
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
@@ -482,11 +482,11 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 define void @t8(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-LABEL: 't8'
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - input [* * *]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
-; CHECK-NEXT:    da analyze - consistent anti [0 0 1]!
+; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* * *]!
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
