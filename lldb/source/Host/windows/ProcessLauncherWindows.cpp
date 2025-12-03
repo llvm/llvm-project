@@ -87,7 +87,6 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   error.Clear();
 
   std::string executable;
-  std::vector<HANDLE> inherited_handles;
   STARTUPINFOEXW startupinfoex = {};
   STARTUPINFOW &startupinfo = startupinfoex.StartupInfo;
   PROCESS_INFORMATION pi = {};
@@ -131,7 +130,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
     error = Status(inherited_handles_or_err.getError());
     return HostProcess();
   }
-  inherited_handles = *inherited_handles_or_err;
+  std::vector<HANDLE> inherited_handles = *inherited_handles_or_err;
 
   const char *hide_console_var =
       getenv("LLDB_LAUNCH_INFERIORS_WITHOUT_CONSOLE");
