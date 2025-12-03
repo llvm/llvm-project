@@ -85,6 +85,64 @@ if (DialectInlinerInterface *interface = dyn_cast<DialectInlinerInterface>(diale
 }
 ```
 
+#### Utilizing the ODS framework
+
+Note: Before reading this section, the reader should have some familiarity with
+the concepts described in the
+[`Operation Definition Specification`](DefiningDialects/Operations.md) documentation.
+
+MLIR also supports defining dialect interfaces directly in **TableGen**.
+This reduces boilerplate and allows authors to specify high-level interface 
+structure declaratively.
+
+For example, the above interface can be defined using ODS as follows:
+```tablegen
+def DialectInlinerInterface : DialectInterface<"DialectInlinerInterface"> {
+  let description = [{
+     Define a base inlining interface class to allow for dialects to opt-in to 
+     the inliner.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        [{
+        Returns true if the given region 'src' can be inlined into the region
+        'dest' that is attached to an operation registered to the current dialect.
+        'valueMapping' contains any remapped values from within the 'src' region.
+        This can be used to examine what values will replace entry arguments into
+        the 'src' region, for example.
+      }],
+      /*returnType=*/  "bool",
+      /*methodName=*/  "isLegalToInline",
+      /*args=*/        (ins "Region *":$dest, "Region *":$src, 
+                        "IRMapping &":$valueMapping),
+      /*methodBody=*/  [{
+        return false;
+      }]
+      >
+  ];
+}
+```
+
+`DialectInterfaces` class make use of the following components:
+
+*   C++ Class Name (Provided via template parameter)
+    -   The name of the C++ interface class.
+*   Description (`description`)
+    -   A string description of the interface, its invariants, example usages,
+    etc.
+*   C++ Namespace (`cppNamespace`)
+    -   The C++ namespace that the interface class should be generated in.
+*   Methods (`methods`)
+    -   The list of interface hook methods that are defined by the IR object.
+    -   The structure of these methods is defined [here](#interface-methods).
+
+The header file can be generated via the following command:
+```bash
+mlir-tblgen gen-dialect-interface-decls DialectInterface.td
+
+```
+
 #### DialectInterfaceCollection
 
 An additional utility is provided via `DialectInterfaceCollection`. This class
@@ -363,10 +421,6 @@ void *TestDialect::getRegisteredInterfaceForOp(TypeID typeID,
 ```
 
 #### Utilizing the ODS Framework
-
-Note: Before reading this section, the reader should have some familiarity with
-the concepts described in the
-[`Operation Definition Specification`](DefiningDialects/Operations.md) documentation.
 
 As detailed above, [Interfaces](#attributeoperationtype-interfaces) allow for
 attributes, operations, and types to expose method calls without requiring that
