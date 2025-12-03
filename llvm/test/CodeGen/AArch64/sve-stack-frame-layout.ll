@@ -33,7 +33,7 @@ define i32 @csr_d8_allocnxv4i32i32f64(double %d) "aarch64_pstate_sm_compatible" 
 ; CHECK-COMMON-NEXT:    ldr x29, [sp, #8] // 8-byte Reload
 ; CHECK-COMMON-NEXT:    ldr d8, [sp], #16 // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ret
-; CHECK-COMMON-NE
+; CHECK-NE
 entry:
   %a = alloca <vscale x 4 x i32>
   %b = alloca i32
@@ -626,23 +626,21 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEWLOWERING-NEXT:    mov x9, sp
 ; CHECK-NEWLOWERING-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x9
-; CHECK-NEWLOWERING-NEXT:    sub x10, x29, #80
 ; CHECK-NEWLOWERING-NEXT:    mov w20, w0
+; CHECK-NEWLOWERING-NEXT:    sub x10, x29, #80
 ; CHECK-NEWLOWERING-NEXT:    stp x9, x8, [x29, #-80]
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEWLOWERING-NEXT:    smstop sm
 ; CHECK-NEWLOWERING-NEXT:    bl other
 ; CHECK-NEWLOWERING-NEXT:    smstart sm
-; CHECK-NEWLOWERING-NEXT:    mov w0, w20
-; CHECK-NEWLOWERING-NEXT:    mov w8, w0
 ; CHECK-NEWLOWERING-NEXT:    smstart za
-; CHECK-NEWLOWERING-NEXT:    mrs x9, TPIDR2_EL0
+; CHECK-NEWLOWERING-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEWLOWERING-NEXT:    sub x0, x29, #80
-; CHECK-NEWLOWERING-NEXT:    cbnz x9, .LBB8_2
+; CHECK-NEWLOWERING-NEXT:    cbnz x8, .LBB8_2
 ; CHECK-NEWLOWERING-NEXT:  // %bb.1: // %entry
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_tpidr2_restore
 ; CHECK-NEWLOWERING-NEXT:  .LBB8_2: // %entry
-; CHECK-NEWLOWERING-NEXT:    mov w0, w8
+; CHECK-NEWLOWERING-NEXT:    mov w0, w20
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEWLOWERING-NEXT:    sub sp, x29, #64
 ; CHECK-NEWLOWERING-NEXT:    .cfi_def_cfa wsp, 112

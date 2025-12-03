@@ -883,10 +883,12 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
           .addUse(NumElementsVReg);
     });
   } else {
-    assert(ST.isShader() && "Runtime arrays are not allowed in non-shader "
-                            "SPIR-V modules.");
-    if (!ST.isShader())
+    if (!ST.isShader()) {
+      llvm::reportFatalUsageError(
+          "Runtime arrays are not allowed in non-shader "
+          "SPIR-V modules");
       return nullptr;
+    }
     ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
       return MIRBuilder.buildInstr(SPIRV::OpTypeRuntimeArray)
           .addDef(createTypeVReg(MIRBuilder))
