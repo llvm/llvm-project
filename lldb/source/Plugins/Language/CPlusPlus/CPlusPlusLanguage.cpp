@@ -35,7 +35,6 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 
@@ -644,6 +643,8 @@ static llvm::StringRef NextContext(llvm::StringRef context, size_t &end_pos) {
       return context.substr(idx + 1, end_pos - idx);
     }
 
+    // in contexts you cannot have a standlone bracket such
+    // as `operator<` use only one variable to track depth.
     if (val == '<' || val == '(' || val == '[')
       depth++;
     else if (val == '>' || val == ')' || val == ']')
@@ -659,7 +660,7 @@ bool CPlusPlusLanguage::CxxMethodName::ContainsContext(
   size_t full_pos = full_name.size();
   size_t pat_pos = pattern.size();
 
-  // We loop as long as there are contexts left in the identifier.
+  // We loop as long as there are contexts left in the full_name.
   while (full_pos != llvm::StringRef::npos) {
     size_t next_full_pos = full_pos;
     const llvm::StringRef full_ctx = NextContext(full_name, next_full_pos);
@@ -681,8 +682,8 @@ bool CPlusPlusLanguage::CxxMethodName::ContainsContext(
     if (next_pat_pos == llvm::StringRef::npos)
       return false;
 
-    // context does not match. advance the identifier cursor (consume the
-    // current identifier context) and resest the path cursor to the beginning.
+    // context does not match. advance the full_name cursor (consume the
+    // current full_namecontext) and resest the path cursor to the beginning.
     full_pos = next_full_pos;
     pat_pos = 0;
   }

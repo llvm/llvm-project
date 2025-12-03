@@ -56,8 +56,8 @@ public:
     // | MyClass::foo()       | OClass::foo |                       | false   |
     // | bar::foo<int>        | foo         | no_skip_template      | false   |
     ///
-    bool NameMatches(llvm::StringRef full_name, llvm::StringRef pattern,
-                     MatchOptions options);
+    static bool NameMatches(llvm::StringRef full_name, llvm::StringRef pattern,
+                            MatchOptions options);
 
     /// Checks if a pattern appears as a suffix of contexts within a full C++
     /// name, uses the same \a MatchOption as \a NameMatches.
@@ -67,8 +67,8 @@ public:
     /// \param options Configuration for name matching (passed to NameMatches)
     /// \return true if the pattern is found as a suffix context or the whole
     /// context, false otherwise
-    bool ContainsContext(llvm::StringRef full_name, llvm::StringRef pattern,
-                         MatchOptions options);
+    static bool ContainsContext(llvm::StringRef full_name,
+                                llvm::StringRef pattern, MatchOptions options);
 
   protected:
     void Parse() override;

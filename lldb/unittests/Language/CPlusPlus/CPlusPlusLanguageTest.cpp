@@ -272,22 +272,22 @@ TEST(CPlusPlusLanguage, AbiContainsPath) {
     Match matches;
     NoMatch no_matches;
   };
-  // NOTE: for future reference to prevent testing unreachable states. or making
-  // the matcher match unreachable states.
-  // see specification for completeness. TODO: add specification
-  // - abi tags can are ordered. i.e func[abi:TAG1][abi:TAG2] is valid but
-  //          func[abi:TAG2][abi:TAG1] is not
-  // - we do not set invalid function as this get filtered out during the module
-  // lookup.
+
+  // NOTE: Constraints to avoid testing/matching unreachable states:
+  // (see specification for more information
+  // https://clang.llvm.org/docs/ItaniumMangleAbiTags.html)
+  // - ABI tags must appear in a specific order: func[abi:TAG1][abi:TAG2] is
+  //   valid, but func[abi:TAG2][abi:TAG1] is not.
+  // - Invalid functions are filtered during module lookup and not set here.
 
   const std::initializer_list<TestCase> test_cases = {
+      // function with abi_tag
       TestCase{"func[abi:TAG1][abi:TAG2]()",
                Match{"func", "func[abi:TAG1]", "func[abi:TAG2]"},
                NoMatch{"func[abi:WRONG_TAG]"}},
       TestCase{"Foo::Bar::baz::func(Ball[abi:CTX_TAG]::Val )",
                Match{"func", "baz::func", "Bar::baz::func"},
                NoMatch{"baz", "baz::fun"}},
-      // function with abi_tag
       TestCase{"second::first::func[abi:FUNC_TAG]()",
                Match{"func", "func[abi:FUNC_TAG]", "first::func",
                      "first::func[abi:FUNC_TAG]"},
@@ -331,13 +331,10 @@ TEST(CPlusPlusLanguage, AbiContainsPath) {
       // multiple two context twice with abi_tag
       TestCase{"first[abi:CTX_TAG1][abi:CTX_TAG2]::func[abi:FUNC_TAG]::first::"
                "func(int)",
-               Match{"first::func", "func"},
-               NoMatch{"first[abi:CTX_TAG1]", "func[abi:FUNC_TAG]"}},
-      // multiple abi tag in context and template
-      // TestCase{"second::first[abi:CTX_TAG]<SomeClass>::func[abi:FUNC_TAG]()",
-
+               Match{"first::func", "func", "first::func::first::func"},
+               NoMatch{"first[abi:CTX_TAG1]", "func[abi:FUNC_TAG]",
+                       "func::first", "first::func::first"}},
       // operator overload
-      // aa::bb::wrap_int
       TestCase{"Ball[abi:CTX_TAG]<int>::operator<[abi:OPERATOR]<int>(int)",
                Match{"operator<", "operator<[abi:OPERATOR]", "Ball::operator<"},
                NoMatch{"operator<<", "Ball::operator<<"}},
@@ -354,13 +351,6 @@ TEST(CPlusPlusLanguage, AbiContainsPath) {
                NoMatch{"operator<", "operator<<<long>",
                        "Ball<long>::operator<<<int>",
                        "operator<<[abi:operator]"}},
-
-      // double context before matching path
-      // TODO: context in anonymous namespace
-
-      // no abi tag
-      // with return value.
-      // with templated return value.
   };
 
   for (const auto &[input, matches, no_matches] : test_cases) {
