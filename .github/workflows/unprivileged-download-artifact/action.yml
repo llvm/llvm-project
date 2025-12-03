@@ -100,5 +100,3 @@ runs:
         for name in "${artifact_names[@]}"; do
           unzip "${artifact_names[$i]}.zip"
         done
-
-        ls
