@@ -5196,6 +5196,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Incompatible_Pointer_Conversion:
   case ICK_HLSL_Array_RValue:
   case ICK_HLSL_Vector_Truncation:
+  case ICK_HLSL_Matrix_Truncation:
   case ICK_HLSL_Vector_Splat:
     llvm_unreachable("Improper second standard conversion");
   }
@@ -5203,12 +5204,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   if (SCS.Dimension != ICK_Identity) {
     // If SCS.Element is not ICK_Identity the To and From types must be HLSL
     // vectors or matrices.
-
-    // TODO: Support HLSL matrices.
-    assert((!From->getType()->isMatrixType() && !ToType->isMatrixType()) &&
-           "Dimension conversion for matrix types is not implemented yet.");
-    assert((ToType->isVectorType() || ToType->isBuiltinType()) &&
-           "Dimension conversion output must be vector or scalar type.");
+    assert(
+        (ToType->isVectorType() || ToType->isConstantMatrixType() ||
+         ToType->isBuiltinType()) &&
+        "Dimension conversion output must be vector, matrix, or scalar type.");
     switch (SCS.Dimension) {
     case ICK_HLSL_Vector_Splat: {
       // Vector splat from any arithmetic type to a vector.
@@ -5232,6 +5231,17 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                From->getValueKind())
                  .get();
 
+      break;
+    }
+    case ICK_HLSL_Matrix_Truncation: {
+      auto *FromMat = From->getType()->castAs<ConstantMatrixType>();
+      QualType TruncTy = FromMat->getElementType();
+      if (auto *ToMat = ToType->getAs<ConstantMatrixType>())
+        TruncTy = Context.getConstantMatrixType(TruncTy, ToMat->getNumRows(),
+                                                ToMat->getNumColumns());
+      From = ImpCastExprToType(From, TruncTy, CK_HLSLMatrixTruncation,
+                               From->getValueKind())
+                 .get();
       break;
     }
     case ICK_Identity:
