@@ -271,6 +271,10 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   if (LTE)
     return;
 
+  // Don't emit warnings for statements inside macro expansions
+  if (Statement->getBeginLoc().isMacroID())
+    return;
+
   auto Diag = diag(PrevDecl->getBeginLoc(),
                    "%select{structured binding|multiple variable|variable %1}0 "
                    "declaration "
@@ -281,8 +285,7 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
 
   const std::string NewInitStmtOpt =
       extractDeclStmtText(PrevDecl, Result.SourceManager, getLangOpts());
-  const bool CanFix = !NewInitStmtOpt.empty() && !Conflict &&
-                      !Statement->getBeginLoc().isMacroID();
+  const bool CanFix = !NewInitStmtOpt.empty() && !Conflict;
 
   if (CanFix) {
     const SourceRange RemovalRange = PrevDecl->getSourceRange();

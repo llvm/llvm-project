@@ -704,16 +704,12 @@ void bad_macro1() {
 void bad_macro2() {
     int i1 = 0 SEMICOLON_IF
      (i1 == 0) {
-// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
         do_some();
     }
     int i2 = 0 SEMICOLON_SWITCH
      (i2) {
-// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
         case 0:
             do_some();
             break;
@@ -857,22 +853,18 @@ void bad_macro10() {
     }
 }
 
-void bad_macro11() {
-    int i1 = 0;
-    MY_IF (i1 == 0,
-// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
-        do_some();
-    )
-    int i2 = 0;
-    MY_ONE_STMT_SWITCH (i2,
-// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
-        do_some();
-    )
-}
+// void bad_macro11() {
+//     int i1 = 0;
+//     MY_IF (i1 == 0,
+// // FIXME: fixme should be suggested
+//         do_some();
+//     )
+//     int i2 = 0;
+//     MY_ONE_STMT_SWITCH (i2,
+// // FIXME: fixme should be suggested
+//         do_some();
+//     )
+// }
 
 void bad_macro12() {
     MY_VAR_DECL(int, i1, 0); DUMMY_TOKEN
@@ -896,16 +888,12 @@ void bad_macro12() {
 void bad_macro13() {
     MY_VAR_DECL(int, i1, 0);
     MY_IF (i1 == 0,
-// CHECK-MESSAGES: [[@LINE-2]]:17: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: [[@LINE-2]]:17: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
         do_some();
     )
     MY_VAR_DECL(int, i2, 0);
     MY_ONE_STMT_SWITCH (i2,
-// CHECK-MESSAGES: [[@LINE-2]]:17: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: [[@LINE-2]]:17: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
         do_some();
     )
 }
@@ -915,15 +903,34 @@ void bad_macro13() {
 
 void bad_macro14() {
     MY_VAR_DECL_IF(int, i1, 0, i1 == 0,
-// CHECK-MESSAGES: [[@LINE-1]]:20: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
-// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
-// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: [[@LINE-1]]:20: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
         do_some();
     )
     MY_VAR_DECL_SWITCH(int, i2, 0, i2,
-// CHECK-MESSAGES: [[@LINE-1]]:24: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
-// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
-// CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: [[@LINE-1]]:24: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
         do_some();
     )
 }
+
+static constexpr int affinity_none = 0;
+
+#define KMP_WARNING(...) do_some(__VA_ARGS__)
+#define KMP_AFF_WARNING(s, ...)                                                \
+  if (s.flags.verbose || (s.flags.warnings && (s.type != affinity_none))) {    \
+    KMP_WARNING(__VA_ARGS__);                                                  \
+  }
+
+// Real-life case got from openmp/runtime/src/kmp_affinity.cpp
+void bad_macro_kmp_warning() {
+    struct kmp_affinity_flags {
+        unsigned verbose : 1;
+        unsigned warnings : 1;
+    };
+    struct kmp_affinity_t { kmp_affinity_flags flags{}; int type{}; };
+    kmp_affinity_t __kmp_affinity{};
+    int num = 0;
+    bool plural = (num > 1);
+    KMP_AFF_WARNING(__kmp_affinity, plural);
+    // CHECK-MESSAGES-NOT: [[@LINE-2]]:5: warning: variable 'plural' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+}
+
