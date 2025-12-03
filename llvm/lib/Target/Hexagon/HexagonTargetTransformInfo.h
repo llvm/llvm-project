@@ -120,16 +120,10 @@ public:
       TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const override;
   InstructionCost
-  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                        TTI::TargetCostKind CostKind) const override;
-  InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
-  InstructionCost
-  getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
-                         TTI::TargetCostKind CostKind) const override;
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
