@@ -601,6 +601,4 @@ static inline odbg_ostream reportErrorStream() {
 
 } // namespace llvm::omp::target::debug
 
-inline int getDebugLevel() { return 1; }
-
 #endif // OMPTARGET_SHARED_DEBUG_H
