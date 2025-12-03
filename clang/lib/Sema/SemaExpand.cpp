@@ -85,7 +85,7 @@ static bool HasDependentSize(const CXXExpansionStmtPattern *Pattern) {
     return true;
 
   case CXXExpansionStmtPattern::ExpansionStmtKind::Destructuring:
-    llvm_unreachable("TODO");
+    return false;
   }
 
   llvm_unreachable("invalid pattern kind");
