@@ -391,7 +391,7 @@ class DebugCommunication(object):
         with self._recv_condition:
             for packet in self._recv_packets:
                 if packet and ("seq" not in packet or packet["seq"] == 0):
-                    warnings.warn(
+                    raise ValueError(
                         f"received a malformed packet, expected 'seq != 0' for {packet!r}"
                     )
                 # Handle events that may modify any stateful properties of
