@@ -2393,7 +2393,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
   case Intrinsic::amdgcn_s_wakeup_barrier: {
-    if (!AMDGPU::isGFX1250(STI)) {
+    if (!STI.hasWakeupBarrier()) {
       Function &F = I.getMF()->getFunction();
       F.getContext().diagnose(
           DiagnosticInfoUnsupported(F, "intrinsic not supported on subtarget",
