@@ -3276,39 +3276,6 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
 }
 
 //===----------------------------------------------------------------------===//
-// SqrtOp
-//===----------------------------------------------------------------------===//
-
-def CIR_SqrtOp : CIR_Op<"sqrt", [Pure]> {
-  let summary = "Floating-point square root";
-
-  let description = [{
-    The `cir.sqrt` operation computes the element-wise square root of its input.
-
-    The input must be either:
-      • a floating-point scalar type, or
-      • a vector whose element type is floating-point.
-
-    The result type must match the input type exactly.
-
-    Examples:
-      // scalar
-      %r = cir.sqrt %x : !cir.fp64
-
-      // vector
-      %v = cir.sqrt %vec : !cir.vector<!cir.fp32 x 4>
-  }];
-
-  // input and output types: float or vector-of-float
-  let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$input);
-  let results   = (outs CIR_AnyFloatOrVecOfFloatType:$result);
-
-  let assemblyFormat = [{
-    $input `:` type($input) attr-dict
-  }];
-}
-
-//===----------------------------------------------------------------------===//
 // UnreachableOp
 //===----------------------------------------------------------------------===//
 
@@ -4663,6 +4630,14 @@ def CIR_PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
 //===----------------------------------------------------------------------===//
 // Floating Point Ops
 //===----------------------------------------------------------------------===//
+
+def CIR_SqrtOp : CIR_UnaryFPToFPBuiltinOp<"sqrt", "SqrtOp"> {
+  let summary = "Floating-point square root operation";
+  
+  let description = [{
+    Computes the square root of a floating-point value or vector.
+  }];
+}
 
 class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]>
