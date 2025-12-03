@@ -56,8 +56,8 @@ define amdgpu_kernel void @s_addk_i32_k3(ptr addrspace(1) %out, i32 %b) #0 {
 }
 
 ; SI-LABEL: {{^}}s_addk_v2i32_k0:
-; SI-DAG: s_addk_i32 {{s[0-9]+}}, 0x42
 ; SI-DAG: s_addk_i32 {{s[0-9]+}}, 0x41
+; SI-DAG: s_addk_i32 {{s[0-9]+}}, 0x42
 ; SI: s_endpgm
 ; Note: dummy argument here to prevent combining of descriptor loads for %out and %b
 define amdgpu_kernel void @s_addk_v2i32_k0(ptr addrspace(1) %out, i32 %dummy, <2 x i32> %b) #0 {

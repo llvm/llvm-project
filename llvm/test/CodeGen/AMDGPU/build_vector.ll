@@ -257,29 +257,28 @@ define amdgpu_kernel void @build_v2i32_from_v4i16_shuffle(ptr addrspace(1) %out,
 ; GFX6-LABEL: build_v2i32_from_v4i16_shuffle:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; GFX6-NEXT:    s_mov_b32 s7, 0xf000
-; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_mov_b32 s4, s0
-; GFX6-NEXT:    s_mov_b32 s5, s1
-; GFX6-NEXT:    s_lshl_b32 s0, s3, 16
-; GFX6-NEXT:    s_lshl_b32 s1, s2, 16
-; GFX6-NEXT:    v_mov_b32_e32 v0, s1
-; GFX6-NEXT:    v_mov_b32_e32 v1, s0
-; GFX6-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; GFX6-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX6-NEXT:    s_lshl_b32 s5, s5, 16
+; GFX6-NEXT:    s_lshl_b32 s4, s4, 16
+; GFX6-NEXT:    s_mov_b32 s3, 0xf000
+; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
+; GFX6-NEXT:    v_mov_b32_e32 v1, s5
+; GFX6-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: build_v2i32_from_v4i16_shuffle:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8-NEXT:    s_lshl_b32 s0, s3, 16
-; GFX8-NEXT:    s_lshl_b32 s1, s2, 16
-; GFX8-NEXT:    v_mov_b32_e32 v2, s1
-; GFX8-NEXT:    v_mov_b32_e32 v3, s0
-; GFX8-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; GFX8-NEXT:    s_lshl_b32 s3, s3, 16
+; GFX8-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
+; GFX8-NEXT:    v_mov_b32_e32 v0, s2
+; GFX8-NEXT:    v_mov_b32_e32 v1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v2, s0
+; GFX8-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: build_v2i32_from_v4i16_shuffle:
