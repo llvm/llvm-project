@@ -1,7 +1,6 @@
 name: Release Binaries Windows
 
 on:
-  pull_request:
   workflow_dispatch:
     inputs:
       release-version:
@@ -12,11 +11,28 @@ on:
         description: 'Upload binaries to the release page'
         required: true
         default: false
+  # Run on pull_requests for testing purposes.
+  pull_request:
+    paths:
+      - '.github/workflows/release-binaries-windows.yml'
+      - '.github/workflows/upload-release-artifact/action.yml'
+    types:
+      - opened
+      - synchronize
+      - reopened
+      # When a PR is closed, we still start this workflow, but then skip
+      # all the jobs, which makes it effectively a no-op.  The reason to
+      # do this is that it allows us to take advantage of concurrency groups
+      # to cancel in progress CI jobs whenever the PR is closed.
+      - closed
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.release-version || github.event.pull_request.number }}
+  cancel-in-progress: True
 
 
 permissions:
-  id-token: write
-  attestations: write
+  contents: read
 
 jobs:
   build-windows-release:
