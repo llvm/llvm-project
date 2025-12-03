@@ -5258,10 +5258,11 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
           isIntegerWideningViable(P, LargestIntTy, DL))
         return {LargestIntTy, true, nullptr};
 
-      // If there are only intrinsic users of an aggregate type, try to represent as a legal integer
-      // type because we are probably just copying data around and the integer
-      // can be promoted.
-      if (OnlyIntrinsicUsers && DL.isLegalInteger(P.size() * 8) && TypePartitionTy->isAggregateType())
+      // If there are only intrinsic users of an aggregate type, try to
+      // represent as a legal integer type because we are probably just copying
+      // data around and the integer can be promoted.
+      if (OnlyIntrinsicUsers && DL.isLegalInteger(P.size() * 8) &&
+          TypePartitionTy->isAggregateType())
         return {
             Type::getIntNTy(*C, P.size() * 8),
             isIntegerWideningViable(P, Type::getIntNTy(*C, P.size() * 8), DL),
