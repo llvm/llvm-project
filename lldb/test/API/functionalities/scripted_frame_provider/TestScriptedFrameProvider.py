@@ -5,6 +5,7 @@ Test scripted frame provider functionality.
 import os
 
 import lldb
+import lldbsuite.test.lldbplatformutil as lldbplatformutil
 from lldbsuite.test.lldbtest import TestBase
 from lldbsuite.test import lldbutil
 
@@ -208,6 +209,10 @@ class ScriptedFrameProviderTestCase(TestBase):
 
         # Check each thread
         thread_id_1_found = False
+        # On ARM32, FixCodeAddress clears bit 0, so synthetic PCs get modified
+        is_arm_32bit = lldbplatformutil.getArchitecture() == "arm"
+        expected_synthetic_pc = 0xFFFE if is_arm_32bit else 0xFFFF
+
         for i in range(num_threads):
             t = process.GetThreadAtIndex(i)
             thread_id = t.GetIndexID()
@@ -222,8 +227,8 @@ class ScriptedFrameProviderTestCase(TestBase):
                 )
                 self.assertEqual(
                     t.GetFrameAtIndex(0).GetPC(),
-                    0xFFFF,
-                    f"Thread with ID 1 should have synthetic PC 0xFFFF",
+                    expected_synthetic_pc,
+                    f"Thread with ID 1 should have synthetic PC {expected_synthetic_pc:#x}",
                 )
             else:
                 # Other threads should keep their original frames
@@ -391,13 +396,17 @@ class ScriptedFrameProviderTestCase(TestBase):
             "Should have original frames + 1 synthetic frame",
         )
 
+        # On ARM32, FixCodeAddress clears bit 0, so synthetic PCs get modified
+        is_arm_32bit = lldbplatformutil.getArchitecture() == "arm"
+        expected_synthetic_pc = 0xDEADBEEE if is_arm_32bit else 0xDEADBEEF
+
         # First frame should be synthetic
         frame0 = thread.GetFrameAtIndex(0)
         self.assertIsNotNone(frame0)
         self.assertEqual(
             frame0.GetPC(),
-            0xDEADBEEF,
-            "First frame should be synthetic frame with PC 0xDEADBEEF",
+            expected_synthetic_pc,
+            f"First frame should be synthetic frame with PC {expected_synthetic_pc:#x}",
         )
 
         # Second frame should be the original first frame
