@@ -4330,9 +4330,7 @@ bool RISCVDAGToDAGISel::selectVSplatSimm5Plus1NonZero(SDValue N,
                                                       SDValue &SplatVal) {
   return selectVSplatImmHelper(
       N, SplatVal, *CurDAG, *Subtarget,
-      [](int64_t Imm) {
-        return Imm != 0 && Imm >= -15 && Imm <= 16;
-      },
+      [](int64_t Imm) { return Imm != 0 && Imm >= -15 && Imm <= 16; },
       /*Decrement=*/true);
 }
 

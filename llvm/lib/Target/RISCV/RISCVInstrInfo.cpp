@@ -2991,8 +2991,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = Ok && Imm != 0;
           break;
         case RISCVOp::OPERAND_CLUI_IMM:
-          Ok = (Imm >= 1 && Imm <= 31) ||
-               (Imm >= 0xfffe0 && Imm <= 0xfffff);
+          Ok = (Imm >= 1 && Imm <= 31) || (Imm >= 0xfffe0 && Imm <= 0xfffff);
           break;
         case RISCVOp::OPERAND_RVKRNUM:
           Ok = Imm >= 0 && Imm <= 10;
