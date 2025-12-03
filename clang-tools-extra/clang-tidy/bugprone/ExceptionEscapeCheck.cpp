@@ -72,7 +72,8 @@ void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
   auto MatchIf = [](bool Enabled, const auto &Matcher) {
-    ast_matchers::internal::Matcher<FunctionDecl> Nothing = unless(anything());
+    const ast_matchers::internal::Matcher<FunctionDecl> Nothing =
+        unless(anything());
     return Enabled ? Matcher : Nothing;
   };
   Finder->addMatcher(

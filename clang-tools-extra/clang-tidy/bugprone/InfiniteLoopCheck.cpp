@@ -119,14 +119,9 @@ static bool isAtLeastOneCondVarChanged(const Decl *Func, const Stmt *LoopStmt,
   if (isVarThatIsPossiblyChanged(Func, LoopStmt, Cond, Context))
     return true;
 
-  for (const Stmt *Child : Cond->children()) {
-    if (!Child)
-      continue;
-
-    if (isAtLeastOneCondVarChanged(Func, LoopStmt, Child, Context))
-      return true;
-  }
-  return false;
+  return llvm::any_of(Cond->children(), [&](const Stmt *Child) {
+    return Child && isAtLeastOneCondVarChanged(Func, LoopStmt, Child, Context);
+  });
 }
 
 /// Return the variable names in `Cond`.
@@ -240,10 +235,9 @@ static bool hasStaticLocalVariable(const Stmt *Cond) {
           return true;
   }
 
-  for (const Stmt *Child : Cond->children())
-    if (Child && hasStaticLocalVariable(Child))
-      return true;
-  return false;
+  return llvm::any_of(Cond->children(), [](const Stmt *Child) {
+    return Child && hasStaticLocalVariable(Child);
+  });
 }
 
 /// Tests if the loop condition `Cond` involves static local variables and

@@ -148,12 +148,9 @@ bool ExprSequence::inSequence(const Stmt *Before, const Stmt *After) const {
 
   // If 'After' is a parent of 'Before' or is sequenced after one of these
   // parents, we know that it is sequenced after 'Before'.
-  for (const Stmt *Parent : BeforeParents) {
-    if (Parent == After || inSequence(Parent, After))
-      return true;
-  }
-
-  return false;
+  return llvm::any_of(BeforeParents, [&](const Stmt *Parent) {
+    return Parent == After || inSequence(Parent, After);
+  });
 }
 
 bool ExprSequence::potentiallyAfter(const Stmt *After,
