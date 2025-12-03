@@ -1065,8 +1065,9 @@ static bool isConstantSplatVectorMaskForType(SDNode *N, EVT ScalarTy) {
 
 // Determines if it is a constant integer or a splat/build vector of constant
 // integers (and undefs).
-// Do not permit build vector implicit truncation.
-static bool isConstantOrConstantVector(SDValue N, bool NoOpaques = false) {
+// Do not permit build vector implicit truncation unless AllowTruncation is set.
+static bool isConstantOrConstantVector(SDValue N, bool NoOpaques = false,
+                                       bool AllowTruncation = false) {
   if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(N))
     return !(Const->isOpaque() && NoOpaques);
   if (N.getOpcode() != ISD::BUILD_VECTOR && N.getOpcode() != ISD::SPLAT_VECTOR)
@@ -1076,8 +1077,13 @@ static bool isConstantOrConstantVector(SDValue N, bool NoOpaques = false) {
     if (Op.isUndef())
       continue;
     ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Op);
-    if (!Const || Const->getAPIntValue().getBitWidth() != BitWidth ||
-        (Const->isOpaque() && NoOpaques))
+    if (!Const || (Const->isOpaque() && NoOpaques))
+      return false;
+    // When AllowTruncation is true, allow constants that have been promoted
+    // during type legalization as long as the value fits in the target type.
+    if ((AllowTruncation &&
+         Const->getAPIntValue().getActiveBits() > BitWidth) ||
+        (!AllowTruncation && Const->getAPIntValue().getBitWidth() != BitWidth))
       return false;
   }
   return true;
@@ -5322,7 +5328,8 @@ SDValue DAGCombiner::visitUDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   EVT VT = N->getValueType(0);
 
   // fold (udiv x, (1 << c)) -> x >>u c
-  if (isConstantOrConstantVector(N1, /*NoOpaques*/ true)) {
+  if (isConstantOrConstantVector(N1, /*NoOpaques=*/true,
+                                 /*AllowTruncation=*/true)) {
     if (SDValue LogBase2 = BuildLogBase2(N1, DL)) {
       AddToWorklist(LogBase2.getNode());
 
@@ -5336,7 +5343,8 @@ SDValue DAGCombiner::visitUDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   // fold (udiv x, (shl c, y)) -> x >>u (log2(c)+y) iff c is power of 2
   if (N1.getOpcode() == ISD::SHL) {
     SDValue N10 = N1.getOperand(0);
-    if (isConstantOrConstantVector(N10, /*NoOpaques*/ true)) {
+    if (isConstantOrConstantVector(N10, /*NoOpaques=*/true,
+                                   /*AllowTruncation=*/true)) {
       if (SDValue LogBase2 = BuildLogBase2(N10, DL)) {
         AddToWorklist(LogBase2.getNode());
 
@@ -5352,7 +5360,8 @@ SDValue DAGCombiner::visitUDIVLike(SDValue N0, SDValue N1, SDNode *N) {
 
   // fold (udiv x, c) -> alternate
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  if (isConstantOrConstantVector(N1) &&
+  if (isConstantOrConstantVector(N1, /*NoOpaques=*/false,
+                                 /*AllowTruncation=*/true) &&
       !TLI.isIntDivCheap(N->getValueType(0), Attr))
     if (SDValue Op = BuildUDIV(N))
       return Op;
