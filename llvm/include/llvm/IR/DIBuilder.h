@@ -1155,17 +1155,17 @@ namespace llvm {
                                       DIExpression *Expr, const DILocation *DL,
                                       InsertPosition InsertPt);
 
-    /// Insert a new llvm.dbg.coroframe_entry intrinsic call.
+    /// Insert a new llvm.dbg.declare_value intrinsic call.
     /// \param Storage      llvm::Value of the variable
     /// \param VarInfo      Variable's debug info descriptor.
     /// \param Expr         A complex location expression.
     /// \param DL           Debug info location.
     /// \param InsertPt     Location for the new intrinsic.
-    LLVM_ABI DbgInstPtr insertCoroFrameEntry(llvm::Value *Storage,
-                                             DILocalVariable *VarInfo,
-                                             DIExpression *Expr,
-                                             const DILocation *DL,
-                                             InsertPosition InsertPt);
+    LLVM_ABI DbgInstPtr insertDeclareValue(llvm::Value *Storage,
+                                           DILocalVariable *VarInfo,
+                                           DIExpression *Expr,
+                                           const DILocation *DL,
+                                           InsertPosition InsertPt);
 
     /// Insert a new llvm.dbg.label intrinsic call.
     /// \param LabelInfo    Label's debug info descriptor.
