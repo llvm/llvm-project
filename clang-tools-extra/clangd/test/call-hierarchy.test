@@ -9,6 +9,7 @@
 # CHECK-NEXT:  "result": [
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "data": "{{.*}}",
+# CHECK-NEXT:      "detail": "callee",
 # CHECK-NEXT:      "kind": 12,
 # CHECK-NEXT:      "name": "callee",
 # CHECK-NEXT:      "range": {
