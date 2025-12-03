@@ -17059,9 +17059,10 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case X86::BI__builtin_ia32_kshiftlisi:
   case X86::BI__builtin_ia32_kshiftlidi: {
     return HandleMaskBinOp([](const APSInt &LHS, const APSInt &RHS) {
-      if (RHS.uge(LHS.getBitWidth()))
+      unsigned Amt = RHS.getZExtValue() & 0xFF;
+      if (Amt >= LHS.getBitWidth())
         return APSInt(APInt::getZero(LHS.getBitWidth()), LHS.isUnsigned());
-      return APSInt(LHS.shl(RHS.getZExtValue()), LHS.isUnsigned());
+      return APSInt(LHS.shl(Amt), LHS.isUnsigned());
     });
   }
 
@@ -17070,9 +17071,10 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case X86::BI__builtin_ia32_kshiftrisi:
   case X86::BI__builtin_ia32_kshiftridi: {
     return HandleMaskBinOp([](const APSInt &LHS, const APSInt &RHS) {
-      if (RHS.uge(LHS.getBitWidth()))
+      unsigned Amt = RHS.getZExtValue() & 0xFF;
+      if (Amt >= LHS.getBitWidth())
         return APSInt(APInt::getZero(LHS.getBitWidth()), LHS.isUnsigned());
-      return APSInt(LHS.lshr(RHS.getZExtValue()), LHS.isUnsigned());
+      return APSInt(LHS.lshr(Amt), LHS.isUnsigned());
     });
   }
 

@@ -4261,9 +4261,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_kshiftlidi:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
-          if (RHS.uge(LHS.getBitWidth()))
+          unsigned Amt = RHS.getZExtValue() & 0xFF;
+          if (Amt >= LHS.getBitWidth())
             return APInt::getZero(LHS.getBitWidth());
-          return LHS.shl(RHS.getZExtValue());
+          return LHS.shl(Amt);
         });
 
   case clang::X86::BI__builtin_ia32_kshiftriqi:
@@ -4272,9 +4273,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_kshiftridi:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
-          if (RHS.uge(LHS.getBitWidth()))
+          unsigned Amt = RHS.getZExtValue() & 0xFF;
+          if (Amt >= LHS.getBitWidth())
             return APInt::getZero(LHS.getBitWidth());
-          return LHS.lshr(RHS.getZExtValue());
+          return LHS.lshr(Amt);
         });
 
   case clang::X86::BI__builtin_ia32_lzcnt_u16:
