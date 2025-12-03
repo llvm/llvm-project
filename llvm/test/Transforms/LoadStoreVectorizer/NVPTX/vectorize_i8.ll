@@ -47,7 +47,7 @@ define void @int8x3a4(ptr nocapture align 4 %ptr) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> poison, i8 [[L23]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i8> [[TMP2]], i8 [[L12]], i32 1
 ; CHECK-NEXT:    store <2 x i8> [[TMP3]], ptr [[PTR0]], align 4
-; CHECK-NEXT:    store i8 [[L01]], ptr [[PTR2]], align 4
+; CHECK-NEXT:    store i8 [[L01]], ptr [[PTR2]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i64 0
