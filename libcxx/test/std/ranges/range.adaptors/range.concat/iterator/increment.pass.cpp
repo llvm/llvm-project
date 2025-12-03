@@ -31,7 +31,7 @@ struct InputRange : IntBufferView {
 
 constexpr bool test() {
   std::array<int, 4> a{1, 2, 3, 4};
-  std::array<double, 4> b{1.1, 2.2, 3.3};
+  std::array<double, 4> b{1.0, 2.0, 3.0};
 
   // one view
   {
@@ -44,6 +44,10 @@ constexpr bool test() {
     auto& result = ++it;
     assert(&result == &it);
     assert(*result == 2);
+
+    it = view.begin();
+    assert(*it++ == 1);
+    assert(*it == 2);
   }
 
   // more than one view
@@ -56,9 +60,14 @@ constexpr bool test() {
     auto& result = ++it;
     assert(&result == &it);
     assert(*result == 2);
+
+    it       = view.begin();
+    auto old = it++;
+    assert(*old == 1);
+    assert(*it == 2);
   }
 
-  // more than one view
+  // more than two views, has input range
   {
     std::ranges::concat_view view(a, b, std::views::iota(0, 5));
     auto it    = view.begin();
@@ -70,7 +79,7 @@ constexpr bool test() {
     assert(*result == 2);
   }
 
-  // input range
+  // input range, no postfix operator++
   {
     int buffer[3] = {4, 5, 6};
     std::ranges::concat_view view(a, InputRange{buffer});
@@ -96,6 +105,11 @@ constexpr bool test() {
     assert(*it == a[2]);
     ++it;
     assert(*it == a[3]);
+
+    it       = view.begin();
+    auto old = it++;
+    assert(*old == a[0]);
+    assert(*it == a[1]);
   }
 
   // Different underlying range types; ++ crosses from end of first into start of second.
@@ -171,6 +185,9 @@ constexpr bool test() {
 
     ++it; // skip e1 and e2
     assert(*it == b.front());
+    auto old = it++;
+    assert(*old == b.front());
+    assert(*it == b[1]);
   }
 
   return true;
