@@ -4080,6 +4080,11 @@ class EnumDecl : public TagDecl {
   /// and can be accessed with the provided accessors.
   unsigned ODRHash;
 
+  /// Source range covering the enum key:
+  ///  - 'enum'              (unscoped)
+  ///  - 'enum class|struct' (scoped)
+  SourceRange EnumKeyRange;
+
   EnumDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
            SourceLocation IdLoc, IdentifierInfo *Id, EnumDecl *PrevDecl,
            bool Scoped, bool ScopedUsingClassTag, bool Fixed);
@@ -4116,6 +4121,10 @@ public:
   /// True if this is an Objective-C, C++11, or
   /// Microsoft-style enumeration with a fixed underlying type.
   void setFixed(bool Fixed = true) { EnumDeclBits.IsFixed = Fixed; }
+
+  SourceRange getEnumKeyRange() const { return EnumKeyRange; }
+
+  void setEnumKeyRange(SourceRange Range) { EnumKeyRange = Range; }
 
 private:
   /// True if a valid hash is stored in ODRHash.
