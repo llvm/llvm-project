@@ -2,14 +2,7 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=0 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=1 -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:    warning: Instruction selection used fallback path for sqshrn1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun1s
+; CHECK-GI:    warning: Instruction selection used fallback path for sqshrun1s
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun8b
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun4h
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun2s
@@ -53,7 +46,6 @@
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli8h
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli4s
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli2d
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu_zero_shift_amount
 
 define <8 x i8> @sqshl8b(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sqshl8b:
