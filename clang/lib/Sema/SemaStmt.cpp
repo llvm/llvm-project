@@ -2427,14 +2427,14 @@ static bool ObjCEnumerationCollection(Expr *Collection) {
           && Collection->getType()->getAs<ObjCObjectPointerType>() != nullptr;
 }
 
-StmtResult Sema::BuildCXXForRangeRangeVar(Scope *S, Expr *Range,
-                                          bool ForExpansionStmt) {
+StmtResult Sema::BuildCXXForRangeRangeVar(Scope *S, Expr *Range, QualType Type,
+                                          bool Constexpr) {
+
   // Divide by 2, since the variables are in the inner scope (loop body).
   const auto DepthStr = std::to_string(S->getDepth() / 2);
   SourceLocation RangeLoc = Range->getBeginLoc();
-  VarDecl *RangeVar =
-      BuildForRangeVarDecl(*this, RangeLoc, Context.getAutoRRefDeductType(),
-                           std::string("__range") + DepthStr, ForExpansionStmt);
+  VarDecl *RangeVar = BuildForRangeVarDecl(
+      *this, RangeLoc, Type, std::string("__range") + DepthStr, Constexpr);
   if (FinishForRangeVarDecl(*this, RangeVar, Range, RangeLoc,
                             diag::err_for_range_deduction_failure))
 
@@ -2491,7 +2491,7 @@ StmtResult Sema::ActOnCXXForRangeStmt(
 
   // Build  auto && __range = range-init
   auto RangeDecl =
-      BuildCXXForRangeRangeVar(S, Range, /*ForExpansionStmt=*/false);
+      BuildCXXForRangeRangeVar(S, Range, Context.getAutoRRefDeductType());
   if (RangeDecl.isInvalid()) {
     ActOnInitializerError(LoopVar);
     return StmtError();
@@ -2704,7 +2704,7 @@ Sema::ForRangeBeginEndInfo Sema::BuildCXXForRangeBeginEndVars(
     Scope *S, VarDecl *RangeVar, SourceLocation ColonLoc,
     SourceLocation CoawaitLoc,
     ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps,
-    BuildForRangeKind Kind, bool ForExpansionStmt, StmtResult *RebuildResult,
+    BuildForRangeKind Kind, bool Constexpr, StmtResult *RebuildResult,
     llvm::function_ref<StmtResult()> RebuildWithDereference) {
   QualType RangeVarType = RangeVar->getType();
   SourceLocation RangeLoc = RangeVar->getLocation();
@@ -2740,10 +2740,10 @@ Sema::ForRangeBeginEndInfo Sema::BuildCXXForRangeBeginEndVars(
   const auto DepthStr = std::to_string(S->getDepth() / 2);
   VarDecl *BeginVar =
       BuildForRangeVarDecl(*this, ColonLoc, AutoType,
-                           std::string("__begin") + DepthStr, ForExpansionStmt);
+                           std::string("__begin") + DepthStr, Constexpr);
   VarDecl *EndVar =
       BuildForRangeVarDecl(*this, ColonLoc, AutoType,
-                           std::string("__end") + DepthStr, ForExpansionStmt);
+                           std::string("__end") + DepthStr, Constexpr);
 
   // Build begin-expr and end-expr and attach to __begin and __end variables.
   ExprResult BeginExpr, EndExpr;
@@ -2953,7 +2953,7 @@ StmtResult Sema::BuildCXXForRangeStmt(
     auto BeginRangeRefTy = RangeVar->getType().getNonReferenceType();
     auto [BeginVar, EndVar, BeginExpr, EndExpr] = BuildCXXForRangeBeginEndVars(
         S, RangeVar, ColonLoc, CoawaitLoc, LifetimeExtendTemps, Kind,
-        /*ForExpansionStmt=*/false, &RebuildResult, RebuildWithDereference);
+        /*Constexpr=*/false, &RebuildResult, RebuildWithDereference);
 
     if (!RebuildResult.isUnset())
       return RebuildResult;

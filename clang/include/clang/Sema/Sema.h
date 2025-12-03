@@ -11100,14 +11100,14 @@ public:
       Scope *S, VarDecl *RangeVar, SourceLocation ColonLoc,
       SourceLocation CoawaitLoc,
       ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps,
-      BuildForRangeKind Kind, bool ForExpansionStmt,
+      BuildForRangeKind Kind, bool Constexpr,
       StmtResult *RebuildResult = nullptr,
       llvm::function_ref<StmtResult()> RebuildWithDereference = {});
 
   /// Build the range variable of a range-based for loop or iterating
   /// expansion statement and return its DeclStmt.
-  StmtResult BuildCXXForRangeRangeVar(Scope *S, Expr *Range,
-                                      bool ForExpansionStmt);
+  StmtResult BuildCXXForRangeRangeVar(Scope *S, Expr *Range, QualType Type,
+                                      bool Constexpr = false);
 
   /// FinishCXXForRangeStmt - Attach the body to a C++0x for-range statement.
   /// This is a separate step from ActOnCXXForRangeStmt because analysis of the
