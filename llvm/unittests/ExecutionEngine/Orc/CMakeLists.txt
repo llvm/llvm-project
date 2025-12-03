@@ -18,6 +18,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(OrcJITTests
+  CallableTraitsHelperTest.cpp
   CoreAPIsTest.cpp
   ExecutorAddressTest.cpp
   ExecutionSessionWrapperFunctionCallsTest.cpp
