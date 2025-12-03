@@ -73,7 +73,7 @@ private:
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
   std::optional<unsigned> getConstant(const MachineOperand &VL) const;
   bool ensureDominates(const MachineOperand &Use, MachineInstr &Src) const;
-  Register lookThruCopies(Register Reg) const;
+  Register lookThruCopies(Register Reg, bool OneUseOnly = false) const;
 };
 
 } // namespace
@@ -389,12 +389,15 @@ bool RISCVVectorPeephole::convertAllOnesVMergeToVMv(MachineInstr &MI) const {
 
 // If \p Reg is defined by one or more COPYs of virtual registers, traverses
 // the chain and returns the root non-COPY source.
-Register RISCVVectorPeephole::lookThruCopies(Register Reg) const {
+Register RISCVVectorPeephole::lookThruCopies(Register Reg,
+                                             bool OneUseOnly) const {
   while (MachineInstr *Def = MRI->getUniqueVRegDef(Reg)) {
     if (!Def->isFullCopy())
       break;
     Register Src = Def->getOperand(1).getReg();
     if (!Src.isVirtual())
+      break;
+    if (OneUseOnly && !MRI->hasOneNonDBGUse(Reg))
       break;
     Reg = Src;
   }
@@ -715,7 +718,8 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
 
   Register PassthruReg = lookThruCopies(MI.getOperand(1).getReg());
   Register FalseReg = lookThruCopies(MI.getOperand(2).getReg());
-  Register TrueReg = lookThruCopies(MI.getOperand(3).getReg());
+  Register TrueReg =
+      lookThruCopies(MI.getOperand(3).getReg(), /*OneUseOnly=*/true);
   if (!TrueReg.isVirtual() || !MRI->hasOneUse(TrueReg))
     return false;
   MachineInstr &True = *MRI->getUniqueVRegDef(TrueReg);
@@ -834,6 +838,8 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
     MRI->constrainRegClass(
         MO.getReg(), True.getRegClassConstraint(MO.getOperandNo(), TII, TRI));
   }
+  // We should clear the IsKill flag since we have a new use now.
+  MRI->clearKillFlags(FalseReg);
   MI.eraseFromParent();
 
   return true;
