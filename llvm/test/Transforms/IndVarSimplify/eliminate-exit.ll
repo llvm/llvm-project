@@ -193,7 +193,7 @@ define void @mixed_width(i32 %len) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[IV]], [[LEN_ZEXT]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i64 [[IV]], [[LEN_ZEXT]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[BACKEDGE]], label [[EXIT:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @side_effect()
@@ -429,7 +429,7 @@ define void @many_exits([100 x i64] %len) {
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    call void @side_effect()
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[IV]], 999
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i64 [[IV]], 999
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
@@ -671,7 +671,7 @@ define i32 @exit_cond_depends_on_inner_loop() {
 ; CHECK-NEXT:    br i1 [[OUTER_COND_1]], label [[EXIT:%.*]], label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[IV_OUTER_NEXT]] = add nuw nsw i32 [[IV_OUTER]], 1
-; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = icmp ult i32 [[IV_OUTER]], 100
+; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = icmp samesign ult i32 [[IV_OUTER]], 100
 ; CHECK-NEXT:    br i1 [[OUTER_COND_2]], label [[OUTER_HEADER]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[X_RES:%.*]] = phi i32 [ [[X_LCSSA]], [[OUTER_EXITING_1]] ], [ -1, [[OUTER_LATCH]] ]
