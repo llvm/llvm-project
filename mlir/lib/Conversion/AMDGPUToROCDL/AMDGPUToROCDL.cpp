@@ -2322,7 +2322,7 @@ struct AMDGPUMakeDmaBaseLowering
     Value c3 = createI32Constant(rewriter, loc, 3);
 
     Type v4i32 = this->typeConverter->convertType(VectorType::get(4, i32));
-    assert(v4i32);
+    assert(v4i32 && "expected type conversion to succeed");
     Value result = LLVM::PoisonOp::create(rewriter, loc, v4i32);
     result = LLVM::InsertElementOp::create(rewriter, loc, result, c1, c0);
     result = LLVM::InsertElementOp::create(rewriter, loc, result,
@@ -2370,7 +2370,7 @@ struct AMDGPUMakeDmaDescriptorLowering
                     Value sgpr0, ArrayRef<Value> consts) const {
     // Compute data_size.
     int elementTypeWidthInBits = op.getElementTypeWidth();
-    assert(llvm::is_contained({8, 16, 32, 64}, elementTypeWidthInBits));
+    assert(llvm::is_contained({8, 16, 32, 64}, elementTypeWidthInBits) && "expected type width to be 8, 16, 32, or 64.");
     int dataSize = llvm::Log2_32(elementTypeWidthInBits / 8);
     return createI32Constant(rewriter, loc, dataSize << 16);
   }
@@ -2626,7 +2626,7 @@ struct AMDGPUMakeDmaDescriptorLowering
 
     IntegerType i32 = rewriter.getI32Type();
     Type v8i32 = this->typeConverter->convertType(VectorType::get(8, i32));
-    assert(v8i32);
+    assert(v8i32 && "expected type conversion to succeed");
     Value dgroup1 = LLVM::UndefOp::create(rewriter, loc, v8i32);
 
     for (auto [sgpr, constant] : llvm::zip_equal(sgprs, consts)) {
@@ -2651,7 +2651,7 @@ struct AMDGPUMakeDmaDescriptorLowering
 
     IntegerType i32 = rewriter.getI32Type();
     Type v4i32 = this->typeConverter->convertType(VectorType::get(4, i32));
-    assert(v4i32);
+    assert(v4i32 && "expected type conversion to succeed");
 
     SmallVector<Value> consts;
     for (int64_t i = 0; i < 8; i++)
