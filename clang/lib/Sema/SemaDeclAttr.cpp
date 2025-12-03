@@ -6992,9 +6992,7 @@ Sema::mergeModularFormatAttr(Decl *D, const AttributeCommonInfo &CI,
       Diag(Existing->getLocation(), diag::err_duplicate_attribute) << *Existing;
       Diag(CI.getLoc(), diag::note_conflicting_attribute);
     }
-    // Drop the existing attribute on the declaration in favor of the newly
-    // inherited one.
-    D->dropAttr<ModularFormatAttr>();
+    return nullptr;
   }
   return ::new (Context) ModularFormatAttr(Context, CI, ModularImplFn, ImplName,
                                            Aspects.data(), Aspects.size());
