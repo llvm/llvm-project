@@ -1320,6 +1320,8 @@ def AMDGPU_MakeDmaDescriptorOp :
      $pad_interval must be a power of two contained in [2, 256].
      $pad_amount must be a value contained in [1, 128].
 
+     $atomic_barrier_address must be aligned to 8 bytes.
+
      2D and 3D tensors may be iterated over by setting $global_increment, $lds_increment, and $iteration_count.
      $global_increment determines how much to increment the starting global memory address per iteration in units of the $base's element type.
      $lds_increment determines how much to increment the starting LDS address per iteration in units of the $base's element type.

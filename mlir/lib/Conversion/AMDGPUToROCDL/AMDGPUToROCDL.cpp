@@ -2446,6 +2446,8 @@ struct AMDGPUMakeDmaDescriptorLowering
 
     Value atomicBarrierAddress = adaptor.getAtomicBarrierAddress();
     IntegerType i32 = rewriter.getI32Type();
+    // pre-condition: atomicBarrierAddress is aligned to 8 bytes which implies
+    // that the 3 LSBs are zero.
     atomicBarrierAddress =
         LLVM::PtrToIntOp::create(rewriter, loc, i32, atomicBarrierAddress);
     atomicBarrierAddress =
