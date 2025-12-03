@@ -63,7 +63,7 @@ myst_substitutions = {"in_progress": "(In-Progress) " if tags.has("PreRelease") 
 # is invoked.
 def setup(sphinx):
     sphinx.config.myst_substitutions.update(
-        {'release': sphinx.config.release, 'version': sphinx.config.version}
+        {"release": sphinx.config.release, "version": sphinx.config.version}
     )
 
 import sphinx
