@@ -2594,7 +2594,6 @@ struct AMDGPUMakeDmaDescriptorLowering
   Value getDGroup1(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
-
     Value sgprs[8];
     for (int i = 0; i < 8; i++) {
       sgprs[i] = consts[0];
