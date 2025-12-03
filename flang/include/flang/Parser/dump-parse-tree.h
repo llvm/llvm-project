@@ -229,6 +229,8 @@ public:
   NODE(CompilerDirective, NoInline)
   NODE(CompilerDirective, Unrecognized)
   NODE(CompilerDirective, VectorAlways)
+  NODE_ENUM(CompilerDirective::VectorLength, VectorLength::Kind)
+  NODE(CompilerDirective, VectorLength)
   NODE(CompilerDirective, Unroll)
   NODE(CompilerDirective, UnrollAndJam)
   NODE(CompilerDirective, NoVector)
