@@ -87,7 +87,6 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   error.Clear();
 
   std::string executable;
-  std::vector<HANDLE> inherited_handles;
   STARTUPINFOEXW startupinfoex = {};
   STARTUPINFOW &startupinfo = startupinfoex.StartupInfo;
   PROCESS_INFORMATION pi = {};
@@ -107,14 +106,6 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
       ::CloseHandle(stderr_handle);
   });
 
-  auto inherited_handles_or_err = GetInheritedHandles(
-      launch_info, startupinfoex, stdout_handle, stderr_handle, stdin_handle);
-  if (!inherited_handles_or_err) {
-    error = Status(inherited_handles_or_err.getError());
-    return HostProcess();
-  }
-  inherited_handles = *inherited_handles_or_err;
-
   SIZE_T attributelist_size = 0;
   InitializeProcThreadAttributeList(/*lpAttributeList=*/nullptr,
                                     /*dwAttributeCount=*/1, /*dwFlags=*/0,
@@ -132,6 +123,14 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   }
   auto delete_attributelist = llvm::make_scope_exit(
       [&] { DeleteProcThreadAttributeList(startupinfoex.lpAttributeList); });
+
+  auto inherited_handles_or_err = GetInheritedHandles(
+      launch_info, startupinfoex, stdout_handle, stderr_handle, stdin_handle);
+  if (!inherited_handles_or_err) {
+    error = Status(inherited_handles_or_err.getError());
+    return HostProcess();
+  }
+  std::vector<HANDLE> inherited_handles = *inherited_handles_or_err;
 
   const char *hide_console_var =
       getenv("LLDB_LAUNCH_INFERIORS_WITHOUT_CONSOLE");
