@@ -1464,22 +1464,27 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
 /// ```
 /// %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<8x32xf32>) {
 ///   %0 = "some_def"() {layout_result_0 =
-///   #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
-///   dims = [1]> } : () -> (vector<8xf32>) %1 = vector.shape_cast %0
-///   {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
-///   1]>}: vector<8xf32> to vector<8x1xf32> %2 = vector.broadcast %1
-///   {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
-///   1]>}: vector<8x1xf32> to vector<8x32xf32> gpu.yield %1 : vector<8x32xf32>
+///     #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
+///     dims = [1]> } : () -> (vector<8xf32>)
+///   %1 = vector.shape_cast %0
+///     {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
+///      1]>}: vector<8xf32> to vector<8x1xf32>
+///   %2 = vector.broadcast %1
+///     {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
+///     1]>}: vector<8x1xf32> to vector<8x32xf32>
+///   gpu.yield %1 : vector<8x32xf32>
 /// }
 /// ```
 /// is lowered to:
 /// ```
 /// %r:1 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<8x1xf32>) {
 ///   %0 = "some_def"() {layout_result_0 =
-///   #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
-///   dims = [1]> } : () -> (vector<8xf32>) %1 = vector.shape_cast %0
-///   {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
-///   1]>}: vector<8xf32> to vector<8x1xf32> gpu.yield %0 : vector<8x1xf32>
+///     #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
+///     dims = [1]> } : () -> (vector<8xf32>)
+///   %1 = vector.shape_cast %0
+///     {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
+///     1]>}: vector<8xf32> to vector<8x1xf32>
+///   gpu.yield %0 : vector<8x1xf32>
 /// }
 /// // The broadcast is implicit through layout transformation (no-op)
 ///  %2 = vector.broadcast %r#0 : vector<8x1xf32> to vector<8x1xf32>

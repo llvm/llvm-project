@@ -940,7 +940,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   } else {
 
     // The layout is strictly determined by the payload type.
-    auto payloadTy = dyn_cast<VectorType>(load.getValueType());
+    auto payloadTy = load.getValueType();
     if (!payloadTy) {
       load.emitWarning("Not propagating, non-vector payload supplied.");
       return;
@@ -1010,7 +1010,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     // Currently, for 2D StoreScatterOp we expect that the height dimension of
     // the tensor descriptor is equal to the subgroup size. This is ensured by
     // the op verifier.
-    auto payloadTy = dyn_cast<VectorType>(storeScatter.getValueType());
+    auto payloadTy = storeScatter.getValueType();
     if (!payloadTy) {
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
       return;
