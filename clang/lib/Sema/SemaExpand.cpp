@@ -21,6 +21,8 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
 
+#include <llvm/ADT/ScopeExit.h>
+
 using namespace clang;
 using namespace sema;
 
@@ -302,6 +304,13 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
     ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
   VarDecl *ExpansionVar = cast<VarDecl>(ExpansionVarStmt->getSingleDecl());
 
+  // Reject lambdas early.
+  if (auto *RD = ExpansionInitializer->getType()->getAsCXXRecordDecl();
+      RD && RD->isLambda()) {
+    Diag(ExpansionInitializer->getBeginLoc(), diag::err_expansion_stmt_lambda);
+    return StmtError();
+  }
+
   if (ExpansionInitializer->isTypeDependent()) {
     ActOnDependentForRangeInitializer(ExpansionVar, BFRK_Build);
     return new (Context) CXXDependentExpansionStmtPattern(
@@ -317,13 +326,6 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
   if (ExpansionInitializer->getType()->isVariableArrayType()) {
     Diag(ExpansionInitializer->getExprLoc(), diag::err_expansion_stmt_vla)
         << ExpansionInitializer->getType();
-    return StmtError();
-  }
-
-  // Reject lambdas early.
-  if (auto *RD = ExpansionInitializer->getType()->getAsCXXRecordDecl();
-      RD && RD->isLambda()) {
-    Diag(ExpansionInitializer->getBeginLoc(), diag::err_expansion_stmt_lambda);
     return StmtError();
   }
 
@@ -360,6 +362,18 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
 
   Expansion->setBody(Body);
   if (HasDependentSize(Expansion))
+    return Expansion;
+
+  // Now that we're expanding this, exit the context of the expansion stmt
+  // so that we no longer treat this as dependent.
+  ContextRAII CtxGuard(*this, CurContext->getParent(),
+                       /*NewThis=*/false);
+
+  // Even if the size isn't technically dependent, delay expansion until
+  // we're no longer in a template if this is an iterating expansion statement
+  // since evaluating a lambda declared in a template doesn't work too well.
+  if (CurContext->isDependentContext() &&
+      isa<CXXIteratingExpansionStmtPattern>(Expansion))
     return Expansion;
 
   // This can fail if this is an iterating expansion statement.
@@ -399,11 +413,6 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
   SmallVector<Stmt *, 4> Instantiations;
   CXXExpansionStmtDecl *ESD = Expansion->getDecl();
   for (uint64_t I = 0; I < *NumInstantiations; ++I) {
-    // Now that we're expanding this, exit the context of the expansion stmt
-    // so that we no longer treat this as dependent.
-    ContextRAII CtxGuard(*this, CurContext->getParent(),
-                         /*NewThis=*/false);
-
     TemplateArgument Arg{Context, llvm::APSInt::get(I),
                          Context.getPointerDiffType()};
     MultiLevelTemplateArgumentList MTArgList(ESD, Arg, true);
@@ -462,42 +471,176 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
   // }()
   // TODO: CWG 3131 changes this lambda a bit.
   if (auto *Iterating = dyn_cast<CXXIteratingExpansionStmtPattern>(Expansion)) {
+    SourceLocation Loc = Expansion->getColonLoc();
     EnterExpressionEvaluationContext ExprEvalCtx(
         *this, ExpressionEvaluationContext::ConstantEvaluated);
 
-    // FIXME: Actually do that; unfortunately, conjuring a lambda out of thin
-    // air in Sema is a massive pain, so for now just cheat by computing
-    // 'end - begin'.
-    SourceLocation Loc = Iterating->getColonLoc();
+    // This is mostly copied from ParseLambdaExpressionAfterIntroducer().
+    ParseScope LambdaScope(*this, Scope::LambdaScope | Scope::DeclScope |
+                                      Scope::FunctionDeclarationScope |
+                                      Scope::FunctionPrototypeScope);
+    AttributeFactory AttrFactory;
+    LambdaIntroducer Intro;
+    Intro.Range = SourceRange(Loc, Loc);
+    Intro.Default = LCD_ByRef; // CWG 3131
+    Intro.DefaultLoc = Loc;
+    DeclSpec DS(AttrFactory);
+    Declarator D(DS, ParsedAttributesView::none(),
+                 DeclaratorContext::LambdaExpr);
+    PushLambdaScope();
+    ActOnLambdaExpressionAfterIntroducer(Intro, getCurScope());
+
+    // Make the lambda 'consteval'.
+    {
+      ParseScope Prototype(*this, Scope::FunctionPrototypeScope |
+                                     Scope::FunctionDeclarationScope |
+                                     Scope::DeclScope);
+      const char* PrevSpec = nullptr;
+      unsigned DiagId = 0;
+      DS.SetConstexprSpec(ConstexprSpecKind::Consteval, Loc, PrevSpec, DiagId);
+      assert(DiagId == 0 && PrevSpec == nullptr);
+      ActOnLambdaClosureParameters(getCurScope(), /*ParamInfo=*/{});
+      ActOnLambdaClosureQualifiers(Intro, /*MutableLoc=*/SourceLocation());
+    }
+
+    ParseScope BodyScope(*this, Scope::BlockScope | Scope::FnScope |
+                                    Scope::DeclScope |
+                                    Scope::CompoundStmtScope);
+
+    ActOnStartOfLambdaDefinition(Intro, D, DS);
+
+    // Enter the compound statement that is the lambda body.
+    ActOnStartOfCompoundStmt(/*IsStmtExpr=*/false);
+    ActOnAfterCompoundStatementLeadingPragmas();
+    auto PopScopesOnReturn = llvm::make_scope_exit([&] {
+      ActOnFinishOfCompoundStmt();
+      ActOnLambdaError(Loc, getCurScope());
+    });
+
+    // std::ptrdiff_t result = 0;
+    QualType PtrDiffT = Context.getPointerDiffType();
+    VarDecl *ResultVar = VarDecl::Create(
+        Context, CurContext, Loc, Loc, &PP.getIdentifierTable().get("__result"),
+        PtrDiffT, Context.getTrivialTypeSourceInfo(PtrDiffT, Loc), SC_None);
+    Expr *Zero = ActOnIntegerConstant(Loc, 0).get();
+    AddInitializerToDecl(ResultVar, Zero, false);
+    StmtResult ResultVarStmt =
+        ActOnDeclStmt(ConvertDeclToDeclGroup(ResultVar), Loc, Loc);
+    if (ResultVarStmt.isInvalid() || ResultVar->isInvalidDecl())
+      return std::nullopt;
+
+    // Start the for loop.
+    ParseScope ForScope(*this, Scope::DeclScope | Scope::ControlScope);
+
+    // auto i = begin;
+    VarDecl *IterationVar = VarDecl::Create(
+        Context, CurContext, Loc, Loc, &PP.getIdentifierTable().get("__i"),
+        Context.getAutoDeductType(),
+        Context.getTrivialTypeSourceInfo(Context.getAutoDeductType(), Loc),
+        SC_None);
     DeclRefExpr *Begin = BuildDeclRefExpr(
         Iterating->getBeginVar(),
         Iterating->getBeginVar()->getType().getNonReferenceType(), VK_LValue,
         Loc);
+    AddInitializerToDecl(IterationVar, Begin, false);
+    StmtResult IterationVarStmt =
+        ActOnDeclStmt(ConvertDeclToDeclGroup(IterationVar), Loc, Loc);
+    if (IterationVarStmt.isInvalid() || IterationVar->isInvalidDecl())
+      return std::nullopt;
 
+    // i != end
+    DeclRefExpr *IterationVarDeclRef = BuildDeclRefExpr(
+        IterationVar, IterationVar->getType().getNonReferenceType(), VK_LValue,
+        Loc);
     DeclRefExpr *End = BuildDeclRefExpr(
         Iterating->getEndVar(),
         Iterating->getEndVar()->getType().getNonReferenceType(), VK_LValue,
         Loc);
+    ExprResult NotEqual = ActOnBinOp(getCurScope(), Loc, tok::exclaimequal,
+                                     IterationVarDeclRef, End);
+    if (NotEqual.isInvalid())
+      return std::nullopt;
+    ConditionResult Condition = ActOnCondition(
+        getCurScope(), Loc, NotEqual.get(), ConditionKind::Boolean,
+        /*MissingOk=*/false);
+    if (Condition.isInvalid())
+      return std::nullopt;
 
-    ExprResult N = ActOnBinOp(getCurScope(), Loc, tok::minus, End, Begin);
-    if (N.isInvalid())
+    // ++i
+    IterationVarDeclRef = BuildDeclRefExpr(
+        IterationVar, IterationVar->getType().getNonReferenceType(), VK_LValue,
+        Loc);
+    ExprResult Increment =
+        ActOnUnaryOp(getCurScope(), Loc, tok::plusplus, IterationVarDeclRef);
+    if (Increment.isInvalid())
+      return std::nullopt;
+    FullExprArg ThirdPart = MakeFullDiscardedValueExpr(Increment.get());
+
+    // Enter the body of the for loop.
+    ParseScope InnerScope(*this, Scope::DeclScope);
+    getCurScope()->decrementMSManglingNumber();
+
+    // ++result;
+    DeclRefExpr *ResultDeclRef = BuildDeclRefExpr(
+        ResultVar, ResultVar->getType().getNonReferenceType(), VK_LValue, Loc);
+    ExprResult IncrementResult =
+        ActOnUnaryOp(getCurScope(), Loc, tok::plusplus, ResultDeclRef);
+    if (IncrementResult.isInvalid())
+      return std::nullopt;
+    StmtResult IncrementStmt = ActOnExprStmt(IncrementResult.get());
+    if (IncrementStmt.isInvalid())
+      return std::nullopt;
+
+    // Exit the for loop.
+    InnerScope.Exit();
+    ForScope.Exit();
+    StmtResult ForLoop =
+        ActOnForStmt(Loc, Loc, IterationVarStmt.get(), Condition, ThirdPart,
+                     Loc, IncrementStmt.get());
+    if (ForLoop.isInvalid())
+      return std::nullopt;
+
+    // return result;
+    ResultDeclRef = BuildDeclRefExpr(
+        ResultVar, ResultVar->getType().getNonReferenceType(), VK_LValue, Loc);
+    StmtResult Return = ActOnReturnStmt(Loc, ResultDeclRef, getCurScope());
+    if (Return.isInvalid())
+      return std::nullopt;
+
+    // Finally, we can build the compound statement that is the lambda body.
+    StmtResult LambdaBody = ActOnCompoundStmt(
+        Loc, Loc, {ResultVarStmt.get(), ForLoop.get(), Return.get()},
+        /*isStmtExpr=*/false);
+    if (LambdaBody.isInvalid())
+      return std::nullopt;
+
+    ActOnFinishOfCompoundStmt();
+    BodyScope.Exit();
+    LambdaScope.Exit();
+    PopScopesOnReturn.release();
+    ExprResult Lambda = ActOnLambdaExpr(Loc, LambdaBody.get());
+    if (Lambda.isInvalid())
+      return std::nullopt;
+
+    // Invoke the lambda.
+    ExprResult Call =
+        ActOnCallExpr(getCurScope(), Lambda.get(), Loc, /*ArgExprs=*/{}, Loc);
+    if (Call.isInvalid())
       return std::nullopt;
 
     Expr::EvalResult ER;
     SmallVector<PartialDiagnosticAt, 4> Notes;
     ER.Diag = &Notes;
-    if (!N.get()->EvaluateAsInt(ER, Context)) {
+    if (!Call.get()->EvaluateAsInt(ER, Context)) {
       Diag(Loc, diag::err_expansion_size_expr_not_ice);
       for (const auto &[Location, PDiag] : Notes)
         Diag(Location, PDiag);
       return std::nullopt;
     }
 
-    if (ER.Val.getInt().isNegative()) {
-      Diag(Loc, diag::err_expansion_size_negative) << ER.Val.getInt();
-      return std::nullopt;
-    }
-
+    // It shouldn't be possible for this to be negative since we compute this
+    // via the built-in '++' on a ptrdiff_t.
+    assert(ER.Val.getInt().isNonNegative());
     return ER.Val.getInt().getZExtValue();
   }
 
