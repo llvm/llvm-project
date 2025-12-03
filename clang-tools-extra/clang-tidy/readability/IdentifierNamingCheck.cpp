@@ -318,8 +318,8 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
   if (!EOL)
     EOL = Begin + strlen(Begin);
 
-  const char *PosList[] = {strchr(Begin, '='), strchr(Begin, ';'),
-                           strchr(Begin, ','), strchr(Begin, ')'), EOL};
+  const char *const PosList[] = {strchr(Begin, '='), strchr(Begin, ';'),
+                                 strchr(Begin, ','), strchr(Begin, ')'), EOL};
   for (const auto &Pos : PosList) {
     if (Pos > Begin)
       EOL = std::min(EOL, Pos);
