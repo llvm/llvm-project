@@ -2898,13 +2898,13 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = isShiftedUInt<4, 1>(Imm);
           break;
         case RISCVOp::OPERAND_UIMM5_NONZERO:
-          Ok = isUInt<5>(Imm) && (Imm != 0);
+          Ok = Imm >= 1 && Imm <= 31;
           break;
         case RISCVOp::OPERAND_UIMM5_GT3:
-          Ok = isUInt<5>(Imm) && (Imm > 3);
+          Ok = Imm >= 4 && Imm <= 31;
           break;
         case RISCVOp::OPERAND_UIMM5_PLUS1:
-          Ok = (isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32);
+          Ok = Imm >= 1 && Imm <= 32;
           break;
         case RISCVOp::OPERAND_UIMM6_LSB0:
           Ok = isShiftedUInt<5, 1>(Imm);
@@ -2937,7 +2937,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = isShiftedUInt<8, 2>(Imm) && (Imm != 0);
           break;
         case RISCVOp::OPERAND_UIMM16_NONZERO:
-          Ok = isUInt<16>(Imm) && (Imm != 0);
+          Ok = Imm >= 1 && Imm <= 65535;
           break;
         case RISCVOp::OPERAND_THREE:
           Ok = Imm == 3;
@@ -2946,7 +2946,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = Imm == 4;
           break;
         case RISCVOp::OPERAND_IMM5_ZIBI:
-          Ok = (isUInt<5>(Imm) && Imm != 0) || Imm == -1;
+          Ok = (Imm >= 1 && Imm <= 31) || Imm == -1;
           break;
           // clang-format off
         CASE_OPERAND_SIMM(5)
@@ -2957,7 +2957,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_SIMM(26)
         // clang-format on
         case RISCVOp::OPERAND_SIMM5_PLUS1:
-          Ok = (isInt<5>(Imm) && Imm != -16) || Imm == 16;
+          Ok = Imm >= -15 && Imm <= 16;
           break;
         case RISCVOp::OPERAND_SIMM5_NONZERO:
           Ok = isInt<5>(Imm) && (Imm != 0);
@@ -2991,7 +2991,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = Ok && Imm != 0;
           break;
         case RISCVOp::OPERAND_CLUI_IMM:
-          Ok = (isUInt<5>(Imm) && Imm != 0) ||
+          Ok = (Imm >= 1 && Imm <= 31) ||
                (Imm >= 0xfffe0 && Imm <= 0xfffff);
           break;
         case RISCVOp::OPERAND_RVKRNUM:
