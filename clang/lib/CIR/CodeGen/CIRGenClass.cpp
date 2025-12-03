@@ -126,8 +126,7 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
                             lhs.isVolatileQualified());
       // Ensure that we destroy the objects if an exception is thrown later in
       // the constructor.
-      QualType::DestructionKind dtorKind = fieldType.isDestructedType();
-      assert(!cgf.needsEHCleanup(dtorKind) &&
+      assert(!cgf.needsEHCleanup(fieldType.isDestructedType()) &&
              "Arrays of non-record types shouldn't need EH cleanup");
       return;
     }
