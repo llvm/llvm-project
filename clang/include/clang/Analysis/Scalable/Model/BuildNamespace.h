@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_BUILDNAMESPACE_H
 #define LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_BUILDNAMESPACE_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 #include <string>
@@ -62,8 +63,8 @@ public:
 
   NestedBuildNamespace makeQualified(NestedBuildNamespace Namespace) {
     auto Copy = *this;
-    for (const auto& N : Namespace.Namespaces)
-      Copy.Namespaces.push_back(N);
+    Copy.Namespaces.reserve(Copy.Namespaces.size() + Namespace.Namespaces.size());
+    llvm::append_range(Copy.Namespaces, Namespace.Namespaces);
     return Copy;
   }
 
