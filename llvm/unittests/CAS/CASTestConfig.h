@@ -74,7 +74,8 @@ protected:
 
   void SetUp() override {
 #ifdef _WIN32
-    if (llvm::GetWindowsOSVersion() < llvm::VersionTuple(10, 0, 0, 17763))
+    // Temporarily disable CAS tests on pre windows 11 OS.
+    if (llvm::GetWindowsOSVersion() < llvm::VersionTuple(10, 0, 0, 22000))
       GTEST_SKIP() << "CAS tests skipped on older windows version";
 #endif
     NextCASIndex = 0;

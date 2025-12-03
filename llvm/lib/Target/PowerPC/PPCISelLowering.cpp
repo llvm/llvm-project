@@ -681,6 +681,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // To handle counter-based loop conditions.
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i1, Custom);
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
 
   setOperationAction(ISD::INTRINSIC_VOID, MVT::i8, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::i16, Custom);
@@ -12657,7 +12658,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ROTL:               return LowerROTL(Op, DAG);
 
   // For counter-based loop handling.
-  case ISD::INTRINSIC_W_CHAIN:  return SDValue();
+  case ISD::INTRINSIC_W_CHAIN:
+    return SDValue();
 
   case ISD::BITCAST:            return LowerBITCAST(Op, DAG);
 
@@ -14568,6 +14570,46 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addReg(Val, MI.getOpcode() == PPC::LQX_PSEUDO ? RegState::Define : 0)
         .addImm(0)
         .addReg(Ptr);
+  } else if (MI.getOpcode() == PPC::LWAT_PSEUDO ||
+             MI.getOpcode() == PPC::LDAT_PSEUDO) {
+    DebugLoc DL = MI.getDebugLoc();
+    Register DstReg = MI.getOperand(0).getReg();
+    Register PtrReg = MI.getOperand(1).getReg();
+    Register ValReg = MI.getOperand(2).getReg();
+    unsigned FC = MI.getOperand(3).getImm();
+    bool IsLwat = MI.getOpcode() == PPC::LWAT_PSEUDO;
+    Register Val64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    if (IsLwat)
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::SUBREG_TO_REG), Val64)
+          .addImm(0)
+          .addReg(ValReg)
+          .addImm(PPC::sub_32);
+    else
+      Val64 = ValReg;
+
+    Register G8rPair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
+    Register UndefG8r = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), UndefG8r);
+    BuildMI(*BB, MI, DL, TII->get(PPC::REG_SEQUENCE), G8rPair)
+        .addReg(UndefG8r)
+        .addImm(PPC::sub_gp8_x0)
+        .addReg(Val64)
+        .addImm(PPC::sub_gp8_x1);
+
+    Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(IsLwat ? PPC::LWAT : PPC::LDAT), PairResult)
+        .addReg(G8rPair)
+        .addReg(PtrReg)
+        .addImm(FC);
+    Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
+        .addReg(PairResult, 0, PPC::sub_gp8_x0);
+    if (IsLwat)
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+          .addReg(Result64, 0, PPC::sub_32);
+    else
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+          .addReg(Result64);
   } else {
     llvm_unreachable("Unexpected instr type to insert");
   }

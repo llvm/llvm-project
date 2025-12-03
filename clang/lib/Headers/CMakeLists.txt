@@ -119,6 +119,7 @@ set(opencl_files
 
 set(ppc_files
   altivec.h
+  amo.h
   )
 
 set(ppc_htm_files

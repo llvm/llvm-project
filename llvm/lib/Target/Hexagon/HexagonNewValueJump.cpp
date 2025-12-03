@@ -138,7 +138,7 @@ static bool canBeFeederToNewValueJump(const HexagonInstrInfo *QII,
     return false;
 
   // Make sure that the (unique) def operand is a register from IntRegs.
-  bool HadDef = false;
+  [[maybe_unused]] bool HadDef = false;
   for (const MachineOperand &Op : II->operands()) {
     if (!Op.isReg() || !Op.isDef())
       continue;

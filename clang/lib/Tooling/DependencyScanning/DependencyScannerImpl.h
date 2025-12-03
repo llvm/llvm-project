@@ -38,7 +38,8 @@ public:
       std::optional<StringRef> ModuleName = std::nullopt)
       : Service(Service), WorkingDirectory(WorkingDirectory),
         Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)) {}
-  bool runInvocation(std::unique_ptr<CompilerInvocation> Invocation,
+  bool runInvocation(std::string Executable,
+                     std::unique_ptr<CompilerInvocation> Invocation,
                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer);
@@ -46,22 +47,7 @@ public:
   bool hasScanned() const { return Scanned; }
   bool hasDiagConsumerFinished() const { return DiagConsumerFinished; }
 
-  /// Take the cc1 arguments corresponding to the most recent invocation used
-  /// with this action. Any modifications implied by the discovered dependencies
-  /// will have already been applied.
-  std::vector<std::string> takeLastCC1Arguments() {
-    std::vector<std::string> Result;
-    std::swap(Result, LastCC1Arguments); // Reset LastCC1Arguments to empty.
-    return Result;
-  }
-
 private:
-  void setLastCC1Arguments(CompilerInvocation &&CI) {
-    if (MDC)
-      MDC->applyDiscoveredDependencies(CI);
-    LastCC1Arguments = CI.getCC1CommandLine();
-  }
-
   DependencyScanningService &Service;
   StringRef WorkingDirectory;
   DependencyConsumer &Consumer;
@@ -69,7 +55,6 @@ private:
   IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   std::optional<CompilerInstance> ScanInstanceStorage;
   std::shared_ptr<ModuleDepCollector> MDC;
-  std::vector<std::string> LastCC1Arguments;
   bool Scanned = false;
   bool DiagConsumerFinished = false;
 };
