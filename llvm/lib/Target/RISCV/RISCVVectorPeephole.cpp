@@ -838,7 +838,7 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
     MRI->constrainRegClass(
         MO.getReg(), True.getRegClassConstraint(MO.getOperandNo(), TII, TRI));
   }
-  // We should clear the IsKill flag since we have an use now.
+  // We should clear the IsKill flag since we have a new use now.
   MRI->clearKillFlags(FalseReg);
   MI.eraseFromParent();
 

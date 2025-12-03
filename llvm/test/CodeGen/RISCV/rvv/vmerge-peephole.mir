@@ -159,8 +159,7 @@ body: |
     %add1:vrnov0 = COPY killed %add:vr
     %or:vrnov0 = PseudoVOR_VV_M1 $noreg, %add1:vrnov0, %y:vr, -1, 5, 3
     %merge:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %add1:vrnov0, killed %or:vrnov0, killed %mask:vmv0, -1, 5 /* e32 */
-    $v8 = COPY %merge:vrnov0
-    PseudoRET implicit $v8
+
 ...
 ---
 name: copy_multiple_use
