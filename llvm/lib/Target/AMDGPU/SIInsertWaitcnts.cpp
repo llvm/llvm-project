@@ -114,16 +114,17 @@ using VMEMID = uint32_t;
 enum : VMEMID {
   TRACKINGID_RANGE_LEN = (1 << 16),
 
+  // Important: MCRegUnits must always be tracked starting from 0, as we
+  // need to be able to convert between a MCRegUnit and a VMEMID freely.
   REGUNITS_BEGIN = 0,
   REGUNITS_END = REGUNITS_BEGIN + TRACKINGID_RANGE_LEN,
 
   // Note for LDSDMA: LDSDMA_BEGIN corresponds to the "common"
   // entry, which is updated for all LDS DMA operations encountered.
   // Specific LDS DMA IDs start at LDSDMA_BEGIN + 1.
+  NUM_LDSDMA = TRACKINGID_RANGE_LEN,
   LDSDMA_BEGIN = REGUNITS_END,
-  LDSDMA_END = LDSDMA_BEGIN + TRACKINGID_RANGE_LEN,
-
-  NUM_LDSDMA = TRACKINGID_RANGE_LEN
+  LDSDMA_END = LDSDMA_BEGIN + NUM_LDSDMA,
 };
 
 /// Convert a MCRegUnit to a VMEMID.
@@ -594,11 +595,29 @@ public:
 class WaitcntBrackets {
 public:
   WaitcntBrackets(const SIInsertWaitcnts *Context) : Context(Context) {
-    static_assert(REGUNITS_BEGIN == 0,
-                  "REGUNITS_BEGIN must be zero; tracking depends on being able "
-                  "to convert a register unit ID to a VMEMID directly!");
     assert(Context->TRI->getNumRegUnits() < REGUNITS_END);
   }
+
+#ifndef NDEBUG
+  ~WaitcntBrackets() {
+    unsigned NumUnusedVmem = 0, NumUnusedSGPRs = 0;
+    for (auto &[ID, Val] : VMem) {
+      if (Val.empty())
+        ++NumUnusedVmem;
+    }
+    for (auto &[ID, Val] : SGPRs) {
+      if (Val.empty())
+        ++NumUnusedSGPRs;
+    }
+
+    if (NumUnusedVmem || NumUnusedSGPRs) {
+      errs() << "WaitcntBracket had unused entries at destruction time: "
+             << NumUnusedVmem << " VMem and " << NumUnusedSGPRs
+             << " SGPR unused entries\n";
+      std::abort();
+    }
+  }
+#endif
 
   bool isSmemCounter(InstCounterType T) const {
     return T == Context->SmemAccessCounter || T == X_CNT;
@@ -1073,7 +1092,7 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
             }
           }
         }
-        if (Slot)
+        if (Slot || LDSDMAStores.size() == NUM_LDSDMA - 1)
           break;
         // The slot may not be valid because it can be >= NUM_LDSDMA which
         // means the scoreboard cannot track it. We still want to preserve the
