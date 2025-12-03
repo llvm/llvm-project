@@ -136,3 +136,30 @@ body: |
     %y:vrnov0 = COPY %x
     %z:vrnov0 = PseudoVMERGE_VVM_M1 %passthru, %passthru, %y, %mask, %avl, 5 /* e32 */
 ...
+---
+name: copy_is_killed
+body: |
+  bb.0:
+    liveins: $v0, $v8, $v9
+    ; CHECK-LABEL: name: copy_is_killed
+    ; CHECK: liveins: $v0, $v8, $v9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = COPY $v8
+    ; CHECK-NEXT: %y:vr = COPY $v9
+    ; CHECK-NEXT: %mask:vmv0 = COPY $v0
+    ; CHECK-NEXT: %add0:vr = PseudoVADD_VV_M1 $noreg, %x, %y, -1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: %add1:vrnov0 = COPY killed %add:vrnov0
+    ; CHECK-NEXT: %merge:vrnov0 = PseudoVOR_VV_M1_MASK %add:vrnov0, %add1, %y, %mask, -1, 5 /* e32 */, 1 /* ta, mu */
+    ; CHECK-NEXT: $v8 = COPY %merge
+    ; CHECK-NEXT: PseudoRET implicit $v8
+    %x:vr = COPY $v8
+    %y:vr = COPY $v9
+    %mask:vmv0 = COPY $v0
+    %add0:vr = PseudoVADD_VV_M1 $noreg, %x:vr, %y:vr, -1, 5, 3
+    %add1:vrnov0 = COPY killed %add:vr
+    %or:vrnov0 = PseudoVOR_VV_M1 $noreg, %add1:vrnov0, %y:vr, -1, 5, 3
+    %merge:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %add1:vrnov0, killed %or:vrnov0, killed %mask:vmv0, -1, 5 /* e32 */
+    $v8 = COPY %merge:vrnov0
+    PseudoRET implicit $v8
+...
+
