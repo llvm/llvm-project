@@ -717,18 +717,10 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     LLVM_DEBUG(llvm::dbgs().indent(2)
                << "Found reference to global " << globalName.str() << " at "
                << *op << "\n");
-    if (source.isPointer()) {
-      // Pointers can alias with any pointer or target.
-      tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
-    } else if (source.isTarget()) {
-      // Targets could alias with any pointer but not with each other.
-      tag = state.getFuncTreeWithScope(func, scopeOp)
-                .targetDataTree.getTag(globalName);
-    } else {
-      // In general, place the tags under the "global data" root.
-      fir::TBAATree::SubtreeState *subTree =
-          &state.getMutableFuncTreeWithScope(func, scopeOp).globalDataTree;
 
+    // Add a named tag inside the given subtree, disambiguating members of a
+    // common block
+    auto addTagUsingStorageDesc = [&](fir::TBAATree::SubtreeState *subTree) {
       mlir::Operation *instantiationPoint = source.origin.instantiationPoint;
       auto storageIface =
           mlir::dyn_cast_or_null<fir::FortranVariableStorageOpInterface>(
@@ -773,6 +765,19 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
         LLVM_DEBUG(llvm::dbgs()
                    << "Tagged under '" << globalName << "' root\n");
       }
+    };
+
+    if (source.isPointer()) {
+      // Pointers can alias with any pointer or target.
+      tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
+    } else if (source.isTarget()) {
+      // Targets could alias with any pointer but not with each other.
+      addTagUsingStorageDesc(
+          &state.getMutableFuncTreeWithScope(func, scopeOp).targetDataTree);
+    } else {
+      // In general, place the tags under the "global data" root.
+      addTagUsingStorageDesc(
+          &state.getMutableFuncTreeWithScope(func, scopeOp).globalDataTree);
     }
 
     // TBAA for global variables with descriptors

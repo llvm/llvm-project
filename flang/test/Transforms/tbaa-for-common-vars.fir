@@ -427,3 +427,52 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK:           fir.load %{{[0-9]+}} {tbaa = [#[[$ATTR_86]]]} : !fir.ptr<f32>
 // CHECK:           fir.load %{{[0-9]+}} : !fir.ref<i32>
 // CHECK:           fir.store %{{[0-9]+}} to %{{[0-9]+}} : !fir.ref<f32>
+
+// -----
+
+// Fortran source:
+// subroutine target_comon_tbaa()
+//   real :: a
+//   real, target :: b, c
+//   common /common1/ a,b,c
+//   a = b
+// end subroutine
+//
+// Test generation of tbaa tags where some members of a common block are TARGET
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {  fir.global common @block_(dense<0> : vector<44xi8>) {alignment = 4 : i64} : !fir.array<44xi8>
+  fir.global common @common1_(dense<0> : vector<12xi8>) {alignment = 4 : i64} : !fir.array<12xi8>
+  func.func @_QPtarget_common_tbaa() {
+    %c8 = arith.constant 8 : index
+    %c4 = arith.constant 4 : index
+    %c0 = arith.constant 0 : index
+    %0 = fir.dummy_scope : !fir.dscope
+    %1 = fir.address_of(@common1_) : !fir.ref<!fir.array<12xi8>>
+    %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<12xi8>>, index) -> !fir.ref<i8>
+    %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<f32>
+    %4 = fir.declare %3 storage(%1[0]) {uniq_name = "_QFtarget_comon_tbaaEa"} : (!fir.ref<f32>, !fir.ref<!fir.array<12xi8>>) -> !fir.ref<f32>
+    %5 = fir.coordinate_of %1, %c4 : (!fir.ref<!fir.array<12xi8>>, index) -> !fir.ref<i8>
+    %6 = fir.convert %5 : (!fir.ref<i8>) -> !fir.ref<f32>
+    %7 = fir.declare %6 storage(%1[4]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtarget_comon_tbaaEb"} : (!fir.ref<f32>, !fir.ref<!fir.array<12xi8>>) -> !fir.ref<f32>
+    %8 = fir.coordinate_of %1, %c8 : (!fir.ref<!fir.array<12xi8>>, index) -> !fir.ref<i8>
+    %9 = fir.convert %8 : (!fir.ref<i8>) -> !fir.ref<f32>
+    %10 = fir.declare %9 storage(%1[8]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtarget_comon_tbaaEc"} : (!fir.ref<f32>, !fir.ref<!fir.array<12xi8>>) -> !fir.ref<f32>
+    %11 = fir.load %7 : !fir.ref<f32>
+    fir.store %11 to %4 : !fir.ref<f32>
+    return
+  }
+}
+// CHECK:      #[[TBAA_FUNC_ROOT:.*]] = #llvm.tbaa_root<id = "Flang function root _QPtarget_common_tbaa">
+// CHECK-NEXT: #[[ANY_ACCESS:.*]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[TBAA_FUNC_ROOT]], 0>}>
+// CHECK-NEXT: #[[ANY_DATA:.*]]  = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANY_ACCESS]], 0>}>
+// CHECK-NEXT: #[[TARGET_DATA:.*]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[ANY_DATA]], 0>}>
+// CHECK-NEXT: #[[GLOBAL_DATA:.*]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[ANY_DATA]], 0>}>
+// CHECK-NEXT: #[[TARGET_COMMON:.*]] = #llvm.tbaa_type_desc<id = "target data/common1_", members = {<#[[TARGET_DATA]], 0>}>
+// CHECK-NEXT: #[[GLOBAL_COMMON:.*]] = #llvm.tbaa_type_desc<id = "global data/common1_", members = {<#[[GLOBAL_DATA]], 0>}>
+// CHECK-NEXT: #[[B:.*]] = #llvm.tbaa_type_desc<id = "target data/common1_/bytes_4_to_7", members = {<#[[TARGET_COMMON]], 0>}>
+// CHECK-NEXT: #[[A:.*]] = #llvm.tbaa_type_desc<id = "global data/common1_/bytes_0_to_3", members = {<#[[GLOBAL_COMMON]], 0>}>
+// CHECK-NEXT: #[[B_TAG:.*]] = #llvm.tbaa_tag<base_type = #[[B]], access_type = #[[B]], offset = 0>
+// CHECK-NEXT: #[[A_TAG:.*]] = #llvm.tbaa_tag<base_type = #[[A]], access_type = #[[A]], offset = 0>
+
+// CHECK-LABEL: func.func @_QPtarget_common_tbaa()
+// CHECK:         %[[LOAD:.*]] = fir.load %{{.*}} {tbaa = [#[[B_TAG]]]}
+// CHECK:         fir.store %[[LOAD]] to %{{.*}} {tbaa = [#[[A_TAG]]]}
