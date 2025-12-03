@@ -274,8 +274,11 @@ Id DAP::Send(const Message &message) {
   std::lock_guard<std::mutex> guard(call_mutex);
   Message msg = std::visit(
       [this](auto &&msg) -> Message {
-        if (msg.seq == kCalculateSeq)
-          msg.seq = seq++;
+        if (msg.seq == kCalculateSeq) {
+          seq++;
+          msg.seq = seq;
+        }
+        assert(msg.seq > 0 && "message sequence must be greater than zero.");
         return msg;
       },
       Message(message));
