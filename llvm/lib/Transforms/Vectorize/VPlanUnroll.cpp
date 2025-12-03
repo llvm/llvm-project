@@ -304,10 +304,10 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(VPR));
       Type *VFTy = TypeInfo.inferScalarType(&Plan.getVF());
       VPValue *VF = Builder.createScalarZExtOrTrunc(
-          &Plan.getVF(), IndexTy, VFTy, DebugLoc::getCompilerGenerated());
+          &Plan.getVF(), IndexTy, VFTy, DebugLoc::getUnknown());
       VPValue *VFxPart = Builder.createOverflowingOp(
           Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
-          {true, true}, DebugLoc::getCompilerGenerated());
+          {true, true});
       Copy->setOperand(0, VPR->getOperand(0));
       Copy->addOperand(VFxPart);
       continue;
