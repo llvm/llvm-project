@@ -53523,18 +53523,48 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
   if (Mst->isCompressingStore())
     return SDValue();
 
-  EVT VT = Mst->getValue().getValueType();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-
-  if (Mst->isTruncatingStore())
-    return SDValue();
-
   if (SDValue ScalarStore = reduceMaskedStoreToScalarStore(Mst, DAG, Subtarget))
     return ScalarStore;
 
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDLoc DL(N);
+
+  SDValue Mask = Mst->getMask();
+  SDValue Value = Mst->getValue();
+  EVT MemVT = Mst->getMemoryVT();
+  EVT VT = Value.getValueType();
+
+  // See if the truncating store can be a saturating truncated store.
+  if (Mst->isTruncatingStore()) {
+    if (VT.isVector() && MemVT.isVector() && VT.getScalarType().isInteger() &&
+        MemVT.getScalarType().isInteger() &&
+        VT.getVectorNumElements() == MemVT.getVectorNumElements() &&
+        Subtarget.hasBWI() && Subtarget.hasVLX()) {
+
+      SDValue SatSrc;
+      unsigned Opc;
+      if (SDValue SVal = detectSSatPattern(Value, MemVT)) {
+        SatSrc = SVal;
+        Opc = X86ISD::VMTRUNCSTORES;
+      } else if (SDValue UVal = detectUSatPattern(Value, MemVT, DAG, DL)) {
+        SatSrc = UVal;
+        Opc = X86ISD::VMTRUNCSTOREUS;
+      } else {
+        return SDValue();
+      }
+
+      SDVTList VTs = DAG.getVTList(MVT::Other);
+      SDValue Ops[] = {Mst->getChain(), SatSrc, Mst->getBasePtr(), Mask};
+      MachineMemOperand *MMO = Mst->getMemOperand();
+      return DAG.getMemIntrinsicNode(Opc, DL, VTs, Ops, MemVT, MMO);
+    }
+
+    // Otherwise don't combine if this store already truncates.
+    return SDValue();
+  }
+
   // If the mask value has been legalized to a non-boolean vector, try to
   // simplify ops leading up to it. We only demand the MSB of each lane.
-  SDValue Mask = Mst->getMask();
   if (Mask.getScalarValueSizeInBits() != 1) {
     APInt DemandedBits(APInt::getSignMask(VT.getScalarSizeInBits()));
     if (TLI.SimplifyDemandedBits(Mask, DemandedBits, DCI)) {
@@ -53550,14 +53580,12 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
                                 Mst->getAddressingMode());
   }
 
-  SDValue Value = Mst->getValue();
   if (Value.getOpcode() == ISD::TRUNCATE && Value.getNode()->hasOneUse() &&
-      TLI.isTruncStoreLegal(Value.getOperand(0).getValueType(),
-                            Mst->getMemoryVT())) {
-    return DAG.getMaskedStore(Mst->getChain(), SDLoc(N), Value.getOperand(0),
-                              Mst->getBasePtr(), Mst->getOffset(), Mask,
-                              Mst->getMemoryVT(), Mst->getMemOperand(),
-                              Mst->getAddressingMode(), true);
+      TLI.isTruncStoreLegal(Value.getOperand(0).getValueType(), MemVT)) {
+    return DAG.getMaskedStore(Mst->getChain(), DL, Value.getOperand(0),
+                              Mst->getBasePtr(), Mst->getOffset(), Mask, MemVT,
+                              Mst->getMemOperand(), Mst->getAddressingMode(),
+                              true);
   }
 
   return SDValue();
