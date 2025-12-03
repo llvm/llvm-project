@@ -432,19 +432,13 @@ static llvm::StringLiteral getInitializer(QualType QT, bool UseAssignment) {
   }
 }
 
-void ProTypeMemberInitCheck::checkMissingMemberInitializer(
-    ASTContext &Context, const CXXRecordDecl &ClassDecl,
-    const CXXConstructorDecl *Ctor) {
-  const bool IsUnion = ClassDecl.isUnion();
-
-  if (IsUnion && ClassDecl.hasInClassInitializer())
-    return;
-
-  // Gather all fields (direct and indirect) that need to be initialized.
-  SmallPtrSet<const FieldDecl *, 16> FieldsToInit;
+static void
+computeFieldsToInit(const ASTContext &Context, const RecordDecl &Record,
+                    bool IgnoreArrays,
+                    SmallPtrSetImpl<const FieldDecl *> &FieldsToInit) {
   bool AnyMemberHasInitPerUnion = false;
   forEachFieldWithFilter(
-      ClassDecl, ClassDecl.fields(), AnyMemberHasInitPerUnion,
+      Record, Record.fields(), AnyMemberHasInitPerUnion,
       [&](const FieldDecl *F) {
         if (IgnoreArrays && F->getType()->isArrayType())
           return;
@@ -459,6 +453,19 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
             !AnyMemberHasInitPerUnion)
           FieldsToInit.insert(F);
       });
+}
+
+void ProTypeMemberInitCheck::checkMissingMemberInitializer(
+    ASTContext &Context, const CXXRecordDecl &ClassDecl,
+    const CXXConstructorDecl *Ctor) {
+  const bool IsUnion = ClassDecl.isUnion();
+
+  if (IsUnion && ClassDecl.hasInClassInitializer())
+    return;
+
+  // Gather all fields (direct and indirect) that need to be initialized.
+  SmallPtrSet<const FieldDecl *, 16> FieldsToInit;
+  computeFieldsToInit(Context, ClassDecl, IgnoreArrays, FieldsToInit);
   if (FieldsToInit.empty())
     return;
 
@@ -508,7 +515,7 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   // Collect all fields but only suggest a fix for the first member of unions,
   // as initializing more than one union member is an error.
   SmallPtrSet<const FieldDecl *, 16> FieldsToFix;
-  AnyMemberHasInitPerUnion = false;
+  bool AnyMemberHasInitPerUnion = false;
   forEachFieldWithFilter(ClassDecl, ClassDecl.fields(),
                          AnyMemberHasInitPerUnion, [&](const FieldDecl *F) {
                            if (!FieldsToInit.contains(F))
@@ -589,23 +596,7 @@ void ProTypeMemberInitCheck::checkUninitializedTrivialType(
     return;
 
   SmallPtrSet<const FieldDecl *, 16> FieldsToInit;
-  bool AnyMemberHasInitPerUnion = false;
-  forEachFieldWithFilter(
-      *Record, Record->fields(), AnyMemberHasInitPerUnion,
-      [&](const FieldDecl *F) {
-        if (IgnoreArrays && F->getType()->isArrayType())
-          return;
-        if (F->hasInClassInitializer() && F->getParent()->isUnion()) {
-          AnyMemberHasInitPerUnion = true;
-          removeFieldInitialized(F, FieldsToInit);
-        }
-        if (!F->hasInClassInitializer() &&
-            utils::type_traits::isTriviallyDefaultConstructible(F->getType(),
-                                                                Context) &&
-            !isEmpty(Context, F->getType()) && !F->isUnnamedBitField() &&
-            !AnyMemberHasInitPerUnion)
-          FieldsToInit.insert(F);
-      });
+  computeFieldsToInit(Context, *Record, IgnoreArrays, FieldsToInit);
 
   if (FieldsToInit.empty())
     return;

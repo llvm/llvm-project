@@ -426,8 +426,8 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check to
-  correctly ignore ``std::array`` and other containers when `IgnoreArrays`
-  option is set to `true`.
+  correctly ignore ``std::array`` and other array-like containers when
+  `IgnoreArrays` option is set to `true`.
 
 - Improved :doc:`google-readability-casting
   <clang-tidy/checks/google/readability-casting>` check by adding fix-it
