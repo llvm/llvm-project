@@ -5158,8 +5158,20 @@ void LoongArchTargetLowering::ReplaceNodeResults(
         assert(isTypeLegal(WidenVT) && isTypeLegal(WidenIn.getValueType()) &&
                "Illegal vector type in truncation");
         WidenIn = DAG.getBitcast(WidenVT, WidenIn);
+
+        SDValue ResIn = WidenIn;
+        if (MinElts == 2 && Scale != 2) {
+          SmallVector<int, 4> Mask = {-1, -1, -1, -1};
+          Mask[0] = InVT == MVT::v2i32 ? 1 : 2;
+          SDValue CastIn = DAG.getBitcast(MVT::v4i32, WidenIn);
+          SDValue ExtractIn =
+              DAG.getVectorShuffle(MVT::v4i32, DL, CastIn, CastIn, Mask);
+          ResIn = DAG.getBitcast(WidenVT, ExtractIn);
+          TruncMask[1] = WidenVT.getVectorNumElements();
+        }
+
         Results.push_back(
-            DAG.getVectorShuffle(WidenVT, DL, WidenIn, WidenIn, TruncMask));
+            DAG.getVectorShuffle(WidenVT, DL, WidenIn, ResIn, TruncMask));
         return;
       }
     }
