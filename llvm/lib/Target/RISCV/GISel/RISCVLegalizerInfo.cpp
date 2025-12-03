@@ -238,7 +238,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         .clampScalar(0, sXLen, sXLen)
         .scalarSameSizeAs(1, 0);
   } else {
-    CTPOPActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+    CTPOPActions.widenScalarToNextPow2(0, /*Min*/ 8)
+        .clampScalar(0, s8, sXLen)
+        .scalarSameSizeAs(1, 0)
+        .lower();
   }
 
   getActionDefinitionsBuilder(G_CONSTANT)
@@ -716,6 +719,18 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
       .clampScalar(0, sXLen, sXLen)
       .lower();
+
+  LegalityPredicate InsertVectorEltPred = [=](const LegalityQuery &Query) {
+    LLT VecTy = Query.Types[0];
+    LLT EltTy = Query.Types[1];
+    return VecTy.getElementType() == EltTy;
+  };
+
+  getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
+      .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                   InsertVectorEltPred, typeIs(2, sXLen)))
+      .legalIf(all(typeIsLegalBoolVec(0, BoolVecTys, ST), InsertVectorEltPred,
+                   typeIs(2, sXLen)));
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
@@ -1196,7 +1211,7 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
   // to place the desired subvector starting at element 0.
   const LLT XLenTy(STI.getXLenVT());
   auto SlidedownAmt = MIB.buildVScale(XLenTy, RemIdx);
-  auto [Mask, VL] = buildDefaultVLOps(LitTy, MIB, MRI);
+  auto [Mask, VL] = buildDefaultVLOps(InterLitTy, MIB, MRI);
   uint64_t Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
   auto Slidedown = MIB.buildInstr(
       RISCV::G_VSLIDEDOWN_VL, {InterLitTy},

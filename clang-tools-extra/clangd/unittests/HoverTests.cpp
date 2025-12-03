@@ -4087,16 +4087,16 @@ Parameters:
 
 @brief brief doc
 
-longer doc
+longer doc  
 @note this is a note
 
-As you see, notes are "inlined".
+As you see, notes are "inlined".  
 @warning this is a warning
 
-As well as warnings
-@param a this is a param
-@return it returns something
-@retval 0 if successful
+As well as warnings  
+@param a this is a param  
+@return it returns something  
+@retval 0 if successful  
 @retval 1 if failed
 
 ---
@@ -4166,9 +4166,9 @@ Parameters:
 
 @brief brief doc
 
-longer doc
-@param a this is a param
-@param b does not exist
+longer doc  
+@param a this is a param  
+@param b does not exist  
 @return it returns something
 
 ---
@@ -4315,19 +4315,19 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo.\nbar",
-                   "foo.\nbar",
-                   "foo.\nbar",
+                   "foo.  \nbar",
+                   "foo.  \nbar",
                    "foo.\nbar",
                },
                {
                    "foo. \nbar",
-                   "foo. \nbar",
-                   "foo. \nbar",
+                   "foo.   \nbar",
+                   "foo.   \nbar",
                    "foo.\nbar",
                },
                {
                    "foo\n*bar",
-                   "foo\n\\*bar",
+                   "foo  \n\\*bar",
                    "foo\n*bar",
                    "foo\n*bar",
                },
@@ -4354,6 +4354,24 @@ TEST(Hover, ParseDocumentation) {
                    "\\`not\nparsed\\`",
                    "`not\nparsed`",
                    "`not parsed`",
+               },
+               {
+                   R"(@brief this is a typical use case
+@param x this is x
+\param y this is y
+@return something)",
+                   R"(@brief this is a typical use case  
+@param x this is x  
+\\param y this is y  
+@return something)",
+                   R"(@brief this is a typical use case  
+@param x this is x  
+\param y this is y  
+@return something)",
+                   R"(@brief this is a typical use case
+@param x this is x
+\param y this is y
+@return something)",
                }};
 
   for (const auto &C : Cases) {

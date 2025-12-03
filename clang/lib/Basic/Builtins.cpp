@@ -197,6 +197,96 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
   return true;
 }
 
+static bool isBuiltinConstForTriple(unsigned BuiltinID, llvm::Triple Trip) {
+  // There's a special case with the fma builtins where they are always const
+  // if the target environment is GNU or the target is OS is Windows and we're
+  // targeting the MSVCRT.dll environment.
+  // FIXME: This list can be become outdated. Need to find a way to get it some
+  // other way.
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_fma:
+  case Builtin::BI__builtin_fmaf:
+  case Builtin::BI__builtin_fmal:
+  case Builtin::BI__builtin_fmaf16:
+  case Builtin::BIfma:
+  case Builtin::BIfmaf:
+  case Builtin::BIfmal: {
+    if (Trip.isGNUEnvironment() || Trip.isOSMSVCRT())
+      return true;
+    break;
+  }
+  default:
+    break;
+  }
+
+  return false;
+}
+
+bool Builtin::Context::shouldGenerateFPMathIntrinsic(
+    unsigned BuiltinID, llvm::Triple Trip, std::optional<bool> ErrnoOverwritten,
+    bool MathErrnoEnabled, bool HasOptNoneAttr,
+    bool IsOptimizationEnabled) const {
+
+  // True if we are compiling at -O2 and errno has been disabled
+  // using the '#pragma float_control(precise, off)', and
+  // attribute opt-none hasn't been seen.
+  bool ErrnoOverridenToFalseWithOpt = ErrnoOverwritten.has_value() &&
+                                      !ErrnoOverwritten.value() &&
+                                      !HasOptNoneAttr && IsOptimizationEnabled;
+
+  // There are LLVM math intrinsics/instructions corresponding to math library
+  // functions except the LLVM op will never set errno while the math library
+  // might. Also, math builtins have the same semantics as their math library
+  // twins. Thus, we can transform math library and builtin calls to their
+  // LLVM counterparts if the call is marked 'const' (known to never set errno).
+  // In case FP exceptions are enabled, the experimental versions of the
+  // intrinsics model those.
+  bool ConstAlways =
+      isConst(BuiltinID) || isBuiltinConstForTriple(BuiltinID, Trip);
+
+  bool ConstWithoutErrnoAndExceptions =
+      isConstWithoutErrnoAndExceptions(BuiltinID);
+  bool ConstWithoutExceptions = isConstWithoutExceptions(BuiltinID);
+
+  // ConstAttr is enabled in fast-math mode. In fast-math mode, math-errno is
+  // disabled.
+  // Math intrinsics are generated only when math-errno is disabled. Any pragmas
+  // or attributes that affect math-errno should prevent or allow math
+  // intrinsics to be generated. Intrinsics are generated:
+  //   1- In fast math mode, unless math-errno is overriden
+  //      via '#pragma float_control(precise, on)', or via an
+  //      'attribute__((optnone))'.
+  //   2- If math-errno was enabled on command line but overriden
+  //      to false via '#pragma float_control(precise, off))' and
+  //      'attribute__((optnone))' hasn't been used.
+  //   3- If we are compiling with optimization and errno has been disabled
+  //      via '#pragma float_control(precise, off)', and
+  //      'attribute__((optnone))' hasn't been used.
+
+  bool ConstWithoutErrnoOrExceptions =
+      ConstWithoutErrnoAndExceptions || ConstWithoutExceptions;
+  bool GenerateIntrinsics =
+      (ConstAlways && !HasOptNoneAttr) ||
+      (!MathErrnoEnabled &&
+       !(ErrnoOverwritten.has_value() && ErrnoOverwritten.value()) &&
+       !HasOptNoneAttr);
+  if (!GenerateIntrinsics) {
+    GenerateIntrinsics =
+        ConstWithoutErrnoOrExceptions && !ConstWithoutErrnoAndExceptions;
+    if (!GenerateIntrinsics)
+      GenerateIntrinsics =
+          ConstWithoutErrnoOrExceptions &&
+          (!MathErrnoEnabled &&
+           !(ErrnoOverwritten.has_value() && ErrnoOverwritten.value()) &&
+           !HasOptNoneAttr);
+    if (!GenerateIntrinsics)
+      GenerateIntrinsics =
+          ConstWithoutErrnoOrExceptions && ErrnoOverridenToFalseWithOpt;
+  }
+
+  return GenerateIntrinsics;
+}
+
 /// initializeBuiltins - Mark the identifiers for all the builtins with their
 /// appropriate builtin ID # and mark any non-portable builtin identifiers as
 /// such.

@@ -178,13 +178,14 @@ for.exit:
 define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; CHECK-VF4UF1-LABEL: define i32 @recurrence_2(
 ; CHECK-VF4UF1-SAME: ptr readonly captures(none) [[A:%.*]], i32 [[N:%.*]]) {
-; CHECK-VF4UF1-NEXT:  [[ENTRY:.*]]:
-; CHECK-VF4UF1-NEXT:    [[CMP27:%.*]] = icmp sgt i32 [[N]], 0
-; CHECK-VF4UF1-NEXT:    br i1 [[CMP27]], label %[[FOR_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
+; CHECK-VF4UF1-NEXT:  [[ENTRY:.*:]]
+; CHECK-VF4UF1-NEXT:    br label %[[FOR_PREHEADER:.*]]
 ; CHECK-VF4UF1:       [[FOR_PREHEADER]]:
 ; CHECK-VF4UF1-NEXT:    [[ARRAYIDX2_PHI_TRANS_INSERT:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 -1
 ; CHECK-VF4UF1-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[ARRAYIDX2_PHI_TRANS_INSERT]], align 4
-; CHECK-VF4UF1-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
+; CHECK-VF4UF1-NEXT:    [[TMP5:%.*]] = add i32 [[N]], -1
+; CHECK-VF4UF1-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
+; CHECK-VF4UF1-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[TMP6]], 1
 ; CHECK-VF4UF1-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF4UF1-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; CHECK-VF4UF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
@@ -202,7 +203,7 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; CHECK-VF4UF1:       [[VECTOR_BODY]]:
 ; CHECK-VF4UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4UF1-NEXT:    [[VECTOR_RECUR:%.*]] = phi <vscale x 4 x i32> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[WIDE_LOAD:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4UF1-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ undef, %[[VECTOR_PH]] ], [ [[TMP17:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-VF4UF1-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP17:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4UF1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-VF4UF1-NEXT:    [[WIDE_LOAD]] = load <vscale x 4 x i32>, ptr [[TMP10]], align 4
 ; CHECK-VF4UF1-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[WIDE_LOAD]], i32 -1)
@@ -225,25 +226,25 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; CHECK-VF4UF1:       [[SCALAR_PH]]:
 ; CHECK-VF4UF1-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ [[DOTPRE]], %[[FOR_PREHEADER]] ]
 ; CHECK-VF4UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_PREHEADER]] ]
-; CHECK-VF4UF1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP19]], %[[MIDDLE_BLOCK]] ], [ undef, %[[FOR_PREHEADER]] ]
+; CHECK-VF4UF1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP19]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_PREHEADER]] ]
 ; CHECK-VF4UF1-NEXT:    br label %[[SCALAR_BODY:.*]]
 ; CHECK-VF4UF1:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
-; CHECK-VF4UF1-NEXT:    [[MINMAX_0_COND_LCSSA:%.*]] = phi i32 [ [[MINMAX_0_COND:%.*]], %[[SCALAR_BODY]] ], [ [[TMP19]], %[[MIDDLE_BLOCK]] ]
-; CHECK-VF4UF1-NEXT:    br label %[[FOR_COND_CLEANUP]]
+; CHECK-VF4UF1-NEXT:    [[MINMAX_0_LCSSA:%.*]] = phi i32 [ [[MINMAX_0_COND:%.*]], %[[SCALAR_BODY]] ], [ [[TMP19]], %[[MIDDLE_BLOCK]] ]
+; CHECK-VF4UF1-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK-VF4UF1:       [[FOR_COND_CLEANUP]]:
-; CHECK-VF4UF1-NEXT:    [[MINMAX_0_LCSSA:%.*]] = phi i32 [ undef, %[[ENTRY]] ], [ [[MINMAX_0_COND_LCSSA]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
 ; CHECK-VF4UF1-NEXT:    ret i32 [[MINMAX_0_LCSSA]]
 ; CHECK-VF4UF1:       [[SCALAR_BODY]]:
 ;
 ; CHECK-VF4UF2-LABEL: define i32 @recurrence_2(
 ; CHECK-VF4UF2-SAME: ptr readonly captures(none) [[A:%.*]], i32 [[N:%.*]]) {
-; CHECK-VF4UF2-NEXT:  [[ENTRY:.*]]:
-; CHECK-VF4UF2-NEXT:    [[CMP27:%.*]] = icmp sgt i32 [[N]], 0
-; CHECK-VF4UF2-NEXT:    br i1 [[CMP27]], label %[[FOR_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
+; CHECK-VF4UF2-NEXT:  [[ENTRY:.*:]]
+; CHECK-VF4UF2-NEXT:    br label %[[FOR_PREHEADER:.*]]
 ; CHECK-VF4UF2:       [[FOR_PREHEADER]]:
 ; CHECK-VF4UF2-NEXT:    [[ARRAYIDX2_PHI_TRANS_INSERT:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 -1
 ; CHECK-VF4UF2-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[ARRAYIDX2_PHI_TRANS_INSERT]], align 4
-; CHECK-VF4UF2-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
+; CHECK-VF4UF2-NEXT:    [[TMP5:%.*]] = add i32 [[N]], -1
+; CHECK-VF4UF2-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
+; CHECK-VF4UF2-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[TMP6]], 1
 ; CHECK-VF4UF2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF4UF2-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
 ; CHECK-VF4UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
@@ -261,8 +262,8 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; CHECK-VF4UF2:       [[VECTOR_BODY]]:
 ; CHECK-VF4UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4UF2-NEXT:    [[VECTOR_RECUR:%.*]] = phi <vscale x 4 x i32> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[WIDE_LOAD2:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4UF2-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ undef, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4UF2-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i32> [ undef, %[[VECTOR_PH]] ], [ [[TMP26:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-VF4UF2-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-VF4UF2-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP26:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4UF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-VF4UF2-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF4UF2-NEXT:    [[TMP13:%.*]] = shl nuw i64 [[TMP12]], 2
@@ -296,19 +297,17 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; CHECK-VF4UF2:       [[SCALAR_PH]]:
 ; CHECK-VF4UF2-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ [[DOTPRE]], %[[FOR_PREHEADER]] ]
 ; CHECK-VF4UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_PREHEADER]] ]
-; CHECK-VF4UF2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP28]], %[[MIDDLE_BLOCK]] ], [ undef, %[[FOR_PREHEADER]] ]
+; CHECK-VF4UF2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP28]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_PREHEADER]] ]
 ; CHECK-VF4UF2-NEXT:    br label %[[SCALAR_BODY:.*]]
 ; CHECK-VF4UF2:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
-; CHECK-VF4UF2-NEXT:    [[MINMAX_0_COND_LCSSA:%.*]] = phi i32 [ [[MINMAX_0_COND:%.*]], %[[SCALAR_BODY]] ], [ [[TMP28]], %[[MIDDLE_BLOCK]] ]
-; CHECK-VF4UF2-NEXT:    br label %[[FOR_COND_CLEANUP]]
+; CHECK-VF4UF2-NEXT:    [[MINMAX_0_LCSSA:%.*]] = phi i32 [ [[MINMAX_0_COND:%.*]], %[[SCALAR_BODY]] ], [ [[TMP28]], %[[MIDDLE_BLOCK]] ]
+; CHECK-VF4UF2-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK-VF4UF2:       [[FOR_COND_CLEANUP]]:
-; CHECK-VF4UF2-NEXT:    [[MINMAX_0_LCSSA:%.*]] = phi i32 [ undef, %[[ENTRY]] ], [ [[MINMAX_0_COND_LCSSA]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
 ; CHECK-VF4UF2-NEXT:    ret i32 [[MINMAX_0_LCSSA]]
 ; CHECK-VF4UF2:       [[SCALAR_BODY]]:
 ;
 entry:
-  %cmp27 = icmp sgt i32 %n, 0
-  br i1 %cmp27, label %for.preheader, label %for.cond.cleanup
+  br label %for.preheader
 
 for.preheader:
   %arrayidx2.phi.trans.insert = getelementptr inbounds i32, ptr %a, i64 -1
@@ -320,13 +319,12 @@ for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
 for.cond.cleanup:
-  %minmax.0.lcssa = phi i32 [ undef, %entry ], [ %minmax.0.cond.lcssa, %for.cond.cleanup.loopexit ]
-  ret i32 %minmax.0.lcssa
+  ret i32 %minmax.0.cond.lcssa
 
 scalar.body:
   %0 = phi i32 [ %.pre, %for.preheader ], [ %1, %scalar.body ]
   %indvars.iv = phi i64 [ 0, %for.preheader ], [ %indvars.iv.next, %scalar.body ]
-  %minmax.028 = phi i32 [ undef, %for.preheader ], [ %minmax.0.cond, %scalar.body ]
+  %minmax.028 = phi i32 [ 0, %for.preheader ], [ %minmax.0.cond, %scalar.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
   %1 = load i32, ptr %arrayidx, align 4
   %sub3 = sub nsw i32 %1, %0

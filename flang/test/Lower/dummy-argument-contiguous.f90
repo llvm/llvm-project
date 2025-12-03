@@ -2,7 +2,7 @@
 ! RUN: bbc -emit-fir -hlfir=false -gen-array-coor %s -o - | FileCheck %s --check-prefix=ArrayCoorCHECK
 
 ! Test that non-contiguous assumed-shape memory layout is handled in lowering.
-! In practice, test that input fir.box is propagated to fir operations 
+! In practice, test that input fir.box is propagated to fir operations
 
 ! Also test that when the contiguous keyword is present, lowering adds the
 ! attribute to the fir argument and that is takes the contiguity into account

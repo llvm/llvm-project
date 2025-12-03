@@ -119,10 +119,10 @@ namespace FileMgr {
 /// the private optional_none_tag to keep it to the size of a single pointer.
 template <class RefTy> class MapEntryOptionalStorage {
   using optional_none_tag = typename RefTy::optional_none_tag;
-  RefTy MaybeRef;
+  RefTy MaybeRef = optional_none_tag();
 
 public:
-  MapEntryOptionalStorage() : MaybeRef(optional_none_tag()) {}
+  MapEntryOptionalStorage() = default;
 
   template <class... ArgTypes>
   explicit MapEntryOptionalStorage(std::in_place_t, ArgTypes &&...Args)
@@ -168,11 +168,7 @@ class OptionalStorage<clang::DirectoryEntryRef>
       clang::FileMgr::MapEntryOptionalStorage<clang::DirectoryEntryRef>;
 
 public:
-  OptionalStorage() = default;
-
-  template <class... ArgTypes>
-  explicit OptionalStorage(std::in_place_t, ArgTypes &&...Args)
-      : StorageImpl(std::in_place_t{}, std::forward<ArgTypes>(Args)...) {}
+  using StorageImpl::StorageImpl;
 
   OptionalStorage &operator=(clang::DirectoryEntryRef Ref) {
     StorageImpl::operator=(Ref);

@@ -1,0 +1,9 @@
+# REQUIRES: x86-registered-target
+## Test checking that update_llc_test_checks.py can generate both ASM and MIR checks in the same file
+
+# RUN: cp -f %S/Inputs/x86_asm_mir_mixed.ll %t.ll && %update_llc_test_checks %t.ll
+# RUN: diff -u %S/Inputs/x86_asm_mir_mixed.ll.expected %t.ll
+
+## Verify that running the script again on an already updated file doesn't add duplicate checks
+# RUN: %update_llc_test_checks %t.ll
+# RUN: diff -u %S/Inputs/x86_asm_mir_mixed.ll.expected %t.ll

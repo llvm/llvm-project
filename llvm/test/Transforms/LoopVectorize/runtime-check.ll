@@ -10,7 +10,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;     a[i] = b[i] * 3;
 ; }
 
-define i32 @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp {
+define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B:%.*]] to i64, !dbg [[DBG4:![0-9]+]]
@@ -58,7 +58,7 @@ define i32 @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]], !dbg [[DBG14:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 undef, !dbg [[DBG14]]
+; CHECK-NEXT:    ret void, !dbg [[DBG14]]
 ;
 ; FORCED_OPTSIZE-LABEL: @foo(
 ; FORCED_OPTSIZE-NEXT:  entry:
@@ -80,7 +80,7 @@ define i32 @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp
 ; FORCED_OPTSIZE:       for.end.loopexit:
 ; FORCED_OPTSIZE-NEXT:    br label [[FOR_END]], !dbg [[DBG10:![0-9]+]]
 ; FORCED_OPTSIZE:       for.end:
-; FORCED_OPTSIZE-NEXT:    ret i32 undef, !dbg [[DBG10]]
+; FORCED_OPTSIZE-NEXT:    ret void, !dbg [[DBG10]]
 ;
 entry:
   %cmp6 = icmp sgt i32 %n, 0, !dbg !6
@@ -99,7 +99,7 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond, label %for.end, label %for.body, !dbg !7
 
 for.end:                                          ; preds = %for.body, %entry
-  ret i32 undef, !dbg !8
+  ret void, !dbg !8
 }
 
 ; Make sure that we try to vectorize loops with a runtime check if the
@@ -505,11 +505,11 @@ define void @test_scev_check_mul_add_expansion(ptr %out, ptr %in, i32 %len, i32 
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[OFFSET_IDX]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[OUT]], i64 [[TMP6]]
-; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP7]], align 2, !alias.scope [[META37:![0-9]+]], !noalias [[META40:![0-9]+]]
-; CHECK-NEXT:    store i32 0, ptr [[IN]], align 4, !alias.scope [[META40]]
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP7]], align 2, !alias.scope [[META36:![0-9]+]], !noalias [[META39:![0-9]+]]
+; CHECK-NEXT:    store i32 0, ptr [[IN]], align 4, !alias.scope [[META39]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP42:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP41:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -524,7 +524,7 @@ define void @test_scev_check_mul_add_expansion(ptr %out, ptr %in, i32 %len, i32 
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    store i32 0, ptr [[IN]], align 4
 ; CHECK-NEXT:    [[CMP7_NOT:%.*]] = icmp sgt i32 [[LEN]], [[IV_NEXT]]
-; CHECK-NEXT:    br i1 [[CMP7_NOT]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP43:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP7_NOT]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP42:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

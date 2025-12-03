@@ -2032,9 +2032,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       assert(inserted.second && "Are we visiting the same expression again?");
       if (isa<CXXConstructExpr>(Exp))
         Self = Placeholder;
-      if (TagT->getOriginalDecl()
-              ->getMostRecentDecl()
-              ->hasAttr<ScopedLockableAttr>())
+      if (TagT->getDecl()->getMostRecentDecl()->hasAttr<ScopedLockableAttr>())
         Scp = CapabilityExpr(Placeholder, Exp->getType(), /*Neg=*/false);
     }
 
@@ -2822,7 +2820,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
           const auto *DD = AD.getDestructorDecl(AC.getASTContext());
-          if (!DD->hasAttrs())
+          if (!DD || !DD->hasAttrs())
             break;
 
           LocksetBuilder.handleCall(

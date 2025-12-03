@@ -201,7 +201,7 @@ define <8 x i32> @vshift08_add(<8 x i32> %a, <8 x i32> %y)  {
 define <4 x i32> @vshift13(<4 x i32> %in) {
 ; CHECK-LABEL: vshift13:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,16]
 ; CHECK-NEXT:    retq
   %T = shl <4 x i32> %in, <i32 0, i32 1, i32 2, i32 4>
   ret <4 x i32> %T

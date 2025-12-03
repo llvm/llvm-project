@@ -1891,13 +1891,6 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
   if (DiagnoseAllowedClauses(Clause.getDirectiveKind(), Clause.getClauseKind(),
                              Clause.getBeginLoc()))
     return nullptr;
-  //// Diagnose that we don't support this clause on this directive.
-  // if (!doesClauseApplyToDirective(Clause.getDirectiveKind(),
-  //                                 Clause.getClauseKind())) {
-  //   Diag(Clause.getBeginLoc(), diag::err_acc_clause_appertainment)
-  //       << Clause.getDirectiveKind() << Clause.getClauseKind();
-  //   return nullptr;
-  // }
 
   if (const auto *DevTypeClause = llvm::find_if(
           ExistingClauses, llvm::IsaPred<OpenACCDeviceTypeClause>);
@@ -1924,7 +1917,7 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
   // off here. This will result in CurType being the actual 'type' of the
   // expression, which is what we are looking to check.
   QualType CurType = isa<ArraySectionExpr>(VarExpr)
-                         ? ArraySectionExpr::getBaseOriginalType(VarExpr)
+                         ? cast<ArraySectionExpr>(VarExpr)->getElementType()
                          : VarExpr->getType();
 
   // This can happen when we have a dependent type in an array element that the
@@ -2256,13 +2249,23 @@ SemaOpenACC::CheckLinkClauseVarList(ArrayRef<Expr *> VarExprs) {
       continue;
     }
 
+    Expr *OrigExpr = VarExpr;
+
+    while (isa<ArraySectionExpr, ArraySubscriptExpr>(VarExpr)) {
+      if (auto *ASE = dyn_cast<ArraySectionExpr>(VarExpr))
+        VarExpr = ASE->getBase()->IgnoreParenImpCasts();
+      else
+        VarExpr =
+            cast<ArraySubscriptExpr>(VarExpr)->getBase()->IgnoreParenImpCasts();
+    }
+
     const auto *DRE = cast<DeclRefExpr>(VarExpr);
     const VarDecl *Var = dyn_cast<VarDecl>(DRE->getDecl());
 
     if (!Var || !Var->hasExternalStorage())
       Diag(VarExpr->getBeginLoc(), diag::err_acc_link_not_extern);
     else
-      NewVarList.push_back(VarExpr);
+      NewVarList.push_back(OrigExpr);
   }
 
   return NewVarList;

@@ -52,10 +52,6 @@
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 
-namespace llvm {
-extern cl::opt<bool> EnableVPlanNativePath;
-}
-
 /// @{
 /// Metadata attribute names
 const char LLVMLoopVectorizeFollowupAll[] = "llvm.loop.vectorize.followup_all";
@@ -103,20 +99,20 @@ VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def)
 
 VPValue::~VPValue() {
   assert(Users.empty() && "trying to delete a VPValue with remaining users");
-  if (Def)
+  if (VPDef *Def = getDefiningRecipe())
     Def->removeDefinedValue(this);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::print(raw_ostream &OS, VPSlotTracker &SlotTracker) const {
-  if (const VPRecipeBase *R = dyn_cast_or_null<VPRecipeBase>(Def))
+  if (const VPRecipeBase *R = getDefiningRecipe())
     R->print(OS, "", SlotTracker);
   else
     printAsOperand(OS, SlotTracker);
 }
 
 void VPValue::dump() const {
-  const VPRecipeBase *Instr = dyn_cast_or_null<VPRecipeBase>(this->Def);
+  const VPRecipeBase *Instr = getDefiningRecipe();
   VPSlotTracker SlotTracker(
       (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
   print(dbgs(), SlotTracker);
@@ -217,32 +213,6 @@ VPBlockBase *VPBlockBase::getEnclosingBlockWithPredecessors() {
   return Parent->getEnclosingBlockWithPredecessors();
 }
 
-bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
-                            const VPDominatorTree &VPDT) {
-  auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
-  if (!VPBB)
-    return false;
-
-  // If VPBB is in a region R, VPBB is a loop header if R is a loop region with
-  // VPBB as its entry, i.e., free of predecessors.
-  if (auto *R = VPBB->getParent())
-    return !R->isReplicator() && !VPBB->hasPredecessors();
-
-  // A header dominates its second predecessor (the latch), with the other
-  // predecessor being the preheader
-  return VPB->getPredecessors().size() == 2 &&
-         VPDT.dominates(VPB, VPB->getPredecessors()[1]);
-}
-
-bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
-                           const VPDominatorTree &VPDT) {
-  // A latch has a header as its second successor, with its other successor
-  // leaving the loop. A preheader OTOH has a header as its first (and only)
-  // successor.
-  return VPB->getNumSuccessors() == 2 &&
-         VPBlockUtils::isHeader(VPB->getSuccessors()[1], VPDT);
-}
-
 VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
   iterator It = begin();
   while (It != end() && It->isPhi())
@@ -330,18 +300,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   }
 
   bool IsSingleScalar = vputils::isSingleScalar(Def);
-
   VPLane LastLane(IsSingleScalar ? 0 : VF.getFixedValue() - 1);
-  // Check if there is a scalar value for the selected lane.
-  if (!hasScalarValue(Def, LastLane)) {
-    // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
-    // VPExpandSCEVRecipes can also be a single scalar.
-    assert((isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe,
-                VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
-           "unexpected recipe found to be invariant");
-    IsSingleScalar = true;
-    LastLane = 0;
-  }
 
   // We need to construct the vector value for a single-scalar value by
   // broadcasting the scalar to all lanes.
@@ -768,8 +727,12 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
 
 VPRegionBlock *VPRegionBlock::clone() {
   const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
-  auto *NewRegion = getPlan()->createVPRegionBlock(NewEntry, NewExiting,
-                                                   getName(), isReplicator());
+  VPlan &Plan = *getPlan();
+  VPRegionBlock *NewRegion =
+      isReplicator()
+          ? Plan.createReplicateRegion(NewEntry, NewExiting, getName())
+          : Plan.createLoopRegion(getName(), NewEntry, NewExiting);
+
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
   return NewRegion;
@@ -921,8 +884,7 @@ VPlan::~VPlan() {
   }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
-  if (BackedgeTakenCount)
-    delete BackedgeTakenCount;
+  delete BackedgeTakenCount;
 }
 
 VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
@@ -1465,7 +1427,7 @@ void VPUser::printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const {
 void VPSlotTracker::assignName(const VPValue *V) {
   assert(!VPValue2Name.contains(V) && "VPValue already has a name!");
   auto *UV = V->getUnderlyingValue();
-  auto *VPI = dyn_cast_or_null<VPInstruction>(V->getDefiningRecipe());
+  auto *VPI = dyn_cast_or_null<VPInstruction>(V);
   if (!UV && !(VPI && !VPI->getName().empty())) {
     VPValue2Name[V] = (Twine("vp<%") + Twine(NextSlot) + ">").str();
     NextSlot++;
@@ -1753,14 +1715,14 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
 }
 #endif
 
-bool llvm::canConstantBeExtended(const ConstantInt *CI, Type *NarrowType,
+bool llvm::canConstantBeExtended(const APInt *C, Type *NarrowType,
                                  TTI::PartialReductionExtendKind ExtKind) {
-  APInt TruncatedVal = CI->getValue().trunc(NarrowType->getScalarSizeInBits());
-  unsigned WideSize = CI->getType()->getScalarSizeInBits();
+  APInt TruncatedVal = C->trunc(NarrowType->getScalarSizeInBits());
+  unsigned WideSize = C->getBitWidth();
   APInt ExtendedVal = ExtKind == TTI::PR_SignExtend
                           ? TruncatedVal.sext(WideSize)
                           : TruncatedVal.zext(WideSize);
-  return ExtendedVal == CI->getValue();
+  return ExtendedVal == *C;
 }
 
 TargetTransformInfo::OperandValueInfo

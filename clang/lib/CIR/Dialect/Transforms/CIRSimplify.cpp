@@ -21,6 +21,11 @@
 using namespace mlir;
 using namespace cir;
 
+namespace mlir {
+#define GEN_PASS_DEF_CIRSIMPLIFY
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
 //===----------------------------------------------------------------------===//
 // Rewrite patterns
 //===----------------------------------------------------------------------===//
@@ -283,7 +288,7 @@ struct SimplifyVecSplat : public OpRewritePattern<VecSplatOp> {
 // CIRSimplifyPass
 //===----------------------------------------------------------------------===//
 
-struct CIRSimplifyPass : public CIRSimplifyBase<CIRSimplifyPass> {
+struct CIRSimplifyPass : public impl::CIRSimplifyBase<CIRSimplifyPass> {
   using CIRSimplifyBase::CIRSimplifyBase;
 
   void runOnOperation() override;

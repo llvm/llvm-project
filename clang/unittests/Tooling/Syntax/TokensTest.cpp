@@ -20,6 +20,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.def"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/Utils.h"
@@ -134,6 +135,7 @@ public:
         FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
     CompilerInstance Compiler(std::move(CI));
     Compiler.setDiagnostics(Diags);
+    Compiler.setVirtualFileSystem(FS);
     Compiler.setFileManager(FileMgr);
     Compiler.setSourceManager(SourceMgr);
 

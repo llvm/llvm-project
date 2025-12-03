@@ -318,6 +318,18 @@ private:
 };
 } // namespace
 
+SanitizerCoveragePass::SanitizerCoveragePass(
+    SanitizerCoverageOptions Options, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+    const std::vector<std::string> &AllowlistFiles,
+    const std::vector<std::string> &BlocklistFiles)
+    : Options(std::move(Options)),
+      VFS(VFS ? std::move(VFS) : vfs::getRealFileSystem()) {
+  if (AllowlistFiles.size() > 0)
+    Allowlist = SpecialCaseList::createOrDie(AllowlistFiles, *this->VFS);
+  if (BlocklistFiles.size() > 0)
+    Blocklist = SpecialCaseList::createOrDie(BlocklistFiles, *this->VFS);
+}
+
 PreservedAnalyses SanitizerCoveragePass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();

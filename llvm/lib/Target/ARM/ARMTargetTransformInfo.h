@@ -186,12 +186,16 @@ public:
 
   bool isProfitableLSRChainElement(Instruction *I) const override;
 
-  bool isLegalMaskedLoad(Type *DataTy, Align Alignment,
-                         unsigned AddressSpace) const override;
+  bool
+  isLegalMaskedLoad(Type *DataTy, Align Alignment, unsigned AddressSpace,
+                    TTI::MaskKind MaskKind =
+                        TTI::MaskKind::VariableOrConstantMask) const override;
 
-  bool isLegalMaskedStore(Type *DataTy, Align Alignment,
-                          unsigned AddressSpace) const override {
-    return isLegalMaskedLoad(DataTy, Alignment, AddressSpace);
+  bool
+  isLegalMaskedStore(Type *DataTy, Align Alignment, unsigned AddressSpace,
+                     TTI::MaskKind MaskKind =
+                         TTI::MaskKind::VariableOrConstantMask) const override {
+    return isLegalMaskedLoad(DataTy, Alignment, AddressSpace, MaskKind);
   }
 
   bool forceScalarizeMaskedGather(VectorType *VTy,
@@ -275,8 +279,7 @@ public:
       const Instruction *I = nullptr) const override;
 
   InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
+  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getInterleavedMemoryOpCost(
@@ -285,10 +288,8 @@ public:
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const override;
 
   InstructionCost
-  getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                         bool VariableMask, Align Alignment,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr) const override;
+  getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                         TTI::TargetCostKind CostKind) const override;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,

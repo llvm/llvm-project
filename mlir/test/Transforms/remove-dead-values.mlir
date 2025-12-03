@@ -118,6 +118,17 @@ func.func @main(%arg0 : i32) {
 
 // -----
 
+// CHECK-LABEL: func.func private @clean_func_op_remove_side_effecting_op() {
+// CHECK-NEXT:    return
+// CHECK-NEXT:  }
+func.func private @clean_func_op_remove_side_effecting_op(%arg0: i32) -> (i32) {
+  // vector.print has a side effect but the op is dead.
+  vector.print %arg0 : i32
+  return %arg0 : i32
+}
+
+// -----
+
 // %arg0 is not live because it is never used. %arg1 is not live because its
 // user `arith.addi` doesn't have any uses and the value that it is forwarded to
 // (%non_live_0) also doesn't have any uses.
@@ -648,4 +659,58 @@ func.func @callee(%arg0: index, %arg1: index, %arg2: index) -> index {
 // CHECK: call @mutl_parameter(%[[ARG1]]) : (index) -> index
   %res = call @mutl_parameter(%arg0, %arg1, %arg2) : (index, index, index) -> (index)
   return %res : index
+}
+
+// -----
+
+// This test verifies that the induction variables in loops are not deleted, the loop has results.
+
+// CHECK-LABEL: func @dead_value_loop_ivs
+func.func @dead_value_loop_ivs_has_result(%lb: index, %ub: index, %step: index, %b: i1) -> i1 {
+  %loop_ret = scf.for %iv = %lb to %ub step %step iter_args(%iter = %b) -> (i1) {
+    cf.assert %b, "loop not dead"
+    scf.yield %b : i1
+  }
+  return %loop_ret : i1
+}
+
+// -----
+
+// This test verifies that the induction variables in loops are not deleted, the loop has no results.
+
+// CHECK-LABEL: func @dead_value_loop_ivs_no_result
+func.func @dead_value_loop_ivs_no_result(%lb: index, %ub: index, %step: index, %input: memref<?xf32>, %value: f32, %pos: index) {
+  scf.for %iv = %lb to %ub step %step {
+    memref.store %value, %input[%pos] : memref<?xf32>
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @op_block_have_dead_arg
+func.func @op_block_have_dead_arg(%arg0: index, %arg1: index, %arg2: i1) {
+  scf.execute_region {
+    cf.cond_br %arg2, ^bb1(%arg0 : index), ^bb1(%arg1 : index)
+  ^bb1(%0: index):
+      scf.yield
+  }
+  // CHECK-NEXT: return
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func private @remove_dead_branch_op()
+// CHECK-NEXT:    ub.unreachable
+// CHECK-NEXT:  ^{{.*}}:
+// CHECK-NEXT:    return
+// CHECK-NEXT:  ^{{.*}}:
+// CHECK-NEXT:    return
+func.func private @remove_dead_branch_op(%c: i1, %arg0: i64, %arg1: i64) -> (i64) {
+  cf.cond_br %c, ^bb1, ^bb2
+^bb1:
+  return %arg0 : i64
+^bb2:
+  return %arg1 : i64
 }

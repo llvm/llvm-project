@@ -366,7 +366,8 @@ public:
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBuffer(const Twine &Name, int64_t FileSize, bool RequiresNullTerminator,
             bool IsVolatile) override {
-    return std::move(Buffer);
+    return llvm::MemoryBuffer::getMemBuffer(Buffer->getMemBufferRef(),
+                                            RequiresNullTerminator);
   }
 
   std::error_code close() override { return {}; }

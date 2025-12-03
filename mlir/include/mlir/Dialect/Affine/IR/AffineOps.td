@@ -330,7 +330,6 @@ def AffineForOp : Affine_Op<"for",
     Speculation::Speculatability getSpeculatability();
   }];
 
-  let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
   let hasRegionVerifier = 1;
@@ -715,7 +714,7 @@ def AffineParallelOp : Affine_Op<"parallel",
     operand_range getUpperBoundsOperands();
     AffineValueMap getUpperBoundsValueMap();
 
-    /// Sets elements fo the loop upper bound.
+    /// Sets elements of the loop upper bound.
     void setUpperBounds(ValueRange operands, AffineMap map);
 
     void setSteps(ArrayRef<int64_t> newSteps);
@@ -1000,7 +999,7 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
     elemental type, supplied as its second operand.
     The index for each memref dimension is an affine expression of loop
     induction variables and symbols. These indices determine the start position
-    of the write within the memref. The shape of th input vector determines the
+    of the write within the memref. The shape of the input vector determines the
     shape of the slice written to the memref. This slice is contiguous along the
     respective dimensions of the shape. Strided vector stores will be supported
     in the future.
@@ -1189,7 +1188,7 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     If all `N` basis elements are provided, the linearize_index operation is said to
     "have an outer bound".
 
-    As a convenience, and for symmetry with `getPaddedBasis()`, ifg the first
+    As a convenience, and for symmetry with `getPaddedBasis()`, if the first
     element of a set of `OpFoldResult`s passed to the builders of this operation is
     `nullptr`, that element is ignored.
 

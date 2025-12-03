@@ -1091,6 +1091,16 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison) {
   }
 }
 
+TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_splat) {
+  parseAssembly(
+      "define <4 x i32> @test(i32 noundef %x) {\n"
+      "  %ins = insertelement <4 x i32> poison, i32 %x, i32 0\n"
+      "  %A = shufflevector <4 x i32> %ins, <4 x i32> poison, <4 x i32> zeroinitializer\n"
+      "  ret <4 x i32> %A\n"
+      "}");
+  EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A));
+}
+
 TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_assume) {
   parseAssembly("declare i1 @f_i1()\n"
                 "declare i32 @f_i32()\n"
@@ -2687,9 +2697,9 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRange) {
   parseAssembly(
       "define void @test(ptr %p) {\n"
       "  %A = load i64, ptr %p, !range !{i64 64, i64 65536}\n"
-      "  %APtr = inttoptr i64 %A to float*"
-      "  %APtrPlus512 = getelementptr float, float* %APtr, i32 128\n"
-      "  %c = icmp ugt float* %APtrPlus512, inttoptr (i32 523 to float*)\n"
+      "  %APtr = inttoptr i64 %A to ptr"
+      "  %APtrPlus512 = getelementptr float, ptr %APtr, i32 128\n"
+      "  %c = icmp ugt ptr %APtrPlus512, inttoptr (i32 523 to ptr)\n"
       "  call void @llvm.assume(i1 %c)\n"
       "  ret void\n"
       "}\n"
@@ -2720,9 +2730,9 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRangeNoOverlap) {
   parseAssembly(
       "define void @test(ptr %p) {\n"
       "  %A = load i64, ptr %p, !range !{i64 32, i64 64}\n"
-      "  %APtr = inttoptr i64 %A to float*"
-      "  %APtrPlus512 = getelementptr float, float* %APtr, i32 128\n"
-      "  %c = icmp ugt float* %APtrPlus512, inttoptr (i32 523 to float*)\n"
+      "  %APtr = inttoptr i64 %A to ptr"
+      "  %APtrPlus512 = getelementptr float, ptr %APtr, i32 128\n"
+      "  %c = icmp ugt ptr %APtrPlus512, inttoptr (i32 523 to ptr)\n"
       "  call void @llvm.assume(i1 %c)\n"
       "  ret void\n"
       "}\n"

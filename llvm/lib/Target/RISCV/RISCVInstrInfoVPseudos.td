@@ -2982,21 +2982,21 @@ multiclass VPseudoVFWALU_WV_WF_RM {
 multiclass VPseudoVMRG_VM_XM_IM {
   foreach m = MxList in {
     defvar mx = m.MX;
-    def "_VVM" # "_" # m.MX:
-      VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, m.vrclass, m>,
-      SchedBinary<"WriteVIMergeV", "ReadVIMergeV", "ReadVIMergeV", mx,
-                          forcePassthruRead=true>;
-    def "_VXM" # "_" # m.MX:
-      VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, GPR, m>,
-      SchedBinary<"WriteVIMergeX", "ReadVIMergeV", "ReadVIMergeX", mx,
-                          forcePassthruRead=true>;
-    def "_VIM" # "_" # m.MX:
-      VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, simm5, m>,
-      SchedUnary<"WriteVIMergeI", "ReadVIMergeV", mx,
-                          forcePassthruRead=true>;
+    def "_VVM"#"_"#m.MX : VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
+                                                   GetVRegNoV0<m.vrclass>.R,
+                                                   GetVRegNoV0<m.vrclass>.R, m>,
+        SchedBinary<"WriteVIMergeV", "ReadVIMergeV", "ReadVIMergeV", mx,
+                    forcePassthruRead = true>;
+    def "_VXM"#"_"#m.MX
+        : VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
+                                   GetVRegNoV0<m.vrclass>.R, GPR, m>,
+        SchedBinary<"WriteVIMergeX", "ReadVIMergeV", "ReadVIMergeX", mx,
+                    forcePassthruRead = true>;
+    def "_VIM"#"_"#m.MX
+        : VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
+                                   GetVRegNoV0<m.vrclass>.R, simm5, m>,
+        SchedUnary<"WriteVIMergeI", "ReadVIMergeV", mx,
+                   forcePassthruRead = true>;
   }
 }
 
@@ -5862,20 +5862,6 @@ multiclass VPatConversionWF_VF<string intrinsic, string instruction,
   }
 }
 
-multiclass VPatConversionWF_VF_BF<string intrinsic, string instruction,
-                                  bit isSEWAware = 0> {
-  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in
-  {
-    defvar fvti = fvtiToFWti.Vti;
-    defvar fwti = fvtiToFWti.Wti;
-    let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
-                                 GetVTypePredicates<fwti>.Predicates) in
-    defm : VPatConversion<intrinsic, instruction, "V",
-                          fwti.Vector, fvti.Vector, fwti.Mask, fvti.Log2SEW,
-                          fvti.LMul, fwti.RegClass, fvti.RegClass, isSEWAware>;
-  }
-}
-
 multiclass VPatConversionVI_WF<string intrinsic, string instruction> {
   foreach vtiToWti = AllWidenableIntToFloatVectors in {
     defvar vti = vtiToWti.Vti;
@@ -5966,20 +5952,6 @@ multiclass VPatConversionVF_WF_RTZ<string intrinsic, string instruction,
     defm : VPatConversionRTZ<intrinsic, instruction, "W",
                              fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
                              fvti.LMul, fvti.RegClass, fwti.RegClass, isSEWAware>;
-  }
-}
-
-multiclass VPatConversionVF_WF_BF_RM<string intrinsic, string instruction,
-                                     bit isSEWAware = 0> {
-  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
-    defvar fvti = fvtiToFWti.Vti;
-    defvar fwti = fvtiToFWti.Wti;
-    let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
-                                 GetVTypePredicates<fwti>.Predicates) in
-    defm : VPatConversionRoundingMode<intrinsic, instruction, "W",
-                                      fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
-                                      fvti.LMul, fvti.RegClass, fwti.RegClass,
-                                      isSEWAware>;
   }
 }
 

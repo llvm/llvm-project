@@ -474,15 +474,24 @@ define i32 @cast_private_to_flat_to_global(ptr addrspace(6) %const32.ptr) {
 ; OPT-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr addrspace(3) [[LOCAL_PTR]], align 4
 ; OPT-NEXT:    ret i32 [[LOAD]]
 ;
-; ASM-LABEL: cast_private_to_flat_to_global:
-; ASM:       ; %bb.0:
-; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; ASM-NEXT:    v_mov_b32_e32 v1, 0
-; ASM-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
-; ASM-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
-; ASM-NEXT:    ds_read_b32 v0, v0
-; ASM-NEXT:    s_waitcnt lgkmcnt(0)
-; ASM-NEXT:    s_setpc_b64 s[30:31]
+; DAGISEL-ASM-LABEL: cast_private_to_flat_to_global:
+; DAGISEL-ASM:       ; %bb.0:
+; DAGISEL-ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; DAGISEL-ASM-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; DAGISEL-ASM-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
+; DAGISEL-ASM-NEXT:    ds_read_b32 v0, v0
+; DAGISEL-ASM-NEXT:    s_waitcnt lgkmcnt(0)
+; DAGISEL-ASM-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-ASM-LABEL: cast_private_to_flat_to_global:
+; GISEL-ASM:       ; %bb.0:
+; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-ASM-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-ASM-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
+; GISEL-ASM-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
+; GISEL-ASM-NEXT:    ds_read_b32 v0, v0
+; GISEL-ASM-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-ASM-NEXT:    s_setpc_b64 s[30:31]
   %flat.ptr = addrspacecast ptr addrspace(6) %const32.ptr to ptr
   %local.ptr = addrspacecast ptr %flat.ptr to ptr addrspace(3)
   %load = load volatile i32, ptr addrspace(3) %local.ptr
