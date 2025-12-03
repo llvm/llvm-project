@@ -911,8 +911,6 @@ public:
     case Intrinsic::masked_store:
     case Intrinsic::vp_scatter:
     case Intrinsic::vp_gather:
-    case Intrinsic::vp_load:
-    case Intrinsic::vp_store:
     case Intrinsic::masked_compressstore:
     case Intrinsic::masked_expandload:
       return 1;
