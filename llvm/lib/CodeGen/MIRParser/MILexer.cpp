@@ -266,6 +266,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("constant-pool", MIToken::kw_constant_pool)
       .Case("call-entry", MIToken::kw_call_entry)
       .Case("custom", MIToken::kw_custom)
+      .Case("lanemask", MIToken::kw_lanemask)
       .Case("liveout", MIToken::kw_liveout)
       .Case("landing-pad", MIToken::kw_landing_pad)
       .Case("inlineasm-br-indirect-target",

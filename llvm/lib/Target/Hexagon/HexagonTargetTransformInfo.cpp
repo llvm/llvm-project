@@ -224,24 +224,12 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 InstructionCost
-HexagonTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                                      TTI::TargetCostKind CostKind) const {
-  return BaseT::getMaskedMemoryOpCost(MICA, CostKind);
-}
-
-InstructionCost
 HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
                                VectorType *SrcTy, ArrayRef<int> Mask,
                                TTI::TargetCostKind CostKind, int Index,
                                VectorType *SubTp, ArrayRef<const Value *> Args,
                                const Instruction *CxtI) const {
   return 1;
-}
-
-InstructionCost
-HexagonTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
-                                       TTI::TargetCostKind CostKind) const {
-  return BaseT::getGatherScatterOpCost(MICA, CostKind);
 }
 
 InstructionCost HexagonTTIImpl::getInterleavedMemoryOpCost(

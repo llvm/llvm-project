@@ -139,7 +139,7 @@ class MIRVocabulary {
       "FrameIndex",      "ConstantPoolIndex", "TargetIndex",  "JumpTableIndex",
       "ExternalSymbol",  "GlobalAddress",     "BlockAddress", "RegisterMask",
       "RegisterLiveOut", "Metadata",          "MCSymbol",     "CFIIndex",
-      "IntrinsicID",     "Predicate",         "ShuffleMask"};
+      "IntrinsicID",     "Predicate",         "ShuffleMask",  "LaneMask"};
   static_assert(std::size(CommonOperandNames) == MachineOperand::MO_Last - 1 &&
                 "Common operand names size changed, update accordingly");
 

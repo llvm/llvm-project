@@ -31,11 +31,11 @@ namespace lldb_dap::protocol {
 // MARK: Base Protocol
 
 /// Message unique identifier type.
-using Id = int64_t;
+using Id = uint64_t;
 
 /// A unique identifier that indicates the `seq` field should be calculated by
 /// the current session.
-static constexpr Id kCalculateSeq = INT64_MAX;
+static constexpr Id kCalculateSeq = UINT64_MAX;
 
 /// A client or debug adapter initiated request.
 struct Request {

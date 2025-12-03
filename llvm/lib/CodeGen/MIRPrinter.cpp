@@ -965,7 +965,8 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
   case MachineOperand::MO_Predicate:
   case MachineOperand::MO_BlockAddress:
   case MachineOperand::MO_DbgInstrRef:
-  case MachineOperand::MO_ShuffleMask: {
+  case MachineOperand::MO_ShuffleMask:
+  case MachineOperand::MO_LaneMask: {
     unsigned TiedOperandIdx = 0;
     if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())
       TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);
