@@ -20,7 +20,7 @@ template <typename T>
 void test(T t) {
   // Enumerating expansion statement.
   //
-  // CHECK:      template for (auto x : { 1, 2, 3 }) {
+  // CHECK:      template for (auto x : {1, 2, 3}) {
   // CHECK-NEXT:     foo(x);
   // CHECK-NEXT: }
   template for (auto x : {1, 2, 3}) {
@@ -64,7 +64,7 @@ template <typename T>
 void test2(T t) {
   // Enumerating expansion statement.
   //
-  // CHECK:      template for (int x : { 1, 2, 3 }) {
+  // CHECK:      template for (int x : {1, 2, 3}) {
   // CHECK-NEXT:     foo(x);
   // CHECK-NEXT: }
   template for (int x : {1, 2, 3}) {
