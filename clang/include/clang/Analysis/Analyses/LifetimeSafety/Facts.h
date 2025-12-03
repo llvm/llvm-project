@@ -218,7 +218,8 @@ public:
 
   void dump(const CFG &Cfg, AnalysisDeclContext &AC) const;
 
-  // A utility function to print the size of the CFG blocks in the analysis context.
+  // A utility function to print the size of the CFG blocks in the analysis
+  // context.
   void dumpBlockSizes(const CFG &Cfg, AnalysisDeclContext &AC) const;
 
   /// Retrieves program points that were specially marked in the source code

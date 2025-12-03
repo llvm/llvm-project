@@ -5166,10 +5166,13 @@ def ffuchsia_api_level_EQ : Joined<["-"], "ffuchsia-api-level=">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set Fuchsia API level">,
   MarshallingInfoInt<LangOpts<"FuchsiaAPILevel">>;
-def fblock_size_threshold : Joined<["-"], "fblock-size-threshold=">,
-  Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Set Threshold for block size above which lifetime analysis will be skipped">,
-  MarshallingInfoInt<LangOpts<"BlockFactNumThreshold">>;
+def fblock_size_threshold
+    : Joined<["-"], "fblock-size-threshold=">,
+      Group<m_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Set Threshold for block size above which lifetime analysis "
+               "will be skipped">,
+      MarshallingInfoInt<LangOpts<"BlockFactNumThreshold">>;
 def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
   Visibility<[ClangOption, CC1Option, FlangOption]>,
   Group<m_Group>, HelpText<"Set macOS deployment target">;

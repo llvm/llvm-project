@@ -29,7 +29,7 @@ void runLifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                         const LiveOriginsAnalysis &LiveOrigins,
                         const FactManager &FactMgr, AnalysisDeclContext &ADC,
                         LifetimeSafetyReporter *Reporter,
-                    uint32_t BlockFactNumThreshold);
+                        uint32_t BlockFactNumThreshold);
 
 } // namespace clang::lifetimes::internal
 

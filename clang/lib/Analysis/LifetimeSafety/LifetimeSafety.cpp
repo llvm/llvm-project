@@ -33,10 +33,10 @@ namespace internal {
 
 LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                                LifetimeSafetyReporter *Reporter,
-                                              uint32_t BlockFactNumThreshold)
+                                               uint32_t BlockFactNumThreshold)
     : BlockFactNumThreshold(BlockFactNumThreshold), AC(AC), Reporter(Reporter) {
   FactMgr.setBlockFactNumThreshold(BlockFactNumThreshold);
-    }
+}
 
 void LifetimeSafetyAnalysis::run() {
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyAnalysis");
@@ -70,14 +70,16 @@ void LifetimeSafetyAnalysis::run() {
   DEBUG_WITH_TYPE("LiveOrigins",
                   LiveOrigins->dump(llvm::dbgs(), FactMgr.getTestPoints()));
 
-  runLifetimeChecker(*LoanPropagation, *LiveOrigins, FactMgr, AC, Reporter, BlockFactNumThreshold);
+  runLifetimeChecker(*LoanPropagation, *LiveOrigins, FactMgr, AC, Reporter,
+                     BlockFactNumThreshold);
 }
 } // namespace internal
 
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetyReporter *Reporter,
-                              uint32_t BlockFactNumThreshold) {
-  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter, BlockFactNumThreshold);
+                               uint32_t BlockFactNumThreshold) {
+  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter,
+                                            BlockFactNumThreshold);
   Analysis.run();
 }
 } // namespace clang::lifetimes

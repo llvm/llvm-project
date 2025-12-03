@@ -52,7 +52,7 @@ public:
 /// The main entry point for the analysis.
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetyReporter *Reporter,
-                              uint32_t BlockFactNumThreshold);
+                               uint32_t BlockFactNumThreshold);
 
 namespace internal {
 /// An object to hold the factories for immutable collections, ensuring
@@ -69,7 +69,7 @@ class LifetimeSafetyAnalysis {
 public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                          LifetimeSafetyReporter *Reporter,
-                        uint32_t BlockFactNumThreshold);
+                         uint32_t BlockFactNumThreshold);
 
   void run();
 
