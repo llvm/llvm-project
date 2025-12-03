@@ -14,7 +14,7 @@ cir.func @E() {
   %6 = cir.load align(8) %0 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   cir.br ^bb1(%6 : !cir.ptr<!void>)
 ^bb1(%7: !cir.ptr<!void>):  // pred: ^bb0
-  cir.indirectbr %7 : <!void>, [
+  cir.indirect_br %7 : !cir.ptr<!void>, [
   ^bb5,
   ^bb4,
   ^bb3,
@@ -38,7 +38,7 @@ cir.func @E() {
   cir.return
 }
 
-// CHECK: cir.indirectbr %7 : <!void>, [
+// CHECK: cir.indirect_br %7 : !cir.ptr<!void>, [
 // CHECK:  ^bb5,
 // CHECK:  ^bb4,
 // CHECK:  ^bb3,

@@ -1466,10 +1466,10 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
 // IndirectBrOp
 //===----------------------------------------------------------------------===//
 
-def CIR_IndirectBrOp : CIR_Op<"indirectbr", [
+def CIR_IndirectBrOp : CIR_Op<"indirect_br", [
   DeclareOpInterfaceMethods<BranchOpInterface>,
-  SameVariadicOperandSize, Terminator, Pure]
-> {
+  SameVariadicOperandSize, Terminator, Pure
+]> {
   let summary = "Indirect branch";
   let description = [{
     The `cir.indirectbr` operation represents an indirect branch to one of
@@ -1486,22 +1486,9 @@ def CIR_IndirectBrOp : CIR_Op<"indirectbr", [
     Example:
 
     ```mlir
-      %0 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init]
-      %1 = cir.block_address <@A, "A"> : !cir.ptr<!void>
-      cir.store align(8) %1, %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
-      %2 = cir.load align(8) %0 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
-      cir.br ^bb1(%2 : !cir.ptr<!void>)
-    ^bb1(%3: !cir.ptr<!void>):
-      cir.indirectbr %3 : <!void>, [
-      ^bb2
-      ]
-    ```
-    or with a poison:
-
-    ```mlir
+      %0 = cir.block_address <@A, "A"> : !cir.ptr<!void>
       cir.indirectbr %0 poison : <!void>, [
-      ^bb3,
-      ^bb2
+      ^bb1
       ]
     ```
   }];
@@ -1509,17 +1496,17 @@ def CIR_IndirectBrOp : CIR_Op<"indirectbr", [
   let arguments = (ins
     CIR_VoidPtrType:$addr,
     UnitAttr:$poison,
-    VariadicOfVariadic<AnyType, "indbr_operand_segments">:$succOperands,
-    DenseI32ArrayAttr:$indbr_operand_segments
+    VariadicOfVariadic<AnyType, "operand_segments">:$succ_operands,
+    DenseI32ArrayAttr:$operand_segments
     );
 
   let successors = (successor VariadicSuccessor<AnySuccessor>:$successors);
   let assemblyFormat = [{
-    $addr ( `poison` $poison^ )? `:` type($addr) `,`
+    $addr ( `poison` $poison^ )? `:` qualified(type($addr)) `,`
     custom<IndirectBrOpSucessors>(ref(type($addr)),
                                   $successors,
-                                  $succOperands,
-                                  type($succOperands))
+                                  $succ_operands,
+                                  type($succ_operands))
     attr-dict
   }];
 }

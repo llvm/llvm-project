@@ -16,7 +16,7 @@ LABEL_A:
 // CIR:    [[BLOCKADD:%.*]] = cir.load align(8) [[PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:    cir.br ^bb1([[BLOCKADD]] : !cir.ptr<!void>)
 // CIR:  ^bb1([[PHI:%.*]]: !cir.ptr<!void> {{.*}}):  // pred: ^bb0
-// CIR:    cir.indirectbr [[PHI]] : <!void>, [
+// CIR:    cir.indirect_br [[PHI]] : !cir.ptr<!void>, [
 // CIR:    ^bb2
 // CIR:    ]
 // CIR:  ^bb2:  // pred: ^bb1
@@ -50,7 +50,7 @@ LABEL_B:
 // CIR:    [[BLOCKADD:%.*]] = cir.load align(8) [[PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:    cir.br ^bb2([[BLOCKADD]] : !cir.ptr<!void>)
 // CIR:  ^bb2([[PHI:%.*]]: !cir.ptr<!void> {{.*}}):  // pred: ^bb1
-// CIR:    cir.indirectbr [[PHI]] : <!void>, [
+// CIR:    cir.indirect_br [[PHI]] : !cir.ptr<!void>, [
 // CIR-NEXT:    ^bb1
 // CIR:    ]
 
@@ -82,7 +82,7 @@ LABEL_B:
 // CIR:    [[BLOCKADD:%.*]] = cir.load align(8) [[PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:    cir.br ^bb1([[BLOCKADD]] : !cir.ptr<!void>)
 // CIR:  ^bb1([[PHI:%.*]]: !cir.ptr<!void> {{.*}}):  // pred: ^bb0
-// CIR:    cir.indirectbr [[PHI]] : <!void>, [
+// CIR:    cir.indirect_br [[PHI]] : !cir.ptr<!void>, [
 // CIR-NEXT:    ^bb2,
 // CIR-NEXT:    ^bb4
 // CIR:    ]
@@ -129,7 +129,7 @@ LABEL_A:
 // CIR:    cir.store align(8) %[[BLK2]], %[[PTR2]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:    cir.br ^bb1
 // CIR:  ^bb1([[PHI:%*.]]: !cir.ptr<!void> {{.*}}):  // pred: ^bb0
-// CIR:    cir.indirectbr [[PHI]] : <!void>, [
+// CIR:    cir.indirect_br [[PHI]] : !cir.ptr<!void>, [
 // CIR-DAG:    ^bb2,
 // CIR-DAG:    ^bb2,
 // CIR-DAG:    ^bb2
@@ -169,9 +169,9 @@ LABEL_D:
   return;
 }
 
-//CIR:  cir.func dso_local @E()
+//CIR:  cir.func {{.*}} @E()
 //CIR:  ^bb1({{.*}}: !cir.ptr<!void> {{.*}}):  // no predecessors
-//CIR:    cir.indirectbr {{.*}} poison : <!void>, [
+//CIR:    cir.indirect_br {{.*}} poison : !cir.ptr<!void>, [
 //CIR-NEXT:    ^bb5,
 //CIR-NEXT:    ^bb4,
 //CIR-NEXT:    ^bb3,
