@@ -72,13 +72,9 @@ TEST(ModuleTest, FindFunctionsCppMangledName) {
     }
   };
   SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab,
-                CPlusPlusLanguage, platform_linux::PlatformLinux,
-                MockLanguageWithBogusLookupInfo>
-      subsystems;
+                CPlusPlusLanguage, 
+                MockLanguageWithBogusLookupInfo> subsystems;
 
-  ArchSpec arch("x86_64-pc-linux");
-  Platform::SetHostPlatform(
-      platform_linux::PlatformLinux::CreateInstance(true, &arch));
 
   std::call_once(TestUtilities::g_debugger_initialize_flag,
                  []() { Debugger::Initialize(nullptr); });
@@ -108,19 +104,7 @@ Symbols:
 )");
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
 
-  DebuggerSP debugger_sp = Debugger::CreateInstance();
-  ASSERT_TRUE(debugger_sp);
-
-  TargetSP target_sp;
-  PlatformSP platform_sp;
-
-  Status error = debugger_sp->GetTargetList().CreateTarget(
-      *debugger_sp, "", arch, eLoadDependentsNo, platform_sp, target_sp);
-  ASSERT_TRUE(error.Success());
-  ASSERT_TRUE(target_sp);
-
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
-  target_sp->GetImages().Append(module_sp);
 
   // Verify both C++ and our mock language are registered.
   Language *cpp_lang = Language::FindPlugin(lldb::eLanguageTypeC_plus_plus);
