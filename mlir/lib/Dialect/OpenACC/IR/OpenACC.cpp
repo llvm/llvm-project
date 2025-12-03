@@ -4293,6 +4293,12 @@ RoutineOp::getGangDimValue(mlir::acc::DeviceType deviceType) {
   return std::nullopt;
 }
 
+void RoutineOp::addSeq(MLIRContext *context,
+                       llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setSeqAttr(addDeviceTypeAffectedOperandHelper(context, getSeqAttr(),
+                                                effectiveDeviceTypes));
+}
+
 //===----------------------------------------------------------------------===//
 // InitOp
 //===----------------------------------------------------------------------===//
