@@ -16626,7 +16626,7 @@ static SDValue performANDCombine(SDNode *N,
     APInt InnerMask = MaskVal.lshr(ShiftAmt);
 
     bool IsNarrowable =
-        InnerMask == 0xff || InnerMask == 0xffff || (InnerMask == 0xffffffff);
+        InnerMask == 0xff || InnerMask == 0xffff || InnerMask == 0xffffffff;
 
     if (IsNarrowable && isa<LoadSDNode>(N0.getOperand(0))) {
       // AND the loaded value and change the shift appropriately, allowing
