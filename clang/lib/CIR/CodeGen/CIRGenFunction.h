@@ -1236,6 +1236,14 @@ public:
   /// CIR emit functions
   /// ----------------------
 public:
+  mlir::Value emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
+                                     ReturnValueSlot returnValue,
+                                     llvm::Triple::ArchType arch);
+  mlir::Value emitAArch64SMEBuiltinExpr(unsigned builtinID,
+                                        const CallExpr *expr);
+  mlir::Value emitAArch64SVEBuiltinExpr(unsigned builtinID,
+                                        const CallExpr *expr);
+
   mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, QualType ty,
                                       SourceLocation loc,
                                       SourceLocation assumptionLoc,
