@@ -4631,14 +4631,6 @@ def CIR_PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
 // Floating Point Ops
 //===----------------------------------------------------------------------===//
 
-def CIR_SqrtOp : CIR_UnaryFPToFPBuiltinOp<"sqrt", "SqrtOp"> {
-  let summary = "Floating-point square root operation";
-  
-  let description = [{
-    Computes the square root of a floating-point value or vector.
-  }];
-}
-
 class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]>
 {
@@ -4648,6 +4640,14 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let assemblyFormat = "$src `:` type($src) attr-dict";
 
   let llvmOp = llvmOpName;
+}
+
+def CIR_SqrtOp : CIR_UnaryFPToFPBuiltinOp<"sqrt", "SqrtOp"> {
+  let summary = "Floating-point square root operation";
+  
+  let description = [{
+    Computes the square root of a floating-point value or vector.
+  }];
 }
 
 def CIR_ACosOp : CIR_UnaryFPToFPBuiltinOp<"acos", "ACosOp"> {
