@@ -30,7 +30,7 @@ void test(T t) {
   // Iterating expansion statement.
   //
   // CHECK:      static constexpr Array<int, 3> a;
-  // CHECK-NEXT: template for (auto x : a) {
+  // CHECK-NEXT: template for (auto x : (a)) {
   // CHECK-NEXT:   foo(x);
   // CHECK-NEXT: }
   static constexpr Array<int, 3> a;
@@ -74,7 +74,7 @@ void test2(T t) {
   // Iterating expansion statement.
   //
   // CHECK:      static constexpr Array<int, 3> a;
-  // CHECK-NEXT: template for (int x : a) {
+  // CHECK-NEXT: template for (int x : (a)) {
   // CHECK-NEXT:   foo(x);
   // CHECK-NEXT: }
   static constexpr Array<int, 3> a;
