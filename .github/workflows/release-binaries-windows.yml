@@ -37,7 +37,7 @@ permissions:
 jobs:
   build-windows-release:
     runs-on: ${{ matrix.runs-on }}
-    if: github.repository_owner == 'llvm'
+    if: github.repository_owner == 'llvm' && false
     outputs:
       digest: ${{ steps.digest.outputs.digest }}
       artifact-id: ${{ steps.artifact-upload.outputs.artifact-id }}
