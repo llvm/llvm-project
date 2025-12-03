@@ -62,9 +62,6 @@ public:
                   uint32_t BlockFactNumThreshold)
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
         Reporter(Reporter) {
-    if (BlockFactNumThreshold <= 0) {
-      llvm::errs() << "Warning: BlockFactNumThreshold should be positive.\n";
-    }
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>()) {
       const auto &BlockFacts = FactMgr.getFacts(B);
       if (BlockFactNumThreshold > 0 &&

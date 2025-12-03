@@ -105,7 +105,7 @@ void FactManager::dumpBlockSizes(const CFG &Cfg,
       llvm::dbgs() << "Function: " << ND->getQualifiedNameAsString() << "\n";
   // Print blocks in the order as they appear in code for a stable ordering.
   for (const CFGBlock *B : *AC.getAnalysis<PostOrderCFGView>()) {
-    if (getFacts(B).size() > BlockFactNumThreshold)
+    if (BlockFactNumThreshold > 0 && getFacts(B).size() > BlockFactNumThreshold)
       continue;
     if (B->getLabel()) {
       llvm::dbgs() << "  Block: " << B->getLabel()->getStmtClassName();
