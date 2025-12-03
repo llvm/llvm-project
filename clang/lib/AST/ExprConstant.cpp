@@ -17054,6 +17054,30 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(Val, E);
   }
 
+  case X86::BI__builtin_ia32_kshiftliqi:
+  case X86::BI__builtin_ia32_kshiftlihi:
+  case X86::BI__builtin_ia32_kshiftlisi:
+  case X86::BI__builtin_ia32_kshiftlidi: {
+    return HandleMaskBinOp([](const APSInt &LHS, const APSInt &RHS) {
+      unsigned Amt = RHS.getZExtValue() & 0xFF;
+      if (Amt >= LHS.getBitWidth())
+        return APSInt(APInt::getZero(LHS.getBitWidth()), LHS.isUnsigned());
+      return APSInt(LHS.shl(Amt), LHS.isUnsigned());
+    });
+  }
+
+  case X86::BI__builtin_ia32_kshiftriqi:
+  case X86::BI__builtin_ia32_kshiftrihi:
+  case X86::BI__builtin_ia32_kshiftrisi:
+  case X86::BI__builtin_ia32_kshiftridi: {
+    return HandleMaskBinOp([](const APSInt &LHS, const APSInt &RHS) {
+      unsigned Amt = RHS.getZExtValue() & 0xFF;
+      if (Amt >= LHS.getBitWidth())
+        return APSInt(APInt::getZero(LHS.getBitWidth()), LHS.isUnsigned());
+      return APSInt(LHS.lshr(Amt), LHS.isUnsigned());
+    });
+  }
+
   case clang::X86::BI__builtin_ia32_vec_ext_v4hi:
   case clang::X86::BI__builtin_ia32_vec_ext_v16qi:
   case clang::X86::BI__builtin_ia32_vec_ext_v8hi:

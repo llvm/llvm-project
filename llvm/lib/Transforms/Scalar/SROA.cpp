@@ -2178,35 +2178,6 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
   return true;
 }
 
-/// Test whether a vector type is viable for promotion.
-///
-/// This implements the necessary checking for \c checkVectorTypesForPromotion
-/// (and thus isVectorPromotionViable) over all slices of the alloca for the
-/// given VectorType.
-static bool checkVectorTypeForPromotion(Partition &P, VectorType *VTy,
-                                        const DataLayout &DL, unsigned VScale) {
-  uint64_t ElementSize =
-      DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
-
-  // While the definition of LLVM vectors is bitpacked, we don't support sizes
-  // that aren't byte sized.
-  if (ElementSize % 8)
-    return false;
-  assert((DL.getTypeSizeInBits(VTy).getFixedValue() % 8) == 0 &&
-         "vector size not a multiple of element size?");
-  ElementSize /= 8;
-
-  for (const Slice &S : P)
-    if (!isVectorPromotionViableForSlice(P, S, VTy, ElementSize, DL, VScale))
-      return false;
-
-  for (const Slice *S : P.splitSliceTails())
-    if (!isVectorPromotionViableForSlice(P, *S, VTy, ElementSize, DL, VScale))
-      return false;
-
-  return true;
-}
-
 /// Test whether any vector type in \p CandidateTys is viable for promotion.
 ///
 /// This implements the necessary checking for \c isVectorPromotionViable over
@@ -2291,11 +2262,30 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
            std::numeric_limits<unsigned short>::max();
   });
 
-  for (VectorType *VTy : CandidateTys)
-    if (checkVectorTypeForPromotion(P, VTy, DL, VScale))
-      return VTy;
+  // Find a vector type viable for promotion by iterating over all slices.
+  auto *VTy = llvm::find_if(CandidateTys, [&](VectorType *VTy) -> bool {
+    uint64_t ElementSize =
+        DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
 
-  return nullptr;
+    // While the definition of LLVM vectors is bitpacked, we don't support sizes
+    // that aren't byte sized.
+    if (ElementSize % 8)
+      return false;
+    assert((DL.getTypeSizeInBits(VTy).getFixedValue() % 8) == 0 &&
+           "vector size not a multiple of element size?");
+    ElementSize /= 8;
+
+    for (const Slice &S : P)
+      if (!isVectorPromotionViableForSlice(P, S, VTy, ElementSize, DL, VScale))
+        return false;
+
+    for (const Slice *S : P.splitSliceTails())
+      if (!isVectorPromotionViableForSlice(P, *S, VTy, ElementSize, DL, VScale))
+        return false;
+
+    return true;
+  });
+  return VTy != CandidateTys.end() ? *VTy : nullptr;
 }
 
 static VectorType *createAndCheckVectorTypesForPromotion(
@@ -5205,7 +5195,6 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // won't always succeed, in which case we fall back to a legal integer type
   // or an i8 array of an appropriate size.
   Type *SliceTy = nullptr;
-  VectorType *SliceVecTy = nullptr;
   const DataLayout &DL = AI.getDataLayout();
   unsigned VScale = AI.getFunction()->getVScaleValue();
 
@@ -5214,10 +5203,8 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // Do all uses operate on the same type?
   if (CommonUseTy.first) {
     TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy.first);
-    if (CommonUseSize.isFixed() && CommonUseSize.getFixedValue() >= P.size()) {
+    if (CommonUseSize.isFixed() && CommonUseSize.getFixedValue() >= P.size())
       SliceTy = CommonUseTy.first;
-      SliceVecTy = dyn_cast<VectorType>(SliceTy);
-    }
   }
   // If not, can we find an appropriate subtype in the original allocated type?
   if (!SliceTy)
@@ -5227,26 +5214,13 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
 
   // If still not, can we use the largest bitwidth integer type used?
   if (!SliceTy && CommonUseTy.second)
-    if (DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size()) {
+    if (DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size())
       SliceTy = CommonUseTy.second;
-      SliceVecTy = dyn_cast<VectorType>(SliceTy);
-    }
   if ((!SliceTy || (SliceTy->isArrayTy() &&
                     SliceTy->getArrayElementType()->isIntegerTy())) &&
       DL.isLegalInteger(P.size() * 8)) {
     SliceTy = Type::getIntNTy(*C, P.size() * 8);
   }
-
-  // If the common use types are not viable for promotion then attempt to find
-  // another type that is viable.
-  if (SliceVecTy && !checkVectorTypeForPromotion(P, SliceVecTy, DL, VScale))
-    if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
-                                                 P.beginOffset(), P.size())) {
-      VectorType *TypePartitionVecTy = dyn_cast<VectorType>(TypePartitionTy);
-      if (TypePartitionVecTy &&
-          checkVectorTypeForPromotion(P, TypePartitionVecTy, DL, VScale))
-        SliceTy = TypePartitionTy;
-    }
 
   if (!SliceTy)
     SliceTy = ArrayType::get(Type::getInt8Ty(*C), P.size());
