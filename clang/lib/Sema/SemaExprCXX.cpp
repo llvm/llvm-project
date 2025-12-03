@@ -5724,12 +5724,14 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
       ResultType = CheckSizelessVectorOperands(LHS, RHS, QuestionLoc,
                                                /*IsCompAssign*/ false,
                                                ArithConvKind::Conditional);
-    else
+    else if (LHSType->isVectorType() || LHSType->isVectorType())
       ResultType = CheckVectorOperands(
           LHS, RHS, QuestionLoc, /*isCompAssign*/ false, /*AllowBothBool*/ true,
           /*AllowBoolConversions*/ false,
           /*AllowBoolOperation*/ true,
           /*ReportInvalid*/ true);
+    else
+      return InvalidOperands(QuestionLoc, LHS, RHS);
     if (ResultType.isNull())
       return {};
   } else {
