@@ -5,6 +5,7 @@ during its initialization.
 
 import os
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import TestBase
 from lldbsuite.test import lldbutil
 
@@ -16,6 +17,7 @@ class FrameProviderCircularDependencyTestCase(TestBase):
         TestBase.setUp(self)
         self.source = "main.c"
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_circular_dependency_with_function_replacement(self):
         """
         Test the circular dependency fix with a provider that replaces function names.
