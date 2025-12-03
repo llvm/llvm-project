@@ -1599,19 +1599,19 @@ public:
                                        /*IsGatherScatter*/ true, CostKind);
   }
 
-  InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
-                                         const Value *Ptr, bool VariableMask,
-                                         Align Alignment,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) const override {
+  InstructionCost
+  getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                         TTI::TargetCostKind CostKind) const override {
     // For a target without strided memory operations (or for an illegal
     // operation type on one which does), assume we lower to a gather/scatter
     // operation.  (Which may in turn be scalarized.)
-    unsigned IID = Opcode == Instruction::Load ? Intrinsic::masked_gather
-                                               : Intrinsic::masked_scatter;
+    unsigned IID = MICA.getID() == Intrinsic::experimental_vp_strided_load
+                       ? Intrinsic::masked_gather
+                       : Intrinsic::masked_scatter;
     return thisT()->getGatherScatterOpCost(
-        MemIntrinsicCostAttributes(IID, DataTy, Ptr, VariableMask, Alignment,
-                                   I),
+        MemIntrinsicCostAttributes(IID, MICA.getDataType(), MICA.getPointer(),
+                                   MICA.getVariableMask(), MICA.getAlignment(),
+                                   MICA.getInst()),
         CostKind);
   }
 
@@ -3062,21 +3062,11 @@ public:
   getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
                            TTI::TargetCostKind CostKind) const override {
     unsigned Id = MICA.getID();
-    Type *DataTy = MICA.getDataType();
-    const Value *Ptr = MICA.getPointer();
-    const Instruction *I = MICA.getInst();
-    bool VariableMask = MICA.getVariableMask();
-    Align Alignment = MICA.getAlignment();
 
     switch (Id) {
     case Intrinsic::experimental_vp_strided_load:
-    case Intrinsic::experimental_vp_strided_store: {
-      unsigned Opcode = Id == Intrinsic::experimental_vp_strided_load
-                            ? Instruction::Load
-                            : Instruction::Store;
-      return thisT()->getStridedMemoryOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                             Alignment, CostKind, I);
-    }
+    case Intrinsic::experimental_vp_strided_store:
+      return thisT()->getStridedMemoryOpCost(MICA, CostKind);
     case Intrinsic::masked_scatter:
     case Intrinsic::masked_gather:
     case Intrinsic::vp_scatter:
