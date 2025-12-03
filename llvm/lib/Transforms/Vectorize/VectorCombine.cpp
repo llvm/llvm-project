@@ -2924,8 +2924,9 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
       auto *ArgTy = FixedVectorType::get(VecTy->getElementType(),
                                          ShuffleDstTy->getNumElements());
       NewArgsTy.push_back(ArgTy);
-      NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
-                                    ArgTy, VecTy, OldMask, CostKind);
+      NewCost += TTI.getShuffleCost(
+          TargetTransformInfo::SK_PermuteTwoSrc, ArgTy, VecTy, OldMask,
+          CostKind, 0, nullptr, {II0->getArgOperand(I), II1->getArgOperand(I)});
     }
   }
   IntrinsicCostAttributes NewAttr(IID, ShuffleDstTy, NewArgsTy);
