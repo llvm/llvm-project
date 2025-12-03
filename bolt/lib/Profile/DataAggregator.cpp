@@ -2417,8 +2417,6 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       // Skip printing if there's no profile data
       llvm::erase_if(
           YamlBF.Blocks, [](const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
-            if ((size_t)YamlBB.Hash == 0)
-              return true;
             auto HasCount = [](const auto &SI) { return SI.Count; };
             bool HasAnyCount = YamlBB.ExecCount ||
                                llvm::any_of(YamlBB.Successors, HasCount) ||
