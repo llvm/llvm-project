@@ -163,7 +163,7 @@ body: |
     ; CHECK-NEXT: %passthru:vrnov0 = COPY $v8
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
     ; CHECK-NEXT: %x:vrnov0 = PseudoVMERGE_VVM_M1 %passthru, %passthru, $noreg, %mask, 4, 5 /* e32 */
-    %passthru:vr = COPY $v8
+    %passthru:vrnov0 = COPY $v8
     %mask:vmv0 = COPY $v0
     %x:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %passthru, $noreg, %mask, 4, 5 /* e32 */
     %z:vr = PseudoVMV_V_V_M1 %passthru, %x, 4, 5 /* e32 */, 0 /* tu, mu */
