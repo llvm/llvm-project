@@ -1,122 +1,197 @@
 {
-    "name": "llvm",
-    "displayName": "llvm",
-    "description": "VS Code Externsion for LLVM development",
-    "publisher": "llvm-vs-code-extensions",
-    "version": "0.0.1",
-    "repository": "somewhere",
-    "engines": {
-        "vscode": "^1.42.0"
-    },
-    "categories": [
-        "Programming Languages"
+  "name": "llvm",
+  "displayName": "llvm",
+  "description": "VS Code Externsion for LLVM development",
+  "publisher": "llvm-vs-code-extensions",
+  "version": "0.0.2",
+  "repository": "somewhere",
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "LLVM"
+  ],
+  "activationEvents": [
+    "onCommand:workbench.action.tasks.runTask"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "tablegen",
+        "aliases": [
+          "TableGen",
+          "tablegen"
+        ],
+        "extensions": [
+          ".td"
+        ],
+        "configuration": "./language-configuration-tablegen.json"
+      },
+      {
+        "id": "llvm",
+        "aliases": [
+          "LLVM IR",
+          "LLVM",
+          "llvm"
+        ],
+        "extensions": [
+          ".ll"
+        ],
+        "configuration": "./language-configuration.json"
+      }
     ],
-    "activationEvents": [
-        "onCommand:workbench.action.tasks.runTask"
+    "grammars": [
+      {
+        "language": "tablegen",
+        "scopeName": "source.tablegen",
+        "path": "./syntaxes/TableGen.tmLanguage"
+      },
+      {
+        "language": "llvm",
+        "scopeName": "source.llvm",
+        "path": "./syntaxes/ll.tmLanguage.json"
+      }
     ],
-    "main": "./out/extension",
-    "contributes": {
-        "languages": [
-            {
-                "id": "tablegen",
-                "aliases": [
-                    "TableGen",
-                    "tablegen"
-                ],
-                "extensions": [
-                    ".td"
-                ],
-                "configuration": "./language-configuration-tablegen.json"
-            },
-            {
-                "id": "llvm",
-                "aliases": [
-                    "LLVM IR",
-                    "LLVM",
-                    "llvm"
-                ],
-                "extensions": [
-                    ".ll"
-                ],
-                "configuration": "./language-configuration.json"
-            }
+    "taskDefinitions": [
+      {
+        "type": "llvm-lit",
+        "required": [
+          "task"
         ],
-        "grammars": [
-            {
-                "language": "tablegen",
-                "scopeName": "source.tablegen",
-                "path": "./syntaxes/TableGen.tmLanguage"
-            },
-            {
-                "language": "llvm",
-                "scopeName": "source.llvm",
-                "path": "./syntaxes/ll.tmLanguage.json"
-            }
+        "properties": {
+          "task": {
+            "type": "string",
+            "description": "The Rake task to customize"
+          }
+        }
+      }
+    ],
+    "problemMatchers": [
+      {
+        "name": "llvm-lit",
+        "fileLocation": [
+          "absolute"
         ],
-        "taskDefinitions": [
-            {
-                "type": "llvm-lit",
-                "required": [
-                    "task"
-                ],
-                "properties": {
-                    "task": {
-                        "type": "string",
-                        "description": "The Rake task to customize"
-                    }
-                }
-            }
-        ],
-        "problemMatchers": [
-            {
-                "name": "llvm-lit",
-                "fileLocation": [
-                    "absolute"
-                ],
-                "label": "LLVM LIT",
-                "source": "llvm lit",
-                "severity": "error",
-                "pattern": [
-                    {
-                        "regexp": "^(.+):(\\d+)\\((\\d+)\\):\\s+(.+)$",
-                        "kind": "location",
-                        "file": 1,
-                        "line": 2,
-                        "code": 3,
-                        "message": 4
-                    }
-                ]
-            },
-            {
-                "name": "llvm-filecheck",
-                "fileLocation": [
-                    "absolute"
-                ],
-                "label": "LLVM FileCheck",
-                "source": "llvm filecheck",
-                "pattern": [
-                    {
-                        "regexp": "^(.+):(\\d+):\\d+:\\s+(error|warning|note|remark):\\s+(.+)$",
-                        "kind": "location",
-                        "file": 1,
-                        "line": 2,
-                        "severity": 3,
-                        "message": 4
-                    }
-                ]
-            }
+        "label": "LLVM LIT",
+        "source": "llvm lit",
+        "severity": "error",
+        "pattern": [
+          {
+            "regexp": "^(.+):(\\d+)\\((\\d+)\\):\\s+(.+)$",
+            "kind": "location",
+            "file": 1,
+            "line": 2,
+            "code": 3,
+            "message": 4
+          }
         ]
+      },
+      {
+        "name": "llvm-filecheck",
+        "fileLocation": [
+          "absolute"
+        ],
+        "label": "LLVM FileCheck",
+        "source": "llvm filecheck",
+        "pattern": [
+          {
+            "regexp": "^(.+):(\\d+):\\d+:\\s+(error|warning|note|remark):\\s+(.+)$",
+            "kind": "location",
+            "file": 1,
+            "line": 2,
+            "severity": 3,
+            "message": 4
+          }
+        ]
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "LLVM",
+      "properties": {
+        "llvm.serverPath": {
+          "scope": "resource",
+          "type": "string",
+          "description": "The file path of the llvm-lsp-server executable."
+        },
+        "llvm.additionalServerArgs": {
+          "scope": "resource",
+          "type": "array",
+          "description": "A list of additional arguments for llvm-lsp-server executable. E.g. --log-file=/tmp/my-log.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "llvm.trace.server": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "messages",
+          "description": "Traces the communication between VS Code and the language server."
+        },
+        "llvm.onSettingsChanged": {
+          "type": "string",
+          "default": "prompt",
+          "description": "Action taken when a setting change requires a server restart to take effect.",
+          "enum": [
+            "prompt",
+            "restart",
+            "ignore"
+          ],
+          "enumDescriptions": [
+            "Prompt the user for restarting the server",
+            "Automatically restart the server",
+            "Do nothing"
+          ]
+        }
+      }
     },
-    "devDependencies": {
-        "@types/node": "^8.10.59",
-        "@types/vscode": "^1.39.0",
-        "js-yaml": "^3.13.1",
-        "tslint": "^5.16.0",
-        "typescript": "^3.8.3"
-    },
-    "extensionDependencies": ["ms-vscode.cmake-tools"],
-    "scripts": {
-        "vscode:prepublish": "npx js-yaml syntaxes/ll.tmLanguage.yaml > syntaxes/ll.tmLanguage.json && tsc -b",
-        "watch": "tsc -b -w"
+    "commands": [
+      {
+        "command": "llvm.restart",
+        "title": "llvm: Restart language server"
+      },
+      {
+        "command": "llvm.cfg",
+        "title": "llvm: Open CFG preview"
+      }
+    ],
+    "menus": {
+      "editor/context": []
     }
+  },
+  "main": "./out/extension",
+  "dependencies": {
+    "base64-js": "^1.5.1",
+    "chokidar": "3.5.2",
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/mocha": "^7.0.2",
+    "@types/node": "^14.17.0",
+    "@types/vscode": "~1.92.0",
+    "@vscode/vsce": "^2.19.0",
+    "js-yaml": "^3.13.1",
+    "clang-format": "^1.8.0",
+    "typescript": "^4.9.5",
+    "vscode-test": "^1.3.0"
+  },
+  "extensionDependencies": [
+    "ms-vscode.cmake-tools"
+  ],
+  "scripts": {
+    "vscode:prepublish": "npx js-yaml syntaxes/ll.tmLanguage.yaml > syntaxes/ll.tmLanguage.json && tsc -b",
+    "compile": "tsc -b",
+    "package": "vsce package",
+    "watch": "tsc -b -w",
+    "lint": "eslint"
+  }
 }
