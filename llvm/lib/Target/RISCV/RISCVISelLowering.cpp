@@ -23900,7 +23900,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
         StackPtr = DAG.getCopyFromReg(Chain, DL, RISCV::X2, PtrVT);
 
       if (IsTailCall) {
-        unsigned OpSize = (VA.getValVT().getSizeInBits() + 7) / 8;
+        unsigned OpSize = divideCeil(VA.getValVT().getSizeInBits(), 8);
         int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
         DstAddr = DAG.getFrameIndex(FI, PtrVT);
         DstInfo = MachinePointerInfo::getFixedStack(MF, FI);
