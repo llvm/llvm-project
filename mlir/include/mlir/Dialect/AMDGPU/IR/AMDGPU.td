@@ -1317,6 +1317,8 @@ def AMDGPU_MakeDmaDescriptorOp :
      Padding can be applied to the LDS address when copying from memory to LDS,
      but not when copying from LDS to memory.
      The values in the padded target addresses remain the same as before the operation was applied.
+     $pad_interval must be a power of two contained in [2, 256].
+     $pad_amount must be a value contained in [1, 128].
 
      2D and 3D tensors may be iterated over by setting $global_increment, $lds_increment, and $iteration_count.
      $global_increment determines how much to increment the starting global memory address per iteration in units of the $base's element type.
