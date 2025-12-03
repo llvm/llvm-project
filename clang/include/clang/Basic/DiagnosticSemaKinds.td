@@ -167,8 +167,6 @@ def note_constexpr_assert_failed : Note<
   "assertion failed during evaluation of constant expression">;
 def err_expansion_size_expr_not_ice : Error<
   "expansion size is not a constant expression">;
-def err_expansion_size_negative : Error<
-  "expansion size must not be negative (was %0)">;
 
 // Semantic analysis of constant literals.
 def ext_predef_outside_function : Warning<
