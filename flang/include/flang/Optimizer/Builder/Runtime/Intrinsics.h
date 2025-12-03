@@ -111,6 +111,12 @@ void genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genChdir(fir::FirOpBuilder &builder, mlir::Location loc,
                      mlir::Value name);
 
+
+mlir::Value genIrand(fir::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value i);
+mlir::Value genRand(fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Value i);
+
 } // namespace runtime
 } // namespace fir
 

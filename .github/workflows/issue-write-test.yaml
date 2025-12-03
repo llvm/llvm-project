@@ -1,4 +1,4 @@
-name: Test Issue Write Workflow
+name: Test Issue Write
 
 permissions:
   contents: read
