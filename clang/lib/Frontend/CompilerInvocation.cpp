@@ -2669,6 +2669,61 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   return Diags->getNumErrors() == NumErrorsBefore;
 }
 
+unsigned clang::getOptimizationLevel(ArgList &Args, InputKind IK,
+                                     DiagnosticsEngine &Diags) {
+  unsigned DefaultOpt = 0;
+  if ((IK.getLanguage() == Language::OpenCL ||
+       IK.getLanguage() == Language::OpenCLCXX) &&
+      !Args.hasArg(OPT_cl_opt_disable))
+    DefaultOpt = 2;
+
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    if (A->getOption().matches(options::OPT_O0))
+      return 0;
+
+    if (A->getOption().matches(options::OPT_Ofast))
+      return 3;
+
+    assert(A->getOption().matches(options::OPT_O));
+
+    StringRef S(A->getValue());
+    if (S == "s" || S == "z")
+      return 2;
+
+    if (S == "g")
+      return 1;
+
+    DefaultOpt = getLastArgIntValue(Args, OPT_O, DefaultOpt, Diags);
+  }
+
+  unsigned MaxOptLevel = 3;
+  if (DefaultOpt > MaxOptLevel) {
+    // If the optimization level is not supported, fall back on the default
+    // optimization
+    Diags.Report(diag::warn_drv_optimization_value)
+        << Args.getLastArg(OPT_O)->getAsString(Args) << "-O" << MaxOptLevel;
+    DefaultOpt = MaxOptLevel;
+  }
+
+  return DefaultOpt;
+}
+
+unsigned clang::getOptimizationLevelSize(ArgList &Args) {
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    if (A->getOption().matches(options::OPT_O)) {
+      switch (A->getValue()[0]) {
+      default:
+        return 0;
+      case 's':
+        return 1;
+      case 'z':
+        return 2;
+      }
+    }
+  }
+  return 0;
+}
+
 /// Parse the argument to the -ftest-module-file-extension
 /// command-line argument.
 ///
