@@ -333,9 +333,9 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
 
   if (ExpansionInitializer->isTypeDependent()) {
     ActOnDependentForRangeInitializer(ExpansionVar, BFRK_Build);
-    return new (Context) CXXDependentExpansionStmtPattern(
-        ESD, Init, ExpansionVarStmt, ExpansionInitializer, LParenLoc, ColonLoc,
-        RParenLoc);
+    return CXXExpansionStmtPattern::CreateDependent(
+        Context, ESD, Init, ExpansionVarStmt, ExpansionInitializer, LParenLoc,
+        ColonLoc, RParenLoc);
   }
 
   if (RequireCompleteType(ExpansionInitializer->getExprLoc(),
@@ -363,8 +363,8 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
     if (FinaliseExpansionVar(*this, ExpansionVar, Data.Initializer))
       return StmtError();
 
-    return new (Context) CXXIteratingExpansionStmtPattern(
-        ESD, Init, ExpansionVarStmt, Data.RangeDecl, Data.BeginDecl,
+    return CXXExpansionStmtPattern::CreateIterating(
+        Context, ESD, Init, ExpansionVarStmt, Data.RangeDecl, Data.BeginDecl,
         Data.EndDecl, LParenLoc, ColonLoc, RParenLoc);
   }
 
@@ -392,8 +392,7 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
   // Even if the size isn't technically dependent, delay expansion until
   // we're no longer in a template if this is an iterating expansion statement
   // since evaluating a lambda declared in a template doesn't work too well.
-  if (CurContext->isDependentContext() &&
-      isa<CXXIteratingExpansionStmtPattern>(Expansion))
+  if (CurContext->isDependentContext() && Expansion->isIterating())
     return Expansion;
 
   // This can fail if this is an iterating expansion statement.
@@ -491,7 +490,7 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
   //    for (; b != e; ++b) ++result;
   //    return result;
   // }()
-  if (auto *Iterating = dyn_cast<CXXIteratingExpansionStmtPattern>(Expansion)) {
+  if (Expansion->isIterating()) {
     SourceLocation Loc = Expansion->getColonLoc();
     EnterExpressionEvaluationContext ExprEvalCtx(
         *this, ExpressionEvaluationContext::ConstantEvaluated);
@@ -556,7 +555,7 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
     // auto b = begin-expr;
     // auto e = end-expr;
     ForRangeBeginEndInfo Info = BuildCXXForRangeBeginEndVars(
-        getCurScope(), Iterating->getRangeVar(), Loc,
+        getCurScope(), Expansion->getRangeVar(), Loc,
         /*CoawaitLoc=*/{},
         /*LifetimeExtendTemps=*/{}, BFRK_Build, /*Constexpr=*/false);
     if (!Info.isValid())
