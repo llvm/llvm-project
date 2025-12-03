@@ -36,6 +36,28 @@ subroutine vector_always
   enddo
 end subroutine
 
+subroutine vector_vectorlength
+  !dir$ vector vectorlength(fixed)
+  ! CHECK: !DIR$ VECTOR VECTORLENGTH (FIXED)
+  do i=1,10
+  enddo
+
+  !dir$ vector vectorlength(scalable)
+  ! CHECK: !DIR$ VECTOR VECTORLENGTH (SCALABLE)
+  do i=1,10
+  enddo
+
+  !dir$ vector vectorlength(8,scalable)
+  ! CHECK: !DIR$ VECTOR VECTORLENGTH (8, SCALABLE)
+  do i=1,10
+  enddo
+
+  !dir$ vector vectorlength(4)
+  ! CHECK: !DIR$ VECTOR VECTORLENGTH (4)
+  do i=1,10
+  enddo
+end subroutine
+
 subroutine unroll
   !dir$ unroll
   ! CHECK: !DIR$ UNROLL
