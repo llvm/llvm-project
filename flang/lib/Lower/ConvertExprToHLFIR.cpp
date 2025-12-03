@@ -1689,12 +1689,24 @@ private:
     BinaryOp<D> binaryOp;
     auto left = hlfir::loadTrivialScalar(loc, builder, gen(op.left()));
     auto right = hlfir::loadTrivialScalar(loc, builder, gen(op.right()));
+         mlir::Value exprl = left;
+         mlir::Value exprr = right;
+
+    bool noReassoc = exprl.getDefiningOp<hlfir::NoReassocOp>() ||
+                     exprr.getDefiningOp<hlfir::NoReassocOp>();
     llvm::SmallVector<mlir::Value, 1> typeParams;
     if constexpr (R::category == Fortran::common::TypeCategory::Character) {
       binaryOp.genResultTypeParams(loc, builder, left, right, typeParams);
     }
-    if (rank == 0)
-      return binaryOp.gen(loc, builder, op.derived(), left, right);
+    if (rank == 0) {
+      auto fmfBackup = builder.getFastMathFlags();
+      if (noReassoc)
+        builder.setFastMathFlags(fmfBackup &
+                                 ~mlir::arith::FastMathFlags::reassoc);
+      auto res = binaryOp.gen(loc, builder, op.derived(), left, right);
+      builder.setFastMathFlags(fmfBackup);
+      return res;
+    }
 
     // Elemental expression.
     mlir::Type elementType =
@@ -1721,9 +1733,14 @@ private:
     // nsw is never added to operations on vector subscripts
     // even if -fno-wrapv is enabled.
     builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::none);
+    auto fmfBackup = builder.getFastMathFlags();
+    if (noReassoc)
+      builder.setFastMathFlags(fmfBackup &
+                               ~mlir::arith::FastMathFlags::reassoc);
     mlir::Value elemental = hlfir::genElementalOp(loc, builder, elementType,
                                                   shape, typeParams, genKernel,
                                                   /*isUnordered=*/true);
+    builder.setFastMathFlags(fmfBackup);
     builder.setIntegerOverflowFlags(iofBackup);
     fir::FirOpBuilder *bldr = &builder;
     getStmtCtx().attachCleanup(
