@@ -699,10 +699,10 @@ Module::LookupInfo::LookupInfo(ConstString name,
 std::vector<Module::LookupInfo>
 Module::LookupInfo::MakeLookupInfos(ConstString name,
                                     lldb::FunctionNameType name_type_mask,
-                                    lldb::LanguageType requested_lang_type) {
+                                    lldb::LanguageType lang_type) {
   std::vector<LanguageType> lang_types;
-  if (requested_lang_type != eLanguageTypeUnknown) {
-    lang_types.push_back(requested_lang_type);
+  if (lang_type != eLanguageTypeUnknown) {
+    lang_types.push_back(lang_type);
   } else {
     // If the language type was not specified, look up in every language
     // available.

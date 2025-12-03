@@ -320,13 +320,6 @@ public:
   /// If the function is an inlined function, it will have a block,
   /// representing the inlined function, and the function will be the
   /// containing function.  If it is not inlined, then the block will be NULL.
-  ///
-  /// \param[in] lookup_infos
-  ///     The vector of lookup infos of the function we are looking for.
-  ///
-  /// \param[out] sc_list
-  ///     A symbol context list that gets filled in with all of the
-  ///     matches.
   void FindFunctions(const std::vector<LookupInfo> &lookup_infos,
                      const CompilerDeclContext &parent_decl_ctx,
                      const ModuleFunctionSearchOptions &options,
@@ -945,7 +938,7 @@ public:
     ///     eFunctionNameTypeMethod, eFunctionNameTypeAuto). Multiple types
     ///     can be combined with bitwise OR.
     ///
-    /// \param[in] requested_lang_type
+    /// \param[in] lang_type
     ///     The language to create lookups for. If eLanguageTypeUnknown is
     ///     passed, creates one LookupInfo for each language plugin currently
     ///     available in LLDB. If a specific language is provided, creates only
@@ -955,7 +948,7 @@ public:
     ///     A vector of LookupInfo objects, one per relevant language.
     static std::vector<LookupInfo>
     MakeLookupInfos(ConstString name, lldb::FunctionNameType name_type_mask,
-                    lldb::LanguageType requested_lang_type);
+                    lldb::LanguageType lang_type);
 
     ConstString GetName() const { return m_name; }
 
