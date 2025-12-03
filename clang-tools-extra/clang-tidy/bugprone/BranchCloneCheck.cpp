@@ -75,12 +75,9 @@ static bool isFallthroughSwitchBranch(const SwitchBranch &Branch) {
       if (!S)
         return true;
 
-      for (const Attr *A : S->getAttrs()) {
-        if (isa<FallThroughAttr>(A))
-          return false;
-      }
-
-      return true;
+      return llvm::all_of(S->getAttrs(), [](const Attr *A) {
+        return !isa<FallThroughAttr>(A);
+      });
     }
   } Visitor;
 
@@ -117,7 +114,6 @@ void BranchCloneCheck::registerMatchers(MatchFinder *Finder) {
 ///
 static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
                             const Stmt *Stmt2, bool IgnoreSideEffects) {
-
   if (!Stmt1 || !Stmt2)
     return !Stmt1 && !Stmt2;
 

@@ -86,3 +86,106 @@ constexpr int another_test(int val) { // both-note {{declared here}}
 }
 static_assert(another_test(1) == 100, ""); // both-error {{static assertion failed}} \
                                            // both-note {{evaluates to}}
+
+namespace gnurange {
+  constexpr int l(int n) {
+    return n + 1;
+  }
+  constexpr int h(int n) {
+    return 2 * n + 1;
+  }
+  constexpr int f(int x) {
+    const int n = 2;
+    constexpr struct {
+      char lo {'a'};
+      char hi {'z'};
+    } s;
+
+    switch (x) {
+      case l(n) ... h(n):
+        return 1;
+      case -1 ... 1:
+        return 2;
+      case 9 ... 14:
+        return 3;
+      case 15:
+        return 4;
+      case 16 ... 20:
+        return 5;
+      case s.lo ... s.hi:
+        return 6;
+      default:
+        return -1;
+    }
+  }
+  static_assert(f(0) == 2);
+  static_assert(f(2) == -1);
+  static_assert(f(3) == 1);
+  static_assert(f(4) == 1);
+  static_assert(f(5) == 1);
+  static_assert(f(6) == -1);
+  static_assert(f(14) == 3);
+  static_assert(f(15) == 4);
+  static_assert(f(16) == 5);
+  static_assert(f(20) == 5);
+  static_assert(f('d') == 6);
+
+  template <int Lo, int Hi>
+  constexpr bool g(int x) {
+    switch (x) {
+      case Lo ... Hi:
+        break;
+      default:
+        return false;
+    }
+    return true;
+  }
+  static_assert(g<100, 200>(132));
+
+  constexpr bool m(int x) {
+    switch (x) {
+      case 10 ... 1: // both-warning {{empty case range specified}}
+        return true;
+      default:
+        return false;
+    }
+  }
+  static_assert(m(3)); // both-error {{static assertion failed due to requirement 'm(3)'}}
+  static_assert(!m(3));
+
+  constexpr bool j(int x) { // both-note {{declared here}}
+    switch (x) {
+      case bad(x) ... 100: // both-error {{case value is not a constant expression}} \
+                           // both-note {{cannot be used in a constant expression}}
+        return true;
+      default:
+        break;
+    }
+    return false;
+  }
+  static_assert(j(1)); // both-error {{static assertion failed}}
+
+  constexpr bool d(int x) { // both-note {{declared here}}
+    switch (x) {
+      case -100 ... bad(x): // both-error {{case value is not a constant expression}} \
+                            // both-note {{cannot be used in a constant expression}}
+        return true;
+      default:
+        break;
+    }
+    return false;
+  }
+  static_assert(d(1)); // both-error {{static assertion failed}}
+  
+  constexpr bool s(int x) { // both-note {{declared here}}
+    switch (x) {
+      case bad(x) - 100 ... bad(x) + 100: // both-error {{case value is not a constant expression}} \
+                                          // both-note {{cannot be used in a constant expression}}
+        return true;
+      default:
+        break;
+    }
+    return false;
+  }
+  static_assert(s(1)); // both-error {{static assertion failed}}
+}

@@ -64,7 +64,7 @@ TEST_F(TargetLibraryInfoTest, InvalidProto) {
   auto *StructTy = StructType::getTypeByName(Context, "foo");
   auto *InvalidFTy = FunctionType::get(StructTy, /*isVarArg=*/false);
 
-  for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
+  for (unsigned FI = LibFunc::Begin_LibFunc; FI != LibFunc::End_LibFunc; ++FI) {
     LibFunc LF = (LibFunc)FI;
     auto *F = cast<Function>(
         M->getOrInsertFunction(TLI.getName(LF), InvalidFTy).getCallee());
@@ -694,7 +694,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare i8* @__kmpc_alloc_shared(i64)\n"
       "declare void @__kmpc_free_shared(i8*, i64)\n");
 
-  for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
+  for (unsigned FI = LibFunc::Begin_LibFunc; FI != LibFunc::End_LibFunc; ++FI) {
     LibFunc LF = (LibFunc)FI;
     // Make sure everything is available; we're not testing target defaults.
     TLII.setAvailable(LF);

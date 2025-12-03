@@ -34,6 +34,7 @@ double RTNAME(Dsecnds)(double *refTime, const char *sourceFile, int line);
 
 // CALL FLUSH(n) antedates the Fortran 2003 FLUSH statement.
 void FORTRAN_PROCEDURE_NAME(flush)(const int &unit);
+void RTNAME(Flush)(int unit);
 
 // GNU extension subroutine FDATE
 void FORTRAN_PROCEDURE_NAME(fdate)(char *string, std::int64_t length);
@@ -100,6 +101,15 @@ int FORTRAN_PROCEDURE_NAME(mclock)();
 // GNU extension subroutine SECNDS(refTime)
 float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime);
 float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line);
+
+// GNU extension function IRAND(I)
+int RTNAME(Irand)(int *i);
+
+// GNU extension function RAND(I)
+float RTNAME(Rand)(int *i, const char *sourceFile, int line);
+
+// GNU extension subroutine SRAND(SEED)
+void FORTRAN_PROCEDURE_NAME(srand)(int *seed);
 
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_
