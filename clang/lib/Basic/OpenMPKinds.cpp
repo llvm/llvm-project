@@ -626,7 +626,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
     return #Name;
 #include "clang/Basic/OpenMPKinds.def"
     }
-    llvm_unreachable("Invalid OpenMP 'transparent' clause modifier");
+    llvm_unreachable("Invalid OpenMP 'transparent' clause argument");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_groupprivate:

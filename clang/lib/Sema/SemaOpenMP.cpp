@@ -17447,13 +17447,13 @@ static bool findOMPImpexT(Sema &S, SourceLocation Loc, DSAStackTy *Stack) {
   return true;
 }
 
-OMPClause *SemaOpenMP::ActOnOpenMPTransparentClause(Expr *Transparent,
+OMPClause *SemaOpenMP::ActOnOpenMPTransparentClause(Expr *ImpexTypeArg,
                                                     SourceLocation StartLoc,
                                                     SourceLocation LParenLoc,
                                                     SourceLocation EndLoc) {
-  if (!findOMPImpexT(SemaRef, Transparent->getExprLoc(), DSAStack))
+  if (!findOMPImpexT(SemaRef, ImpexTypeArg->getExprLoc(), DSAStack))
     return nullptr;
-  ExprResult TR = SemaRef.DefaultLvalueConversion(Transparent);
+  ExprResult TR = SemaRef.DefaultLvalueConversion(ImpexTypeArg);
   if (TR.isInvalid())
     return nullptr;
 

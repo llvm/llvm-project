@@ -16,6 +16,23 @@ struct ComplexStruct {
   } inner;
 };
 
+void TestTaskTransparentWithErrors() {
+  int a;
+  // expected-error@+1{{'omp_impex_t' type not found; include <omp.h>}}
+#pragma omp task transparent(a)
+
+#pragma omp parallel
+  {
+  // expected-error@+1{{'omp_impex_t' type not found; include <omp.h>}}
+#pragma omp task transparent(a)
+    {
+  // expected-error@+1{{'omp_impex_t' type not found; include <omp.h>}}
+#pragma omp taskloop transparent(a)
+      for (int i = 0; i < 5; ++i) {}
+    }
+  }
+}
+
 typedef void **omp_impex_t;
 extern const omp_impex_t omp_not_impex; // omp60-note {{'omp_not_impex' declared here}}
 extern const omp_impex_t omp_import;

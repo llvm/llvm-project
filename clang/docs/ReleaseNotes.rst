@@ -713,7 +713,8 @@ OpenMP Support
 - Allow array length to be omitted in array section subscript expression.
 - Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
 - Added support for threadset clause in task and taskloop directives.
-- Added support for ``transparent`` clause in task and taskloop directives.
+- Added parsing and semantic analysis support for the ``transparent``
+  clause in task and taskloop directives.
 - Properly handle array section/assumed-size array privatization in C/C++.
 - Added support to handle new syntax of the ``uses_allocators`` clause.
 - Added support for ``variable-category`` modifier in ``default clause``.
