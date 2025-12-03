@@ -310,6 +310,28 @@ directly, not its address.  Note that the value operand of this intrinsic may
 be indirect (i.e, a pointer to the source variable), provided that interpreting
 the complex expression derives the direct value.
 
+
+``#dbg_declare_value``
+^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: llvm
+
+    #dbg_declare_value([Value|MDNode], DILocalVariable, DIExpression, DILocation)
+
+This record provides information about a local element (e.g., variable). The
+first argument is used to compute the value of the variable throughout the 
+entire function.  The second argument is a 
+:ref:`local variable <dilocalvariable>` containing a description of the 
+variable. The third argument is a :ref:`complex expression <diexpression>`. The
+foruth argument is a :ref:`source location <dilocation>`. A 
+``#dbg_declare_value`` record describes describes the *value* of a source 
+variable directly, not its address. The difference between a ``#dbg_value`` and
+a ``#dbg_declare_value`` is that, just like a ``#dbg_declare``, a frontend 
+should generate exactly one ``#dbg_declare_value`` record. The idea is to have
+``#dbg_declare`` guarantees but be able to describe a value rather than the 
+address of a value.
+
+
 ``#dbg_assign``
 ^^^^^^^^^^^^^^^^^^^
 .. toctree::
@@ -400,21 +422,6 @@ This intrinsic is equivalent to ``#dbg_assign``:
       metadata i32 %i, metadata !1, metadata !DIExpression(), metadata !2,
       metadata ptr %i.addr, metadata !DIExpression(), metadata !3), !dbg !3
 
-
-``llvm.dbg.coroframe_entry``
-^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: llvm
-
-  void @llvm.dbg.coroframe_entry(metadata, metadata, metadata)
-
-This intrinsic is equivalent to ``#dbg_coroframe_entry``:
-
-.. code-block:: llvm
-
-      #dbg_coroframe_entry(i32 %i., !1, !DIExpression(), !2)
-    call void @llvm.dbg.coroframe_entry(metadata i32 %i., metadata !1,
-                                metadata !DIExpression()), !dbg !2
 
 Object lifetimes and scoping
 ============================

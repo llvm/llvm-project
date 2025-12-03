@@ -555,8 +555,7 @@ static void cacheDIVar(FrameDataInfo &FrameData,
     };
     CacheIt(findDbgDeclares(V));
     CacheIt(findDVRDeclares(V));
-    CacheIt(findDbgCoroFrameEntrys(V));
-    CacheIt(findDVRCoroFrameEntrys(V));
+    CacheIt(findDVRDeclareValues(V));
   }
 }
 
@@ -1158,15 +1157,14 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
         for_each(DVRs, SalvageOne);
       }
 
-      TinyPtrVector<DbgCoroFrameEntryInst *> DICoros =
-          findDbgCoroFrameEntrys(Def);
-      TinyPtrVector<DbgVariableRecord *> DVRCoros = findDVRCoroFrameEntrys(Def);
-      // Try best to find dbg.coroframe_entry. If the spill is a temp, there may
-      // not be a direct dbg.coroframe_entry. Walk up the load chain to find one
+      TinyPtrVector<DbgVariableRecord *> DVRDeclareValues =
+          findDVRDeclareValues(Def);
+      // Try best to find dbg.declare_value. If the spill is a temp, there may
+      // not be a direct dbg.declare_value. Walk up the load chain to find one
       // from an alias.
       if (F->getSubprogram()) {
         auto *CurDef = Def;
-        while (DICoros.empty() && DVRCoros.empty() && isa<LoadInst>(CurDef)) {
+        while (DVRDeclareValues.empty() && isa<LoadInst>(CurDef)) {
           auto *LdInst = cast<LoadInst>(CurDef);
           // Only consider ptr to ptr same type load.
           if (LdInst->getPointerOperandType() != LdInst->getType())
@@ -1174,19 +1172,19 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
           CurDef = LdInst->getPointerOperand();
           if (!isa<AllocaInst, LoadInst>(CurDef))
             break;
-          DICoros = findDbgCoroFrameEntrys(CurDef);
-          DVRCoros = findDVRCoroFrameEntrys(CurDef);
+          DVRDeclareValues = findDVRDeclareValues(CurDef);
         }
       }
 
       auto SalvageOneCoro = [&](auto *DDI) {
-        // This dbg.coroframe_entry is preserved for all coro-split function
+        // This dbg.declare_value is preserved for all coro-split function
         // fragments. It will be unreachable in the main function, and
         // processed by coro::salvageDebugInfo() by the Cloner. However, convert
         // it to a dbg.declare to make sure future passes don't have to deal
-        // with a dbg.coroframe_entry.
+        // with a dbg.declare_value.
         auto *VAM = ValueAsMetadata::get(CurrentReload);
         Type *Ty = VAM->getValue()->getType();
+        // If the metadata type is not a pointer, emit a dbg.value instead.
         DbgVariableRecord *NewDVR = new DbgVariableRecord(
             ValueAsMetadata::get(CurrentReload), DDI->getVariable(),
             DDI->getExpression(), DDI->getDebugLoc(),
@@ -1194,12 +1192,11 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
                               : DbgVariableRecord::LocationType::Value);
         Builder.GetInsertPoint()->getParent()->insertDbgRecordBefore(
             NewDVR, Builder.GetInsertPoint());
-        // This dbg.coroframe_entry is for the main function entry point.  It
+        // This dbg.declare_value is for the main function entry point.  It
         // will be deleted in all coro-split functions.
         coro::salvageDebugInfo(ArgToAllocaMap, *DDI, false /*UseEntryValue*/);
       };
-      for_each(DICoros, SalvageOneCoro);
-      for_each(DVRCoros, SalvageOneCoro);
+      for_each(DVRDeclareValues, SalvageOneCoro);
 
       // If we have a single edge PHINode, remove it and replace it with a
       // reload from the coroutine frame. (We already took care of multi edge
@@ -1999,10 +1996,10 @@ void coro::salvageDebugInfo(
 
   DVI.replaceVariableLocationOp(OriginalStorage, Storage);
   DVI.setExpression(Expr);
-  // We only hoist dbg.declare and dbg.coroframe_entry today since it doesn't
-  // make sense to hoist dbg.value since it does not have the same function wide
-  // guarantees that dbg.declare and dbg.coroframe_entry do.
-  if (isa<DbgDeclareInst>(DVI) || isa<DbgCoroFrameEntryInst>(DVI)) {
+  // We only hoist dbg.declare today since it doesn't make sense to hoist
+  // dbg.value since it does not have the same function wide guarantees that
+  // dbg.declare does.
+  if (isa<DbgDeclareInst>(DVI)) {
     std::optional<BasicBlock::iterator> InsertPt;
     if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
@@ -2027,7 +2024,7 @@ void coro::salvageDebugInfo(
   Function *F = DVR.getFunction();
   // Follow the pointer arithmetic all the way to the incoming
   // function argument and convert into a DIExpression.
-  bool SkipOutermostLoad = DVR.isDbgDeclare() || DVR.isDbgCoroFrameEntry();
+  bool SkipOutermostLoad = DVR.isDbgDeclare() || DVR.isDbgDeclareValue();
   Value *OriginalStorage = DVR.getVariableLocationOp(0);
 
   auto SalvagedInfo =
@@ -2041,11 +2038,11 @@ void coro::salvageDebugInfo(
 
   DVR.replaceVariableLocationOp(OriginalStorage, Storage);
   DVR.setExpression(Expr);
-  // We only hoist dbg.declare and dbg.coroframe_entry today since it doesn't
-  // make sense to hoist dbg.value since it does not have the same function wide
-  // guarantees that dbg.declare and dbg.coroframe_entry do.
+  // We only hoist dbg.declare and dbg.declare_value today since it doesn't make
+  // sense to hoist dbg.value since it does not have the same function wide
+  // guarantees that dbg.declare does.
   if (DVR.getType() == DbgVariableRecord::LocationType::Declare ||
-      DVR.getType() == DbgVariableRecord::LocationType::CoroFrameEntry) {
+      DVR.getType() == DbgVariableRecord::LocationType::DeclareValue) {
     std::optional<BasicBlock::iterator> InsertPt;
     if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
@@ -2060,10 +2057,10 @@ void coro::salvageDebugInfo(
       InsertPt = F->getEntryBlock().begin();
     if (InsertPt) {
       DVR.removeFromParent();
-      // If there is a dbg.coroframe_entry being reinserted, insert it as a
+      // If there is a dbg.declare_value being reinserted, insert it as a
       // dbg.declare instead, so that subsequent passes don't have to deal with
-      // a dbg.coroframe_entry.
-      if (DVR.getType() == DbgVariableRecord::LocationType::CoroFrameEntry) {
+      // a dbg.declare_value.
+      if (DVR.getType() == DbgVariableRecord::LocationType::DeclareValue) {
         auto *MD = DVR.getRawLocation();
         if (auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
           Type *Ty = VAM->getValue()->getType();

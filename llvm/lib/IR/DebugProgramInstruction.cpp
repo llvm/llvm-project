@@ -41,9 +41,6 @@ DbgVariableRecord::DbgVariableRecord(const DbgVariableIntrinsic *DVI)
   case Intrinsic::dbg_declare:
     Type = LocationType::Declare;
     break;
-  case Intrinsic::dbg_coroframe_entry:
-    Type = LocationType::CoroFrameEntry;
-    break;
   case Intrinsic::dbg_assign: {
     Type = LocationType::Assign;
     const DbgAssignIntrinsic *Assign =
@@ -213,17 +210,17 @@ DbgVariableRecord::createDVRDeclare(Value *Address, DILocalVariable *DV,
 }
 
 DbgVariableRecord *
-DbgVariableRecord::createDVRCoroFrameEntry(Value *Address, DILocalVariable *DV,
-                                           DIExpression *Expr,
-                                           const DILocation *DI) {
+DbgVariableRecord::createDVRDeclareValue(Value *Address, DILocalVariable *DV,
+                                         DIExpression *Expr,
+                                         const DILocation *DI) {
   return new DbgVariableRecord(ValueAsMetadata::get(Address), DV, Expr, DI,
-                               LocationType::CoroFrameEntry);
+                               LocationType::DeclareValue);
 }
 
-DbgVariableRecord *DbgVariableRecord::createDVRCoroFrameEntry(
+DbgVariableRecord *DbgVariableRecord::createDVRDeclareValue(
     Value *Address, DILocalVariable *DV, DIExpression *Expr,
     const DILocation *DI, DbgVariableRecord &InsertBefore) {
-  auto *NewDVRCoro = createDVRCoroFrameEntry(Address, DV, Expr, DI);
+  auto *NewDVRCoro = createDVRDeclareValue(Address, DV, Expr, DI);
   NewDVRCoro->insertBefore(&InsertBefore);
   return NewDVRCoro;
 }
@@ -435,10 +432,6 @@ DbgVariableRecord::createDebugIntrinsic(Module *M,
   case DbgVariableRecord::LocationType::Declare:
     IntrinsicFn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_declare);
     break;
-  case DbgVariableRecord::LocationType::CoroFrameEntry:
-    IntrinsicFn =
-        Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_coroframe_entry);
-    break;
   case DbgVariableRecord::LocationType::Value:
     IntrinsicFn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_value);
     break;
@@ -448,6 +441,10 @@ DbgVariableRecord::createDebugIntrinsic(Module *M,
   case DbgVariableRecord::LocationType::End:
   case DbgVariableRecord::LocationType::Any:
     llvm_unreachable("Invalid LocationType");
+    break;
+  case DbgVariableRecord::LocationType::DeclareValue:
+    llvm_unreachable(
+        "#dbg_declare_value should never be converted to an intrinsic");
   }
 
   // Create the intrinsic from this DbgVariableRecord's information, optionally
