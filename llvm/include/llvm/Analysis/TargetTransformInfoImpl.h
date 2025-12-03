@@ -904,13 +904,22 @@ public:
   virtual InstructionCost
   getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
                            TTI::TargetCostKind CostKind) const {
-    unsigned IID = MICA.getID();
-    bool IsStrided = IID == Intrinsic::experimental_vp_strided_load ||
-                     IID == Intrinsic::experimental_vp_strided_store;
-    if (IsStrided)
-      return InstructionCost::getInvalid();
-    return 1;
+    switch (MICA.getID()) {
+    case Intrinsic::masked_scatter:
+    case Intrinsic::masked_gather:
+    case Intrinsic::masked_load:
+    case Intrinsic::masked_store:
+    case Intrinsic::vp_scatter:
+    case Intrinsic::vp_gather:
+    case Intrinsic::vp_load:
+    case Intrinsic::vp_store:
+    case Intrinsic::masked_compressstore:
+    case Intrinsic::masked_expandload:
+      return 1;
+    }
+    return InstructionCost::getInvalid();
   }
+
   virtual InstructionCost getCallInstrCost(Function *F, Type *RetTy,
                                            ArrayRef<Type *> Tys,
                                            TTI::TargetCostKind CostKind) const {
