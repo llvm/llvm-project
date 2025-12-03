@@ -44,6 +44,7 @@
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
+using namespace SCEVPatternMatch;
 
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan,
@@ -155,38 +156,36 @@ static bool isNoAliasViaDistance(VPReplicateRecipe *A, VPReplicateRecipe *B,
   if (isa<SCEVCouldNotCompute>(SCEVA) || isa<SCEVCouldNotCompute>(SCEVB))
     return false;
 
-  const SCEV *Distance = SE.getMinusSCEV(SCEVA, SCEVB);
-  auto *ConstDist = dyn_cast<SCEVConstant>(Distance);
-  if (!ConstDist)
+  const APInt *Distance;
+  if (!match(SE.getMinusSCEV(SCEVA, SCEVB), m_scev_APInt(Distance)))
     return false;
 
   const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
   Type *TyA = TypeInfo.inferScalarType(A->getOperand(0));
-  TypeSize SizeA = DL.getTypeStoreSize(TyA);
+  uint64_t SizeA = DL.getTypeStoreSize(TyA);
   Type *TyB = TypeInfo.inferScalarType(B->getOperand(0));
-  TypeSize SizeB = DL.getTypeStoreSize(TyB);
-
+  uint64_t SizeB = DL.getTypeStoreSize(TyB);
   // Use the maximum store size to ensure no overlap from either direction.
-  uint64_t MaxStoreSize =
-      std::max(SizeA.getFixedValue(), SizeB.getFixedValue());
-  const APInt &DistValue = ConstDist->getAPInt();
+  uint64_t MaxStoreSize = std::max(SizeA, SizeB);
+
   auto VFs = B->getParent()->getPlan()->vectorFactors();
   ElementCount MaxVF = *max_element(VFs, ElementCount::isKnownLT);
-  return DistValue.abs().uge(
+  return Distance->abs().uge(
       MaxVF.multiplyCoefficientBy(MaxStoreSize).getFixedValue());
 }
 
 // Check if a memory operation doesn't alias with memory operations in blocks
-// between FirstBB and LastBB using scoped noalias metadata.
-// For load hoisting, we only check writes in one direction.
-// For store sinking, we check both reads and writes bidirectionally.
+// between FirstBB and LastBB using scoped noalias metadata. If \p CheckReads is
+// false, we only check recipes that may write to memory. Otherwise we check
+// recipes that both read and write memory. If a \p GroupLeader is passed, SCEV
+// is used to try to prove no-alias between \p GroupLeader and other replicate
+// recipes.
 static bool canHoistOrSinkWithNoAliasCheck(
     const MemoryLocation &MemLoc, VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
     bool CheckReads,
     const SmallPtrSetImpl<VPRecipeBase *> *ExcludeRecipes = nullptr,
-    ScalarEvolution *SE = nullptr, const Loop *L = nullptr,
-    VPTypeAnalysis *TypeInfo = nullptr,
-    ArrayRef<VPReplicateRecipe *> MemOpsInGroup = {}) {
+    VPReplicateRecipe *GroupLeader = nullptr, ScalarEvolution *SE = nullptr,
+    const Loop *L = nullptr, VPTypeAnalysis *TypeInfo = nullptr) {
   if (!MemLoc.AATags.Scope)
     return false;
 
@@ -205,10 +204,12 @@ static bool canHoistOrSinkWithNoAliasCheck(
       if (!R.mayWriteToMemory() && !(CheckReads && R.mayReadFromMemory()))
         continue;
 
-      // For stores, check if we can use SCEV to prove no-alias.
+      // For stores, check if we can use SCEV to prove no-alias with the group
+      // leader (all members of the group write to the same address with the
+      // same size).
       if (auto *Store = dyn_cast<VPReplicateRecipe>(&R)) {
-        if (SE && L && TypeInfo && !MemOpsInGroup.empty() &&
-            isNoAliasViaDistance(Store, MemOpsInGroup[0], *SE, *L, *TypeInfo))
+        if (GroupLeader &&
+            isNoAliasViaDistance(Store, GroupLeader, *SE, *L, *TypeInfo))
           continue;
       }
 
@@ -4364,7 +4365,7 @@ canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink,
   VPBasicBlock *LastBB = StoresToSink.back()->getParent();
   return canHoistOrSinkWithNoAliasCheck(*StoreLoc, FirstBB, LastBB,
                                         /*CheckReads=*/true, &StoresToSinkSet,
-                                        SE, L, &TypeInfo, StoresToSink);
+                                        StoresToSink[0], SE, L, &TypeInfo);
 }
 
 void VPlanTransforms::sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
