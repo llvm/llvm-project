@@ -38,6 +38,13 @@ endfunction()
 
 include(LLVMExternalProjectUtils)
 
+# If lld is available in the toolchain but LLVM_USE_LINKER is not set,
+# default to using lld. This ensures -fuse-ld=lld is passed to the compiler,
+# which is required because CMAKE_LINKER has no effect when using clang.
+if(TARGET lld AND NOT LLVM_USE_LINKER)
+  set(LLVM_USE_LINKER lld)
+endif()
+
 if(NOT LLVM_BUILD_RUNTIMES)
   set(EXTRA_ARGS EXCLUDE_FROM_ALL)
 endif()
