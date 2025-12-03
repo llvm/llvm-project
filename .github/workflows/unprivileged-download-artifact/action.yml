@@ -81,7 +81,7 @@ runs:
 
           core.setOutput("urls", " ".join(artifact_urls));
           core.setOutput("ids", " ".join(artifact_ids));
-          core.setOutput("names", " ".join(artifact_names)")
+          core.setOutput("names", " ".join(artifact_names));
 
     - shell: bash
       if: steps.artifact-url.outputs.urls != ''
