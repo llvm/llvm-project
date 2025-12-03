@@ -1175,6 +1175,8 @@ public:
     }
 
     if (HowManyGoodConversions == 1) {
+      assert(BestConversion &&
+             "BestConversion must be set if HowManyGoodConversions is 1");
       LLVM_DEBUG(llvm::dbgs()
                  << "--- selectUserDefinedConv. Unique result. Flags: "
                  << formatMixFlags(BestConversion->Flags) << '\n');
