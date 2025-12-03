@@ -11115,6 +11115,11 @@ bool ScalarEvolution::isKnownMultipleOf(
   return true;
 }
 
+bool ScalarEvolution::haveSameSign(const SCEV *S1, const SCEV *S2) {
+  return ((isKnownNonNegative(S1) && isKnownNonNegative(S2)) ||
+          (isKnownNegative(S1) && isKnownNegative(S2)));
+}
+
 std::pair<const SCEV *, const SCEV *>
 ScalarEvolution::SplitIntoInitAndPostInc(const Loop *L, const SCEV *S) {
   // Compute SCEV on entry of loop L.
@@ -12034,8 +12039,7 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
   if (IsSignFlippedPredicate(Pred, FoundPred)) {
     // Unsigned comparison is the same as signed comparison when both the
     // operands are non-negative or negative.
-    if ((isKnownNonNegative(FoundLHS) && isKnownNonNegative(FoundRHS)) ||
-        (isKnownNegative(FoundLHS) && isKnownNegative(FoundRHS)))
+    if (haveSameSign(FoundLHS, FoundRHS))
       return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI);
     // Create local copies that we can freely swap and canonicalize our
     // conditions to "le/lt".
