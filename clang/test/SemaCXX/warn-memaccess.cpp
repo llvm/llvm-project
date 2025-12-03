@@ -9,8 +9,14 @@ class TriviallyCopyable {};
 class NonTriviallyCopyable { NonTriviallyCopyable(const NonTriviallyCopyable&);};
 struct Incomplete;
 
+struct Polymorphic {
+  virtual ~Polymorphic();
+};
+
+
 void test_bzero(TriviallyCopyable* tc,
                 NonTriviallyCopyable *ntc,
+                Polymorphic *p,
                 Incomplete* i) {
   // OK
   bzero(tc, sizeof(*tc));
@@ -18,29 +24,62 @@ void test_bzero(TriviallyCopyable* tc,
   // OK
   bzero(i, 10);
 
-  // expected-warning@+2{{first argument in call to 'bzero' is a pointer to non-trivially copyable type 'NonTriviallyCopyable'}}
-  // expected-note@+1{{explicitly cast the pointer to silence this warning}}
+  // OK
   bzero(ntc, sizeof(*ntc));
 
   // OK
   bzero((void*)ntc, sizeof(*ntc));
+
+  bzero(p, sizeof(*p)); // #bzerodynamic
+  // expected-warning@#bzerodynamic {{destination for this 'bzero' call is a pointer to dynamic class 'Polymorphic'; vtable pointer will be overwritten}}
+  // expected-note@#bzerodynamic {{explicitly cast the pointer to silence this warning}}
 }
 
 void test_memset(TriviallyCopyable* tc,
                  NonTriviallyCopyable *ntc,
-                 Incomplete* i) {
+                 Polymorphic *p,
+                 Incomplete* i, int NonconstantInit) {
   // OK
   memset(tc, 0, sizeof(*tc));
 
   // OK
   memset(i, 0, 10);
 
-  // expected-warning@+2{{first argument in call to 'memset' is a pointer to non-trivially copyable type 'NonTriviallyCopyable'}}
-  // expected-note@+1{{explicitly cast the pointer to silence this warning}}
   memset(ntc, 0, sizeof(*ntc));
 
   // OK
   memset((void*)ntc, 0, sizeof(*ntc));
+
+  // OK
+  memset(p, 0, sizeof(*p)); // #memset0dynamic
+  // expected-warning@#memset0dynamic {{destination for this 'memset' call is a pointer to dynamic class 'Polymorphic'; vtable pointer will be overwritten}}
+  // expected-note@#memset0dynamic {{explicitly cast the pointer to silence this warning}}
+
+  // OK
+  memset(tc, 1, sizeof(*tc));
+
+  // OK
+  memset(i, 1, 10);
+
+  memset(ntc, 1, sizeof(*ntc)); // #memset1ntc
+  // expected-warning@#memset1ntc {{first argument in call to 'memset' is a pointer to non-trivially copyable type 'NonTriviallyCopyable'}}
+  // expected-note@#memset1ntc {{explicitly cast the pointer to silence this warning}}
+
+  // OK
+  memset((void*)ntc, 1, sizeof(*ntc));
+
+  // OK
+  memset(tc, NonconstantInit, sizeof(*tc));
+
+  // OK
+  memset(i, NonconstantInit, 10);
+
+  memset(ntc, NonconstantInit, sizeof(*ntc)); // #memsetnonconstntc
+  // expected-warning@#memsetnonconstntc {{first argument in call to 'memset' is a pointer to non-trivially copyable type 'NonTriviallyCopyable'}}
+  // expected-note@#memsetnonconstntc {{explicitly cast the pointer to silence this warning}}
+
+  // OK
+  memset((void*)ntc, NonconstantInit, sizeof(*ntc));
 }
 
 
