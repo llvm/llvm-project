@@ -54,19 +54,6 @@ myst_enable_extensions = ["substitution"]
 # substitutions, but more may be added once the configuration is obtained.
 myst_substitutions = {"in_progress": "(In-Progress) " if tags.has("PreRelease") else ""}
 
-
-# It is not clear who calls setup and when. In any case, when it is called, the
-# configurations options are available. These include, among the other things,
-# the values of the -D options passed to sphinx-build. Populate the myst
-# substitutions dictionary as needed.
-#
-# See llvm/cmake/modules/AddSphinxTarget.cmake for details on how sphinx-build
-# is invoked.
-def setup(sphinx):
-    sphinx.config.myst_substitutions.update(
-        {"release": sphinx.config.release, "version": sphinx.config.version}
-    )
-
 import sphinx
 
 # The encoding of source files.
@@ -289,3 +276,20 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 # texinfo_show_urls = 'footnote'
+
+# This can be treated as its own sphinx extension. The setup function will be
+# called by sphinx. Register a callback to be called when the configuration has
+# been initialized. The configuration will contain the values of the -D options
+# passed to sphinx-build on the command line.
+#
+# See llvm/cmake/modules/AddSphinxTarget.cmake for details on how sphinx-build
+# is invoked.
+def setup(app):
+    app.connect("config-inited", myst_substitutions_update)
+
+
+# Override the myst_parser substitutions map after the configuration has been
+# initialized.
+def myst_substitutions_update(app, config):
+    config.myst_substitutions["release"] = config.release
+    config.myst_substitutions["version"] = config.version
