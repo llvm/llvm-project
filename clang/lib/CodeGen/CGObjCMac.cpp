@@ -3996,8 +3996,7 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
 /// ARC operations must happen in the caller, not in the thunk.
 void CodeGenFunction::StartObjCDirectThunk(const ObjCMethodDecl *OMD,
                                            llvm::Function *Fn,
-                            const CGFunctionInfo &FI)
-                                          {
+                                           const CGFunctionInfo &FI) {
   // Mark this as a thunk function to disable ARC parameter processing
   // and other thunk-inappropriate behavior.
   CurFuncIsThunk = true;
