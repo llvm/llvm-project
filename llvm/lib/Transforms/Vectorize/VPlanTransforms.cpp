@@ -2149,8 +2149,13 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
       if (Op == FOR)
         return false;
 
-      if (auto *R = NeedsHoisting(Op))
+      if (auto *R = NeedsHoisting(Op)) {
+        // Bail out if the recipe defines multiple values.
+        // TODO: Hoisting such recipes requires additional handling.
+        if (R->getNumDefinedValues() != 1)
+          return false;
         HoistCandidates.push_back(R);
+      }
     }
   }
 
