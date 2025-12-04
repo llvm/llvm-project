@@ -23,6 +23,17 @@ This document provides **enhancement recommendations** for the `dsmil` and `dsmi
 
 ## 1. DSMIL Folder Enhancements
 
+### 1.0 Device 255 (Master Crypto Controller) Integration
+
+**See**: `DEVICE255-MASTER-CRYPTO-ENHANCEMENTS.md` for complete Device 255 enhancement plan.
+
+Device 255 (0xFF) provides unified cryptographic operations for:
+- Device 15 (CRYPTO) - Wycheproof crypto operations
+- Device 47 (AI/ML) - Model encryption and signing
+- Device 46 (Quantum) - PQC algorithm support
+- Layer 8 (ENHANCED_SEC) - PQC enforcement
+- MLOps Pipeline - Model provenance signing (CNSA 2.0)
+
 ### 1.1 Layer 7 (EXTENDED) - Device 47 Integration
 
 #### Enhancement: LLM Runtime Support for Device 47
@@ -1001,7 +1012,22 @@ mlops_gate:
 
 ---
 
-## 6. Summary
+## 6. Device 255 (Master Crypto Controller) Integration
+
+**See**: `DEVICE255-MASTER-CRYPTO-ENHANCEMENTS.md` for complete details.
+
+Device 255 (0xFF) enhancements include:
+- Unified crypto API for all 88 algorithms
+- Device 15 (CRYPTO) Wycheproof integration
+- Device 47 (AI/ML) model encryption/signing
+- Device 46 (Quantum) PQC support
+- Layer 8 (ENHANCED_SEC) PQC enforcement
+- MLOps model provenance signing (ML-DSA-87)
+- Cross-layer intelligence flow encryption
+
+---
+
+## 7. Summary
 
 These enhancements align the `dsmil` and `dsmil-wycheproof-bundle` folders with the comprehensive AI system integration plan by:
 
@@ -1012,8 +1038,12 @@ These enhancements align the `dsmil` and `dsmil-wycheproof-bundle` folders with 
 5. **Cross-Layer Intelligence** - Event-driven upward flow architecture
 6. **Memory Management** - Dynamic 62 GB allocation with layer budgets
 7. **Hardware Integration** - NPU/GPU/CPU orchestration via HIL
+8. **Device 255 Crypto** - Unified cryptographic subsystem for all devices and layers
 
 All enhancements maintain backward compatibility while adding new capabilities aligned with the comprehensive plan's architecture and goals.
+
+**Related Documents**:
+- `DEVICE255-MASTER-CRYPTO-ENHANCEMENTS.md` - Complete Device 255 integration plan
 
 ---
 
