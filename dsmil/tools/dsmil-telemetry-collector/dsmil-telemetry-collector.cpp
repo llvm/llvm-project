@@ -43,7 +43,7 @@ static void print_usage(const char *prog_name) {
 }
 
 int main(int argc, char **argv) {
-    dsmil_telemetry_options_t options = {0};
+    dsmil_telemetry_options_t options;
     options.format = DSMIL_TELEMETRY_JSON;
     options.enable_performance = true;
     options.enable_security = true;

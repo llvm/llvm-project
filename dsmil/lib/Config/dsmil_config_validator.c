@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <time.h>
 
 /* JSON parsing (simplified - in production use proper JSON library) */
 static bool is_valid_json(const char *path) {

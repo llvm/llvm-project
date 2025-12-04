@@ -15,6 +15,7 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
+#define _POSIX_C_SOURCE 200809L
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -22,6 +23,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <time.h>
+#include <unistd.h>
 
 // JADC2 transport priorities
 #define JADC2_PRI_ROUTINE    0    // 0-63: Routine

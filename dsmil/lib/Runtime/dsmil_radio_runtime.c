@@ -161,7 +161,7 @@ int dsmil_radio_frame_muos(const uint8_t *data, size_t length,
     fflush(g_radio_ctx.radio_log);
 
     // MUOS uses 3G-like framing
-    output[0] = 0x3G;  // Simplified marker
+    output[0] = 0x33;  // Simplified marker (MUOS 3G)
     memcpy(output + 1, data, length);
 
     return (int)(length + 1);
@@ -193,7 +193,7 @@ int dsmil_radio_frame_eplrs(const uint8_t *data, size_t length,
     fflush(g_radio_ctx.radio_log);
 
     // EPLRS: mesh network framing
-    output[0] = 0xEP;  // EPLRS marker
+    output[0] = 0xE5;  // EPLRS marker
     memcpy(output + 1, data, length);
 
     return (int)(length + 1);

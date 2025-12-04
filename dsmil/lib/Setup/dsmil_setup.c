@@ -5,12 +5,14 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
+#define _POSIX_C_SOURCE 200809L
 #include "dsmil_setup.h"
 #include "dsmil_paths.h"
 #include "dsmil_config_validator.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <sys/stat.h>
 

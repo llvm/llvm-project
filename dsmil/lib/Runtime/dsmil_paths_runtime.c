@@ -7,6 +7,7 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
+#define _POSIX_C_SOURCE 200809L
 #include "dsmil_paths.h"
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,7 @@
 #include <sys/stat.h>
 #include <limits.h>
 #include <errno.h>
+#include <stdio.h>
 
 #ifdef _WIN32
 #include <windows.h>
