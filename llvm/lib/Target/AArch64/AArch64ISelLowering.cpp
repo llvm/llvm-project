@@ -23386,11 +23386,15 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return DAG.getNode(ISD::OR, SDLoc(N), N->getValueType(0), N->getOperand(2),
                        N->getOperand(3));
   case Intrinsic::aarch64_sve_sabd_u:
-    return DAG.getNode(ISD::ABDS, SDLoc(N), N->getValueType(0),
-                       N->getOperand(2), N->getOperand(3));
+    if (SDValue V = convertMergedOpToPredOp(N, ISD::ABDS, DAG, true))
+      return V;
+    return DAG.getNode(AArch64ISD::ABDS_PRED, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_uabd_u:
-    return DAG.getNode(ISD::ABDU, SDLoc(N), N->getValueType(0),
-                       N->getOperand(2), N->getOperand(3));
+    if (SDValue V = convertMergedOpToPredOp(N, ISD::ABDU, DAG, true))
+      return V;
+    return DAG.getNode(AArch64ISD::ABDU_PRED, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_sdiv_u:
     return DAG.getNode(AArch64ISD::SDIV_PRED, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));

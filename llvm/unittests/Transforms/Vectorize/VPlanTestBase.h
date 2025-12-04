@@ -86,15 +86,21 @@ protected:
 class VPlanTestBase : public testing::Test {
 protected:
   LLVMContext C;
-  std::unique_ptr<BasicBlock> ScalarHeader;
+  std::unique_ptr<Module> M;
+  Function *F;
+  BasicBlock *ScalarHeader;
   SmallVector<std::unique_ptr<VPlan>> Plans;
 
-  VPlanTestBase() : ScalarHeader(BasicBlock::Create(C, "scalar.header")) {
-    BranchInst::Create(&*ScalarHeader, &*ScalarHeader);
+  VPlanTestBase() {
+    M = std::make_unique<Module>("VPlanTestModule", C);
+    FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), false);
+    F = Function::Create(FTy, GlobalValue::ExternalLinkage, "f", M.get());
+    ScalarHeader = BasicBlock::Create(C, "scalar.header", F);
+    BranchInst::Create(ScalarHeader, ScalarHeader);
   }
 
   VPlan &getPlan() {
-    Plans.push_back(std::make_unique<VPlan>(&*ScalarHeader));
+    Plans.push_back(std::make_unique<VPlan>(ScalarHeader));
     VPlan &Plan = *Plans.back();
     VPValue *DefaultTC = Plan.getConstantInt(32, 1024);
     Plan.setTripCount(DefaultTC);

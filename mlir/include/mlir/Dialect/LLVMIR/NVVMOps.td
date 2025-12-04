@@ -948,8 +948,7 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
     auto [id, args] = NVVM::MBarrierArriveExpectTxOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
 
-    int addrSpace = llvm::cast<LLVMPointerType>(op.getAddr().getType()).getAddressSpace();
-    if (addrSpace != NVVM::NVVMMemorySpace::SharedCluster)
+    if (op.getNumResults() > 0)
       $res = createIntrinsicCall(builder, id, args);
     else
       createIntrinsicCall(builder, id, args);
@@ -985,9 +984,7 @@ def NVVM_MBarrierArriveDropExpectTxOp : NVVM_Op<"mbarrier.arrive_drop.expect_tx"
   string llvmBuilder = [{
     auto [id, args] = NVVM::MBarrierArriveDropExpectTxOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
-
-    int addrSpace = llvm::cast<LLVMPointerType>(op.getAddr().getType()).getAddressSpace();
-    if (addrSpace != NVVM::NVVMMemorySpace::SharedCluster)
+    if (op.getNumResults() > 0)
       $res = createIntrinsicCall(builder, id, args);
     else
       createIntrinsicCall(builder, id, args);
