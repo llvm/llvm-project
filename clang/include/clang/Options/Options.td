@@ -3775,6 +3775,11 @@ defm objc_avoid_heapify_local_blocks : BoolFOption<"objc-avoid-heapify-local-blo
   PosFlag<SetTrue, [], [ClangOption], "Try">,
   NegFlag<SetFalse, [], [ClangOption], "Don't try">,
   BothFlags<[], [CC1Option], " to avoid heapifying local blocks">>;
+defm objc_expose_direct_methods : BoolFOption<"objc-expose-direct-methods",
+  CodeGenOpts<"ObjCExposeDirectMethods">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Expose direct method symbols and move nil checks to caller-side thunks">,
+  NegFlag<SetFalse>>;
 defm disable_block_signature_string : BoolFOption<"disable-block-signature-string",
   CodeGenOpts<"DisableBlockSignatureString">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Disable">,
