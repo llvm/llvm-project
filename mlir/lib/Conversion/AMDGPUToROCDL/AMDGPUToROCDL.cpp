@@ -1645,7 +1645,7 @@ int32_t getScaleSel(int32_t blockSize, unsigned bitWidth, int32_t scaleWaveHalf,
     int32_t bit0 = isBlock16;
     assert(llvm::is_contained({0, 1, 2}, firstScaleByte));
     int32_t bit1 = (firstScaleByte == 2) << 1;
-    assert(llvm::is_contained({0, 1}, firstScaleLane));
+    assert(llvm::is_contained({0, 1}, scaleWaveHalf));
     int32_t bit2 = scaleWaveHalf << 2;
     return bit2 | bit1 | bit0;
   }
@@ -1654,7 +1654,7 @@ int32_t getScaleSel(int32_t blockSize, unsigned bitWidth, int32_t scaleWaveHalf,
   // firstScaleByte is guaranteed to be defined by two bits.
   assert(llvm::is_contained({0, 1, 2, 3}, firstScaleByte));
   int32_t bits2and1 = firstScaleByte << 1;
-  assert(llvm::is_contained({0, 1}, firstScaleLane));
+  assert(llvm::is_contained({0, 1}, scaleWaveHalf));
   int32_t bit3 = scaleWaveHalf << 3;
   int32_t bits = bit3 | bits2and1 | bit0;
   // These are invalid cases.
