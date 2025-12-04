@@ -480,9 +480,8 @@ void OmpStructureChecker::CheckDistLinear(
 
   // Collect symbols of all the variables from linear clauses
   for (auto &clause : clauses.v) {
-    if (auto *linearClause{std::get_if<parser::OmpClause::Linear>(&clause.u)}) {
-      auto &objects{std::get<parser::OmpObjectList>(linearClause->v.t)};
-      GetSymbolsInObjectList(objects, indexVars);
+    if (std::get_if<parser::OmpClause::Linear>(&clause.u)) {
+      GetSymbolsInObjectList(*parser::omp::GetOmpObjectList(clause), indexVars);
     }
   }
 
@@ -604,8 +603,6 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
       auto *maybeModifier{OmpGetUniqueModifier<ReductionModifier>(modifiers)};
       if (maybeModifier &&
           maybeModifier->v == ReductionModifier::Value::Inscan) {
-        const auto &objectList{
-            std::get<parser::OmpObjectList>(reductionClause->v.t)};
         auto checkReductionSymbolInScan = [&](const parser::Name *name) {
           if (auto &symbol = name->symbol) {
             if (!symbol->test(Symbol::Flag::OmpInclusiveScan) &&
@@ -618,7 +615,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
             }
           }
         };
-        for (const auto &ompObj : objectList.v) {
+        for (const auto &ompObj : parser::omp::GetOmpObjectList(clause)->v) {
           common::visit(
               common::visitors{
                   [&](const parser::Designator &designator) {

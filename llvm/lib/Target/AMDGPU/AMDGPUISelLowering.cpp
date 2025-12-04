@@ -1412,7 +1412,7 @@ SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
       InVals.push_back(DAG.getPOISON(Arg.VT));
   }
 
-  return DAG.getEntryNode();
+  return CLI.Chain;
 }
 
 SDValue AMDGPUTargetLowering::LowerCall(CallLoweringInfo &CLI,

@@ -9,6 +9,7 @@
 #include "RedundantCastingCheck.h"
 #include "../utils/FixItHintUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
@@ -29,7 +30,7 @@ static bool areTypesEqual(QualType S, QualType D) {
   const QualType PtrD = D->getPointeeType();
 
   if (!PtrS.isNull() && !PtrD.isNull())
-    return areTypesEqual(PtrS, PtrD);
+    return areTypesEqual(PtrS.IgnoreParens(), PtrD.IgnoreParens());
 
   const DeducedType *DT = S->getContainedDeducedType();
   if (DT && DT->isDeduced())
