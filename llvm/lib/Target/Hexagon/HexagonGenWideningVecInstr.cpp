@@ -349,7 +349,7 @@ Intrinsic::ID HexagonGenWideningVecInstr::getIntrinsic(
     llvm_unreachable("Incorrect input and output operand sizes");
 
   case OP_Mul:
-    assert(ResEltSize = 2 * InEltSize);
+    assert(ResEltSize == 2 * InEltSize);
     // Enter inside 'if' block when one of the operand is constant vector
     if (IsConstScalar) {
       // When inputs are of 8bit type and output is 16bit type, enter 'if' block
@@ -839,9 +839,9 @@ bool HexagonGenWideningVecInstr::replaceWithVmpaIntrinsic(Instruction *Inst,
   NewVOP2 = IRB.CreateBitCast(NewVOP2, InType);
   Value *VecOP = IRB.CreateCall(ExtF, {NewVOP1, NewVOP2});
 
-  Intrinsic::ID VmpaIntID =
-      (NewResEltSize == 16) ? VmpaIntID = Intrinsic::hexagon_V6_vmpabus_128B
-                            : VmpaIntID = Intrinsic::hexagon_V6_vmpauhb_128B;
+  Intrinsic::ID VmpaIntID = (NewResEltSize == 16)
+                                ? Intrinsic::hexagon_V6_vmpabus_128B
+                                : Intrinsic::hexagon_V6_vmpauhb_128B;
   ExtF = Intrinsic::getOrInsertDeclaration(M, VmpaIntID);
   auto *ResType =
       FixedVectorType::get(getElementTy(NewResEltSize, IRB), NumElts);
