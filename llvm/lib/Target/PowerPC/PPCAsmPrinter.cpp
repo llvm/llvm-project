@@ -3436,6 +3436,8 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
 
   // Query if the given function is local to the load module.
   auto IsLocalFunc = [](const Function *F) -> IsLocal {
+    // We require a definition, because the AIX linker chooses the visibility
+    // of a symbol based on the definition (ignoring the declaration).
     bool Result = F->isStrongDefinitionForLinker() && F->isDSOLocal();
     LLVM_DEBUG(dbgs() << F->getName() << " is "
                       << (Result ? "local\n" : "not local\n"));
