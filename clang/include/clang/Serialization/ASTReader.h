@@ -1005,7 +1005,7 @@ private:
   ///
   /// The AST context tracks a few important decls, currently cudaConfigureCall,
   /// directly.
-  SmallVector<GlobalDeclID, 2> CUDASpecialDeclRefs;
+  SmallVector<GlobalDeclID, 4> CUDASpecialDeclRefs;
 
   /// The floating point pragma option settings.
   SmallVector<uint64_t, 1> FPPragmaOptions;

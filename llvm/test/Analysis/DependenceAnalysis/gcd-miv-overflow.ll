@@ -24,7 +24,9 @@
 define void @gcdmiv_coef_ovfl(ptr %A, i64 %m) {
 ; CHECK-ALL-LABEL: 'gcdmiv_coef_ovfl'
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - consistent output [0]!
+; CHECK-ALL-NEXT:    Runtime Assumptions:
+; CHECK-ALL-NEXT:    Compare predicate: (3 * %m) ne) 0
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
@@ -127,9 +129,8 @@ exit:
 ;   A[-3*i - 3*m - INT64_MAX] = 1;
 ; }
 ;
-; FIXME: DependenceAnalysis currently detects no dependency between the two
-; stores, but it may exist. For example, consider `m = 1`. Then,
-; `-3*m - INT64_MAX` is `INT64_MAX - 1`. So `-3*i - 3*m - INT64_MAX` is
+; Dependency may exist between the two stores. For example, consider `m = 1`.
+; Then, `-3*m - INT64_MAX` is `INT64_MAX - 1`. So `-3*i - 3*m - INT64_MAX` is
 ; effectively `-3*i + (INT64_MAX - 1)`. Thus, accesses will be as follows:
 ;
 ;  memory access             | i == 1           | i == max_i - 1
@@ -143,7 +144,7 @@ define void @gcdmiv_const_ovfl(ptr %A, i64 %m) {
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ;
@@ -151,7 +152,7 @@ define void @gcdmiv_const_ovfl(ptr %A, i64 %m) {
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - none!
+; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*|<]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
 ;

@@ -216,12 +216,13 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
   }
 
   return OM.map("adapterID", IRA.adapterID) &&
-         OM.map("clientID", IRA.clientID) &&
-         OM.map("clientName", IRA.clientName) && OM.map("locale", IRA.locale) &&
-         OM.map("linesStartAt1", IRA.linesStartAt1) &&
-         OM.map("columnsStartAt1", IRA.columnsStartAt1) &&
+         OM.mapOptional("clientID", IRA.clientID) &&
+         OM.mapOptional("clientName", IRA.clientName) &&
+         OM.mapOptional("locale", IRA.locale) &&
+         OM.mapOptional("linesStartAt1", IRA.linesStartAt1) &&
+         OM.mapOptional("columnsStartAt1", IRA.columnsStartAt1) &&
          OM.mapOptional("pathFormat", IRA.pathFormat) &&
-         OM.map("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
+         OM.mapOptional("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
 }
 
 bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
