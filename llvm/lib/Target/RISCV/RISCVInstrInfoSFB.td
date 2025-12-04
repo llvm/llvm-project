@@ -178,7 +178,7 @@ def PseudoCCMINU : SFBALU_rr;
 let Predicates = [HasShortForwardBranchIMul] in
 def PseudoCCMUL : SFBALU_rr;
 
-let Predicates = [HasShortForwardBranchIMul] in {
+let Predicates = [HasShortForwardBranchILoad] in {
 def PseudoCCLB : SFBLoad;
 def PseudoCCLH : SFBLoad;
 def PseudoCCLW : SFBLoad;
