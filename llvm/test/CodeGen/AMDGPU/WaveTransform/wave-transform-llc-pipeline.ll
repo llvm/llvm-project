@@ -7,9 +7,11 @@
 ; REQUIRES: asserts
 
 ; GCN-O0:Target Library Information
+; GCN-O0-NEXT:Runtime Library Function Analysis
 ; GCN-O0-NEXT:Target Pass Configuration
 ; GCN-O0-NEXT:Machine Module Information
 ; GCN-O0-NEXT:Target Transform Information
+; GCN-O0-NEXT:Library Function Lowering Analysis
 ; GCN-O0-NEXT:Assumption Cache Tracker
 ; GCN-O0-NEXT:Profile summary info
 ; GCN-O0-NEXT:Argument Register Usage Information Storage
@@ -142,9 +144,11 @@
 ; GCN-O0-NEXT:        Free MachineFunction
 
 ; GCN-O3:Target Library Information
+; GCN-O3-NEXT:Runtime Library Function Analysis
 ; GCN-O3-NEXT:Target Pass Configuration
 ; GCN-O3-NEXT:Machine Module Information
 ; GCN-O3-NEXT:Target Transform Information
+; GCN-O3-NEXT:Library Function Lowering Analysis
 ; GCN-O3-NEXT:Assumption Cache Tracker
 ; GCN-O3-NEXT:Profile summary info
 ; GCN-O3-NEXT:AMDGPU Address space based Alias Analysis

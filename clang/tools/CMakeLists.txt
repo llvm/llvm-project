@@ -2,7 +2,6 @@ create_subdirectory_options(CLANG TOOL)
 
 add_clang_subdirectory(diagtool)
 add_clang_subdirectory(driver)
-add_clang_subdirectory(apinotes-test)
 if(CLANG_ENABLE_CIR)
   add_clang_subdirectory(cir-opt)
   add_clang_subdirectory(cir-translate)
@@ -25,7 +24,10 @@ if(HAVE_CLANG_REPL_SUPPORT)
 endif()
 add_clang_subdirectory(clang-hip)
 
-add_clang_subdirectory(c-index-test)
+if(CLANG_INCLUDE_TESTS)
+  add_clang_subdirectory(c-index-test)
+  add_clang_subdirectory(apinotes-test)
+endif()
 
 add_clang_subdirectory(clang-refactor)
 # For MinGW/Cygwin we only enable shared library if LLVM_LINK_LLVM_DYLIB=ON.

@@ -114,12 +114,7 @@ static bool spelledInMacroDefinition(CharSourceRange Range,
     return B.isInvalid() || B != E;
   }
 
-  if (Range.getBegin().isMacroID())
-    return getMacroArgumentSpellingLoc(Range.getBegin(), SM).isInvalid();
-  if (Range.getEnd().isMacroID())
-    return getMacroArgumentSpellingLoc(Range.getEnd(), SM).isInvalid();
-
-  return false;
+  return Range.getBegin().isMacroID() || Range.getEnd().isMacroID();
 }
 
 // Returns the expansion char-range of `Loc` if `Loc` is a split token. For

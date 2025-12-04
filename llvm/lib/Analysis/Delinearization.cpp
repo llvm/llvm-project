@@ -747,6 +747,26 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
                                          ArrayRef<const SCEV *> Sizes,
                                          ArrayRef<const SCEV *> Subscripts,
                                          const Value *Ptr) {
+  // Sizes and Subscripts are as follows:
+  //
+  //   Sizes:      [UNK][S_2]...[S_n]
+  //   Subscripts: [I_1][I_2]...[I_n]
+  //
+  // where the size of the outermost dimension is unknown (UNK).
+
+  auto AddOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
+    if (!SE.willNotOverflow(Instruction::Add, /*IsSigned=*/true, A, B))
+      return nullptr;
+    return SE.getAddExpr(A, B);
+  };
+
+  auto MulOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
+    if (!SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/true, A, B))
+      return nullptr;
+    return SE.getMulExpr(A, B);
+  };
+
+  // Range check: 0 <= I_k < S_k for k = 2..n.
   for (size_t I = 1; I < Sizes.size(); ++I) {
     const SCEV *Size = Sizes[I - 1];
     const SCEV *Subscript = Subscripts[I];
@@ -755,18 +775,62 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
     if (!isKnownLessThan(&SE, Subscript, Size))
       return false;
   }
+
+  // The offset computation is as follows:
+  //
+  //   Offset = I_n +
+  //            S_n * I_{n-1} +
+  //            ... +
+  //            (S_2 * ... * S_n) * I_1
+  //
+  // Regarding this as a function from (I_1, I_2, ..., I_n) to integers, it
+  // must be injective. To guarantee it, the above calculation must not
+  // overflow. Since we have already checked that 0 <= I_k < S_k for k = 2..n,
+  // the minimum and maximum values occur in the following cases:
+  //
+  //   Min = [I_1][0]...[0] = S_2 * ... * S_n * I_1
+  //   Max = [I_1][S_2-1]...[S_n-1]
+  //       = (S_2 * ... * S_n) * I_1 +
+  //         (S_2 * ... * S_{n-1}) * (S_2 - 1) +
+  //         ... +
+  //         (S_n - 1)
+  //       = (S_2 * ... * S_n) * I_1 +
+  //         (S_2 * ... * S_n) - 1  (can be proven by induction)
+  //       = Min + (S_2 * ... * S_n) - 1
+  //
+  // NOTE: I_1 can be negative, so Min is not just 0.
+  const SCEV *Prod = SE.getOne(Sizes[0]->getType());
+  for (const SCEV *Size : Sizes) {
+    Prod = MulOverflow(Prod, Size);
+    if (!Prod)
+      return false;
+  }
+  const SCEV *Min = MulOverflow(Prod, Subscripts[0]);
+  if (!Min)
+    return false;
+
+  // We have already checked that Min and Prod don't overflow, so it's enough
+  // to check whether Min + Prod - 1 doesn't overflow.
+  const SCEV *MaxPlusOne = AddOverflow(Min, Prod);
+  if (!MaxPlusOne)
+    return false;
+  if (!SE.willNotOverflow(Instruction::Sub, /*IsSigned=*/true, MaxPlusOne,
+                          SE.getOne(MaxPlusOne->getType())))
+    return false;
+
   return true;
 }
 
 bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
                                       const GetElementPtrInst *GEP,
                                       SmallVectorImpl<const SCEV *> &Subscripts,
-                                      SmallVectorImpl<int> &Sizes) {
+                                      SmallVectorImpl<const SCEV *> &Sizes) {
   assert(Subscripts.empty() && Sizes.empty() &&
          "Expected output lists to be empty on entry to this function.");
   assert(GEP && "getIndexExpressionsFromGEP called with a null GEP");
   LLVM_DEBUG(dbgs() << "\nGEP to delinearize: " << *GEP << "\n");
   Type *Ty = nullptr;
+  Type *IndexTy = SE.getEffectiveSCEVType(GEP->getPointerOperandType());
   bool DroppedFirstDim = false;
   for (unsigned i = 1; i < GEP->getNumOperands(); i++) {
     const SCEV *Expr = SE.getSCEV(GEP->getOperand(i));
@@ -792,7 +856,7 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
 
     Subscripts.push_back(Expr);
     if (!(DroppedFirstDim && i == 2))
-      Sizes.push_back(ArrayTy->getNumElements());
+      Sizes.push_back(SE.getConstant(IndexTy, ArrayTy->getNumElements()));
 
     Ty = ArrayTy->getElementType();
   }

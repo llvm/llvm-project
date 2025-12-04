@@ -1799,11 +1799,9 @@ libc_support_library(
     name = "__support_wctype_utils",
     hdrs = ["src/__support/wctype_utils.h"],
     deps = [
-        ":__support_cpp_optional",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":types_wchar_t",
-        ":types_wint_t",
     ],
 )
 
@@ -7472,7 +7470,6 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_macros_config",
-        ":__support_wctype_utils",
         ":hdr_wchar_macros",
         ":types_wint_t",
     ],
@@ -7704,7 +7701,6 @@ libc_function(
         ":__support_common",
         ":__support_macros_config",
         ":__support_macros_null_check",
-        ":__support_wctype_utils",
         ":hdr_stdio_macros",
         ":types_wint_t",
     ],
