@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/SymbolTable.h"
@@ -203,12 +204,68 @@ struct MemRefPointerLikeModel
 
     return false;
   }
+
+  mlir::Value genLoad(Type pointer, OpBuilder &builder, Location loc,
+                      TypedValue<PointerLikeType> srcPtr,
+                      Type valueType) const {
+    // Load from a memref - only valid for scalar memrefs (rank 0).
+    // This is because the address computation for memrefs is part of the load
+    // (and not computed separately), but the API does not have arguments for
+    // indexing.
+    auto memrefValue = dyn_cast_if_present<TypedValue<MemRefType>>(srcPtr);
+    if (!memrefValue)
+      return {};
+
+    auto memrefTy = memrefValue.getType();
+
+    // Only load from scalar memrefs (rank 0)
+    if (memrefTy.getRank() != 0)
+      return {};
+
+    return memref::LoadOp::create(builder, loc, memrefValue);
+  }
+
+  bool genStore(Type pointer, OpBuilder &builder, Location loc,
+                Value valueToStore, TypedValue<PointerLikeType> destPtr) const {
+    // Store to a memref - only valid for scalar memrefs (rank 0)
+    // This is because the address computation for memrefs is part of the store
+    // (and not computed separately), but the API does not have arguments for
+    // indexing.
+    auto memrefValue = dyn_cast_if_present<TypedValue<MemRefType>>(destPtr);
+    if (!memrefValue)
+      return false;
+
+    auto memrefTy = memrefValue.getType();
+
+    // Only store to scalar memrefs (rank 0)
+    if (memrefTy.getRank() != 0)
+      return false;
+
+    memref::StoreOp::create(builder, loc, valueToStore, memrefValue);
+    return true;
+  }
 };
 
 struct LLVMPointerPointerLikeModel
     : public PointerLikeType::ExternalModel<LLVMPointerPointerLikeModel,
                                             LLVM::LLVMPointerType> {
   Type getElementType(Type pointer) const { return Type(); }
+
+  mlir::Value genLoad(Type pointer, OpBuilder &builder, Location loc,
+                      TypedValue<PointerLikeType> srcPtr,
+                      Type valueType) const {
+    // For LLVM pointers, we need the valueType to determine what to load
+    if (!valueType)
+      return {};
+
+    return LLVM::LoadOp::create(builder, loc, valueType, srcPtr);
+  }
+
+  bool genStore(Type pointer, OpBuilder &builder, Location loc,
+                Value valueToStore, TypedValue<PointerLikeType> destPtr) const {
+    LLVM::StoreOp::create(builder, loc, valueToStore, destPtr);
+    return true;
+  }
 };
 
 struct MemrefAddressOfGlobalModel
@@ -1390,6 +1447,28 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
     }
   }
 
+  return recipe;
+}
+
+std::optional<PrivateRecipeOp>
+PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
+                                   StringRef recipeName,
+                                   FirstprivateRecipeOp firstprivRecipe) {
+  // Create the private.recipe op with the same type as the firstprivate.recipe.
+  OpBuilder::InsertionGuard guard(builder);
+  auto varType = firstprivRecipe.getType();
+  auto recipe = PrivateRecipeOp::create(builder, loc, recipeName, varType);
+
+  // Clone the init region
+  IRMapping mapping;
+  firstprivRecipe.getInitRegion().cloneInto(&recipe.getInitRegion(), mapping);
+
+  // Clone destroy region if the firstprivate.recipe has one.
+  if (!firstprivRecipe.getDestroyRegion().empty()) {
+    IRMapping mapping;
+    firstprivRecipe.getDestroyRegion().cloneInto(&recipe.getDestroyRegion(),
+                                                 mapping);
+  }
   return recipe;
 }
 
@@ -2617,6 +2696,27 @@ LogicalResult acc::KernelsOp::verify() {
     return failure();
 
   return checkDataOperands<acc::KernelsOp>(*this, getDataClauseOperands());
+}
+
+void acc::KernelsOp::addPrivatization(MLIRContext *context,
+                                      mlir::acc::PrivateOp op,
+                                      mlir::acc::PrivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
+  getPrivateOperandsMutable().append(op.getResult());
+}
+
+void acc::KernelsOp::addFirstPrivatization(
+    MLIRContext *context, mlir::acc::FirstprivateOp op,
+    mlir::acc::FirstprivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
+  getFirstprivateOperandsMutable().append(op.getResult());
+}
+
+void acc::KernelsOp::addReduction(MLIRContext *context,
+                                  mlir::acc::ReductionOp op,
+                                  mlir::acc::ReductionRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
+  getReductionOperandsMutable().append(op.getResult());
 }
 
 void acc::KernelsOp::addNumWorkersOperand(
@@ -4291,6 +4391,61 @@ RoutineOp::getGangDimValue(mlir::acc::DeviceType deviceType) {
     return intAttr.getInt();
   }
   return std::nullopt;
+}
+
+void RoutineOp::addSeq(MLIRContext *context,
+                       llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setSeqAttr(addDeviceTypeAffectedOperandHelper(context, getSeqAttr(),
+                                                effectiveDeviceTypes));
+}
+
+void RoutineOp::addVector(MLIRContext *context,
+                          llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setVectorAttr(addDeviceTypeAffectedOperandHelper(context, getVectorAttr(),
+                                                   effectiveDeviceTypes));
+}
+
+void RoutineOp::addWorker(MLIRContext *context,
+                          llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWorkerAttr(addDeviceTypeAffectedOperandHelper(context, getWorkerAttr(),
+                                                   effectiveDeviceTypes));
+}
+
+void RoutineOp::addGang(MLIRContext *context,
+                        llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setGangAttr(addDeviceTypeAffectedOperandHelper(context, getGangAttr(),
+                                                 effectiveDeviceTypes));
+}
+
+void RoutineOp::addGang(MLIRContext *context,
+                        llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+                        uint64_t val) {
+  llvm::SmallVector<mlir::Attribute> dimValues;
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
+
+  if (getGangDimAttr())
+    llvm::copy(getGangDimAttr(), std::back_inserter(dimValues));
+  if (getGangDimDeviceTypeAttr())
+    llvm::copy(getGangDimDeviceTypeAttr(), std::back_inserter(deviceTypes));
+
+  assert(dimValues.size() == deviceTypes.size());
+
+  if (effectiveDeviceTypes.empty()) {
+    dimValues.push_back(
+        mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), val));
+    deviceTypes.push_back(
+        acc::DeviceTypeAttr::get(context, acc::DeviceType::None));
+  } else {
+    for (DeviceType dt : effectiveDeviceTypes) {
+      dimValues.push_back(
+          mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), val));
+      deviceTypes.push_back(acc::DeviceTypeAttr::get(context, dt));
+    }
+  }
+  assert(dimValues.size() == deviceTypes.size());
+
+  setGangDimAttr(mlir::ArrayAttr::get(context, dimValues));
+  setGangDimDeviceTypeAttr(mlir::ArrayAttr::get(context, deviceTypes));
 }
 
 //===----------------------------------------------------------------------===//

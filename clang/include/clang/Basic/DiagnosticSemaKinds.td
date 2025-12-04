@@ -4356,6 +4356,9 @@ def warn_param_typestate_mismatch : Warning<
 def warn_unknown_sanitizer_ignored : Warning<
   "unknown sanitizer '%0' ignored">, InGroup<UnknownSanitizers>;
 
+def warn_impcast_matrix_scalar : Warning<
+  "implicit conversion turns matrix to scalar: %0 to %1">,
+  InGroup<MatrixConversion>;
 def warn_impcast_vector_scalar : Warning<
   "implicit conversion turns vector to scalar: %0 to %1">,
   InGroup<Conversion>, DefaultIgnore;
@@ -11274,6 +11277,8 @@ def warn_duplicate_attribute_exact : Warning<
 def warn_duplicate_attribute : Warning<
   "attribute %0 is already applied with different arguments">,
   InGroup<IgnoredAttributes>;
+def err_duplicate_attribute
+    : Error<"attribute %0 is already applied with different arguments">;
 def err_disallowed_duplicate_attribute : Error<
   "attribute %0 cannot appear more than once on a declaration">;
 
@@ -13067,6 +13072,12 @@ def err_get_vtable_pointer_requires_complete_type
     : Error<"__builtin_get_vtable_pointer requires an argument with a complete "
             "type, but %0 is incomplete">;
 
+def err_modular_format_attribute_no_format
+    : Error<"'modular_format' attribute requires 'format' attribute">;
+
+def err_modular_format_duplicate_aspect
+    : Error<"duplicate aspect '%0' in 'modular_format' attribute">;
+
 // SYCL-specific diagnostics
 def warn_sycl_kernel_num_of_template_params : Warning<
   "'sycl_kernel' attribute only applies to a function template with at least"
@@ -13235,6 +13246,12 @@ def err_hlsl_semantic_indexing_not_supported
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
+def err_hlsl_semantic_unsupported_iotype_for_stage
+    : Error<"semantic %0 is unsupported in %2 shaders as %1, requires one of "
+            "the following: %3">;
+def err_hlsl_semantic_partial_explicit_indexing
+    : Error<"partial explicit stage input location assignment via "
+            "vk::location(X) unsupported">;
 
 def warn_hlsl_user_defined_type_missing_member: Warning<"binding type '%select{t|u|b|s|c}0' only applies to types containing %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric types}0">, InGroup<LegacyConstantRegisterBinding>;
 def err_hlsl_binding_type_mismatch: Error<"binding type '%select{t|u|b|s|c}0' only applies to %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric variables in the global scope}0">;
@@ -13276,7 +13293,10 @@ def err_hlsl_builtin_scalar_vector_mismatch
           "vector type with matching scalar element type%diff{: $ vs $|}2,3">;
 
 def warn_hlsl_impcast_vector_truncation : Warning<
-  "implicit conversion truncates vector: %0 to %1">, InGroup<Conversion>;
+  "implicit conversion truncates vector: %0 to %1">, InGroup<VectorConversion>;
+
+def warn_hlsl_impcast_matrix_truncation : Warning<
+  "implicit conversion truncates matrix: %0 to %1">, InGroup<MatrixConversion>;
 
 def warn_hlsl_availability : Warning<
   "%0 is only available %select{|in %4 environment }3on %1 %2 or newer">,
@@ -13517,21 +13537,19 @@ def err_acc_clause_after_device_type
 def err_acc_clause_cannot_combine
     : Error<"OpenACC clause '%0' may not appear on the same construct as a "
             "'%1' clause on a '%2' construct">;
-def err_acc_clause_routine_cannot_combine_before_device_type
-    : Error<"OpenACC clause '%0' after 'device_type' clause on a 'routine' "
-              "conflicts with the '%1' clause before the first 'device_type'">;
-def err_acc_clause_routine_cannot_combine_same_device_type
-    : Error<"OpenACC clause '%0' on a 'routine' directive conflicts with the "
-            "'%1' clause applying to the same 'device_type'">;
+def err_acc_clause_cannot_combine_before_device_type
+    : Error<
+          "OpenACC clause '%1' after 'device_type' clause on a '%0' construct "
+          "conflicts with the '%2' clause before the first 'device_type'">;
+def err_acc_clause_cannot_combine_same_device_type
+    : Error<"OpenACC clause '%1' cannot combine with previous '%2' clause"
+            "%select{| in the same 'device_type' region}3 on a '%0' directive">;
+def err_acc_clause_conflicts_prev_dev_type
+    : Error<"OpenACC '%0' clause applies to 'device_type' '%1', which "
+            "conflicts with previous '%2' clause">;
 def err_acc_clause_routine_one_of_in_region
     : Error<"OpenACC 'routine' construct must have at least one 'gang', 'seq', "
             "'vector', or 'worker' clause that applies to each 'device_type'">;
-def err_acc_clause_since_last_device_type
-    : Error<"OpenACC '%0' clause cannot appear more than once%select{| in a "
-            "'device_type' region}2 on a '%1' directive">;
-def err_acc_clause_conflicts_prev_dev_type
-    : Error<"OpenACC '%0' clause applies to 'device_type' '%1', which "
-            "conflicts with previous '%0' clause">;
 
 def err_acc_reduction_num_gangs_conflict
     : Error<"OpenACC '%1' clause %select{|with more than 1 argument }0may not "
