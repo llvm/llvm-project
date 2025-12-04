@@ -926,16 +926,20 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       if (!Index)
         return RejectUser(Inst, "cannot compute vector index for GEP");
 
-      if (!isa<ConstantInt>(Index)) {
-        bool UsedInLoad = llvm::any_of(
-            GEP->users(), [&](const auto *U) { return isa<LoadInst>(U); });
-        if (auto *UserVecTy =
-                dyn_cast<FixedVectorType>(GEP->getSourceElementType())) {
-          if (UsedInLoad && UserVecTy->getNumElements() >
-                                PromoteAllocaDynamicIndexNumberElementLimit) {
-            return RejectUser(Inst,
-                              "user has too many elements for dynamic index");
+      auto Predicate = [&](const User *U) -> bool {
+        if (auto *LI = dyn_cast<LoadInst>(U)) {
+          if (auto *LoadVecTy = dyn_cast<FixedVectorType>(LI->getType())) {
+            if (LoadVecTy->getNumElements() >
+                    PromoteAllocaDynamicIndexNumberElementLimit)
+              return true;
           }
+        }
+        return false;
+      };
+      if (!isa<ConstantInt>(Index)) {
+        if (llvm::any_of(GEP->users(), Predicate)) {
+          return RejectUser(Inst,
+                            "user has too many elements for dynamic index");
         }
       }
 
