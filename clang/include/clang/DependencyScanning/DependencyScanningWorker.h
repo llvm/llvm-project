@@ -96,7 +96,7 @@ public:
   /// Run the dependency scanning tool for a given clang -cc1 command-line,
   /// and report the discovered dependencies to the provided consumer.
   ///
-  /// @return false if clang errors occurred (with diagnostics reported to
+  /// \return false if clang errors occurred (with diagnostics reported to
   /// \c DiagConsumer), true otherwise.
   bool computeDependencies(
       StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
