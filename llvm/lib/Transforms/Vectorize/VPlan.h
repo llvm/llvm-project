@@ -3486,6 +3486,15 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
     setMask(Mask);
   }
 
+  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Addr,
+                        VPValue *StoredVal, VPValue &EVL, VPValue *Mask)
+      : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
+                            {Addr, StoredVal, &EVL}, S.isConsecutive(),
+                            S.isReverse(), S, S.getDebugLoc()) {
+    assert(isReverse() && "Only reverse access need to set new stored value");
+    setMask(Mask);
+  }
+
   VP_CLASSOF_IMPL(VPDef::VPWidenStoreEVLSC)
 
   /// Return the address accessed by this recipe.
