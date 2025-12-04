@@ -830,6 +830,7 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
   assert(GEP && "getIndexExpressionsFromGEP called with a null GEP");
   LLVM_DEBUG(dbgs() << "\nGEP to delinearize: " << *GEP << "\n");
   Type *Ty = nullptr;
+  Type *IndexTy = SE.getEffectiveSCEVType(GEP->getPointerOperandType());
   bool DroppedFirstDim = false;
   for (unsigned i = 1; i < GEP->getNumOperands(); i++) {
     const SCEV *Expr = SE.getSCEV(GEP->getOperand(i));
@@ -855,8 +856,7 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
 
     Subscripts.push_back(Expr);
     if (!(DroppedFirstDim && i == 2))
-      Sizes.push_back(SE.getConstant(Expr->getType(),
-                                      ArrayTy->getNumElements()));
+      Sizes.push_back(SE.getConstant(IndexTy, ArrayTy->getNumElements()));
 
     Ty = ArrayTy->getElementType();
   }
