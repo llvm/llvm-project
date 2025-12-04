@@ -146,12 +146,8 @@ def AMDGPU_ExtPackedFp8Op :
   }];
 }
 
-def IsValidBlockSize: AttrConstraint<
-    CPred<"::llvm::is_contained({16, 32}, ::llvm::cast<::mlir::IntegerAttr>($_self).getInt())">,
-    "whose value is 16 or 32">;
-
-def AMDGPU_ScaledExtPacked816Op
-    : AMDGPU_Op<"scaled_ext_packed816", [Pure, AllShapesMatch<["source", "res"]>]>,
+def AMDGPU_ScaledExtPackedMatrixOp
+    : AMDGPU_Op<"scaled_ext_packed_matrix", [Pure, AllShapesMatch<["source", "res"]>]>,
       Arguments<(
           ins AnyTypeOf<[FixedVectorOfShapeAndType<[8], F4E2M1FN>,
                          FixedVectorOfShapeAndType<[8], F8E4M3FN>,
@@ -159,8 +155,8 @@ def AMDGPU_ScaledExtPacked816Op
                          FixedVectorOfShapeAndType<[16], F6E2M3FN>,
                          FixedVectorOfShapeAndType<[16], F6E3M2FN>]>:$source,
           FixedVectorOfShapeAndType<[4], F8E8M0FNU>:$scale,
-          ConfinedAttr<I32Attr, [IsValidBlockSize]>:$blockSize,
-          ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>:$firstScaleLane,
+          ConfinedAttr<I32Attr, [IntIsOneOf<[16, 32]>]>:$blockSize,
+          ConfinedAttr<I32Attr, [IntIsOneOf<[0, 16]>]>:$firstScaleLane,
           ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<3>]>:$firstScaleByte)>,
       Results<(
           outs AnyTypeOf<[FixedVectorOfShapeAndType<[8], F32>,
@@ -170,9 +166,12 @@ def AMDGPU_ScaledExtPacked816Op
                           FixedVectorOfShapeAndType<[16], F16>,
                           FixedVectorOfShapeAndType<[16], BF16>]>:$res)> {
 
-  let summary = "Extend a vector of packed floating point values";
+  let summary = "Extend a wave-wide matrix of packed floating point values";
 
   let description = [{
+    Extend matrix of microfloats (8 or 16 elements per lane) using a set of scales
+    that may be stored on other lanes.
+
     The scales applied to the input microfloats are stored in bytes which
     come from the `scales` input provided in a *half* of the wave identified
     by `firstScaleLane`. The bytes used is selected by `firstScaleByte` and depends
@@ -192,14 +191,14 @@ def AMDGPU_ScaledExtPacked816Op
     ```mlir
     // Input: 8-element vector of F8E4M3FN, converting to F32
     // Lanes 0-15 read from byte 0, lanes 16-31 read from byte 1
-    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+    %result = amdgpu.scaled_ext_packed_matrix %source scale(%scales)
       blockSize(32) firstScaleLane(0) firstScaleByte(0)
       : vector<8xf8E4M3FN>, vector<4xf8E8M0FNU> -> vector<8xf32>
 
     // Input: 16-element vector of F6E2M3FN, converting to F16
     // Lanes 0-15 read from byte 2, lanes 16-31 read from byte 3
-    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
-      blockSize(32) firstScaleLane(1) firstScaleByte(2)
+    %result = amdgpu.scaled_ext_packed_matrix %source scale(%scales)
+      blockSize(32) firstScaleLane(16) firstScaleByte(2)
       : vector<16xf6E2M3FN>, vector<4xf8E8M0FNU> -> vector<16xf16>
     ```
 
@@ -211,19 +210,19 @@ def AMDGPU_ScaledExtPacked816Op
     ```mlir
     // Input: 8-element vector of F8E5M2, converting to BF16
     // Lanes 0-15 read from byte 0, lanes 16-31 read from byte 2 (0+2)
-    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+    %result = amdgpu.scaled_ext_packed_matrix %source scale(%scales)
       blockSize(16) firstScaleLane(0) firstScaleByte(0)
       : vector<8xf8E5M2>, vector<4xf8E8M0FNU> -> vector<8xbf16>
 
     // Input: 16-element vector of F6E3M2FN, converting to F32
     // Lanes 0-15 read from byte 1, lanes 16-31 read from byte 3 (1+2)
-    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
-      blockSize(16) firstScaleLane(1) firstScaleByte(1)
+    %result = amdgpu.scaled_ext_packed_matrix %source scale(%scales)
+      blockSize(16) firstScaleLane(16) firstScaleByte(1)
       : vector<16xf6E3M2FN>, vector<4xf8E8M0FNU> -> vector<16xf32>
     ```
 
     Note: the layout for the scales generally mirrors how the WMMA
-    instructions use for matix scales. These selection operands allows
+    instructions use for matrix scales. These selection operands allows
     one to choose portions of the matrix to convert.
 
     When `source` is either F8E4M3FN or F8E5M2 and `blockSize` is 32,
@@ -233,7 +232,7 @@ def AMDGPU_ScaledExtPacked816Op
     When `source` is either F8E4M3FN or F8E5M2 and `blockSize` is 16,
     following combinations are allowed:
     * `firstScaleLane(0), firstScaleByte(0)`
-    * `firstScaleLane(1), firstScaleByte(2)`
+    * `firstScaleLane(16), firstScaleByte(2)`
     all other combinations are reserved.
 
     Available on gfx1250+.
