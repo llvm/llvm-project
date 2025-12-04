@@ -623,7 +623,7 @@ void RISCVPassConfig::addMachineSSAOptimization() {
   addPass(createRISCVVectorPeepholePass());
   addPass(createRISCVFoldMemOffsetPass());
   if (EnableRISCVLiveVariables)
-    addPass(createRISCVLiveVariablesPass(true));
+    addPass(createRISCVLiveVariablesPass(getRISCVTargetMachine(), true));
 
   TargetPassConfig::addMachineSSAOptimization();
 
@@ -657,12 +657,13 @@ void RISCVPassConfig::addFastRegAlloc() {
 
 
 void RISCVPassConfig::addPostRegAlloc() {
-  if (TM->getOptLevel() != CodeGenOptLevel::None &&
-      EnableRedundantCopyElimination)
-    addPass(createRISCVRedundantCopyEliminationPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None) {
+    if (EnableRedundantCopyElimination)
+      addPass(createRISCVRedundantCopyEliminationPass());
 
-  if (EnableRISCVLiveVariables)
-    addPass(createRISCVLiveVariablesPass(false));
+    if (EnableRISCVLiveVariables)
+      addPass(createRISCVLiveVariablesPass(getRISCVTargetMachine(), false));
+  }
 }
 
 bool RISCVPassConfig::addILPOpts() {

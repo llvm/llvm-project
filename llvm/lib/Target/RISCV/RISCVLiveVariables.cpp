@@ -19,6 +19,7 @@
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
 #include "RISCVSubtarget.h"
+#include "RISCVTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -57,8 +58,8 @@ static cl::opt<unsigned> MaxVRegs("riscv-liveness-max-vregs",
                                   cl::init(1024), cl::Hidden);
 
 static cl::opt<bool> VerifyLiveness("riscv-liveness-verify",
-                                        cl::desc("Verify liveness information"),
-                                        cl::init(false), cl::Hidden);
+                                    cl::desc("Verify liveness information"),
+                                    cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -84,8 +85,8 @@ class RISCVLiveVariables : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVLiveVariables(bool PreRegAlloc)
-      : MachineFunctionPass(ID), PreRegAlloc(PreRegAlloc) {
+  RISCVLiveVariables(RISCVTargetMachine &TM, bool PreRegAlloc)
+      : MachineFunctionPass(ID), TM(TM), PreRegAlloc(PreRegAlloc) {
     initializeRISCVLiveVariablesPass(*PassRegistry::getPassRegistry());
   }
 
@@ -143,6 +144,7 @@ private:
   bool isTrackableRegister(Register Reg, const TargetRegisterInfo *TRI,
                            const MachineRegisterInfo *MRI) const;
 
+  RISCVTargetMachine &TM;
   bool PreRegAlloc;
   unsigned RegCounter = 0;
 
@@ -167,8 +169,9 @@ char RISCVLiveVariables::ID = 0;
 INITIALIZE_PASS(RISCVLiveVariables, DEBUG_TYPE, RISCV_LIVE_VARIABLES_NAME,
                 false, true)
 
-FunctionPass *llvm::createRISCVLiveVariablesPass(bool PreRegAlloc) {
-  return new RISCVLiveVariables(PreRegAlloc);
+FunctionPass *llvm::createRISCVLiveVariablesPass(RISCVTargetMachine &TM,
+                                                 bool PreRegAlloc) {
+  return new RISCVLiveVariables(TM, PreRegAlloc);
 }
 
 bool RISCVLiveVariables::isTrackableRegister(
@@ -519,8 +522,8 @@ bool RISCVLiveVariables::runOnMachineFunction(MachineFunction &MF) {
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
   // Verify we're targeting RV64
-  if (!Subtarget.is64Bit()) {
-    LLVM_DEBUG(dbgs() << "Warning: RISCVLiveVariables optimized for RV64, "
+  if (!TM.getTargetTriple().isRISCV64()) {
+    LLVM_DEBUG(dbgs() << "Warning: RISCVLiveVariables only intended for RV64, "
                       << "but running on RV32\n");
     return false;
   }
