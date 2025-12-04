@@ -297,7 +297,7 @@ int main(int argc, const char **argv) {
       CB.SetCudaSDK(CudaPath);
 
     if (OffloadArch.empty()) {
-      OffloadArch = "sm_35";
+      OffloadArch = "sm_75";
     }
     CB.SetOffloadArch(OffloadArch);
 
