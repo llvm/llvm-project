@@ -1722,6 +1722,9 @@ static void emitCXXDestructMethod(CodeGenFunction &CGF,
   const ObjCInterfaceDecl *iface = impl->getClassInterface();
   for (const ObjCIvarDecl *ivar = iface->all_declared_ivar_begin();
        ivar; ivar = ivar->getNextIvar()) {
+    if (CGF.CGM.getContext().hasUnavailableFeature(ivar))
+      continue;
+
     QualType type = ivar->getType();
 
     // Check whether the ivar is a destructible type.

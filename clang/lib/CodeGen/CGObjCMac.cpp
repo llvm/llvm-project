@@ -5488,7 +5488,8 @@ CGObjCCommonMac::BuildIvarLayout(const ObjCImplementationDecl *OMD,
   if (CGM.getLangOpts().getGC() == LangOptions::NonGC) {
     for (const ObjCIvarDecl *IVD = OI->all_declared_ivar_begin(); IVD;
          IVD = IVD->getNextIvar())
-      ivars.push_back(IVD);
+      if (!CGM.getContext().hasUnavailableFeature(IVD))
+        ivars.push_back(IVD);
 
     if (isNonFragileABI()) {
       baseOffset = beginOffset; // InstanceStart
