@@ -43,6 +43,18 @@ func.func @entry() {
   %cvt = arith.truncf %b2 : f32 to f8E4M3FN
   vector.print %cvt : f8E4M3FN
 
+  // CHECK-NEXT: -2.25
+  %negated = arith.negf %cvt : f8E4M3FN
+  vector.print %negated : f8E4M3FN
+
+  // CHECK-NEXT: -2.25
+  %min = arith.minimumf %cvt, %negated : f8E4M3FN
+  vector.print %min : f8E4M3FN
+
+  // CHECK-NEXT: 1
+  %cmp1 = arith.cmpf "olt", %cvt, %c1 : f8E4M3FN
+  vector.print %cmp1 : i1
+
   // CHECK-NEXT: 1
   // Bit pattern: 01, interpreted as signed integer: 1
   %cvt_int_signed = arith.fptosi %cvt : f8E4M3FN to i2

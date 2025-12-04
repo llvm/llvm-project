@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+xventanacondops -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,RV64IMXVTCONDOPS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+zicond -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,CHECKZICOND,RV32IMZICOND %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+zicond -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,CHECKZICOND,RV64IMZICOND %s
-; RUN: llc -mtriple=riscv32 -mattr=+m,+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-opt,+conditional-cmv-fusion -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+m,+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-ialu,+conditional-cmv-fusion -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 
 define i16 @select_xor_1(i16 %A, i8 %cond) {

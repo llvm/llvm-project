@@ -8,5 +8,5 @@ subroutine reduction_task()
 
   !$omp parallel reduction(task, +:i)
   i = i + 1
-  !$omp end parallel 
+  !$omp end parallel
 end subroutine reduction_task
