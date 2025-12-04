@@ -105,8 +105,6 @@ facgt v0.2d, v0.2d, v0.2d
 fadd v0.4s, v0.4s, v0.4s
 faddp v0.2s, v0.2s, v0.2s
 faddp v0.4s, v0.4s, v0.4s
-fcadd v0.2s, v0.2s, v0.2s,  90
-fcadd v0.4s, v0.4s, v0.4s, 270
 fcmeq d20, d21, #0.0
 fcmeq d20, d21, d22
 fcmeq s10, s11, #0.0
@@ -125,8 +123,6 @@ fcmgt s10, s11, #0.0
 fcmgt s10, s11, s12
 fcmgt v0.4s, v0.4s, #0.0
 fcmgt v0.4s, v0.4s, v0.4s
-fcmla v0.2s, v0.2s, v0.2s, #90
-fcmla v0.4s, v0.4s, v0.s[1], #0
 fcmle d20, d21, #0.0
 fcmle s10, s11, #0.0
 fcmle v0.2d, v0.2d, #0.0

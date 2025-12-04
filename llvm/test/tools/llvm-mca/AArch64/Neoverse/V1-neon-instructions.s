@@ -137,8 +137,6 @@ faddp d11, v28.2d
 faddp v0.2s, v0.2s, v0.2s
 faddp v0.4s, v0.4s, v0.4s
 faddp v16.2d, v11.2d, v5.2d
-fcadd v0.2s, v0.2s, v0.2s,  90
-fcadd v0.4s, v0.4s, v0.4s, 270
 fcmeq h30, h6, h1
 fcmeq h19, h23, #0.0
 fcmeq d20, d21, #0.0
@@ -172,8 +170,6 @@ fcmgt v0.4s, v0.4s, v0.4s
 fcmgt v24.8h, v24.8h, v28.8h
 fcmgt v0.8h, v11.8h, #0.0
 fcmgt v19.2d, v31.2d, #0.0
-fcmla v0.2s, v0.2s, v0.2s, #90
-fcmla v0.4s, v0.4s, v0.s[1], #0
 fcmle v16.8h, v11.8h, #0.0
 fcmle v22.4s, v30.4s, #0.0
 fcmle d20, d21, #0.0
@@ -1705,8 +1701,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.25                        faddp	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      2     0.25                        faddp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      2     0.25                        faddp	v16.2d, v11.2d, v5.2d
-# CHECK-NEXT:  1      4     0.25                        fcadd	v0.2s, v0.2s, v0.2s, #90
-# CHECK-NEXT:  1      4     0.25                        fcadd	v0.4s, v0.4s, v0.4s, #270
 # CHECK-NEXT:  1      2     0.25                        fcmeq	h30, h6, h1
 # CHECK-NEXT:  1      2     0.25                        fcmeq	h19, h23, #0.0
 # CHECK-NEXT:  1      2     0.25                        fcmeq	d20, d21, #0.0
@@ -1740,8 +1734,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.25                        fcmgt	v24.8h, v24.8h, v28.8h
 # CHECK-NEXT:  1      2     0.25                        fcmgt	v0.8h, v11.8h, #0.0
 # CHECK-NEXT:  1      2     0.25                        fcmgt	v19.2d, v31.2d, #0.0
-# CHECK-NEXT:  1      4     0.25                        fcmla	v0.2s, v0.2s, v0.2s, #90
-# CHECK-NEXT:  1      4     0.25                        fcmla	v0.4s, v0.4s, v0.s[1], #0
 # CHECK-NEXT:  1      2     0.25                        fcmle	v16.8h, v11.8h, #0.0
 # CHECK-NEXT:  1      2     0.25                        fcmle	v22.4s, v30.4s, #0.0
 # CHECK-NEXT:  1      2     0.25                        fcmle	d20, d21, #0.0
@@ -3150,7 +3142,7 @@ zip2 v0.8h, v0.8h, v0.8h
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -      -      -      -      -      -     84.33  167.83 167.83 20.75  7.75   7.75   7.75   602.75 495.25 496.25 388.75
+# CHECK-NEXT:  -      -      -      -      -      -      -     84.33  167.83 167.83 20.75  7.75   7.75   7.75   601.75 494.25 495.25 387.75
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -3290,8 +3282,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   faddp	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   faddp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   faddp	v16.2d, v11.2d, v5.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcadd	v0.2s, v0.2s, v0.2s, #90
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcadd	v0.4s, v0.4s, v0.4s, #270
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcmeq	h30, h6, h1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcmeq	h19, h23, #0.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcmeq	d20, d21, #0.0
@@ -3325,8 +3315,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcmgt	v24.8h, v24.8h, v28.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcmgt	v0.8h, v11.8h, #0.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcmgt	v19.2d, v31.2d, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcmla	v0.2s, v0.2s, v0.2s, #90
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcmla	v0.4s, v0.4s, v0.s[1], #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcmle	v16.8h, v11.8h, #0.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcmle	v22.4s, v30.4s, #0.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fcmle	d20, d21, #0.0

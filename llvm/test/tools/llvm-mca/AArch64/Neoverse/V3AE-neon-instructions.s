@@ -117,8 +117,6 @@
 # CHECK-NEXT:  1      2     0.50                        fadd	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      2     0.50                        faddp	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      2     0.50                        faddp	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT:  1      2     0.50                        fcadd	v0.2s, v0.2s, v0.2s, #90
-# CHECK-NEXT:  1      2     0.50                        fcadd	v0.4s, v0.4s, v0.4s, #270
 # CHECK-NEXT:  1      2     0.50                        fcmeq	d20, d21, #0.0
 # CHECK-NEXT:  1      2     0.50                        fcmeq	d20, d21, d22
 # CHECK-NEXT:  1      2     0.50                        fcmeq	s10, s11, #0.0
@@ -137,8 +135,6 @@
 # CHECK-NEXT:  1      2     0.50                        fcmgt	s10, s11, s12
 # CHECK-NEXT:  1      2     0.50                        fcmgt	v0.4s, v0.4s, #0.0
 # CHECK-NEXT:  1      2     0.50                        fcmgt	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT:  1      4     0.50                        fcmla	v0.2s, v0.2s, v0.2s, #90
-# CHECK-NEXT:  1      4     0.50                        fcmla	v0.4s, v0.4s, v0.s[1], #0
 # CHECK-NEXT:  1      2     0.50                        fcmle	d20, d21, #0.0
 # CHECK-NEXT:  1      2     0.50                        fcmle	s10, s11, #0.0
 # CHECK-NEXT:  1      2     0.50                        fcmle	v0.2d, v0.2d, #0.0
@@ -1244,7 +1240,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     27.33  27.33  48.83  14.88  3.88   3.88   3.88   3.88   3.88   3.88   3.88   21.50  978.50 591.50
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     27.33  27.33  48.83  14.88  3.88   3.88   3.88   3.88   3.88   3.88   3.88   21.50  976.50 589.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
@@ -1355,8 +1351,6 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fadd	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   faddp	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   faddp	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcadd	v0.2s, v0.2s, v0.2s, #90
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcadd	v0.4s, v0.4s, v0.4s, #270
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcmeq	d20, d21, #0.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcmeq	d20, d21, d22
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcmeq	s10, s11, #0.0
@@ -1375,8 +1369,6 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcmgt	s10, s11, s12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcmgt	v0.4s, v0.4s, #0.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcmgt	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcmla	v0.2s, v0.2s, v0.2s, #90
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcmla	v0.4s, v0.4s, v0.s[1], #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcmle	d20, d21, #0.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcmle	s10, s11, #0.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcmle	v0.2d, v0.2d, #0.0
