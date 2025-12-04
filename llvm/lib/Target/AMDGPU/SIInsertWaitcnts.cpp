@@ -2289,10 +2289,13 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(LDS_ACCESS, Inst);
     }
 
-    // This is a flat memory operation that access both VMEM and LDS, so note it
-    // - it will require that both the VM and LGKM be flushed to zero if it is
-    // pending when a VM or LGKM dependency occurs.
-    if (FlatASCount > 1)
+    // If this is a truly flat memory operation, then it accesss both VMEM and
+    // LDS, so note it - it will require that both the VM and LGKM be flushed to
+    // zero if it is pending when a VM or LGKM dependency occurs.
+    //
+    // For example, LDS DMA operations have FLAT set in their TSFlags for
+    // unspecified reasons, but they are not flat operations)
+    if (!SIInstrInfo::isLDSDMA(Inst) && FlatASCount > 1)
       ScoreBrackets->setPendingFlat();
   } else if (SIInstrInfo::isVMEM(Inst) &&
              !llvm::AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode())) {
