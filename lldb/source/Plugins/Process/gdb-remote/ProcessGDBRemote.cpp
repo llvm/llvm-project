@@ -5151,12 +5151,12 @@ llvm::Error ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
   if (!m_gdb_comm.GetQXferFeaturesReadSupported())
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
-        "The debug server does not support \"qXfer:features:read\"");
+        "the debug server does not support \"qXfer:features:read\"");
 
   if (!XMLDocument::XMLEnabled())
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
-        "The debug server supports \"qXfer:features:read\", but LLDB does not "
+        "the debug server supports \"qXfer:features:read\", but LLDB does not "
         "have XML enabled (check LLLDB_ENABLE_LIBXML2)");
 
   // These hold register type information for the whole of target.xml.
@@ -5178,7 +5178,7 @@ llvm::Error ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
              ? llvm::ErrorSuccess()
              : llvm::createStringError(
                    llvm::inconvertibleErrorCode(),
-                   "Debug server did not describe any registers");
+                   "the debug server did not describe any registers");
 }
 
 llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
