@@ -4471,7 +4471,7 @@ class Config:
             msg = str(e) + (
                 "To provide the path to libclang, you can use the environment variable "
                 "LIBCLANG_LIBRARY_PATH or call Config.set_library_path(). "
-                "Alternatively, you can specify the exact library file using "
+                "Alternatively, you can specify path of the library file using "
                 "LIBCLANG_LIBRARY_FILE or Config.set_library_file()."
             )
             raise LibclangError(msg)
