@@ -520,7 +520,7 @@ bool llvm::runPassPipeline(
         false, "", nullptr, DebugifyMode::OriginalDebugInfo,
         &DebugInfoBeforePass, VerifyDIPreserveExport));
   if (EnableProfcheck)
-    MPM.addPass(createModuleToFunctionPassAdaptor(ProfileVerifierPass()));
+    MPM.addPass(ProfileVerifierPass());
 
   // Add any relevant output pass at the end of the pipeline.
   switch (OK) {

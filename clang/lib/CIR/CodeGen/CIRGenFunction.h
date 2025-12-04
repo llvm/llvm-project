@@ -123,6 +123,10 @@ public:
 
   GlobalDecl curSEHParent;
 
+  /// A mapping from NRVO variables to the flags used to indicate
+  /// when the NRVO has been applied to this variable.
+  llvm::DenseMap<const VarDecl *, mlir::Value> nrvoFlags;
+
   llvm::DenseMap<const clang::ValueDecl *, clang::FieldDecl *>
       lambdaCaptureFields;
   clang::FieldDecl *lambdaThisCaptureField = nullptr;

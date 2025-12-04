@@ -331,6 +331,11 @@ public:
     return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, order);
   }
 
+  cir::StoreOp createFlagStore(mlir::Location loc, bool val, mlir::Value dst) {
+    mlir::Value flag = getBool(val, loc);
+    return CIRBaseBuilderTy::createStore(loc, flag, dst);
+  }
+
   [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
                                            mlir::Location loc,
                                            mlir::StringRef name,

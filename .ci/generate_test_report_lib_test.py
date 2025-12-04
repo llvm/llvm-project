@@ -181,6 +181,7 @@ class TestReports(unittest.TestCase):
                 "tools/check-langley",
                 dedent(
                     """\
+                    ModuleNotFoundError: No module named 'mount_langley'
                     FAILED: tools/check-langley
                     Wow! This system is really broken!"""
                 ),

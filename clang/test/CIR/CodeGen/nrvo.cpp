@@ -49,3 +49,52 @@ struct S f1() {
 // OGCG-NEXT:   call void @_ZN1SC1Ev(ptr {{.*}} %[[RETVAL]])
 // OGCG-NEXT:   %[[RET:.*]] = load i64, ptr %[[RETVAL]]
 // OGCG-NEXT:   ret i64 %[[RET]]
+
+struct NonTrivial {
+  ~NonTrivial();
+};
+
+void maybeThrow();
+
+NonTrivial test_nrvo() {
+  NonTrivial result;
+  maybeThrow();
+  return result;
+}
+
+// TODO(cir): Handle normal cleanup properly.
+
+// CIR: cir.func {{.*}} @_Z9test_nrvov()
+// CIR:   %[[RESULT:.*]] = cir.alloca !rec_NonTrivial, !cir.ptr<!rec_NonTrivial>, ["__retval"]
+// CIR:   %[[NRVO_FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["nrvo"]
+// CIR:   %[[FALSE:.*]] = cir.const #false
+// CIR:   cir.store{{.*}} %[[FALSE]], %[[NRVO_FLAG]]
+// CIR:   cir.call @_Z10maybeThrowv() : () -> ()
+// CIR:   %[[TRUE:.*]] = cir.const #true
+// CIR:   cir.store{{.*}} %[[TRUE]], %[[NRVO_FLAG]]
+// CIR:   %[[RET:.*]] = cir.load %[[RESULT]]
+// CIR:   cir.return %[[RET]]
+
+// LLVM: define {{.*}} %struct.NonTrivial @_Z9test_nrvov()
+// LLVM:   %[[RESULT:.*]] = alloca %struct.NonTrivial
+// LLVM:   %[[NRVO_FLAG:.*]] = alloca i8
+// LLVM:   store i8 0, ptr %[[NRVO_FLAG]]
+// LLVM:   call void @_Z10maybeThrowv()
+// LLVM:   store i8 1, ptr %[[NRVO_FLAG]]
+// LLVM:   %[[RET:.*]] = load %struct.NonTrivial, ptr %[[RESULT]]
+// LLVM:   ret %struct.NonTrivial %[[RET]]
+
+// OGCG: define {{.*}} void @_Z9test_nrvov(ptr {{.*}} sret(%struct.NonTrivial) {{.*}} %[[RESULT:.*]])
+// OGCG:   %[[RESULT_ADDR:.*]] = alloca ptr
+// OGCG:   %[[NRVO_FLAG:.*]] = alloca i1, align 1
+// OGCG:   store ptr %[[RESULT]], ptr %[[RESULT_ADDR]]
+// OGCG:   store i1 false, ptr %[[NRVO_FLAG]]
+// OGCG:   call void @_Z10maybeThrowv()
+// OGCG:   store i1 true, ptr %[[NRVO_FLAG]]
+// OGCG:   %[[NRVO_VAL:.*]] = load i1, ptr %[[NRVO_FLAG]]
+// OGCG:   br i1 %[[NRVO_VAL]], label %[[SKIPDTOR:.*]], label %[[NRVO_UNUSED:.*]]
+// OGCG: [[NRVO_UNUSED]]:
+// OGCG:   call void @_ZN10NonTrivialD1Ev(ptr {{.*}} %[[RESULT]])
+// OGCG:   br label %[[SKIPDTOR]]
+// OGCG: [[SKIPDTOR]]:
+// OGCG:   ret void
