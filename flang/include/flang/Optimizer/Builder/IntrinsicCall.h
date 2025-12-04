@@ -413,6 +413,7 @@ struct IntrinsicLibrary {
   template <typename Shift>
   mlir::Value genShift(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
   mlir::Value genShiftA(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
+  void genShowDescriptor(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSind(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSinpi(mlir::Type, llvm::ArrayRef<mlir::Value>);

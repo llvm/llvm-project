@@ -92,13 +92,6 @@ func.func @llvm_nvvm_cluster_wait() {
   llvm.return
 }
 
-// CHECK-LABEL: @llvm_nvvm_fence_sc_cluster
-func.func @llvm_nvvm_fence_sc_cluster() {
-  // CHECK: nvvm.fence.sc.cluster
-  nvvm.fence.sc.cluster
-  llvm.return
-}
-
 // CHECK-LABEL: @nvvm_shfl
 func.func @nvvm_shfl(
     %arg0 : i32, %arg1 : i32, %arg2 : i32,
