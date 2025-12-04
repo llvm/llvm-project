@@ -45,7 +45,7 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
     }
   }
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     auto exitOp = mlir::acc::DeclareExitOp::create(
         cgf.getBuilder(), enterOp.getLoc(), enterOp, {});
 

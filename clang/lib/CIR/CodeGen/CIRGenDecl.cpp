@@ -812,13 +812,16 @@ namespace {
 struct DestroyObject final : EHScopeStack::Cleanup {
   DestroyObject(Address addr, QualType type,
                 CIRGenFunction::Destroyer *destroyer)
-      : addr(addr), type(type), destroyer(destroyer) {}
+      : addr(addr), type(type), destroyer(destroyer) {
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
+  }
 
   Address addr;
   QualType type;
   CIRGenFunction::Destroyer *destroyer;
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
     cgf.emitDestroy(addr, type, destroyer);
   }
 };
@@ -831,7 +834,7 @@ template <class Derived> struct DestroyNRVOVariable : EHScopeStack::Cleanup {
   Address addr;
   QualType ty;
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     assert(!cir::MissingFeatures::cleanupDestroyNRVOVariable());
   }
 
@@ -855,7 +858,7 @@ struct DestroyNRVOVariableCXX final
 struct CallStackRestore final : EHScopeStack::Cleanup {
   Address stack;
   CallStackRestore(Address stack) : stack(stack) {}
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     mlir::Location loc = stack.getPointer().getLoc();
     mlir::Value v = cgf.getBuilder().createLoad(loc, stack);
     cgf.getBuilder().createStackRestore(loc, v);
@@ -957,6 +960,7 @@ void CIRGenFunction::emitDestroy(Address addr, QualType type,
     return;
 
   mlir::Value begin = addr.getPointer();
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
   emitArrayDestroy(begin, length, type, elementAlign, destroyer);
 
   // If the array destroy didn't use the length op, we can erase it.
@@ -1029,7 +1033,7 @@ void CIRGenFunction::emitAutoVarTypeCleanup(
   if (!destroyer)
     destroyer = getDestroyer(dtorKind);
 
-  assert(!cir::MissingFeatures::ehCleanupFlags());
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
   ehStack.pushCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
 }
 
