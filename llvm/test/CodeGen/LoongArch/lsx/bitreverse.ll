@@ -111,9 +111,8 @@ declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>)
 define <2 x i64> @test_bitreverse_v2i64(<2 x i64> %a) nounwind {
 ; LA32-LABEL: test_bitreverse_v2i64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA32-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI3_0)
-; LA32-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; LA32-NEXT:    vshuf4i.b $vr0, $vr0, 27
+; LA32-NEXT:    vshuf4i.w $vr0, $vr0, 177
 ; LA32-NEXT:    vslli.b $vr1, $vr0, 4
 ; LA32-NEXT:    vsrli.b $vr0, $vr0, 4
 ; LA32-NEXT:    vor.v $vr0, $vr0, $vr1
