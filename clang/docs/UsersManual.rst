@@ -2373,6 +2373,7 @@ are listed below.
    Ex of IR before the optimization:
 
    .. code-block:: llvm
+
      %vtable = load ptr, ptr %BV, align 8, !tbaa !6
      %0 = tail call i1 @llvm.public.type.test(ptr %vtable, metadata !"_ZTS4Base")
      tail call void @llvm.assume(i1 %0)
@@ -2383,6 +2384,7 @@ are listed below.
    IR after the optimization:
 
    .. code-block:: llvm
+
      %vtable = load ptr, ptr %BV, align 8, !tbaa !12
      %0 = load ptr, ptr %vtable, align 8
      %1 = icmp eq ptr %0, @_ZN4Base17virtual_function1Ev
