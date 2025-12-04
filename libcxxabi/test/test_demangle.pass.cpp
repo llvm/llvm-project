@@ -13,6 +13,10 @@
 // dd8b266ef.
 // UNSUPPORTED: using-built-library-before-llvm-20
 
+// This test exercises support for BitInt demangling introduced in
+// 20f56d140909a01c74e9981835373eaab6021af9.
+// UNSUPPORTED: using-built-library-before-llvm-21
+
 // XFAIL: win32-broken-printf-a-precision
 
 #include "support/timer.h"

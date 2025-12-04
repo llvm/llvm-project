@@ -258,6 +258,7 @@ static bool isBuiltinHeaderName(StringRef FileName) {
            .Case("stdarg.h", true)
            .Case("stdatomic.h", true)
            .Case("stdbool.h", true)
+           .Case("stdckdint.h", true)
            .Case("stdcountof.h", true)
            .Case("stddef.h", true)
            .Case("stdint.h", true)

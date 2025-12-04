@@ -87,31 +87,91 @@ def SDT_PPCxxperm : SDTypeProfile<1, 3, [
   SDTCisVT<0, v2f64>, SDTCisVT<1, v2f64>,
   SDTCisVT<2, v2f64>, SDTCisVT<3, v4i32>]>;
 //--------------------------- Custom PPC nodes -------------------------------//
+
+// VSRC, CHAIN = LXVD2X_LE CHAIN, Ptr - Occurs only for little endian.
+// Maps directly to an lxvd2x instruction that will be followed by
+// an xxswapd.
 def PPClxvd2x  : SDNode<"PPCISD::LXVD2X", SDT_PPClxvd2x,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// CHAIN = STXVD2X CHAIN, VSRC, Ptr - Occurs only for little endian.
+// Maps directly to an stxvd2x instruction that will be preceded by
+// an xxswapd.
 def PPCstxvd2x : SDNode<"PPCISD::STXVD2X", SDT_PPCstxvd2x,
                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// VSRC, CHAIN = LOAD_VEC_BE CHAIN, Ptr - Occurs only for little endian.
+// Maps directly to one of lxvd2x/lxvw4x/lxvh8x/lxvb16x depending on
+// the vector type to load vector in big-endian element order.
 def PPCld_vec_be  : SDNode<"PPCISD::LOAD_VEC_BE", SDT_PPCld_vec_be,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// CHAIN = STORE_VEC_BE CHAIN, VSRC, Ptr - Occurs only for little endian.
+// Maps directly to one of stxvd2x/stxvw4x/stxvh8x/stxvb16x depending on
+// the vector type to store vector in big-endian element order.
 def PPCst_vec_be : SDNode<"PPCISD::STORE_VEC_BE", SDT_PPCst_vec_be,
                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// VSRC, CHAIN = XXSWAPD CHAIN, VSRC - Occurs only for little
+// endian.  Maps to an xxswapd instruction that corrects an lxvd2x
+// or stxvd2x instruction.  The chain is necessary because the
+// sequence replaces a load and needs to provide the same number
+// of outputs.
 def PPCxxswapd : SDNode<"PPCISD::XXSWAPD", SDT_PPCxxswapd, [SDNPHasChain]>;
+
+// Direct move from a VSX register to a GPR
 def PPCmfvsr : SDNode<"PPCISD::MFVSR", SDTUnaryOp, []>;
+
+// Direct move from a GPR to a VSX register (algebraic)
 def PPCmtvsra : SDNode<"PPCISD::MTVSRA", SDTUnaryOp, []>;
+
+// Direct move from a GPR to a VSX register (zero)
 def PPCmtvsrz : SDNode<"PPCISD::MTVSRZ", SDTUnaryOp, []>;
+
+// Extract a subvector from signed integer vector and convert to FP.
+// It is primarily used to convert a (widened) illegal integer vector
+// type to a legal floating point vector type.
+// For example v2i32 -> widened to v4i32 -> v2f64
 def PPCsvec2fp : SDNode<"PPCISD::SINT_VEC_TO_FP", SDTVecConv, []>;
+
+// Extract a subvector from unsigned integer vector and convert to FP.
+// As with SINT_VEC_TO_FP, used for converting illegal types.
 def PPCuvec2fp: SDNode<"PPCISD::UINT_VEC_TO_FP", SDTVecConv, []>;
+
+// An SDNode for swaps that are not associated with any loads/stores
+// and thereby have no chain.
 def PPCswapNoChain : SDNode<"PPCISD::SWAP_NO_CHAIN", SDT_PPCxxswapd>;
 
+// FP_EXTEND_HALF(VECTOR, IDX) - Custom extend upper (IDX=0) half or
+// lower (IDX=1) half of v4f32 to v2f64.
 def PPCfpexth : SDNode<"PPCISD::FP_EXTEND_HALF", SDT_PPCfpexth, []>;
+
+// VSRC, CHAIN = LD_VSX_LH CHAIN, Ptr - This is a floating-point load of a
+// v2f32 value into the lower half of a VSR register.
 def PPCldvsxlh : SDNode<"PPCISD::LD_VSX_LH", SDT_PPCldvsxlh,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// VSRC, CHAIN = LD_SPLAT, CHAIN, Ptr - a splatting load memory
+// instructions such as LXVDSX, LXVWSX.
 def PPCldsplat : SDNode<"PPCISD::LD_SPLAT", SDT_PPCldsplat,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// VSRC, CHAIN = ZEXT_LD_SPLAT, CHAIN, Ptr - a splatting load memory
+// that zero-extends.
 def PPCzextldsplat : SDNode<"PPCISD::ZEXT_LD_SPLAT", SDT_PPCldsplat,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// VSRC, CHAIN = SEXT_LD_SPLAT, CHAIN, Ptr - a splatting load memory
+// that sign-extends.
 def PPCsextldsplat : SDNode<"PPCISD::SEXT_LD_SPLAT", SDT_PPCldsplat,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// PowerPC instructions that have SCALAR_TO_VECTOR semantics tend to
+// place the value into the least significant element of the most
+// significant doubleword in the vector. This is not element zero for
+// anything smaller than a doubleword on either endianness. This node has
+// the same semantics as SCALAR_TO_VECTOR except that the value remains in
+// the aforementioned location in the vector register.
 def PPCSToV : SDNode<"PPCISD::SCALAR_TO_VECTOR_PERMUTED",
                      SDTypeProfile<1, 1, []>, []>;
 
@@ -2786,14 +2846,16 @@ def : Pat<(v2f64 (any_frint v2f64:$S)), (v2f64 (XVRDPIC $S))>;
 // Rounding without exceptions (nearbyint). Due to strange tblgen behaviour,
 // these need to be defined after the any_frint versions so ISEL will correctly
 // add the chain to the strict versions.
-def : Pat<(f32 (fnearbyint f32:$S)),
+// TODO: Match strict fp rounding intrinsics with instructions like xsrdpiz when
+// rounding mode is propagated to CodeGen part.
+def : Pat<(f32 (strict_fnearbyint f32:$S)),
           (f32 (COPY_TO_REGCLASS (XSRDPIC
                                    (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
-def : Pat<(f64 (fnearbyint f64:$S)),
+def : Pat<(f64 (strict_fnearbyint f64:$S)),
           (f64 (XSRDPIC $S))>;
-def : Pat<(v2f64 (fnearbyint v2f64:$S)),
+def : Pat<(v2f64 (strict_fnearbyint v2f64:$S)),
           (v2f64 (XVRDPIC $S))>;
-def : Pat<(v4f32 (fnearbyint v4f32:$S)),
+def : Pat<(v4f32 (strict_fnearbyint v4f32:$S)),
           (v4f32 (XVRSPIC $S))>;
 
 // Materialize a zero-vector of long long
@@ -3578,25 +3640,25 @@ def : Pat<(f64 (bitconvert i64:$S)),
           (f64 (MTVSRD $S))>;
 
 // Rounding to integer.
-def : Pat<(i64 (lrint f64:$S)),
+def : Pat<(i64 (strict_lrint f64:$S)),
           (i64 (MFVSRD (FCTID $S)))>;
-def : Pat<(i64 (lrint f32:$S)),
+def : Pat<(i64 (strict_lrint f32:$S)),
           (i64 (MFVSRD (FCTID (COPY_TO_REGCLASS $S, F8RC))))>;
-def : Pat<(i64 (llrint f64:$S)),
+def : Pat<(i64 (strict_llrint f64:$S)),
           (i64 (MFVSRD (FCTID $S)))>;
-def : Pat<(i64 (llrint f32:$S)),
+def : Pat<(i64 (strict_llrint f32:$S)),
           (i64 (MFVSRD (FCTID (COPY_TO_REGCLASS $S, F8RC))))>;
-def : Pat<(i64 (lround f64:$S)),
+def : Pat<(i64 (strict_lround f64:$S)),
           (i64 (MFVSRD (FCTID (XSRDPI $S))))>;
-def : Pat<(i64 (lround f32:$S)),
+def : Pat<(i64 (strict_lround f32:$S)),
           (i64 (MFVSRD (FCTID (XSRDPI (COPY_TO_REGCLASS $S, VSFRC)))))>;
-def : Pat<(i32 (lround f64:$S)),
+def : Pat<(i32 (strict_lround f64:$S)),
           (i32 (MFVSRWZ (FCTIW (XSRDPI $S))))>;
-def : Pat<(i32 (lround f32:$S)),
+def : Pat<(i32 (strict_lround f32:$S)),
           (i32 (MFVSRWZ (FCTIW (XSRDPI (COPY_TO_REGCLASS $S, VSFRC)))))>;
-def : Pat<(i64 (llround f64:$S)),
+def : Pat<(i64 (strict_llround f64:$S)),
           (i64 (MFVSRD (FCTID (XSRDPI $S))))>;
-def : Pat<(i64 (llround f32:$S)),
+def : Pat<(i64 (strict_llround f32:$S)),
           (i64 (MFVSRD (FCTID (XSRDPI (COPY_TO_REGCLASS $S, VSFRC)))))>;
 
 // Alternate patterns for PPCmtvsrz where the output is v8i16 or v16i8 instead

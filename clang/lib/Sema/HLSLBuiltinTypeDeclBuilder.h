@@ -91,8 +91,12 @@ public:
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
                                                   bool IsConst, bool IsRef);
+  BuiltinTypeDeclBuilder &addLoadWithStatusFunction(DeclarationName &Name,
+                                                    bool IsConst);
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
+
+  BuiltinTypeDeclBuilder &addGetDimensionsMethodForBuffer();
 
 private:
   BuiltinTypeDeclBuilder &addCreateFromBinding();

@@ -174,8 +174,8 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1153"},   {"gfx1153"}, GK_GFX1153, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1200"},   {"gfx1200"}, GK_GFX1200, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1201"},   {"gfx1201"}, GK_GFX1201, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
-    {{"gfx1250"},   {"gfx1250"}, GK_GFX1250, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
-    {{"gfx1251"},   {"gfx1251"}, GK_GFX1251, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+    {{"gfx1250"},   {"gfx1250"}, GK_GFX1250, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK_ALWAYS},
+    {{"gfx1251"},   {"gfx1251"}, GK_GFX1251, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK_ALWAYS},
 
     {{"gfx9-generic"},      {"gfx9-generic"},    GK_GFX9_GENERIC,    FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
     {{"gfx10-1-generic"},   {"gfx10-1-generic"}, GK_GFX10_1_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
@@ -433,6 +433,8 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["fp8e5m3-insts"] = true;
     Features["permlane16-swap"] = true;
     Features["ashr-pk-insts"] = true;
+    Features["add-min-max-insts"] = true;
+    Features["pk-add-min-max-insts"] = true;
     Features["atomic-buffer-pk-add-bf16-inst"] = true;
     Features["vmem-pref-insts"] = true;
     Features["atomic-fadd-rtn-insts"] = true;
@@ -445,6 +447,11 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["atomic-fmin-fmax-global-f64"] = true;
     Features["wavefrontsize32"] = true;
     Features["clusters"] = true;
+    Features["cube-insts"] = true;
+    Features["lerp-inst"] = true;
+    Features["sad-insts"] = true;
+    Features["qsad-insts"] = true;
+    Features["cvt-pknorm-vop2-insts"] = true;
     break;
   case GK_GFX1201:
   case GK_GFX1200:
@@ -472,6 +479,11 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["gfx12-insts"] = true;
     Features["atomic-fadd-rtn-insts"] = true;
     Features["image-insts"] = true;
+    Features["cube-insts"] = true;
+    Features["lerp-inst"] = true;
+    Features["sad-insts"] = true;
+    Features["qsad-insts"] = true;
+    Features["cvt-pknorm-vop2-insts"] = true;
     Features["fp8-conversion-insts"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
     break;
@@ -501,6 +513,11 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["gfx11-insts"] = true;
     Features["atomic-fadd-rtn-insts"] = true;
     Features["image-insts"] = true;
+    Features["cube-insts"] = true;
+    Features["lerp-inst"] = true;
+    Features["sad-insts"] = true;
+    Features["qsad-insts"] = true;
+    Features["cvt-pknorm-vop2-insts"] = true;
     Features["gws"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
     break;
@@ -533,6 +550,11 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["vmem-to-lds-load-insts"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
     Features["atomic-fmin-fmax-global-f64"] = true;
+    Features["cube-insts"] = true;
+    Features["lerp-inst"] = true;
+    Features["sad-insts"] = true;
+    Features["qsad-insts"] = true;
+    Features["cvt-pknorm-vop2-insts"] = true;
     break;
   case GK_GFX1012:
   case GK_GFX1011:
@@ -560,6 +582,11 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["vmem-to-lds-load-insts"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
     Features["atomic-fmin-fmax-global-f64"] = true;
+    Features["cube-insts"] = true;
+    Features["lerp-inst"] = true;
+    Features["sad-insts"] = true;
+    Features["qsad-insts"] = true;
+    Features["cvt-pknorm-vop2-insts"] = true;
     break;
   case GK_GFX950:
     Features["bitop3-insts"] = true;
@@ -613,6 +640,11 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["vmem-to-lds-load-insts"] = true;
     Features["atomic-fmin-fmax-global-f64"] = true;
     Features["wavefrontsize64"] = true;
+    Features["cube-insts"] = true;
+    Features["lerp-inst"] = true;
+    Features["sad-insts"] = true;
+    Features["qsad-insts"] = true;
+    Features["cvt-pknorm-vop2-insts"] = true;
     break;
   case GK_GFX90A:
     Features["gfx90a-insts"] = true;
@@ -657,6 +689,11 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["s-memtime-inst"] = true;
     Features["gws"] = true;
     Features["wavefrontsize64"] = true;
+    Features["cube-insts"] = true;
+    Features["lerp-inst"] = true;
+    Features["sad-insts"] = true;
+    Features["qsad-insts"] = true;
+    Features["cvt-pknorm-vop2-insts"] = true;
     break;
   case GK_GFX705:
   case GK_GFX704:
@@ -665,7 +702,18 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   case GK_GFX701:
   case GK_GFX700:
     Features["ci-insts"] = true;
-    [[fallthrough]];
+    Features["cube-insts"] = true;
+    Features["lerp-inst"] = true;
+    Features["sad-insts"] = true;
+    Features["qsad-insts"] = true;
+    Features["cvt-pknorm-vop2-insts"] = true;
+    Features["image-insts"] = true;
+    Features["s-memtime-inst"] = true;
+    Features["gws"] = true;
+    Features["atomic-fmin-fmax-global-f32"] = true;
+    Features["atomic-fmin-fmax-global-f64"] = true;
+    Features["wavefrontsize64"] = true;
+    break;
   case GK_GFX602:
   case GK_GFX601:
   case GK_GFX600:
@@ -675,6 +723,10 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["atomic-fmin-fmax-global-f32"] = true;
     Features["atomic-fmin-fmax-global-f64"] = true;
     Features["wavefrontsize64"] = true;
+    Features["cube-insts"] = true;
+    Features["lerp-inst"] = true;
+    Features["sad-insts"] = true;
+    Features["cvt-pknorm-vop2-insts"] = true;
     break;
   case GK_NONE:
     break;

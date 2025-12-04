@@ -408,6 +408,12 @@ public:
   const char *getStaticInitSectionSpecifier() const override {
     return ".text.startup";
   }
+
+  // This allows template specializations, see
+  // LinuxTargetInfo<AArch64leTargetInfo>::setABI
+  bool setABI(const std::string &Name) override {
+    return OSTargetInfo<Target>::setABI(Name);
+  }
 };
 
 // Managarm Target

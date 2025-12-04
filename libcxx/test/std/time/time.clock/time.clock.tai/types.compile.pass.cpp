@@ -32,6 +32,7 @@
 #include <chrono>
 #include <concepts>
 #include <ratio>
+#include <type_traits>
 
 #include "test_macros.h"
 

@@ -88,7 +88,7 @@ public:
                         std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
 
   /// Destroy the LinkGraphLinkingLayer.
-  ~LinkGraphLinkingLayer();
+  ~LinkGraphLinkingLayer() override;
 
   /// Add a plugin.
   LinkGraphLinkingLayer &addPlugin(std::shared_ptr<Plugin> P) {

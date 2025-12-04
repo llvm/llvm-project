@@ -220,7 +220,7 @@ Sections:
 
 ## Check that yaml2obj generates a warning when we use unsupported versions.
 # RUN: yaml2obj --docnum=3  %s 2>&1 | FileCheck %s --check-prefix=INVALID-VERSION
-# INVALID-VERSION: warning: unsupported SHT_LLVM_BB_ADDR_MAP version: 5; encoding using the most recent version
+# INVALID-VERSION: warning: unsupported SHT_LLVM_BB_ADDR_MAP version: 6; encoding using the most recent version
 
 --- !ELF
 FileHeader:
@@ -232,4 +232,4 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
 ##  Specify unsupported version
-      - Version: 5
+      - Version: 6

@@ -34,13 +34,12 @@ namespace clang {
 // getType() tests include whole bunch of type comparisons,
 // so when something is wrong, it's good to have gtest telling us
 // what are those types.
-LLVM_ATTRIBUTE_UNUSED std::ostream &operator<<(std::ostream &OS,
-                                               const QualType &T) {
+[[maybe_unused]] std::ostream &operator<<(std::ostream &OS, const QualType &T) {
   return OS << T.getAsString();
 }
 
-LLVM_ATTRIBUTE_UNUSED std::ostream &operator<<(std::ostream &OS,
-                                               const CanQualType &T) {
+[[maybe_unused]] std::ostream &operator<<(std::ostream &OS,
+                                          const CanQualType &T) {
   return OS << QualType{T};
 }
 

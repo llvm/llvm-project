@@ -238,7 +238,7 @@ define void @call_both() #0 {
 
 ; TEST 10 (positive case)
 ; Call intrinsic function
-; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+; CHECK: Function Attrs: nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none)
 declare float @llvm.floor.f32(float)
 
 define void @call_floor(float %a) #0 {
@@ -489,7 +489,7 @@ attributes #2 = { nobuiltin nounwind }
 ; TUNIT: attributes #[[ATTR3]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
 ; TUNIT: attributes #[[ATTR4]] = { mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable }
 ; TUNIT: attributes #[[ATTR5:[0-9]+]] = { nofree noinline nounwind memory(none) uwtable }
-; TUNIT: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; TUNIT: attributes #[[ATTR6:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR7]] = { nofree nounwind }
 ; TUNIT: attributes #[[ATTR8]] = { nobuiltin nofree nounwind }
 ; TUNIT: attributes #[[ATTR9]] = { nosync memory(none) }
@@ -506,7 +506,7 @@ attributes #2 = { nobuiltin nounwind }
 ; CGSCC: attributes #[[ATTR3]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
 ; CGSCC: attributes #[[ATTR4:[0-9]+]] = { nofree noinline nounwind memory(none) uwtable }
 ; CGSCC: attributes #[[ATTR5]] = { mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable }
-; CGSCC: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CGSCC: attributes #[[ATTR6:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR7]] = { nofree nounwind }
 ; CGSCC: attributes #[[ATTR8]] = { nobuiltin nofree nounwind }
 ; CGSCC: attributes #[[ATTR9]] = { nosync memory(none) }

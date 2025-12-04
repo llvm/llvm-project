@@ -23,7 +23,6 @@
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
-#include <optional>
 
 #define DEBUG_TYPE "dxil-resource"
 
@@ -206,6 +205,14 @@ static dxil::ElementType toDXILElementType(Type *Ty, bool IsSigned) {
   return ElementType::Invalid;
 }
 
+static dxil::ElementType toDXILStorageType(dxil::ElementType ET) {
+  if (ET == dxil::ElementType::U64 || ET == dxil::ElementType::F64 ||
+      ET == dxil::ElementType::I64 || ET == dxil::ElementType::SNormF64 ||
+      ET == dxil::ElementType::UNormF64)
+    return dxil::ElementType::U32;
+  return ET;
+}
+
 ResourceTypeInfo::ResourceTypeInfo(TargetExtType *HandleTy,
                                    const dxil::ResourceClass RC_,
                                    const dxil::ResourceKind Kind_)
@@ -255,6 +262,12 @@ static void formatTypeName(SmallString<64> &Dest, StringRef Name,
   if (!ContainedType)
     return;
 
+  SmallVector<uint64_t> ArrayDimensions;
+  while (ArrayType *AT = dyn_cast<ArrayType>(ContainedType)) {
+    ArrayDimensions.push_back(AT->getNumElements());
+    ContainedType = AT->getElementType();
+  }
+
   StringRef ElementName;
   ElementType ET = toDXILElementType(ContainedType, IsSigned);
   if (ET != ElementType::Invalid) {
@@ -271,6 +284,8 @@ static void formatTypeName(SmallString<64> &Dest, StringRef Name,
   DestStream << "<" << ElementName;
   if (const FixedVectorType *VTy = dyn_cast<FixedVectorType>(ContainedType))
     DestStream << VTy->getNumElements();
+  for (uint64_t Dim : ArrayDimensions)
+    DestStream << "[" << Dim << "]";
   DestStream << ">";
 }
 
@@ -561,10 +576,11 @@ ResourceTypeInfo::TypedInfo ResourceTypeInfo::getTyped() const {
 
   auto [ElTy, IsSigned] = getTypedElementType(Kind, HandleTy);
   dxil::ElementType ET = toDXILElementType(ElTy, IsSigned);
+  dxil::ElementType DXILStorageTy = toDXILStorageType(ET);
   uint32_t Count = 1;
   if (auto *VTy = dyn_cast<FixedVectorType>(ElTy))
     Count = VTy->getNumElements();
-  return {ET, Count};
+  return {ET, DXILStorageTy, Count};
 }
 
 dxil::SamplerFeedbackType ResourceTypeInfo::getFeedbackType() const {
@@ -628,7 +644,10 @@ void ResourceTypeInfo::print(raw_ostream &OS, const DataLayout &DL) const {
       OS << "  Alignment: " << Struct.AlignLog2 << "\n";
     } else if (isTyped()) {
       TypedInfo Typed = getTyped();
-      OS << "  Element Type: " << getElementTypeName(Typed.ElementTy) << "\n"
+      OS << "  Element Type: " << getElementTypeName(Typed.ElementTy);
+      if (Typed.ElementTy != Typed.DXILStorageTy)
+        OS << " (stored as " << getElementTypeName(Typed.DXILStorageTy) << ")";
+      OS << "\n"
          << "  Element Count: " << Typed.ElementCount << "\n";
     } else if (isFeedback())
       OS << "  Feedback Type: " << getSamplerFeedbackTypeName(getFeedbackType())
@@ -706,7 +725,8 @@ MDTuple *ResourceInfo::getAsMetadata(Module &M,
       Tags.push_back(getIntMD(RTI.getStruct(DL).Stride));
     } else if (RTI.isTyped()) {
       Tags.push_back(getIntMD(llvm::to_underlying(ExtPropTags::ElementType)));
-      Tags.push_back(getIntMD(llvm::to_underlying(RTI.getTyped().ElementTy)));
+      Tags.push_back(
+          getIntMD(llvm::to_underlying(RTI.getTyped().DXILStorageTy)));
     } else if (RTI.isFeedback()) {
       Tags.push_back(
           getIntMD(llvm::to_underlying(ExtPropTags::SamplerFeedbackKind)));

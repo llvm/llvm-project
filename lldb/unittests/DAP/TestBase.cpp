@@ -45,7 +45,7 @@ void TransportBase::SetUp() {
       /*client_name=*/"test_client",
       /*transport=*/*to_client, /*loop=*/loop);
 
-  auto server_handle = to_server->RegisterMessageHandler(loop, *dap.get());
+  auto server_handle = to_server->RegisterMessageHandler(loop, *dap);
   EXPECT_THAT_EXPECTED(server_handle, Succeeded());
   handles[0] = std::move(*server_handle);
 
@@ -55,8 +55,9 @@ void TransportBase::SetUp() {
 }
 
 void TransportBase::Run() {
-  loop.AddPendingCallback(
+  bool addition_succeeded = loop.AddPendingCallback(
       [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  EXPECT_TRUE(addition_succeeded);
   EXPECT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
 }
 
@@ -71,6 +72,7 @@ void DAPTestBase::TearDown() {
 
 void DAPTestBase::SetUpTestSuite() {
   lldb::SBError error = SBDebugger::InitializeWithErrorHandling();
+  EXPECT_TRUE(error.IsValid());
   EXPECT_TRUE(error.Success());
 }
 void DAPTestBase::TeatUpTestSuite() { SBDebugger::Terminate(); }

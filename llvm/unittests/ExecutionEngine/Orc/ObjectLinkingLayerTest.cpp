@@ -34,7 +34,7 @@ ArrayRef<char> BlockContent(BlockContentBytes);
 
 class ObjectLinkingLayerTest : public testing::Test {
 public:
-  ~ObjectLinkingLayerTest() {
+  ~ObjectLinkingLayerTest() override {
     if (auto Err = ES.endSession())
       ES.reportError(std::move(Err));
   }
@@ -161,7 +161,7 @@ TEST_F(ObjectLinkingLayerTest, HandleErrorDuringPostAllocationPass) {
   // abandon the in-flight allocation and report an error.
   class TestPlugin : public ObjectLinkingLayer::Plugin {
   public:
-    ~TestPlugin() { EXPECT_TRUE(ErrorReported); }
+    ~TestPlugin() override { EXPECT_TRUE(ErrorReported); }
 
     void modifyPassConfig(MaterializationResponsibility &MR,
                           jitlink::LinkGraph &G,
@@ -215,7 +215,7 @@ TEST_F(ObjectLinkingLayerTest, AddAndRemovePlugins) {
     TestPlugin(size_t &ActivationCount, bool &PluginDestroyed)
         : ActivationCount(ActivationCount), PluginDestroyed(PluginDestroyed) {}
 
-    ~TestPlugin() { PluginDestroyed = true; }
+    ~TestPlugin() override { PluginDestroyed = true; }
 
     void modifyPassConfig(MaterializationResponsibility &MR,
                           jitlink::LinkGraph &G,
@@ -336,7 +336,7 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
 
   class CheckDefs : public ObjectLinkingLayer::Plugin {
   public:
-    ~CheckDefs() { EXPECT_TRUE(SawSymbolDef); }
+    ~CheckDefs() override { EXPECT_TRUE(SawSymbolDef); }
 
     void modifyPassConfig(MaterializationResponsibility &MR,
                           jitlink::LinkGraph &G,

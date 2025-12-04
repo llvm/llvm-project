@@ -10,7 +10,7 @@
 // CHECK-LABEL: define hidden <4 x i32> @test_v128_load(
 // CHECK-SAME: ptr noundef readonly captures(none) [[MEM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA2:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA6:![0-9]+]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_v128_load(const void *mem) {
@@ -20,7 +20,7 @@ v128_t test_v128_load(const void *mem) {
 // CHECK-LABEL: define hidden <4 x i32> @test_v128_load8_splat(
 // CHECK-SAME: ptr noundef readonly captures(none) [[MEM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 [[TMP0]], i64 0
 // CHECK-NEXT:    [[VECINIT16_I:%.*]] = shufflevector <16 x i8> [[VECINIT_I]], <16 x i8> poison, <16 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[VECINIT16_I]] to <4 x i32>
@@ -33,7 +33,7 @@ v128_t test_v128_load8_splat(const void *mem) {
 // CHECK-LABEL: define hidden <4 x i32> @test_v128_load16_splat(
 // CHECK-SAME: ptr noundef readonly captures(none) [[MEM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 [[TMP0]], i64 0
 // CHECK-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <8 x i16> [[VECINIT_I]], <8 x i16> poison, <8 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[VECINIT8_I]] to <4 x i32>
@@ -46,7 +46,7 @@ v128_t test_v128_load16_splat(const void *mem) {
 // CHECK-LABEL: define hidden <4 x i32> @test_v128_load32_splat(
 // CHECK-SAME: ptr noundef readonly captures(none) [[MEM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 // CHECK-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i32> [[VECINIT_I]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    ret <4 x i32> [[VECINIT4_I]]
@@ -58,7 +58,7 @@ v128_t test_v128_load32_splat(const void *mem) {
 // CHECK-LABEL: define hidden <4 x i32> @test_v128_load64_splat(
 // CHECK-SAME: ptr noundef readonly captures(none) [[MEM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
 // CHECK-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i64> [[VECINIT_I]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[VECINIT2_I]] to <4 x i32>
@@ -71,7 +71,7 @@ v128_t test_v128_load64_splat(const void *mem) {
 // CHECK-LABEL: define hidden <4 x i32> @test_i16x8_load8x8(
 // CHECK-SAME: ptr noundef readonly captures(none) [[MEM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[CONV_I:%.*]] = sext <8 x i8> [[TMP0]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[CONV_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
@@ -83,7 +83,7 @@ v128_t test_i16x8_load8x8(const void *mem) {
 // CHECK-LABEL: define hidden <4 x i32> @test_u16x8_load8x8(
 // CHECK-SAME: ptr noundef readonly captures(none) [[MEM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[CONV_I:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[CONV_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
@@ -95,7 +95,7 @@ v128_t test_u16x8_load8x8(const void *mem) {
 // CHECK-LABEL: define hidden range(i32 -32768, 32768) <4 x i32> @test_i32x4_load16x4(
 // CHECK-SAME: ptr noundef readonly captures(none) [[MEM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[CONV_I:%.*]] = sext <4 x i16> [[TMP0]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[CONV_I]]
 //
@@ -106,7 +106,7 @@ v128_t test_i32x4_load16x4(const void *mem) {
 // CHECK-LABEL: define hidden range(i32 0, 65536) <4 x i32> @test_u32x4_load16x4(
 // CHECK-SAME: ptr noundef readonly captures(none) [[MEM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[CONV_I:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[CONV_I]]
 //
@@ -117,7 +117,7 @@ v128_t test_u32x4_load16x4(const void *mem) {
 // CHECK-LABEL: define hidden <4 x i32> @test_i64x2_load32x2(
 // CHECK-SAME: ptr noundef readonly captures(none) [[MEM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[CONV_I:%.*]] = sext <2 x i32> [[TMP0]] to <2 x i64>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[CONV_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
@@ -129,7 +129,7 @@ v128_t test_i64x2_load32x2(const void *mem) {
 // CHECK-LABEL: define hidden <4 x i32> @test_u64x2_load32x2(
 // CHECK-SAME: ptr noundef readonly captures(none) [[MEM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[CONV_I:%.*]] = zext <2 x i32> [[TMP0]] to <2 x i64>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[CONV_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
@@ -141,7 +141,7 @@ v128_t test_u64x2_load32x2(const void *mem) {
 // CHECK-LABEL: define hidden <4 x i32> @test_v128_load32_zero(
 // CHECK-SAME: ptr noundef readonly captures(none) [[MEM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[VECINIT4_I:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 [[TMP0]], i64 0
 // CHECK-NEXT:    ret <4 x i32> [[VECINIT4_I]]
 //
@@ -152,7 +152,7 @@ v128_t test_v128_load32_zero(const void *mem) {
 // CHECK-LABEL: define hidden <4 x i32> @test_v128_load64_zero(
 // CHECK-SAME: ptr noundef readonly captures(none) [[MEM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[TMP0]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[VECINIT2_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
@@ -164,7 +164,7 @@ v128_t test_v128_load64_zero(const void *mem) {
 // CHECK-LABEL: define hidden <4 x i32> @test_v128_load8_lane(
 // CHECK-SAME: ptr noundef readonly captures(none) [[PTR:%.*]], <4 x i32> noundef [[VEC:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[VEC]] to <16 x i8>
 // CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[TMP0]], i64 15
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[VECINS_I]] to <4 x i32>
@@ -177,7 +177,7 @@ v128_t test_v128_load8_lane(const uint8_t *ptr, v128_t vec) {
 // CHECK-LABEL: define hidden <4 x i32> @test_v128_load16_lane(
 // CHECK-SAME: ptr noundef readonly captures(none) [[PTR:%.*]], <4 x i32> noundef [[VEC:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[VEC]] to <8 x i16>
 // CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <8 x i16> [[TMP1]], i16 [[TMP0]], i64 7
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[VECINS_I]] to <4 x i32>
@@ -190,7 +190,7 @@ v128_t test_v128_load16_lane(const uint16_t *ptr, v128_t vec) {
 // CHECK-LABEL: define hidden <4 x i32> @test_v128_load32_lane(
 // CHECK-SAME: ptr noundef readonly captures(none) [[PTR:%.*]], <4 x i32> noundef [[VEC:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <4 x i32> [[VEC]], i32 [[TMP0]], i64 3
 // CHECK-NEXT:    ret <4 x i32> [[VECINS_I]]
 //
@@ -201,7 +201,7 @@ v128_t test_v128_load32_lane(const uint32_t *ptr, v128_t vec) {
 // CHECK-LABEL: define hidden <4 x i32> @test_v128_load64_lane(
 // CHECK-SAME: ptr noundef readonly captures(none) [[PTR:%.*]], <4 x i32> noundef [[VEC:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[VEC]] to <2 x i64>
 // CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <2 x i64> [[TMP1]], i64 [[TMP0]], i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[VECINS_I]] to <4 x i32>
@@ -214,7 +214,7 @@ v128_t test_v128_load64_lane(const uint64_t *ptr, v128_t vec) {
 // CHECK-LABEL: define hidden void @test_v128_store(
 // CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[MEM:%.*]], <4 x i32> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    store <4 x i32> [[A]], ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    store <4 x i32> [[A]], ptr [[MEM]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 void test_v128_store(void *mem, v128_t a) {
@@ -226,7 +226,7 @@ void test_v128_store(void *mem, v128_t a) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[VEC]] to <16 x i8>
 // CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <16 x i8> [[TMP0]], i64 15
-// CHECK-NEXT:    store i8 [[VECEXT_I]], ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    store i8 [[VECEXT_I]], ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 void test_v128_store8_lane(uint8_t *ptr, v128_t vec) {
@@ -238,7 +238,7 @@ void test_v128_store8_lane(uint8_t *ptr, v128_t vec) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[VEC]] to <8 x i16>
 // CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <8 x i16> [[TMP0]], i64 7
-// CHECK-NEXT:    store i16 [[VECEXT_I]], ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    store i16 [[VECEXT_I]], ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 void test_v128_store16_lane(uint16_t *ptr, v128_t vec) {
@@ -249,7 +249,7 @@ void test_v128_store16_lane(uint16_t *ptr, v128_t vec) {
 // CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 4)) [[PTR:%.*]], <4 x i32> noundef [[VEC:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <4 x i32> [[VEC]], i64 3
-// CHECK-NEXT:    store i32 [[VECEXT_I]], ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    store i32 [[VECEXT_I]], ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 void test_v128_store32_lane(uint32_t *ptr, v128_t vec) {
@@ -261,7 +261,7 @@ void test_v128_store32_lane(uint32_t *ptr, v128_t vec) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[VEC]] to <2 x i64>
 // CHECK-NEXT:    [[VECEXT_I:%.*]] = extractelement <2 x i64> [[TMP0]], i64 1
-// CHECK-NEXT:    store i64 [[VECEXT_I]], ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA2]]
+// CHECK-NEXT:    store i64 [[VECEXT_I]], ptr [[PTR]], align 1, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    ret void
 //
 void test_v128_store64_lane(uint64_t *ptr, v128_t vec) {
@@ -612,7 +612,7 @@ v128_t test_f64x2_const_splat(void) {
   return wasm_f64x2_const_splat(42);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_i8x16_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_i8x16_splat(
 // CHECK-SAME: i8 noundef signext [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 [[A]], i64 0
@@ -624,7 +624,7 @@ v128_t test_i8x16_splat(int8_t a) {
   return wasm_i8x16_splat(a);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_u8x16_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_u8x16_splat(
 // CHECK-SAME: i8 noundef zeroext [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 [[A]], i64 0
@@ -682,7 +682,7 @@ v128_t test_u8x16_replace_lane(v128_t a, uint8_t b) {
   return wasm_u8x16_replace_lane(a, 15, b);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_i16x8_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_i16x8_splat(
 // CHECK-SAME: i16 noundef signext [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 [[A]], i64 0
@@ -694,7 +694,7 @@ v128_t test_i16x8_splat(int16_t a) {
   return wasm_i16x8_splat(a);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_u16x8_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_u16x8_splat(
 // CHECK-SAME: i16 noundef zeroext [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 [[A]], i64 0
@@ -752,7 +752,7 @@ v128_t test_u16x8_replace_lane(v128_t a, uint16_t b) {
   return wasm_u16x8_replace_lane(a, 7, b);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_i32x4_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_i32x4_splat(
 // CHECK-SAME: i32 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
@@ -763,7 +763,7 @@ v128_t test_i32x4_splat(int32_t a) {
   return wasm_i32x4_splat(a);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_u32x4_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_u32x4_splat(
 // CHECK-SAME: i32 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
@@ -814,7 +814,7 @@ v128_t test_u32x4_replace_lane(v128_t a, uint32_t b) {
   return wasm_u32x4_replace_lane(a, 3, b);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_i64x2_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_i64x2_splat(
 // CHECK-SAME: i64 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i64> poison, i64 [[A]], i64 0
@@ -826,7 +826,7 @@ v128_t test_i64x2_splat(int64_t a) {
   return wasm_i64x2_splat(a);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_u64x2_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_u64x2_splat(
 // CHECK-SAME: i64 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i64> poison, i64 [[A]], i64 0
@@ -919,7 +919,7 @@ v128_t test_f32x4_replace_lane(v128_t a, float b) {
   return wasm_f32x4_replace_lane(a, 3, b);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_f64x2_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_f64x2_splat(
 // CHECK-SAME: double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x double> poison, double [[A]], i64 0
@@ -3466,7 +3466,7 @@ v128_t test_i16x8_q15mulr_sat(v128_t a, v128_t b) {
   return wasm_i16x8_q15mulr_sat(a, b);
 }
 //.
-// CHECK: [[CHAR_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[CHAR_TBAA6]] = !{[[META4]], [[META4]], i64 0}
 //.

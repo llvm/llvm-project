@@ -7,21 +7,33 @@ RUN: rm -rf %t && split-file %s %t && cd %t
 RUN: opt -thinlto-bc t1.ll -o t1.bc
 RUN: opt -thinlto-bc t2.ll -o t2.bc
 
-; Perform DTLTO.
+; Perform DTLTO with clang.
 RUN: not llvm-lto2 run t1.bc t2.bc -o my.output \
 RUN:     -r=t1.bc,t1,px -r=t2.bc,t2,px \
 RUN:     -dtlto-distributor=%python \
 RUN:     -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py,--da1=10,--da2=10 \
 RUN:     -dtlto-compiler=my_clang.exe \
 RUN:     -dtlto-compiler-arg=--rota1=10,--rota2=20 \
-RUN:   2>&1 | FileCheck %s
+RUN:   2>&1 | FileCheck --check-prefixes=CHECK,CLANG %s
+
+; Perform DTLTO with LLVM driver.
+RUN: not llvm-lto2 run t1.bc t2.bc -o my.output \
+RUN:     -r=t1.bc,t1,px -r=t2.bc,t2,px \
+RUN:     -dtlto-distributor=%python \
+RUN:     -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py,--da1=10,--da2=10 \
+RUN:     -dtlto-compiler=llvm \
+RUN:     -dtlto-compiler-prepend-arg=clang \
+RUN:     -dtlto-compiler-arg=--rota1=10,--rota2=20 \
+RUN:   2>&1 | FileCheck --check-prefixes=CHECK,LLVM %s
 
 CHECK: distributor_args=['--da1=10', '--da2=10']
 
 ; Check the common object.
 CHECK:      "linker_output": "my.output"
 CHECK:      "args":
-CHECK-NEXT: "my_clang.exe"
+CLANG-NEXT: "my_clang.exe"
+LLVM-NEXT:  "llvm"
+LLVM-NEXT:  "clang"
 CHECK-NEXT: "-c"
 CHECK-NEXT: "--target=x86_64-unknown-linux-gnu"
 CHECK-NEXT: "-O2"
@@ -30,7 +42,7 @@ CHECK-NEXT: "-Wno-unused-command-line-argument"
 CHECK-NEXT: "--rota1=10"
 CHECK-NEXT: "--rota2=20"
 CHECK-NEXT: ]
-CHECK: "inputs": []
+CHECK:      "inputs": []
 
 ; Check the first job entry.
 CHECK:      "args":

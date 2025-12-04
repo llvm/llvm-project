@@ -834,7 +834,7 @@ Constant<TYPE> ReadRealLiteral(
   auto valWithFlags{
       Scalar<TYPE>::Read(p, context.targetCharacteristics().roundingMode())};
   CHECK(p == source.end());
-  RealFlagWarnings(context, valWithFlags.flags, "conversion of REAL literal");
+  context.RealFlagWarnings(valWithFlags.flags, "conversion of REAL literal");
   auto value{valWithFlags.value};
   if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
     value = value.FlushSubnormalToZero();
@@ -1579,6 +1579,19 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
         std::get<std::list<parser::ImageSelectorSpec>>(x.imageSelector.t)) {
       common::visit(
           common::visitors{
+              [&](const parser::ImageSelectorSpec::Notify &x) {
+                Analyze(x.v);
+                if (const auto *expr{GetExpr(context_, x.v)}) {
+                  if (coarrayRef.notify()) {
+                    Say("coindexed reference has multiple NOTIFY= specifiers"_err_en_US);
+                  } else if (auto dyType{expr->GetType()};
+                      dyType && IsNotifyType(GetDerivedTypeSpec(*dyType))) {
+                    coarrayRef.set_notify(Expr<SomeType>{*expr});
+                  } else {
+                    Say("NOTIFY= specifier must have type NOTIFY_TYPE from ISO_FORTRAN_ENV"_err_en_US);
+                  }
+                }
+              },
               [&](const parser::ImageSelectorSpec::Stat &x) {
                 Analyze(x.v);
                 if (const auto *expr{GetExpr(context_, x.v)}) {
@@ -2090,17 +2103,32 @@ static MaybeExpr ImplicitConvertTo(const Symbol &sym, Expr<SomeType> &&expr,
 }
 
 MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
-    parser::CharBlock typeName, const semantics::DerivedTypeSpec &spec,
+    parser::CharBlock typeName, const semantics::DerivedTypeSpec &spec0,
     std::list<ComponentSpec> &&componentSpecs) {
+  semantics::Scope &scope{context_.FindScope(typeName)};
+  FoldingContext &foldingContext{GetFoldingContext()};
+  const semantics::DerivedTypeSpec *effectiveSpec{&spec0};
+  if (foldingContext.pdtInstance() && spec0.MightBeParameterized()) {
+    // We're processing a structure constructor in the context of a derived
+    // type instantiation, and the derived type of the structure constructor
+    // is parameterized.  Evaluate its parameters in the context of the
+    // instantiation in progress so that the components in constructor's scope
+    // have the correct types.
+    semantics::DerivedTypeSpec newSpec{spec0};
+    newSpec.ReevaluateParameters(context());
+    const semantics::DeclTypeSpec &instantiatedType{
+        semantics::FindOrInstantiateDerivedType(
+            scope, std::move(newSpec), semantics::DeclTypeSpec::TypeDerived)};
+    effectiveSpec = &instantiatedType.derivedTypeSpec();
+  }
+  const semantics::DerivedTypeSpec &spec{*effectiveSpec};
   const Symbol &typeSymbol{spec.typeSymbol()};
   if (!spec.scope() || !typeSymbol.has<semantics::DerivedTypeDetails>()) {
     return std::nullopt; // error recovery
   }
-  const semantics::Scope &scope{context_.FindScope(typeName)};
   const semantics::Scope *pureContext{FindPureProcedureContaining(scope)};
   const auto &typeDetails{typeSymbol.get<semantics::DerivedTypeDetails>()};
   const Symbol *parentComponent{typeDetails.GetParentComponent(*spec.scope())};
-
   if (typeSymbol.attrs().test(semantics::Attr::ABSTRACT)) { // C796
     AttachDeclaration(
         Say(typeName,
@@ -2140,6 +2168,9 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
     parser::CharBlock exprSource{componentSpec.exprSource};
     auto restorer{messages.SetLocation(source)};
     const Symbol *symbol{componentSpec.keywordSymbol};
+    if (symbol) {
+      symbol = spec.scope()->FindComponent(symbol->name());
+    }
     MaybeExpr &maybeValue{componentSpec.expr};
     if (!maybeValue.has_value()) {
       return std::nullopt;
@@ -2315,7 +2346,6 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
       // convert would cause a segfault. Lowering will deal with
       // conditionally converting and preserving the lower bounds in this
       // case.
-      FoldingContext &foldingContext{GetFoldingContext()};
       if (MaybeExpr converted{ImplicitConvertTo(*symbol, std::move(value),
               /*keepConvertImplicit=*/IsAllocatable(*symbol),
               foldingContext)}) {
@@ -2552,11 +2582,12 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 }
                 return true;
               }};
-          auto pair{
-              ResolveGeneric(generic, arguments, adjustment, isSubroutine)};
-          sym = pair.first;
+          auto result{ResolveGeneric(
+              generic, arguments, adjustment, isSubroutine, SymbolVector{})};
+          sym = result.specific;
           if (!sym) {
-            EmitGenericResolutionError(generic, pair.second, isSubroutine);
+            EmitGenericResolutionError(generic, result.failedDueToAmbiguity,
+                isSubroutine, arguments, result.tried);
             return std::nullopt;
           }
           // re-resolve the name to the specific binding
@@ -2886,10 +2917,10 @@ const Symbol *ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
 
 // Resolve a call to a generic procedure with given actual arguments.
 // adjustActuals is called on procedure bindings to handle pass arg.
-std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
-    const Symbol &symbol, const ActualArguments &actuals,
-    const AdjustActuals &adjustActuals, bool isSubroutine,
-    bool mightBeStructureConstructor) {
+auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
+    const ActualArguments &actuals, const AdjustActuals &adjustActuals,
+    bool isSubroutine, SymbolVector &&tried, bool mightBeStructureConstructor)
+    -> GenericResolution {
   const Symbol &ultimate{symbol.GetUltimate()};
   // Check for a match with an explicit INTRINSIC
   const Symbol *explicitIntrinsic{nullptr};
@@ -2948,7 +2979,7 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
               // cannot be unambiguously distinguished
               // Underspecified external procedure actual arguments can
               // also lead to ambiguity.
-              return {nullptr, true /* due to ambiguity */};
+              return {nullptr, true /* due to ambiguity */, std::move(tried)};
             }
           }
           if (!procedure->IsElemental()) {
@@ -2959,6 +2990,8 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
           }
           crtMatchingDistance = ComputeCudaMatchingDistance(
               context_.languageFeatures(), *procedure, localActuals);
+        } else {
+          tried.push_back(*specific);
         }
       }
     }
@@ -3038,11 +3071,12 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
   // Check parent derived type
   if (const auto *parentScope{symbol.owner().GetDerivedTypeParent()}) {
     if (const Symbol * extended{parentScope->FindComponent(symbol.name())}) {
-      auto pair{ResolveGeneric(
-          *extended, actuals, adjustActuals, isSubroutine, false)};
-      if (pair.first) {
-        return pair;
+      auto result{ResolveGeneric(*extended, actuals, adjustActuals,
+          isSubroutine, std::move(tried), false)};
+      if (result.specific != nullptr) {
+        return result;
       }
+      tried = std::move(result.tried);
     }
   }
   // Structure constructor?
@@ -3054,14 +3088,15 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
   if (!symbol.owner().IsGlobal() && !symbol.owner().IsDerivedType()) {
     if (const Symbol *
         outer{symbol.owner().parent().FindSymbol(symbol.name())}) {
-      auto pair{ResolveGeneric(*outer, actuals, adjustActuals, isSubroutine,
-          mightBeStructureConstructor)};
-      if (pair.first) {
-        return pair;
+      auto result{ResolveGeneric(*outer, actuals, adjustActuals, isSubroutine,
+          std::move(tried), mightBeStructureConstructor)};
+      if (result.specific) {
+        return result;
       }
+      tried = std::move(result.tried);
     }
   }
-  return {nullptr, false};
+  return {nullptr, false, std::move(tried)};
 }
 
 const Symbol &ExpressionAnalyzer::AccessSpecific(
@@ -3098,16 +3133,39 @@ const Symbol &ExpressionAnalyzer::AccessSpecific(
   }
 }
 
-void ExpressionAnalyzer::EmitGenericResolutionError(
-    const Symbol &symbol, bool dueToAmbiguity, bool isSubroutine) {
-  Say(dueToAmbiguity
-          ? "The actual arguments to the generic procedure '%s' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface"_err_en_US
-          : semantics::IsGenericDefinedOp(symbol)
-          ? "No specific procedure of generic operator '%s' matches the actual arguments"_err_en_US
-          : isSubroutine
-          ? "No specific subroutine of generic '%s' matches the actual arguments"_err_en_US
-          : "No specific function of generic '%s' matches the actual arguments"_err_en_US,
-      symbol.name());
+void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
+    bool dueToAmbiguity, bool isSubroutine, ActualArguments &arguments,
+    const SymbolVector &tried) {
+  if (auto *msg{Say(dueToAmbiguity
+              ? "The actual arguments to the generic procedure '%s' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface"_err_en_US
+              : semantics::IsGenericDefinedOp(symbol)
+              ? "No specific procedure of generic operator '%s' matches the actual arguments"_err_en_US
+              : isSubroutine
+              ? "No specific subroutine of generic '%s' matches the actual arguments"_err_en_US
+              : "No specific function of generic '%s' matches the actual arguments"_err_en_US,
+          symbol.name())}) {
+    parser::ContextualMessages &messages{GetContextualMessages()};
+    semantics::Scope &scope{context_.FindScope(messages.at())};
+    for (const Symbol &specific : tried) {
+      if (auto procChars{characteristics::Procedure::Characterize(
+              specific, GetFoldingContext())}) {
+        if (procChars->HasExplicitInterface()) {
+          if (auto reasons{semantics::CheckExplicitInterface(*procChars,
+                  arguments, context_, &scope, /*intrinsic=*/nullptr,
+                  /*allocActualArgumentConversions=*/false,
+                  /*extentErrors=*/false,
+                  /*ignoreImplicitVsExplicit=*/false)};
+              !reasons.empty()) {
+            reasons.AttachTo(
+                msg->Attach(specific.name(),
+                    "Specific procedure '%s' does not match the actual arguments because"_en_US,
+                    specific.name()),
+                parser::Severity::None);
+          }
+        }
+      }
+    }
+  }
 }
 
 auto ExpressionAnalyzer::GetCalleeAndArguments(
@@ -3146,12 +3204,14 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
   bool isGenericInterface{ultimate.has<semantics::GenericDetails>()};
   bool isExplicitIntrinsic{ultimate.attrs().test(semantics::Attr::INTRINSIC)};
   const Symbol *resolution{nullptr};
+  SymbolVector tried;
   if (isGenericInterface || isExplicitIntrinsic) {
     ExpressionAnalyzer::AdjustActuals noAdjustment;
-    auto pair{ResolveGeneric(*symbol, arguments, noAdjustment, isSubroutine,
-        mightBeStructureConstructor)};
-    resolution = pair.first;
-    dueToAmbiguity = pair.second;
+    auto result{ResolveGeneric(*symbol, arguments, noAdjustment, isSubroutine,
+        SymbolVector{}, mightBeStructureConstructor)};
+    resolution = result.specific;
+    dueToAmbiguity = result.failedDueToAmbiguity;
+    tried = std::move(result.tried);
     if (resolution) {
       if (context_.GetPPCBuiltinsScope() &&
           resolution->name().ToString().rfind("__ppc_", 0) == 0) {
@@ -3182,7 +3242,8 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
           std::move(specificCall->arguments)};
     } else {
       if (isGenericInterface) {
-        EmitGenericResolutionError(*symbol, dueToAmbiguity, isSubroutine);
+        EmitGenericResolutionError(
+            *symbol, dueToAmbiguity, isSubroutine, arguments, tried);
       }
       return std::nullopt;
     }
@@ -4955,8 +5016,10 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc(
     auto restorer{context_.GetContextualMessages().DiscardMessages()};
     if (const Symbol *symbol{scope.FindSymbol(oprName)}) {
       ExpressionAnalyzer::AdjustActuals noAdjustment;
-      proc =
-          context_.ResolveGeneric(*symbol, actuals_, noAdjustment, true).first;
+      proc = context_
+                 .ResolveGeneric(
+                     *symbol, actuals_, noAdjustment, true, SymbolVector{})
+                 .specific;
       if (proc) {
         isProcElemental = IsElementalProcedure(*proc);
       }
@@ -5105,17 +5168,18 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
         [&](const Symbol &proc, ActualArguments &) {
           return passIndex == GetPassIndex(proc).value_or(-1);
         }};
-    auto pair{
-        context_.ResolveGeneric(*generic, actuals_, adjustment, isSubroutine)};
-    if (const Symbol *binding{pair.first}) {
+    auto result{context_.ResolveGeneric(
+        *generic, actuals_, adjustment, isSubroutine, SymbolVector{})};
+    if (const Symbol *binding{result.specific}) {
       CHECK(binding->has<semantics::ProcBindingDetails>());
       // Use the most recent override of the binding, if any
       return scope->FindComponent(binding->name());
     } else {
       if (isAmbiguous) {
-        *isAmbiguous = pair.second;
+        *isAmbiguous = result.failedDueToAmbiguity;
       }
-      context_.EmitGenericResolutionError(*generic, pair.second, isSubroutine);
+      context_.EmitGenericResolutionError(*generic, result.failedDueToAmbiguity,
+          isSubroutine, actuals_, result.tried);
     }
   }
   return nullptr;

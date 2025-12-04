@@ -601,46 +601,6 @@ define i32 @test_no-signed-zeros-fp-math3(i32 %i) "no-signed-zeros-fp-math"="tru
 ; CHECK-NEXT: ret i32
 }
 
-define i32 @unsafe-fp-math_callee0(i32 %i) "unsafe-fp-math"="false" {
-  ret i32 %i
-; CHECK: @unsafe-fp-math_callee0(i32 %i) [[UNSAFE_FPMATH_FALSE:#[0-9]+]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @unsafe-fp-math_callee1(i32 %i) "unsafe-fp-math"="true" {
-  ret i32 %i
-; CHECK: @unsafe-fp-math_callee1(i32 %i) [[UNSAFE_FPMATH_TRUE:#[0-9]+]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_unsafe-fp-math0(i32 %i) "unsafe-fp-math"="false" {
-  %1 = call i32 @unsafe-fp-math_callee0(i32 %i)
-  ret i32 %1
-; CHECK: @test_unsafe-fp-math0(i32 %i) [[UNSAFE_FPMATH_FALSE]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_unsafe-fp-math1(i32 %i) "unsafe-fp-math"="false" {
-  %1 = call i32 @unsafe-fp-math_callee1(i32 %i)
-  ret i32 %1
-; CHECK: @test_unsafe-fp-math1(i32 %i) [[UNSAFE_FPMATH_FALSE]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_unsafe-fp-math2(i32 %i) "unsafe-fp-math"="true" {
-  %1 = call i32 @unsafe-fp-math_callee0(i32 %i)
-  ret i32 %1
-; CHECK: @test_unsafe-fp-math2(i32 %i) [[UNSAFE_FPMATH_FALSE]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_unsafe-fp-math3(i32 %i) "unsafe-fp-math"="true" {
-  %1 = call i32 @unsafe-fp-math_callee1(i32 %i)
-  ret i32 %1
-; CHECK: @test_unsafe-fp-math3(i32 %i) [[UNSAFE_FPMATH_TRUE]] {
-; CHECK-NEXT: ret i32
-}
-
 ; Test that fn_ret_thunk_extern has no CompatRule; inlining is permitted.
 ; Test that fn_ret_thunk_extern has no MergeRule; fn_ret_thunk_extern is not
 ; propagated or dropped on the caller after inlining.
@@ -693,6 +653,4 @@ define i32 @loader_replaceable_caller() {
 ; CHECK: attributes [[NO_NANS_FPMATH_TRUE]] = { "no-nans-fp-math"="true" }
 ; CHECK: attributes [[NO_SIGNED_ZEROS_FPMATH_FALSE]] = { "no-signed-zeros-fp-math"="false" }
 ; CHECK: attributes [[NO_SIGNED_ZEROS_FPMATH_TRUE]] = { "no-signed-zeros-fp-math"="true" }
-; CHECK: attributes [[UNSAFE_FPMATH_FALSE]] = { "unsafe-fp-math"="false" }
-; CHECK: attributes [[UNSAFE_FPMATH_TRUE]] = { "unsafe-fp-math"="true" }
 ; CHECK: attributes [[FNRETTHUNK_EXTERN]] = { fn_ret_thunk_extern }

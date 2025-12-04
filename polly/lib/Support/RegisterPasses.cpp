@@ -28,13 +28,15 @@
 #include "polly/DependenceInfo.h"
 #include "polly/ForwardOpTree.h"
 #include "polly/JSONExporter.h"
-#include "polly/LinkAllPasses.h"
 #include "polly/MaximalStaticExpansion.h"
+#include "polly/Options.h"
+#include "polly/Pass/PollyFunctionPass.h"
 #include "polly/PruneUnprofitable.h"
 #include "polly/ScheduleOptimizer.h"
 #include "polly/ScopDetection.h"
 #include "polly/ScopGraphPrinter.h"
 #include "polly/ScopInfo.h"
+#include "polly/ScopInliner.h"
 #include "polly/Simplify.h"
 #include "polly/Support/DumpFunctionPass.h"
 #include "polly/Support/DumpModulePass.h"
@@ -46,10 +48,15 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/IPO.h"
 
+using namespace llvm;
+using namespace polly;
+
 namespace cl = llvm::cl;
+using namespace polly;
 
 using llvm::FunctionPassManager;
 using llvm::OptimizationLevel;
@@ -197,58 +204,19 @@ static cl::opt<bool> EnablePruneUnprofitable(
     cl::desc("Bail out on unprofitable SCoPs before rescheduling"), cl::Hidden,
     cl::init(true), cl::cat(PollyCategory));
 
-namespace {
+static cl::opt<bool>
+    PollyPrintDetect("polly-print-detect",
+                     cl::desc("Polly - Print static control parts (SCoPs)"),
+                     cl::cat(PollyCategory));
 
-/// Initialize Polly passes when library is loaded.
-///
-/// We use the constructor of a statically declared object to initialize the
-/// different Polly passes right after the Polly library is loaded. This ensures
-/// that the Polly passes are available e.g. in the 'opt' tool.
-struct StaticInitializer {
-  StaticInitializer() {
-    llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
-    polly::initializePollyPasses(Registry);
-  }
-};
-static StaticInitializer InitializeEverything;
-} // end of anonymous namespace.
+static cl::opt<bool>
+    PollyPrintScops("polly-print-scops",
+                    cl::desc("Print polyhedral description of all regions"),
+                    cl::cat(PollyCategory));
 
-void initializePollyPasses(llvm::PassRegistry &Registry) {
-  initializeCodeGenerationPass(Registry);
-
-  initializeCodePreparationPass(Registry);
-  initializeDeadCodeElimWrapperPassPass(Registry);
-  initializeDependenceInfoPass(Registry);
-  initializeDependenceInfoPrinterLegacyPassPass(Registry);
-  initializeDependenceInfoWrapperPassPass(Registry);
-  initializeDependenceInfoPrinterLegacyFunctionPassPass(Registry);
-  initializeJSONExporterPass(Registry);
-  initializeJSONImporterPass(Registry);
-  initializeJSONImporterPrinterLegacyPassPass(Registry);
-  initializeMaximalStaticExpanderWrapperPassPass(Registry);
-  initializeIslAstInfoWrapperPassPass(Registry);
-  initializeIslAstInfoPrinterLegacyPassPass(Registry);
-  initializeIslScheduleOptimizerWrapperPassPass(Registry);
-  initializeIslScheduleOptimizerPrinterLegacyPassPass(Registry);
-  initializePollyCanonicalizePass(Registry);
-  initializeScopDetectionWrapperPassPass(Registry);
-  initializeScopDetectionPrinterLegacyPassPass(Registry);
-  initializeScopInlinerPass(Registry);
-  initializeScopInfoRegionPassPass(Registry);
-  initializeScopInfoPrinterLegacyRegionPassPass(Registry);
-  initializeScopInfoWrapperPassPass(Registry);
-  initializeScopInfoPrinterLegacyFunctionPassPass(Registry);
-  initializeFlattenSchedulePass(Registry);
-  initializeFlattenSchedulePrinterLegacyPassPass(Registry);
-  initializeForwardOpTreeWrapperPassPass(Registry);
-  initializeForwardOpTreePrinterLegacyPassPass(Registry);
-  initializeDeLICMWrapperPassPass(Registry);
-  initializeDeLICMPrinterLegacyPassPass(Registry);
-  initializeSimplifyWrapperPassPass(Registry);
-  initializeSimplifyPrinterLegacyPassPass(Registry);
-  initializeDumpModuleWrapperPassPass(Registry);
-  initializePruneUnprofitableWrapperPassPass(Registry);
-}
+static cl::opt<bool> PollyPrintDeps("polly-print-deps",
+                                    cl::desc("Polly - Print dependences"),
+                                    cl::cat(PollyCategory));
 
 static bool shouldEnablePollyForOptimization() { return PollyEnabled; }
 
@@ -260,6 +228,198 @@ static bool shouldEnablePollyForDiagnostic() {
 
   return PollyOnlyPrinter || PollyPrinter || PollyOnlyViewer || PollyViewer ||
          ExportJScop;
+}
+
+/// Parser of parameters for LoopVectorize pass.
+static llvm::Expected<PollyPassOptions> parsePollyOptions(StringRef Params,
+                                                          bool IsCustom) {
+  PassPhase PrevPhase = PassPhase::None;
+
+  bool EnableDefaultOpts = !IsCustom;
+  bool EnableEnd2End = !IsCustom;
+  std::optional<bool>
+      PassEnabled[static_cast<size_t>(PassPhase::PassPhaseLast) + 1];
+  PassPhase StopAfter = PassPhase::None;
+
+  // Passes enabled using command-line flags (can be overridden using
+  // 'polly<no-pass>')
+  if (PollyPrintDetect)
+    PassEnabled[static_cast<size_t>(PassPhase::PrintDetect)] = true;
+  if (PollyPrintScops)
+    PassEnabled[static_cast<size_t>(PassPhase::PrintScopInfo)] = true;
+  if (PollyPrintDeps)
+    PassEnabled[static_cast<size_t>(PassPhase::PrintDependences)] = true;
+
+  if (PollyViewer)
+    PassEnabled[static_cast<size_t>(PassPhase::ViewScops)] = true;
+  if (PollyOnlyViewer)
+    PassEnabled[static_cast<size_t>(PassPhase::ViewScopsOnly)] = true;
+  if (PollyPrinter)
+    PassEnabled[static_cast<size_t>(PassPhase::DotScops)] = true;
+  if (PollyOnlyPrinter)
+    PassEnabled[static_cast<size_t>(PassPhase::DotScopsOnly)] = true;
+  if (!EnableSimplify)
+    PassEnabled[static_cast<size_t>(PassPhase::Simplify0)] = false;
+  if (!EnableForwardOpTree)
+    PassEnabled[static_cast<size_t>(PassPhase::Optree)] = false;
+  if (!EnableDeLICM)
+    PassEnabled[static_cast<size_t>(PassPhase::DeLICM)] = false;
+  if (!EnableSimplify)
+    PassEnabled[static_cast<size_t>(PassPhase::Simplify1)] = false;
+  if (ImportJScop)
+    PassEnabled[static_cast<size_t>(PassPhase::ImportJScop)] = true;
+  if (DeadCodeElim)
+    PassEnabled[static_cast<size_t>(PassPhase::DeadCodeElimination)] = true;
+  if (FullyIndexedStaticExpansion)
+    PassEnabled[static_cast<size_t>(PassPhase::MaximumStaticExtension)] = true;
+  if (!EnablePruneUnprofitable)
+    PassEnabled[static_cast<size_t>(PassPhase::PruneUnprofitable)] = false;
+  switch (Optimizer) {
+  case OPTIMIZER_NONE:
+    // explicitly switched off
+    PassEnabled[static_cast<size_t>(PassPhase::Optimization)] = false;
+    break;
+  case OPTIMIZER_ISL:
+    // default: enabled
+    break;
+  }
+  if (ExportJScop)
+    PassEnabled[static_cast<size_t>(PassPhase::ExportJScop)] = true;
+  switch (CodeGeneration) {
+  case CODEGEN_AST:
+    PassEnabled[static_cast<size_t>(PassPhase::AstGen)] = true;
+    PassEnabled[static_cast<size_t>(PassPhase::CodeGen)] = false;
+    break;
+  case CODEGEN_FULL:
+    // default: ast and codegen enabled
+    break;
+  case CODEGEN_NONE:
+    PassEnabled[static_cast<size_t>(PassPhase::AstGen)] = false;
+    PassEnabled[static_cast<size_t>(PassPhase::CodeGen)] = false;
+    break;
+  }
+
+  while (!Params.empty()) {
+    StringRef Param;
+    std::tie(Param, Params) = Params.split(';');
+    auto [ParamName, ParamVal] = Param.split('=');
+
+    if (ParamName == "stopafter") {
+      StopAfter = parsePhase(ParamVal);
+      if (StopAfter == PassPhase::None)
+        return make_error<StringError>(
+            formatv("invalid stopafter parameter value '{0}'", ParamVal).str(),
+            inconvertibleErrorCode());
+      continue;
+    }
+
+    if (!ParamVal.empty())
+      return make_error<StringError>(
+          formatv("parameter '{0}' does not take value", ParamName).str(),
+          inconvertibleErrorCode());
+
+    bool Enabled = true;
+    if (ParamName.starts_with("no-")) {
+      Enabled = false;
+      ParamName = ParamName.drop_front(3);
+    }
+
+    if (ParamName == "default-opts") {
+      EnableDefaultOpts = Enabled;
+      continue;
+    }
+
+    if (ParamName == "end2end") {
+      EnableEnd2End = Enabled;
+      continue;
+    }
+
+    PassPhase Phase;
+
+    // Shortcut for both simplifys at the same time
+    if (ParamName == "simplify") {
+      PassEnabled[static_cast<size_t>(PassPhase::Simplify0)] = Enabled;
+      PassEnabled[static_cast<size_t>(PassPhase::Simplify1)] = Enabled;
+      Phase = PassPhase::Simplify0;
+    } else {
+      Phase = parsePhase(ParamName);
+      if (Phase == PassPhase::None)
+        return make_error<StringError>(
+            formatv("invalid Polly parameter/phase name '{0}'", ParamName)
+                .str(),
+            inconvertibleErrorCode());
+
+      if (PrevPhase >= Phase)
+        return make_error<StringError>(
+            formatv("phases must not be repeated and enumerated in-order: "
+                    "'{0}' listed before '{1}'",
+                    getPhaseName(PrevPhase), getPhaseName(Phase))
+                .str(),
+            inconvertibleErrorCode());
+
+      PassEnabled[static_cast<size_t>(Phase)] = Enabled;
+    }
+    PrevPhase = Phase;
+  }
+
+  PollyPassOptions Opts;
+  Opts.ViewAll = ViewAll;
+  Opts.ViewFilter = ViewFilter;
+  Opts.PrintDepsAnalysisLevel = OptAnalysisLevel;
+
+  // Implicitly enable dependent phases first. May be overriden explicitly
+  // on/off later.
+  for (PassPhase P : llvm::enum_seq_inclusive(PassPhase::PassPhaseFirst,
+                                              PassPhase::PassPhaseLast)) {
+    bool Enabled = PassEnabled[static_cast<size_t>(P)].value_or(false);
+    if (!Enabled)
+      continue;
+
+    if (static_cast<size_t>(PassPhase::Detection) < static_cast<size_t>(P))
+      Opts.setPhaseEnabled(PassPhase::Detection);
+
+    if (static_cast<size_t>(PassPhase::ScopInfo) < static_cast<size_t>(P))
+      Opts.setPhaseEnabled(PassPhase::ScopInfo);
+
+    if (dependsOnDependenceInfo(P))
+      Opts.setPhaseEnabled(PassPhase::Dependences);
+
+    if (static_cast<size_t>(PassPhase::AstGen) < static_cast<size_t>(P))
+      Opts.setPhaseEnabled(PassPhase::AstGen);
+  }
+
+  if (EnableEnd2End)
+    Opts.enableEnd2End();
+
+  if (EnableDefaultOpts)
+    Opts.enableDefaultOpts();
+
+  for (PassPhase P : llvm::enum_seq_inclusive(PassPhase::PassPhaseFirst,
+                                              PassPhase::PassPhaseLast)) {
+    std::optional<bool> Enabled = PassEnabled[static_cast<size_t>(P)];
+
+    // Apply only if set explicitly.
+    if (Enabled.has_value())
+      Opts.setPhaseEnabled(P, *Enabled);
+  }
+
+  if (StopAfter != PassPhase::None)
+    Opts.disableAfter(StopAfter);
+
+  if (Error CheckResult = Opts.checkConsistency())
+    return CheckResult;
+
+  return Opts;
+}
+
+static llvm::Expected<PollyPassOptions>
+parsePollyDefaultOptions(StringRef Params) {
+  return parsePollyOptions(Params, false);
+}
+
+static llvm::Expected<PollyPassOptions>
+parsePollyCustomOptions(StringRef Params) {
+  return parsePollyOptions(Params, true);
 }
 
 /// Register Polly passes such that they form a polyhedral optimizer.
@@ -301,77 +461,12 @@ static void buildCommonPollyPipeline(FunctionPassManager &PM,
                                      OptimizationLevel Level,
                                      bool EnableForOpt) {
   PassBuilder PB;
-  ScopPassManager SPM;
 
-  PM.addPass(CodePreparationPass());
+  ExitOnError Err("Inconsistent Polly configuration: ");
+  PollyPassOptions &&Opts =
+      Err(parsePollyOptions(StringRef(), /*IsCustom=*/false));
+  PM.addPass(PollyFunctionPass(Opts));
 
-  // TODO add utility passes for the various command line options, once they're
-  // ported
-
-  if (PollyDetectOnly) {
-    // Don't add more passes other than the ScopPassManager's detection passes.
-    PM.addPass(createFunctionToScopPassAdaptor(std::move(SPM)));
-    return;
-  }
-
-  if (PollyViewer)
-    PM.addPass(ScopViewer());
-  if (PollyOnlyViewer)
-    PM.addPass(ScopOnlyViewer());
-  if (PollyPrinter)
-    PM.addPass(ScopPrinter());
-  if (PollyOnlyPrinter)
-    PM.addPass(ScopOnlyPrinter());
-  if (EnableSimplify)
-    SPM.addPass(SimplifyPass(0));
-  if (EnableForwardOpTree)
-    SPM.addPass(ForwardOpTreePass());
-  if (EnableDeLICM)
-    SPM.addPass(DeLICMPass());
-  if (EnableSimplify)
-    SPM.addPass(SimplifyPass(1));
-
-  if (ImportJScop)
-    SPM.addPass(JSONImportPass());
-
-  if (DeadCodeElim)
-    SPM.addPass(DeadCodeElimPass());
-
-  if (FullyIndexedStaticExpansion)
-    SPM.addPass(MaximalStaticExpansionPass());
-
-  if (EnablePruneUnprofitable)
-    SPM.addPass(PruneUnprofitablePass());
-
-  switch (Optimizer) {
-  case OPTIMIZER_NONE:
-    break; /* Do nothing */
-  case OPTIMIZER_ISL:
-    SPM.addPass(IslScheduleOptimizerPass());
-    break;
-  }
-
-  if (ExportJScop)
-    SPM.addPass(JSONExportPass());
-
-  if (!EnableForOpt)
-    return;
-
-  switch (CodeGeneration) {
-  case CODEGEN_AST:
-    SPM.addPass(
-        llvm::RequireAnalysisPass<IslAstAnalysis, Scop, ScopAnalysisManager,
-                                  ScopStandardAnalysisResults &,
-                                  SPMUpdater &>());
-    break;
-  case CODEGEN_FULL:
-    SPM.addPass(CodeGenerationPass());
-    break;
-  case CODEGEN_NONE:
-    break;
-  }
-
-  PM.addPass(createFunctionToScopPassAdaptor(std::move(SPM)));
   PM.addPass(PB.buildFunctionSimplificationPipeline(
       Level, llvm::ThinOrFullLTOPhase::None)); // Cleanup
 
@@ -434,48 +529,45 @@ static void buildLatePollyPipeline(FunctionPassManager &PM,
         false);
 }
 
-static OwningScopAnalysisManagerFunctionProxy
-createScopAnalyses(FunctionAnalysisManager &FAM,
-                   PassInstrumentationCallbacks *PIC) {
-  OwningScopAnalysisManagerFunctionProxy Proxy;
-#define SCOP_ANALYSIS(NAME, CREATE_PASS)                                       \
-  Proxy.getManager().registerPass([PIC] {                                      \
-    (void)PIC;                                                                 \
-    return CREATE_PASS;                                                        \
-  });
-#include "PollyPasses.def"
+static llvm::Expected<std::monostate> parseNoOptions(StringRef Params) {
+  if (!Params.empty())
+    return make_error<StringError>(
+        formatv("'{0}' passed to pass that does not take any options", Params)
+            .str(),
+        inconvertibleErrorCode());
 
-  Proxy.getManager().registerPass(
-      [&FAM] { return FunctionAnalysisManagerScopProxy(FAM); });
-  return Proxy;
+  return std::monostate{};
 }
 
-static void registerFunctionAnalyses(FunctionAnalysisManager &FAM,
-                                     PassInstrumentationCallbacks *PIC) {
-
-#define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
-  FAM.registerPass([] { return CREATE_PASS; });
-
+static llvm::Expected<bool>
+parseCGPipeline(StringRef Name, llvm::CGSCCPassManager &CGPM,
+                PassInstrumentationCallbacks *PIC,
+                ArrayRef<PassBuilder::PipelineElement> Pipeline) {
+#define CGSCC_PASS(NAME, CREATE_PASS, PARSER)                                  \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
+    auto Params = PassBuilder::parsePassParameters(PARSER, Name, NAME);        \
+    if (!Params)                                                               \
+      return Params.takeError();                                               \
+    CGPM.addPass(CREATE_PASS);                                                 \
+    return true;                                                               \
+  }
 #include "PollyPasses.def"
 
-  FAM.registerPass([&FAM, PIC] { return createScopAnalyses(FAM, PIC); });
+  return false;
 }
 
-static bool
+static llvm::Expected<bool>
 parseFunctionPipeline(StringRef Name, FunctionPassManager &FPM,
+                      PassInstrumentationCallbacks *PIC,
                       ArrayRef<PassBuilder::PipelineElement> Pipeline) {
-  if (llvm::parseAnalysisUtilityPasses<OwningScopAnalysisManagerFunctionProxy>(
-          "polly-scop-analyses", Name, FPM))
-    return true;
 
-#define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
-  if (llvm::parseAnalysisUtilityPasses<                                        \
-          std::remove_reference<decltype(CREATE_PASS)>::type>(NAME, Name,      \
-                                                              FPM))            \
-    return true;
-
-#define FUNCTION_PASS(NAME, CREATE_PASS)                                       \
-  if (Name == NAME) {                                                          \
+#define FUNCTION_PASS(NAME, CREATE_PASS, PARSER)                               \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
+    auto ExpectedOpts = PassBuilder::parsePassParameters(PARSER, Name, NAME);  \
+    if (!ExpectedOpts)                                                         \
+      return ExpectedOpts.takeError();                                         \
+    auto &&Opts = *ExpectedOpts;                                               \
+    (void)Opts;                                                                \
     FPM.addPass(CREATE_PASS);                                                  \
     return true;                                                               \
   }
@@ -484,81 +576,24 @@ parseFunctionPipeline(StringRef Name, FunctionPassManager &FPM,
   return false;
 }
 
-static bool parseScopPass(StringRef Name, ScopPassManager &SPM,
-                          PassInstrumentationCallbacks *PIC) {
-#define SCOP_ANALYSIS(NAME, CREATE_PASS)                                       \
-  if (llvm::parseAnalysisUtilityPasses<                                        \
-          std::remove_reference<decltype(CREATE_PASS)>::type>(NAME, Name,      \
-                                                              SPM))            \
-    return true;
-
-#define SCOP_PASS(NAME, CREATE_PASS)                                           \
-  if (Name == NAME) {                                                          \
-    SPM.addPass(CREATE_PASS);                                                  \
+static llvm::Expected<bool>
+parseModulePipeline(StringRef Name, llvm::ModulePassManager &MPM,
+                    PassInstrumentationCallbacks *PIC,
+                    ArrayRef<PassBuilder::PipelineElement> Pipeline) {
+#define MODULE_PASS(NAME, CREATE_PASS, PARSER)                                 \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
+    auto ExpectedOpts = PassBuilder::parsePassParameters(PARSER, Name, NAME);  \
+    if (!ExpectedOpts)                                                         \
+      return ExpectedOpts.takeError();                                         \
+    auto &&Opts = *ExpectedOpts;                                               \
+    (void)Opts;                                                                \
+    MPM.addPass(CREATE_PASS);                                                  \
     return true;                                                               \
   }
 
 #include "PollyPasses.def"
 
   return false;
-}
-
-static bool parseScopPipeline(StringRef Name, FunctionPassManager &FPM,
-                              PassInstrumentationCallbacks *PIC,
-                              ArrayRef<PassBuilder::PipelineElement> Pipeline) {
-  if (Name != "scop")
-    return false;
-  if (!Pipeline.empty()) {
-    ScopPassManager SPM;
-    for (const auto &E : Pipeline)
-      if (!parseScopPass(E.Name, SPM, PIC))
-        return false;
-    FPM.addPass(createFunctionToScopPassAdaptor(std::move(SPM)));
-  }
-  return true;
-}
-
-static bool isScopPassName(StringRef Name) {
-#define SCOP_ANALYSIS(NAME, CREATE_PASS)                                       \
-  if (Name == "require<" NAME ">")                                             \
-    return true;                                                               \
-  if (Name == "invalidate<" NAME ">")                                          \
-    return true;
-
-#define SCOP_PASS(NAME, CREATE_PASS)                                           \
-  if (Name == NAME)                                                            \
-    return true;
-
-#include "PollyPasses.def"
-
-  return false;
-}
-
-static bool
-parseTopLevelPipeline(llvm::ModulePassManager &MPM,
-                      PassInstrumentationCallbacks *PIC,
-                      ArrayRef<PassBuilder::PipelineElement> Pipeline) {
-  StringRef FirstName = Pipeline.front().Name;
-
-  if (!isScopPassName(FirstName))
-    return false;
-
-  FunctionPassManager FPM;
-  ScopPassManager SPM;
-
-  for (auto &Element : Pipeline) {
-    auto &Name = Element.Name;
-    auto &InnerPipeline = Element.InnerPipeline;
-    if (!InnerPipeline.empty()) // Scop passes don't have inner pipelines
-      return false;
-    if (!parseScopPass(Name, SPM, PIC))
-      return false;
-  }
-
-  FPM.addPass(createFunctionToScopPassAdaptor(std::move(SPM)));
-  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-
-  return true;
 }
 
 /// Register Polly to be available as an optimizer
@@ -589,19 +624,44 @@ parseTopLevelPipeline(llvm::ModulePassManager &MPM,
 /// handle LICMed code to make it useful.
 void registerPollyPasses(PassBuilder &PB) {
   PassInstrumentationCallbacks *PIC = PB.getPassInstrumentationCallbacks();
-  PB.registerAnalysisRegistrationCallback([PIC](FunctionAnalysisManager &FAM) {
-    registerFunctionAnalyses(FAM, PIC);
-  });
-  PB.registerPipelineParsingCallback(parseFunctionPipeline);
+
+#define MODULE_PASS(NAME, CREATE_PASS, PARSER)                                 \
+  {                                                                            \
+    std::remove_reference_t<decltype(*PARSER(StringRef()))> Opts;              \
+    (void)Opts;                                                                \
+    PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);              \
+  }
+#define CGSCC_PASS(NAME, CREATE_PASS, PARSER)                                  \
+  {                                                                            \
+    std::remove_reference_t<decltype(*PARSER(StringRef()))> Opts;              \
+    (void)Opts;                                                                \
+    PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);              \
+  }
+#define FUNCTION_PASS(NAME, CREATE_PASS, PARSER)                               \
+  {                                                                            \
+    std::remove_reference_t<decltype(*PARSER(StringRef()))> Opts;              \
+    (void)Opts;                                                                \
+    PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);              \
+  }
+#include "PollyPasses.def"
+
   PB.registerPipelineParsingCallback(
       [PIC](StringRef Name, FunctionPassManager &FPM,
             ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
-        return parseScopPipeline(Name, FPM, PIC, Pipeline);
+        ExitOnError Err("Unable to parse Polly module pass: ");
+        return Err(parseFunctionPipeline(Name, FPM, PIC, Pipeline));
       });
-  PB.registerParseTopLevelPipelineCallback(
-      [PIC](llvm::ModulePassManager &MPM,
+  PB.registerPipelineParsingCallback(
+      [PIC](StringRef Name, CGSCCPassManager &CGPM,
             ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
-        return parseTopLevelPipeline(MPM, PIC, Pipeline);
+        ExitOnError Err("Unable to parse Polly call graph pass: ");
+        return Err(parseCGPipeline(Name, CGPM, PIC, Pipeline));
+      });
+  PB.registerPipelineParsingCallback(
+      [PIC](StringRef Name, ModulePassManager &MPM,
+            ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
+        ExitOnError Err("Unable to parse Polly module pass: ");
+        return Err(parseModulePipeline(Name, MPM, PIC, Pipeline));
       });
 
   switch (PassPosition) {

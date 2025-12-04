@@ -13,11 +13,16 @@
 #define BOLT_PASSES_MARK_RA_STATES
 
 #include "bolt/Passes/BinaryPasses.h"
+#include <mutex>
 
 namespace llvm {
 namespace bolt {
 
 class MarkRAStates : public BinaryFunctionPass {
+  // setIgnored() is not thread-safe, but the pass is running on functions in
+  // parallel.
+  std::mutex IgnoreMutex;
+
 public:
   explicit MarkRAStates() : BinaryFunctionPass(false) {}
 
