@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s modernize-use-init-statement %t
+// RUN: %check_clang_tidy -std=c++17-or-later %s modernize-use-init-statement %t -- -- -I %S/Inputs/use-init-statement
 
 void do_some(int i=0);
 int get_with_possible_side_effects();
@@ -231,6 +231,18 @@ void good_unused_multiple() {
     switch (var) {
         case 0:
             break;
+    }
+}
+
+// Real-life case, got from clang/lib/Basic/Attributes.cpp
+void good_include() {
+    {
+        int i1 = 0;
+#include "separate_if.hpp"
+    }
+    {
+        int i2 = 0;
+#include "separate_switch.hpp"
     }
 }
 
@@ -1001,4 +1013,5 @@ void bad_macro_ifdef_statement_2() {
     ++i2;
 #endif
 }
+
 
