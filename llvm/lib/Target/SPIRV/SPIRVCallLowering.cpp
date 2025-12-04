@@ -394,6 +394,15 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           buildOpDecorate(VRegs[i][0], MIRBuilder, Decoration, {});
       }
 
+      if (MDNode *Node = F.getMetadata("kernel_arg_buffer_location")) {
+        int64_t BufferLoc =
+            processKernelArgBufferLocation(F, Node, i, VRegs, -1);
+        if (BufferLoc != -1)
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::BufferLocationALTERA,
+                          {static_cast<uint32_t>(BufferLoc)});
+      }
+
       MDNode *Node = F.getMetadata("spirv.ParameterDecorations");
       if (Node && i < Node->getNumOperands() &&
           isa<MDNode>(Node->getOperand(i))) {
