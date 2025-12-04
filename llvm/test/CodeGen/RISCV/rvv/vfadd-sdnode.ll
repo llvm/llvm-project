@@ -12,10 +12,10 @@
 ; RUN:     -target-abi=lp64d -verify-machineinstrs < %s | FileCheck %s \
 ; RUN:     --check-prefixes=CHECK,ZVFHMIN
 ; RUN: llc -mtriple=riscv32 -mattr=+d,+zvfh,+experimental-zvfbfa,+v \
-; RUN:     -target-abi=ilp32d -verify-machineinstrs < %s | FileCheck %s \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s \
 ; RUN:     --check-prefixes=CHECK,ZVFBFA
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfh,+experimental-zvfbfa,+v \
-; RUN:     -target-abi=lp64d -verify-machineinstrs < %s | FileCheck %s \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s \
 ; RUN:     --check-prefixes=CHECK,ZVFBFA
 
 define <vscale x 1 x bfloat> @vfadd_vv_nxv1bf16(<vscale x 1 x bfloat> %va, <vscale x 1 x bfloat> %vb) {

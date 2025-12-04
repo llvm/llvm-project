@@ -523,71 +523,6 @@ multiclass VPatConversionVF_WF_BF16<string intrinsic, string instruction,
   }
 }
 
-multiclass VPatBinaryFPSDNode_VV_VF_RM_BF16<SDPatternOperator vop,
-                                            string instruction_name> {
-  foreach vti = AllBF16Vectors in {
-    let Predicates = GetVTypePredicates<vti>.Predicates in {
-      def : VPatBinarySDNode_VV_RM<vop, instruction_name,
-                                   vti.Vector, vti.Vector, vti.Log2SEW,
-                                   vti.LMul, vti.AVL, vti.RegClass, isSEWAware=1>;
-      def : VPatBinarySDNode_VF_RM<vop, instruction_name#"_V"#vti.ScalarSuffix,
-                                   vti.Vector, vti.Vector, vti.Scalar,
-                                   vti.Log2SEW, vti.LMul, vti.AVL, vti.RegClass,
-                                   vti.ScalarRegClass, isSEWAware=1>;
-    }
-  }
-}
-
-multiclass VPatBinaryFPSDNode_R_VF_RM_BF16<SDPatternOperator vop, string instruction_name> {
-  foreach fvti = AllBF16Vectors in
-    let Predicates = GetVTypePredicates<fvti>.Predicates in
-    def : Pat<(fvti.Vector (vop (fvti.Vector (SplatFPOp fvti.Scalar:$rs2)),
-                                (fvti.Vector fvti.RegClass:$rs1))),
-              (!cast<Instruction>(
-                             instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_E"#fvti.SEW)
-                           (fvti.Vector (IMPLICIT_DEF)),
-                           fvti.RegClass:$rs1,
-                           (fvti.Scalar fvti.ScalarRegClass:$rs2),
-                           // Value to indicate no rounding mode change in
-                           // RISCVInsertReadWriteCSR
-                           FRM_DYN,
-                           fvti.AVL, fvti.Log2SEW, TA_MA)>;
-}
-
-multiclass VPatBinaryFPVL_VV_VF_RM_BF16<SDPatternOperator vop, string instruction_name> {
-  foreach vti = AllBF16Vectors in {
-    let Predicates = GetVTypePredicates<vti>.Predicates in {
-      def : VPatBinaryVL_V_RM<vop, instruction_name, "VV",
-                              vti.Vector, vti.Vector, vti.Vector, vti.Mask,
-                              vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
-                              vti.RegClass, isSEWAware=1>;
-      def : VPatBinaryVL_VF_RM<vop, instruction_name#"_V"#vti.ScalarSuffix,
-                               vti.Vector, vti.Vector, vti.Vector, vti.Mask,
-                               vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
-                               vti.ScalarRegClass, isSEWAware=1>;
-      }
-  }
-}
-
-multiclass VPatBinaryFPVL_R_VF_RM_BF16<SDPatternOperator vop, string instruction_name> {
-  foreach fvti = AllBF16Vectors in {
-    let Predicates = GetVTypePredicates<fvti>.Predicates in
-    def : Pat<(fvti.Vector (vop (SplatFPOp fvti.ScalarRegClass:$rs2),
-                                fvti.RegClass:$rs1,
-                                (fvti.Vector fvti.RegClass:$passthru),
-                                (fvti.Mask VMV0:$vm),
-                                VLOpFrag)),
-              (!cast<Instruction>(instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
-                   fvti.RegClass:$passthru,
-                   fvti.RegClass:$rs1, fvti.ScalarRegClass:$rs2,
-                   (fvti.Mask VMV0:$vm),
-                   // Value to indicate no rounding mode change in
-                   // RISCVInsertReadWriteCSR
-                   FRM_DYN,
-                   GPR:$vl, fvti.Log2SEW, TAIL_AGNOSTIC)>;
-  }
-}
-
 let Predicates = [HasStdExtZvfbfa] in {
 defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfadd", "PseudoVFADD_ALT",
                             AllBF16Vectors, isSEWAware = 1>;
@@ -849,13 +784,21 @@ let Predicates = [HasStdExtZvfbfa] in {
     }
   }
 
-  defm : VPatBinaryFPSDNode_VV_VF_RM_BF16<any_fadd, "PseudoVFADD_ALT">;
-  defm : VPatBinaryFPSDNode_VV_VF_RM_BF16<any_fsub, "PseudoVFSUB_ALT">;
-  defm : VPatBinaryFPSDNode_VV_VF_RM_BF16<any_fmul, "PseudoVFMUL_ALT">;
-  defm : VPatBinaryFPSDNode_R_VF_RM_BF16<any_fsub, "PseudoVFRSUB_ALT">;
+  defm : VPatBinaryFPSDNode_VV_VF_RM<any_fadd, "PseudoVFADD_ALT",
+                                     /*isSEWAware*/ 1, /*isBF16*/ 1>;
+  defm : VPatBinaryFPSDNode_VV_VF_RM<any_fsub, "PseudoVFSUB_ALT",
+                                     /*isSEWAware*/ 1, /*isBF16*/ 1>;
+  defm : VPatBinaryFPSDNode_VV_VF_RM<any_fmul, "PseudoVFMUL_ALT",
+                                     /*isSEWAware*/ 1, /*isBF16*/ 1>;
+  defm : VPatBinaryFPSDNode_R_VF_RM<any_fsub, "PseudoVFRSUB_ALT",
+                                    /*isSEWAware*/ 1, /*isBF16*/ 1>;
 
-  defm : VPatBinaryFPVL_VV_VF_RM_BF16<any_riscv_fadd_vl, "PseudoVFADD_ALT">;
-  defm : VPatBinaryFPVL_VV_VF_RM_BF16<any_riscv_fsub_vl, "PseudoVFSUB_ALT">;
-  defm : VPatBinaryFPVL_VV_VF_RM_BF16<any_riscv_fmul_vl, "PseudoVFMUL_ALT">;
-  defm : VPatBinaryFPVL_R_VF_RM_BF16<any_riscv_fsub_vl, "PseudoVFRSUB_ALT">;
+  defm : VPatBinaryFPVL_VV_VF_RM<any_riscv_fadd_vl, "PseudoVFADD_ALT",
+                                 /*isSEWAware*/ 1, /*isBF16*/ 1>;
+  defm : VPatBinaryFPVL_VV_VF_RM<any_riscv_fsub_vl, "PseudoVFSUB_ALT",
+                                 /*isSEWAware*/ 1, /*isBF16*/ 1>;
+  defm : VPatBinaryFPVL_VV_VF_RM<any_riscv_fmul_vl, "PseudoVFMUL_ALT",
+                                 /*isSEWAware*/ 1, /*isBF16*/ 1>;
+  defm : VPatBinaryFPVL_R_VF_RM<any_riscv_fsub_vl, "PseudoVFRSUB_ALT",
+                                /*isSEWAware*/ 1, /*isBF16*/ 1>;
 } // Predicates = [HasStdExtZvfbfa]

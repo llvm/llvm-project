@@ -1091,7 +1091,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VECREDUCE_FMINIMUM,
         ISD::VECREDUCE_FMAXIMUM};
 
-    // TODO: support more ops.
+    // TODO: Make more of these ops legal.
     static const unsigned ZvfbfaPromoteOps[] = {ISD::FMINNUM,
                                                 ISD::FMAXNUM,
                                                 ISD::FMINIMUMNUM,
