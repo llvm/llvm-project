@@ -561,10 +561,8 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
             !XMLDocument::XMLEnabled()) {
           Debugger::ReportWarning(
               "the debug server supports Target Description XML but LLDB does "
-              "not "
-              "have XML parsing enabled. Using \"qRegisterInfo\" was also not "
-              "possible. "
-              "Register information may be incorrect or missing.",
+              "not have XML parsing enabled. Using \"qRegisterInfo\" was also "
+              "not possible. Register information may be incorrect or missing.",
               GetTarget().GetDebugger().GetID());
         }
         break;
