@@ -9,7 +9,7 @@ subroutine max_array_reduction(l, r)
   !$omp end parallel
 end subroutine
 
-! CHECK-LABEL:   omp.declare_reduction @max_byref_box_Uxi32 : !fir.ref<!fir.box<!fir.array<?xi32>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @max_byref_box_Uxi32 : !fir.ref<!fir.box<!fir.array<?xi32>>> {{.*}} alloc {
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
 ! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.array<?xi32>>>)
 ! CHECK-LABEL:   } init {

@@ -78,11 +78,10 @@ enum DefaultDataSharingAttributes {
 /// Not mentioning any Variable category attribute indicates
 /// the modifier (DefaultDataSharingAttributes) is for all variables.
 enum DefaultDataSharingVCAttributes {
-  DSA_VC_all = 0,     /// for all variables.
-  DSA_VC_aggregate,   /// for aggregate variables.
-  DSA_VC_allocatable, /// for allocatable variables.
-  DSA_VC_pointer,     /// for pointer variables.
-  DSA_VC_scalar,      /// for scalar variables.
+  DSA_VC_all = 0,   /// for all variables.
+  DSA_VC_aggregate, /// for aggregate variables.
+  DSA_VC_pointer,   /// for pointer variables.
+  DSA_VC_scalar,    /// for scalar variables.
 };
 
 /// Stack for tracking declarations used in OpenMP directives and
@@ -760,11 +759,6 @@ public:
     getTopOfStack().DefaultVCAttr = DSA_VC_all;
     getTopOfStack().DefaultAttrVCLoc = VCLoc;
   }
-  /// Set default data sharing variable category attribute to allocatable.
-  void setDefaultDSAVCAllocatable(SourceLocation VCLoc) {
-    getTopOfStack().DefaultVCAttr = DSA_VC_allocatable;
-    getTopOfStack().DefaultAttrVCLoc = VCLoc;
-  }
   /// Set default data sharing variable category attribute to pointer.
   void setDefaultDSAVCPointer(SourceLocation VCLoc) {
     getTopOfStack().DefaultVCAttr = DSA_VC_pointer;
@@ -1370,20 +1364,15 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
   DefaultDataSharingAttributes IterDA = Iter->DefaultAttr;
   switch (Iter->DefaultVCAttr) {
   case DSA_VC_aggregate:
-    if (!VD->getType()->isAggregateType())
-      IterDA = DSA_none;
-    break;
-  case DSA_VC_allocatable:
-    if (!(VD->getType()->isPointerType() ||
-          VD->getType()->isVariableArrayType()))
+    if (!D->getType()->isAggregateType())
       IterDA = DSA_none;
     break;
   case DSA_VC_pointer:
-    if (!VD->getType()->isPointerType())
+    if (!D->getType()->isPointerType())
       IterDA = DSA_none;
     break;
   case DSA_VC_scalar:
-    if (!VD->getType()->isScalarType())
+    if (!D->getType()->isScalarType())
       IterDA = DSA_none;
     break;
   case DSA_VC_all:
@@ -18723,16 +18712,16 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
         ExtraModifierLoc, ColonLoc, VarList, Locs);
     break;
   case OMPC_to:
-    Res =
-        ActOnOpenMPToClause(Data.MotionModifiers, Data.MotionModifiersLoc,
-                            Data.ReductionOrMapperIdScopeSpec,
-                            Data.ReductionOrMapperId, ColonLoc, VarList, Locs);
+    Res = ActOnOpenMPToClause(
+        Data.MotionModifiers, Data.MotionModifiersLoc, Data.IteratorExpr,
+        Data.ReductionOrMapperIdScopeSpec, Data.ReductionOrMapperId, ColonLoc,
+        VarList, Locs);
     break;
   case OMPC_from:
-    Res = ActOnOpenMPFromClause(Data.MotionModifiers, Data.MotionModifiersLoc,
-                                Data.ReductionOrMapperIdScopeSpec,
-                                Data.ReductionOrMapperId, ColonLoc, VarList,
-                                Locs);
+    Res = ActOnOpenMPFromClause(
+        Data.MotionModifiers, Data.MotionModifiersLoc, Data.IteratorExpr,
+        Data.ReductionOrMapperIdScopeSpec, Data.ReductionOrMapperId, ColonLoc,
+        VarList, Locs);
     break;
   case OMPC_use_device_ptr:
     Res = ActOnOpenMPUseDevicePtrClause(VarList, Locs);
@@ -24468,11 +24457,12 @@ void SemaOpenMP::ActOnOpenMPDeclareTargetInitializer(Decl *TargetDecl) {
 
 OMPClause *SemaOpenMP::ActOnOpenMPToClause(
     ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
-    ArrayRef<SourceLocation> MotionModifiersLoc,
+    ArrayRef<SourceLocation> MotionModifiersLoc, Expr *IteratorExpr,
     CXXScopeSpec &MapperIdScopeSpec, DeclarationNameInfo &MapperId,
     SourceLocation ColonLoc, ArrayRef<Expr *> VarList,
     const OMPVarListLocTy &Locs, ArrayRef<Expr *> UnresolvedMappers) {
   OpenMPMotionModifierKind Modifiers[] = {OMPC_MOTION_MODIFIER_unknown,
+                                          OMPC_MOTION_MODIFIER_unknown,
                                           OMPC_MOTION_MODIFIER_unknown};
   SourceLocation ModifiersLoc[NumberOfOMPMotionModifiers];
 
@@ -24496,20 +24486,25 @@ OMPClause *SemaOpenMP::ActOnOpenMPToClause(
                               MapperIdScopeSpec, MapperId, UnresolvedMappers);
   if (MVLI.ProcessedVarList.empty())
     return nullptr;
-
+  if (IteratorExpr)
+    if (auto *DRE = dyn_cast<DeclRefExpr>(IteratorExpr))
+      if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+        DSAStack->addIteratorVarDecl(VD);
   return OMPToClause::Create(
       getASTContext(), Locs, MVLI.ProcessedVarList, MVLI.VarBaseDeclarations,
-      MVLI.VarComponents, MVLI.UDMapperList, Modifiers, ModifiersLoc,
-      MapperIdScopeSpec.getWithLocInContext(getASTContext()), MapperId);
+      MVLI.VarComponents, MVLI.UDMapperList, IteratorExpr, Modifiers,
+      ModifiersLoc, MapperIdScopeSpec.getWithLocInContext(getASTContext()),
+      MapperId);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPFromClause(
     ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
-    ArrayRef<SourceLocation> MotionModifiersLoc,
+    ArrayRef<SourceLocation> MotionModifiersLoc, Expr *IteratorExpr,
     CXXScopeSpec &MapperIdScopeSpec, DeclarationNameInfo &MapperId,
     SourceLocation ColonLoc, ArrayRef<Expr *> VarList,
     const OMPVarListLocTy &Locs, ArrayRef<Expr *> UnresolvedMappers) {
   OpenMPMotionModifierKind Modifiers[] = {OMPC_MOTION_MODIFIER_unknown,
+                                          OMPC_MOTION_MODIFIER_unknown,
                                           OMPC_MOTION_MODIFIER_unknown};
   SourceLocation ModifiersLoc[NumberOfOMPMotionModifiers];
 
@@ -24533,11 +24528,15 @@ OMPClause *SemaOpenMP::ActOnOpenMPFromClause(
                               MapperIdScopeSpec, MapperId, UnresolvedMappers);
   if (MVLI.ProcessedVarList.empty())
     return nullptr;
-
+  if (IteratorExpr)
+    if (auto *DRE = dyn_cast<DeclRefExpr>(IteratorExpr))
+      if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+        DSAStack->addIteratorVarDecl(VD);
   return OMPFromClause::Create(
       getASTContext(), Locs, MVLI.ProcessedVarList, MVLI.VarBaseDeclarations,
-      MVLI.VarComponents, MVLI.UDMapperList, Modifiers, ModifiersLoc,
-      MapperIdScopeSpec.getWithLocInContext(getASTContext()), MapperId);
+      MVLI.VarComponents, MVLI.UDMapperList, IteratorExpr, Modifiers,
+      ModifiersLoc, MapperIdScopeSpec.getWithLocInContext(getASTContext()),
+      MapperId);
 }
 
 OMPClause *

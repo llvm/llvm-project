@@ -58,8 +58,10 @@
 namespace mlir {
 namespace acc {
 
-// Forward declaration for RecipeKind enum
+// Forward declarations
 enum class RecipeKind : uint32_t;
+bool isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
+                      Operation **definingOpPtr);
 
 namespace detail {
 /// This class contains internal trait classes used by OpenACCSupport.
@@ -79,11 +81,27 @@ struct OpenACCSupportTraits {
 
     // Used to report a case that is not supported by the implementation.
     virtual InFlightDiagnostic emitNYI(Location loc, const Twine &message) = 0;
+
+    /// Check if a symbol use is valid for use in an OpenACC region.
+    virtual bool isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
+                                  Operation **definingOpPtr) = 0;
   };
+
+  /// SFINAE helpers to detect if implementation has optional methods
+  template <typename ImplT, typename... Args>
+  using isValidSymbolUse_t =
+      decltype(std::declval<ImplT>().isValidSymbolUse(std::declval<Args>()...));
+
+  template <typename ImplT>
+  using has_isValidSymbolUse =
+      llvm::is_detected<isValidSymbolUse_t, ImplT, Operation *, SymbolRefAttr,
+                        Operation **>;
 
   /// This class wraps a concrete OpenACCSupport implementation and forwards
   /// interface calls to it. This provides type erasure, allowing different
   /// implementation types to be used interchangeably without inheritance.
+  /// Methods can be optionally implemented; if not present, default behavior
+  /// is used.
   template <typename ImplT>
   class Model final : public Concept {
   public:
@@ -100,6 +118,14 @@ struct OpenACCSupportTraits {
 
     InFlightDiagnostic emitNYI(Location loc, const Twine &message) final {
       return impl.emitNYI(loc, message);
+    }
+
+    bool isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
+                          Operation **definingOpPtr) final {
+      if constexpr (has_isValidSymbolUse<ImplT>::value)
+        return impl.isValidSymbolUse(user, symbol, definingOpPtr);
+      else
+        return acc::isValidSymbolUse(user, symbol, definingOpPtr);
     }
 
   private:
@@ -153,6 +179,15 @@ public:
   /// \return An in-flight diagnostic object that can be used to report the
   ///         unsupported case.
   InFlightDiagnostic emitNYI(Location loc, const Twine &message);
+
+  /// Check if a symbol use is valid for use in an OpenACC region.
+  ///
+  /// \param user The operation using the symbol.
+  /// \param symbol The symbol reference being used.
+  /// \param definingOpPtr Optional output parameter to receive the defining op.
+  /// \return true if the symbol use is valid, false otherwise.
+  bool isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
+                        Operation **definingOpPtr = nullptr);
 
   /// Signal that this analysis should always be preserved so that
   /// underlying implementation registration is not lost.

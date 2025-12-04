@@ -1408,6 +1408,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
       FormatTok->Tok.setKind(tok::identifier);
     } else if (Style.isTableGen() && !Keywords.isTableGenKeyword(*FormatTok)) {
       FormatTok->Tok.setKind(tok::identifier);
+    } else if (Style.isVerilog() && Keywords.isVerilogIdentifier(*FormatTok)) {
+      FormatTok->Tok.setKind(tok::identifier);
     }
   } else if (const bool Greater = FormatTok->is(tok::greatergreater);
              Greater || FormatTok->is(tok::lessless)) {

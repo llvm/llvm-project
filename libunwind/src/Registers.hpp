@@ -1862,16 +1862,13 @@ public:
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
+  void        jumpto(unsigned walkedFrames = 0) {
+    zaDisable();
+    __libunwind_Registers_arm64_jumpto(this, walkedFrames);
+  }
 #ifdef _LIBUNWIND_TRACE_RET_INJECT
   _LIBUNWIND_TRACE_NO_INLINE
-    void      returnto(unsigned walkedFrames) {
-      __libunwind_Registers_arm64_jumpto(this, walkedFrames);
-    }
-#else
-  void        jumpto() {
-      zaDisable();
-      __libunwind_Registers_arm64_jumpto(this, 0);
-  }
+  void        returnto(unsigned walkedFrames) { jumpto(walkedFrames); }
 #endif
   static constexpr int lastDwarfRegNum() {
     return _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64;

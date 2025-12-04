@@ -644,7 +644,7 @@ def VGPR_32_Lo128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg1
 // Identical to VGPR_32 except it only contains the low 256 (Lo256) registers.
 def VGPR_32_Lo256 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
                                     (add (sequence "VGPR%u", 0, 255))> {
-  let AllocationPriority = 0;
+  let AllocationPriority = !add(3, !mul(BaseClassPriority, BaseClassScaleFactor));
   let GeneratePressureSet = 0;
   let Size = 32;
   let Weight = 1;
@@ -1328,6 +1328,17 @@ def VS_64_AlignTarget : SIRegisterClassLike<64, true, false, true>,
   let DecoderMethod = "decodeSrcRegOrImm9";
 }
 
+
+// Special case for DS_GWS instructions. The register input is really
+// 32-bit, but it needs to be even aligned on targets with a VGPR
+// alignment requirement.
+def AV_LdSt_32_Align2 : SIRegisterClassLike</*Bitwidth=*/32, /*VGPR=*/true, /*AGPR=*/true>,
+                        RegClassByHwMode<
+  [DefaultMode_Wave64, DefaultMode_Wave32, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode_Wave64, AlignedVGPRNoAGPRMode_Wave32],
+  [VGPR_32,            VGPR_32,            AV_64_Align2,          VReg_64_Align2,               VReg_64_Align2]> {
+  let DecoderMethod = "decodeAVLdSt<32>";
+}
+
 class RegImmMatcher<string name> : AsmOperandClass {
   let Name = name;
   let RenderMethod = "addRegOrImmOperands";
@@ -1578,6 +1589,17 @@ foreach size = ["64", "96", "128", "160", "256", "1024" ] in {
   def AVLdSt_#size : AVLdStOperand<!cast<RegisterClassLike>("AV_LdSt_"#size#_AlignTarget)>;
   def AVLdSt_#size#_Align1 : AVLdStOperand<!cast<RegisterClassLike>("AV_LdSt_"#size#_Align1)>;
   def AVLdSt_#size#_Align2 : AVLdStOperand<!cast<RegisterClassLike>("AV_LdSt_"#size#_Align2)>;
+}
+
+def AV_LdSt_32_Align2_RegMatcher : AsmOperandClass {
+  let Name = "AV_LdSt_32_Align2_RegOp";
+  let RenderMethod = "addRegOperands";
+}
+
+def AV_LdSt_32_Align2_RegOp : RegisterOperand<AV_LdSt_32_Align2> {
+  let ParserMatchClass = AV_LdSt_32_Align2_RegMatcher;
+  let PrintMethod = "printAVLdSt32Align2RegOp";
+  let EncoderMethod = "getAVOperandEncoding";
 }
 
 //===----------------------------------------------------------------------===//
