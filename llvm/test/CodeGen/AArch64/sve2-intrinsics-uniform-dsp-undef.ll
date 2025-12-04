@@ -345,8 +345,8 @@ define <vscale x 2 x i64> @sqshl_n_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64>
   ret <vscale x 2 x i64> %out
 }
 
-define <vscale x 16 x i8> @sqshl_n_i8_range(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) {
-; CHECK-LABEL: sqshl_n_i8_range:
+define <vscale x 16 x i8> @sqshl_n_i8_out_of_range(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) {
+; CHECK-LABEL: sqshl_n_i8_out_of_range:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.b, #8 // =0x8
 ; CHECK-NEXT:    sqshl z0.b, p0/m, z0.b, z1.b
@@ -357,8 +357,8 @@ define <vscale x 16 x i8> @sqshl_n_i8_range(<vscale x 16 x i1> %pg, <vscale x 16
   ret <vscale x 16 x i8> %out
 }
 
-define <vscale x 8 x i16> @sqshl_n_i16_range(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
-; CHECK-LABEL: sqshl_n_i16_range:
+define <vscale x 8 x i16> @sqshl_n_i16_out_of_range(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
+; CHECK-LABEL: sqshl_n_i16_out_of_range:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.h, #16 // =0x10
 ; CHECK-NEXT:    sqshl z0.h, p0/m, z0.h, z1.h
@@ -369,8 +369,8 @@ define <vscale x 8 x i16> @sqshl_n_i16_range(<vscale x 8 x i1> %pg, <vscale x 8 
   ret <vscale x 8 x i16> %out
 }
 
-define <vscale x 4 x i32> @sqshl_n_i32_range(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
-; CHECK-LABEL: sqshl_n_i32_range:
+define <vscale x 4 x i32> @sqshl_n_i32_out_of_range(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
+; CHECK-LABEL: sqshl_n_i32_out_of_range:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.s, #32 // =0x20
 ; CHECK-NEXT:    sqshl z0.s, p0/m, z0.s, z1.s
@@ -381,8 +381,8 @@ define <vscale x 4 x i32> @sqshl_n_i32_range(<vscale x 4 x i1> %pg, <vscale x 4 
   ret <vscale x 4 x i32> %out
 }
 
-define <vscale x 2 x i64> @sqshl_n_i64_range(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
-; CHECK-LABEL: sqshl_n_i64_range:
+define <vscale x 2 x i64> @sqshl_n_i64_out_of_range(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
+; CHECK-LABEL: sqshl_n_i64_out_of_range:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.d, #64 // =0x40
 ; CHECK-NEXT:    sqshl z0.d, p0/m, z0.d, z1.d
@@ -548,10 +548,9 @@ define <vscale x 2 x i64> @srshl_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %
 define <vscale x 16 x i8> @srshl_i8_swapped_operands(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: srshl_i8_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    srshlr z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.srshl.u.nxv16i8(<vscale x 16 x i1> splat(i1 true),
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.srshl.u.nxv16i8(<vscale x 16 x i1> %pg,
                                                                    <vscale x 16 x i8> %b,
                                                                    <vscale x 16 x i8> %a)
   ret <vscale x 16 x i8> %out
@@ -560,10 +559,9 @@ define <vscale x 16 x i8> @srshl_i8_swapped_operands(<vscale x 16 x i1> %pg, <vs
 define <vscale x 8 x i16> @srshl_i16_swapped_operands(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: srshl_i16_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    srshlr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.srshl.u.nxv8i16(<vscale x 8 x i1> splat(i1 true),
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.srshl.u.nxv8i16(<vscale x 8 x i1> %pg,
                                                                    <vscale x 8 x i16> %b,
                                                                    <vscale x 8 x i16> %a)
   ret <vscale x 8 x i16> %out
@@ -572,10 +570,9 @@ define <vscale x 8 x i16> @srshl_i16_swapped_operands(<vscale x 8 x i1> %pg, <vs
 define <vscale x 4 x i32> @srshl_i32_swapped_operands(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: srshl_i32_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    srshlr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.srshl.u.nxv4i32(<vscale x 4 x i1> splat(i1 true),
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.srshl.u.nxv4i32(<vscale x 4 x i1> %pg,
                                                                    <vscale x 4 x i32> %b,
                                                                    <vscale x 4 x i32> %a)
   ret <vscale x 4 x i32> %out
@@ -584,10 +581,9 @@ define <vscale x 4 x i32> @srshl_i32_swapped_operands(<vscale x 4 x i1> %pg, <vs
 define <vscale x 2 x i64> @srshl_i64_swapped_operands(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: srshl_i64_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    srshlr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.srshl.u.nxv2i64(<vscale x 2 x i1> splat(i1 true),
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.srshl.u.nxv2i64(<vscale x 2 x i1> %pg,
                                                                    <vscale x 2 x i64> %b,
                                                                    <vscale x 2 x i64> %a)
   ret <vscale x 2 x i64> %out
@@ -700,10 +696,9 @@ define <vscale x 2 x i64> @uqrshl_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> 
 define <vscale x 16 x i8> @uqrshl_i8_swapped_operands(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: uqrshl_i8_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    uqrshlr z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.uqrshl.u.nxv16i8(<vscale x 16 x i1> splat(i1 true),
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.uqrshl.u.nxv16i8(<vscale x 16 x i1> %pg,
                                                                     <vscale x 16 x i8> %b,
                                                                     <vscale x 16 x i8> %a)
   ret <vscale x 16 x i8> %out
@@ -712,10 +707,9 @@ define <vscale x 16 x i8> @uqrshl_i8_swapped_operands(<vscale x 16 x i1> %pg, <v
 define <vscale x 8 x i16> @uqrshl_i16_swapped_operands(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: uqrshl_i16_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uqrshlr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.uqrshl.u.nxv8i16(<vscale x 8 x i1> splat(i1 true),
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.uqrshl.u.nxv8i16(<vscale x 8 x i1> %pg,
                                                                     <vscale x 8 x i16> %b,
                                                                     <vscale x 8 x i16> %a)
   ret <vscale x 8 x i16> %out
@@ -724,10 +718,9 @@ define <vscale x 8 x i16> @uqrshl_i16_swapped_operands(<vscale x 8 x i1> %pg, <v
 define <vscale x 4 x i32> @uqrshl_i32_swapped_operands(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: uqrshl_i32_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uqrshlr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.uqrshl.u.nxv4i32(<vscale x 4 x i1> splat(i1 true),
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.uqrshl.u.nxv4i32(<vscale x 4 x i1> %pg,
                                                                     <vscale x 4 x i32> %b,
                                                                     <vscale x 4 x i32> %a)
   ret <vscale x 4 x i32> %out
@@ -736,10 +729,9 @@ define <vscale x 4 x i32> @uqrshl_i32_swapped_operands(<vscale x 4 x i1> %pg, <v
 define <vscale x 2 x i64> @uqrshl_i64_swapped_operands(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: uqrshl_i64_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uqrshlr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.uqrshl.u.nxv2i64(<vscale x 2 x i1> splat(i1 true),
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.uqrshl.u.nxv2i64(<vscale x 2 x i1> %pg,
                                                                     <vscale x 2 x i64> %b,
                                                                     <vscale x 2 x i64> %a)
   ret <vscale x 2 x i64> %out
@@ -852,10 +844,9 @@ define <vscale x 2 x i64> @uqshl_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %
 define <vscale x 16 x i8> @uqshl_i8_swapped_operands(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: uqshl_i8_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    uqshlr z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.uqshl.u.nxv16i8(<vscale x 16 x i1> splat(i1 true),
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.uqshl.u.nxv16i8(<vscale x 16 x i1> %pg,
                                                                    <vscale x 16 x i8> %b,
                                                                    <vscale x 16 x i8> %a)
   ret <vscale x 16 x i8> %out
@@ -864,10 +855,9 @@ define <vscale x 16 x i8> @uqshl_i8_swapped_operands(<vscale x 16 x i1> %pg, <vs
 define <vscale x 8 x i16> @uqshl_i16_swapped_operands(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: uqshl_i16_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uqshlr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.uqshl.u.nxv8i16(<vscale x 8 x i1> splat(i1 true),
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.uqshl.u.nxv8i16(<vscale x 8 x i1> %pg,
                                                                    <vscale x 8 x i16> %b,
                                                                    <vscale x 8 x i16> %a)
   ret <vscale x 8 x i16> %out
@@ -876,10 +866,9 @@ define <vscale x 8 x i16> @uqshl_i16_swapped_operands(<vscale x 8 x i1> %pg, <vs
 define <vscale x 4 x i32> @uqshl_i32_swapped_operands(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: uqshl_i32_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uqshlr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.uqshl.u.nxv4i32(<vscale x 4 x i1> splat(i1 true),
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.uqshl.u.nxv4i32(<vscale x 4 x i1> %pg,
                                                                    <vscale x 4 x i32> %b,
                                                                    <vscale x 4 x i32> %a)
   ret <vscale x 4 x i32> %out
@@ -888,10 +877,9 @@ define <vscale x 4 x i32> @uqshl_i32_swapped_operands(<vscale x 4 x i1> %pg, <vs
 define <vscale x 2 x i64> @uqshl_i64_swapped_operands(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: uqshl_i64_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uqshlr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.uqshl.u.nxv2i64(<vscale x 2 x i1> splat(i1 true),
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.uqshl.u.nxv2i64(<vscale x 2 x i1> %pg,
                                                                    <vscale x 2 x i64> %b,
                                                                    <vscale x 2 x i64> %a)
   ret <vscale x 2 x i64> %out
@@ -997,8 +985,8 @@ define <vscale x 2 x i64> @uqshl_n_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64>
   ret <vscale x 2 x i64> %out
 }
 
-define <vscale x 16 x i8> @uqshl_n_i8_range(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) {
-; CHECK-LABEL: uqshl_n_i8_range:
+define <vscale x 16 x i8> @uqshl_n_i8_out_of_range(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) {
+; CHECK-LABEL: uqshl_n_i8_out_of_range:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.b, #8 // =0x8
 ; CHECK-NEXT:    uqshl z0.b, p0/m, z0.b, z1.b
@@ -1009,8 +997,8 @@ define <vscale x 16 x i8> @uqshl_n_i8_range(<vscale x 16 x i1> %pg, <vscale x 16
   ret <vscale x 16 x i8> %out
 }
 
-define <vscale x 8 x i16> @uqshl_n_i16_range(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
-; CHECK-LABEL: uqshl_n_i16_range:
+define <vscale x 8 x i16> @uqshl_n_i16_out_of_range(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
+; CHECK-LABEL: uqshl_n_i16_out_of_range:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.h, #16 // =0x10
 ; CHECK-NEXT:    uqshl z0.h, p0/m, z0.h, z1.h
@@ -1021,8 +1009,8 @@ define <vscale x 8 x i16> @uqshl_n_i16_range(<vscale x 8 x i1> %pg, <vscale x 8 
   ret <vscale x 8 x i16> %out
 }
 
-define <vscale x 4 x i32> @uqshl_n_i32_range(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
-; CHECK-LABEL: uqshl_n_i32_range:
+define <vscale x 4 x i32> @uqshl_n_i32_out_of_range(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
+; CHECK-LABEL: uqshl_n_i32_out_of_range:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.s, #32 // =0x20
 ; CHECK-NEXT:    uqshl z0.s, p0/m, z0.s, z1.s
@@ -1033,8 +1021,8 @@ define <vscale x 4 x i32> @uqshl_n_i32_range(<vscale x 4 x i1> %pg, <vscale x 4 
   ret <vscale x 4 x i32> %out
 }
 
-define <vscale x 2 x i64> @uqshl_n_i64_range(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
-; CHECK-LABEL: uqshl_n_i64_range:
+define <vscale x 2 x i64> @uqshl_n_i64_out_of_range(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
+; CHECK-LABEL: uqshl_n_i64_out_of_range:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.d, #64 // =0x40
 ; CHECK-NEXT:    uqshl z0.d, p0/m, z0.d, z1.d
@@ -1200,10 +1188,9 @@ define <vscale x 2 x i64> @urshl_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %
 define <vscale x 16 x i8> @urshl_i8_swapped_operands(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: urshl_i8_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    urshlr z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.urshl.u.nxv16i8(<vscale x 16 x i1> splat(i1 true),
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.urshl.u.nxv16i8(<vscale x 16 x i1> %pg,
                                                                    <vscale x 16 x i8> %b,
                                                                    <vscale x 16 x i8> %a)
   ret <vscale x 16 x i8> %out
@@ -1212,10 +1199,9 @@ define <vscale x 16 x i8> @urshl_i8_swapped_operands(<vscale x 16 x i1> %pg, <vs
 define <vscale x 8 x i16> @urshl_i16_swapped_operands(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: urshl_i16_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    urshlr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.urshl.u.nxv8i16(<vscale x 8 x i1> splat(i1 true),
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.urshl.u.nxv8i16(<vscale x 8 x i1> %pg,
                                                                    <vscale x 8 x i16> %b,
                                                                    <vscale x 8 x i16> %a)
   ret <vscale x 8 x i16> %out
@@ -1224,10 +1210,9 @@ define <vscale x 8 x i16> @urshl_i16_swapped_operands(<vscale x 8 x i1> %pg, <vs
 define <vscale x 4 x i32> @urshl_i32_swapped_operands(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: urshl_i32_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    urshlr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.urshl.u.nxv4i32(<vscale x 4 x i1> splat(i1 true),
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.urshl.u.nxv4i32(<vscale x 4 x i1> %pg,
                                                                    <vscale x 4 x i32> %b,
                                                                    <vscale x 4 x i32> %a)
   ret <vscale x 4 x i32> %out
@@ -1236,10 +1221,9 @@ define <vscale x 4 x i32> @urshl_i32_swapped_operands(<vscale x 4 x i1> %pg, <vs
 define <vscale x 2 x i64> @urshl_i64_swapped_operands(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: urshl_i64_swapped_operands:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    urshlr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.urshl.u.nxv2i64(<vscale x 2 x i1> splat(i1 true),
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.urshl.u.nxv2i64(<vscale x 2 x i1> %pg,
                                                                    <vscale x 2 x i64> %b,
                                                                    <vscale x 2 x i64> %a)
   ret <vscale x 2 x i64> %out
