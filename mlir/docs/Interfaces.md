@@ -96,6 +96,7 @@ This reduces boilerplate and allows authors to specify high-level interface
 structure declaratively.
 
 For example, the above interface can be defined using ODS as follows:
+
 ```tablegen
 def DialectInlinerInterface : DialectInterface<"DialectInlinerInterface"> {
   let description = [{
@@ -104,19 +105,16 @@ def DialectInlinerInterface : DialectInterface<"DialectInlinerInterface"> {
   }];
 
   let methods = [
-    InterfaceMethod<
-      /*desc=*/        [{
+    InterfaceMethod<[{
         Returns true if the given region 'src' can be inlined into the region
         'dest' that is attached to an operation registered to the current dialect.
         'valueMapping' contains any remapped values from within the 'src' region.
         This can be used to examine what values will replace entry arguments into
         the 'src' region, for example.
       }],
-      /*returnType=*/  "bool",
-      /*methodName=*/  "isLegalToInline",
-      /*args=*/        (ins "Region *":$dest, "Region *":$src, 
-                        "IRMapping &":$valueMapping),
-      /*methodBody=*/  [{
+      "bool", "isLegalToInline",
+      (ins "Region *":$dest, "Region *":$src, "IRMapping &":$valueMapping),
+      [{
         return false;
       }]
       >
@@ -138,9 +136,20 @@ def DialectInlinerInterface : DialectInterface<"DialectInlinerInterface"> {
     -   The structure of these methods is defined [here](#interface-methods).
 
 The header file can be generated via the following command:
+
 ```bash
-mlir-tblgen gen-dialect-interface-decls DialectInterface.td
+mlir-tblgen --gen-dialect-interface-decls DialectInterface.td
 ```
+
+To generate dialect interface declarations using the ODS framework in CMake, you would write:
+
+```cmake
+set(LLVM_TARGET_DEFINITIONS DialectInlinerInterface.td)
+mlir_tablegen(DialectInlinerInterface.h.inc -gen-dialect-interface-decls)
+```
+
+An example of this can be found in the DialectInlinerInterface implementation 
+and the related `CMakeLists.txt` under `mlir/include/mlir/Transforms`.
 
 #### DialectInterfaceCollection
 

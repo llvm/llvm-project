@@ -12,6 +12,7 @@
 
 #include "CppGenUtilities.h"
 #include "DocGenUtilities.h"
+#include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
 #include "llvm/ADT/StringExtras.h"
@@ -94,16 +95,24 @@ static void emitInterfaceMethodDoc(const InterfaceMethod &method,
 
 static void emitInterfaceMethodsDef(const Interface &interface,
                                     raw_ostream &os) {
+
+  raw_indented_ostream ios(os);
+  ios.indent(2);
+
   for (auto &method : interface.getMethods()) {
-    emitInterfaceMethodDoc(method, os, "  ");
-    os << "  virtual ";
-    emitCPPType(method.getReturnType(), os);
-    emitMethodNameAndArgs(method, method.getName(), os);
-    if (auto body = method.getBody())
-      os << " {\n    " << body << "\n  }\n";
-    else
-      // no default method body
-      os << " {}\n";
+    emitInterfaceMethodDoc(method, ios);
+    ios << "virtual ";
+    emitCPPType(method.getReturnType(), ios);
+    emitMethodNameAndArgs(method, method.getName(), ios);
+    ios << " {";
+
+    if (auto body = method.getBody()) {
+      ios << "\n";
+      ios.indent(4);
+      ios << body << "\n";
+      ios.indent(2);
+    }
+    os << "}\n";
   }
 }
 
