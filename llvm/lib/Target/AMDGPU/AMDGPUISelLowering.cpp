@@ -3055,8 +3055,11 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
 
   if (VT.getScalarType() == MVT::f16) {
     // v_exp_f16 (fmul x, log2e)
-    if (allowApproxFunc(DAG, Flags)) // TODO: Does this really require fast?
-      return lowerFEXPUnsafe(X, SL, DAG, Flags);
+
+    if (allowApproxFunc(DAG, Flags)) { // TODO: Does this really require fast?
+      return IsExp10 ? lowerFEXP10Unsafe(X, SL, DAG, Flags)
+                     : lowerFEXPUnsafe(X, SL, DAG, Flags);
+    }
 
     if (VT.isVector())
       return SDValue();
@@ -3066,7 +3069,8 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
 
     // Nothing in half is a denormal when promoted to f32.
     SDValue Ext = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, X, Flags);
-    SDValue Lowered = lowerFEXPUnsafe(Ext, SL, DAG, Flags);
+    SDValue Lowered = IsExp10 ? lowerFEXP10Unsafe(Ext, SL, DAG, Flags)
+                              : lowerFEXPUnsafe(Ext, SL, DAG, Flags);
     return DAG.getNode(ISD::FP_ROUND, SL, VT, Lowered,
                        DAG.getTargetConstant(0, SL, MVT::i32), Flags);
   }
