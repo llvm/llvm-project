@@ -266,6 +266,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("constant-pool", MIToken::kw_constant_pool)
       .Case("call-entry", MIToken::kw_call_entry)
       .Case("custom", MIToken::kw_custom)
+      .Case("lanemask", MIToken::kw_lanemask)
       .Case("liveout", MIToken::kw_liveout)
       .Case("landing-pad", MIToken::kw_landing_pad)
       .Case("inlineasm-br-indirect-target",
@@ -281,6 +282,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("heap-alloc-marker", MIToken::kw_heap_alloc_marker)
       .Case("pcsections", MIToken::kw_pcsections)
       .Case("cfi-type", MIToken::kw_cfi_type)
+      .Case("deactivation-symbol", MIToken::kw_deactivation_symbol)
       .Case("bbsections", MIToken::kw_bbsections)
       .Case("bb_id", MIToken::kw_bb_id)
       .Case("unknown-size", MIToken::kw_unknown_size)

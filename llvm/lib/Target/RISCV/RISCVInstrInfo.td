@@ -507,7 +507,7 @@ def ixlenimm_li_restricted : Operand<XLenVT> {
 
 // A 12-bit signed immediate plus one where the imm range will be -2047~2048.
 def simm12_plus1 : ImmLeaf<XLenVT,
-  [{return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
+  [{return Imm >= -2047 && Imm <= 2048;}]>;
 
 // A 6-bit constant greater than 32.
 def uimm6gt32 : ImmLeaf<XLenVT, [{
@@ -768,7 +768,7 @@ def BGE  : BranchCC_rri<0b101, "bge">;
 def BLTU : BranchCC_rri<0b110, "bltu">;
 def BGEU : BranchCC_rri<0b111, "bgeu">;
 
-let IsSignExtendingOpW = 1, canFoldAsLoad = 1 in {
+let IsSignExtendingOpW = 1, canFoldAsLoad = 1, isReMaterializable = 1 in {
 def LB  : Load_ri<0b000, "lb">, Sched<[WriteLDB, ReadMemBase]>;
 def LH  : Load_ri<0b001, "lh">, Sched<[WriteLDH, ReadMemBase]>;
 def LW  : Load_ri<0b010, "lw">, Sched<[WriteLDW, ReadMemBase]>;
@@ -889,7 +889,7 @@ def CSRRCI : CSR_ii<0b111, "csrrci">;
 /// RV64I instructions
 
 let Predicates = [IsRV64] in {
-let canFoldAsLoad = 1 in {
+let canFoldAsLoad = 1, isReMaterializable = 1 in {
 def LWU   : Load_ri<0b110, "lwu">, Sched<[WriteLDW, ReadMemBase]>;
 def LD    : Load_ri<0b011, "ld">, Sched<[WriteLDD, ReadMemBase]>;
 }

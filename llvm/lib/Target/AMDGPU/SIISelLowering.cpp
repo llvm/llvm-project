@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1308,7 +1309,7 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   }
 }
 
-static void getCoopAtomicOperandsInfo(const CallInst &CI, bool IsLoad,
+static void getCoopAtomicOperandsInfo(const CallBase &CI, bool IsLoad,
                                       TargetLoweringBase::IntrinsicInfo &Info) {
   Value *OrderingArg = CI.getArgOperand(IsLoad ? 1 : 2);
   unsigned Ord = cast<ConstantInt>(OrderingArg)->getZExtValue();
@@ -1338,7 +1339,7 @@ static void getCoopAtomicOperandsInfo(const CallInst &CI, bool IsLoad,
 }
 
 bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                          const CallInst &CI,
+                                          const CallBase &CI,
                                           MachineFunction &MF,
                                           unsigned IntrID) const {
   Info.flags = MachineMemOperand::MONone;
@@ -2265,6 +2266,14 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
   return TargetLowering::isTypeDesirableForOp(Op, VT);
 }
 
+MachinePointerInfo
+SITargetLowering::getKernargSegmentPtrInfo(MachineFunction &MF) const {
+  // This isn't really a constant pool but close enough.
+  MachinePointerInfo PtrInfo(MF.getPSVManager().getConstantPool());
+  PtrInfo.AddrSpace = AMDGPUAS::CONSTANT_ADDRESS;
+  return PtrInfo;
+}
+
 SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
                                                    const SDLoc &SL,
                                                    SDValue Chain,
@@ -2341,7 +2350,9 @@ SDValue SITargetLowering::lowerKernargMemParameter(
     SelectionDAG &DAG, EVT VT, EVT MemVT, const SDLoc &SL, SDValue Chain,
     uint64_t Offset, Align Alignment, bool Signed,
     const ISD::InputArg *Arg) const {
-  MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
+
+  MachinePointerInfo PtrInfo =
+      getKernargSegmentPtrInfo(DAG.getMachineFunction());
 
   // Try to avoid using an extload by loading earlier than the argument address,
   // and extracting the relevant bits. The load should hopefully be merged with
@@ -2356,7 +2367,8 @@ SDValue SITargetLowering::lowerKernargMemParameter(
     // TODO: If we passed in the base kernel offset we could have a better
     // alignment than 4, but we don't really need it.
     SDValue Ptr = lowerKernArgParameterPtr(DAG, SL, Chain, AlignDownOffset);
-    SDValue Load = DAG.getLoad(MVT::i32, SL, Chain, Ptr, PtrInfo, Align(4),
+    SDValue Load = DAG.getLoad(MVT::i32, SL, Chain, Ptr,
+                               PtrInfo.getWithOffset(AlignDownOffset), Align(4),
                                MachineMemOperand::MODereferenceable |
                                    MachineMemOperand::MOInvariant);
 
@@ -2371,9 +2383,9 @@ SDValue SITargetLowering::lowerKernargMemParameter(
   }
 
   SDValue Ptr = lowerKernArgParameterPtr(DAG, SL, Chain, Offset);
-  SDValue Load = DAG.getLoad(MemVT, SL, Chain, Ptr, PtrInfo, Alignment,
-                             MachineMemOperand::MODereferenceable |
-                                 MachineMemOperand::MOInvariant);
+  SDValue Load = DAG.getLoad(
+      MemVT, SL, Chain, Ptr, PtrInfo.getWithOffset(Offset), Alignment,
+      MachineMemOperand::MODereferenceable | MachineMemOperand::MOInvariant);
 
   SDValue Val = convertArgType(DAG, VT, MemVT, SL, Load, Signed, Arg);
   return DAG.getMergeValues({Val, Load.getValue(1)}, SL);
@@ -5480,15 +5492,15 @@ static uint32_t getIdentityValueFor32BitWaveReduction(unsigned Opc) {
     return std::numeric_limits<uint32_t>::min();
   case AMDGPU::S_MAX_I32:
     return std::numeric_limits<int32_t>::min();
+  case AMDGPU::V_ADD_F32_e64: // -0.0
+    return 0x80000000;
   case AMDGPU::V_SUB_F32_e64: // +0.0
-    return __builtin_bit_cast(uint32_t, +0.0f);
+    return 0x0;
   case AMDGPU::S_ADD_I32:
   case AMDGPU::S_SUB_I32:
   case AMDGPU::S_OR_B32:
   case AMDGPU::S_XOR_B32:
     return std::numeric_limits<uint32_t>::min();
-  case AMDGPU::V_ADD_F32_e64: // -0.0
-    return __builtin_bit_cast(uint32_t, -0.0f);
   case AMDGPU::S_AND_B32:
     return std::numeric_limits<uint32_t>::max();
   case AMDGPU::V_MIN_F32_e64:
@@ -6429,8 +6441,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::DS_GWS_INIT:
   case AMDGPU::DS_GWS_SEMA_BR:
   case AMDGPU::DS_GWS_BARRIER:
-    TII->enforceOperandRCAlignment(MI, AMDGPU::OpName::data0);
-    [[fallthrough]];
   case AMDGPU::DS_GWS_SEMA_V:
   case AMDGPU::DS_GWS_SEMA_P:
   case AMDGPU::DS_GWS_SEMA_RELEASE_ALL:
@@ -8145,10 +8155,11 @@ SITargetLowering::loadImplicitKernelArgument(SelectionDAG &DAG, MVT VT,
   MachineFunction &MF = DAG.getMachineFunction();
   uint64_t Offset = getImplicitParameterOffset(MF, Param);
   SDValue Ptr = lowerKernArgParameterPtr(DAG, DL, DAG.getEntryNode(), Offset);
-  MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
-  return DAG.getLoad(VT, DL, DAG.getEntryNode(), Ptr, PtrInfo, Alignment,
-                     MachineMemOperand::MODereferenceable |
-                         MachineMemOperand::MOInvariant);
+  MachinePointerInfo PtrInfo =
+      getKernargSegmentPtrInfo(DAG.getMachineFunction());
+  return DAG.getLoad(
+      VT, DL, DAG.getEntryNode(), Ptr, PtrInfo.getWithOffset(Offset), Alignment,
+      MachineMemOperand::MODereferenceable | MachineMemOperand::MOInvariant);
 }
 
 SDValue SITargetLowering::lowerTrapHsaQueuePtr(SDValue Op,
@@ -8410,6 +8421,9 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
       Op.getValueType() == MVT::i64) {
     const SIMachineFunctionInfo *Info =
         DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
+    if (Info->get32BitAddressHighBits() == 0)
+      return DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i64, Src);
+
     SDValue Hi = DAG.getConstant(Info->get32BitAddressHighBits(), SL, MVT::i32);
     SDValue Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Hi);
     return DAG.getNode(ISD::BITCAST, SL, MVT::i64, Vec);
@@ -9819,7 +9833,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                              AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR);
   }
   case Intrinsic::amdgcn_kernarg_segment_ptr: {
-    if (!AMDGPU::isKernel(MF.getFunction().getCallingConv())) {
+    if (!AMDGPU::isKernel(MF.getFunction())) {
       // This only makes sense to call in a kernel, so just lower to null.
       return DAG.getConstant(0, DL, VT);
     }
@@ -11980,7 +11994,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
       (AS == AMDGPUAS::GLOBAL_ADDRESS &&
        Subtarget->getScalarizeGlobalBehavior() && Load->isSimple() &&
-       isMemOpHasNoClobberedMemOperand(Load))) {
+       (Load->isInvariant() || isMemOpHasNoClobberedMemOperand(Load)))) {
     if ((!Op->isDivergent() || AMDGPU::isUniformMMO(MMO)) &&
         Alignment >= Align(4) && NumElements < 32) {
       if (MemVT.isPow2VectorType() ||
