@@ -15,6 +15,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_REPRESENTATION_H
 
 #include "clang/AST/Type.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Tooling/Execution.h"
 #include "llvm/ADT/SmallVector.h"
@@ -598,17 +599,13 @@ llvm::Expected<std::unique_ptr<Info>>
 mergeInfos(std::vector<std::unique_ptr<Info>> &Values);
 
 struct ClangDocContext {
-  ClangDocContext() = default;
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
                   bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
                   StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
                   StringRef Base, std::vector<std::string> UserStylesheets,
-                  bool FTimeTrace = false);
+                  clang::DiagnosticsEngine &Diags, bool FTimeTrace = false);
   tooling::ExecutionContext *ECtx;
-  std::string ProjectName; // Name of project clang-doc is documenting.
-  bool PublicOnly; // Indicates if only public declarations are documented.
-  bool FTimeTrace; // Indicates if ftime trace is turned on
-  int Granularity; // Granularity of ftime trace
+  std::string ProjectName;  // Name of project clang-doc is documenting.
   std::string OutDirectory; // Directory for outputting generated files.
   std::string SourceRoot;   // Directory where processed files are stored. Links
                             // to definition locations will only be generated if
@@ -627,7 +624,12 @@ struct ClangDocContext {
   // Maps mustache template types to specific mustache template files.
   // Ex.    comment-template -> /path/to/comment-template.mustache
   llvm::StringMap<std::string> MustacheTemplates;
+  // A pointer to a DiagnosticsEngine for error reporting.
+  clang::DiagnosticsEngine &Diags;
   Index Idx;
+  int Granularity; // Granularity of ftime trace
+  bool PublicOnly; // Indicates if only public declarations are documented.
+  bool FTimeTrace; // Indicates if ftime trace is turned on
 };
 
 } // namespace doc

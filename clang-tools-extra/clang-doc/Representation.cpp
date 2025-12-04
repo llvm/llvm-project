@@ -481,10 +481,11 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef RepositoryUrl,
                                  StringRef RepositoryLinePrefix, StringRef Base,
                                  std::vector<std::string> UserStylesheets,
+                                 clang::DiagnosticsEngine &Diags,
                                  bool FTimeTrace)
-    : ECtx(ECtx), ProjectName(ProjectName), PublicOnly(PublicOnly),
-      FTimeTrace(FTimeTrace), OutDirectory(OutDirectory),
-      UserStylesheets(UserStylesheets), Base(Base) {
+    : ECtx(ECtx), ProjectName(ProjectName), OutDirectory(OutDirectory),
+      SourceRoot(std::string(SourceRoot)), UserStylesheets(UserStylesheets),
+      Base(Base), Diags(Diags), PublicOnly(PublicOnly), FTimeTrace(FTimeTrace) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default
