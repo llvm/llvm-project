@@ -155,25 +155,28 @@ PreservedAnalyses InlineBitcodeLibraryPass::run(Module &M,
       continue;
     }
     ModifiedModule = true;
-    // Inline the functions from the bitcode
+    // Collect functions to inline.
     DenseSet<CallInst *> CallsToInline;
     for (const auto &FuncName : FunctionsInBitcode) {
       if (Function *F = M.getFunction(FuncName)) {
         if (!F->isDeclaration()) {
-          CallsToInline.clear();
           for (auto &U : F->uses())
             if (CallInst *CI = dyn_cast<CallInst>(U.getUser()))
               CallsToInline.insert(CI);
-          for (CallInst *CI : CallsToInline) {
-            InlineFunctionInfo IFI;
-            InlineResult IR = InlineFunction(*CI, IFI);
-            if (!IR.isSuccess())
-              M.getContext().diagnose(DiagnosticInfoInlineBitcodeLib(
-                  DiagnosticSeverity::DS_Error,
-                  Twine("failed to inline function: ") + FuncName +
-                      "; Reason: " + IR.getFailureReason()));
-          }
         }
+      }
+    }
+    // Inline the functions from the bitcode.
+    for (CallInst *CI : CallsToInline) {
+      InlineFunctionInfo IFI;
+      InlineResult IR = InlineFunction(*CI, IFI);
+      if (!IR.isSuccess()) {
+        Function *Callee = CI->getCalledFunction();
+        StringRef CalleeName = Callee ? Callee->getName() : "<indirect call>";
+        M.getContext().diagnose(DiagnosticInfoInlineBitcodeLib(
+            DiagnosticSeverity::DS_Error,
+            Twine("failed to inline function: ") + CalleeName +
+                "; Reason: " + IR.getFailureReason()));
       }
     }
   }
