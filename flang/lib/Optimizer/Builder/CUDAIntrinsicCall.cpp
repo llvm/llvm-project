@@ -1508,10 +1508,8 @@ static void genTMABulkLoad(fir::FirOpBuilder &builder, mlir::Location loc,
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
   barrier = builder.createConvert(loc, llvmPtrTy, barrier);
   setAlignment(dst, kTMAAlignment);
-  dst = convertPtrToNVVMSpace(builder, loc, dst,
-                              mlir::NVVM::NVVMMemorySpace::Shared);
-  src = convertPtrToNVVMSpace(builder, loc, src,
-                              mlir::NVVM::NVVMMemorySpace::Shared);
+  dst = builder.createConvert(loc, llvmPtrTy, dst);
+  src = builder.createConvert(loc, llvmPtrTy, src);
   mlir::NVVM::InlinePtxOp::create(
       builder, loc, mlir::TypeRange{}, {dst, src, size, barrier}, {},
       "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], "
