@@ -1,4 +1,5 @@
 ; RUN: llvm-as < %s | llvm-dis | llc -mtriple=x86_64 -O0 -filetype=obj -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; REQUIRES: newTestStability
 
 ; A test to verify the use of a DIDerivedType as a bound of a
 ; DISubrangeType.
