@@ -632,6 +632,8 @@ public:
   // Array of input bitcode files for LTO.
   std::vector<std::unique_ptr<llvm::lto::InputFile>> InputFiles;
   std::unique_ptr<dtlto::TempFilesRemover> TempsRemover;
+
+  Expected<lto::InputFile *> addInput(std::unique_ptr<lto::InputFile> InputPtr);
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

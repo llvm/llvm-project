@@ -761,6 +761,7 @@ Error LTO::add(std::unique_ptr<InputFile> InputPtr,
   }
 
   assert(Res.empty());
+  if (!Dtlto) delete Input;
   return Error::success();
 }
 

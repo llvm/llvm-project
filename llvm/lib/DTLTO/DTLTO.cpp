@@ -125,22 +125,24 @@ Expected<bool> isThinArchive(const StringRef ArchivePath) {
   return IsThin;
 }
 
+} // namespace dtlto
+
 // This function performs the following tasks:
 // 1. Adds the input file to the LTO object's list of input files.
 // 2. For thin archive members, generates a new module ID which is a path to a
 // thin archive member file.
 // 3. For regular archive members, generates a new unique module ID.
 // 4. Updates the bitcode module's identifier.
-Expected<lto::InputFile *> addInput(lto::LTO *LtoObj,
-                                    std::unique_ptr<lto::InputFile> InputPtr) {
-
-  // Add the input file to the LTO object.
-  LtoObj->InputFiles.push_back(std::move(InputPtr));
-  lto::InputFile *Input = LtoObj->InputFiles.back().get();
+Expected<lto::InputFile *>
+lto::LTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
 
   // Skip processing if not in DTLTO mode.
-  if (!LtoObj->Dtlto)
-    return Input;
+  if (!Dtlto)
+    return InputPtr.release();
+
+  // Add the input file to the LTO object.
+  InputFiles.push_back(std::move(InputPtr));
+  lto::InputFile *Input = InputFiles.back().get();
 
   StringRef ModuleId = Input->getName();
   StringRef ArchivePath = Input->getArchivePath();
@@ -153,30 +155,32 @@ Expected<lto::InputFile *> addInput(lto::LTO *LtoObj,
   BitcodeModule &BM = Input->getSingleBitcodeModule();
 
   // Check if the archive is a thin archive.
-  Expected<bool> IsThin = isThinArchive(ArchivePath);
+  Expected<bool> IsThin = dtlto::isThinArchive(ArchivePath);
   if (!IsThin)
     return IsThin.takeError();
 
   if (*IsThin) {
     // For thin archives, use the path to the actual file.
-    NewModuleId =
-        computeThinArchiveMemberPath(ArchivePath, Input->getMemberName());
+    NewModuleId = dtlto::computeThinArchiveMemberPath(ArchivePath,
+                                                      Input->getMemberName());
   } else {
     // For regular archives, generate a unique name.
     Input->memberOfArchive(true);
 
     // Create unique identifier using process ID and sequence number.
     std::string PID = utohexstr(sys::Process::getProcessId());
-    std::string Seq = std::to_string(LtoObj->InputFiles.size());
+    std::string Seq = std::to_string(InputFiles.size());
 
     NewModuleId = {sys::path::filename(ModuleId), ".", Seq, ".", PID, ".o"};
   }
 
   // Update the module identifier and save it.
-  BM.setModuleIdentifier(LtoObj->Saver.save(NewModuleId.str()));
+  BM.setModuleIdentifier(Saver.save(NewModuleId.str()));
 
   return Input;
 }
+
+namespace dtlto {
 
 // Write the archive member content to a file named after the module ID.
 // If a file with that name already exists, it's likely a leftover from a
