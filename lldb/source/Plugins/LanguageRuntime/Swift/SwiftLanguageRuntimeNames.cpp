@@ -1539,10 +1539,10 @@ SwiftLanguageRuntime::GetGenericSignature(llvm::StringRef function_name,
 /// Returns true if a function called `symbol_name` exists in `module`.
 static bool SymbolExists(StringRef symbol_name, Module &module) {
   SymbolContextList sc_list;
-  Module::LookupInfo lookup_info(ConstString(symbol_name),
-                                 lldb::FunctionNameType::eFunctionNameTypeFull,
-                                 lldb::eLanguageTypeSwift);
-  module.FindFunctions(lookup_info, CompilerDeclContext(),
+  auto lookup_infos = Module::LookupInfo::MakeLookupInfos(
+      ConstString(symbol_name), lldb::FunctionNameType::eFunctionNameTypeFull,
+      lldb::eLanguageTypeSwift);
+  module.FindFunctions(lookup_infos, CompilerDeclContext(),
                        ModuleFunctionSearchOptions(), sc_list);
   return !sc_list.IsEmpty();
 }
