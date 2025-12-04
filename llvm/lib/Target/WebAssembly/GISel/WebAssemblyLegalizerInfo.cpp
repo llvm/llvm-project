@@ -247,16 +247,15 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
     getActionDefinitionsBuilder(G_BZERO).unsupported();
 
     getActionDefinitionsBuilder(G_MEMSET)
-        .legalForCartesianProduct({p0}, {s32}, {p0s})
-        .customForCartesianProduct({p0}, {s8}, {p0s})
+        .customForCartesianProduct({p0}, {s8, s32}, {p0s})
         .immIdx(0);
 
     getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE})
-        .legalForCartesianProduct({p0}, {p0}, {p0s})
+        .customForCartesianProduct({p0}, {p0}, {p0s})
         .immIdx(0);
 
     getActionDefinitionsBuilder(G_MEMCPY_INLINE)
-        .legalForCartesianProduct({p0}, {p0}, {p0s});
+        .customForCartesianProduct({p0}, {p0}, {p0s});
   } else {
     getActionDefinitionsBuilder({G_BZERO, G_MEMCPY, G_MEMMOVE, G_MEMSET})
         .libcall();
@@ -566,13 +565,63 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_MEMSET: {
     // Anyext the value being set to 32 bit (only the bottom 8 bits are read by
     // the instruction).
-    Helper.Observer.changingInstr(MI);
     auto &Value = MI.getOperand(1);
 
-    Register ExtValueReg =
-        Helper.MIRBuilder.buildAnyExt(LLT::scalar(32), Value).getReg(0);
-    Value.setReg(ExtValueReg);
-    Helper.Observer.changedInstr(MI);
+    if (MRI.getType(Value.getReg()).getSizeInBits() == 8) {
+      Register ExtValueReg =
+          Helper.MIRBuilder.buildAnyExt(LLT::scalar(32), Value).getReg(0);
+      Value.setReg(ExtValueReg);
+      return true;
+    }
+
+
+    MachineIRBuilder B(MI);
+    assert(MI.getNumMemOperands() == 1);
+
+    auto *DstMem = MI.memoperands()[0];
+    auto &Dst = MI.getOperand(0);
+    auto &Len = MI.getOperand(1);
+    // auto TailCall = I.getOperand(3);
+
+    auto PointerWidth = MI.getMF()->getDataLayout().getPointerSizeInBits();
+    auto PtrIsI64 = PointerWidth == 64;
+
+    B.buildInstr(PtrIsI64 ? WebAssembly::MEMSET_A64 : WebAssembly::MEMSET_A32)
+        .addImm(0) // DstMem idx
+        .add(Dst)
+        .add(Value)
+        .add(Len)
+        .addMemOperand(DstMem);
+
+    MI.eraseFromParent();
+
+    return true;
+  }
+  case TargetOpcode::G_MEMCPY:
+  case TargetOpcode::G_MEMMOVE: {
+    MachineIRBuilder B(MI);
+    assert(MI.getNumMemOperands() == 2);
+
+    auto *DstMem = MI.memoperands()[0];
+    auto *SrcMem = MI.memoperands()[1];
+    auto &Dst = MI.getOperand(0);
+    auto &Src = MI.getOperand(1);
+    auto &Len = MI.getOperand(2);
+    // auto TailCall = I.getOperand(3);
+
+    auto PointerWidth = MI.getMF()->getDataLayout().getPointerSizeInBits();
+    auto PtrIsI64 = PointerWidth == 64;
+
+    B.buildInstr(PtrIsI64 ? WebAssembly::MEMCPY_A64 : WebAssembly::MEMCPY_A32)
+        .addImm(0) // DstMem idx
+        .addImm(0) // SrcMem idx
+        .add(Dst)
+        .add(Src)
+        .add(Len)
+        .addMemOperand(DstMem)
+        .addMemOperand(SrcMem);
+
+    MI.eraseFromParent();
     return true;
   }
   default:

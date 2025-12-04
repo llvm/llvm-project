@@ -145,7 +145,7 @@ WebAssemblyInstructionSelector::selectAddrOperands(LLT AddrType,
 
         if (!TM.isPositionIndependent()) {
           if (OpDef.getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
-            auto Offset = OpDef.getOperand(1).getGlobal();
+            auto *Offset = OpDef.getOperand(1).getGlobal();
             auto Addr = OtherOp;
 
             return {{
@@ -516,7 +516,7 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
            "Couldn't constrain registers for instruction");
     return true;
   }
-  case G_GLOBAL_VALUE:
+  case G_GLOBAL_VALUE: {
     assert(I.getOperand(1).getTargetFlags() == 0 &&
            "Unexpected target flags on generic G_GLOBAL_VALUE instruction");
     assert(WebAssembly::isValidAddressSpace(
@@ -588,6 +588,7 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
            "Couldn't constrain registers for instruction");
 
     return true;
+  }
   }
 
   return false;
