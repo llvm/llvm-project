@@ -143,9 +143,9 @@ Transforms/ExpandLargeFpConvert/X86/expand-large-fp-convert-fptosi129.ll
 Transforms/ExpandLargeFpConvert/X86/expand-large-fp-convert-fptoui129.ll
 Transforms/ExpandLargeFpConvert/X86/expand-large-fp-convert-si129tofp.ll
 Transforms/ExpandLargeFpConvert/X86/expand-large-fp-convert-ui129tofp.ll
-Transforms/ExpandMemCmp/AArch64/memcmp.ll
-Transforms/ExpandMemCmp/X86/memcmp.ll
-Transforms/ExpandMemCmp/X86/memcmp-x32.ll
+Transforms/ExpandVariadics/expand-va-intrinsic-split-linkage.ll
+Transforms/ExpandVariadics/expand-va-intrinsic-split-simple.ll
+Transforms/ExpandVariadics/intrinsics.ll
 Transforms/FixIrreducible/basic.ll
 Transforms/FixIrreducible/bug45623.ll
 Transforms/FixIrreducible/callbr.ll
