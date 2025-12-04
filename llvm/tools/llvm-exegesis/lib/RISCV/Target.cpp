@@ -864,10 +864,14 @@ Error ExegesisRISCVTarget::randomizeTargetMCOperand(
     // 5-bit unsigned immediate value.
     AssignedValue = MCOperand::createImm(randomIndex(31));
     break;
+  case RISCVOp::OPERAND_SIMM12_LO:
+    AssignedValue = MCOperand::createImm(0);
+    break;
   default:
     if (OperandType >= RISCVOp::OPERAND_FIRST_RISCV_IMM &&
         OperandType <= RISCVOp::OPERAND_LAST_RISCV_IMM)
       AssignedValue = MCOperand::createImm(0);
+    break;
   }
   return Error::success();
 }
