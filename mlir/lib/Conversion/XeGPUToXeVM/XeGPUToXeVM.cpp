@@ -361,20 +361,18 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
       // FIXME: width or pitch is not the same as baseShapeW it should be the
       // stride of the second to last dimension in row major layout.
       // Compute width in bytes.
-      Value surfaceW =
+      Value baseShapeWInBytes =
           arith::MulIOp::create(rewriter, loc, baseShapeW, elemByteSize);
 
       if (wScaleFactor > 1) {
-        // Scale baseShapeW, offsetW, surfaceW for sub byte emulation.
+        // Scale offsetW, baseShapeWInBytes for sub byte emulation.
         // Note: tileW is already scaled above.
         Value wScaleFactorValLog2 = arith::ConstantIntOp::create(
             rewriter, loc, rewriter.getI32Type(), llvm::Log2_64(wScaleFactor));
-        baseShapeW = arith::ShRSIOp::create(rewriter, loc, baseShapeW,
-                                            wScaleFactorValLog2);
+        baseShapeWInBytes = arith::ShRSIOp::create(
+            rewriter, loc, baseShapeWInBytes, wScaleFactorValLog2);
         offsetW =
             arith::ShRSIOp::create(rewriter, loc, offsetW, wScaleFactorValLog2);
-        surfaceW = arith::ShRSIOp::create(rewriter, loc, surfaceW,
-                                          wScaleFactorValLog2);
       }
       // Get tile height from the tensor descriptor type.
       auto tileH = tdescTy.getDimSize(0);
@@ -399,8 +397,8 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
         auto storeCacheControl =
             translateStoreXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
         xevm::BlockStore2dOp::create(
-            rewriter, loc, basePtrLLVM, surfaceW, baseShapeH, surfaceW, offsetW,
-            offsetH, elemBitSize, tileW, tileH, src,
+            rewriter, loc, basePtrLLVM, baseShapeWInBytes, baseShapeH,
+            baseShapeWInBytes, offsetW, offsetH, elemBitSize, tileW, tileH, src,
             xevm::StoreCacheControlAttr::get(ctxt, storeCacheControl));
         rewriter.eraseOp(op);
       } else {
@@ -408,9 +406,9 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
             translateLoadXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
         if constexpr (std::is_same_v<OpType, xegpu::PrefetchNdOp>) {
           xevm::BlockPrefetch2dOp::create(
-              rewriter, loc, basePtrLLVM, surfaceW, baseShapeH, surfaceW,
-              offsetW, offsetH, elemBitSize, tileW, tileH, vblocks,
-              xevm::LoadCacheControlAttr::get(ctxt, loadCacheControl));
+              rewriter, loc, basePtrLLVM, baseShapeWInBytes, baseShapeH,
+              baseShapeWInBytes, offsetW, offsetH, elemBitSize, tileW, tileH,
+              vblocks, xevm::LoadCacheControlAttr::get(ctxt, loadCacheControl));
           rewriter.eraseOp(op);
         } else {
           VectorType dstVecTy = cast<VectorType>(op.getValue().getType());
@@ -423,9 +421,9 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
                              : rewriter.getIntegerType(elemBitSize));
 
           Value resultFlatVec = xevm::BlockLoad2dOp::create(
-              rewriter, loc, loadedTy, basePtrLLVM, surfaceW, baseShapeH,
-              surfaceW, offsetW, offsetH, elemBitSize, tileW, tileH, vblocks,
-              transpose, vnni,
+              rewriter, loc, loadedTy, basePtrLLVM, baseShapeWInBytes,
+              baseShapeH, baseShapeWInBytes, offsetW, offsetH, elemBitSize,
+              tileW, tileH, vblocks, transpose, vnni,
               xevm::LoadCacheControlAttr::get(ctxt, loadCacheControl));
           resultFlatVec = vector::BitCastOp::create(
               rewriter, loc,
