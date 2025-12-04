@@ -544,7 +544,7 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
       std::move(ChangedTypes), NewF->getName());
 
   for (auto *U : make_early_inc_range(F->users())) {
-    if (CallInst *CI; 
+    if (CallInst *CI;
         (CI = dyn_cast<CallInst>(U)) && CI->getCalledFunction() == F)
       CI->mutateFunctionType(NewF->getFunctionType());
     if (auto *C = dyn_cast<Constant>(U))
