@@ -32,8 +32,8 @@ private:
   /// Size of stack frame to save callee saved registers
   unsigned CalleeSavedStackSize = 0;
 
-  /// ArgumentStackSize - amount of bytes on stack consumed by the arguments
-  /// being passed on the stack
+  /// Amount of bytes on stack consumed by the arguments being passed on
+  /// the stack
   unsigned ArgumentStackSize = 0;
 
   /// FrameIndex of the spill slot when there is no scavenged register in
