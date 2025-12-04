@@ -1246,6 +1246,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("ObjCPropertyAttributeOrder",
                    Style.ObjCPropertyAttributeOrder);
     IO.mapOptional("ObjCSpaceAfterProperty", Style.ObjCSpaceAfterProperty);
+    IO.mapOptional("ObjCSpaceBeforeMethodDeclColon",
+                   Style.ObjCSpaceBeforeMethodDeclColon);
     IO.mapOptional("ObjCSpaceBeforeProtocolList",
                    Style.ObjCSpaceBeforeProtocolList);
     IO.mapOptional("OneLineFormatOffRegex", Style.OneLineFormatOffRegex);
@@ -1353,8 +1355,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.WhitespaceSensitiveMacros);
     IO.mapOptional("WrapNamespaceBodyWithEmptyLines",
                    Style.WrapNamespaceBodyWithEmptyLines);
-    IO.mapOptional("ObjCSpaceBeforeMethodDeclColon",
-                   Style.ObjCSpaceBeforeMethodDeclColon);
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
     // BreakAfterReturnType was not, initialize the latter from the former for

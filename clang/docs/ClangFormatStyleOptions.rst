@@ -5540,9 +5540,15 @@ the configuration (without a prefix: ``Auto``).
 
 .. _ObjCSpaceBeforeMethodDeclColon:
 
-**ObjCSpaceBeforeMethodDeclColon** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <ObjCSpaceBeforeMethodDeclColon>`
-  Add or remove a space between the '-'/'+' and the return type in Objective-C method declarations,
-  i.e. use '- (void)method' instead of '-(void)method'.
+**ObjCSpaceBeforeMethodDeclColon** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <ObjCSpaceBeforeMethodDeclColon>`
+  Add or remove a space between the '-'/'+' and the return type in
+  Objective-C method declarations. i.e
+
+  .. code-block:: objc
+
+     false:                      true:
+
+     -(void)method      vs.      - (void)method
 
 .. _ObjCSpaceBeforeProtocolList:
 
