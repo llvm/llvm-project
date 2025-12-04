@@ -315,6 +315,61 @@ static mlir::Value emitX86Muldq(CIRGenBuilderTy &builder, mlir::Location loc,
   return builder.createMul(loc, lhs, rhs);
 }
 
+static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
+                                llvm::SmallVector<mlir::Value> ops,
+                                bool isSigned) {
+  mlir::Value op0 = ops[0];
+  mlir::Value op1 = ops[1];
+
+  cir::VectorType ty = cast<cir::VectorType>(op0.getType());
+  cir::IntType elementTy = cast<cir::IntType>(ty.getElementType());
+
+  uint64_t imm = CIRGenFunction::getZExtIntValueFromConstOp(ops[2]) & 0x7;
+
+  cir::CmpOpKind pred;
+  switch (imm) {
+  case 0x0:
+    pred = cir::CmpOpKind::lt;
+    break;
+  case 0x1:
+    pred = cir::CmpOpKind::le;
+    break;
+  case 0x2:
+    pred = cir::CmpOpKind::gt;
+    break;
+  case 0x3:
+    pred = cir::CmpOpKind::ge;
+    break;
+  case 0x4:
+    pred = cir::CmpOpKind::eq;
+    break;
+  case 0x5:
+    pred = cir::CmpOpKind::ne;
+    break;
+  case 0x6:
+    return builder.getNullValue(ty, loc); // FALSE
+  case 0x7: {
+    llvm::APInt allOnes = llvm::APInt::getAllOnes(elementTy.getWidth());
+    return cir::VecSplatOp::create(
+        builder, loc, ty,
+        builder.getConstAPInt(loc, elementTy, allOnes)); // TRUE
+  }
+  default:
+    llvm_unreachable("Unexpected XOP vpcom/vpcomu predicate");
+  }
+
+  if ((!isSigned && elementTy.isSigned()) ||
+      (isSigned && elementTy.isUnsigned())) {
+    elementTy = elementTy.isSigned() ? builder.getUIntNTy(elementTy.getWidth())
+                                     : builder.getSIntNTy(elementTy.getWidth());
+    ty = cir::VectorType::get(elementTy, ty.getSize());
+    op0 = builder.createBitcast(op0, ty);
+    op1 = builder.createBitcast(op1, ty);
+  }
+
+  return builder.createVecCompare(loc, pred, op0, op1);
+}
+
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
                                                const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
@@ -1159,18 +1214,20 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_ucmpq128_mask:
   case X86::BI__builtin_ia32_ucmpq256_mask:
   case X86::BI__builtin_ia32_ucmpq512_mask:
-  case X86::BI__builtin_ia32_vpcomb:
-  case X86::BI__builtin_ia32_vpcomw:
-  case X86::BI__builtin_ia32_vpcomd:
-  case X86::BI__builtin_ia32_vpcomq:
-  case X86::BI__builtin_ia32_vpcomub:
-  case X86::BI__builtin_ia32_vpcomuw:
-  case X86::BI__builtin_ia32_vpcomud:
-  case X86::BI__builtin_ia32_vpcomuq:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented X86 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return {};
+  case X86::BI__builtin_ia32_vpcomb:
+  case X86::BI__builtin_ia32_vpcomw:
+  case X86::BI__builtin_ia32_vpcomd:
+  case X86::BI__builtin_ia32_vpcomq:
+    return emitX86vpcom(builder, getLoc(expr->getExprLoc()), ops, true);
+  case X86::BI__builtin_ia32_vpcomub:
+  case X86::BI__builtin_ia32_vpcomuw:
+  case X86::BI__builtin_ia32_vpcomud:
+  case X86::BI__builtin_ia32_vpcomuq:
+    return emitX86vpcom(builder, getLoc(expr->getExprLoc()), ops, false);
   case X86::BI__builtin_ia32_kortestcqi:
   case X86::BI__builtin_ia32_kortestchi:
   case X86::BI__builtin_ia32_kortestcsi:
