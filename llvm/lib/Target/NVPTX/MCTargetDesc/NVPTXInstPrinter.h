@@ -46,6 +46,8 @@ public:
                     StringRef Modifier = {});
   void printMemOperand(const MCInst *MI, int OpNum, raw_ostream &O,
                        StringRef Modifier = {});
+  void printUsedBytesMaskPragma(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printRegisterOrSinkSymbol(const MCInst *MI, int OpNum, raw_ostream &O);
   void printHexu32imm(const MCInst *MI, int OpNum, raw_ostream &O);
   void printProtoIdent(const MCInst *MI, int OpNum, raw_ostream &O);
   void printPrmtMode(const MCInst *MI, int OpNum, raw_ostream &O);

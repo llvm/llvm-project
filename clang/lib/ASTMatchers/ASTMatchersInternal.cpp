@@ -807,6 +807,7 @@ const internal::VariadicDynCastAllOfMatcher<TypeLoc, PointerTypeLoc>
     pointerTypeLoc;
 const internal::VariadicDynCastAllOfMatcher<TypeLoc, ReferenceTypeLoc>
     referenceTypeLoc;
+const internal::VariadicDynCastAllOfMatcher<TypeLoc, ArrayTypeLoc> arrayTypeLoc;
 const internal::VariadicDynCastAllOfMatcher<TypeLoc,
                                             TemplateSpecializationTypeLoc>
     templateSpecializationTypeLoc;

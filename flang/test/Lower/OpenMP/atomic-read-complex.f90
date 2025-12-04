@@ -15,7 +15,7 @@ program atomic_read_complex
   complex(4) :: c41, c42
   ! Test complex(8) - double precision (16 bytes)
   complex(8) :: c81, c82
-  
+
   c42 = (1.0_4, 1.0_4)
   c82 = (1.0_8, 1.0_8)
 
@@ -25,7 +25,7 @@ program atomic_read_complex
   ! CHECK: call void @__atomic_load(i64 8, ptr {{.*}}, ptr {{.*}}, i32 {{.*}})
 !$omp atomic read
   c41 = c42
-  
+
   ! Double precision complex: 16 bytes (this was broken before the fix)
   ! CHECK: call void @__atomic_load(i64 16, ptr {{.*}}, ptr {{.*}}, i32 {{.*}})
 !$omp atomic read

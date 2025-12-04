@@ -314,20 +314,42 @@ func.func @different_expressions(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32)
   return %v_load : i32
 }
 
-// CPP-DEFAULT:      int32_t expression_with_dereference(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2]]) {
+// CPP-DEFAULT:      int32_t expression_with_dereference_apply(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2]]) {
 // CPP-DEFAULT-NEXT:   return *([[VAL_2]] - [[VAL_1]]);
 // CPP-DEFAULT-NEXT: }
 
-// CPP-DECLTOP:      int32_t expression_with_dereference(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2]]) {
+// CPP-DECLTOP:      int32_t expression_with_dereference_apply(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2]]) {
 // CPP-DECLTOP-NEXT:   return *([[VAL_2]] - [[VAL_1]]);
 // CPP-DECLTOP-NEXT: }
-emitc.func @expression_with_dereference(%arg1: i32, %arg2: !emitc.ptr<i32>) -> i32 {
+emitc.func @expression_with_dereference_apply(%arg1: i32, %arg2: !emitc.ptr<i32>) -> i32 {
   %c = emitc.expression %arg1, %arg2 : (i32, !emitc.ptr<i32>) -> i32 {
     %e = emitc.sub %arg2, %arg1 : (!emitc.ptr<i32>, i32) -> !emitc.ptr<i32>
     %d = emitc.apply "*"(%e) : (!emitc.ptr<i32>) -> i32
     emitc.yield %d : i32
   }
   return %c : i32
+}
+
+// CPP-DEFAULT:      bool expression_with_address_taken_apply(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t* [[VAL_3]]) {
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_4:v[0-9]+]] = 42;
+// CPP-DEFAULT-NEXT:   return &[[VAL_4]] - [[VAL_2]] < [[VAL_3]];
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP:      bool expression_with_address_taken_apply(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t* [[VAL_3]]) {
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_4:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   [[VAL_4]] = 42;
+// CPP-DECLTOP-NEXT:   return &[[VAL_4]] - [[VAL_2]] < [[VAL_3]];
+// CPP-DECLTOP-NEXT: }
+
+func.func @expression_with_address_taken_apply(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr<i32>) -> i1 {
+  %a = "emitc.variable"(){value = 42 : i32} : () -> !emitc.lvalue<i32>
+  %c = emitc.expression %arg1, %arg2, %a : (i32, !emitc.ptr<i32>, !emitc.lvalue<i32>) -> i1 {
+    %d = emitc.apply "&"(%a) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+    %e = emitc.sub %d, %arg1 : (!emitc.ptr<i32>, i32) -> !emitc.ptr<i32>
+    %f = emitc.cmp lt, %e, %arg2 : (!emitc.ptr<i32>, !emitc.ptr<i32>) -> i1
+    emitc.yield %f : i1
+  }
+  return %c : i1
 }
 
 // CPP-DEFAULT:      bool expression_with_address_taken(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t* [[VAL_3]]) {
@@ -344,7 +366,7 @@ emitc.func @expression_with_dereference(%arg1: i32, %arg2: !emitc.ptr<i32>) -> i
 func.func @expression_with_address_taken(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr<i32>) -> i1 {
   %a = "emitc.variable"(){value = 42 : i32} : () -> !emitc.lvalue<i32>
   %c = emitc.expression %arg1, %arg2, %a : (i32, !emitc.ptr<i32>, !emitc.lvalue<i32>) -> i1 {
-    %d = emitc.apply "&"(%a) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+    %d = emitc.address_of %a : !emitc.lvalue<i32>
     %e = emitc.sub %d, %arg1 : (!emitc.ptr<i32>, i32) -> !emitc.ptr<i32>
     %f = emitc.cmp lt, %e, %arg2 : (!emitc.ptr<i32>, !emitc.ptr<i32>) -> i1
     emitc.yield %f : i1
