@@ -9,7 +9,7 @@
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
 
 
-// Test subtarget with flushing off by ddefault.
+// Test subtarget with flushing off by default.
 // RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:  --cuda-gpu-arch=gfx900 \
 // RUN:  --rocm-path=%S/Inputs/rocm \
