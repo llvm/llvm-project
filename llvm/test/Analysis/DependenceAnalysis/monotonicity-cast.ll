@@ -57,9 +57,7 @@ define void @sext_may_wrap(ptr %a, i8 %start, i8 %step) {
 ; CHECK-NEXT:        Reason: (sext i8 {%start,+,%step}<%loop> to i64)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - consistent output [0]!
-; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Compare predicate: %step ne) 0
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   br label %loop

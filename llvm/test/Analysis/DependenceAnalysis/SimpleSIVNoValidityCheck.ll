@@ -78,11 +78,11 @@ for.end14:                                        ; preds = %entry, %for.inc12
 define void @t2(i32 signext %n, i32 signext %m, ptr %a) {
 ; CHECK-LABEL: 't2'
 ; CHECK-NEXT:  Src: %21 = load i32, ptr %arrayidx28, align 4 --> Dst: %21 = load i32, ptr %arrayidx28, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [0 0 0 * 0]!
 ; CHECK-NEXT:  Src: %21 = load i32, ptr %arrayidx28, align 4 --> Dst: store i32 %21, ptr %arrayidx38, align 4
-; CHECK-NEXT:    da analyze - consistent anti [1 -2 0 -3 2]!
+; CHECK-NEXT:    da analyze - consistent anti [1 -2 0 * 2]!
 ; CHECK-NEXT:  Src: store i32 %21, ptr %arrayidx38, align 4 --> Dst: store i32 %21, ptr %arrayidx38, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0 0 0 * 0]!
 ;
 ; LIN-LABEL: 't2'
 ; LIN-NEXT:  Src: %21 = load i32, ptr %arrayidx28, align 4 --> Dst: %21 = load i32, ptr %arrayidx28, align 4
@@ -208,11 +208,11 @@ for.end50:                                        ; preds = %entry, %for.inc48
 define void @t3(i64 %n, i64 %m, i64 %lb, ptr %a) {
 ; CHECK-LABEL: 't3'
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx6, align 4 --> Dst: %2 = load i32, ptr %arrayidx6, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [* *]!
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx6, align 4 --> Dst: store i32 %2, ptr %arrayidx8, align 4
-; CHECK-NEXT:    da analyze - anti [1 *]!
+; CHECK-NEXT:    da analyze - consistent anti [* *|<]!
 ; CHECK-NEXT:  Src: store i32 %2, ptr %arrayidx8, align 4 --> Dst: store i32 %2, ptr %arrayidx8, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [* *]!
 ;
 ; LIN-LABEL: 't3'
 ; LIN-NEXT:  Src: %2 = load i32, ptr %arrayidx6, align 4 --> Dst: %2 = load i32, ptr %arrayidx6, align 4
