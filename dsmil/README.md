@@ -456,6 +456,26 @@ DSMIL provides comprehensive runtime libraries for Layer 7 AI/ML workloads, quan
 - Availability checking
 - Device-aware workload routing
 
+### Layer 8 Security AI Runtime ⭐ NEW
+- **Header**: `dsmil/include/dsmil_layer8_security.h`
+- **Implementation**: `dsmil/lib/Runtime/dsmil_layer8_security_runtime.c`
+- Adversarial ML defense (~188 TOPS INT8)
+- Threat detection and anomaly analysis
+- Side-channel vulnerability detection
+- Security validation and risk scoring
+- Zero-trust security enforcement
+- PQC-only mode enforcement (via Device 255)
+
+### Layer 9 Executive Command Runtime ⭐ NEW
+- **Header**: `dsmil/include/dsmil_layer9_executive.h`
+- **Implementation**: `dsmil/lib/Runtime/dsmil_layer9_executive_runtime.c`
+- Strategic planning and decision support (~330 TOPS INT8)
+- Nuclear Command & Control (NC3) integration
+- Coalition fusion and interoperability
+- Executive-level intelligence synthesis
+- Campaign-level mission planning
+- Global resource orchestration
+
 ### Device 255 Master Crypto Controller ⭐ NEW
 - **Header**: `dsmil/include/dsmil_device255_crypto.h`
 - **Implementation**: `dsmil/lib/Runtime/dsmil_device255_crypto_runtime.c`
@@ -592,7 +612,8 @@ All three features from Phase 2 (v1.4) are now implemented:
   - ✅ Device 15 Wycheproof integration (crypto operations via Device 255)
   - ✅ Device 47 model crypto (encryption/signing with AES-256-GCM, ML-DSA-87 CNSA 2.0)
   - ✅ Device 46 PQC integration (key generation, test vectors)
-  - ✅ Layer 8 security crypto (PQC-only mode enforcement)
+  - ✅ Layer 8 Security AI runtime (adversarial defense, threat detection, side-channel analysis, zero-trust)
+  - ✅ Layer 9 Executive Command runtime (strategic planning, NC3, coalition coordination, campaign planning)
   - ✅ MLOps crypto runtime (model provenance signing)
 - ✅ **Wycheproof Bundle Configs**: Device 255 integration YAML, intelligence flows configuration, schema updates (device255_metadata)
 
