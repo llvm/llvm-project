@@ -635,7 +635,7 @@ define <vscale x 8 x i1> @fcmp_one_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofp
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 8 x bfloat> %head, <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan one <vscale x 8 x bfloat> %va, %splat
+  %vc = fcmp one <vscale x 8 x bfloat> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -882,7 +882,7 @@ define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofp
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 8 x bfloat> %head, <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ueq <vscale x 8 x bfloat> %va, %splat
+  %vc = fcmp ueq <vscale x 8 x bfloat> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -989,7 +989,7 @@ define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofp
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 8 x bfloat> %head, <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ugt <vscale x 8 x bfloat> %va, %splat
+  %vc = fcmp ugt <vscale x 8 x bfloat> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -1096,7 +1096,7 @@ define <vscale x 8 x i1> @fcmp_uge_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofp
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 8 x bfloat> %head, <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan uge <vscale x 8 x bfloat> %va, %splat
+  %vc = fcmp uge <vscale x 8 x bfloat> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -1203,7 +1203,7 @@ define <vscale x 8 x i1> @fcmp_ult_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofp
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 8 x bfloat> %head, <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ult <vscale x 8 x bfloat> %va, %splat
+  %vc = fcmp ult <vscale x 8 x bfloat> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -1310,7 +1310,7 @@ define <vscale x 8 x i1> @fcmp_ule_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofp
 ; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 8 x bfloat> %head, <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ule <vscale x 8 x bfloat> %va, %splat
+  %vc = fcmp ule <vscale x 8 x bfloat> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -2163,7 +2163,7 @@ define <vscale x 8 x i1> @fcmp_one_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan one <vscale x 8 x half> %va, %splat
+  %vc = fcmp one <vscale x 8 x half> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -2410,7 +2410,7 @@ define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ueq <vscale x 8 x half> %va, %splat
+  %vc = fcmp ueq <vscale x 8 x half> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -2517,7 +2517,7 @@ define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ugt <vscale x 8 x half> %va, %splat
+  %vc = fcmp ugt <vscale x 8 x half> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -2624,7 +2624,7 @@ define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan uge <vscale x 8 x half> %va, %splat
+  %vc = fcmp uge <vscale x 8 x half> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -2731,7 +2731,7 @@ define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ult <vscale x 8 x half> %va, %splat
+  %vc = fcmp ult <vscale x 8 x half> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -2838,7 +2838,7 @@ define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f16_nonans(<vscale x 8 x half> nofpcla
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ule <vscale x 8 x half> %va, %splat
+  %vc = fcmp ule <vscale x 8 x half> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -3415,7 +3415,7 @@ define <vscale x 8 x i1> @fcmp_one_vf_nxv8f32_nonans(<vscale x 8 x float> nofpcl
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float %b, i32 0
   %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan one <vscale x 8 x float> %va, %splat
+  %vc = fcmp one <vscale x 8 x float> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -3546,7 +3546,7 @@ define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f32_nonans(<vscale x 8 x float> nofpcl
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float %b, i32 0
   %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ueq <vscale x 8 x float> %va, %splat
+  %vc = fcmp ueq <vscale x 8 x float> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -3605,7 +3605,7 @@ define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f32_nonans(<vscale x 8 x float> nofpcl
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float %b, i32 0
   %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ugt <vscale x 8 x float> %va, %splat
+  %vc = fcmp ugt <vscale x 8 x float> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -3664,7 +3664,7 @@ define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f32_nonans(<vscale x 8 x float> nofpcl
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float %b, i32 0
   %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan uge <vscale x 8 x float> %va, %splat
+  %vc = fcmp uge <vscale x 8 x float> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -3723,7 +3723,7 @@ define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f32_nonans(<vscale x 8 x float> nofpcl
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float %b, i32 0
   %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ult <vscale x 8 x float> %va, %splat
+  %vc = fcmp ult <vscale x 8 x float> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -3782,7 +3782,7 @@ define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f32_nonans(<vscale x 8 x float> nofpcl
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float %b, i32 0
   %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ule <vscale x 8 x float> %va, %splat
+  %vc = fcmp ule <vscale x 8 x float> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -4249,7 +4249,7 @@ define <vscale x 8 x i1> @fcmp_one_vf_nxv8f64_nonans(<vscale x 8 x double> nofpc
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x double> poison, double %b, i32 0
   %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan one <vscale x 8 x double> %va, %splat
+  %vc = fcmp one <vscale x 8 x double> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -4380,7 +4380,7 @@ define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f64_nonans(<vscale x 8 x double> nofpc
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x double> poison, double %b, i32 0
   %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ueq <vscale x 8 x double> %va, %splat
+  %vc = fcmp ueq <vscale x 8 x double> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -4439,7 +4439,7 @@ define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f64_nonans(<vscale x 8 x double> nofpc
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x double> poison, double %b, i32 0
   %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ugt <vscale x 8 x double> %va, %splat
+  %vc = fcmp ugt <vscale x 8 x double> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -4498,7 +4498,7 @@ define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f64_nonans(<vscale x 8 x double> nofpc
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x double> poison, double %b, i32 0
   %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan uge <vscale x 8 x double> %va, %splat
+  %vc = fcmp uge <vscale x 8 x double> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -4557,7 +4557,7 @@ define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f64_nonans(<vscale x 8 x double> nofpc
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x double> poison, double %b, i32 0
   %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ult <vscale x 8 x double> %va, %splat
+  %vc = fcmp ult <vscale x 8 x double> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
@@ -4616,7 +4616,7 @@ define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f64_nonans(<vscale x 8 x double> nofpc
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x double> poison, double %b, i32 0
   %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = fcmp nnan ule <vscale x 8 x double> %va, %splat
+  %vc = fcmp ule <vscale x 8 x double> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
 
