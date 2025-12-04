@@ -134,9 +134,26 @@ The test configurations are at these links:
 Sunsetting
 ----------
 
-If a target is incomplete and no progress has been made for 1 month, or if a
-target has no active maintainers, then it may be considered stale and sunset.
-Sunsetting means removing the target specific code and turning off any related
-testing. If a target has been sunset and there new maintainers are interested
-in picking it up they are encouraged to look at the git history to learn from
-the previous implementation.
+Sunsetting is the process through which targets can be removed from LLVM-libc.
+If a target is broken or stale it may be sunset. It is the responsibility of the
+target's maintainers to keep it from being sunset. The target's maintainers may
+be marked inactive if their target is sunset.
+
+Broken targets are ones where the target's CI has been failing for at least
+30 days. After 30 days have passed the CI should be changed so it does not
+block commits and does not notify people when it fails. If the target remains
+broken for another 90 days it may be sunset.
+
+Stale targets are ones with no active maintainers or no contributions. If a
+target has 0 specific contributions between two major LLVM releases, or if it
+has no active maintainers, then it may be marked "deprecated" in the next major
+release. If there are still no contributions or no maintainers after the next
+major release it may be sunset.
+
+To sunset a target, all specific references to that target in the code and build
+system should be removed. All buildbots for that target should be shut down, or
+otherwise removed.
+
+To restart a target that was previously sunset, the new maintainers are
+encouraged to look at the commit(s) removing the target to provide a starting
+point.
