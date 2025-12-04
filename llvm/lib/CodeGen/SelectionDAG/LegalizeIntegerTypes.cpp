@@ -2692,7 +2692,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ExpOp(SDNode *N) {
   RTLIB::Libcall LC = IsPowI ? RTLIB::getPOWI(N->getValueType(0))
                              : RTLIB::getLDEXP(N->getValueType(0));
 
-  if (LC == RTLIB::UNKNOWN_LIBCALL || !TLI.getLibcallName(LC)) {
+  if (TLI.getLibcallImpl(LC) == RTLIB::Unsupported) {
     // Scalarize vector FPOWI instead of promoting the type. This allows the
     // scalar FPOWIs to be visited and converted to libcalls before promoting
     // the type.
