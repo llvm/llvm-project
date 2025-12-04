@@ -7,7 +7,7 @@
 
 /// Must emit __kcfi_typeid symbols for address-taken function declarations
 // CHECK: module asm ".weak __kcfi_typeid_[[F4:[a-zA-Z0-9_]+]]"
-// CHECK: module asm ".set __kcfi_typeid_[[F4]], {{[0-9]+}} # [[#%d,HASH:]]"
+// CHECK: module asm ".set __kcfi_typeid_[[F4]], {{[0-9]+}} /* [[#%d,HASH:]] */"
 /// Must not __kcfi_typeid symbols for non-address-taken declarations
 // CHECK-NOT: module asm ".weak __kcfi_typeid_{{f6|_Z2f6v}}"
 
