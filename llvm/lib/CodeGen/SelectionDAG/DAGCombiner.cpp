@@ -17245,6 +17245,11 @@ static bool allMulUsesCanBeContracted(SDValue Mul,
                                       const unsigned PreferredFusedOpcode,
                                       const TargetLowering &TLI,
                                       SelectionDAG &DAG) {
+  // Default to always contracting on non-AMDGCN targets.
+  const Triple &TT = TLI.getTargetMachine().getTargetTriple();
+  if (!TT.isAMDGCN())
+    return true;
+
   // Check if all uses are contractable patterns
   for (const auto *User : Mul->users()) {
     SDNode *UserNode = const_cast<SDNode *>(User);
