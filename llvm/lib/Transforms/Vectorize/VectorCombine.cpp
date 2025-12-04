@@ -2965,16 +2965,10 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
 /// Try to convert
 /// "shuffle (intrinsic), (poison/undef)" into "intrinsic (shuffle)".
 bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
-  Value *V0, *V1;
+  Value *V0;
   ArrayRef<int> Mask;
-  if (!match(&I, m_Shuffle(m_OneUse(m_Value(V0)), m_Value(V1), m_Mask(Mask))))
+  if (!match(&I, m_Shuffle(m_OneUse(m_Value(V0)), m_Undef(), m_Mask(Mask))))
     return false;
-
-  // Check for permute
-  if (!match(V1, m_Poison()) && !match(V1, m_Undef())) {
-    LLVM_DEBUG(dbgs() << "not a permute\n");
-    return false;
-  }
 
   auto *II0 = dyn_cast<IntrinsicInst>(V0);
   if (!II0)
@@ -2987,10 +2981,8 @@ bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
 
   // Validate it's a pure permute, mask should only reference the first vector
   unsigned NumSrcElts = IntrinsicSrcTy->getNumElements();
-  for (int Idx : Mask) {
-    if (Idx > 0 && Idx >= (int)NumSrcElts)
-      return false;
-  }
+  if (any_of(Mask, [NumSrcElts](int M) { return M >= (int)NumSrcElts; }))
+    return false;
 
   Intrinsic::ID IID = II0->getIntrinsicID();
   if (!isTriviallyVectorizable(IID))
@@ -3000,8 +2992,7 @@ bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
   InstructionCost OldCost =
       TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0), CostKind) +
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleDstTy,
-                         IntrinsicSrcTy, Mask, CostKind, 0, nullptr, {V0, V1},
-                         &I);
+                         IntrinsicSrcTy, Mask, CostKind, 0, nullptr, {V0}, &I);
 
   SmallVector<Type *> NewArgsTy;
   InstructionCost NewCost = 0;
@@ -3033,9 +3024,7 @@ bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
     if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
       NewArgs.push_back(II0->getArgOperand(I));
     } else {
-      Value *Shuf = Builder.CreateShuffleVector(
-          II0->getArgOperand(I),
-          PoisonValue::get(II0->getArgOperand(I)->getType()), Mask);
+      Value *Shuf = Builder.CreateShuffleVector(II0->getArgOperand(I), Mask);
       NewArgs.push_back(Shuf);
       Worklist.pushValue(Shuf);
     }
