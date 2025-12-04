@@ -292,44 +292,37 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
         return rewriter.notifyMatchFailure(
             op, "Sub byte types are only supported for 2D tensor descriptors.");
       auto subByteFactor = 8 / elemBitSize;
-      auto sub16BitFactor = subByteFactor * 2;
-      auto sub32BitFactor = sub16BitFactor * 2;
       auto tileH = tdescTy.getDimSize(0);
-      if (tileW == executionSize * sub16BitFactor) {
-        // Usage case for loading as Matrix A operand
-        // Emulate with 16bit loads/stores.
-        //   scaled_tileW = executionSize
-        elemType = rewriter.getIntegerType(16);
-        tileW = executionSize;
-        wScaleFactor = sub16BitFactor;
-      } else if (tileW == executionSize * sub32BitFactor) {
-        // Usage case for loading as pre-packed Matrix B operand
-        // Emulate with 32bit loads/stores.
-        //  scaled_tileW = executionSize
-        elemType = rewriter.getIntegerType(32);
-        tileW = executionSize;
-        wScaleFactor = sub32BitFactor;
-      } else if constexpr (std::is_same_v<OpType, xegpu::LoadNdOp>) {
-        if (!(tileH == systolicDepth * 4 &&
-              tileW == executionSize * subByteFactor)) {
+      // Handle special case for packed load.
+      if constexpr (std::is_same_v<OpType, xegpu::LoadNdOp>) {
+        if (op.getPacked().value_or(false)) {
+          // packed load is implemented as packed loads of 8bit elements.
+          if (tileH == systolicDepth * 4 &&
+              tileW == executionSize * subByteFactor) {
+            // Usage case for loading as Matrix B with pack request.
+            // source is assumed to pre-packed into 8bit elements
+            // Emulate with 8bit loads with pack request.
+            //   scaled_tileW = executionSize
+            elemType = rewriter.getIntegerType(8);
+            tileW = executionSize;
+            wScaleFactor = subByteFactor;
+          }
+        }
+      }
+      // If not handled by packed load case above, handle other cases.
+      if (wScaleFactor == 1) {
+        auto sub16BitFactor = subByteFactor * 2;
+        if (tileW == executionSize * sub16BitFactor) {
+          // Usage case for loading as Matrix A operand
+          // Emulate with 16bit loads/stores.
+          //   scaled_tileW = executionSize
+          elemType = rewriter.getIntegerType(16);
+          tileW = executionSize;
+          wScaleFactor = sub16BitFactor;
+        } else {
           return rewriter.notifyMatchFailure(
               op, "Unsupported tile shape for sub byte types.");
         }
-        const bool vnni = op.getPacked().value_or(false);
-        if (!vnni) {
-          return rewriter.notifyMatchFailure(
-              op, "Unsupported tile shape for sub byte types without pack.");
-        }
-        // Usage case for loading as Matrix B with pack request.
-        // source is assumed to pre-packed into 8bit elements
-        // Emulate with 8bit loads with pack request.
-        //   scaled_tileW = executionSize
-        elemType = rewriter.getIntegerType(8);
-        tileW = executionSize;
-        wScaleFactor = subByteFactor;
-      } else {
-        return rewriter.notifyMatchFailure(
-            op, "Unsupported tile width for sub byte types.");
       }
       // recompute element bit size for emulation.
       elemBitSize = elemType.getIntOrFloatBitWidth();
