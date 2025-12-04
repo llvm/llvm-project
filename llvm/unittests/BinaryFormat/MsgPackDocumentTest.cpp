@@ -421,7 +421,7 @@ TEST(MsgPackDocument, TestInputYAMLMap) {
   ASSERT_EQ(SS.getString(), "2");
 }
 
-TEST(MsgPackDocument, TestInputYAMLBoolean) {
+TEST(MsgPackDocument, TestYAMLBoolean) {
   Document Doc;
   auto GetFirst = [](Document &Doc) { return Doc.getRoot().getArray()[0]; };
   auto ToYAML = [](Document &Doc) {
@@ -480,6 +480,18 @@ TEST(MsgPackDocument, TestInputYAMLBoolean) {
   ASSERT_EQ(GetFirst(Doc).getKind(), Type::String);
   ASSERT_EQ(GetFirst(Doc).getString(), "true");
   ASSERT_EQ(ToYAML(Doc), "---\n- !str 'true'\n...\n");
+
+  Ok = Doc.fromYAML("- !bool false\n");
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(GetFirst(Doc).getKind(), Type::Boolean);
+  ASSERT_EQ(GetFirst(Doc).getBool(), false);
+  ASSERT_EQ(ToYAML(Doc), "---\n- false\n...\n");
+
+  Ok = Doc.fromYAML("- !bool true\n");
+  ASSERT_TRUE(Ok);
+  ASSERT_EQ(GetFirst(Doc).getKind(), Type::Boolean);
+  ASSERT_EQ(GetFirst(Doc).getBool(), true);
+  ASSERT_EQ(ToYAML(Doc), "---\n- true\n...\n");
 
   // FIXME: A fix for these requires changes in YAMLParser/YAMLTraits.
   Ok = Doc.fromYAML("- \"false\"\n");
