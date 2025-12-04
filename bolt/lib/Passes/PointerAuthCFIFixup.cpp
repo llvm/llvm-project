@@ -1,4 +1,4 @@
-//===- bolt/Passes/InsertNegateRAStatePass.cpp ----------------------------===//
+//===- bolt/Passes/PointerAuthCFIFixup.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the InsertNegateRAStatePass class. It inserts
+// This file implements the PointerAuthCFIFixup class. It inserts
 // OpNegateRAState CFIs to places where the state of two consecutive
 // instructions are different.
 //
 //===----------------------------------------------------------------------===//
-#include "bolt/Passes/InsertNegateRAStatePass.h"
+#include "bolt/Passes/PointerAuthCFIFixup.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include <cstdlib>
@@ -23,7 +23,7 @@ namespace bolt {
 
 static bool PassFailed = false;
 
-void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
+void PointerAuthCFIFixup::runOnFunction(BinaryFunction &BF) {
   if (PassFailed)
     return;
 
@@ -35,7 +35,7 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
   if (BF.getState() != BinaryFunction::State::CFG &&
       BF.getState() != BinaryFunction::State::CFG_Finalized) {
     BC.outs() << "BOLT-INFO: no CFG for " << BF.getPrintName()
-              << " in InsertNegateRAStatePass\n";
+              << " in PointerAuthCFIFixup\n";
     return;
   }
 
@@ -74,7 +74,7 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
   }
 }
 
-void InsertNegateRAState::inferUnknownStates(BinaryFunction &BF) {
+void PointerAuthCFIFixup::inferUnknownStates(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
 
   // Fill in missing RAStates in simple cases (inside BBs).
@@ -88,7 +88,7 @@ void InsertNegateRAState::inferUnknownStates(BinaryFunction &BF) {
   fillUnknownStubs(BF);
 }
 
-void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
+void PointerAuthCFIFixup::coverFunctionFragmentStart(BinaryFunction &BF,
                                                      FunctionFragment &FF) {
   BinaryContext &BC = BF.getBinaryContext();
   if (FF.empty())
@@ -119,7 +119,7 @@ void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
 }
 
 std::optional<bool>
-InsertNegateRAState::getFirstKnownRAState(BinaryContext &BC,
+PointerAuthCFIFixup::getFirstKnownRAState(BinaryContext &BC,
                                           BinaryBasicBlock &BB) {
   for (const MCInst &Inst : BB) {
     if (BC.MIB->isCFI(Inst))
@@ -131,13 +131,13 @@ InsertNegateRAState::getFirstKnownRAState(BinaryContext &BC,
   return std::nullopt;
 }
 
-bool InsertNegateRAState::isUnknownBlock(BinaryContext &BC,
+bool PointerAuthCFIFixup::isUnknownBlock(BinaryContext &BC,
                                          BinaryBasicBlock &BB) {
   std::optional<bool> FirstRAState = getFirstKnownRAState(BC, BB);
   return !FirstRAState.has_value();
 }
 
-void InsertNegateRAState::fillUnknownStateInBB(BinaryContext &BC,
+void PointerAuthCFIFixup::fillUnknownStateInBB(BinaryContext &BC,
                                                BinaryBasicBlock &BB) {
 
   auto First = BB.getFirstNonPseudo();
@@ -180,7 +180,7 @@ void InsertNegateRAState::fillUnknownStateInBB(BinaryContext &BC,
   }
 }
 
-void InsertNegateRAState::markUnknownBlock(BinaryContext &BC,
+void PointerAuthCFIFixup::markUnknownBlock(BinaryContext &BC,
                                            BinaryBasicBlock &BB, bool State) {
   // If we call this when an Instruction has either kRASigned or kRAUnsigned
   // annotation, setRASigned or setRAUnsigned would fail.
@@ -193,7 +193,7 @@ void InsertNegateRAState::markUnknownBlock(BinaryContext &BC,
   }
 }
 
-void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
+void PointerAuthCFIFixup::fillUnknownStubs(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
   bool FirstIter = true;
   MCInst PrevInst;
@@ -235,7 +235,7 @@ void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
   }
 }
 
-Error InsertNegateRAState::runOnFunctions(BinaryContext &BC) {
+Error PointerAuthCFIFixup::runOnFunctions(BinaryContext &BC) {
   std::atomic<uint64_t> FunctionsModified{0};
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     FunctionsModified++;
@@ -252,7 +252,7 @@ Error InsertNegateRAState::runOnFunctions(BinaryContext &BC) {
 
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
-      SkipPredicate, "InsertNegateRAStatePass");
+      SkipPredicate, "PointerAuthCFIFixup");
 
   BC.outs() << "BOLT-INFO: rewritten pac-ret DWARF info in "
             << FunctionsModified << " out of " << BC.getBinaryFunctions().size()
