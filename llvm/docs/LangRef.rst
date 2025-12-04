@@ -6394,8 +6394,8 @@ multiple metadata attachments with the same identifier.
 A transformation is required to drop any metadata attachment that it
 does not recognize or cannot preserve. Currently there is an
 exception for metadata attachment to globals for ``!func_sanitize``,
-``!type``, ``!absolute_symbol`` and ``!associated`` which can't be
-unconditionally dropped unless the global is itself deleted.
+``!type``, ``!absolute_symbol``, ``!implicit.ref`` and ``!associated`` which
+can't be unconditionally dropped unless the global is itself deleted.
 
 Metadata attached to a module using named metadata may not be dropped, with
 the exception of debug metadata (named metadata with the name ``!llvm.dbg.*``).
