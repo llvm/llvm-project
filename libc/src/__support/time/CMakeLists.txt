@@ -49,15 +49,6 @@ add_header_library(
 )
 
 add_header_library(
-  clock_conversion
-  HDRS
-    clock_conversion.h
-  DEPENDS
-    .clock_gettime
-    libc.src.__support.time.units
-)
-
-add_header_library(
   monotonicity
   HDRS
     monotonicity.h
