@@ -8,7 +8,7 @@ define i8 @and_or_xor_undef_constant_mask() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[DEFS:.*]]
 ; CHECK:       [[USE:.*]]:
-; CHECK-NEXT:    ret i8 -1
+; CHECK-NEXT:    ret i8 -2
 ; CHECK:       [[DEFS]]:
 ; CHECK-NEXT:    br label %[[USE]]
 ;
