@@ -6871,7 +6871,7 @@ static SDValue combineF16AddWithNeg(SDNode *N, SelectionDAG &DAG,
 
   if (Op2.getOpcode() != ISD::FNEG)
     return SDValue();
-  
+
   std::optional<unsigned> SubOpc = getF16SubOpc(AddIntrinsicID);
   if (!SubOpc)
     return SDValue();
