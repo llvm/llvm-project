@@ -7740,6 +7740,8 @@ SDValue AArch64TargetLowering::LowerFMA(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
 
+  assert(VT.isVector() && "Scalar fma lowering should be handled by patterns");
+
   // Bail early if we're definitely not looking to merge FNEGs into the FMA.
   if (VT != MVT::v8f16 && VT != MVT::v4f32 && VT != MVT::v2f64)
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);

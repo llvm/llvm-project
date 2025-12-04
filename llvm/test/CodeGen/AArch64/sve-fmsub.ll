@@ -4,8 +4,11 @@
 
 target triple = "aarch64"
 
-define <vscale x 2 x double> @fmsub_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c) {
-; CHECK-LABEL: fmsub_nxv2f64:
+; A * B + C
+; Negate only the addend:
+
+define <vscale x 2 x double> @fma_negC_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c) {
+; CHECK-LABEL: fma_negC_nxv2f64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fnmsb z0.d, p0/m, z1.d, z2.d
@@ -16,8 +19,8 @@ entry:
   ret <vscale x 2 x double> %0
 }
 
-define <vscale x 4 x float> @fmsub_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) {
-; CHECK-LABEL: fmsub_nxv4f32:
+define <vscale x 4 x float> @fma_negC_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) {
+; CHECK-LABEL: fma_negC_nxv4f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fnmsb z0.s, p0/m, z1.s, z2.s
@@ -28,8 +31,8 @@ entry:
   ret <vscale x 4 x float> %0
 }
 
-define <vscale x 8 x half> @fmsub_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) {
-; CHECK-LABEL: fmsub_nxv8f16:
+define <vscale x 8 x half> @fma_negC_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) {
+; CHECK-LABEL: fma_negC_nxv8f16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fnmsb z0.h, p0/m, z1.h, z2.h
@@ -40,8 +43,8 @@ entry:
   ret <vscale x 8 x half> %0
 }
 
-define <2 x double> @fmsub_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
-; CHECK-LABEL: fmsub_v2f64:
+define <2 x double> @fma_negC_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+; CHECK-LABEL: fma_negC_v2f64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
@@ -56,8 +59,8 @@ entry:
   ret <2 x double> %0
 }
 
-define <4 x float> @fmsub_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
-; CHECK-LABEL: fmsub_v4f32:
+define <4 x float> @fma_negC_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+; CHECK-LABEL: fma_negC_v4f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
@@ -72,8 +75,8 @@ entry:
   ret <4 x float> %0
 }
 
-define <8 x half> @fmsub_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
-; CHECK-LABEL: fmsub_v8f16:
+define <8 x half> @fma_negC_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; CHECK-LABEL: fma_negC_v8f16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
@@ -88,25 +91,8 @@ entry:
   ret <8 x half> %0
 }
 
-
-define <2 x double> @fmsub_flipped_v2f64(<2 x double> %c, <2 x double> %a, <2 x double> %b) {
-; CHECK-LABEL: fmsub_flipped_v2f64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fnmls z0.d, p0/m, z1.d, z2.d
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    ret
-entry:
-  %neg = fneg <2 x double> %c
-  %0 = tail call <2 x double> @llvm.fmuladd(<2 x double> %a, <2 x double> %b, <2 x double> %neg)
-  ret <2 x double> %0
-}
-
-define <4 x float> @fmsub_flipped_v4f32(<4 x float> %c, <4 x float> %a, <4 x float> %b) {
-; CHECK-LABEL: fmsub_flipped_v4f32:
+define <4 x float> @fma_negC_commutative_v4f32(<4 x float> %c, <4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fma_negC_commutative_v4f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
@@ -121,24 +107,10 @@ entry:
   ret <4 x float> %0
 }
 
-define <8 x half> @fmsub_flipped_v8f16(<8 x half> %c, <8 x half> %a, <8 x half> %b) {
-; CHECK-LABEL: fmsub_flipped_v8f16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fnmls z0.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    ret
-entry:
-  %neg = fneg <8 x half> %c
-  %0 = tail call <8 x half> @llvm.fmuladd(<8 x half> %a, <8 x half> %b, <8 x half> %neg)
-  ret <8 x half> %0
-}
+; Negate one multiplicand (A/B) and the addend (C).
 
-define <vscale x 2 x double> @fnmsub_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c) {
-; CHECK-LABEL: fnmsub_nxv2f64:
+define <vscale x 2 x double> @fma_negA_negC_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c) {
+; CHECK-LABEL: fma_negA_negC_nxv2f64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fnmad z0.d, p0/m, z1.d, z2.d
@@ -150,8 +122,8 @@ entry:
   ret <vscale x 2 x double> %0
 }
 
-define <vscale x 4 x float> @fnmsub_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) {
-; CHECK-LABEL: fnmsub_nxv4f32:
+define <vscale x 4 x float> @fma_negA_negC_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) {
+; CHECK-LABEL: fma_negA_negC_nxv4f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fnmad z0.s, p0/m, z1.s, z2.s
@@ -163,8 +135,8 @@ entry:
   ret <vscale x 4 x float> %0
 }
 
-define <vscale x 8 x half> @fnmsub_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) {
-; CHECK-LABEL: fnmsub_nxv8f16:
+define <vscale x 8 x half> @fma_negA_negC_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) {
+; CHECK-LABEL: fma_negA_negC_nxv8f16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fnmad z0.h, p0/m, z1.h, z2.h
@@ -176,48 +148,8 @@ entry:
   ret <vscale x 8 x half> %0
 }
 
-
-define <vscale x 2 x double> @fnmsub_negated_b_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c) {
-; CHECK-LABEL: fnmsub_negated_b_nxv2f64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    fnmad z0.d, p0/m, z1.d, z2.d
-; CHECK-NEXT:    ret
-entry:
-  %neg = fneg <vscale x 2 x double> %b
-  %neg1 = fneg <vscale x 2 x double> %c
-  %0 = tail call <vscale x 2 x double> @llvm.fmuladd(<vscale x 2 x double> %a, <vscale x 2 x double> %neg, <vscale x 2 x double> %neg1)
-  ret <vscale x 2 x double> %0
-}
-
-define <vscale x 4 x float> @fnmsub_negated_b_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) {
-; CHECK-LABEL: fnmsub_negated_b_nxv4f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fnmad z0.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    ret
-entry:
-  %neg = fneg <vscale x 4 x float> %b
-  %neg1 = fneg <vscale x 4 x float> %c
-  %0 = tail call <vscale x 4 x float> @llvm.fmuladd(<vscale x 4 x float> %a, <vscale x 4 x float> %neg, <vscale x 4 x float> %neg1)
-  ret <vscale x 4 x float> %0
-}
-
-define <vscale x 8 x half> @fnmsub_negated_b_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) {
-; CHECK-LABEL: fnmsub_negated_b_nxv8f16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    fnmad z0.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    ret
-entry:
-  %neg = fneg <vscale x 8 x half> %b
-  %neg1 = fneg <vscale x 8 x half> %c
-  %0 = tail call <vscale x 8 x half> @llvm.fmuladd(<vscale x 8 x half> %a, <vscale x 8 x half> %neg, <vscale x 8 x half> %neg1)
-  ret <vscale x 8 x half> %0
-}
-
-define <2 x double> @fnmsub_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
-; CHECK-LABEL: fnmsub_v2f64:
+define <2 x double> @fma_negA_negC_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+; CHECK-LABEL: fma_negA_negC_v2f64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
@@ -233,8 +165,8 @@ entry:
   ret <2 x double> %0
 }
 
-define <4 x float> @fnmsub_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
-; CHECK-LABEL: fnmsub_v4f32:
+define <4 x float> @fma_negA_negC_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+; CHECK-LABEL: fma_negA_negC_v4f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
@@ -250,8 +182,8 @@ entry:
   ret <4 x float> %0
 }
 
-define <8 x half> @fnmsub_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
-; CHECK-LABEL: fnmsub_v8f16:
+define <8 x half> @fma_negA_negC_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; CHECK-LABEL: fma_negA_negC_v8f16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
@@ -267,76 +199,8 @@ entry:
   ret <8 x half> %0
 }
 
-define <2 x double> @fnmsub_negated_b_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
-; CHECK-LABEL: fnmsub_negated_b_v2f64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fnmad z0.d, p0/m, z1.d, z2.d
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    ret
-entry:
-  %neg = fneg <2 x double> %b
-  %neg1 = fneg <2 x double> %c
-  %0 = tail call <2 x double> @llvm.fmuladd(<2 x double> %a, <2 x double> %neg, <2 x double> %neg1)
-  ret <2 x double> %0
-}
-
-define <4 x float> @fnmsub_negated_b_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
-; CHECK-LABEL: fnmsub_negated_b_v4f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fnmad z0.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    ret
-entry:
-  %neg = fneg <4 x float> %b
-  %neg1 = fneg <4 x float> %c
-  %0 = tail call <4 x float> @llvm.fmuladd(<4 x float> %a, <4 x float> %neg, <4 x float> %neg1)
-  ret <4 x float> %0
-}
-
-define <8 x half> @fnmsub_negated_b_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
-; CHECK-LABEL: fnmsub_negated_b_v8f16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fnmad z0.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    ret
-entry:
-  %neg = fneg <8 x half> %b
-  %neg1 = fneg <8 x half> %c
-  %0 = tail call <8 x half> @llvm.fmuladd(<8 x half> %a, <8 x half> %neg, <8 x half> %neg1)
-  ret <8 x half> %0
-}
-
-define <2 x double> @fnmsub_flipped_v2f64(<2 x double> %c, <2 x double> %a, <2 x double> %b) {
-; CHECK-LABEL: fnmsub_flipped_v2f64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fnmla z0.d, p0/m, z1.d, z2.d
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    ret
-entry:
-  %neg = fneg <2 x double> %a
-  %neg1 = fneg <2 x double> %c
-  %0 = tail call <2 x double> @llvm.fmuladd(<2 x double> %neg, <2 x double> %b, <2 x double> %neg1)
-  ret <2 x double> %0
-}
-
-define <4 x float> @fnmsub_flipped_v4f32(<4 x float> %c, <4 x float> %a, <4 x float> %b) {
-; CHECK-LABEL: fnmsub_flipped_v4f32:
+define <4 x float> @fma_negA_negC_commutative_v4f32(<4 x float> %c, <4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fma_negA_negC_commutative_v4f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
@@ -352,79 +216,64 @@ entry:
   ret <4 x float> %0
 }
 
-define <8 x half> @fnmsub_flipped_v8f16(<8 x half> %c, <8 x half> %a, <8 x half> %b) {
-; CHECK-LABEL: fnmsub_flipped_v8f16:
+define <vscale x 2 x double> @fma_negB_negC_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c) {
+; CHECK-LABEL: fma_negB_negC_nxv2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fnmla z0.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fnmad z0.d, p0/m, z1.d, z2.d
 ; CHECK-NEXT:    ret
 entry:
-  %neg = fneg <8 x half> %a
-  %neg1 = fneg <8 x half> %c
-  %0 = tail call <8 x half> @llvm.fmuladd(<8 x half> %neg, <8 x half> %b, <8 x half> %neg1)
-  ret <8 x half> %0
+  %neg = fneg <vscale x 2 x double> %b
+  %neg1 = fneg <vscale x 2 x double> %c
+  %0 = tail call <vscale x 2 x double> @llvm.fmuladd(<vscale x 2 x double> %a, <vscale x 2 x double> %neg, <vscale x 2 x double> %neg1)
+  ret <vscale x 2 x double> %0
 }
 
-; Illegal types
-
-define <vscale x 3 x float> @fmsub_illegal_nxv3f32(<vscale x 3 x float> %a, <vscale x 3 x float> %b, <vscale x 3 x float> %c) {
-; CHECK-LABEL: fmsub_illegal_nxv3f32:
+define <vscale x 4 x float> @fma_negB_negC_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) {
+; CHECK-LABEL: fma_negB_negC_nxv4f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fnmsb z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    fnmad z0.s, p0/m, z1.s, z2.s
 ; CHECK-NEXT:    ret
 entry:
-  %neg = fneg <vscale x 3 x float> %c
-  %0 = tail call <vscale x 3 x float> @llvm.fmuladd(<vscale x 3 x float> %a, <vscale x 3 x float> %b, <vscale x 3 x float> %neg)
-  ret <vscale x 3 x float> %0
+  %neg = fneg <vscale x 4 x float> %b
+  %neg1 = fneg <vscale x 4 x float> %c
+  %0 = tail call <vscale x 4 x float> @llvm.fmuladd(<vscale x 4 x float> %a, <vscale x 4 x float> %neg, <vscale x 4 x float> %neg1)
+  ret <vscale x 4 x float> %0
 }
 
-define <1 x double> @fmsub_illegal_v1f64(<1 x double> %a, <1 x double> %b, <1 x double> %c) {
-; CHECK-LABEL: fmsub_illegal_v1f64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fnmsub d0, d0, d1, d2
-; CHECK-NEXT:    ret
-entry:
-  %neg = fneg <1 x double> %c
-  %0 = tail call <1 x double> @llvm.fmuladd(<1 x double> %a, <1 x double> %b, <1 x double> %neg)
-  ret <1 x double> %0
-}
-
-define <3 x float> @fmsub_flipped_illegal_v3f32(<3 x float> %c, <3 x float> %a, <3 x float> %b) {
-; CHECK-LABEL: fmsub_flipped_illegal_v3f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fnmls z0.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    ret
-entry:
-  %neg = fneg <3 x float> %c
-  %0 = tail call <3 x float> @llvm.fmuladd(<3 x float> %a, <3 x float> %b, <3 x float> %neg)
-  ret <3 x float> %0
-}
-
-define <vscale x 7 x half> @fnmsub_illegal_nxv7f16(<vscale x 7 x half> %a, <vscale x 7 x half> %b, <vscale x 7 x half> %c) {
-; CHECK-LABEL: fnmsub_illegal_nxv7f16:
+define <vscale x 8 x half> @fma_negB_negC_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) {
+; CHECK-LABEL: fma_negB_negC_nxv8f16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fnmad z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
 entry:
-  %neg = fneg <vscale x 7 x half> %a
-  %neg1 = fneg <vscale x 7 x half> %c
-  %0 = tail call <vscale x 7 x half> @llvm.fmuladd(<vscale x 7 x half> %neg, <vscale x 7 x half> %b, <vscale x 7 x half> %neg1)
-  ret <vscale x 7 x half> %0
+  %neg = fneg <vscale x 8 x half> %b
+  %neg1 = fneg <vscale x 8 x half> %c
+  %0 = tail call <vscale x 8 x half> @llvm.fmuladd(<vscale x 8 x half> %a, <vscale x 8 x half> %neg, <vscale x 8 x half> %neg1)
+  ret <vscale x 8 x half> %0
 }
 
-define <3 x float> @fnmsub_illegal_v3f32(<3 x float> %a, <3 x float> %b, <3 x float> %c) {
-; CHECK-LABEL: fnmsub_illegal_v3f32:
+define <2 x double> @fma_negB_negC_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+; CHECK-LABEL: fma_negB_negC_v2f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fnmad z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ret
+entry:
+  %neg = fneg <2 x double> %b
+  %neg1 = fneg <2 x double> %c
+  %0 = tail call <2 x double> @llvm.fmuladd(<2 x double> %a, <2 x double> %neg, <2 x double> %neg1)
+  ret <2 x double> %0
+}
+
+define <4 x float> @fma_negB_negC_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+; CHECK-LABEL: fma_negB_negC_v4f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
@@ -434,25 +283,42 @@ define <3 x float> @fnmsub_illegal_v3f32(<3 x float> %a, <3 x float> %b, <3 x fl
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 entry:
-  %neg = fneg <3 x float> %a
-  %neg1 = fneg <3 x float> %c
-  %0 = tail call <3 x float> @llvm.fmuladd(<3 x float> %neg, <3 x float> %b, <3 x float> %neg1)
-  ret <3 x float> %0
+  %neg = fneg <4 x float> %b
+  %neg1 = fneg <4 x float> %c
+  %0 = tail call <4 x float> @llvm.fmuladd(<4 x float> %a, <4 x float> %neg, <4 x float> %neg1)
+  ret <4 x float> %0
 }
 
-define <7 x half> @fnmsub_flipped_illegal_v7f16(<7 x half> %c, <7 x half> %a, <7 x half> %b) {
-; CHECK-LABEL: fnmsub_flipped_illegal_v7f16:
+define <8 x half> @fma_negB_negC_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; CHECK-LABEL: fma_negB_negC_v8f16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fnmla z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    fnmad z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 entry:
-  %neg = fneg <7 x half> %a
-  %neg1 = fneg <7 x half> %c
-  %0 = tail call <7 x half> @llvm.fmuladd(<7 x half> %neg, <7 x half> %b, <7 x half> %neg1)
-  ret <7 x half> %0
+  %neg = fneg <8 x half> %b
+  %neg1 = fneg <8 x half> %c
+  %0 = tail call <8 x half> @llvm.fmuladd(<8 x half> %a, <8 x half> %neg, <8 x half> %neg1)
+  ret <8 x half> %0
+}
+
+define <4 x float> @fma_negB_negC_commutative_v4f32(<4 x float> %c, <4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fma_negB_negC_commutative_v4f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    fnmla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ret
+entry:
+  %neg = fneg <4 x float> %b
+  %neg1 = fneg <4 x float> %c
+  %0 = tail call <4 x float> @llvm.fmuladd(<4 x float> %a, <4 x float> %neg, <4 x float> %neg1)
+  ret <4 x float> %0
 }
