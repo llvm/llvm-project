@@ -8086,6 +8086,21 @@ pass should record the new estimates by calling
 loop, ``llvm::getLoopEstimatedTripCount`` returns its value instead of
 estimating the trip count from the loop's ``branch_weights`` metadata.
 
+Zero
+""""
+
+Some passes set ``llvm.loop.estimated_trip_count`` to 0.  For example, after
+peeling 10 or more iterations from a loop with an estimated trip count of 10,
+``llvm.loop.estimated_trip_count`` becomes 0 on the remaining loop.  It
+indicates that, each time execution reaches the peeled iterations, execution is
+estimated to exit them without reaching the remaining loop's header.
+
+Even if the probability of reaching a loop's header is low, if it is reached, it
+is the start of an iteration.  Consequently, some passes historically assume
+that ``llvm::getLoopEstimatedTripCount`` always returns a positive count or
+``std::nullopt``.  Thus, it returns ``std::nullopt`` when
+``llvm.loop.estimated_trip_count`` is 0.
+
 '``llvm.licm.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -31747,10 +31762,8 @@ third argument is 1, the pointer is signed (using pointer authentication
 instructions or emulated PAC if not supported by the hardware) using
 the discriminator before being stored, and authenticated after being
 loaded. Note that it is currently unsupported to have the third argument
-be 1 on targets other than AArch64. When the third argument is 0, it is
-rotated left by 16 bits and the discriminator is subtracted before being
-stored, and the discriminator is added and the pointer is rotated right
-by 16 bits after being loaded.
+be 1 on targets other than AArch64, and it is also currently unsupported
+to have the third argument be 0 at all.
 
 If the pointer is used other than for loading or storing (e.g. its
 address escapes), that will disable all blending operations using

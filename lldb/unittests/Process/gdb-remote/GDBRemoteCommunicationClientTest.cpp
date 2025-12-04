@@ -326,7 +326,7 @@ TEST_F(GDBRemoteCommunicationClientTest, SendSignalsToIgnore) {
 
 TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   const lldb::addr_t addr = 0xa000;
-  MemoryRegionInfo region_info;
+  lldb_private::MemoryRegionInfo region_info;
   std::future<Status> result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
   });
@@ -343,13 +343,16 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   EXPECT_TRUE(result.get().Success());
   EXPECT_EQ(addr, region_info.GetRange().GetRangeBase());
   EXPECT_EQ(0x2000u, region_info.GetRange().GetByteSize());
-  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetReadable());
-  EXPECT_EQ(MemoryRegionInfo::eNo, region_info.GetWritable());
-  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetExecutable());
+  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.GetReadable());
+  EXPECT_EQ(lldb_private::MemoryRegionInfo::eNo, region_info.GetWritable());
+  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.GetExecutable());
   EXPECT_EQ("/foo/bar.so", region_info.GetName().GetStringRef());
-  EXPECT_EQ(MemoryRegionInfo::eDontKnow, region_info.GetMemoryTagged());
-  EXPECT_EQ(MemoryRegionInfo::eDontKnow, region_info.IsStackMemory());
-  EXPECT_EQ(MemoryRegionInfo::eDontKnow, region_info.IsShadowStack());
+  EXPECT_EQ(lldb_private::MemoryRegionInfo::eDontKnow,
+            region_info.GetMemoryTagged());
+  EXPECT_EQ(lldb_private::MemoryRegionInfo::eDontKnow,
+            region_info.IsStackMemory());
+  EXPECT_EQ(lldb_private::MemoryRegionInfo::eDontKnow,
+            region_info.IsShadowStack());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
@@ -358,9 +361,9 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   HandlePacket(server, "qMemoryRegionInfo:a000",
                "start:a000;size:2000;flags:;type:stack;");
   EXPECT_TRUE(result.get().Success());
-  EXPECT_EQ(MemoryRegionInfo::eNo, region_info.GetMemoryTagged());
-  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.IsStackMemory());
-  EXPECT_EQ(MemoryRegionInfo::eNo, region_info.IsShadowStack());
+  EXPECT_EQ(lldb_private::MemoryRegionInfo::eNo, region_info.GetMemoryTagged());
+  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.IsStackMemory());
+  EXPECT_EQ(lldb_private::MemoryRegionInfo::eNo, region_info.IsShadowStack());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
@@ -369,9 +372,10 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   HandlePacket(server, "qMemoryRegionInfo:a000",
                "start:a000;size:2000;flags: mt  zz mt ss  ;type:ha,ha,stack;");
   EXPECT_TRUE(result.get().Success());
-  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetMemoryTagged());
-  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.IsStackMemory());
-  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.IsShadowStack());
+  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes,
+            region_info.GetMemoryTagged());
+  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.IsStackMemory());
+  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.IsShadowStack());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
@@ -380,12 +384,12 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   HandlePacket(server, "qMemoryRegionInfo:a000",
                "start:a000;size:2000;type:heap;");
   EXPECT_TRUE(result.get().Success());
-  EXPECT_EQ(MemoryRegionInfo::eNo, region_info.IsStackMemory());
+  EXPECT_EQ(lldb_private::MemoryRegionInfo::eNo, region_info.IsStackMemory());
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
   const lldb::addr_t addr = 0x4000;
-  MemoryRegionInfo region_info;
+  lldb_private::MemoryRegionInfo region_info;
   std::future<Status> result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
   });
