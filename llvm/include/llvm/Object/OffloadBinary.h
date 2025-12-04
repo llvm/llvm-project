@@ -85,9 +85,47 @@ public:
     std::unique_ptr<MemoryBuffer> Image;
   };
 
+  struct Header {
+    uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
+    uint32_t Version = OffloadBinary::Version;   // Version identifier.
+    uint64_t Size;        // Size in bytes of this entire binary.
+    uint64_t EntriesOffset; // Offset in bytes to the start of entries block.
+    uint64_t EntriesCount;  // Number of metadata entries in the binary.
+  };
+
+  struct Entry {
+    ImageKind TheImageKind;     // The kind of the image stored.
+    OffloadKind TheOffloadKind; // The producer of this image.
+    uint32_t Flags;             // Additional flags associated with the entry.
+    uint64_t StringOffset;      // Offset in bytes to the string map.
+    uint64_t NumStrings;        // Number of entries in the string map.
+    uint64_t ImageOffset;       // Offset in bytes of the actual binary image.
+    uint64_t ImageSize;         // Size in bytes of the binary image.
+  };
+
+  struct StringEntry {
+    uint64_t KeyOffset;
+    uint64_t ValueOffset;
+    uint64_t ValueSize; // Size of the value in bytes.
+  };
+
+  struct StringEntryV1 {
+    uint64_t KeyOffset;
+    uint64_t ValueOffset;
+  };
+
+  /// Attempt to extract and validate the header from the offloading binary in
+  /// \p Buf.
+  LLVM_ABI
+  static Expected<const Header *> extractHeader(MemoryBufferRef Buf);
+
   /// Attempt to parse the offloading binary stored in \p Data.
   LLVM_ABI static Expected<std::unique_ptr<OffloadBinary>>
-      create(MemoryBufferRef);
+      createV1(MemoryBufferRef);
+
+  /// Attempt to parse the offloading binary stored in \p Data.
+  LLVM_ABI static Expected<std::unique_ptr<OffloadBinary>>
+      createV2(MemoryBufferRef);
 
   /// Serialize the contents of \p OffloadingData to a binary buffer to be read
   /// later.
@@ -114,30 +152,6 @@ public:
   StringRef getString(StringRef Key) const { return StringData.lookup(Key); }
 
   static bool classof(const Binary *V) { return V->isOffloadFile(); }
-
-  struct Header {
-    uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
-    uint32_t Version = OffloadBinary::Version;   // Version identifier.
-    uint64_t Size;        // Size in bytes of this entire binary.
-    uint64_t EntriesOffset; // Offset in bytes to the start of entries block.
-    uint64_t EntriesCount;  // Number of metadata entries in the binary.
-  };
-
-  struct Entry {
-    ImageKind TheImageKind;     // The kind of the image stored.
-    OffloadKind TheOffloadKind; // The producer of this image.
-    uint32_t Flags;             // Additional flags associated with the entry.
-    uint64_t StringOffset;      // Offset in bytes to the string map.
-    uint64_t NumStrings;        // Number of entries in the string map.
-    uint64_t ImageOffset;       // Offset in bytes of the actual binary image.
-    uint64_t ImageSize;         // Size in bytes of the binary image.
-  };
-
-  struct StringEntry {
-    uint64_t KeyOffset;
-    uint64_t ValueOffset;
-    uint64_t ValueSize; // Size of the value in bytes.
-  };
 
 private:
   OffloadBinary(MemoryBufferRef Source, const Header *TheHeader,
@@ -181,7 +195,7 @@ public:
         getBinary()->getMemoryBufferRef().getBufferIdentifier());
 
     // This parsing should never fail because it has already been parsed.
-    auto NewBinaryOrErr = OffloadBinary::create(*Buffer);
+    auto NewBinaryOrErr = OffloadBinary::createV1(*Buffer);
     assert(NewBinaryOrErr && "Failed to parse a copy of the binary?");
     if (!NewBinaryOrErr)
       llvm::consumeError(NewBinaryOrErr.takeError());

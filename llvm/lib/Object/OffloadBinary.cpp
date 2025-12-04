@@ -33,31 +33,47 @@ namespace {
 /// binary format.
 Error extractOffloadFiles(MemoryBufferRef Contents,
                           SmallVectorImpl<OffloadFile> &Binaries) {
-  uint64_t Offset = 0;
-  // There could be multiple offloading binaries stored at this section.
-  while (Offset < Contents.getBuffer().size()) {
-    std::unique_ptr<MemoryBuffer> Buffer =
-        MemoryBuffer::getMemBuffer(Contents.getBuffer().drop_front(Offset), "",
-                                   /*RequiresNullTerminator*/ false);
-    if (!isAddrAligned(Align(OffloadBinary::getAlignment()),
-                       Buffer->getBufferStart()))
-      Buffer = MemoryBuffer::getMemBufferCopy(Buffer->getBuffer(),
-                                              Buffer->getBufferIdentifier());
-    auto BinaryOrErr = OffloadBinary::create(*Buffer);
-    if (!BinaryOrErr)
-      return BinaryOrErr.takeError();
-    OffloadBinary &Binary = **BinaryOrErr;
+  if (Contents.getBuffer().size() == 0)
+    return Error::success();
 
-    // Create a new owned binary with a copy of the original memory.
-    std::unique_ptr<MemoryBuffer> BufferCopy = MemoryBuffer::getMemBufferCopy(
-        Binary.getData().take_front(Binary.getSize()),
-        Contents.getBufferIdentifier());
-    auto NewBinaryOrErr = OffloadBinary::create(*BufferCopy);
-    if (!NewBinaryOrErr)
-      return NewBinaryOrErr.takeError();
-    Binaries.emplace_back(std::move(*NewBinaryOrErr), std::move(BufferCopy));
+  std::unique_ptr<MemoryBuffer> Buffer =
+      MemoryBuffer::getMemBuffer(Contents.getBuffer(), "",
+                                 /*RequiresNullTerminator*/ false);
+  auto HeaderOrErr = OffloadBinary::extractHeader(*Buffer);
+  if (!HeaderOrErr)
+    return HeaderOrErr.takeError();
+  const OffloadBinary::Header *Header = *HeaderOrErr;
 
-    Offset += Binary.getSize();
+  switch (Header->Version) {
+  case 1: {
+    uint64_t Offset = 0;
+    // There could be multiple offloading binaries stored at this section.
+    while (Offset < Contents.getBuffer().size()) {
+      std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBuffer(
+          Contents.getBuffer().drop_front(Offset), "",
+          /*RequiresNullTerminator*/ false);
+      if (!isAddrAligned(Align(OffloadBinary::getAlignment()),
+                         Buffer->getBufferStart()))
+        Buffer = MemoryBuffer::getMemBufferCopy(Buffer->getBuffer(),
+                                                Buffer->getBufferIdentifier());
+      auto BinaryOrErr = OffloadBinary::createV1(*Buffer);
+      if (!BinaryOrErr)
+        return BinaryOrErr.takeError();
+      OffloadBinary &Binary = **BinaryOrErr;
+      // Create a new owned binary with a copy of the original memory.
+      std::unique_ptr<MemoryBuffer> BufferCopy = MemoryBuffer::getMemBufferCopy(
+          Binary.getData().take_front(Binary.getSize()),
+          Contents.getBufferIdentifier());
+      auto NewBinaryOrErr = OffloadBinary::createV1(*BufferCopy);
+      if (!NewBinaryOrErr)
+        return NewBinaryOrErr.takeError();
+      Binaries.emplace_back(std::move(*NewBinaryOrErr), std::move(BufferCopy));
+      Offset += Binary.getSize();
+    }
+  } break;
+  case 2: {
+
+  } break;
   }
 
   return Error::success();
@@ -167,8 +183,8 @@ Error extractFromArchive(const Archive &Library,
 
 } // namespace
 
-Expected<std::unique_ptr<OffloadBinary>>
-OffloadBinary::create(MemoryBufferRef Buf) {
+Expected<const OffloadBinary::Header *>
+OffloadBinary::extractHeader(MemoryBufferRef Buf) {
   if (Buf.getBufferSize() < sizeof(Header) + sizeof(Entry))
     return errorCodeToError(object_error::parse_failed);
 
@@ -182,7 +198,7 @@ OffloadBinary::create(MemoryBufferRef Buf) {
 
   const char *Start = Buf.getBufferStart();
   const Header *TheHeader = reinterpret_cast<const Header *>(Start);
-  if (TheHeader->Version != OffloadBinary::Version)
+  if (TheHeader->Version == 0 || TheHeader->Version > OffloadBinary::Version)
     return errorCodeToError(object_error::parse_failed);
 
   if (TheHeader->Size > Buf.getBufferSize() ||
@@ -193,6 +209,37 @@ OffloadBinary::create(MemoryBufferRef Buf) {
   if (TheHeader->EntriesOffset > TheHeader->Size - EntriesSize ||
       EntriesSize > TheHeader->Size - sizeof(Header))
     return errorCodeToError(object_error::unexpected_eof);
+
+  return TheHeader;
+}
+
+Expected<std::unique_ptr<OffloadBinary>>
+OffloadBinary::createV1(MemoryBufferRef Buf) {
+  auto HeaderOrErr = extractHeader(Buf);
+  if (!HeaderOrErr)
+    return HeaderOrErr.takeError();
+  const Header *TheHeader = *HeaderOrErr;
+
+  const char *Start = Buf.getBufferStart();
+  const Entry *TheEntry =
+      reinterpret_cast<const Entry *>(&Start[TheHeader->EntriesOffset]);
+
+  if (TheEntry->ImageOffset > Buf.getBufferSize() ||
+      TheEntry->StringOffset > Buf.getBufferSize())
+    return errorCodeToError(object_error::unexpected_eof);
+
+  return std::unique_ptr<OffloadBinary>(
+      new OffloadBinary(Buf, TheHeader, TheEntry));
+}
+
+Expected<std::unique_ptr<OffloadBinary>>
+OffloadBinary::createV2(MemoryBufferRef Buf) {
+  auto HeaderOrErr = extractHeader(Buf);
+  if (!HeaderOrErr)
+    return HeaderOrErr.takeError();
+  const Header *TheHeader = *HeaderOrErr;
+
+  const char *Start = Buf.getBufferStart();
 
   const Entry *Entries =
       reinterpret_cast<const Entry *>(&Start[TheHeader->EntriesOffset]);

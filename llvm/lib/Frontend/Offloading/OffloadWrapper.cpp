@@ -952,7 +952,7 @@ private:
     Constant *OffloadKindConstant = ConstantInt::get(
         Type::getInt8Ty(C), static_cast<uint8_t>(OB.getOffloadKind()));
     Constant *ImageKindConstant = ConstantInt::get(
-        Type::getInt8Ty(C), static_cast<uint8_t>(OB.getOnlyImageKind()));
+        Type::getInt8Ty(C), static_cast<uint8_t>(OB.getImageKind()));
     StringRef Triple = OB.getString("triple");
     Constant *TripleConstant =
         addStringToModule(Triple, Twine(OffloadKindTag) + "target." + ImageID);

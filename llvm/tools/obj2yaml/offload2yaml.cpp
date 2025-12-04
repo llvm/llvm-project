@@ -16,17 +16,20 @@ using namespace llvm;
 
 namespace {
 
-void populateYAML(OffloadYAML::Binary &YAMLBinary, object::OffloadBinary &OB,
+void populateYAML(OffloadYAML::Binary &YAMLBinary,
+                  ArrayRef<std::unique_ptr<object::OffloadBinary>> OBinaries,
                   UniqueStringSaver Saver) {
-  for (const auto &Entry : OB.entries()) {
+  for (const auto &OBinaryPtr : OBinaries) {
+    object::OffloadBinary &OB = *OBinaryPtr;
+
     YAMLBinary.Members.emplace_back();
     auto &Member = YAMLBinary.Members.back();
-    Member.ImageKind = Entry.first->TheImageKind;
-    Member.OffloadKind = Entry.first->TheOffloadKind;
-    Member.Flags = Entry.first->Flags;
-    if (!Entry.second.empty()) {
+    Member.ImageKind = OB.getImageKind();
+    Member.OffloadKind = OB.getOffloadKind();
+    Member.Flags = OB.getFlags();
+    if (!OB.strings().empty()) {
       Member.StringEntries = std::vector<OffloadYAML::Binary::StringEntry>();
-      for (const auto &StringEntry : Entry.second)
+      for (const auto &StringEntry : OB.strings())
         Member.StringEntries->emplace_back(OffloadYAML::Binary::StringEntry(
             {Saver.save(StringEntry.first), Saver.save(StringEntry.second)}));
     }
@@ -39,7 +42,7 @@ void populateYAML(OffloadYAML::Binary &YAMLBinary, object::OffloadBinary &OB,
 Expected<OffloadYAML::Binary *> dump(MemoryBufferRef Source,
                                      UniqueStringSaver Saver) {
   Expected<std::unique_ptr<object::OffloadBinary>> OB =
-      object::OffloadBinary::create(Source);
+      object::OffloadBinary::createV1(Source);
   if (!OB)
     return OB.takeError();
 
@@ -52,15 +55,15 @@ Expected<OffloadYAML::Binary *> dump(MemoryBufferRef Source,
   while (Offset < (*OB)->getMemoryBufferRef().getBufferSize()) {
     MemoryBufferRef Buffer = MemoryBufferRef(
         (*OB)->getData().drop_front(Offset), (*OB)->getFileName());
-    auto BinaryOrErr = object::OffloadBinary::create(Buffer);
+    auto BinaryOrErr = object::OffloadBinary::createV1(Buffer);
     if (!BinaryOrErr)
       return BinaryOrErr.takeError();
 
-    object::OffloadBinary &Binary = **BinaryOrErr;
+    std::unique_ptr<object::OffloadBinary> BinaryPtr = std::move(*BinaryOrErr);
 
-    populateYAML(*YAMLBinary, Binary, Saver);
+    populateYAML(*YAMLBinary, BinaryPtr, Saver);
 
-    Offset += Binary.getSize();
+    Offset += BinaryPtr->getSize();
   }
 
   return YAMLBinary.release();
