@@ -675,6 +675,7 @@ attributes(global) subroutine test_tma_bulk_store_c4(c, n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_c4
+! CHECK: cuf.shared_memory !fir.array<1024xcomplex<f32>> align 16 {bindc_name = "tmpa", uniq_name = "_QFtest_tma_bulk_store_c4Etmpa"} -> !fir.ref<!fir.array<1024xcomplex<f32>>>
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
 ! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
@@ -688,6 +689,7 @@ attributes(global) subroutine test_tma_bulk_store_c8(c, n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_c8
+! CHECK: cuf.shared_memory !fir.array<1024xcomplex<f64>> align 16 {bindc_name = "tmpa", uniq_name = "_QFtest_tma_bulk_store_c8Etmpa"} -> !fir.ref<!fir.array<1024xcomplex<f64>>>
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
 ! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
@@ -701,6 +703,7 @@ attributes(global) subroutine test_tma_bulk_store_i4(c, n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_i4
+! CHECK: cuf.shared_memory !fir.array<1024xi32> align 16 {bindc_name = "tmpa", uniq_name = "_QFtest_tma_bulk_store_i4Etmpa"} -> !fir.ref<!fir.array<1024xi32>>
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
 ! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
@@ -714,6 +717,7 @@ attributes(global) subroutine test_tma_bulk_store_i8(c, n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_i8
+! CHECK: cuf.shared_memory !fir.array<1024xi64> align 16 {bindc_name = "tmpa", uniq_name = "_QFtest_tma_bulk_store_i8Etmpa"} -> !fir.ref<!fir.array<1024xi64>>
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
 ! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
@@ -728,6 +732,7 @@ attributes(global) subroutine test_tma_bulk_store_r2(c, n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_r2
+! CHECK: cuf.shared_memory !fir.array<1024xf16> align 16 {bindc_name = "tmpa", uniq_name = "_QFtest_tma_bulk_store_r2Etmpa"} -> !fir.ref<!fir.array<1024xf16>>
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
 ! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
@@ -741,6 +746,7 @@ attributes(global) subroutine test_tma_bulk_store_r4(c, n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_r4
+! CHECK: cuf.shared_memory !fir.array<1024xf32> align 16 {bindc_name = "tmpa", uniq_name = "_QFtest_tma_bulk_store_r4Etmpa"} -> !fir.ref<!fir.array<1024xf32>>
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
 ! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
@@ -754,6 +760,7 @@ attributes(global) subroutine test_tma_bulk_store_r8(c, n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_r8
+! CHECK: cuf.shared_memory !fir.array<1024xf64> align 16 {bindc_name = "tmpa", uniq_name = "_QFtest_tma_bulk_store_r8Etmpa"} -> !fir.ref<!fir.array<1024xf64>>
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
 ! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
