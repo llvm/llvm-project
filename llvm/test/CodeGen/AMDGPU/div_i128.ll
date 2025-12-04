@@ -4355,11 +4355,11 @@ define i128 @v_sdiv_i128_v_pow2k(i128 %lhs) {
 ; GFX9-G-O0-NEXT:    v_add_co_u32_e64 v4, s[6:7], v4, v5
 ; GFX9-G-O0-NEXT:    v_addc_co_u32_e64 v1, s[6:7], v1, v0, s[6:7]
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, s8
-; GFX9-G-O0-NEXT:    v_addc_co_u32_e64 v2, s[6:7], v2, v0, s[6:7]
+; GFX9-G-O0-NEXT:    v_addc_co_u32_e64 v5, s[6:7], v2, v0, s[6:7]
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX9-G-O0-NEXT:    v_addc_co_u32_e64 v4, s[6:7], v3, v0, s[6:7]
-; GFX9-G-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v3, v4
+; GFX9-G-O0-NEXT:    ; kill: def $vgpr5 killed $vgpr5 def $vgpr5_vgpr6 killed $exec
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX9-G-O0-NEXT:    s_mov_b32 s5, 1
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX9-G-O0-NEXT:    v_lshrrev_b32_e64 v2, v0, v1

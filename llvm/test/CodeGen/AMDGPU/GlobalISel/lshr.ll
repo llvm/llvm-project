@@ -1744,12 +1744,8 @@ define i65 @v_lshr_i65_33(i65 %value) {
 ; GFX6-LABEL: v_lshr_i65_33:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_mov_b32_e32 v3, 1
-; GFX6-NEXT:    v_mov_b32_e32 v4, 0
-; GFX6-NEXT:    v_and_b32_e32 v3, 1, v2
-; GFX6-NEXT:    v_lshl_b64 v[2:3], v[3:4], 31
-; GFX6-NEXT:    v_lshrrev_b32_e32 v0, 1, v1
-; GFX6-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX6-NEXT:    v_mov_b32_e32 v3, v1
+; GFX6-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX6-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX6-NEXT:    v_and_b32_e32 v0, 1, v2
 ; GFX6-NEXT:    v_lshl_b64 v[0:1], v[0:1], 31
@@ -1761,12 +1757,8 @@ define i65 @v_lshr_i65_33(i65 %value) {
 ; GFX8-LABEL: v_lshr_i65_33:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v3, 1
-; GFX8-NEXT:    v_mov_b32_e32 v4, 0
-; GFX8-NEXT:    v_and_b32_e32 v3, 1, v2
-; GFX8-NEXT:    v_lshlrev_b64 v[2:3], 31, v[3:4]
-; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 1, v1
-; GFX8-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX8-NEXT:    v_mov_b32_e32 v3, v1
+; GFX8-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX8-NEXT:    v_and_b32_e32 v0, 1, v2
 ; GFX8-NEXT:    v_lshlrev_b64 v[0:1], 31, v[0:1]
@@ -1778,12 +1770,8 @@ define i65 @v_lshr_i65_33(i65 %value) {
 ; GFX9-LABEL: v_lshr_i65_33:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v3, 1
-; GFX9-NEXT:    v_mov_b32_e32 v4, 0
-; GFX9-NEXT:    v_and_b32_e32 v3, 1, v2
-; GFX9-NEXT:    v_lshlrev_b64 v[2:3], 31, v[3:4]
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 1, v1
-; GFX9-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    v_and_b32_e32 v0, 1, v2
 ; GFX9-NEXT:    v_lshlrev_b64 v[0:1], 31, v[0:1]
@@ -1795,10 +1783,8 @@ define i65 @v_lshr_i65_33(i65 %value) {
 ; GFX10-LABEL: v_lshr_i65_33:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v3, 1
-; GFX10-NEXT:    v_mov_b32_e32 v4, 0
-; GFX10-NEXT:    v_and_b32_e32 v3, 1, v2
-; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 1, v1
+; GFX10-NEXT:    v_mov_b32_e32 v3, v1
+; GFX10-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_and_b32_e32 v0, 1, v2
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 1, v3
