@@ -527,3 +527,223 @@ __m512i test_mm512_ror_epi64(__m512i __A) {
   // OGCG: call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %[[VAR]], <8 x i64> %[[VAR]], <8 x i64> splat (i64 5))
   return _mm512_ror_epi64(__A, 5); 
 }
+
+void test_mm512_i32scatter_pd(void *__addr, __m256i __index, __m512d __v1) {
+  // CIR-LABEL: test_mm512_i32scatter_pd
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.scatter.dpd.512"
+
+  // LLVM-LABEL: test_mm512_i32scatter_pd
+  // LLVM: @llvm.x86.avx512.mask.scatter.dpd.512
+
+  // OGCG-LABEL: test_mm512_i32scatter_pd
+  // OGCG: @llvm.x86.avx512.mask.scatter.dpd.512
+  return _mm512_i32scatter_pd(__addr, __index, __v1, 2);
+}
+
+void test_mm512_mask_i32scatter_pd(void *__addr, __mmask8 __mask, __m256i __index, __m512d __v1) {
+  // CIR-LABEL: test_mm512_mask_i32scatter_pd
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.scatter.dpd.512"
+
+  // LLVM-LABEL: test_mm512_mask_i32scatter_pd
+  // LLVM: @llvm.x86.avx512.mask.scatter.dpd.512
+
+  // OGCG-LABEL: test_mm512_mask_i32scatter_pd
+  // OGCG: @llvm.x86.avx512.mask.scatter.dpd.512
+  return _mm512_mask_i32scatter_pd(__addr, __mask, __index, __v1, 2);
+}
+
+void test_mm512_i32scatter_ps(void *__addr, __m512i __index, __m512 __v1) {
+  // CIR-LABEL: test_mm512_i32scatter_ps
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.scatter.dps.512"
+
+  // LLVM-LABEL: test_mm512_i32scatter_ps
+  // LLVM: @llvm.x86.avx512.mask.scatter.dps.512
+
+  // OGCG-LABEL: test_mm512_i32scatter_ps
+  // OGCG: @llvm.x86.avx512.mask.scatter.dps.512
+  return _mm512_i32scatter_ps(__addr, __index, __v1, 2);
+}
+
+void test_mm512_mask_i32scatter_ps(void *__addr, __mmask16 __mask, __m512i __index, __m512 __v1) {
+  // CIR-LABEL: test_mm512_mask_i32scatter_ps
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.scatter.dps.512"
+
+  // LLVM-LABEL: test_mm512_mask_i32scatter_ps
+  // LLVM: @llvm.x86.avx512.mask.scatter.dps.512
+
+  // OGCG-LABEL: test_mm512_mask_i32scatter_ps
+  // OGCG: @llvm.x86.avx512.mask.scatter.dps.512
+  return _mm512_mask_i32scatter_ps(__addr, __mask, __index, __v1, 2);
+}
+
+void test_mm512_i64scatter_pd(void *__addr, __m512i __index, __m512d __v1) {
+  // CIR-LABEL: test_mm512_i64scatter_pd
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.scatter.qpd.512"
+
+  // LLVM-LABEL: test_mm512_i64scatter_pd
+  // LLVM: @llvm.x86.avx512.mask.scatter.qpd.512
+
+  // OGCG-LABEL: test_mm512_i64scatter_pd
+  // OGCG: @llvm.x86.avx512.mask.scatter.qpd.512
+  return _mm512_i64scatter_pd(__addr, __index, __v1, 2);
+}
+
+void test_mm512_mask_i64scatter_pd(void *__addr, __mmask8 __mask, __m512i __index, __m512d __v1) {
+  // CIR-LABEL: test_mm512_mask_i64scatter_pd
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.scatter.qpd.512"
+
+  // LLVM-LABEL: test_mm512_mask_i64scatter_pd
+  // LLVM: @llvm.x86.avx512.mask.scatter.qpd.512
+
+  // OGCG-LABEL: test_mm512_mask_i64scatter_pd
+  // OGCG: @llvm.x86.avx512.mask.scatter.qpd.512
+  return _mm512_mask_i64scatter_pd(__addr, __mask, __index, __v1, 2);
+}
+
+void test_mm512_i64scatter_ps(void *__addr, __m512i __index, __m256 __v1) {
+  // CIR-LABEL: test_mm512_i64scatter_ps
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.scatter.qps.512"
+
+  // LLVM-LABEL: test_mm512_i64scatter_ps
+  // LLVM: @llvm.x86.avx512.mask.scatter.qps.512
+
+  // OGCG-LABEL: test_mm512_i64scatter_ps
+  // OGCG: @llvm.x86.avx512.mask.scatter.qps.512
+  return _mm512_i64scatter_ps(__addr, __index, __v1, 2);
+}
+
+void test_mm512_mask_i64scatter_ps(void *__addr, __mmask8 __mask, __m512i __index, __m256 __v1) {
+  // CIR-LABEL: test_mm512_mask_i64scatter_ps
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.scatter.qps.512"
+
+  // LLVM-LABEL: test_mm512_mask_i64scatter_ps
+  // LLVM: @llvm.x86.avx512.mask.scatter.qps.512
+
+  // OGCG-LABEL: test_mm512_mask_i64scatter_ps
+  // OGCG: @llvm.x86.avx512.mask.scatter.qps.512
+  return _mm512_mask_i64scatter_ps(__addr, __mask, __index, __v1, 2);
+}
+
+void test_mm512_i32scatter_epi32(void *__addr, __m512i __index, __m512i __v1) {
+  // CIR-LABEL: test_mm512_i32scatter_epi32
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.scatter.dpi.512"
+
+  // LLVM-LABEL: test_mm512_i32scatter_epi32
+  // LLVM: @llvm.x86.avx512.mask.scatter.dpi.512
+
+  // OGCG-LABEL: test_mm512_i32scatter_epi32
+  // OGCG: @llvm.x86.avx512.mask.scatter.dpi.512
+  return _mm512_i32scatter_epi32(__addr, __index, __v1, 2);
+}
+
+void test_mm512_mask_i32scatter_epi32(void *__addr, __mmask16 __mask, __m512i __index, __m512i __v1) {
+  // CIR-LABEL: test_mm512_mask_i32scatter_epi32
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.scatter.dpi.512"
+
+  // LLVM-LABEL: test_mm512_mask_i32scatter_epi32
+  // LLVM: @llvm.x86.avx512.mask.scatter.dpi.512
+
+  // OGCG-LABEL: test_mm512_mask_i32scatter_epi32
+  // OGCG: @llvm.x86.avx512.mask.scatter.dpi.512
+  return _mm512_mask_i32scatter_epi32(__addr, __mask, __index, __v1, 2);
+}
+
+void test_mm512_i64scatter_epi64(void *__addr, __m512i __index, __m512i __v1) {
+  // CIR-LABEL: test_mm512_i64scatter_epi64
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.scatter.qpq.512"
+
+  // LLVM-LABEL: test_mm512_i64scatter_epi64
+  // LLVM: @llvm.x86.avx512.mask.scatter.qpq.512
+
+  // OGCG-LABEL: test_mm512_i64scatter_epi64
+  // OGCG: @llvm.x86.avx512.mask.scatter.qpq.512
+  return _mm512_i64scatter_epi64(__addr, __index, __v1, 2);
+}
+
+void test_mm512_mask_i64scatter_epi64(void *__addr, __mmask8 __mask, __m512i __index, __m512i __v1) {
+  // CIR-LABEL: test_mm512_mask_i64scatter_epi64
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.scatter.qpq.512"
+
+  // LLVM-LABEL: test_mm512_mask_i64scatter_epi64
+  // LLVM: @llvm.x86.avx512.mask.scatter.qpq.512
+
+  // OGCG-LABEL: test_mm512_mask_i64scatter_epi64
+  // OGCG: @llvm.x86.avx512.mask.scatter.qpq.512
+  return _mm512_mask_i64scatter_epi64(__addr, __mask, __index, __v1, 2);
+}
+
+void test_mm512_i64scatter_epi32(void *__addr, __m512i __index, __m256i __v1) {
+  // CIR-LABEL: test_mm512_i64scatter_epi32
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.scatter.qpi.512"
+
+  // LLVM-LABEL: test_mm512_i64scatter_epi32
+  // LLVM: @llvm.x86.avx512.mask.scatter.qpi.512
+
+  // OGCG-LABEL: test_mm512_i64scatter_epi32
+  // OGCG: @llvm.x86.avx512.mask.scatter.qpi.512
+  return _mm512_i64scatter_epi32(__addr, __index, __v1, 2);
+}
+
+void test_mm512_mask_i64scatter_epi32(void *__addr, __mmask8 __mask, __m512i __index, __m256i __v1) {
+  // CIR-LABEL: test_mm512_mask_i64scatter_epi32
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.scatter.qpi.512"
+
+  // LLVM-LABEL: test_mm512_mask_i64scatter_epi32
+  // LLVM: @llvm.x86.avx512.mask.scatter.qpi.512
+
+  // OGCG-LABEL: test_mm512_mask_i64scatter_epi32
+  // OGCG: @llvm.x86.avx512.mask.scatter.qpi.512
+  return _mm512_mask_i64scatter_epi32(__addr, __mask, __index, __v1, 2);
+}
+
+__m512i test_mm512_mul_epi32(__m512i __A, __m512i __B) {
+  // CIR-LABEL: _mm512_mul_epi32
+  // CIR: [[A64:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s32i> -> !cir.vector<8 x !s64i>
+  // CIR: [[B64:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s32i> -> !cir.vector<8 x !s64i>
+  // CIR: [[SC:%.*]] = cir.const #cir.int<32> : !s64i
+  // CIR: [[SV:%.*]] = cir.vec.splat [[SC]] : !s64i, !cir.vector<8 x !s64i>
+  // CIR: [[SHL_A:%.*]]  = cir.shift(left, [[A64]] : !cir.vector<8 x !s64i>, [[SV]] : !cir.vector<8 x !s64i>)
+  // CIR: [[ASHR_A:%.*]] = cir.shift(right, [[SHL_A]] : !cir.vector<8 x !s64i>, [[SV]] : !cir.vector<8 x !s64i>)
+  // CIR: [[SHL_B:%.*]]  = cir.shift(left, [[B64]] : !cir.vector<8 x !s64i>, [[SV]] : !cir.vector<8 x !s64i>)
+  // CIR: [[ASHR_B:%.*]] = cir.shift(right, [[SHL_B]] : !cir.vector<8 x !s64i>, [[SV]] : !cir.vector<8 x !s64i>)
+  // CIR: [[MUL:%.*]]    = cir.binop(mul, [[ASHR_A]], [[ASHR_B]])
+
+  // LLVM-LABEL: _mm512_mul_epi32
+  // LLVM: shl <8 x i64> %{{.*}}, splat (i64 32)
+  // LLVM: ashr <8 x i64> %{{.*}}, splat (i64 32)
+  // LLVM: shl <8 x i64> %{{.*}}, splat (i64 32)
+  // LLVM: ashr <8 x i64> %{{.*}}, splat (i64 32)
+  // LLVM: mul <8 x i64> %{{.*}}, %{{.*}}
+
+  // OGCG-LABEL: _mm512_mul_epi32
+  // OGCG: shl <8 x i64> %{{.*}}, splat (i64 32)
+  // OGCG: ashr <8 x i64> %{{.*}}, splat (i64 32)
+  // OGCG: shl <8 x i64> %{{.*}}, splat (i64 32)
+  // OGCG: ashr <8 x i64> %{{.*}}, splat (i64 32)
+  // OGCG: mul <8 x i64> %{{.*}}, %{{.*}}
+
+  return _mm512_mul_epi32(__A, __B);
+}
+
+__m512i test_mm512_mul_epu32(__m512i __A, __m512i __B) {
+  // CIR-LABEL: _mm512_mul_epu32
+  // CIR: [[BC_A:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<8 x !s64i>
+  // CIR: [[BC_B:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<8 x !s64i>
+  // CIR: [[MASK_SCALAR:%.*]] = cir.const #cir.int<4294967295> : !s64i
+  // CIR: [[MASK_VEC:%.*]] = cir.vec.splat [[MASK_SCALAR]] : !s64i, !cir.vector<8 x !s64i>
+  // CIR: [[AND_A:%.*]] = cir.binop(and, [[BC_A]], [[MASK_VEC]])
+  // CIR: [[AND_B:%.*]] = cir.binop(and, [[BC_B]], [[MASK_VEC]])
+  // CIR: [[MUL:%.*]]   = cir.binop(mul, [[AND_A]], [[AND_B]])
+
+  // LLVM-LABEL: _mm512_mul_epu32
+  // LLVM: and <8 x i64> %{{.*}}, splat (i64 4294967295)
+  // LLVM: and <8 x i64> %{{.*}}, splat (i64 4294967295)
+  // LLVM: mul <8 x i64> %{{.*}}, %{{.*}}
+
+  // OGCG-LABEL: _mm512_mul_epu32
+  // OGCG: and <8 x i64> %{{.*}}, splat (i64 4294967295)
+  // OGCG: and <8 x i64> %{{.*}}, splat (i64 4294967295)
+  // OGCG: mul <8 x i64> %{{.*}}, %{{.*}}
+
+return _mm512_mul_epu32(__A, __B);
+}

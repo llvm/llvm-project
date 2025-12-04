@@ -1010,7 +1010,7 @@ public:
       Metadata.emplace_back(Kind, Node);
   }
 
-  /// Intersect this VPIRMetada object with \p MD, keeping only metadata
+  /// Intersect this VPIRMetadata object with \p MD, keeping only metadata
   /// nodes that are common to both.
   void intersect(const VPIRMetadata &MD);
 
@@ -1020,6 +1020,11 @@ public:
         find_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
     return It != Metadata.end() ? It->second : nullptr;
   }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print metadata with node IDs.
+  void print(raw_ostream &O, VPSlotTracker &SlotTracker) const;
+#endif
 };
 
 /// This is a concrete Recipe that models a single VPlan-level instruction.
@@ -1510,12 +1515,6 @@ class LLVM_ABI_FOR_TEST VPWidenRecipe : public VPRecipeWithIRFlags,
   unsigned Opcode;
 
 public:
-  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, const VPIRMetadata &Metadata,
-                DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, Flags, DL),
-        VPIRMetadata(Metadata), Opcode(Opcode) {}
-
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
                 DebugLoc DL = {})
@@ -1527,10 +1526,8 @@ public:
   ~VPWidenRecipe() override = default;
 
   VPWidenRecipe *clone() override {
-    auto *R =
-        new VPWidenRecipe(getOpcode(), operands(), *this, *this, getDebugLoc());
-    R->setUnderlyingValue(getUnderlyingValue());
-    return R;
+    return new VPWidenRecipe(*getUnderlyingInstr(), operands(), *this, *this,
+                             getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenSC)

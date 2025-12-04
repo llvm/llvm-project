@@ -360,6 +360,12 @@ Attribute Changes in Clang
   attribute, but `malloc_span` applies not to functions returning pointers, but to functions returning
   span-like structures (i.e. those that contain a pointer field and a size integer field or two pointers).
 
+- Added new attribute ``modular_format`` to allow dynamically selecting at link
+  time which aspects of a statically linked libc's printf (et al)
+  implementation are required. This can reduce code size without requiring e.g.
+  multilibs for printf features. Requires cooperation with the libc
+  implementation.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Diagnostics messages now refer to ``structured binding`` instead of ``decomposition``,
@@ -448,6 +454,8 @@ Improvements to Clang's diagnostics
 - A new warning ``-Wenum-compare-typo`` has been added to detect potential erroneous
   comparison operators when mixed with bitwise operators in enum value initializers.
   This can be locally disabled by explicitly casting the initializer value.
+- Clang now provides correct caret placement when attributes appear before
+  `enum class` (#GH163224).
 
 - A new warning ``-Wshadow-header`` has been added to detect when a header file
   is found in multiple search directories (excluding system paths).
@@ -740,6 +748,8 @@ Crash and bug fixes
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 - Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
 - Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
+- Fixed a crash when parsing invalid nested name specifier sequences
+  containing a single colon. (#GH167905)
 
 Improvements
 ^^^^^^^^^^^^
