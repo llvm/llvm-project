@@ -436,12 +436,18 @@ void RocmInstallationDetector::detectDeviceLibrary() {
   if (HasDeviceLibrary)
     return;
 
-  // Find device libraries in a legacy ROCm directory structure
-  // ${ROCM_ROOT}/amdgcn/bitcode/*
+  // Find device libraries in a ROCm directory structure
   auto &ROCmDirs = getInstallationPathCandidates();
   for (const auto &Candidate : ROCmDirs) {
+    // Legacy: ${ROCM_PATH}/amdgcn/bitcode/*
     LibDevicePath = Candidate.Path;
     llvm::sys::path::append(LibDevicePath, "amdgcn", "bitcode");
+    HasDeviceLibrary = CheckDeviceLib(LibDevicePath, Candidate.StrictChecking);
+    if (HasDeviceLibrary)
+      return;
+    // TheRock: ${ROCM_PATH}/lib/llvm/amdgcn/bitcode/*
+    LibDevicePath = Candidate.Path;
+    llvm::sys::path::append(LibDevicePath, "lib", "llvm", "amdgcn", "bitcode");
     HasDeviceLibrary = CheckDeviceLib(LibDevicePath, Candidate.StrictChecking);
     if (HasDeviceLibrary)
       return;
