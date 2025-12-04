@@ -135,4 +135,12 @@ gpu.module @test_distribution {
     %constant_mask = vector.constant_mask [16, 16] {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16]>} : vector<256x128xi1>
     gpu.return
   }
+
+  gpu.func @vector_create_mask_2D() {
+    // CHECK-COUNT-4: vector.create_mask {{.*}}, {{.*}} : vector<16x16xi1>
+    // CHECK-NOT: vector.create_mask
+    %cst16 = arith.constant 16 : index
+    %constant_mask = vector.create_mask %cst16, %cst16 {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16]>} : vector<256x128xi1>
+    gpu.return
+  } 
 }
