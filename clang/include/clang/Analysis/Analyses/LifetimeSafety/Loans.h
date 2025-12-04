@@ -34,7 +34,8 @@ struct AccessPath {
   AccessPath(const clang::ValueDecl *D) : D(D) {}
 };
 
-/// An abstract base class for a single borrow, or "Loan".
+/// An abstract base class for a single "Loan" which represents a lifetime
+/// dependency.
 class Loan {
   /// TODO: Represent opaque loans.
   /// TODO: Represent nullptr: loans to no path. Accessing it UB! Currently it
@@ -62,10 +63,11 @@ private:
   const LoanID ID;
 };
 
-/// Information about a single borrow, or "Loan". A loan is created when a
+/// Information about a single borrow loan. A borrow loan is created when a
 /// reference or pointer is created.
 class BorrowLoan : public Loan {
   AccessPath Path;
+  /// The expression that creates the loan, e.g., &x.
   const Expr *IssueExpr;
 
 public:
@@ -117,6 +119,10 @@ public:
 
   template <typename LoanType, typename... Args>
   LoanType *createLoan(Args &&...args) {
+    static_assert(
+        std::is_same_v<LoanType, BorrowLoan> ||
+            std::is_same_v<LoanType, PlaceholderLoan>,
+        "createLoan can only be used with BorrowLoan or PlaceholderLoan");
     void *Mem = LoanAllocator.Allocate<LoanType>();
     auto *NewLoan =
         new (Mem) LoanType(getNextLoanID(), std::forward<Args>(args)...);

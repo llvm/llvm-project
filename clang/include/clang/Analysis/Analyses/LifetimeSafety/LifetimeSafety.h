@@ -48,6 +48,7 @@ public:
                                     SourceLocation ExpiryLoc,
                                     Confidence Confidence) {}
 
+  // Suggests lifetime bound annotations for function paramters
   virtual void suggestAnnotation(const ParmVarDecl *PVD,
                                  const Expr *EscapeExpr) {}
 };
