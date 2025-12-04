@@ -210,12 +210,12 @@ public:
     return getNumInequalities() + getNumEqualities();
   }
 
-  // Unified indexing into the constraints. Index into the inequalities
-  // if i < getNumInequalities() and into the equalities otherwise.
-  inline DynamicAPInt atConstraint(unsigned i, unsigned j) const {
+  /// Unified indexing into the constraints. Index into the inequalities
+  /// if i < getNumInequalities() and into the equalities otherwise.
+  inline int64_t atConstraint64(unsigned i, unsigned j) const {
     assert(i < getNumConstraints());
     unsigned numIneqs = getNumInequalities();
-    return i < numIneqs ? atIneq(i, j) : atEq(i - numIneqs, j);
+    return i < numIneqs ? atIneq64(i, j) : atEq64(i - numIneqs, j);
   }
   inline DynamicAPInt &atConstraint(unsigned i, unsigned j) {
     assert(i < getNumConstraints());
@@ -365,6 +365,7 @@ public:
 
   void removeEquality(unsigned pos);
   void removeInequality(unsigned pos);
+  void removeConstraint(unsigned pos);
 
   /// Remove the (in)equalities at positions [start, end).
   void removeEqualityRange(unsigned start, unsigned end);
@@ -524,6 +525,34 @@ public:
   // mark exactness for example.
   void projectOut(unsigned pos, unsigned num);
   inline void projectOut(unsigned pos) { return projectOut(pos, 1); }
+
+  /// The function removes some constraints that do not impose any bound on the
+  /// specified variable.
+  ///
+  /// The set of constraints (equations/inequalities) can be modeled as an
+  /// undirected graph where:
+  /// 1. Variables are the nodes.
+  /// 2. Constraints are the edges connecting those nodes.
+  ///
+  /// Variables and constraints belonging to different connected components
+  /// are irrelevant to each other. This property allows for safe pruning of
+  /// constraints.
+  ///
+  /// For example, given the following constraints:
+  /// - Inequalities: (1) d0 + d1 > 0, (2) d1 >= 2, (3) d4 > 5
+  /// - Equalities:   (4) d3 + d4 = 1, (5) d0 - d2 = 3
+  ///
+  /// These form two connected components:
+  /// - Component 1: {d0, d1, d2} (related by constraints 1, 2, 5)
+  /// - Component 2: {d3, d4} (related by constraint 4)
+  ///
+  /// If we are querying the bound of variable `d0`, constraints related to
+  /// Component 2 (e.g., constraints 3 and 4) can be safely pruned as they
+  /// have no impact on the solution space of Component 1.
+  /// This function prunes irrelevant constraints by identifying all variables
+  /// and constraints that belong to the same connected component as the
+  /// target variable.
+  void pruneOrthogonalConstraints(unsigned pos);
 
   /// Tries to fold the specified variable to a constant using a trivial
   /// equality detection; if successful, the constant is substituted for the
