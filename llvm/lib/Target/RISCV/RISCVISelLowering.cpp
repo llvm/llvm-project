@@ -1868,7 +1868,7 @@ bool RISCVTargetLowering::shouldExpandCttzElements(EVT VT) const {
 }
 
 bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                             const CallInst &I,
+                                             const CallBase &I,
                                              MachineFunction &MF,
                                              unsigned Intrinsic) const {
   auto &DL = I.getDataLayout();
@@ -25580,6 +25580,8 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
       return false;
     }
+    if (II->getIntrinsicID() == Intrinsic::vector_extract)
+      return false;
   }
 
   if (Inst.getType()->isScalableTy())
