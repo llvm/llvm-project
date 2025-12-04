@@ -213,7 +213,7 @@ define void @offset_truncated_to_i1(ptr %a) {
 ; CHECK-NEXT:        Reason: (zext i1 {false,+,true}<%loop> to i64)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   br label %loop

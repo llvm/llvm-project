@@ -20,15 +20,15 @@ define void @symbolicrdiv_prod_ovfl(ptr %A) {
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ;
 ; CHECK-SYMBOLIC-RDIV-LABEL: 'symbolicrdiv_prod_ovfl'
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - none!
+; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - consistent output [*]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - none!
+; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - consistent output [*|<]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - consistent output [*]!
 ;
@@ -87,7 +87,7 @@ define void @symbolicrdiv_delta_ovfl(ptr %A) {
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ;
@@ -95,7 +95,7 @@ define void @symbolicrdiv_delta_ovfl(ptr %A) {
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - consistent output [*]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - none!
+; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - consistent output [*|<]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - consistent output [*]!
 ;

@@ -2101,39 +2101,36 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
 // backup for the RDIV test. Note that i and j can be the same variable,
 // letting this test serve as a backup for the various SIV tests.
 //
-// For a dependence to exist, c1 + a1*i must equal c2 + a2*j for some
-//  0 <= i <= N1 and some 0 <= j <= N2, where N1 and N2 are the (normalized)
-// loop bounds for the i and j loops, respectively. So, ...
-//
-// c1 + a1*i = c2 + a2*j
-// a1*i - a2*j = c2 - c1
-//
-// To test for a dependence, we compute c2 - c1 and make sure it's in the
-// range of the maximum and minimum possible values of a1*i - a2*j.
-// Considering the signs of a1 and a2, we have 4 possible cases:
+// To test for a dependence, we compare the minimum/maximum values of c1 + a1*i
+// and c2 + a2*j.
+// Considering the signs of a1 and a2, we have 4 possible cases (0 <= i <= N1
+// and 0 <= j <= N2):
 //
 // 1) If a1 >= 0 and a2 >= 0, then
-//        a1*0 - a2*N2 <= c2 - c1 <= a1*N1 - a2*0
-//              -a2*N2 <= c2 - c1 <= a1*N1
+//        a1*N1 + c1 <= a2*0 + c2 or a2*N2 + c2 <= a1*0 + c1
 //
 // 2) If a1 >= 0 and a2 <= 0, then
-//        a1*0 - a2*0 <= c2 - c1 <= a1*N1 - a2*N2
-//                  0 <= c2 - c1 <= a1*N1 - a2*N2
+//        a1*N1 + c1 <= a2*N2 + c2 or a2*0 + c2 <= a1*0 + c1
 //
 // 3) If a1 <= 0 and a2 >= 0, then
-//        a1*N1 - a2*N2 <= c2 - c1 <= a1*0 - a2*0
-//        a1*N1 - a2*N2 <= c2 - c1 <= 0
+//        a1*0 + c1 <= a2*0 + c2 or a2*N2 + c2 <= a1*N1 + c1
 //
 // 4) If a1 <= 0 and a2 <= 0, then
-//        a1*N1 - a2*0  <= c2 - c1 <= a1*0 - a2*N2
-//        a1*N1         <= c2 - c1 <=       -a2*N2
+//        a1*0 + c1 <= a2*N2 + c2 or a2*0 + c2 <= a1*N1 + c1
 //
 // return true if dependence disproved
-bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
-                                      const SCEV *C1, const SCEV *C2,
-                                      const Loop *Loop1,
-                                      const Loop *Loop2) const {
+bool DependenceInfo::symbolicRDIVtest(const SCEVAddRecExpr *Src,
+                                      const SCEVAddRecExpr *Dst) {
   if (!isDependenceTestEnabled(DependenceTestType::SymbolicRDIV))
+    return false;
+
+  const SCEV *A1 = Src->getStepRecurrence(*SE);
+  const SCEV *A2 = Dst->getStepRecurrence(*SE);
+  const Loop *Loop1 = Src->getLoop();
+  const Loop *Loop2 = Dst->getLoop();
+
+  if (!isMonotonicPair(Src, Dst, SCEVMonotonicityDomain::EntireDomain,
+                       Loop1->getOutermostLoop()))
     return false;
 
   ++SymbolicRDIVapplications;
@@ -2141,96 +2138,27 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
   LLVM_DEBUG(dbgs() << "\t    A1 = " << *A1);
   LLVM_DEBUG(dbgs() << ", type = " << *A1->getType() << "\n");
   LLVM_DEBUG(dbgs() << "\t    A2 = " << *A2 << "\n");
-  LLVM_DEBUG(dbgs() << "\t    C1 = " << *C1 << "\n");
-  LLVM_DEBUG(dbgs() << "\t    C2 = " << *C2 << "\n");
   const SCEV *N1 = collectUpperBound(Loop1, A1->getType());
   const SCEV *N2 = collectUpperBound(Loop2, A1->getType());
   LLVM_DEBUG(if (N1) dbgs() << "\t    N1 = " << *N1 << "\n");
   LLVM_DEBUG(if (N2) dbgs() << "\t    N2 = " << *N2 << "\n");
-  const SCEV *C2_C1 = SE->getMinusSCEV(C2, C1);
-  const SCEV *C1_C2 = SE->getMinusSCEV(C1, C2);
-  LLVM_DEBUG(dbgs() << "\t    C2 - C1 = " << *C2_C1 << "\n");
-  LLVM_DEBUG(dbgs() << "\t    C1 - C2 = " << *C1_C2 << "\n");
+  auto [SrcFirst, SrcLast] = evaluateFirstAndLast(*SE, Src, N1);
+  auto [DstFirst, DstLast] = evaluateFirstAndLast(*SE, Dst, N2);
+
+  auto IsKnownSLT = [&](const SCEV *LHS, const SCEV *RHS) {
+    return SE->isKnownPredicate(CmpInst::ICMP_SLT, LHS, RHS);
+  };
+
   if (SE->isKnownNonNegative(A1)) {
-    if (SE->isKnownNonNegative(A2)) {
-      // A1 >= 0 && A2 >= 0
-      if (N1) {
-        // make sure that c2 - c1 <= a1*N1
-        const SCEV *A1N1 = SE->getMulExpr(A1, N1);
-        LLVM_DEBUG(dbgs() << "\t    A1*N1 = " << *A1N1 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SGT, C2_C1, A1N1)) {
-          ++SymbolicRDIVindependence;
-          return true;
-        }
-      }
-      if (N2) {
-        // make sure that -a2*N2 <= c2 - c1, or a2*N2 >= c1 - c2
-        const SCEV *A2N2 = SE->getMulExpr(A2, N2);
-        LLVM_DEBUG(dbgs() << "\t    A2*N2 = " << *A2N2 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SLT, A2N2, C1_C2)) {
-          ++SymbolicRDIVindependence;
-          return true;
-        }
-      }
-    } else if (SE->isKnownNonPositive(A2)) {
-      // a1 >= 0 && a2 <= 0
-      if (N1 && N2) {
-        // make sure that c2 - c1 <= a1*N1 - a2*N2
-        const SCEV *A1N1 = SE->getMulExpr(A1, N1);
-        const SCEV *A2N2 = SE->getMulExpr(A2, N2);
-        const SCEV *A1N1_A2N2 = SE->getMinusSCEV(A1N1, A2N2);
-        LLVM_DEBUG(dbgs() << "\t    A1*N1 - A2*N2 = " << *A1N1_A2N2 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SGT, C2_C1, A1N1_A2N2)) {
-          ++SymbolicRDIVindependence;
-          return true;
-        }
-      }
-      // make sure that 0 <= c2 - c1
-      if (SE->isKnownNegative(C2_C1)) {
-        ++SymbolicRDIVindependence;
-        return true;
-      }
-    }
+    if (SE->isKnownNonNegative(A2))
+      return IsKnownSLT(SrcLast, DstFirst) || IsKnownSLT(DstLast, SrcFirst);
+    if (SE->isKnownNonPositive(A2))
+      return IsKnownSLT(SrcLast, DstLast) || IsKnownSLT(DstFirst, SrcFirst);
   } else if (SE->isKnownNonPositive(A1)) {
-    if (SE->isKnownNonNegative(A2)) {
-      // a1 <= 0 && a2 >= 0
-      if (N1 && N2) {
-        // make sure that a1*N1 - a2*N2 <= c2 - c1
-        const SCEV *A1N1 = SE->getMulExpr(A1, N1);
-        const SCEV *A2N2 = SE->getMulExpr(A2, N2);
-        const SCEV *A1N1_A2N2 = SE->getMinusSCEV(A1N1, A2N2);
-        LLVM_DEBUG(dbgs() << "\t    A1*N1 - A2*N2 = " << *A1N1_A2N2 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SGT, A1N1_A2N2, C2_C1)) {
-          ++SymbolicRDIVindependence;
-          return true;
-        }
-      }
-      // make sure that c2 - c1 <= 0
-      if (SE->isKnownPositive(C2_C1)) {
-        ++SymbolicRDIVindependence;
-        return true;
-      }
-    } else if (SE->isKnownNonPositive(A2)) {
-      // a1 <= 0 && a2 <= 0
-      if (N1) {
-        // make sure that a1*N1 <= c2 - c1
-        const SCEV *A1N1 = SE->getMulExpr(A1, N1);
-        LLVM_DEBUG(dbgs() << "\t    A1*N1 = " << *A1N1 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SGT, A1N1, C2_C1)) {
-          ++SymbolicRDIVindependence;
-          return true;
-        }
-      }
-      if (N2) {
-        // make sure that c2 - c1 <= -a2*N2, or c1 - c2 >= a2*N2
-        const SCEV *A2N2 = SE->getMulExpr(A2, N2);
-        LLVM_DEBUG(dbgs() << "\t    A2*N2 = " << *A2N2 << "\n");
-        if (isKnownPredicate(CmpInst::ICMP_SLT, C1_C2, A2N2)) {
-          ++SymbolicRDIVindependence;
-          return true;
-        }
-      }
-    }
+    if (SE->isKnownNonNegative(A2))
+      return IsKnownSLT(SrcFirst, DstFirst) || IsKnownSLT(DstLast, SrcLast);
+    if (SE->isKnownNonPositive(A2))
+      return IsKnownSLT(SrcFirst, DstLast) || IsKnownSLT(DstFirst, SrcLast);
   }
   return false;
 }
@@ -2272,8 +2200,7 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
       disproven = exactSIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst,
                                CurSrcLoop, CurDstLoop, Level, Result);
     return disproven || gcdMIVtest(Src, Dst, Result) ||
-           symbolicRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, CurSrcLoop,
-                            CurDstLoop);
+           symbolicRDIVtest(SrcAddRec, DstAddRec);
   }
   if (SrcAddRec) {
     const SCEV *SrcConst = SrcAddRec->getStart();
@@ -2361,9 +2288,7 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
     llvm_unreachable("RDIV expected at least one AddRec");
   return exactRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop, DstLoop,
                        Result) ||
-         gcdMIVtest(Src, Dst, Result) ||
-         symbolicRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop,
-                          DstLoop);
+         gcdMIVtest(Src, Dst, Result);
 }
 
 // Tests the single-subscript MIV pair (Src and Dst) for dependence.

@@ -518,7 +518,7 @@ define void @symbolic_rdiv(ptr %a) {
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - consistent output [*]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - none!
+; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - consistent output [|<]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - consistent output [*]!
 ;
