@@ -354,6 +354,9 @@ void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
     if (!AR->isAffine())
       return;
 
+  // Clear output vector.
+  Subscripts.clear();
+
   LLVM_DEBUG(dbgs() << "\ncomputeAccessFunctions\n"
                     << "Memory Access Function: " << *Expr << "\n");
 
@@ -461,6 +464,10 @@ void llvm::delinearize(ScalarEvolution &SE, const SCEV *Expr,
                        SmallVectorImpl<const SCEV *> &Subscripts,
                        SmallVectorImpl<const SCEV *> &Sizes,
                        const SCEV *ElementSize) {
+  // Clear output vectors.
+  Subscripts.clear();
+  Sizes.clear();
+
   // First step: collect parametric terms.
   SmallVector<const SCEV *, 4> Terms;
   collectParametricTerms(SE, Expr, Terms);
@@ -638,6 +645,9 @@ bool llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
                                      SmallVectorImpl<const SCEV *> &Subscripts,
                                      SmallVectorImpl<const SCEV *> &Sizes,
                                      const SCEV *ElementSize) {
+  // Clear output vectors.
+  Subscripts.clear();
+  Sizes.clear();
 
   // First step: find the fixed array size.
   SmallVector<uint64_t, 4> ConstSizes;
