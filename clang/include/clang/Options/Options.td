@@ -2719,6 +2719,16 @@ def fsanitize_kcfi_arity : Flag<["-"], "fsanitize-kcfi-arity">,
                            Group<f_clang_Group>,
                            HelpText<"Embed function arity information into the KCFI patchable function prefix">,
                            MarshallingInfoFlag<CodeGenOpts<"SanitizeKcfiArity">>;
+def fsanitize_kcfi_hash_EQ
+    : Joined<["-"], "fsanitize-kcfi-hash=">,
+      HelpText<"Select hash algorithm for KCFI type IDs (xxHash64, FNV-1a)">,
+      Visibility<[ClangOption, CC1Option]>,
+      Values<"xxHash64,FNV-1a">,
+      NormalizedValuesScope<"llvm">,
+      NormalizedValues<["KCFIHashAlgorithm::xxHash64",
+                        "KCFIHashAlgorithm::FNV1a"]>,
+      MarshallingInfoEnum<CodeGenOpts<"SanitizeKcfiHash">,
+                          "KCFIHashAlgorithm::xxHash64">;
 defm sanitize_stats : BoolOption<"f", "sanitize-stats",
   CodeGenOpts<"SanitizeStats">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Enable">,

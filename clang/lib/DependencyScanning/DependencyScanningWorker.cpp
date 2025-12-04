@@ -1,4 +1,4 @@
-//===- DependencyScanningWorker.cpp - clang-scan-deps worker --------------===//
+//===- DependencyScanningWorker.cpp - Thread-Safe Scanning Worker ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
-#include "DependencyScannerImpl.h"
+#include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
 
 using namespace clang;
-using namespace tooling;
 using namespace dependencies;
 
 DependencyScanningWorker::DependencyScanningWorker(

@@ -3024,11 +3024,9 @@ static Op createComputeOp(
   }
   addOperand(operands, operandSegments, ifCond);
   addOperand(operands, operandSegments, selfCond);
-  if constexpr (!std::is_same_v<Op, mlir::acc::KernelsOp>) {
-    addOperands(operands, operandSegments, reductionOperands);
-    addOperands(operands, operandSegments, privateOperands);
-    addOperands(operands, operandSegments, firstprivateOperands);
-  }
+  addOperands(operands, operandSegments, reductionOperands);
+  addOperands(operands, operandSegments, privateOperands);
+  addOperands(operands, operandSegments, firstprivateOperands);
   addOperands(operands, operandSegments, dataClauseOperands);
 
   Op computeOp;

@@ -6,17 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DependencyScannerImpl.h"
+#include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSerialization.h"
+#include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace clang;
-using namespace tooling;
 using namespace dependencies;
 
 namespace {

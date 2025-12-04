@@ -1,4 +1,4 @@
-//===- DependencyScanningTool.h - clang-scan-deps service -----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGTOOL_H
-#define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGTOOL_H
+#ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNINGTOOL_H
+#define LLVM_CLANG_TOOLING_DEPENDENCYSCANNINGTOOL_H
 
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
-#include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
+#include "clang/DependencyScanning/DependencyScanningService.h"
+#include "clang/DependencyScanning/DependencyScanningUtils.h"
+#include "clang/DependencyScanning/DependencyScanningWorker.h"
+#include "clang/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -25,61 +26,10 @@ namespace clang {
 namespace tooling {
 namespace dependencies {
 
-/// A callback to lookup module outputs for "-fmodule-file=", "-o" etc.
-using LookupModuleOutputCallback =
-    llvm::function_ref<std::string(const ModuleDeps &, ModuleOutputKind)>;
-
-/// Graph of modular dependencies.
-using ModuleDepsGraph = std::vector<ModuleDeps>;
-
-/// The full dependencies and module graph for a specific input.
-struct TranslationUnitDeps {
-  /// The graph of direct and transitive modular dependencies.
-  ModuleDepsGraph ModuleGraph;
-
-  /// The identifier of the C++20 module this translation unit exports.
-  ///
-  /// If the translation unit is not a module then \c ID.ModuleName is empty.
-  ModuleID ID;
-
-  /// A collection of absolute paths to files that this translation unit
-  /// directly depends on, not including transitive dependencies.
-  std::vector<std::string> FileDeps;
-
-  /// A collection of prebuilt modules this translation unit directly depends
-  /// on, not including transitive dependencies.
-  std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
-
-  /// A list of modules this translation unit directly depends on, not including
-  /// transitive dependencies.
-  ///
-  /// This may include modules with a different context hash when it can be
-  /// determined that the differences are benign for this compilation.
-  std::vector<ModuleID> ClangModuleDeps;
-
-  /// A list of module names that are visible to this translation unit. This
-  /// includes both direct and transitive module dependencies.
-  std::vector<std::string> VisibleModules;
-
-  /// A list of the C++20 named modules this translation unit depends on.
-  std::vector<std::string> NamedModuleDeps;
-
-  /// The sequence of commands required to build the translation unit. Commands
-  /// should be executed in order.
-  ///
-  /// FIXME: If we add support for multi-arch builds in clang-scan-deps, we
-  /// should make the dependencies between commands explicit to enable parallel
-  /// builds of each architecture.
-  std::vector<Command> Commands;
-
-  /// Deprecated driver command-line. This will be removed in a future version.
-  std::vector<std::string> DriverCommandLine;
-};
-
 struct P1689Rule {
   std::string PrimaryOutput;
-  std::optional<P1689ModuleInfo> Provides;
-  std::vector<P1689ModuleInfo> Requires;
+  std::optional<clang::dependencies::P1689ModuleInfo> Provides;
+  std::vector<clang::dependencies::P1689ModuleInfo> Requires;
 };
 
 /// The high-level implementation of the dependency discovery tool that runs on
@@ -90,9 +40,10 @@ public:
   ///
   /// @param Service  The parent service. Must outlive the tool.
   /// @param FS The filesystem for the tool to use. Defaults to the physical FS.
-  DependencyScanningTool(DependencyScanningService &Service,
-                         llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
-                             llvm::vfs::createPhysicalFileSystem());
+  DependencyScanningTool(
+      clang::dependencies::DependencyScanningService &Service,
+      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
+          llvm::vfs::createPhysicalFileSystem());
 
   /// Print out the dependency information into a string using the dependency
   /// file format that is specified in the options (-MD is the default) and
@@ -145,10 +96,11 @@ public:
   ///
   /// \returns a \c StringError with the diagnostic output if clang errors
   /// occurred, \c TranslationUnitDeps otherwise.
-  llvm::Expected<TranslationUnitDeps> getTranslationUnitDependencies(
+  llvm::Expected<clang::dependencies::TranslationUnitDeps>
+  getTranslationUnitDependencies(
       const std::vector<std::string> &CommandLine, StringRef CWD,
-      const llvm::DenseSet<ModuleID> &AlreadySeen,
-      LookupModuleOutputCallback LookupModuleOutput,
+      const llvm::DenseSet<clang::dependencies::ModuleID> &AlreadySeen,
+      clang::dependencies::LookupModuleOutputCallback LookupModuleOutput,
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
 
   /// Given a compilation context specified via the Clang driver command-line,
@@ -157,10 +109,12 @@ public:
   /// TODO: this method should be removed as soon as Swift and our C-APIs adopt
   /// CompilerInstanceWithContext. We are keeping it here so that it is easier
   /// to coordinate with Swift and C-API changes.
-  llvm::Expected<TranslationUnitDeps> getModuleDependencies(
+  llvm::Expected<clang::dependencies::TranslationUnitDeps>
+  getModuleDependencies(
       StringRef ModuleName, const std::vector<std::string> &CommandLine,
-      StringRef CWD, const llvm::DenseSet<ModuleID> &AlreadySeen,
-      LookupModuleOutputCallback LookupModuleOutput);
+      StringRef CWD,
+      const llvm::DenseSet<clang::dependencies::ModuleID> &AlreadySeen,
+      clang::dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
   /// The following three methods provide a new interface to perform
   /// by name dependency scan. The new interface's intention is to improve
@@ -190,9 +144,11 @@ public:
   ///                           arguments for dependencies.
   /// @return An instance of \c TranslationUnitDeps if the scan is successful.
   ///         Otherwise it returns an error.
-  llvm::Expected<TranslationUnitDeps> computeDependenciesByNameWithContext(
-      StringRef ModuleName, const llvm::DenseSet<ModuleID> &AlreadySeen,
-      LookupModuleOutputCallback LookupModuleOutput);
+  llvm::Expected<clang::dependencies::TranslationUnitDeps>
+  computeDependenciesByNameWithContext(
+      StringRef ModuleName,
+      const llvm::DenseSet<clang::dependencies::ModuleID> &AlreadySeen,
+      clang::dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
   /// @brief This method finializes the compiler instance. It finalizes the
   ///        diagnostics and deletes the compiler instance. Call this method
@@ -203,96 +159,13 @@ public:
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
 
 private:
-  DependencyScanningWorker Worker;
-};
-
-class FullDependencyConsumer : public DependencyConsumer {
-public:
-  FullDependencyConsumer(const llvm::DenseSet<ModuleID> &AlreadySeen)
-      : AlreadySeen(AlreadySeen) {}
-
-  void handleBuildCommand(Command Cmd) override {
-    Commands.push_back(std::move(Cmd));
-  }
-
-  void handleDependencyOutputOpts(const DependencyOutputOptions &) override {}
-
-  void handleFileDependency(StringRef File) override {
-    Dependencies.push_back(std::string(File));
-  }
-
-  void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {
-    PrebuiltModuleDeps.emplace_back(std::move(PMD));
-  }
-
-  void handleModuleDependency(ModuleDeps MD) override {
-    ClangModuleDeps[MD.ID] = std::move(MD);
-  }
-
-  void handleDirectModuleDependency(ModuleID ID) override {
-    DirectModuleDeps.push_back(ID);
-  }
-
-  void handleVisibleModule(std::string ModuleName) override {
-    VisibleModules.push_back(ModuleName);
-  }
-
-  void handleContextHash(std::string Hash) override {
-    ContextHash = std::move(Hash);
-  }
-
-  void handleProvidedAndRequiredStdCXXModules(
-      std::optional<P1689ModuleInfo> Provided,
-      std::vector<P1689ModuleInfo> Requires) override {
-    ModuleName = Provided ? Provided->ModuleName : "";
-    llvm::transform(Requires, std::back_inserter(NamedModuleDeps),
-                    [](const auto &Module) { return Module.ModuleName; });
-  }
-
-  TranslationUnitDeps takeTranslationUnitDeps();
-
-private:
-  std::vector<std::string> Dependencies;
-  std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
-  llvm::MapVector<ModuleID, ModuleDeps> ClangModuleDeps;
-  std::string ModuleName;
-  std::vector<std::string> NamedModuleDeps;
-  std::vector<ModuleID> DirectModuleDeps;
-  std::vector<std::string> VisibleModules;
-  std::vector<Command> Commands;
-  std::string ContextHash;
-  const llvm::DenseSet<ModuleID> &AlreadySeen;
-};
-
-/// A simple dependency action controller that uses a callback. If no callback
-/// is provided, it is assumed that looking up module outputs is unreachable.
-class CallbackActionController : public DependencyActionController {
-public:
-  virtual ~CallbackActionController();
-
-  static std::string lookupUnreachableModuleOutput(const ModuleDeps &MD,
-                                                   ModuleOutputKind Kind) {
-    llvm::report_fatal_error("unexpected call to lookupModuleOutput");
-  };
-
-  CallbackActionController(LookupModuleOutputCallback LMO)
-      : LookupModuleOutput(std::move(LMO)) {
-    if (!LookupModuleOutput) {
-      LookupModuleOutput = lookupUnreachableModuleOutput;
-    }
-  }
-
-  std::string lookupModuleOutput(const ModuleDeps &MD,
-                                 ModuleOutputKind Kind) override {
-    return LookupModuleOutput(MD, Kind);
-  }
-
-private:
-  LookupModuleOutputCallback LookupModuleOutput;
+  clang::dependencies::DependencyScanningWorker Worker;
+  std::unique_ptr<clang::dependencies::TextDiagnosticsPrinterWithOutput>
+      DiagPrinterWithOS;
 };
 
 } // end namespace dependencies
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGTOOL_H
+#endif // LLVM_CLANG_TOOLING_DEPENDENCYSCANNINGTOOL_H

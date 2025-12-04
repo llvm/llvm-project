@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+//===- InProcessModuleCache.cpp - Implicit Module Cache ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/DependencyScanning/InProcessModuleCache.h"
+#include "clang/DependencyScanning/InProcessModuleCache.h"
 
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/AdvisoryLock.h"
@@ -15,7 +15,6 @@
 #include <mutex>
 
 using namespace clang;
-using namespace tooling;
 using namespace dependencies;
 
 namespace {

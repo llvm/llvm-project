@@ -1,4 +1,4 @@
-//===- DependencyScannerImpl.h - Implements dependency scanning *- C++ -*--===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,18 +9,18 @@
 #ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNER_H
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNER_H
 
+#include "clang/DependencyScanning/DependencyScanningFilesystem.h"
+#include "clang/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
-#include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 
 namespace clang {
 class DiagnosticConsumer;
 
-namespace tooling {
 namespace dependencies {
 class DependencyScanningService;
 class DependencyScanningWorker;
@@ -191,7 +191,6 @@ public:
   llvm::Error handleReturnStatus(bool Success);
 };
 } // namespace dependencies
-} // namespace tooling
 } // namespace clang
 
 #endif

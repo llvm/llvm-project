@@ -283,11 +283,11 @@ body:             |
     ; GCN-NEXT: v_dual_mov_b32 v2, v3 /*v259*/ :: v_dual_add_f32 v3, v1 /*v257*/, v2 /*v258*/
     $vgpr2, $vgpr3 = V_DUAL_MOV_B32_e32_X_ADD_F32_e32_gfx1250 undef $vgpr259, undef $vgpr257, undef $vgpr258, implicit $exec, implicit $mode
 
-    ; GCN-NEXT: s_set_vgpr_msb 0x544
+    ; GCN-NEXT: s_set_vgpr_msb 0x554
     ; GCN-NEXT: v_dual_fmamk_f32 v244 /*v500*/, v0, 0xa, v44 /*v300*/ :: v_dual_fmac_f32 v3 /*v259*/, v1, v1 /*v257*/
     $vgpr500, $vgpr259 = V_DUAL_FMAMK_F32_X_FMAC_F32_e32_gfx1250 undef $vgpr0, 10, undef $vgpr300, undef $vgpr1, undef $vgpr257, $vgpr259, implicit $mode, implicit $exec
 
-    ; GCN-NEXT: s_set_vgpr_msb 0x4410
+    ; GCN-NEXT: s_set_vgpr_msb 0x5410
     ; GCN-NEXT: v_dual_fma_f32 v0, v6, v6, v44 /*v300*/ :: v_dual_fma_f32 v1, v4, v5, v45 /*v301*/
     $vgpr0, $vgpr1 = V_DUAL_FMA_F32_e64_X_FMA_F32_e64_e96_gfx1250 0, undef $vgpr6, 0, undef $vgpr6, 0, undef $vgpr300, 0, undef $vgpr4, 0, undef $vgpr5, 0, undef $vgpr301, implicit $mode, implicit $exec
 
@@ -302,6 +302,10 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_msb 0x40ae
     ; GCN-NEXT: v_dual_fmac_f32 v2 /*v514*/, v6 /*v518*/, v8 /*v776*/ :: v_dual_fma_f32 v3 /*v515*/, v4 /*v516*/, v7 /*v775*/, v3 /*v515*/
     $vgpr514, $vgpr515 = V_DUAL_FMAC_F32_e32_X_FMA_F32_e64_e96_gfx1250 0, undef $vgpr518, 0, undef $vgpr776, undef $vgpr514, 0, undef $vgpr516, 0, undef $vgpr775, 0, $vgpr515, implicit $mode, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0xae54
+    ; GCN-NEXT: v_dual_fmac_f32 v7 /*v263*/, v1, v1 /*v257*/ :: v_dual_fmamk_f32 v244 /*v500*/, v0, 0xa, v44 /*v300*/
+    $vgpr263, $vgpr500 = V_DUAL_FMAC_F32_e32_X_FMAMK_F32_gfx1250 undef $vgpr1, undef $vgpr257, $vgpr263, undef $vgpr0, 10, undef $vgpr300, implicit $mode, implicit $exec
 
     ; ASM: NumVgprs: 777
 

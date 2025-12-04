@@ -1,4 +1,4 @@
-//===- ModuleDepCollector.h - Callbacks to collect deps ---------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_MODULEDEPCOLLECTOR_H
-#define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_MODULEDEPCOLLECTOR_H
+#ifndef LLVM_CLANG_DEPENDENCYSCANNING_MODULEDEPCOLLECTOR_H
+#define LLVM_CLANG_DEPENDENCYSCANNING_MODULEDEPCOLLECTOR_H
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Serialization/ASTReader.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringSet.h"
@@ -28,7 +28,6 @@
 #include <variant>
 
 namespace clang {
-namespace tooling {
 namespace dependencies {
 
 class DependencyActionController;
@@ -109,7 +108,7 @@ struct ModuleID {
            std::tie(Other.ModuleName, Other.ContextHash);
   }
 
-  bool operator<(const ModuleID& Other) const {
+  bool operator<(const ModuleID &Other) const {
     return std::tie(ModuleName, ContextHash) <
            std::tie(Other.ModuleName, Other.ContextHash);
   }
@@ -264,10 +263,11 @@ private:
 
   /// Traverses the affecting modules and updates \c MD with references to the
   /// parent \c ModuleDepCollector info.
-  void addAllAffectingClangModules(const Module *M, ModuleDeps &MD,
+  void
+  addAllAffectingClangModules(const Module *M, ModuleDeps &MD,
                               llvm::DenseSet<const Module *> &AddedModules);
   void addAffectingClangModule(const Module *M, ModuleDeps &MD,
-                          llvm::DenseSet<const Module *> &AddedModules);
+                               llvm::DenseSet<const Module *> &AddedModules);
 
   /// Add discovered module dependency for the given module.
   void addOneModuleDep(const Module *M, const ModuleID ID, ModuleDeps &MD);
@@ -406,16 +406,15 @@ bool areOptionsInStableDir(const ArrayRef<StringRef> Directories,
                            const HeaderSearchOptions &HSOpts);
 
 } // end namespace dependencies
-} // end namespace tooling
 } // end namespace clang
 
 namespace llvm {
-inline hash_code hash_value(const clang::tooling::dependencies::ModuleID &ID) {
+inline hash_code hash_value(const clang::dependencies::ModuleID &ID) {
   return hash_combine(ID.ModuleName, ID.ContextHash);
 }
 
-template <> struct DenseMapInfo<clang::tooling::dependencies::ModuleID> {
-  using ModuleID = clang::tooling::dependencies::ModuleID;
+template <> struct DenseMapInfo<clang::dependencies::ModuleID> {
+  using ModuleID = clang::dependencies::ModuleID;
   static inline ModuleID getEmptyKey() { return ModuleID{"", ""}; }
   static inline ModuleID getTombstoneKey() {
     return ModuleID{"~", "~"}; // ~ is not a valid module name or context hash
@@ -427,4 +426,4 @@ template <> struct DenseMapInfo<clang::tooling::dependencies::ModuleID> {
 };
 } // namespace llvm
 
-#endif // LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_MODULEDEPCOLLECTOR_H
+#endif // LLVM_CLANG_DEPENDENCYSCANNING_MODULEDEPCOLLECTOR_H

@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
+#include "clang/Tooling/DependencyScanningTool.h"
 #include "clang/Frontend/Utils.h"
 #include <optional>
 
 using namespace clang;
 using namespace tooling;
-using namespace dependencies;
+using namespace clang::dependencies;
+using namespace clang::tooling::dependencies;
 
 DependencyScanningTool::DependencyScanningTool(
     DependencyScanningService &Service,
@@ -200,29 +201,3 @@ DependencyScanningTool::computeDependenciesByNameWithContext(
 llvm::Error DependencyScanningTool::finalizeCompilerInstanceWithContext() {
   return Worker.finalizeCompilerInstanceWithContextOrError();
 }
-
-TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {
-  TranslationUnitDeps TU;
-
-  TU.ID.ContextHash = std::move(ContextHash);
-  TU.ID.ModuleName = std::move(ModuleName);
-  TU.NamedModuleDeps = std::move(NamedModuleDeps);
-  TU.FileDeps = std::move(Dependencies);
-  TU.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
-  TU.VisibleModules = std::move(VisibleModules);
-  TU.Commands = std::move(Commands);
-
-  for (auto &&M : ClangModuleDeps) {
-    auto &MD = M.second;
-    // TODO: Avoid handleModuleDependency even being called for modules
-    //   we've already seen.
-    if (AlreadySeen.count(M.first))
-      continue;
-    TU.ModuleGraph.push_back(std::move(MD));
-  }
-  TU.ClangModuleDeps = std::move(DirectModuleDeps);
-
-  return TU;
-}
-
-CallbackActionController::~CallbackActionController() {}
