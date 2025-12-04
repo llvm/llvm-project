@@ -209,6 +209,10 @@ jobs:
       digest: ${{ steps.digest.outputs.digest }}
       artifact-id: ${{ steps.artifact-upload.outputs.artifact-id }}
     steps:
+    - name: Setup crlf
+      if: runner.os == 'Windows'
+      run: |
+        git config --global core.autocrlf false
 
     - name: Checkout LLVM
       uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
