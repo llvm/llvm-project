@@ -343,9 +343,9 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// ScaledExtPacked816Op
+// ScaledExtPackedMatrixOp
 //===----------------------------------------------------------------------===//
-LogicalResult ScaledExtPacked816Op::verify() {
+LogicalResult ScaledExtPackedMatrixOp::verify() {
   int blockSize = getBlockSize();
   assert(llvm::is_contained({16, 32}, blockSize) && "invalid block size");
 
@@ -376,10 +376,10 @@ LogicalResult ScaledExtPacked816Op::verify() {
   } else {
     if (is_block_16) {
       bool is_valid = ((firstScaleLane == 0) && (firstScaleByte == 0)) ||
-                      ((firstScaleLane == 1) && (firstScaleByte == 2));
+                      ((firstScaleLane == 16) && (firstScaleByte == 2));
       if (!is_valid) {
         return emitOpError("blockSize of 16 can only have (firstScaleLane, "
-                           "firstScaleByte) be (0, 0) or (1, 2) for f8.");
+                           "firstScaleByte) be (0, 0) or (16, 2) for f8.");
       }
     }
   }
@@ -700,6 +700,62 @@ LogicalResult TransposeLoadOp::verify() {
     return emitOpError(
                "Transferring type size mismatch: expected num of elements: ")
            << validNumElems->second;
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MakeDmaBaseOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MakeDmaBaseOp::verify() {
+  MemRefType ldsType = cast<MemRefType>(getLds().getType());
+  MemRefType globalType = cast<MemRefType>(getGlobal().getType());
+  if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace())) {
+    return emitOpError(
+        "lds memref must have workgroup address space attribute.");
+  }
+  if (!hasGlobalMemorySpace(globalType.getMemorySpace())) {
+    return emitOpError(
+        "global memref must have global address space attribute.");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MakeDmaDescriptorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MakeDmaDescriptorOp::verify() {
+  ArrayRef<int64_t> globalStaticStrides = getGlobalStaticStrides();
+
+  if (globalStaticStrides.empty()) {
+    return emitOpError("strides must not be empty.");
+  }
+  if (globalStaticStrides.back() != 1) {
+    return emitOpError("strides for the innermost dimension must be 1.");
+  }
+
+  ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
+  size_t rank = globalStaticSizes.size();
+  if (rank != globalStaticStrides.size()) {
+    return emitOpError("strides and sizes must have same rank.");
+  }
+
+  ArrayRef<int64_t> sharedStaticSizes = getSharedStaticSizes();
+  if (rank != sharedStaticSizes.size()) {
+    return emitOpError("tensor must have same rank as tile.");
+  }
+
+  if (Value atomicBarrierAddress = getAtomicBarrierAddress()) {
+    MemRefType atomicBarrierAddressType =
+        cast<MemRefType>(atomicBarrierAddress.getType());
+    bool barrierInLDS =
+        hasWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
+    if (!barrierInLDS) {
+      return emitOpError("atomic barrier address must be in LDS.");
+    }
   }
 
   return success();

@@ -127,7 +127,7 @@ struct S1 {
 // PRESERVE_MIN-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META5]]
 // PRESERVE_MIN-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF6:![0-9]+]], !nosanitize [[META5]]
 // PRESERVE_MIN:       [[HANDLER_CFI_CHECK_FAIL]]:
-// PRESERVE_MIN-NEXT:    call void @__ubsan_handle_cfi_check_fail_minimal() #[[ATTR3:[0-9]+]], !nosanitize [[META5]]
+// PRESERVE_MIN-NEXT:    call preserve_allcc void @__ubsan_handle_cfi_check_fail_minimal_preserve() #[[ATTR3:[0-9]+]], !nosanitize [[META5]]
 // PRESERVE_MIN-NEXT:    br label %[[CONT]], !nosanitize [[META5]]
 // PRESERVE_MIN:       [[CONT]]:
 // PRESERVE_MIN-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0

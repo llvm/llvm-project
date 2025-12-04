@@ -501,7 +501,7 @@ def CARRYRC : RegisterClass<"PPC", [i32], 32, (add CARRY, XER)> {
 // Similarly, we have an AltOrder for 64-bit ELF ABI which r2 is allocated
 // at last.
 def G8pRC :
-  RegisterClass<"PPC", [i128], 128,
+  RegisterClass<"PPC", [untyped], 128,
                 (add (sequence "G8p%u", 1, 5),
                      (sequence "G8p%u", 14, 7),
                      G8p15, G8p6, G8p0)> {
@@ -806,6 +806,25 @@ def s17imm64 : Operand<i64> {
   let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_half16>";
   let ParserMatchClass = PPCS17ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<16>";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def PPCS32ImmAsmOperand : AsmOperandClass {
+  let Name = "S32Imm";
+  let PredicateMethod = "isS32Imm";
+  let RenderMethod = "addImmOperands";
+}
+def s32imm : Operand<i64> {
+  let PrintMethod = "printS32ImmOperand";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_imm32>";
+  let ParserMatchClass = PPCS32ImmAsmOperand;
+  let DecoderMethod = "decodeSImmOperand<32>";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def s32imm_pcrel : Operand<i64> {
+  let PrintMethod = "printS32ImmOperand";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_pcrel32>";
+  let ParserMatchClass = PPCS32ImmAsmOperand;
+  let DecoderMethod = "decodeSImmOperand<32>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCS34ImmAsmOperand : AsmOperandClass {

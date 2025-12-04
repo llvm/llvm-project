@@ -4016,6 +4016,27 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::experimental_get_vector_length: {
+    // get.vector.length(Cnt, MaxLanes) --> Cnt when Cnt <= MaxLanes
+    unsigned BitWidth =
+        std::max(II->getArgOperand(0)->getType()->getScalarSizeInBits(),
+                 II->getType()->getScalarSizeInBits());
+    ConstantRange Cnt =
+        computeConstantRangeIncludingKnownBits(II->getArgOperand(0), false,
+                                               SQ.getWithInstruction(II))
+            .zextOrTrunc(BitWidth);
+    ConstantRange MaxLanes = cast<ConstantInt>(II->getArgOperand(1))
+                                 ->getValue()
+                                 .zextOrTrunc(Cnt.getBitWidth());
+    if (cast<ConstantInt>(II->getArgOperand(2))->isOne())
+      MaxLanes = MaxLanes.multiply(
+          getVScaleRange(II->getFunction(), Cnt.getBitWidth()));
+
+    if (Cnt.icmp(CmpInst::ICMP_ULE, MaxLanes))
+      return replaceInstUsesWith(
+          *II, Builder.CreateZExtOrTrunc(II->getArgOperand(0), II->getType()));
+    return nullptr;
+  }
   default: {
     // Handle target specific intrinsics
     std::optional<Instruction *> V = targetInstCombineIntrinsic(*II);
