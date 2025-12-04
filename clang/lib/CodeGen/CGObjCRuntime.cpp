@@ -415,7 +415,70 @@ bool CGObjCRuntime::canMessageReceiverBeNull(
 
 bool CGObjCRuntime::canClassObjectBeUnrealized(
     const ObjCInterfaceDecl *CalleeClassDecl, CodeGenFunction &CGF) const {
-  // TODO
+  if (!CalleeClassDecl)
+    return true;
+
+  // Heuristic 1: +load method on this class
+  // If the class has a +load method, it's realized when the binary is loaded.
+  ASTContext &Ctx = CGM.getContext();
+  const IdentifierInfo *LoadII = &Ctx.Idents.get("load");
+  Selector LoadSel = Ctx.Selectors.getSelector(0, &LoadII);
+
+  // TODO: if one if the child had +load, this class is guaranteed to be
+  // realized as well. We should have a translation unit specific map that
+  // precomputes all classes that are realized, and just do a lookup here.
+  // But we need to measure how expensive it is to create a map like that.
+  if (CalleeClassDecl->lookupClassMethod(LoadSel))
+    return false; // This class has +load, so it's already realized
+
+  // Heuristic 2: using Self / Super
+  // If we're currently executing a method of ClassDecl (or a subclass),
+  // then ClassDecl must already be realized.
+  if (const auto *CurMethod =
+          dyn_cast_or_null<ObjCMethodDecl>(CGF.CurCodeDecl)) {
+    const ObjCInterfaceDecl *CallerCalssDecl = CurMethod->getClassInterface();
+    if (CallerCalssDecl && CalleeClassDecl->isSuperClassOf(CallerCalssDecl))
+      return false;
+  }
+
+  // Heuristic 3: previously realized
+  // Heuristic 3.1: Walk through the current BasicBlock looking for calls that
+  // realize the class. All heuristics in this cluster share the same
+  // implementation pattern.
+  auto *BB = CGF.Builder.GetInsertBlock();
+  if (!BB)
+    return true; // No current block, assume unrealized
+
+  llvm::StringRef CalleeClassName = CalleeClassDecl->getName();
+
+  // Heuristic 3.2 / TODO: If realization happened in a dominating block, the
+  // class is realized Requires Dominator tree analysis. There should be an
+  // outer loop `for (BB: DominatingBasicBlocks)`
+  for (const auto &Inst : *BB) {
+    // Check if this is a call instruction
+    const auto *Call = llvm::dyn_cast<llvm::CallInst>(&Inst);
+    if (!Call)
+      continue;
+    llvm::Function *CalledFunc = Call->getCalledFunction();
+    if (!CalledFunc)
+      continue;
+
+    llvm::StringRef FuncNamePtr = CalledFunc->getName();
+    // Skip the \01 prefix if present
+    if (FuncNamePtr.starts_with("\01"))
+      FuncNamePtr = FuncNamePtr.drop_front(1);
+    // Check for instance method calls: "-[ClassName methodName]"
+    // or class method calls: "+[ClassName methodName]"
+    // Also check for thunks: "-[ClassName methodName]_thunk"
+    if ((FuncNamePtr.starts_with("-[") || FuncNamePtr.starts_with("+["))) {
+      FuncNamePtr = FuncNamePtr.drop_front(2);
+      // TODO: if the current class is the super class of the function that's
+      // used, it should've been realized as well
+      if (FuncNamePtr.starts_with(CalleeClassName))
+        return false;
+    }
+  }
+
   // Otherwise, assume it can be unrealized.
   return true;
 }

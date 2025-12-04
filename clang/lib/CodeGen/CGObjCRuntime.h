@@ -330,10 +330,23 @@ public:
                                      QualType resultType,
                                      CallArgList &callArgs);
 
-  bool canMessageReceiverBeNull(CodeGenFunction &CGF,
-                                const ObjCMethodDecl *method, bool isSuper,
-                                const ObjCInterfaceDecl *classReceiver,
-                                llvm::Value *receiver);
+  /// Check if the receiver of an ObjC message send can be null.
+  /// Returns true if the receiver may be null, false if provably non-null.
+  ///
+  /// This can be overridden by subclasses to add runtime-specific heuristics.
+  /// Base implementation checks:
+  /// - Super dispatch (always non-null)
+  /// - Self in const-qualified methods (ARC)
+  /// - Weak-linked classes
+  ///
+  /// Future enhancements in CGObjCCommonMac override:
+  /// - _Nonnull attributes
+  /// - Results of alloc, new, ObjC literals
+  virtual bool canMessageReceiverBeNull(CodeGenFunction &CGF,
+                                        const ObjCMethodDecl *method,
+                                        bool isSuper,
+                                        const ObjCInterfaceDecl *classReceiver,
+                                        llvm::Value *receiver);
 
   /// Check if a class object can be unrealized (not yet initialized).
   /// Returns true if the class may be unrealized, false if provably realized.
