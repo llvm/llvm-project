@@ -23,7 +23,6 @@
 #include "Transport.h"
 #include "Variables.h"
 #include "lldb/API/SBBroadcaster.h"
-#include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFile.h"
@@ -33,11 +32,9 @@
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/Host/MainLoop.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -88,7 +85,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// Path to the lldb-dap binary itself.
   static llvm::StringRef debug_adapter_path;
 
-  Log *log;
+  Log &log;
   DAPTransport &transport;
   lldb::SBFile in;
   OutputRedirector out;
@@ -194,12 +191,12 @@ struct DAP final : public DAPTransport::MessageHandler {
   ///     Transport for this debug session.
   /// \param[in] loop
   ///     Main loop associated with this instance.
-  DAP(Log *log, const ReplMode default_repl_mode,
+  DAP(Log &log, const ReplMode default_repl_mode,
       std::vector<std::string> pre_init_commands, bool no_lldbinit,
       llvm::StringRef client_name, DAPTransport &transport,
       lldb_private::MainLoop &loop);
 
-  ~DAP();
+  ~DAP() override = default;
 
   /// DAP is not copyable.
   /// @{
