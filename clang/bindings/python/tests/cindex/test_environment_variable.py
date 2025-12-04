@@ -4,7 +4,7 @@ import sys
 import os
 
 
-def reset_import_and_get_frech_config():
+def reset_import_and_get_fresh_config():
     # Reloads the clang.cindex module to reset any class-level state in Config.
     sys.modules.pop("clang.cindex", None)
     sys.modules.pop("clang", None)
@@ -15,15 +15,15 @@ def reset_import_and_get_frech_config():
 
 class TestEnvironementVariable(unittest.TestCase):
     def test_working_libclang_library_file(self):
-        ref_libclang_library_file = reset_import_and_get_frech_config().get_filename()
+        ref_libclang_library_file = reset_import_and_get_fresh_config().get_filename()
         with unittest.mock.patch.dict(
             os.environ, {"LIBCLANG_LIBRARY_FILE": ref_libclang_library_file}
         ):
-            reset_import_and_get_frech_config().lib
+            reset_import_and_get_fresh_config().lib
 
     @unittest.mock.patch.dict("os.environ", {"LIBCLANG_LIBRARY_FILE": "/dev/null"})
     def test_non_working_libclang_library_file(self):
-        config = reset_import_and_get_frech_config()
+        config = reset_import_and_get_fresh_config()
         import clang.cindex
 
         with self.assertRaises(clang.cindex.LibclangError):
@@ -31,7 +31,7 @@ class TestEnvironementVariable(unittest.TestCase):
 
     def test_working_libclang_library_path(self):
         # Get adequate libclang path
-        ref_libclang_library_file = reset_import_and_get_frech_config().get_filename()
+        ref_libclang_library_file = reset_import_and_get_fresh_config().get_filename()
         ref_libclang_library_path, filename = os.path.split(ref_libclang_library_file)
         filename_root, filename_ext = os.path.splitext(filename)
 
@@ -49,14 +49,14 @@ class TestEnvironementVariable(unittest.TestCase):
             # Remove LIBCLANG_LIBRARY_FILE to avoid it taking precedence if set by the user
             # Need to be in the mocked environement
             os.environ.pop("LIBCLANG_LIBRARY_FILE", None)
-            reset_import_and_get_frech_config().lib
+            reset_import_and_get_fresh_config().lib
 
     @unittest.mock.patch.dict("os.environ", {"LIBCLANG_LIBRARY_PATH": "not_a_real_dir"})
     def test_non_working_libclang_library_path(self):
         # Remove LIBCLANG_LIBRARY_FILE to avoid it taking precedence if set by the user
         os.environ.pop("LIBCLANG_LIBRARY_FILE", None)
 
-        config = reset_import_and_get_frech_config()
+        config = reset_import_and_get_fresh_config()
         import clang.cindex
 
         with self.assertRaises(clang.cindex.LibclangError):
