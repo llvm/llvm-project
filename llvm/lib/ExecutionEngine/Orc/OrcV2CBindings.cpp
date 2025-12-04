@@ -11,9 +11,11 @@
 #include "llvm-c/OrcEE.h"
 #include "llvm-c/TargetMachine.h"
 
+#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
@@ -1015,6 +1017,17 @@ LLVMOrcObjectLayerRef LLVMOrcLLJITGetObjLinkingLayer(LLVMOrcLLJITRef J) {
 LLVMOrcObjectTransformLayerRef
 LLVMOrcLLJITGetObjTransformLayer(LLVMOrcLLJITRef J) {
   return wrap(&unwrap(J)->getObjTransformLayer());
+}
+
+LLVMErrorRef LLVMOrcCreateObjectLinkingLayerWithInProcessMemoryManager(
+    LLVMOrcObjectLayerRef *Result, LLVMOrcExecutionSessionRef ES) {
+  assert(Result && "Result must not be null");
+  assert(ES && "ES must not be null");
+  auto MM = jitlink::InProcessMemoryManager::Create();
+  if (!MM)
+    return wrap(MM.takeError());
+  *Result = wrap(new ObjectLinkingLayer(*unwrap(ES), std::move(*MM)));
+  return LLVMErrorSuccess;
 }
 
 LLVMOrcObjectLayerRef
