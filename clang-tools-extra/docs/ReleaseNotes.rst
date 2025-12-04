@@ -567,6 +567,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
 
+- Improved :doc:`readability-redundant-casting
+  <clang-tidy/checks/readability/redundant-casting>` check by fixing false
+  negatives when explicitly cast from function pointer.
+
 - Improved :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
   literal suffixes added in C++23 and C23.
