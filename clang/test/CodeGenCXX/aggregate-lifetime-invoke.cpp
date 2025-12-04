@@ -14,7 +14,7 @@ void test() {
   // CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[AGG1]])
   // CHECK: invoke void @_Z16func_that_throws7Trivial(ptr noundef nonnull byval(%struct.Trivial) align 8 %[[AGG1]])
   // CHECK-NEXT: to label %[[CONT1:.*]] unwind label %[[LPAD1:.*]]
-  
+
   // CHECK: [[CONT1]]:
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr nonnull %[[AGG2]])
   // CHECK: invoke void @_Z16func_that_throws7Trivial(ptr noundef nonnull byval(%struct.Trivial) align 8 %[[AGG2]])
