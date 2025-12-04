@@ -1,6 +1,4 @@
-import os
-
-from clang.cindex import Config, LanguageKind
+from clang.cindex import LanguageKind
 
 
 import unittest

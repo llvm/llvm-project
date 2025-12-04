@@ -1,7 +1,4 @@
-import os
-
 from clang.cindex import (
-    Config,
     CursorKind,
     PrintingPolicy,
     PrintingPolicyProperty,

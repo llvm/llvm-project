@@ -1,6 +1,4 @@
-import os
-
-from clang.cindex import Config, TLSKind
+from clang.cindex import TLSKind
 
 
 import unittest

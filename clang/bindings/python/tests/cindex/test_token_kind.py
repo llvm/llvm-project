@@ -1,6 +1,4 @@
-import os
-
-from clang.cindex import Config, TokenKind
+from clang.cindex import TokenKind
 
 
 import unittest

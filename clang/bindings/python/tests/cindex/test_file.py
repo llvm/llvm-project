@@ -1,6 +1,6 @@
 import os
 
-from clang.cindex import Config, File, Index, TranslationUnit
+from clang.cindex import File, Index, TranslationUnit
 
 
 import unittest

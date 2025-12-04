@@ -1,6 +1,4 @@
-import os
-
-from clang.cindex import Config, CursorKind, SourceLocation, SourceRange, TokenKind
+from clang.cindex import CursorKind, SourceLocation, SourceRange, TokenKind
 
 
 import unittest

@@ -1,6 +1,4 @@
-import os
-
-from clang.cindex import Config, LinkageKind
+from clang.cindex import LinkageKind
 
 
 import unittest

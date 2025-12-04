@@ -1,9 +1,6 @@
-import os
-
 from clang.cindex import (
     AvailabilityKind,
     BinaryOperator,
-    Config,
     Cursor,
     CursorKind,
     PrintingPolicy,

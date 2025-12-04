@@ -1,7 +1,6 @@
-import os
 from pathlib import Path
 
-from clang.cindex import Config, SourceLocation, SourceRange, TranslationUnit
+from clang.cindex import SourceLocation, SourceRange, TranslationUnit
 
 
 import unittest

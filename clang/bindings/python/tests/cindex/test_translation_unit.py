@@ -1,7 +1,6 @@
 import os
 
 from clang.cindex import (
-    Config,
     Cursor,
     CursorKind,
     File,

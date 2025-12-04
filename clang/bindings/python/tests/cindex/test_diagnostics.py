@@ -1,6 +1,4 @@
-import os
-
-from clang.cindex import Config, Diagnostic
+from clang.cindex import Diagnostic
 
 
 import unittest

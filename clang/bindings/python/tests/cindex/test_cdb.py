@@ -1,6 +1,6 @@
 import os
 
-from clang.cindex import CompilationDatabase, CompilationDatabaseError, Config
+from clang.cindex import CompilationDatabase, CompilationDatabaseError
 
 
 import gc

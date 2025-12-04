@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 
 from clang.cindex import (
-    Config,
     Cursor,
     File,
     SourceLocation,

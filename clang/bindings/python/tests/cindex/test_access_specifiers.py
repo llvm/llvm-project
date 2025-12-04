@@ -1,6 +1,4 @@
-import os
-
-from clang.cindex import AccessSpecifier, Config
+from clang.cindex import AccessSpecifier
 
 
 import unittest

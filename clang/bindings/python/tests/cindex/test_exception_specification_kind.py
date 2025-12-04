@@ -1,6 +1,4 @@
-import os
-
-from clang.cindex import Config, CursorKind, ExceptionSpecificationKind
+from clang.cindex import CursorKind, ExceptionSpecificationKind
 
 
 import unittest
