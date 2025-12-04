@@ -11,6 +11,7 @@
 //==============================================================================
 
 #pragma once
+#include "lib_func_attrib.h"
 #include <stddef.h>
 #include <stdint.h>
 
