@@ -1,4 +1,3 @@
-! REQUIRES: flang-rt
 ! UNSUPPORTED: offload-cuda
 
 ! Verify that flang can correctly build executables.
