@@ -460,6 +460,13 @@ Improvements to Clang's diagnostics
 - A new warning ``-Wshadow-header`` has been added to detect when a header file
   is found in multiple search directories (excluding system paths).
 
+- Fixed: ``-Wuninitialized`` now emits a warning for uninitialized fixed-size local arrays. For example:
+
+  .. code-block:: c
+
+     int arr[4];
+     int x = arr[2]; // warning: variable 'arr' is uninitialized when used here (#GH165239)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
