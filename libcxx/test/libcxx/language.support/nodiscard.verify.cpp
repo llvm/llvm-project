@@ -12,7 +12,6 @@
 
 #include <compare>
 #include <coroutine>
-#include <functional>
 #include <initializer_list>
 
 #include "test_macros.h"
