@@ -1394,6 +1394,15 @@ def OpenACC_PrivateRecipeOp
         ::mlir::Type varType,
         ::llvm::StringRef varName = "",
         ::mlir::ValueRange bounds = {});
+
+    /// Creates a PrivateRecipeOp using the same variable type as an existing
+    /// FirstprivateRecipeOp. This is a convenience wrapper that forwards to
+    /// the type-based createAndPopulate overload.
+    static std::optional<PrivateRecipeOp> createAndPopulate(
+        ::mlir::OpBuilder &builder,
+        ::mlir::Location loc,
+        ::llvm::StringRef recipeName,
+        ::mlir::acc::FirstprivateRecipeOp firstprivRecipe);
   }];
 }
 
