@@ -45,20 +45,20 @@ STATISTIC(NumLiveRegsAtEntry, "Number of registers live at function entry");
 STATISTIC(NumLiveRegsTotal, "Total number of live registers across all blocks");
 
 static cl::opt<bool> UpdateKills("riscv-liveness-update-kills",
-                                 cl::desc("Update kill flags"), cl::init(false),
+                                 cl::desc("Update kill flags"), cl::init(true),
                                  cl::Hidden);
 
 static cl::opt<bool> UpdateLiveIns("riscv-liveness-update-mbb-liveins",
                                    cl::desc("Update MBB live-in sets"),
-                                   cl::init(false), cl::Hidden);
+                                   cl::init(true), cl::Hidden);
 
 static cl::opt<unsigned> MaxVRegs("riscv-liveness-max-vregs",
                                   cl::desc("Maximum VRegs to track"),
                                   cl::init(1024), cl::Hidden);
 
-static cl::opt<unsigned> VerifyLiveness("riscv-liveness-verify",
+static cl::opt<bool> VerifyLiveness("riscv-liveness-verify",
                                         cl::desc("Verify liveness information"),
-                                        cl::init(true), cl::Hidden);
+                                        cl::init(false), cl::Hidden);
 
 namespace {
 
