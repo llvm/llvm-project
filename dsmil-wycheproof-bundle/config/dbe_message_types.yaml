@@ -9,6 +9,8 @@ message_types:
     producers: [ "L4_ENGINEERING", "L7_ROUTER" ]
     consumers: [ "DEVICE_15" ]
     payload_schema: "CryptoTestRequest"
+    # Note: CryptoTestRequest schema is defined inline below (fields section)
+    # For full schema validation, consider creating a separate schema file
     fields:
       - { name: campaign_id, type: string, required: true }
       - { name: lib_id, type: string, required: true }
@@ -27,7 +29,9 @@ message_types:
     description: "Extended test vectors (AI/Quantum/manual)."
     producers: [ "DEVICE_46", "DEVICE_47", "ENGINEERING" ]
     consumers: [ "DEVICE_15" ]
-    payload_schema: "crypto_test_vector_classical.schema.yaml | crypto_test_vector_pqc.schema.yaml"
+    payload_schema: "crypto_test_vector_classical.schema.yaml"
+    payload_schema_alt: "crypto_test_vector_pqc.schema.yaml"
+    # Note: Use classical schema for classical primitives, PQC schema for PQC primitives
 
   - name: CRYPTO_ASSURANCE_SUMMARY
     description: "Aggregated crypto posture summary sent to Layer 9."

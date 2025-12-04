@@ -1267,6 +1267,32 @@
 #define DSMIL_TELEMETRY \
     __attribute__((dsmil_telemetry))
 
+/**
+ * @brief Mark function for telemetry export (v1.7+)
+ * @param format Export format: "prometheus", "otel", "json"
+ *
+ * Functions marked with telemetry export automatically export metrics
+ * to configured observability backends (Prometheus, OpenTelemetry, ELK).
+ *
+ * Example:
+ * @code
+ * DSMIL_TELEMETRY_EXPORT("prometheus")
+ * DSMIL_MISSION_CRITICAL
+ * void critical_function(void) {
+ *     // Automatically exports:
+ *     // - Function call count
+ *     // - Execution time histogram
+ *     // - Error rate
+ *     // - Resource usage
+ * }
+ * @endcode
+ *
+ * @note Requires runtime telemetry collector (dsmil-telemetry-collector)
+ * @note Integrates with Feature 1.3 telemetry enforcement
+ */
+#define DSMIL_TELEMETRY_EXPORT(format) \
+    __attribute__((dsmil_telemetry_export(format)))
+
 /** @} */
 
 /**
@@ -1355,6 +1381,15 @@
     DSMIL_ROE("ANALYSIS_ONLY")
 
 /**
+ * @brief Enhanced LLM worker with JADC2 integration
+ */
+#define DSMIL_LLM_WORKER_JADC2 \
+    DSMIL_LLM_WORKER_MAIN \
+    DSMIL_JADC2_PROFILE("c2_processing") \
+    DSMIL_5G_EDGE \
+    DSMIL_LATENCY_BUDGET(5)
+
+/**
  * @brief Annotation for kernel driver entry point
  */
 #define DSMIL_KERNEL_DRIVER \
@@ -1375,11 +1410,46 @@
 /**
  * @brief Annotation for telemetry/observability
  */
-#define DSMIL_TELEMETRY \
+#define DSMIL_TELEMETRY_WORKER \
     DSMIL_LAYER(5) \
     DSMIL_DEVICE(50) \
     DSMIL_STAGE("serve") \
     DSMIL_ROE("ANALYSIS_ONLY")
+
+/**
+ * @brief High-assurance crypto worker with nuclear surety
+ */
+#define DSMIL_CRYPTO_NUCLEAR \
+    DSMIL_CRYPTO_WORKER \
+    DSMIL_TWO_PERSON \
+    DSMIL_NC3_ISOLATED \
+    DSMIL_SECRET
+
+/**
+ * @brief Coalition-sharable function (MPE)
+ */
+#define DSMIL_MPE_SHARABLE(partner) \
+    DSMIL_MPE_PARTNER(partner) \
+    DSMIL_RELEASABILITY("REL " partner)
+
+/**
+ * @brief Edge-deployed function with security hardening
+ */
+#define DSMIL_EDGE_SECURE \
+    DSMIL_5G_EDGE \
+    DSMIL_EDGE_TRUSTED_ZONE \
+    DSMIL_EDGE_HARDEN \
+    DSMIL_SECRET
+
+/**
+ * @brief Covert operations function with maximum stealth
+ */
+#define DSMIL_COVERT_OPS \
+    DSMIL_LOW_SIGNATURE("aggressive") \
+    DSMIL_CONSTANT_RATE \
+    DSMIL_JITTER_SUPPRESS \
+    DSMIL_NETWORK_STEALTH \
+    DSMIL_EMCON_MODE(3)
 
 /** @} */
 
@@ -1448,6 +1518,42 @@
 #define DSMIL_LAYER_MIDDLEWARE      6  /* Middleware/frameworks */
 #define DSMIL_LAYER_APPLICATION     7  /* Applications (AI/ML) */
 #define DSMIL_LAYER_USER            8  /* User interface */
+
+/** @} */
+
+/**
+ * @defgroup DSMIL_PATH_MACROS Path Resolution Macros
+ * @{
+ */
+
+/**
+ * @brief Macro to get DSMIL prefix at compile time (if available)
+ *
+ * Evaluates to DSMIL_PREFIX environment variable if set during compilation,
+ * otherwise falls back to runtime resolution via dsmil_get_prefix().
+ *
+ * @note Include dsmil_paths.h for runtime path resolution
+ */
+#ifdef DSMIL_PREFIX
+#define DSMIL_PREFIX_PATH DSMIL_PREFIX
+#else
+#define DSMIL_PREFIX_PATH NULL  /* Use runtime resolution */
+#endif
+
+/**
+ * @brief Macro helper for path construction
+ *
+ * Example:
+ * @code
+ * #include <dsmil_paths.h>
+ * char config_path[PATH_MAX];
+ * snprintf(config_path, sizeof(config_path), "%s/mission-profiles.json", dsmil_get_config_dir());
+ * @endcode
+ */
+#define DSMIL_CONFIG_PATH(filename) \
+    (dsmil_get_config_dir() ? \
+     (dsmil_get_config_dir() + "/" + filename) : \
+     ("/etc/dsmil/" + filename))
 
 /** @} */
 

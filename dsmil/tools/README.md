@@ -168,8 +168,91 @@ sudo ninja -C build install
 # Tools installed to /usr/local/bin/dsmil-*
 ```
 
+### Configuration & Setup (v1.7+) ⭐ NEW
+
+#### `dsmil-config-validate`
+Configuration validation and health check tool.
+
+**Usage**:
+```bash
+# Validate all configuration
+dsmil-config-validate --all
+
+# Validate specific components
+dsmil-config-validate --mission-profiles --truststore
+
+# Generate health report
+dsmil-config-validate --report=health.json
+
+# Auto-fix issues
+dsmil-config-validate --auto-fix
+```
+
+**Documentation**: [CONFIG-VALIDATION.md](../docs/CONFIG-VALIDATION.md)
+
+#### `dsmil-setup`
+Interactive setup wizard for DSLLVM installation and configuration.
+
+**Usage**:
+```bash
+# Interactive wizard
+dsmil-setup
+
+# Non-interactive mode
+dsmil-setup --non-interactive --profile=cyber_defence
+
+# Verify installation
+dsmil-setup --verify
+
+# Fix issues
+dsmil-setup --fix
+```
+
+**Documentation**: [SETUP-WIZARD.md](../docs/SETUP-WIZARD.md)
+
+### Performance Analysis (v1.7+) ⭐ NEW
+
+#### `dsmil-metrics`
+Compile-time performance metrics analysis tool.
+
+**Usage**:
+```bash
+# View metrics report
+dsmil-metrics report build.json
+
+# Compare builds
+dsmil-metrics compare build1.json build2.json
+
+# Generate dashboard
+dsmil-metrics dashboard build.json --output=dashboard.html
+```
+
+**Documentation**: [COMPILE-TIME-METRICS.md](../docs/COMPILE-TIME-METRICS.md)
+
+### Runtime Observability (v1.7+) ⭐ NEW
+
+#### `dsmil-telemetry-collector`
+Runtime telemetry collection and export tool.
+
+**Usage**:
+```bash
+# Prometheus export
+dsmil-telemetry-collector --format=prometheus --port=9090
+
+# OpenTelemetry export
+dsmil-telemetry-collector --format=otel --endpoint=http://otel:4317
+
+# Structured JSON logging
+dsmil-telemetry-collector --format=json --output=/var/log/dsmil/telemetry.json
+```
+
+**Documentation**: [RUNTIME-OBSERVABILITY.md](../docs/RUNTIME-OBSERVABILITY.md)
+
+---
+
 ## Implementation Status
 
+### Core Tools
 - [ ] `dsmil-clang` - Planned
 - [ ] `dsmil-clang++` - Planned
 - [ ] `dsmil-llc` - Planned
@@ -179,6 +262,12 @@ sudo ninja -C build install
 - [ ] `dsmil-truststore` - Planned
 - [ ] `dsmil-map-viewer` - Planned
 - [ ] `dsmil-quantum-viewer` - Planned
+
+### v1.7 Tools ✅ COMPLETE
+- [x] `dsmil-config-validate` - ✅ Complete
+- [x] `dsmil-setup` - ✅ Complete
+- [x] `dsmil-metrics` - ✅ Complete
+- [x] `dsmil-telemetry-collector` - ✅ Complete
 
 ## Testing
 

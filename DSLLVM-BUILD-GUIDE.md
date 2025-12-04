@@ -52,7 +52,32 @@ CXXFLAGS += -O3 -fpass-pipeline=dsmil-default
 
 ## Building DSLLVM
 
-### Prerequisites
+### Quick Install (Recommended)
+
+For a complete automated build and system installation:
+
+```bash
+# Run the automated installer (replaces system LLVM)
+sudo ./build-dsllvm.sh
+
+# Or install to a custom prefix
+./build-dsllvm.sh --prefix /opt/dsllvm
+
+# See all options
+./build-dsllvm.sh --help
+```
+
+The installer will:
+- Check prerequisites
+- Backup existing LLVM installation
+- Build DSLLVM with all DSMIL features
+- Install and create system symlinks
+- Set up environment configuration
+- Verify the installation
+
+### Manual Build
+
+#### Prerequisites
 
 ```bash
 sudo apt-get update
@@ -65,7 +90,7 @@ sudo apt-get install -y \
   libssl-dev
 ```
 
-### Build Commands
+#### Build Commands
 
 ```bash
 # Configure
@@ -206,6 +231,69 @@ dsmil-verify test
 ```
 
 ---
+
+## Automated Installer Script
+
+The `build-dsllvm.sh` script provides a complete automated build and installation process:
+
+### Features
+
+- **Prerequisite Checking**: Automatically verifies required tools and libraries
+- **Backup System**: Backs up existing LLVM installation before replacement
+- **Parallel Building**: Uses all available CPU cores for faster builds
+- **System Integration**: Creates symlinks to replace system LLVM tools
+- **Environment Setup**: Configures shell environment variables
+- **Verification**: Tests installation after completion
+- **Dry Run Mode**: Preview changes without executing
+
+### Usage Examples
+
+```bash
+# Standard system installation (requires sudo)
+sudo ./build-dsllvm.sh
+
+# Install to custom prefix (no sudo needed)
+./build-dsllvm.sh --prefix /opt/dsllvm
+
+# Debug build
+./build-dsllvm.sh --build-type Debug
+
+# Build only, skip installation
+./build-dsllvm.sh --skip-install
+
+# Preview what would happen
+./build-dsllvm.sh --dry-run
+
+# Custom targets and projects
+./build-dsllvm.sh --targets "X86;AArch64" --projects "clang;lld;lldb"
+
+# Verbose output
+./build-dsllvm.sh --verbose
+```
+
+### Installer Options
+
+- `--prefix PATH`: Installation prefix (default: `/usr/local`)
+- `--build-dir PATH`: Build directory (default: `./build`)
+- `--backup-dir PATH`: Backup directory for existing LLVM
+- `--build-type TYPE`: CMake build type (Debug/Release/RelWithDebInfo/MinSizeRel)
+- `--targets TARGETS`: LLVM targets to build (comma-separated)
+- `--projects PROJECTS`: LLVM projects to enable (semicolon-separated)
+- `--jobs N`: Number of parallel build jobs (default: auto-detect)
+- `--dry-run`: Show what would be done without executing
+- `--skip-build`: Skip build step (assume build exists)
+- `--skip-install`: Build only, do not install
+- `--skip-backup`: Skip backing up existing LLVM
+- `--verbose`: Enable verbose output
+
+### Restoring Previous LLVM
+
+If you need to restore the previous LLVM installation:
+
+```bash
+# The installer creates a backup with a restore script
+sudo /opt/llvm-backup-TIMESTAMP/RESTORE.sh
+```
 
 ## Related Repositories
 

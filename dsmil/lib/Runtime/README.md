@@ -13,11 +13,13 @@ Runtime support for sandbox setup and enforcement.
 - libseccomp (seccomp-bpf filter installation)
 
 **Functions**:
-- `dsmil_load_sandbox_profile()`: Load sandbox profile from `/etc/dsmil/sandbox/`
+- `dsmil_load_sandbox_profile()`: Load sandbox profile (uses dynamic path resolution)
 - `dsmil_apply_sandbox()`: Apply sandbox to current process
 - `dsmil_apply_capabilities()`: Set capability bounding set
 - `dsmil_apply_seccomp()`: Install seccomp BPF filter
 - `dsmil_apply_resource_limits()`: Set rlimits
+
+**Path Resolution**: Sandbox profiles are loaded from `${DSMIL_CONFIG_DIR}/sandbox/` (default: `/etc/dsmil/sandbox/`). See [PATH-CONFIGURATION.md](../../docs/PATH-CONFIGURATION.md) for details.
 
 **Used By**: Binaries compiled with `dsmil_sandbox` attribute (via `DsmilSandboxWrapPass`)
 
@@ -86,6 +88,7 @@ dsmil-clang -o binary input.c -ldsmil_provenance_runtime -loqs -lcbor -lelf -lcr
 Runtime/
 ├── dsmil_sandbox_runtime.c       # Sandbox runtime implementation
 ├── dsmil_provenance_runtime.c    # Provenance runtime implementation
+├── dsmil_paths_runtime.c        # Dynamic path resolution (v1.6.1+) ⭐ NEW
 ├── dsmil_crypto.c                # CNSA 2.0 crypto wrappers
 ├── dsmil_elf.c                   # ELF manipulation utilities
 └── CMakeLists.txt                # Build configuration
@@ -121,7 +124,7 @@ Target configuration:
 
 ## Sandbox Profiles
 
-Predefined sandbox profiles in `/etc/dsmil/sandbox/`:
+Predefined sandbox profiles in `${DSMIL_CONFIG_DIR}/sandbox/` (default: `/etc/dsmil/sandbox/`):
 
 ### `l7_llm_worker.profile`
 
@@ -214,10 +217,43 @@ ninja -C build check-dsmil-provenance
 
 ---
 
+### `libdsmil_paths_runtime.a` ⭐ NEW
+
+Runtime support for dynamic path resolution (v1.6.1+).
+
+**Dependencies**: None (pure C, standard library only)
+
+**Functions**:
+- `dsmil_get_prefix()`: Get installation prefix
+- `dsmil_get_config_dir()`: Get configuration directory
+- `dsmil_get_bin_dir()`: Get binary directory
+- `dsmil_get_truststore_dir()`: Get truststore directory
+- `dsmil_resolve_config()`: Resolve configuration file paths
+- `dsmil_resolve_binary()`: Resolve binary paths
+- `dsmil_path_exists()`: Check if path exists
+- `dsmil_ensure_dir()`: Create directory tree
+
+**Used By**: All DSMIL tools and runtime libraries for portable installations
+
+**Build**:
+```bash
+ninja -C build dsmil_paths_runtime
+```
+
+**Link**:
+```bash
+dsmil-clang -o binary input.c -ldsmil_paths_runtime
+```
+
+**Documentation**: See [PATH-CONFIGURATION.md](../../docs/PATH-CONFIGURATION.md) for complete guide.
+
+---
+
 ## Implementation Status
 
 - [ ] `dsmil_sandbox_runtime.c` - Planned
 - [ ] `dsmil_provenance_runtime.c` - Planned
+- [x] `dsmil_paths_runtime.c` - ✅ Complete (v1.6.1)
 - [ ] `dsmil_crypto.c` - Planned
 - [ ] `dsmil_elf.c` - Planned
 - [ ] Sandbox profile loader - Planned

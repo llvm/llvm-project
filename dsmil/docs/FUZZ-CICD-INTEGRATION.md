@@ -93,10 +93,11 @@ dsmil-clang -fdsmil-fuzz-export src/*.c -o app
 
 ```bash
 # GitLab CI
-cp dsmil/tools/dsmil-fuzz-gen/ci-templates/gitlab-ci.yml .gitlab-ci.yml
+# Use dynamic path resolution (relative to project root or DSMIL_DATA_DIR)
+cp ${DSMIL_DATA_DIR:-dsmil}/tools/dsmil-fuzz-gen/ci-templates/gitlab-ci.yml .gitlab-ci.yml
 
 # GitHub Actions
-cp dsmil/tools/dsmil-fuzz-gen/ci-templates/github-actions.yml \
+cp ${DSMIL_DATA_DIR:-dsmil}/tools/dsmil-fuzz-gen/ci-templates/github-actions.yml \
    .github/workflows/dsllvm-fuzz.yml
 ```
 
@@ -118,7 +119,7 @@ CI/CD will automatically:
 
 ### GitLab CI
 
-**Template:** `dsmil/tools/dsmil-fuzz-gen/ci-templates/gitlab-ci.yml`
+**Template:** `${DSMIL_DATA_DIR:-dsmil}/tools/dsmil-fuzz-gen/ci-templates/gitlab-ci.yml` (or use `dsmil_resolve_config()` API)
 
 #### Pipeline Stages
 
@@ -158,7 +159,7 @@ gitlab-runner exec docker fuzz:nightly
 
 ### GitHub Actions
 
-**Template:** `dsmil/tools/dsmil-fuzz-gen/ci-templates/github-actions.yml`
+**Template:** `${DSMIL_DATA_DIR:-dsmil}/tools/dsmil-fuzz-gen/ci-templates/github-actions.yml` (or use `dsmil_resolve_config()` API)
 
 #### Workflow Jobs
 
