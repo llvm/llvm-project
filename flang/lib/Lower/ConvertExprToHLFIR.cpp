@@ -1689,11 +1689,9 @@ private:
     BinaryOp<D> binaryOp;
     auto left = hlfir::loadTrivialScalar(loc, builder, gen(op.left()));
     auto right = hlfir::loadTrivialScalar(loc, builder, gen(op.right()));
-         mlir::Value exprl = left;
-         mlir::Value exprr = right;
 
-    bool noReassoc = exprl.getDefiningOp<hlfir::NoReassocOp>() ||
-                     exprr.getDefiningOp<hlfir::NoReassocOp>();
+    bool noReassoc = left.template getDefiningOp<hlfir::NoReassocOp>() ||
+                     right.template getDefiningOp<hlfir::NoReassocOp>();
     llvm::SmallVector<mlir::Value, 1> typeParams;
     if constexpr (R::category == Fortran::common::TypeCategory::Character) {
       binaryOp.genResultTypeParams(loc, builder, left, right, typeParams);
