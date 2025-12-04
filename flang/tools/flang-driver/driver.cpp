@@ -52,9 +52,9 @@ createAndPopulateDiagOpts(llvm::ArrayRef<const char *> argv) {
   // Any errors that would be diagnosed here will also be diagnosed later,
   // when the DiagnosticsEngine actually exists.
   unsigned missingArgIndex, missingArgCount;
-  llvm::opt::InputArgList args = clang::driver::getDriverOptTable().ParseArgs(
+  llvm::opt::InputArgList args = clang::getDriverOptTable().ParseArgs(
       argv.slice(1), missingArgIndex, missingArgCount,
-      llvm::opt::Visibility(clang::driver::options::FlangOption));
+      llvm::opt::Visibility(clang::options::FlangOption));
 
   (void)Fortran::frontend::parseDiagnosticArgs(*diagOpts, args);
 

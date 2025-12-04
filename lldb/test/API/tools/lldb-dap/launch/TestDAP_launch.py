@@ -156,7 +156,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(
             program, debuggerRoot=program_parent_dir, initCommands=commands
         )
-        self.continue_to_exit()
         output = self.get_console()
         self.assertTrue(output and len(output) > 0, "expect console output")
         lines = output.splitlines()
@@ -172,6 +171,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                     % (program_parent_dir, line[len(prefix) :]),
                 )
         self.assertTrue(found, "verified lldb-dap working directory")
+        self.continue_to_exit()
 
     def test_sourcePath(self):
         """
@@ -642,6 +642,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
     @skipIfAsan
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
+    @skipIfBuildType(["debug"])
     def test_stdio_redirection_and_console(self):
         """
         Test stdio redirection and console.

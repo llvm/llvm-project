@@ -722,7 +722,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* Raw profile format version (start from 1). */
 #define INSTR_PROF_RAW_VERSION 10
 /* Indexed profile format version (start from 1). */
-#define INSTR_PROF_INDEX_VERSION 12
+#define INSTR_PROF_INDEX_VERSION 13
 /* Coverage mapping format version (start from 0). */
 #define INSTR_PROF_COVMAP_VERSION 6
 

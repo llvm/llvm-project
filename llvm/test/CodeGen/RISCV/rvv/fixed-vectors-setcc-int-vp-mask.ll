@@ -4,9 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK
 
-
-declare <2 x i1> @llvm.vp.icmp.v2i1(<2 x i1>, <2 x i1>, metadata, <2 x i1>, i32)
-
 define <2 x i1> @icmp_eq_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v2i1:
 ; CHECK:       # %bb.0:
@@ -16,8 +13,6 @@ define <2 x i1> @icmp_eq_vv_v2i1(<2 x i1> %va, <2 x i1> %vb, <2 x i1> %m, i32 ze
   %v = call <2 x i1> @llvm.vp.icmp.v2i1(<2 x i1> %va, <2 x i1> %vb, metadata !"eq", <2 x i1> %m, i32 %evl)
   ret <2 x i1> %v
 }
-
-declare <4 x i1> @llvm.vp.icmp.v4i1(<4 x i1>, <4 x i1>, metadata, <4 x i1>, i32)
 
 define <4 x i1> @icmp_eq_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v4i1:
@@ -29,8 +24,6 @@ define <4 x i1> @icmp_eq_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 ze
   ret <4 x i1> %v
 }
 
-declare <8 x i1> @llvm.vp.icmp.v8i1(<8 x i1>, <8 x i1>, metadata, <8 x i1>, i32)
-
 define <8 x i1> @icmp_eq_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v8i1:
 ; CHECK:       # %bb.0:
@@ -40,8 +33,6 @@ define <8 x i1> @icmp_eq_vv_v8i1(<8 x i1> %va, <8 x i1> %vb, <8 x i1> %m, i32 ze
   %v = call <8 x i1> @llvm.vp.icmp.v8i1(<8 x i1> %va, <8 x i1> %vb, metadata !"eq", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
-
-declare <16 x i1> @llvm.vp.icmp.v16i1(<16 x i1>, <16 x i1>, metadata, <16 x i1>, i32)
 
 define <16 x i1> @icmp_eq_vv_v16i1(<16 x i1> %va, <16 x i1> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: icmp_eq_vv_v16i1:

@@ -42,6 +42,52 @@ public:
     return keys;
   }
 };
+
+/// Helper structure for DWARFASTParserClang tests that want to parse DWARF
+/// generated using yaml2obj. On construction parses the supplied YAML data
+/// into a DWARF module and thereafter vends a DWARFASTParserClang and
+/// TypeSystemClang that are guaranteed to live for the duration of this object.
+class DWARFASTParserClangYAMLTester {
+public:
+  DWARFASTParserClangYAMLTester(llvm::StringRef yaml_data)
+      : m_module_tester(yaml_data) {}
+
+  DWARFDIE GetCUDIE() {
+    DWARFUnit *unit = m_module_tester.GetDwarfUnit();
+    assert(unit);
+
+    const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+    assert(cu_entry->Tag() == DW_TAG_compile_unit);
+
+    return DWARFDIE(unit, cu_entry);
+  }
+
+  DWARFASTParserClang &GetParser() {
+    auto *parser = GetTypeSystem().GetDWARFParser();
+
+    assert(llvm::isa_and_nonnull<DWARFASTParserClang>(parser));
+
+    return *llvm::cast<DWARFASTParserClang>(parser);
+  }
+
+  TypeSystemClang &GetTypeSystem() {
+    ModuleSP module_sp = m_module_tester.GetModule();
+    assert(module_sp);
+
+    SymbolFile *symfile = module_sp->GetSymbolFile();
+    assert(symfile);
+
+    TypeSystemSP ts_sp = llvm::cantFail(
+        symfile->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus));
+
+    assert(llvm::isa_and_nonnull<TypeSystemClang>(ts_sp.get()));
+
+    return llvm::cast<TypeSystemClang>(*ts_sp);
+  }
+
+private:
+  YAMLModuleTester m_module_tester;
+};
 } // namespace
 
 // If your implementation needs to dereference the dummy pointers we are
@@ -99,7 +145,6 @@ DWARF:
             - Value:           0x0000000000000001
         - AbbrCode:        0x00000000
 )";
-
   YAMLModuleTester t(yamldata);
   ASSERT_TRUE((bool)t.GetDwarfUnit());
 
@@ -248,17 +293,9 @@ DWARF:
         - AbbrCode:        0x0
 ...
 )";
-  YAMLModuleTester t(yamldata);
+  DWARFASTParserClangYAMLTester tester(yamldata);
 
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   std::vector<std::string> found_function_types;
   // The DWARF above is just a list of functions. Parse all of them to
@@ -267,7 +304,8 @@ DWARF:
     ASSERT_EQ(func.Tag(), DW_TAG_subprogram);
     SymbolContext sc;
     bool new_type = false;
-    lldb::TypeSP type = ast_parser.ParseTypeFromDWARF(sc, func, &new_type);
+    lldb::TypeSP type =
+        tester.GetParser().ParseTypeFromDWARF(sc, func, &new_type);
     found_function_types.push_back(
         type->GetForwardCompilerType().GetTypeName().AsCString());
   }
@@ -394,18 +432,9 @@ DWARF:
         - AbbrCode:        0x00 # end of child tags of 0x0c
 ...
 )";
-  YAMLModuleTester t(yamldata);
+  DWARFASTParserClangYAMLTester tester(yamldata);
 
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
-
+  DWARFDIE cu_die = tester.GetCUDIE();
   DWARFDIE ptrauth_variable = cu_die.GetFirstChild();
   ASSERT_EQ(ptrauth_variable.Tag(), DW_TAG_variable);
   DWARFDIE ptrauth_type =
@@ -415,7 +444,7 @@ DWARF:
   SymbolContext sc;
   bool new_type = false;
   lldb::TypeSP type_sp =
-      ast_parser.ParseTypeFromDWARF(sc, ptrauth_type, &new_type);
+      tester.GetParser().ParseTypeFromDWARF(sc, ptrauth_type, &new_type);
   CompilerType compiler_type = type_sp->GetForwardCompilerType();
   ASSERT_EQ(compiler_type.GetPtrAuthKey(), 0U);
   ASSERT_EQ(compiler_type.GetPtrAuthAddressDiversity(), false);
@@ -554,24 +583,17 @@ TEST_F(DWARFASTParserClangTests, TestDefaultTemplateParamParsing) {
   auto BufferOrError = llvm::MemoryBuffer::getFile(
       GetInputFilePath("DW_AT_default_value-test.yaml"), /*IsText=*/true);
   ASSERT_TRUE(BufferOrError);
-  YAMLModuleTester t(BufferOrError.get()->getBuffer());
 
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFASTParserClangYAMLTester tester(BufferOrError.get()->getBuffer());
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   llvm::SmallVector<lldb::TypeSP, 2> types;
   for (DWARFDIE die : cu_die.children()) {
     if (die.Tag() == DW_TAG_class_type) {
       SymbolContext sc;
       bool new_type = false;
-      types.push_back(ast_parser.ParseTypeFromDWARF(sc, die, &new_type));
+      types.push_back(
+          tester.GetParser().ParseTypeFromDWARF(sc, die, &new_type));
     }
   }
 
@@ -605,23 +627,14 @@ TEST_F(DWARFASTParserClangTests, TestSpecDeclExistsError) {
   auto BufferOrError = llvm::MemoryBuffer::getFile(
       GetInputFilePath("DW_AT_spec_decl_exists-test.yaml"), /*IsText=*/true);
   ASSERT_TRUE(BufferOrError);
-  YAMLModuleTester t(BufferOrError.get()->getBuffer());
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFASTParserClangYAMLTester tester(BufferOrError.get()->getBuffer());
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   llvm::SmallVector<lldb::TypeSP, 2> specializations;
   for (DWARFDIE die : cu_die.children()) {
     SymbolContext sc;
     bool new_type = false;
-    auto type = ast_parser.ParseTypeFromDWARF(sc, die, &new_type);
+    auto type = tester.GetParser().ParseTypeFromDWARF(sc, die, &new_type);
     llvm::StringRef die_name = llvm::StringRef(die.GetName());
     if (die_name.starts_with("_Optional_payload")) {
       specializations.push_back(std::move(type));
@@ -730,18 +743,8 @@ DWARF:
         - AbbrCode:        0x00 # end of child tags of 0x0c
 ...
 )";
-  YAMLModuleTester t(yamldata);
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   DWARFDIE decl_die;
   DWARFDIE def_die;
@@ -761,6 +764,8 @@ DWARF:
 
   ParsedDWARFTypeAttributes attrs(def_die);
   ASSERT_TRUE(attrs.decl.IsValid());
+
+  DWARFASTParserClang &ast_parser = tester.GetParser();
 
   SymbolContext sc;
   bool new_type = false;
@@ -906,18 +911,8 @@ DWARF:
         - AbbrCode: 0x0
 ...
 )";
-  YAMLModuleTester t(yamldata);
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   auto context_die = cu_die.GetFirstChild();
   ASSERT_TRUE(context_die.IsValid());
@@ -932,7 +927,8 @@ DWARF:
     auto param_die = decl_die.GetFirstChild();
     ASSERT_TRUE(param_die.IsValid());
 
-    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(decl_die, context_die));
+    EXPECT_EQ(param_die,
+              tester.GetParser().GetObjectParameter(decl_die, context_die));
   }
 
   {
@@ -945,8 +941,8 @@ DWARF:
     auto param_die = subprogram_definition.GetFirstChild();
     ASSERT_TRUE(param_die.IsValid());
 
-    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(subprogram_definition,
-                                                       context_die));
+    EXPECT_EQ(param_die, tester.GetParser().GetObjectParameter(
+                             subprogram_definition, context_die));
   }
 }
 
@@ -1076,18 +1072,8 @@ DWARF:
         - AbbrCode: 0x0
 ...
 )";
-  YAMLModuleTester t(yamldata);
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   auto context_die = cu_die.GetFirstChild();
   ASSERT_TRUE(context_die.IsValid());
@@ -1105,7 +1091,7 @@ DWARF:
   auto param_die = subprogram_definition.GetFirstChild();
   ASSERT_TRUE(param_die.IsValid());
   EXPECT_EQ(param_die,
-            ast_parser.GetObjectParameter(subprogram_definition, {}));
+            tester.GetParser().GetObjectParameter(subprogram_definition, {}));
 }
 
 TEST_F(DWARFASTParserClangTests, TestParseSubroutine_ExplicitObjectParameter) {
@@ -1243,21 +1229,15 @@ DWARF:
         - AbbrCode: 0x0
 ...
 )";
-  YAMLModuleTester t(yamldata);
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
-  DWARFDIE cu_die(unit, cu_entry);
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   auto ts_or_err =
       cu_die.GetDWARF()->GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   ASSERT_TRUE(static_cast<bool>(ts_or_err));
   llvm::consumeError(ts_or_err.takeError());
   auto *parser =
-      static_cast<DWARFASTParserClang *>((*ts_or_err)->GetDWARFParser());
+      llvm::cast<DWARFASTParserClang>((*ts_or_err)->GetDWARFParser());
 
   auto context_die = cu_die.GetFirstChild();
   ASSERT_TRUE(context_die.IsValid());
@@ -1419,22 +1399,8 @@ DWARF:
         - AbbrCode: 0x0
 ...
 )";
-  YAMLModuleTester t(yamldata);
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto ts_or_err =
-      cu_die.GetDWARF()->GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
-  ASSERT_TRUE(static_cast<bool>(ts_or_err));
-  llvm::consumeError(ts_or_err.takeError());
-
-  auto *ts = static_cast<TypeSystemClang *>(ts_or_err->get());
-  auto *parser = static_cast<DWARFASTParserClang *>(ts->GetDWARFParser());
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   auto subprogram = cu_die.GetFirstChild();
   ASSERT_TRUE(subprogram.IsValid());
@@ -1442,11 +1408,13 @@ DWARF:
 
   SymbolContext sc;
   bool new_type;
-  auto type_sp = parser->ParseTypeFromDWARF(sc, subprogram, &new_type);
+  auto type_sp =
+      tester.GetParser().ParseTypeFromDWARF(sc, subprogram, &new_type);
   ASSERT_NE(type_sp, nullptr);
 
-  auto result = ts->GetTranslationUnitDecl()->lookup(
-      clang_utils::getDeclarationName(*ts, "func"));
+  TypeSystemClang &ts = tester.GetTypeSystem();
+  auto result = ts.GetTranslationUnitDecl()->lookup(
+      clang_utils::getDeclarationName(ts, "func"));
   ASSERT_TRUE(result.isSingleResult());
 
   auto const *func = llvm::cast<clang::FunctionDecl>(result.front());
@@ -1609,19 +1577,8 @@ DWARF:
         - AbbrCode: 0x0
 ...
 )";
-
-  YAMLModuleTester t(yamldata);
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   auto context_die = cu_die.GetFirstChild();
   ASSERT_TRUE(context_die.IsValid());
@@ -1640,7 +1597,8 @@ DWARF:
     auto param_die = sub1.GetFirstChild().GetSibling();
     ASSERT_TRUE(param_die.IsValid());
 
-    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(sub1, context_die));
+    EXPECT_EQ(param_die,
+              tester.GetParser().GetObjectParameter(sub1, context_die));
   }
 
   // Object parameter is at constant index 0
@@ -1648,6 +1606,515 @@ DWARF:
     auto param_die = sub2.GetFirstChild();
     ASSERT_TRUE(param_die.IsValid());
 
-    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(sub2, context_die));
+    EXPECT_EQ(param_die,
+              tester.GetParser().GetObjectParameter(sub2, context_die));
   }
+}
+
+TEST_F(DWARFASTParserClangTests, TestTypeBitSize) {
+  // Tests that we correctly parse DW_AT_bit_size of a DW_AT_base_type.
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - _BitInt(2)
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_strp
+            - Attribute: DW_AT_encoding
+              Form:      DW_FORM_data1
+            - Attribute: DW_AT_byte_size
+              Form:      DW_FORM_data1
+            - Attribute: DW_AT_bit_size
+              Form:      DW_FORM_data1
+
+  debug_info:
+     - Version:  5
+       UnitType: DW_UT_compile
+       AddrSize: 8
+       Entries:
+
+# DW_TAG_compile_unit
+#   DW_AT_language [DW_FORM_data2]    (DW_LANG_C_plus_plus)
+
+        - AbbrCode: 0x1
+          Values:
+            - Value: 0x04
+
+#   DW_TAG_base_type
+#     DW_AT_name [DW_FORM_strp] ('_BitInt(2)')
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x0
+            - Value: 0x05
+            - Value: 0x01
+            - Value: 0x02
+...
+)";
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
+
+  auto type_die = cu_die.GetFirstChild();
+  ASSERT_TRUE(type_die.IsValid());
+  ASSERT_EQ(type_die.Tag(), DW_TAG_base_type);
+
+  ParsedDWARFTypeAttributes attrs(type_die);
+  EXPECT_EQ(attrs.byte_size.value_or(0), 1U);
+  EXPECT_EQ(attrs.data_bit_size.value_or(0), 2U);
+
+  SymbolContext sc;
+  auto type_sp = tester.GetParser().ParseTypeFromDWARF(
+      sc, type_die, /*type_is_new_ptr=*/nullptr);
+  ASSERT_NE(type_sp, nullptr);
+
+  EXPECT_EQ(llvm::expectedToOptional(type_sp->GetByteSize(nullptr)).value_or(0),
+            1U);
+}
+
+TEST_F(DWARFASTParserClangTests, TestBitIntParsing) {
+  // Tests that we correctly parse the DW_AT_base_type for a _BitInt.
+  // Older versions of Clang only emit the `_BitInt` string into the
+  // DW_AT_name (not including the bitsize). Make sure we understand
+  // those too.
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - _BitInt(2)
+    - _BitInt
+    - unsigned _BitInt(2)
+    - unsigned _BitInt
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_strp
+            - Attribute: DW_AT_encoding
+              Form:      DW_FORM_data1
+            - Attribute: DW_AT_byte_size
+              Form:      DW_FORM_data1
+            - Attribute: DW_AT_bit_size
+              Form:      DW_FORM_data1
+        - Code:            0x3
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_strp
+            - Attribute: DW_AT_encoding
+              Form:      DW_FORM_data1
+            - Attribute: DW_AT_byte_size
+              Form:      DW_FORM_data1
+
+  debug_info:
+     - Version:  5
+       UnitType: DW_UT_compile
+       AddrSize: 8
+       Entries:
+
+# DW_TAG_compile_unit
+#   DW_AT_language [DW_FORM_data2]    (DW_LANG_C_plus_plus)
+
+        - AbbrCode: 0x1
+          Values:
+            - Value: 0x04
+
+#   DW_TAG_base_type
+#     DW_AT_name [DW_FORM_strp] ('_BitInt(2)')
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x0
+            - Value: 0x05
+            - Value: 0x01
+            - Value: 0x02
+
+#   DW_TAG_base_type
+#     DW_AT_name [DW_FORM_strp] ('_BitInt')
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x0b
+            - Value: 0x05
+            - Value: 0x08
+            - Value: 0x34
+
+#   DW_TAG_base_type
+#     DW_AT_name [DW_FORM_strp] ('unsigned _BitInt(2)')
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x13
+            - Value: 0x07
+            - Value: 0x01
+            - Value: 0x02
+
+#   DW_TAG_base_type
+#     DW_AT_name [DW_FORM_strp] ('unsigned _BitInt')
+
+        - AbbrCode: 0x2
+          Values:
+            - Value: 0x27
+            - Value: 0x07
+            - Value: 0x08
+            - Value: 0x34
+
+#   DW_TAG_base_type
+#     DW_AT_name [DW_FORM_strp] ('_BitInt')
+
+        - AbbrCode: 0x3
+          Values:
+            - Value: 0x0b
+            - Value: 0x05
+            - Value: 0x08
+...
+
+)";
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
+
+  auto type_die = cu_die.GetFirstChild();
+  ASSERT_TRUE(type_die.IsValid());
+
+  {
+    SymbolContext sc;
+    auto type_sp =
+        tester.GetParser().ParseTypeFromDWARF(sc, type_die,
+                                              /*type_is_new_ptr=*/nullptr);
+    ASSERT_NE(type_sp, nullptr);
+
+    EXPECT_EQ(
+        llvm::expectedToOptional(type_sp->GetByteSize(nullptr)).value_or(0),
+        1U);
+    EXPECT_EQ(type_sp->GetEncoding(), lldb::eEncodingSint);
+    EXPECT_EQ(type_sp->GetName(), "_BitInt(2)");
+    EXPECT_EQ(type_sp->GetForwardCompilerType().GetTypeName(), "_BitInt(2)");
+  }
+
+  {
+    type_die = type_die.GetSibling();
+    SymbolContext sc;
+    auto type_sp =
+        tester.GetParser().ParseTypeFromDWARF(sc, type_die,
+                                              /*type_is_new_ptr=*/nullptr);
+    ASSERT_NE(type_sp, nullptr);
+
+    EXPECT_EQ(
+        llvm::expectedToOptional(type_sp->GetByteSize(nullptr)).value_or(0),
+        8U);
+    EXPECT_EQ(type_sp->GetEncoding(), lldb::eEncodingSint);
+    EXPECT_EQ(type_sp->GetName(), "_BitInt");
+    EXPECT_EQ(type_sp->GetForwardCompilerType().GetTypeName(), "_BitInt(52)");
+  }
+
+  {
+    type_die = type_die.GetSibling();
+    SymbolContext sc;
+    auto type_sp =
+        tester.GetParser().ParseTypeFromDWARF(sc, type_die,
+                                              /*type_is_new_ptr=*/nullptr);
+    ASSERT_NE(type_sp, nullptr);
+
+    EXPECT_EQ(
+        llvm::expectedToOptional(type_sp->GetByteSize(nullptr)).value_or(0),
+        1U);
+    EXPECT_EQ(type_sp->GetEncoding(), lldb::eEncodingUint);
+    EXPECT_EQ(type_sp->GetName(), "unsigned _BitInt(2)");
+    EXPECT_EQ(type_sp->GetForwardCompilerType().GetTypeName(),
+              "unsigned _BitInt(2)");
+  }
+
+  {
+    type_die = type_die.GetSibling();
+    SymbolContext sc;
+    auto type_sp =
+        tester.GetParser().ParseTypeFromDWARF(sc, type_die,
+                                              /*type_is_new_ptr=*/nullptr);
+    ASSERT_NE(type_sp, nullptr);
+
+    EXPECT_EQ(
+        llvm::expectedToOptional(type_sp->GetByteSize(nullptr)).value_or(0),
+        8U);
+    EXPECT_EQ(type_sp->GetEncoding(), lldb::eEncodingUint);
+    EXPECT_EQ(type_sp->GetName(), "unsigned _BitInt");
+    EXPECT_EQ(type_sp->GetForwardCompilerType().GetTypeName(),
+              "unsigned _BitInt(52)");
+  }
+
+  {
+    type_die = type_die.GetSibling();
+    SymbolContext sc;
+    auto type_sp =
+        tester.GetParser().ParseTypeFromDWARF(sc, type_die,
+                                              /*type_is_new_ptr=*/nullptr);
+    ASSERT_NE(type_sp, nullptr);
+
+    EXPECT_EQ(
+        llvm::expectedToOptional(type_sp->GetByteSize(nullptr)).value_or(0),
+        8U);
+    EXPECT_EQ(type_sp->GetEncoding(), lldb::eEncodingSint);
+    EXPECT_EQ(type_sp->GetName(), "_BitInt");
+
+    // Older versions of Clang didn't emit a DW_AT_bit_size for _BitInt. In
+    // those cases we would format the CompilerType name using the byte-size.
+    EXPECT_EQ(type_sp->GetForwardCompilerType().GetTypeName(), "_BitInt(64)");
+  }
+}
+
+TEST_F(DWARFASTParserClangTests, TestTemplateAlias_NoSimpleTemplateNames) {
+  // Tests that we correctly parse the DW_TAG_template_alias generated by
+  // -gno-simple-template-names.
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+        - Code:            0x3
+          Tag:             DW_TAG_template_alias
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_type
+              Form:      DW_FORM_ref4
+        - Code:            0x4
+          Tag:             DW_TAG_template_type_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_type
+              Form:      DW_FORM_ref4
+
+  debug_info:
+     - Version:  5
+       UnitType: DW_UT_compile
+       AddrSize: 8
+       Entries:
+
+# DW_TAG_compile_unit
+#   DW_AT_language (DW_LANG_C_plus_plus)
+
+        - AbbrCode: 0x1
+          Values:
+            - Value: 0x04
+
+#   DW_TAG_base_type
+#     DW_AT_name ('int')
+
+        - AbbrCode: 0x2
+          Values:
+            - CStr: int
+
+#   DW_TAG_template_alias
+#     DW_AT_name ('Foo<int>')
+#     DW_AT_type ('int')
+#     DW_TAG_template_type_parameter
+#       DW_AT_name ('T')
+#       DW_AT_type ('int')
+
+        - AbbrCode: 0x3
+          Values:
+            - CStr: Foo<int>
+            - Value: 0xf
+
+        - AbbrCode: 0x4
+          Values:
+            - CStr: T
+            - Value: 0xf
+
+        - AbbrCode: 0x0
+        - AbbrCode: 0x0
+...
+)";
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
+
+  auto alias_die = cu_die.GetFirstChild().GetSibling();
+  ASSERT_EQ(alias_die.Tag(), DW_TAG_template_alias);
+
+  SymbolContext sc;
+  auto type_sp =
+      tester.GetParser().ParseTypeFromDWARF(sc, alias_die,
+                                            /*type_is_new_ptr=*/nullptr);
+  ASSERT_NE(type_sp, nullptr);
+
+  EXPECT_TRUE(type_sp->IsTypedef());
+  EXPECT_EQ(type_sp->GetName(), "Foo<int>");
+  EXPECT_EQ(type_sp->GetForwardCompilerType().GetTypeName(), "Foo<int>");
+}
+
+TEST_F(DWARFASTParserClangTests,
+       TestTemplateAlias_InStruct_NoSimpleTemplateNames) {
+  // Tests that we correctly parse the DW_TAG_template_alias scoped inside a
+  // DW_TAG_structure_type *declaration* generated by
+  // -gno-simple-template-names. This tests the codepath the forcefully
+  // completes the context of the alias via PrepareContextToReceiveMembers.
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+        - Code:            0x3
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_declaration
+              Form:      DW_FORM_flag_present
+        - Code:            0x4
+          Tag:             DW_TAG_template_alias
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_type
+              Form:      DW_FORM_ref4
+        - Code:            0x5
+          Tag:             DW_TAG_template_type_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_type
+              Form:      DW_FORM_ref4
+
+  debug_info:
+     - Version:  5
+       UnitType: DW_UT_compile
+       AddrSize: 8
+       Entries:
+
+# DW_TAG_compile_unit
+#   DW_AT_language (DW_LANG_C_plus_plus)
+
+        - AbbrCode: 0x1
+          Values:
+            - Value: 0x04
+
+#   DW_TAG_base_type
+#     DW_AT_name ('int')
+
+        - AbbrCode: 0x2
+          Values:
+            - CStr: int
+
+#   DW_TAG_structure_type
+#     DW_AT_name ('Foo')
+
+        - AbbrCode: 0x3
+          Values:
+            - CStr: Foo
+
+#     DW_TAG_template_alias
+#       DW_AT_name ('Bar<int>')
+#       DW_AT_type ('int')
+#       DW_TAG_template_type_parameter
+#         DW_AT_name ('T')
+#         DW_AT_type ('int')
+
+        - AbbrCode: 0x4
+          Values:
+            - CStr: Bar<int>
+            - Value: 0xf
+
+        - AbbrCode: 0x5
+          Values:
+            - CStr: T
+            - Value: 0xf
+
+        - AbbrCode: 0x0
+        - AbbrCode: 0x0
+        - AbbrCode: 0x0
+...
+)";
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
+
+  auto alias_die = cu_die.GetFirstChild().GetSibling().GetFirstChild();
+  ASSERT_EQ(alias_die.Tag(), DW_TAG_template_alias);
+
+  SymbolContext sc;
+  auto type_sp =
+      tester.GetParser().ParseTypeFromDWARF(sc, alias_die,
+                                            /*type_is_new_ptr=*/nullptr);
+  ASSERT_NE(type_sp, nullptr);
+
+  EXPECT_TRUE(type_sp->IsTypedef());
+  EXPECT_EQ(type_sp->GetName(), "Bar<int>");
+  EXPECT_EQ(type_sp->GetForwardCompilerType().GetTypeName(), "Foo::Bar<int>");
 }

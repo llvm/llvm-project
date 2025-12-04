@@ -1742,6 +1742,9 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
   // Collect named contexts.
   DeclarationName NameInScope = getDeclName();
   for (; Ctx; Ctx = Ctx->getParent()) {
+    if (P.Callbacks && P.Callbacks->isScopeVisible(Ctx))
+      continue;
+
     // Suppress anonymous namespace if requested.
     if (P.SuppressUnwrittenScope && isa<NamespaceDecl>(Ctx) &&
         cast<NamespaceDecl>(Ctx)->isAnonymousNamespace())
@@ -1787,7 +1790,9 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       else
         OS << *ND;
     } else if (const auto *RD = dyn_cast<RecordDecl>(DC)) {
-      if (!RD->getIdentifier())
+      if (TypedefNameDecl *TD = RD->getTypedefNameForAnonDecl())
+        OS << *TD;
+      else if (!RD->getIdentifier())
         OS << "(anonymous " << RD->getKindName() << ')';
       else
         OS << *RD;
@@ -3180,7 +3185,7 @@ void FunctionDecl::DefaultedOrDeletedFunctionInfo::setDeletedMessage(
 }
 
 FunctionDecl::DefaultedOrDeletedFunctionInfo *
-FunctionDecl::getDefalutedOrDeletedInfo() const {
+FunctionDecl::getDefaultedOrDeletedInfo() const {
   return FunctionDeclBits.HasDefaultedOrDeletedInfo ? DefaultedOrDeletedInfo
                                                     : nullptr;
 }
