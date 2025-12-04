@@ -9,7 +9,7 @@ project(omptest LANGUAGES CXX)
 
 option(LIBOMPTEST_BUILD_STANDALONE
        "Build ompTest 'standalone', i.e. w/o GoogleTest."
-       ${OPENMP_STANDALONE_BUILD})
+       OFF)
 option(LIBOMPTEST_BUILD_UNITTESTS
        "Build ompTest's unit tests, requires GoogleTest." OFF)
 option(LIBOMPTEST_INSTALL_COMPONENTS
