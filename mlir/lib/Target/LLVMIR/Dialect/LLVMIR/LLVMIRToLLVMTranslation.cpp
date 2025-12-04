@@ -80,8 +80,9 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
 
 /// Returns the list of LLVM IR metadata kinds that are convertible to MLIR LLVM
 /// dialect attributes.
-static ArrayRef<unsigned> getSupportedMetadataImpl(llvm::LLVMContext &context) {
-  static const SmallVector<unsigned> convertibleMetadata = {
+static SmallVector<unsigned>
+getSupportedMetadataImpl(llvm::LLVMContext &llvmContext) {
+  SmallVector<unsigned> convertibleMetadata = {
       llvm::LLVMContext::MD_prof,
       llvm::LLVMContext::MD_tbaa,
       llvm::LLVMContext::MD_access_group,
@@ -91,10 +92,10 @@ static ArrayRef<unsigned> getSupportedMetadataImpl(llvm::LLVMContext &context) {
       llvm::LLVMContext::MD_dereferenceable,
       llvm::LLVMContext::MD_dereferenceable_or_null,
       llvm::LLVMContext::MD_mmra,
-      context.getMDKindID(vecTypeHintMDName),
-      context.getMDKindID(workGroupSizeHintMDName),
-      context.getMDKindID(reqdWorkGroupSizeMDName),
-      context.getMDKindID(intelReqdSubGroupSizeMDName)};
+      llvmContext.getMDKindID(vecTypeHintMDName),
+      llvmContext.getMDKindID(workGroupSizeHintMDName),
+      llvmContext.getMDKindID(reqdWorkGroupSizeMDName),
+      llvmContext.getMDKindID(intelReqdSubGroupSizeMDName)};
   return convertibleMetadata;
 }
 
@@ -505,9 +506,9 @@ public:
 
   /// Returns the list of LLVM IR metadata kinds that are convertible to MLIR
   /// LLVM dialect attributes.
-  ArrayRef<unsigned>
-  getSupportedMetadata(llvm::LLVMContext &context) const final {
-    return getSupportedMetadataImpl(context);
+  SmallVector<unsigned>
+  getSupportedMetadata(llvm::LLVMContext &llvmContext) const final {
+    return getSupportedMetadataImpl(llvmContext);
   }
 };
 } // namespace
