@@ -1412,7 +1412,12 @@ SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
       InVals.push_back(DAG.getPOISON(Arg.VT));
   }
 
-  return CLI.Chain;
+  // FIXME: Hack because R600 doesn't handle callseq pseudos yet.
+  if (getTargetMachine().getTargetTriple().getArch() == Triple::r600)
+    return CLI.Chain;
+
+  SDValue Chain = DAG.getCALLSEQ_START(CLI.Chain, 0, 0, CLI.DL);
+  return DAG.getCALLSEQ_END(Chain, 0, 0, /*InGlue=*/SDValue(), CLI.DL);
 }
 
 SDValue AMDGPUTargetLowering::LowerCall(CallLoweringInfo &CLI,
