@@ -46,16 +46,6 @@
 using namespace cir;
 using namespace llvm;
 
-
-static std::string getLLVMIntrinsicNameForType(mlir::Type llvmTy) {
-  std::string s;
-  {
-    llvm::raw_string_ostream os(s);
-    os << llvmTy;
-  }
-  return s;
-}
-
 // Actual lowering
 mlir::LogicalResult CIRToLLVMSqrtOpLowering::matchAndRewrite(
     cir::SqrtOp op, typename cir::SqrtOp::Adaptor adaptor,
