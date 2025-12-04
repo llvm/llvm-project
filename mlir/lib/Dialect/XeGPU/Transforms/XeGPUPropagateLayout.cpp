@@ -588,23 +588,22 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
   if (sourceTy.getRank() != resultTy.getRank()) {
     auto sourceDims = sourceTy.getShape();
     auto resultDims = resultTy.getShape();
-    // adding the missing leading missing dims
     SmallVector<int64_t> bcastDims;
-    int64_t dimDiff = resultTy.getRank() - sourceTy.getRank();
-    for (int i = 0; i < dimDiff; i++) {
+    auto dimDiff = resultTy.getRank() - sourceTy.getRank();
+    // adding the missing leading dims
+    for (int i = 0; i < dimDiff; i++)
       bcastDims.push_back(i);
-    }
 
     // for the rest dims in the resultTy, if sourceTy dim is 1, then it's
     // broadcasted dim
-    for (size_t i = 0; i < sourceDims.size(); i++) {
+    for (size_t i = 0; i < sourceDims.size(); i++)
       if ((sourceDims[i] == 1) && (resultDims[i + dimDiff] != 1))
         bcastDims.push_back(i + dimDiff);
-    }
 
     // create a slice layout for the source
     xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
-        broadcast->getContext(), cast<xegpu::LayoutAttr>(resultLayout.get()),
+        broadcast->getContext(),
+        cast<xegpu::DistributeLayoutAttr>(resultLayout.get()),
         DenseI64ArrayAttr::get(broadcast->getContext(), bcastDims));
 
     propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
@@ -938,7 +937,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   } else {
 
     // The layout is strictly determined by the payload type.
-    auto payloadTy = load.getValueType();
+    VectorType payloadTy = load.getValueType();
     if (!payloadTy) {
       load.emitWarning("Not propagating, non-vector payload supplied.");
       return;
@@ -1008,7 +1007,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     // Currently, for 2D StoreScatterOp we expect that the height dimension of
     // the tensor descriptor is equal to the subgroup size. This is ensured by
     // the op verifier.
-    auto payloadTy = storeScatter.getValueType();
+    VectorType payloadTy = storeScatter.getValueType();
     if (!payloadTy) {
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
       return;

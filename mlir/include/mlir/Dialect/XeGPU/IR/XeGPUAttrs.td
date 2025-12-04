@@ -290,7 +290,7 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
 
     InterfaceMethod</*desc=*/[{Check if this layout is identical to another layout.}],
                     /*retTy=*/"bool",
-                    /*methodName=*/"isIdentical",
+                    /*methodName=*/"isEqualTo",
                     /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other)>
   ];
 }
@@ -508,7 +508,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
     
     /// Check if this is identical to some other layout.
-    bool isIdentical(const xegpu::DistributeLayoutAttr &other); 
+    bool isEqualTo(const xegpu::DistributeLayoutAttr &other); 
 
   }];
 
@@ -680,7 +680,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
     
     /// Check if this is identical to some other layout.
-    bool isIdentical(const xegpu::DistributeLayoutAttr &other); 
+    bool isEqualTo(const xegpu::DistributeLayoutAttr &other); 
   }];
 
   let assemblyFormat = "`<` qualified($parent) `,` `dims` `=` $dims `>`";

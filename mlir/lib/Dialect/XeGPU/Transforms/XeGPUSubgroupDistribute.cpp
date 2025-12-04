@@ -1445,18 +1445,21 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
 /// ```
 /// %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<8x1xf32>) {
 ///   %0 = "some_def"() {layout_result_0 =
-///   #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
-///   dims = [0]> } : () -> (vector<32xf32>) %2 = vector.broadcast %1
-///   {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
-///   1]>}: vector<32xf32> to vector<8x32xf32> gpu.yield %1 : vector<8x32xf32>
+///     #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
+///     dims = [0]> } : () -> (vector<32xf32>)
+///   %2 = vector.broadcast %0 {layout_result_0 =
+///     #xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>}
+///     : vector<32xf32> to vector<8x32xf32>
+///     gpu.yield %1 : vector<8x32xf32>
 /// }
 /// ```
 /// is lowered to:
 /// ```
 /// %r:1 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xf32>) {
 ///   %0 = "some_def"() {layout_result_0 =
-///   #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
-///   dims = [0]> } : () -> (vector<32xf32>) gpu.yield %0 : vector<32xf32>
+///     #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
+///     dims = [0]> } : () -> (vector<32xf32>)
+///   gpu.yield %0 : vector<32xf32>
 /// }
 /// %2 = vector.broadcast %r#0 : vector<1xf32> to vector<8x1xf32>
 ///
@@ -1484,10 +1487,10 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
 ///   %1 = vector.shape_cast %0
 ///     {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
 ///     1]>}: vector<8xf32> to vector<8x1xf32>
-///   gpu.yield %0 : vector<8x1xf32>
+///   gpu.yield %1 : vector<8x1xf32>
 /// }
 /// // The broadcast is implicit through layout transformation (no-op)
-///  %2 = vector.broadcast %r#0 : vector<8x1xf32> to vector<8x1xf32>
+///  "some_use"(%r#0)
 /// ```
 struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
@@ -1514,10 +1517,11 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
       xegpu::DistributeLayoutAttr resultLayout =
           xegpu::getDistributeLayoutAttr(broadcastOp.getResult());
       assert(resultLayout && "Broadcast result must have layout attribute.");
-      if (!sourceLayout.isSliceOf(resultLayout) ||
-          sourceLayout.isIdentical(resultLayout))
+      if (!sourceLayout.isSliceOf(resultLayout) &&
+          !sourceLayout.isEqualTo(resultLayout))
         return rewriter.notifyMatchFailure(
-            warpOp, "Broadcast input layout must be a slice of result layout.");
+            warpOp, "Broadcast input layout must be either a slice of or equal "
+                    "to result layout.");
     }
     // Get the distributed source type based on layout
     FailureOr<VectorType> sourceDistTypeOrFailure =
@@ -1533,17 +1537,17 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
         {sourceDistTypeOrFailure.value()}, newRetIndices);
 
     // Replace the broadcast result with the distributed source
-    Value distributedVal = newWarpOp.getResult(newRetIndices[0]);
-    Value newBroadcast = distributedVal;
+    Value distributedSource = newWarpOp.getResult(newRetIndices[0]);
+    Value newBroadcast = distributedSource;
     // if sourceDistType is same as orignial warp result type, no need to
     //  re-create broadcast op
-    if (distributedVal.getType() != warpOp.getResult(operandIdx).getType()) {
+    if (distributedSource.getType() != warpOp.getResult(operandIdx).getType()) {
       // generate broadcast op outside warp op to have correct type
       rewriter.setInsertionPointAfter(newWarpOp);
       newBroadcast = vector::BroadcastOp::create(
           rewriter, newWarpOp.getLoc(),
           cast<VectorType>(warpOp.getResult(operandIdx).getType()),
-          distributedVal);
+          distributedSource);
     }
 
     rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx), newBroadcast);
@@ -1982,9 +1986,9 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
   patterns.add<CreateNdDescDistribution, StoreNdDistribution,
                LoadNdDistribution, DpasDistribution, PrefetchNdDistribution,
                GpuBarrierDistribution, VectorMultiReductionDistribution,
-               VectorBroadcastDistribution, LoadDistribution, StoreDistribution,
-               VectorTransposeDistribution, VectorBitcastDistribution,
-               LoadMatrixDistribution, StoreMatrixDistribution,
+               LoadDistribution, StoreDistribution, VectorTransposeDistribution,
+               VectorBitcastDistribution, LoadMatrixDistribution,
+               StoreMatrixDistribution,
                MemrefExtractAlignedPointerAsIndexDistribution>(
       patterns.getContext(),
       /*pattern benefit=*/regularPatternBenefit);
@@ -1992,7 +1996,7 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
   // patterns. Therefore, assign higher benefit.
   patterns
       .add<VectorShapeCastDistribution, VectorExtractStridedSliceDistribution,
-           VectorInsertStridedSliceDistribution>(
+           VectorInsertStridedSliceDistribution, VectorBroadcastDistribution>(
           patterns.getContext(),
           /*pattern benefit=*/highPatternBenefit);
 }

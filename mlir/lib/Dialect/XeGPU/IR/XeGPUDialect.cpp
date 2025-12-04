@@ -390,7 +390,7 @@ LayoutAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
   return genCoordinates(builder, loc, ids, layout, subShape, shape);
 }
 
-bool LayoutAttr::isIdentical(const xegpu::DistributeLayoutAttr &other) {
+bool LayoutAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
   if (dyn_cast<xegpu::SliceAttr>(other))
     return false;
 
@@ -517,18 +517,15 @@ bool SliceAttr::isSliceOf(const xegpu::DistributeLayoutAttr &other) {
                       [&](int64_t dim) { return thisDims.contains(dim); });
 }
 
-bool SliceAttr::isIdentical(const xegpu::DistributeLayoutAttr &other) {
+bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
   if (dyn_cast<xegpu::LayoutAttr>(other))
     return false;
 
   auto flattenedThis = flatten();
   auto flattenedOther = dyn_cast<xegpu::SliceAttr>(other).flatten();
 
-  if ((flattenedThis.getParent() == flattenedOther.getParent()) &&
-      (flattenedThis.getDims() == flattenedOther.getDims())) {
-    return true;
-  }
-  return false;
+  return ((flattenedThis.getParent() == flattenedOther.getParent()) &&
+          (flattenedThis.getDims() == flattenedOther.getDims()));
 }
 
 //===----------------------------------------------------------------------===//
