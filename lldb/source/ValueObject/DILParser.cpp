@@ -13,7 +13,9 @@
 
 #include "lldb/ValueObject/DILParser.h"
 #include "lldb/Host/common/DiagnosticsRendering.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILEval.h"
 #include "llvm/ADT/StringRef.h"
@@ -80,15 +82,63 @@ ASTNodeUP DILParser::Run() {
 // Parse an expression.
 //
 //  expression:
-//    unary_expression
+//    cast_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParseUnaryExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParseCastExpression(); }
+
+// Parse a cast_expression.
+//
+// cast_expression:
+//   unary_expression
+//   "(" type_id ")" cast_expression
+
+ASTNodeUP DILParser::ParseCastExpression() {
+  if (!CurToken().Is(Token::l_paren))
+    return ParseUnaryExpression();
+
+  // This could be a type cast, try parsing the contents as a type declaration.
+  Token token = CurToken();
+  uint32_t loc = token.GetLocation();
+
+  // Enable lexer backtracking, so that we can rollback in case it's not
+  // actually a type declaration.
+
+  // Start tentative parsing (save token location/idx, for possible rollback).
+  uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
+
+  // Consume the token only after enabling the backtracking.
+  m_dil_lexer.Advance();
+
+  // Try parsing the type declaration. If the returned value is not valid,
+  // then we should rollback and try parsing the expression.
+  auto type_id = ParseTypeId();
+  if (type_id) {
+    // Successfully parsed the type declaration. Commit the backtracked
+    // tokens and parse the cast_expression.
+
+    if (!type_id.value().IsValid())
+      return std::make_unique<ErrorNode>();
+
+    Expect(Token::r_paren);
+    m_dil_lexer.Advance();
+    auto rhs = ParseCastExpression();
+
+    return std::make_unique<CastNode>(loc, type_id.value(), std::move(rhs),
+                                      CastKind::eNone);
+  }
+
+  // Failed to parse the contents of the parentheses as a type declaration.
+  // Rollback the lexer and try parsing it as unary_expression.
+  TentativeParsingRollback(save_token_idx);
+
+  return ParseUnaryExpression();
+}
 
 // Parse an unary_expression.
 //
 //  unary_expression:
 //    postfix_expression
-//    unary_operator expression
+//    unary_operator cast_expression
 //
 //  unary_operator:
 //    "&"
@@ -102,7 +152,7 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
     Token token = CurToken();
     uint32_t loc = token.GetLocation();
     m_dil_lexer.Advance();
-    auto rhs = ParseExpression();
+    auto rhs = ParseCastExpression();
     switch (token.GetKind()) {
     case Token::star:
       return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Deref,
@@ -282,6 +332,81 @@ std::string DILParser::ParseNestedNameSpecifier() {
   }
 }
 
+// Parse a type_id.
+//
+//  type_id:
+//    type_specifier_seq [abstract_declarator]
+//
+//  type_specifier_seq:
+//    type_specifier [type_specifier]
+//
+//  type_specifier:
+//    ["::"] [nested_name_specifier] type_name // not handled for now!
+//    builtin_typename
+//
+std::optional<CompilerType> DILParser::ParseTypeId() {
+  CompilerType type;
+  // For now only allow builtin types -- will expand add to this later.
+  auto maybe_builtin_type = ParseBuiltinType();
+  if (maybe_builtin_type) {
+    type = *maybe_builtin_type;
+  } else
+    return {};
+
+  //
+  //  abstract_declarator:
+  //    ptr_operator [abstract_declarator]
+  //
+  std::vector<Token> ptr_operators;
+  while (CurToken().IsOneOf({Token::star, Token::amp})) {
+    Token tok = CurToken();
+    ptr_operators.push_back(std::move(tok));
+    m_dil_lexer.Advance();
+  }
+  type = ResolveTypeDeclarators(type, ptr_operators);
+
+  return type;
+}
+
+// Parse a built-in type
+//
+// builtin_typename:
+//   identifer_seq
+//
+//  identifier_seq
+//    identifer [identifier_seq]
+//
+// A built-in type can be a single identifier or a space-separated
+// list of identifiers (e.g. "short" or "long long").
+std::optional<CompilerType> DILParser::ParseBuiltinType() {
+  std::string type_name = "";
+  uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
+  bool first_word = true;
+  while (CurToken().GetKind() == Token::identifier) {
+    if (CurToken().GetSpelling() == "const" ||
+        CurToken().GetSpelling() == "volatile")
+      continue;
+    if (!first_word)
+      type_name.push_back(' ');
+    else
+      first_word = false;
+    type_name.append(CurToken().GetSpelling());
+    m_dil_lexer.Advance();
+  }
+
+  if (type_name.size() > 0) {
+    lldb::TargetSP target_sp = m_ctx_scope->CalculateTarget();
+    ConstString const_type_name(type_name.c_str());
+    for (auto type_system_sp : target_sp->GetScratchTypeSystems())
+      if (auto compiler_type =
+              type_system_sp->GetBuiltinTypeByName(const_type_name))
+        return compiler_type;
+  }
+
+  TentativeParsingRollback(save_token_idx);
+  return {};
+}
+
 // Parse an id_expression.
 //
 //  id_expression:
@@ -345,6 +470,40 @@ std::string DILParser::ParseUnqualifiedId() {
   std::string identifier = CurToken().GetSpelling();
   m_dil_lexer.Advance();
   return identifier;
+}
+
+CompilerType
+DILParser::ResolveTypeDeclarators(CompilerType type,
+                                  const std::vector<Token> &ptr_operators) {
+  // Resolve pointers/references.
+  for (Token tk : ptr_operators) {
+    uint32_t loc = tk.GetLocation();
+    if (tk.GetKind() == Token::star) {
+      // Pointers to reference types are forbidden.
+      if (type.IsReferenceType()) {
+        BailOut(llvm::formatv("'type name' declared as a pointer to a "
+                              "reference of type {0}",
+                              type.TypeDescription()),
+                loc, CurToken().GetSpelling().length());
+        return {};
+      }
+      // Get pointer type for the base type: e.g. int* -> int**.
+      type = type.GetPointerType();
+
+    } else if (tk.GetKind() == Token::amp) {
+      // References to references are forbidden.
+      // FIXME: In future we may want to allow rvalue references (i.e. &&).
+      if (type.IsReferenceType()) {
+        BailOut("type name declared as a reference to a reference", loc,
+                CurToken().GetSpelling().length());
+        return {};
+      }
+      // Get reference type for the base type: e.g. int -> int&.
+      type = type.GetLValueReferenceType();
+    }
+  }
+
+  return type;
 }
 
 // Parse an boolean_literal.
