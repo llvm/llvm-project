@@ -224,6 +224,125 @@ int dsmil_layer9_get_utilization(const dsmil_layer9_executive_ctx_t *ctx,
                                  float *tops_utilization,
                                  uint32_t *active_campaigns);
 
+/**
+ * @brief Crisis management decision support
+ * 
+ * Uses Device 59 (Executive Command) for:
+ * - Real-time decision support
+ * - Resource allocation optimization
+ * - Crisis scenario analysis
+ * 
+ * @param ctx Executive context
+ * @param crisis_data Crisis situation data
+ * @param data_size Crisis data size
+ * @param decision_support Output decision support recommendations
+ * @param support_size Decision support buffer size / actual length
+ * @return 0 on success, negative on error
+ */
+int dsmil_layer9_crisis_management(const dsmil_layer9_executive_ctx_t *ctx,
+                                   const void *crisis_data, size_t data_size,
+                                   void *decision_support, size_t *support_size);
+
+/**
+ * @brief Multi-criteria decision analysis
+ * 
+ * Uses Strategic AI models for:
+ * - Policy simulation
+ * - Multi-criteria optimization
+ * - Decision trade-off analysis
+ * 
+ * @param ctx Executive context
+ * @param criteria Decision criteria
+ * @param num_criteria Number of criteria
+ * @param alternatives Decision alternatives
+ * @param num_alternatives Number of alternatives
+ * @param ranked_results Output ranked decision results
+ * @param results_size Results buffer size / actual length
+ * @return 0 on success, negative on error
+ */
+int dsmil_layer9_multi_criteria_decision(const dsmil_layer9_executive_ctx_t *ctx,
+                                        const void *criteria, uint32_t num_criteria,
+                                        const void *alternatives, uint32_t num_alternatives,
+                                        void *ranked_results, size_t *results_size);
+
+/**
+ * @brief Apply releasability markings for coalition sharing
+ * 
+ * Uses Device 60 (Coalition Fusion) for:
+ * - REL NATO marking
+ * - REL FVEY marking
+ * - NOFORN enforcement
+ * - Information sharing policy application
+ * 
+ * @param ctx Executive context
+ * @param intelligence_data Intelligence data to mark
+ * @param data_size Data size
+ * @param coalition_type Coalition type (NATO, FVEY, etc.)
+ * @param marked_data Output marked data
+ * @param marked_size Marked data buffer size / actual length
+ * @return 0 on success, negative on error
+ */
+int dsmil_layer9_apply_releasability(const dsmil_layer9_executive_ctx_t *ctx,
+                                     const void *intelligence_data, size_t data_size,
+                                     dsmil_coalition_type_t coalition_type,
+                                     void *marked_data, size_t *marked_size);
+
+/**
+ * @brief Strategic stability assessment (NC3)
+ * 
+ * Uses Device 61 (Nuclear C&C Integration) for:
+ * - Strategic stability modeling
+ * - Deterrence analysis
+ * - NC3 threat assessment
+ * 
+ * @param ctx Executive context (must be Device 61)
+ * @param stability_data Stability assessment data
+ * @param data_size Data size
+ * @param assessment_result Output stability assessment
+ * @param result_size Assessment buffer size / actual length
+ * @return 0 on success, negative on error
+ */
+int dsmil_layer9_assess_strategic_stability(const dsmil_layer9_executive_ctx_t *ctx,
+                                            const void *stability_data, size_t data_size,
+                                            void *assessment_result, size_t *result_size);
+
+/**
+ * @brief Long-term strategic planning
+ * 
+ * Uses Strategic AI models (1B-7B parameters) for:
+ * - Long-term scenario planning
+ * - Strategic forecasting
+ * - Policy impact simulation
+ * 
+ * @param ctx Executive context
+ * @param planning_horizon Planning horizon in years
+ * @param strategic_plan Output strategic plan
+ * @param plan_size Strategic plan buffer size / actual length
+ * @return 0 on success, negative on error
+ */
+int dsmil_layer9_strategic_planning(const dsmil_layer9_executive_ctx_t *ctx,
+                                    uint32_t planning_horizon,
+                                    void *strategic_plan, size_t *plan_size);
+
+/**
+ * @brief Multi-national coordination
+ * 
+ * Uses Device 60 (Coalition Fusion) for:
+ * - Cross-cultural analysis
+ * - Multi-lingual intelligence processing
+ * - Joint operations coordination
+ * 
+ * @param ctx Executive context
+ * @param coordination_request Coordination request
+ * @param request_size Request size
+ * @param coordination_plan Output coordination plan
+ * @param plan_size Coordination plan buffer size / actual length
+ * @return 0 on success, negative on error
+ */
+int dsmil_layer9_multinational_coordination(const dsmil_layer9_executive_ctx_t *ctx,
+                                           const void *coordination_request, size_t request_size,
+                                           void *coordination_plan, size_t *plan_size);
+
 /** @} */
 
 #ifdef __cplusplus

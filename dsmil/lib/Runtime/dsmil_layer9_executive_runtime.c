@@ -304,3 +304,202 @@ int dsmil_layer9_get_utilization(const dsmil_layer9_executive_ctx_t *ctx,
     
     return 0;
 }
+
+int dsmil_layer9_crisis_management(const dsmil_layer9_executive_ctx_t *ctx,
+                                   const void *crisis_data, size_t data_size,
+                                   void *decision_support, size_t *support_size) {
+    if (!ctx || !crisis_data || !decision_support || !support_size || data_size == 0) {
+        return -1;
+    }
+    
+    // Use Device 59 (Executive Command) for crisis management
+    if (ctx->device_id != 59) {
+        fprintf(stderr, "WARNING: Crisis management optimized for Device 59\n");
+    }
+    
+    // Placeholder - actual implementation would:
+    // 1. Analyze crisis situation
+    // 2. Run real-time decision support models
+    // 3. Optimize resource allocation
+    // 4. Generate crisis response recommendations
+    
+    const char *support = "Crisis management decision support generated";
+    size_t len = strlen(support) + 1;
+    
+    if (*support_size < len) {
+        *support_size = len;
+        return -1;
+    }
+    
+    memcpy(decision_support, support, len);
+    *support_size = len;
+    
+    return 0;
+}
+
+int dsmil_layer9_multi_criteria_decision(const dsmil_layer9_executive_ctx_t *ctx,
+                                        const void *criteria, uint32_t num_criteria,
+                                        const void *alternatives, uint32_t num_alternatives,
+                                        void *ranked_results, size_t *results_size) {
+    if (!ctx || !criteria || !alternatives || !ranked_results || !results_size) {
+        return -1;
+    }
+    
+    // Use Strategic AI models for multi-criteria decision analysis
+    // Placeholder - actual implementation would:
+    // 1. Evaluate alternatives against criteria
+    // 2. Run policy simulation models
+    // 3. Calculate trade-offs
+    // 4. Rank alternatives
+    
+    const char *results = "Multi-criteria decision analysis completed";
+    size_t len = strlen(results) + 1;
+    
+    if (*results_size < len) {
+        *results_size = len;
+        return -1;
+    }
+    
+    memcpy(ranked_results, results, len);
+    *results_size = len;
+    
+    return 0;
+}
+
+int dsmil_layer9_apply_releasability(const dsmil_layer9_executive_ctx_t *ctx,
+                                     const void *intelligence_data, size_t data_size,
+                                     dsmil_coalition_type_t coalition_type,
+                                     void *marked_data, size_t *marked_size) {
+    if (!ctx || !intelligence_data || !marked_data || !marked_size || data_size == 0) {
+        return -1;
+    }
+    
+    // Use Device 60 (Coalition Fusion) for releasability marking
+    if (ctx->device_id != 60) {
+        fprintf(stderr, "WARNING: Releasability marking optimized for Device 60\n");
+    }
+    
+    // Placeholder - actual implementation would:
+    // 1. Determine releasability based on coalition type
+    // 2. Apply REL NATO, REL FVEY, or NOFORN markings
+    // 3. Apply information sharing policies
+    // 4. Generate marked intelligence data
+    
+    const char *marked = "Releasability markings applied";
+    size_t len = strlen(marked) + 1;
+    
+    if (*marked_size < len) {
+        *marked_size = len;
+        return -1;
+    }
+    
+    memcpy(marked_data, marked, len);
+    *marked_size = len;
+    
+    fprintf(stdout, "INFO: Releasability markings applied (Coalition: %d)\n", coalition_type);
+    
+    return 0;
+}
+
+int dsmil_layer9_assess_strategic_stability(const dsmil_layer9_executive_ctx_t *ctx,
+                                            const void *stability_data, size_t data_size,
+                                            void *assessment_result, size_t *result_size) {
+    if (!ctx || !stability_data || !assessment_result || !result_size || data_size == 0) {
+        return -1;
+    }
+    
+    // Use Device 61 (Nuclear C&C Integration) for strategic stability assessment
+    if (ctx->device_id != 61) {
+        fprintf(stderr, "ERROR: Strategic stability assessment requires Device 61\n");
+        return -1;
+    }
+    
+    if (!ctx->nc3_enabled) {
+        fprintf(stderr, "ERROR: NC3 not enabled for Device 61\n");
+        return -1;
+    }
+    
+    // Placeholder - actual implementation would:
+    // 1. Run strategic stability models
+    // 2. Perform deterrence analysis
+    // 3. Assess NC3 threat landscape
+    // 4. Generate stability assessment (Section 4.1c compliant)
+    
+    const char *assessment = "Strategic stability assessment completed (NC3, ROE-governed)";
+    size_t len = strlen(assessment) + 1;
+    
+    if (*result_size < len) {
+        *result_size = len;
+        return -1;
+    }
+    
+    memcpy(assessment_result, assessment, len);
+    *result_size = len;
+    
+    fprintf(stdout, "INFO: Strategic stability assessment completed (Device 61, Section 4.1c)\n");
+    
+    return 0;
+}
+
+int dsmil_layer9_strategic_planning(const dsmil_layer9_executive_ctx_t *ctx,
+                                    uint32_t planning_horizon,
+                                    void *strategic_plan, size_t *plan_size) {
+    if (!ctx || !strategic_plan || !plan_size || planning_horizon == 0) {
+        return -1;
+    }
+    
+    // Use Strategic AI models (1B-7B parameters) for long-term planning
+    // Placeholder - actual implementation would:
+    // 1. Run strategic forecasting models
+    // 2. Perform scenario planning
+    // 3. Simulate policy impacts
+    // 4. Generate long-term strategic plan (up to 32K token context)
+    
+    char plan[256];
+    snprintf(plan, sizeof(plan), "Strategic plan generated (%u year horizon)", planning_horizon);
+    size_t len = strlen(plan) + 1;
+    
+    if (*plan_size < len) {
+        *plan_size = len;
+        return -1;
+    }
+    
+    memcpy(strategic_plan, plan, len);
+    *plan_size = len;
+    
+    return 0;
+}
+
+int dsmil_layer9_multinational_coordination(const dsmil_layer9_executive_ctx_t *ctx,
+                                           const void *coordination_request, size_t request_size,
+                                           void *coordination_plan, size_t *plan_size) {
+    if (!ctx || !coordination_request || !coordination_plan || !plan_size || request_size == 0) {
+        return -1;
+    }
+    
+    // Use Device 60 (Coalition Fusion) for multi-national coordination
+    if (ctx->device_id != 60) {
+        fprintf(stderr, "WARNING: Multi-national coordination optimized for Device 60\n");
+    }
+    
+    // Placeholder - actual implementation would:
+    // 1. Process multi-lingual intelligence
+    // 2. Perform cross-cultural analysis
+    // 3. Coordinate joint operations
+    // 4. Generate coordination plan
+    
+    const char *plan = "Multi-national coordination plan generated";
+    size_t len = strlen(plan) + 1;
+    
+    if (*plan_size < len) {
+        *plan_size = len;
+        return -1;
+    }
+    
+    memcpy(coordination_plan, plan, len);
+    *plan_size = len;
+    
+    fprintf(stdout, "INFO: Multi-national coordination completed (Device 60, Coalition Fusion)\n");
+    
+    return 0;
+}

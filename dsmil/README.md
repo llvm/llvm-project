@@ -460,31 +460,43 @@ DSMIL provides comprehensive runtime libraries for Layer 7 AI/ML workloads, quan
 - **Header**: `dsmil/include/dsmil_layer8_security.h`
 - **Implementation**: `dsmil/lib/Runtime/dsmil_layer8_security_runtime.c`
 - **8 Devices (51-58)**: 188 TOPS INT8 total
-  - Device 51: Enhanced Security Framework (15 TOPS) - Anomaly detection, behavioral analytics
-  - Device 52: Adversarial ML Defense (30 TOPS) - Adversarial training, robustness testing
-  - Device 53: Cybersecurity AI (25 TOPS) - Threat intelligence, attack prediction
-  - Device 54: Threat Intelligence (25 TOPS) - IOC extraction, attribution analysis
-  - Device 55: Automated Security Response (20 TOPS) - Incident response automation
-  - Device 56: Post-Quantum Crypto (20 TOPS) - PQC algorithm optimization
+  - Device 51: Enhanced Security Framework (15 TOPS) - Anomaly detection, behavioral analytics (LSTM/GRU)
+  - Device 52: Adversarial ML Defense (30 TOPS) - Adversarial training with GANs, robustness testing
+  - Device 53: Cybersecurity AI (25 TOPS) - Threat intelligence, attack prediction, zero-day prediction
+  - Device 54: Threat Intelligence (25 TOPS) - IOC extraction (NLP), attribution analysis (GNN)
+  - Device 55: Automated Security Response (20 TOPS) - RL-based incident response automation
+  - Device 56: Post-Quantum Crypto (20 TOPS) - ML-optimized PQC algorithms (ML-KEM, ML-DSA)
   - Device 57: Autonomous Operations (28 TOPS) - Self-healing systems, adaptive defense
-  - Device 58: Security Analytics (25 TOPS) - Security event correlation, forensics
-- Model sizes: 50-300M parameters
-- Latency: <100ms for real-time threat detection
-- Detection accuracy: >99% known threats, >95% zero-day
-- Adversarial ML defense, threat detection, side-channel analysis, zero-trust enforcement
+  - Device 58: Security Analytics (25 TOPS) - Security event correlation (GNN), forensics
+- **Model sizes**: 50-300M parameters
+- **Latency**: <100ms for real-time threat detection
+- **Detection accuracy**: >99% known threats, >95% zero-day
+- **Specialized capabilities**:
+  - Adversarial defense training (GANs)
+  - Security event correlation (Graph Neural Networks)
+  - Zero-day attack prediction
+  - Behavioral pattern analysis (LSTM/GRU temporal patterns)
+  - PQC algorithm ML optimization
+  - Automated incident response (Reinforcement Learning)
 
 ### Layer 9 Executive Command Runtime ⭐ NEW
 - **Header**: `dsmil/include/dsmil_layer9_executive.h`
 - **Implementation**: `dsmil/lib/Runtime/dsmil_layer9_executive_runtime.c`
 - **4 Devices (59-62)**: 330 TOPS INT8 total
-  - Device 59: Executive Command (85 TOPS) - Strategic decision support, crisis management
-  - Device 60: Coalition Fusion (85 TOPS) - Multi-national intelligence fusion
-  - Device 61: Nuclear C&C Integration (80 TOPS) - NC3 analysis, strategic stability (ROE-governed)
-  - Device 62: Strategic Intelligence (80 TOPS) - Global threat assessment, strategic planning
-- Model sizes: 1B-7B parameters
-- Latency: <1000ms for complex strategic queries
-- Context windows: Up to 32K tokens
-- Strategic planning, NC3 integration (Device 61, Section 4.1c compliant), coalition coordination
+  - Device 59: Executive Command (85 TOPS) - Strategic decision support, crisis management, real-time resource allocation
+  - Device 60: Coalition Fusion (85 TOPS) - Multi-national intelligence fusion, multi-lingual NLP, cross-cultural analysis
+  - Device 61: Nuclear C&C Integration (80 TOPS) - NC3 analysis, strategic stability, deterrence modeling (ROE-governed)
+  - Device 62: Strategic Intelligence (80 TOPS) - Global threat assessment, geopolitical modeling, risk forecasting
+- **Model sizes**: 1B-7B parameters
+- **Latency**: <1000ms for complex strategic queries
+- **Context windows**: Up to 32K tokens for comprehensive analysis
+- **Specialized capabilities**:
+  - Crisis management with real-time decision support
+  - Multi-criteria decision analysis and policy simulation
+  - Releasability markings (REL NATO, REL FVEY, NOFORN)
+  - Strategic stability assessment (NC3, Device 61, Section 4.1c compliant)
+  - Long-term strategic planning with scenario analysis
+  - Multi-national coordination and joint operations
 
 ### Device 255 Master Crypto Controller ⭐ NEW
 - **Header**: `dsmil/include/dsmil_device255_crypto.h`

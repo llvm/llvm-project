@@ -248,6 +248,92 @@ int dsmil_layer8_get_security_posture(const dsmil_layer8_security_ctx_t *ctx,
  */
 int dsmil_layer8_enable_zero_trust(dsmil_layer8_security_ctx_t *ctx);
 
+/**
+ * @brief Train adversarial defense model
+ * 
+ * Uses Device 52 (Adversarial ML Defense) with GANs for:
+ * - Adversarial training
+ * - Robustness testing
+ * - Model hardening against adversarial attacks
+ * 
+ * @param model_path Path to model to harden
+ * @param adversarial_samples Adversarial training samples
+ * @param num_samples Number of adversarial samples
+ * @param hardened_model_path Output path for hardened model
+ * @return 0 on success, negative on error
+ */
+int dsmil_layer8_train_adversarial_defense(const char *model_path,
+                                           const void *adversarial_samples,
+                                           uint32_t num_samples,
+                                           const char *hardened_model_path);
+
+/**
+ * @brief Correlate security events using Graph Neural Networks
+ * 
+ * Uses Device 58 (Security Analytics) with GNN for:
+ * - Security event correlation
+ * - Attack pattern detection
+ * - Forensics analysis
+ * 
+ * @param events Security event data
+ * @param num_events Number of events
+ * @param correlation_graph Output correlation graph
+ * @param graph_size Graph buffer size / actual length
+ * @return 0 on success, negative on error
+ */
+int dsmil_layer8_correlate_security_events(const void *events, uint32_t num_events,
+                                           void *correlation_graph, size_t *graph_size);
+
+/**
+ * @brief Predict zero-day attacks
+ * 
+ * Uses Device 53 (Cybersecurity AI) for:
+ * - Zero-day attack prediction
+ * - Attack pattern recognition
+ * - Threat forecasting
+ * 
+ * @param threat_indicators Threat indicators
+ * @param num_indicators Number of indicators
+ * @param prediction Output attack prediction
+ * @param confidence Output prediction confidence (0.0-1.0)
+ * @return 0 on success, negative on error
+ */
+int dsmil_layer8_predict_zero_day(const void *threat_indicators, uint32_t num_indicators,
+                                  void *prediction, float *confidence);
+
+/**
+ * @brief Analyze behavioral patterns using LSTM/GRU
+ * 
+ * Uses Device 51 (Enhanced Security Framework) for:
+ * - Temporal pattern analysis
+ * - Behavioral anomaly detection
+ * - User/entity behavior analytics
+ * 
+ * @param behavior_data Time-series behavior data
+ * @param data_size Data size
+ * @param time_window Time window in seconds
+ * @param anomaly_score Output anomaly score (0.0-1.0)
+ * @return 0 on success, negative on error
+ */
+int dsmil_layer8_analyze_behavioral_patterns(const void *behavior_data, size_t data_size,
+                                            uint32_t time_window, float *anomaly_score);
+
+/**
+ * @brief Optimize PQC algorithms using ML
+ * 
+ * Uses Device 56 (Post-Quantum Crypto) for:
+ * - ML-KEM-1024 optimization
+ * - ML-DSA-87 optimization
+ * - PQC performance tuning
+ * 
+ * @param pqc_algorithm PQC algorithm ID (ML-KEM-1024, ML-DSA-87)
+ * @param optimization_params Output optimization parameters
+ * @param params_size Parameters buffer size / actual length
+ * @return 0 on success, negative on error
+ */
+int dsmil_layer8_optimize_pqc(uint16_t pqc_algorithm,
+                              void *optimization_params, size_t *params_size);
+
 /** @} */
 
 #ifdef __cplusplus
