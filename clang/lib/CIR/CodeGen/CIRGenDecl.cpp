@@ -106,7 +106,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
           cir::ConstantOp falseNVRO = builder.getFalse(loc);
           Address nrvoFlag = createTempAlloca(falseNVRO.getType(),
                                               CharUnits::One(), loc, "nrvo",
-                                              /*ArraySize=*/nullptr, &address);
+                                              /*arraySize=*/nullptr, &address);
           assert(builder.getInsertionBlock());
           builder.createStore(loc, falseNVRO, nrvoFlag);
 
