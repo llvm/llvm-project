@@ -3938,43 +3938,55 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_SUBVECTOR(SDNode *N) {
 
   GetSplitVector(N->getOperand(0), Lo, Hi);
 
-  uint64_t LoEltsMin = Lo.getValueType().getVectorMinNumElements();
-  uint64_t IdxVal = Idx->getAsZExtVal();
+  ElementCount LoElts = Lo.getValueType().getVectorElementCount();
+  // Note: For scalable vectors, the index is scaled by vscale.
+  ElementCount IdxVal =
+      ElementCount::get(Idx->getAsZExtVal(), SubVT.isScalableVector());
+  uint64_t IdxValMin = IdxVal.getKnownMinValue();
 
-  unsigned NumResultElts = SubVT.getVectorMinNumElements();
+  EVT SrcVT = N->getOperand(0).getValueType();
+  ElementCount NumResultElts = SubVT.getVectorElementCount();
 
-  if (IdxVal < LoEltsMin) {
-    // If the extracted elements are all in the low half, do a simple extract.
-    if (IdxVal + NumResultElts <= LoEltsMin)
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Lo, Idx);
+  // If the extracted elements are all in the low half, do a simple extract.
+  if (ElementCount::isKnownLE(IdxVal + NumResultElts, LoElts))
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Lo, Idx);
 
+  unsigned LoEltsMin = LoElts.getKnownMinValue();
+  if (IdxValMin < LoEltsMin && SubVT.isFixedLengthVector() &&
+      SrcVT.isFixedLengthVector()) {
     // Extracted subvector crosses vector split, so we need to blend the two
     // halves.
     // TODO: May be able to emit partial extract_subvector.
     SmallVector<SDValue, 8> Elts;
-    Elts.reserve(NumResultElts);
+    Elts.reserve(NumResultElts.getFixedValue());
 
-    DAG.ExtractVectorElements(Lo, Elts, /*Start=*/IdxVal,
-                              /*Count=*/LoEltsMin - IdxVal);
+    // This is not valid for scalable vectors. If SubVT is scalable, this is the
+    // same as unrolling a scalable dimension (invalid). If ScrVT is scalable,
+    // `Lo[LoEltsMin]` may not be the last element of `Lo`.
+    DAG.ExtractVectorElements(Lo, Elts, /*Start=*/IdxValMin,
+                              /*Count=*/LoEltsMin - IdxValMin);
     DAG.ExtractVectorElements(Hi, Elts, /*Start=*/0,
                               /*Count=*/SubVT.getVectorNumElements() -
                                   Elts.size());
     return DAG.getBuildVector(SubVT, dl, Elts);
   }
 
-  EVT SrcVT = N->getOperand(0).getValueType();
   if (SubVT.isScalableVector() == SrcVT.isScalableVector()) {
-    uint64_t ExtractIdx = IdxVal - LoEltsMin;
-    if (ExtractIdx % NumResultElts == 0)
-      return DAG.getExtractSubvector(dl, SubVT, Hi, ExtractIdx);
+    ElementCount ExtractIdx = IdxVal - LoElts;
+    if (ExtractIdx.isKnownMultipleOf(NumResultElts))
+      return DAG.getExtractSubvector(dl, SubVT, Hi,
+                                     ExtractIdx.getKnownMinValue());
 
-    // We cannot create an extract_subvector that isn't a multiple of the result
-    // size, which may go out of bounds for the last elements. Shuffle the
-    // desired elements down to 0 and do a simple 0 extract.
     EVT HiVT = Hi.getValueType();
+    assert(HiVT.isFixedLengthVector() &&
+           "Only fixed-vector extracts are supported in this case");
+
+    // We cannot create an extract_subvector that isn't a multiple of the
+    // result size, which may go out of bounds for the last elements. Shuffle
+    // the desired elements down to 0 and do a simple 0 extract.
     SmallVector<int, 8> Mask(HiVT.getVectorNumElements(), -1);
-    for (int I = 0; I != static_cast<int>(NumResultElts); ++I)
-      Mask[I] = ExtractIdx + I;
+    for (int I = 0; I != int(NumResultElts.getFixedValue()); ++I)
+      Mask[I] = int(ExtractIdx.getFixedValue()) + I;
 
     SDValue Shuffle =
         DAG.getVectorShuffle(HiVT, dl, Hi, DAG.getPOISON(HiVT), Mask);

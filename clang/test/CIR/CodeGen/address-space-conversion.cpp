@@ -11,7 +11,7 @@ using pi2_t = int __attribute__((address_space(2))) *;
 using ri1_t = int __attribute__((address_space(1))) &;
 using ri2_t = int __attribute__((address_space(2))) &;
 
-// CIR: cir.func dso_local @{{.*test_ptr.*}}
+// CIR: cir.func {{.*}} @{{.*test_ptr.*}}
 // LLVM: define dso_local void @{{.*test_ptr.*}}
 // OGCG: define dso_local void @{{.*test_ptr.*}}
 void test_ptr() {
@@ -30,7 +30,7 @@ void test_ptr() {
   // OGCG-NEXT: store ptr addrspace(2)  %{{.*}}, ptr %{{.*}}
 }
 
-// CIR: cir.func dso_local @{{.*test_ref.*}}
+// CIR: cir.func {{.*}} @{{.*test_ref.*}}
 // LLVM: define dso_local void @{{.*test_ref.*}}
 // OGCG: define dso_local void @{{.*test_ref.*}}
 void test_ref() {
@@ -56,7 +56,7 @@ void test_ref() {
   // OGCG-NEXT: store ptr addrspace(2) %{{.*}}, ptr %{{.*}}
 }
 
-// CIR: cir.func dso_local @{{.*test_nullptr.*}}
+// CIR: cir.func {{.*}} @{{.*test_nullptr.*}}
 // LLVM: define dso_local void @{{.*test_nullptr.*}}
 // OGCG: define dso_local void @{{.*test_nullptr.*}}
 void test_nullptr() {
@@ -74,7 +74,7 @@ void test_nullptr() {
   // OGCG-NEXT: store ptr addrspace(2) null, ptr %{{.*}}
 }
 
-// CIR: cir.func dso_local @{{.*test_side_effect.*}}
+// CIR: cir.func {{.*}} @{{.*test_side_effect.*}}
 // LLVM: define dso_local void @{{.*test_side_effect.*}}
 // OGCG: define dso_local void @{{.*test_side_effect.*}}
 void test_side_effect(pi1_t b) {
