@@ -425,11 +425,14 @@ bool CGObjCRuntime::canClassObjectBeUnrealized(
   Selector LoadSel = Ctx.Selectors.getSelector(0, &LoadII);
 
   // TODO: if one if the child had +load, this class is guaranteed to be
-  // realized as well. We should have a translation unit specific map that
-  // precomputes all classes that are realized, and just do a lookup here.
-  // But we need to measure how expensive it is to create a map like that.
-  if (CalleeClassDecl->lookupClassMethod(LoadSel))
-    return false; // This class has +load, so it's already realized
+  // realized as well. We can't search for all child classes here. Ideally, we
+  // should have a translation unit level `SmallSet` to include all classes with
+  // +load. Every time a class has +load, put itself and all parents in it, and
+  // we can just query that `SmallSet` here.
+  if (CalleeClassDecl->lookupMethod(LoadSel, /*isInstance=*/false,
+                                    /*shallowCategoryLookup=*/false,
+                                    /*followSuper=*/false))
+    return false;
 
   // Heuristic 2: using Self / Super
   // If we're currently executing a method of ClassDecl (or a subclass),
