@@ -163,7 +163,7 @@ jobs:
         fi
 
         case "${{ inputs.runs-on }}" in
-          ubuntu-22.04*)
+          ubuntu-22.04* | windows-2022)
             build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
             ;;
