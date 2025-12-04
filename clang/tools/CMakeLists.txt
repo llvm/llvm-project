@@ -25,9 +25,11 @@ endif()
 if(CLANG_INCLUDE_TESTS)
   add_clang_subdirectory(c-index-test)
   add_clang_subdirectory(apinotes-test)
-  add_clang_subdirectory(clang-cas-test)
   add_clang_subdirectory(clang-refactor-test)
 endif()
+
+# Add clang-cas-test unconditionally, as it is not only used by tests.
+add_clang_subdirectory(clang-cas-test)
 
 add_clang_subdirectory(IndexStore)
 
