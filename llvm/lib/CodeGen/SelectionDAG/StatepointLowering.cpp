@@ -1145,6 +1145,8 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
     const CallBase *Call, SDValue Callee, const BasicBlock *EHPadBB,
     bool VarArgDisallowed, bool ForceVoidReturnTy) {
   StatepointLoweringInfo SI(DAG);
+  SI.CLI.CB = Call;
+
   unsigned ArgBeginIndex = Call->arg_begin() - Call->op_begin();
   populateCallLoweringInfo(
       SI.CLI, Call, ArgBeginIndex, Call->arg_size(), Callee,

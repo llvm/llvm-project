@@ -331,6 +331,17 @@ namespace llvm {
 MachineBasicBlock *
 TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::STATEPOINT:
+    // As an implementation detail, STATEPOINT shares the STACKMAP format at
+    // this point in the process.  We diverge later.
+  case TargetOpcode::STACKMAP:
+  case TargetOpcode::PATCHPOINT:
+    return emitPatchPoint(MI, MBB);
+  default:
+    break;
+  }
+
 #ifndef NDEBUG
   dbgs() << "If a target marks an instruction with "
           "'usesCustomInserter', it must implement "
