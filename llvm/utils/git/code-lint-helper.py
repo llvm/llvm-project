@@ -27,69 +27,33 @@ from typing import Any, Dict, Final, List, Sequence
 
 
 class LintArgs:
-    __start_rev: str
-    __end_rev: str
-    __repo: str
-    __changed_files: List[str]
-    __token: str
-    __verbose: bool
-    __issue_number: int
-    __build_path: str
-    __clang_tidy_binary: str
+    start_rev: str
+    end_rev: str
+    repo: str
+    changed_files: Sequence[str]
+    token: str
+    verbose: bool = True
+    issue_number: int = 0
+    build_path: str = "build"
+    clang_tidy_binary: str = "clang-tidy"
 
     def __init__(self, args: argparse.Namespace) -> None:
         if not args is None:
-            self.__start_rev = args.start_rev
-            self.__end_rev = args.end_rev
-            self.__repo = args.repo
-            self.__token = args.token
-            self.__changed_files = (
+            self.start_rev = args.start_rev
+            self.end_rev = args.end_rev
+            self.repo = args.repo
+            self.token = args.token
+            self.changed_files = (
                 args.changed_files.split(",") if args.changed_files else []
             )
-            self.__issue_number = args.issue_number
-            self.__verbose = args.verbose
-            self.__build_path = args.build_path
-            self.__clang_tidy_binary = args.clang_tidy_binary
-
-    @property
-    def start_rev(self) -> str:
-        return self.__start_rev
-
-    @property
-    def end_rev(self) -> str:
-        return self.__end_rev
-
-    @property
-    def repo(self) -> str:
-        return self.__repo
-
-    @property
-    def changed_files(self) -> List[str]:
-        return self.__changed_files
-
-    @property
-    def token(self) -> str:
-        return self.__token
-
-    @property
-    def verbose(self) -> bool:
-        return self.__verbose
-
-    @property
-    def issue_number(self) -> int:
-        return self.__issue_number
-
-    @property
-    def build_path(self) -> str:
-        return self.__build_path
-
-    @property
-    def clang_tidy_binary(self) -> str:
-        return self.__clang_tidy_binary
+            self.issue_number = args.issue_number
+            self.verbose = args.verbose
+            self.build_path = args.build_path
+            self.clang_tidy_binary = args.clang_tidy_binary
 
 
 class LintHelper:
-    COMMENT_TAG: Final = "<!--LLVM CODE LINT COMMENT: {linter}-->"
+    COMMENT_TAG = "<!--LLVM CODE LINT COMMENT: {linter}-->"
     name: str
     friendly_name: str
     comment: Dict[str, Any] = {}
@@ -216,8 +180,8 @@ class ClangTidyLintHelper(LintHelper):
     name: Final = "clang-tidy"
     friendly_name: Final = "C/C++ code linter"
 
-    def instructions(self, files_to_lint: Sequence[str], args: LintArgs) -> str:
-        files_str = " ".join(files_to_lint)
+    def instructions(self, cpp_files: Sequence[str], args: LintArgs) -> str:
+        files_str = " ".join(cpp_files)
         return f"""
 git diff -U0 origin/main...HEAD -- {files_str} |
 python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
@@ -243,8 +207,8 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
         # TODO: Add more rules when enabling other projects to use clang-tidy in CI.
         return filepath.startswith("clang-tools-extra/clang-tidy/")
 
-    def run_linter_tool(self, files_to_lint: Sequence[str], args: LintArgs) -> str:
-        if not files_to_lint:
+    def run_linter_tool(self, cpp_files: Sequence[str], args: LintArgs) -> str:
+        if not cpp_files:
             return ""
 
         git_diff_cmd = [
@@ -254,7 +218,7 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
             f"{args.start_rev}...{args.end_rev}",
             "--",
         ]
-        git_diff_cmd.extend(files_to_lint)
+        git_diff_cmd.extend(cpp_files)
 
         diff_proc = subprocess.run(
             git_diff_cmd,
