@@ -4938,16 +4938,14 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     // Compiling HIP in device-only non-RDC mode requires linking each action
     // individually.
     for (Action *&A : DeviceActions) {
-      auto OsName = A->getOffloadingToolChain()
-                        ? A->getOffloadingToolChain()->getTriple().getOSName()
-                        : StringRef();
-      bool IsHIPSPV = A->getOffloadingToolChain() &&
-                      A->getOffloadingToolChain()->getTriple().isSPIRV() &&
-                      (OsName == "hipspv" || OsName == "chipstar");
-      bool IsAMDGCNSPIRV = A->getOffloadingToolChain() &&
-                           A->getOffloadingToolChain()->getTriple().getOS() ==
-                               llvm::Triple::OSType::AMDHSA &&
-                           A->getOffloadingToolChain()->getTriple().isSPIRV();
+      auto *OffloadTriple = A->getOffloadingToolChain()
+                                ? &A->getOffloadingToolChain()->getTriple()
+                                : nullptr;
+      bool IsHIPSPV =
+          OffloadTriple && OffloadTriple->isSPIRV() &&
+          (OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA ||
+           OffloadTriple->getOS() == llvm::Triple::OSType::HIPSPV ||
+           OffloadTriple->getOS() == llvm::Triple::OSType::ChipStar);
       bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
                                           options::OPT_no_use_spirv_backend,
                                           /*Default=*/false);
@@ -4956,9 +4954,11 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       // The translator path has a linking step, whereas the SPIR-V backend path
       // does not to avoid any external dependency such as spirv-link. The
       // linking step is skipped for the SPIR-V backend path.
-      bool IsAMDGCNSPIRVWithBackend = IsAMDGCNSPIRV && UseSPIRVBackend;
+      bool IsAMDGCNSPIRVWithBackend =
+          IsHIPSPV && OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA &&
+          UseSPIRVBackend;
 
-      if ((A->getType() != types::TY_Object && !IsAMDGCNSPIRV && !IsHIPSPV &&
+      if ((A->getType() != types::TY_Object && !IsHIPSPV &&
            A->getType() != types::TY_LTO_BC) ||
           HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly() ||
           (IsAMDGCNSPIRVWithBackend && offloadDeviceOnly()))
@@ -6967,6 +6967,10 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::ShaderModel:
       TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);
       break;
+    case llvm::Triple::HIPSPV:
+    case llvm::Triple::ChipStar:
+      TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target, Args);
+      break;
     default:
       // Of these targets, Hexagon is the only one that might have
       // an OS of Linux, in which case it got handled above already.
@@ -7006,12 +7010,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         break;
       case llvm::Triple::spirv32:
       case llvm::Triple::spirv64:
-        if (Target.getOSName() == "hipspv" ||
-            Target.getOSName() == "chipstar") {
-          TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target,
-                                                             Args);
-          break;
-        }
         TC = std::make_unique<toolchains::SPIRVToolChain>(*this, Target, Args);
         break;
       case llvm::Triple::csky:

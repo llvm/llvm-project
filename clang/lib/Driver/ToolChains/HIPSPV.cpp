@@ -93,7 +93,7 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   llvm::opt::ArgStringList TrArgs;
   auto T = getToolChain().getTriple();
   bool HasNoSubArch = T.getSubArch() == llvm::Triple::NoSubArch;
-  if (T.getOSName() == "chipstar") {
+  if (T.getOS() == llvm::Triple::ChipStar) {
     // chipStar needs 1.2 for supporting warp-level primitivies via sub-group
     // extensions.  Strictly put we'd need 1.3 for the standard non-extension
     // shuffle operations, but it's not supported by any backend driver of the
