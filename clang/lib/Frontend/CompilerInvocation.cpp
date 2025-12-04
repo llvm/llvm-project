@@ -2669,7 +2669,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   return Diags->getNumErrors() == NumErrorsBefore;
 }
 
-unsigned clang::getOptimizationLevel(ArgList &Args, InputKind IK,
+unsigned clang::getOptimizationLevel(const ArgList &Args, InputKind IK,
                                      DiagnosticsEngine &Diags) {
   unsigned DefaultOpt = 0;
   if ((IK.getLanguage() == Language::OpenCL ||
@@ -2708,7 +2708,7 @@ unsigned clang::getOptimizationLevel(ArgList &Args, InputKind IK,
   return DefaultOpt;
 }
 
-unsigned clang::getOptimizationLevelSize(ArgList &Args) {
+unsigned clang::getOptimizationLevelSize(const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O)) {
       switch (A->getValue()[0]) {
@@ -3948,21 +3948,7 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
                 std::to_string(*Opts.AllocTokenMax));
 
   if (Opts.AllocTokenMode) {
-    StringRef S;
-    switch (*Opts.AllocTokenMode) {
-    case llvm::AllocTokenMode::Increment:
-      S = "increment";
-      break;
-    case llvm::AllocTokenMode::Random:
-      S = "random";
-      break;
-    case llvm::AllocTokenMode::TypeHash:
-      S = "typehash";
-      break;
-    case llvm::AllocTokenMode::TypeHashPointerSplit:
-      S = "typehashpointersplit";
-      break;
-    }
+    StringRef S = llvm::getAllocTokenModeAsString(*Opts.AllocTokenMode);
     GenerateArg(Consumer, OPT_falloc_token_mode_EQ, S);
   }
 }
@@ -4293,8 +4279,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   // Set the flag to prevent the implementation from emitting device exception
   // handling code for those requiring so.
-  if ((Opts.OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN())) ||
-      Opts.OpenCLCPlusPlus) {
+  if ((Opts.OpenMPIsTargetDevice && T.isGPU()) || Opts.OpenCLCPlusPlus) {
 
     Opts.Exceptions = 0;
     Opts.CXXExceptions = 0;

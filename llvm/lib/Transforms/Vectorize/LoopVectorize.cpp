@@ -5122,8 +5122,18 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
       InstructionCost C = getInstructionCost(&I, VF);
 
       // Check if we should override the cost.
-      if (C.isValid() && ForceTargetInstructionCost.getNumOccurrences() > 0)
-        C = InstructionCost(ForceTargetInstructionCost);
+      if (C.isValid() && ForceTargetInstructionCost.getNumOccurrences() > 0) {
+        // For interleave groups, use ForceTargetInstructionCost once for the
+        // whole group.
+        if (VF.isVector() && getWideningDecision(&I, VF) == CM_Interleave) {
+          if (getInterleavedAccessGroup(&I)->getInsertPos() == &I)
+            C = InstructionCost(ForceTargetInstructionCost);
+          else
+            C = InstructionCost(0);
+        } else {
+          C = InstructionCost(ForceTargetInstructionCost);
+        }
+      }
 
       BlockCost += C;
       LLVM_DEBUG(dbgs() << "LV: Found an estimated cost of " << C << " for VF "
@@ -5254,7 +5264,8 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
     unsigned IID = I->getOpcode() == Instruction::Load
                        ? Intrinsic::masked_load
                        : Intrinsic::masked_store;
-    Cost += TTI.getMaskedMemoryOpCost({IID, VectorTy, Alignment, AS}, CostKind);
+    Cost += TTI.getMemIntrinsicInstrCost(
+        MemIntrinsicCostAttributes(IID, VectorTy, Alignment, AS), CostKind);
   } else {
     TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(I->getOperand(0));
     Cost += TTI.getMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
@@ -5313,10 +5324,14 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
   if (!Legal->isUniform(Ptr, VF))
     PtrTy = toVectorTy(PtrTy, VF);
 
+  unsigned IID = I->getOpcode() == Instruction::Load
+                     ? Intrinsic::masked_gather
+                     : Intrinsic::masked_scatter;
   return TTI.getAddressComputationCost(PtrTy, nullptr, nullptr, CostKind) +
-         TTI.getGatherScatterOpCost(I->getOpcode(), VectorTy, Ptr,
-                                    Legal->isMaskRequired(I), Alignment,
-                                    CostKind, I);
+         TTI.getMemIntrinsicInstrCost(
+             MemIntrinsicCostAttributes(IID, VectorTy, Ptr,
+                                        Legal->isMaskRequired(I), Alignment, I),
+             CostKind);
 }
 
 InstructionCost
@@ -6575,8 +6590,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   // detection.
   for (const auto &Induction : Legal->getInductionVars()) {
     const InductionDescriptor &IndDes = Induction.second;
-    const SmallVectorImpl<Instruction *> &Casts = IndDes.getCastInsts();
-    VecValuesToIgnore.insert_range(Casts);
+    VecValuesToIgnore.insert_range(IndDes.getCastInsts());
   }
 }
 
@@ -6588,6 +6602,11 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
   for (const auto &Reduction : Legal->getReductionVars()) {
     PHINode *Phi = Reduction.first;
     const RecurrenceDescriptor &RdxDesc = Reduction.second;
+
+    // Multi-use reductions (e.g., used in FindLastIV patterns) are handled
+    // separately and should not be considered for in-loop reductions.
+    if (RdxDesc.hasUsesOutsideReductionChain())
+      continue;
 
     // We don't collect reductions that are type promoted (yet).
     if (RdxDesc.getRecurrenceType() != Phi->getType())
@@ -7022,10 +7041,11 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
                              VPInstruction::FirstOrderRecurrenceSplice>())))
           return true;
       }
-      // The VPlan-based cost model is more accurate for partial reduction and
+      // The VPlan-based cost model is more accurate for partial reductions and
       // comparing against the legacy cost isn't desirable.
-      if (isa<VPPartialReductionRecipe>(&R))
-        return true;
+      if (auto *VPR = dyn_cast<VPReductionRecipe>(&R))
+        if (VPR->isPartialReduction())
+          return true;
 
       // The VPlan-based cost model can analyze if recipes are scalar
       // recursively, but the legacy cost model cannot.
@@ -7177,17 +7197,29 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   VPCostContext CostCtx(CM.TTI, *CM.TLI, BestPlan, CM, CM.CostKind,
                         *CM.PSE.getSE(), OrigLoop);
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
-  // Verify that the VPlan-based and legacy cost models agree, except for VPlans
-  // with early exits and plans with additional VPlan simplifications. The
-  // legacy cost model doesn't properly model costs for such loops.
-  assert((BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
-          !Legal->getLAI()->getSymbolicStrides().empty() ||
-          planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
-                                                CostCtx, OrigLoop,
-                                                BestFactor.Width) ||
-          planContainsAdditionalSimplifications(
-              getPlanFor(LegacyVF.Width), CostCtx, OrigLoop, LegacyVF.Width)) &&
-         " VPlan cost model and legacy cost model disagreed");
+  // Verify that the VPlan-based and legacy cost models agree, except for
+  // * VPlans with early exits,
+  // * VPlans with additional VPlan simplifications,
+  // * EVL-based VPlans with gather/scatters (the VPlan-based cost model uses
+  //   vp_scatter/vp_gather).
+  // The legacy cost model doesn't properly model costs for such loops.
+  bool UsesEVLGatherScatter =
+      any_of(VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
+                 BestPlan.getVectorLoopRegion()->getEntry())),
+             [](VPBasicBlock *VPBB) {
+               return any_of(*VPBB, [](VPRecipeBase &R) {
+                 return isa<VPWidenLoadEVLRecipe, VPWidenStoreEVLRecipe>(&R) &&
+                        !cast<VPWidenMemoryRecipe>(&R)->isConsecutive();
+               });
+             });
+  assert(
+      (BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
+       !Legal->getLAI()->getSymbolicStrides().empty() || UsesEVLGatherScatter ||
+       planContainsAdditionalSimplifications(
+           getPlanFor(BestFactor.Width), CostCtx, OrigLoop, BestFactor.Width) ||
+       planContainsAdditionalSimplifications(
+           getPlanFor(LegacyVF.Width), CostCtx, OrigLoop, LegacyVF.Width)) &&
+      " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");
 #endif
@@ -7993,9 +8025,10 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   MapVector<Instruction *,
             SmallVector<std::pair<PartialReductionChain, unsigned>>>
       ChainsByPhi;
-  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars())
-    getScaledReductions(Phi, RdxDesc.getLoopExitInstr(), Range,
-                        ChainsByPhi[Phi]);
+  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
+    if (Instruction *RdxExitInstr = RdxDesc.getLoopExitInstr())
+      getScaledReductions(Phi, RdxExitInstr, Range, ChainsByPhi[Phi]);
+  }
 
   // A partial reduction is invalid if any of its extends are used by
   // something that isn't another partial reduction. This is because the
@@ -8208,11 +8241,16 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
              Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
 
       // If the PHI is used by a partial reduction, set the scale factor.
+      bool UseInLoopReduction = CM.isInLoopReduction(Phi);
+      bool UseOrderedReductions = CM.useOrderedReductions(RdxDesc);
       unsigned ScaleFactor =
           getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
+
       PhiRecipe = new VPReductionPHIRecipe(
-          Phi, RdxDesc.getRecurrenceKind(), *StartV, CM.isInLoopReduction(Phi),
-          CM.useOrderedReductions(RdxDesc), ScaleFactor);
+          Phi, RdxDesc.getRecurrenceKind(), *StartV,
+          getReductionStyle(UseInLoopReduction, UseOrderedReductions,
+                            ScaleFactor),
+          RdxDesc.hasUsesOutsideReductionChain());
     } else {
       // TODO: Currently fixed-order recurrences are modeled as chains of
       // first-order recurrences. If there are no users of the intermediate
@@ -8281,16 +8319,18 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
 
   VPValue *BinOp = Reduction->getOperand(0);
   VPValue *Accumulator = Reduction->getOperand(1);
-  if (isa<VPReductionPHIRecipe>(BinOp) || isa<VPPartialReductionRecipe>(BinOp))
+  VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
+  if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
+      (isa<VPReductionRecipe>(BinOpRecipe) &&
+       cast<VPReductionRecipe>(BinOpRecipe)->isPartialReduction()))
     std::swap(BinOp, Accumulator);
 
   assert(ScaleFactor ==
              vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()) &&
          "all accumulators in chain must have same scale factor");
 
-  unsigned ReductionOpcode = Reduction->getOpcode();
   auto *ReductionI = Reduction->getUnderlyingInstr();
-  if (ReductionOpcode == Instruction::Sub) {
+  if (Reduction->getOpcode() == Instruction::Sub) {
     auto *const Zero = ConstantInt::get(ReductionI->getType(), 0);
     SmallVector<VPValue *, 2> Ops;
     Ops.push_back(Plan.getOrAddLiveIn(Zero));
@@ -8298,14 +8338,15 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
     BinOp = new VPWidenRecipe(*ReductionI, Ops, VPIRFlags(*ReductionI),
                               VPIRMetadata(), ReductionI->getDebugLoc());
     Builder.insert(BinOp->getDefiningRecipe());
-    ReductionOpcode = Instruction::Add;
   }
 
   VPValue *Cond = nullptr;
   if (CM.blockNeedsPredicationForAnyReason(ReductionI->getParent()))
     Cond = getBlockInMask(Builder.getInsertBlock());
-  return new VPPartialReductionRecipe(ReductionOpcode, Accumulator, BinOp, Cond,
-                                      ScaleFactor, ReductionI);
+
+  return new VPReductionRecipe(
+      RecurKind::Add, FastMathFlags(), ReductionI, Accumulator, BinOp, Cond,
+      RdxUnordered{/*VFScaleFactor=*/ScaleFactor}, ReductionI->getDebugLoc());
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -8337,6 +8378,8 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     if (auto Plan = tryToBuildVPlanWithVPRecipes(
             std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange, &LVer)) {
       // Now optimize the initial VPlan.
+      VPlanTransforms::hoistPredicatedLoads(*Plan, *PSE.getSE(), OrigLoop);
+      VPlanTransforms::sinkPredicatedStores(*Plan, *PSE.getSE(), OrigLoop);
       VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
                                *Plan, CM.getMinimalBitwidths());
       VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
@@ -8542,6 +8585,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
 
+  // Apply mandatory transformation to handle reductions with multiple in-loop
+  // uses if possible, bail out otherwise.
+  if (!VPlanTransforms::runPass(VPlanTransforms::handleMultiUseReductions,
+                                *Plan))
+    return nullptr;
   // Apply mandatory transformation to handle FP maxnum/minnum reduction with
   // NaNs if possible, bail out otherwise.
   if (!VPlanTransforms::runPass(VPlanTransforms::handleMaxMinNumReductions,
@@ -8759,9 +8807,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
                  match(CurrentLink, m_Sub(m_VPValue(), m_VPValue()))) {
         Type *PhiTy = TypeInfo.inferScalarType(PhiR);
         auto *Zero = Plan->getConstantInt(PhiTy, 0);
-        VPWidenRecipe *Sub = new VPWidenRecipe(
-            Instruction::Sub, {Zero, CurrentLink->getOperand(1)}, {},
-            VPIRMetadata(), CurrentLinkI->getDebugLoc());
+        auto *Sub = new VPInstruction(Instruction::Sub,
+                                      {Zero, CurrentLink->getOperand(1)}, {},
+                                      {}, CurrentLinkI->getDebugLoc());
         Sub->setUnderlyingValue(CurrentLinkI);
         LinkVPBB->insert(Sub, CurrentLink->getIterator());
         VecOp = Sub;
@@ -8795,9 +8843,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (CM.blockNeedsPredicationForAnyReason(CurrentLinkI->getParent()))
         CondOp = RecipeBuilder.getBlockInMask(CurrentLink->getParent());
 
-      auto *RedRecipe = new VPReductionRecipe(
-          Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
-          PhiR->isOrdered(), CurrentLinkI->getDebugLoc());
+      ReductionStyle Style = getReductionStyle(true, PhiR->isOrdered(), 1);
+      auto *RedRecipe =
+          new VPReductionRecipe(Kind, FMFs, CurrentLinkI, PreviousLink, VecOp,
+                                CondOp, Style, CurrentLinkI->getDebugLoc());
       // Append the recipe to the end of the VPBasicBlock because we need to
       // ensure that it comes after all of it's inputs, including CondOp.
       // Delete CurrentLink as it will be invalid if its operand is replaced
@@ -8832,8 +8881,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // Don't output selects for partial reductions because they have an output
     // with fewer lanes than the VF. So the operands of the select would have
     // different numbers of lanes. Partial reductions mask the input instead.
+    auto *RR = dyn_cast<VPReductionRecipe>(OrigExitingVPV->getDefiningRecipe());
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
-        !isa<VPPartialReductionRecipe>(OrigExitingVPV)) {
+        (!RR || !RR->isPartialReduction())) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(PhiR->getParent());
       std::optional<FastMathFlags> FMFs =
           PhiTy->isFloatingPointTy()
@@ -8930,7 +8980,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (FinalReductionResult == U || Parent->getParent())
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
-      if (match(U, m_ExtractLastElement(m_VPValue())))
+      if (match(U, m_CombineOr(m_ExtractLastElement(m_VPValue()),
+                               m_ExtractLane(m_VPValue(), m_VPValue()))))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
     }
 
@@ -9258,6 +9309,7 @@ static InstructionCost calculateEarlyExitCost(VPCostContext &CostCtx,
 ///  2. In the case of loops with uncountable early exits, we may have to do
 ///     extra work when exiting the loop early, such as calculating the final
 ///     exit values of variables used outside the loop.
+///  3. The middle block, if expected TC <= VF.Width.
 static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
                                         VectorizationFactor &VF, Loop *L,
                                         PredicatedScalarEvolution &PSE,
@@ -9271,6 +9323,14 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // Add on the cost of any work required in the vector early exit block, if
   // one exists.
   TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
+
+  // If the expected trip count is less than the VF, the vector loop will only
+  // execute a single iteration. Then the middle block is executed the same
+  // number of times as the vector region.
+  // TODO: Extend logic to always account for the cost of the middle block.
+  auto ExpectedTC = getSmallBestKnownTC(PSE, L);
+  if (ExpectedTC && ElementCount::isKnownLE(*ExpectedTC, VF.Width))
+    TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
 
   // When interleaving only scalar and vector cost will be equal, which in turn
   // would lead to a divide by 0. Fall back to hard threshold.
@@ -9302,9 +9362,11 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   //  The total cost of the vector loop is
   //    RtC + VecC * (TC / VF) + EpiC
   //  where
-  //  * RtC is the cost of the generated runtime checks plus the cost of
-  //    performing any additional work in the vector.early.exit block for loops
-  //    with uncountable early exits.
+  //  * RtC is the sum of the costs cost of
+  //    - the generated runtime checks
+  //    - performing any additional work in the vector.early.exit block for
+  //      loops with uncountable early exits.
+  //    - the middle block, if ExpectedTC <=  VF.Width.
   //  * VecC is the cost of a single vector iteration.
   //  * TC is the actual trip count of the loop
   //  * VF is the vectorization factor

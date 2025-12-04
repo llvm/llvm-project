@@ -25,9 +25,9 @@ define void @foo(ptr nocapture noalias %A, i64 %N) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr @inc, align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[TMP1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT]], <8 x float> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[A]], i32 8
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i32 16
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i32 24
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 16
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 24
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x float>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x float>, ptr [[TMP5]], align 4
