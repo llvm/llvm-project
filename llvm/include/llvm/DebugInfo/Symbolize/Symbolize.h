@@ -246,7 +246,7 @@ private:
   };
 
   /// Parsed object file for each path/member/architecture triple.
-  /// Used to cache objects extracted from containers (e.g: Mach-O
+  /// Used to cache objects extracted from containers (e.g., Mach-O
   /// universal binaries, archives).
   std::map<ContainerCacheKey, std::unique_ptr<ObjectFile>> ObjectFileCache;
 

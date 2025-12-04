@@ -67,7 +67,7 @@ Symbols:
         SectionOrLength: 25
         StabInfoIndex:   0
         StabSectNum:     0
-  - Name:            .foo
+  - Name:            .foo32
     Value:           0x0
     Section:         .text
     Type:            0x0
@@ -83,7 +83,7 @@ Symbols:
         SectionOrLength: 3
         StabInfoIndex:   0
         StabSectNum:     0
-  - Name:            foo
+  - Name:            foo32
     Value:           0x1C
     Section:         .data
     Type:            0x0
