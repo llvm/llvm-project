@@ -21,6 +21,7 @@
 #include <vector>
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::utils::lexer;
 
 namespace clang::tidy::modernize {
 
@@ -200,6 +201,30 @@ static bool isLastInCompound(const Stmt *S, const CompoundStmt *P) {
   return !P->body_empty() && P->body_back() == S;
 }
 
+static bool hasPreprocessorConditionalBetween(const SourceManager &SM,
+                                               const LangOptions &LangOpts,
+                                               SourceLocation StartLoc,
+                                               SourceLocation EndLoc) {
+  if (StartLoc.isInvalid() || EndLoc.isInvalid())
+    return false;
+
+  // Get the file locations (not macro expansion locations)
+  StartLoc = SM.getFileLoc(StartLoc);
+  EndLoc = SM.getFileLoc(EndLoc);
+
+  if (!SM.isWrittenInSameFile(StartLoc, EndLoc))
+    return false;
+
+  // Create a source range from the end of the first location to the second location
+  const SourceRange Range(Lexer::getLocForEndOfToken(StartLoc, 0, SM, LangOpts),
+                          EndLoc);
+  if (Range.isInvalid())
+    return false;
+
+  // Use the utility function to check for preprocessor directives or macro expansions
+  return rangeContainsExpansionsOrDirectives(Range, SM, LangOpts);
+}
+
 static std::string extractDeclStmtText(const DeclStmt *PrevDecl,
                                        const SourceManager *SM,
                                        const LangOptions &LangOpts) {
@@ -273,6 +298,13 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Don't emit warnings for statements inside macro expansions
   if (Statement->getBeginLoc().isMacroID())
+    return;
+
+  // Don't emit warnings if there are preprocessor conditionals between
+  // the variable declaration and the if/switch statement
+  if (hasPreprocessorConditionalBetween(
+          *Result.SourceManager, getLangOpts(),
+          PrevDecl->getEndLoc(), Statement->getBeginLoc()))
     return;
 
   auto Diag = diag(PrevDecl->getBeginLoc(),

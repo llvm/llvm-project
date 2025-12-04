@@ -937,7 +937,7 @@ static constexpr int affinity_none = 0;
     KMP_WARNING(__VA_ARGS__);                                                  \
   }
 
-// Real-life case got from openmp/runtime/src/kmp_affinity.cpp
+// Real-life case, got from openmp/runtime/src/kmp_affinity.cpp
 void bad_macro_kmp_warning() {
     struct kmp_affinity_flags {
         unsigned verbose : 1;
@@ -949,5 +949,35 @@ void bad_macro_kmp_warning() {
     bool plural = (num > 1);
     KMP_AFF_WARNING(__kmp_affinity, plural);
     // CHECK-MESSAGES-NOT: [[@LINE-2]]:5: warning: variable 'plural' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+}
+
+#define SOME_MACRO 0
+
+void bad_macro_ifdef_statement_1() {
+    int i1 = 0;
+#if SOME_MACRO
+    if (i1 == 0) {
+        do_some();
+    }
+#endif
+    if (i1 == 0) {
+// CHECK-MESSAGES-NOT: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+        do_some();
+    }
+
+    int i2 = 0;
+#if SOME_MACRO
+    switch (i2) {
+        case 0:
+            do_some();
+            break;
+    }
+#endif
+    switch (i2) {
+// CHECK-MESSAGES-NOT: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+        case 0:
+            do_some();
+            break;
+    }
 }
 
