@@ -26,12 +26,43 @@ cmake --build build
 
 ## 📦 Building DSLLVM
 
-### Prerequisites
+### Quick Install (Recommended)
+
+**Automated installer** - Builds and installs DSLLVM, replacing system LLVM:
+
+```bash
+# System-wide installation (requires sudo)
+sudo ./build-dsllvm.sh
+
+# Install to custom prefix (no sudo needed)
+./build-dsllvm.sh --prefix /opt/dsllvm
+
+# See all options
+./build-dsllvm.sh --help
+```
+
+The installer automatically:
+- ✅ Checks prerequisites
+- ✅ Backs up existing LLVM installation
+- ✅ Builds DSLLVM with all DSMIL features
+- ✅ Creates system symlinks (clang → dsmil-clang, etc.)
+- ✅ Sets up environment configuration
+- ✅ Verifies installation
+
+**Build Types:**
+- `Release` (default): Optimized production build, faster execution, larger binaries
+- `Debug`: Full debug symbols, assertions enabled, slower execution, easier debugging
+- `RelWithDebInfo`: Optimized with debug info, good for profiling
+- `MinSizeRel`: Optimized for smallest binary size
+
+### Manual Build
+
+#### Prerequisites
 ```bash
 sudo apt-get install -y build-essential cmake ninja-build python3 git libssl-dev
 ```
 
-### Build LLVM/Clang + DSMIL
+#### Build LLVM/Clang + DSMIL
 ```bash
 cmake -G Ninja -S llvm -B build \
   -DCMAKE_BUILD_TYPE=Release \
@@ -125,6 +156,8 @@ These features are entirely optional; standard builds can ignore them.
 ---
 
 ## Building & Using DSLLVM
+
+**Recommended**: Use the automated installer (`./build-dsllvm.sh`) for a complete build and system integration. See the [Build Guide](DSLLVM-BUILD-GUIDE.md) for details.
 
 DSLLVM follows the **standard LLVM build flow**:
 

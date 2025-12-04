@@ -54,6 +54,39 @@ DSLLVM is a **war-fighting compiler** specialized for military Command, Control 
 
 ### Building DSLLVM
 
+#### Automated Installer (Recommended)
+
+**Quick install** - Builds and replaces system LLVM with DSLLVM:
+
+```bash
+# System-wide installation (requires sudo)
+sudo ./build-dsllvm.sh
+
+# Install to custom prefix (no sudo needed)
+./build-dsllvm.sh --prefix /opt/dsllvm
+
+# Debug build (for development/debugging)
+./build-dsllvm.sh --build-type Debug
+
+# See all options
+./build-dsllvm.sh --help
+```
+
+**What does `--build-type Debug` do?**
+- **Debug symbols**: Full debug information included (file names, line numbers, variable names)
+- **Assertions enabled**: Runtime checks and assertions are active (catches bugs during development)
+- **No optimizations**: Code is not optimized, making it easier to step through with a debugger
+- **Larger binaries**: Debug builds are significantly larger due to symbol tables
+- **Slower execution**: Unoptimized code runs slower, but easier to debug
+- **Use case**: Development, debugging compiler passes, investigating crashes
+
+**Other build types:**
+- `Release` (default): Optimized for production, fastest execution
+- `RelWithDebInfo`: Optimized code with debug symbols (good for profiling)
+- `MinSizeRel`: Optimized for smallest binary size
+
+#### Manual Build
+
 ```bash
 # Configure with CMake
 cmake -G Ninja -S llvm -B build \
