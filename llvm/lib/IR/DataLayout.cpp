@@ -147,10 +147,13 @@ bool DataLayout::PrimitiveSpec::operator==(const PrimitiveSpec &Other) const {
          PrefAlign == Other.PrefAlign;
 }
 
-StringRef
-DataLayout::PointerSpec::getAddrSpaceName(const DataLayout &DL) const {
-  return StringRef(DL.StringRepresentation)
-      .substr(AddrSpaceNameOffset, AddrSpaceNameSize);
+bool DataLayout::PointerSpec::operator==(const PointerSpec &Other) const {
+  return AddrSpace == Other.AddrSpace && BitWidth == Other.BitWidth &&
+         ABIAlign == Other.ABIAlign && PrefAlign == Other.PrefAlign &&
+         IndexBitWidth == Other.IndexBitWidth &&
+         HasUnstableRepresentation == Other.HasUnstableRepresentation &&
+         HasExternalState == Other.HasExternalState &&
+         AddrSpaceName == Other.AddrSpaceName;
 }
 
 namespace {
@@ -190,17 +193,14 @@ constexpr DataLayout::PrimitiveSpec DefaultVectorSpecs[] = {
     {128, Align::Constant<16>(), Align::Constant<16>()}, // v128:128:128
 };
 
-// Default pointer type specifications.
-constexpr DataLayout::PointerSpec DefaultPointerSpecs[] = {
-    // p0:64:64:64:64
-    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false, false, 0, 0},
-};
-
 DataLayout::DataLayout()
     : IntSpecs(ArrayRef(DefaultIntSpecs)),
       FloatSpecs(ArrayRef(DefaultFloatSpecs)),
-      VectorSpecs(ArrayRef(DefaultVectorSpecs)),
-      PointerSpecs(ArrayRef(DefaultPointerSpecs)) {}
+      VectorSpecs(ArrayRef(DefaultVectorSpecs)) {
+  // Default pointer type specifications.
+  setPointerSpec(0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false,
+                 false, "");
+}
 
 DataLayout::DataLayout(StringRef LayoutString) : DataLayout() {
   if (Error Err = parseLayoutString(LayoutString))
@@ -231,15 +231,6 @@ DataLayout &DataLayout::operator=(const DataLayout &Other) {
 
 bool DataLayout::operator==(const DataLayout &Other) const {
   // NOTE: StringRepresentation might differ, it is not canonicalized.
-  auto IsPointerSpecEqual = [this, &Other](const PointerSpec &A,
-                                           const PointerSpec &B) {
-    return A.AddrSpace == B.AddrSpace && A.BitWidth == B.BitWidth &&
-           A.ABIAlign == B.ABIAlign && A.PrefAlign == B.PrefAlign &&
-           A.IndexBitWidth == B.IndexBitWidth &&
-           A.HasUnstableRepresentation == B.HasUnstableRepresentation &&
-           A.HasExternalState == B.HasExternalState &&
-           A.getAddrSpaceName(*this) == B.getAddrSpaceName(Other);
-  };
   return BigEndian == Other.BigEndian &&
          AllocaAddrSpace == Other.AllocaAddrSpace &&
          ProgramAddrSpace == Other.ProgramAddrSpace &&
@@ -250,9 +241,9 @@ bool DataLayout::operator==(const DataLayout &Other) const {
          ManglingMode == Other.ManglingMode &&
          LegalIntWidths == Other.LegalIntWidths && IntSpecs == Other.IntSpecs &&
          FloatSpecs == Other.FloatSpecs && VectorSpecs == Other.VectorSpecs &&
+         PointerSpecs == Other.PointerSpecs &&
          StructABIAlignment == Other.StructABIAlignment &&
-         StructPrefAlignment == Other.StructPrefAlignment &&
-         llvm::equal(PointerSpecs, Other.PointerSpecs, IsPointerSpecEqual);
+         StructPrefAlignment == Other.StructPrefAlignment;
 }
 
 Expected<DataLayout> DataLayout::parse(StringRef LayoutString) {
@@ -751,25 +742,10 @@ void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
                                 bool HasExternalState,
                                 StringRef AddrSpaceName) {
   auto I = lower_bound(PointerSpecs, AddrSpace, LessPointerAddrSpace());
-  size_t AddrSpaceNameOffset = 0, AddrSpaceNameSize = AddrSpaceName.size();
-  if (!AddrSpaceName.empty()) {
-    // Validate that AddrSpaceName points to data within the
-    // StringRepresentation.
-    const char *RepStart = StringRepresentation.data();
-    const char *ASStart = AddrSpaceName.data();
-    [[maybe_unused]] const char *RepEnd =
-        RepStart + StringRepresentation.size();
-    [[maybe_unused]] const char *ASEnd = ASStart + AddrSpaceNameSize;
-
-    assert(RepStart <= ASStart && ASStart < RepEnd && RepStart < ASEnd &&
-           ASEnd <= RepEnd);
-    AddrSpaceNameOffset = std::distance(RepStart, ASStart);
-  }
   if (I == PointerSpecs.end() || I->AddrSpace != AddrSpace) {
     PointerSpecs.insert(I, PointerSpec{AddrSpace, BitWidth, ABIAlign, PrefAlign,
                                        IndexBitWidth, HasUnstableRepr,
-                                       HasExternalState, AddrSpaceNameOffset,
-                                       AddrSpaceNameSize});
+                                       HasExternalState, AddrSpaceName.str()});
   } else {
     I->BitWidth = BitWidth;
     I->ABIAlign = ABIAlign;
@@ -777,8 +753,7 @@ void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
     I->IndexBitWidth = IndexBitWidth;
     I->HasUnstableRepresentation = HasUnstableRepr;
     I->HasExternalState = HasExternalState;
-    I->AddrSpaceNameOffset = AddrSpaceNameOffset;
-    I->AddrSpaceNameSize = AddrSpaceNameSize;
+    I->AddrSpaceName = AddrSpaceName.str();
   }
 }
 
@@ -827,13 +802,12 @@ Align DataLayout::getPointerABIAlignment(unsigned AS) const {
 }
 
 StringRef DataLayout::getAddressSpaceName(unsigned AS) const {
-  const PointerSpec &PS = getPointerSpec(AS);
-  return PS.getAddrSpaceName(*this);
+  return getPointerSpec(AS).AddrSpaceName;
 }
 
 std::optional<unsigned> DataLayout::getNamedAddressSpace(StringRef Name) const {
-  auto II = llvm::find_if(PointerSpecs, [Name, this](const PointerSpec &PS) {
-    return PS.getAddrSpaceName(*this) == Name;
+  auto II = llvm::find_if(PointerSpecs, [Name](const PointerSpec &PS) {
+    return PS.AddrSpaceName == Name;
   });
   if (II != PointerSpecs.end())
     return II->AddrSpace;

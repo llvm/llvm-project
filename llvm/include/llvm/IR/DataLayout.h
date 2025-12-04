@@ -93,15 +93,10 @@ public:
     /// of this would be CHERI capabilities where the validity bit is stored
     /// separately from the pointer address+bounds information.
     bool HasExternalState;
-    // Symbolic name of the address space. We can store a StringRef here
-    // directly (backed by StringRepresentation) but then the copy construtor
-    // for DataLayout has to be updated to redirect these StringRefs to the new
-    // copy of StringRepresentation. To avoid that, we store just the offset and
-    // size of the address space name within the StringRepresentation.
-    size_t AddrSpaceNameOffset;
-    size_t AddrSpaceNameSize;
+    // Symbolic name of the address space.
+    std::string AddrSpaceName;
 
-    StringRef getAddrSpaceName(const DataLayout &DL) const;
+    LLVM_ABI bool operator==(const PointerSpec &Other) const;
   };
 
   enum class FunctionPtrAlignType {
