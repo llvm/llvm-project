@@ -877,7 +877,7 @@ def FeatureStdExtZvksg
 // Vector quad widening dot product
 
 def FeatureStdExtZvqdotq
-    : RISCVExperimentalExtension<0, 0, "Vector quad widening 4D Dot Product",
+    : RISCVExperimentalExtension<0, 1, "Vector quad widening 4D Dot Product",
                                  [FeatureStdExtZve32x]>;
 def HasStdExtZvqdotq : Predicate<"Subtarget->hasStdExtZvqdotq()">,
                        AssemblerPredicate<(all_of FeatureStdExtZvqdotq),

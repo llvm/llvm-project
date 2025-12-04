@@ -1620,12 +1620,12 @@
 // CHECK-ZVKGS-EXT: __riscv_zvkgs 7000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN:   -march=rv32i_zve32x_zvqdotq0p0 -E -dM %s \
+// RUN:   -march=rv32i_zve32x_zvqdotq0p1 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZVQDOTQ-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN:   -march=rv64i_zve32x_zvqdotq0p0 -E -dM %s \
+// RUN:   -march=rv64i_zve32x_zvqdotq0p1 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZVQDOTQ-EXT %s
-// CHECK-ZVQDOTQ-EXT: __riscv_zvqdotq 0{{$}}
+// CHECK-ZVQDOTQ-EXT: __riscv_zvqdotq 1000{{$}}
 
 // RUN: %clang -target riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32izicfiss1p0 -E -dM %s \
