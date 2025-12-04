@@ -1299,7 +1299,7 @@ bool RewriteScheduleStage::initGCNSchedStage() {
   RegionsWithExcessArchVGPR.resize(DAG.Regions.size());
   RegionsWithExcessArchVGPR.reset();
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
-    auto PressureBefore = DAG.Pressure[Region];
+    GCNRegPressure PressureBefore = DAG.Pressure[Region];
     if (PressureBefore.getArchVGPRNum() > ST.getAddressableNumArchVGPRs())
       RegionsWithExcessArchVGPR[Region] = true;
   }
@@ -1985,42 +1985,42 @@ bool RewriteScheduleStage::initHeuristics(
         }
       }
 
-        MachineOperand &Dst = MI.getOperand(0);
-        SmallVector<MachineOperand *, 8> DstReachingUses;
+      MachineOperand &Dst = MI.getOperand(0);
+      SmallVector<MachineOperand *, 8> DstReachingUses;
 
-        findReachingUses(&MI, DAG.LIS, DstReachingUses);
+      findReachingUses(&MI, DAG.LIS, DstReachingUses);
 
-        for (MachineOperand *RUOp : DstReachingUses) {
-          if (TII->isMAI(*RUOp->getParent()))
+      for (MachineOperand *RUOp : DstReachingUses) {
+        if (TII->isMAI(*RUOp->getParent()))
+          continue;
+
+        // For any user of the result of the MFMA which is not an MFMA, we
+        // insert a copy. For a given register, we will only insert one copy
+        // per user block.
+        CopyForUse[RUOp->getParent()->getParent()].insert(RUOp->getReg());
+
+        SmallVector<SlotIndex, 8> DstUsesReachingDefs;
+        findReachingDefs(*RUOp, DAG.LIS, DstUsesReachingDefs);
+
+        for (auto RDIndex : DstUsesReachingDefs) {
+          MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
+          if (TII->isMAI(*RD))
             continue;
 
-          // For any user of the result of the MFMA which is not an MFMA, we
-          // insert a copy. For a given register, we will only insert one copy
-          // per user block.
-          CopyForUse[RUOp->getParent()->getParent()].insert(RUOp->getReg());
-
-          SmallVector<SlotIndex, 8> DstUsesReachingDefs;
-          findReachingDefs(*RUOp, DAG.LIS, DstUsesReachingDefs);
-
-          for (auto RDIndex : DstUsesReachingDefs) {
-            MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-            if (TII->isMAI(*RD))
-              continue;
-
-            // For any definition of the user of the MFMA which is not an MFMA,
-            // we insert a copy. We do this to transform all the reaching defs
-            // of this use to AGPR. By doing this, we can insert a copy from
-            // AGPR to VGPR at the user rather than after the MFMA.
-            CopyForDef.insert(RD);
-          }
+          // For any definition of the user of the MFMA which is not an MFMA,
+          // we insert a copy. We do this to transform all the reaching defs
+          // of this use to AGPR. By doing this, we can insert a copy from
+          // AGPR to VGPR at the user rather than after the MFMA.
+          CopyForDef.insert(RD);
         }
+      }
 
-        // Do the rewrite to allow for updated RP calculation.
-        const TargetRegisterClass *VGPRRC = DAG.MRI.getRegClass(Dst.getReg());
-        const TargetRegisterClass *AGPRRC = SRI->getEquivalentAGPRClass(VGPRRC);
-        DAG.MRI.setRegClass(Dst.getReg(), AGPRRC);
-        if (Src2->isReg())
-          DAG.MRI.setRegClass(Src2->getReg(), AGPRRC);
+      // Do the rewrite to allow for updated RP calculation.
+      const TargetRegisterClass *VGPRRC = DAG.MRI.getRegClass(Dst.getReg());
+      const TargetRegisterClass *AGPRRC = SRI->getEquivalentAGPRClass(VGPRRC);
+      DAG.MRI.setRegClass(Dst.getReg(), AGPRRC);
+      if (Src2->isReg())
+        DAG.MRI.setRegClass(Src2->getReg(), AGPRRC);
     }
   }
 

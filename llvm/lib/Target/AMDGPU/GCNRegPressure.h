@@ -107,7 +107,8 @@ struct GCNRegPressure {
     if (!ST.hasGFX90AInsts())
       return 0;
 
-    auto MaxVectorRegs = ST.getMaxNumVectorRegs(MF.getFunction());
+    std::pair<unsigned, unsigned> MaxVectorRegs =
+        ST.getMaxNumVectorRegs(MF.getFunction());
     unsigned ArchVGPRThreshold = MaxVectorRegs.first;
     unsigned AGPRThreshold = MaxVectorRegs.second;
 
@@ -121,7 +122,7 @@ struct GCNRegPressure {
         AGPRPressure > AGPRThreshold ? (AGPRPressure - AGPRThreshold) : 0;
 
     unsigned CombinedThreshold = ST.getMaxNumVGPRs(MF);
-    unsigned UnifiedPressure = getVGPRNum(true);
+    unsigned UnifiedPressure = getVGPRNum(/*UnifiedVGPRFile=*/true);
     unsigned UnifiedSpill = UnifiedPressure > CombinedThreshold
                                 ? (UnifiedPressure - CombinedThreshold)
                                 : 0;
