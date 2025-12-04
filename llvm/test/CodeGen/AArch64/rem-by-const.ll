@@ -893,46 +893,15 @@ define <4 x i8> @sv4i8_7(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-SD-LABEL: sv4i8_7:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-SD-NEXT:    mov x8, #-56173 // =0xffffffffffff2493
-; CHECK-SD-NEXT:    movk x8, #37449, lsl #16
+; CHECK-SD-NEXT:    mov w8, #18725 // =0x4925
+; CHECK-SD-NEXT:    movi v2.4h, #7
+; CHECK-SD-NEXT:    dup v1.4h, w8
 ; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-SD-NEXT:    smov x10, v0.h[0]
-; CHECK-SD-NEXT:    smov x9, v0.h[1]
-; CHECK-SD-NEXT:    smov w12, v0.h[0]
-; CHECK-SD-NEXT:    smov w11, v0.h[1]
-; CHECK-SD-NEXT:    smov x13, v0.h[2]
-; CHECK-SD-NEXT:    smov w14, v0.h[2]
-; CHECK-SD-NEXT:    smov x17, v0.h[3]
-; CHECK-SD-NEXT:    smull x10, w10, w8
-; CHECK-SD-NEXT:    smull x9, w9, w8
-; CHECK-SD-NEXT:    smull x13, w13, w8
-; CHECK-SD-NEXT:    add x10, x12, x10, lsr #32
-; CHECK-SD-NEXT:    smull x8, w17, w8
-; CHECK-SD-NEXT:    add x9, x11, x9, lsr #32
-; CHECK-SD-NEXT:    asr w16, w10, #2
-; CHECK-SD-NEXT:    add x13, x14, x13, lsr #32
-; CHECK-SD-NEXT:    asr w15, w9, #2
-; CHECK-SD-NEXT:    add w10, w16, w10, lsr #31
-; CHECK-SD-NEXT:    asr w16, w13, #2
-; CHECK-SD-NEXT:    add w9, w15, w9, lsr #31
-; CHECK-SD-NEXT:    smov w15, v0.h[3]
-; CHECK-SD-NEXT:    sub w10, w10, w10, lsl #3
-; CHECK-SD-NEXT:    sub w9, w9, w9, lsl #3
-; CHECK-SD-NEXT:    add w10, w12, w10
-; CHECK-SD-NEXT:    fmov s0, w10
-; CHECK-SD-NEXT:    add w9, w11, w9
-; CHECK-SD-NEXT:    add w10, w16, w13, lsr #31
-; CHECK-SD-NEXT:    add x8, x15, x8, lsr #32
-; CHECK-SD-NEXT:    mov v0.h[1], w9
-; CHECK-SD-NEXT:    sub w9, w10, w10, lsl #3
-; CHECK-SD-NEXT:    asr w10, w8, #2
-; CHECK-SD-NEXT:    add w9, w14, w9
-; CHECK-SD-NEXT:    add w8, w10, w8, lsr #31
-; CHECK-SD-NEXT:    mov v0.h[2], w9
-; CHECK-SD-NEXT:    sub w8, w8, w8, lsl #3
-; CHECK-SD-NEXT:    add w8, w15, w8
-; CHECK-SD-NEXT:    mov v0.h[3], w8
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    sshr v1.4s, v1.4s, #17
+; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
+; CHECK-SD-NEXT:    usra v1.4h, v1.4h, #15
+; CHECK-SD-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sv4i8_7:
@@ -978,39 +947,15 @@ define <4 x i8> @sv4i8_100(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-SD-LABEL: sv4i8_100:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-SD-NEXT:    mov w8, #34079 // =0x851f
-; CHECK-SD-NEXT:    mov w14, #100 // =0x64
-; CHECK-SD-NEXT:    movk w8, #20971, lsl #16
-; CHECK-SD-NEXT:    sshr v1.4h, v0.4h, #8
-; CHECK-SD-NEXT:    smov x9, v1.h[0]
-; CHECK-SD-NEXT:    smov x10, v1.h[1]
-; CHECK-SD-NEXT:    smov x11, v1.h[2]
-; CHECK-SD-NEXT:    smov w12, v1.h[0]
-; CHECK-SD-NEXT:    smov x13, v1.h[3]
-; CHECK-SD-NEXT:    smov w15, v1.h[1]
-; CHECK-SD-NEXT:    smull x9, w9, w8
-; CHECK-SD-NEXT:    smull x10, w10, w8
-; CHECK-SD-NEXT:    smull x11, w11, w8
-; CHECK-SD-NEXT:    asr x9, x9, #37
-; CHECK-SD-NEXT:    smull x8, w13, w8
-; CHECK-SD-NEXT:    asr x10, x10, #37
-; CHECK-SD-NEXT:    add w9, w9, w9, lsr #31
-; CHECK-SD-NEXT:    asr x11, x11, #37
-; CHECK-SD-NEXT:    add w10, w10, w10, lsr #31
-; CHECK-SD-NEXT:    asr x8, x8, #37
-; CHECK-SD-NEXT:    msub w9, w9, w14, w12
-; CHECK-SD-NEXT:    msub w10, w10, w14, w15
-; CHECK-SD-NEXT:    add w8, w8, w8, lsr #31
-; CHECK-SD-NEXT:    fmov s0, w9
-; CHECK-SD-NEXT:    add w9, w11, w11, lsr #31
-; CHECK-SD-NEXT:    smov w11, v1.h[2]
-; CHECK-SD-NEXT:    msub w9, w9, w14, w11
-; CHECK-SD-NEXT:    mov v0.h[1], w10
-; CHECK-SD-NEXT:    smov w10, v1.h[3]
-; CHECK-SD-NEXT:    msub w8, w8, w14, w10
-; CHECK-SD-NEXT:    mov v0.h[2], w9
-; CHECK-SD-NEXT:    mov v0.h[3], w8
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    mov w8, #5243 // =0x147b
+; CHECK-SD-NEXT:    movi v2.4h, #100
+; CHECK-SD-NEXT:    dup v1.4h, w8
+; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    sshr v1.4s, v1.4s, #19
+; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
+; CHECK-SD-NEXT:    usra v1.4h, v1.4h, #15
+; CHECK-SD-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sv4i8_100:
