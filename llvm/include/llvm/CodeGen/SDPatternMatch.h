@@ -1335,9 +1335,8 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
   // Searchs for a matching leaf for every sub-pattern.
   template <typename MatchContext, typename PatternHd, typename... PatternTl>
   [[nodiscard]] inline bool
-  reassociatableMatchHelper(const MatchContext &Ctx,
-                            ArrayRef<SDValue> Leaves, SmallBitVector &Used,
-                            PatternHd &HeadPattern,
+  reassociatableMatchHelper(const MatchContext &Ctx, ArrayRef<SDValue> Leaves,
+                            SmallBitVector &Used, PatternHd &HeadPattern,
                             PatternTl &...TailPatterns) {
     for (size_t Match = 0, N = Used.size(); Match < N; Match++) {
       if (Used[Match] || !(sd_context_match(Leaves[Match], Ctx, HeadPattern)))
@@ -1351,10 +1350,9 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
   }
 
   template <typename MatchContext>
-  [[nodiscard]] inline bool
-  reassociatableMatchHelper(const MatchContext &Ctx,
-                            ArrayRef<SDValue> Leaves,
-                            SmallBitVector &Used) {
+  [[nodiscard]] inline bool reassociatableMatchHelper(const MatchContext &Ctx,
+                                                      ArrayRef<SDValue> Leaves,
+                                                      SmallBitVector &Used) {
     return true;
   }
 };
