@@ -176,6 +176,50 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
         return false;
       }]
     >,
+    InterfaceMethod<
+      /*description=*/[{
+        Generates a load operation from the pointer-like type. This dereferences
+        the pointer and returns the loaded value.
+
+        The `srcPtr` parameter is the pointer to load from. If the current type is
+        represented in a way that it does not capture the pointee type, `valueType`
+        must be passed in to provide the necessary type information.
+
+        Returns the loaded value, or an empty Value if load generation failed.
+      }],
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"genLoad",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$srcPtr,
+                    "::mlir::Type":$valueType),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return {};
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Generates a store operation to the pointer-like type. This stores a value
+        to the memory location pointed to by the pointer.
+
+        The `destPtr` parameter is the pointer to store to. The `valueToStore`
+        parameter is the value to be stored. The type information is derived from
+        the valueToStore parameter itself.
+
+        Returns true if store was successfully generated, false otherwise.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"genStore",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::Value":$valueToStore,
+                    "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$destPtr),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
   ];
 }
 

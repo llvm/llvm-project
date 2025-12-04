@@ -461,6 +461,12 @@ public:
                                             OpenACCModifierKind modifiers,
                                             bool structured, bool implicit,
                                             bool requiresDtor);
+  // Each of the acc.routine operations must have a unique name, so we just use
+  // an integer counter.  This is how Flang does it, so it seems reasonable.
+  unsigned routineCounter = 0;
+  void emitOpenACCRoutineDecl(const clang::FunctionDecl *funcDecl,
+                              cir::FuncOp func, SourceLocation pragmaLoc,
+                              ArrayRef<const OpenACCClause *> clauses);
 
   // C++ related functions.
   void emitDeclContext(const DeclContext *dc);

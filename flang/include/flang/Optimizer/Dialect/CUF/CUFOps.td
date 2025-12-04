@@ -350,15 +350,14 @@ def cuf_SharedMemoryOp
   let arguments = (ins TypeAttr:$in_type, OptionalAttr<StrAttr>:$uniq_name,
       OptionalAttr<StrAttr>:$bindc_name, Variadic<AnyIntegerType>:$typeparams,
       Variadic<AnyIntegerType>:$shape,
-      Optional<AnyIntegerType>:$offset // offset in bytes from the shared memory
-                                       // base address.
-  );
+      // offset in bytes from the shared memory base address.
+      Optional<AnyIntegerType>:$offset, OptionalAttr<I64Attr>:$alignment);
 
   let results = (outs fir_ReferenceType:$ptr);
 
   let assemblyFormat = [{
       (`[` $offset^ `:` type($offset) `]`)? $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
-        (`,` $shape^ `:` type($shape) )?  attr-dict `->` qualified(type($ptr))
+        (`,` $shape^ `:` type($shape) )?  (`align` $alignment^ )? attr-dict `->` qualified(type($ptr))
   }];
 
   let builders = [OpBuilder<(ins "mlir::Type":$inType,

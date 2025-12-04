@@ -43,6 +43,15 @@ struct OpenACCPointerLikeModel
                mlir::TypedValue<mlir::acc::PointerLikeType> destination,
                mlir::TypedValue<mlir::acc::PointerLikeType> source,
                mlir::Type varType) const;
+
+  mlir::Value genLoad(mlir::Type pointer, mlir::OpBuilder &builder,
+                      mlir::Location loc,
+                      mlir::TypedValue<mlir::acc::PointerLikeType> srcPtr,
+                      mlir::Type valueType) const;
+
+  bool genStore(mlir::Type pointer, mlir::OpBuilder &builder,
+                mlir::Location loc, mlir::Value valueToStore,
+                mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
 };
 
 template <typename T>

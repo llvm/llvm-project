@@ -393,6 +393,12 @@ def vsub : PatFrags<(ops node:$lhs, node:$rhs),
 def vmul : PatFrags<(ops node:$lhs, node:$rhs),
                     [(fmul node:$lhs, node:$rhs),
                      (int_arm_mve_vmul node:$lhs, node:$rhs)]>;
+def vminnm : PatFrags<(ops node:$lhs, node:$rhs),
+                    [(fminnum node:$lhs, node:$rhs),
+                     (int_arm_mve_vminnm node:$lhs, node:$rhs)]>;
+def vmaxnm : PatFrags<(ops node:$lhs, node:$rhs),
+                    [(fmaxnum node:$lhs, node:$rhs),
+                     (int_arm_mve_vmaxnm node:$lhs, node:$rhs)]>;
 
 // --------- Start of base classes for the instructions themselves
 
@@ -1489,7 +1495,7 @@ class MVE_VMINMAXNM<string iname, string suffix, bits<2> sz, bit bit_21,
   let validForTailPredication = 1;
 }
 
-multiclass MVE_VMINMAXNM_m<string iname, bit bit_4, MVEVectorVTInfo VTI, SDNode Op, Intrinsic PredInt> {
+multiclass MVE_VMINMAXNM_m<string iname, bit bit_4, MVEVectorVTInfo VTI, SDPatternOperator Op, Intrinsic PredInt> {
   def "" : MVE_VMINMAXNM<iname, VTI.Suffix, VTI.Size, bit_4>;
 
   let Predicates = [HasMVEFloat] in {
@@ -1497,10 +1503,10 @@ multiclass MVE_VMINMAXNM_m<string iname, bit bit_4, MVEVectorVTInfo VTI, SDNode 
   }
 }
 
-defm MVE_VMAXNMf32 : MVE_VMINMAXNM_m<"vmaxnm", 0b0, MVE_v4f32, fmaxnum, int_arm_mve_max_predicated>;
-defm MVE_VMAXNMf16 : MVE_VMINMAXNM_m<"vmaxnm", 0b0, MVE_v8f16, fmaxnum, int_arm_mve_max_predicated>;
-defm MVE_VMINNMf32 : MVE_VMINMAXNM_m<"vminnm", 0b1, MVE_v4f32, fminnum, int_arm_mve_min_predicated>;
-defm MVE_VMINNMf16 : MVE_VMINMAXNM_m<"vminnm", 0b1, MVE_v8f16, fminnum, int_arm_mve_min_predicated>;
+defm MVE_VMAXNMf32 : MVE_VMINMAXNM_m<"vmaxnm", 0b0, MVE_v4f32, vmaxnm, int_arm_mve_max_predicated>;
+defm MVE_VMAXNMf16 : MVE_VMINMAXNM_m<"vmaxnm", 0b0, MVE_v8f16, vmaxnm, int_arm_mve_max_predicated>;
+defm MVE_VMINNMf32 : MVE_VMINMAXNM_m<"vminnm", 0b1, MVE_v4f32, vminnm, int_arm_mve_min_predicated>;
+defm MVE_VMINNMf16 : MVE_VMINMAXNM_m<"vminnm", 0b1, MVE_v8f16, vminnm, int_arm_mve_min_predicated>;
 
 
 class MVE_VMINMAX<string iname, string suffix, bit U, bits<2> size,
@@ -4148,7 +4154,7 @@ class MVE_VMAXMINNMA<string iname, string suffix, bits<2> size, bit bit_12,
 }
 
 multiclass MVE_VMAXMINNMA_m<string iname, MVEVectorVTInfo VTI,
-                      SDNode unpred_op, Intrinsic pred_int,
+                      SDPatternOperator unpred_op, Intrinsic pred_int,
                       bit bit_12> {
   def "" : MVE_VMAXMINNMA<iname, VTI.Suffix, VTI.Size, bit_12>;
   defvar Inst = !cast<Instruction>(NAME);
@@ -4168,13 +4174,13 @@ multiclass MVE_VMAXMINNMA_m<string iname, MVEVectorVTInfo VTI,
 }
 
 multiclass MVE_VMAXNMA<MVEVectorVTInfo VTI, bit bit_12>
-  : MVE_VMAXMINNMA_m<"vmaxnma", VTI, fmaxnum, int_arm_mve_vmaxnma_predicated, bit_12>;
+  : MVE_VMAXMINNMA_m<"vmaxnma", VTI, vmaxnm, int_arm_mve_vmaxnma_predicated, bit_12>;
 
 defm MVE_VMAXNMAf32 : MVE_VMAXNMA<MVE_v4f32, 0b0>;
 defm MVE_VMAXNMAf16 : MVE_VMAXNMA<MVE_v8f16, 0b0>;
 
 multiclass MVE_VMINNMA<MVEVectorVTInfo VTI, bit bit_12>
-  : MVE_VMAXMINNMA_m<"vminnma", VTI, fminnum, int_arm_mve_vminnma_predicated, bit_12>;
+  : MVE_VMAXMINNMA_m<"vminnma", VTI, vminnm, int_arm_mve_vminnma_predicated, bit_12>;
 
 defm MVE_VMINNMAf32 : MVE_VMINNMA<MVE_v4f32, 0b1>;
 defm MVE_VMINNMAf16 : MVE_VMINNMA<MVE_v8f16, 0b1>;

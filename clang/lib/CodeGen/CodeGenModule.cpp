@@ -5976,7 +5976,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
              (D->getType()->isHLSLResourceRecord() ||
               D->getType()->isHLSLResourceRecordArray())) {
     Init = llvm::PoisonValue::get(getTypes().ConvertType(ASTTy));
-    NeedsGlobalCtor = D->getType()->isHLSLResourceRecord();
+    NeedsGlobalCtor = D->getType()->isHLSLResourceRecord() ||
+                      D->getStorageClass() == SC_Static;
   } else if (D->hasAttr<LoaderUninitializedAttr>()) {
     Init = llvm::UndefValue::get(getTypes().ConvertTypeForMem(ASTTy));
   } else if (!InitExpr) {

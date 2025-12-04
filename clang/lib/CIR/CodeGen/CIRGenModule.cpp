@@ -2227,6 +2227,15 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
 
     if (!cgf)
       theModule.push_back(func);
+
+    if (this->getLangOpts().OpenACC) {
+      // We only have to handle this attribute, since OpenACCAnnotAttrs are
+      // handled via the end-of-TU work.
+      for (const auto *attr :
+           funcDecl->specific_attrs<OpenACCRoutineDeclAttr>())
+        emitOpenACCRoutineDecl(funcDecl, func, attr->getLocation(),
+                               attr->Clauses);
+    }
   }
   return func;
 }

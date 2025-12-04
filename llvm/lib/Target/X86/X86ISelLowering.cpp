@@ -3104,7 +3104,7 @@ static bool useVPTERNLOG(const X86Subtarget &Subtarget, MVT VT) {
 }
 
 bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                           const CallInst &I,
+                                           const CallBase &I,
                                            MachineFunction &MF,
                                            unsigned Intrinsic) const {
   Info.flags = MachineMemOperand::MONone;

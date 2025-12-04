@@ -2264,6 +2264,77 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
   }
 };
 
+struct AMDGPUMakeDmaBaseLowering
+    : public ConvertOpToLLVMPattern<MakeDmaBaseOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  AMDGPUMakeDmaBaseLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<MakeDmaBaseOp>(converter), chipset(chipset) {}
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(MakeDmaBaseOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op->emitOpError("make_dma_base is only supported on gfx1250");
+
+    Location loc = op.getLoc();
+
+    ValueRange ldsIndices = adaptor.getLdsIndices();
+    Value lds = adaptor.getLds();
+    auto ldsMemRefType = cast<MemRefType>(op.getLds().getType());
+
+    Value ldsPtr =
+        getStridedElementPtr(rewriter, loc, ldsMemRefType, lds, ldsIndices);
+
+    ValueRange globalIndices = adaptor.getGlobalIndices();
+    Value global = adaptor.getGlobal();
+    auto globalMemRefType = cast<MemRefType>(op.getGlobal().getType());
+
+    Value globalPtr = getStridedElementPtr(rewriter, loc, globalMemRefType,
+                                           global, globalIndices);
+
+    Type i32 = rewriter.getI32Type();
+    Type i64 = rewriter.getI64Type();
+
+    Value castForLdsAddr = LLVM::PtrToIntOp::create(rewriter, loc, i32, ldsPtr);
+    Value castForGlobalAddr =
+        LLVM::PtrToIntOp::create(rewriter, loc, i64, globalPtr);
+
+    Value lowHalf =
+        LLVM::TruncOp::create(rewriter, loc, i32, castForGlobalAddr);
+
+    Value shift = LLVM::LShrOp::create(rewriter, loc, castForGlobalAddr,
+                                       createI64Constant(rewriter, loc, 32));
+
+    Value highHalf = LLVM::TruncOp::create(rewriter, loc, i32, shift);
+
+    Value mask = createI32Constant(rewriter, loc, (1ull << 25) - 1);
+    Value validHighHalf = LLVM::AndOp::create(rewriter, loc, highHalf, mask);
+
+    Value typeField = createI32Constant(rewriter, loc, 2 << 30);
+    Value highHalfPlusType =
+        LLVM::OrOp::create(rewriter, loc, validHighHalf, typeField);
+
+    Value c0 = createI32Constant(rewriter, loc, 0);
+    Value c1 = createI32Constant(rewriter, loc, 1);
+    Value c2 = createI32Constant(rewriter, loc, 2);
+    Value c3 = createI32Constant(rewriter, loc, 3);
+
+    Type v4i32 = this->typeConverter->convertType(VectorType::get(4, i32));
+    Value result = LLVM::PoisonOp::create(rewriter, loc, v4i32);
+    result = LLVM::InsertElementOp::create(rewriter, loc, result, c1, c0);
+    result = LLVM::InsertElementOp::create(rewriter, loc, result,
+                                           castForLdsAddr, c1);
+    result = LLVM::InsertElementOp::create(rewriter, loc, result, lowHalf, c2);
+    result = LLVM::InsertElementOp::create(rewriter, loc, result,
+                                           highHalfPlusType, c3);
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 struct ConvertAMDGPUToROCDLPass
     : public impl::ConvertAMDGPUToROCDLPassBase<ConvertAMDGPUToROCDLPass> {
   using Base::Base;
@@ -2278,6 +2349,10 @@ struct ConvertAMDGPUToROCDLPass
 
     RewritePatternSet patterns(ctx);
     LLVMTypeConverter converter(ctx);
+    converter.addConversion([&](TDMBaseType type) -> Type {
+      Type i32 = IntegerType::get(type.getContext(), 32);
+      return converter.convertType(VectorType::get(4, i32));
+    });
     populateAMDGPUToROCDLConversionPatterns(converter, patterns, *maybeChipset);
     LLVMConversionTarget target(getContext());
     target.addIllegalDialect<::mlir::amdgpu::AMDGPUDialect>();
@@ -2333,6 +2408,7 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            ScaledExtPackedOpLowering, PackedScaledTruncOpLowering,
            PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
            GatherToLDSOpLowering, TransposeLoadOpLowering,
-           AMDGPUPermlaneLowering>(converter, chipset);
+           AMDGPUPermlaneLowering, AMDGPUMakeDmaBaseLowering>(converter,
+                                                              chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }

@@ -240,4 +240,93 @@ entry:
   ret <8 x half> %0
 }
 
+
+define arm_aapcs_vfpcc <8 x half> @test_vminnmq_f16(<8 x half> %a, <8 x half> %b) #0 {
+; CHECK-LABEL: test_vminnmq_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnm.f16 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %2 = tail call <8 x half> @llvm.arm.mve.vmaxnm.v8f16(<8 x half> %a, <8 x half> %b)
+  ret <8 x half> %2
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vminnmq_f32(<4 x float> %a, <4 x float> %b) #0 {
+; CHECK-LABEL: test_vminnmq_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnm.f32 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %2 = tail call <4 x float> @llvm.arm.mve.vmaxnm.v4f32(<4 x float> %a, <4 x float> %b)
+  ret <4 x float> %2
+}
+
+define arm_aapcs_vfpcc <8 x half> @test_vmaxnmq_f16(<8 x half> %a, <8 x half> %b) #0 {
+; CHECK-LABEL: test_vmaxnmq_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnm.f16 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %2 = tail call <8 x half> @llvm.arm.mve.vmaxnm.v8f16(<8 x half> %a, <8 x half> %b)
+  ret <8 x half> %2
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vmaxnmq_f32(<4 x float> %a, <4 x float> %b) #0 {
+; CHECK-LABEL: test_vmaxnmq_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnm.f32 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %2 = tail call <4 x float> @llvm.arm.mve.vmaxnm.v4f32(<4 x float> %a, <4 x float> %b)
+  ret <4 x float> %2
+}
+
+define arm_aapcs_vfpcc <8 x half> @test_vminnmaq_f16(<8 x half> %a, <8 x half> %b) #0 {
+; CHECK-LABEL: test_vminnmaq_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnma.f16 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> %a)
+  %1 = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> %b)
+  %2 = tail call <8 x half> @llvm.arm.mve.vmaxnm.v8f16(<8 x half> %0, <8 x half> %1)
+  ret <8 x half> %2
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vminnmaq_f32(<4 x float> %a, <4 x float> %b) #0 {
+; CHECK-LABEL: test_vminnmaq_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnma.f32 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
+  %1 = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %b)
+  %2 = tail call <4 x float> @llvm.arm.mve.vmaxnm.v4f32(<4 x float> %0, <4 x float> %1)
+  ret <4 x float> %2
+}
+
+define arm_aapcs_vfpcc <8 x half> @test_vmaxnmaq_f16(<8 x half> %a, <8 x half> %b) #0 {
+; CHECK-LABEL: test_vmaxnmaq_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnma.f16 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> %a)
+  %1 = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> %b)
+  %2 = tail call <8 x half> @llvm.arm.mve.vmaxnm.v8f16(<8 x half> %0, <8 x half> %1)
+  ret <8 x half> %2
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vmaxnmaq_f32(<4 x float> %a, <4 x float> %b) #0 {
+; CHECK-LABEL: test_vmaxnmaq_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmaxnma.f32 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
+  %1 = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %b)
+  %2 = tail call <4 x float> @llvm.arm.mve.vmaxnm.v4f32(<4 x float> %0, <4 x float> %1)
+  ret <4 x float> %2
+}
+
 attributes #0 = { strictfp }
