@@ -152,6 +152,32 @@ def OpenACC_LoopParMode : I32EnumAttr<
   let genSpecializedAttr = 0;
 }
 
+// Parallelism level (gang/worker/vector/seq).
+// GangDim1 is the default gang level (equivalent to just "gang").
+// GangDim2/GangDim3 are for gang(dim:2) and gang(dim:3).
+def OpenACC_ParLevelSeq      : I32EnumAttrCase<"seq", 0>;
+def OpenACC_ParLevelGangDim1 : I32EnumAttrCase<"gang_dim1", 1>;
+def OpenACC_ParLevelGangDim2 : I32EnumAttrCase<"gang_dim2", 2>;
+def OpenACC_ParLevelGangDim3 : I32EnumAttrCase<"gang_dim3", 3>;
+def OpenACC_ParLevelWorker   : I32EnumAttrCase<"worker", 4>;
+def OpenACC_ParLevelVector   : I32EnumAttrCase<"vector", 5>;
+
+def OpenACC_ParLevel : I32EnumAttr<"ParLevel",
+    "Parallelism level (gang/worker/vector/seq)",
+    [OpenACC_ParLevelSeq,
+     OpenACC_ParLevelGangDim1, OpenACC_ParLevelGangDim2,
+     OpenACC_ParLevelGangDim3,
+     OpenACC_ParLevelWorker, OpenACC_ParLevelVector]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::acc";
+}
+
+def OpenACC_ParLevelAttr : EnumAttr<OpenACC_Dialect,
+                                    OpenACC_ParLevel,
+                                    "par_level"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
+}
+
 def OpenACC_PrivateRecipe : I32EnumAttrCase<"private_recipe", 0>;
 def OpenACC_FirstprivateRecipe : I32EnumAttrCase<"firstprivate_recipe", 1>;
 def OpenACC_ReductionRecipe : I32EnumAttrCase<"reduction_recipe", 2>;
@@ -3347,6 +3373,58 @@ def RoutineInfoAttr : OpenACC_Attr<"RoutineInfo", "routine_info"> {
 
   let parameters = (ins ArrayRefParameter<"SymbolRefAttr", "">:$accRoutines);
   let assemblyFormat = "`<` `[` `` $accRoutines `]` `>`";
+}
+
+def SpecializedRoutineAttr : OpenACC_Attr<"SpecializedRoutine",
+                                          "specialized_routine"> {
+  let summary = "Marks a specialized device version of an acc routine";
+
+  let description = [{
+    This attribute is attached to a function that was specialized from a host
+    function marked with `acc.routine_info`. It captures the parallelism level,
+    a reference to the original `acc.routine` operation, and the original
+    function name (since the specialized function may be renamed).
+
+    Example - before specialization:
+    ```mlir
+    acc.routine @routine_gang func(@foo) gang
+    acc.routine @routine_vector func(@foo) vector
+
+    func.func @foo() attributes {
+      acc.routine_info = #acc.routine_info<[@routine_gang, @routine_vector]>
+    } { ... }
+    ```
+
+    After specialization, there are three functions: the original function and
+    two specialized versions (one per parallelism level):
+    ```mlir
+    acc.routine @routine_gang func(@foo) gang
+    acc.routine @routine_vector func(@foo) vector
+
+    // Original function (unchanged)
+    func.func @foo() attributes {
+      acc.routine_info = #acc.routine_info<[@routine_gang, @routine_vector]>
+    } { ... }
+
+    // Specialized for gang parallelism
+    func.func @foo_gang() attributes {
+      acc.specialized_routine = #acc.specialized_routine<@routine_gang, <gang_dim1>, "foo">
+    } { ... }
+
+    // Specialized for vector parallelism
+    func.func @foo_vector() attributes {
+      acc.specialized_routine = #acc.specialized_routine<@routine_vector, <vector>, "foo">
+    } { ... }
+    ```
+  }];
+
+  let parameters = (ins
+    "SymbolRefAttr":$routine,
+    "ParLevelAttr":$level,
+    "StringAttr":$funcName
+  );
+
+  let assemblyFormat = "`<` $routine `,` $level `,` $funcName `>`";
 }
 
 //===----------------------------------------------------------------------===//
