@@ -13,23 +13,19 @@
 #include "clang/DependencyScanning/DependencyScanningUtils.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/DependencyScanning/ModuleDepCollector.h"
-#include "clang/Tooling/JSONCompilationDatabase.h"
+#include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/STLExtras.h"
-#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
 
 namespace clang {
 namespace tooling {
-namespace dependencies {
 
 struct P1689Rule {
   std::string PrimaryOutput;
-  std::optional<clang::dependencies::P1689ModuleInfo> Provides;
-  std::vector<clang::dependencies::P1689ModuleInfo> Requires;
+  std::optional<dependencies::P1689ModuleInfo> Provides;
+  std::vector<dependencies::P1689ModuleInfo> Requires;
 };
 
 /// The high-level implementation of the dependency discovery tool that runs on
@@ -40,10 +36,9 @@ public:
   ///
   /// @param Service  The parent service. Must outlive the tool.
   /// @param FS The filesystem for the tool to use. Defaults to the physical FS.
-  DependencyScanningTool(
-      clang::dependencies::DependencyScanningService &Service,
-      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
-          llvm::vfs::createPhysicalFileSystem());
+  DependencyScanningTool(dependencies::DependencyScanningService &Service,
+                         llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
+                             llvm::vfs::createPhysicalFileSystem());
 
   /// Print out the dependency information into a string using the dependency
   /// file format that is specified in the options (-MD is the default) and
@@ -66,12 +61,11 @@ public:
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, P1689 dependency format rules otherwise.
   llvm::Expected<P1689Rule>
-  getP1689ModuleDependencyFile(const clang::tooling::CompileCommand &Command,
-                               StringRef CWD, std::string &MakeformatOutput,
+  getP1689ModuleDependencyFile(const CompileCommand &Command, StringRef CWD,
+                               std::string &MakeformatOutput,
                                std::string &MakeformatOutputPath);
   llvm::Expected<P1689Rule>
-  getP1689ModuleDependencyFile(const clang::tooling::CompileCommand &Command,
-                               StringRef CWD) {
+  getP1689ModuleDependencyFile(const CompileCommand &Command, StringRef CWD) {
     std::string MakeformatOutput;
     std::string MakeformatOutputPath;
 
@@ -96,11 +90,11 @@ public:
   ///
   /// \returns a \c StringError with the diagnostic output if clang errors
   /// occurred, \c TranslationUnitDeps otherwise.
-  llvm::Expected<clang::dependencies::TranslationUnitDeps>
+  llvm::Expected<dependencies::TranslationUnitDeps>
   getTranslationUnitDependencies(
       const std::vector<std::string> &CommandLine, StringRef CWD,
-      const llvm::DenseSet<clang::dependencies::ModuleID> &AlreadySeen,
-      clang::dependencies::LookupModuleOutputCallback LookupModuleOutput,
+      const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
+      dependencies::LookupModuleOutputCallback LookupModuleOutput,
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
 
   /// Given a compilation context specified via the Clang driver command-line,
@@ -109,12 +103,10 @@ public:
   /// TODO: this method should be removed as soon as Swift and our C-APIs adopt
   /// CompilerInstanceWithContext. We are keeping it here so that it is easier
   /// to coordinate with Swift and C-API changes.
-  llvm::Expected<clang::dependencies::TranslationUnitDeps>
-  getModuleDependencies(
+  llvm::Expected<dependencies::TranslationUnitDeps> getModuleDependencies(
       StringRef ModuleName, const std::vector<std::string> &CommandLine,
-      StringRef CWD,
-      const llvm::DenseSet<clang::dependencies::ModuleID> &AlreadySeen,
-      clang::dependencies::LookupModuleOutputCallback LookupModuleOutput);
+      StringRef CWD, const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
   /// The following three methods provide a new interface to perform
   /// by name dependency scan. The new interface's intention is to improve
@@ -144,11 +136,11 @@ public:
   ///                           arguments for dependencies.
   /// @return An instance of \c TranslationUnitDeps if the scan is successful.
   ///         Otherwise it returns an error.
-  llvm::Expected<clang::dependencies::TranslationUnitDeps>
+  llvm::Expected<dependencies::TranslationUnitDeps>
   computeDependenciesByNameWithContext(
       StringRef ModuleName,
-      const llvm::DenseSet<clang::dependencies::ModuleID> &AlreadySeen,
-      clang::dependencies::LookupModuleOutputCallback LookupModuleOutput);
+      const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
   /// @brief This method finializes the compiler instance. It finalizes the
   ///        diagnostics and deletes the compiler instance. Call this method
@@ -159,12 +151,11 @@ public:
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
 
 private:
-  clang::dependencies::DependencyScanningWorker Worker;
-  std::unique_ptr<clang::dependencies::TextDiagnosticsPrinterWithOutput>
+  dependencies::DependencyScanningWorker Worker;
+  std::unique_ptr<dependencies::TextDiagnosticsPrinterWithOutput>
       DiagPrinterWithOS;
 };
 
-} // end namespace dependencies
 } // end namespace tooling
 } // end namespace clang
 

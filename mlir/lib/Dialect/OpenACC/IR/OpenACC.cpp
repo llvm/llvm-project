@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/SymbolTable.h"
@@ -1446,6 +1447,28 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
     }
   }
 
+  return recipe;
+}
+
+std::optional<PrivateRecipeOp>
+PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
+                                   StringRef recipeName,
+                                   FirstprivateRecipeOp firstprivRecipe) {
+  // Create the private.recipe op with the same type as the firstprivate.recipe.
+  OpBuilder::InsertionGuard guard(builder);
+  auto varType = firstprivRecipe.getType();
+  auto recipe = PrivateRecipeOp::create(builder, loc, recipeName, varType);
+
+  // Clone the init region
+  IRMapping mapping;
+  firstprivRecipe.getInitRegion().cloneInto(&recipe.getInitRegion(), mapping);
+
+  // Clone destroy region if the firstprivate.recipe has one.
+  if (!firstprivRecipe.getDestroyRegion().empty()) {
+    IRMapping mapping;
+    firstprivRecipe.getDestroyRegion().cloneInto(&recipe.getDestroyRegion(),
+                                                 mapping);
+  }
   return recipe;
 }
 

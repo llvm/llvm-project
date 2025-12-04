@@ -343,9 +343,9 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// ScaledExtPacked816Op
+// ScaledExtPackedMatrixOp
 //===----------------------------------------------------------------------===//
-LogicalResult ScaledExtPacked816Op::verify() {
+LogicalResult ScaledExtPackedMatrixOp::verify() {
   int blockSize = getBlockSize();
   assert(llvm::is_contained({16, 32}, blockSize) && "invalid block size");
 
@@ -376,10 +376,10 @@ LogicalResult ScaledExtPacked816Op::verify() {
   } else {
     if (is_block_16) {
       bool is_valid = ((firstScaleLane == 0) && (firstScaleByte == 0)) ||
-                      ((firstScaleLane == 1) && (firstScaleByte == 2));
+                      ((firstScaleLane == 16) && (firstScaleByte == 2));
       if (!is_valid) {
         return emitOpError("blockSize of 16 can only have (firstScaleLane, "
-                           "firstScaleByte) be (0, 0) or (1, 2) for f8.");
+                           "firstScaleByte) be (0, 0) or (16, 2) for f8.");
       }
     }
   }

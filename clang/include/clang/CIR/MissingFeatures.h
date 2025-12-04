@@ -255,7 +255,7 @@ struct MissingFeatures {
   static bool devirtualizeDestructor() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
   static bool dtorCleanups() { return false; }
-  static bool ehCleanupFlags() { return false; }
+  static bool ehCleanupActiveFlag() { return false; }
   static bool ehCleanupHasPrebranchedFallthrough() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
@@ -335,6 +335,7 @@ struct MissingFeatures {
   static bool thunks() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool typeChecks() { return false; }
+  static bool useEHCleanupForArray() { return false; }
   static bool vaArgABILowering() { return false; }
   static bool vectorConstants() { return false; }
   static bool vlas() { return false; }

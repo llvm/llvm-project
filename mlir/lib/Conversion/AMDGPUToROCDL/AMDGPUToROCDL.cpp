@@ -1506,16 +1506,17 @@ struct ExtPackedFp8OpLowering final
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-struct ScaledExtPacked816OpLowering final
-    : public ConvertOpToLLVMPattern<ScaledExtPacked816Op> {
-  ScaledExtPacked816OpLowering(const LLVMTypeConverter &converter,
-                               Chipset chipset)
-      : ConvertOpToLLVMPattern<amdgpu::ScaledExtPacked816Op>(converter),
+struct ScaledExtPackedMatrixOpLowering final
+    : public ConvertOpToLLVMPattern<ScaledExtPackedMatrixOp> {
+  ScaledExtPackedMatrixOpLowering(const LLVMTypeConverter &converter,
+                                  Chipset chipset)
+      : ConvertOpToLLVMPattern<amdgpu::ScaledExtPackedMatrixOp>(converter),
         chipset(chipset) {}
   Chipset chipset;
 
   LogicalResult
-  matchAndRewrite(ScaledExtPacked816Op op, ScaledExtPacked816OpAdaptor adaptor,
+  matchAndRewrite(ScaledExtPackedMatrixOp op,
+                  ScaledExtPackedMatrixOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -1627,34 +1628,35 @@ LogicalResult ExtPackedFp8OpLowering::matchAndRewrite(
   return success();
 }
 
-int32_t getScaleSel(int32_t blockSize, unsigned bitWidth,
-                    int32_t firstScaleLane, int32_t firstScaleByte) {
-  // When lowering amdgpu.scaled_ext_packed816 to rocdl.cvt.scale.pk*.f*.f*
-  // operations, the attributes blockSize, sourceType, firstScaleLane and
+int32_t getScaleSel(int32_t blockSize, unsigned bitWidth, int32_t scaleWaveHalf,
+                    int32_t firstScaleByte) {
+  // When lowering amdgpu.scaled_ext_packed_matrix to rocdl.cvt.scale.pk*.f*.f*
+  // operations, the attributes blockSize, sourceType, scaleWaveHalf, and
   // firstScaleByte are merged into a single attribute scaleSel. This is how
-  // those values are merged together.
+  // those values are merged together. (Note: scaleWaveHalf isn't a high-level
+  // attribute but is derifed from firstScaleLane).
   assert(llvm::is_contained({16, 32}, blockSize));
   assert(llvm::is_contained(llvm::ArrayRef<unsigned>{4, 6, 8}, bitWidth));
 
-  const bool is_fp8 = bitWidth == 8;
-  const bool is_block_16 = blockSize == 16;
+  const bool isFp8 = bitWidth == 8;
+  const bool isBlock16 = blockSize == 16;
 
-  if (!is_fp8) {
-    int bit_0 = is_block_16;
+  if (!isFp8) {
+    int32_t bit0 = isBlock16;
     assert(llvm::is_contained({0, 1, 2}, firstScaleByte));
-    int bit_1 = (firstScaleByte == 2) << 1;
-    assert(llvm::is_contained({0, 1}, firstScaleLane));
-    int bit_2 = firstScaleLane << 2;
-    return bit_2 | bit_1 | bit_0;
+    int32_t bit1 = (firstScaleByte == 2) << 1;
+    assert(llvm::is_contained({0, 1}, scaleWaveHalf));
+    int32_t bit2 = scaleWaveHalf << 2;
+    return bit2 | bit1 | bit0;
   }
 
-  int bit_0 = is_block_16;
+  int32_t bit0 = isBlock16;
   // firstScaleByte is guaranteed to be defined by two bits.
   assert(llvm::is_contained({0, 1, 2, 3}, firstScaleByte));
-  int bit_2_and_1 = firstScaleByte << 1;
-  assert(llvm::is_contained({0, 1}, firstScaleLane));
-  int bit_3 = firstScaleLane << 3;
-  int bits = bit_3 | bit_2_and_1 | bit_0;
+  int32_t bits2and1 = firstScaleByte << 1;
+  assert(llvm::is_contained({0, 1}, scaleWaveHalf));
+  int32_t bit3 = scaleWaveHalf << 3;
+  int32_t bits = bit3 | bits2and1 | bit0;
   // These are invalid cases.
   assert(!llvm::is_contained(
       {0b0011, 0b0101, 0b0111, 0b1000, 0b1001, 0b1011, 0b1111}, bits));
@@ -1717,8 +1719,8 @@ scaledExtPacked816ToIntrinsic(Type srcElemType, Type destElemType) {
                    "instructions");
 }
 
-LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
-    ScaledExtPacked816Op op, ScaledExtPacked816OpAdaptor adaptor,
+LogicalResult ScaledExtPackedMatrixOpLowering::matchAndRewrite(
+    ScaledExtPackedMatrixOp op, ScaledExtPackedMatrixOpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   using fp4 = Float4E2M1FNType;
   using fp8 = Float8E4M3FNType;
@@ -1732,7 +1734,9 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         "Scaled fp packed conversion instructions are not available on target "
         "architecture and their emulation is not implemented");
   }
-  int32_t firstScaleLane = op.getFirstScaleLane();
+  // Convert user-facing firstScaleLane (0 or 16) to the half of the wave that
+  // is being selected.
+  int32_t scaleWaveHalf = op.getFirstScaleLane() / 16;
   int32_t firstScaleByte = op.getFirstScaleByte();
   int32_t blockSize = op.getBlockSize();
   auto sourceType = cast<VectorType>(op.getSource().getType());
@@ -1770,7 +1774,7 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         "no intrinsic matching packed scaled conversion on the given chipset");
 
   int32_t scaleSel =
-      getScaleSel(blockSize, bitWidth, firstScaleLane, firstScaleByte);
+      getScaleSel(blockSize, bitWidth, scaleWaveHalf, firstScaleByte);
   Value castedScale =
       LLVM::BitcastOp::create(rewriter, loc, i32, adaptor.getScale());
   Value castedSource =
@@ -2388,27 +2392,26 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                                    RewritePatternSet &patterns,
                                                    Chipset chipset) {
   populateAMDGPUMemorySpaceAttributeConversions(converter);
-  patterns
-      .add<FatRawBufferCastLowering,
-           RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,
-           RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawPtrBufferStoreOp>,
-           RawBufferOpLowering<RawBufferAtomicFaddOp,
-                               ROCDL::RawPtrBufferAtomicFaddOp>,
-           RawBufferOpLowering<RawBufferAtomicFmaxOp,
-                               ROCDL::RawPtrBufferAtomicFmaxOp>,
-           RawBufferOpLowering<RawBufferAtomicSmaxOp,
-                               ROCDL::RawPtrBufferAtomicSmaxOp>,
-           RawBufferOpLowering<RawBufferAtomicUminOp,
-                               ROCDL::RawPtrBufferAtomicUminOp>,
-           RawBufferOpLowering<RawBufferAtomicCmpswapOp,
-                               ROCDL::RawPtrBufferAtomicCmpSwap>,
-           AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
-           SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
-           WMMAOpLowering, ExtPackedFp8OpLowering, ScaledExtPacked816OpLowering,
-           ScaledExtPackedOpLowering, PackedScaledTruncOpLowering,
-           PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
-           GatherToLDSOpLowering, TransposeLoadOpLowering,
-           AMDGPUPermlaneLowering, AMDGPUMakeDmaBaseLowering>(converter,
-                                                              chipset);
+  patterns.add<
+      FatRawBufferCastLowering,
+      RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,
+      RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawPtrBufferStoreOp>,
+      RawBufferOpLowering<RawBufferAtomicFaddOp,
+                          ROCDL::RawPtrBufferAtomicFaddOp>,
+      RawBufferOpLowering<RawBufferAtomicFmaxOp,
+                          ROCDL::RawPtrBufferAtomicFmaxOp>,
+      RawBufferOpLowering<RawBufferAtomicSmaxOp,
+                          ROCDL::RawPtrBufferAtomicSmaxOp>,
+      RawBufferOpLowering<RawBufferAtomicUminOp,
+                          ROCDL::RawPtrBufferAtomicUminOp>,
+      RawBufferOpLowering<RawBufferAtomicCmpswapOp,
+                          ROCDL::RawPtrBufferAtomicCmpSwap>,
+      AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
+      SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
+      WMMAOpLowering, ExtPackedFp8OpLowering, ScaledExtPackedMatrixOpLowering,
+      ScaledExtPackedOpLowering, PackedScaledTruncOpLowering,
+      PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
+      GatherToLDSOpLowering, TransposeLoadOpLowering, AMDGPUPermlaneLowering,
+      AMDGPUMakeDmaBaseLowering>(converter, chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }
