@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - %s -O1 -fexceptions -fcxx-exceptions | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s -O1 -fexceptions -fcxx-exceptions | FileCheck %s
 
 extern "C" {
 
