@@ -23,12 +23,12 @@ auto error_sve_vector_result_matched_element_count(__SVBool_t svbool, __SVUint32
 }
 
 auto error_fixed_cond_mixed_scalar_and_vector_operands(fixed_vector cond, unsigned char a, __SVUint8_t b) {
-  // expected-error@+1 {{invalid operands to binary expression ('unsigned char' and '__SVUint8_t')}}
+  // expected-error@+1 {{cannot mix vectors and sizeless vectors in a vector conditional}}
   return cond ? a : b;
 }
 
 auto error_scalable_cond_mixed_scalar_and_vector_operands(__SVBool_t svbool, unsigned char a, fixed_vector b) {
-  // expected-error@+1 {{cannot convert between vector and non-scalar values ('unsigned char' and 'fixed_vector' (vector of 1 'int' value))}}
+  // expected-error@+1 {{cannot mix vectors and sizeless vectors in a vector conditional}}
   return svbool ? a : b;
 }
 
