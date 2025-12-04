@@ -2,20 +2,15 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=0 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=1 -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:    warning: Instruction selection used fallback path for neon_ushl_vscalar_constant_shift
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for neon_ushl_scalar_constant_shift
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for neon_sshll_vscalar_constant_shift
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for neon_sshll_scalar_constant_shift
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for neon_sshll_scalar_constant_shift_m1
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli8b
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli4h
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli2s
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli1d
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli1d_imm0
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli16b
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli8h
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli4s
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sli2d
+; CHECK-GI:    warning: Instruction selection used fallback path for sli8b
+; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli4h
+; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli2s
+; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli1d
+; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli1d_imm0
+; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli16b
+; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli8h
+; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli4s
+; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli2d
 
 define <8 x i8> @sqshl8b(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sqshl8b:
