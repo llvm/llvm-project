@@ -194,8 +194,8 @@ public:
           builder.CreateLoad(linearOrigVars[index]->getAllocatedType(),
 
                              linearPreconditionVars[index]);
-      auto mulInst = builder.CreateMul(loopInductionVar, linearSteps[index]);
-      auto addInst = builder.CreateAdd(linearVarStart, mulInst);
+      auto *mulInst = builder.CreateMul(loopInductionVar, linearSteps[index]);
+      auto *addInst = builder.CreateAdd(linearVarStart, mulInst);
       builder.CreateStore(addInst, linearLoopBodyTemps[index]);
     }
   }
@@ -1968,7 +1968,7 @@ static bool teamsReductionContainedInDistribute(omp::TeamsOp teamsOp) {
   // If we are going to use distribute reduction then remove any debug uses of
   // the reduction parameters in teamsOp. Otherwise they will be left without
   // any mapped value in moduleTranslation and will eventually error out.
-  for (auto use : debugUses)
+  for (auto *use : debugUses)
     use->erase();
   return true;
 }
