@@ -5327,12 +5327,12 @@ private:
         return false;
       SmallDenseMap<TreeEntry *, unsigned> PotentiallyReorderedEntriesCount;
       SmallDenseMap<const TreeEntry *, unsigned> OrderedEntriesCount;
+      ArrayRef<TreeEntry *> Entries = SLP.getTreeEntries(User);
+      if (Entries.empty())
+        return false;
       for (const Use &U : User->operands()) {
         if (U.get() != Op)
           continue;
-        ArrayRef<TreeEntry *> Entries = SLP.getTreeEntries(User);
-        if (Entries.empty())
-          return false;
         // Check all tree entries, if they have operands replaced by copyable
         // data.
         for (TreeEntry *TE : Entries) {
