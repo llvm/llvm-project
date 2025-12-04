@@ -43,7 +43,8 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
   }
   auto tmOrError = tmBuilderOrError->createTargetMachine();
   if (!tmOrError) {
-    llvm::errs() << "Failed to create a TargetMachine for the host\n";
+    llvm::errs() << "Failed to create a TargetMachine for the host because: "
+                 << tmOrError.takeError();
     return MlirExecutionEngine{nullptr};
   }
 
