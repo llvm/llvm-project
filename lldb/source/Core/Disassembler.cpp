@@ -293,9 +293,8 @@ AddVariableAnnotationToVector(std::vector<VariableAnnotation> &annotations,
                               VariableAnnotation annotation_entity,
                               const bool is_live) {
   annotation_entity.is_live = is_live;
-  if (!is_live) {
+  if (!is_live) 
     annotation_entity.location_description = kUndefLocation;
-  }
   annotations.push_back(std::move(annotation_entity));
 }
 
