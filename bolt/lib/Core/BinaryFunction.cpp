@@ -1408,9 +1408,7 @@ Error BinaryFunction::disassemble() {
           // A recursive call. Calls to internal blocks are handled by
           // ValidateInternalCalls pass.
           TargetSymbol = getSymbol();
-        }
-
-        if (!TargetSymbol) {
+        } else {
           // Create either local label or external symbol.
           if (containsAddress(TargetAddress)) {
             TargetSymbol = getOrCreateLocalLabel(TargetAddress);

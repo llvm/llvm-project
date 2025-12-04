@@ -108,7 +108,7 @@ public:
           "module '%s.__file__' attribute is not a string",
           py_obj_module_str_ref.data());
 
-    return FileSpec(py_obj_module_str.GetString());
+    return FileSpec(py_module_file_str.GetString());
   }
 
   llvm::Expected<std::map<llvm::StringLiteral, AbstractMethodCheckerPayload>>
