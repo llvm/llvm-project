@@ -333,11 +333,14 @@ added in the future:
     (e.g., by passing things in registers). This calling convention
     allows the target to use whatever tricks it wants to produce fast
     code for the target, without having to conform to an externally
-    specified ABI (Application Binary Interface). `Tail calls can only
-    be optimized when this, the tailcc, the GHC or the HiPE convention is
-    used. <CodeGenerator.html#tail-call-optimization>`_ This calling
-    convention does not support varargs and requires the prototype of all
-    callees to exactly match the prototype of the function definition.
+    specified ABI (Application Binary Interface). Targets may use different
+    implementations according to different features. In this case, a
+    TTI interface ``useFastCCForInternalCall`` must return false when
+    any caller functions and the callee belong to different implementations.
+    `Tail calls can only be optimized when this, the tailcc, the GHC or the
+    HiPE convention is used. <CodeGenerator.html#tail-call-optimization>`_
+    This calling convention does not support varargs and requires the prototype
+    of all callees to exactly match the prototype of the function definition.
 "``coldcc``" - The cold calling convention
     This calling convention attempts to make code in the caller as
     efficient as possible under the assumption that the call is not
@@ -3231,6 +3234,24 @@ A "convergencectrl" operand bundle is only valid on a ``convergent`` operation.
 When present, the operand bundle must contain exactly one value of token type.
 See the :doc:`ConvergentOperations` document for details.
 
+.. _deactivationsymbol:
+
+Deactivation Symbol Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A ``"deactivation-symbol"`` operand bundle is valid on the following
+instructions (AArch64 only):
+
+- Call to a normal function with ``notail`` attribute and a first argument and
+  return value of type ``ptr``.
+- Call to ``llvm.ptrauth.sign`` or ``llvm.ptrauth.auth`` intrinsics.
+
+This operand bundle specifies that if the deactivation symbol is defined
+to a valid value for the target, the marked instruction will return the
+value of its first argument instead of calling the specified function
+or intrinsic. This is achieved with ``PATCHINST`` relocations on the
+target instructions (see the AArch64 psABI for details).
+
 .. _moduleasm:
 
 Module-Level Inline Assembly
@@ -5281,7 +5302,7 @@ need to refer to the actual function body.
 Pointer Authentication Constants
 --------------------------------
 
-``ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC]?]?)``
+``ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC[, ptr DS]?]?]?)``
 
 A '``ptrauth``' constant represents a pointer with a cryptographic
 authentication signature embedded into some bits, as described in the
@@ -5309,6 +5330,11 @@ Otherwise, the expression is equivalent to:
     %tmp1 = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr ADDRDISC to i64), i64 DISC)
     %tmp2 = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr CST to i64), i32 KEY, i64 %tmp1)
     %val = inttoptr i64 %tmp2 to ptr
+
+If the deactivation symbol operand ``DS`` has a non-null value,
+the semantics are as if a :ref:`deactivation-symbol operand bundle
+<deactivationsymbol>` were added to the ``llvm.ptrauth.sign`` intrinsic
+calls above, with ``DS`` as the only operand.
 
 .. _constantexprs:
 
@@ -8059,6 +8085,21 @@ pass should record the new estimates by calling
 ``llvm.loop.estimated_trip_count`` metadata.  Once this metadata is present on a
 loop, ``llvm::getLoopEstimatedTripCount`` returns its value instead of
 estimating the trip count from the loop's ``branch_weights`` metadata.
+
+Zero
+""""
+
+Some passes set ``llvm.loop.estimated_trip_count`` to 0.  For example, after
+peeling 10 or more iterations from a loop with an estimated trip count of 10,
+``llvm.loop.estimated_trip_count`` becomes 0 on the remaining loop.  It
+indicates that, each time execution reaches the peeled iterations, execution is
+estimated to exit them without reaching the remaining loop's header.
+
+Even if the probability of reaching a loop's header is low, if it is reached, it
+is the start of an iteration.  Consequently, some passes historically assume
+that ``llvm::getLoopEstimatedTripCount`` always returns a positive count or
+``std::nullopt``.  Thus, it returns ``std::nullopt`` when
+``llvm.loop.estimated_trip_count`` is 0.
 
 '``llvm.licm.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -31680,3 +31721,55 @@ Semantics:
 
 The '``llvm.preserve.struct.access.index``' intrinsic produces the same result
 as a getelementptr with base ``base`` and access operands ``{0, gep_index}``.
+
+'``llvm.protected.field.ptr``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare ptr @llvm.protected.field.ptr(ptr ptr, i64 disc, i1 use_hw_encoding)
+
+Overview:
+"""""""""
+
+The '``llvm.protected.field.ptr``' intrinsic returns a pointer to the
+storage location of a pointer that has special properties as described
+below.
+
+Arguments:
+""""""""""
+
+The first argument is the pointer specifying the location to store the
+pointer. The second argument is the discriminator, which is used as an
+input for the pointer encoding. The third argument specifies whether to
+use a target-specific mechanism to encode the pointer.
+
+Semantics:
+""""""""""
+
+This intrinsic returns a pointer which may be used to store a
+pointer at the specified address that is encoded using the specified
+discriminator. Stores via the pointer will cause the stored pointer to be
+blended with the second argument before being stored. The blend operation
+shall be either a weak but cheap and target-independent operation (if
+the third argument is 0) or a stronger target-specific operation (if the
+third argument is 1). When loading from the pointer, the inverse operation
+is done on the loaded pointer after it is loaded. Specifically, when the
+third argument is 1, the pointer is signed (using pointer authentication
+instructions or emulated PAC if not supported by the hardware) using
+the discriminator before being stored, and authenticated after being
+loaded. Note that it is currently unsupported to have the third argument
+be 1 on targets other than AArch64, and it is also currently unsupported
+to have the third argument be 0 at all.
+
+If the pointer is used other than for loading or storing (e.g. its
+address escapes), that will disable all blending operations using
+the deactivation symbol specified in the intrinsic's operand bundle.
+The deactivation symbol operand bundle is copied onto any sign and auth
+intrinsics that this intrinsic is lowered into. The intent is that the
+deactivation symbol represents a field identifier.
+
+This intrinsic is used to implement structure protection.

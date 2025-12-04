@@ -190,6 +190,9 @@ private:
     case DbgVariableRecord::LocationType::Declare:
       *OS << "declare";
       break;
+    case DbgVariableRecord::LocationType::DeclareValue:
+      *OS << "declare_value";
+      break;
     case DbgVariableRecord::LocationType::Assign:
       *OS << "assign";
       break;
@@ -1184,13 +1187,17 @@ void Verifier::visitDISubrangeType(const DISubrangeType &N) {
   CheckDI(!BaseType || isType(BaseType), "BaseType must be a type");
   auto *LBound = N.getRawLowerBound();
   CheckDI(!LBound || isa<ConstantAsMetadata>(LBound) ||
-              isa<DIVariable>(LBound) || isa<DIExpression>(LBound),
-          "LowerBound must be signed constant or DIVariable or DIExpression",
+              isa<DIVariable>(LBound) || isa<DIExpression>(LBound) ||
+              isa<DIDerivedType>(LBound),
+          "LowerBound must be signed constant or DIVariable or DIExpression or "
+          "DIDerivedType",
           &N);
   auto *UBound = N.getRawUpperBound();
   CheckDI(!UBound || isa<ConstantAsMetadata>(UBound) ||
-              isa<DIVariable>(UBound) || isa<DIExpression>(UBound),
-          "UpperBound must be signed constant or DIVariable or DIExpression",
+              isa<DIVariable>(UBound) || isa<DIExpression>(UBound) ||
+              isa<DIDerivedType>(UBound),
+          "UpperBound must be signed constant or DIVariable or DIExpression or "
+          "DIDerivedType",
           &N);
   auto *Stride = N.getRawStride();
   CheckDI(!Stride || isa<ConstantAsMetadata>(Stride) ||
@@ -2729,6 +2736,14 @@ void Verifier::visitConstantPtrAuth(const ConstantPtrAuth *CPA) {
 
   Check(CPA->getDiscriminator()->getBitWidth() == 64,
         "signed ptrauth constant discriminator must be i64 constant integer");
+
+  Check(CPA->getDeactivationSymbol()->getType()->isPointerTy(),
+        "signed ptrauth constant deactivation symbol must be a pointer");
+
+  Check(isa<GlobalValue>(CPA->getDeactivationSymbol()) ||
+            CPA->getDeactivationSymbol()->isNullValue(),
+        "signed ptrauth constant deactivation symbol must be a global value "
+        "or null");
 }
 
 bool Verifier::verifyAttributeCount(AttributeList Attrs, unsigned Params) {
@@ -7083,6 +7098,7 @@ void Verifier::visit(DbgVariableRecord &DVR) {
 
   CheckDI(DVR.getType() == DbgVariableRecord::LocationType::Value ||
               DVR.getType() == DbgVariableRecord::LocationType::Declare ||
+              DVR.getType() == DbgVariableRecord::LocationType::DeclareValue ||
               DVR.getType() == DbgVariableRecord::LocationType::Assign,
           "invalid #dbg record type", &DVR, DVR.getType(), BB, F);
 

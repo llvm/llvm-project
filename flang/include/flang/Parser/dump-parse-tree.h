@@ -14,9 +14,11 @@
 #include "parse-tree.h"
 #include "tools.h"
 #include "unparse.h"
+#include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
@@ -35,6 +37,19 @@ public:
       : out_(out), asFortran_{asFortran} {}
 
   static constexpr const char *GetNodeName(const char *) { return "char *"; }
+
+  template <typename T, typename E, size_t B>
+  static std::string GetMemberNames(const common::EnumSet<E, B> &x) {
+    llvm::ListSeparator sep;
+    std::string s;
+    llvm::raw_string_ostream stream(s);
+    x.IterateOverMembers([&](E e) { stream << sep << T::EnumToString(e); });
+    return stream.str();
+  }
+#define NODE_ENUMSET(T, S) \
+  static std::string GetNodeName(const T::S &x) { \
+    return #S " = {"s + GetMemberNames<T>(x) + "}"s; \
+  }
 #define NODE_NAME(T, N) \
   static constexpr const char *GetNodeName(const T &) { return N; }
 #define NODE_ENUM(T, E) \
@@ -214,6 +229,8 @@ public:
   NODE(CompilerDirective, NoInline)
   NODE(CompilerDirective, Unrecognized)
   NODE(CompilerDirective, VectorAlways)
+  NODE_ENUM(CompilerDirective::VectorLength, VectorLength::Kind)
+  NODE(CompilerDirective, VectorLength)
   NODE(CompilerDirective, Unroll)
   NODE(CompilerDirective, UnrollAndJam)
   NODE(CompilerDirective, NoVector)
@@ -572,7 +589,8 @@ public:
   NODE_ENUM(OmpDeviceTypeClause, DeviceTypeDescription)
   NODE(parser, OmpDirectiveName)
   NODE(parser, OmpDirectiveSpecification)
-  NODE_ENUM(OmpDirectiveSpecification, Flags)
+  NODE_ENUM(OmpDirectiveSpecification, Flag)
+  NODE_ENUMSET(OmpDirectiveSpecification, Flags)
   NODE(parser, OmpDoacross)
   NODE(OmpDoacross, Sink)
   NODE(OmpDoacross, Source)
@@ -627,7 +645,7 @@ public:
   NODE_ENUM(OmpLinearModifier, Value)
   NODE(parser, OmpLocator)
   NODE(parser, OmpLocatorList)
-  NODE(parser, OmpLoopRangeClause)
+  NODE(parser, OmpLooprangeClause)
   NODE(parser, OmpMapClause)
   NODE(OmpMapClause, Modifier)
   NODE(parser, OmpMapper)
@@ -755,7 +773,9 @@ public:
   NODE(parser, OpenMPDispatchConstruct)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPGroupprivate)
+  NODE(parser, OpenMPInvalidDirective)
   NODE(parser, OpenMPLoopConstruct)
+  NODE(parser, OpenMPMisplacedEndDirective)
   NODE(parser, OpenMPRequiresConstruct)
   NODE(parser, OpenMPSectionConstruct)
   NODE(parser, OpenMPSectionsConstruct)
