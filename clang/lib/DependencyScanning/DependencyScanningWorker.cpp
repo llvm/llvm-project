@@ -74,10 +74,9 @@ bool DependencyScanningWorker::scanDependencies(
       Consumer.handleBuildCommand({Cmd.front(), {Cmd.begin() + 1, Cmd.end()}});
       return true;
     }
-    // Create an invocation that uses the underlying file
-    // system to ensure that any file system requests that
-    // are made by the driver do not go through the
-    // dependency scanning filesystem.
+    // Create an invocation that uses the underlying file system to ensure that
+    // any file system requests that are made by the driver do not go through
+    // the dependency scanning filesystem.
     return createAndRunToolInvocation(Cmd, Action, FS, PCHContainerOps, Diags);
   });
 
