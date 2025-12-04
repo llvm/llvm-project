@@ -662,9 +662,10 @@ VariableDescription::VariableDescription(
 }
 
 std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
-  // In repl context, the results can be displayed as multiple lines so more
-  // detailed descriptions can be returned.
-  if (context != protocol::eEvaluateContextRepl)
+  // In repl and clipboard contexts, the results can be displayed as multiple
+  // lines so more detailed descriptions can be returned.
+  if (context != protocol::eEvaluateContextRepl &&
+      context != protocol::eEvaluateContextClipboard)
     return display_value;
 
   if (!val.IsValid())
@@ -673,7 +674,7 @@ std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
   // Try the SBValue::GetDescription(), which may call into language runtime
   // specific formatters (see ValueObjectPrinter).
   lldb::SBStream stream;
-  val.GetDescription(stream);
+  val.GetDescription(stream, context == protocol::eEvaluateContextClipboard);
   llvm::StringRef description = stream.GetData();
   return description.trim().str();
 }

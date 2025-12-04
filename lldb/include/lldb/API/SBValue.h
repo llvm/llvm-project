@@ -318,7 +318,7 @@ public:
 
   lldb::SBValue Persist();
 
-  bool GetDescription(lldb::SBStream &description);
+  bool GetDescription(lldb::SBStream &description, bool short_mode = false);
 
   bool GetExpressionPath(lldb::SBStream &description);
 

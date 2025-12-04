@@ -81,6 +81,9 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
     def isResultExpandedDescription(self):
         return self.context == "repl"
 
+    def isResultShortDescription(self):
+        return self.context == "clipboard"
+
     def isExpressionParsedExpected(self):
         return self.context != "hover"
 
@@ -165,6 +168,25 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
                 want_type="my_struct *",
                 want_varref=True,
             )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "struct1",
+                "(foo = 15)",
+                want_type="my_struct",
+                want_varref=True,
+            )
+            self.assertEvaluate(
+                "struct2",
+                r"0x.*",
+                want_type="my_struct *",
+                want_varref=True,
+            )
+            self.assertEvaluate(
+                "struct3",
+                "nullptr",
+                want_type="my_struct *",
+                want_varref=True,
+            )
         else:
             self.assertEvaluate(
                 "struct1",
@@ -233,6 +255,13 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             self.assertEvaluate(
                 "struct1",
                 r"\(my_struct\) (struct1|\$\d+) = \(foo = 15\)",
+                want_type="my_struct",
+                want_varref=True,
+            )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "struct1",
+                "(foo = 15)",
                 want_type="my_struct",
                 want_varref=True,
             )
@@ -354,4 +383,11 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         # Tests expression evaluations that are triggered in the variable explorer
         self.run_test_evaluate_expressions(
             "variables", enableAutoVariableSummaries=True
+        )
+
+    @skipIfWindows
+    def test_variable_evaluate_expressions(self):
+        # Tests expression evaluations that are triggered when value copied in editor
+        self.run_test_evaluate_expressions(
+            "clipboard", enableAutoVariableSummaries=False
         )

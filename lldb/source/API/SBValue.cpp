@@ -1259,7 +1259,7 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
   return result;
 }
 
-bool SBValue::GetDescription(SBStream &description) {
+bool SBValue::GetDescription(SBStream &description, bool short_mode) {
   LLDB_INSTRUMENT_VA(this, description);
 
   Stream &strm = description.ref();
@@ -1270,6 +1270,11 @@ bool SBValue::GetDescription(SBStream &description) {
     DumpValueObjectOptions options;
     options.SetUseDynamicType(m_opaque_sp->GetUseDynamic());
     options.SetUseSyntheticValue(m_opaque_sp->GetUseSynthetic());
+    if (short_mode) {
+      options.SetAllowOnelinerMode(true);
+      options.SetHideRootName(true);
+      options.SetHideRootType(true);
+    }
     if (llvm::Error error = value_sp->Dump(strm, options)) {
       strm << "error: " << toString(std::move(error));
       return false;
