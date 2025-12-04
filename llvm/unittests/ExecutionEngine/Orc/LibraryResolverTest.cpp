@@ -619,7 +619,7 @@ TEST_F(LibraryResolverIT, ResolveFromUsrOrSystemPaths) {
   auto LibPathCache = std::make_shared<LibraryPathCache>();
   auto PResolver = std::make_shared<PathResolver>(LibPathCache);
 
-  DylibPathValidator validator(*PResolver);
+  DylibPathValidator validator(*PResolver, *LibPathCache);
 
   std::vector<std::string> Paths = {"/foo/bar/", "temp/foo",  libdir("C"),
                                     libdir("A"), libdir("B"), libdir("Z")};
@@ -671,7 +671,7 @@ TEST_F(LibraryResolverIT, ResolveViaLoaderPathAndRPathSubstitution) {
   auto LibPathCache = std::make_shared<LibraryPathCache>();
   auto PResolver = std::make_shared<PathResolver>(LibPathCache);
 
-  DylibPathValidator validator(*PResolver);
+  DylibPathValidator validator(*PResolver, *LibPathCache);
 
   std::vector<std::string> Paths = {"@loader_path/../A", "@loader_path/../B",
                                     "@loader_path/../C", "@loader_path/../Z"};
@@ -715,9 +715,9 @@ TEST_F(LibraryResolverIT, ResolveViaLoaderPathAndRPathSubstitution) {
 #if defined(__linux__)
 TEST_F(LibraryResolverIT, ResolveViaOriginAndRPathSubstitution) {
   auto LibPathCache = std::make_shared<LibraryPathCache>();
-  auto PResolver = std::make_shared<PathResolver>(LibPathCache);
+  auto PResolver = std::make_shared<PathResolver>(LibPathCach);
 
-  DylibPathValidator validator(*PResolver);
+  DylibPathValidator validator(*PResolver, *LibPathCache);
 
   // On Linux, $ORIGIN works like @loader_path
   std::vector<std::string> Paths = {"$ORIGIN/../A", "$ORIGIN/../B",

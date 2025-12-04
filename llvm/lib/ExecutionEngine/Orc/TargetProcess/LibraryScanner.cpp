@@ -49,113 +49,116 @@ void handleError(Error Err, StringRef context = "") {
   }));
 }
 
+static std::string getHostFileFormatName() {
+  static const std::string HostFormat = []() -> std::string {
+    auto ObjOrErr = object::ObjectFile::createObjectFile(
+        sys::fs::getMainExecutable(nullptr, nullptr));
+
+    if (!ObjOrErr) {
+      return "Unknown";
+    }
+
+    return (*ObjOrErr).getBinary()->getFileFormatName().str();
+  }();
+
+  return HostFormat;
+}
+
 bool ObjectFileLoader::isArchitectureCompatible(const object::ObjectFile &Obj) {
-  Triple HostTriple(sys::getProcessTriple());
-  Triple ObjTriple = Obj.makeTriple();
-
-  LLVM_DEBUG({
-    dbgs() << "Host triple: " << HostTriple.str()
-           << ", Object triple: " << ObjTriple.str() << "\n";
-  });
-
-  if (ObjTriple.getArch() != Triple::UnknownArch &&
-      HostTriple.getArch() != ObjTriple.getArch())
-    return false;
-
-  if (ObjTriple.getOS() != Triple::UnknownOS &&
-      HostTriple.getOS() != ObjTriple.getOS())
-    return false;
-
-  if (ObjTriple.getEnvironment() != Triple::UnknownEnvironment &&
-      HostTriple.getEnvironment() != Triple::UnknownEnvironment &&
-      HostTriple.getEnvironment() != ObjTriple.getEnvironment())
-    return false;
-
-  return true;
+  return  Obj.getFileFormatName() == getHostFileFormatName();
 }
 
 Expected<object::OwningBinary<object::ObjectFile>>
 ObjectFileLoader::loadObjectFileWithOwnership(StringRef FilePath) {
   LLVM_DEBUG(dbgs() << "ObjectFileLoader: Attempting to open file " << FilePath
                     << "\n";);
-  auto BinOrErr = object::createBinary(FilePath);
-  if (!BinOrErr) {
+  if (auto ObjOrErr =
+          object::ObjectFile::createObjectFile(FilePath)) {
+
+    LLVM_DEBUG(dbgs() << "ObjectFileLoader: Detected object file\n";);
+
+    auto OwningBin = std::move(*ObjOrErr);
+
+    if (!isArchitectureCompatible(*OwningBin.getBinary())) {
+      LLVM_DEBUG(dbgs() << "ObjectFileLoader: Incompatible architecture: "
+                        << FilePath << "\n";);
+      return createStringError(inconvertibleErrorCode(),
+                               "Incompatible object file: %s",
+                               FilePath.str().c_str());
+    }
+
+    LLVM_DEBUG(dbgs() << "ObjectFileLoader: Object file is compatible\n";);
+
+    return std::move(OwningBin);
+  } else {
+#if defined(__APPLE__)
+    consumeError(ObjOrErr.takeError());
+    auto BinOrErr = object::createBinary(FilePath);
+    if (!BinOrErr) {
+      LLVM_DEBUG(dbgs() << "ObjectFileLoader: Failed to open file " << FilePath
+                        << "\n";);
+      return BinOrErr.takeError();
+    }
+
+    LLVM_DEBUG(dbgs() << "ObjectFileLoader: Successfully opened file "
+                      << FilePath << "\n";);
+
+    auto OwningBin = BinOrErr->takeBinary();
+    object::Binary *Bin = OwningBin.first.get();
+
+    if (Bin->isArchive()) {
+      LLVM_DEBUG(
+          dbgs() << "ObjectFileLoader: File is an archive, not supported: "
+                 << FilePath << "\n";);
+      return createStringError(std::errc::invalid_argument,
+                               "Archive files are not supported: %s",
+                               FilePath.str().c_str());
+    }
+
+    if (auto *UB = dyn_cast<object::MachOUniversalBinary>(Bin)) {
+      LLVM_DEBUG(
+          dbgs() << "ObjectFileLoader: Detected Mach-O universal binary: "
+                 << FilePath << "\n";);
+      for (auto ObjForArch : UB->objects()) {
+        auto ObjOrErr = ObjForArch.getAsObjectFile();
+        if (!ObjOrErr) {
+          LLVM_DEBUG(dbgs() << "ObjectFileLoader: Skipping invalid "
+                               "architecture slice\n";);
+
+          consumeError(ObjOrErr.takeError());
+          continue;
+        }
+
+        std::unique_ptr<object::ObjectFile> Obj = std::move(ObjOrErr.get());
+        if (isArchitectureCompatible(*Obj)) {
+          LLVM_DEBUG(
+              dbgs() << "ObjectFileLoader: Found compatible object slice\n";);
+
+          return object::OwningBinary<object::ObjectFile>(
+              std::move(Obj), std::move(OwningBin.second));
+
+        } else {
+          LLVM_DEBUG(dbgs() << "ObjectFileLoader: Incompatible architecture "
+                               "slice skipped\n";);
+        }
+      }
+      LLVM_DEBUG(dbgs() << "ObjectFileLoader: No compatible slices found in "
+                           "universal binary\n";);
+      return createStringError(inconvertibleErrorCode(),
+                               "No compatible object found in fat binary: %s",
+                               FilePath.str().c_str());
+    }
+    return ObjOrErr.takeError();
+#else
     LLVM_DEBUG(dbgs() << "ObjectFileLoader: Failed to open file " << FilePath
                       << "\n";);
-    return BinOrErr.takeError();
-  }
-
-  LLVM_DEBUG(dbgs() << "ObjectFileLoader: Successfully opened file " << FilePath
-                    << "\n";);
-
-  auto OwningBin = BinOrErr->takeBinary();
-  object::Binary *Bin = OwningBin.first.get();
-
-  if (Bin->isArchive()) {
-    LLVM_DEBUG(dbgs() << "ObjectFileLoader: File is an archive, not supported: "
-                      << FilePath << "\n";);
-    return createStringError(std::errc::invalid_argument,
-                             "Archive files are not supported: %s",
-                             FilePath.str().c_str());
-  }
-
-#if defined(__APPLE__)
-  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(Bin)) {
-    LLVM_DEBUG(dbgs() << "ObjectFileLoader: Detected Mach-O universal binary: "
-                      << FilePath << "\n";);
-    for (auto ObjForArch : UB->objects()) {
-      auto ObjOrErr = ObjForArch.getAsObjectFile();
-      if (!ObjOrErr) {
-        LLVM_DEBUG(
-            dbgs()
-                << "ObjectFileLoader: Skipping invalid architecture slice\n";);
-
-        consumeError(ObjOrErr.takeError());
-        continue;
-      }
-
-      std::unique_ptr<object::ObjectFile> Obj = std::move(ObjOrErr.get());
-      if (isArchitectureCompatible(*Obj)) {
-        LLVM_DEBUG(
-            dbgs() << "ObjectFileLoader: Found compatible object slice\n";);
-
-        return object::OwningBinary<object::ObjectFile>(
-            std::move(Obj), std::move(OwningBin.second));
-
-      } else {
-        LLVM_DEBUG(dbgs() << "ObjectFileLoader: Incompatible architecture "
-                             "slice skipped\n";);
-      }
-    }
-    LLVM_DEBUG(dbgs() << "ObjectFileLoader: No compatible slices found in "
-                         "universal binary\n";);
-    return createStringError(inconvertibleErrorCode(),
-                             "No compatible object found in fat binary: %s",
-                             FilePath.str().c_str());
-  }
-#endif
-
-  auto ObjOrErr =
-      object::ObjectFile::createObjectFile(Bin->getMemoryBufferRef());
-  if (!ObjOrErr) {
-    LLVM_DEBUG(dbgs() << "ObjectFileLoader: Failed to create object file\n";);
     return ObjOrErr.takeError();
-  }
-  LLVM_DEBUG(dbgs() << "ObjectFileLoader: Detected object file\n";);
-
-  std::unique_ptr<object::ObjectFile> Obj = std::move(*ObjOrErr);
-  if (!isArchitectureCompatible(*Obj)) {
-    LLVM_DEBUG(dbgs() << "ObjectFileLoader: Incompatible architecture: "
-                      << FilePath << "\n";);
-    return createStringError(inconvertibleErrorCode(),
-                             "Incompatible object file: %s",
-                             FilePath.str().c_str());
+#endif
   }
 
-  LLVM_DEBUG(dbgs() << "ObjectFileLoader: Object file is compatible\n";);
-
-  return object::OwningBinary<object::ObjectFile>(std::move(Obj),
-                                                  std::move(OwningBin.second));
+  return createStringError(inconvertibleErrorCode(),
+                          "Not a compatible object file : %s",
+                          FilePath.str().c_str());
 }
 
 template <class ELFT>
@@ -271,6 +274,7 @@ bool DylibPathValidator::isSharedLibrary(StringRef Path) {
       consumeError(ObjOrErr.takeError());
       return false;
     }
+
     return isSharedLibraryObject(ObjOrErr.get());
   }
 
@@ -957,7 +961,7 @@ Expected<LibraryDepsInfo> LibraryScanner::extractDeps(StringRef FilePath) {
                            FilePath.str().c_str());
 }
 
-bool LibraryScanner::shouldScan(StringRef FilePath) {
+bool LibraryScanner::shouldScan(StringRef FilePath, bool IsResolvingDep) {
   LLVM_DEBUG(dbgs() << "[shouldScan] Checking: " << FilePath << "\n";);
 
   LibraryPathCache &Cache = ScanHelper.getCache();
@@ -968,13 +972,13 @@ bool LibraryScanner::shouldScan(StringRef FilePath) {
   }
 
   // [2] Already tracked in LibraryManager?
-  if (LibMgr.hasLibrary(FilePath)) {
+  /*if (LibMgr.hasLibrary(FilePath)) {
     LLVM_DEBUG(dbgs() << "  -> Skipped: already tracked by LibraryManager.\n";);
     return false;
-  }
+  }*/
 
   // [3] Skip if it's not a shared library.
-  if (!DylibPathValidator::isSharedLibrary(FilePath)) {
+  if (!IsResolvingDep && !DylibPathValidator::isSharedLibrary(FilePath)) {
     LLVM_DEBUG(dbgs() << "  -> Skipped: not a shared library.\n";);
     return false;
   }
@@ -995,7 +999,7 @@ bool LibraryScanner::shouldScan(StringRef FilePath) {
 void LibraryScanner::handleLibrary(StringRef FilePath, PathType K, int level) {
   LLVM_DEBUG(dbgs() << "LibraryScanner::handleLibrary: Scanning: " << FilePath
                     << ", level=" << level << "\n";);
-  if (!shouldScan(FilePath)) {
+  if (!shouldScan(FilePath, level > 0)) {
     LLVM_DEBUG(dbgs() << "  Skipped (shouldScan returned false): " << FilePath
                       << "\n";);
     return;
@@ -1060,7 +1064,8 @@ void LibraryScanner::handleLibrary(StringRef FilePath, PathType K, int level) {
     return;
   }
 
-  DylibPathValidator Validator(ScanHelper.getPathResolver());
+  DylibPathValidator Validator(ScanHelper.getPathResolver(),
+                               ScanHelper.getCache());
   DylibResolver Resolver(Validator);
   Resolver.configure(FilePath,
                      {{Deps.rpath, SearchPathType::RPath},
@@ -1071,7 +1076,6 @@ void LibraryScanner::handleLibrary(StringRef FilePath, PathType K, int level) {
     auto DepFullOpt = Resolver.resolve(Dep);
     if (!DepFullOpt) {
       LLVM_DEBUG(dbgs() << "    Failed to resolve dep: " << Dep << "\n";);
-
       continue;
     }
     LLVM_DEBUG(dbgs() << "    Resolved dep to: " << *DepFullOpt << "\n";);
@@ -1157,5 +1161,4 @@ void LibraryScanner::scanNext(PathType K, size_t BatchSize) {
     scanBaseDir(const_cast<LibrarySearchPath *>(SP));
   }
 }
-
 } // end namespace llvm::orc
