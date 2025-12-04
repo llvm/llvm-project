@@ -1130,6 +1130,47 @@ def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait"> {
   }];
 }
 
+def NVVM_MBarrierTryWaitOp : NVVM_Op<"mbarrier.try_wait"> {
+  let summary = "MBarrier try wait on state or phase with an optional timelimit";
+  let description = [{
+    The `nvvm.mbarrier.try_wait` operation checks whether the specified
+    *mbarrier object* at `addr` has completed the given phase. Note that
+    unlike the `nvvm.mbarrier.test.wait` operation, the try_wait operation
+    is a potentially-blocking one. If the phase is not yet complete, the
+    calling thread may be suspended. A suspended thread resumes execution
+    once the phase completes or when a system-defined timeout occurs.
+    Optionally, the `ticks` operand can be used to provide a custom timeout
+    (in nanoseconds), overriding the system-defined one. The semantics of
+    this operation and its operands are otherwise similar to those of the
+    `nvvm.mbarrier.test.wait` Op.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait)
+  }];
+
+  let results = (outs I1:$res);
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
+    AnyTypeOf<[I64, I32]>:$stateOrPhase,
+    Optional<I32>:$ticks,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
+    DefaultValuedAttr<BoolAttr, "false">:$relaxed);
+
+  let assemblyFormat = "$addr `,` $stateOrPhase (`,` $ticks^)? attr-dict `:` type(operands) `->` type($res)";
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::MBarrierTryWaitOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    $res = createIntrinsicCall(builder, id, args);
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NVVM synchronization op definitions
 //===----------------------------------------------------------------------===//
