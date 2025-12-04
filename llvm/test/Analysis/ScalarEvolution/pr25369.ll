@@ -8,9 +8,9 @@ define void @hoge1(i1 %arg) {
 ;
 ; CHECK-LABEL: 'hoge1'
 ; CHECK-NEXT:  Determining loop execution counts for: @hoge1
-; CHECK-NEXT:  Loop %bb13: backedge-taken count is (-2 + (2 * undef) + %tmp7 + %tmp6)
-; CHECK-NEXT:  Loop %bb13: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %bb13: symbolic max backedge-taken count is (-2 + (2 * undef) + %tmp7 + %tmp6)
+; CHECK-NEXT:  Loop %bb13: backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %bb13: constant max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %bb13: symbolic max backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %bb13: Trip multiple is 1
 ; CHECK-NEXT:  Loop %bb4: backedge-taken count is i64 20
 ; CHECK-NEXT:  Loop %bb4: constant max backedge-taken count is i64 20
@@ -57,9 +57,9 @@ define void @hoge2(i1 %arg) {
 ;
 ; CHECK-LABEL: 'hoge2'
 ; CHECK-NEXT:  Determining loop execution counts for: @hoge2
-; CHECK-NEXT:  Loop %bb13: backedge-taken count is (-2 + (2 * undef) + %tmp7 + %tmp6)
-; CHECK-NEXT:  Loop %bb13: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %bb13: symbolic max backedge-taken count is (-2 + (2 * undef) + %tmp7 + %tmp6)
+; CHECK-NEXT:  Loop %bb13: backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %bb13: constant max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %bb13: symbolic max backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %bb13: Trip multiple is 1
 ; CHECK-NEXT:  Loop %bb4: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %bb4: Unpredictable constant max backedge-taken count.

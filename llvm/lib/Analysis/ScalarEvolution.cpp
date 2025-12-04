@@ -2537,6 +2537,11 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
   if (Folded)
     return Folded;
 
+  for (const SCEV *Op : Ops) {
+    if (match(Op, m_scev_UndefOrPoison()))
+      return Op;
+  }
+
   unsigned Idx = isa<SCEVConstant>(Ops[0]) ? 1 : 0;
 
   // Delay expensive flag strengthening until necessary.
@@ -3717,6 +3722,12 @@ ScalarEvolution::getAddRecExpr(SmallVectorImpl<const SCEV *> &Operands,
     assert(isAvailableAtLoopEntry(Op, L) &&
            "SCEVAddRecExpr operand is not available at loop entry!");
 #endif
+
+  // If the start is undef/poison, fold to undef/poison. Otherwise fold to the
+  // start value.
+  if (any_of(Operands,
+             [](const SCEV *Op) { return match(Op, m_scev_UndefOrPoison()); }))
+    return Operands[0];
 
   if (Operands.back()->isZero()) {
     Operands.pop_back();
@@ -9264,6 +9275,9 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
     std::swap(LHS, RHS);
     Pred = ICmpInst::getSwappedCmpPredicate(Pred);
   }
+
+  if (match(LHS, m_scev_UndefOrPoison()) || match(RHS, m_scev_UndefOrPoison()))
+    return getZero(LHS->getType());
 
   bool ControllingFiniteLoop = ControlsOnlyExit && loopHasNoAbnormalExits(L) &&
                                loopIsFiniteByAssumption(L);

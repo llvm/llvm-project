@@ -28,7 +28,7 @@ for.body:
   store i32 poison, ptr %arrayidx23, align 4
   %indvars.next= add i64 %indvars.iv17, -1
   %0 = trunc i64 %indvars.next to i32
-  %cmp15 = icmp ugt i32 %0, poison
+  %cmp15 = icmp ugt i32 %0, 100
   br i1 %cmp15, label %for.body, label %loopexit
 
 loopexit:

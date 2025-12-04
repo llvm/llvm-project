@@ -401,11 +401,11 @@ define void @test_04(i1 %arg) {
 ; CHECK-NEXT:    %tmp10 = sub i64 %tmp9, %tmp7
 ; CHECK-NEXT:    --> ((sext i8 %tmp8 to i64) + {-2,+,-1}<nsw><%loop2>) U: [9223372036854775682,126) S: [9223372036854775682,126) Exits: <<Unknown>> LoopDispositions: { %loop2: Variant }
 ; CHECK-NEXT:    %tmp11 = add i64 %tmp10, undef
-; CHECK-NEXT:    --> ((sext i8 %tmp8 to i64) + {(-2 + undef),+,-1}<nw><%loop2>) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Variant }
+; CHECK-NEXT:    --> undef U: full-set S: full-set Exits: undef LoopDispositions: { %loop2: Invariant }
 ; CHECK-NEXT:    %tmp13 = trunc i64 %tmp11 to i32
-; CHECK-NEXT:    --> ((sext i8 %tmp8 to i32) + {(-2 + (trunc i64 undef to i32)),+,-1}<%loop2>) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Variant }
+; CHECK-NEXT:    --> (trunc i64 undef to i32) U: full-set S: full-set Exits: (trunc i64 undef to i32) LoopDispositions: { %loop2: Invariant }
 ; CHECK-NEXT:    %tmp14 = sub i32 %tmp13, %tmp2
-; CHECK-NEXT:    --> ((sext i8 %tmp8 to i32) + {{\{\{}}(-4 + (trunc i64 undef to i32)),+,-1}<%loop1>,+,-1}<%loop2>) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Variant }
+; CHECK-NEXT:    --> {(trunc i64 undef to i32),+,-1}<%loop1> U: full-set S: full-set Exits: {(trunc i64 undef to i32),+,-1}<%loop1> LoopDispositions: { %loop2: Invariant }
 ; CHECK-NEXT:    %tmp15 = add nuw nsw i64 %tmp7, 1
 ; CHECK-NEXT:    --> {3,+,1}<nuw><nsw><%loop2> U: [3,-9223372036854775808) S: [3,-9223372036854775808) Exits: (3 smax {2,+,1}<nuw><nsw><%loop1>) LoopDispositions: { %loop2: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_04

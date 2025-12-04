@@ -42,19 +42,19 @@ define void @test_or() {
 ; CHECK-NEXT:    %indvars.iv = phi i64 [ -1, %BB ], [ -1, %0 ]
 ; CHECK-NEXT:    --> -1 U: [-1,0) S: [-1,0) Exits: -1 LoopDispositions: { %BB: Invariant }
 ; CHECK-NEXT:    %sum.01 = phi i32 [ %2, %BB ], [ undef, %0 ]
-; CHECK-NEXT:    --> {undef,+,-1}<%BB> U: full-set S: full-set Exits: 0 LoopDispositions: { %BB: Computable }
+; CHECK-NEXT:    --> undef U: full-set S: full-set Exits: undef LoopDispositions: { %BB: Invariant }
 ; CHECK-NEXT:    %1 = trunc i64 %indvars.iv to i32
 ; CHECK-NEXT:    --> -1 U: [-1,0) S: [-1,0) Exits: -1 LoopDispositions: { %BB: Invariant }
 ; CHECK-NEXT:    %2 = add nsw i32 %1, %sum.01
-; CHECK-NEXT:    --> {(-1 + undef),+,-1}<%BB> U: full-set S: full-set Exits: -1 LoopDispositions: { %BB: Computable }
+; CHECK-NEXT:    --> undef U: full-set S: full-set Exits: undef LoopDispositions: { %BB: Invariant }
 ; CHECK-NEXT:    %B3 = add i32 %1, %2
-; CHECK-NEXT:    --> {(-2 + undef),+,-1}<%BB> U: full-set S: full-set Exits: -2 LoopDispositions: { %BB: Computable }
+; CHECK-NEXT:    --> undef U: full-set S: full-set Exits: undef LoopDispositions: { %BB: Invariant }
 ; CHECK-NEXT:    %B = or i1 %C5, %C11
-; CHECK-NEXT:    --> (%C11 umax %C5) U: full-set S: full-set Exits: false LoopDispositions: { %BB: Variant }
+; CHECK-NEXT:    --> (%C11 umax %C5) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %BB: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_or
-; CHECK-NEXT:  Loop %BB: backedge-taken count is undef
-; CHECK-NEXT:  Loop %BB: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %BB: symbolic max backedge-taken count is undef
+; CHECK-NEXT:  Loop %BB: backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %BB: constant max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %BB: symbolic max backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %BB: Trip multiple is 1
 ;
   %C10 = icmp slt i1 undef, undef
