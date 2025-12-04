@@ -417,6 +417,7 @@ public:
     case LibFunc_nearbyint:    case LibFunc_nearbyintf: case LibFunc_nearbyintl:
     case LibFunc_rint:         case LibFunc_rintf:      case LibFunc_rintl:
     case LibFunc_round:        case LibFunc_roundf:     case LibFunc_roundl:
+    case LibFunc_roundeven:    case LibFunc_roundevenf: case LibFunc_roundevenl:
     case LibFunc_sin:          case LibFunc_sinf:       case LibFunc_sinl:
     case LibFunc_sinh:         case LibFunc_sinhf:      case LibFunc_sinhl:
     case LibFunc_sqrt:         case LibFunc_sqrtf:      case LibFunc_sqrtl:
