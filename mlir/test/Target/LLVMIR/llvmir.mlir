@@ -78,6 +78,9 @@ llvm.mlir.global internal @f8E8M0FNU_global_as_i8(1.0 : f8E8M0FNU) : i8
 // CHECK: @bf16_global_as_i16 = internal global i16 16320
 llvm.mlir.global internal @bf16_global_as_i16(1.5 : bf16) : i16
 
+// CHECK: @bool_global_as_i8 = internal global i8 1
+llvm.mlir.global internal @bool_global_as_i8(true) : i8
+
 // CHECK: @explicit_undef = global i32 undef
 llvm.mlir.global external @explicit_undef() : i32 {
   %0 = llvm.mlir.undef : i32
