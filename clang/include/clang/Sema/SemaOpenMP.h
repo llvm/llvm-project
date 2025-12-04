@@ -1177,7 +1177,8 @@ public:
     int NeedDevicePtrModifier = 0;
     SourceLocation NeedDevicePtrModifierLoc;
     int UseDevicePtrFallbackModifier =
-        OMPC_USE_DEVICE_PTR_FALLBACK_unknown; ///< Fallback modifier for use_device_ptr clause.
+        OMPC_USE_DEVICE_PTR_FALLBACK_unknown; ///< Fallback modifier for
+                                              ///< use_device_ptr clause.
     SourceLocation UseDevicePtrFallbackModifierLoc;
     SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
         MapTypeModifiers;
@@ -1369,7 +1370,8 @@ public:
   /// Called on well-formed 'use_device_ptr' clause.
   OMPClause *ActOnOpenMPUseDevicePtrClause(
       ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
-      OpenMPUseDevicePtrFallbackModifier FallbackModifier, SourceLocation FallbackModifierLoc);
+      OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+      SourceLocation FallbackModifierLoc);
   /// Called on well-formed 'use_device_addr' clause.
   OMPClause *ActOnOpenMPUseDeviceAddrClause(ArrayRef<Expr *> VarList,
                                             const OMPVarListLocTy &Locs);

@@ -5066,11 +5066,10 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         Data.UseDevicePtrFallbackModifier = FallbackModifier;
         Data.UseDevicePtrFallbackModifierLoc = Tok.getLocation();
         ConsumeToken();
-        if (Tok.is(tok::colon)) {
+        if (Tok.is(tok::colon))
           Data.ColonLoc = ConsumeToken();
-        } else {
+        else
           Diag(Tok, diag::err_modifier_expected_colon) << "fallback";
-        }
       }
     }
   }

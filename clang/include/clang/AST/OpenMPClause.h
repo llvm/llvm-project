@@ -8008,12 +8008,13 @@ class OMPUseDevicePtrClause final
   /// NumComponents: total number of expression components in the clause.
   /// \param FallbackModifier The fallback modifier for the clause.
   /// \param FallbackModifierLoc Location of the fallback modifier.
-  explicit OMPUseDevicePtrClause(const OMPVarListLocTy &Locs,
-                                 const OMPMappableExprListSizeTy &Sizes,
-                                 OpenMPUseDevicePtrFallbackModifier FallbackModifier,
-                                 SourceLocation FallbackModifierLoc)
+  explicit OMPUseDevicePtrClause(
+      const OMPVarListLocTy &Locs, const OMPMappableExprListSizeTy &Sizes,
+      OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+      SourceLocation FallbackModifierLoc)
       : OMPMappableExprListClause(llvm::omp::OMPC_use_device_ptr, Locs, Sizes),
-        FallbackModifier(FallbackModifier), FallbackModifierLoc(FallbackModifierLoc) {}
+        FallbackModifier(FallbackModifier),
+        FallbackModifierLoc(FallbackModifierLoc) {}
 
   /// Build an empty clause.
   ///

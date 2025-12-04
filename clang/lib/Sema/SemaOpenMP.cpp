@@ -24580,7 +24580,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPFromClause(
 
 OMPClause *SemaOpenMP::ActOnOpenMPUseDevicePtrClause(
     ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
-    OpenMPUseDevicePtrFallbackModifier FallbackModifier, SourceLocation FallbackModifierLoc) {
+    OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+    SourceLocation FallbackModifierLoc) {
   MappableVarListInfo MVLI(VarList);
   SmallVector<Expr *, 8> PrivateCopies;
   SmallVector<Expr *, 8> Inits;
@@ -24661,7 +24662,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPUseDevicePtrClause(
 
   return OMPUseDevicePtrClause::Create(
       getASTContext(), Locs, MVLI.ProcessedVarList, PrivateCopies, Inits,
-      MVLI.VarBaseDeclarations, MVLI.VarComponents, FallbackModifier, FallbackModifierLoc);
+      MVLI.VarBaseDeclarations, MVLI.VarComponents, FallbackModifier,
+      FallbackModifierLoc);
 }
 
 OMPClause *
