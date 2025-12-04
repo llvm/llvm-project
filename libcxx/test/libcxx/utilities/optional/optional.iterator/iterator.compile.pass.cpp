@@ -36,13 +36,13 @@ using Iter4 = std::optional<double>::const_iterator;
 
 static_assert(std::is_convertible_v<Iter1, Iter1>);
 static_assert(!std::is_convertible_v<Iter1, Iter2>);
-static_assert(!std::is_convertible_v<Iter1, Iter3>);
+static_assert(std::is_convertible_v<Iter1, Iter3>);
 static_assert(!std::is_convertible_v<Iter1, Iter4>);
 
 static_assert(std::is_convertible_v<Iter2, Iter2>);
 static_assert(!std::is_convertible_v<Iter2, Iter1>);
 static_assert(!std::is_convertible_v<Iter2, Iter3>);
-static_assert(!std::is_convertible_v<Iter2, Iter4>);
+static_assert(std::is_convertible_v<Iter2, Iter4>);
 
 static_assert(std::is_convertible_v<Iter3, Iter3>);
 static_assert(!std::is_convertible_v<Iter3, Iter1>);

@@ -11,7 +11,7 @@
  * __upper_bounded_iterator is an iterator that wraps an underlying iterator.
  * It stores the underlying container type to prevent mixing iterators, and allow algorithms
  * to optimize based on the underlying container type.
- * It also stores the absolute maximum amount of elements the container can have, known at compile-time.
+ * It also encodes the container's (known at compile-time) maximum amount of elements as part of the type.
  * As of writing, the only standard library containers which have this property are inplace_vector and optional.
  */
 
@@ -26,6 +26,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/is_constructible.h>
+#include <__type_traits/is_convertible.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -58,6 +59,12 @@ public:
   = default;
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __upper_bounded_iterator(_Iter __iter) : __iter_(std::move(__iter)) {}
+
+  template <typename _Iter2>
+    requires is_convertible_v<_Iter2, _Iter>
+  _LIBCPP_HIDE_FROM_ABI constexpr __upper_bounded_iterator(
+      const __upper_bounded_iterator<_Iter2, _Container, _Max_Elements>& __y)
+      : __iter_(__y.__iter_) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr _Iter __base() const noexcept(noexcept(_Iter(__iter_))) { return __iter_; }
   _LIBCPP_HIDE_FROM_ABI constexpr auto __max_elements() const noexcept { return _Max_Elements; }
