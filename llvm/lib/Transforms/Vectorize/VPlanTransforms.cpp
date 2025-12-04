@@ -942,7 +942,8 @@ static VPValue *optimizeLatchExitInductionUser(
   VPValue *Step = WideIV->getStepValue();
   Type *ScalarTy = TypeInfo.inferScalarType(WideIV);
   if (ScalarTy->isIntegerTy())
-    return B.createNaryOp(Instruction::Sub, {EndValue, Step}, {}, "ind.escape");
+    return B.createNaryOp(Instruction::Sub, {EndValue, Step},
+                          DebugLoc::getUnknown(), "ind.escape");
   if (ScalarTy->isPointerTy()) {
     Type *StepTy = TypeInfo.inferScalarType(Step);
     auto *Zero = Plan.getConstantInt(StepTy, 0);
@@ -3748,11 +3749,11 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
     if (!IncomingFromEarlyExit->isLiveIn()) {
       // Update the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
-          VPInstruction::FirstActiveLane, {CondToEarlyExit}, nullptr,
-          "first.active.lane");
+          VPInstruction::FirstActiveLane, {CondToEarlyExit},
+          DebugLoc::getUnknown(), "first.active.lane");
       IncomingFromEarlyExit = EarlyExitB.createNaryOp(
           VPInstruction::ExtractLane, {FirstActiveLane, IncomingFromEarlyExit},
-          nullptr, "early.exit.value");
+          DebugLoc::getUnknown(), "early.exit.value");
       ExitIRI->setOperand(EarlyExitIdx, IncomingFromEarlyExit);
     }
   }
@@ -4968,8 +4969,8 @@ void VPlanTransforms::updateScalarResumePhis(
            "Cannot handle loops with uncountable early exits");
     if (IsFOR)
       ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractLastElement, {ResumeFromVectorLoop}, {},
-          "vector.recur.extract");
+          VPInstruction::ExtractLastElement, {ResumeFromVectorLoop},
+          DebugLoc::getUnknown(), "vector.recur.extract");
     ResumePhiR->setName(IsFOR ? "scalar.recur.init" : "bc.merge.rdx");
     ResumePhiR->setOperand(0, ResumeFromVectorLoop);
   }

@@ -9861,8 +9861,12 @@ The '``callbr``' instruction causes control to transfer to a specified
 function, with the possibility of control flow transfer to either the
 '``fallthrough``' label or one of the '``indirect``' labels.
 
-This instruction should only be used to implement the "goto" feature of gcc
-style inline assembly. Any other usage is an error in the IR verifier.
+This instruction can currently only be used
+
+#. to implement the "goto" feature of gcc style inline assembly or
+#. to call selected intrinsics.
+
+Any other usage is an error in the IR verifier.
 
 Note that in order to support outputs along indirect edges, LLVM may need to
 split critical edges, which may require synthesizing a replacement block for
@@ -9911,7 +9915,7 @@ This instruction requires several arguments:
    indicates the function accepts a variable number of arguments, the
    extra arguments can be specified.
 #. '``fallthrough label``': the label reached when the inline assembly's
-   execution exits the bottom.
+   execution exits the bottom / the intrinsic call returns.
 #. '``indirect labels``': the labels reached when a callee transfers control
    to a location other than the '``fallthrough label``'. Label constraints
    refer to these destinations.
@@ -9929,9 +9933,12 @@ flow goes after the call.
 The output values of a '``callbr``' instruction are available both in the
 the '``fallthrough``' block, and any '``indirect``' blocks(s).
 
-The only use of this today is to implement the "goto" feature of gcc inline
-assembly where additional labels can be provided as locations for the inline
-assembly to jump to.
+The only current uses of this are:
+
+#. implement the "goto" feature of gcc inline assembly where additional
+   labels can be provided as locations for the inline assembly to jump to.
+#. support selected intrinsics which manipulate control flow and should
+   be chained to specific terminators, such as '``unreachable``'.
 
 Example:
 """"""""
@@ -9945,6 +9952,14 @@ Example:
       ; "asm goto" with output constraints.
       <result> = callbr i32 asm "", "=r,r,!i"(i32 %x)
                   to label %fallthrough [label %indirect]
+
+      ; intrinsic which should be followed by unreachable (the order of the
+      ; blocks after the callbr instruction doesn't matter)
+        callbr void @llvm.amdgcn.kill(i1 %c) to label %cont [label %kill]
+      cont:
+        ...
+      kill:
+        unreachable
 
 .. _i_resume:
 

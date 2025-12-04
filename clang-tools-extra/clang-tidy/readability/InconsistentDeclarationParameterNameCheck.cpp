@@ -107,6 +107,10 @@ findDifferingParamsInDeclaration(const FunctionDecl *ParameterSourceDeclaration,
 
   while (SourceParamIt != ParameterSourceDeclaration->param_end() &&
          OtherParamIt != OtherDeclaration->param_end()) {
+    if ((*SourceParamIt)->isParameterPack() !=
+        (*OtherParamIt)->isParameterPack())
+      break;
+
     auto SourceParamName = (*SourceParamIt)->getName();
     auto OtherParamName = (*OtherParamIt)->getName();
 
