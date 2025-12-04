@@ -2163,15 +2163,15 @@ define amdgpu_ps i48 @s_fshr_v2i24(i48 inreg %lhs.arg, i48 inreg %rhs.arg, i48 i
 ; GFX11-NEXT:    s_and_b32 s14, s4, 0xff
 ; GFX11-NEXT:    s_bfe_u32 s4, s4, 0x80010
 ; GFX11-NEXT:    v_rcp_iflag_f32_e32 v0, v0
-; GFX11-NEXT:    s_and_b32 s4, s4, 0xff
-; GFX11-NEXT:    s_and_b32 s15, s15, 0xff
-; GFX11-NEXT:    s_lshl_b32 s14, s14, 8
-; GFX11-NEXT:    s_lshl_b32 s15, s15, 16
-; GFX11-NEXT:    s_or_b32 s4, s4, s14
-; GFX11-NEXT:    s_lshr_b32 s17, s5, 8
-; GFX11-NEXT:    s_and_b32 s5, s5, 0xff
-; GFX11-NEXT:    s_or_b32 s4, s4, s15
-; GFX11-NEXT:    s_lshl_b32 s5, s5, 8
+; GFX11-NEXT:    s_lshl_b32 s15, s15, 8
+; GFX11-NEXT:    s_and_b32 s4, 0xffff, s4
+; GFX11-NEXT:    s_or_b32 s14, s14, s15
+; GFX11-NEXT:    s_lshl_b32 s4, s4, 16
+; GFX11-NEXT:    s_and_b32 s14, 0xffff, s14
+; GFX11-NEXT:    s_and_b32 s16, s5, 0xff
+; GFX11-NEXT:    s_bfe_u32 s5, s5, 0x80008
+; GFX11-NEXT:    s_or_b32 s4, s14, s4
+; GFX11-NEXT:    s_lshl_b32 s16, s16, 8
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX11-NEXT:    s_and_b32 s5, 0xffff, s5

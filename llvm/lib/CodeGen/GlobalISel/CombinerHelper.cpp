@@ -4760,7 +4760,10 @@ bool CombinerHelper::matchBitfieldExtractFromSExtInReg(
   if (ShiftImm < 0 || ShiftImm + Width > Ty.getScalarSizeInBits())
     return false;
 
-  const RegisterBank *RB = getRegBank(ShiftSrc);
+  // FIXME: Propagate RBs better!
+  const RegisterBank *RB = nullptr;
+  if (MI.getMF()->getProperties().hasRegBankSelected())
+    RB = getRegBank(ShiftSrc);
 
   MatchInfo = [=](MachineIRBuilder &B) {
     auto Cst1 = B.buildConstant(ExtractTy, ShiftImm);
@@ -4806,7 +4809,10 @@ bool CombinerHelper::matchBitfieldExtractFromAnd(MachineInstr &MI,
 
   uint64_t Width = APInt(Size, AndImm).countr_one();
 
-  const RegisterBank *RB = getRegBank(ShiftSrc);
+  // FIXME: Propagate RBs better!
+  const RegisterBank *RB = nullptr;
+  if (MI.getMF()->getProperties().hasRegBankSelected())
+    RB = getRegBank(ShiftSrc);
 
   MatchInfo = [=](MachineIRBuilder &B) {
     auto WidthCst = B.buildConstant(ExtractTy, Width);
@@ -4863,7 +4869,10 @@ bool CombinerHelper::matchBitfieldExtractFromShr(
   const int64_t Pos = ShrAmt - ShlAmt;
   const int64_t Width = Size - ShrAmt;
 
-  const RegisterBank *RB = getRegBank(ShlSrc);
+  // FIXME: Propagate RBs better!
+  const RegisterBank *RB = nullptr;
+  if (MI.getMF()->getProperties().hasRegBankSelected())
+    RB = getRegBank(ShlSrc);
 
   MatchInfo = [=](MachineIRBuilder &B) {
     auto WidthCst = B.buildConstant(ExtractTy, Width);
@@ -4928,7 +4937,10 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
   if (Opcode == TargetOpcode::G_ASHR && Width + ShrAmt == Size)
     return false;
 
-  const RegisterBank *RB = getRegBank(AndSrc);
+  // FIXME: Propagate RBs better!
+  const RegisterBank *RB = nullptr;
+  if (MI.getMF()->getProperties().hasRegBankSelected())
+    RB = getRegBank(AndSrc);
 
   MatchInfo = [=](MachineIRBuilder &B) {
     auto WidthCst = B.buildConstant(ExtractTy, Width);
