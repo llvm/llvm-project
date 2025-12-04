@@ -731,6 +731,59 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 
 // -----
 
+// Test acc.kernels with private and firstprivate operands, similar to acc.serial.
+
+acc.private.recipe @privatization_memref_10_f32 : memref<10xf32> init {
+^bb0(%arg0: memref<10xf32>):
+  %0 = memref.alloc() : memref<10xf32>
+  acc.yield %0 : memref<10xf32>
+} destroy {
+^bb0(%arg0: memref<10xf32>):
+  memref.dealloc %arg0 : memref<10xf32>
+  acc.terminator
+}
+
+acc.private.recipe @privatization_memref_10_10_f32 : memref<10x10xf32> init {
+^bb0(%arg0: memref<10x10xf32>):
+  %1 = memref.alloc() : memref<10x10xf32>
+  acc.yield %1 : memref<10x10xf32>
+} destroy {
+^bb0(%arg0: memref<10x10xf32>):
+  memref.dealloc %arg0 : memref<10x10xf32>
+  acc.terminator
+}
+
+acc.firstprivate.recipe @firstprivatization_memref_10xf32 : memref<10xf32> init {
+^bb0(%arg0: memref<10xf32>):
+  %2 = memref.alloca() : memref<10xf32>
+  acc.yield %2 : memref<10xf32>
+} copy {
+^bb0(%arg0: memref<10xf32>, %arg1: memref<10xf32>):
+  memref.copy %arg0, %arg1 : memref<10xf32> to memref<10xf32>
+  acc.terminator
+} destroy {
+^bb0(%arg0: memref<10xf32>):
+  acc.terminator
+}
+
+func.func @testkernelspriv(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+  %priv_a = acc.private varPtr(%a : memref<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
+  %priv_c = acc.private varPtr(%c : memref<10x10xf32>) recipe(@privatization_memref_10_10_f32) -> memref<10x10xf32>
+  %firstp = acc.firstprivate varPtr(%b : memref<10xf32>) varType(tensor<10xf32>) recipe(@firstprivatization_memref_10xf32) -> memref<10xf32>
+  acc.kernels firstprivate(%firstp : memref<10xf32>) private(%priv_a, %priv_c : memref<10xf32>, memref<10x10xf32>) {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @testkernelspriv(
+// CHECK: %[[PRIV_A:.*]] = acc.private varPtr(%{{.*}} : memref<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
+// CHECK: %[[PRIV_C:.*]] = acc.private varPtr(%{{.*}} : memref<10x10xf32>) recipe(@privatization_memref_10_10_f32) -> memref<10x10xf32>
+// CHECK: %[[FIRSTP:.*]] = acc.firstprivate varPtr(%{{.*}} : memref<10xf32>) varType(tensor<10xf32>) recipe(@firstprivatization_memref_10xf32) -> memref<10xf32>
+// CHECK: acc.kernels firstprivate(%[[FIRSTP]] : memref<10xf32>) private(%[[PRIV_A]], %[[PRIV_C]] : memref<10xf32>, memref<10x10xf32>) {
+// CHECK-NEXT: }
+
+// -----
+
 func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
   %ifCond = arith.constant true
 
@@ -1599,6 +1652,35 @@ func.func @acc_reduc_test(%a : memref<i64>) -> () {
 // CHECK-SAME:    %[[ARG0:.*]]: memref<i64>)
 // CHECK:         %[[REDUCTION_A:.*]] = acc.reduction varPtr(%[[ARG0]] : memref<i64>) recipe(@reduction_add_memref_i64) -> memref<i64>
 // CHECK-NEXT:    acc.serial reduction(%[[REDUCTION_A]] : memref<i64>)
+
+// -----
+
+acc.reduction.recipe @reduction_add_memref_i64 : memref<i64> reduction_operator <add> init {
+^bb0(%arg0: memref<i64>):
+  %c0_i64 = arith.constant 0 : i64
+  %alloca = memref.alloca() : memref<i64>
+  memref.store %c0_i64, %alloca[] : memref<i64>
+  acc.yield %alloca : memref<i64>
+} combiner {
+^bb0(%arg0: memref<i64>, %arg1: memref<i64>):
+  %0 = memref.load %arg0[] : memref<i64>
+  %1 = memref.load %arg1[] : memref<i64>
+  %2 = arith.addi %0, %1 : i64
+  memref.store %2, %arg0[] : memref<i64>
+  acc.yield %arg0 : memref<i64>
+}
+
+func.func @acc_kernels_reduc_test(%a : memref<i64>) -> () {
+  %reduction_a = acc.reduction varPtr(%a : memref<i64>) recipe(@reduction_add_memref_i64) -> memref<i64>
+  acc.kernels reduction(%reduction_a : memref<i64>) {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @acc_kernels_reduc_test(
+// CHECK-SAME:    %[[ARG0:.*]]: memref<i64>)
+// CHECK:         %[[REDUCTION_A:.*]] = acc.reduction varPtr(%[[ARG0]] : memref<i64>) recipe(@reduction_add_memref_i64) -> memref<i64>
+// CHECK-NEXT:    acc.kernels reduction(%[[REDUCTION_A]] : memref<i64>)
 
 // -----
 
