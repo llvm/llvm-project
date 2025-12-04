@@ -26,7 +26,7 @@
 
 // llvm-bc and llvm-ll outputs need to match regular suffixes
 // (unfortunately).
-// RUN: %clangxx %s --target=x86_64-unknown-linux-gnu --no-offload-new-driver -nocudainc -nocudalib -flto -save-temps --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda -### 2> %t
+// RUN: %clangxx %s --target=x86_64-unknown-linux-gnu --no-offload-new-driver -nocudainc -nocudalib -flto -save-temps --cuda-path=%S/Inputs/CUDA/usr/local/cuda -### 2> %t
 // RUN: FileCheck -check-prefix=CHECK-COMPILELINK-SUFFIXES < %t %s
 //
 // CHECK-COMPILELINK-SUFFIXES: "-o" "[[CPP:.*lto-host.*\.cui]]" "-x" "cuda" "{{.*}}lto.cu"
