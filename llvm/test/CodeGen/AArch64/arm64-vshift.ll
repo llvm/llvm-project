@@ -2,14 +2,7 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=0 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=1 -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:    warning: Instruction selection used fallback path for sqrshrn1s
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrn8b
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrn4h
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrn2s
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrn16b
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrn8h
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrn4s
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrun1s
+; CHECK-GI:    warning: Instruction selection used fallback path for sqrshrun1s
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrun8b
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrun4h
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrun2s
