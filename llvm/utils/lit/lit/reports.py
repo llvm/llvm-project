@@ -29,10 +29,10 @@ class Report(object):
             fd, _ = tempfile.mkstemp(
                 suffix=ext, prefix=f"{filename}.", dir=os.path.dirname(self.output_file)
             )
-            report_file = os.fdopen(fd, "w")
+            report_file = os.fdopen(fd, "w", encoding="utf-8")
         else:
             # Overwrite if the results already exist.
-            report_file = open(self.output_file, "w")
+            report_file = open(self.output_file, "w", encoding="utf-8")
 
         with report_file:
             self._write_results_to_file(tests, elapsed, report_file)

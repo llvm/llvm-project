@@ -31721,3 +31721,55 @@ Semantics:
 
 The '``llvm.preserve.struct.access.index``' intrinsic produces the same result
 as a getelementptr with base ``base`` and access operands ``{0, gep_index}``.
+
+'``llvm.protected.field.ptr``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare ptr @llvm.protected.field.ptr(ptr ptr, i64 disc, i1 use_hw_encoding)
+
+Overview:
+"""""""""
+
+The '``llvm.protected.field.ptr``' intrinsic returns a pointer to the
+storage location of a pointer that has special properties as described
+below.
+
+Arguments:
+""""""""""
+
+The first argument is the pointer specifying the location to store the
+pointer. The second argument is the discriminator, which is used as an
+input for the pointer encoding. The third argument specifies whether to
+use a target-specific mechanism to encode the pointer.
+
+Semantics:
+""""""""""
+
+This intrinsic returns a pointer which may be used to store a
+pointer at the specified address that is encoded using the specified
+discriminator. Stores via the pointer will cause the stored pointer to be
+blended with the second argument before being stored. The blend operation
+shall be either a weak but cheap and target-independent operation (if
+the third argument is 0) or a stronger target-specific operation (if the
+third argument is 1). When loading from the pointer, the inverse operation
+is done on the loaded pointer after it is loaded. Specifically, when the
+third argument is 1, the pointer is signed (using pointer authentication
+instructions or emulated PAC if not supported by the hardware) using
+the discriminator before being stored, and authenticated after being
+loaded. Note that it is currently unsupported to have the third argument
+be 1 on targets other than AArch64, and it is also currently unsupported
+to have the third argument be 0 at all.
+
+If the pointer is used other than for loading or storing (e.g. its
+address escapes), that will disable all blending operations using
+the deactivation symbol specified in the intrinsic's operand bundle.
+The deactivation symbol operand bundle is copied onto any sign and auth
+intrinsics that this intrinsic is lowered into. The intent is that the
+deactivation symbol represents a field identifier.
+
+This intrinsic is used to implement structure protection.

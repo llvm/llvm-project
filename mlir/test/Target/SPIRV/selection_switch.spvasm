@@ -1,0 +1,69 @@
+; RUN: %if spirv-tools %{ spirv-as --target-env spv1.0 %s -o - | mlir-translate --deserialize-spirv - -o - | FileCheck %s %}
+
+; This test is analogous to selection.spv but tests switch op.
+
+; CHECK:      spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+; CHECK-NEXT:   spirv.func @switch({{%.*}}: si32) "None" {
+; CHECK:          {{%.*}} = spirv.Constant 1.000000e+00 : f32
+; CHECK-NEXT:     {{%.*}} = spirv.Undef : vector<3xf32>
+; CHECK-NEXT:     {{%.*}} = spirv.CompositeInsert {{%.*}}, {{%.*}}[0 : i32] : f32 into vector<3xf32>
+; CHECK-NEXT:     spirv.Branch ^[[bb:.+]]
+; CHECK-NEXT:   ^[[bb:.+]]:
+; CHECK-NEXT:     {{%.*}} = spirv.mlir.selection -> vector<3xf32> {
+; CHECK-NEXT:     spirv.Switch {{%.*}} : si32, [
+; CHECK-NEXT:       default: ^[[bb:.+]]({{%.*}}: vector<3xf32>),
+; CHECK-NEXT:       0: ^[[bb:.+]]({{%.*}}: vector<3xf32>),
+; CHECK-NEXT:       1: ^[[bb:.+]]({{%.*}}: vector<3xf32>)
+; CHECK:          ^[[bb:.+]]({{%.*}}: vector<3xf32>):
+; CHECK:            spirv.Branch ^[[bb:.+]]({{%.*}}: vector<3xf32>)
+; CHECK-NEXT:     ^[[bb:.+]]({{%.*}}: vector<3xf32>):
+; CHECK:            spirv.Branch ^[[bb:.+]]({{%.*}}: vector<3xf32>)
+; CHECK-NEXT:     ^[[bb:.+]]({{%.*}}: vector<3xf32>):
+; CHECK-NEXT:       spirv.mlir.merge %8 : vector<3xf32>
+; CHECK-NEXT      }
+; CHECK:          spirv.Return
+; CHECK-NEXT:   }
+; CHECK:      }
+
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %switch "switch"
+               OpName %main "main"
+       %void = OpTypeVoid
+        %int = OpTypeInt 32 1
+          %1 = OpTypeFunction %void %int
+      %float = OpTypeFloat 32
+    %float_1 = OpConstant %float 1
+    %v3float = OpTypeVector %float 3
+          %9 = OpUndef %v3float
+    %float_3 = OpConstant %float 3
+    %float_4 = OpConstant %float 4
+    %float_2 = OpConstant %float 2
+         %25 = OpTypeFunction %void
+     %switch = OpFunction %void None %1
+          %5 = OpFunctionParameter %int
+          %6 = OpLabel
+               OpBranch %12
+         %12 = OpLabel
+         %11 = OpCompositeInsert %v3float %float_1 %9 0
+               OpSelectionMerge %15 None
+               OpSwitch %5 %15 0 %13 1 %14
+         %13 = OpLabel
+         %16 = OpPhi %v3float %11 %12
+         %18 = OpCompositeInsert %v3float %float_3 %16 1
+               OpBranch %15
+         %14 = OpLabel
+         %19 = OpPhi %v3float %11 %12
+         %21 = OpCompositeInsert %v3float %float_4 %19 1
+               OpBranch %15
+         %15 = OpLabel
+         %22 = OpPhi %v3float %21 %14 %18 %13 %11 %12
+         %24 = OpCompositeInsert %v3float %float_2 %22 2
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %25
+         %27 = OpLabel
+               OpReturn
+               OpFunctionEnd

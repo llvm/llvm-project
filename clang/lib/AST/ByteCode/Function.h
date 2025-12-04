@@ -312,8 +312,8 @@ private:
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().
-  void dump() const;
-  void dump(llvm::raw_ostream &OS) const;
+  void dump(CodePtr PC = {}) const;
+  void dump(llvm::raw_ostream &OS, CodePtr PC = {}) const;
 };
 
 } // namespace interp

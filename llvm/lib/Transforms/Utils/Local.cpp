@@ -3884,6 +3884,12 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   if (Op->isSwiftError())
     return false;
 
+  // Protected pointer field loads/stores should be paired with the intrinsic
+  // to avoid unnecessary address escapes.
+  if (auto *II = dyn_cast<IntrinsicInst>(Op))
+    if (II->getIntrinsicID() == Intrinsic::protected_field_ptr)
+      return false;
+
   // Cannot replace alloca argument with phi/select.
   if (I->isLifetimeStartOrEnd())
     return false;
