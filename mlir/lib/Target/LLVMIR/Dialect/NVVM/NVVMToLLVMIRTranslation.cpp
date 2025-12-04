@@ -411,6 +411,41 @@ getTcgen05StIntrinsicID(mlir::NVVM::Tcgen05LdStShape shape, uint32_t num) {
   llvm_unreachable("unhandled tcgen05.st lowering");
 }
 
+static llvm::Intrinsic::ID getFenceSyncRestrictID(NVVM::MemOrderKind order) {
+  return order == NVVM::MemOrderKind::ACQUIRE
+             ? llvm::Intrinsic::
+                   nvvm_fence_acquire_sync_restrict_space_cluster_scope_cluster
+             : llvm::Intrinsic::
+                   nvvm_fence_release_sync_restrict_space_cta_scope_cluster;
+}
+
+static llvm::Intrinsic::ID
+getFenceProxyID(NVVM::ProxyKind kind, std::optional<NVVM::SharedSpace> space) {
+  switch (kind) {
+  case NVVM::ProxyKind::alias:
+    return llvm::Intrinsic::nvvm_fence_proxy_alias;
+  case NVVM::ProxyKind::async:
+    return llvm::Intrinsic::nvvm_fence_proxy_async;
+  case NVVM::ProxyKind::async_global:
+    return llvm::Intrinsic::nvvm_fence_proxy_async_global;
+  case NVVM::ProxyKind::async_shared:
+    return *space == NVVM::SharedSpace::shared_cta
+               ? llvm::Intrinsic::nvvm_fence_proxy_async_shared_cta
+               : llvm::Intrinsic::nvvm_fence_proxy_async_shared_cluster;
+  default:
+    llvm_unreachable("unsupported proxy kind");
+  }
+}
+
+static llvm::Intrinsic::ID
+getFenceProxySyncRestrictID(NVVM::MemOrderKind order) {
+  return order == NVVM::MemOrderKind::ACQUIRE
+             ? llvm::Intrinsic::
+                   nvvm_fence_proxy_async_generic_acquire_sync_restrict_space_cluster_scope_cluster
+             : llvm::Intrinsic::
+                   nvvm_fence_proxy_async_generic_release_sync_restrict_space_cta_scope_cluster;
+}
+
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
 /// to the NVVM dialect to LLVM IR.
