@@ -1,4 +1,4 @@
-//===- bolt/Passes/MarkRAStates.cpp ---------------------------------===//
+//===- bolt/Passes/PointerAuthCFIAnalyzer.cpp -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the MarkRAStates class.
+// This file implements the PointerAuthCFIAnalyzer class.
 // Three CFIs have an influence on the RA State of an instruction:
 // - NegateRAState flips the RA State,
 // - RememberState pushes the RA State to a stack,
@@ -16,10 +16,10 @@
 // the RA State of each instruction, and save it as new MCAnnotations. The new
 // annotations are Signing, Signed, Authenticating and Unsigned. After
 // optimizations, .cfi_negate_ra_state CFIs are added to the places where the
-// state changes in InsertNegateRAStatePass.
+// state changes in PointerAuthCFIFixup.
 //
 //===----------------------------------------------------------------------===//
-#include "bolt/Passes/MarkRAStates.h"
+#include "bolt/Passes/PointerAuthCFIAnalyzer.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include <cstdlib>
@@ -31,7 +31,7 @@ using namespace llvm;
 namespace llvm {
 namespace bolt {
 
-bool MarkRAStates::runOnFunction(BinaryFunction &BF) {
+bool PointerAuthCFIAnalyzer::runOnFunction(BinaryFunction &BF) {
 
   BinaryContext &BC = BF.getBinaryContext();
 
@@ -110,7 +110,7 @@ bool MarkRAStates::runOnFunction(BinaryFunction &BF) {
   return true;
 }
 
-Error MarkRAStates::runOnFunctions(BinaryContext &BC) {
+Error PointerAuthCFIAnalyzer::runOnFunctions(BinaryContext &BC) {
   std::atomic<uint64_t> FunctionsIgnored{0};
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     if (!runOnFunction(BF)) {
@@ -132,8 +132,8 @@ Error MarkRAStates::runOnFunctions(BinaryContext &BC) {
 
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
-      SkipPredicate, "MarkRAStates");
-  BC.outs() << "BOLT-INFO: MarkRAStates ran on " << Total
+      SkipPredicate, "PointerAuthCFIAnalyzer");
+  BC.outs() << "BOLT-INFO: PointerAuthCFIAnalyzer ran on " << Total
             << " functions. Ignored " << FunctionsIgnored << " functions "
             << format("(%.2lf%%)", (100.0 * FunctionsIgnored) / Total)
             << " because of CFI inconsistencies\n";

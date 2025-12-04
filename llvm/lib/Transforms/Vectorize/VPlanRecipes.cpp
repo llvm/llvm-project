@@ -3606,10 +3606,8 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
-  // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
-  // After migrating to getMemIntrinsicInstrCost, switch this to vp_load.
   InstructionCost Cost = Ctx.TTI.getMemIntrinsicInstrCost(
-      MemIntrinsicCostAttributes(Intrinsic::masked_load, Ty, Alignment, AS),
+      MemIntrinsicCostAttributes(Intrinsic::vp_load, Ty, Alignment, AS),
       Ctx.CostKind);
   if (!Reverse)
     return Cost;
@@ -3718,10 +3716,8 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
-  // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
-  // After migrating to getMemIntrinsicInstrCost, switch this to vp_store.
   InstructionCost Cost = Ctx.TTI.getMemIntrinsicInstrCost(
-      MemIntrinsicCostAttributes(Intrinsic::masked_store, Ty, Alignment, AS),
+      MemIntrinsicCostAttributes(Intrinsic::vp_store, Ty, Alignment, AS),
       Ctx.CostKind);
   if (!Reverse)
     return Cost;

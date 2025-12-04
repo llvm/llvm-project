@@ -624,7 +624,8 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       // Record potential call targets for tail frame inference later-on.
       if (InferMissingFrames && FRange) {
         uint64_t Target = 0;
-        bool Err = MIA->evaluateBranch(Inst, Address, Size, Target);
+        [[maybe_unused]] bool Err =
+            MIA->evaluateBranch(Inst, Address, Size, Target);
         if (MCDesc.isCall()) {
           // Indirect call targets are unknown at this point. Recording the
           // unknown target (zero) for further LBR-based refinement.
@@ -1169,7 +1170,7 @@ void ProfiledBinary::loadSymbolsFromPseudoProbe() {
               InlineTreeNode->Parent);
 
         auto TopLevelProbes = InlineTreeNode->getProbes();
-        auto TopProbe = TopLevelProbes.begin();
+        [[maybe_unused]] auto TopProbe = TopLevelProbes.begin();
         assert(TopProbe != TopLevelProbes.end() &&
                TopProbe->getAddress() >= StartAddr &&
                TopProbe->getAddress() < EndAddr &&

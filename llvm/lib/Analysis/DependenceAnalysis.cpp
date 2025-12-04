@@ -2495,7 +2495,7 @@ bool DependenceInfo::testMIV(const SCEV *Src, const SCEV *Dst,
 /// returns std::nullopt. For example, given (10 * X * Y)<nsw>, it returns 10.
 /// Notably, if it doesn't have nsw, the multiplication may overflow, and if
 /// so, it may not a multiple of 10.
-static std::optional<APInt> getConstanCoefficient(const SCEV *Expr) {
+static std::optional<APInt> getConstantCoefficient(const SCEV *Expr) {
   if (const auto *Constant = dyn_cast<SCEVConstant>(Expr))
     return Constant->getAPInt();
   if (const auto *Product = dyn_cast<SCEVMulExpr>(Expr))
@@ -2527,7 +2527,7 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
   if (AddRec->getLoop() == CurLoop) {
     CurLoopCoeff = Step;
   } else {
-    std::optional<APInt> ConstCoeff = getConstanCoefficient(Step);
+    std::optional<APInt> ConstCoeff = getConstantCoefficient(Step);
 
     // If the coefficient is the product of a constant and other stuff, we can
     // use the constant in the GCD computation.
@@ -2580,7 +2580,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstanCoefficient(Coeff);
+    std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
     if (!ConstCoeff)
       return false;
     RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
@@ -2598,7 +2598,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstanCoefficient(Coeff);
+    std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
     if (!ConstCoeff)
       return false;
     RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
@@ -2656,7 +2656,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     Delta = SE->getMinusSCEV(SrcCoeff, DstCoeff);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstanCoefficient(Delta);
+    std::optional<APInt> ConstCoeff = getConstantCoefficient(Delta);
     if (!ConstCoeff)
       // The difference of the two coefficients might not be a product
       // or constant, in which case we give up on this direction.
