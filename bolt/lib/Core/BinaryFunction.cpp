@@ -1947,7 +1947,7 @@ bool BinaryFunction::validateExternalBranch(uint64_t TargetAddress) {
   return true;
 }
 
-bool BinaryFunction::validateInternalBranch() {
+bool BinaryFunction::validateInternalBranches() {
   if (!isSimple())
     return true;
 
