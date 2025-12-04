@@ -1336,7 +1336,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
   template <typename MatchContext, typename PatternHd, typename... PatternTl>
   [[nodiscard]] inline bool
   reassociatableMatchHelper(const MatchContext &Ctx,
-                            SmallVector<SDValue> &Leaves, SmallBitVector &Used,
+                            ArrayRef<SDValue> Leaves, SmallBitVector &Used,
                             PatternHd &HeadPattern,
                             PatternTl &...TailPatterns) {
     for (size_t Match = 0, N = Used.size(); Match < N; Match++) {
@@ -1353,7 +1353,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
   template <typename MatchContext>
   [[nodiscard]] inline bool
   reassociatableMatchHelper(const MatchContext &Ctx,
-                            SmallVector<SDValue> &Leaves,
+                            ArrayRef<SDValue> Leaves,
                             SmallBitVector &Used) {
     return true;
   }
