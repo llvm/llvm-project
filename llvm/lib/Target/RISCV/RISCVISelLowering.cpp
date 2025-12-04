@@ -21872,6 +21872,44 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return N->getOperand(0);
     break;
   }
+  case RISCVISD::VMERGE_VL: {
+    // vmerge_vl allones, x, y, passthru, vl -> vmv_v_v passthru, x, vl
+    SDValue Mask = N->getOperand(0);
+    SDValue True = N->getOperand(1);
+    SDValue Passthru = N->getOperand(3);
+    SDValue VL = N->getOperand(4);
+
+    // Fixed vectors are wrapped in scalable containers, unwrap them.
+    using namespace SDPatternMatch;
+    SDValue SubVec;
+    if (sd_match(Mask, m_InsertSubvector(m_Undef(), m_Value(SubVec), m_Zero())))
+      Mask = SubVec;
+
+    if (!isOneOrOneSplat(Mask))
+      break;
+
+    return DAG.getNode(RISCVISD::VMV_V_V_VL, SDLoc(N), N->getSimpleValueType(0),
+                       Passthru, True, VL);
+  }
+  case RISCVISD::VMV_V_V_VL: {
+    // vmv_v_v passthru, splat(x), vl -> vmv_v_x passthru, x, vl
+    SDValue Passthru = N->getOperand(0);
+    SDValue Src = N->getOperand(1);
+    SDValue VL = N->getOperand(2);
+
+    // Fixed vectors are wrapped in scalable containers, unwrap them.
+    using namespace SDPatternMatch;
+    SDValue SubVec;
+    if (sd_match(Src, m_InsertSubvector(m_Undef(), m_Value(SubVec), m_Zero())))
+      Src = SubVec;
+
+    SDValue SplatVal = DAG.getSplatValue(Src);
+    if (!SplatVal)
+      break;
+    MVT VT = N->getSimpleValueType(0);
+    return lowerScalarSplat(Passthru, SplatVal, VL, VT, SDLoc(N), DAG,
+                            Subtarget);
+  }
   case RISCVISD::VSLIDEDOWN_VL:
   case RISCVISD::VSLIDEUP_VL:
     if (N->getOperand(1)->isUndef())

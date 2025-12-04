@@ -3093,12 +3093,24 @@ bool IRTranslator::translateCallBr(const User &U,
 
   // Update successor info.
   addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
-  // TODO: For most of the cases where there is an intrinsic callbr, we're
-  // having exactly one indirect target, which will be unreachable. As soon as
-  // this changes, we might need to enhance
-  // Target->setIsInlineAsmBrIndirectTarget or add something similar for
-  // intrinsic indirect branches.
+
+  // Add indirect targets as successors. For intrinsic callbr, these represent
+  // implicit control flow (e.g., the "kill" path for amdgcn.kill). We mark them
+  // with setIsInlineAsmBrIndirectTarget so the machine verifier accepts them as
+  // valid successors, even though they're not from inline asm.
+  for (BasicBlock *Dest : I.getIndirectDests()) {
+    MachineBasicBlock &Target = getMBB(*Dest);
+    Target.setIsInlineAsmBrIndirectTarget();
+    Target.setLabelMustBeEmitted();
+    // Don't add duplicate machine successors.
+    if (Dests.insert(Dest).second)
+      addSuccessorWithProb(CallBrMBB, &Target, BranchProbability::getZero());
+  }
+
   CallBrMBB->normalizeSuccProbs();
+
+  // Drop into default successor.
+  MIRBuilder.buildBr(*Return);
 
   return true;
 }
