@@ -718,7 +718,7 @@ Module::LookupInfo::MakeLookupInfos(ConstString name,
       auto lang_type = lang->GetLanguageType();
       if (!llvm::is_contained(lang_types, lang_type))
         lang_types.push_back(lang_type);
-      return IterationAction::Continue;
+      return true;
     });
 
     if (lang_types.empty())
