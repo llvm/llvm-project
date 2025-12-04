@@ -1335,7 +1335,7 @@ def AMDGPU_MakeDmaDescriptorOp :
      2D and 3D tensors may be iterated over by setting $global_increment, $lds_increment, and $iteration_count.
      $global_increment determines how much to increment the starting global memory address per iteration in units of the $base's element type.
      $lds_increment determines how much to increment the starting LDS address per iteration in units of the $base's element type.
-     $iterate_count determines how many times to iterate.
+     $iterate_count determines how many times to iterate, it must be a value in the inclusive interval [1, 256].
 
      ```mlir
       // Example of moving a two-dimensional tensor to LDS.
