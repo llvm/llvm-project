@@ -2748,8 +2748,8 @@ void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
 
   unsigned version{context_.langOptions().OpenMPVersion};
   if (version >= 52) {
-    using Flags = parser::OmpDirectiveSpecification::Flags;
-    if (std::get<Flags>(x.v.t) == Flags::DeprecatedSyntax) {
+    auto &flags{std::get<parser::OmpDirectiveSpecification::Flags>(x.v.t)};
+    if (flags.test(parser::OmpDirectiveSpecification::Flag::DeprecatedSyntax)) {
       context_.Say(x.source,
           "The syntax \"FLUSH clause (object, ...)\" has been deprecated, use \"FLUSH(object, ...) clause\" instead"_warn_en_US);
     }
@@ -3391,21 +3391,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
       }
     }
   }
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Sizes &c) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_sizes);
-  for (const parser::Cosubscript &v : c.v)
-    RequiresPositiveParameter(llvm::omp::Clause::OMPC_sizes, v,
-        /*paramName=*/"parameter", /*allowZero=*/false);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_looprange);
-  auto &first = std::get<0>(x.v.t);
-  auto &count = std::get<1>(x.v.t);
-  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, count);
-  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, first);
 }
 
 // Restrictions specific to each clause are implemented apart from the
