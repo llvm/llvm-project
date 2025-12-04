@@ -1064,7 +1064,7 @@ public:
                  const ObjCContainerDecl *CD = nullptr) override;
 
   DirectMethodInfo &GenerateDirectMethod(const ObjCMethodDecl *OMD,
-                                       const ObjCContainerDecl *CD);
+                                         const ObjCContainerDecl *CD);
 
   /// Generate class realization code: [self self]
   /// This is used for class methods to ensure the class is initialized.
@@ -3928,7 +3928,8 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
 
     Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
                                 Name, &CGM.getModule());
-    auto [It, inserted] = DirectMethodDefinitions.insert(std::make_pair(COMD, DirectMethodInfo(Fn)));
+    auto [It, inserted] = DirectMethodDefinitions.insert(
+        std::make_pair(COMD, DirectMethodInfo(Fn)));
     I = It;
   }
 
@@ -4036,7 +4037,7 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
   if (!CGM.shouldExposeSymbol(OMD)) {
     GenerateDirectMethodsPreconditionCheck(CGF, Fn, OMD, CD);
   }
-  
+
   auto &Builder = CGF.Builder;
   // Only synthesize _cmd if it's referenced
   // This is the actual "prologue" work that always happens
