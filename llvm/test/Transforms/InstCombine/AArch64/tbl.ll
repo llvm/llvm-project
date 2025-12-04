@@ -213,10 +213,10 @@ define <8 x i16> @tbl1_8x16(<16 x i8> %vec) {
 ; CHECK-NEXT:    ret <8 x i16> [[TBL1]]
 ;
 entry:
+  ; `tbl1.v8i16` is not really a thing, but it's good to check.
   %tbl1 = call <8 x i16> @llvm.aarch64.neon.tbl1.v8i16(<16 x i8> %vec, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
   ret <8 x i16> %tbl1
 }
-declare <8 x i16> @llvm.aarch64.neon.tbl1.v8i16(<16 x i8>, <8 x i16>)
 
 ; tbl1 with non-8/16 element count should NOT optimize.
 define <12 x i8> @tbl1_16x8(<16 x i8> %vec) {
@@ -226,10 +226,10 @@ define <12 x i8> @tbl1_16x8(<16 x i8> %vec) {
 ; CHECK-NEXT:    ret <12 x i8> [[TBL1]]
 ;
 entry:
+  ; `tbl1.v12i8` is not really a thing, but it's good to check.
   %tbl1 = call <12 x i8> @llvm.aarch64.neon.tbl1.v12i8(<16 x i8> %vec, <12 x i8> <i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
   ret <12 x i8> %tbl1
 }
-declare <12 x i8> @llvm.aarch64.neon.tbl1.v12i8(<16 x i8>, <12 x i8>)
 
 ; Non-constant mask should NOT optimize.
 define <16 x i8> @tbl1_non_constant_mask(<16 x i8> %a, <16 x i8> %mask) {
