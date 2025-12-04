@@ -7907,12 +7907,28 @@ private:
           const Expr *StrideExpr = OASE->getStride();
           if (!StrideExpr)
             return false;
+         
+          assert(StrideExpr->getType()->isIntegerType() &&
+          "Stride expression must be of integer type");
 
+          // If the stride is a variable (not a constant), it's non-contiguous.
+          const Expr *S = StrideExpr->IgnoreParenImpCasts();
+          if (const auto *DRE = dyn_cast<DeclRefExpr>(S)) {
+            if (isa<VarDecl>(DRE->getDecl()) ||
+                isa<ParmVarDecl>(DRE->getDecl()))
+              return true;
+          }
+          if (isa<MemberExpr>(S) || isa<ArraySubscriptExpr>(S))
+            return true;
+
+          // If stride is not evaluatable as a constant, treat as
+          // non-contiguous.
           const auto Constant =
               StrideExpr->getIntegerConstantExpr(CGF.getContext());
           if (!Constant)
             return false;
 
+          // Treat non-unitary strides as non-contiguous.
           return !Constant->isOne();
         });
 
