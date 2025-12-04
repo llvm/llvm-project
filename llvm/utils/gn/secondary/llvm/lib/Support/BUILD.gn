@@ -97,6 +97,7 @@ static_library("Support") {
     "FormattedStream.cpp",
     "GlobPattern.cpp",
     "GraphWriter.cpp",
+    "Hash.cpp",
     "HexagonAttributeParser.cpp",
     "HexagonAttributes.cpp",
     "InitLLVM.cpp",
