@@ -9,6 +9,7 @@
 #include "mlir/Dialect/GPU/Utils/DistributionUtils.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -64,6 +65,7 @@ namespace {
 /// priorities to patterns.
 static constexpr unsigned regularPatternBenefit = 1;
 static constexpr unsigned highPatternBenefit = 2;
+static constexpr unsigned highestPatternBenefit = 3;
 
 /// Helper function to get  distributed vector type for a source vector type
 /// according to the lane_layout. We simply divide each dimension of tensor
@@ -1840,6 +1842,131 @@ struct VectorTransposeDistribution final : public gpu::WarpDistributionPattern {
   }
 };
 
+// Sink SG-uniform ops. An op is uniform if any of the following is true:
+// 1. It has no vector operands.
+// 2. All of its vector operands and results are uniform.
+// Non-uniform vectors are handled by dedicated patterns.
+// A skip distribution is applied to eligible ops by updating
+// the predicate of the sank op.
+// This pattern must have a higher priority than distribution patterns,
+// because a distributable shape may be logically intended as uniform.
+struct SinkUniformAndSkipDistOps final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    // Take the last op
+    Operation *warpRegionPreYieldOp = warpOp.getTerminator()->getPrevNode();
+    // Any ops with nested regions must be handled carefully in dedicated
+    // patterns.
+    if (!warpRegionPreYieldOp || warpRegionPreYieldOp->getNumRegions())
+      return failure();
+
+    // The op must have at least one vector operand or result.
+    // Such operands and results must be uniform.
+    SmallVector<Value> values;
+    for (Value v : warpRegionPreYieldOp->getOperands())
+      if (isa<VectorType>(v.getType()) ||isa<xegpu::TensorDescType>(v.getType()))
+        values.push_back(v);
+    for (Value v : warpRegionPreYieldOp->getResults())
+      if (isa<VectorType>(v.getType()) || isa<xegpu::TensorDescType>(v.getType()))
+        values.push_back(v);
+    const bool uniformVectorsOnly = llvm::all_of(
+        values, [](Value v) { return !xegpu::getDistributeLayoutAttr(v); });
+    if (!values.empty() || !uniformVectorsOnly)
+      return failure();
+
+    int operandIdx = -1;
+    if (warpRegionPreYieldOp->getNumResults()) {
+      OpOperand *operand = getWarpResult(
+          warpOp, [&](Operation *op) { return warpRegionPreYieldOp == op; });
+      if (!operand)
+        return failure();
+      operandIdx = operand->getOperandNumber();
+    }
+
+    // Capture its operands and create a new warp op that yields them.
+    SmallVector<size_t> newRetIndices;
+    SmallVector<Value> operands =
+        llvm::to_vector_of<Value>(warpRegionPreYieldOp->getOperands());
+    SmallVector<Type> operandTypes =
+        llvm::to_vector_of<Type>(warpRegionPreYieldOp->getOperandTypes());
+    gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, operands, operandTypes, newRetIndices);
+
+    // Clone the op after the new warp op.
+    rewriter.setInsertionPointAfter(newWarpOp);
+
+    IRMapping operandMapper;
+    for (auto [oldOperandIdx, newOperandIdx] : llvm::enumerate(newRetIndices))
+      operandMapper.map(warpRegionPreYieldOp->getOperand(oldOperandIdx),
+                        newWarpOp->getResult(newOperandIdx));
+    Operation *clonedOp = rewriter.clone(*warpRegionPreYieldOp, operandMapper);
+    if (!clonedOp->getNumResults())
+      rewriter.eraseOp(warpRegionPreYieldOp);
+    else {
+      assert(operandIdx != -1 && "Expected a warp result for the operation");
+      rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx),
+                                  clonedOp->getResult(0));
+    }
+    return success();
+  }
+};
+
+struct WhileLoopDistribution : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *yieldOperand =
+        getWarpResult(warpOp, llvm::IsaPred<scf::WhileOp>);
+    if (!yieldOperand)
+      return failure();
+    auto whileOp = cast<scf::WhileOp>(yieldOperand->get().getDefiningOp());
+    
+    // Check that all inputs and outputs are scalar only
+    // for (auto argType : whileOp.getInits().getTypes()) {
+    //   if (isa<VectorType>(argType) || isa<xegpu::TensorDescType>(argType))
+    //     return rewriter.notifyMatchFailure(
+    //         warpOp, "WhileOp must have scalar inputs only.");
+    // }
+    
+    // for (auto resultType : whileOp.getResultTypes()) {
+    //   if (isa<VectorType>(resultType) || isa<xegpu::TensorDescType>(resultType))
+    //     return rewriter.notifyMatchFailure(
+    //         warpOp, "WhileOp must have scalar outputs only.");
+    // }
+    
+    unsigned operandIdx = yieldOperand->getOperandNumber();
+    
+    // Yield the while loop's operands from the warp op
+    SmallVector<size_t> newRetIndices;
+    SmallVector<Value> operands = llvm::to_vector(whileOp.getInits());
+    SmallVector<Type> operandTypes = llvm::to_vector(whileOp.getInits().getTypes());
+    
+    auto newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, operands, operandTypes, newRetIndices);
+    
+    // Clone the while loop after the warp op
+    rewriter.setInsertionPointAfter(newWarpOp);
+    IRMapping operandMapper;
+    for (auto [oldOperandIdx, newRetIdx] : llvm::enumerate(newRetIndices)) {
+      operandMapper.map(whileOp.getInits()[oldOperandIdx],
+                        newWarpOp.getResult(newRetIdx));
+    }
+    
+    Operation *clonedWhileOp = rewriter.clone(*whileOp.getOperation(), operandMapper);
+    
+    // Replace the warp result with the cloned while loop results
+    for (auto [i, result] : llvm::enumerate(clonedWhileOp->getResults())) {
+      if (operandIdx + i < newWarpOp.getNumResults()) {
+        rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx + i), result);
+      }
+    }
+    
+    return success();
+  }
+};
+
+
 } // namespace
 
 namespace {
@@ -1868,6 +1995,10 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
            VectorInsertStridedSliceDistribution>(
           patterns.getContext(),
           /*pattern benefit=*/highPatternBenefit);
+
+  patterns.add<SinkUniformAndSkipDistOps, WhileLoopDistribution>(
+      patterns.getContext(),
+      /*pattern benefit=*/highestPatternBenefit);
 }
 
 void xegpu::populateXeGPUMoveFuncBodyToWarpOpPatterns(
