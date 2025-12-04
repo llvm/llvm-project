@@ -10882,7 +10882,8 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
     SDValue Zero = DAG.getConstant(0, dl, VT);
     EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
     SDValue IsNonZero = DAG.getSetCC(dl, BoolVT, LHS, Zero, ISD::SETNE);
-    SDValue Subtrahend = DAG.getZExtOrTrunc(IsNonZero, dl, VT);
+    SDValue Subtrahend = DAG.getBoolExtOrTrunc(IsNonZero, dl, VT, BoolVT);
+    Subtrahend = DAG.getNode(ISD::AND, dl, VT, Subtrahend, DAG.getConstant(1, dl, VT));
     return DAG.getNode(ISD::SUB, dl, VT, LHS, Subtrahend);
   }
 
