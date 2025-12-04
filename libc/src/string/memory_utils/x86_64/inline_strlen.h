@@ -15,8 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace internal::arch_vector {
-
+namespace string_length_internal {
 // Return a bit-mask with the nth bit set if the nth-byte in block_ptr is zero.
 template <typename Vector, typename Mask>
 LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static Mask
@@ -93,18 +92,15 @@ namespace avx512 {
 }
 } // namespace avx512
 #endif
+} // namespace string_length_internal
 
-[[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
 #if defined(__AVX512F__)
-  return avx512::string_length(src);
+namespace string_length_impl = string_length_internal::avx512;
 #elif defined(__AVX2__)
-  return avx2::string_length(src);
+namespace string_length_impl = string_length_internal::avx2;
 #else
-  return sse2::string_length(src);
+namespace string_length_impl = string_length_internal::sse2;
 #endif
-}
-
-} // namespace internal::arch_vector
 
 } // namespace LIBC_NAMESPACE_DECL
 
