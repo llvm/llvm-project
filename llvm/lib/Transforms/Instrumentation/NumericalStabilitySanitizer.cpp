@@ -1514,6 +1514,9 @@ const KnownIntrinsic::LFEntry KnownIntrinsic::kLibfuncIntrinsics[] = {
     {LibFunc_roundf, "llvm.round.f32"},
     {LibFunc_round, "llvm.round.f64"},
     {LibFunc_roundl, "llvm.round.f80"},
+    {LibFunc_roundevenf, "llvm.roundeven.f32"},
+    {LibFunc_roundeven, "llvm.roundeven.f64"},
+    {LibFunc_roundevenl, "llvm.roundeven.f80"},
 };
 
 const char *KnownIntrinsic::get(LibFunc LFunc) {
