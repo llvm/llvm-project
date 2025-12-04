@@ -137,7 +137,7 @@ jobs:
               tar_arch="aarch64"
               ;;
           esac
-          release_binary_basename="LLVM-$release_version-$tar_arch-pc-windows-msvc"
+          release_binary_basename="clang+llvm-$release_version-$tar_arch-pc-windows-msvc"
         else
           release_binary_basename="LLVM-$release_version-$RUNNER_OS-$RUNNER_ARCH"
         fi
@@ -264,7 +264,7 @@ jobs:
         # Move installer to top-level directory so it is easier to upload.
         mv $installer $env:GITHUB_WORKSPACE
         mv $tarball $env:GITHUB_WORKSPACE
-        echo "windows-installer-filename=$installer" >> $env:GITHUB_OUTPUT
+        echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
 
     - name: Generate sha256 digest for binaries
       id: digest
