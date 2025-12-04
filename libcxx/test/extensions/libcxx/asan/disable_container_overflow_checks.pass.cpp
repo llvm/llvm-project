@@ -7,12 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 // XFAIL: FROZEN-CXX03-HEADERS-FIXME
-// REQUIRES: asan
 
 // Check that libc++ honors when __SANITIZER_DISABLE_CONTAINER_OVERFLOW__ is set
 // and disables the container overflow checks.
+//
+// ADDITIONAL_COMPILE_FLAGS: -fsanitize=address -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__
 
-// ADDITIONAL_COMPILE_FLAGS: -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__
+// When libc++ is build with ASAN instrumentation, we can't turn off the ASAN checks,
+// and that is diagnosed as an error.
+// UNSUPPORTED: libcpp-instrumented-with-asan
+
+// MSAN, TSAN and ASAN are mutually exclusive
+// UNSUPPORTED: msan, tsan
 
 #include <deque>
 #include <string>
