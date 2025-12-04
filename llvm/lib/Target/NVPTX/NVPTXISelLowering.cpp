@@ -6850,16 +6850,34 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
   }
 }
 
-// Combine add.sat(a, fneg(b)) -> sub.sat(a, b)
-static SDValue combineAddSatWithNeg(SDNode *N, SelectionDAG &DAG,
-                                    unsigned SubOpc) {
+static std::optional<unsigned> getF16SubOpc(Intrinsic::ID AddIntrinsicID) {
+  switch (AddIntrinsicID) {
+  default:
+    break;
+  case Intrinsic::nvvm_add_rn_sat_f16:
+  case Intrinsic::nvvm_add_rn_sat_v2f16:
+    return NVPTXISD::SUB_RN_SAT;
+  case Intrinsic::nvvm_add_rn_ftz_sat_f16:
+  case Intrinsic::nvvm_add_rn_ftz_sat_v2f16:
+    return NVPTXISD::SUB_RN_FTZ_SAT;
+  }
+  llvm_unreachable("Invalid F16 add intrinsic");
+  return std::nullopt;
+}
+
+static SDValue combineF16AddWithNeg(SDNode *N, SelectionDAG &DAG,
+                                    Intrinsic::ID AddIntrinsicID) {
   SDValue Op2 = N->getOperand(2);
 
   if (Op2.getOpcode() != ISD::FNEG)
     return SDValue();
+  
+  std::optional<unsigned> SubOpc = getF16SubOpc(AddIntrinsicID);
+  if (!SubOpc)
+    return SDValue();
 
   SDLoc DL(N);
-  return DAG.getNode(SubOpc, DL, N->getValueType(0), N->getOperand(1),
+  return DAG.getNode(*SubOpc, DL, N->getValueType(0), N->getOperand(1),
                      Op2.getOperand(0));
 }
 
@@ -6872,13 +6890,10 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   default:
     break;
   case Intrinsic::nvvm_add_rn_sat_f16:
-    return combineAddSatWithNeg(N, DCI.DAG, NVPTXISD::SUB_RN_SAT_F16);
   case Intrinsic::nvvm_add_rn_ftz_sat_f16:
-    return combineAddSatWithNeg(N, DCI.DAG, NVPTXISD::SUB_RN_FTZ_SAT_F16);
   case Intrinsic::nvvm_add_rn_sat_v2f16:
-    return combineAddSatWithNeg(N, DCI.DAG, NVPTXISD::SUB_RN_SAT_F16X2);
   case Intrinsic::nvvm_add_rn_ftz_sat_v2f16:
-    return combineAddSatWithNeg(N, DCI.DAG, NVPTXISD::SUB_RN_FTZ_SAT_F16X2);
+    return combineF16AddWithNeg(N, DCI.DAG, IntID);
   }
   return SDValue();
 }

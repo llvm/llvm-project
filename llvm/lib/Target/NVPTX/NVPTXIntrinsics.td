@@ -1760,31 +1760,18 @@ let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
             (INT_NVVM_MIXED_FMA_rn_f32_bf16 B16:$a, B16:$b, B32:$c)>;
 }
 
-class FMA_OOB_INST<NVPTXRegClass RC, string suffix> : 
-  BasicNVPTXInst<(outs RC:$dst), (ins RC:$a, RC:$b, RC:$c),
-    "fma.rn.oob" # suffix>;
-
-class FMA_OOB_TYPE<ValueType VT, NVPTXRegClass RC, string TypeName> {
-  ValueType Type = VT;
-  NVPTXRegClass RegClass = RC;
-  string TypeStr = TypeName;
-}
-
-let Predicates = [hasPTX<81>, hasSM<90>] in {
+foreach ty = [F16RT, F16X2RT, BF16RT, BF16X2RT] in {
   foreach relu = ["", "_relu"] in {
-    foreach ty = [
-      FMA_OOB_TYPE<f16, B16, "f16">,
-      FMA_OOB_TYPE<v2f16, B32, "f16x2">,
-      FMA_OOB_TYPE<bf16, B16, "bf16">,
-      FMA_OOB_TYPE<v2bf16, B32, "bf16x2">
-    ] in {
-      defvar Intr = !cast<Intrinsic>("int_nvvm_fma_rn_oob" # relu);
-      defvar suffix = !subst("_", ".", relu # "_" # ty.TypeStr);
-      def : Pat<(ty.Type (Intr ty.Type:$a, ty.Type:$b, ty.Type:$c)), 
-                (FMA_OOB_INST<ty.RegClass, suffix> $a, $b, $c)>;
-    }
+    defvar Intr = !cast<Intrinsic>("int_nvvm_fma_rn_oob" # relu);
+    defvar suffix = !subst("_", ".", relu # "_" # ty.PtxType);
+    def INT_NVVM_FMA_OOB # relu # ty.PtxType : 
+      BasicNVPTXInst<(outs ty.RC:$dst), (ins ty.RC:$a, ty.RC:$b, ty.RC:$c),
+        "fma.rn.oob" # suffix,
+        [(set ty.Ty:$dst, (Intr ty.Ty:$a, ty.Ty:$b, ty.Ty:$c))]>,
+      Requires<[hasPTX<81>, hasSM<90>]>;
   }
 }
+
 //
 // Rcp
 //
@@ -1982,33 +1969,20 @@ let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
 // Sub
 //
 
-def SUB_RN_SAT_F16_NODE : SDNode<"NVPTXISD::SUB_RN_SAT_F16", SDTFPBinOp>;
-def SUB_RN_FTZ_SAT_F16_NODE : 
-  SDNode<"NVPTXISD::SUB_RN_FTZ_SAT_F16", SDTFPBinOp>;
-def SUB_RN_SAT_F16X2_NODE : 
-  SDNode<"NVPTXISD::SUB_RN_SAT_F16X2", SDTFPBinOp>;
-def SUB_RN_FTZ_SAT_F16X2_NODE : 
-  SDNode<"NVPTXISD::SUB_RN_FTZ_SAT_F16X2", SDTFPBinOp>;
+def sub_rn_sat_node : SDNode<"NVPTXISD::SUB_RN_SAT", SDTFPBinOp>;
+def sub_rn_ftz_sat_node : 
+  SDNode<"NVPTXISD::SUB_RN_FTZ_SAT", SDTFPBinOp>;
+  
+class INT_NVVM_SUB_RN<RegTyInfo TyInfo, string variant> :
+  BasicNVPTXInst<(outs TyInfo.RC:$dst), (ins TyInfo.RC:$a, TyInfo.RC:$b),
+    !subst("_", ".", "sub.rn" # variant # "." # TyInfo.PtxType),
+    [(set TyInfo.Ty:$dst, 
+     (!cast<SDNode>("sub_rn" # variant # "_node") TyInfo.Ty:$a, TyInfo.Ty:$b))]>;
 
-def INT_NVVM_SUB_RN_SAT_F16 : 
-  BasicNVPTXInst<(outs B16:$dst), (ins B16:$a, B16:$b),
-    "sub.rn.sat.f16",
-    [(set f16:$dst, (SUB_RN_SAT_F16_NODE f16:$a, f16:$b))]>;
-
-def INT_NVVM_SUB_RN_FTZ_SAT_F16 : 
-  BasicNVPTXInst<(outs B16:$dst), (ins B16:$a, B16:$b),
-    "sub.rn.ftz.sat.f16",
-    [(set f16:$dst, (SUB_RN_FTZ_SAT_F16_NODE f16:$a, f16:$b))]>;
-
-def INT_NVVM_SUB_RN_SAT_F16X2 : 
-  BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
-    "sub.rn.sat.f16x2",
-    [(set v2f16:$dst, (SUB_RN_SAT_F16X2_NODE v2f16:$a, v2f16:$b))]>;
-
-def INT_NVVM_SUB_RN_FTZ_SAT_F16X2 : 
-  BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
-    "sub.rn.ftz.sat.f16x2",
-    [(set v2f16:$dst, (SUB_RN_FTZ_SAT_F16X2_NODE v2f16:$a, v2f16:$b))]>;
+def INT_NVVM_SUB_RN_SAT_F16 : INT_NVVM_SUB_RN<F16RT, "_sat">;
+def INT_NVVM_SUB_RN_FTZ_SAT_F16 : INT_NVVM_SUB_RN<F16RT, "_ftz_sat">;
+def INT_NVVM_SUB_RN_SAT_F16X2 : INT_NVVM_SUB_RN<F16X2RT, "_sat">;
+def INT_NVVM_SUB_RN_FTZ_SAT_F16X2 : INT_NVVM_SUB_RN<F16X2RT, "_ftz_sat">;
 
 
 //

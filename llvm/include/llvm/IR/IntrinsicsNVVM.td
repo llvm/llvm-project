@@ -1365,6 +1365,14 @@ let TargetPrefix = "nvvm" in {
       def int_nvvm_mul_ # rnd # _d : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
     }
+    
+    foreach ftz = ["", "_ftz"] in {
+      def int_nvvm_mul_rn # ftz # _sat_f16 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
+
+      def int_nvvm_mul_rn # ftz # _sat_v2f16 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
+    } // ftz
   }
 
   //
@@ -1507,13 +1515,11 @@ let TargetPrefix = "nvvm" in {
     def int_nvvm_fma_rn # relu # _bf16x2 : NVVMBuiltin,
       PureIntrinsic<[llvm_v2bf16_ty],
         [llvm_v2bf16_ty, llvm_v2bf16_ty, llvm_v2bf16_ty]>;
-  } // relu
-
-  // oob (out-of-bounds) - clamps the result to 0 if either of the operands is 
-  // OOB NaN value.
-  foreach relu = ["", "_relu"] in {
+    
+    // oob (out-of-bounds) - clamps the result to 0 if either of the operand is 
+    // an OOB NaN value.
     def int_nvvm_fma_rn_oob # relu : PureIntrinsic<[llvm_anyfloat_ty],
-          [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
+        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
   } // relu
 
   foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
@@ -1584,14 +1590,6 @@ let TargetPrefix = "nvvm" in {
   //
   // Add
   //
-  foreach ftz = ["", "_ftz"] in {
-    def int_nvvm_add_rn # ftz # _sat_f16 : NVVMBuiltin,
-      PureIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
-
-    def int_nvvm_add_rn # ftz # _sat_v2f16 : NVVMBuiltin,
-      PureIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
-        
-  } // ftz
 
   let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
                         IntrNoCreateUndefOrPoison] in {
@@ -1604,19 +1602,17 @@ let TargetPrefix = "nvvm" in {
       } // ftz
       def int_nvvm_add # rnd # _d : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
-    } // rnd
+    }
+    
+    foreach ftz = ["", "_ftz"] in {
+      def int_nvvm_add_rn # ftz # _sat_f16 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
+
+      def int_nvvm_add_rn # ftz # _sat_v2f16 : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
+        
+    } // ftz
   }
-
-  //
-  // Mul
-  //
-  foreach ftz = ["", "_ftz"] in {
-    def int_nvvm_mul_rn # ftz # _sat_f16 : NVVMBuiltin,
-      PureIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
-
-    def int_nvvm_mul_rn # ftz # _sat_v2f16 : NVVMBuiltin,
-      PureIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
-  } // ftz
 
   //
   // Dot Product
