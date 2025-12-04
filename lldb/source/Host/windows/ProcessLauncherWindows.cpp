@@ -198,7 +198,7 @@ llvm::ErrorOr<std::vector<HANDLE>> ProcessLauncherWindows::GetInheritedHandles(
     const ProcessLaunchInfo &launch_info, STARTUPINFOEXW &startupinfoex,
     HANDLE stdout_handle, HANDLE stderr_handle, HANDLE stdin_handle) {
   std::vector<HANDLE> inherited_handles;
-  STARTUPINFOW startupinfo = startupinfoex.StartupInfo;
+  STARTUPINFOW &startupinfo = startupinfoex.StartupInfo;
 
   startupinfo.hStdError =
       stderr_handle ? stderr_handle : GetStdHandle(STD_ERROR_HANDLE);
