@@ -183,3 +183,41 @@ loop:
 exit:
   ret i32 %add
 }
+
+; Check if caching the defining access produces valid MemorySSA.
+; LICM refuses to sink a MemoryUse if there is any MemoryDef following.
+; All sunk MemoryUses must share the same defining access.
+define i32 @test_sink_diff_def(i32 %a, ptr %p, ptr %q, i32 %N) {
+; CHECK-LABEL: @test_sink_diff_def(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A:%.*]], [[LOAD1]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[LOAD2]]
+; CHECK-NEXT:    ret i32 [[ADD2]]
+;
+entry:
+  %load1 = load i32, ptr %p
+  store i32 1, ptr %q
+  %load2 = load i32, ptr %p
+  %add1 = add i32 %a, %load1
+  %add2 = add i32 %add1, %load2
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv.next, %N
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 %add2
+}
