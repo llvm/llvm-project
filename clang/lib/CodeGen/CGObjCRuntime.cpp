@@ -415,7 +415,7 @@ bool CGObjCRuntime::canMessageReceiverBeNull(
 
 bool CGObjCRuntime::canClassObjectBeUnrealized(
     const ObjCInterfaceDecl *CalleeClassDecl, CodeGenFunction &CGF) const {
-  if (!CalleeClassDecl)
+  if (!CalleeClassDecl || isWeakLinkedClass(CalleeClassDecl))
     return true;
 
   // Heuristic 1: +load method on this class
