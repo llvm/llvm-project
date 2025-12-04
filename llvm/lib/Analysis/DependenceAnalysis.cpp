@@ -2142,25 +2142,31 @@ bool DependenceInfo::symbolicRDIVtest(const SCEVAddRecExpr *Src,
   const SCEV *N2 = collectUpperBound(Loop2, A1->getType());
   LLVM_DEBUG(if (N1) dbgs() << "\t    N1 = " << *N1 << "\n");
   LLVM_DEBUG(if (N2) dbgs() << "\t    N2 = " << *N2 << "\n");
-  auto [SrcFirst, SrcLast] = evaluateFirstAndLast(*SE, Src, N1);
-  auto [DstFirst, DstLast] = evaluateFirstAndLast(*SE, Dst, N2);
 
   auto IsKnownSLT = [&](const SCEV *LHS, const SCEV *RHS) {
     return SE->isKnownPredicate(CmpInst::ICMP_SLT, LHS, RHS);
   };
 
-  if (SE->isKnownNonNegative(A1)) {
-    if (SE->isKnownNonNegative(A2))
-      return IsKnownSLT(SrcLast, DstFirst) || IsKnownSLT(DstLast, SrcFirst);
-    if (SE->isKnownNonPositive(A2))
-      return IsKnownSLT(SrcLast, DstLast) || IsKnownSLT(DstFirst, SrcFirst);
-  } else if (SE->isKnownNonPositive(A1)) {
-    if (SE->isKnownNonNegative(A2))
-      return IsKnownSLT(SrcFirst, DstFirst) || IsKnownSLT(DstLast, SrcLast);
-    if (SE->isKnownNonPositive(A2))
-      return IsKnownSLT(SrcFirst, DstLast) || IsKnownSLT(DstFirst, SrcLast);
-  }
-  return false;
+  auto Res = [&]() {
+    auto [SrcFirst, SrcLast] = evaluateFirstAndLast(*SE, Src, N1);
+    auto [DstFirst, DstLast] = evaluateFirstAndLast(*SE, Dst, N2);
+    if (SE->isKnownNonNegative(A1)) {
+      if (SE->isKnownNonNegative(A2))
+        return IsKnownSLT(SrcLast, DstFirst) || IsKnownSLT(DstLast, SrcFirst);
+      if (SE->isKnownNonPositive(A2))
+        return IsKnownSLT(SrcLast, DstLast) || IsKnownSLT(DstFirst, SrcFirst);
+    } else if (SE->isKnownNonPositive(A1)) {
+      if (SE->isKnownNonNegative(A2))
+        return IsKnownSLT(SrcFirst, DstFirst) || IsKnownSLT(DstLast, SrcLast);
+      if (SE->isKnownNonPositive(A2))
+        return IsKnownSLT(SrcFirst, DstLast) || IsKnownSLT(DstFirst, SrcLast);
+    }
+    return false;
+  }();
+
+  if (Res)
+    ++SymbolicRDIVindependence;
+  return Res;
 }
 
 // testSIV -
