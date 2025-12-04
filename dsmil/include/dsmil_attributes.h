@@ -1267,6 +1267,32 @@
 #define DSMIL_TELEMETRY \
     __attribute__((dsmil_telemetry))
 
+/**
+ * @brief Mark function for telemetry export (v1.7+)
+ * @param format Export format: "prometheus", "otel", "json"
+ *
+ * Functions marked with telemetry export automatically export metrics
+ * to configured observability backends (Prometheus, OpenTelemetry, ELK).
+ *
+ * Example:
+ * @code
+ * DSMIL_TELEMETRY_EXPORT("prometheus")
+ * DSMIL_MISSION_CRITICAL
+ * void critical_function(void) {
+ *     // Automatically exports:
+ *     // - Function call count
+ *     // - Execution time histogram
+ *     // - Error rate
+ *     // - Resource usage
+ * }
+ * @endcode
+ *
+ * @note Requires runtime telemetry collector (dsmil-telemetry-collector)
+ * @note Integrates with Feature 1.3 telemetry enforcement
+ */
+#define DSMIL_TELEMETRY_EXPORT(format) \
+    __attribute__((dsmil_telemetry_export(format)))
+
 /** @} */
 
 /**

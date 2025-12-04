@@ -171,11 +171,20 @@ Welcome to the DSLLVM comprehensive documentation. This directory contains all d
 |----------|-------------|
 | [AI-INTEGRATION.md](AI-INTEGRATION.md) | Layer 5/7/8 AI integration for performance, mission planning, and security |
 
+### Developer Experience & Observability (v1.7)
+
+| Document | Description |
+|----------|-------------|
+| [CONFIG-VALIDATION.md](CONFIG-VALIDATION.md) | Configuration validation and health checking |
+| [COMPILE-TIME-METRICS.md](COMPILE-TIME-METRICS.md) | Compile-time performance profiling and metrics |
+| [SETUP-WIZARD.md](SETUP-WIZARD.md) | Interactive setup wizard guide |
+| [RUNTIME-OBSERVABILITY.md](RUNTIME-OBSERVABILITY.md) | Runtime telemetry export (Prometheus/OpenTelemetry/ELK) |
+
 ### Enhancement Proposals
 
 | Document | Description |
 |----------|-------------|
-| [ENHANCEMENT-SUGGESTIONS.md](ENHANCEMENT-SUGGESTIONS.md) | 5 strategic enhancement proposals for v1.7+ |
+| [ENHANCEMENT-SUGGESTIONS.md](ENHANCEMENT-SUGGESTIONS.md) | Future enhancement proposals |
 
 ---
 

@@ -433,15 +433,37 @@ All three features from Phase 2 (v1.4) are now implemented:
 - 🚧 Tool wrappers (dsmil-clang, dsmil-verify)
 - 🚧 Dynamic path resolution runtime (v1.6.1) ✅ COMPLETE
 
-### 💡 Proposed Enhancements (v1.7+)
+### ✅ Completed (v1.7 - Developer Experience & Observability)
 
-See **[ENHANCEMENT-SUGGESTIONS.md](docs/ENHANCEMENT-SUGGESTIONS.md)** for 5 strategic enhancements:
+- ✅ **Configuration Validation & Health Check Tool** (`dsmil-config-validate`)
+  - ✅ Mission profile validation
+  - ✅ Path configuration validation
+  - ✅ Truststore validation
+  - ✅ Classification validation
+  - ✅ Auto-fix common issues
+  - ✅ Health report generation
+- ✅ **Compile-Time Performance Profiling** (`dsmil-metrics`)
+  - ✅ Pass execution time tracking
+  - ✅ Memory usage metrics
+  - ✅ Feature impact analysis
+  - ✅ Build comparison tool
+  - ✅ HTML dashboard generation
+- ✅ **Interactive Setup Wizard** (`dsmil-setup`)
+  - ✅ Installation detection
+  - ✅ Mission profile setup
+  - ✅ Path configuration
+  - ✅ Verification and auto-fix
+- ✅ **Runtime Observability Integration** (`dsmil-telemetry-collector`)
+  - ✅ Prometheus metrics export
+  - ✅ OpenTelemetry integration
+  - ✅ Structured JSON logging (ELK/Splunk)
+  - ✅ Performance, security, and operational metrics
 
-1. **Configuration Validation & Health Check Tool** - Automated config validation
-2. **Compile-Time Performance Profiling** - Build metrics and optimization insights
-3. **Interactive Setup Wizard** - Guided installation and configuration
-4. **Runtime Observability Integration** - Prometheus/OpenTelemetry/ELK support
-5. **Multi-Architecture Support** - ARM64, RISC-V, embedded targets
+### 💡 Proposed Enhancements (v1.8+)
+
+See **[ENHANCEMENT-SUGGESTIONS.md](docs/ENHANCEMENT-SUGGESTIONS.md)** for future enhancements:
+
+5. **Multi-Architecture Support** - ARM64, RISC-V, embedded targets (deferred)
 
 ### 📋 Planned (v1.5 - System Intelligence)
 
