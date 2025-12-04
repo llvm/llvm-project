@@ -35,6 +35,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Util.h"
 #include "clang/Driver/XRayArgs.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -1095,27 +1096,14 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "mcpu=" + CPU));
 
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    // The optimization level matches
-    // CompilerInvocation.cpp:getOptimizationLevel().
-    StringRef OOpt;
-    if (A->getOption().matches(options::OPT_O4) ||
-        A->getOption().matches(options::OPT_Ofast))
-      OOpt = "3";
-    else if (A->getOption().matches(options::OPT_O)) {
-      OOpt = A->getValue();
-      if (OOpt == "g")
-        OOpt = "1";
-      else if (OOpt == "s" || OOpt == "z")
-        OOpt = "2";
-    } else if (A->getOption().matches(options::OPT_O0))
-      OOpt = "0";
-    if (!OOpt.empty()) {
+  if (Args.getLastArg(options::OPT_O_Group)) {
+    unsigned OptimizationLevel =
+        getOptimizationLevel(Args, InputKind(), D.getDiags());
+    CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash +
+                                         "O" + Twine(OptimizationLevel)));
+    if (IsAMDGCN)
       CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "O" + OOpt));
-      if (IsAMDGCN)
-        CmdArgs.push_back(Args.MakeArgString(Twine("--lto-CGO") + OOpt));
-    }
+          Args.MakeArgString(Twine("--lto-CGO") + Twine(OptimizationLevel)));
   }
 
   if (Args.hasArg(options::OPT_gsplit_dwarf)) {
@@ -3396,169 +3384,6 @@ void tools::handleInterchangeLoopsArgs(const ArgList &Args,
   if (Args.hasFlag(options::OPT_floop_interchange,
                    options::OPT_fno_loop_interchange, false))
     CmdArgs.push_back("-floop-interchange");
-}
-
-// Parse -mprefer-vector-width=. Return the Value string if well-formed.
-// Otherwise, return an empty string and issue a diagnosic message if needed.
-StringRef tools::parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
-                                               const llvm::opt::ArgList &Args) {
-  Arg *A = Args.getLastArg(options::OPT_mprefer_vector_width_EQ);
-  if (!A)
-    return "";
-
-  StringRef Value = A->getValue();
-  unsigned Width LLVM_ATTRIBUTE_UNINITIALIZED;
-
-  // Only "none" and Integer values are accepted by
-  // -mprefer-vector-width=<value>.
-  if (Value != "none" && Value.getAsInteger(10, Width)) {
-    Diags.Report(clang::diag::err_drv_invalid_value)
-        << A->getOption().getName() << Value;
-    return "";
-  }
-
-  return Value;
-}
-
-// This is a helper function for validating the optional refinement step
-// parameter in reciprocal argument strings. Return false if there is an error
-// parsing the refinement step. Otherwise, return true and set the Position
-// of the refinement step in the input string.
-static bool getRefinementStep(StringRef In, clang::DiagnosticsEngine &Diags,
-                              const Arg &A, size_t &Position) {
-  const char RefinementStepToken = ':';
-  Position = In.find(RefinementStepToken);
-  if (Position != StringRef::npos) {
-    StringRef Option = A.getOption().getName();
-    StringRef RefStep = In.substr(Position + 1);
-    // Allow exactly one numeric character for the additional refinement
-    // step parameter. This is reasonable for all currently-supported
-    // operations and architectures because we would expect that a larger value
-    // of refinement steps would cause the estimate "optimization" to
-    // under-perform the native operation. Also, if the estimate does not
-    // converge quickly, it probably will not ever converge, so further
-    // refinement steps will not produce a better answer.
-    if (RefStep.size() != 1) {
-      Diags.Report(diag::err_drv_invalid_value) << Option << RefStep;
-      return false;
-    }
-    char RefStepChar = RefStep[0];
-    if (RefStepChar < '0' || RefStepChar > '9') {
-      Diags.Report(diag::err_drv_invalid_value) << Option << RefStep;
-      return false;
-    }
-  }
-  return true;
-}
-
-// Parse -mrecip. Return the Value string if well-formed.
-// Otherwise, return an empty string and issue a diagnosic message if needed.
-StringRef tools::parseMRecipOption(clang::DiagnosticsEngine &Diags,
-                                   const ArgList &Args) {
-  StringRef DisabledPrefixIn = "!";
-  StringRef DisabledPrefixOut = "!";
-  StringRef EnabledPrefixOut = "";
-  StringRef Out = "";
-
-  Arg *A = Args.getLastArg(options::OPT_mrecip, options::OPT_mrecip_EQ);
-  if (!A)
-    return "";
-
-  unsigned NumOptions = A->getNumValues();
-  if (NumOptions == 0) {
-    // No option is the same as "all".
-    return "all";
-  }
-
-  // Pass through "all", "none", or "default" with an optional refinement step.
-  if (NumOptions == 1) {
-    StringRef Val = A->getValue(0);
-    size_t RefStepLoc;
-    if (!getRefinementStep(Val, Diags, *A, RefStepLoc))
-      return "";
-    StringRef ValBase = Val.slice(0, RefStepLoc);
-    if (ValBase == "all" || ValBase == "none" || ValBase == "default") {
-      return Val;
-    }
-  }
-
-  // Each reciprocal type may be enabled or disabled individually.
-  // Check each input value for validity, concatenate them all back together,
-  // and pass through.
-
-  llvm::StringMap<bool> OptionStrings;
-  OptionStrings.insert(std::make_pair("divd", false));
-  OptionStrings.insert(std::make_pair("divf", false));
-  OptionStrings.insert(std::make_pair("divh", false));
-  OptionStrings.insert(std::make_pair("vec-divd", false));
-  OptionStrings.insert(std::make_pair("vec-divf", false));
-  OptionStrings.insert(std::make_pair("vec-divh", false));
-  OptionStrings.insert(std::make_pair("sqrtd", false));
-  OptionStrings.insert(std::make_pair("sqrtf", false));
-  OptionStrings.insert(std::make_pair("sqrth", false));
-  OptionStrings.insert(std::make_pair("vec-sqrtd", false));
-  OptionStrings.insert(std::make_pair("vec-sqrtf", false));
-  OptionStrings.insert(std::make_pair("vec-sqrth", false));
-
-  for (unsigned i = 0; i != NumOptions; ++i) {
-    StringRef Val = A->getValue(i);
-
-    bool IsDisabled = Val.starts_with(DisabledPrefixIn);
-    // Ignore the disablement token for string matching.
-    if (IsDisabled)
-      Val = Val.substr(1);
-
-    size_t RefStep;
-    if (!getRefinementStep(Val, Diags, *A, RefStep))
-      return "";
-
-    StringRef ValBase = Val.slice(0, RefStep);
-    llvm::StringMap<bool>::iterator OptionIter = OptionStrings.find(ValBase);
-    if (OptionIter == OptionStrings.end()) {
-      // Try again specifying float suffix.
-      OptionIter = OptionStrings.find(ValBase.str() + 'f');
-      if (OptionIter == OptionStrings.end()) {
-        // The input name did not match any known option string.
-        Diags.Report(diag::err_drv_unknown_argument) << Val;
-        return "";
-      }
-      // The option was specified without a half or float or double suffix.
-      // Make sure that the double or half entry was not already specified.
-      // The float entry will be checked below.
-      if (OptionStrings[ValBase.str() + 'd'] ||
-          OptionStrings[ValBase.str() + 'h']) {
-        Diags.Report(diag::err_drv_invalid_value)
-            << A->getOption().getName() << Val;
-        return "";
-      }
-    }
-
-    if (OptionIter->second == true) {
-      // Duplicate option specified.
-      Diags.Report(diag::err_drv_invalid_value)
-          << A->getOption().getName() << Val;
-      return "";
-    }
-
-    // Mark the matched option as found. Do not allow duplicate specifiers.
-    OptionIter->second = true;
-
-    // If the precision was not specified, also mark the double and half entry
-    // as found.
-    if (ValBase.back() != 'f' && ValBase.back() != 'd' &&
-        ValBase.back() != 'h') {
-      OptionStrings[ValBase.str() + 'd'] = true;
-      OptionStrings[ValBase.str() + 'h'] = true;
-    }
-
-    // Build the output string.
-    StringRef Prefix = IsDisabled ? DisabledPrefixOut : EnabledPrefixOut;
-    Out = Args.MakeArgString(Out + Prefix + Val);
-    if (i != NumOptions - 1)
-      Out = Args.MakeArgString(Out + ",");
-  }
-
-  return Out;
 }
 
 std::string tools::complexRangeKindToStr(LangOptions::ComplexRangeKind Range) {

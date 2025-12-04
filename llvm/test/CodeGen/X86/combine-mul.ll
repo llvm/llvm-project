@@ -504,7 +504,7 @@ define <16 x i8> @PR35579(<16 x i8> %x) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; SSE-NEXT:    psllw $8, %xmm1
-; SSE-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,0,2,0,4,0,2,0,8,0,2,0,4,0,2,0]
+; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,1,2,1,4,1,2,1,8,1,2,1,4,1,2,1]
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    por %xmm1, %xmm0
 ; SSE-NEXT:    retq

@@ -811,7 +811,7 @@ static bool shouldCheckArgs(CallBase &CI, const TargetLibraryInfo &TLI,
     return false;
 
   const auto ID = Fn->getIntrinsicID();
-  LibFunc LFunc = LibFunc::NumLibFuncs;
+  LibFunc LFunc = LibFunc::NotLibFunc;
   // Always check args of unknown functions.
   if (ID == Intrinsic::ID() && !TLI.getLibFunc(*Fn, LFunc))
     return true;

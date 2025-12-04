@@ -13,17 +13,8 @@
 #ifndef POLLY_PRUNEUNPROFITABLE_H
 #define POLLY_PRUNEUNPROFITABLE_H
 
-#include "polly/ScopPass.h"
-
 namespace polly {
-
-struct PruneUnprofitablePass final
-    : llvm::PassInfoMixin<PruneUnprofitablePass> {
-  PruneUnprofitablePass() {}
-
-  llvm::PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,
-                              ScopStandardAnalysisResults &SAR, SPMUpdater &U);
-};
+class Scop;
 
 bool runPruneUnprofitable(Scop &S);
 } // namespace polly

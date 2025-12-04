@@ -355,7 +355,8 @@ public:
     llvm_unreachable("Invalid content kind");
   }
 
-  explicit TargetLoweringBase(const TargetMachine &TM);
+  explicit TargetLoweringBase(const TargetMachine &TM,
+                              const TargetSubtargetInfo &STI);
   TargetLoweringBase(const TargetLoweringBase &) = delete;
   TargetLoweringBase &operator=(const TargetLoweringBase &) = delete;
   virtual ~TargetLoweringBase();
@@ -1242,7 +1243,7 @@ public:
   /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
   /// true and store the intrinsic information into the IntrinsicInfo that was
   /// passed to the function.
-  virtual bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
+  virtual bool getTgtMemIntrinsic(IntrinsicInfo &, const CallBase &,
                                   MachineFunction &,
                                   unsigned /*Intrinsic*/) const {
     return false;
@@ -3492,6 +3493,13 @@ public:
     return MathUsed && (VT.isSimple() || !isOperationExpand(Opcode, VT));
   }
 
+  // Return true if the target wants to optimize the mul overflow intrinsic
+  // for the given \p VT.
+  virtual bool shouldOptimizeMulOverflowWithZeroHighBits(LLVMContext &Context,
+                                                         EVT VT) const {
+    return false;
+  }
+
   // Return true if it is profitable to use a scalar input to a BUILD_VECTOR
   // even if the vector itself has multiple uses.
   virtual bool aggressivelyPreferBuildVectorSources(EVT VecVT) const {
@@ -3970,7 +3978,8 @@ public:
   TargetLowering(const TargetLowering &) = delete;
   TargetLowering &operator=(const TargetLowering &) = delete;
 
-  explicit TargetLowering(const TargetMachine &TM);
+  explicit TargetLowering(const TargetMachine &TM,
+                          const TargetSubtargetInfo &STI);
   ~TargetLowering() override;
 
   bool isPositionIndependent() const;
@@ -4756,6 +4765,7 @@ public:
     SmallVector<SDValue, 4> InVals;
     const ConstantInt *CFIType = nullptr;
     SDValue ConvergenceControlToken;
+    GlobalValue *DeactivationSymbol = nullptr;
 
     std::optional<PtrAuthInfo> PAI;
 
@@ -4906,6 +4916,11 @@ public:
 
     CallLoweringInfo &setConvergenceControlToken(SDValue Token) {
       ConvergenceControlToken = Token;
+      return *this;
+    }
+
+    CallLoweringInfo &setDeactivationSymbol(GlobalValue *Sym) {
+      DeactivationSymbol = Sym;
       return *this;
     }
 

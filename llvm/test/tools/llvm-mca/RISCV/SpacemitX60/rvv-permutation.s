@@ -1198,137 +1198,137 @@ vfslide1up.vf v8, v16, ft0
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMV_V_V                    vmv.v.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV_V_V                    vmv.v.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMV_V_X                    vmv.v.x	v8, s0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV_V_X                    vmv.v.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMV_V_I                    vmv.v.i	v8, 12
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV_V_I                    vmv.v.i	v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  1      6     6.00                         6     SMX60_VIEU[6]                              VMV_X_S                    vmv.x.s	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
@@ -1418,225 +1418,225 @@ vfslide1up.vf v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV_S_X                    vmv.s.x	v8, s0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV1R_V                    vmv1r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV1R_V                    vmv1r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV2R_V                    vmv2r.v	v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMV2R_V                    vmv2r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV4R_V                    vmv4r.v	v8, v8
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMV4R_V                    vmv4r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VMV8R_V                    vmv8r.v	v8, v8
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMV8R_V                    vmv8r.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VIEU                                 VIOTA_M                    viota.m	v8, v16
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VIOTA_M                    viota.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VCOMPRESS_VM               vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
@@ -2120,167 +2120,167 @@ vfslide1up.vf v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  1      256   256.00                       256   SMX60_VIEU[256]                            VRGATHEREI16_VV            vrgatherei16.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMERGE_VIM                 vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMERGE_VVM                 vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VIEU                                 VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VIEU[2]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
 # CHECK-NEXT:  1      4     4.00                         4     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      8     4.00                         8     SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VIEU[8]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      16    4.00                         16    SMX60_VIEU[4]                              VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VIEU[16]                             VMERGE_VXM                 vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     SMX60_VFP                                  VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFMERGE_VFM                vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFSLIDE1DOWN_VF            vfslide1down.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
@@ -2354,142 +2354,142 @@ vfslide1up.vf v8, v16, ft0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4]    [5]    [6]
-# CHECK-NEXT:  -     572.00  -      -      -     225.00 5253.00  -
+# CHECK-NEXT:  -     572.00  -      -      -     303.00 6201.00  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv.v.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.x	v8, s0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv.v.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.v.i	v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv.v.i	v8, 12
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     6.00    -     vmv.x.s	s0, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -2579,181 +2579,181 @@ vfslide1up.vf v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv.s.x	v8, s0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv1r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv1r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv2r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmv2r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv4r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmv4r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmv8r.v	v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmv8r.v	v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -2761,43 +2761,43 @@ vfslide1up.vf v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     viota.m	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     viota.m	v8, v16
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vcompress.vm	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -3281,167 +3281,167 @@ vfslide1up.vf v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     256.00  -     vrgatherei16.vv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmerge.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmerge.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     2.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     8.00    -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -     4.00    -     vmerge.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -     16.00   -     vmerge.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  -      -      -      -      -     4.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  -      -      -      -      -     4.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  -      -      -      -      -     4.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmerge.vfm	v8, v8, ft0, v0
+# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfmerge.vfm	v8, v8, ft0, v0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfslide1down.vf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
