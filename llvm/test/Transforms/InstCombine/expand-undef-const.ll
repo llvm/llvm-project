@@ -16,7 +16,7 @@ define i8 @foo(i1 %arg, i8 %arg1) {
 ; CHECK:       [[BB2]]:
 ; CHECK-NEXT:    br i1 true, label %[[BB15:.*]], label %[[BB2]]
 ; CHECK:       [[BB15]]:
-; CHECK-NEXT:    ret i8 -128
+; CHECK-NEXT:    ret i8 0
 ;
 bb:
   br label %bb2
