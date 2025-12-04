@@ -1891,25 +1891,23 @@ static std::optional<Instruction *> instCombineSVESel(InstCombiner &IC,
 
 static std::optional<Instruction *> instCombineSVEDup(InstCombiner &IC,
                                                       IntrinsicInst &II) {
-  IntrinsicInst *Pg = dyn_cast<IntrinsicInst>(II.getArgOperand(1));
-  if (!Pg)
+  Value *Pg = II.getOperand(1);
+
+  // sve.dup(V, all_active, X) ==> splat(X)
+  if (isAllActivePredicate(Pg)) {
+    auto *RetTy = cast<ScalableVectorType>(II.getType());
+    Value *Splat = IC.Builder.CreateVectorSplat(RetTy->getElementCount(),
+                                                II.getArgOperand(2));
+    return IC.replaceInstUsesWith(II, Splat);
+  }
+
+  if (!match(Pg, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
+                     m_SpecificInt(AArch64SVEPredPattern::vl1))))
     return std::nullopt;
 
-  if (Pg->getIntrinsicID() != Intrinsic::aarch64_sve_ptrue)
-    return std::nullopt;
-
-  const auto PTruePattern =
-      cast<ConstantInt>(Pg->getOperand(0))->getZExtValue();
-  if (PTruePattern != AArch64SVEPredPattern::vl1)
-    return std::nullopt;
-
-  // The intrinsic is inserting into lane zero so use an insert instead.
-  auto *IdxTy = Type::getInt64Ty(II.getContext());
-  auto *Insert = InsertElementInst::Create(
-      II.getArgOperand(0), II.getArgOperand(2), ConstantInt::get(IdxTy, 0));
-  Insert->insertBefore(II.getIterator());
-  Insert->takeName(&II);
-
+  // sve.dup(V, sve.ptrue(vl1), X) ==> insertelement V, X, 0
+  Value *Insert = IC.Builder.CreateInsertElement(
+      II.getArgOperand(0), II.getArgOperand(2), uint64_t(0));
   return IC.replaceInstUsesWith(II, Insert);
 }
 
