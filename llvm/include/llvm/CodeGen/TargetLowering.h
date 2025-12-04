@@ -1243,7 +1243,7 @@ public:
   /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
   /// true and store the intrinsic information into the IntrinsicInfo that was
   /// passed to the function.
-  virtual bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
+  virtual bool getTgtMemIntrinsic(IntrinsicInfo &, const CallBase &,
                                   MachineFunction &,
                                   unsigned /*Intrinsic*/) const {
     return false;
@@ -4765,6 +4765,7 @@ public:
     SmallVector<SDValue, 4> InVals;
     const ConstantInt *CFIType = nullptr;
     SDValue ConvergenceControlToken;
+    GlobalValue *DeactivationSymbol = nullptr;
 
     std::optional<PtrAuthInfo> PAI;
 
@@ -4915,6 +4916,11 @@ public:
 
     CallLoweringInfo &setConvergenceControlToken(SDValue Token) {
       ConvergenceControlToken = Token;
+      return *this;
+    }
+
+    CallLoweringInfo &setDeactivationSymbol(GlobalValue *Sym) {
+      DeactivationSymbol = Sym;
       return *this;
     }
 

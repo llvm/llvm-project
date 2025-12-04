@@ -841,6 +841,7 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
           uint32_t Index = cast<ConstantInt>(II->getOperand(1))->getZExtValue();
           Ty = cast<StructType>(Ty)->getElementType(Index);
         }
+        Ty = reconstitutePeeledArrayType(Ty);
       } else {
         llvm_unreachable("Unknown handle type for spv_resource_getpointer.");
       }
