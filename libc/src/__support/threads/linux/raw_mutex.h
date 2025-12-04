@@ -24,7 +24,7 @@
 #endif
 
 #if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
-#include "src/__support/time/linux/monotonicity.h"
+#include "src/__support/time/monotonicity.h"
 #endif
 
 #ifndef LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT
