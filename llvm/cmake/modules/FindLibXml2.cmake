@@ -25,6 +25,11 @@ find_library(LIBXML2_SHARED_LIBRARY NAMES xml2 libxml2 libxml2_a
   ${PC_LIBXML_LIBRARY_DIRS}
 )
 
+# This is a system lib on macOS, so we don't need to avoid the dependency
+if(APPLE)
+  set(LLVM_USE_STATIC_LIBXML2 OFF)
+endif()
+
 if(LLVM_USE_STATIC_LIBXML2)
   set(_original_suffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
   if(UNIX)
