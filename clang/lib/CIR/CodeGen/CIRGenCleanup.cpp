@@ -291,7 +291,6 @@ void CIRGenFunction::popCleanupBlock() {
   if (scope.isEHCleanup())
     cleanupFlags.setIsEHCleanupKind();
 
-
   // If we have a fallthrough and no other need for the cleanup,
   // emit it directly.
   if (hasFallthrough && !hasFixups) {
