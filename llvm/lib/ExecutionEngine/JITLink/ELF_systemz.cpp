@@ -33,7 +33,7 @@ constexpr StringRef ELFTLSInfoSectionName = "$__TLSINFO";
 class TLSInfoTableManager_ELF_systemz
     : public TableManager<TLSInfoTableManager_ELF_systemz> {
 public:
-  static StringRef getSectionName() { return "$__TLSINFO"; }
+  static StringRef getSectionName() { return ELFTLSInfoSectionName; }
 
   static const uint8_t TLSInfoEntryContent[16];
 
