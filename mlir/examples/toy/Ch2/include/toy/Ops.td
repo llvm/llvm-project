@@ -78,6 +78,7 @@ def ConstantOp : Toy_Op<"constant", [Pure]> {
     }]>,
 
     // Build a constant with a given constant floating-point value.
+    // 下面创建的函数，没有函数的实现，只有定义，具体的实现在Dialect.cpp中
     OpBuilder<(ins "double":$value)>
   ];
 

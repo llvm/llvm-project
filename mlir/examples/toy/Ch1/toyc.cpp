@@ -31,7 +31,7 @@ static cl::opt<std::string> inputFilename(cl::Positional,
                                           cl::init("-"),
                                           cl::value_desc("filename"));
 namespace {
-enum Action { None, DumpAST };
+enum Action { None, DumpAST };    // 两种操作，不操作和输出AST（dump）
 } // namespace
 
 static cl::opt<enum Action>
@@ -47,8 +47,8 @@ std::unique_ptr<toy::ModuleAST> parseInputFile(llvm::StringRef filename) {
     return nullptr;
   }
   auto buffer = fileOrErr.get()->getBuffer();
-  LexerBuffer lexer(buffer.begin(), buffer.end(), std::string(filename));
-  Parser parser(lexer);
+  LexerBuffer lexer(buffer.begin(), buffer.end(), std::string(filename));   // 词法分析
+  Parser parser(lexer);       // 语法分析
   return parser.parseModule();
 }
 

@@ -140,13 +140,13 @@ private:
       while (isalnum((lastChar = Token(getNextChar()))) || lastChar == '_')
         identifierStr += (char)lastChar;
 
-      if (identifierStr == "return")
+      if (identifierStr == "return")      // 返回语句
         return tok_return;
-      if (identifierStr == "def")
+      if (identifierStr == "def")         // 函数定义
         return tok_def;
-      if (identifierStr == "var")
+      if (identifierStr == "var")         // 变量定义
         return tok_var;
-      return tok_identifier;
+      return tok_identifier;              // 标识符
     }
 
     // Number: [0-9.]+
@@ -158,10 +158,10 @@ private:
       } while (isdigit(lastChar) || lastChar == '.');
 
       numVal = strtod(numStr.c_str(), nullptr);
-      return tok_number;
+      return tok_number;                  // 数字
     }
 
-    if (lastChar == '#') {
+    if (lastChar == '#') {                // 注释
       // Comment until end of line.
       do {
         lastChar = Token(getNextChar());
@@ -173,12 +173,12 @@ private:
 
     // Check for end of file.  Don't eat the EOF.
     if (lastChar == EOF)
-      return tok_eof;
+      return tok_eof;                     // 文件结束
 
     // Otherwise, just return the character as its ascii value.
     Token thisChar = Token(lastChar);
     lastChar = Token(getNextChar());
-    return thisChar;
+    return thisChar;                      // 其他字符
   }
 
   /// The last token read from the input.

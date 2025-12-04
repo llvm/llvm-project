@@ -50,7 +50,7 @@ static cl::opt<enum InputType> inputType(
                           "load the input file as an MLIR file")));
 
 namespace {
-enum Action { None, DumpAST, DumpMLIR };
+enum Action { None, DumpAST, DumpMLIR };    // 增加了dump mlir的选项。现在源代码可以dump成抽象语法树，也可以dump成mlir（这个是重点）。
 } // namespace
 static cl::opt<enum Action> emitAction(
     "emit", cl::desc("Select the kind of output desired"),
@@ -71,14 +71,14 @@ std::unique_ptr<toy::ModuleAST> parseInputFile(llvm::StringRef filename) {
   return parser.parseModule();
 }
 
-int dumpMLIR() {
+int dumpMLIR() {                                        // dump mlir逻辑
   mlir::MLIRContext context;
   // Load our Dialect in this MLIR Context.
-  context.getOrLoadDialect<mlir::toy::ToyDialect>();
+  context.getOrLoadDialect<mlir::toy::ToyDialect>();    // 增加ToyDialect方言，完全自定义
 
   // Handle '.toy' input to the compiler.
   if (inputType != InputType::MLIR &&
-      !llvm::StringRef(inputFilename).ends_with(".mlir")) {
+      !llvm::StringRef(inputFilename).ends_with(".mlir")) {     // 处理非mlir文件，也就是toy文件
     auto moduleAST = parseInputFile(inputFilename);
     if (!moduleAST)
       return 6;
@@ -102,13 +102,13 @@ int dumpMLIR() {
   llvm::SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), llvm::SMLoc());
   mlir::OwningOpRef<mlir::ModuleOp> module =
-      mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
+      mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);             // 解析mlir文件
   if (!module) {
     llvm::errs() << "Error can't load file " << inputFilename << "\n";
     return 3;
   }
 
-  module->dump();
+  module->dump();                                     // 打印mlir中间表示
   return 0;
 }
 
@@ -130,7 +130,8 @@ int main(int argc, char **argv) {
   // Register any command line options.
   mlir::registerAsmPrinterCLOptions();
   mlir::registerMLIRContextCLOptions();
-  cl::ParseCommandLineOptions(argc, argv, "toy compiler\n");
+  // example: toyc-ch2 %s -emit=mlir
+  cl::ParseCommandLineOptions(argc, argv, "toy compiler\n");      // 给 inputType 和 emitAction 赋值
 
   switch (emitAction) {
   case Action::DumpAST:

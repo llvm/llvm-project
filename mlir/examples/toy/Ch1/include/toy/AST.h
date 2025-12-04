@@ -31,18 +31,19 @@ struct VarType {
   std::vector<int64_t> shape;
 };
 
+// 源代码 --> 词法分析(Lexer) --> 语法分析(Parser) --> AST --> 语义分析 --> 中间代码生成
 /// Base class for all expression nodes.
-class ExprAST {
+class ExprAST {       // Abstract Syntax Tree，抽象语法树
 public:
   enum ExprASTKind {
-    Expr_VarDecl,
-    Expr_Return,
-    Expr_Num,
-    Expr_Literal,
-    Expr_Var,
-    Expr_BinOp,
-    Expr_Call,
-    Expr_Print,
+    Expr_VarDecl,     // 定义变量
+    Expr_Return,      // 返回操作
+    Expr_Num,         // 数值类型
+    Expr_Literal,     // 文本类型
+    Expr_Var,         // 引用变量
+    Expr_BinOp,       // 两元素操作
+    Expr_Call,        // 函数调用
+    Expr_Print,       // 内置打印功能
   };
 
   ExprAST(ExprASTKind kind, Location location)
