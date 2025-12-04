@@ -349,7 +349,7 @@ Intrinsic::ID HexagonGenWideningVecInstr::getIntrinsic(
     llvm_unreachable("Incorrect input and output operand sizes");
 
   case OP_Mul:
-    assert(ResEltSize = 2 * InEltSize);
+    assert(ResEltSize == 2 * InEltSize);
     // Enter inside 'if' block when one of the operand is constant vector
     if (IsConstScalar) {
       // When inputs are of 8bit type and output is 16bit type, enter 'if' block
