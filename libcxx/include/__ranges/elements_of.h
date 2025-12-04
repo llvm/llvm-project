@@ -11,10 +11,10 @@
 #define _LIBCPP___RANGES_ELEMENTS_OF_H
 
 #include <__config>
+#include <__cstddef/byte.h>
 #include <__memory/allocator.h>
 #include <__ranges/concepts.h>
 #include <__utility/forward.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
