@@ -43,3 +43,49 @@ define <16 x i8> @low_vector_splat_v16i8_from_i8(i8 %0) {
   %4 = shufflevector <8 x i8> %3, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i8> %4
 }
+
+define <2 x double> @low_vector_splat_v2f64_from_f64(double %0) {
+; CHECK-LABEL: low_vector_splat_v2f64_from_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, d0
+; CHECK-NEXT:    ret
+  %2 = insertelement <1 x double> poison, double %0, i64 0
+  %3 = shufflevector <1 x double> %2, <1 x double> zeroinitializer, <2 x i32> <i32 0, i32 1>
+  ret <2 x double> %3
+}
+
+define <4 x float> @low_vector_splat_v4f32_from_f32(float %0) {
+; CHECK-LABEL: low_vector_splat_v4f32_from_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    dup v0.2s, v0.s[0]
+; CHECK-NEXT:    ret
+  %2 = insertelement <2 x float> poison, float %0, i64 0
+  %3 = shufflevector <2 x float> %2, <2 x float> poison, <2 x i32> zeroinitializer
+  %4 = shufflevector <2 x float> %3, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %4
+}
+
+define <8 x half> @low_vector_splat_v8f16_from_f16(half %0) {
+; CHECK-LABEL: low_vector_splat_v8f16_from_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
+; CHECK-NEXT:    dup v0.4h, v0.h[0]
+; CHECK-NEXT:    ret
+  %2 = insertelement <4 x half> poison, half %0, i64 0
+  %3 = shufflevector <4 x half> %2, <4 x half> poison, <4 x i32> zeroinitializer
+  %4 = shufflevector <4 x half> %3, <4 x half> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x half> %4
+}
+
+define <8 x bfloat> @low_vector_splat_v8bf16_from_bf16(bfloat %0) {
+; CHECK-LABEL: low_vector_splat_v8bf16_from_bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
+; CHECK-NEXT:    dup v0.4h, v0.h[0]
+; CHECK-NEXT:    ret
+  %2 = insertelement <4 x bfloat> poison, bfloat %0, i64 0
+  %3 = shufflevector <4 x bfloat> %2, <4 x bfloat> poison, <4 x i32> zeroinitializer
+  %4 = shufflevector <4 x bfloat> %3, <4 x bfloat> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x bfloat> %4
+}

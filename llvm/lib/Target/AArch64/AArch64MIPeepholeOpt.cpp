@@ -696,6 +696,15 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
   const TargetRegisterClass *RC = MRI->getRegClass(MI->getOperand(0).getReg());
   if (RC != &AArch64::FPR64RegClass)
     return false;
+  if (MI->getOpcode() == TargetOpcode::COPY) {
+    MachineOperand &SrcOp = MI->getOperand(1);
+    if (!SrcOp.isReg())
+      return false;
+    Register SrcReg = SrcOp.getReg();
+    if (SrcReg.isVirtual())
+      return AArch64::GPR64allRegClass.hasSubClassEq(MRI->getRegClass(SrcReg));
+    return AArch64::GPR64allRegClass.contains(SrcReg);
+  }
   return MI->getOpcode() > TargetOpcode::GENERIC_OP_END;
 }
 
