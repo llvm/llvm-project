@@ -773,7 +773,6 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; CI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; CI-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v8
 ; CI-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
-; CI-NEXT:    v_or_b32_e32 v0, s6, v0
 ; CI-NEXT:    v_or_b32_e32 v1, s7, v1
 ; CI-NEXT:  .LBB6_8: ; %Flow17
 ; CI-NEXT:    v_cmp_nlg_f64_e64 vcc, s[4:5], 0
@@ -882,7 +881,6 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; VI-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v8
 ; VI-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
-; VI-NEXT:    v_or_b32_e32 v0, s6, v0
 ; VI-NEXT:    v_or_b32_e32 v1, s7, v1
 ; VI-NEXT:  .LBB6_8: ; %Flow17
 ; VI-NEXT:    v_cmp_nlg_f64_e64 vcc, s[4:5], 0
@@ -3247,7 +3245,6 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; CI-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v8
 ; CI-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
-; CI-NEXT:    v_or_b32_e32 v0, s2, v0
 ; CI-NEXT:    v_or_b32_e32 v1, s3, v1
 ; CI-NEXT:  .LBB13_8: ; %Flow54
 ; CI-NEXT:    v_mov_b32_e32 v2, s10
@@ -3334,7 +3331,6 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; CI-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v10
 ; CI-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
-; CI-NEXT:    v_or_b32_e32 v2, s2, v2
 ; CI-NEXT:    v_or_b32_e32 v3, s3, v3
 ; CI-NEXT:  .LBB13_16: ; %Flow50
 ; CI-NEXT:    v_cmp_nlg_f64_e64 vcc, s[8:9], 0
@@ -3449,7 +3445,6 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; VI-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v8
 ; VI-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
-; VI-NEXT:    v_or_b32_e32 v0, s2, v0
 ; VI-NEXT:    v_or_b32_e32 v1, s3, v1
 ; VI-NEXT:  .LBB13_8: ; %Flow54
 ; VI-NEXT:    v_mov_b32_e32 v2, s10
@@ -3536,7 +3531,6 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; VI-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v10
 ; VI-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
-; VI-NEXT:    v_or_b32_e32 v2, s2, v2
 ; VI-NEXT:    v_or_b32_e32 v3, s3, v3
 ; VI-NEXT:  .LBB13_16: ; %Flow50
 ; VI-NEXT:    v_cmp_nlg_f64_e64 vcc, s[8:9], 0
