@@ -450,9 +450,8 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
   // 2) Ends: anything that was live but is not in current_vars becomes
   // UndefLocation.
   for (const auto &KV : m_live_vars)
-    if (!current_vars.count(KV.first)) {
+    if (!current_vars.count(KV.first))
       AddVariableAnnotationToVector(annotations, KV.second, false);
-    }
 
   // Commit new state.
   m_live_vars = std::move(current_vars);
