@@ -6518,59 +6518,46 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
   }
 }
 
-static std::optional<unsigned> getSubF32Opc(Intrinsic::ID AddIntrinsicID) {
+static std::optional<unsigned> getFSubOpc(Intrinsic::ID AddIntrinsicID) {
   switch (AddIntrinsicID) {
   default:
     break;
   case Intrinsic::nvvm_add_rn_f:
-    return NVPTXISD::SUB_RN_F;
-  case Intrinsic::nvvm_add_rn_sat_f:
-    return NVPTXISD::SUB_RN_SAT_F;
-  case Intrinsic::nvvm_add_rn_ftz_f:
-    return NVPTXISD::SUB_RN_FTZ_F;
-  case Intrinsic::nvvm_add_rn_ftz_sat_f:
-    return NVPTXISD::SUB_RN_FTZ_SAT_F;
-  case Intrinsic::nvvm_add_rz_f:
-    return NVPTXISD::SUB_RZ_F;
-  case Intrinsic::nvvm_add_rz_sat_f:
-    return NVPTXISD::SUB_RZ_SAT_F;
-  case Intrinsic::nvvm_add_rz_ftz_f:
-    return NVPTXISD::SUB_RZ_FTZ_F;
-  case Intrinsic::nvvm_add_rz_ftz_sat_f:
-    return NVPTXISD::SUB_RZ_FTZ_SAT_F;
-  case Intrinsic::nvvm_add_rm_f:
-    return NVPTXISD::SUB_RM_F;
-  case Intrinsic::nvvm_add_rm_sat_f:
-    return NVPTXISD::SUB_RM_SAT_F;
-  case Intrinsic::nvvm_add_rm_ftz_f:
-    return NVPTXISD::SUB_RM_FTZ_F;
-  case Intrinsic::nvvm_add_rm_ftz_sat_f:
-    return NVPTXISD::SUB_RM_FTZ_SAT_F;
-  case Intrinsic::nvvm_add_rp_f:
-    return NVPTXISD::SUB_RP_F;
-  case Intrinsic::nvvm_add_rp_sat_f:
-    return NVPTXISD::SUB_RP_SAT_F;
-  case Intrinsic::nvvm_add_rp_ftz_f:
-    return NVPTXISD::SUB_RP_FTZ_F;
-  case Intrinsic::nvvm_add_rp_ftz_sat_f:
-    return NVPTXISD::SUB_RP_FTZ_SAT_F;
-  }
-  llvm_unreachable("Invalid add intrinsic ID");
-  return std::nullopt;
-}
-
-static std::optional<unsigned> getSubF64Opc(Intrinsic::ID AddIntrinsicID) {
-  switch (AddIntrinsicID) {
-  default:
-    return std::nullopt;
   case Intrinsic::nvvm_add_rn_d:
-    return NVPTXISD::SUB_RN_D;
+    return NVPTXISD::SUB_RN;
+  case Intrinsic::nvvm_add_rn_sat_f:
+    return NVPTXISD::SUB_RN_SAT;
+  case Intrinsic::nvvm_add_rn_ftz_f:
+    return NVPTXISD::SUB_RN_FTZ;
+  case Intrinsic::nvvm_add_rn_ftz_sat_f:
+    return NVPTXISD::SUB_RN_FTZ_SAT;
+  case Intrinsic::nvvm_add_rz_f:
   case Intrinsic::nvvm_add_rz_d:
-    return NVPTXISD::SUB_RZ_D;
+    return NVPTXISD::SUB_RZ;
+  case Intrinsic::nvvm_add_rz_sat_f:
+    return NVPTXISD::SUB_RZ_SAT;
+  case Intrinsic::nvvm_add_rz_ftz_f:
+    return NVPTXISD::SUB_RZ_FTZ;
+  case Intrinsic::nvvm_add_rz_ftz_sat_f:
+    return NVPTXISD::SUB_RZ_FTZ_SAT;
+  case Intrinsic::nvvm_add_rm_f:
   case Intrinsic::nvvm_add_rm_d:
-    return NVPTXISD::SUB_RM_D;
+    return NVPTXISD::SUB_RM;
+  case Intrinsic::nvvm_add_rm_sat_f:
+    return NVPTXISD::SUB_RM_SAT;
+  case Intrinsic::nvvm_add_rm_ftz_f:
+    return NVPTXISD::SUB_RM_FTZ;
+  case Intrinsic::nvvm_add_rm_ftz_sat_f:
+    return NVPTXISD::SUB_RM_FTZ_SAT;
+  case Intrinsic::nvvm_add_rp_f:
   case Intrinsic::nvvm_add_rp_d:
-    return NVPTXISD::SUB_RP_D;
+    return NVPTXISD::SUB_RP;
+  case Intrinsic::nvvm_add_rp_sat_f:
+    return NVPTXISD::SUB_RP_SAT;
+  case Intrinsic::nvvm_add_rp_ftz_f:
+    return NVPTXISD::SUB_RP_FTZ;
+  case Intrinsic::nvvm_add_rp_ftz_sat_f:
+    return NVPTXISD::SUB_RP_FTZ_SAT;
   }
   llvm_unreachable("Invalid add intrinsic ID");
   return std::nullopt;
@@ -6595,7 +6582,7 @@ static SDValue combineF32AddWithNeg(SDNode *N, SelectionDAG &DAG,
       return SDValue();
   }
 
-  std::optional<unsigned> Opc = getSubF32Opc(AddIntrinsicID);
+  std::optional<unsigned> Opc = getFSubOpc(AddIntrinsicID);
   if (!Opc)
     return SDValue();
 
@@ -6611,7 +6598,7 @@ static SDValue combineF64AddWithNeg(SDNode *N, SelectionDAG &DAG,
   if (Op2.getOpcode() != ISD::FNEG)
     return SDValue();
 
-  std::optional<unsigned> Opc = getSubF64Opc(AddIntrinsicID);
+  std::optional<unsigned> Opc = getFSubOpc(AddIntrinsicID);
   if (!Opc)
     return SDValue();
 
