@@ -220,6 +220,18 @@ static mlir::Value emitX86MaskLogic(CIRGenBuilderTy &builder,
                                ops[0].getType());
 }
 
+static mlir::Value emitX86MaskTest(CIRGenBuilderTy &builder, mlir::Location loc,
+                                   const std::string &intrinsicName,
+                                   SmallVectorImpl<mlir::Value> &ops) {
+  auto intTy = cast<cir::IntType>(ops[0].getType());
+  unsigned numElts = intTy.getWidth();
+  mlir::Value lhsVec = getMaskVecValue(builder, loc, ops[0], numElts);
+  mlir::Value rhsVec = getMaskVecValue(builder, loc, ops[1], numElts);
+  mlir::Type resTy = builder.getSInt32Ty();
+  return emitIntrinsicCallOp(builder, loc, intrinsicName, resTy,
+                             mlir::ValueRange{lhsVec, rhsVec});
+}
+
 static mlir::Value emitVecInsert(CIRGenBuilderTy &builder, mlir::Location loc,
                                  mlir::Value vec, mlir::Value value,
                                  mlir::Value indexOp) {
@@ -1155,26 +1167,61 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vpcomuw:
   case X86::BI__builtin_ia32_vpcomud:
   case X86::BI__builtin_ia32_vpcomuq:
-  case X86::BI__builtin_ia32_kortestcqi:
-  case X86::BI__builtin_ia32_kortestchi:
-  case X86::BI__builtin_ia32_kortestcsi:
-  case X86::BI__builtin_ia32_kortestcdi:
-  case X86::BI__builtin_ia32_kortestzqi:
-  case X86::BI__builtin_ia32_kortestzhi:
-  case X86::BI__builtin_ia32_kortestzsi:
-  case X86::BI__builtin_ia32_kortestzdi:
-  case X86::BI__builtin_ia32_ktestcqi:
-  case X86::BI__builtin_ia32_ktestzqi:
-  case X86::BI__builtin_ia32_ktestchi:
-  case X86::BI__builtin_ia32_ktestzhi:
-  case X86::BI__builtin_ia32_ktestcsi:
-  case X86::BI__builtin_ia32_ktestzsi:
-  case X86::BI__builtin_ia32_ktestcdi:
-  case X86::BI__builtin_ia32_ktestzdi:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented X86 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return {};
+  case X86::BI__builtin_ia32_kortestcqi:
+  case X86::BI__builtin_ia32_kortestchi:
+  case X86::BI__builtin_ia32_kortestcsi:
+  case X86::BI__builtin_ia32_kortestcdi: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    cir::IntType ty = cast<cir::IntType>(ops[0].getType());
+    mlir::Value allOnesOp =
+        builder.getConstAPInt(loc, ty, APInt::getAllOnes(ty.getWidth()));
+    mlir::Value orOp = emitX86MaskLogic(builder, loc, cir::BinOpKind::Or, ops);
+    mlir::Value cmp =
+        cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, orOp, allOnesOp);
+    return builder.createCast(cir::CastKind::bool_to_int, cmp,
+                              cgm.convertType(expr->getType()));
+  }
+  case X86::BI__builtin_ia32_kortestzqi:
+  case X86::BI__builtin_ia32_kortestzhi:
+  case X86::BI__builtin_ia32_kortestzsi:
+  case X86::BI__builtin_ia32_kortestzdi: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    cir::IntType ty = cast<cir::IntType>(ops[0].getType());
+    mlir::Value allZerosOp = builder.getNullValue(ty, loc).getResult();
+    mlir::Value orOp = emitX86MaskLogic(builder, loc, cir::BinOpKind::Or, ops);
+    mlir::Value cmp =
+        cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, orOp, allZerosOp);
+    return builder.createCast(cir::CastKind::bool_to_int, cmp,
+                              cgm.convertType(expr->getType()));
+  }
+  case X86::BI__builtin_ia32_ktestcqi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestc.b", ops);
+  case X86::BI__builtin_ia32_ktestzqi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestz.b", ops);
+  case X86::BI__builtin_ia32_ktestchi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestc.w", ops);
+  case X86::BI__builtin_ia32_ktestzhi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestz.w", ops);
+  case X86::BI__builtin_ia32_ktestcsi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestc.d", ops);
+  case X86::BI__builtin_ia32_ktestzsi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestz.d", ops);
+  case X86::BI__builtin_ia32_ktestcdi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestc.q", ops);
+  case X86::BI__builtin_ia32_ktestzdi:
+    return emitX86MaskTest(builder, getLoc(expr->getExprLoc()),
+                           "x86.avx512.ktestz.q", ops);
   case X86::BI__builtin_ia32_kaddqi:
     return emitX86MaskAddLogic(builder, getLoc(expr->getExprLoc()),
                                "x86.avx512.kadd.b", ops);

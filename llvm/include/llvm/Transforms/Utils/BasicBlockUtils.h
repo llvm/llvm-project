@@ -45,6 +45,10 @@ class ReturnInst;
 class TargetLibraryInfo;
 class Value;
 
+/// Check if the given basic block contains any loop or entry convergent
+/// intrinsic instructions.
+LLVM_ABI bool HasLoopOrEntryConvergenceToken(const BasicBlock *BB);
+
 /// Replace contents of every block in \p BBs with single unreachable
 /// instruction. If \p Updates is specified, collect all necessary DT updates
 /// into this vector. If \p KeepOneInputPHIs is true, one-input Phis in

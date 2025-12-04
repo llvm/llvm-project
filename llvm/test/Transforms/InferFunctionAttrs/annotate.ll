@@ -918,6 +918,15 @@ declare float @roundf(float)
 ; CHECK: declare x86_fp80 @roundl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare x86_fp80 @roundl(x86_fp80)
 
+; CHECK: declare double @roundeven(double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare double @roundeven(double)
+
+; CHECK: declare float @roundevenf(float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare float @roundevenf(float)
+
+; CHECK: declare x86_fp80 @roundevenl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare x86_fp80 @roundevenl(x86_fp80)
+
 ; CHECK: declare double @scalbln(double, i64) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare double @scalbln(double, i64)
 
