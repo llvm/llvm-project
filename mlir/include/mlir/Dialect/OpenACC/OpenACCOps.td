@@ -1394,6 +1394,19 @@ def OpenACC_PrivateRecipeOp
         ::mlir::Type varType,
         ::llvm::StringRef varName = "",
         ::mlir::ValueRange bounds = {});
+
+    /// Creates a PrivateRecipeOp using the same variable type as an existing
+    /// FirstprivateRecipeOp. This is a useful in cases where we promote private variables to firstprivate by analysis
+    /// This function reuses the init region from a firstprivate recipe when building a private
+    /// recipe. Callers thus must ensure that this is semantically valid for the language
+    /// lowering (e.g. that private does not perform extra default initialization
+    /// that firstprivate intentionally omits, such as for C++ classes or Fortran
+    /// derived types with default initialization).
+    static std::optional<PrivateRecipeOp> createAndPopulate(
+        ::mlir::OpBuilder &builder,
+        ::mlir::Location loc,
+        ::llvm::StringRef recipeName,
+        ::mlir::acc::FirstprivateRecipeOp firstprivRecipe);
   }];
 }
 
@@ -2002,8 +2015,7 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     corresponding `device_type` attributes must be modified as well.
   }];
 
-  let arguments = (ins
-      Variadic<IntOrIndex>:$asyncOperands,
+  let arguments = (ins Variadic<IntOrIndex>:$asyncOperands,
       OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
       OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
       Variadic<IntOrIndex>:$waitOperands,
@@ -2018,12 +2030,12 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
       OptionalAttr<DeviceTypeArrayAttr>:$numWorkersDeviceType,
       Variadic<IntOrIndex>:$vectorLength,
       OptionalAttr<DeviceTypeArrayAttr>:$vectorLengthDeviceType,
-      Optional<I1>:$ifCond,
-      Optional<I1>:$selfCond,
-      UnitAttr:$selfAttr,
+      Optional<I1>:$ifCond, Optional<I1>:$selfCond, UnitAttr:$selfAttr,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$reductionOperands,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$dataClauseOperands,
-      OptionalAttr<DefaultValueAttr>:$defaultAttr,
-      UnitAttr:$combined);
+      OptionalAttr<DefaultValueAttr>:$defaultAttr, UnitAttr:$combined);
 
   let regions = (region AnyRegion:$region);
 
@@ -2111,6 +2123,18 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     /// types.
     void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
                          llvm::ArrayRef<DeviceType>);
+
+    /// Adds a private clause variable to this operation, including its recipe.
+    void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
+                          mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a firstprivate clause variable to this operation, including its
+    /// recipe.
+    void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
+                               mlir::acc::FirstprivateRecipeOp recipe);
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let assemblyFormat = [{
@@ -2119,10 +2143,12 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
+      | `firstprivate` `(` $firstprivateOperands `:` type($firstprivateOperands) `)`
       | `num_gangs` `(` custom<NumGangs>($numGangs,
             type($numGangs), $numGangsDeviceType, $numGangsSegments) `)`
       | `num_workers` `(` custom<DeviceTypeOperands>($numWorkers,
             type($numWorkers), $numWorkersDeviceType) `)`
+      | `private` `(` $privateOperands `:` type($privateOperands) `)`
       | `vector_length` `(` custom<DeviceTypeOperands>($vectorLength,
             type($vectorLength), $vectorLengthDeviceType) `)`
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
@@ -2130,6 +2156,7 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
           $waitOnly)
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
+      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
     )
     $region attr-dict-with-keyword
   }];
@@ -3286,6 +3313,11 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
     void addVector(MLIRContext *, llvm::ArrayRef<DeviceType>);
     // Add an entry to the 'worker' attribute for each additional device types.
     void addWorker(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    // Add an entry to the 'gang' attribute for each additional device type.
+    void addGang(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    // Add an entry to the 'gang' attribute with a value for each additional
+    // device type.
+    void addGang(MLIRContext *, llvm::ArrayRef<DeviceType>, uint64_t);
   }];
 
   let assemblyFormat = [{
