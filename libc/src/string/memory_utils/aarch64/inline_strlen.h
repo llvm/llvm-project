@@ -15,7 +15,7 @@
 #include <arm_neon.h>
 #include <stddef.h> // size_t
 namespace LIBC_NAMESPACE_DECL {
-namespace internal::neon {
+namespace neon {
 [[maybe_unused]] LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static size_t
 string_length(const char *src) {
   using Vector __attribute__((may_alias)) = uint8x8_t;
@@ -43,7 +43,7 @@ string_length(const char *src) {
                                  (cpp::countr_zero(cmp) >> 3));
   }
 }
-} // namespace internal::neon
+} // namespace neon
 } // namespace LIBC_NAMESPACE_DECL
 #endif // __ARM_NEON
 
@@ -51,7 +51,7 @@ string_length(const char *src) {
 #include "src/__support/macros/optimization.h"
 #include <arm_sve.h>
 namespace LIBC_NAMESPACE_DECL {
-namespace internal::sve {
+namespace sve {
 [[maybe_unused]] LIBC_INLINE static size_t string_length(const char *src) {
   const uint8_t *ptr = reinterpret_cast<const uint8_t *>(src);
   // Initialize the first-fault register to all true
@@ -92,19 +92,15 @@ namespace internal::sve {
   len += svcntp_b8(all_true, before_zero);
   return len;
 }
-} // namespace internal::sve
+} // namespace sve
 } // namespace LIBC_NAMESPACE_DECL
 #endif // LIBC_TARGET_CPU_HAS_SVE
 
 namespace LIBC_NAMESPACE_DECL {
-namespace internal::arch_vector {
-[[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
 #ifdef LIBC_TARGET_CPU_HAS_SVE
-  return sve::string_length(src);
+namespace string_length_impl = sve;
 #elif defined(__ARM_NEON)
-  return neon::string_length(src);
+namespace string_length_impl = neon;
 #endif
-}
-} // namespace internal::arch_vector
 } // namespace LIBC_NAMESPACE_DECL
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_STRLEN_H
