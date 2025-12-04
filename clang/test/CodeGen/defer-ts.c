@@ -427,3 +427,49 @@ int main() {
   defer x(42);
   return 5;
 }
+
+// CHECK-LABEL: define {{.*}} void @t()
+// CHECK: entry:
+// CHECK-NEXT:   %count = alloca i32, align 4
+// CHECK-NEXT:   %cleanup.dest.slot = alloca i32, align 4
+// CHECK-NEXT:   store i32 0, ptr %count, align 4
+// CHECK-NEXT:   br label %target
+// CHECK: target:
+// CHECK-NEXT:   %0 = load i32, ptr %count, align 4
+// CHECK-NEXT:   %inc = add nsw i32 %0, 1
+// CHECK-NEXT:   store i32 %inc, ptr %count, align 4
+// CHECK-NEXT:   %1 = load i32, ptr %count, align 4
+// CHECK-NEXT:   %cmp = icmp sle i32 %1, 2
+// CHECK-NEXT:   br i1 %cmp, label %if.then, label %if.end
+// CHECK: if.then:
+// CHECK-NEXT:   store i32 2, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   br label %cleanup
+// CHECK: if.end:
+// CHECK-NEXT:   store i32 0, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   br label %cleanup
+// CHECK: cleanup:
+// CHECK-NEXT:   call void @x(i32 {{.*}} 1)
+// CHECK-NEXT:   %cleanup.dest = load i32, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   switch i32 %cleanup.dest, label %unreachable [
+// CHECK-NEXT:     i32 0, label %cleanup.cont
+// CHECK-NEXT:     i32 2, label %target
+// CHECK-NEXT:   ]
+// CHECK: cleanup.cont:
+// CHECK-NEXT:   call void @x(i32 {{.*}} 2)
+// CHECK-NEXT:   ret void
+// CHECK: unreachable:
+// CHECK-NEXT:   unreachable
+void t() {
+   int count = 0;
+
+   {
+     target:
+     _Defer { x(1); }
+     ++count;
+     if (count <= 2) {
+       goto target;
+     }
+   }
+
+   x(2);
+}
