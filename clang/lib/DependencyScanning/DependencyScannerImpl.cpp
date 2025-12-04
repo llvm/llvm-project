@@ -6,21 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DependencyScannerImpl.h"
+#include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSerialization.h"
+#include "clang/DependencyScanning/DependencyScanningWorker.h"
+#include "clang/DependencyScanning/ScanAndUpdateArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
-#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace clang;
-using namespace tooling;
 using namespace dependencies;
 using llvm::Error;
 

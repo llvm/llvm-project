@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
+#include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/CAS/CASOptions.h"
+#include "clang/DependencyScanning/DependencyScanningService.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
-using namespace clang::tooling::dependencies;
+using namespace clang::dependencies;
 
 TEST(DependencyScanningFilesystem, OpenFileAndGetBufferRepeatedly) {
   auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
@@ -23,8 +23,8 @@ TEST(DependencyScanningFilesystem, OpenFileAndGetBufferRepeatedly) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr,
-      ScanningOptimizations::Default, /*EagerLoadModules=*/false,
+      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
+      /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
   DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS);
@@ -62,8 +62,8 @@ TEST(DependencyScanningWorkerFilesystem, CacheStatusFailures) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr,
-      ScanningOptimizations::Default, /*EagerLoadModules=*/false,
+      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
+      /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
   DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
@@ -93,8 +93,8 @@ TEST(DependencyScanningFilesystem, CacheGetRealPath) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr,
-      ScanningOptimizations::Default, /*EagerLoadModules=*/false,
+      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
+      /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
   DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
@@ -131,9 +131,9 @@ TEST(DependencyScanningFilesystem, RealPathAndStatusInvariants) {
   InMemoryFS->addFile("/foo.c", 0, llvm::MemoryBuffer::getMemBuffer(""));
   InMemoryFS->addFile("/bar.c", 0, llvm::MemoryBuffer::getMemBuffer(""));
 
-  DependencyScanningService Service(
-      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr);
+  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
+                                    ScanningOutputFormat::Make,
+                                    clang::CASOptions(), nullptr, nullptr);
   DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS);
 
   // Success.
@@ -188,8 +188,8 @@ TEST(DependencyScanningFilesystem, CacheStatOnExists) {
   InMemoryFS->addFile("/bar", 0, llvm::MemoryBuffer::getMemBuffer(""));
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr,
-      ScanningOptimizations::Default, /*EagerLoadModules=*/false,
+      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
+      /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
   DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
@@ -216,8 +216,8 @@ TEST(DependencyScanningFilesystem, CacheStatFailures) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr,
-      ScanningOptimizations::Default, /*EagerLoadModules=*/false,
+      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
+      /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
   DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
@@ -248,8 +248,8 @@ TEST(DependencyScanningFilesystem, DiagnoseStaleStatFailures) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr,
-      ScanningOptimizations::Default, /*EagerLoadModules=*/false,
+      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
+      /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
   DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS);
@@ -279,8 +279,8 @@ TEST(DependencyScanningFilesystem, DiagnoseCachedFileSizeChange) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr,
-      ScanningOptimizations::Default, /*EagerLoadModules=*/false,
+      clang::CASOptions(), nullptr, nullptr, ScanningOptimizations::Default,
+      /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
   DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS1);
@@ -316,9 +316,9 @@ TEST(DependencyScanningFilesystem, DoNotDiagnoseDirSizeChange) {
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
       llvm::vfs::createPhysicalFileSystem();
 
-  DependencyScanningService Service(
-      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr);
+  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
+                                    ScanningOutputFormat::Make,
+                                    clang::CASOptions(), nullptr, nullptr);
   DependencyScanningWorkerFilesystem DepFS(Service, FS);
 
   // Trigger the file system cache.

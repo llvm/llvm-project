@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CAS/IncludeTree.h"
+#include "clang/DependencyScanning/DependencyScanningService.h"
+#include "clang/DependencyScanning/DependencyScanningWorker.h"
+#include "clang/DependencyScanning/ScanAndUpdateArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Tooling/CommonOptionsParser.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
-#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
+#include "clang/Tooling/DependencyScanningTool.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
@@ -46,7 +46,8 @@
 
 using namespace clang;
 using namespace tooling;
-using namespace tooling::dependencies;
+using namespace clang::dependencies;
+using namespace clang::tooling::dependencies;
 
 namespace {
 

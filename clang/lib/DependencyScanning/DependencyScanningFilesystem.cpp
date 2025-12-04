@@ -1,4 +1,4 @@
-//===- DependencyScanningFilesystem.cpp - clang-scan-deps fs --------------===//
+//===- DependencyScanningFilesystem.cpp - Optimized Scanning FS -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
+#include "clang/DependencyScanning/DependencyScanningFilesystem.h"
+#include "clang/DependencyScanning/DependencyScanningService.h"
 #include "llvm/CAS/CASFileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 #include <optional>
 
 using namespace clang;
-using namespace tooling;
 using namespace dependencies;
 
 llvm::ErrorOr<DependencyScanningWorkerFilesystem::TentativeEntry>
@@ -451,17 +450,16 @@ DepScanFile::create(EntryRef Entry) {
   std::unique_ptr<llvm::vfs::File> Result;
   if (Entry.getObjectRefForContent())
     Result = std::make_unique<DepScanCASFile>(
-      llvm::MemoryBuffer::getMemBuffer(Entry.getContents(),
-                                       Entry.getStatus().getName(),
-                                       /*RequiresNullTerminator=*/false),
-      *Entry.getObjectRefForContent(), Entry.getStatus());
+        llvm::MemoryBuffer::getMemBuffer(Entry.getContents(),
+                                         Entry.getStatus().getName(),
+                                         /*RequiresNullTerminator=*/false),
+        *Entry.getObjectRefForContent(), Entry.getStatus());
   else
     Result = std::make_unique<DepScanFile>(
         llvm::MemoryBuffer::getMemBuffer(Entry.getContents(),
                                          Entry.getStatus().getName(),
                                          /*RequiresNullTerminator=*/false),
         Entry.getStatus());
-
 
   return Result;
 }

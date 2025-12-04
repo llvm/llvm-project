@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
-#include "CachingActions.h"
+#include "clang/Tooling/DependencyScanningTool.h"
 #include "clang/CAS/IncludeTree.h"
+#include "clang/DependencyScanning/CachingActions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/Utils.h"
-#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "llvm/CAS/ObjectStore.h"
 
 using namespace clang;
 using namespace tooling;
-using namespace dependencies;
+using namespace clang::dependencies;
+using namespace clang::tooling::dependencies;
 using llvm::Error;
 
 DependencyScanningTool::DependencyScanningTool(
@@ -134,7 +134,7 @@ private:
   cas::ObjectStore &DB;
   std::optional<std::string> IncludeTreeID;
 };
-}
+} // namespace
 
 Expected<cas::IncludeTreeRoot> DependencyScanningTool::getIncludeTree(
     cas::ObjectStore &DB, const std::vector<std::string> &CommandLine,
@@ -278,33 +278,6 @@ llvm::Error DependencyScanningTool::finalizeCompilerInstanceWithContext() {
   return Worker.finalizeCompilerInstanceWithContextOrError();
 }
 
-TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {
-  TranslationUnitDeps TU;
-
-  TU.ID.ContextHash = std::move(ContextHash);
-  TU.ID.ModuleName = std::move(ModuleName);
-  TU.NamedModuleDeps = std::move(NamedModuleDeps);
-  TU.FileDeps = std::move(Dependencies);
-  TU.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
-  TU.VisibleModules = std::move(VisibleModules);
-  TU.Commands = std::move(Commands);
-  TU.IncludeTreeID = std::move(IncludeTreeID);
-
-  for (auto &&M : ClangModuleDeps) {
-    auto &MD = M.second;
-    // TODO: Avoid handleModuleDependency even being called for modules
-    //   we've already seen.
-    if (AlreadySeen.count(M.first))
-      continue;
-    TU.ModuleGraph.push_back(std::move(MD));
-  }
-  TU.ClangModuleDeps = std::move(DirectModuleDeps);
-
-  return TU;
-}
-
-CallbackActionController::~CallbackActionController() {}
-
 std::unique_ptr<DependencyActionController>
 DependencyScanningTool::createActionController(
     DependencyScanningWorker &Worker,
@@ -319,4 +292,41 @@ std::unique_ptr<DependencyActionController>
 DependencyScanningTool::createActionController(
     LookupModuleOutputCallback LookupModuleOutput) {
   return createActionController(Worker, std::move(LookupModuleOutput));
+}
+
+Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
+    DependencyScanningTool &Tool, DiagnosticConsumer &DiagsConsumer,
+    raw_ostream *VerboseOS, CompilerInvocation &Invocation,
+    StringRef WorkingDirectory, llvm::cas::ObjectStore &DB) {
+  // Override the CASOptions. They may match (the caller having sniffed them
+  // out of InputArgs) but if they have been overridden we want the new ones.
+  Invocation.getCASOpts() = Tool.getCASOpts();
+
+  llvm::PrefixMapper Mapper;
+  DepscanPrefixMapping::configurePrefixMapper(Invocation, Mapper);
+
+  auto ScanInvocation = std::make_shared<CompilerInvocation>(Invocation);
+  // An error during dep-scanning is treated as if the main compilation has
+  // failed, but warnings are ignored and deferred for the main compilation.
+  ScanInvocation->getDiagnosticOpts().IgnoreWarnings = true;
+
+  LookupModuleOutputCallback Lookup;
+
+  std::optional<llvm::cas::CASID> Root;
+  if (Error E =
+          Tool.getIncludeTreeFromCompilerInvocation(
+                  DB, std::move(ScanInvocation), WorkingDirectory,
+                  /*LookupModuleOutput=*/nullptr, DiagsConsumer, VerboseOS,
+                  /*DiagGenerationAsCompilation*/ true)
+              .moveInto(Root))
+    return std::move(E);
+
+  // Turn off dependency outputs. Should have already been emitted.
+  Invocation.getDependencyOutputOpts().OutputFile.clear();
+
+  configureInvocationForCaching(Invocation, Tool.getCASOpts(), Root->toString(),
+                                CachingInputKind::IncludeTree,
+                                WorkingDirectory.str());
+  DepscanPrefixMapping::remapInvocationPaths(Invocation, Mapper);
+  return *Root;
 }

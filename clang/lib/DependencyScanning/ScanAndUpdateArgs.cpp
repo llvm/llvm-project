@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
+#include "clang/DependencyScanning/ScanAndUpdateArgs.h"
 #include "clang/CAS/IncludeTree.h"
+#include "clang/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Lex/HeaderSearchOptions.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrefixMapper.h"
 
 using namespace clang;
-using namespace clang::tooling::dependencies;
+using namespace clang::dependencies;
 using llvm::Error;
 
 static void updateRelativePath(std::string &Path,
@@ -29,9 +29,11 @@ static void updateRelativePath(std::string &Path,
   Path = PathStorage.str();
 }
 
-void tooling::dependencies::configureInvocationForCaching(
-    CompilerInvocation &CI, CASOptions CASOpts, std::string InputID,
-    CachingInputKind InputKind, std::string WorkingDir) {
+void dependencies::configureInvocationForCaching(CompilerInvocation &CI,
+                                                 CASOptions CASOpts,
+                                                 std::string InputID,
+                                                 CachingInputKind InputKind,
+                                                 std::string WorkingDir) {
   CI.getCASOpts() = std::move(CASOpts);
   auto &FrontendOpts = CI.getFrontendOpts();
   FrontendOpts.CacheCompileJob = true;
@@ -160,7 +162,8 @@ void DepscanPrefixMapping::configurePrefixMapper(const CompilerInvocation &CI,
 }
 
 void DepscanPrefixMapping::configurePrefixMapper(
-    ArrayRef<std::pair<std::string, std::string>> PathPrefixMappings, llvm::PrefixMapper &Mapper) {
+    ArrayRef<std::pair<std::string, std::string>> PathPrefixMappings,
+    llvm::PrefixMapper &Mapper) {
   if (PathPrefixMappings.empty())
     return;
 
@@ -170,41 +173,4 @@ void DepscanPrefixMapping::configurePrefixMapper(
     Mapper.add(MappedPrefix);
 
   Mapper.sort();
-}
-
-Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
-    DependencyScanningTool &Tool, DiagnosticConsumer &DiagsConsumer,
-    raw_ostream *VerboseOS, CompilerInvocation &Invocation,
-    StringRef WorkingDirectory, llvm::cas::ObjectStore &DB) {
-  // Override the CASOptions. They may match (the caller having sniffed them
-  // out of InputArgs) but if they have been overridden we want the new ones.
-  Invocation.getCASOpts() = Tool.getCASOpts();
-
-  llvm::PrefixMapper Mapper;
-  DepscanPrefixMapping::configurePrefixMapper(Invocation, Mapper);
-
-  auto ScanInvocation = std::make_shared<CompilerInvocation>(Invocation);
-  // An error during dep-scanning is treated as if the main compilation has
-  // failed, but warnings are ignored and deferred for the main compilation.
-  ScanInvocation->getDiagnosticOpts().IgnoreWarnings = true;
-
-  LookupModuleOutputCallback Lookup;
-
-  std::optional<llvm::cas::CASID> Root;
-  if (Error E =
-          Tool.getIncludeTreeFromCompilerInvocation(
-                  DB, std::move(ScanInvocation), WorkingDirectory,
-                  /*LookupModuleOutput=*/nullptr, DiagsConsumer, VerboseOS,
-                  /*DiagGenerationAsCompilation*/ true)
-              .moveInto(Root))
-    return std::move(E);
-
-  // Turn off dependency outputs. Should have already been emitted.
-  Invocation.getDependencyOutputOpts().OutputFile.clear();
-
-  configureInvocationForCaching(Invocation, Tool.getCASOpts(), Root->toString(),
-                                CachingInputKind::IncludeTree,
-                                WorkingDirectory.str());
-  DepscanPrefixMapping::remapInvocationPaths(Invocation, Mapper);
-  return *Root;
 }

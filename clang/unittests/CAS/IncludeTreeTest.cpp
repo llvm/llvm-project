@@ -1,6 +1,6 @@
 #include "clang/CAS/IncludeTree.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
-#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
+#include "clang/DependencyScanning/ScanAndUpdateArgs.h"
+#include "clang/Tooling/DependencyScanningTool.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/Error.h"
@@ -11,9 +11,8 @@
 
 using namespace clang;
 using namespace clang::cas;
-
-using namespace tooling;
-using namespace dependencies;
+using namespace clang::dependencies;
+using namespace clang::tooling::dependencies;
 
 TEST(IncludeTree, IncludeTreeScan) {
   StringRef PathSep = llvm::sys::path::get_separator();

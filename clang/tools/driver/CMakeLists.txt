@@ -72,6 +72,7 @@ clang_target_link_libraries(clang
   clangFrontendTool
   clangOptions
   clangSerialization
+  clangTooling # FIXME: This is here just for DependencyScanningTool.
   )
 
 if(WIN32 AND NOT CYGWIN)

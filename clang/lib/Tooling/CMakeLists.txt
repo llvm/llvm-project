@@ -11,7 +11,6 @@ add_subdirectory(Refactor)
 add_subdirectory(Refactoring)
 add_subdirectory(ASTDiff)
 add_subdirectory(Syntax)
-add_subdirectory(DependencyScanning)
 add_subdirectory(Transformer)
 
 add_clang_library(clangTooling
@@ -19,6 +18,7 @@ add_clang_library(clangTooling
   ArgumentsAdjusters.cpp
   CommonOptionsParser.cpp
   CompilationDatabase.cpp
+  DependencyScanningTool.cpp
   Execution.cpp
   ExpandResponseFilesCompilationDatabase.cpp
   FileMatchTrie.cpp
@@ -40,6 +40,7 @@ add_clang_library(clangTooling
   clangAST
   clangASTMatchers
   clangBasic
+  clangDependencyScanning
   clangDriver
   clangOptions
   clangFormat

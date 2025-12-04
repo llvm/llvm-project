@@ -13,6 +13,8 @@
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Config/config.h"
+#include "clang/DependencyScanning/DependencyScanningService.h"
+#include "clang/DependencyScanning/ScanAndUpdateArgs.h"
 #include "clang/Frontend/CompileJobCacheKey.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -21,9 +23,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Options/Options.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
-#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
+#include "clang/Tooling/DependencyScanningTool.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
@@ -897,10 +897,9 @@ int ScanServer::listen() {
   if (!Cache)
     reportError("cannot create ActionCache");
 
-  tooling::dependencies::DependencyScanningService Service(
-      tooling::dependencies::ScanningMode::DependencyDirectivesScan,
-      tooling::dependencies::ScanningOutputFormat::IncludeTree, CASOpts, CAS,
-      Cache);
+  dependencies::DependencyScanningService Service(
+      dependencies::ScanningMode::DependencyDirectivesScan,
+      dependencies::ScanningOutputFormat::IncludeTree, CASOpts, CAS, Cache);
 
   std::atomic<int> NumRunning(0);
 
@@ -1116,10 +1115,9 @@ scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
   if (!DB || !Cache)
     return 1;
 
-  tooling::dependencies::DependencyScanningService Service(
-      tooling::dependencies::ScanningMode::DependencyDirectivesScan,
-      tooling::dependencies::ScanningOutputFormat::IncludeTree, CASOpts, DB,
-      Cache);
+  dependencies::DependencyScanningService Service(
+      dependencies::ScanningMode::DependencyDirectivesScan,
+      dependencies::ScanningOutputFormat::IncludeTree, CASOpts, DB, Cache);
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> UnderlyingFS =
       llvm::vfs::createPhysicalFileSystem();
   UnderlyingFS =
