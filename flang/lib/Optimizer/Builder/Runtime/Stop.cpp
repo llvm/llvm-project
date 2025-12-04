@@ -17,9 +17,11 @@ using namespace Fortran::runtime;
 void fir::runtime::genExit(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value status) {
   auto exitFunc = fir::runtime::getRuntimeFunc<mkRTKey(Exit)>(loc, builder);
+  exitFunc->setAttr("noreturn", builder.getUnitAttr());
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, exitFunc.getFunctionType(), status);
   fir::CallOp::create(builder, loc, exitFunc, args);
+  builder.create<fir::UnreachableOp>(loc);
 }
 
 void fir::runtime::genAbort(fir::FirOpBuilder &builder, mlir::Location loc) {
