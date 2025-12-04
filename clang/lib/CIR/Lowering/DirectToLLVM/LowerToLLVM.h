@@ -18,19 +18,6 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 namespace cir {
-class SqrtOp;
-}
-
-class CIRToLLVMSqrtOpLowering : public mlir::OpConversionPattern<cir::SqrtOp> {
-public:
-  using mlir::OpConversionPattern<cir::SqrtOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::SqrtOp op, typename cir::SqrtOp::Adaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override;
-};
-
-namespace cir {
 
 namespace direct {
 
