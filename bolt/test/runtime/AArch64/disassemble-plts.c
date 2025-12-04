@@ -16,9 +16,9 @@
 // Check that PLTs are disassembled for the BTI binary.
 // CHECK-BTI: Binary Function "__libc_start_main@PLT" after disassembly {
 // CHECK-BTI: adrp
-// CHECK-BTI: ldr
-// CHECK-BTI: add
-// CHECK-BTI: br
+// CHECK-BTI-NEXT: ldr
+// CHECK-BTI-NEXT: add
+// CHECK-BTI-NEXT: br
 // CHECK-BTI: End of Function "__libc_start_main@PLT"
 
 #include <stdio.h>
