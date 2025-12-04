@@ -41,7 +41,7 @@ namespace lldb_dap {
 /// `DAP_LOG_ERROR` helpers.
 class Log final {
 public:
-  using Mutex = std::recursive_mutex;
+  using Mutex = std::mutex;
 
   Log(llvm::raw_ostream &stream, Mutex &mutex)
       : m_stream(stream), m_mutex(mutex) {}
@@ -51,7 +51,7 @@ public:
   /// Retuns a new Log instance with the associated prefix for all messages.
   inline Log WithPrefix(llvm::StringRef prefix) const {
     std::string full_prefix =
-        m_prefix.empty() ? prefix.str() : m_prefix + " " + prefix.str();
+        m_prefix.empty() ? prefix.str() : m_prefix + prefix.str();
     full_prefix += " ";
     return Log(full_prefix, *this);
   }

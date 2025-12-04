@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "JSONUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBStringList.h"
-#include "lldb/SBCommandInterpreter.h"
 
 using namespace llvm;
 using namespace lldb_dap;

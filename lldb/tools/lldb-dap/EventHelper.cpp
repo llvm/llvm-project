@@ -480,7 +480,7 @@ static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
   }
 }
 
-void HandleBreakpointEvent(const lldb::SBEvent &event, Log &log) {
+static void HandleBreakpointEvent(const lldb::SBEvent &event, Log &log) {
   const uint32_t event_mask = event.GetType();
   if (!(event_mask & lldb::SBTarget::eBroadcastBitBreakpointChanged))
     return;

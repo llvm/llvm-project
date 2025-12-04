@@ -23,6 +23,7 @@
 #include "Transport.h"
 #include "Variables.h"
 #include "lldb/API/SBBroadcaster.h"
+#include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFile.h"

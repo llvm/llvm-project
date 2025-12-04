@@ -453,15 +453,16 @@ static llvm::Error serveConnection(
       ResetConnectionTimeout(g_connection_timeout_mutex,
                              g_connection_timeout_time_point);
     std::string client_name = llvm::formatv("client_{0}", clientCount++).str();
-    Log client_log = log.WithPrefix("(" + client_name + ")");
-    DAP_LOG(client_log, "client connected");
-
     lldb::IOObjectSP io(std::move(sock));
 
     // Move the client into a background thread to unblock accepting the next
     // client.
-    std::thread client([=, &client_log]() {
+    std::thread client([=, &log]() {
       llvm::set_thread_name(client_name + ".runloop");
+
+      Log client_log = log.WithPrefix("(" + client_name + ")");
+      DAP_LOG(client_log, "client connected");
+
       MainLoop loop;
       Transport transport(client_log, io, io);
       DAP dap(client_log, default_repl_mode, pre_init_commands, no_lldbinit,
@@ -652,7 +653,7 @@ int main(int argc, char *argv[]) {
     log_os = std::make_unique<llvm::raw_fd_ostream>(FD, /*shouldClose=*/true);
   }
   Log::Mutex mutex;
-  Log log(log_os ? *log_os.get() : llvm::nulls(), mutex);
+  Log log(log_os ? *log_os : llvm::nulls(), mutex);
 
   // Initialize LLDB first before we do anything.
   lldb::SBError error = lldb::SBDebugger::InitializeWithErrorHandling();

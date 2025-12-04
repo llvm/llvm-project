@@ -39,7 +39,7 @@ void TransportBase::SetUp() {
 
   log = std::make_unique<Log>(llvm::outs(), log_mutex);
   dap = std::make_unique<DAP>(
-      /*log=*/*log.get(),
+      /*log=*/*log,
       /*default_repl_mode=*/ReplMode::Auto,
       /*pre_init_commands=*/std::vector<std::string>(),
       /*no_lldbinit=*/false,
