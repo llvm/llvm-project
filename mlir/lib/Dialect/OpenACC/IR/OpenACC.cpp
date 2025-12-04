@@ -1459,26 +1459,16 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   auto varType = firstprivRecipe.getType();
   auto recipe = PrivateRecipeOp::create(builder, loc, recipeName, varType);
 
-  // Clone the init region: same argument list (original + bounds...), same
-  // body, same yield value. This matches PrivateRecipeOp's expected init
-  // signature.
-  {
-    IRMapping mapping;
-    firstprivRecipe.getInitRegion().cloneInto(&recipe.getInitRegion(), mapping);
-  }
+  // Clone the init region
+  IRMapping mapping;
+  firstprivRecipe.getInitRegion().cloneInto(&recipe.getInitRegion(), mapping);
 
-  // Clone destroy region if the firstprivate.recipe has one. The destroy region
-  // signatures (original, privatized, bounds...) are compatible between the
-  // two.
+  // Clone destroy region if the firstprivate.recipe has one.
   if (!firstprivRecipe.getDestroyRegion().empty()) {
     IRMapping mapping;
     firstprivRecipe.getDestroyRegion().cloneInto(&recipe.getDestroyRegion(),
                                                  mapping);
   }
-
-  // The copy region from firstprivate is intentionally ignored: private recipes
-  // only have init + optional destroy.
-
   return recipe;
 }
 

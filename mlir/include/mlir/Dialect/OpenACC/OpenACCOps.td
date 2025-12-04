@@ -1396,8 +1396,7 @@ def OpenACC_PrivateRecipeOp
         ::mlir::ValueRange bounds = {});
 
     /// Creates a PrivateRecipeOp using the same variable type as an existing
-    /// FirstprivateRecipeOp. This is a convenience wrapper that forwards to
-    /// the type-based createAndPopulate overload.
+    /// FirstprivateRecipeOp. This is a useful in cases where we promote private variables to firstprivate by analysis
     static std::optional<PrivateRecipeOp> createAndPopulate(
         ::mlir::OpBuilder &builder,
         ::mlir::Location loc,
