@@ -4787,6 +4787,8 @@ genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::semantics::SemanticsContext &semanticsContext,
        const Fortran::parser::OpenACCCacheConstruct &cacheConstruct) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.genLocation(cacheConstruct.source);
+  TODO(loc, "OpenACC cache directive");
   auto loopOp = builder.getRegion().getParentOfType<mlir::acc::LoopOp>();
   auto crtPos = builder.saveInsertionPoint();
   if (loopOp) {
