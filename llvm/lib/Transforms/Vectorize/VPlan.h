@@ -1010,7 +1010,7 @@ public:
       Metadata.emplace_back(Kind, Node);
   }
 
-  /// Intersect this VPIRMetada object with \p MD, keeping only metadata
+  /// Intersect this VPIRMetadata object with \p MD, keeping only metadata
   /// nodes that are common to both.
   void intersect(const VPIRMetadata &MD);
 
@@ -1020,6 +1020,11 @@ public:
         find_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
     return It != Metadata.end() ? It->second : nullptr;
   }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print metadata with node IDs.
+  void print(raw_ostream &O, VPSlotTracker &SlotTracker) const;
+#endif
 };
 
 /// This is a concrete Recipe that models a single VPlan-level instruction.
@@ -1510,12 +1515,6 @@ class LLVM_ABI_FOR_TEST VPWidenRecipe : public VPRecipeWithIRFlags,
   unsigned Opcode;
 
 public:
-  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, const VPIRMetadata &Metadata,
-                DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, Flags, DL),
-        VPIRMetadata(Metadata), Opcode(Opcode) {}
-
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
                 DebugLoc DL = {})
@@ -1527,10 +1526,8 @@ public:
   ~VPWidenRecipe() override = default;
 
   VPWidenRecipe *clone() override {
-    auto *R =
-        new VPWidenRecipe(getOpcode(), operands(), *this, *this, getDebugLoc());
-    R->setUnderlyingValue(getUnderlyingValue());
-    return R;
+    return new VPWidenRecipe(*getUnderlyingInstr(), operands(), *this, *this,
+                             getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenSC)
@@ -2071,6 +2068,9 @@ public:
   static inline bool classof(const VPValue *V) {
     return isa<VPHeaderPHIRecipe>(V->getDefiningRecipe());
   }
+  static inline bool classof(const VPSingleDefRecipe *R) {
+    return isa<VPHeaderPHIRecipe>(static_cast<const VPRecipeBase *>(R));
+  }
 
   /// Generate the phi nodes.
   void execute(VPTransformState &State) override = 0;
@@ -2136,7 +2136,7 @@ public:
     return R && classof(R);
   }
 
-  static inline bool classof(const VPHeaderPHIRecipe *R) {
+  static inline bool classof(const VPSingleDefRecipe *R) {
     return classof(static_cast<const VPRecipeBase *>(R));
   }
 
@@ -2432,19 +2432,27 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
 
   ReductionStyle Style;
 
+  /// The phi is part of a multi-use reduction (e.g., used in FindLastIV
+  /// patterns for argmin/argmax).
+  /// TODO: Also support cases where the phi itself has a single use, but its
+  /// compare has multiple uses.
+  bool HasUsesOutsideReductionChain;
+
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
-                       ReductionStyle Style)
+                       ReductionStyle Style,
+                       bool HasUsesOutsideReductionChain = false)
       : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start), Kind(Kind),
-        Style(Style) {}
+        Style(Style),
+        HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {}
 
   ~VPReductionPHIRecipe() override = default;
 
   VPReductionPHIRecipe *clone() override {
     auto *R = new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
-        *getOperand(0), Style);
+        *getOperand(0), Style, HasUsesOutsideReductionChain);
     R->addOperand(getBackedgeValue());
     return R;
   }
@@ -2480,6 +2488,11 @@ public:
 
   /// Returns true if the reduction outputs a vector with a scaled down VF.
   bool isPartialReduction() const { return getVFScaleFactor() > 1; }
+
+  /// Returns true, if the phi is part of a multi-use reduction.
+  bool hasUsesOutsideReductionChain() const {
+    return HasUsesOutsideReductionChain;
+  }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
