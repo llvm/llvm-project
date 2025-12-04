@@ -1,0 +1,6 @@
+RUN: %lldb -b -o 'version -v' | FileCheck %s
+
+CHECK: lldb version
+CHECK: xml:
+CHECK: python:
+CHECK: targets: [{{.*}}]
