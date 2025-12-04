@@ -606,7 +606,7 @@ private:
           return Style.BraceWrapping.AfterUnion;
         default:
           return false;
-        };
+        }
       };
 
       auto TryMergeShortRecord = [&] {
@@ -615,7 +615,8 @@ private:
           return false;
         case FormatStyle::SRS_Always:
           return true;
-        default:
+        case FormatStyle::SRS_EmptyIfAttached:
+        case FormatStyle::SRS_Empty:
           return NextLine->First->is(tok::r_brace);
         }
       };

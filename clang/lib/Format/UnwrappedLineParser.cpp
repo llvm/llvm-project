@@ -3265,8 +3265,7 @@ void UnwrappedLineParser::parseNew() {
     if (FormatTok->is(tok::l_paren)) {
       parseParens();
 
-      // If there is a class body of an anonymous class, consume that as
-      // child.
+      // If there is a class body of an anonymous class, consume that as child.
       if (FormatTok->is(tok::l_brace))
         parseChildBlock();
       return;
