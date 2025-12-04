@@ -359,6 +359,15 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
           *DAG.getContext(), *CallConv, ValueVT, IntermediateVT,
           NumIntermediates, RegisterVT);
     } else {
+      if (!ValueVT.isScalableVector() && PartVT.isVector() &&
+          !PartVT.isScalableVector()) {
+        if (ValueVT.getSizeInBits() % PartVT.getSizeInBits() == 0) {
+          MVT NewEltVT = PartVT.getVectorElementType();
+          unsigned NewNumElts =
+              ValueVT.getSizeInBits() / NewEltVT.getSizeInBits();
+          ValueVT = MVT::getVectorVT(NewEltVT, NewNumElts);
+        }
+      }
       NumRegs =
           TLI.getVectorTypeBreakdown(*DAG.getContext(), ValueVT, IntermediateVT,
                                      NumIntermediates, RegisterVT);
@@ -763,6 +772,16 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
         *DAG.getContext(), *CallConv, ValueVT, IntermediateVT, NumIntermediates,
         RegisterVT);
   } else {
+    if (!ValueVT.isScalableVector() && PartVT.isVector() &&
+        !PartVT.isScalableVector()) {
+      if (ValueVT.getSizeInBits() % PartVT.getSizeInBits() == 0) {
+        MVT NewEltVT = PartVT.getVectorElementType();
+        unsigned NewNumElts =
+            ValueVT.getSizeInBits() / NewEltVT.getSizeInBits();
+        ValueVT = MVT::getVectorVT(NewEltVT, NewNumElts);
+        Val = DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
+      }
+    }
     NumRegs =
         TLI.getVectorTypeBreakdown(*DAG.getContext(), ValueVT, IntermediateVT,
                                    NumIntermediates, RegisterVT);
