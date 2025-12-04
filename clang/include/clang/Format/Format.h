@@ -3936,6 +3936,11 @@ struct FormatStyle {
   /// \version 3.7
   bool ObjCSpaceAfterProperty;
 
+  /// Add or remove a space between the '-'/'+' and the return type in Objective-C method declarations,
+  /// i.e. use '- (void)method' instead of '-(void)method'.
+  /// \version 23
+  bool ObjCSpaceBeforeMethodDeclColon;
+
   /// Add a space in front of an Objective-C protocol list, i.e. use
   /// ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
   /// \version 3.7
@@ -5845,7 +5850,8 @@ struct FormatStyle {
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros &&
-           WrapNamespaceBodyWithEmptyLines == R.WrapNamespaceBodyWithEmptyLines;
+           WrapNamespaceBodyWithEmptyLines == R.WrapNamespaceBodyWithEmptyLines &&
+           ObjCSpaceBeforeMethodDeclColon == R.ObjCSpaceBeforeMethodDeclColon;
   }
 
   std::optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;

@@ -15623,6 +15623,22 @@ TEST_F(FormatTest, FormatForObjectiveCMethodDecls) {
   verifyGoogleFormat("- foo:(int)foo;");
 }
 
+TEST_F(FormatTest, SpaceBeforeObjCMethodDeclColon) {
+  FormatStyle Style = getLLVMStyle();
+  verifyFormat("- (void)method;", "-(void)method;", Style);
+  verifyFormat("+ (int)foo:(int)x;", "+       (int)        foo:(int)x;", Style);
+  verifyFormat("- foo;", "-foo;", Style);
+  verifyFormat("- foo:(int)f;", "-foo:(int)f;", Style);
+
+  Style.ObjCSpaceBeforeMethodDeclColon = false;
+  verifyFormat("-(void)method;", "-  (void)   method;", Style);
+  verifyFormat("+(int)foo:(int)x;", "+        (int)foo:(int)x;", Style);
+  verifyFormat("+(int)foo:(int)x;", "+ (int)foo:(int)x;", Style);
+
+  verifyFormat("-foo;", "- foo;", Style);
+  verifyFormat("-foo:(int)f;", "- foo:(int)f;", Style);
+}
+
 TEST_F(FormatTest, BreaksStringLiterals) {
   // FIXME: unstable test case
   EXPECT_EQ("\"some text \"\n"

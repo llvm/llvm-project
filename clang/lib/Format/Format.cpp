@@ -1353,6 +1353,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.WhitespaceSensitiveMacros);
     IO.mapOptional("WrapNamespaceBodyWithEmptyLines",
                    Style.WrapNamespaceBodyWithEmptyLines);
+    IO.mapOptional("ObjCSpaceBeforeMethodDeclColon",
+                   Style.ObjCSpaceBeforeMethodDeclColon);
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
     // BreakAfterReturnType was not, initialize the latter from the former for
@@ -1788,6 +1790,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ObjCBlockIndentWidth = 2;
   LLVMStyle.ObjCBreakBeforeNestedBlockParam = true;
   LLVMStyle.ObjCSpaceAfterProperty = false;
+  LLVMStyle.ObjCSpaceBeforeMethodDeclColon = true;
   LLVMStyle.ObjCSpaceBeforeProtocolList = true;
   LLVMStyle.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
   LLVMStyle.PointerAlignment = FormatStyle::PAS_Right;
