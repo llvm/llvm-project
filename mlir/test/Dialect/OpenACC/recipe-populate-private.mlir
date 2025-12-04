@@ -73,8 +73,10 @@ func.func @test_mixed_dims(%arg0: index) {
 // CHECK:   %[[ALLOC:.*]] = memref.alloca() {acc.var_name = #acc.var_name<"scalar_int">} : memref<i32>
 // CHECK:   acc.yield %[[ALLOC]] : memref<i32>
 // CHECK: }
+// CHECK-NOT: destroy
 
 func.func @test_scalar_int() {
   %0 = memref.alloca() {test.var = "scalar_int"} : memref<i32>
   return
 }
+
