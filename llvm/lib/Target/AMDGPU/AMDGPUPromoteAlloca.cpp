@@ -930,7 +930,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         if (auto *LI = dyn_cast<LoadInst>(U)) {
           if (auto *LoadVecTy = dyn_cast<FixedVectorType>(LI->getType())) {
             if (LoadVecTy->getNumElements() >
-                    PromoteAllocaDynamicIndexNumberElementLimit)
+                PromoteAllocaDynamicIndexNumberElementLimit)
               return true;
           }
         }
