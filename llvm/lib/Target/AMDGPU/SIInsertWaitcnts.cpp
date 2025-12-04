@@ -63,8 +63,8 @@ static cl::opt<bool> ForceEmitZeroLoadFlag(
     cl::desc("Force all waitcnt load counters to wait until 0"),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool> SoftwareHazardModeFlag(
-    "amdgpu-software-hazard-mode",
+static cl::opt<bool> ExpertSchedulingModeFlag(
+    "amdgpu-expert-scheduling-mode",
     cl::desc("Enable expert scheduling mode 2 for all kernel functions (GFX12+ "
              "only)"),
     cl::init(false), cl::Hidden);
@@ -602,7 +602,7 @@ public:
   }
 
   std::optional<WaitEventType>
-  getSoftwareHazardEventType(const MachineInstr &Inst) const;
+  getExpertSchedulingEventType(const MachineInstr &Inst) const;
 
   bool isVmemAccess(const MachineInstr &MI) const;
   bool generateWaitcntInstBefore(MachineInstr &MI,
@@ -2372,7 +2372,7 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
 }
 
 std::optional<WaitEventType>
-SIInsertWaitcnts::getSoftwareHazardEventType(const MachineInstr &Inst) const {
+SIInsertWaitcnts::getExpertSchedulingEventType(const MachineInstr &Inst) const {
   if (TII->isVALU(Inst)) {
     // Core/Side-, DP-, XDL- and TRANS-MACC VALU instructions complete
     // out-of-order with respect to each other, so each of these classes
@@ -2484,7 +2484,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   bool IsSMEMAccess = false;
 
   if (isExpertMode(MaxCounter)) {
-    if (const auto ET = getSoftwareHazardEventType(Inst))
+    if (const auto ET = getExpertSchedulingEventType(Inst))
       ScoreBrackets->updateByEvent(*ET, Inst);
   }
 
@@ -2979,11 +2979,11 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST->getCPU());
 
   if (ST->hasExtendedWaitCounts()) {
-    if (ST->hasSoftwareHazardMode() &&
+    if (ST->hasExpertSchedulingMode() &&
         (MF.getFunction()
-             .getFnAttribute("amdgpu-software-hazard-mode")
+             .getFnAttribute("amdgpu-expert-scheduling-mode")
              .getValueAsBool() ||
-         SoftwareHazardModeFlag))
+         ExpertSchedulingModeFlag))
       MaxCounter = NUM_EXPERT_INST_CNTS;
     else
       MaxCounter = NUM_EXTENDED_INST_CNTS;

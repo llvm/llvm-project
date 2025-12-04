@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs -amdgpu-software-hazard-mode -run-pass si-insert-waitcnts %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs -amdgpu-expert-scheduling-mode -run-pass si-insert-waitcnts %s -o - | FileCheck -check-prefix=GCN %s
 # RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs -amdgpu-waitcnt-forcezero -run-pass si-insert-waitcnts %s -o - | FileCheck %s
 
 ---
