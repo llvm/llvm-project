@@ -9516,3 +9516,4 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   LinkCommand->replaceExecutable(Exec);
   LinkCommand->replaceArguments(CmdArgs);
 }
+

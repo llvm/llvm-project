@@ -3784,10 +3784,9 @@ class OffloadingActionBuilder final {
       }
 
       // By default, we produce an action for each device arch.
-      for (Action *&A : CudaDeviceActions) {
+      for (Action *&A : CudaDeviceActions)
         A = C.getDriver().ConstructPhaseAction(C, Args, CurPhase, A,
                                                AssociatedOffloadKind);
-      }
 
       if (CompileDeviceOnly && CurPhase == FinalPhase && BundleOutput &&
           *BundleOutput) {
@@ -7468,3 +7467,4 @@ void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
       ++S;
   }
 }
+

@@ -445,7 +445,6 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
 llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
     const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
     Action::OffloadKind DeviceOffloadKind) const {
-
   DerivedArgList *DAL =
       HostTC.TranslateArgs(Args, BoundArch, DeviceOffloadKind);
 

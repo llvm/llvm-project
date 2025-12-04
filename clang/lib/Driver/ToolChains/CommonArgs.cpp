@@ -1019,7 +1019,6 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   StringRef Linker = Args.getLastArgValue(options::OPT_fuse_ld_EQ);
   const char *LinkerPath = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
-
   const bool IsFatLTO = Args.hasFlag(options::OPT_ffat_lto_objects,
                                      options::OPT_fno_fat_lto_objects, false);
   const bool IsUnifiedLTO = Args.hasArg(options::OPT_funified_lto);
@@ -3184,7 +3183,6 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
       Triple.isAMDGCN()  ? options::OPT_libomptarget_amdgpu_bc_path_EQ
       : Triple.isNVPTX() ? options::OPT_libomptarget_nvptx_bc_path_EQ
                          : options::OPT_libomptarget_spirv_bc_path_EQ;
-
 
   StringRef ArchPrefix = Triple.isAMDGCN()  ? "amdgpu"
                          : Triple.isNVPTX() ? "nvptx"

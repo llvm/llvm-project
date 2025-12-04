@@ -1,4 +1,3 @@
-
 //===--- Cuda.h - Cuda ToolChain Implementations ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -6,8 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_CUDA_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_CUDA_H
+
 #include "clang/Basic/Cuda.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/CudaInstallationDetector.h"
@@ -19,10 +20,12 @@
 #include <bitset>
 #include <set>
 #include <vector>
+
 namespace clang {
 namespace driver {
 namespace tools {
 namespace NVPTX {
+
 // Run ptxas, the NVPTX assembler.
 class LLVM_LIBRARY_VISIBILITY Assembler final : public Tool {
 public:
@@ -33,6 +36,7 @@ public:
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
+
 // Runs fatbinary, which combines GPU object files ("cubin" files) and/or PTX
 // assembly into a single output file.
 class LLVM_LIBRARY_VISIBILITY FatBinary : public Tool {
@@ -44,6 +48,7 @@ public:
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
+
 // Runs nvlink, which links GPU object files ("cubin" files) into a single file.
 class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
@@ -55,6 +60,7 @@ public:
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
+
 class LLVM_LIBRARY_VISIBILITY OpenMPLinker : public Tool {
  public:
    OpenMPLinker(const ToolChain &TC)
@@ -65,12 +71,15 @@ class LLVM_LIBRARY_VISIBILITY OpenMPLinker : public Tool {
                      const llvm::opt::ArgList &TCArgs,
                      const char *LinkingOutput) const override;
 };
+
 void getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                             const llvm::opt::ArgList &Args,
                             std::vector<StringRef> &Features);
 } // end namespace NVPTX
 } // end namespace tools
+
 namespace toolchains {
+
 class LLVM_LIBRARY_VISIBILITY NVPTXToolChain : public ToolChain {
 public:
   NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
@@ -79,6 +88,7 @@ public:
 
   NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
                  const llvm::opt::ArgList &Args);
+
   llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
@@ -102,10 +112,13 @@ public:
   bool HasNativeLLVMSupport() const override { return true; }
   bool isPICDefaultForced() const override { return false; }
   bool SupportsProfiling() const override { return false; }
+
   bool IsMathErrnoDefault() const override { return false; }
+
   bool supportsDebugInfoOption(const llvm::opt::Arg *A) const override;
   void adjustDebugInfoKind(llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
                            const llvm::opt::ArgList &Args) const override;
+
   // NVPTX supports only DWARF2.
   unsigned GetDefaultDwarfVersion() const override { return 2; }
   unsigned getMaxDwarfVersion() const override { return 2; }
@@ -116,6 +129,7 @@ public:
   getSystemGPUArchs(const llvm::opt::ArgList &Args) const override;
 
   CudaInstallationDetector CudaInstallation;
+
 protected:
   Tool *buildAssembler() const override; // ptxas.
   Tool *buildLinker() const override;    // nvlink.
@@ -128,6 +142,7 @@ public:
   CudaToolChain(const Driver &D, const llvm::Triple &Triple,
                 const ToolChain &HostTC, const llvm::opt::ArgList &Args,
                 const std::string TargetID);
+
   const llvm::Triple *getAuxTriple() const override {
     return &HostTC.getTriple();
   }
@@ -135,6 +150,7 @@ public:
   bool HasNativeLLVMSupport() const override { return false; }
 
   std::string getInputFilename(const InputInfo &Input) const override;
+
   llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
@@ -142,11 +158,14 @@ public:
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
                         Action::OffloadKind DeviceOffloadKind) const override;
+
   llvm::DenormalMode getDefaultDenormalModeForType(
       const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
       const llvm::fltSemantics *FPType = nullptr) const override;
+
   void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const override;
+
   void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
   void
@@ -157,6 +176,7 @@ public:
       llvm::opt::ArgStringList &CC1Args) const override;
   void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
+
   SanitizerMask getSupportedSanitizers() const override;
   VersionTuple
   computeMSVCVersion(const Driver *D,
@@ -168,7 +188,9 @@ protected:
   Tool *buildAssembler() const override; // ptxas
   Tool *buildLinker() const override;    // fatbinary (ok, not really a linker)
 };
+
 } // end namespace toolchains
 } // end namespace driver
 } // end namespace clang
+
 #endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_CUDA_H
