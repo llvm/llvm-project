@@ -110,5 +110,15 @@ add_libc_test(
     libc.src.strings.strncasecmp_l
 )
 
+add_libc_test(
+  wide_read_memory_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    wide_read_memory_test.cpp
+  DEPENDS
+    libc.src.string.strlen
+)
+
 add_libc_multi_impl_test(bcmp libc-strings-tests SRCS bcmp_test.cpp)
 add_libc_multi_impl_test(bzero libc-strings-tests SRCS bzero_test.cpp)
