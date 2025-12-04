@@ -93,9 +93,7 @@ __m128i test_mm_roti_epi64(__m128i a) {
 
 __m128i test_mm_com_epu8(__m128i a, __m128i b) {
   // CIR-LABEL: test_mm_com_epu8
-  // CIR: %[[A:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<16 x !u8i>
-  // CIR: %[[B:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<16 x !u8i>
-  // CIR: %[[CMP:.*]] = cir.vec.cmp(lt, %[[A]], %[[B]]) : !cir.vector<16 x !u8i>, !cir.vector<16 x !s8i>
+  // CIR: %[[CMP:.*]] = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<16 x !u8i>, !cir.vector<16 x !s8i>
   // CIR: %[[RES:.*]] = cir.cast bitcast %[[CMP]] : !cir.vector<16 x !s8i> -> !cir.vector<2 x !s64i>
 
   // LLVM-LABEL: test_mm_com_epu8
@@ -161,7 +159,62 @@ __m128i test_mm_com_epu64(__m128i a, __m128i b) {
   // OGCG-LABEL: test_mm_com_epu64
   // OGCG: %[[CMP:.*]] = icmp ult <2 x i64> %{{.*}}, %{{.*}}
   // OGCG: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
-  return _mm_com_epu64(a, b, 0);
+  a = _mm_com_epu64(a, b, 0);
+
+  // CIR: %[[VAL1:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
+  // CIR: %[[VAL2:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
+  // CIR: %[[CMP:.*]] = cir.vec.cmp(le, %[[VAL1]], %[[VAL2]]) : !cir.vector<2 x !u64i>, !cir.vector<2 x !s64i>
+
+  // LLVM: %[[CMP:.*]] = icmp ule <2 x i64> %{{.*}}, %{{.*}}
+  // LLVM: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
+
+  // OGCG: %[[CMP:.*]] = icmp ule <2 x i64> %{{.*}}, %{{.*}}
+  // OGCG: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
+  a = _mm_com_epu64(a, b, 1);
+
+  // CIR: %[[VAL1:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
+  // CIR: %[[VAL2:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
+  // CIR: %[[CMP:.*]] = cir.vec.cmp(gt, %[[VAL1]], %[[VAL2]]) : !cir.vector<2 x !u64i>, !cir.vector<2 x !s64i>
+
+  // LLVM: %[[CMP:.*]] = icmp ugt <2 x i64> %{{.*}}, %{{.*}}
+  // LLVM: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
+
+  // OGCG: %[[CMP:.*]] = icmp ugt <2 x i64> %{{.*}}, %{{.*}}
+  // OGCG: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
+  a = _mm_com_epu64(a, b, 2);
+
+  // CIR: %[[VAL1:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
+  // CIR: %[[VAL2:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
+  // CIR: %[[CMP:.*]] = cir.vec.cmp(ge, %[[VAL1]], %[[VAL2]]) : !cir.vector<2 x !u64i>, !cir.vector<2 x !s64i>
+
+  // LLVM: %[[CMP:.*]] = icmp uge <2 x i64> %{{.*}}, %{{.*}}
+  // LLVM: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
+
+  // OGCG: %[[CMP:.*]] = icmp uge <2 x i64> %{{.*}}, %{{.*}}
+  // OGCG: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
+  a = _mm_com_epu64(a, b, 3);
+
+  // CIR: %[[VAL1:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
+  // CIR: %[[VAL2:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
+  // CIR: %[[CMP:.*]] = cir.vec.cmp(eq, %[[VAL1]], %[[VAL2]]) : !cir.vector<2 x !u64i>, !cir.vector<2 x !s64i>
+
+  // LLVM: %[[CMP:.*]] = icmp eq <2 x i64> %{{.*}}, %{{.*}}
+  // LLVM: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
+
+  // OGCG: %[[CMP:.*]] = icmp eq <2 x i64> %{{.*}}, %{{.*}}
+  // OGCG: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
+  a = _mm_com_epu64(a, b, 4);
+
+  // CIR: %[[VAL1:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
+  // CIR: %[[VAL2:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
+  // CIR: %[[CMP:.*]] = cir.vec.cmp(ne, %[[VAL1]], %[[VAL2]]) : !cir.vector<2 x !u64i>, !cir.vector<2 x !s64i>
+
+  // LLVM: %[[CMP:.*]] = icmp ne <2 x i64> %{{.*}}, %{{.*}}
+  // LLVM: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
+
+  // OGCG: %[[CMP:.*]] = icmp ne <2 x i64> %{{.*}}, %{{.*}}
+  // OGCG: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
+  return _mm_com_epu64(a, b, 5);
 }
 
 __m128i test_mm_com_epi8(__m128i a, __m128i b) {
@@ -226,7 +279,52 @@ __m128i test_mm_com_epi64(__m128i a, __m128i b) {
   // OGCG-LABEL: test_mm_com_epi64
   // OGCG: %[[CMP:.*]] = icmp slt <2 x i64> %{{.*}}, %{{.*}}
   // OGCG: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
-  return _mm_com_epi64(a, b, 0);
+  a = _mm_com_epi64(a, b, 0);
+
+  // CIR: %[[CMP1:.*]] = cir.vec.cmp(le, %{{.*}}, %{{.*}}) : !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>
+
+  // LLVM: %[[CMP1:.*]] = icmp sle <2 x i64> %{{.*}}, %{{.*}}
+  // LLVM: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
+
+  // OGCG: %[[CMP1:.*]] = icmp sle <2 x i64> %{{.*}}, %{{.*}}
+  // OGCG: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
+  a = _mm_com_epi64(a, b, 1);
+
+  // CIR: %[[CMP1:.*]] = cir.vec.cmp(gt, %{{.*}}, %{{.*}}) : !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>
+
+  // LLVM: %[[CMP1:.*]] = icmp sgt <2 x i64> %{{.*}}, %{{.*}}
+  // LLVM: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
+
+  // OGCG: %[[CMP1:.*]] = icmp sgt <2 x i64> %{{.*}}, %{{.*}}
+  // OGCG: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
+  a = _mm_com_epi64(a, b, 2);
+
+  // CIR: %[[CMP1:.*]] = cir.vec.cmp(ge, %{{.*}}, %{{.*}}) : !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>
+
+  // LLVM: %[[CMP1:.*]] = icmp sge <2 x i64> %{{.*}}, %{{.*}}
+  // LLVM: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
+
+  // OGCG: %[[CMP1:.*]] = icmp sge <2 x i64> %{{.*}}, %{{.*}}
+  // OGCG: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
+  a = _mm_com_epi64(a, b, 3);
+
+  // CIR: %[[CMP1:.*]] = cir.vec.cmp(eq, %{{.*}}, %{{.*}}) : !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>
+
+  // LLVM: %[[CMP1:.*]] = icmp eq <2 x i64> %{{.*}}, %{{.*}}
+  // LLVM: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
+
+  // OGCG: %[[CMP1:.*]] = icmp eq <2 x i64> %{{.*}}, %{{.*}}
+  // OGCG: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
+  a = _mm_com_epi64(a, b, 4);
+
+  // CIR: %[[CMP1:.*]] = cir.vec.cmp(ne, %{{.*}}, %{{.*}}) : !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>
+
+  // LLVM: %[[CMP1:.*]] = icmp ne <2 x i64> %{{.*}}, %{{.*}}
+  // LLVM: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
+
+  // OGCG: %[[CMP1:.*]] = icmp ne <2 x i64> %{{.*}}, %{{.*}}
+  // OGCG: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
+  return _mm_com_epi64(a, b, 5);
 }
 
 __m128i test_mm_com_epi32_false(__m128i a, __m128i b) {

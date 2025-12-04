@@ -322,11 +322,9 @@ static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
   mlir::Value op1 = ops[1];
 
   cir::VectorType ty = cast<cir::VectorType>(op0.getType());
-  mlir::Type elementTy = ty.getElementType();
+  cir::IntType elementTy = cast<cir::IntType>(ty.getElementType());
 
-  uint64_t imm =
-      ops[2].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
-      0x7;
+  uint64_t imm = CIRGenFunction::getZExtIntValueFromConstOp(ops[2]) & 0x7;
 
   cir::CmpOpKind pred;
   switch (imm) {
@@ -351,8 +349,7 @@ static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
   case 0x6:
     return builder.getNullValue(ty, loc); // FALSE
   case 0x7: {
-    llvm::APInt allOnes =
-        llvm::APInt::getAllOnes(cast<cir::IntType>(elementTy).getWidth());
+    llvm::APInt allOnes = llvm::APInt::getAllOnes(elementTy.getWidth());
     return cir::VecSplatOp::create(
         builder, loc, ty,
         builder.getConstAPInt(loc, elementTy, allOnes)); // TRUE
@@ -361,8 +358,10 @@ static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
     llvm_unreachable("Unexpected XOP vpcom/vpcomu predicate");
   }
 
-  if (!isSigned) {
-    elementTy = builder.getUIntNTy(cast<cir::IntType>(elementTy).getWidth());
+  if ((!isSigned && elementTy.isSigned()) ||
+      (isSigned && elementTy.isUnsigned())) {
+    elementTy = elementTy.isSigned() ? builder.getUIntNTy(elementTy.getWidth())
+                                     : builder.getSIntNTy(elementTy.getWidth());
     ty = cir::VectorType::get(elementTy, ty.getSize());
     op0 = builder.createBitcast(op0, ty);
     op1 = builder.createBitcast(op1, ty);
