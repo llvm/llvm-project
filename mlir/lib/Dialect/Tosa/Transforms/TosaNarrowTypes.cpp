@@ -45,21 +45,21 @@ enum class TosaNarrowKind { Int64ToInt32, Float64ToFloat32 };
 // ---------------------------------------------------------------------------
 
 template <TosaNarrowKind Kind>
-static bool isSourceInteger(IntegerType type) {
+bool isSourceInteger(IntegerType type) {
   if constexpr (Kind == TosaNarrowKind::Int64ToInt32)
     return type.isInteger(64);
   return false;
 }
 
 template <TosaNarrowKind Kind>
-static bool isSourceFloat(FloatType type) {
+bool isSourceFloat(FloatType type) {
   if constexpr (Kind == TosaNarrowKind::Float64ToFloat32)
     return type.isF64();
   return false;
 }
 
 template <TosaNarrowKind Kind>
-static Type convertInteger(IntegerType type) {
+Type convertInteger(IntegerType type) {
   if (!isSourceInteger<Kind>(type))
     return type;
   if constexpr (Kind == TosaNarrowKind::Int64ToInt32)
@@ -68,7 +68,7 @@ static Type convertInteger(IntegerType type) {
 }
 
 template <TosaNarrowKind Kind>
-static Type convertFloat(FloatType type) {
+Type convertFloat(FloatType type) {
   if (!isSourceFloat<Kind>(type))
     return type;
   if constexpr (Kind == TosaNarrowKind::Float64ToFloat32)
@@ -77,7 +77,7 @@ static Type convertFloat(FloatType type) {
 }
 
 template <TosaNarrowKind Kind>
-static bool isSourceElement(Type type) {
+bool isSourceElement(Type type) {
   if (auto intTy = dyn_cast<IntegerType>(type))
     return isSourceInteger<Kind>(intTy);
   if (auto floatTy = dyn_cast<FloatType>(type))
@@ -86,7 +86,7 @@ static bool isSourceElement(Type type) {
 }
 
 template <TosaNarrowKind Kind>
-static Type convertElement(Type type) {
+Type convertElement(Type type) {
   if (auto intTy = dyn_cast<IntegerType>(type))
     return convertInteger<Kind>(intTy);
   if (auto floatTy = dyn_cast<FloatType>(type))
@@ -95,73 +95,168 @@ static Type convertElement(Type type) {
 }
 
 template <TosaNarrowKind Kind>
-static bool typeNeedsConversion(Type type) {
+bool typeNeedsConversion(Type type) {
   if (auto shaped = dyn_cast<ShapedType>(type))
     return isSourceElement<Kind>(shaped.getElementType());
   return isSourceElement<Kind>(type);
 }
 
+FailureOr<APInt> convertIntegerConstant(IntegerType targetType,
+                                        const APInt &value,
+                                        bool allowLossyConversion) {
+  const unsigned targetWidth = targetType.getWidth();
+  if (!allowLossyConversion && !value.isSignedIntN(targetWidth))
+    return failure();
+
+  if (allowLossyConversion)
+    return value.truncSSat(targetWidth);
+  return value.sextOrTrunc(targetWidth);
+}
+
+FailureOr<APFloat> convertFloatConstant(FloatType targetType,
+                                        const APFloat &value,
+                                        bool allowLossyConversion) {
+  APFloat converted(value);
+  bool losesInfo = false;
+  converted.convert(targetType.getFloatSemantics(),
+                    APFloat::rmNearestTiesToEven, &losesInfo);
+  if (!allowLossyConversion && losesInfo)
+    return failure();
+  return converted;
+}
+
 // Narrows scalar constant attributes so they keep matching the converted
 // element types.
 template <TosaNarrowKind Kind>
-static bool tryConvertScalarAttribute(Attribute attribute,
-                                      Attribute &resultAttr) {
+FailureOr<Attribute> tryConvertScalarAttribute(Attribute attribute,
+                                               bool allowLossyConversion) {
   if constexpr (Kind == TosaNarrowKind::Int64ToInt32) {
     if (const auto intAttr = dyn_cast<IntegerAttr>(attribute)) {
       if (const auto intType = dyn_cast<IntegerType>(intAttr.getType());
           intType && isSourceInteger<Kind>(intType)) {
         const auto convertedType =
             cast<IntegerType>(convertInteger<Kind>(intType));
-        const APInt truncated =
-            intAttr.getValue().truncSSat(convertedType.getWidth());
-        resultAttr = IntegerAttr::get(convertedType, truncated);
-        return true;
+        FailureOr<APInt> convertedValue = convertIntegerConstant(
+            convertedType, intAttr.getValue(), allowLossyConversion);
+        if (failed(convertedValue))
+          return failure();
+        return IntegerAttr::get(convertedType, convertedValue.value());
       }
     }
-  }
-
-  if constexpr (Kind == TosaNarrowKind::Float64ToFloat32) {
+  } else if constexpr (Kind == TosaNarrowKind::Float64ToFloat32) {
     if (const auto floatAttr = dyn_cast<FloatAttr>(attribute)) {
       if (const auto floatType = dyn_cast<FloatType>(floatAttr.getType());
           floatType && isSourceFloat<Kind>(floatType)) {
         const auto convertedType =
             cast<FloatType>(convertFloat<Kind>(floatType));
-        APFloat value = floatAttr.getValue();
-        bool losesInfo = false;
-        value.convert(convertedType.getFloatSemantics(),
-                      APFloat::rmNearestTiesToEven, &losesInfo);
-        resultAttr = FloatAttr::get(convertedType, value);
-        return true;
+        FailureOr<APFloat> convertedValue = convertFloatConstant(
+            convertedType, floatAttr.getValue(), allowLossyConversion);
+        if (failed(convertedValue))
+          return failure();
+        return FloatAttr::get(convertedType, convertedValue.value());
       }
     }
   }
 
-  return false;
+  return attribute;
+}
+
+template <TosaNarrowKind Kind>
+FailureOr<Attribute>
+convertDenseIntElementsAttr(ShapedType type, DenseIntElementsAttr attr,
+                            const TypeConverter &typeConverter,
+                            bool allowLossyConversion) {
+  if constexpr (Kind != TosaNarrowKind::Int64ToInt32)
+    return attr;
+
+  const auto oldElementType = dyn_cast<IntegerType>(type.getElementType());
+  if (!oldElementType || !isSourceInteger<Kind>(oldElementType))
+    return attr;
+
+  const auto newType =
+      dyn_cast_or_null<ShapedType>(typeConverter.convertType(type));
+  if (!newType)
+    return failure();
+
+  const auto newElementType = dyn_cast<IntegerType>(newType.getElementType());
+  if (!newElementType)
+    return failure();
+
+  if (!allowLossyConversion) {
+    for (APInt value : attr.getValues<APInt>())
+      if (failed(convertIntegerConstant(newElementType, value,
+                                        /*allowLossyConversion=*/false)))
+        return failure();
+  }
+
+  Attribute convertedAttr =
+      attr.mapValues(newElementType, [&](const APInt &value) -> APInt {
+        return convertIntegerConstant(newElementType, value,
+                                      /*allowLossyConversion=*/true)
+            .value();
+      });
+  return convertedAttr;
+}
+
+template <TosaNarrowKind Kind>
+FailureOr<Attribute>
+convertDenseFPElementsAttr(ShapedType type, DenseFPElementsAttr attr,
+                           const TypeConverter &typeConverter,
+                           bool allowLossyConversion) {
+  if constexpr (Kind != TosaNarrowKind::Float64ToFloat32)
+    return attr;
+
+  const auto oldElementType = dyn_cast<FloatType>(type.getElementType());
+  if (!oldElementType || !isSourceFloat<Kind>(oldElementType))
+    return attr;
+
+  const auto newType =
+      dyn_cast_or_null<ShapedType>(typeConverter.convertType(type));
+  if (!newType)
+    return failure();
+
+  const auto newElementType = dyn_cast<FloatType>(newType.getElementType());
+  if (!newElementType)
+    return failure();
+
+  if (!allowLossyConversion) {
+    for (APFloat value : attr.getValues<APFloat>())
+      if (failed(convertFloatConstant(newElementType, value,
+                                      /*allowLossyConversion=*/false)))
+        return failure();
+  }
+
+  Attribute convertedAttr =
+      attr.mapValues(newElementType, [&](const APFloat &value) -> APInt {
+        APFloat converted = convertFloatConstant(newElementType, value,
+                                                 /*allowLossyConversion=*/true)
+                                .value();
+        // DenseFPElementsAttr stores each float as raw bits, so emit the APInt
+        // representation that MLIR expects in the underlying buffer.
+        return converted.bitcastToAPInt();
+      });
+  return convertedAttr;
 }
 
 template <TosaNarrowKind Kind, typename AttrT>
-static LogicalResult
+FailureOr<Attribute>
 convertAttributeWithTypeConverter(AttrT attr, Type type,
-                                  const TypeConverter *typeConverter,
-                                  Attribute &resultAttr) {
-  if (!typeNeedsConversion<Kind>(type)) {
-    resultAttr = attr;
-    return success();
-  }
+                                  const TypeConverter *typeConverter) {
+  if (!typeNeedsConversion<Kind>(type))
+    return attr;
 
   const std::optional<Attribute> convertedAttribute =
       typeConverter->convertTypeAttribute(type, attr);
   if (!convertedAttribute)
     return failure();
 
-  resultAttr = convertedAttribute.value();
-  return success();
+  return convertedAttribute.value();
 }
 
 // Rejects cast rewrites that would lose precision (unless aggressive mode is
 // enabled).
 template <TosaNarrowKind Kind>
-static LogicalResult
+LogicalResult
 verifyCastDoesNotLosePrecision(Operation *op, ShapedType inputType,
                                ShapedType resultType,
                                ConversionPatternRewriter &rewriter) {
@@ -174,9 +269,7 @@ verifyCastDoesNotLosePrecision(Operation *op, ShapedType inputType,
         elementInputIntType.getWidth() > elementResultIntType.getWidth())
       return rewriter.notifyMatchFailure(
           op, "Narrowing cast may lead to data loss.");
-  }
-
-  if constexpr (Kind == TosaNarrowKind::Float64ToFloat32) {
+  } else if constexpr (Kind == TosaNarrowKind::Float64ToFloat32) {
     const auto elementInputFloatType =
         dyn_cast<FloatType>(inputType.getElementType());
     const auto elementResultFloatType =
@@ -191,37 +284,6 @@ verifyCastDoesNotLosePrecision(Operation *op, ShapedType inputType,
   return success();
 }
 
-template <TosaNarrowKind Kind, typename DenseAttrT, typename ElementTypeT,
-          typename MapValueFn>
-static Attribute convertDenseElementsAttr(ShapedType type, DenseAttrT attr,
-                                          const TypeConverter &typeConverter,
-                                          MapValueFn &&mapValueFn) {
-  const auto oldElementType = dyn_cast<ElementTypeT>(type.getElementType());
-  if (!oldElementType)
-    return attr;
-
-  if constexpr (std::is_same_v<ElementTypeT, IntegerType>) {
-    if (!isSourceInteger<Kind>(oldElementType))
-      return attr;
-  } else {
-    if (!isSourceFloat<Kind>(oldElementType))
-      return attr;
-  }
-
-  const auto newType =
-      dyn_cast_or_null<ShapedType>(typeConverter.convertType(type));
-  if (!newType)
-    return attr;
-
-  const auto newElementType = dyn_cast<ElementTypeT>(newType.getElementType());
-  if (!newElementType)
-    return attr;
-
-  return attr.mapValues(newElementType, [&](const auto &value) {
-    return mapValueFn(newElementType, value);
-  });
-}
-
 // ---------------------------------------------------------------------------
 // Conversion patterns
 // ---------------------------------------------------------------------------
@@ -231,7 +293,8 @@ static Attribute convertDenseElementsAttr(ShapedType type, DenseAttrT attr,
 template <TosaNarrowKind Kind>
 LogicalResult convertGenericOp(Operation *op, ValueRange operands,
                                ConversionPatternRewriter &rewriter,
-                               const TypeConverter *typeConverter) {
+                               const TypeConverter *typeConverter,
+                               bool allowLossyConversion) {
   SmallVector<Type, 4> newResults;
   if (failed(typeConverter->convertTypes(op->getResultTypes(), newResults)))
     return failure();
@@ -243,28 +306,37 @@ LogicalResult convertGenericOp(Operation *op, ValueRange operands,
   for (const NamedAttribute &namedAttribute : op->getAttrs()) {
     const Attribute attribute = namedAttribute.getValue();
 
-    Attribute convertedAttr;
-    if (tryConvertScalarAttribute<Kind>(attribute, convertedAttr)) {
-      state.addAttribute(namedAttribute.getName(), convertedAttr);
+    if (isa<IntegerAttr>(attribute) || isa<FloatAttr>(attribute)) {
+      FailureOr<Attribute> convertedAttr =
+          tryConvertScalarAttribute<Kind>(attribute, allowLossyConversion);
+      if (failed(convertedAttr))
+        return rewriter.notifyMatchFailure(
+            op, "Scalar attribute narrowing would lose precision; enable "
+                "aggressive rewrite to override.");
+      state.addAttribute(namedAttribute.getName(), convertedAttr.value());
       continue;
     }
 
     if (const auto typeAttr = dyn_cast<TypeAttr>(attribute)) {
-      if (failed(convertAttributeWithTypeConverter<Kind>(
-              typeAttr, typeAttr.getValue(), typeConverter, convertedAttr)))
+      FailureOr<Attribute> convertedAttr =
+          convertAttributeWithTypeConverter<Kind>(typeAttr, typeAttr.getValue(),
+                                                  typeConverter);
+      if (failed(convertedAttr))
         return rewriter.notifyMatchFailure(op,
                                            "Failed to convert type attribute.");
-      state.addAttribute(namedAttribute.getName(), convertedAttr);
+      state.addAttribute(namedAttribute.getName(), convertedAttr.value());
       continue;
     }
 
     if (const auto denseElementsAttr = dyn_cast<DenseElementsAttr>(attribute)) {
-      if (failed(convertAttributeWithTypeConverter<Kind>(
-              denseElementsAttr, denseElementsAttr.getType(), typeConverter,
-              convertedAttr)))
+      FailureOr<Attribute> convertedAttr =
+          convertAttributeWithTypeConverter<Kind>(
+              denseElementsAttr, denseElementsAttr.getType(), typeConverter);
+      if (failed(convertedAttr))
         return rewriter.notifyMatchFailure(
-            op, "Failed to convert dense elements attribute.");
-      state.addAttribute(namedAttribute.getName(), convertedAttr);
+            op, "Failed to convert dense elements attribute without precision "
+                "loss; enable aggressive rewrite to override.");
+      state.addAttribute(namedAttribute.getName(), convertedAttr.value());
       continue;
     }
 
@@ -286,8 +358,10 @@ LogicalResult convertGenericOp(Operation *op, ValueRange operands,
 template <TosaNarrowKind Kind>
 class ConvertGenericOp : public ConversionPattern {
 public:
-  ConvertGenericOp(TypeConverter &typeConverter, MLIRContext *context)
-      : ConversionPattern(typeConverter, MatchAnyOpTypeTag{}, 0, context) {}
+  ConvertGenericOp(TypeConverter &typeConverter, MLIRContext *context,
+                   bool allowLossyConversion)
+      : ConversionPattern(typeConverter, MatchAnyOpTypeTag{}, 0, context),
+        allowLossyConversion(allowLossyConversion) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -297,19 +371,26 @@ public:
           op,
           "Support for operations other than TOSA has not been implemented.");
 
-    return convertGenericOp<Kind>(op, operands, rewriter, typeConverter);
+    return convertGenericOp<Kind>(op, operands, rewriter, typeConverter,
+                                  allowLossyConversion);
   }
+
+private:
+  const bool allowLossyConversion;
 };
 
 template <typename OpTy, TosaNarrowKind Kind>
 class ConvertTypedOp : public OpConversionPattern<OpTy> {
-  using OpConversionPattern<OpTy>::OpConversionPattern;
+public:
+  ConvertTypedOp(TypeConverter &typeConverter, MLIRContext *context)
+      : OpConversionPattern<OpTy>(typeConverter, context) {}
 
   LogicalResult
   matchAndRewrite(OpTy op, typename OpTy::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     return convertGenericOp<Kind>(op, adaptor.getOperands(), rewriter,
-                                  this->getTypeConverter());
+                                  this->getTypeConverter(),
+                                  /*allowLossyConversion=*/false);
   }
 };
 
@@ -317,7 +398,7 @@ class ConvertTypedOp : public OpConversionPattern<OpTy> {
 // Kind-specific helpers and patterns
 // ---------------------------------------------------------------------------
 
-// Casts get extra checking so we only narrow when it is provably safe.
+// Casts get extra checking so we only narrow when it is probably safe.
 template <TosaNarrowKind Kind>
 class ConvertCastOpWithBoundsChecking
     : public OpConversionPattern<tosa::CastOp> {
@@ -369,12 +450,57 @@ class ConvertArgMaxOpWithBoundsChecking
   }
 };
 
+template <TosaNarrowKind Kind>
+class ConvertClampOpWithBoundsChecking
+    : public OpConversionPattern<tosa::ClampOp> {
+  static_assert(Kind == TosaNarrowKind::Int64ToInt32,
+                "Clamp bounds checking only supported for integer narrowing");
+  using OpConversionPattern<tosa::ClampOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(tosa::ClampOp op, typename tosa::ClampOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto minAttr = dyn_cast<IntegerAttr>(op.getMinValAttr());
+    auto maxAttr = dyn_cast<IntegerAttr>(op.getMaxValAttr());
+    if (!minAttr || !maxAttr)
+      return rewriter.notifyMatchFailure(
+          op, "Clamp attributes must be integer constants.");
+
+    const int64_t min = minAttr.getInt();
+    const int64_t max = maxAttr.getInt();
+    if (min < std::numeric_limits<int32_t>::min() ||
+        max > std::numeric_limits<int32_t>::max())
+      return rewriter.notifyMatchFailure(
+          op, "Clamp bounds exceed int32 range. Narrowing may lose data.");
+
+    const Type resultType = op.getOutput().getType();
+    const Type newResultType =
+        this->getTypeConverter()->convertType(resultType);
+    const auto newResultShaped = dyn_cast<ShapedType>(newResultType);
+    if (!newResultShaped)
+      return failure();
+    const auto newElementType =
+        dyn_cast<IntegerType>(newResultShaped.getElementType());
+    if (!newElementType)
+      return failure();
+
+    const IntegerAttr newMinAttr = IntegerAttr::get(newElementType, min);
+    const IntegerAttr newMaxAttr = IntegerAttr::get(newElementType, max);
+
+    rewriter.replaceOpWithNewOp<tosa::ClampOp>(op, newResultType,
+                                               adaptor.getInput(), newMinAttr,
+                                               newMaxAttr, op.getNanModeAttr());
+    return success();
+  }
+};
+
 // Shared implementation for both narrowing passes; the mode decides which
 // element types and attribute payloads participate.
 template <TosaNarrowKind Kind>
 LogicalResult runTosaNarrowing(Operation *op, bool aggressiveRewrite,
                                bool convertFunctionBoundaries) {
   MLIRContext *context = op->getContext();
+  const bool allowLossyConversion = aggressiveRewrite;
 
   TypeConverter typeConverter;
   typeConverter.addConversion([](Type type) -> Type { return type; });
@@ -415,44 +541,47 @@ LogicalResult runTosaNarrowing(Operation *op, bool aggressiveRewrite,
 
   if constexpr (Kind == TosaNarrowKind::Int64ToInt32) {
     typeConverter.addTypeAttributeConversion(
-        [](IntegerType type, IntegerAttr attribute) -> Attribute {
-          Attribute convertedAttr;
-          if (tryConvertScalarAttribute<Kind>(attribute, convertedAttr))
-            return convertedAttr;
-          return attribute;
-        });
-    typeConverter.addTypeAttributeConversion([&typeConverter](
-                                                 ShapedType type,
-                                                 DenseIntElementsAttr attr)
-                                                 -> Attribute {
-      return convertDenseElementsAttr<Kind, DenseIntElementsAttr, IntegerType>(
-          type, attr, typeConverter,
-          [](IntegerType newElementType, const APInt &value) {
-            return value.truncSSat(newElementType.getWidth());
-          });
-    });
-  }
-
-  if constexpr (Kind == TosaNarrowKind::Float64ToFloat32) {
-    typeConverter.addTypeAttributeConversion(
-        [](FloatType type, FloatAttr attribute) -> Attribute {
-          Attribute convertedAttr;
-          if (tryConvertScalarAttribute<Kind>(attribute, convertedAttr))
-            return convertedAttr;
-          return attribute;
+        [allowLossyConversion](IntegerType /*type*/, IntegerAttr attribute)
+            -> TypeConverter::AttributeConversionResult {
+          FailureOr<Attribute> converted =
+              tryConvertScalarAttribute<Kind>(attribute, allowLossyConversion);
+          if (failed(converted))
+            return TypeConverter::AttributeConversionResult::abort();
+          return TypeConverter::AttributeConversionResult::result(
+              converted.value());
         });
     typeConverter.addTypeAttributeConversion(
-        [&typeConverter](ShapedType type,
-                         DenseFPElementsAttr attr) -> Attribute {
-          return convertDenseElementsAttr<Kind, DenseFPElementsAttr, FloatType>(
-              type, attr, typeConverter,
-              [](FloatType newElementType, const APFloat &value) {
-                APFloat converted(value);
-                bool losesInfo = false;
-                converted.convert(newElementType.getFloatSemantics(),
-                                  APFloat::rmNearestTiesToEven, &losesInfo);
-                return converted.bitcastToAPInt();
-              });
+        [&typeConverter, allowLossyConversion](ShapedType type,
+                                               DenseIntElementsAttr attr)
+            -> TypeConverter::AttributeConversionResult {
+          FailureOr<Attribute> converted = convertDenseIntElementsAttr<Kind>(
+              type, attr, typeConverter, allowLossyConversion);
+          if (failed(converted))
+            return TypeConverter::AttributeConversionResult::abort();
+          return TypeConverter::AttributeConversionResult::result(
+              converted.value());
+        });
+  } else if constexpr (Kind == TosaNarrowKind::Float64ToFloat32) {
+    typeConverter.addTypeAttributeConversion(
+        [allowLossyConversion](FloatType /*type*/, FloatAttr attribute)
+            -> TypeConverter::AttributeConversionResult {
+          FailureOr<Attribute> converted =
+              tryConvertScalarAttribute<Kind>(attribute, allowLossyConversion);
+          if (failed(converted))
+            return TypeConverter::AttributeConversionResult::abort();
+          return TypeConverter::AttributeConversionResult::result(
+              converted.value());
+        });
+    typeConverter.addTypeAttributeConversion(
+        [&typeConverter, allowLossyConversion](ShapedType type,
+                                               DenseFPElementsAttr attr)
+            -> TypeConverter::AttributeConversionResult {
+          FailureOr<Attribute> converted = convertDenseFPElementsAttr<Kind>(
+              type, attr, typeConverter, allowLossyConversion);
+          if (failed(converted))
+            return TypeConverter::AttributeConversionResult::abort();
+          return TypeConverter::AttributeConversionResult::result(
+              converted.value());
         });
   }
 
@@ -487,10 +616,14 @@ LogicalResult runTosaNarrowing(Operation *op, bool aggressiveRewrite,
     populateReturnOpTypeConversionPattern(patterns, typeConverter);
   }
   if (aggressiveRewrite) {
-    patterns.add<ConvertGenericOp<Kind>>(typeConverter, context);
+    patterns.add<ConvertGenericOp<Kind>>(typeConverter, context,
+                                         allowLossyConversion);
   } else {
-    if constexpr (Kind == TosaNarrowKind::Int64ToInt32)
+    if constexpr (Kind == TosaNarrowKind::Int64ToInt32) {
       patterns.add<ConvertArgMaxOpWithBoundsChecking>(typeConverter, context);
+      patterns.add<ConvertClampOpWithBoundsChecking<Kind>>(typeConverter,
+                                                           context);
+    }
     patterns.add<ConvertTypedOp<tosa::ConstOp, Kind>>(typeConverter, context);
     patterns.add<ConvertTypedOp<tosa::ConcatOp, Kind>>(typeConverter, context);
     patterns.add<ConvertTypedOp<tosa::PadOp, Kind>>(typeConverter, context);
@@ -505,8 +638,8 @@ LogicalResult runTosaNarrowing(Operation *op, bool aggressiveRewrite,
     patterns.add<ConvertCastOpWithBoundsChecking<Kind>>(typeConverter, context);
     patterns.add<ConvertTypedOp<tosa::IfOp, Kind>>(typeConverter, context);
     patterns.add<ConvertTypedOp<tosa::WhileOp, Kind>>(typeConverter, context);
+    patterns.add<ConvertTypedOp<tosa::YieldOp, Kind>>(typeConverter, context);
   }
-  patterns.add<ConvertTypedOp<tosa::YieldOp, Kind>>(typeConverter, context);
 
   if (failed(applyFullConversion(op, target, std::move(patterns))))
     return failure();
