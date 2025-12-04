@@ -55,11 +55,7 @@ enum Color {
 // HTML-INDEX: <p> Comment 3</p>
 
 // MUSTACHE-INDEX:     <div>
-// MUSTACHE-INDEX:         <pre>
-// MUSTACHE-INDEX:             <code class="language-cpp code-clang-doc">
-// MUSTACHE-INDEX: enum Color
-// MUSTACHE-INDEX:             </code>
-// MUSTACHE-INDEX:         </pre>
+// MUSTACHE-INDEX:         <pre><code class="language-cpp code-clang-doc">enum Color</code></pre>
 // MUSTACHE-INDEX:     </div>
 // MUSTACHE-INDEX:     <table class="table-wrapper">
 // MUSTACHE-INDEX:         <tbody>
@@ -67,18 +63,18 @@ enum Color {
 // MUSTACHE-INDEX:                 <th>Name</th>
 // MUSTACHE-INDEX:                 <th>Value</th>
 // MUSTACHE-INDEX:             </tr>
-// MUSTACHE-INDEX:                 <tr>
-// MUSTACHE-INDEX:                     <td>Red</td>
-// MUSTACHE-INDEX:                     <td>0</td>
-// MUSTACHE-INDEX:                 </tr>
-// MUSTACHE-INDEX:                 <tr>
-// MUSTACHE-INDEX:                     <td>Green</td>
-// MUSTACHE-INDEX:                     <td>1</td>
-// MUSTACHE-INDEX:                 </tr>
-// MUSTACHE-INDEX:                 <tr>
-// MUSTACHE-INDEX:                     <td>Blue</td>
-// MUSTACHE-INDEX:                     <td>2</td>
-// MUSTACHE-INDEX:                 </tr>
+// MUSTACHE-INDEX:             <tr>
+// MUSTACHE-INDEX:                 <td>Red</td>
+// MUSTACHE-INDEX:                 <td>0</td>
+// MUSTACHE-INDEX:             </tr>
+// MUSTACHE-INDEX:             <tr>
+// MUSTACHE-INDEX:                 <td>Green</td>
+// MUSTACHE-INDEX:                 <td>1</td>
+// MUSTACHE-INDEX:             </tr>
+// MUSTACHE-INDEX:             <tr>
+// MUSTACHE-INDEX:                 <td>Blue</td>
+// MUSTACHE-INDEX:                 <td>2</td>
+// MUSTACHE-INDEX:             </tr>
 // MUSTACHE-INDEX:         </tbody>
 // MUSTACHE-INDEX:     </table>
 
@@ -117,11 +113,7 @@ enum class Shapes {
 
 // COM: FIXME: Serialize "enum class" in template
 // MUSTACHE-INDEX:     <div>
-// MUSTACHE-INDEX:         <pre>
-// MUSTACHE-INDEX:             <code class="language-cpp code-clang-doc">
-// MUSTACHE-INDEX: enum Shapes
-// MUSTACHE-INDEX:             </code>
-// MUSTACHE-INDEX:         </pre>
+// MUSTACHE-INDEX:         <pre><code class="language-cpp code-clang-doc">enum Shapes</code></pre>
 // MUSTACHE-INDEX:     </div>
 // MUSTACHE-INDEX:     <table class="table-wrapper">
 // MUSTACHE-INDEX:         <tbody>
@@ -129,18 +121,18 @@ enum class Shapes {
 // MUSTACHE-INDEX:                 <th>Name</th>
 // MUSTACHE-INDEX:                 <th>Value</th>
 // MUSTACHE-INDEX:             </tr>
-// MUSTACHE-INDEX:                 <tr>
-// MUSTACHE-INDEX:                     <td>Circle</td>
-// MUSTACHE-INDEX:                     <td>0</td>
-// MUSTACHE-INDEX:                 </tr>
-// MUSTACHE-INDEX:                 <tr>
-// MUSTACHE-INDEX:                     <td>Rectangle</td>
-// MUSTACHE-INDEX:                     <td>1</td>
-// MUSTACHE-INDEX:                 </tr>
-// MUSTACHE-INDEX:                 <tr>
-// MUSTACHE-INDEX:                     <td>Triangle</td>
-// MUSTACHE-INDEX:                     <td>2</td>
-// MUSTACHE-INDEX:                 </tr>
+// MUSTACHE-INDEX:             <tr>
+// MUSTACHE-INDEX:                 <td>Circle</td>
+// MUSTACHE-INDEX:                 <td>0</td>
+// MUSTACHE-INDEX:             </tr>
+// MUSTACHE-INDEX:             <tr>
+// MUSTACHE-INDEX:                 <td>Rectangle</td>
+// MUSTACHE-INDEX:                 <td>1</td>
+// MUSTACHE-INDEX:             </tr>
+// MUSTACHE-INDEX:             <tr>
+// MUSTACHE-INDEX:                 <td>Triangle</td>
+// MUSTACHE-INDEX:                 <td>2</td>
+// MUSTACHE-INDEX:             </tr>
 // MUSTACHE-INDEX:         </tbody>
 // MUSTACHE-INDEX:     </table>
 
@@ -240,11 +232,7 @@ enum Car {
 // HTML-VEHICLES: <p> Comment 4</p>
 
 // MUSTACHE-VEHICLES:     <div>
-// MUSTACHE-VEHICLES:         <pre>
-// MUSTACHE-VEHICLES:             <code class="language-cpp code-clang-doc">
-// MUSTACHE-VEHICLES: enum Car
-// MUSTACHE-VEHICLES:             </code>
-// MUSTACHE-VEHICLES:         </pre>
+// MUSTACHE-VEHICLES:         <pre><code class="language-cpp code-clang-doc">enum Car</code></pre>
 // MUSTACHE-VEHICLES:      </div>
 // MUSTACHE-VEHICLES:      <table class="table-wrapper">
 // MUSTACHE-VEHICLES:          <tbody>
@@ -252,22 +240,22 @@ enum Car {
 // MUSTACHE-VEHICLES:                  <th>Name</th>
 // MUSTACHE-VEHICLES:                  <th>Value</th>
 // MUSTACHE-VEHICLES:              </tr>
-// MUSTACHE-VEHICLES:                  <tr>
-// MUSTACHE-VEHICLES:                      <td>Sedan</td>
-// MUSTACHE-VEHICLES:                      <td>0</td>
-// MUSTACHE-VEHICLES:                  </tr>
-// MUSTACHE-VEHICLES:                  <tr>
-// MUSTACHE-VEHICLES:                      <td>SUV</td>
-// MUSTACHE-VEHICLES:                      <td>1</td>
-// MUSTACHE-VEHICLES:                  </tr>
-// MUSTACHE-VEHICLES:                  <tr>
-// MUSTACHE-VEHICLES:                      <td>Pickup</td>
-// MUSTACHE-VEHICLES:                      <td>2</td>
-// MUSTACHE-VEHICLES:                  </tr>
-// MUSTACHE-VEHICLES:                  <tr>
-// MUSTACHE-VEHICLES:                      <td>Hatchback</td>
-// MUSTACHE-VEHICLES:                      <td>3</td>
-// MUSTACHE-VEHICLES:                  </tr>
+// MUSTACHE-VEHICLES:              <tr>
+// MUSTACHE-VEHICLES:                  <td>Sedan</td>
+// MUSTACHE-VEHICLES:                  <td>0</td>
+// MUSTACHE-VEHICLES:              </tr>
+// MUSTACHE-VEHICLES:              <tr>
+// MUSTACHE-VEHICLES:                  <td>SUV</td>
+// MUSTACHE-VEHICLES:                  <td>1</td>
+// MUSTACHE-VEHICLES:              </tr>
+// MUSTACHE-VEHICLES:              <tr>
+// MUSTACHE-VEHICLES:                  <td>Pickup</td>
+// MUSTACHE-VEHICLES:                  <td>2</td>
+// MUSTACHE-VEHICLES:              </tr>
+// MUSTACHE-VEHICLES:              <tr>
+// MUSTACHE-VEHICLES:                  <td>Hatchback</td>
+// MUSTACHE-VEHICLES:                  <td>3</td>
+// MUSTACHE-VEHICLES:              </tr>
 // MUSTACHE-VEHICLES:          </tbody>
 // MUSTACHE-VEHICLES:      </table>
 
@@ -292,11 +280,7 @@ enum ColorUserSpecified {
 // HTML-INDEX: <td>&apos;C&apos;</td>
 
 // MUSTACHE-INDEX:     <div>
-// MUSTACHE-INDEX:         <pre>
-// MUSTACHE-INDEX:             <code class="language-cpp code-clang-doc">
-// MUSTACHE-INDEX: enum ColorUserSpecified
-// MUSTACHE-INDEX:             </code>
-// MUSTACHE-INDEX:         </pre>
+// MUSTACHE-INDEX:         <pre><code class="language-cpp code-clang-doc">enum ColorUserSpecified</code></pre>
 // MUSTACHE-INDEX:     </div>
 // MUSTACHE-INDEX:     <table class="table-wrapper">
 // MUSTACHE-INDEX:         <tbody>
@@ -304,17 +288,17 @@ enum ColorUserSpecified {
 // MUSTACHE-INDEX:                 <th>Name</th>
 // MUSTACHE-INDEX:                 <th>Value</th>
 // MUSTACHE-INDEX:             </tr>
-// MUSTACHE-INDEX:                 <tr>
-// MUSTACHE-INDEX:                     <td>RedUserSpecified</td>
-// MUSTACHE-INDEX:                     <td>&#39;A&#39;</td>
-// MUSTACHE-INDEX:                 </tr>
-// MUSTACHE-INDEX:                 <tr>
-// MUSTACHE-INDEX:                     <td>GreenUserSpecified</td>
-// MUSTACHE-INDEX:                     <td>2</td>
-// MUSTACHE-INDEX:                 </tr>
-// MUSTACHE-INDEX:                 <tr>
-// MUSTACHE-INDEX:                     <td>BlueUserSpecified</td>
-// MUSTACHE-INDEX:                     <td>&#39;C&#39;</td>
-// MUSTACHE-INDEX:                 </tr>
+// MUSTACHE-INDEX:             <tr>
+// MUSTACHE-INDEX:                 <td>RedUserSpecified</td>
+// MUSTACHE-INDEX:                 <td>&#39;A&#39;</td>
+// MUSTACHE-INDEX:             </tr>
+// MUSTACHE-INDEX:             <tr>
+// MUSTACHE-INDEX:                 <td>GreenUserSpecified</td>
+// MUSTACHE-INDEX:                 <td>2</td>
+// MUSTACHE-INDEX:             </tr>
+// MUSTACHE-INDEX:             <tr>
+// MUSTACHE-INDEX:                 <td>BlueUserSpecified</td>
+// MUSTACHE-INDEX:                 <td>&#39;C&#39;</td>
+// MUSTACHE-INDEX:             </tr>
 // MUSTACHE-INDEX:         </tbody>
 // MUSTACHE-INDEX:     </table>
