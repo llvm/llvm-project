@@ -625,6 +625,10 @@ protected:
 
   /// All lldb::Type pointers produced by DWARFASTParser Swift go here.
   ThreadSafeDenseMap<const char *, lldb::TypeSP> m_swift_type_map;
+
+  /// A cache of Clang types that this TypeSystem mapped into Swift.
+  ThreadSafeDenseMap<const char *, CompilerType> m_imported_type_map;
+
   /// An LRU cache for \ref GetManglingFlavor().
   std::pair<CompileUnit *, swift::Mangle::ManglingFlavor> m_lru_is_embedded = {
       nullptr, swift::Mangle::ManglingFlavor::Default};
