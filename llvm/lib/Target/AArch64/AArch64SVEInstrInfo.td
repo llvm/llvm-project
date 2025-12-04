@@ -341,11 +341,11 @@ def AArch64urhadd : PatFrags<(ops node:$pg, node:$op1, node:$op2),
 
 def AArch64saba : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_saba node:$op1, node:$op2, node:$op3),
-                            (add node:$op1, (AArch64sabd_p (SVEAllActive), node:$op2, node:$op3))]>;
+                            (add node:$op1, (AArch64sabd_p (SVEAnyPredicate), node:$op2, node:$op3))]>;
 
 def AArch64uaba : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_uaba node:$op1, node:$op2, node:$op3),
-                            (add node:$op1, (AArch64uabd_p (SVEAllActive), node:$op2, node:$op3))]>;
+                            (add node:$op1, (AArch64uabd_p (SVEAnyPredicate), node:$op2, node:$op3))]>;
 
 def AArch64usra : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_usra node:$op1, node:$op2, node:$op3),
