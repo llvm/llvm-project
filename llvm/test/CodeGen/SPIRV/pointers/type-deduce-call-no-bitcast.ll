@@ -34,6 +34,8 @@
 
 %class.CustomType = type { i64 }
 
+@G = global ptr addrspace(4) null
+
 define linkonce_odr dso_local spir_func void @bar(ptr addrspace(4) noundef %first) {
 entry:
   %first.addr = alloca ptr addrspace(4)
@@ -44,6 +46,7 @@ entry:
   call spir_func void @foo(i64 noundef 100, ptr addrspace(4) noundef dereferenceable(8) %first.addr.ascast, ptr addrspace(4) noundef dereferenceable(8) %temp.ascast)
   call spir_func void @foo(i64 noundef 100, ptr addrspace(4) noundef dereferenceable(8) %temp.ascast, ptr addrspace(4) noundef dereferenceable(8) %first.addr.ascast)
   %var = alloca ptr addrspace(4), align 8
+  store ptr addrspace(4) null, ptr %var
   ret void
 }
 

@@ -2107,8 +2107,8 @@ void ASTDeclMerger::MergeDefinitionData(
     auto *Def = DD.Definition;
     DD = std::move(MergeDD);
     DD.Definition = Def;
-    while ((Def = Def->getPreviousDecl()))
-      cast<CXXRecordDecl>(Def)->DefinitionData = &DD;
+    for (auto *D : Def->redecls())
+      cast<CXXRecordDecl>(D)->DefinitionData = &DD;
     return;
   }
 

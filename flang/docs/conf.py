@@ -10,6 +10,7 @@
 # serve to show the default.
 
 from datetime import date
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -45,6 +46,14 @@ source_suffix = {
     ".md": "markdown",
 }
 myst_heading_anchors = 6
+
+# Enable myst's substitution extension since markdown files cannot use the
+# |version| and |release| substitutions available to .rst files.
+myst_enable_extensions = ["substitution"]
+
+# The substitutions to use in markdown files. This contains unconditional
+# substitutions, but more may be added once the configuration is obtained.
+myst_substitutions = {"in_progress": "(In-Progress) " if tags.has("PreRelease") else ""}
 
 import sphinx
 
@@ -268,3 +277,22 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 # texinfo_show_urls = 'footnote'
+
+
+# This can be treated as its own sphinx extension. setup() will be called by
+# sphinx. In it, register a function to be called when the configuration has
+# been initialized. The configuration will contain the values of the -D options
+# passed to sphinx-build on the command line.
+#
+# See llvm/cmake/modules/AddSphinxTarget.cmake for details on how sphinx-build
+# is invoked.
+def setup(app):
+    app.connect("config-inited", myst_substitutions_update)
+
+
+# Override the myst_parser substitutions map after the configuration has been
+# initialized.
+def myst_substitutions_update(app, config):
+    config.myst_substitutions.update(
+        {"release": config.release, "version": config.version}
+    )

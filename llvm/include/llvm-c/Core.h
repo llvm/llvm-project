@@ -2347,6 +2347,14 @@ LLVM_C_ABI LLVMValueRef LLVMConstRealOfStringAndSize(LLVMTypeRef RealTy,
                                                      unsigned SLen);
 
 /**
+ * Obtain a constant for a floating point value from array of 64 bit values.
+ * The length of the array N must be ceildiv(bits, 64), where bits is the
+ * scalar size in bits of the floating-point type.
+ */
+
+LLVM_C_ABI LLVMValueRef LLVMConstFPFromBits(LLVMTypeRef Ty, const uint64_t N[]);
+
+/**
  * Obtain the zero extended value for an integer constant value.
  *
  * @see llvm::ConstantInt::getZExtValue()
