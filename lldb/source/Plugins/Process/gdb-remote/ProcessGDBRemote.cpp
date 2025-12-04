@@ -5157,7 +5157,7 @@ llvm::Error ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
         "the debug server supports \"qXfer:features:read\", but LLDB does not "
-        "have XML enabled (check LLLDB_ENABLE_LIBXML2)");
+        "have XML parsing enabled (check LLLDB_ENABLE_LIBXML2)");
 
   // These hold register type information for the whole of target.xml.
   // target.xml may include further documents that
