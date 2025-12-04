@@ -903,6 +903,14 @@ for postfix in ["2", "1", ""]:
             )
         )
         config.substitutions.append(("%ld_flags_rpath_so" + postfix, ""))
+    elif config.target_os == "AIX":
+        config.substitutions.append(
+            (
+                "%ld_flags_rpath_exe" + postfix,
+                "-L%t.dir -l%xdynamiclib_namespec" + postfix,
+            )
+        )
+        config.substitutions.append(("%ld_flags_rpath_so" + postfix, ""))
 
     # Must be defined after the substitutions that use %dynamiclib.
     config.substitutions.append(
@@ -911,12 +919,22 @@ for postfix in ["2", "1", ""]:
     config.substitutions.append(
         ("%base_dynamiclib" + postfix, "%xdynamiclib_filename" + postfix)
     )
-    config.substitutions.append(
-        (
-            "%xdynamiclib_filename" + postfix,
-            "lib%xdynamiclib_namespec{}.so".format(postfix),
+
+    if config.target_os == "AIX":
+        config.substitutions.append(
+            (
+                "%xdynamiclib_filename" + postfix,
+                "lib%xdynamiclib_namespec{}.a".format(postfix),
+            )
         )
-    )
+    else:
+        config.substitutions.append(
+            (
+                "%xdynamiclib_filename" + postfix,
+                "lib%xdynamiclib_namespec{}.so".format(postfix),
+            )
+        )
+
     config.substitutions.append(("%xdynamiclib_namespec", "%basename_t.dynamic"))
 
 config.default_sanitizer_opts = []

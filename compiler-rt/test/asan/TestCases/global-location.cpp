@@ -10,6 +10,9 @@
 // FIXME: Investigate failure on MinGW
 // XFAIL: target={{.*-windows-gnu}}
 
+// FIXME: llvm-symbolizer on AIX can't resolve line number for the global
+// XFAIL: target={{.*-aix.*}}
+
 // atos doesn't show source line numbers for global variables.
 // UNSUPPORTED: darwin
 

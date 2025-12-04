@@ -38,6 +38,9 @@
 // TODO(alekseyshl): win32 is disabled due to failing errno tests, fix it there.
 // UNSUPPORTED: ubsan, target={{.*windows-msvc.*}}
 
+// The llvm-symbolizer on AIX can not symbolize the pc to asan's source.
+// XFAIL: target={{.*aix.*}}
+
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>

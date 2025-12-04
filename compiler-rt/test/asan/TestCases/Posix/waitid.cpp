@@ -20,9 +20,9 @@ int main(int argc, char **argv) {
     // CHECK: stack-buffer-overflow
     // CHECK: {{WRITE of size .* at 0x.* thread T0}}
     // CHECK: {{in .*waitid}}
-    // CHECK: {{in main .*waitid.cpp:}}
+    // CHECK: {{in \.?main .*waitid.cpp:}}
     // CHECK: is located in stack of thread T0 at offset
-    // CHECK: {{in main}}
+    // CHECK: {{in \.?main}}
     return res != -1;
   }
   // child

@@ -14,6 +14,6 @@ int main(int argc, char *argv[]) {
   saved = &IntHolder().Self();
   int x = saved->val;  // BOOM
   // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
-  // CHECK:  #0 0x{{.*}} in main {{.*}}use-after-scope-temp2.cpp:[[@LINE-2]]
+  // CHECK:  #0 0x{{.*}} in {{\.?main}} {{.*}}use-after-scope-temp2.cpp:[[@LINE-2]]
   return x;
 }

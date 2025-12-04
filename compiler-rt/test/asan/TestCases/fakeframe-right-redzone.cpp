@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
   char *x = OverwriteFakeFrameLastWord();
   // CHECK: ERROR: AddressSanitizer: stack-buffer-overflow on address
   // CHECK: is located in stack of thread T0 at offset {{2040|2044}} in frame
-  // CHECK:  in OverwriteFakeFrameLastWord{{.*}}fakeframe-right-redzone.cpp:
+  // CHECK:  in {{\.?OverwriteFakeFrameLastWord}}{{.*}}fakeframe-right-redzone.cpp:
   // CHECK: [{{16|32}}, {{1040|1056}}) 'x'
   pretend_to_do_something(x);
   return 0;

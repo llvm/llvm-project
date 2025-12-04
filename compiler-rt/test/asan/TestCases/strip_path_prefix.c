@@ -8,5 +8,5 @@ int main() {
   return x[5];
   // Check that paths in error report don't start with slash.
   // CHECK: heap-use-after-free
-  // CHECK: #0 0x{{.*}} in main {{.*}}strip_path_prefix.c:[[@LINE-3]]
+  // CHECK: #0 0x{{.*}} in {{\.?main}} {{.*}}strip_path_prefix.c:[[@LINE-3]]
 }

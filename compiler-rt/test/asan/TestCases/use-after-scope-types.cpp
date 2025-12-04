@@ -42,7 +42,7 @@ template <class T> ATTRIBUTE_NOINLINE void test() {
 
   ptr.Access();
   // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
-  // CHECK:  #{{[0-9]+}} 0x{{.*}} in {{(void )?test.*\((void)?\) .*}}use-after-scope-types.cpp
+  // CHECK:  #{{[0-9]+}} 0x{{.*}} in {{(\.?void )?test.*\((void)?\) .*}}use-after-scope-types.cpp
   // CHECK: Address 0x{{.*}} is located in stack of thread T{{.*}} at offset [[OFFSET:[^ ]+]] in frame
   // {{\[}}[[OFFSET]], {{[0-9]+}}) 'x'
 }

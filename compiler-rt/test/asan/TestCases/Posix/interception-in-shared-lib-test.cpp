@@ -1,4 +1,8 @@
 // Check that memset() call from a shared library gets intercepted.
+
+// FIXME: Instructions don't start at 0x0 in shared libraries on AIX
+// XFAIL: target={{.*-aix.*}}
+
 // RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_asan -O0 %s -DSHARED_LIB \
 // RUN:     -shared -o %dynamiclib -fPIC %ld_flags_rpath_so
@@ -21,7 +25,7 @@ int main(int argc, char *argv[]) {
   my_memset(buf, 11);
   // CHECK: {{.*ERROR: AddressSanitizer: stack-buffer-overflow}}
   // CHECK: {{WRITE of size 11 at 0x.* thread T0}}
-  // CHECK: {{0x.* in my_memset .*interception-in-shared-lib-test.cpp:}}[[@LINE-10]]
+  // CHECK: {{0x.* in \.?my_memset .*interception-in-shared-lib-test.cpp:}}[[@LINE-10]]
   return 0;
 }
 #endif

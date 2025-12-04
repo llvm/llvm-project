@@ -4,6 +4,9 @@
 // pthread_create with lsan i386 does not fail here.
 // UNSUPPORTED: i386-linux && lsan
 
+// pthread_create on AIX does not fail here.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <cassert>
 #include <pthread.h>
 #include <stdlib.h>

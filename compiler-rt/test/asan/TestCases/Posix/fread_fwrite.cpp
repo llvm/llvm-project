@@ -29,6 +29,6 @@ int main(int argc, char *argv[]) {
 }
 
 // CHECK-FREAD: {{.*ERROR: AddressSanitizer: stack-buffer-overflow}}
-// CHECK-FREAD: #{{.*}} in {{(wrap_|__interceptor_)?}}fread
+// CHECK-FREAD: #{{.*}} in {{(wrap_|__interceptor_)?}}{{\.?fread}}
 // CHECK-FWRITE: {{.*ERROR: AddressSanitizer: stack-buffer-overflow}}
-// CHECK-FWRITE: #{{.*}} in {{(wrap_|__interceptor_)?}}fwrite
+// CHECK-FWRITE: #{{.*}} in {{(wrap_|__interceptor_)?}}{{\.?fwrite}}

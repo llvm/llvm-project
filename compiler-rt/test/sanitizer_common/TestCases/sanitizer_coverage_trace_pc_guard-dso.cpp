@@ -6,6 +6,9 @@
 // XFAIL: tsan,darwin
 // XFAIL: android && asan
 
+// FIXME: support -fsanitize-coverage on AIX
+// UNSUPPORTED: target={{.*aix.*}}
+
 // RUN: rm -rf %t_workdir
 // RUN: mkdir -p %t_workdir
 // RUN: cd %t_workdir

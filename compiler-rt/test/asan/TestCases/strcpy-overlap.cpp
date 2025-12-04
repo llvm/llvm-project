@@ -28,6 +28,9 @@
 
 // UNSUPPORTED: android, MSVC
 
+// AIX does not intercept strcpy
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include "defines.h"
 #include <string.h>
 

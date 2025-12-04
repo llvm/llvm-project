@@ -4,6 +4,10 @@
 // Fails with debug checks: https://bugs.llvm.org/show_bug.cgi?id=46862
 // XFAIL: !compiler-rt-optimized
 
+// For this case, do_another_bad_thing(which calls malloc) is compiled to a shared library,
+// and intercepting symbols in a shared library is still unsupported.
+// UNSUPPORTED: target={{.*aix.*}}
+
 // RUN: %clangxx_asan -O0 -DSHARED_LIB %s -std=c++11 -fPIC -shared -o %t-so.so
 // RUN: %clangxx -O0 %s -std=c++11 -c -o %t.o
 // RUN: %clangxx_asan -O0 %t.o %libdl -o %t

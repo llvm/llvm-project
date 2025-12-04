@@ -2,6 +2,9 @@
 
 // Test the frexpf() interceptor.
 
+// AIX can not intercept frexpf because libc does not export this symbol.
+// UNSUPPORTED: aix
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

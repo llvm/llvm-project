@@ -6,6 +6,8 @@
 // RUN: %clangxx -O0 %s -fsanitize-coverage=inline-8bit-counters,pc-table -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
+// XFAIL: target={{.*aix.*}}
+
 #include <stdio.h>
 #include <stdint.h>
 #include <assert.h>
