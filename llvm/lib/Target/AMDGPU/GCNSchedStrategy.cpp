@@ -1231,10 +1231,8 @@ void RewriteScheduleStage::findReachingDefs(
   LiveInterval &UseLI = LIS->getInterval(UseMO.getReg());
   VNInfo *VNI = UseLI.getVNInfoAt(LIS->getInstructionIndex(*UseMI));
 
-  SlotIndex DefMBBStart = LIS->getMBBStartIdx(LIS->getMBBFromIndex(VNI->def));
-
-  // If the def is in the block, then it must be the only reaching def.
-  if (DefMBBStart != VNI->def) {
+  // If the def is not a PHI, then it must be the only reaching def.
+  if (!VNI->isPHIDef()) {
     DefIdxs.push_back(VNI->def);
     return;
   }
@@ -1257,11 +1255,10 @@ void RewriteScheduleStage::findReachingDefs(
     VNInfo *VNI = UseLI.getVNInfoAt(CurrMBBEnd.getPrevSlot());
 
     MachineBasicBlock *DefMBB = LIS->getMBBFromIndex(VNI->def);
-    SlotIndex DefMBBStart = LIS->getMBBStartIdx(DefMBB);
 
     // If there is a def in this block, then add it to the list. This is the
     // reaching def of this path.
-    if (DefMBBStart != VNI->def) {
+    if (!VNI->isPHIDef()) {
       DefIdxs.push_back(VNI->def);
       continue;
     }
