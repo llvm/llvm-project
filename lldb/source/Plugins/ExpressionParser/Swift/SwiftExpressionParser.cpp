@@ -1759,6 +1759,19 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     AnnotateDiagnostics(diagnostic_manager);
   };
 
+  auto verify = [&](llvm::Module &module) {
+    std::string Error;
+    llvm::raw_string_ostream MsgsOS(Error);
+    if (llvm::verifyModule(module, &MsgsOS)) {
+      LLDB_LOG(log, "IRGeneration failed with error: {0}", Error);
+      diagnostic_manager.AddDiagnostic(
+          "The expression could not be compiled",
+          eSeverityError, eDiagnosticOriginLLDB);
+      return parse_result_failure;
+    }
+    return ParseResult::success;
+  };
+
   // In the case of playgrounds, we turn all rewriting functionality off.
   const bool repl = m_options.GetREPLEnabled();
   const bool playground = m_options.GetPlaygroundTransformEnabled();
@@ -2091,9 +2104,15 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         llvm::ArrayRef<std::string>());
 
     if (GenModule) {
+      auto parse_result = verify(*GenModule.getModule());
+      if (parse_result != ParseResult::success)
+        return parse_result;
       swift::performLLVMOptimizations(
           IRGenOpts, m_swift_ast_ctx.GetDiagnosticEngine(), nullptr,
           GenModule.getModule(), GenModule.getTargetMachine(), nullptr);
+      parse_result = verify(*GenModule.getModule());
+      if (parse_result != ParseResult::success)
+        return parse_result;
     }
     auto ContextAndModule = std::move(GenModule).release();
     m_llvm_context.reset(ContextAndModule.first);
@@ -2178,12 +2197,9 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     std::lock_guard<std::recursive_mutex> global_context_locker(
         IRExecutionUnit::GetLLVMGlobalContextMutex());
 
-    bool has_errors = LLVMVerifyModule((LLVMOpaqueModule *)m_module.get(),
-                                       LLVMReturnStatusAction, nullptr);
-    if (has_errors) {
-      diagnostic_manager.PutString(eSeverityInfo, "LLVM verification error");
-      return parse_result_failure;
-    }
+    ParseResult parse_result = verify(*m_module.get());
+    if (parse_result != ParseResult::success)
+      return parse_result;
   }
 
   if (expr_diagnostics->HasErrors()) {
