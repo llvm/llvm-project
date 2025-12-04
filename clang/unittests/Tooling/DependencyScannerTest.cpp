@@ -29,8 +29,7 @@
 
 using namespace clang;
 using namespace tooling;
-using namespace clang::dependencies;
-using namespace tooling::dependencies;
+using namespace dependencies;
 
 namespace {
 
