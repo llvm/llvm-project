@@ -1821,6 +1821,19 @@ TEST(DesignatorHints, NoCrash) {
                         ExpectedHint{".b=", "b"});
 }
 
+TEST(DesignatorHints, BasicParenInit) {
+  assertDesignatorHints(R"cpp(
+    struct S { 
+      int x;
+      int y;
+      int z; 
+    };
+    S s ($x[[1]], $y[[2+2]], $z[[4]]);
+  )cpp",
+                        ExpectedHint{".x=", "x"}, ExpectedHint{".y=", "y"},
+                        ExpectedHint{".z=", "z"});
+}
+
 TEST(InlayHints, RestrictRange) {
   Annotations Code(R"cpp(
     auto a = false;

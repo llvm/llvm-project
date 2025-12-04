@@ -699,6 +699,26 @@ public:
     return InstantiatedFunction->getParamDecl(ParamIdx);
   }
 
+  bool VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
+    // TODO: Lang check needed?
+    if (!Cfg.InlayHints.Designators &&
+        AST.getLangOpts().LangStd >= LangStandard::Kind::lang_cxx20)
+      return true;
+
+    if (const auto *CXXRecord = E->getType()->getAsCXXRecordDecl()) {
+      const auto &InitExprs = E->getInitExprs();
+      auto RecordFields = CXXRecord->fields().begin();
+
+      for (size_t I = 0; I < InitExprs.size();
+           ++I, RecordFields = std::next(RecordFields)) {
+        // TODO: is prepending "." sufficient?
+        addDesignatorHint(InitExprs[I]->getSourceRange(),
+                          "." + RecordFields->getName().str());
+      }
+    }
+    return true;
+  }
+
   bool VisitInitListExpr(InitListExpr *Syn) {
     // We receive the syntactic form here (shouldVisitImplicitCode() is false).
     // This is the one we will ultimately attach designators to.
