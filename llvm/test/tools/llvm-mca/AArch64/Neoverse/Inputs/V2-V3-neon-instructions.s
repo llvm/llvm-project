@@ -591,7 +591,6 @@ smlsl v0.8h, v0.8b, v0.8b
 smlsl2 v0.2d, v0.4s, v0.4s
 smlsl2 v0.4s, v0.8h, v0.8h
 smlsl2 v0.8h, v0.16b, v0.16b
-smmla v0.4s, v0.16b, v0.16b
 smull v0.2d, v0.2s, v0.2s
 smull v0.4s, v0.4h, v0.4h
 smull v0.8h, v0.8b, v0.8b
@@ -863,8 +862,6 @@ st4 { v0.b, v1.b, v2.b, v3.b }[9], [x0]
 st4 { v0.d, v1.d, v2.d, v3.d }[1], [x0], x5
 sub d15, d5, d16
 sub v0.2d, v0.2d, v0.2d
-sudot v0.2s, v0.8b, v0.4b[2]
-sudot v0.4s, v0.16b, v0.4b[2]
 suqadd b19, b14
 suqadd d18, d22
 suqadd h20, h15
@@ -1002,7 +999,6 @@ umlsl v0.8h, v0.8b, v0.8b
 umlsl2 v0.2d, v0.4s, v0.4s
 umlsl2 v0.4s, v0.8h, v0.8h
 umlsl2 v0.8h, v0.16b, v0.16b
-ummla v0.4s, v0.16b, v0.16b
 umov w0, v0.b[1]
 umov w0, v0.h[1]
 umov w0, v0.s[1]
@@ -1095,10 +1091,6 @@ ursra v0.4h, v0.4h, #3
 ursra v0.4s, v0.4s, #3
 ursra v0.8b, v0.8b, #3
 ursra v0.8h, v0.8h, #3
-usdot v0.2s, v0.8b, v0.4b[2]
-usdot v0.2s, v0.8b, v0.8b
-usdot v0.4s, v0.16b, v0.16b
-usdot v0.4s, v0.16b, v0.4b[2]
 ushl d0, d0, d0
 ushl v0.16b, v0.16b, v0.16b
 ushl v0.4s, v0.4s, v0.4s
@@ -1113,7 +1105,6 @@ ushr v0.4h, v0.4h, #3
 ushr v0.4s, v0.4s, #3
 ushr v0.8b, v0.8b, #3
 ushr v0.8h, v0.8h, #3
-usmmla v0.4s, v0.16b, v0.16b
 smov w0, v0.b[1]
 smov w0, v0.h[1]
 smov x0, v0.b[1]

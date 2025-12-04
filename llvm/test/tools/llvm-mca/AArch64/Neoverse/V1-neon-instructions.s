@@ -813,7 +813,6 @@ smlsl2 v0.2d, v0.4s, v0.4s
 smlsl2 v11.2d, v28.4s, v7.s[2]
 smlsl2 v0.4s, v0.8h, v0.8h
 smlsl2 v0.8h, v0.16b, v0.16b
-smmla v0.4s, v0.16b, v0.16b
 smull v0.2d, v0.2s, v0.2s
 smull v31.2d, v23.2s, v6.s[2]
 smull v0.4s, v0.4h, v0.4h
@@ -1176,8 +1175,6 @@ sub v0.2d, v0.2d, v0.2d
 sub v15.2s, v14.2s, v11.2s
 subhn v7.4h, v10.4s, v13.4s
 subhn2 v24.4s, v24.2d, v8.2d
-sudot v0.2s, v0.8b, v0.4b[2]
-sudot v0.4s, v0.16b, v0.4b[2]
 suqadd b19, b14
 suqadd d18, d22
 suqadd h20, h15
@@ -1334,7 +1331,6 @@ umlsl2 v30.2d, v23.4s, v1.s[2]
 umlsl2 v0.4s, v0.8h, v0.8h
 umlsl2 v27.4s, v28.8h, v6.h[4]
 umlsl2 v0.8h, v0.16b, v0.16b
-ummla v0.4s, v0.16b, v0.16b
 umov w6, v22.b[0]
 umov w0, v0.b[1]
 umov w10, v25.h[0]
@@ -1440,10 +1436,6 @@ ursra v0.4h, v0.4h, #3
 ursra v0.4s, v0.4s, #3
 ursra v0.8b, v0.8b, #3
 ursra v0.8h, v0.8h, #3
-usdot v0.2s, v0.8b, v0.4b[2]
-usdot v0.2s, v0.8b, v0.8b
-usdot v0.4s, v0.16b, v0.16b
-usdot v0.4s, v0.16b, v0.4b[2]
 ushl d0, d0, d0
 ushl v6.8b, v26.8b, v6.8b
 ushl v0.16b, v0.16b, v0.16b
@@ -1463,7 +1455,6 @@ ushr v0.4h, v0.4h, #3
 ushr v0.4s, v0.4s, #3
 ushr v0.8b, v0.8b, #3
 ushr v0.8h, v0.8h, #3
-usmmla v0.4s, v0.16b, v0.16b
 smov w15, v22.b[0]
 smov w26, v27.h[0]
 smov x21, v0.b[0]
@@ -2361,7 +2352,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        smlsl2	v11.2d, v28.4s, v7.s[2]
 # CHECK-NEXT:  1      4     0.50                        smlsl2	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        smlsl2	v0.8h, v0.16b, v0.16b
-# CHECK-NEXT:  1      3     0.25                        smmla	v0.4s, v0.16b, v0.16b
 # CHECK-NEXT:  1      3     0.50                        smull	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  1      3     0.50                        smull	v31.2d, v23.2s, v6.s[2]
 # CHECK-NEXT:  1      3     0.50                        smull	v0.4s, v0.4h, v0.4h
@@ -2724,8 +2714,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.25                        sub	v15.2s, v14.2s, v11.2s
 # CHECK-NEXT:  1      2     0.25                        subhn	v7.4h, v10.4s, v13.4s
 # CHECK-NEXT:  1      2     0.25                        subhn2	v24.4s, v24.2d, v8.2d
-# CHECK-NEXT:  1      3     0.25                        sudot	v0.2s, v0.8b, v0.4b[2]
-# CHECK-NEXT:  1      3     0.25                        sudot	v0.4s, v0.16b, v0.4b[2]
 # CHECK-NEXT:  1      2     0.25                        suqadd	b19, b14
 # CHECK-NEXT:  1      2     0.25                        suqadd	d18, d22
 # CHECK-NEXT:  1      2     0.25                        suqadd	h20, h15
@@ -2882,7 +2870,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        umlsl2	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        umlsl2	v27.4s, v28.8h, v6.h[4]
 # CHECK-NEXT:  1      4     0.50                        umlsl2	v0.8h, v0.16b, v0.16b
-# CHECK-NEXT:  1      3     0.25                        ummla	v0.4s, v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.25                        umov	w6, v22.b[0]
 # CHECK-NEXT:  1      2     0.25                        umov	w0, v0.b[1]
 # CHECK-NEXT:  1      2     0.25                        umov	w10, v25.h[0]
@@ -2988,10 +2975,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        ursra	v0.4s, v0.4s, #3
 # CHECK-NEXT:  1      4     0.50                        ursra	v0.8b, v0.8b, #3
 # CHECK-NEXT:  1      4     0.50                        ursra	v0.8h, v0.8h, #3
-# CHECK-NEXT:  1      3     0.25                        usdot	v0.2s, v0.8b, v0.4b[2]
-# CHECK-NEXT:  1      3     0.25                        usdot	v0.2s, v0.8b, v0.8b
-# CHECK-NEXT:  1      3     0.25                        usdot	v0.4s, v0.16b, v0.16b
-# CHECK-NEXT:  1      3     0.25                        usdot	v0.4s, v0.16b, v0.4b[2]
 # CHECK-NEXT:  1      2     0.50                        ushl	d0, d0, d0
 # CHECK-NEXT:  1      2     0.50                        ushl	v6.8b, v26.8b, v6.8b
 # CHECK-NEXT:  1      2     0.50                        ushl	v0.16b, v0.16b, v0.16b
@@ -3011,7 +2994,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.50                        ushr	v0.4s, v0.4s, #3
 # CHECK-NEXT:  1      2     0.50                        ushr	v0.8b, v0.8b, #3
 # CHECK-NEXT:  1      2     0.50                        ushr	v0.8h, v0.8h, #3
-# CHECK-NEXT:  1      3     0.25                        usmmla	v0.4s, v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.25                  U     smov	w15, v22.b[0]
 # CHECK-NEXT:  1      2     0.25                  U     smov	w26, v27.h[0]
 # CHECK-NEXT:  1      2     0.25                  U     smov	x21, v0.b[0]
@@ -3110,7 +3092,7 @@ zip2 v0.8h, v0.8h, v0.8h
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -      -      -      -      -      -     84.33  167.83 167.83 20.75  7.75   7.75   7.75   597.75 490.25 491.25 383.75
+# CHECK-NEXT:  -      -      -      -      -      -      -     84.33  167.83 167.83 20.75  7.75   7.75   7.75   595.50 488.00 489.00 381.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -3926,7 +3908,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     smlsl2	v11.2d, v28.4s, v7.s[2]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     smlsl2	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     smlsl2	v0.8h, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   smmla	v0.4s, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     smull	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     smull	v31.2d, v23.2s, v6.s[2]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     smull	v0.4s, v0.4h, v0.4h
@@ -4289,8 +4270,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   sub	v15.2s, v14.2s, v11.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   subhn	v7.4h, v10.4s, v13.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   subhn2	v24.4s, v24.2d, v8.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   sudot	v0.2s, v0.8b, v0.4b[2]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   sudot	v0.4s, v0.16b, v0.4b[2]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   suqadd	b19, b14
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   suqadd	d18, d22
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   suqadd	h20, h15
@@ -4447,7 +4426,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     umlsl2	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     umlsl2	v27.4s, v28.8h, v6.h[4]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     umlsl2	v0.8h, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   ummla	v0.4s, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   umov	w6, v22.b[0]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   umov	w0, v0.b[1]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   umov	w10, v25.h[0]
@@ -4553,10 +4531,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ursra	v0.4s, v0.4s, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ursra	v0.8b, v0.8b, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ursra	v0.8h, v0.8h, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   usdot	v0.2s, v0.8b, v0.4b[2]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   usdot	v0.2s, v0.8b, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   usdot	v0.4s, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   usdot	v0.4s, v0.16b, v0.4b[2]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ushl	d0, d0, d0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ushl	v6.8b, v26.8b, v6.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ushl	v0.16b, v0.16b, v0.16b
@@ -4576,7 +4550,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ushr	v0.4s, v0.4s, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ushr	v0.8b, v0.8b, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ushr	v0.8h, v0.8h, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   usmmla	v0.4s, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   smov	w15, v22.b[0]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   smov	w26, v27.h[0]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   smov	x21, v0.b[0]
