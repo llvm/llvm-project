@@ -278,7 +278,7 @@ bool SimplifyIndvar::forceEqualityForICmp(ICmpInst *ICmp,
 
   if (!ICmpInst::isEquality(NewPredicate)) {
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(IVOperand));
-    if (!AR) {
+    if (!AR || AR->getLoop() != L) {
       return false;
     }
     const SCEVConstant *IVStart = dyn_cast<SCEVConstant>(AR->getStart());
