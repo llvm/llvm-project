@@ -654,6 +654,11 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"i", OperandUnsigned}, {"j", OperandUnsigned, Rank::elementalOrBOZ}},
         OperandUnsigned},
     {"ior", {{"i", BOZ}, {"j", SameIntOrUnsigned}}, SameIntOrUnsigned},
+    {"irand",
+        {{"i", TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
+            Optionality::optional}},
+        TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
+        IntrinsicClass::impureFunction},
     {"ishft", {{"i", SameIntOrUnsigned}, {"shift", AnyInt}}, SameIntOrUnsigned},
     {"ishftc",
         {{"i", SameIntOrUnsigned}, {"shift", AnyInt},
@@ -872,6 +877,11 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             common::Intent::In,
             {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultInt, Rank::scalar, IntrinsicClass::inquiryFunction},
+    {"rand",
+        {{"i", TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
+            Optionality::optional}},
+        TypePattern{RealType, KindCode::exactKind, 4}, Rank::scalar,
+        IntrinsicClass::impureFunction},
     {"range",
         {{"x", AnyNumeric, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In,
@@ -1597,6 +1607,10 @@ static const IntrinsicInterface intrinsicSubroutine[]{
     {"exit", {{"status", DefaultInt, Rank::scalar, Optionality::optional}}, {},
         Rank::elemental, IntrinsicClass::impureSubroutine},
     {"free", {{"ptr", Addressable}}, {}},
+    {"flush",
+        {{"unit", AnyInt, Rank::scalar, Optionality::optional,
+            common::Intent::In}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"fseek",
         {{"unit", AnyInt, Rank::scalar}, {"offset", AnyInt, Rank::scalar},
             {"whence", AnyInt, Rank::scalar},
@@ -1701,6 +1715,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {}, Rank::scalar, IntrinsicClass::impureSubroutine},
     {"second", {{"time", DefaultReal, Rank::scalar}}, {}, Rank::scalar,
         IntrinsicClass::impureSubroutine},
+    {"__builtin_show_descriptor", {{"d", AnyData, Rank::anyOrAssumedRank}}, {},
+        Rank::elemental, IntrinsicClass::impureSubroutine},
     {"system",
         {{"command", DefaultChar, Rank::scalar},
             {"exitstat", DefaultInt, Rank::scalar, Optionality::optional,
@@ -2822,7 +2838,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             name, characteristics::Procedure{std::move(dummyArgs), attrs}},
         std::move(rearranged)};
   } else {
-    attrs.set(characteristics::Procedure::Attr::Pure);
+    if (intrinsicClass != IntrinsicClass::impureFunction /* RAND and IRAND */)
+      attrs.set(characteristics::Procedure::Attr::Pure);
     characteristics::TypeAndShape typeAndShape{resultType.value(), resultRank};
     characteristics::FunctionResult funcResult{std::move(typeAndShape)};
     characteristics::Procedure chars{

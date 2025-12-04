@@ -8,8 +8,8 @@
 
 #include "ProjectModules.h"
 #include "support/Logger.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
+#include "clang/DependencyScanning/DependencyScanningService.h"
+#include "clang/Tooling/DependencyScanningTool.h"
 
 namespace clang::clangd {
 namespace {
@@ -36,8 +36,8 @@ public:
       std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
       const ThreadsafeFS &TFS)
       : CDB(CDB), TFS(TFS),
-        Service(tooling::dependencies::ScanningMode::CanonicalPreprocessing,
-                tooling::dependencies::ScanningOutputFormat::P1689) {}
+        Service(dependencies::ScanningMode::CanonicalPreprocessing,
+                dependencies::ScanningOutputFormat::P1689) {}
 
   /// The scanned modules dependency information for a specific source file.
   struct ModuleDependencyInfo {
@@ -81,7 +81,7 @@ private:
   // Whether the scanner has scanned the project globally.
   bool GlobalScanned = false;
 
-  clang::tooling::dependencies::DependencyScanningService Service;
+  clang::dependencies::DependencyScanningService Service;
 
   // TODO: Add a scanning cache.
 
@@ -104,7 +104,7 @@ ModuleDependencyScanner::scan(PathRef FilePath,
   if (Mangler)
     Mangler(Cmd, FilePath);
 
-  using namespace clang::tooling::dependencies;
+  using namespace clang::tooling;
 
   llvm::SmallString<128> FilePathDir(FilePath);
   llvm::sys::path::remove_filename(FilePathDir);
