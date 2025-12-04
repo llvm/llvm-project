@@ -74,6 +74,8 @@ public:
 
   bool enableShrinkWrapping(const MachineFunction &MF) const override;
 
+  void emitCFIsEarly(MachineFunction &MF, ReachingDefInfo &RDI) const override;
+
   bool isSupportedStackID(TargetStackID::Value ID) const override;
   TargetStackID::Value getStackIDForScalableVectors() const override;
 

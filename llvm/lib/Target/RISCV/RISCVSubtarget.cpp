@@ -75,9 +75,10 @@ static cl::opt<bool> EnablePExtCodeGen(
              "only partial codegen is currently supported)"),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool> SaveCSREarly("riscv-save-csrs-early",
-                                  cl::desc("Save CSRs early"),
-                                  cl::init(false), cl::Hidden);
+static cl::opt<bool> RISCVSaveCSRsEarly(
+    "riscv-save-csrs-early",
+    cl::desc("Let register alloctor do csr saves/restores"), cl::init(false),
+    cl::Hidden);
 
 void RISCVSubtarget::anchor() {}
 
@@ -221,8 +222,8 @@ bool RISCVSubtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel();
 }
 
-  /// Enable use of alias analysis during code generation (during MI
-  /// scheduling, DAGCombine, etc.).
+/// Enable use of alias analysis during code generation (during MI
+/// scheduling, DAGCombine, etc.).
 bool RISCVSubtarget::useAA() const { return UseAA; }
 
 unsigned RISCVSubtarget::getMinimumJumpTableEntries() const {
@@ -270,6 +271,4 @@ bool RISCVSubtarget::useMIPSCCMovInsn() const {
   return UseMIPSCCMovInsn && HasVendorXMIPSCMov;
 }
 
-bool RISCVSubtarget::savesCSRsEarly() const {
-  return SaveCSREarly;
-}
+bool RISCVSubtarget::savesCSRsEarly() const { return RISCVSaveCSRsEarly; }
