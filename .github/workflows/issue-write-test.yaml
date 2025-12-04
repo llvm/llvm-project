@@ -1,0 +1,25 @@
+name: Test Issue Write
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/issue-write-test.yaml'
+
+jobs:
+  test-issue-write:
+    name: "Test Issue Write"
+    runs-on: ubuntu-24.04
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - name: Write Comment
+        run: |
+          echo '[{"body": "This is a comment for testing the issue write workflow"}]' > comments
+      - name: Upload Comment
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: workflow-args
+          path: |
+            comments
