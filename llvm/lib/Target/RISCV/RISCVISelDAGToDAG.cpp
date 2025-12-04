@@ -1504,9 +1504,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
             // (packh x0, X)
             if (Subtarget->hasStdExtZbkb() && C1 == 0xff00 && C2 == 8) {
               SDNode *PACKH = CurDAG->getMachineNode(
-                RISCV::PACKH, DL, VT,
-                CurDAG->getRegister(RISCV::X0, Subtarget->getXLenVT()),
-                X);
+                  RISCV::PACKH, DL, VT,
+                  CurDAG->getRegister(RISCV::X0, Subtarget->getXLenVT()), X);
               ReplaceNode(Node, PACKH);
               return;
             }
