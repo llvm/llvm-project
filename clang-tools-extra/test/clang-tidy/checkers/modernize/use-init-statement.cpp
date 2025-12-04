@@ -981,3 +981,24 @@ void bad_macro_ifdef_statement_1() {
     }
 }
 
+void bad_macro_ifdef_statement_2() {
+    int i1 = 0;
+    if (i1 == 0) {
+// CHECK-MESSAGES-NOT: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+        do_some();
+    }
+#if SOME_MACRO
+    ++i1;
+#endif
+    int i2 = 0;
+    switch (i2) {
+// CHECK-MESSAGES-NOT: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+        case 0:
+            do_some();
+            break;
+    }
+#if SOME_MACRO
+    ++i2;
+#endif
+}
+
