@@ -1449,6 +1449,41 @@ void ClauseProcessor::processMapObjects(
   }
 }
 
+/// Extract and mangle the mapper identifier name from a mapper clause.
+/// Returns "__implicit_mapper" if no mapper is specified, or "default" if
+/// the default mapper is specified, otherwise returns the mangled mapper name.
+/// This handles both the Map clause (which uses a vector of mappers) and
+/// To/From clauses (which use a DefinedOperator).
+template <typename MapperType>
+static std::string
+getMapperIdentifier(lower::AbstractConverter &converter,
+                    const std::optional<MapperType> &mapper) {
+  std::string mapperIdName = "__implicit_mapper";
+  if (mapper) {
+    const semantics::Symbol *mapperSym = nullptr;
+
+    // Handle different mapper types
+    if constexpr (std::is_same_v<MapperType, omp::clause::DefinedOperator>) {
+      // For To/From clauses: mapper is a DefinedOperator
+      assert(mapper->size() == 1 && "more than one mapper");
+      mapperSym = mapper->front().v.id().symbol;
+    } else {
+      // For Map clause: mappers is a vector
+      assert(mapper->size() == 1 && "more than one mapper");
+      mapperSym = mapper->front().v.id().symbol;
+    }
+
+    mapperIdName = mapperSym->name().ToString();
+    if (mapperIdName != "default") {
+      // Mangle with the ultimate owner so that use-associated mapper
+      // identifiers resolve to the same symbol as their defining scope.
+      const semantics::Symbol &ultimate = mapperSym->GetUltimate();
+      mapperIdName = converter.mangleName(mapperIdName, ultimate.owner());
+    }
+  }
+  return mapperIdName;
+}
+
 bool ClauseProcessor::processMap(
     mlir::Location currentLocation, lower::StatementContext &stmtCtx,
     mlir::omp::MapClauseOps &result, llvm::omp::Directive directive,
@@ -1517,17 +1552,7 @@ bool ClauseProcessor::processMap(
       TODO(currentLocation,
            "Support for iterator modifiers is not implemented yet");
     }
-    if (mappers) {
-      assert(mappers->size() == 1 && "more than one mapper");
-      const semantics::Symbol *mapperSym = mappers->front().v.id().symbol;
-      mapperIdName = mapperSym->name().ToString();
-      if (mapperIdName != "default") {
-        // Mangle with the ultimate owner so that use-associated mapper
-        // identifiers resolve to the same symbol as their defining scope.
-        const semantics::Symbol &ultimate = mapperSym->GetUltimate();
-        mapperIdName = converter.mangleName(mapperIdName, ultimate.owner());
-      }
-    }
+    mapperIdName = getMapperIdentifier(converter, mappers);
 
     processMapObjects(stmtCtx, clauseLocation,
                       std::get<omp::ObjectList>(clause.t), mapTypeBits,
@@ -1559,19 +1584,7 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
       mapTypeBits |= mlir::omp::ClauseMapFlags::present;
 
     // Support motion modifiers: mapper, iterator.
-    std::string mapperIdName = "__implicit_mapper";
-    if (mapper) {
-      // Only one mapper is allowed by the parser here.
-      assert(mapper->size() == 1 && "more than one mapper");
-      const semantics::Symbol *mapperSym = mapper->front().v.id().symbol;
-      mapperIdName = mapperSym->name().ToString();
-      if (mapperIdName != "default") {
-        // Mangle with the ultimate owner so that use-associated mapper
-        // identifiers resolve to the same symbol as their defining scope.
-        const semantics::Symbol &ultimate = mapperSym->GetUltimate();
-        mapperIdName = converter.mangleName(mapperIdName, ultimate.owner());
-      }
-    }
+    std::string mapperIdName = getMapperIdentifier(converter, mapper);
     if (iterator) {
       TODO(clauseLocation, "Iterator modifier is not supported yet");
     }
