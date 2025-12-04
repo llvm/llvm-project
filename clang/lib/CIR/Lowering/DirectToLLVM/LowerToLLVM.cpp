@@ -62,9 +62,8 @@ mlir::LogicalResult CIRToLLVMSqrtOpLowering::matchAndRewrite(
 
   Value operand = adaptor.getInput();
   Value llvmOperand = operand;
-  if (operand.getType() != llvmResTy) {
+  if (operand.getType() != llvmResTy)
     llvmOperand = rewriter.create<LLVM::BitcastOp>(loc, llvmResTy, operand);
-  }
 
   // Build the llvm.sqrt.* intrinsic name depending on scalar vs vector result
   std::string intrinsicName = "llvm.sqrt.";
@@ -84,9 +83,8 @@ mlir::LogicalResult CIRToLLVMSqrtOpLowering::matchAndRewrite(
         suffix = "v" + std::to_string(n) + "f16";
       else
         return op.emitOpError("unsupported float width for sqrt");
-    } else {
+    } else 
       return op.emitOpError("vector element must be floating point for sqrt");
-    }
   } else if (auto f = cirResTy.dyn_cast<cir::FloatType>()) {
     // Scalar float
     unsigned width = f.getWidth();
@@ -98,9 +96,8 @@ mlir::LogicalResult CIRToLLVMSqrtOpLowering::matchAndRewrite(
       suffix = "f16";
     else
       return op.emitOpError("unsupported float width for sqrt");
-  } else {
+  } else 
     return op.emitOpError("unsupported type for cir.sqrt lowering");
-  }
 
   intrinsicName += suffix;
 
