@@ -12,6 +12,7 @@
 #include <limits>
 #include <sstream>
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -490,7 +491,8 @@ ValueObjectSP ABISysV_loongarch::GetReturnValueObjectSimple(
   value.SetCompilerType(compiler_type);
 
   const uint32_t type_flags = compiler_type.GetTypeInfo();
-  const size_t byte_size = compiler_type.GetByteSize(&thread).value_or(0);
+  const size_t byte_size =
+      llvm::expectedToOptional(compiler_type.GetByteSize(&thread)).value_or(0);
   const ArchSpec arch = thread.GetProcess()->GetTarget().GetArchitecture();
   const llvm::Triple::ArchType machine = arch.GetMachine();
 
@@ -508,11 +510,10 @@ ValueObjectSP ABISysV_loongarch::GetReturnValueObjectSimple(
                                           value, ConstString(""));
   }
   if (type_flags & eTypeIsFloat) {
-    uint32_t float_count = 0;
     bool is_complex = false;
 
-    if (compiler_type.IsFloatingPointType(float_count, is_complex) &&
-        float_count == 1 && !is_complex) {
+    if (compiler_type.IsFloatingPointType(is_complex) &&
+        !(type_flags & eTypeIsVector) && !is_complex) {
       return_valobj_sp =
           GetValObjFromFPRegs(thread, reg_ctx, machine, type_flags, byte_size);
       return return_valobj_sp;
@@ -532,41 +533,34 @@ ValueObjectSP ABISysV_loongarch::GetReturnValueObjectImpl(
   return GetReturnValueObjectSimple(thread, return_compiler_type);
 }
 
-bool ABISysV_loongarch::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_loongarch::CreateFunctionEntryUnwindPlan() {
   uint32_t pc_reg_num = loongarch_dwarf::dwarf_gpr_pc;
   uint32_t sp_reg_num = loongarch_dwarf::dwarf_gpr_sp;
   uint32_t ra_reg_num = loongarch_dwarf::dwarf_gpr_ra;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Define CFA as the stack pointer
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
   // Previous frame's pc is in ra
+  row.SetRegisterLocationToRegister(pc_reg_num, ra_reg_num, true);
 
-  row->SetRegisterLocationToRegister(pc_reg_num, ra_reg_num, true);
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("loongarch function-entry unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("loongarch function-entry unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_loongarch::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindGeneric);
-
+UnwindPlanSP ABISysV_loongarch::CreateDefaultUnwindPlan() {
   uint32_t pc_reg_num = LLDB_REGNUM_GENERIC_PC;
   uint32_t fp_reg_num = LLDB_REGNUM_GENERIC_FP;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Define the CFA as the current frame pointer value.
-  row->GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 0);
-  row->SetOffset(0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 0);
 
   int reg_size = 4;
   if (m_is_la64)
@@ -574,14 +568,15 @@ bool ABISysV_loongarch::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
 
   // Assume the ra reg (return pc) and caller's frame pointer
   // have been spilled to stack already.
-  row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("loongarch default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindGeneric);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("loongarch default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  return plan_sp;
 }
 
 bool ABISysV_loongarch::RegisterIsVolatile(const RegisterInfo *reg_info) {
@@ -601,15 +596,16 @@ bool ABISysV_loongarch::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
 
   return llvm::StringSwitch<bool>(name)
       // integer ABI names
-      .Cases("ra", "sp", "fp", true)
-      .Cases("s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", true)
+      .Cases({"ra", "sp", "fp"}, true)
+      .Cases({"s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"}, true)
       // integer hardware names
-      .Cases("r1", "r3", "r22", true)
-      .Cases("r23", "r24", "r25", "r26", "r27", "r28", "r29", "r30", "31", true)
+      .Cases({"r1", "r3", "r22"}, true)
+      .Cases({"r23", "r24", "r25", "r26", "r27", "r28", "r29", "r30", "31"},
+             true)
       // floating point ABI names
-      .Cases("fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7", is_hw_fp)
+      .Cases({"fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7"}, is_hw_fp)
       // floating point hardware names
-      .Cases("f24", "f25", "f26", "f27", "f28", "f29", "f30", "f31", is_hw_fp)
+      .Cases({"f24", "f25", "f26", "f27", "f28", "f29", "f30", "f31"}, is_hw_fp)
       .Default(false);
 }
 
@@ -626,17 +622,17 @@ void ABISysV_loongarch::Terminate() {
 static uint32_t GetGenericNum(llvm::StringRef name) {
   return llvm::StringSwitch<uint32_t>(name)
       .Case("pc", LLDB_REGNUM_GENERIC_PC)
-      .Cases("ra", "r1", LLDB_REGNUM_GENERIC_RA)
-      .Cases("sp", "r3", LLDB_REGNUM_GENERIC_SP)
-      .Cases("fp", "r22", LLDB_REGNUM_GENERIC_FP)
-      .Cases("a0", "r4", LLDB_REGNUM_GENERIC_ARG1)
-      .Cases("a1", "r5", LLDB_REGNUM_GENERIC_ARG2)
-      .Cases("a2", "r6", LLDB_REGNUM_GENERIC_ARG3)
-      .Cases("a3", "r7", LLDB_REGNUM_GENERIC_ARG4)
-      .Cases("a4", "r8", LLDB_REGNUM_GENERIC_ARG5)
-      .Cases("a5", "r9", LLDB_REGNUM_GENERIC_ARG6)
-      .Cases("a6", "r10", LLDB_REGNUM_GENERIC_ARG7)
-      .Cases("a7", "r11", LLDB_REGNUM_GENERIC_ARG8)
+      .Cases({"ra", "r1"}, LLDB_REGNUM_GENERIC_RA)
+      .Cases({"sp", "r3"}, LLDB_REGNUM_GENERIC_SP)
+      .Cases({"fp", "r22"}, LLDB_REGNUM_GENERIC_FP)
+      .Cases({"a0", "r4"}, LLDB_REGNUM_GENERIC_ARG1)
+      .Cases({"a1", "r5"}, LLDB_REGNUM_GENERIC_ARG2)
+      .Cases({"a2", "r6"}, LLDB_REGNUM_GENERIC_ARG3)
+      .Cases({"a3", "r7"}, LLDB_REGNUM_GENERIC_ARG4)
+      .Cases({"a4", "r8"}, LLDB_REGNUM_GENERIC_ARG5)
+      .Cases({"a5", "r9"}, LLDB_REGNUM_GENERIC_ARG6)
+      .Cases({"a6", "r10"}, LLDB_REGNUM_GENERIC_ARG7)
+      .Cases({"a7", "r11"}, LLDB_REGNUM_GENERIC_ARG8)
       .Default(LLDB_INVALID_REGNUM);
 }
 
@@ -644,34 +640,25 @@ void ABISysV_loongarch::AugmentRegisterInfo(
     std::vector<lldb_private::DynamicRegisterInfo::Register> &regs) {
   lldb_private::RegInfoBasedABI::AugmentRegisterInfo(regs);
 
+  static const llvm::StringMap<llvm::StringRef> isa_to_abi_alias_map = {
+      {"r0", "zero"}, {"r1", "ra"},  {"r2", "tp"},  {"r3", "sp"},
+      {"r4", "a0"},   {"r5", "a1"},  {"r6", "a2"},  {"r7", "a3"},
+      {"r8", "a4"},   {"r9", "a5"},  {"r10", "a6"}, {"r11", "a7"},
+      {"r12", "t0"},  {"r13", "t1"}, {"r14", "t2"}, {"r15", "t3"},
+      {"r16", "t4"},  {"r17", "t5"}, {"r18", "t6"}, {"r19", "t7"},
+      {"r20", "t8"},  {"r22", "fp"}, {"r23", "s0"}, {"r24", "s1"},
+      {"r25", "s2"},  {"r26", "s3"}, {"r27", "s4"}, {"r28", "s5"},
+      {"r29", "s6"},  {"r30", "s7"}, {"r31", "s8"}};
+
   for (auto it : llvm::enumerate(regs)) {
+    llvm::StringRef reg_name = it.value().name.GetStringRef();
+
     // Set alt name for certain registers for convenience
-    if (it.value().name == "r0")
-      it.value().alt_name.SetCString("zero");
-    else if (it.value().name == "r1")
-      it.value().alt_name.SetCString("ra");
-    else if (it.value().name == "r3")
-      it.value().alt_name.SetCString("sp");
-    else if (it.value().name == "r22")
-      it.value().alt_name.SetCString("fp");
-    else if (it.value().name == "r4")
-      it.value().alt_name.SetCString("a0");
-    else if (it.value().name == "r5")
-      it.value().alt_name.SetCString("a1");
-    else if (it.value().name == "r6")
-      it.value().alt_name.SetCString("a2");
-    else if (it.value().name == "r7")
-      it.value().alt_name.SetCString("a3");
-    else if (it.value().name == "r8")
-      it.value().alt_name.SetCString("a4");
-    else if (it.value().name == "r9")
-      it.value().alt_name.SetCString("a5");
-    else if (it.value().name == "r10")
-      it.value().alt_name.SetCString("a6");
-    else if (it.value().name == "r11")
-      it.value().alt_name.SetCString("a7");
+    llvm::StringRef alias_name = isa_to_abi_alias_map.lookup(reg_name);
+    if (!alias_name.empty())
+      it.value().alt_name.SetString(alias_name);
 
     // Set generic regnum so lldb knows what the PC, etc is
-    it.value().regnum_generic = GetGenericNum(it.value().name.GetStringRef());
+    it.value().regnum_generic = GetGenericNum(reg_name);
   }
 }

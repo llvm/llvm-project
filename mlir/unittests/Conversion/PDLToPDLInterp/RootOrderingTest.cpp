@@ -41,7 +41,7 @@ protected:
     builder.setInsertionPointToStart(&block);
     for (int i = 0; i < 4; ++i)
       // Ops will be deleted when `block` is destroyed.
-      v[i] = builder.create<ConstantIntOp>(builder.getUnknownLoc(), i, 32);
+      v[i] = ConstantIntOp::create(builder, builder.getUnknownLoc(), i, 32);
   }
 
   /// Checks that optimal branching on graph has the given cost and

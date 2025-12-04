@@ -324,7 +324,6 @@ define i32 @reduce_sum_16xi32_prefix13(ptr %p) {
   ret i32 %add11
 }
 
-
 define i32 @reduce_sum_16xi32_prefix14(ptr %p) {
 ; CHECK-LABEL: reduce_sum_16xi32_prefix14:
 ; CHECK:       # %bb.0:
@@ -530,7 +529,7 @@ define i32 @reduce_and_16xi32_prefix5(ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 5, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, -1
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vredand.vs v8, v8, v10
@@ -585,11 +584,6 @@ define i32 @reduce_or_16xi32_prefix5(ptr %p) {
   %or3 = or i32 %or2, %e4
   ret i32 %or3
 }
-
-declare i32 @llvm.smax.i32(i32 %a, i32 %b)
-declare i32 @llvm.smin.i32(i32 %a, i32 %b)
-declare i32 @llvm.umax.i32(i32 %a, i32 %b)
-declare i32 @llvm.umin.i32(i32 %a, i32 %b)
 
 define i32 @reduce_smax_16xi32_prefix2(ptr %p) {
 ; CHECK-LABEL: reduce_smax_16xi32_prefix2:
@@ -725,7 +719,7 @@ define i32 @reduce_umin_16xi32_prefix5(ptr %p) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 5, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v10, -1
 ; RV32-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; RV32-NEXT:    vredminu.vs v8, v8, v10
@@ -849,7 +843,6 @@ define float @reduce_fadd_2xf32_ninf_only(ptr %p) {
   ret float %fadd0
 }
 
-
 ; Negative test - last fadd is not associative
 define float @reduce_fadd_4xi32_non_associative(ptr %p) {
 ; CHECK-LABEL: reduce_fadd_4xi32_non_associative:
@@ -903,4 +896,34 @@ define float @reduce_fadd_4xi32_non_associative2(ptr %p) {
   %fadd1 = fadd fast float %fadd0, %e2
   %fadd2 = fadd fast float %fadd1, %e3
   ret float %fadd2
+}
+
+define float @reduce_fmaxnum_16xf32_prefix2(ptr %p) {
+; CHECK-LABEL: reduce_fmaxnum_16xf32_prefix2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vfredmax.vs v8, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+  %v = load <16 x float>, ptr %p, align 256
+  %e0 = extractelement <16 x float> %v, i32 0
+  %e1 = extractelement <16 x float> %v, i32 1
+  %fmax0 = call float @llvm.maxnum.f32(float %e0, float %e1)
+  ret float %fmax0
+}
+
+define float @reduce_fminnum_16xf32_prefix2(ptr %p) {
+; CHECK-LABEL: reduce_fminnum_16xf32_prefix2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vfredmin.vs v8, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+  %v = load <16 x float>, ptr %p, align 256
+  %e0 = extractelement <16 x float> %v, i32 0
+  %e1 = extractelement <16 x float> %v, i32 1
+  %fmax0 = call float @llvm.minnum.f32(float %e0, float %e1)
+  ret float %fmax0
 }

@@ -149,10 +149,10 @@ define void @f3(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST17:%.*]] = bitcast <32 x i32> [[CUP16]] to <128 x i8>
 ; CHECK-NEXT:    [[TRN:%.*]] = trunc <128 x i8> [[CST6]] to <128 x i1>
-; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST4]], ptr [[ITP]], i32 128, <128 x i1> [[TRN]]), !tbaa [[TBAA5:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST4]], ptr align 128 [[ITP]], <128 x i1> [[TRN]]), !tbaa [[TBAA5:![0-9]+]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[ITP]], i32 128
 ; CHECK-NEXT:    [[TRN18:%.*]] = trunc <128 x i8> [[CST12]] to <128 x i1>
-; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST10]], ptr [[GEP]], i32 128, <128 x i1> [[TRN18]]), !tbaa [[TBAA5]]
+; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST10]], ptr align 128 [[GEP]], <128 x i1> [[TRN18]]), !tbaa [[TBAA5]]
 ; CHECK-NEXT:    [[GEP19:%.*]] = getelementptr i8, ptr [[ITP]], i32 256
 ; CHECK-NEXT:    [[AND20:%.*]] = and i32 [[PTI1]], 127
 ; CHECK-NEXT:    [[ISZ:%.*]] = icmp ne i32 [[AND20]], 0
@@ -202,10 +202,10 @@ define void @f4(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST17:%.*]] = bitcast <32 x i32> [[CUP16]] to <128 x i8>
 ; CHECK-NEXT:    [[TRN:%.*]] = trunc <128 x i8> [[CST6]] to <128 x i1>
-; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST4]], ptr [[ITP]], i32 128, <128 x i1> [[TRN]])
+; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST4]], ptr align 128 [[ITP]], <128 x i1> [[TRN]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[ITP]], i32 128
 ; CHECK-NEXT:    [[TRN18:%.*]] = trunc <128 x i8> [[CST12]] to <128 x i1>
-; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST10]], ptr [[GEP]], i32 128, <128 x i1> [[TRN18]])
+; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST10]], ptr align 128 [[GEP]], <128 x i1> [[TRN18]])
 ; CHECK-NEXT:    [[GEP19:%.*]] = getelementptr i8, ptr [[ITP]], i32 256
 ; CHECK-NEXT:    [[AND20:%.*]] = and i32 [[PTI1]], 127
 ; CHECK-NEXT:    [[ISZ:%.*]] = icmp ne i32 [[AND20]], 0
@@ -255,10 +255,10 @@ define void @f5(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST17:%.*]] = bitcast <32 x i32> [[CUP16]] to <128 x i8>
 ; CHECK-NEXT:    [[TRN:%.*]] = trunc <128 x i8> [[CST6]] to <128 x i1>
-; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST4]], ptr [[ITP]], i32 128, <128 x i1> [[TRN]]), !tbaa [[TBAA5]]
+; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST4]], ptr align 128 [[ITP]], <128 x i1> [[TRN]]), !tbaa [[TBAA5]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[ITP]], i32 128
 ; CHECK-NEXT:    [[TRN18:%.*]] = trunc <128 x i8> [[CST12]] to <128 x i1>
-; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST10]], ptr [[GEP]], i32 128, <128 x i1> [[TRN18]])
+; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST10]], ptr align 128 [[GEP]], <128 x i1> [[TRN18]])
 ; CHECK-NEXT:    [[GEP19:%.*]] = getelementptr i8, ptr [[ITP]], i32 256
 ; CHECK-NEXT:    [[AND20:%.*]] = and i32 [[PTI1]], 127
 ; CHECK-NEXT:    [[ISZ:%.*]] = icmp ne i32 [[AND20]], 0

@@ -15,6 +15,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Memory.h"
 
 #include <vector>
@@ -62,13 +63,13 @@ inline size_t numDeallocActions(const AllocActions &AAs) {
 /// be returned. The dealloc actions should be run by calling
 /// runDeallocationActions. If this function succeeds then the AA argument will
 /// be cleared before the function returns.
-Expected<std::vector<WrapperFunctionCall>>
+LLVM_ABI Expected<std::vector<WrapperFunctionCall>>
 runFinalizeActions(AllocActions &AAs);
 
 /// Run deallocation actions.
 /// Dealloc actions will be run in reverse order (from last element of DAs to
 /// first).
-Error runDeallocActions(ArrayRef<WrapperFunctionCall> DAs);
+LLVM_ABI Error runDeallocActions(ArrayRef<WrapperFunctionCall> DAs);
 
 using SPSAllocActionCallPair =
     SPSTuple<SPSWrapperFunctionCall, SPSWrapperFunctionCall>;

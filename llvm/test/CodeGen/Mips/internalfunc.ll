@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=mipsel -relocation-model=pic | FileCheck %s
+; RUN: llc < %s -mtriple=mipsel -relocation-model=pic | FileCheck %s
 
 @caller.sf1 = internal unnamed_addr global ptr null, align 4
 @gf1 = external global ptr

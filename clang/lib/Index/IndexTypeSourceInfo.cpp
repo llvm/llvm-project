@@ -11,6 +11,7 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
@@ -58,9 +59,9 @@ public:
 
   bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
     SourceLocation Loc = TL.getNameLoc();
-    TypedefNameDecl *ND = TL.getTypedefNameDecl();
+    TypedefNameDecl *ND = TL.getDecl();
     if (ND->isTransparentTag()) {
-      TagDecl *Underlying = ND->getUnderlyingType()->getAsTagDecl();
+      auto *Underlying = ND->getUnderlyingType()->castAsTagDecl();
       return IndexCtx.handleReference(Underlying, Loc, Parent,
                                       ParentDC, SymbolRoleSet(), Relations);
     }
@@ -171,7 +172,8 @@ public:
     return true;
   }
 
-  bool TraverseTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
+  bool TraverseTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL,
+                                             bool TraverseQualifier) {
     if (!WalkUpFromTemplateSpecializationTypeLoc(TL))
       return false;
     if (!TraverseTemplateName(TL.getTypePtr()->getTemplateName()))
@@ -201,33 +203,9 @@ public:
     return true;
   }
 
-  bool VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-    return IndexCtx.handleReference(TL.getDecl(), TL.getNameLoc(), Parent,
-                                    ParentDC, SymbolRoleSet(), Relations);
-  }
-
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
-    const DependentNameType *DNT = TL.getTypePtr();
-    const NestedNameSpecifier *NNS = DNT->getQualifier();
-    const Type *T = NNS->getAsType();
-    if (!T)
-      return true;
-    const TemplateSpecializationType *TST =
-        T->getAs<TemplateSpecializationType>();
-    if (!TST)
-      return true;
-    TemplateName TN = TST->getTemplateName();
-    const ClassTemplateDecl *TD =
-        dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl());
-    if (!TD)
-      return true;
-    CXXRecordDecl *RD = TD->getTemplatedDecl();
-    if (!RD->hasDefinition())
-      return true;
-    RD = RD->getDefinition();
-    DeclarationName Name(DNT->getIdentifier());
-    std::vector<const NamedDecl *> Symbols = RD->lookupDependentName(
-        Name, [](const NamedDecl *ND) { return isa<TypeDecl>(ND); });
+    std::vector<const NamedDecl *> Symbols =
+        IndexCtx.getResolver()->resolveDependentNameType(TL.getTypePtr());
     if (Symbols.size() != 1)
       return true;
     return IndexCtx.handleReference(Symbols[0], TL.getNameLoc(), Parent,
@@ -266,37 +244,28 @@ void IndexingContext::indexTypeLoc(TypeLoc TL,
   TypeIndexer(*this, Parent, DC, isBase, isIBType).TraverseTypeLoc(TL);
 }
 
-void IndexingContext::indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
-                                                  const NamedDecl *Parent,
-                                                  const DeclContext *DC) {
-  if (!NNS)
-    return;
-
-  if (NestedNameSpecifierLoc Prefix = NNS.getPrefix())
-    indexNestedNameSpecifierLoc(Prefix, Parent, DC);
-
+void IndexingContext::indexNestedNameSpecifierLoc(
+    NestedNameSpecifierLoc QualifierLoc, const NamedDecl *Parent,
+    const DeclContext *DC) {
   if (!DC)
     DC = Parent->getLexicalDeclContext();
-  SourceLocation Loc = NNS.getLocalBeginLoc();
-
-  switch (NNS.getNestedNameSpecifier()->getKind()) {
-  case NestedNameSpecifier::Identifier:
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
+  switch (NestedNameSpecifier Qualifier = QualifierLoc.getNestedNameSpecifier();
+          Qualifier.getKind()) {
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
     break;
 
-  case NestedNameSpecifier::Namespace:
-    handleReference(NNS.getNestedNameSpecifier()->getAsNamespace(),
-                    Loc, Parent, DC, SymbolRoleSet());
+  case NestedNameSpecifier::Kind::Namespace: {
+    auto [Namespace, Prefix] = QualifierLoc.castAsNamespaceAndPrefix();
+    indexNestedNameSpecifierLoc(Prefix, Parent, DC);
+    handleReference(Namespace, QualifierLoc.getLocalBeginLoc(), Parent, DC,
+                    SymbolRoleSet());
     break;
-  case NestedNameSpecifier::NamespaceAlias:
-    handleReference(NNS.getNestedNameSpecifier()->getAsNamespaceAlias(),
-                    Loc, Parent, DC, SymbolRoleSet());
-    break;
+  }
 
-  case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
-    indexTypeLoc(NNS.getTypeLoc(), Parent, DC);
+  case NestedNameSpecifier::Kind::Type:
+    indexTypeLoc(QualifierLoc.castAsTypeLoc(), Parent, DC);
     break;
   }
 }

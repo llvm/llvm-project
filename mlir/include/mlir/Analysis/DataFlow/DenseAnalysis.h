@@ -73,6 +73,14 @@ public:
   /// may modify the program state; that is, every operation and block.
   LogicalResult initialize(Operation *top) override;
 
+  /// Initialize lattice anchor equivalence class from the provided top-level
+  /// operation.
+  ///
+  /// This function will union lattice anchor to same equivalent class if the
+  /// analysis can determine the lattice content of lattice anchor is
+  /// necessarily identical under the corrensponding lattice type.
+  virtual void initializeEquivalentLatticeAnchor(Operation *top) override;
+
   /// Visit a program point that modifies the state of the program. If the
   /// program point is at the beginning of a block, then the state is propagated
   /// from control-flow predecessors or callsites.  If the operation before
@@ -96,8 +104,8 @@ protected:
   /// dependency. That is, every time the lattice after anchor is updated, the
   /// dependent program point must be visited, and the newly triggered visit
   /// might update the lattice on dependent.
-  const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
-                                            LatticeAnchor anchor);
+  virtual const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
+                                                    LatticeAnchor anchor) = 0;
 
   /// Set the dense lattice at control flow entry point and propagate an update
   /// if it changed.
@@ -113,6 +121,23 @@ protected:
   /// control-flow or the callgraph. Otherwise, this function invokes the
   /// operation transfer function.
   virtual LogicalResult processOperation(Operation *op);
+
+  /// Visit an operation. If this analysis can confirm that lattice content
+  /// of lattice anchors around operation are necessarily identical, join
+  /// them into the same equivalent class.
+  virtual void buildOperationEquivalentLatticeAnchor(Operation *op) {}
+
+  /// Visit a block and propagate the dense lattice forward along the control
+  /// flow edge from predecessor to block. `point` corresponds to the program
+  /// point before `block`. The default implementation merges in the state from
+  /// the predecessor's terminator.
+  virtual void visitBlockTransfer(Block *block, ProgramPoint *point,
+                                  Block *predecessor,
+                                  const AbstractDenseLattice &before,
+                                  AbstractDenseLattice *after) {
+    // Merge in the state from the predecessor's terminator.
+    join(after, before);
+  }
 
   /// Propagate the dense lattice forward along the control flow edge from
   /// `regionFrom` to `regionTo` regions of the `branch` operation. `nullopt`
@@ -246,10 +271,35 @@ public:
         branch, regionFrom, regionTo, before, after);
   }
 
+  /// Hook for customizing the behavior of lattice propagation along the control
+  /// flow edges between blocks. The control flows from `predecessor` to
+  /// `block`. The lattice is propagated forward along this edge. The lattices
+  /// are as follows:
+  ///   - `before` is the lattice at the end of the predecessor block;
+  ///   - `after` is the lattice at the beginning of the block.
+  /// By default, the `after` state is simply joined with the `before` state.
+  /// Concrete analyses can override this behavior or delegate to the parent
+  /// call for the default behavior.
+  virtual void visitBlockTransfer(Block *block, ProgramPoint *point,
+                                  Block *predecessor, const LatticeT &before,
+                                  LatticeT *after) {
+    AbstractDenseForwardDataFlowAnalysis::visitBlockTransfer(
+        block, point, predecessor, before, after);
+  }
+
 protected:
   /// Get the dense lattice on this lattice anchor.
   LatticeT *getLattice(LatticeAnchor anchor) override {
     return getOrCreate<LatticeT>(anchor);
+  }
+
+  /// Get the dense lattice on the given lattice anchor and add dependent as its
+  /// dependency. That is, every time the lattice after anchor is updated, the
+  /// dependent program point must be visited, and the newly triggered visit
+  /// might update the lattice on dependent.
+  const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
+                                            LatticeAnchor anchor) override {
+    return getOrCreateFor<LatticeT>(dependent, anchor);
   }
 
   /// Set the dense lattice at control flow entry point and propagate an update
@@ -284,6 +334,13 @@ protected:
                                          static_cast<const LatticeT &>(before),
                                          static_cast<LatticeT *>(after));
   }
+  void visitBlockTransfer(Block *block, ProgramPoint *point, Block *predecessor,
+                          const AbstractDenseLattice &before,
+                          AbstractDenseLattice *after) final {
+    visitBlockTransfer(block, point, predecessor,
+                       static_cast<const LatticeT &>(before),
+                       static_cast<LatticeT *>(after));
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -309,6 +366,14 @@ public:
   /// Initialize the analysis by visiting every program point whose execution
   /// may modify the program state; that is, every operation and block.
   LogicalResult initialize(Operation *top) override;
+
+  /// Initialize lattice anchor equivalence class from the provided top-level
+  /// operation.
+  ///
+  /// This function will union lattice anchor to same equivalent class if the
+  /// analysis can determine the lattice content of lattice anchor is
+  /// necessarily identical under the corrensponding lattice type.
+  virtual void initializeEquivalentLatticeAnchor(Operation *top) override;
 
   /// Visit a program point that modifies the state of the program. The state is
   /// propagated along control flow directions for branch-, region- and
@@ -336,8 +401,8 @@ protected:
   /// dependency. That is, every time the lattice after anchor is updated, the
   /// dependent program point must be visited, and the newly triggered visit
   /// might update the lattice before dependent.
-  const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
-                                            LatticeAnchor anchor);
+  virtual const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
+                                                    LatticeAnchor anchor) = 0;
 
   /// Set the dense lattice before at the control flow exit point and propagate
   /// the update if it changed.
@@ -353,6 +418,22 @@ protected:
   /// transfer function.
   virtual LogicalResult processOperation(Operation *op);
 
+  /// Visit an operation. If this analysis can confirm that lattice content
+  /// of lattice anchors around operation are necessarily identical, join
+  /// them into the same equivalent class.
+  virtual void buildOperationEquivalentLatticeAnchor(Operation *op) {}
+
+  /// Visit a block and propagate the dense lattice backward along the control
+  /// flow edge from successor to block. `point` corresponds to the program
+  /// point after `block`. The default implementation merges in the state from
+  /// the successor's first operation or the block itself when empty.
+  virtual void visitBlockTransfer(Block *block, ProgramPoint *point,
+                                  Block *successor,
+                                  const AbstractDenseLattice &after,
+                                  AbstractDenseLattice *before) {
+    meet(before, after);
+  }
+
   /// Propagate the dense lattice backwards along the control flow edge from
   /// `regionFrom` to `regionTo` regions of the `branch` operation. `nullopt`
   /// values correspond to control flow branches originating at or targeting the
@@ -362,7 +443,7 @@ protected:
   /// itself.
   virtual void visitRegionBranchControlFlowTransfer(
       RegionBranchOpInterface branch, RegionBranchPoint regionFrom,
-      RegionBranchPoint regionTo, const AbstractDenseLattice &after,
+      RegionSuccessor regionTo, const AbstractDenseLattice &after,
       AbstractDenseLattice *before) {
     meet(before, after);
   }
@@ -491,15 +572,40 @@ public:
   /// and "to" regions.
   virtual void visitRegionBranchControlFlowTransfer(
       RegionBranchOpInterface branch, RegionBranchPoint regionFrom,
-      RegionBranchPoint regionTo, const LatticeT &after, LatticeT *before) {
+      RegionSuccessor regionTo, const LatticeT &after, LatticeT *before) {
     AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchControlFlowTransfer(
         branch, regionFrom, regionTo, after, before);
+  }
+
+  /// Hook for customizing the behavior of lattice propagation along the control
+  /// flow edges between blocks. The control flows from `successor` to
+  /// `block`. The lattice is propagated back along this edge. The lattices
+  /// are as follows:
+  ///   - `after` is the lattice at the beginning of the successor block;
+  ///   - `before` is the lattice at the end of the block.
+  /// By default, the `before` state is simply met with the `after` state.
+  /// Concrete analyses can override this behavior or delegate to the parent
+  /// call for the default behavior.
+  virtual void visitBlockTransfer(Block *block, ProgramPoint *point,
+                                  Block *successor, const LatticeT &after,
+                                  LatticeT *before) {
+    AbstractDenseBackwardDataFlowAnalysis::visitBlockTransfer(
+        block, point, successor, after, before);
   }
 
 protected:
   /// Get the dense lattice at the given lattice anchor.
   LatticeT *getLattice(LatticeAnchor anchor) override {
     return getOrCreate<LatticeT>(anchor);
+  }
+
+  /// Get the dense lattice on the given lattice anchor and add dependent as its
+  /// dependency. That is, every time the lattice after anchor is updated, the
+  /// dependent program point must be visited, and the newly triggered visit
+  /// might update the lattice before dependent.
+  virtual const AbstractDenseLattice *
+  getLatticeFor(ProgramPoint *dependent, LatticeAnchor anchor) override {
+    return getOrCreateFor<LatticeT>(dependent, anchor);
   }
 
   /// Set the dense lattice at control flow exit point (after the terminator)
@@ -527,11 +633,18 @@ protected:
   }
   void visitRegionBranchControlFlowTransfer(
       RegionBranchOpInterface branch, RegionBranchPoint regionForm,
-      RegionBranchPoint regionTo, const AbstractDenseLattice &after,
+      RegionSuccessor regionTo, const AbstractDenseLattice &after,
       AbstractDenseLattice *before) final {
     visitRegionBranchControlFlowTransfer(branch, regionForm, regionTo,
                                          static_cast<const LatticeT &>(after),
                                          static_cast<LatticeT *>(before));
+  }
+  void visitBlockTransfer(Block *block, ProgramPoint *point, Block *successor,
+                          const AbstractDenseLattice &after,
+                          AbstractDenseLattice *before) final {
+    visitBlockTransfer(block, point, successor,
+                       static_cast<const LatticeT &>(after),
+                       static_cast<LatticeT *>(before));
   }
 };
 

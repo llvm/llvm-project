@@ -133,6 +133,8 @@ static uint16_t getImgRelRelocation(MachineTypes Machine) {
     return IMAGE_REL_ARM64_ADDR32NB;
   case IMAGE_FILE_MACHINE_I386:
     return IMAGE_REL_I386_DIR32NB;
+  case IMAGE_FILE_MACHINE_R4000:
+    return IMAGE_REL_MIPS_REFWORDNB;
   }
 }
 
@@ -159,7 +161,7 @@ static void writeStringTable(std::vector<uint8_t> &B,
 
   for (const auto &S : Strings) {
     B.resize(Pos + S.length() + 1);
-    std::copy(S.begin(), S.end(), std::next(B.begin(), Pos));
+    llvm::copy(S, std::next(B.begin(), Pos));
     B[Pos + S.length()] = 0;
     Pos += S.length() + 1;
   }

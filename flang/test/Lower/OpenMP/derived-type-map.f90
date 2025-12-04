@@ -1,5 +1,6 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
+!CHECK: omp.declare_mapper @[[MAPPER1:_QQFmaptype_derived_implicit_allocatablescalar_and_array_omp_default_mapper]] : !fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}> {
 
 !CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.type<_QFmaptype_derived_implicitTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}> {bindc_name = "scalar_arr", uniq_name = "_QFmaptype_derived_implicitEscalar_arr"}
 !CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "_QFmaptype_derived_implicitEscalar_arr"} : (!fir.ref<!fir.type<_QFmaptype_derived_implicitTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>) -> (!fir.ref<!fir.type<_QFmaptype_derived_implicitTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.ref<!fir.type<_QFmaptype_derived_implicitTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>)
@@ -11,12 +12,32 @@ subroutine mapType_derived_implicit
       integer(4) :: array(10)
       integer(4) :: int
     end type scalar_and_array
-    type(scalar_and_array) :: scalar_arr 
-    
+    type(scalar_and_array) :: scalar_arr
+
     !$omp target
        scalar_arr%int = 1
     !$omp end target
 end subroutine mapType_derived_implicit
+
+!CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>> {bindc_name = "scalar_arr", uniq_name = "_QFmaptype_derived_implicit_allocatableEscalar_arr"}
+!CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFmaptype_derived_implicit_allocatableEscalar_arr"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>>>, !fir.ref<!fir.box<!fir.heap<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>>>)
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_offset %[[DECLARE]]#1 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>>
+!CHECK: %[[BASE_MAP:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>>>, !fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>) map_clauses(implicit, tofrom) capture(ByRef) var_ptr_ptr(%[[BOX_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>>) mapper(@[[MAPPER1]]) -> !fir.llvm_ptr<!fir.ref<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>> {name = ""}
+!CHECK: %[[DESC_MAP:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>>>, !fir.box<!fir.heap<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>>) map_clauses(always, implicit, to) capture(ByRef) members(%[[BASE_MAP]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>>> {name = "scalar_arr"}
+!CHECK:     omp.target map_entries(%[[DESC_MAP]] -> %[[ARG0:.*]], %[[BASE_MAP]] -> %[[ARG1:.*]] : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>>>, !fir.llvm_ptr<!fir.ref<!fir.type<_QFmaptype_derived_implicit_allocatableTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>>) {
+subroutine mapType_derived_implicit_allocatable
+    type :: scalar_and_array
+      real(4) :: real
+      integer(4) :: array(10)
+      integer(4) :: int
+    end type scalar_and_array
+    type(scalar_and_array), allocatable :: scalar_arr 
+
+    allocate (scalar_arr)
+    !$omp target
+       scalar_arr%int = 1
+    !$omp end target
+end subroutine mapType_derived_implicit_allocatable
 
 !CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.type<_QFmaptype_derived_explicitTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}> {bindc_name = "scalar_arr", uniq_name = "_QFmaptype_derived_explicitEscalar_arr"}
 !CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "_QFmaptype_derived_explicitEscalar_arr"} : (!fir.ref<!fir.type<_QFmaptype_derived_explicitTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>) -> (!fir.ref<!fir.type<_QFmaptype_derived_explicitTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.ref<!fir.type<_QFmaptype_derived_explicitTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>)
@@ -28,8 +49,8 @@ subroutine mapType_derived_explicit
       integer(4) :: array(10)
       integer(4) :: int
     end type scalar_and_array
-    type(scalar_and_array) :: scalar_arr 
-    
+    type(scalar_and_array) :: scalar_arr
+
     !$omp target map(tofrom: scalar_arr)
        scalar_arr%int = 1
     !$omp end target
@@ -48,8 +69,8 @@ subroutine mapType_derived_explicit_single_member
       integer(4) :: array(10)
       integer(4) :: int
     end type scalar_and_array
-    type(scalar_and_array) :: scalar_arr 
-    
+    type(scalar_and_array) :: scalar_arr
+
     !$omp target map(tofrom: scalar_arr%array)
        scalar_arr%array(1) = 1
     !$omp end target
@@ -69,13 +90,13 @@ subroutine mapType_derived_explicit_multiple_members
       integer(4) :: array(10)
       integer(4) :: int
     end type scalar_and_array
-    type(scalar_and_array) :: scalar_arr 
-    
+    type(scalar_and_array) :: scalar_arr
+
     !$omp target map(tofrom: scalar_arr%int, scalar_arr%real)
        scalar_arr%int = 1
     !$omp end target
 end subroutine mapType_derived_explicit_multiple_members
-  
+
 !CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.type<_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}> {bindc_name = "scalar_arr", uniq_name = "_QFmaptype_derived_explicit_member_with_boundsEscalar_arr"}
 !CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "_QFmaptype_derived_explicit_member_with_boundsEscalar_arr"} : (!fir.ref<!fir.type<_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>) -> (!fir.ref<!fir.type<_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.ref<!fir.type<_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>)
 !CHECK: %[[MEMBER:.*]] = hlfir.designate %[[DECLARE]]#0{"array"}   shape %{{.*}} : (!fir.ref<!fir.type<_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>>
@@ -83,7 +104,7 @@ end subroutine mapType_derived_explicit_multiple_members
 !CHECK: %[[LB:.*]] = arith.constant 1 : index
 !CHECK: %[[UB:.*]] = arith.constant 4 : index
 !CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%[[LB]] : index) upper_bound(%[[UB]] : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index)
-!CHECK: %[[MEMBER_MAP:.*]] = omp.map.info var_ptr(%[[MEMBER]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%20) -> !fir.ref<!fir.array<10xi32>> {name = "scalar_arr%array(2:5)"}
+!CHECK: %[[MEMBER_MAP:.*]] = omp.map.info var_ptr(%[[MEMBER]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<10xi32>> {name = "scalar_arr%array(2:5)"}
 !CHECK: %[[PARENT_MAP:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.type<_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.type<_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>) map_clauses(tofrom) capture(ByRef) members(%[[MEMBER_MAP]] : [1] : !fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.type<_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>> {name = "scalar_arr", partial_map = true}
 !CHECK: omp.target map_entries(%[[PARENT_MAP]] -> %[[ARG0:.*]], %[[MEMBER_MAP]] -> %[[ARG1:.*]] : !fir.ref<!fir.type<_QFmaptype_derived_explicit_member_with_boundsTscalar_and_array{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.ref<!fir.array<10xi32>>) {
 subroutine mapType_derived_explicit_member_with_bounds
@@ -92,8 +113,8 @@ subroutine mapType_derived_explicit_member_with_bounds
       integer(4) :: array(10)
       integer(4) :: int
     end type scalar_and_array
-    type(scalar_and_array) :: scalar_arr 
-    
+    type(scalar_and_array) :: scalar_arr
+
     !$omp target map(tofrom: scalar_arr%array(2:5))
        scalar_arr%array(3) = 3
     !$omp end target
@@ -105,7 +126,7 @@ end subroutine mapType_derived_explicit_member_with_bounds
 !CHECK: %[[NEST_MEMBER:.*]] = hlfir.designate %[[NEST]]{"array"}   shape %{{.*}} : (!fir.ref<!fir.type<_QFmaptype_derived_nested_explicit_single_memberTnested{int:i32,real:f32,array:!fir.array<10xi32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>>
 !CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index)
 !CHECK: %[[MEMBER_MAP:.*]] = omp.map.info var_ptr(%[[NEST_MEMBER]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<10xi32>> {name = "scalar_arr%nest%array"}
-!CHECK: %[[PARENT_MAP:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) members(%35 : [2, 2] : !fir.ref<!fir.array<10xi32>>) -> {{.*}} {name = "scalar_arr", partial_map = true}
+!CHECK: %[[PARENT_MAP:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) members(%[[MEMBER_MAP]] : [2, 2] : !fir.ref<!fir.array<10xi32>>) -> {{.*}} {name = "scalar_arr", partial_map = true}
 !CHECK: omp.target map_entries(%[[PARENT_MAP]] -> %[[ARG0:.*]], %[[MEMBER_MAP]] -> %[[ARG1:.*]] : {{.*}}, {{.*}}) {
 subroutine mapType_derived_nested_explicit_single_member
   type :: nested
@@ -120,8 +141,8 @@ subroutine mapType_derived_nested_explicit_single_member
     type(nested) :: nest
     integer(4) :: int
   end type scalar_and_array
-  
-  type(scalar_and_array) :: scalar_arr 
+
+  type(scalar_and_array) :: scalar_arr
 
   !$omp target map(tofrom: scalar_arr%nest%array)
     scalar_arr%nest%array(1) = 1
@@ -152,7 +173,7 @@ subroutine mapType_derived_nested_explicit_multiple_members
     integer(4) :: int
   end type scalar_and_array
 
-  type(scalar_and_array) :: scalar_arr 
+  type(scalar_and_array) :: scalar_arr
 
   !$omp target map(tofrom: scalar_arr%nest%int, scalar_arr%nest%real)
     scalar_arr%nest%int = 1
@@ -184,9 +205,9 @@ subroutine mapType_derived_nested_explicit_member_with_bounds
     type(nested) :: nest
     integer(4) :: int
   end type scalar_and_array
-  
-  type(scalar_and_array) :: scalar_arr 
-  
+
+  type(scalar_and_array) :: scalar_arr
+
   !$omp target map(tofrom: scalar_arr%nest%array(2:5))
     scalar_arr%nest%array(3) = 3
   !$omp end target
@@ -218,7 +239,7 @@ subroutine mapType_multilpe_derived_nested_explicit_member
     type(nested) :: nest
     integer(4) :: int
   end type scalar_and_array
-  
+
   type(scalar_and_array) :: scalar_arr1
   type(scalar_and_array) :: scalar_arr2
 

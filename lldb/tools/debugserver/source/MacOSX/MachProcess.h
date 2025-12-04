@@ -34,7 +34,6 @@
 #include "MachVMMemory.h"
 #include "PThreadCondition.h"
 #include "PThreadEvent.h"
-#include "PThreadMutex.h"
 #include "RNBContext.h"
 #include "ThreadInfo.h"
 
@@ -284,7 +283,10 @@ public:
   JSONGenerator::ObjectSP
   GetAllLoadedLibrariesInfos(nub_process_t pid,
                              bool fetch_report_load_commands);
-  JSONGenerator::ObjectSP GetSharedCacheInfo(nub_process_t pid);
+  bool GetDebugserverSharedCacheInfo(uuid_t &uuid,
+                                     std::string &shared_cache_path);
+  bool GetInferiorSharedCacheFilepath(std::string &inferior_sc_path);
+  JSONGenerator::ObjectSP GetInferiorSharedCacheInfo(nub_process_t pid);
 
   nub_size_t GetNumThreads() const;
   nub_thread_t GetThreadAtIndex(nub_size_t thread_idx) const;
@@ -413,7 +415,7 @@ private:
   uint32_t m_stop_count; // A count of many times have we stopped
   pthread_t m_stdio_thread;   // Thread ID for the thread that watches for child
                               // process stdio
-  PThreadMutex m_stdio_mutex; // Multithreaded protection for stdio
+  std::recursive_mutex m_stdio_mutex; // Multithreaded protection for stdio
   std::string m_stdout_data;
 
   bool m_profile_enabled; // A flag to indicate if profiling is enabled
@@ -423,11 +425,11 @@ private:
       m_profile_scan_type; // Indicates what needs to be profiled
   pthread_t
       m_profile_thread; // Thread ID for the thread that profiles the inferior
-  PThreadMutex
+  std::recursive_mutex
       m_profile_data_mutex; // Multithreaded protection for profile info data
   std::vector<std::string>
       m_profile_data; // Profile data, must be protected by m_profile_data_mutex
-  PThreadEvent m_profile_events; // Used for the profile thread cancellable wait  
+  PThreadEvent m_profile_events; // Used for the profile thread cancellable wait
   DNBThreadResumeActions m_thread_actions; // The thread actions for the current
                                            // MachProcess::Resume() call
   MachException::Message::collection m_exception_messages; // A collection of
@@ -435,15 +437,16 @@ private:
                                                            // caught when
                                                            // listening to the
                                                            // exception port
-  PThreadMutex m_exception_messages_mutex; // Multithreaded protection for
-                                           // m_exception_messages
+  std::recursive_mutex
+      m_exception_and_signal_mutex; // Multithreaded protection for
+                                    // exceptions and signals.
 
   MachThreadList m_thread_list; // A list of threads that is maintained/updated
                                 // after each stop
   Genealogy m_activities; // A list of activities that is updated after every
                           // stop lazily
   nub_state_t m_state;    // The state of our process
-  PThreadMutex m_state_mutex; // Multithreaded protection for m_state
+  std::recursive_mutex m_state_mutex; // Multithreaded protection for m_state
   PThreadEvent m_events;      // Process related events in the child processes
                               // lifetime can be waited upon
   PThreadEvent m_private_events; // Used to coordinate running and stopping the
@@ -474,6 +477,14 @@ private:
 
   void *(*m_dyld_process_info_create)(task_t task, uint64_t timestamp,
                                       kern_return_t *kernelError);
+  void *(*m_dyld_process_create_for_task)(task_read_t task, kern_return_t *kr);
+  void *(*m_dyld_process_snapshot_create_for_process)(void *process,
+                                                      kern_return_t *kr);
+  void *(*m_dyld_process_snapshot_get_shared_cache)(void *snapshot);
+  void (*m_dyld_shared_cache_for_each_file)(
+      void *cache, void (^block)(const char *file_path));
+  void (*m_dyld_process_snapshot_dispose)(void *snapshot);
+  void (*m_dyld_process_dispose)(void *process);
   void (*m_dyld_process_info_for_each_image)(
       void *info, void (^callback)(uint64_t machHeaderAddress,
                                    const uuid_t uuid, const char *path));
@@ -481,6 +492,7 @@ private:
   void (*m_dyld_process_info_get_cache)(void *info, void *cacheInfo);
   uint32_t (*m_dyld_process_info_get_platform)(void *info);
   void (*m_dyld_process_info_get_state)(void *info, void *stateInfo);
+  const char *(*m_dyld_shared_cache_file_path)();
 };
 
 #endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHPROCESS_H

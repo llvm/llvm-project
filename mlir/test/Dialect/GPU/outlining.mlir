@@ -508,3 +508,155 @@ func.func @launch_cluster() {
 // CHECK-NEXT: "some_op"(%[[CID]], %[[BID]], %[[BDIM]]) : (index, index, index) -> ()
 // CHECK-NEXT: = memref.load %[[KERNEL_ARG1]][%[[TID]]] : memref<?xf32, 1>
 
+// -----
+// This test tests the two optional attributes `module` and `function` for gpu.launch
+// CHECK-LABEL: func.func @testKernelAttributes()
+// CHECK: gpu.launch_func  @test_module::@test_kernel_func blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
+// CHECK: gpu.module @test_module
+// CHECK: gpu.func @test_kernel_func()
+func.func @testKernelAttributes() {
+  %gDimX = arith.constant 8 : index
+  %gDimY = arith.constant 12 : index
+  %gDimZ = arith.constant 16 : index
+  %bDimX = arith.constant 32 : index
+  %bDimY = arith.constant 16 : index
+  %bDimZ = arith.constant 8 : index
+
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ)
+             module(@test_module) function(@test_kernel_func) {
+    "some_op"(%bx, %tx) : (index, index) -> ()
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+// This test tests the two optional attributes `module` and `function` for gpu.launch, when kernelModule already exists.
+
+// CHECK-LABEL: gpu.module @existing_module
+// CHECK: gpu.func @test_kernel_func()
+// CHECK: gpu.func @test_kernel_func_0()
+// CHECK-NOT: gpu.module @testExistingModule_kernel
+// CHECK-NOT: gpu.func @testExistingModule_kernel()
+// CHECK: func.func @testExistingModule()
+// CHECK: gpu.launch_func  @existing_module::@test_kernel_func_0 blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
+
+gpu.module @existing_module {
+  gpu.func @test_kernel_func() {
+    gpu.return
+  }
+}
+
+func.func @testExistingModule() {
+  %gDimX = arith.constant 8 : index
+  %gDimY = arith.constant 12 : index
+  %gDimZ = arith.constant 16 : index
+  %bDimX = arith.constant 32 : index
+  %bDimY = arith.constant 16 : index
+  %bDimZ = arith.constant 8 : index
+
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ)
+             module(@existing_module) function(@test_kernel_func) {
+    "some_op"(%bx, %tx) : (index, index) -> ()
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+// This test tests the optional attribute `module` for gpu.launch.
+// CHECK-LABEL: func.func @testKernelModuleOnly()
+// CHECK: gpu.launch_func  @test_module::@testKernelModuleOnly_kernel blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
+// CHECK: gpu.module @test_module
+// CHECK: gpu.func @testKernelModuleOnly_kernel()
+func.func @testKernelModuleOnly() {
+  %gDimX = arith.constant 8 : index
+  %gDimY = arith.constant 12 : index
+  %gDimZ = arith.constant 16 : index
+  %bDimX = arith.constant 32 : index
+  %bDimY = arith.constant 16 : index
+  %bDimZ = arith.constant 8 : index
+
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ)
+             module(@test_module) {
+    "some_op"(%bx, %tx) : (index, index) -> ()
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+// This test tests the optional attribute `function` for gpu.launch.
+// CHECK-LABEL: func.func @testKernelFuncOnly()
+// CHECK: gpu.launch_func  @test_kernel_func::@test_kernel_func blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
+
+// CHECK: gpu.module @test_kernel_func
+// CHECK: gpu.func @test_kernel_func()
+func.func @testKernelFuncOnly() {
+  %gDimX = arith.constant 8 : index
+  %gDimY = arith.constant 12 : index
+  %gDimZ = arith.constant 16 : index
+  %bDimX = arith.constant 32 : index
+  %bDimY = arith.constant 16 : index
+  %bDimZ = arith.constant 8 : index
+
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ)
+             function(@test_kernel_func) {
+    "some_op"(%bx, %tx) : (index, index) -> ()
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+// This test tests gpu.launch when optional attributes `module` and `function` are not specified.
+// CHECK-LABEL: func.func @testNoAttributes()
+// CHECK: gpu.launch_func  @testNoAttributes_kernel::@testNoAttributes_kernel blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
+
+// CHECK: gpu.module @testNoAttributes_kernel
+// CHECK: gpu.func @testNoAttributes_kernel()
+func.func @testNoAttributes() {
+  %gDimX = arith.constant 8 : index
+  %gDimY = arith.constant 12 : index
+  %gDimZ = arith.constant 16 : index
+  %bDimX = arith.constant 32 : index
+  %bDimY = arith.constant 16 : index
+  %bDimZ = arith.constant 8 : index
+
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+    "some_op"(%bx, %tx) : (index, index) -> ()
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+// This test tests nested `gpu.launch`.
+
+// CHECK-LABEL: func.func @nested_launch(
+//  CHECK-SAME:                          %[[ARG0:.*]]: index) {
+//       CHECK:   gpu.launch_func  @nested_launch_kernel_0::@nested_launch_kernel blocks in (%[[ARG0]], %[[ARG0]], %[[ARG0]]) threads in (%[[ARG0]], %[[ARG0]], %[[ARG0]])  args(%[[ARG0]] : index)
+//       CHECK: gpu.module @nested_launch_kernel
+//       CHECK:   gpu.func @nested_launch_kernel() kernel
+//       CHECK:     "some_op"
+//       CHECK: gpu.module @nested_launch_kernel_0
+//       CHECK:   gpu.func @nested_launch_kernel(%[[VAL_0:.*]]: index) kernel
+//       CHECK:     gpu.launch_func  @nested_launch_kernel::@nested_launch_kernel blocks in (%[[VAL_0]], %[[VAL_0]], %[[VAL_0]]) threads in (%[[VAL_0]], %[[VAL_0]], %[[VAL_0]])
+func.func @nested_launch(%sz : index) {
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %sz, %grid_y = %sz, %grid_z = %sz)
+             threads(%tx, %ty, %tz) in (%block_x = %sz, %block_y = %sz, %block_z = %sz) {
+    gpu.launch blocks(%bx1, %by1, %bz1) in (%grid_x1 = %sz, %grid_y1 = %sz, %grid_z1 = %sz)
+               threads(%tx1, %ty1, %tz1) in (%block_x1 = %sz, %block_y1 = %sz, %block_z1 = %sz) {
+      "some_op"(%bx1, %tx1) : (index, index) -> ()
+      gpu.terminator
+    }
+    gpu.terminator
+  }
+  return
+}

@@ -28,6 +28,12 @@ class CCIfSubtarget<string F, CCAction A>
 //===----------------------------------------------------------------------===//
 
 defvar AArch64_Common = [
+  // The 'nest' parameter, if any, is passed in X15.
+  // The previous register used here (X18) is also defined to be unavailable
+  // for this purpose, while all of X9-X15 were defined to be free for LLVM to
+  // use for this, so use X15 (which LLVM often already clobbers anyways).
+  CCIfNest<CCAssignToReg<[X15]>>,
+
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32], CCBitConvertToType<v2i64>>,
@@ -117,13 +123,7 @@ defvar AArch64_Common = [
 ];
 
 let Entry = 1 in
-def CC_AArch64_AAPCS : CallingConv<!listconcat(
-  // The 'nest' parameter, if any, is passed in X18.
-  // Darwin and Windows use X18 as the platform register and hence 'nest' isn't
-  // currently supported there.
-  [CCIfNest<CCAssignToReg<[X18]>>],
-  AArch64_Common
-)>;
+def CC_AArch64_AAPCS : CallingConv<AArch64_Common>;
 
 let Entry = 1 in
 def RetCC_AArch64_AAPCS : CallingConv<[
@@ -162,7 +162,13 @@ def RetCC_AArch64_AAPCS : CallingConv<[
 ]>;
 
 let Entry = 1 in
-def CC_AArch64_Win64PCS : CallingConv<AArch64_Common>;
+def CC_AArch64_Win64PCS : CallingConv<!listconcat(
+  [
+    // 'CFGuardTarget' is used for Arm64EC; it passes its parameter in X9.
+    CCIfCFGuardTarget<CCAssignToReg<[X9]>>
+  ],
+  AArch64_Common)
+>;
 
 // Vararg functions on windows pass floats in integer registers
 let Entry = 1 in
@@ -177,6 +183,11 @@ def CC_AArch64_Win64_VarArg : CallingConv<[
 // a stack layout compatible with the x64 calling convention.
 let Entry = 1 in
 def CC_AArch64_Arm64EC_VarArg : CallingConv<[
+  // 'CFGuardTarget' is used for Arm64EC; it passes its parameter in X9.
+  CCIfCFGuardTarget<CCAssignToReg<[X9]>>,
+
+  CCIfNest<CCAssignToReg<[X15]>>,
+
   // Convert small floating-point values to integer.
   CCIfType<[f16, bf16], CCBitConvertToType<i16>>,
   CCIfType<[f32], CCBitConvertToType<i32>>,
@@ -343,7 +354,7 @@ def CC_AArch64_Arm64EC_CFGuard_Check : CallingConv<[
 
 let Entry = 1 in
 def RetCC_AArch64_Arm64EC_CFGuard_Check : CallingConv<[
-  CCIfType<[i64], CCAssignToReg<[X11]>>
+  CCIfType<[i64], CCAssignToReg<[X11, X9]>>
 ]>;
 
 
@@ -353,6 +364,8 @@ def RetCC_AArch64_Arm64EC_CFGuard_Check : CallingConv<[
 //     + Stack slots are sized as needed rather than being at least 64-bit.
 let Entry = 1 in
 def CC_AArch64_DarwinPCS : CallingConv<[
+  CCIfNest<CCAssignToReg<[X15]>>,
+
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32, f128], CCBitConvertToType<v2i64>>,
@@ -427,6 +440,8 @@ def CC_AArch64_DarwinPCS : CallingConv<[
 
 let Entry = 1 in
 def CC_AArch64_DarwinPCS_VarArg : CallingConv<[
+  CCIfNest<CCAssignToReg<[X15]>>,
+
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32, f128], CCBitConvertToType<v2i64>>,
@@ -450,6 +465,8 @@ def CC_AArch64_DarwinPCS_VarArg : CallingConv<[
 // same as the normal Darwin VarArgs handling.
 let Entry = 1 in
 def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
+  CCIfNest<CCAssignToReg<[X15]>>,
+
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32, f128], CCBitConvertToType<v2i64>>,
 
@@ -494,6 +511,8 @@ def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
 
 let Entry = 1 in
 def CC_AArch64_GHC : CallingConv<[
+  CCIfNest<CCAssignToReg<[X15]>>,
+
   CCIfType<[iPTR], CCBitConvertToType<i64>>,
 
   // Handle all vector types as either f64 or v2f64.
@@ -522,6 +541,7 @@ def CC_AArch64_Preserve_None : CallingConv<[
 
   // We can pass arguments in all general registers, except:
   // - X8, used for sret
+  // - X15 (on Windows), used as a temporary register in the prologue when allocating call frames
   // - X16/X17, used by the linker as IP0/IP1
   // - X18, the platform register
   // - X19, the base pointer
@@ -590,6 +610,12 @@ def CSR_Win_AArch64_AAPCS_SwiftError
 def CSR_Win_AArch64_AAPCS_SwiftTail
     : CalleeSavedRegs<(sub CSR_Win_AArch64_AAPCS, X20, X22)>;
 
+def CSR_Win_AArch64_RT_MostRegs
+    : CalleeSavedRegs<(add CSR_Win_AArch64_AAPCS, (sequence "X%u", 9, 15))>;
+
+def CSR_Win_AArch64_RT_AllRegs
+    : CalleeSavedRegs<(add CSR_Win_AArch64_RT_MostRegs, (sequence "Q%u", 8, 31))>;
+
 // The Control Flow Guard check call uses a custom calling convention that also
 // preserves X0-X8 and Q0-Q7.
 def CSR_Win_AArch64_CFGuard_Check : CalleeSavedRegs<(add CSR_Win_AArch64_AAPCS,
@@ -606,6 +632,9 @@ def CSR_Win_AArch64_Arm64EC_Thunk : CalleeSavedRegs<(add (sequence "Q%u", 6, 15)
 def CSR_AArch64_AAVPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
                                           X25, X26, X27, X28, LR, FP,
                                           (sequence "Q%u", 8, 23))>;
+def CSR_Win_AArch64_AAVPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
+                                              X25, X26, X27, X28, FP, LR,
+                                              (sequence "Q%u", 8, 23))>;
 
 // Functions taking SVE arguments or returning an SVE type
 // must (additionally) preserve full Z8-Z23 and predicate registers P4-P15
@@ -618,6 +647,11 @@ def CSR_Darwin_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "Z%u", 8, 23),
                                                         (sequence "P%u", 4, 15),
                                                         LR, FP, X19, X20, X21, X22,
                                                         X23, X24, X25, X26, X27, X28)>;
+
+def CSR_Win_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "P%u", 4, 15),
+                                                     (sequence "Z%u", 8, 23),
+                                                     X19, X20, X21, X22, X23, X24,
+                                                     X25, X26, X27, X28, FP, LR)>;
 
 // SME ABI support routines such as __arm_tpidr2_save/restore preserve most registers.
 def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0

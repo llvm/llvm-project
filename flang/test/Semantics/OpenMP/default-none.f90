@@ -58,3 +58,18 @@ subroutine sub( aaa)
      ccc= aaa(ip)
   end do
 end subroutine sub
+
+! Test that threadprivate variables with host association
+! have a predetermined DSA
+subroutine host_assoc()
+  integer, save :: i
+  !$omp threadprivate(i)
+  real, save :: r
+  !$omp threadprivate(r)
+contains
+  subroutine internal()
+!$omp parallel default(none)
+    print *, i, r
+!$omp end parallel
+  end subroutine internal
+end subroutine host_assoc

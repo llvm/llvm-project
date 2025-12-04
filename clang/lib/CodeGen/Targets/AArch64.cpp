@@ -24,9 +24,16 @@ namespace {
 class AArch64ABIInfo : public ABIInfo {
   AArch64ABIKind Kind;
 
+  std::unique_ptr<TargetCodeGenInfo> WinX86_64CodegenInfo;
+
 public:
-  AArch64ABIInfo(CodeGenTypes &CGT, AArch64ABIKind Kind)
-      : ABIInfo(CGT), Kind(Kind) {}
+  AArch64ABIInfo(CodeGenModule &CGM, AArch64ABIKind Kind)
+      : ABIInfo(CGM.getTypes()), Kind(Kind) {
+    if (getTarget().getTriple().isWindowsArm64EC()) {
+      WinX86_64CodegenInfo =
+          createWinX86_64TargetCodeGenInfo(CGM, X86AVXABILevel::None);
+    }
+  }
 
   bool isSoftFloat() const { return Kind == AArch64ABIKind::AAPCSSoft; }
 
@@ -52,6 +59,7 @@ private:
 
   bool isIllegalVectorType(QualType Ty) const;
 
+  bool passAsAggregateType(QualType Ty) const;
   bool passAsPureScalableType(QualType Ty, unsigned &NV, unsigned &NP,
                               SmallVectorImpl<llvm::Type *> &CoerceToSeq) const;
 
@@ -118,9 +126,9 @@ public:
 
 class AArch64TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
-  AArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIKind Kind)
-      : TargetCodeGenInfo(std::make_unique<AArch64ABIInfo>(CGT, Kind)) {
-    SwiftInfo = std::make_unique<AArch64SwiftABIInfo>(CGT);
+  AArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind Kind)
+      : TargetCodeGenInfo(std::make_unique<AArch64ABIInfo>(CGM, Kind)) {
+    SwiftInfo = std::make_unique<AArch64SwiftABIInfo>(CGM.getTypes());
   }
 
   StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
@@ -135,24 +143,26 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
-    const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-    if (!FD)
+    auto *Fn = dyn_cast<llvm::Function>(GV);
+    if (!Fn)
       return;
 
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
     TargetInfo::BranchProtectionInfo BPI(CGM.getLangOpts());
 
-    if (const auto *TA = FD->getAttr<TargetAttr>()) {
+    if (FD && FD->hasAttr<TargetAttr>()) {
+      const auto *TA = FD->getAttr<TargetAttr>();
       ParsedTargetAttr Attr =
           CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
       if (!Attr.BranchProtection.empty()) {
         StringRef Error;
-        (void)CGM.getTarget().validateBranchProtection(Attr.BranchProtection,
-                                                       Attr.CPU, BPI, Error);
+        (void)CGM.getTarget().validateBranchProtection(
+            Attr.BranchProtection, Attr.CPU, BPI, CGM.getLangOpts(), Error);
         assert(Error.empty());
       }
     }
-    auto *Fn = cast<llvm::Function>(GV);
     setBranchProtectionFnAttributes(BPI, *Fn);
+    setPointerAuthFnAttributes(CGM.getCodeGenOpts().PointerAuth, *Fn);
   }
 
   bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
@@ -197,8 +207,8 @@ private:
 
 class WindowsAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {
 public:
-  WindowsAArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIKind K)
-      : AArch64TargetCodeGenInfo(CGT, K) {}
+  WindowsAArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind K)
+      : AArch64TargetCodeGenInfo(CGM, K) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override;
@@ -243,6 +253,7 @@ AArch64ABIInfo::convertFixedToScalableVectorType(const VectorType *VT) const {
 
     case BuiltinType::SChar:
     case BuiltinType::UChar:
+    case BuiltinType::MFloat8:
       return llvm::ScalableVectorType::get(
           llvm::Type::getInt8Ty(getVMContext()), 16);
 
@@ -325,7 +336,8 @@ ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty, unsigned &NSRN,
     return ABIArgInfo::getDirect(ResType);
   }
 
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                 /*ByVal=*/false);
 }
 
 ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
@@ -333,9 +345,14 @@ ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
     const SmallVectorImpl<llvm::Type *> &UnpaddedCoerceToSeq, unsigned &NSRN,
     unsigned &NPRN) const {
   if (!IsNamedArg || NSRN + NVec > 8 || NPRN + NPred > 4)
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
   NSRN += NVec;
   NPRN += NPred;
+
+  // Handle SVE vector tuples.
+  if (Ty->isSVESizelessBuiltinType())
+    return ABIArgInfo::getDirect();
 
   llvm::Type *UnpaddedCoerceToType =
       UnpaddedCoerceToSeq.size() == 1
@@ -358,18 +375,25 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
                                                 unsigned &NPRN) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
+  if (IsVariadicFn && getTarget().getTriple().isWindowsArm64EC()) {
+    // Arm64EC varargs functions use the x86_64 classification rules,
+    // not the AArch64 ABI rules.
+    return WinX86_64CodegenInfo->getABIInfo().classifyArgForArm64ECVarArg(Ty);
+  }
+
   // Handle illegal vector types here.
   if (isIllegalVectorType(Ty))
     return coerceIllegalVector(Ty, NSRN, NPRN);
 
-  if (!isAggregateTypeForABI(Ty)) {
+  if (!passAsAggregateType(Ty)) {
     // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getDecl()->getIntegerType();
+    if (const auto *ED = Ty->getAsEnumDecl())
+      Ty = ED->getIntegerType();
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
-        return getNaturalAlignIndirect(Ty, false);
+        return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                       false);
 
     if (Ty->isVectorType())
       NSRN = std::min(NSRN + 1, 8u);
@@ -378,10 +402,6 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
         NSRN = std::min(NSRN + 1, 8u);
       else {
         switch (BT->getKind()) {
-        case BuiltinType::MFloat8x8:
-        case BuiltinType::MFloat8x16:
-          NSRN = std::min(NSRN + 1, 8u);
-          break;
         case BuiltinType::SveBool:
         case BuiltinType::SveCount:
           NPRN = std::min(NPRN + 1, 4u);
@@ -409,23 +429,30 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   // Structures with either a non-trivial destructor or a non-trivial
   // copy constructor are always indirect.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/RAA ==
-                                     CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(
+        Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
-  // Empty records are always ignored on Darwin, but actually passed in C++ mode
-  // elsewhere for GNU compatibility.
+  // Empty records:
+  // AAPCS64 does not say that empty records are ignored as arguments,
+  // but other compilers do so in certain situations, and we copy that behavior.
+  // Those situations are in fact language-mode-specific, which seems really
+  // unfortunate, but it's something we just have to accept. If this doesn't
+  // apply, just fall through to the standard argument-handling path.
+  // Darwin overrides the psABI here to ignore all empty records in all modes.
   uint64_t Size = getContext().getTypeSize(Ty);
   bool IsEmpty = isEmptyRecord(getContext(), Ty, true);
-  if (IsEmpty || Size == 0) {
+  if (!Ty->isSVESizelessBuiltinType() && (IsEmpty || Size == 0)) {
+    // Empty records are ignored in C mode, and in C++ on Darwin.
     if (!getContext().getLangOpts().CPlusPlus || isDarwinPCS())
       return ABIArgInfo::getIgnore();
 
-    // GNU C mode. The only argument that gets ignored is an empty one with size
-    // 0.
-    if (IsEmpty && Size == 0)
+    // In C++ mode, arguments which have sizeof() == 0 (which are non-standard
+    // C++) are ignored. This isn't defined by any standard, so we copy GCC's
+    // behaviour here.
+    if (Size == 0)
       return ABIArgInfo::getIgnore();
-    return ABIArgInfo::getDirect(llvm::Type::getInt8Ty(getVMContext()));
   }
 
   // Homogeneous Floating-point Aggregates (HFAs) need to be expanded.
@@ -476,15 +503,44 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     }
     Size = llvm::alignTo(Size, Alignment);
 
+    // If the Aggregate is made up of pointers, use an array of pointers for the
+    // coerced type. This prevents having to convert ptr2int->int2ptr through
+    // the call, allowing alias analysis to produce better code.
+    auto ContainsOnlyPointers = [&](const auto &Self, QualType Ty) {
+      if (isEmptyRecord(getContext(), Ty, true))
+        return false;
+      const auto *RD = Ty->getAsRecordDecl();
+      if (!RD)
+        return false;
+      if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        for (const auto &I : CXXRD->bases())
+          if (!Self(Self, I.getType()))
+            return false;
+      }
+      return all_of(RD->fields(), [&](FieldDecl *FD) {
+        QualType FDTy = FD->getType();
+        if (FDTy->isArrayType())
+          FDTy = getContext().getBaseElementType(FDTy);
+        return (FDTy->isPointerOrReferenceType() &&
+                getContext().getTypeSize(FDTy) == 64 &&
+                !FDTy->getPointeeType().hasAddressSpace()) ||
+               Self(Self, FDTy);
+      });
+    };
+
     // We use a pair of i64 for 16-byte aggregate with 8-byte alignment.
     // For aggregates with 16-byte alignment, we use i128.
     llvm::Type *BaseTy = llvm::Type::getIntNTy(getVMContext(), Alignment);
+    if ((Size == 64 || Size == 128) && Alignment == 64 &&
+        ContainsOnlyPointers(ContainsOnlyPointers, Ty))
+      BaseTy = llvm::PointerType::getUnqual(getVMContext());
     return ABIArgInfo::getDirect(
         Size == Alignment ? BaseTy
                           : llvm::ArrayType::get(BaseTy, Size / Alignment));
   }
 
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                 /*ByVal=*/false);
 }
 
 ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
@@ -502,16 +558,17 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
 
   // Large vector types should be returned via memory.
   if (RetTy->isVectorType() && getContext().getTypeSize(RetTy) > 128)
-    return getNaturalAlignIndirect(RetTy);
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
 
-  if (!isAggregateTypeForABI(RetTy)) {
+  if (!passAsAggregateType(RetTy)) {
     // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-      RetTy = EnumTy->getDecl()->getIntegerType();
+    if (const auto *ED = RetTy->getAsEnumDecl())
+      RetTy = ED->getIntegerType();
 
     if (const auto *EIT = RetTy->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
-        return getNaturalAlignIndirect(RetTy);
+        return getNaturalAlignIndirect(RetTy,
+                                       getDataLayout().getAllocaAddrSpace());
 
     return (isPromotableIntegerTypeForABI(RetTy) && isDarwinPCS()
                 ? ABIArgInfo::getExtend(RetTy)
@@ -519,7 +576,8 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
   }
 
   uint64_t Size = getContext().getTypeSize(RetTy);
-  if (isEmptyRecord(getContext(), RetTy, true) || Size == 0)
+  if (!RetTy->isSVESizelessBuiltinType() &&
+      (isEmptyRecord(getContext(), RetTy, true) || Size == 0))
     return ABIArgInfo::getIgnore();
 
   const Type *Base = nullptr;
@@ -569,7 +627,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
     return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), Size));
   }
 
-  return getNaturalAlignIndirect(RetTy);
+  return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
 }
 
 /// isIllegalVectorType - check whether the vector type is legal for AArch64.
@@ -623,8 +681,7 @@ bool AArch64ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
   // but with the difference that any floating-point type is allowed,
   // including __fp16.
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
-    if (BT->isFloatingPoint() || BT->getKind() == BuiltinType::MFloat8x16 ||
-        BT->getKind() == BuiltinType::MFloat8x8)
+    if (BT->isFloatingPoint())
       return true;
   } else if (const VectorType *VT = Ty->getAs<VectorType>()) {
     if (auto Kind = VT->getVectorKind();
@@ -654,6 +711,15 @@ bool AArch64ABIInfo::isZeroLengthBitfieldPermittedInHomogeneousAggregate()
   return true;
 }
 
+bool AArch64ABIInfo::passAsAggregateType(QualType Ty) const {
+  if (Kind == AArch64ABIKind::AAPCS && Ty->isSVESizelessBuiltinType()) {
+    const auto *BT = Ty->castAs<BuiltinType>();
+    return !BT->isSVECount() &&
+           getContext().getBuiltinVectorTypeInfo(BT).NumVectors > 1;
+  }
+  return isAggregateTypeForABI(Ty);
+}
+
 // Check if a type needs to be passed in registers as a Pure Scalable Type (as
 // defined by AAPCS64). Return the number of data vectors and the number of
 // predicate vectors in the type, into `NVec` and `NPred`, respectively. Upon
@@ -679,21 +745,21 @@ bool AArch64ABIInfo::passAsPureScalableType(
       return false;
 
     for (uint64_t I = 0; I < NElt; ++I)
-      llvm::copy(EltCoerceToSeq, std::back_inserter(CoerceToSeq));
+      llvm::append_range(CoerceToSeq, EltCoerceToSeq);
 
     NVec += NElt * NV;
     NPred += NElt * NP;
     return true;
   }
 
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+  if (const RecordType *RT = Ty->getAsCanonical<RecordType>()) {
     // If the record cannot be passed in registers, then it's not a PST.
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI());
         RAA != CGCXXABI::RAA_Default)
       return false;
 
     // Pure scalable types are never unions and never contain unions.
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
     if (RD->isUnion())
       return false;
 
@@ -719,40 +785,40 @@ bool AArch64ABIInfo::passAsPureScalableType(
     return true;
   }
 
-  const auto *VT = Ty->getAs<VectorType>();
-  if (!VT)
-    return false;
+  if (const auto *VT = Ty->getAs<VectorType>()) {
+    if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
+      ++NPred;
+      if (CoerceToSeq.size() + 1 > 12)
+        return false;
+      CoerceToSeq.push_back(convertFixedToScalableVectorType(VT));
+      return true;
+    }
 
-  if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
-    ++NPred;
-    if (CoerceToSeq.size() + 1 > 12)
-      return false;
-    CoerceToSeq.push_back(convertFixedToScalableVectorType(VT));
-    return true;
+    if (VT->getVectorKind() == VectorKind::SveFixedLengthData) {
+      ++NVec;
+      if (CoerceToSeq.size() + 1 > 12)
+        return false;
+      CoerceToSeq.push_back(convertFixedToScalableVectorType(VT));
+      return true;
+    }
+
+    return false;
   }
 
-  if (VT->getVectorKind() == VectorKind::SveFixedLengthData) {
-    ++NVec;
-    if (CoerceToSeq.size() + 1 > 12)
-      return false;
-    CoerceToSeq.push_back(convertFixedToScalableVectorType(VT));
-    return true;
-  }
-
-  if (!VT->isBuiltinType())
+  if (!Ty->isBuiltinType())
     return false;
 
-  switch (cast<BuiltinType>(VT)->getKind()) {
+  bool isPredicate;
+  switch (Ty->castAs<BuiltinType>()->getKind()) {
 #define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
   case BuiltinType::Id:                                                        \
-    ++NVec;                                                                    \
+    isPredicate = false;                                                       \
     break;
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:                                                        \
-    ++NPred;                                                                   \
+    isPredicate = true;                                                        \
     break;
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
   default:
     return false;
   }
@@ -761,8 +827,14 @@ bool AArch64ABIInfo::passAsPureScalableType(
       getContext().getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
   assert(Info.NumVectors > 0 && Info.NumVectors <= 4 &&
          "Expected 1, 2, 3 or 4 vectors!");
-  auto VTy = llvm::ScalableVectorType::get(CGT.ConvertType(Info.ElementType),
-                                           Info.EC.getKnownMinValue());
+  if (isPredicate)
+    NPred += Info.NumVectors;
+  else
+    NVec += Info.NumVectors;
+  llvm::Type *EltTy = Info.ElementType->isMFloat8Type()
+                          ? llvm::Type::getInt8Ty(getVMContext())
+                          : CGT.ConvertType(Info.ElementType);
+  auto *VTy = llvm::ScalableVectorType::get(EltTy, Info.EC.getKnownMinValue());
 
   if (CoerceToSeq.size() + Info.NumVectors > 12)
     return false;
@@ -791,7 +863,7 @@ void AArch64ABIInfo::flattenType(
     flattenType(AT->getElementType(), EltFlattened);
 
     for (uint64_t I = 0; I < NElt; ++I)
-      llvm::copy(EltFlattened, std::back_inserter(Flattened));
+      llvm::append_range(Flattened, EltFlattened);
     return;
   }
 
@@ -822,7 +894,7 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
 
   llvm::Type *BaseTy = CGF.ConvertType(Ty);
   if (IsIndirect)
-    BaseTy = llvm::PointerType::getUnqual(BaseTy);
+    BaseTy = llvm::PointerType::getUnqual(BaseTy->getContext());
   else if (AI.getCoerceToType())
     BaseTy = AI.getCoerceToType();
 
@@ -940,7 +1012,7 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
   if (IsIndirect) {
     // If it's been passed indirectly (actually a struct), whatever we find from
     // stored registers or on the stack will actually be a struct **.
-    MemTy = llvm::PointerType::getUnqual(MemTy);
+    MemTy = llvm::PointerType::getUnqual(MemTy->getContext());
   }
 
   const Type *Base = nullptr;
@@ -1094,9 +1166,16 @@ RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                    QualType Ty, AggValueSlot Slot) const {
   bool IsIndirect = false;
 
-  // Composites larger than 16 bytes are passed by reference.
-  if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) > 128)
-    IsIndirect = true;
+  if (getTarget().getTriple().isWindowsArm64EC()) {
+    // MS x64 ABI requirement: "Any argument that doesn't fit in 8 bytes, or is
+    // not 1, 2, 4, or 8 bytes, must be passed by reference."
+    uint64_t Width = getContext().getTypeSize(Ty);
+    IsIndirect = Width > 64 || !llvm::isPowerOf2_64(Width);
+  } else {
+    // Composites larger than 16 bytes are passed by reference.
+    if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) > 128)
+      IsIndirect = true;
+  }
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           CGF.getContext().getTypeInfoInChars(Ty),
@@ -1149,8 +1228,9 @@ void AArch64TargetCodeGenInfo::checkFunctionABI(
 enum class ArmSMEInlinability : uint8_t {
   Ok = 0,
   ErrorCalleeRequiresNewZA = 1 << 0,
-  WarnIncompatibleStreamingModes = 1 << 1,
-  ErrorIncompatibleStreamingModes = 1 << 2,
+  ErrorCalleeRequiresNewZT0 = 1 << 1,
+  WarnIncompatibleStreamingModes = 1 << 2,
+  ErrorIncompatibleStreamingModes = 1 << 3,
 
   IncompatibleStreamingModes =
       WarnIncompatibleStreamingModes | ErrorIncompatibleStreamingModes,
@@ -1178,9 +1258,12 @@ static ArmSMEInlinability GetArmSMEInlinability(const FunctionDecl *Caller,
     else
       Inlinability |= ArmSMEInlinability::WarnIncompatibleStreamingModes;
   }
-  if (auto *NewAttr = Callee->getAttr<ArmNewAttr>())
+  if (auto *NewAttr = Callee->getAttr<ArmNewAttr>()) {
     if (NewAttr->isNewZA())
       Inlinability |= ArmSMEInlinability::ErrorCalleeRequiresNewZA;
+    if (NewAttr->isNewZT0())
+      Inlinability |= ArmSMEInlinability::ErrorCalleeRequiresNewZT0;
+  }
 
   return Inlinability;
 }
@@ -1206,6 +1289,11 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
   if ((Inlinability & ArmSMEInlinability::ErrorCalleeRequiresNewZA) ==
       ArmSMEInlinability::ErrorCalleeRequiresNewZA)
     CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
+        << Callee->getDeclName();
+
+  if ((Inlinability & ArmSMEInlinability::ErrorCalleeRequiresNewZT0) ==
+      ArmSMEInlinability::ErrorCalleeRequiresNewZT0)
+    CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_zt0)
         << Callee->getDeclName();
 }
 
@@ -1279,11 +1367,11 @@ void AArch64ABIInfo::appendAttributeMangling(StringRef AttrStr,
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createAArch64TargetCodeGenInfo(CodeGenModule &CGM,
                                         AArch64ABIKind Kind) {
-  return std::make_unique<AArch64TargetCodeGenInfo>(CGM.getTypes(), Kind);
+  return std::make_unique<AArch64TargetCodeGenInfo>(CGM, Kind);
 }
 
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createWindowsAArch64TargetCodeGenInfo(CodeGenModule &CGM,
                                                AArch64ABIKind K) {
-  return std::make_unique<WindowsAArch64TargetCodeGenInfo>(CGM.getTypes(), K);
+  return std::make_unique<WindowsAArch64TargetCodeGenInfo>(CGM, K);
 }

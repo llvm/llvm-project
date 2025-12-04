@@ -9,7 +9,9 @@
 #include "check-io.h"
 #include "definable.h"
 #include "flang/Common/format.h"
+#include "flang/Common/indirection.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Parser/characters.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/tools.h"
@@ -422,8 +424,8 @@ void IoChecker::Enter(const parser::InquireSpec::CharVar &spec) {
     specKind = IoSpecKind::Dispose;
     break;
   }
-  const parser::Variable &var{
-      std::get<parser::ScalarDefaultCharVariable>(spec.t).thing.thing};
+  const auto &var{parser::UnwrapRef<parser::Variable>(
+      std::get<parser::ScalarDefaultCharVariable>(spec.t))};
   std::string what{parser::ToUpperCaseLetters(common::EnumToString(specKind))};
   CheckForDefinableVariable(var, what);
   WarnOnDeferredLengthCharacterScalar(
@@ -476,6 +478,8 @@ void IoChecker::Enter(const parser::InquireSpec::LogVar &spec) {
     specKind = IoSpecKind::Pending;
     break;
   }
+  CheckForDefinableVariable(std::get<parser::ScalarLogicalVariable>(spec.t),
+      parser::ToUpperCaseLetters(common::EnumToString(specKind)));
   SetSpecifier(specKind);
 }
 
@@ -576,8 +580,9 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
           std::move(mutableVar.u))};
       newExpr.source = source;
       newExpr.typedExpr = std::move(typedExpr);
-      mutableSpec.u = parser::FileUnitNumber{
-          parser::ScalarIntExpr{parser::IntExpr{std::move(newExpr)}}};
+      mutableSpec.u = common::Indirection<parser::Expr>{std::move(newExpr)};
+      SetSpecifier(IoSpecKind::Unit);
+      flags_.set(Flag::NumberUnit);
     } else if (!dyType || dyType->category() != TypeCategory::Character) {
       SetSpecifier(IoSpecKind::Unit);
       context_.Say(parser::FindSourceLocation(*var),
@@ -598,11 +603,31 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
   } else if (std::get_if<parser::Star>(&spec.u)) {
     SetSpecifier(IoSpecKind::Unit);
     flags_.set(Flag::StarUnit);
+  } else if (const common::Indirection<parser::Expr> *pexpr{
+                 std::get_if<common::Indirection<parser::Expr>>(&spec.u)}) {
+    const auto *expr{GetExpr(context_, *pexpr)};
+    std::optional<evaluate::DynamicType> dyType;
+    if (expr) {
+      dyType = expr->GetType();
+    }
+    if (!expr || !dyType) {
+      context_.Say(parser::FindSourceLocation(*pexpr),
+          "I/O unit must be a character variable or scalar integer expression"_err_en_US);
+    } else if (dyType->category() != TypeCategory::Integer) {
+      context_.Say(parser::FindSourceLocation(*pexpr),
+          "I/O unit must be a character variable or a scalar integer expression, but is an expression of type %s"_err_en_US,
+          parser::ToUpperCaseLetters(dyType->AsFortran()));
+    } else if (expr->Rank() != 0) {
+      context_.Say(parser::FindSourceLocation(*pexpr),
+          "I/O unit number must be scalar"_err_en_US);
+    }
+    SetSpecifier(IoSpecKind::Unit);
+    flags_.set(Flag::NumberUnit);
   }
 }
 
 void IoChecker::Enter(const parser::MsgVariable &msgVar) {
-  const parser::Variable &var{msgVar.v.thing.thing};
+  const auto &var{parser::UnwrapRef<parser::Variable>(msgVar)};
   if (stmt_ == IoStmtKind::None) {
     // allocate, deallocate, image control
     CheckForDefinableVariable(var, "ERRMSG");
@@ -920,7 +945,7 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
       {IoSpecKind::Decimal, {"COMMA", "POINT"}},
       {IoSpecKind::Delim, {"APOSTROPHE", "NONE", "QUOTE"}},
       {IoSpecKind::Encoding, {"DEFAULT", "UTF-8"}},
-      {IoSpecKind::Form, {"FORMATTED", "UNFORMATTED"}},
+      {IoSpecKind::Form, {"FORMATTED", "UNFORMATTED", "BINARY"}},
       {IoSpecKind::Pad, {"NO", "YES"}},
       {IoSpecKind::Position, {"APPEND", "ASIS", "REWIND"}},
       {IoSpecKind::Round,

@@ -17,12 +17,14 @@
 
 ; LAXX-LABEL: Pass Arguments:
 ; LAXX-NEXT: Target Library Information
+; LAXX-NEXT: Runtime Library Function Analysis
 ; LAXX-NEXT: Target Pass Configuration
 ; LAXX-NEXT: Machine Module Information
 ; LAXX-NEXT: Target Transform Information
+; LAXX-NEXT: Library Function Lowering Analysis
+; LAXX-NEXT: Assumption Cache Tracker
 ; LAXX-NEXT: Type-Based Alias Analysis
 ; LAXX-NEXT: Scoped NoAlias Alias Analysis
-; LAXX-NEXT: Assumption Cache Tracker
 ; LAXX-NEXT: Profile summary info
 ; LAXX-NEXT: Create Garbage Collector Module Metadata
 ; LAXX-NEXT: Machine Branch Probability Analysis
@@ -32,7 +34,7 @@
 ; LAXX-NEXT:     Pre-ISel Intrinsic Lowering
 ; LAXX-NEXT:     FunctionPass Manager
 ; LAXX-NEXT:       Expand large div/rem
-; LAXX-NEXT:       Expand large fp convert
+; LAXX-NEXT:       Expand fp
 ; LAXX-NEXT:       Expand Atomic instructions
 ; LAXX-NEXT:       Module Verifier
 ; LAXX-NEXT:       Dominator Tree Construction
@@ -60,6 +62,9 @@
 ; LAXX-NEXT:       Block Frequency Analysis
 ; LAXX-NEXT:       Constant Hoisting
 ; LAXX-NEXT:       Replace intrinsics with calls to vector library
+; LAXX-NEXT:       Lazy Branch Probability Analysis
+; LAXX-NEXT:       Lazy Block Frequency Analysis
+; LAXX-NEXT:       Optimization Remark Emitter
 ; LAXX-NEXT:       Partially inline calls to library functions
 ; LAXX-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; LAXX-NEXT:       Scalarize Masked Memory Intrinsics

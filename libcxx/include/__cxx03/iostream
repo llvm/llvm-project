@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_IOSTREAM
-#define _LIBCPP_IOSTREAM
+#ifndef _LIBCPP___CXX03_IOSTREAM
+#define _LIBCPP___CXX03_IOSTREAM
 
 /*
     iostream synopsis
@@ -64,4 +64,4 @@ extern _LIBCPP_EXPORTED_FROM_ABI wostream wclog;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_IOSTREAM
+#endif // _LIBCPP___CXX03_IOSTREAM

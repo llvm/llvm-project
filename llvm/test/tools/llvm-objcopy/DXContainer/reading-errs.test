@@ -1,0 +1,43 @@
+## Check that llvm-objcopy reports a suitable error when it
+## encounters an invalid input during reading.
+
+## We can't have multiple DXIL parts.
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: not llvm-objcopy %t1 %t1.out 2>&1 | FileCheck %s -DFILE=%t1 --check-prefix=ERROR1
+
+# ERROR1: error: '[[FILE]]': More than one DXIL part is present in the file
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       2
+Parts:
+  - Name:            DXIL
+    Size:            28
+  - Name:            DXIL
+    Size:            28
+...
+
+## The first part offset is out of file bounds.
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: not llvm-objcopy %t2 %t2.out 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=ERROR2
+
+# ERROR2: error: '[[FILE]]': Reading structure out of file bounds
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           2
+    Minor:           0
+  PartCount:       1
+  PartOffsets:     [ 48 ]
+Parts:
+  - Name:            DXIL
+    Size:            28
+...

@@ -443,7 +443,7 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, ptr
 ; CHECK:  mov     x21, x19
 ; CHECK:  mov     x7, x28
 ; CHECK:  ldp     x29, x30, [sp, #96]             ; 16-byte Folded Reload
-; CHECK:  ldr     x28, [sp, #16]                  ; 8-byte Folded Reload
+; CHECK:  ldr     x28, [sp, #16]                  ; 8-byte Reload
 ; CHECK:  ldp     x20, x19, [sp, #80]             ; 16-byte Folded Reload
 ; CHECK:  ldp     x23, x22, [sp, #64]             ; 16-byte Folded Reload
 ; CHECK:  ldp     x25, x24, [sp, #48]             ; 16-byte Folded Reload

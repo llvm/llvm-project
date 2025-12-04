@@ -1,4 +1,4 @@
-//===--- UnnecessaryValueParamCheck.cpp - clang-tidy-----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnnecessaryValueParamCheck.h"
-
 #include "../utils/DeclRefExprUtils.h"
 #include "../utils/FixItHintUtils.h"
 #include "../utils/Matchers.h"
@@ -22,24 +21,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-namespace {
-
-std::string paramNameOrIndex(StringRef Name, size_t Index) {
+static std::string paramNameOrIndex(StringRef Name, size_t Index) {
   return (Name.empty() ? llvm::Twine('#') + llvm::Twine(Index + 1)
                        : llvm::Twine('\'') + Name + llvm::Twine('\''))
       .str();
 }
 
-bool isReferencedOutsideOfCallExpr(const FunctionDecl &Function,
-                                   ASTContext &Context) {
-  auto Matches = match(declRefExpr(to(functionDecl(equalsNode(&Function))),
-                                   unless(hasAncestor(callExpr()))),
-                       Context);
-  return !Matches.empty();
-}
-
-bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
-                         ASTContext &Context) {
+static bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
+                                ASTContext &Context) {
   auto Matches = match(
       traverse(TK_AsIs,
                decl(forEachDescendant(declRefExpr(
@@ -50,8 +39,6 @@ bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
   return Matches.empty();
 }
 
-} // namespace
-
 UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -59,7 +46,8 @@ UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
                                         utils::IncludeSorter::IS_LLVM),
                areDiagsSelfContained()),
       AllowedTypes(
-          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))),
+      IgnoreCoroutines(Options.get("IgnoreCoroutines", true)) {}
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   const auto ExpensiveValueParamDecl = parmVarDecl(
@@ -70,12 +58,14 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
                            matchers::matchesAnyListedName(AllowedTypes))))))),
       decl().bind("param"));
   Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          functionDecl(hasBody(stmt()), isDefinition(), unless(isImplicit()),
-                       unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
-                       has(typeLoc(forEach(ExpensiveValueParamDecl))),
-                       decl().bind("functionDecl"))),
+      traverse(TK_AsIs,
+               functionDecl(
+                   hasBody(IgnoreCoroutines ? stmt(unless(coroutineBodyStmt()))
+                                            : stmt()),
+                   isDefinition(), unless(isImplicit()),
+                   unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
+                   has(typeLoc(forEach(ExpensiveValueParamDecl))),
+                   decl().bind("functionDecl"))),
       this);
 }
 
@@ -83,7 +73,7 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Param = Result.Nodes.getNodeAs<ParmVarDecl>("param");
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("functionDecl");
 
-  TraversalKindScope RAII(*Result.Context, TK_AsIs);
+  const TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
   FunctionParmMutationAnalyzer *Analyzer =
       FunctionParmMutationAnalyzer::getFunctionParmMutationAnalyzer(
@@ -132,6 +122,7 @@ void UnnecessaryValueParamCheck::storeOptions(
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));
+  Options.store(Opts, "IgnoreCoroutines", IgnoreCoroutines);
 }
 
 void UnnecessaryValueParamCheck::onEndOfTranslationUnit() {
@@ -148,19 +139,18 @@ void UnnecessaryValueParamCheck::handleConstRefFix(const FunctionDecl &Function,
 
   auto Diag =
       diag(Param.getLocation(),
-           "the %select{|const qualified }0parameter %1 is copied for each "
+           "the %select{|const qualified }0parameter %1 of type %2 is copied "
+           "for each "
            "invocation%select{ but only used as a const reference|}0; consider "
            "making it a %select{const |}0reference")
-      << IsConstQualified << paramNameOrIndex(Param.getName(), Index);
+      << IsConstQualified << paramNameOrIndex(Param.getName(), Index)
+      << Param.getType();
   // Do not propose fixes when:
   // 1. the ParmVarDecl is in a macro, since we cannot place them correctly
   // 2. the function is virtual as it might break overrides
-  // 3. the function is referenced outside of a call expression within the
-  //    compilation unit as the signature change could introduce build errors.
-  // 4. the function is an explicit template/ specialization.
+  // 3. the function is an explicit template/ specialization.
   const auto *Method = llvm::dyn_cast<CXXMethodDecl>(&Function);
   if (Param.getBeginLoc().isMacroID() || (Method && Method->isVirtual()) ||
-      isReferencedOutsideOfCallExpr(Function, Context) ||
       Function.getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
     return;
   for (const auto *FunctionDecl = &Function; FunctionDecl != nullptr;
@@ -181,10 +171,11 @@ void UnnecessaryValueParamCheck::handleConstRefFix(const FunctionDecl &Function,
 void UnnecessaryValueParamCheck::handleMoveFix(const ParmVarDecl &Param,
                                                const DeclRefExpr &CopyArgument,
                                                ASTContext &Context) {
-  auto Diag = diag(CopyArgument.getBeginLoc(),
-                   "parameter %0 is passed by value and only copied once; "
-                   "consider moving it to avoid unnecessary copies")
-              << &Param;
+  auto Diag =
+      diag(CopyArgument.getBeginLoc(),
+           "parameter %0 of type %1 is passed by value and only copied once; "
+           "consider moving it to avoid unnecessary copies")
+      << &Param << Param.getType();
   // Do not propose fixes in macros since we cannot place them correctly.
   if (CopyArgument.getBeginLoc().isMacroID())
     return;

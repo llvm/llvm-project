@@ -19,6 +19,7 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
@@ -33,7 +34,7 @@
 #if defined(HAVE_UNISTD_H)
 # include <unistd.h>
 #endif
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 # include <io.h>
 # include <fcntl.h>
 #endif
@@ -61,6 +62,17 @@ static void *BadAllocErrorHandlerUserData = nullptr;
 static std::mutex ErrorHandlerMutex;
 static std::mutex BadAllocErrorHandlerMutex;
 #endif
+
+static bool write_retry(int fd, const char *buf, size_t count) {
+  while (count > 0) {
+    ssize_t written = sys::RetryAfterSignal(-1, ::write, fd, buf, count);
+    if (written <= 0)
+      return false;
+    buf += written;
+    count -= written;
+  }
+  return true;
+}
 
 void llvm::install_fatal_error_handler(fatal_error_handler_t handler,
                                        void *user_data) {
@@ -111,8 +123,7 @@ void llvm::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
     raw_svector_ostream OS(Buffer);
     OS << "LLVM ERROR: " << Reason << "\n";
     StringRef MessageStr = OS.str();
-    ssize_t written = ::write(2, MessageStr.data(), MessageStr.size());
-    (void)written; // If something went wrong, we deliberately just give up.
+    write_retry(2, MessageStr.data(), MessageStr.size());
   }
 
   // If we reached here, we are failing ungracefully. Run the interrupt handlers
@@ -124,6 +135,25 @@ void llvm::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
     abort();
   else
     exit(1);
+}
+
+void llvm::reportFatalInternalError(const char *reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/true);
+}
+void llvm::reportFatalInternalError(StringRef reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/true);
+}
+void llvm::reportFatalInternalError(const Twine &reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/true);
+}
+void llvm::reportFatalUsageError(const char *reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/false);
+}
+void llvm::reportFatalUsageError(StringRef reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/false);
+}
+void llvm::reportFatalUsageError(const Twine &reason) {
+  report_fatal_error(reason, /*GenCrashDiag=*/false);
 }
 
 void llvm::install_bad_alloc_error_handler(fatal_error_handler_t handler,
@@ -171,9 +201,9 @@ void llvm::report_bad_alloc_error(const char *Reason, bool GenCrashDiag) {
   // an OOM to stderr and abort.
   const char *OOMMessage = "LLVM ERROR: out of memory\n";
   const char *Newline = "\n";
-  (void)!::write(2, OOMMessage, strlen(OOMMessage));
-  (void)!::write(2, Reason, strlen(Reason));
-  (void)!::write(2, Newline, strlen(Newline));
+  write_retry(2, OOMMessage, strlen(OOMMessage));
+  write_retry(2, Reason, strlen(Reason));
+  write_retry(2, Newline, strlen(Newline));
   abort();
 #endif
 }

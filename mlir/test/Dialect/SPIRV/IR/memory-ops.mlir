@@ -57,7 +57,7 @@ func.func @access_chain_non_composite() -> () {
 
 func.func @access_chain_no_indices(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+1 {{custom op 'spirv.AccessChain' 0 operands present, but expected 1}}
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 0 operands and 1 types}}
   %1 = spirv.AccessChain %0[] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }
@@ -75,7 +75,7 @@ func.func @access_chain_missing_comma(%index0 : i32) -> () {
 
 func.func @access_chain_invalid_indices_types_count(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+1 {{custom op 'spirv.AccessChain' 1 operands present, but expected 2}}
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 1 operands and 2 types}}
   %1 = spirv.AccessChain %0[%index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32 -> !spirv.ptr<!spirv.array<4xf32>, Function>
   return
 }
@@ -84,7 +84,7 @@ func.func @access_chain_invalid_indices_types_count(%index0 : i32) -> () {
 
 func.func @access_chain_missing_indices_type(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+1 {{custom op 'spirv.AccessChain' 2 operands present, but expected 1}}
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 2 operands and 1 types}}
   %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }
@@ -352,6 +352,16 @@ spirv.module Logical GLSL450 {
     %3 = spirv.Load "UniformConstant" %2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, IsDepth, Arrayed, SingleSampled, NeedSampler, Unknown>>
     spirv.Return
   }
+}
+
+// -----
+
+// CHECK-LABEL: @image_load
+func.func @image_load() -> () {
+  %0 = spirv.Variable : !spirv.ptr<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>, Function>
+  // CHECK: spirv.Load "Function" %{{.*}} : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>
+  %1 = spirv.Load "Function" %0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>
+  return
 }
 
 // -----

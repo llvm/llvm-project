@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86FixupKinds.h"
+#include "MCTargetDesc/X86MCAsmInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCContext.h"
@@ -44,41 +45,44 @@ unsigned X86WinCOFFObjectWriter::getRelocType(MCContext &Ctx,
                                               const MCAsmBackend &MAB) const {
   const bool Is64Bit = getMachine() == COFF::IMAGE_FILE_MACHINE_AMD64;
   unsigned FixupKind = Fixup.getKind();
+  bool PCRel = Fixup.isPCRel();
   if (IsCrossSection) {
     // IMAGE_REL_AMD64_REL64 does not exist. We treat FK_Data_8 as FK_PCRel_4 so
     // that .quad a-b can lower to IMAGE_REL_AMD64_REL32. This allows generic
     // instrumentation to not bother with the COFF limitation. A negative value
     // needs attention.
-    if (FixupKind == FK_Data_4 || FixupKind == llvm::X86::reloc_signed_4byte ||
-        (FixupKind == FK_Data_8 && Is64Bit)) {
-      FixupKind = FK_PCRel_4;
+    if (!PCRel &&
+        (FixupKind == FK_Data_4 || FixupKind == llvm::X86::reloc_signed_4byte ||
+         (FixupKind == FK_Data_8 && Is64Bit))) {
+      FixupKind = FK_Data_4;
+      PCRel = true;
     } else {
       Ctx.reportError(Fixup.getLoc(), "Cannot represent this expression");
       return COFF::IMAGE_REL_AMD64_ADDR32;
     }
   }
 
-  MCSymbolRefExpr::VariantKind Modifier = Target.isAbsolute() ?
-    MCSymbolRefExpr::VK_None : Target.getSymA()->getKind();
-
+  auto Spec = Target.getSpecifier();
   if (Is64Bit) {
     switch (FixupKind) {
-    case FK_PCRel_4:
     case X86::reloc_riprel_4byte:
     case X86::reloc_riprel_4byte_movq_load:
     case X86::reloc_riprel_4byte_movq_load_rex2:
     case X86::reloc_riprel_4byte_relax:
     case X86::reloc_riprel_4byte_relax_rex:
     case X86::reloc_riprel_4byte_relax_rex2:
-    case X86::reloc_riprel_6byte_relax:
+    case X86::reloc_riprel_4byte_relax_evex:
     case X86::reloc_branch_4byte_pcrel:
       return COFF::IMAGE_REL_AMD64_REL32;
     case FK_Data_4:
+      if (PCRel)
+        return COFF::IMAGE_REL_AMD64_REL32;
+      [[fallthrough]];
     case X86::reloc_signed_4byte:
     case X86::reloc_signed_4byte_relax:
-      if (Modifier == MCSymbolRefExpr::VK_COFF_IMGREL32)
+      if (Spec == MCSymbolRefExpr::VK_COFF_IMGREL32)
         return COFF::IMAGE_REL_AMD64_ADDR32NB;
-      if (Modifier == MCSymbolRefExpr::VK_SECREL)
+      if (Spec == X86::S_COFF_SECREL)
         return COFF::IMAGE_REL_AMD64_SECREL;
       return COFF::IMAGE_REL_AMD64_ADDR32;
     case FK_Data_8:
@@ -93,16 +97,18 @@ unsigned X86WinCOFFObjectWriter::getRelocType(MCContext &Ctx,
     }
   } else if (getMachine() == COFF::IMAGE_FILE_MACHINE_I386) {
     switch (FixupKind) {
-    case FK_PCRel_4:
     case X86::reloc_riprel_4byte:
     case X86::reloc_riprel_4byte_movq_load:
       return COFF::IMAGE_REL_I386_REL32;
     case FK_Data_4:
+      if (PCRel)
+        return COFF::IMAGE_REL_I386_REL32;
+      [[fallthrough]];
     case X86::reloc_signed_4byte:
     case X86::reloc_signed_4byte_relax:
-      if (Modifier == MCSymbolRefExpr::VK_COFF_IMGREL32)
+      if (Spec == MCSymbolRefExpr::VK_COFF_IMGREL32)
         return COFF::IMAGE_REL_I386_DIR32NB;
-      if (Modifier == MCSymbolRefExpr::VK_SECREL)
+      if (Spec == X86::S_COFF_SECREL)
         return COFF::IMAGE_REL_I386_SECREL;
       return COFF::IMAGE_REL_I386_DIR32;
     case FK_SecRel_2:

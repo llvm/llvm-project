@@ -6,28 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/string_view.h"
 #include "src/stdio/printf_core/writer.h"
 
+#include "src/__support/CPP/string_view.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-
 #include "test/UnitTest/Test.h"
+
+namespace {
 
 using LIBC_NAMESPACE::cpp::string_view;
 using LIBC_NAMESPACE::printf_core::WriteBuffer;
+using LIBC_NAMESPACE::printf_core::WriteMode;
 using LIBC_NAMESPACE::printf_core::Writer;
 
 TEST(LlvmLibcPrintfWriterTest, Constructor) {
   char str[10];
-  WriteBuffer wb(str, sizeof(str) - 1);
-  Writer writer(&wb);
+  WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(str, sizeof(str) - 1);
+  Writer writer(wb);
   (void)writer;
 }
 
 TEST(LlvmLibcPrintfWriterTest, Write) {
   char str[4] = {'D', 'E', 'F', 'G'};
-  WriteBuffer wb(str, sizeof(str) - 1);
-  Writer writer(&wb);
+  WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(str, sizeof(str) - 1);
+  Writer writer(wb);
   writer.write({"abc", 3});
 
   EXPECT_EQ(str[3], 'G');
@@ -37,13 +39,13 @@ TEST(LlvmLibcPrintfWriterTest, Write) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("abc", str);
-  ASSERT_EQ(writer.get_chars_written(), 3);
+  ASSERT_EQ(writer.get_chars_written(), size_t{3});
 }
 
 TEST(LlvmLibcPrintfWriterTest, WriteMultipleTimes) {
   char str[10];
-  WriteBuffer wb(str, sizeof(str) - 1);
-  Writer writer(&wb);
+  WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(str, sizeof(str) - 1);
+  Writer writer(wb);
   writer.write({"abc", 3});
   writer.write({"DEF", 3});
   writer.write({"1234", 3});
@@ -51,26 +53,26 @@ TEST(LlvmLibcPrintfWriterTest, WriteMultipleTimes) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("abcDEF123", str);
-  ASSERT_EQ(writer.get_chars_written(), 9);
+  ASSERT_EQ(writer.get_chars_written(), size_t{9});
 }
 
 TEST(LlvmLibcPrintfWriterTest, WriteChars) {
   char str[4] = {'D', 'E', 'F', 'G'};
-  WriteBuffer wb(str, sizeof(str) - 1);
-  Writer writer(&wb);
+  WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(str, sizeof(str) - 1);
+  Writer writer(wb);
   writer.write('a', 3);
 
   EXPECT_EQ(str[3], 'G');
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("aaa", str);
-  ASSERT_EQ(writer.get_chars_written(), 3);
+  ASSERT_EQ(writer.get_chars_written(), size_t{3});
 }
 
 TEST(LlvmLibcPrintfWriterTest, WriteCharsMultipleTimes) {
   char str[10];
-  WriteBuffer wb(str, sizeof(str) - 1);
-  Writer writer(&wb);
+  WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(str, sizeof(str) - 1);
+  Writer writer(wb);
   writer.write('a', 3);
   writer.write('D', 3);
   writer.write('1', 3);
@@ -78,13 +80,13 @@ TEST(LlvmLibcPrintfWriterTest, WriteCharsMultipleTimes) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("aaaDDD111", str);
-  ASSERT_EQ(writer.get_chars_written(), 9);
+  ASSERT_EQ(writer.get_chars_written(), size_t{9});
 }
 
 TEST(LlvmLibcPrintfWriterTest, WriteManyChars) {
   char str[100];
-  WriteBuffer wb(str, sizeof(str) - 1);
-  Writer writer(&wb);
+  WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(str, sizeof(str) - 1);
+  Writer writer(wb);
   writer.write('Z', 99);
 
   wb.buff[wb.buff_cur] = '\0';
@@ -100,13 +102,13 @@ TEST(LlvmLibcPrintfWriterTest, WriteManyChars) {
                "ZZZZZZZZZZ"
                "ZZZZZZZZZ",
                str);
-  ASSERT_EQ(writer.get_chars_written(), 99);
+  ASSERT_EQ(writer.get_chars_written(), size_t{99});
 }
 
 TEST(LlvmLibcPrintfWriterTest, MixedWrites) {
   char str[13];
-  WriteBuffer wb(str, sizeof(str) - 1);
-  Writer writer(&wb);
+  WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(str, sizeof(str) - 1);
+  Writer writer(wb);
   writer.write('a', 3);
   writer.write({"DEF", 3});
   writer.write('1', 3);
@@ -115,38 +117,38 @@ TEST(LlvmLibcPrintfWriterTest, MixedWrites) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("aaaDEF111456", str);
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 TEST(LlvmLibcPrintfWriterTest, WriteWithMaxLength) {
   char str[11];
-  WriteBuffer wb(str, sizeof(str) - 1);
-  Writer writer(&wb);
+  WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(str, sizeof(str) - 1);
+  Writer writer(wb);
   writer.write({"abcDEF123456", 12});
 
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("abcDEF1234", str);
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 TEST(LlvmLibcPrintfWriterTest, WriteCharsWithMaxLength) {
   char str[11];
-  WriteBuffer wb(str, sizeof(str) - 1);
-  Writer writer(&wb);
+  WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(str, sizeof(str) - 1);
+  Writer writer(wb);
   writer.write('1', 15);
 
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("1111111111", str);
-  ASSERT_EQ(writer.get_chars_written(), 15);
+  ASSERT_EQ(writer.get_chars_written(), size_t{15});
 }
 
 TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLength) {
   char str[11];
-  WriteBuffer wb(str, sizeof(str) - 1);
+  WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(str, sizeof(str) - 1);
 
-  Writer writer(&wb);
+  Writer writer(wb);
   writer.write('a', 3);
   writer.write({"DEF", 3});
   writer.write('1', 3);
@@ -155,16 +157,16 @@ TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLength) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("aaaDEF1114", str);
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 TEST(LlvmLibcPrintfWriterTest, StringWithMaxLengthOne) {
   char str[1];
   // This is because the max length should be at most 1 less than the size of
   // the buffer it's writing to.
-  WriteBuffer wb(str, 0);
+  WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(str, 0);
 
-  Writer writer(&wb);
+  Writer writer(wb);
   writer.write('a', 3);
   writer.write({"DEF", 3});
   writer.write('1', 3);
@@ -173,19 +175,19 @@ TEST(LlvmLibcPrintfWriterTest, StringWithMaxLengthOne) {
   wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ("", str);
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 TEST(LlvmLibcPrintfWriterTest, NullStringWithZeroMaxLength) {
-  WriteBuffer wb(nullptr, 0);
+  WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(nullptr, 0);
 
-  Writer writer(&wb);
+  Writer writer(wb);
   writer.write('a', 3);
   writer.write({"DEF", 3});
   writer.write('1', 3);
   writer.write({"456", 3});
 
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 struct OutBuff {
@@ -213,9 +215,10 @@ TEST(LlvmLibcPrintfWriterTest, WriteWithMaxLengthWithCallback) {
   OutBuff out_buff = {str, 0};
 
   char wb_buff[8];
-  WriteBuffer wb(wb_buff, sizeof(wb_buff), &copy_to_out,
-                 reinterpret_cast<void *>(&out_buff));
-  Writer writer(&wb);
+  WriteBuffer<WriteMode::FLUSH_TO_STREAM> wb(
+      wb_buff, sizeof(wb_buff), &copy_to_out,
+      reinterpret_cast<void *>(&out_buff));
+  Writer writer(wb);
   writer.write({"abcDEF123456", 12});
 
   // Flush the buffer
@@ -223,7 +226,7 @@ TEST(LlvmLibcPrintfWriterTest, WriteWithMaxLengthWithCallback) {
   str[out_buff.cur_pos] = '\0';
 
   ASSERT_STREQ("abcDEF123456", str);
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 TEST(LlvmLibcPrintfWriterTest, WriteCharsWithMaxLengthWithCallback) {
@@ -232,9 +235,10 @@ TEST(LlvmLibcPrintfWriterTest, WriteCharsWithMaxLengthWithCallback) {
   OutBuff out_buff = {str, 0};
 
   char wb_buff[8];
-  WriteBuffer wb(wb_buff, sizeof(wb_buff), &copy_to_out,
-                 reinterpret_cast<void *>(&out_buff));
-  Writer writer(&wb);
+  WriteBuffer<WriteMode::FLUSH_TO_STREAM> wb(
+      wb_buff, sizeof(wb_buff), &copy_to_out,
+      reinterpret_cast<void *>(&out_buff));
+  Writer writer(wb);
   writer.write('1', 15);
 
   // Flush the buffer
@@ -242,7 +246,7 @@ TEST(LlvmLibcPrintfWriterTest, WriteCharsWithMaxLengthWithCallback) {
   str[out_buff.cur_pos] = '\0';
 
   ASSERT_STREQ("111111111111111", str);
-  ASSERT_EQ(writer.get_chars_written(), 15);
+  ASSERT_EQ(writer.get_chars_written(), size_t{15});
 }
 
 TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLengthWithCallback) {
@@ -251,9 +255,10 @@ TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLengthWithCallback) {
   OutBuff out_buff = {str, 0};
 
   char wb_buff[8];
-  WriteBuffer wb(wb_buff, sizeof(wb_buff), &copy_to_out,
-                 reinterpret_cast<void *>(&out_buff));
-  Writer writer(&wb);
+  WriteBuffer<WriteMode::FLUSH_TO_STREAM> wb(
+      wb_buff, sizeof(wb_buff), &copy_to_out,
+      reinterpret_cast<void *>(&out_buff));
+  Writer writer(wb);
   writer.write('a', 3);
   writer.write({"DEF", 3});
   writer.write('1', 3);
@@ -264,7 +269,7 @@ TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLengthWithCallback) {
   str[out_buff.cur_pos] = '\0';
 
   ASSERT_STREQ("aaaDEF111456", str);
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 TEST(LlvmLibcPrintfWriterTest, ZeroLengthBufferWithCallback) {
@@ -273,9 +278,10 @@ TEST(LlvmLibcPrintfWriterTest, ZeroLengthBufferWithCallback) {
   OutBuff out_buff = {str, 0};
 
   char wb_buff[1];
-  WriteBuffer wb(wb_buff, 0, &copy_to_out, reinterpret_cast<void *>(&out_buff));
+  WriteBuffer<WriteMode::FLUSH_TO_STREAM> wb(
+      wb_buff, 0, &copy_to_out, reinterpret_cast<void *>(&out_buff));
 
-  Writer writer(&wb);
+  Writer writer(wb);
   writer.write('a', 3);
   writer.write({"DEF", 3});
   writer.write('1', 3);
@@ -286,7 +292,7 @@ TEST(LlvmLibcPrintfWriterTest, ZeroLengthBufferWithCallback) {
   str[out_buff.cur_pos] = '\0';
 
   ASSERT_STREQ("aaaDEF111456", str);
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
 TEST(LlvmLibcPrintfWriterTest, NullStringWithZeroMaxLengthWithCallback) {
@@ -294,9 +300,10 @@ TEST(LlvmLibcPrintfWriterTest, NullStringWithZeroMaxLengthWithCallback) {
 
   OutBuff out_buff = {str, 0};
 
-  WriteBuffer wb(nullptr, 0, &copy_to_out, reinterpret_cast<void *>(&out_buff));
+  WriteBuffer<WriteMode::FLUSH_TO_STREAM> wb(
+      nullptr, 0, &copy_to_out, reinterpret_cast<void *>(&out_buff));
 
-  Writer writer(&wb);
+  Writer writer(wb);
   writer.write('a', 3);
   writer.write({"DEF", 3});
   writer.write('1', 3);
@@ -305,6 +312,8 @@ TEST(LlvmLibcPrintfWriterTest, NullStringWithZeroMaxLengthWithCallback) {
   wb.overflow_write("");
   str[out_buff.cur_pos] = '\0';
 
-  ASSERT_EQ(writer.get_chars_written(), 12);
+  ASSERT_EQ(writer.get_chars_written(), size_t{12});
   ASSERT_STREQ("aaaDEF111456", str);
 }
+
+} // namespace

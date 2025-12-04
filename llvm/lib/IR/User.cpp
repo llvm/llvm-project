@@ -11,8 +11,11 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IntrinsicInst.h"
 
+using namespace llvm;
+
 namespace llvm {
 class BasicBlock;
+}
 
 //===----------------------------------------------------------------------===//
 //                                 User Class
@@ -146,6 +149,9 @@ void *User::allocateFixedOperandUser(size_t Size, unsigned Us,
   Use *Start = reinterpret_cast<Use *>(Storage + DescBytesToAllocate);
   Use *End = Start + Us;
   User *Obj = reinterpret_cast<User *>(End);
+  Obj->NumUserOperands = Us;
+  Obj->HasHungOffUses = false;
+  Obj->HasDescriptor = DescBytes != 0;
   for (; Start != End; Start++)
     new (Start) Use(Obj);
 
@@ -172,6 +178,9 @@ void *User::operator new(size_t Size, HungOffOperandsAllocMarker) {
   void *Storage = ::operator new(Size + sizeof(Use *));
   Use **HungOffOperandList = static_cast<Use **>(Storage);
   User *Obj = reinterpret_cast<User *>(HungOffOperandList + 1);
+  Obj->NumUserOperands = 0;
+  Obj->HasHungOffUses = true;
+  Obj->HasDescriptor = false;
   *HungOffOperandList = nullptr;
   return Obj;
 }
@@ -208,5 +217,3 @@ LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE void User::operator delete(void *Usr) {
     ::operator delete(Storage);
   }
 }
-
-} // namespace llvm

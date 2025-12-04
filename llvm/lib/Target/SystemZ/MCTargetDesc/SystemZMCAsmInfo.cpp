@@ -8,8 +8,18 @@
 
 #include "SystemZMCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCValue.h"
 
 using namespace llvm;
+
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
+    {SystemZ::S_DTPOFF, "DTPOFF"}, {SystemZ::S_GOT, "GOT"},
+    {SystemZ::S_GOTENT, "GOTENT"}, {SystemZ::S_INDNTPOFF, "INDNTPOFF"},
+    {SystemZ::S_NTPOFF, "NTPOFF"}, {SystemZ::S_PLT, "PLT"},
+    {SystemZ::S_TLSGD, "TLSGD"},   {SystemZ::S_TLSLD, "TLSLD"},
+    {SystemZ::S_TLSLDM, "TLSLDM"},
+};
 
 SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {
   AssemblerDialect = AD_GNU;
@@ -22,6 +32,8 @@ SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {
   SupportsDebugInformation = true;
   UsesELFSectionDirectiveForBSS = true;
   ZeroDirective = "\t.space\t";
+
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
@@ -29,22 +41,48 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
   AllowAtInName = true;
   AllowAtAtStartOfIdentifier = true;
   AllowDollarAtStartOfIdentifier = true;
-  AllowHashAtStartOfIdentifier = true;
   AssemblerDialect = AD_HLASM;
   CalleeSaveStackSlotSize = 8;
   CodePointerSize = 8;
   CommentString = "*";
-  DotIsPC = false;
-  EmitGNUAsmStartIndentationMarker = false;
-  EmitLabelsInUpperCase = true;
+  UsesSetToEquateSymbol = true;
   ExceptionsType = ExceptionHandling::ZOS;
+  IsHLASM = true;
   IsLittleEndian = false;
   MaxInstLength = 6;
-  RestrictCommentStringToStartOfStatement = true;
-  StarIsPC = true;
   SupportsDebugInformation = true;
+
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 bool SystemZMCAsmInfoGOFF::isAcceptableChar(char C) const {
   return MCAsmInfo::isAcceptableChar(C) || C == '#';
+}
+
+void SystemZMCAsmInfoGOFF::printSpecifierExpr(
+    raw_ostream &OS, const MCSpecifierExpr &Expr) const {
+  switch (Expr.getSpecifier()) {
+  case SystemZ::S_None:
+    OS << "A";
+    break;
+  case SystemZ::S_RCon:
+    OS << "R";
+    break;
+  case SystemZ::S_VCon:
+    OS << "V";
+    break;
+  default:
+    llvm_unreachable("Invalid kind");
+  }
+  OS << '(';
+  printExpr(OS, *Expr.getSubExpr());
+  OS << ')';
+}
+
+bool SystemZMCAsmInfoGOFF::evaluateAsRelocatableImpl(
+    const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+  Res.setSpecifier(Expr.getSpecifier());
+  return true;
 }

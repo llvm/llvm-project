@@ -185,6 +185,11 @@ static constexpr bool isExecutableDirective{common::HasMember<
                   parser::OpenMPConstruct, parser::CUFKernelDoConstruct>>};
 
 template <typename A>
+static constexpr bool isOpenMPDirective{
+    common::HasMember<A, std::tuple<parser::OpenMPConstruct,
+                                    parser::OpenMPDeclarativeConstruct>>};
+
+template <typename A>
 static constexpr bool isFunctionLike{common::HasMember<
     A, std::tuple<parser::MainProgram, parser::FunctionSubprogram,
                   parser::SubroutineSubprogram,
@@ -265,6 +270,11 @@ struct Evaluation : EvaluationVariant {
   constexpr bool isExecutableDirective() const {
     return visit(common::visitors{[](auto &r) {
       return pft::isExecutableDirective<std::decay_t<decltype(r)>>;
+    }});
+  }
+  constexpr bool isOpenMPDirective() const {
+    return visit(common::visitors{[](auto &r) {
+      return pft::isOpenMPDirective<std::decay_t<decltype(r)>>;
     }});
   }
 
@@ -723,6 +733,7 @@ struct FunctionLikeUnit : public ProgramUnit {
   bool hasIeeeAccess{false};
   bool mayModifyHaltingMode{false};
   bool mayModifyRoundingMode{false};
+  bool mayModifyUnderflowMode{false};
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
   HostAssociations hostAssociations;

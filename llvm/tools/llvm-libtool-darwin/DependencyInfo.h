@@ -18,7 +18,7 @@ public:
   explicit DependencyInfo(std::string DependencyInfoPath)
       : DependencyInfoPath(DependencyInfoPath) {}
 
-  virtual ~DependencyInfo(){};
+  virtual ~DependencyInfo() = default;
 
   virtual void addMissingInput(llvm::StringRef Path) {
     NotFounds.insert(Path.str());
@@ -50,8 +50,7 @@ public:
     // Sort the input by its names.
     std::vector<llvm::StringRef> InputNames;
     InputNames.reserve(Inputs.size());
-    for (const auto &F : Inputs)
-      InputNames.push_back(F);
+    llvm::append_range(InputNames, Inputs);
     llvm::sort(InputNames);
 
     for (const auto &In : InputNames)

@@ -1,24 +1,26 @@
-// XFAIL: target=aarch64-{{.*}}-windows-{{.*}}
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_multc3
 
 #include <stdio.h>
-
-#if _ARCH_PPC || __aarch64__
-
 #include "int_lib.h"
+
+#if defined(CRT_HAS_128BIT) && defined(CRT_HAS_F128)
+
+#define QUAD_PRECISION
+#include "fp_lib.h"
+
 #include <math.h>
 #include <complex.h>
 
 // Returns: the product of a + ib and c + id
 
-COMPILER_RT_ABI long double _Complex
-__multc3(long double __a, long double __b, long double __c, long double __d);
+COMPILER_RT_ABI Qcomplex
+__multc3(fp_t __a, fp_t __b, fp_t __c, fp_t __d);
 
 enum {zero, non_zero, inf, NaN, non_zero_nan};
 
 int
-classify(long double _Complex x)
+classify(Qcomplex x)
 {
     if (x == 0)
         return zero;
@@ -41,13 +43,13 @@ classify(long double _Complex x)
     return non_zero;
 }
 
-int test__multc3(long double a, long double b, long double c, long double d)
+int test__multc3(fp_t a, fp_t b, fp_t c, fp_t d)
 {
-    long double _Complex r = __multc3(a, b, c, d);
+    Qcomplex r = __multc3(a, b, c, d);
 //     printf("test__multc3(%Lf, %Lf, %Lf, %Lf) = %Lf + I%Lf\n",
 //             a, b, c, d, creall(r), cimagl(r));
-	long double _Complex dividend;
-	long double _Complex divisor;
+	Qcomplex dividend;
+	Qcomplex divisor;
 	
 	__real__ dividend = a;
 	__imag__ dividend = b;
@@ -188,7 +190,7 @@ int test__multc3(long double a, long double b, long double c, long double d)
     return 0;
 }
 
-long double x[][2] =
+fp_t x[][2] =
 {
     { 1.e-6,  1.e-6},
     {-1.e-6,  1.e-6},
@@ -348,7 +350,7 @@ long double x[][2] =
 
 int main()
 {
-#if _ARCH_PPC || __aarch64__
+#if defined(CRT_HAS_128BIT) && defined(CRT_HAS_F128)
     const unsigned N = sizeof(x) / sizeof(x[0]);
     unsigned i, j;
     for (i = 0; i < N; ++i)

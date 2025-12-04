@@ -104,6 +104,9 @@ Calls to the following std library algorithms are checked:
 ``std::unique``,
 ``std::upper_bound``.
 
+Note: some range algorithms for ``vector<bool>`` require C++23 because it uses
+proxy iterators.
+
 Reverse Iteration
 -----------------
 
@@ -111,7 +114,7 @@ If calls are made using reverse iterators on containers, The code will be
 fixed using the ``std::views::reverse`` adaptor.
 
 .. code-block:: c++
-  
+
   auto AreSame = std::equal(Items1.rbegin(), Items1.rend(),
                             std::crbegin(Items2), std::crend(Items2));
 

@@ -1,0 +1,83 @@
+(* Data Inspection Language (DIL) definition - LLDB Debug Expressions *)
+
+(* This is currently a subset of the final DIL Language, matching the current
+   DIL implementation. *)
+
+expression = cast_expression;
+
+cast_expression = unary_expression
+                | "(" type_id ")" cast_expression;
+
+unary_expression = postfix_expression
+                 | unary_operator cast_expression ;
+
+unary_operator = "*" | "&" | "+" | "-";
+
+postfix_expression = primary_expression
+                   | postfix_expression "[" integer_literal "]"
+                   | postfix_expression "." id_expression
+                   | postfix_expression "->" id_expression ;
+
+primary_expression = numeric_literal
+                   | boolean_literal
+                   | id_expression
+                   | "(" expression ")" ;
+
+id_expression = unqualified_id
+              | qualified_id
+              | register ;
+
+unqualified_id = identifier ;
+
+qualified_id = ["::"] [nested_name_specifier] unqualified_id
+             | ["::"] identifier ;
+
+identifier = ? C99 Identifier ? ;
+
+integer_literal = ? Integer constant: hexademical, decimal, octal, binary ? ;
+
+numeric_literal = ? Integer constant: hexademical, decimal, octal, binary ?
+                | ? Floating constant ? ;
+
+boolean_literal = "true" | "false" ;
+
+register = "$" ? Register name ? ;
+
+nested_name_specifier = type_name "::"
+                      | namespace_name '::'
+                      | nested_name_specifier identifier "::" ;
+
+type_id = type_specifier_seq [abstract_declarator] ;
+
+type_specifier_seq = type_specifier [type_specifier];
+
+type_specifier = ["::"] [nested_name_specifier] type_name
+               | builtin_typename ;
+
+nested_name_specifier = type_name "::"
+                      | namespace_name "::"
+                      | nested_name_specifier identifier "::" ;
+
+abstract_declarator = ptr_operator [abstract_declarator] ;
+
+ptr_operator = "*"
+             | "&";
+
+type_name = class_name
+          | enum_name
+          | typedef_name;
+
+builtin_typename = identifier_seq;
+
+class_name = identifier ;
+
+enum_name = identifier ;
+
+typedef_name = identifier ;
+
+namespace_name = identifier ;
+
+identifier_seq = identifier
+               | identifier identifier_seq;
+
+

@@ -61,7 +61,6 @@ class ErrorReporter {
   /// Return a nice name for an TargetAllocTy.
   static StringRef getAllocTyName(TargetAllocTy Kind) {
     switch (Kind) {
-    case TARGET_ALLOC_DEVICE_NON_BLOCKING:
     case TARGET_ALLOC_DEFAULT:
     case TARGET_ALLOC_DEVICE:
       return "device memory";
@@ -80,8 +79,10 @@ class ErrorReporter {
   /// Print \p Format, instantiated with \p Args to stderr.
   /// TODO: Allow redirection into a file stream.
   template <typename... ArgsTy>
-  [[gnu::format(__printf__, 1, 2)]] static void print(const char *Format,
-                                                      ArgsTy &&...Args) {
+#ifdef __clang__ // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77958
+  [[gnu::format(__printf__, 1, 2)]]
+#endif
+  static void print(const char *Format, ArgsTy &&...Args) {
     raw_fd_ostream OS(STDERR_FILENO, false);
     OS << llvm::format(Format, Args...);
   }
@@ -89,8 +90,10 @@ class ErrorReporter {
   /// Print \p Format, instantiated with \p Args to stderr, but colored.
   /// TODO: Allow redirection into a file stream.
   template <typename... ArgsTy>
-  [[gnu::format(__printf__, 2, 3)]] static void
-  print(ColorTy Color, const char *Format, ArgsTy &&...Args) {
+#ifdef __clang__ // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77958
+  [[gnu::format(__printf__, 2, 3)]]
+#endif
+  static void print(ColorTy Color, const char *Format, ArgsTy &&...Args) {
     raw_fd_ostream OS(STDERR_FILENO, false);
     WithColor(OS, HighlightColor(Color)) << llvm::format(Format, Args...);
   }
@@ -99,8 +102,10 @@ class ErrorReporter {
   /// a banner.
   /// TODO: Allow redirection into a file stream.
   template <typename... ArgsTy>
-  [[gnu::format(__printf__, 1, 2)]] static void reportError(const char *Format,
-                                                            ArgsTy &&...Args) {
+#ifdef __clang__ // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77958
+  [[gnu::format(__printf__, 1, 2)]]
+#endif
+  static void reportError(const char *Format, ArgsTy &&...Args) {
     print(BoldRed, "%s", ErrorBanner);
     print(BoldRed, Format, Args...);
     print("\n");

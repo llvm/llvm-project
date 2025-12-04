@@ -27,7 +27,7 @@ bool isCodeSection(StringRef name, StringRef segName, uint32_t flags) {
 
   if (segName == segment_names::text)
     return StringSwitch<bool>(name)
-        .Cases(section_names::textCoalNt, section_names::staticInit, true)
+        .Cases({section_names::textCoalNt, section_names::staticInit}, true)
         .Default(false);
 
   return false;

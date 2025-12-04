@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_CONJUNCTION_H
-#define _LIBCPP___TYPE_TRAITS_CONJUNCTION_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_CONJUNCTION_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_CONJUNCTION_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/conditional.h>
@@ -44,22 +44,6 @@ struct __all_dummy;
 template <bool... _Pred>
 struct __all : _IsSame<__all_dummy<_Pred...>, __all_dummy<((void)_Pred, true)...> > {};
 
-#if _LIBCPP_STD_VER >= 17
-
-template <class...>
-struct conjunction : true_type {};
-
-template <class _Arg>
-struct conjunction<_Arg> : _Arg {};
-
-template <class _Arg, class... _Args>
-struct conjunction<_Arg, _Args...> : conditional_t<!bool(_Arg::value), _Arg, conjunction<_Args...>> {};
-
-template <class... _Args>
-inline constexpr bool conjunction_v = conjunction<_Args...>::value;
-
-#endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_CONJUNCTION_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_CONJUNCTION_H

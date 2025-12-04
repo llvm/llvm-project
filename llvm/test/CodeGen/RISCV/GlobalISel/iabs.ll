@@ -8,11 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -global-isel -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV64ZBB
 
-declare i8 @llvm.abs.i8(i8, i1 immarg)
-declare i16 @llvm.abs.i16(i16, i1 immarg)
-declare i32 @llvm.abs.i32(i32, i1 immarg)
-declare i64 @llvm.abs.i64(i64, i1 immarg)
-
 define i8 @abs8(i8 %x) {
 ; RV32I-LABEL: abs8:
 ; RV32I:       # %bb.0:
@@ -98,7 +93,7 @@ define i32 @abs32(i32 %x) {
 ; RV64I-LABEL: abs32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sraiw a1, a0, 31
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    ret
 ;

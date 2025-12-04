@@ -179,48 +179,9 @@ void SBDebugger::Initialize() {
 lldb::SBError SBDebugger::InitializeWithErrorHandling() {
   LLDB_INSTRUMENT();
 
-  auto LoadPlugin = [](const lldb::DebuggerSP &debugger_sp,
-                       const FileSpec &spec,
-                       Status &error) -> llvm::sys::DynamicLibrary {
-    llvm::sys::DynamicLibrary dynlib =
-        llvm::sys::DynamicLibrary::getPermanentLibrary(spec.GetPath().c_str());
-    if (dynlib.isValid()) {
-      typedef bool (*LLDBCommandPluginInit)(lldb::SBDebugger & debugger);
-
-      lldb::SBDebugger debugger_sb(debugger_sp);
-      // This calls the bool lldb::PluginInitialize(lldb::SBDebugger debugger)
-      // function.
-      // TODO: mangle this differently for your system - on OSX, the first
-      // underscore needs to be removed and the second one stays
-      LLDBCommandPluginInit init_func =
-          (LLDBCommandPluginInit)(uintptr_t)dynlib.getAddressOfSymbol(
-              "_ZN4lldb16PluginInitializeENS_10SBDebuggerE");
-      if (init_func) {
-        if (init_func(debugger_sb))
-          return dynlib;
-        else
-          error = Status::FromErrorString(
-              "plug-in refused to load "
-              "(lldb::PluginInitialize(lldb::SBDebugger) "
-              "returned false)");
-      } else {
-        error = Status::FromErrorString(
-            "plug-in is missing the required initialization: "
-            "lldb::PluginInitialize(lldb::SBDebugger)");
-      }
-    } else {
-      if (FileSystem::Instance().Exists(spec))
-        error = Status::FromErrorString(
-            "this file does not represent a loadable dylib");
-      else
-        error = Status::FromErrorString("no such file");
-    }
-    return llvm::sys::DynamicLibrary();
-  };
-
-  SBError error;
+  SBError error((Status()));
   if (auto e = g_debugger_lifetime->Initialize(
-          std::make_unique<SystemInitializerFull>(), LoadPlugin)) {
+          std::make_unique<SystemInitializerFull>())) {
     error.SetError(Status::FromError(std::move(e)));
   }
   return error;
@@ -366,8 +327,8 @@ void SBDebugger::SkipAppInitFiles(bool b) {
 void SBDebugger::SetInputFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
   if (m_opaque_sp)
-    m_opaque_sp->SetInputFile(
-        (FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
+    m_opaque_sp->SetInputFile((FileSP)std::make_shared<NativeFile>(
+        fh, File::eOpenOptionReadOnly, transfer_ownership));
 }
 
 SBError SBDebugger::SetInputString(const char *data) {
@@ -424,7 +385,8 @@ SBError SBDebugger::SetOutputFile(FileSP file_sp) {
 
 void SBDebugger::SetOutputFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
-  SetOutputFile((FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
+  SetOutputFile((FileSP)std::make_shared<NativeFile>(
+      fh, File::eOpenOptionWriteOnly, transfer_ownership));
 }
 
 SBError SBDebugger::SetOutputFile(SBFile file) {
@@ -444,7 +406,8 @@ SBError SBDebugger::SetOutputFile(SBFile file) {
 
 void SBDebugger::SetErrorFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
-  SetErrorFile((FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
+  SetErrorFile((FileSP)std::make_shared<NativeFile>(
+      fh, File::eOpenOptionWriteOnly, transfer_ownership));
 }
 
 SBError SBDebugger::SetErrorFile(FileSP file_sp) {
@@ -508,39 +471,31 @@ SBFile SBDebugger::GetInputFile() {
 
 FILE *SBDebugger::GetOutputFileHandle() {
   LLDB_INSTRUMENT_VA(this);
-  if (m_opaque_sp) {
-    StreamFile &stream_file = m_opaque_sp->GetOutputStream();
-    return stream_file.GetFile().GetStream();
-  }
+  if (m_opaque_sp)
+    return m_opaque_sp->GetOutputFileSP()->GetStream();
   return nullptr;
 }
 
 SBFile SBDebugger::GetOutputFile() {
   LLDB_INSTRUMENT_VA(this);
-  if (m_opaque_sp) {
-    SBFile file(m_opaque_sp->GetOutputStream().GetFileSP());
-    return file;
-  }
+  if (m_opaque_sp)
+    return SBFile(m_opaque_sp->GetOutputFileSP());
   return SBFile();
 }
 
 FILE *SBDebugger::GetErrorFileHandle() {
   LLDB_INSTRUMENT_VA(this);
 
-  if (m_opaque_sp) {
-    StreamFile &stream_file = m_opaque_sp->GetErrorStream();
-    return stream_file.GetFile().GetStream();
-  }
+  if (m_opaque_sp)
+    return m_opaque_sp->GetErrorFileSP()->GetStream();
   return nullptr;
 }
 
 SBFile SBDebugger::GetErrorFile() {
   LLDB_INSTRUMENT_VA(this);
   SBFile file;
-  if (m_opaque_sp) {
-    SBFile file(m_opaque_sp->GetErrorStream().GetFileSP());
-    return file;
-  }
+  if (m_opaque_sp)
+    return SBFile(m_opaque_sp->GetErrorFileSP());
   return SBFile();
 }
 
@@ -581,8 +536,8 @@ void SBDebugger::HandleCommand(const char *command) {
 
     sb_interpreter.HandleCommand(command, result, false);
 
-    result.PutError(m_opaque_sp->GetErrorStream().GetFileSP());
-    result.PutOutput(m_opaque_sp->GetOutputStream().GetFileSP());
+    result.PutError(m_opaque_sp->GetErrorFileSP());
+    result.PutOutput(m_opaque_sp->GetOutputFileSP());
 
     if (!m_opaque_sp->GetAsyncExecution()) {
       SBProcess process(GetCommandInterpreter().GetProcess());
@@ -623,8 +578,10 @@ void SBDebugger::HandleProcessEvent(const SBProcess &process,
                                     FILE *err) {
   LLDB_INSTRUMENT_VA(this, process, event, out, err);
 
-  FileSP outfile = std::make_shared<NativeFile>(out, false);
-  FileSP errfile = std::make_shared<NativeFile>(err, false);
+  FileSP outfile =
+      std::make_shared<NativeFile>(out, File::eOpenOptionWriteOnly, false);
+  FileSP errfile =
+      std::make_shared<NativeFile>(err, File::eOpenOptionWriteOnly, false);
   return HandleProcessEvent(process, event, outfile, errfile);
 }
 
@@ -973,6 +930,17 @@ SBTarget SBDebugger::GetDummyTarget() {
   return sb_target;
 }
 
+void SBDebugger::DispatchClientTelemetry(const lldb::SBStructuredData &entry) {
+  LLDB_INSTRUMENT_VA(this);
+  if (m_opaque_sp) {
+    m_opaque_sp->DispatchClientTelemetry(*entry.m_impl_up);
+  } else {
+    Log *log = GetLog(LLDBLog::API);
+    LLDB_LOGF(log,
+              "Could not send telemetry from SBDebugger - debugger was null.");
+  }
+}
+
 bool SBDebugger::DeleteTarget(lldb::SBTarget &target) {
   LLDB_INSTRUMENT_VA(this, target);
 
@@ -1017,6 +985,17 @@ uint32_t SBDebugger::GetIndexOfTarget(lldb::SBTarget target) {
     return UINT32_MAX;
 
   return m_opaque_sp->GetTargetList().GetIndexOfTarget(target.GetSP());
+}
+
+SBTarget SBDebugger::FindTargetByGloballyUniqueID(lldb::user_id_t id) {
+  LLDB_INSTRUMENT_VA(this, id);
+  SBTarget sb_target;
+  if (m_opaque_sp) {
+    // No need to lock, the target list is thread safe
+    sb_target.SetSP(
+        m_opaque_sp->GetTargetList().FindTargetByGloballyUniqueID(id));
+  }
+  return sb_target;
 }
 
 SBTarget SBDebugger::FindTargetWithProcessID(lldb::pid_t pid) {
@@ -1403,6 +1382,19 @@ void SBDebugger::SetTerminalWidth(uint32_t term_width) {
 
   if (m_opaque_sp)
     m_opaque_sp->SetTerminalWidth(term_width);
+}
+
+uint32_t SBDebugger::GetTerminalHeight() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  return (m_opaque_sp ? m_opaque_sp->GetTerminalWidth() : 0);
+}
+
+void SBDebugger::SetTerminalHeight(uint32_t term_height) {
+  LLDB_INSTRUMENT_VA(this, term_height);
+
+  if (m_opaque_sp)
+    m_opaque_sp->SetTerminalHeight(term_height);
 }
 
 const char *SBDebugger::GetPrompt() const {

@@ -1,4 +1,4 @@
-//===--- RedundantInlineSpecifierCheck.cpp - clang-tidy--------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,8 +38,8 @@ AST_POLYMORPHIC_MATCHER(isInlineSpecified,
 AST_POLYMORPHIC_MATCHER_P(isInternalLinkage,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
                                                           VarDecl),
-                          bool, strictMode) {
-  if (!strictMode)
+                          bool, StrictMode) {
+  if (!StrictMode)
     return false;
   if (const auto *FD = dyn_cast<FunctionDecl>(&Node))
     return FD->getStorageClass() == SC_Static || FD->isInAnonymousNamespace();
@@ -52,7 +52,7 @@ AST_POLYMORPHIC_MATCHER_P(isInternalLinkage,
 static SourceLocation getInlineTokenLocation(SourceRange RangeLocation,
                                              const SourceManager &Sources,
                                              const LangOptions &LangOpts) {
-  SourceLocation Loc = RangeLocation.getBegin();
+  const SourceLocation Loc = RangeLocation.getBegin();
   if (Loc.isMacroID())
     return {};
 
@@ -72,11 +72,13 @@ static SourceLocation getInlineTokenLocation(SourceRange RangeLocation,
 }
 
 void RedundantInlineSpecifierCheck::registerMatchers(MatchFinder *Finder) {
+  const auto IsPartOfRecordDecl = hasAncestor(recordDecl());
   Finder->addMatcher(
       functionDecl(isInlineSpecified(),
-                   anyOf(isConstexpr(), isDeleted(), isDefaulted(),
+                   anyOf(isConstexpr(), isDeleted(),
+                         allOf(isDefaulted(), IsPartOfRecordDecl),
                          isInternalLinkage(StrictMode),
-                         allOf(isDefinition(), hasAncestor(recordDecl()))))
+                         allOf(isDefinition(), IsPartOfRecordDecl)))
           .bind("fun_decl"),
       this);
 
@@ -88,7 +90,6 @@ void RedundantInlineSpecifierCheck::registerMatchers(MatchFinder *Finder) {
         this);
 
   if (getLangOpts().CPlusPlus17) {
-    const auto IsPartOfRecordDecl = hasAncestor(recordDecl());
     Finder->addMatcher(
         varDecl(
             isInlineSpecified(),
@@ -105,7 +106,7 @@ template <typename T>
 void RedundantInlineSpecifierCheck::handleMatchedDecl(
     const T *MatchedDecl, const SourceManager &Sources,
     const MatchFinder::MatchResult &Result, StringRef Message) {
-  SourceLocation Loc = getInlineTokenLocation(
+  const SourceLocation Loc = getInlineTokenLocation(
       MatchedDecl->getSourceRange(), Sources, Result.Context->getLangOpts());
   if (Loc.isValid())
     diag(Loc, Message) << MatchedDecl << FixItHint::CreateRemoval(Loc);

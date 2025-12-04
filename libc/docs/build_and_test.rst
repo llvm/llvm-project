@@ -22,7 +22,7 @@ The libc can be built and tested in two different modes:
    static archive will be run with the above command.
 
 #. **The full build mode** - In this mode, the libc is used as the only libc
-   for the user's application. See :ref:`fullbuild_mode` for more details on
+   for the user's application. See :ref:`full_host_build` for more details on
    building and using the libc in this mode. Once configured for a full libc
    build, you can run three kinds of tests:
 
@@ -47,12 +47,18 @@ and put the following in your settings.json file:
 .. code-block:: javascript
 
    {
-     "cmake.sourceDirectory": "${workspaceFolder}/llvm",
+     "cmake.sourceDirectory": "${workspaceFolder}/runtimes",
      "cmake.configureSettings": {
-         "LLVM_ENABLE_PROJECTS" : "libc",
-         "LLVM_LIBC_FULL_BUILD" : true,
-         "LLVM_ENABLE_SPHINX" : true,
-         "LIBC_INCLUDE_DOCS" : true
+       "LLVM_ENABLE_RUNTIMES" : ["libc", "compiler-rt"],
+       "LLVM_LIBC_FULL_BUILD" : true,
+       "LLVM_ENABLE_SPHINX" : true,
+       "LIBC_INCLUDE_DOCS" : true,
+       "LLVM_LIBC_INCLUDE_SCUDO" : true,
+       "COMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC": true,
+       "COMPILER_RT_BUILD_GWP_ASAN" : false,
+       "COMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED" : false,
+       "CMAKE_EXPORT_COMPILE_COMMANDS" : true,
+       "LIBC_CMAKE_VERBOSE_LOGGING" : true
      }
    }
 

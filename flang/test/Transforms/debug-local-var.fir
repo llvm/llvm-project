@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func @_QQmain() attributes {fir.bindc_name = "mn"} {
     %0 = fir.alloca i32 {bindc_name = "i4", uniq_name = "_QFEi4"}
     %1 = fircg.ext_declare %0 {uniq_name = "_QFEi4"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc1)
@@ -22,9 +22,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   } loc(#loc7)
   func.func private @_QFPfn1(%arg0: !fir.ref<i32> {fir.bindc_name = "a1"}, %arg1: !fir.ref<f64> {fir.bindc_name = "b1"}, %arg2: !fir.ref<!fir.logical<1>> {fir.bindc_name = "c1"}) -> i64 attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
     %0 = fir.undefined !fir.dscope loc(#loc11)
-    %1 = fircg.ext_declare %arg0 dummy_scope %0 {uniq_name = "_QFFfn1Ea1"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc8)
-    %2 = fircg.ext_declare %arg1 dummy_scope %0 {uniq_name = "_QFFfn1Eb1"} : (!fir.ref<f64>, !fir.dscope) -> !fir.ref<f64> loc(#loc9)
-    %3 = fircg.ext_declare %arg2 dummy_scope %0 {uniq_name = "_QFFfn1Ec1"} : (!fir.ref<!fir.logical<1>>, !fir.dscope) -> !fir.ref<!fir.logical<1>> loc(#loc10)
+    %1 = fircg.ext_declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFFfn1Ea1"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc8)
+    %2 = fircg.ext_declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFFfn1Eb1"} : (!fir.ref<f64>, !fir.dscope) -> !fir.ref<f64> loc(#loc9)
+    %3 = fircg.ext_declare %arg2 dummy_scope %0 arg 3 {uniq_name = "_QFFfn1Ec1"} : (!fir.ref<!fir.logical<1>>, !fir.dscope) -> !fir.ref<!fir.logical<1>> loc(#loc10)
     %4 = fir.alloca i64 {bindc_name = "res1", uniq_name = "_QFFfn1Eres1"} loc(#loc15)
     %5 = fircg.ext_declare %4 {uniq_name = "_QFFfn1Eres1"} : (!fir.ref<i64>) -> !fir.ref<i64> loc(#loc11)
     %6 = fir.load %1 : !fir.ref<i32>
@@ -38,9 +38,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   } loc(#loc12)
   func.func private @_QFPfn2(%arg0: !fir.ref<i64> {fir.bindc_name = "a2"}, %arg1: !fir.ref<f32> {fir.bindc_name = "b2"}, %arg2: !fir.ref<!fir.logical<4>> {fir.bindc_name = "c2"}) -> i32 attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
     %0 = fir.undefined !fir.dscope
-    %1 = fircg.ext_declare %arg0 dummy_scope %0 {uniq_name = "_QFFfn2Ea2"} : (!fir.ref<i64>, !fir.dscope) -> !fir.ref<i64> loc(#loc13)
-    %2 = fircg.ext_declare %arg1 dummy_scope %0 {uniq_name = "_QFFfn2Eb2"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32> loc(#loc14)
-    %3 = fircg.ext_declare %arg2 dummy_scope %0 {uniq_name = "_QFFfn2Ec2"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> !fir.ref<!fir.logical<4>> loc(#loc15)
+    %1 = fircg.ext_declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFFfn2Ea2"} : (!fir.ref<i64>, !fir.dscope) -> !fir.ref<i64> loc(#loc13)
+    %2 = fircg.ext_declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFFfn2Eb2"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32> loc(#loc14)
+    %3 = fircg.ext_declare %arg2 dummy_scope %0 arg 3 {uniq_name = "_QFFfn2Ec2"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> !fir.ref<!fir.logical<4>> loc(#loc15)
     %4 = fir.alloca i32 {bindc_name = "res2", uniq_name = "_QFFfn2Eres2"}
     %5 = fircg.ext_declare %4 {uniq_name = "_QFFfn2Eres2"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc16)
     %6 = fir.load %1 : !fir.ref<i64>
@@ -71,10 +71,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 #loc15 = loc("test.f90":21:24)
 #loc16 = loc("test.f90":22:5)
 
-// CHECK-DAG: #[[INT8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>
+// CHECK-DAG: #[[INT8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer(kind=8)", sizeInBits = 64, encoding = DW_ATE_signed>
 // CHECK-DAG: #[[INT4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 32, encoding = DW_ATE_signed>
-// CHECK-DAG: #[[REAL8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 64, encoding = DW_ATE_float>
-// CHECK-DAG: #[[LOG1:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical", sizeInBits = 8, encoding = DW_ATE_boolean>
+// CHECK-DAG: #[[REAL8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real(kind=8)", sizeInBits = 64, encoding = DW_ATE_float>
+// CHECK-DAG: #[[LOG1:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical(kind=1)", sizeInBits = 8, encoding = DW_ATE_boolean>
 // CHECK-DAG: #[[REAL4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 32, encoding = DW_ATE_float>
 // CHECK-DAG: #[[LOG4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical", sizeInBits = 32, encoding = DW_ATE_boolean>
 // CHECK-DAG: #[[MAIN:.*]] = #llvm.di_subprogram<{{.*}}name = "mn"{{.*}}>

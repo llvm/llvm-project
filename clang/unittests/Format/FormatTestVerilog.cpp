@@ -160,6 +160,8 @@ TEST_F(FormatTestVerilog, Block) {
   // Test that 'disable fork' and 'rand join' don't get mistaken as blocks.
   verifyFormat("disable fork;\n"
                "x = x;");
+  verifyFormat("wait fork;\n"
+               "x = x;");
   verifyFormat("rand join x x;\n"
                "x = x;");
   // The begin keyword should not be indented if it is too long to fit on the
@@ -421,6 +423,11 @@ TEST_F(FormatTestVerilog, Declaration) {
   verifyFormat("wire (strong1, pull0) mynet, mynet1 = enable;");
   verifyFormat("wire (strong1, pull0) mynet, //\n"
                "                      mynet1 = enable;");
+
+  // The type or variable can be a C++ keyword.
+  verifyFormat("private mynet;");
+  verifyFormat("switch mynet;");
+  verifyFormat("wire try;");
 }
 
 TEST_F(FormatTestVerilog, Delay) {
@@ -674,6 +681,16 @@ TEST_F(FormatTestVerilog, Hierarchy) {
                "  endprogram\n"
                "endmodule");
   // Test that an extern declaration doesn't change the indentation.
+  verifyFormat("import \"DPI-C\" context MyCFunc = function integer MapID\n"
+               "    (int portID);\n"
+               "x = x;");
+  verifyFormat("export \"DPI-C\" function exported_sv_func;\n"
+               "x = x;");
+  verifyFormat("import \"DPI-C\" function void f1\n"
+               "    (input int i1,\n"
+               "     pair i2,\n"
+               "     output logic [63 : 0] o3);\n"
+               "x = x;");
   verifyFormat("extern module x;\n"
                "x = x;");
   // Test complex headers
@@ -1285,7 +1302,7 @@ TEST_F(FormatTestVerilog, StringLiteral) {
                getStyleWithColumns(getDefaultStyle(), 32));
   // Space around braces should be correct.
   auto Style = getStyleWithColumns(getDefaultStyle(), 24);
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   verifyFormat(R"(x({ "xxxxxxxxxxxxxxxx ",
     "xxxx" });)",
                R"(x("xxxxxxxxxxxxxxxx xxxx");)", Style);

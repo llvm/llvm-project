@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPUtility.h"
-#include "Clang.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Archive.h"
@@ -45,7 +44,7 @@ static std::string normalizeForBundler(const llvm::Triple &T,
   return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
                         T.getOSName() + "-" + T.getEnvironmentName())
                            .str()
-                     : T.normalize();
+                     : T.normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
 }
 
 // Collect undefined __hip_fatbin* and __hip_gpubin_handle* symbols from all
@@ -190,8 +189,7 @@ private:
 
         processInput(BufferOrErr.get()->getMemBufferRef());
       } else
-        WorkList.insert(WorkList.end(), CurrentAction->getInputs().begin(),
-                        CurrentAction->getInputs().end());
+        llvm::append_range(WorkList, CurrentAction->getInputs());
     }
   }
 
@@ -291,7 +289,7 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
 
   // ToDo: Remove the dummy host binary entry which is required by
   // clang-offload-bundler.
-  std::string BundlerTargetArg = "-targets=host-x86_64-unknown-linux";
+  std::string BundlerTargetArg = "-targets=host-x86_64-unknown-linux-gnu";
   // AMDGCN:
   // For code object version 2 and 3, the offload kind in bundle ID is 'hip'
   // for backward compatibility. For code object version 4 and greater, the
@@ -466,11 +464,22 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
 
   Objf << ObjBuffer;
 
-  ArgStringList McArgs{"-target", Args.MakeArgString(HostTriple.normalize()),
+  ArgStringList ClangArgs{"-target", Args.MakeArgString(HostTriple.normalize()),
                        "-o",      Output.getFilename(),
                        "-x",      "assembler",
                        ObjinFile, "-c"};
   C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
-                                         D.getClangProgramPath(), McArgs,
+                                         D.getClangProgramPath(), ClangArgs,
                                          Inputs, Output, D.getPrependArg()));
+}
+
+// Convenience function for creating temporary file for both modes of
+// isSaveTempsEnabled().
+const char *HIP::getTempFile(Compilation &C, StringRef Prefix,
+                             StringRef Extension) {
+  if (C.getDriver().isSaveTempsEnabled()) {
+    return C.getArgs().MakeArgString(Prefix + "." + Extension);
+  }
+  auto TmpFile = C.getDriver().GetTemporaryPath(Prefix, Extension);
+  return C.addTempFile(C.getArgs().MakeArgString(TmpFile));
 }

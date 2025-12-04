@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes='mem2reg' -S | FileCheck %s
-; RUN: opt < %s -passes='mem2reg' -S --try-experimental-debuginfo-iterators | FileCheck %s
 target datalayout = "e-p:64:64"
 
 ; An intrinsic without any expressions should always be converted.

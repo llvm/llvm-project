@@ -62,7 +62,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
@@ -99,7 +99,8 @@ public:
                  const std::vector<std::string> &FeaturesVec) const override;
 
   std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts) const override;
+  getVScaleRange(const LangOptions &LangOpts, ArmStreamingKind Mode,
+                 llvm::StringMap<bool> *FeatureMap = nullptr) const override;
 
   bool hasFeature(StringRef Feature) const override;
 
@@ -122,10 +123,10 @@ public:
   void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool supportsTargetAttributeTune() const override { return true; }
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
-  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
+  llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
-    return std::make_pair(32, 32);
+    return std::make_pair(64, 64);
   }
 
   bool supportsCpuSupports() const override { return getTriple().isOSLinux(); }
@@ -146,7 +147,7 @@ public:
 
   bool
   checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const override {
-    if (ISAInfo->hasExtension("zicfiss"))
+    if (ISAInfo->hasExtension("zimop"))
       return true;
     return TargetInfo::checkCFProtectionReturnSupported(Diags);
   }
@@ -194,7 +195,8 @@ public:
   void setMaxAtomicWidth() override {
     MaxAtomicPromoteWidth = 128;
 
-    if (ISAInfo->hasExtension("a"))
+    // "a" implies "zalrsc" which is sufficient to inline atomics
+    if (ISAInfo->hasExtension("zalrsc"))
       MaxAtomicInlineWidth = 32;
   }
 };
@@ -224,7 +226,8 @@ public:
   void setMaxAtomicWidth() override {
     MaxAtomicPromoteWidth = 128;
 
-    if (ISAInfo->hasExtension("a"))
+    // "a" implies "zalrsc" which is sufficient to inline atomics
+    if (ISAInfo->hasExtension("zalrsc"))
       MaxAtomicInlineWidth = 64;
   }
 };

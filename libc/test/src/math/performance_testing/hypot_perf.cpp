@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BinaryOpSingleOutputPerf.h"
-
+#include "PerfTest.h"
 #include "src/math/hypot.h"
 
 #include <math.h>
 
-BINARY_OP_SINGLE_OUTPUT_PERF(double, double, LIBC_NAMESPACE::hypot, ::hypot,
-                             "hypot_perf.log")
+int main() {
+  BINARY_INPUT_SINGLE_OUTPUT_PERF(double, double, LIBC_NAMESPACE::hypot,
+                                  ::hypot, "hypot_perf.log")
+  return 0;
+}

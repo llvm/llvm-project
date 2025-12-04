@@ -62,7 +62,7 @@ define { double, double } @sincos_f64_value_return(double %x) {
 ; CHECK-LABEL: sincos_f64_value_return:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    add x0, sp, #24
@@ -70,7 +70,7 @@ define { double, double } @sincos_f64_value_return(double %x) {
 ; CHECK-NEXT:    bl sincos
 ; CHECK-NEXT:    ldr d0, [sp, #24]
 ; CHECK-NEXT:    ldr d1, [sp, #8]
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 entry:
@@ -227,7 +227,7 @@ define void @sincos_misaligned_result_stores(double %x, ptr noalias %out_sin, pt
 ; CHECK-LABEL: sincos_misaligned_result_stores:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
@@ -240,7 +240,7 @@ define void @sincos_misaligned_result_stores(double %x, ptr noalias %out_sin, pt
 ; CHECK-NEXT:    bl sincos
 ; CHECK-NEXT:    ldr d0, [sp, #24]
 ; CHECK-NEXT:    ldr d1, [sp, #8]
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    str d0, [x20]
 ; CHECK-NEXT:    str d1, [x19]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
@@ -251,5 +251,39 @@ entry:
   %cos = tail call double @llvm.cos.f64(double %x)
   store double %sin, ptr %out_sin, align 4
   store double %cos, ptr %out_cos, align 4
+  ret void
+}
+
+declare void @foo(ptr, ptr)
+
+define void @can_fold_with_call_in_chain(float %x, ptr noalias %a, ptr noalias %b) {
+; CHECK-LABEL: can_fold_with_call_in_chain:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str d8, [sp, #-32]! // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w20, -16
+; CHECK-NEXT:    .cfi_offset w30, -24
+; CHECK-NEXT:    .cfi_offset b8, -32
+; CHECK-NEXT:    mov x19, x1
+; CHECK-NEXT:    mov x20, x0
+; CHECK-NEXT:    fmov s8, s0
+; CHECK-NEXT:    bl foo
+; CHECK-NEXT:    fmov s0, s8
+; CHECK-NEXT:    mov x0, x20
+; CHECK-NEXT:    mov x1, x19
+; CHECK-NEXT:    bl sincosf
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
+; CHECK-NEXT:    ldr d8, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %sin = tail call float @llvm.sin.f32(float %x)
+  %cos = tail call float @llvm.cos.f32(float %x)
+  call void @foo(ptr %a, ptr %b)
+  store float %sin, ptr %a, align 4
+  store float %cos, ptr %b, align 4
   ret void
 }

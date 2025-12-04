@@ -9,8 +9,10 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFTYPEPRINTER_H
 #define LLVM_DEBUGINFO_DWARF_DWARFTYPEPRINTER_H
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Support/Error.h"
 
 #include <string>
 
@@ -76,6 +78,12 @@ private:
     }
     return false;
   }
+
+  /// If FormValue is a valid constant Form, print into \c OS the integral value
+  /// casted to the type referred to by \c Cast.
+  template <typename FormValueType>
+  void appendCastedValue(const FormValueType &FormValue, DieType Cast,
+                         bool IsUnsigned);
 };
 
 template <typename DieType>
@@ -108,13 +116,11 @@ void DWARFTypePrinter<DieType>::appendArrayType(const DieType &D) {
     if (std::optional<typename DieType::DWARFFormValue> UpperV =
             C.find(dwarf::DW_AT_upper_bound))
       UB = UpperV->getAsUnsignedConstant();
-    if (std::optional<typename DieType::DWARFFormValue> LV =
-            D.getDwarfUnit()->getUnitDIE().find(dwarf::DW_AT_language))
-      if (std::optional<uint64_t> LC = LV->getAsUnsignedConstant())
-        if ((DefaultLB =
-                 LanguageLowerBound(static_cast<dwarf::SourceLanguage>(*LC))))
-          if (LB && *LB == *DefaultLB)
-            LB = std::nullopt;
+    if (std::optional<uint64_t> LV = D.getLanguage())
+      if ((DefaultLB =
+               LanguageLowerBound(static_cast<dwarf::SourceLanguage>(*LV))))
+        if (LB && *LB == *DefaultLB)
+          LB = std::nullopt;
     if (!LB && !Count && !UB)
       OS << "[]";
     else if (!LB && (Count || UB) && DefaultLB)
@@ -150,6 +156,33 @@ DieType resolveReferencedType(DieType D,
 template <typename DieType>
 DieType resolveReferencedType(DieType D, typename DieType::DWARFFormValue F) {
   return D.resolveReferencedType(F);
+}
+template <typename DWARFFormValueType>
+const char *toString(std::optional<DWARFFormValueType> F) {
+  if (F) {
+    llvm::Expected<const char *> E = F->getAsCString();
+    if (E)
+      return *E;
+    llvm::consumeError(E.takeError());
+  }
+  return nullptr;
+}
+
+/// Resolve the DW_AT_type of \c D until we reach a DIE that is not a
+/// DW_TAG_typedef.
+template <typename DieType> DieType unwrapReferencedTypedefType(DieType D) {
+  auto TypeAttr = D.find(dwarf::DW_AT_type);
+  if (!TypeAttr)
+    return DieType();
+
+  auto Unwrapped = detail::resolveReferencedType(D, *TypeAttr);
+  if (!Unwrapped)
+    return DieType();
+
+  if (Unwrapped.getTag() == dwarf::DW_TAG_typedef)
+    return unwrapReferencedTypedefType(Unwrapped);
+
+  return Unwrapped;
 }
 } // namespace detail
 
@@ -240,7 +273,7 @@ DieType DWARFTypePrinter<DieType>::appendUnqualifiedNameBefore(
     appendConstVolatileQualifierBefore(D);
     break;
   case dwarf::DW_TAG_namespace: {
-    if (const char *Name = dwarf::toString(D.find(dwarf::DW_AT_name), nullptr))
+    if (const char *Name = detail::toString(D.find(dwarf::DW_AT_name)))
       OS << Name;
     else
       OS << "(anonymous namespace)";
@@ -262,7 +295,7 @@ DieType DWARFTypePrinter<DieType>::appendUnqualifiedNameBefore(
   case DW_TAG_base_type:
   */
   default: {
-    const char *NamePtr = dwarf::toString(D.find(dwarf::DW_AT_name), nullptr);
+    const char *NamePtr = detail::toString(D.find(dwarf::DW_AT_name));
     if (!NamePtr) {
       appendTypeTagName(D.getTag());
       return DieType();
@@ -404,6 +437,31 @@ DieType DWARFTypePrinter<DieType>::appendQualifiedNameBefore(DieType D) {
 }
 
 template <typename DieType>
+template <typename FormValueType>
+void DWARFTypePrinter<DieType>::appendCastedValue(
+    const FormValueType &FormValue, DieType Cast, bool IsUnsigned) {
+  std::string ValStr;
+  if (IsUnsigned) {
+    std::optional<uint64_t> UVal = FormValue.getAsUnsignedConstant();
+    if (!UVal)
+      return;
+
+    ValStr = std::to_string(*UVal);
+  } else {
+    std::optional<int64_t> SVal = FormValue.getAsSignedConstant();
+    if (!SVal)
+      return;
+
+    ValStr = std::to_string(*SVal);
+  }
+
+  OS << '(';
+  appendQualifiedName(Cast);
+  OS << ')';
+  OS << std::move(ValStr);
+}
+
+template <typename DieType>
 bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
                                                          bool *FirstParameter) {
   bool FirstParameterValue = true;
@@ -428,20 +486,18 @@ bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
       DieType T = detail::resolveReferencedType(C);
       Sep();
       if (T.getTag() == dwarf::DW_TAG_enumeration_type) {
-        OS << '(';
-        appendQualifiedName(T);
-        OS << ')';
         auto V = C.find(dwarf::DW_AT_const_value);
-        OS << std::to_string(*V->getAsSignedConstant());
+        appendCastedValue(*V, T, /*IsUnsigned=*/false);
         continue;
       }
+
       // /Maybe/ we could do pointer/reference type parameters, looking for the
       // symbol in the ELF symbol table to get back to the variable...
       // but probably not worth it.
       if (T.getTag() == dwarf::DW_TAG_pointer_type ||
           T.getTag() == dwarf::DW_TAG_reference_type)
         continue;
-      const char *RawName = dwarf::toString(T.find(dwarf::DW_AT_name), nullptr);
+      const char *RawName = detail::toString(T.find(dwarf::DW_AT_name));
       assert(RawName);
       StringRef Name = RawName;
       auto V = C.find(dwarf::DW_AT_const_value);
@@ -529,12 +585,18 @@ bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
           else
             OS << llvm::format("'\\U%08" PRIx64 "'", Val);
         }
+        // FIXME: Handle _BitInt's larger than 64-bits which are emitted as
+        // block data.
+      } else if (Name.starts_with("_BitInt")) {
+        appendCastedValue(*V, T, /*IsUnsigned=*/false);
+      } else if (Name.starts_with("unsigned _BitInt")) {
+        appendCastedValue(*V, T, /*IsUnsigned=*/true);
       }
       continue;
     }
     if (C.getTag() == dwarf::DW_TAG_GNU_template_template_param) {
       const char *RawName =
-          dwarf::toString(C.find(dwarf::DW_AT_GNU_template_name), nullptr);
+          detail::toString(C.find(dwarf::DW_AT_GNU_template_name));
       assert(RawName);
       StringRef Name = RawName;
       Sep();
@@ -543,10 +605,9 @@ bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
     }
     if (C.getTag() != dwarf::DW_TAG_template_type_parameter)
       continue;
-    auto TypeAttr = C.find(dwarf::DW_AT_type);
     Sep();
-    appendQualifiedName(TypeAttr ? detail::resolveReferencedType(C, *TypeAttr)
-                                 : DieType());
+
+    appendQualifiedName(detail::unwrapReferencedTypedefType(C));
   }
   if (IsTemplate && *FirstParameter && FirstParameter == &FirstParameterValue) {
     OS << '<';
@@ -594,7 +655,7 @@ void DWARFTypePrinter<DieType>::appendConstVolatileQualifierAfter(DieType N) {
   decomposeConstVolatile(N, T, C, V);
   if (T && T.getTag() == dwarf::DW_TAG_subroutine_type)
     appendSubroutineNameAfter(T, detail::resolveReferencedType(T), false,
-                              C.isValid(), V.isValid());
+                              static_cast<bool>(C), static_cast<bool>(V));
   else
     appendUnqualifiedNameAfter(T, detail::resolveReferencedType(T));
 }
@@ -724,12 +785,14 @@ void DWARFTypePrinter<DieType>::appendSubroutineNameAfter(
       OS << " __attribute__((intel_ocl_bicc))";
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_SpirFunction:
-    case dwarf::CallingConvention::DW_CC_LLVM_OpenCLKernel:
-      // These aren't available as attributes, but maybe we should still
-      // render them somehow? (Clang doesn't render them, but that's an issue
+      // This isn't available as an attribute, but maybe we should still
+      // render it somehow? (Clang doesn't render it, but that's an issue
       // for template names too - since then the DWARF names of templates
       // instantiated with function types with these calling conventions won't
       // have distinct names - so we'd need to fix that too)
+      break;
+    case dwarf::CallingConvention::DW_CC_LLVM_DeviceKernel:
+      OS << " __attribute__((device_kernel))";
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_Swift:
       // SwiftAsync missing

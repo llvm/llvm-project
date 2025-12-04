@@ -100,6 +100,7 @@ public:
   void SetStopOnSharedLibraryEvents(bool stop);
   bool GetDisableLangRuntimeUnwindPlans() const;
   void SetDisableLangRuntimeUnwindPlans(bool disable);
+  void DisableLanguageRuntimeUnwindPlansCallback();
   bool GetDetachKeepsStopped() const;
   void SetDetachKeepsStopped(bool keep_stopped);
   bool GetWarningsOptimization() const;
@@ -111,6 +112,7 @@ public:
   void SetOSPluginReportsAllThreads(bool does_report);
   bool GetSteppingRunsAllThreads() const;
   FollowForkMode GetFollowForkMode() const;
+  bool TrackMemoryCacheChanges() const;
 
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties
@@ -125,10 +127,7 @@ class ProcessAttachInfo : public ProcessInstanceInfo {
 public:
   ProcessAttachInfo() = default;
 
-  ProcessAttachInfo(const ProcessLaunchInfo &launch_info)
-      : m_resume_count(0), m_wait_for_launch(false), m_ignore_existing(true),
-        m_continue_once_attached(false), m_detach_on_error(true),
-        m_async(false) {
+  ProcessAttachInfo(const ProcessLaunchInfo &launch_info) {
     ProcessInfo::operator=(launch_info);
     SetProcessPluginName(launch_info.GetProcessPluginName());
     SetResumeCount(launch_info.GetResumeCount());
@@ -310,6 +309,18 @@ public:
     if (stop_id == m_last_natural_stop_id)
       return m_last_natural_stop_event;
     return lldb::EventSP();
+  }
+
+  void Dump(Stream &stream) const {
+    stream.Format("ProcessModID:\n"
+                  "  m_stop_id: {0}\n  m_last_natural_stop_id: {1}\n"
+                  "  m_resume_id: {2}\n  m_memory_id: {3}\n"
+                  "  m_last_user_expression_resume: {4}\n"
+                  "  m_running_user_expression: {5}\n"
+                  "  m_running_utility_function: {6}\n",
+                  m_stop_id, m_last_natural_stop_id, m_resume_id, m_memory_id,
+                  m_last_user_expression_resume, m_running_user_expression,
+                  m_running_utility_function);
   }
 
 private:
@@ -592,7 +603,7 @@ public:
 
   /// The underlying plugin might store the low-level communication history for
   /// this session.  Dump it into the provided stream.
-  virtual void DumpPluginHistory(Stream &s) { return; }
+  virtual void DumpPluginHistory(Stream &s) {}
 
   /// Launch a new process.
   ///
@@ -1089,6 +1100,13 @@ public:
   ///     Returns an error object.
   virtual Status WillResume() { return Status(); }
 
+  /// Reports whether this process supports reverse execution.
+  ///
+  /// \return
+  ///     Returns true if the process supports reverse execution (at least
+  /// under some circumstances).
+  virtual bool SupportsReverseDirection() { return false; }
+
   /// Resumes all of a process's threads as configured using the Thread run
   /// control functions.
   ///
@@ -1104,9 +1122,12 @@ public:
   /// \see Thread:Resume()
   /// \see Thread:Step()
   /// \see Thread:Suspend()
-  virtual Status DoResume() {
+  virtual Status DoResume(lldb::RunDirection direction) {
+    if (direction == lldb::RunDirection::eRunForward)
+      return Status::FromErrorStringWithFormatv(
+          "{0} does not support resuming processes", GetPluginName());
     return Status::FromErrorStringWithFormatv(
-        "error: {0} does not support resuming processes", GetPluginName());
+        "{0} does not support reverse execution of processes", GetPluginName());
   }
 
   /// Called after resuming a process.
@@ -1491,10 +1512,11 @@ public:
   ///     otherwise.
   virtual bool IsAlive();
 
+  /// Check if a process is a live debug session, or a corefile/post-mortem.
   virtual bool IsLiveDebugSession() const { return true; };
 
   /// Provide a way to retrieve the core dump file that is loaded for debugging.
-  /// Only available if IsLiveDebugSession() returns true.
+  /// Only available if IsLiveDebugSession() returns false.
   ///
   /// \return
   ///     File path to the core file.
@@ -1546,6 +1568,28 @@ public:
   virtual size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                             Status &error);
 
+  /// Read from multiple memory ranges and write the results into buffer.
+  /// This calls ReadMemoryFromInferior multiple times, once per range,
+  /// bypassing the read cache. Process implementations that can perform this
+  /// operation more efficiently should override this.
+  ///
+  /// \param[in] ranges
+  ///     A collection of ranges (base address + size) to read from.
+  ///
+  /// \param[out] buffer
+  ///     A buffer where the read memory will be written to. It must be at least
+  ///     as long as the sum of the sizes of each range.
+  ///
+  /// \return
+  ///     A vector of MutableArrayRef, where each MutableArrayRef is a slice of
+  ///     the input buffer into which the memory contents were copied. The size
+  ///     of the slice indicates how many bytes were read successfully. Partial
+  ///     reads are always performed from the start of the requested range,
+  ///     never from the middle or end.
+  virtual llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                   llvm::MutableArrayRef<uint8_t> buffer);
+
   /// Read of memory from a process.
   ///
   /// This function has the same semantics of ReadMemory except that it
@@ -1576,6 +1620,52 @@ public:
   ///     returned in the case of an error.
   size_t ReadMemoryFromInferior(lldb::addr_t vm_addr, void *buf, size_t size,
                                 Status &error);
+
+  // Callback definition for read Memory in chunks
+  //
+  // Status, the status returned from ReadMemoryFromInferior
+  // addr_t, the bytes_addr, start + bytes read so far.
+  // void*, pointer to the bytes read
+  // bytes_size, the count of bytes read for this chunk
+  typedef std::function<IterationAction(
+      lldb_private::Status &error, lldb::addr_t bytes_addr, const void *bytes,
+      lldb::offset_t bytes_size)>
+      ReadMemoryChunkCallback;
+
+  /// Read of memory from a process in discrete chunks, terminating
+  /// either when all bytes are read, or the supplied callback returns
+  /// IterationAction::Stop
+  ///
+  /// \param[in] vm_addr
+  ///     A virtual load address that indicates where to start reading
+  ///     memory from.
+  ///
+  /// \param[in] buf
+  ///    If NULL, a buffer of \a chunk_size will be created and used for the
+  ///    callback. If non NULL, this buffer must be at least \a chunk_size bytes
+  ///    and will be used for storing chunked memory reads.
+  ///
+  /// \param[in] chunk_size
+  ///     The minimum size of the byte buffer, and the chunk size of memory
+  ///     to read.
+  ///
+  /// \param[in] total_size
+  ///     The total number of bytes to read.
+  ///
+  /// \param[in] callback
+  ///     The callback to invoke when a chunk is read from memory.
+  ///
+  /// \return
+  ///     The number of bytes that were actually read into \a buf and
+  ///     written to the provided callback.
+  ///     If the returned number is greater than zero, yet less than \a
+  ///     size, then this function will get called again with \a
+  ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
+  ///     returned in the case of an error.
+  lldb::offset_t ReadMemoryInChunks(lldb::addr_t vm_addr, void *buf,
+                                    lldb::addr_t chunk_size,
+                                    lldb::offset_t total_size,
+                                    ReadMemoryChunkCallback callback);
 
   /// Read a NULL terminated C string from memory
   ///
@@ -2444,6 +2534,28 @@ void PruneThreadPlans();
 
   void CalculateExecutionContext(ExecutionContext &exe_ctx) override;
 
+  /// Associates a file descriptor with the process' STDIO handling
+  /// and configures an asynchronous reading of that descriptor.
+  ///
+  /// This method installs a ConnectionFileDescriptor for the passed file
+  /// descriptor and starts a dedicated read thread. If the read thread starts
+  /// successfully, the method also ensures that an IOHandlerProcessSTDIO is
+  /// created to manage user input to the process.
+  ///
+  /// The descriptor's ownership is transferred to the underlying
+  /// ConnectionFileDescriptor.
+  ///
+  /// When data is successfully read from the file descriptor, it is stored in
+  /// m_stdout_data. There is no differentiation between stdout and stderr.
+  ///
+  /// \param[in] fd
+  ///     The file descriptor to use for process STDIO communication. It's
+  ///     assumed to be valid and will be managed by the newly created
+  ///     connection.
+  ///
+  /// \see lldb_private::Process::STDIOReadThreadBytesReceived()
+  /// \see lldb_private::IOHandlerProcessSTDIO
+  /// \see lldb_private::ConnectionFileDescriptor
   void SetSTDIOFileDescriptor(int file_descriptor);
 
   // Add a permanent region of memory that should never be read or written to.
@@ -2476,6 +2588,8 @@ void PruneThreadPlans();
   ProcessRunLock &GetRunLock();
 
   bool CurrentThreadIsPrivateStateThread();
+
+  bool CurrentThreadPosesAsPrivateStateThread();
 
   virtual Status SendEventData(const char *data) {
     return Status::FromErrorString(
@@ -2547,7 +2661,7 @@ void PruneThreadPlans();
 
   void ResetExtendedCrashInfoDict() {
     // StructuredData::Dictionary is add only, so we have to make a new one:
-    m_crash_info_dict_sp.reset(new StructuredData::Dictionary());
+    m_crash_info_dict_sp = std::make_shared<StructuredData::Dictionary>();
   }
 
   size_t AddImageToken(lldb::addr_t image_ptr);
@@ -2675,6 +2789,18 @@ void PruneThreadPlans();
   lldb::addr_t FindInMemory(const uint8_t *buf, uint64_t size,
                             const AddressRange &range, size_t alignment,
                             Status &error);
+
+  /// Get the base run direction for the process.
+  /// The base direction is the direction the process will execute in
+  /// (forward or backward) if no thread plan overrides the direction.
+  lldb::RunDirection GetBaseDirection() const { return m_base_direction; }
+  /// Set the base run direction for the process.
+  /// As a side-effect, if this changes the base direction, then we
+  /// discard all non-base thread plans to ensure that when execution resumes
+  /// we definitely execute in the requested direction.
+  /// FIXME: this is overkill. In some situations ensuring the latter
+  /// would not require discarding all non-base thread plans.
+  void SetBaseDirection(lldb::RunDirection direction);
 
 protected:
   friend class Trace;
@@ -3075,6 +3201,7 @@ protected:
   ThreadList
       m_extended_thread_list; ///< Constituent for extended threads that may be
                               /// generated, cleared on natural stops
+  lldb::RunDirection m_base_direction; ///< ThreadPlanBase run direction
   uint32_t m_extended_thread_stop_id; ///< The natural stop id when
                                       ///extended_thread_list was last updated
   QueueList

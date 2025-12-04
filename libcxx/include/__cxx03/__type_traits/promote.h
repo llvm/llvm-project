@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_PROMOTE_H
-#define _LIBCPP___TYPE_TRAITS_PROMOTE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_PROMOTE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_PROMOTE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -125,4 +125,4 @@ class __promote : public __promote_imp<_A1, _A2, _A3> {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_PROMOTE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_PROMOTE_H

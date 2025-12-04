@@ -36,13 +36,13 @@
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/GenericLoopInfoImpl.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 // Explicitly instantiate methods in LoopInfoImpl.h for IR-level Loops.
-template class llvm::LoopBase<BasicBlock, Loop>;
-template class llvm::LoopInfoBase<BasicBlock, Loop>;
+template class LLVM_EXPORT_TEMPLATE llvm::LoopBase<BasicBlock, Loop>;
+template class LLVM_EXPORT_TEMPLATE llvm::LoopInfoBase<BasicBlock, Loop>;
 
 // Always verify loopinfo if expensive checking is enabled.
 #ifdef EXPENSIVE_CHECKS
@@ -65,7 +65,7 @@ bool Loop::isLoopInvariant(const Value *V) const {
 }
 
 bool Loop::hasLoopInvariantOperands(const Instruction *I) const {
-  return all_of(I->operands(), [this](Value *V) { return isLoopInvariant(V); });
+  return all_of(I->operands(), [&](Value *V) { return isLoopInvariant(V); });
 }
 
 bool Loop::makeLoopInvariant(Value *V, bool &Changed, Instruction *InsertPt,
@@ -103,7 +103,7 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
       return false;
 
   // Hoist.
-  I->moveBefore(InsertPt);
+  I->moveBefore(InsertPt->getIterator());
   if (MSSAU)
     if (auto *MUD = MSSAU->getMemorySSA()->getMemoryAccess(I))
       MSSAU->moveToPlace(MUD, InsertPt->getParent(),
@@ -986,8 +986,8 @@ PreservedAnalyses LoopPrinterPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-void llvm::printLoop(Loop &L, raw_ostream &OS, const std::string &Banner) {
-
+void llvm::printLoop(const Loop &L, raw_ostream &OS,
+                     const std::string &Banner) {
   if (forcePrintModuleIR()) {
     // handling -print-module-scope
     OS << Banner << " (loop: ";
@@ -996,6 +996,18 @@ void llvm::printLoop(Loop &L, raw_ostream &OS, const std::string &Banner) {
 
     // printing whole module
     OS << *L.getHeader()->getModule();
+    return;
+  }
+
+  if (forcePrintFuncIR()) {
+    // handling -print-loop-func-scope.
+    // -print-module-scope overrides this.
+    OS << Banner << " (loop: ";
+    L.getHeader()->printAsOperand(OS, false);
+    OS << ")\n";
+
+    // printing whole function.
+    OS << *L.getHeader()->getParent();
     return;
   }
 
@@ -1198,9 +1210,7 @@ MDNode *llvm::makePostTransformationMetadata(LLVMContext &Context,
 // LoopInfo implementation
 //
 
-LoopInfoWrapperPass::LoopInfoWrapperPass() : FunctionPass(ID) {
-  initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+LoopInfoWrapperPass::LoopInfoWrapperPass() : FunctionPass(ID) {}
 
 char LoopInfoWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopInfoWrapperPass, "loops", "Natural Loop Information",

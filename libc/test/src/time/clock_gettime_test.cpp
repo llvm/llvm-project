@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/time_macros.h"
+#include "hdr/types/struct_timespec.h"
+#include "hdr/types/time_t.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/time/clock_gettime.h"
 #include "test/UnitTest/Test.h"
-
-#include <time.h>
 
 TEST(LlvmLibcClockGetTime, RealTime) {
   timespec tp;

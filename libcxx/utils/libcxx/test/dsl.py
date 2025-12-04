@@ -9,7 +9,6 @@
 import os
 import pickle
 import platform
-import shlex
 import shutil
 import tempfile
 
@@ -89,7 +88,7 @@ def _executeWithFakeConfig(test, commands):
     litConfig = lit.LitConfig.LitConfig(
         progname="lit",
         path=[],
-        quiet=False,
+        diagnostic_level="note",
         useValgrind=False,
         valgrindLeakCheck=False,
         valgrindArgs=[],
@@ -112,8 +111,8 @@ def _makeConfigTest(config):
             os.makedirs(supportDir)
 
     # Create a dummy test suite and single dummy test inside it. As part of
-    # the Lit configuration, automatically do the equivalent of 'mkdir %T'
-    # and 'rm -r %T' to avoid cluttering the build directory.
+    # the Lit configuration, automatically do the equivalent of 'mkdir %{temp}'
+    # and 'rm -r %{temp}' to avoid cluttering the build directory.
     suite = lit.Test.TestSuite("__config__", sourceRoot, execRoot, config)
     tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False, suffix=".cpp")
     tmp.close()
@@ -274,23 +273,41 @@ def hasAnyLocale(config, locales):
     %{exec} -- this means that the command may be executed on a remote host
     depending on the %{exec} substitution.
     """
-    program = """
+
+    # Convert the locale names into C string literals. We expect all currently
+    # known locale names to be printable ASCII and not contain awkward
+    # characters like \ or ", so this should be trivial.
+    assert all(
+        0x20 <= ord(ch) <= 0x7E and ch not in {'"', "\\"}
+        for locale in locales
+        for ch in locale
+    )
+    name_string_literals = ", ".join('"' + locale + '"' for locale in locales)
+
+    program = (
+        """
     #include <stddef.h>
     #if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_LOCALIZATION
       int main(int, char**) { return 1; }
     #else
       #include <locale.h>
-      int main(int argc, char** argv) {
-        for (int i = 1; i < argc; i++) {
-          if (::setlocale(LC_ALL, argv[i]) != NULL) {
+      static const char *const test_locale_names[] = {
+          """
+        + name_string_literals
+        + """, nullptr,
+      };
+      int main(int, char**) {
+        for (size_t i = 0; test_locale_names[i]; i++) {
+          if (::setlocale(LC_ALL, test_locale_names[i]) != NULL) {
             return 0;
           }
         }
         return 1;
       }
     #endif
-  """
-    return programSucceeds(config, program, args=[shlex.quote(l) for l in locales])
+    """
+    )
+    return programSucceeds(config, program)
 
 
 @_memoizeExpensiveOperation(lambda c, flags="": (c.substitutions, c.environment, flags))

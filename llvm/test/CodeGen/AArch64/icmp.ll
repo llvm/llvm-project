@@ -1228,18 +1228,18 @@ define <3 x i32> @v3i32_i32(<3 x i32> %a, <3 x i32> %b, <3 x i32> %d, <3 x i32> 
 ; CHECK-GI-LABEL: v3i32_i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    mov w9, #-1 // =0xffffffff
 ; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    mov v4.s[0], w8
-; CHECK-GI-NEXT:    mov v5.s[0], w9
+; CHECK-GI-NEXT:    fmov s4, w8
 ; CHECK-GI-NEXT:    mov v4.s[1], w8
-; CHECK-GI-NEXT:    mov v5.s[1], w9
 ; CHECK-GI-NEXT:    mov v4.s[2], w8
-; CHECK-GI-NEXT:    mov v5.s[2], w9
+; CHECK-GI-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov v1.s[1], w8
 ; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v4.4s
-; CHECK-GI-NEXT:    neg v1.4s, v4.4s
-; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v5.16b
+; CHECK-GI-NEXT:    neg v4.4s, v4.4s
+; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
@@ -1403,28 +1403,26 @@ define <2 x i128> @v2i128_i128(<2 x i128> %a, <2 x i128> %b, <2 x i128> %d, <2 x
 ;
 ; CHECK-GI-LABEL: v2i128_i128:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    cmp x1, x5
-; CHECK-GI-NEXT:    ldp x8, x9, [sp]
-; CHECK-GI-NEXT:    cset w10, lt
 ; CHECK-GI-NEXT:    cmp x0, x4
-; CHECK-GI-NEXT:    cset w13, lo
+; CHECK-GI-NEXT:    ldp x9, x10, [sp]
+; CHECK-GI-NEXT:    cset w8, lo
 ; CHECK-GI-NEXT:    cmp x1, x5
-; CHECK-GI-NEXT:    csel w10, w13, w10, eq
-; CHECK-GI-NEXT:    cmp x3, x7
-; CHECK-GI-NEXT:    ldp x13, x14, [sp, #32]
-; CHECK-GI-NEXT:    cset w15, lt
+; CHECK-GI-NEXT:    cset w11, lt
+; CHECK-GI-NEXT:    ldp x14, x15, [sp, #32]
+; CHECK-GI-NEXT:    csel w8, w8, w11, eq
 ; CHECK-GI-NEXT:    cmp x2, x6
-; CHECK-GI-NEXT:    ldp x11, x12, [sp, #16]
-; CHECK-GI-NEXT:    cset w16, lo
+; CHECK-GI-NEXT:    cset w11, lo
 ; CHECK-GI-NEXT:    cmp x3, x7
+; CHECK-GI-NEXT:    ldp x12, x13, [sp, #16]
+; CHECK-GI-NEXT:    cset w16, lt
 ; CHECK-GI-NEXT:    ldp x17, x18, [sp, #48]
-; CHECK-GI-NEXT:    csel w15, w16, w15, eq
-; CHECK-GI-NEXT:    tst w10, #0x1
-; CHECK-GI-NEXT:    csel x0, x8, x13, ne
-; CHECK-GI-NEXT:    csel x1, x9, x14, ne
-; CHECK-GI-NEXT:    tst w15, #0x1
-; CHECK-GI-NEXT:    csel x2, x11, x17, ne
-; CHECK-GI-NEXT:    csel x3, x12, x18, ne
+; CHECK-GI-NEXT:    csel w11, w11, w16, eq
+; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    csel x0, x9, x14, ne
+; CHECK-GI-NEXT:    csel x1, x10, x15, ne
+; CHECK-GI-NEXT:    tst w11, #0x1
+; CHECK-GI-NEXT:    csel x2, x12, x17, ne
+; CHECK-GI-NEXT:    csel x3, x13, x18, ne
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = icmp slt <2 x i128> %a, %b
@@ -2094,4 +2092,55 @@ define <2 x i1> @icmp_slt_v2i64_Zero_LHS(<2 x i64> %a) {
 ; CHECK-NEXT:    ret
     %c = icmp slt <2 x i64> <i64 0, i64 0>, %a
     ret <2 x i1> %c
+}
+
+; Test TST optimization for i8 sign bit testing with cross-type select
+; This tests the pattern: icmp slt i8 %val, 0; select i1 %cmp, i32 %a, i32 %b
+; The optimization should convert sxtb+cmp to tst for sign bit testing.
+
+define i32 @i8_signbit_tst_constants(i8 %x, i8 %y) {
+; CHECK-SD-LABEL: i8_signbit_tst_constants:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add w9, w0, w1
+; CHECK-SD-NEXT:    mov w8, #42 // =0x2a
+; CHECK-SD-NEXT:    tst w9, #0x80
+; CHECK-SD-NEXT:    mov w9, #20894 // =0x519e
+; CHECK-SD-NEXT:    csel w0, w9, w8, ne
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: i8_signbit_tst_constants:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add w8, w0, w1
+; CHECK-GI-NEXT:    mov w9, #42 // =0x2a
+; CHECK-GI-NEXT:    mov w10, #20894 // =0x519e
+; CHECK-GI-NEXT:    sxtb w8, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    csel w0, w10, w9, mi
+; CHECK-GI-NEXT:    ret
+  %add = add i8 %x, %y
+  %cmp = icmp slt i8 %add, 0
+  %sel = select i1 %cmp, i32 20894, i32 42
+  ret i32 %sel
+}
+
+; Test i8 sign bit testing with variable select values (problematic case)
+define i32 @i8_signbit_variables(i8 %x, i8 %y, i32 %a, i32 %b) {
+; CHECK-SD-LABEL: i8_signbit_variables:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add w8, w0, w1
+; CHECK-SD-NEXT:    tst w8, #0x80
+; CHECK-SD-NEXT:    csel w0, w2, w3, ne
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: i8_signbit_variables:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add w8, w0, w1
+; CHECK-GI-NEXT:    sxtb w8, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    csel w0, w2, w3, mi
+; CHECK-GI-NEXT:    ret
+  %add = add i8 %x, %y
+  %cmp = icmp slt i8 %add, 0
+  %sel = select i1 %cmp, i32 %a, i32 %b
+  ret i32 %sel
 }

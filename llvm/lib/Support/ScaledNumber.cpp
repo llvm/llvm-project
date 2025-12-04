@@ -41,7 +41,7 @@ std::pair<uint64_t, int16_t> ScaledNumbers::multiply64(uint64_t LHS,
 
   // Check whether the upper digit is empty.
   if (!Upper)
-    return std::make_pair(Lower, 0);
+    return {Lower, 0};
 
   // Shift as little as possible to maximize precision.
   unsigned LeadingZeros = llvm::countl_zero(Upper);
@@ -91,7 +91,7 @@ std::pair<uint64_t, int16_t> ScaledNumbers::divide64(uint64_t Dividend,
 
   // Check for powers of two.
   if (Divisor == 1)
-    return std::make_pair(Dividend, Shift);
+    return {Dividend, Shift};
 
   // Maximize size of dividend.
   if (int Zeros = llvm::countl_zero(Dividend)) {
@@ -240,8 +240,9 @@ std::string ScaledNumberBase::toString(uint64_t D, int16_t E, int Width,
   if (Above0) {
     appendNumber(Str, Above0);
     DigitsOut = Str.size();
-  } else
+  } else {
     appendDigit(Str, 0);
+  }
   std::reverse(Str.begin(), Str.end());
 
   // Return early if there's nothing after the decimal.
@@ -262,8 +263,9 @@ std::string ScaledNumberBase::toString(uint64_t D, int16_t E, int Width,
     if (ExtraShift) {
       --ExtraShift;
       Error *= 5;
-    } else
+    } else {
       Error *= 10;
+    }
 
     Below0 *= 10;
     Extra *= 10;

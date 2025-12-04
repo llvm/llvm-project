@@ -67,6 +67,11 @@ bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
                          DiagnosticsEngine *Diags = nullptr,
                          bool DefaultDiagColor = true);
 
+unsigned getOptimizationLevel(const llvm::opt::ArgList &Args, InputKind IK,
+                              DiagnosticsEngine &Diags);
+
+unsigned getOptimizationLevelSize(const llvm::opt::ArgList &Args);
+
 /// The base class of CompilerInvocation. It keeps individual option objects
 /// behind reference-counted pointers, which is useful for clients that want to
 /// keep select option objects alive (even after CompilerInvocation gets
@@ -80,7 +85,7 @@ protected:
   std::shared_ptr<TargetOptions> TargetOpts;
 
   /// Options controlling the diagnostic engine.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagnosticOpts;
+  std::shared_ptr<DiagnosticOptions> DiagnosticOpts;
 
   /// Options controlling the \#include directive.
   std::shared_ptr<HeaderSearchOptions> HSOpts;
@@ -89,7 +94,7 @@ protected:
   std::shared_ptr<PreprocessorOptions> PPOpts;
 
   /// Options controlling the static analyzer.
-  AnalyzerOptionsRef AnalyzerOpts;
+  std::shared_ptr<AnalyzerOptions> AnalyzerOpts;
 
   std::shared_ptr<MigratorOptions> MigratorOpts;
 
@@ -147,6 +152,13 @@ public:
   }
   /// @}
 
+  /// Visitation.
+  /// @{
+  /// Visits paths stored in the invocation. The callback may return true to
+  /// short-circuit the visitation, or return false to continue visiting.
+  void visitPaths(llvm::function_ref<bool(StringRef)> Callback) const;
+  /// @}
+
   /// Command line generation.
   /// @{
   using StringAllocator = llvm::function_ref<const char *(const Twine &)>;
@@ -180,6 +192,12 @@ public:
   ///
   /// This is a (less-efficient) wrapper over generateCC1CommandLine().
   std::vector<std::string> getCC1CommandLine() const;
+
+protected:
+  /// Visits paths stored in the invocation. This is generally unsafe to call
+  /// directly, and each sub-class need to ensure calling this doesn't violate
+  /// its invariants.
+  void visitPathsImpl(llvm::function_ref<bool(std::string &)> Predicate);
 
 private:
   /// Generate command line options from DiagnosticOptions.
@@ -265,20 +283,6 @@ public:
   }
   /// @}
 
-  /// Base class internals.
-  /// @{
-  using CompilerInvocationBase::LangOpts;
-  using CompilerInvocationBase::TargetOpts;
-  using CompilerInvocationBase::DiagnosticOpts;
-  std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() {
-    return HSOpts;
-  }
-  std::shared_ptr<PreprocessorOptions> getPreprocessorOptsPtr() {
-    return PPOpts;
-  }
-  std::shared_ptr<LangOptions> getLangOptsPtr() { return LangOpts; }
-  /// @}
-
   /// Create a compiler invocation from a list of input options.
   /// \returns true on success.
   ///
@@ -294,16 +298,6 @@ public:
                              ArrayRef<const char *> CommandLineArgs,
                              DiagnosticsEngine &Diags,
                              const char *Argv0 = nullptr);
-
-  /// Get the directory where the compiler headers
-  /// reside, relative to the compiler binary (found by the passed in
-  /// arguments).
-  ///
-  /// \param Argv0 - The program path (from argv[0]), for finding the builtin
-  /// compiler path.
-  /// \param MainAddr - The address of main (or some other function in the main
-  /// executable), for finding the builtin compiler path.
-  static std::string GetResourcesPath(const char *Argv0, void *MainAddr);
 
   /// Populate \p Opts with the default set of pointer authentication-related
   /// options given \p LangOpts and \p Triple.

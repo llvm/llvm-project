@@ -12,7 +12,6 @@
 // Simple predicates and look-up functions that are best defined
 // canonically for use in semantic checking.
 
-#include "flang/Common/Fortran.h"
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
@@ -23,6 +22,7 @@
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/Fortran.h"
 #include <functional>
 
 namespace Fortran::semantics {
@@ -42,14 +42,11 @@ const Scope &GetProgramUnitOrBlockConstructContaining(const Scope &);
 const Scope &GetProgramUnitOrBlockConstructContaining(const Symbol &);
 
 const Scope *FindModuleContaining(const Scope &);
+const Scope *FindModuleOrSubmoduleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
 
-const Symbol *FindPointerComponent(const Scope &);
-const Symbol *FindPointerComponent(const DerivedTypeSpec &);
-const Symbol *FindPointerComponent(const DeclTypeSpec &);
-const Symbol *FindPointerComponent(const Symbol &);
 const Symbol *FindInterface(const Symbol &);
 const Symbol *FindSubprogram(const Symbol &);
 const Symbol *FindOverriddenBinding(
@@ -110,6 +107,7 @@ bool IsBindCProcedure(const Scope &);
 // Returns a pointer to the function's symbol when true, else null
 const Symbol *IsFunctionResultWithSameNameAsFunction(const Symbol &);
 bool IsOrContainsEventOrLockComponent(const Symbol &);
+bool IsOrContainsNotifyComponent(const Symbol &);
 bool CanBeTypeBoundProc(const Symbol &);
 // Does a non-PARAMETER symbol have explicit initialization with =value or
 // =>target in its declaration (but not in a DATA statement)? (Being
@@ -185,9 +183,12 @@ const Symbol *HasImpureFinal(
     const Symbol &, std::optional<int> rank = std::nullopt);
 // Is this type finalizable or does it contain any polymorphic allocatable
 // ultimate components?
-bool MayRequireFinalization(const DerivedTypeSpec &derived);
+bool MayRequireFinalization(const DerivedTypeSpec &);
 // Does this type have an allocatable direct component?
-bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived);
+bool HasAllocatableDirectComponent(const DerivedTypeSpec &);
+// Does this type have any defined assignment at any level (or any polymorphic
+// allocatable)?
+bool MayHaveDefinedAssignment(const DerivedTypeSpec &);
 
 bool IsInBlankCommon(const Symbol &);
 bool IsAssumedLengthCharacter(const Symbol &);
@@ -198,6 +199,8 @@ bool IsAssumedType(const Symbol &);
 bool IsPolymorphic(const Symbol &);
 bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
+
+bool IsDeviceAllocatable(const Symbol &symbol);
 
 inline bool IsCUDADeviceContext(const Scope *scope) {
   if (scope) {
@@ -221,6 +224,24 @@ inline bool HasCUDAAttr(const Symbol &sym) {
   return false;
 }
 
+bool HasCUDAComponent(const Symbol &sym);
+
+inline bool IsCUDADevice(const Symbol &sym) {
+  if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+    return details->cudaDataAttr() &&
+        *details->cudaDataAttr() == common::CUDADataAttr::Device;
+  }
+  return false;
+}
+
+inline bool IsCUDAShared(const Symbol &sym) {
+  if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+    return details->cudaDataAttr() &&
+        *details->cudaDataAttr() == common::CUDADataAttr::Shared;
+  }
+  return false;
+}
+
 inline bool NeedCUDAAlloc(const Symbol &sym) {
   if (IsDummy(sym)) {
     return false;
@@ -230,6 +251,7 @@ inline bool NeedCUDAAlloc(const Symbol &sym) {
         (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
             *details->cudaDataAttr() == common::CUDADataAttr::Managed ||
             *details->cudaDataAttr() == common::CUDADataAttr::Unified ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Shared ||
             *details->cudaDataAttr() == common::CUDADataAttr::Pinned)) {
       return true;
     }
@@ -237,12 +259,16 @@ inline bool NeedCUDAAlloc(const Symbol &sym) {
   return false;
 }
 
+bool CanCUDASymbolBeGlobal(const Symbol &sym);
+
 const Scope *FindCUDADeviceContext(const Scope *);
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *);
 
+bool IsAccessible(const Symbol &, const Scope &);
+
 // Return an error if a symbol is not accessible from a scope
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
-    const Scope &, const Symbol &);
+    const Scope &, const Symbol &, bool inStructureConstructor = false);
 
 // Analysis of image control statements
 bool IsImageControlStmt(const parser::ExecutableConstruct &);
@@ -526,6 +552,9 @@ public:
     // having to check against an end() iterator.
     explicit operator bool() const { return !componentPath_.empty(); }
 
+    // Returns the current sequence of components, including parent components.
+    SymbolVector GetComponentPath() const;
+
     // Builds a designator name of the referenced component for messages.
     // The designator helps when the component referred to by the iterator
     // may be "buried" into other components. This gives the full
@@ -623,7 +652,13 @@ using PotentialAndPointerComponentIterator =
 // is returned. Otherwise, the returned iterator casts to true and can be
 // dereferenced.
 PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
+    const DerivedTypeSpec &, bool ignoreCoarrays = false);
+PotentialComponentIterator::const_iterator FindNotifyPotentialComponent(
+    const DerivedTypeSpec &, bool ignoreCoarrays = false);
+PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
     const DerivedTypeSpec &);
+PotentialAndPointerComponentIterator::const_iterator
+FindPointerPotentialComponent(const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindPointerUltimateComponent(
@@ -634,6 +669,8 @@ DirectComponentIterator::const_iterator FindAllocatableOrPointerDirectComponent(
     const DerivedTypeSpec &);
 PotentialComponentIterator::const_iterator
 FindPolymorphicAllocatablePotentialComponent(const DerivedTypeSpec &);
+UltimateComponentIterator::const_iterator
+FindCUDADeviceAllocatableUltimateComponent(const DerivedTypeSpec &);
 
 // The LabelEnforce class (given a set of labels) provides an error message if
 // there is a branch to a label which is not in the given set.
@@ -705,12 +742,6 @@ const DerivedTypeSpec *GetDtvArgDerivedType(const Symbol &);
 void WarnOnDeferredLengthCharacterScalar(SemanticsContext &, const SomeExpr *,
     parser::CharBlock at, const char *what);
 
-inline const parser::Name *getDesignatorNameIfDataRef(
-    const parser::Designator &designator) {
-  const auto *dataRef{std::get_if<parser::DataRef>(&designator.u)};
-  return dataRef ? std::get_if<parser::Name>(&dataRef->u) : nullptr;
-}
-
 bool CouldBeDataPointerValuedFunction(const Symbol *);
 
 template <typename R, typename T>
@@ -736,34 +767,7 @@ std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 // Check for ambiguous USE associations
 bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
 
-/// Checks if the assignment statement has a single variable on the RHS.
-inline bool checkForSingleVariableOnRHS(
-    const Fortran::parser::AssignmentStmt &assignmentStmt) {
-  const Fortran::parser::Expr &expr{
-      std::get<Fortran::parser::Expr>(assignmentStmt.t)};
-  const Fortran::common::Indirection<Fortran::parser::Designator> *designator =
-      std::get_if<Fortran::common::Indirection<Fortran::parser::Designator>>(
-          &expr.u);
-  return designator != nullptr;
-}
+bool AreSameModuleSymbol(const Symbol &, const Symbol &);
 
-/// Checks if the symbol on the LHS of the assignment statement is present in
-/// the RHS expression.
-inline bool checkForSymbolMatch(
-    const Fortran::parser::AssignmentStmt &assignmentStmt) {
-  const auto &var{std::get<Fortran::parser::Variable>(assignmentStmt.t)};
-  const auto &expr{std::get<Fortran::parser::Expr>(assignmentStmt.t)};
-  const auto *e{Fortran::semantics::GetExpr(expr)};
-  const auto *v{Fortran::semantics::GetExpr(var)};
-  auto varSyms{Fortran::evaluate::GetSymbolVector(*v)};
-  const Fortran::semantics::Symbol &varSymbol{*varSyms.front()};
-  for (const Fortran::semantics::Symbol &symbol :
-      Fortran::evaluate::GetSymbolVector(*e)) {
-    if (varSymbol == symbol) {
-      return true;
-    }
-  }
-  return false;
-}
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

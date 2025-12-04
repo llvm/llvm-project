@@ -14,8 +14,10 @@ set(STANDALONE_TEST_DEPENDS
         standalone-capi-test
         standalone-opt
         standalone-translate
-        StandalonePlugin
         )
+if(NOT WIN32)
+  list(APPEND STANDALONE_TEST_DEPENDS StandalonePlugin)
+endif()
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   list(APPEND STANDALONE_TEST_DEPENDS StandalonePythonModules)
 endif()

@@ -155,6 +155,12 @@ struct AliasAnalysis {
     /// Return true, if Target or Pointer attribute is set.
     bool isTargetOrPointer() const;
 
+    /// Return true, if Target attribute is set.
+    bool isTarget() const;
+
+    /// Return true, if Pointer attribute is set.
+    bool isPointer() const;
+
     bool isDummyArgument() const;
     bool isData() const;
     bool isBoxData() const;
@@ -198,6 +204,12 @@ struct AliasAnalysis {
   /// Return the modify-reference behavior of `op` on `location`.
   mlir::ModRefResult getModRef(mlir::Operation *op, mlir::Value location);
 
+  /// Return the modify-reference behavior of operations inside `region` on
+  /// `location`. Contrary to getModRef(operation, location), this will visit
+  /// nested regions recursively according to the HasRecursiveMemoryEffects
+  /// trait.
+  mlir::ModRefResult getModRef(mlir::Region &region, mlir::Value location);
+
   /// Return the memory source of a value.
   /// If getLastInstantiationPoint is true, the search for the source
   /// will stop at [hl]fir.declare if it represents a dummy
@@ -205,14 +217,14 @@ struct AliasAnalysis {
   fir::AliasAnalysis::Source getSource(mlir::Value,
                                        bool getLastInstantiationPoint = false);
 
+  /// Return true, if `ty` is a reference type to a boxed
+  /// POINTER object or a raw fir::PointerType.
+  static bool isPointerReference(mlir::Type ty);
+
 private:
   /// Return true, if `ty` is a reference type to an object of derived type
   /// that contains a component with POINTER attribute.
   static bool isRecordWithPointerComponent(mlir::Type ty);
-
-  /// Return true, if `ty` is a reference type to a boxed
-  /// POINTER object or a raw fir::PointerType.
-  static bool isPointerReference(mlir::Type ty);
 };
 
 inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,

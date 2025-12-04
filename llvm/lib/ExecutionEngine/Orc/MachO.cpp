@@ -10,8 +10,11 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/BinaryFormat/Magic.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Object/TapiUniversal.h"
 #include "llvm/Support/FileSystem.h"
 
 #define DEBUG_TYPE "orc"
@@ -229,18 +232,29 @@ getMachOSliceRangeForTriple(MemoryBufferRef UBBuf, const Triple &TT) {
   return getMachOSliceRangeForTriple(**UB, TT);
 }
 
-Error ForceLoadMachOArchiveMembers::operator()(MemoryBufferRef MemberBuf) {
-  if (!ObjCOnly)
-    return L.add(JD, MemoryBuffer::getMemBuffer(MemberBuf));
+Expected<bool> ForceLoadMachOArchiveMembers::operator()(
+    object::Archive &A, MemoryBufferRef MemberBuf, size_t Index) {
+
+  auto LoadMember = [&]() {
+    return StaticLibraryDefinitionGenerator::createMemberBuffer(A, MemberBuf,
+                                                                Index);
+  };
+
+  if (!ObjCOnly) {
+    // If we're loading all files then just load the buffer immediately. Return
+    // false to indicate that there's no further loading to do here.
+    if (auto Err = L.add(JD, LoadMember()))
+      return Err;
+    return false;
+  }
 
   // We need to check whether this archive member contains any Objective-C
   // or Swift metadata.
-
   auto Obj = object::ObjectFile::createObjectFile(MemberBuf);
   if (!Obj) {
-    // We silently ignore invalid files.
+    // Invalid files are not loadable, but don't invalidate the archive.
     consumeError(Obj.takeError());
-    return Error::success();
+    return false;
   }
 
   if (auto *MachOObj = dyn_cast<object::MachOObjectFile>(&**Obj)) {
@@ -253,14 +267,191 @@ Error ForceLoadMachOArchiveMembers::operator()(MemoryBufferRef MemberBuf) {
             *SecName == "__objc_clsrolist" || *SecName == "__objc_catlist" ||
             *SecName == "__objc_catlist2" || *SecName == "__objc_nlcatlist" ||
             (SegName == "__TEXT" && (*SecName).starts_with("__swift") &&
-             *SecName != "__swift_modhash"))
-          return L.add(JD, MemoryBuffer::getMemBuffer(MemberBuf));
+             *SecName != "__swift_modhash")) {
+          if (auto Err = L.add(JD, LoadMember()))
+            return Err;
+          return false;
+        }
       } else
         return SecName.takeError();
     }
   }
 
-  return Error::success();
+  // This is an object file but we didn't load it, so return true to indicate
+  // that it's still loadable.
+  return true;
+}
+
+SmallVector<std::pair<uint32_t, uint32_t>>
+noFallbackArchs(uint32_t CPUType, uint32_t CPUSubType) {
+  SmallVector<std::pair<uint32_t, uint32_t>> Result;
+  Result.push_back({CPUType, CPUSubType});
+  return Result;
+}
+
+SmallVector<std::pair<uint32_t, uint32_t>>
+standardMachOFallbackArchs(uint32_t CPUType, uint32_t CPUSubType) {
+  SmallVector<std::pair<uint32_t, uint32_t>> Archs;
+
+  // Match given CPU type/subtype first.
+  Archs.push_back({CPUType, CPUSubType});
+
+  switch (CPUType) {
+  case MachO::CPU_TYPE_ARM64:
+    // Handle arm64 variants.
+    switch (CPUSubType) {
+    case MachO::CPU_SUBTYPE_ARM64_ALL:
+      Archs.push_back({CPUType, MachO::CPU_SUBTYPE_ARM64E});
+      break;
+    default:
+      break;
+    }
+    break;
+  default:
+    break;
+  }
+
+  return Archs;
+}
+
+Expected<SymbolNameSet>
+getDylibInterfaceFromDylib(ExecutionSession &ES, Twine Path,
+                           GetFallbackArchsFn GetFallbackArchs) {
+  auto InitCPUType = MachO::getCPUType(ES.getTargetTriple());
+  if (!InitCPUType)
+    return InitCPUType.takeError();
+
+  auto InitCPUSubType = MachO::getCPUSubType(ES.getTargetTriple());
+  if (!InitCPUSubType)
+    return InitCPUSubType.takeError();
+
+  auto Buf = MemoryBuffer::getFile(Path);
+  if (!Buf)
+    return createFileError(Path, Buf.getError());
+
+  auto BinFile = object::createBinary((*Buf)->getMemBufferRef());
+  if (!BinFile)
+    return BinFile.takeError();
+
+  std::unique_ptr<object::MachOObjectFile> MachOFile;
+  if (isa<object::MachOObjectFile>(**BinFile)) {
+    MachOFile.reset(dyn_cast<object::MachOObjectFile>(BinFile->release()));
+
+    // TODO: Check that dylib arch is compatible.
+  } else if (auto *MachOUni =
+                 dyn_cast<object::MachOUniversalBinary>(BinFile->get())) {
+    SmallVector<std::pair<uint32_t, uint32_t>> ArchsToTry;
+    if (GetFallbackArchs)
+      ArchsToTry = GetFallbackArchs(*InitCPUType, *InitCPUSubType);
+    else
+      ArchsToTry.push_back({*InitCPUType, *InitCPUSubType});
+
+    for (auto &[CPUType, CPUSubType] : ArchsToTry) {
+      for (auto &O : MachOUni->objects()) {
+        if (O.getCPUType() == CPUType &&
+            (O.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK) == CPUSubType) {
+          if (auto Obj = O.getAsObjectFile())
+            MachOFile = std::move(*Obj);
+          else
+            return Obj.takeError();
+          break;
+        }
+      }
+      if (MachOFile) // If found, break out.
+        break;
+    }
+    if (!MachOFile)
+      return make_error<StringError>(
+          "MachO universal binary at " + Path +
+              " does not contain a compatible slice for " +
+              ES.getTargetTriple().str(),
+          inconvertibleErrorCode());
+  } else
+    return make_error<StringError>("File at " + Path + " is not a MachO",
+                                   inconvertibleErrorCode());
+
+  if (MachOFile->getHeader().filetype != MachO::MH_DYLIB)
+    return make_error<StringError>("MachO at " + Path + " is not a dylib",
+                                   inconvertibleErrorCode());
+
+  SymbolNameSet Symbols;
+  for (auto &Sym : MachOFile->symbols()) {
+    if (auto Name = Sym.getName())
+      Symbols.insert(ES.intern(*Name));
+    else
+      return Name.takeError();
+  }
+
+  return std::move(Symbols);
+}
+
+Expected<SymbolNameSet>
+getDylibInterfaceFromTapiFile(ExecutionSession &ES, Twine Path,
+                              GetFallbackArchsFn GetFallbackArchs) {
+  SymbolNameSet Symbols;
+
+  auto TapiFileBuffer = MemoryBuffer::getFile(Path);
+  if (!TapiFileBuffer)
+    return createFileError(Path, TapiFileBuffer.getError());
+
+  auto Tapi =
+      object::TapiUniversal::create((*TapiFileBuffer)->getMemBufferRef());
+  if (!Tapi)
+    return Tapi.takeError();
+
+  auto InitCPUType = MachO::getCPUType(ES.getTargetTriple());
+  if (!InitCPUType)
+    return InitCPUType.takeError();
+
+  auto InitCPUSubType = MachO::getCPUSubType(ES.getTargetTriple());
+  if (!InitCPUSubType)
+    return InitCPUSubType.takeError();
+
+  SmallVector<std::pair<uint32_t, uint32_t>> ArchsToTry;
+  if (GetFallbackArchs)
+    ArchsToTry = GetFallbackArchs(*InitCPUType, *InitCPUSubType);
+  else
+    ArchsToTry.push_back({*InitCPUType, *InitCPUSubType});
+
+  auto &IF = (*Tapi)->getInterfaceFile();
+
+  auto ArchSet = IF.getArchitectures();
+  for (auto [CPUType, CPUSubType] : ArchsToTry) {
+    auto A = MachO::getArchitectureFromCpuType(CPUType, CPUSubType);
+    if (ArchSet.has(A)) {
+      if (auto Interface = IF.extract(A)) {
+        for (auto *Sym : (*Interface)->exports())
+          Symbols.insert(ES.intern(Sym->getName()));
+        return Symbols;
+      } else
+        return Interface.takeError();
+    }
+  }
+
+  return make_error<StringError>(
+      "MachO interface file at " + Path +
+          " does not contain a compatible slice for " +
+          ES.getTargetTriple().str(),
+      inconvertibleErrorCode());
+}
+
+Expected<SymbolNameSet> getDylibInterface(ExecutionSession &ES, Twine Path,
+                                          GetFallbackArchsFn GetFallbackArchs) {
+  file_magic Magic;
+  if (auto EC = identify_magic(Path, Magic))
+    return createFileError(Path, EC);
+
+  switch (Magic) {
+  case file_magic::macho_universal_binary:
+  case file_magic::macho_dynamically_linked_shared_lib:
+    return getDylibInterfaceFromDylib(ES, Path, std::move(GetFallbackArchs));
+  case file_magic::tapi_file:
+    return getDylibInterfaceFromTapiFile(ES, Path, std::move(GetFallbackArchs));
+  default:
+    return make_error<StringError>("Cannot get interface for " + Path +
+                                       " unrecognized file type",
+                                   inconvertibleErrorCode());
+  }
 }
 
 } // End namespace orc.

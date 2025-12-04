@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_VOIDIFY_H
-#define _LIBCPP___MEMORY_VOIDIFY_H
+#ifndef _LIBCPP___CXX03___MEMORY_VOIDIFY_H
+#define _LIBCPP___CXX03___MEMORY_VOIDIFY_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/addressof.h>
@@ -20,11 +20,11 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <typename _Tp>
-_LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void* __voidify(_Tp& __from) {
+_LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI void* __voidify(_Tp& __from) {
   // Cast away cv-qualifiers to allow modifying elements of a range through const iterators.
   return const_cast<void*>(static_cast<const volatile void*>(std::addressof(__from)));
 }
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_VOIDIFY_H
+#endif // _LIBCPP___CXX03___MEMORY_VOIDIFY_H

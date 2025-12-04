@@ -83,7 +83,7 @@ public:
 
   /// Add the parameters of Source to this result.
   void addParamsFrom(const ValidatorResult &Source) {
-    Parameters.insert(Source.Parameters.begin(), Source.Parameters.end());
+    Parameters.insert_range(Source.Parameters);
   }
 
   /// Merge a result.
@@ -403,8 +403,8 @@ public:
     if (!PollyAllowUnsignedOperations)
       return ValidatorResult(SCEVType::INVALID);
 
-    auto *Dividend = Expr->getLHS();
-    auto *Divisor = Expr->getRHS();
+    const SCEV *Dividend = Expr->getLHS();
+    const SCEV *Divisor = Expr->getRHS();
     return visitDivision(Dividend, Divisor, Expr);
   }
 
@@ -412,8 +412,8 @@ public:
     assert(SDiv->getOpcode() == Instruction::SDiv &&
            "Assumed SDiv instruction!");
 
-    auto *Dividend = SE.getSCEV(SDiv->getOperand(0));
-    auto *Divisor = SE.getSCEV(SDiv->getOperand(1));
+    const SCEV *Dividend = SE.getSCEV(SDiv->getOperand(0));
+    const SCEV *Divisor = SE.getSCEV(SDiv->getOperand(1));
     return visitDivision(Dividend, Divisor, Expr, SDiv);
   }
 
@@ -427,7 +427,7 @@ public:
       return visitGenericInst(SRem, S);
 
     auto *Dividend = SRem->getOperand(0);
-    auto *DividendSCEV = SE.getSCEV(Dividend);
+    const SCEV *DividendSCEV = SE.getSCEV(Dividend);
     return visit(DividendSCEV);
   }
 
@@ -566,11 +566,11 @@ public:
                   Inst->getOpcode() != Instruction::SDiv))
       return false;
 
-    auto *Dividend = SE.getSCEV(Inst->getOperand(1));
+    const SCEV *Dividend = SE.getSCEV(Inst->getOperand(1));
     if (!isa<SCEVConstant>(Dividend))
       return false;
 
-    auto *Divisor = SE.getSCEV(Inst->getOperand(0));
+    const SCEV *Divisor = SE.getSCEV(Inst->getOperand(0));
     SCEVFindValues FindValues(SE, Values);
     SCEVTraversal<SCEVFindValues> ST(FindValues);
     ST.visitAll(Dividend);
@@ -623,7 +623,7 @@ bool polly::isAffineExpr(const Region *R, llvm::Loop *Scope, const SCEV *Expr,
 
 static bool isAffineExpr(Value *V, const Region *R, Loop *Scope,
                          ScalarEvolution &SE, ParameterSetTy &Params) {
-  auto *E = SE.getSCEV(V);
+  const SCEV *E = SE.getSCEV(V);
   if (isa<SCEVCouldNotCompute>(E))
     return false;
 
@@ -633,7 +633,7 @@ static bool isAffineExpr(Value *V, const Region *R, Loop *Scope,
     return false;
 
   auto ResultParams = Result.getParameters();
-  Params.insert(ResultParams.begin(), ResultParams.end());
+  Params.insert_range(ResultParams);
 
   return true;
 }
@@ -684,10 +684,10 @@ polly::extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
 
   auto *AddRec = dyn_cast<SCEVAddRecExpr>(S);
   if (AddRec) {
-    auto *StartExpr = AddRec->getStart();
+    const SCEV *StartExpr = AddRec->getStart();
     if (StartExpr->isZero()) {
       auto StepPair = extractConstantFactor(AddRec->getStepRecurrence(SE), SE);
-      auto *LeftOverAddRec =
+      const SCEV *LeftOverAddRec =
           SE.getAddRecExpr(StartExpr, StepPair.second, AddRec->getLoop(),
                            AddRec->getNoWrapFlags());
       return std::make_pair(StepPair.first, LeftOverAddRec);
@@ -717,7 +717,7 @@ polly::extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
         return std::make_pair(ConstPart, S);
     }
 
-    auto *NewAdd = SE.getAddExpr(LeftOvers, Add->getNoWrapFlags());
+    const SCEV *NewAdd = SE.getAddExpr(LeftOvers, Add->getNoWrapFlags());
     return std::make_pair(Factor, NewAdd);
   }
 
@@ -726,7 +726,7 @@ polly::extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
     return std::make_pair(ConstPart, S);
 
   SmallVector<const SCEV *, 4> LeftOvers;
-  for (auto *Op : Mul->operands())
+  for (const SCEV *Op : Mul->operands())
     if (isa<SCEVConstant>(Op))
       ConstPart = cast<SCEVConstant>(SE.getMulExpr(ConstPart, Op));
     else

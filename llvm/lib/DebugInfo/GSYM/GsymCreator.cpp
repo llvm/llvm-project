@@ -200,8 +200,8 @@ void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {
   if (Funcs.size() < 2)
     return;
 
-  // Sort the function infos by address range first
-  llvm::sort(Funcs);
+  // Sort the function infos by address range first, preserving input order
+  llvm::stable_sort(Funcs);
   std::vector<FunctionInfo> TopLevelFuncs;
 
   // Add the first function info to the top level functions
@@ -275,8 +275,9 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
   // object.
   if (!IsSegment) {
     if (NumBefore > 1) {
-      // Sort function infos so we can emit sorted functions.
-      llvm::sort(Funcs);
+      // Sort function infos so we can emit sorted functions. Use stable sort to
+      // ensure determinism.
+      llvm::stable_sort(Funcs);
       std::vector<FunctionInfo> FinalizedFuncs;
       FinalizedFuncs.reserve(Funcs.size());
       FinalizedFuncs.emplace_back(std::move(Funcs.front()));
@@ -551,7 +552,7 @@ llvm::Error GsymCreator::saveSegments(StringRef Path,
         createSegment(SegmentSize, FuncIdx);
     if (ExpectedGC) {
       GsymCreator *GC = ExpectedGC->get();
-      if (GC == NULL)
+      if (!GC)
         break; // We had not more functions to encode.
       // Don't collect any messages at all
       OutputAggregator Out(nullptr);

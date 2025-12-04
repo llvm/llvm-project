@@ -87,6 +87,41 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pkey_alloc
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_alloc
+)
+
+add_entrypoint_object(
+  pkey_free
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_free
+)
+
+add_entrypoint_object(
+  pkey_get
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_get
+)
+
+add_entrypoint_object(
+  pkey_mprotect
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_mprotect
+)
+
+add_entrypoint_object(
+  pkey_set
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pkey_set
+)
+
+add_entrypoint_object(
   remap_file_pages
   ALIAS
   DEPENDS
@@ -113,9 +148,3 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.mremap
 )
-
-add_entrypoint_object(
-  process_mrelease 
-  ALIAS 
-  DEPENDS
-    .${LIBC_TARGET_OS}.process_mrelease)

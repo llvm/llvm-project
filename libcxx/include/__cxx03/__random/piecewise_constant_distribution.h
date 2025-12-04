@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_PIECEWISE_CONSTANT_DISTRIBUTION_H
-#define _LIBCPP___RANDOM_PIECEWISE_CONSTANT_DISTRIBUTION_H
+#ifndef _LIBCPP___CXX03___RANDOM_PIECEWISE_CONSTANT_DISTRIBUTION_H
+#define _LIBCPP___CXX03___RANDOM_PIECEWISE_CONSTANT_DISTRIBUTION_H
 
 #include <__cxx03/__algorithm/upper_bound.h>
 #include <__cxx03/__config>
@@ -46,10 +46,6 @@ public:
     _LIBCPP_HIDE_FROM_ABI param_type();
     template <class _InputIteratorB, class _InputIteratorW>
     _LIBCPP_HIDE_FROM_ABI param_type(_InputIteratorB __f_b, _InputIteratorB __l_b, _InputIteratorW __f_w);
-#ifndef _LIBCPP_CXX03_LANG
-    template <class _UnaryOperation>
-    _LIBCPP_HIDE_FROM_ABI param_type(initializer_list<result_type> __bl, _UnaryOperation __fw);
-#endif // _LIBCPP_CXX03_LANG
     template <class _UnaryOperation>
     _LIBCPP_HIDE_FROM_ABI param_type(size_t __nw, result_type __xmin, result_type __xmax, _UnaryOperation __fw);
     _LIBCPP_HIDE_FROM_ABI param_type(param_type const&) = default;
@@ -87,12 +83,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   piecewise_constant_distribution(_InputIteratorB __f_b, _InputIteratorB __l_b, _InputIteratorW __f_w)
       : __p_(__f_b, __l_b, __f_w) {}
-
-#ifndef _LIBCPP_CXX03_LANG
-  template <class _UnaryOperation>
-  _LIBCPP_HIDE_FROM_ABI piecewise_constant_distribution(initializer_list<result_type> __bl, _UnaryOperation __fw)
-      : __p_(__bl, __fw) {}
-#endif // _LIBCPP_CXX03_LANG
 
   template <class _UnaryOperation>
   _LIBCPP_HIDE_FROM_ABI
@@ -194,29 +184,6 @@ piecewise_constant_distribution<_RealType>::param_type::param_type(
   }
 }
 
-#ifndef _LIBCPP_CXX03_LANG
-
-template <class _RealType>
-template <class _UnaryOperation>
-piecewise_constant_distribution<_RealType>::param_type::param_type(
-    initializer_list<result_type> __bl, _UnaryOperation __fw)
-    : __b_(__bl.begin(), __bl.end()) {
-  if (__b_.size() < 2) {
-    __b_.resize(2);
-    __b_[0] = 0;
-    __b_[1] = 1;
-    __densities_.assign(1, 1.0);
-    __areas_.assign(1, 0.0);
-  } else {
-    __densities_.reserve(__b_.size() - 1);
-    for (size_t __i = 0; __i < __b_.size() - 1; ++__i)
-      __densities_.push_back(__fw((__b_[__i + 1] + __b_[__i]) * .5));
-    __init();
-  }
-}
-
-#endif // _LIBCPP_CXX03_LANG
-
 template <class _RealType>
 template <class _UnaryOperation>
 piecewise_constant_distribution<_RealType>::param_type::param_type(
@@ -299,4 +266,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_PIECEWISE_CONSTANT_DISTRIBUTION_H
+#endif // _LIBCPP___CXX03___RANDOM_PIECEWISE_CONSTANT_DISTRIBUTION_H

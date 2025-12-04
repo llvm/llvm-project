@@ -52,7 +52,7 @@ void test02() {
 // CHECK-NEXT:   [[X:%.*]] = tail call <[[#div(VBITS, 32)]] x i32> @llvm.vector.extract.v[[#div(VBITS, 32)]]i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE:%.*]], i64 0)
 // CHECK-NEXT:   [[Y:%.*]] = tail call <[[#div(VBITS, 32)]] x i32> @llvm.vector.extract.v[[#div(VBITS, 32)]]i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE1:%.*]], i64 0)
 // CHECK-NEXT:   [[ADD:%.*]] = add <[[#div(VBITS, 32)]] x i32> [[Y]], [[X]]
-// CHECK-NEXT:   [[CASTSCALABLESVE:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v[[#div(VBITS, 32)]]i32(<vscale x 4 x i32> undef, <[[#div(VBITS, 32)]] x i32> [[ADD]], i64 0)
+// CHECK-NEXT:   [[CASTSCALABLESVE:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v[[#div(VBITS, 32)]]i32(<vscale x 4 x i32> poison, <[[#div(VBITS, 32)]] x i32> [[ADD]], i64 0)
 // CHECK-NEXT:   ret <vscale x 4 x i32> [[CASTSCALABLESVE]]
 typedef svint32_t vec __attribute__((arm_sve_vector_bits(N)));
 auto f(vec x, vec y) { return x + y; } // Returns a vec.
@@ -73,10 +73,10 @@ typedef svint16_t vec2 __attribute__((arm_sve_vector_bits(N)));
 // CHECK128-NEXT:   ret void
 // CHECKWIDE-NEXT:   [[INDIRECT_ARG_TEMP:%.*]] = alloca <[[#div(VBITS, 16)]] x i16>, align 16
 // CHECKWIDE-NEXT:   [[X:%.*]] = tail call <[[#div(VBITS, 16)]] x i16> @llvm.vector.extract.v[[#div(VBITS, 16)]]i16.nxv8i16(<vscale x 8 x i16> [[X_COERCE:%.*]], i64 0)
-// CHECKWIDE-NEXT:   call void @llvm.lifetime.start.p0(i64 [[SIZE:[0-9]+]], ptr nonnull [[INDIRECT_ARG_TEMP]]) #[[ATTR6:[0-9]+]]
+// CHECKWIDE-NEXT:   call void @llvm.lifetime.start.p0(ptr nonnull [[INDIRECT_ARG_TEMP]]) #[[ATTR6:[0-9]+]]
 // CHECKWIDE-NEXT:   store <[[#div(VBITS, 16)]] x i16> [[X]], ptr [[INDIRECT_ARG_TEMP]], align 16, [[TBAA6:!tbaa !.*]]
-// CHECKWIDE-NEXT:   call void @_Z1fDv[[#div(VBITS, 16)]]_s(ptr noundef nonnull [[INDIRECT_ARG_TEMP]]) [[ATTR5:#.*]]
-// CHECKWIDE-NEXT:   call void @llvm.lifetime.end.p0(i64 [[SIZE]], ptr nonnull [[INDIRECT_ARG_TEMP]]) #[[ATTR6:[0-9]+]]
+// CHECKWIDE-NEXT:   call void @_Z1fDv[[#div(VBITS, 16)]]_s(ptr dead_on_return noundef nonnull [[INDIRECT_ARG_TEMP]]) [[ATTR5:#.*]]
+// CHECKWIDE-NEXT:   call void @llvm.lifetime.end.p0(ptr nonnull [[INDIRECT_ARG_TEMP]]) #[[ATTR6:[0-9]+]]
 // CHECKWIDE-NEXT:   ret void
 void g(vec2 x) { f(x); } // OK
 #endif

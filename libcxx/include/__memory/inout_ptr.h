@@ -35,7 +35,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 template <class _Smart, class _Pointer, class... _Args>
-class _LIBCPP_TEMPLATE_VIS inout_ptr_t {
+class inout_ptr_t {
   static_assert(!__is_specialization_v<_Smart, shared_ptr>, "std::shared_ptr<> is not supported with std::inout_ptr.");
 
 public:
@@ -96,7 +96,7 @@ private:
 };
 
 template <class _Pointer = void, class _Smart, class... _Args>
-_LIBCPP_HIDE_FROM_ABI auto inout_ptr(_Smart& __s, _Args&&... __args) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto inout_ptr(_Smart& __s, _Args&&... __args) {
   using _Ptr = conditional_t<is_void_v<_Pointer>, __pointer_of_t<_Smart>, _Pointer>;
   return std::inout_ptr_t<_Smart, _Ptr, _Args&&...>(__s, std::forward<_Args>(__args)...);
 }
