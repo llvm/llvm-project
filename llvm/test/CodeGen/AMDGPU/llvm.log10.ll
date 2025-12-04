@@ -506,7 +506,7 @@ define amdgpu_kernel void @s_log10_contract_f32(ptr addrspace(1) %out, float %in
 ; GFX1100-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v1, v1
-; GFX1100-SDAG-NEXT:    s_waitcnt_depctr 0xfff
+; GFX1100-SDAG-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-SDAG-NEXT:    v_mul_f32_e32 v2, 0x3e9a209a, v1
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v1|
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v3, 0x3e9a209a, v1, -v2
@@ -532,7 +532,7 @@ define amdgpu_kernel void @s_log10_contract_f32(ptr addrspace(1) %out, float %in
 ; GFX1100-GISEL-NEXT:    v_ldexp_f32 v0, s0, v0
 ; GFX1100-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1100-GISEL-NEXT:    v_log_f32_e32 v0, v0
-; GFX1100-GISEL-NEXT:    s_waitcnt_depctr 0xfff
+; GFX1100-GISEL-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-GISEL-NEXT:    v_mul_f32_e32 v1, 0x3e9a209a, v0
 ; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
