@@ -1014,4 +1014,23 @@ void bad_macro_ifdef_statement_2() {
 #endif
 }
 
+#define ASSERT(expr)
+
+void bad_macro_assert() {
+    int i1 = 0;
+    ASSERT(i1 != 0);
+    if (i1 == 0) {
+// CHECK-MESSAGES-NOT: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement
+        do_some();
+    }
+    int i2 = 0;
+    ASSERT(i2 != 0);
+    switch (i2) {
+// CHECK-MESSAGES-NOT: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init
+        case 0:
+            do_some();
+            break;
+    }
+}
+
 
