@@ -70,7 +70,7 @@ public:
 
 private:
   TypeInfo convertTypeToInfo(Type type) {
-    return {type.getTypeID(), type.getIntOrFloatBitWidth()};
+    return {type.getTypeID(), tosa::getBitWidth(type)};
   }
 
   TypeInfo convertValueToInfo(Value value) {

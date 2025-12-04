@@ -159,8 +159,6 @@ std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
 }
 }
 
-constexpr uint64_t DataAggregator::KernelBaseAddr;
-
 DataAggregator::~DataAggregator() { deleteTempFiles(); }
 
 namespace {
@@ -564,13 +562,18 @@ void DataAggregator::imputeFallThroughs() {
     // Skip fall-throughs in external code.
     if (Trace.From == Trace::EXTERNAL)
       continue;
-    std::pair CurrentBranch(Trace.Branch, Trace.From);
+    if (std::pair CurrentBranch(Trace.Branch, Trace.From);
+        CurrentBranch != PrevBranch) {
+      // New group: reset aggregates.
+      AggregateCount = AggregateFallthroughSize = 0;
+      PrevBranch = CurrentBranch;
+    }
     // BR_ONLY must be the last trace in the group
     if (Trace.To == Trace::BR_ONLY) {
       // If the group is not empty, use aggregate values, otherwise 0-length
       // for unconditional jumps (call/ret/uncond branch) or 1-length for others
       uint64_t InferredBytes =
-          PrevBranch == CurrentBranch
+          AggregateFallthroughSize
               ? AggregateFallthroughSize / AggregateCount
               : !checkUnconditionalControlTransfer(Trace.From);
       Trace.To = Trace.From + InferredBytes;
@@ -578,16 +581,11 @@ void DataAggregator::imputeFallThroughs() {
                         << " bytes)\n");
       ++InferredTraces;
     } else {
-      // Trace with a valid fall-through
-      // New group: reset aggregates.
-      if (CurrentBranch != PrevBranch)
-        AggregateCount = AggregateFallthroughSize = 0;
       // Only use valid fall-through lengths
       if (Trace.To != Trace::EXTERNAL)
         AggregateFallthroughSize += (Trace.To - Trace.From) * Info.TakenCount;
       AggregateCount += Info.TakenCount;
     }
-    PrevBranch = CurrentBranch;
   }
   if (opts::Verbosity >= 1)
     outs() << "BOLT-INFO: imputed " << InferredTraces << " traces\n";
@@ -1321,7 +1319,8 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     }
 
     using SSI = StringSwitch<int>;
-    AddrNum = SSI(Str).Cases("T", "R", 3).Case("S", 1).Case("E", 0).Default(2);
+    AddrNum =
+        SSI(Str).Cases({"T", "R"}, 3).Case("S", 1).Case("E", 0).Default(2);
     CounterNum = SSI(Str).Case("B", 2).Case("E", 0).Default(1);
   }
 
@@ -2215,7 +2214,7 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
     OutFile << "boltedcollection\n";
   if (opts::BasicAggregation) {
     OutFile << "no_lbr";
-    for (const StringMapEntry<std::nullopt_t> &Entry : EventNames)
+    for (const StringMapEntry<EmptyStringSetTag> &Entry : EventNames)
       OutFile << " " << Entry.getKey();
     OutFile << "\n";
 
@@ -2291,7 +2290,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
 
   ListSeparator LS(",");
   raw_string_ostream EventNamesOS(BP.Header.EventNames);
-  for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames)
+  for (const StringMapEntry<EmptyStringSetTag> &EventEntry : EventNames)
     EventNamesOS << LS << EventEntry.first().str();
 
   BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_BASIC
@@ -2398,10 +2397,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
             PseudoProbeDecoder->getAddress2ProbesMap();
         BinaryFunction::FragmentsSetTy Fragments(BF->Fragments);
         Fragments.insert(BF);
-        DenseMap<
-            uint32_t,
-            std::vector<std::reference_wrapper<const MCDecodedPseudoProbe>>>
-            BlockProbes;
+        DenseMap<uint32_t, YAMLProfileWriter::BlockProbeCtx> BlockCtx;
         for (const BinaryFunction *F : Fragments) {
           const uint64_t FuncAddr = F->getAddress();
           for (const MCDecodedPseudoProbe &Probe :
@@ -2409,15 +2405,14 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
             const uint32_t OutputAddress = Probe.getAddress();
             const uint32_t InputOffset = BAT->translate(
                 FuncAddr, OutputAddress - FuncAddr, /*IsBranchSrc=*/true);
-            const unsigned BlockIndex = getBlock(InputOffset).second;
-            BlockProbes[BlockIndex].emplace_back(Probe);
+            const auto &[BlockOffset, BlockIndex] = getBlock(InputOffset);
+            BlockCtx[BlockIndex].addBlockProbe(InlineTreeNodeId, Probe,
+                                               InputOffset - BlockOffset);
           }
         }
 
-        for (auto &[Block, Probes] : BlockProbes) {
-          YamlBF.Blocks[Block].PseudoProbes =
-              YAMLProfileWriter::writeBlockProbes(Probes, InlineTreeNodeId);
-        }
+        for (auto &[Block, Ctx] : BlockCtx)
+          Ctx.finalize(YamlBF.Blocks[Block]);
       }
       // Skip printing if there's no profile data
       llvm::erase_if(

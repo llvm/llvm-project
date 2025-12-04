@@ -15,11 +15,10 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_REPRESENTATION_H
 
 #include "clang/AST/Type.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Tooling/StandaloneExecution.h"
-#include "llvm/ADT/APSInt.h"
+#include "clang/Tooling/Execution.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include <array>
 #include <optional>
 #include <string>
@@ -437,10 +436,6 @@ struct FunctionInfo : public SymbolInfo {
   // (AS_public = 0, AS_protected = 1, AS_private = 2, AS_none = 3)
   AccessSpecifier Access = AccessSpecifier::AS_public;
 
-  // Full qualified name of this function, including namespaces and template
-  // specializations.
-  SmallString<16> FullName;
-
   // Function Prototype
   SmallString<256> Prototype;
 
@@ -459,10 +454,6 @@ struct RecordInfo : public SymbolInfo {
 
   // Type of this record (struct, class, union, interface).
   TagTypeKind TagType = TagTypeKind::Struct;
-
-  // Full qualified name of this record, including namespaces and template
-  // specializations.
-  SmallString<16> FullName;
 
   // When present, this record is a template or specialization.
   std::optional<TemplateInfo> Template;
@@ -608,17 +599,13 @@ llvm::Expected<std::unique_ptr<Info>>
 mergeInfos(std::vector<std::unique_ptr<Info>> &Values);
 
 struct ClangDocContext {
-  ClangDocContext() = default;
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
                   bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
                   StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
                   StringRef Base, std::vector<std::string> UserStylesheets,
-                  bool FTimeTrace = false);
+                  clang::DiagnosticsEngine &Diags, bool FTimeTrace = false);
   tooling::ExecutionContext *ECtx;
-  std::string ProjectName; // Name of project clang-doc is documenting.
-  bool PublicOnly; // Indicates if only public declarations are documented.
-  bool FTimeTrace; // Indicates if ftime trace is turned on
-  int Granularity; // Granularity of ftime trace
+  std::string ProjectName;  // Name of project clang-doc is documenting.
   std::string OutDirectory; // Directory for outputting generated files.
   std::string SourceRoot;   // Directory where processed files are stored. Links
                             // to definition locations will only be generated if
@@ -637,7 +624,12 @@ struct ClangDocContext {
   // Maps mustache template types to specific mustache template files.
   // Ex.    comment-template -> /path/to/comment-template.mustache
   llvm::StringMap<std::string> MustacheTemplates;
+  // A pointer to a DiagnosticsEngine for error reporting.
+  clang::DiagnosticsEngine &Diags;
   Index Idx;
+  int Granularity; // Granularity of ftime trace
+  bool PublicOnly; // Indicates if only public declarations are documented.
+  bool FTimeTrace; // Indicates if ftime trace is turned on
 };
 
 } // namespace doc

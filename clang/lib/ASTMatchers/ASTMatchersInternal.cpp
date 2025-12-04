@@ -807,6 +807,7 @@ const internal::VariadicDynCastAllOfMatcher<TypeLoc, PointerTypeLoc>
     pointerTypeLoc;
 const internal::VariadicDynCastAllOfMatcher<TypeLoc, ReferenceTypeLoc>
     referenceTypeLoc;
+const internal::VariadicDynCastAllOfMatcher<TypeLoc, ArrayTypeLoc> arrayTypeLoc;
 const internal::VariadicDynCastAllOfMatcher<TypeLoc,
                                             TemplateSpecializationTypeLoc>
     templateSpecializationTypeLoc;
@@ -954,6 +955,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXTryStmt> cxxTryStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXThrowExpr> cxxThrowExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, NullStmt> nullStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, AsmStmt> asmStmt;
+const internal::VariadicDynCastAllOfMatcher<Decl, FileScopeAsmDecl>
+    fileScopeAsmDecl;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXBoolLiteralExpr>
     cxxBoolLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, StringLiteral> stringLiteral;

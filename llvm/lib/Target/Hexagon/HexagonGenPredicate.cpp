@@ -30,7 +30,6 @@
 #include <cassert>
 #include <iterator>
 #include <queue>
-#include <utility>
 
 #define DEBUG_TYPE "gen-pred"
 
@@ -52,8 +51,7 @@ private:
 };
 
 [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
-                                         const PrintRegister &PR);
-raw_ostream &operator<<(raw_ostream &OS, const PrintRegister &PR) {
+                                         const PrintRegister &PR) {
   return OS << printReg(PR.Reg.Reg, &PR.TRI, PR.Reg.SubReg);
 }
 

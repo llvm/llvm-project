@@ -61,7 +61,6 @@
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <array>
@@ -8188,6 +8187,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
               } else {
                 W.printNumber("Frequency", PBBE.BlockFreq.getFrequency());
               }
+              if (PAM.FeatEnable.PostLinkCfg)
+                W.printNumber("PostLink Frequency", PBBE.PostLinkBlockFreq);
             }
 
             if (PAM.FeatEnable.BrProb) {
@@ -8200,6 +8201,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
                 } else {
                   W.printHex("Probability", Succ.Prob.getNumerator());
                 }
+                if (PAM.FeatEnable.PostLinkCfg)
+                  W.printNumber("PostLink Probability", Succ.PostLinkFreq);
               }
             }
           }

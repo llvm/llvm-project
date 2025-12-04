@@ -97,6 +97,7 @@ static_library("Support") {
     "FormattedStream.cpp",
     "GlobPattern.cpp",
     "GraphWriter.cpp",
+    "Hash.cpp",
     "HexagonAttributeParser.cpp",
     "HexagonAttributes.cpp",
     "InitLLVM.cpp",
@@ -190,6 +191,7 @@ static_library("Support") {
     "regfree.c",
     "regstrlcpy.c",
     "xxhash.cpp",
+    "zOSLibFunctions.cpp",
 
     # System
     "Atomic.cpp",

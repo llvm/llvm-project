@@ -14,7 +14,7 @@ subroutine scale_test1(x, i)
   ! CHECK: %[[tmp:.*]] = fir.call @_FortranAScale4(%[[x_val]], %[[i_cast]]) {{.*}}: (f32, i64) -> f32
   ! CHECK: hlfir.assign %[[tmp]] to %[[res]]#0 : f32, !fir.ref<f32>
 end subroutine scale_test1
-  
+
 ! CHECK-LABEL: scale_test2
 subroutine scale_test2(x, i)
   real(kind=8) :: x, res

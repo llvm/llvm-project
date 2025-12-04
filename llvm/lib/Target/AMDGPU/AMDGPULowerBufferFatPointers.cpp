@@ -1565,8 +1565,11 @@ void SplitPtrStructs::processConditionals() {
     } else if (isa<SelectInst>(I)) {
       if (MaybeRsrc) {
         if (auto *RsrcInst = dyn_cast<Instruction>(Rsrc)) {
-          ConditionalTemps.push_back(RsrcInst);
-          RsrcInst->replaceAllUsesWith(*MaybeRsrc);
+          // Guard against conditionals that were already folded away.
+          if (RsrcInst != *MaybeRsrc) {
+            ConditionalTemps.push_back(RsrcInst);
+            RsrcInst->replaceAllUsesWith(*MaybeRsrc);
+          }
         }
         for (Value *V : Seen)
           FoundRsrcs[V] = *MaybeRsrc;
@@ -2059,17 +2062,7 @@ PtrParts SplitPtrStructs::visitICmpInst(ICmpInst &Cmp) {
          "Pointer comparison is only equal or unequal");
   auto [LhsRsrc, LhsOff] = getPtrParts(Lhs);
   auto [RhsRsrc, RhsOff] = getPtrParts(Rhs);
-  Value *RsrcCmp =
-      IRB.CreateICmp(Pred, LhsRsrc, RhsRsrc, Cmp.getName() + ".rsrc");
-  copyMetadata(RsrcCmp, &Cmp);
-  Value *OffCmp = IRB.CreateICmp(Pred, LhsOff, RhsOff, Cmp.getName() + ".off");
-  copyMetadata(OffCmp, &Cmp);
-
-  Value *Res = nullptr;
-  if (Pred == ICmpInst::ICMP_EQ)
-    Res = IRB.CreateAnd(RsrcCmp, OffCmp);
-  else if (Pred == ICmpInst::ICMP_NE)
-    Res = IRB.CreateOr(RsrcCmp, OffCmp);
+  Value *Res = IRB.CreateICmp(Pred, LhsOff, RhsOff);
   copyMetadata(Res, &Cmp);
   Res->takeName(&Cmp);
   SplitUsers.insert(&Cmp);

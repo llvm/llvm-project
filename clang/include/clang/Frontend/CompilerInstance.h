@@ -946,6 +946,12 @@ public:
     DependencyCollectors.push_back(std::move(Listener));
   }
 
+  void clearDependencyCollectors() { DependencyCollectors.clear(); }
+
+  std::vector<std::shared_ptr<DependencyCollector>> &getDependencyCollectors() {
+    return DependencyCollectors;
+  }
+
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
 
   ModuleCache &getModuleCache() const { return *ModCache; }

@@ -63,6 +63,9 @@ protected:
   // whether we should enable MCAsmInfo DwarfUsesRelocationsAcrossSections
   bool UseDwarfRIS;
 
+  // whether we allows misaligned memory access
+  bool AllowsMisalignedMemAccess;
+
   // whether cpu v4 insns are enabled.
   bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm,
       HasLoadAcqStoreRel, HasGotox;
@@ -87,6 +90,9 @@ public:
   bool getHasJmp32() const { return HasJmp32; }
   bool getHasAlu32() const { return HasAlu32; }
   bool getUseDwarfRIS() const { return UseDwarfRIS; }
+  bool getAllowsMisalignedMemAccess() const {
+    return AllowsMisalignedMemAccess;
+  }
   bool hasLdsx() const { return HasLdsx; }
   bool hasMovsx() const { return HasMovsx; }
   bool hasBswap() const { return HasBswap; }

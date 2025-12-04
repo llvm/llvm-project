@@ -14,6 +14,7 @@ CHECK: -fat64
 CHECK: -flat
 CHECK: -gen-reproducer
 CHECK: -help
+CHECK: -include-swiftmodules-from-interface
 CHECK: -keep-function-for-static
 CHECK: -no-object-timestamp
 CHECK: -no-odr

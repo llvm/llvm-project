@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++2a -Wno-unused-value %s -verify
+// RUN: %clang_cc1 -std=c++2a -Wno-unused-value %s -verify -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++2b -Wno-unused-value %s -verify
+// RUN: %clang_cc1 -std=c++2b -Wno-unused-value %s -verify -fexperimental-new-constant-interpreter
 
 consteval int id(int i) { return i; }
 constexpr char id(char c) { return c; }

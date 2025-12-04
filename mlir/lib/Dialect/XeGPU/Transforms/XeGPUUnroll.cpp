@@ -678,12 +678,16 @@ struct UnrollLoadGatherOpWithOffset
           pack(offsets, convertedOffsetTypes, *targetShape, loc, rewriter);
     }
 
+    auto layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropInstData();
+
     SmallVector<Value> newOps;
     for (auto [o, m] : llvm::zip(convertedOffsets, convertedMasks)) {
       auto newOp = xegpu::LoadGatherOp::create(
           rewriter, loc, newValueTy, op.getSource(), o, m,
           rewriter.getI64IntegerAttr(chunkSize), op.getL1HintAttr(),
-          op.getL2HintAttr(), op.getL3HintAttr());
+          op.getL2HintAttr(), op.getL3HintAttr(), layout);
       newOps.push_back(newOp);
     }
 
@@ -774,12 +778,16 @@ struct UnrollStoreScatterOpWithOffsets
     SmallVector<Value> convertedValues =
         pack(op.getValue(), convertedValTypes, *targetShape, loc, rewriter);
 
+    auto layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropInstData();
+
     for (auto [v, o, m] :
          llvm::zip(convertedValues, convertedOffsets, convertedMasks)) {
       xegpu::StoreScatterOp::create(rewriter, loc, v, op.getDest(), o, m,
                                     rewriter.getI64IntegerAttr(chunkSize),
                                     op.getL1HintAttr(), op.getL2HintAttr(),
-                                    op.getL3HintAttr());
+                                    op.getL3HintAttr(), layout);
     }
 
     rewriter.eraseOp(op);

@@ -62,7 +62,7 @@ entry:
 ; CHECK-NEXT:         Mutable:         true
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           66576
+; CHECK-NEXT:           Value:           65536
 
 ; GOT.func.ret32
 ; CHECK-NEXT:       - Index:           1
@@ -70,7 +70,7 @@ entry:
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1
+; CHECK-NEXT: Value: 1
 
 ; GOT.func.missing_function
 ; CHECK-NEXT:       - Index:           2
@@ -102,7 +102,7 @@ entry:
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1024
+; CHECK-NEXT:           Value:           65536
 
 ; GOT.mem.ret32_ptr
 ; CHECK-NEXT:       - Index:           6
@@ -110,7 +110,7 @@ entry:
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1032
+; CHECK-NEXT:           Value:           65544
 
 ; __memory_base
 ; CHECK-NEXT:       - Index:           7

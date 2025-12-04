@@ -63,7 +63,11 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
 
 std::optional<DataRef> ExtractDataRef(
     const ActualArgument &arg, bool intoSubstring, bool intoComplexPart) {
-  return ExtractDataRef(arg.UnwrapExpr(), intoSubstring, intoComplexPart);
+  if (const Symbol *assumedType{arg.GetAssumedTypeDummy()}) {
+    return DataRef{*assumedType};
+  } else {
+    return ExtractDataRef(arg.UnwrapExpr(), intoSubstring, intoComplexPart);
+  }
 }
 
 std::optional<DataRef> ExtractSubstringBase(const Substring &substring) {
@@ -1208,6 +1212,20 @@ struct HasConstantHelper : public AnyTraverse<HasConstantHelper, bool,
 
 bool HasConstant(const Expr<SomeType> &expr) {
   return HasConstantHelper{}(expr);
+}
+
+// HasStructureComponent()
+struct HasStructureComponentHelper
+    : public AnyTraverse<HasStructureComponentHelper, bool, false> {
+  using Base = AnyTraverse<HasStructureComponentHelper, bool, false>;
+  HasStructureComponentHelper() : Base(*this) {}
+  using Base::operator();
+
+  bool operator()(const Component &) const { return true; }
+};
+
+bool HasStructureComponent(const Expr<SomeType> &expr) {
+  return HasStructureComponentHelper{}(expr);
 }
 
 parser::Message *AttachDeclaration(

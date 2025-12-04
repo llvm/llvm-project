@@ -22,6 +22,12 @@ include "mlir/Dialect/Tosa/IR/TosaOpBase.td"
 // Tosa Type Definitions.
 //===----------------------------------------------------------------------===//
 
+// The base class for Tosa dialect types.
+class Tosa_Type<string name, string typeMnemonic, list<Trait> traits = []>
+    : TypeDef<Tosa_Dialect, name, traits> {
+  let mnemonic = typeMnemonic;
+}
+
 // The base class of a quantized type.
 // Param tuple is: [bitwidth, zeropt, smantissa, sexp, low_end, high_end].
 // Where low and high ends are 0,255 when unsigned, -128,127 when signed, for
@@ -79,12 +85,25 @@ def Tosa_QuantizedInt : AnyTypeOf<[Tosa_QuantizedType<"uint8", [8], 0>,
                                    Tosa_QuantizedType<"int32", [32, 0], 1>]>;
 
 //===----------------------------------------------------------------------===//
+// Custom TOSA element types.
+//===----------------------------------------------------------------------===//
+
+// MLIR doesn't have a builtin type for mxint8 yet. For now declared it as a
+// custom TOSA type. This may be changed in the future.
+def Tosa_MXInt8 : Tosa_Type<"mxint8", "mxint8"> {
+  let summary = "INT8 type as defined by OCP-MX";
+  let description = [{
+    8-bit integer format with an implicit 1/64 scale defined by OCP-MX.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Multi-category types.
 //===----------------------------------------------------------------------===//
-def Tosa_AnyNumber : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, AnyFloat],
+def Tosa_AnyNumber : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, AnyFloat, Tosa_MXInt8],
                                 "number">;
 
-def Tosa_MXFPNumber : AnyTypeOf<[F8E4M3FN, F8E5M2, F4E2M1FN, F6E2M3FN, F6E3M2FN],
+def Tosa_MXFPNumber : AnyTypeOf<[F8E4M3FN, F8E5M2, F4E2M1FN, F6E2M3FN, F6E3M2FN, Tosa_MXInt8],
                                 "micro-scaling format number">;
 def Tosa_MXFPScaleNumber : AnyTypeOf<[F8E8M0FNU], "micro-scaling format scale number">;
 
@@ -183,10 +202,8 @@ def Tosa_Tensor1Dto6D : AnyTypeOf<[
 def Tosa_TensorUpto4D : AnyTypeOf<[
   Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [0,1,2,3,4]>]>;
 
-def Tosa_Int32TensorUpto4D : AnyTypeOf<[
-  Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32], [0,1,2,3,4]>]>;
-def Tosa_Int32Tensor2D : AnyTypeOf<[
-  Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32], [2]>]>;
+def Tosa_IndexTensor2D : AnyTypeOf<[
+  Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32, Tosa_Int64], [2]>]>;
 
 def Tosa_TensorAtLeast1D : AnyTypeOf<[
   Tosa_UnrankedTensor, TosaRankedTensorOf<[Tosa_AnyNumber], [AtLeastRankOne]>], "tosa-conformant tensor of at least rank 1", "::mlir::TensorType">;
@@ -264,16 +281,6 @@ def Tosa_TensorTypeAttr : TypeAttrBase<"TensorType", "Tensor type attribute">;
 def Tosa_Buffer : MemRefOf<[Tosa_AnyNumber]>;
 def Tosa_TupleBuffer : NestedTupleOf<[Tosa_Buffer]>;
 def Tosa_BufOrTuple : AnyTypeOf<[Tosa_Buffer, Tosa_TupleBuffer]>;
-
-//===----------------------------------------------------------------------===//
-// Tosa Type Definitions.
-//===----------------------------------------------------------------------===//
-
-// The base class for Tosa dialect types.
-class Tosa_Type<string name, string typeMnemonic, list<Trait> traits = []>
-    : TypeDef<Tosa_Dialect, name, traits> {
-  let mnemonic = typeMnemonic;
-}
 
 //===----------------------------------------------------------------------===//
 // ShapeType

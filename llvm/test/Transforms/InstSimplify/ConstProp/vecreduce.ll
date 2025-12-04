@@ -12,8 +12,7 @@ define i32 @add_0() {
 
 define i32 @add_0_scalable_vector() {
 ; CHECK-LABEL: @add_0_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 0
 ;
   %x = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> zeroinitializer)
   ret i32 %x
@@ -89,8 +88,7 @@ define i32 @add_poison() {
 
 define i32 @add_poison_scalable_vector() {
 ; CHECK-LABEL: @add_poison_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> poison)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %x = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> poison)
   ret i32 %x
@@ -123,8 +121,7 @@ define i32 @mul_0() {
 
 define i32 @mul_0_scalable_vector() {
 ; CHECK-LABEL: @mul_0_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.mul.nxv8i32(<vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 0
 ;
   %x = call i32 @llvm.vector.reduce.mul.nxv8i32(<vscale x 8 x i32> zeroinitializer)
   ret i32 %x
@@ -140,10 +137,26 @@ define i32 @mul_1() {
 
 define i32 @mul_1_scalable_vector() {
 ; CHECK-LABEL: @mul_1_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.mul.nxv8i32(<vscale x 8 x i32> splat (i32 1))
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 1
 ;
   %x = call i32 @llvm.vector.reduce.mul.nxv8i32(<vscale x 8 x i32> splat (i32 1))
+  ret i32 %x
+}
+
+define i32 @mul_2() {
+; CHECK-LABEL: @mul_2(
+; CHECK-NEXT:    ret i32 256
+;
+  %x = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>)
+  ret i32 %x
+}
+
+define i32 @mul_2_scalable_vector() {
+; CHECK-LABEL: @mul_2_scalable_vector(
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.mul.nxv8i32(<vscale x 8 x i32> splat (i32 2))
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = call i32 @llvm.vector.reduce.mul.nxv8i32(<vscale x 8 x i32> splat (i32 2))
   ret i32 %x
 }
 
@@ -200,8 +213,7 @@ define i32 @mul_poison() {
 
 define i32 @mul_poison_scalable_vector() {
 ; CHECK-LABEL: @mul_poison_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.mul.nxv8i32(<vscale x 8 x i32> poison)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %x = call i32 @llvm.vector.reduce.mul.nxv8i32(<vscale x 8 x i32> poison)
   ret i32 %x
@@ -225,8 +237,7 @@ define i32 @and_0() {
 
 define i32 @and_0_scalable_vector() {
 ; CHECK-LABEL: @and_0_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.and.nxv8i32(<vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 0
 ;
   %x = call i32 @llvm.vector.reduce.and.nxv8i32(<vscale x 8 x i32> zeroinitializer)
   ret i32 %x
@@ -242,8 +253,7 @@ define i32 @and_1() {
 
 define i32 @and_1_scalable_vector() {
 ; CHECK-LABEL: @and_1_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.and.nxv8i32(<vscale x 8 x i32> splat (i32 1))
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 1
 ;
   %x = call i32 @llvm.vector.reduce.and.nxv8i32(<vscale x 8 x i32> splat (i32 1))
   ret i32 %x
@@ -302,8 +312,7 @@ define i32 @and_poison() {
 
 define i32 @and_poison_scalable_vector() {
 ; CHECK-LABEL: @and_poison_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.and.nxv8i32(<vscale x 8 x i32> poison)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %x = call i32 @llvm.vector.reduce.and.nxv8i32(<vscale x 8 x i32> poison)
   ret i32 %x
@@ -327,8 +336,7 @@ define i32 @or_0() {
 
 define i32 @or_0_scalable_vector() {
 ; CHECK-LABEL: @or_0_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.or.nxv8i32(<vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 0
 ;
   %x = call i32 @llvm.vector.reduce.or.nxv8i32(<vscale x 8 x i32> zeroinitializer)
   ret i32 %x
@@ -344,8 +352,7 @@ define i32 @or_1() {
 
 define i32 @or_1_scalable_vector() {
 ; CHECK-LABEL: @or_1_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.or.nxv8i32(<vscale x 8 x i32> splat (i32 1))
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 1
 ;
   %x = call i32 @llvm.vector.reduce.or.nxv8i32(<vscale x 8 x i32> splat (i32 1))
   ret i32 %x
@@ -404,8 +411,7 @@ define i32 @or_poison() {
 
 define i32 @or_poison_scalable_vector() {
 ; CHECK-LABEL: @or_poison_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.or.nxv8i32(<vscale x 8 x i32> poison)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %x = call i32 @llvm.vector.reduce.or.nxv8i32(<vscale x 8 x i32> poison)
   ret i32 %x
@@ -429,8 +435,7 @@ define i32 @xor_0() {
 
 define i32 @xor_0_scalable_vector() {
 ; CHECK-LABEL: @xor_0_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.xor.nxv8i32(<vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 0
 ;
   %x = call i32 @llvm.vector.reduce.xor.nxv8i32(<vscale x 8 x i32> zeroinitializer)
   ret i32 %x
@@ -446,10 +451,18 @@ define i32 @xor_1() {
 
 define i32 @xor_1_scalable_vector() {
 ; CHECK-LABEL: @xor_1_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.xor.nxv8i32(<vscale x 8 x i32> splat (i32 1))
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 0
 ;
   %x = call i32 @llvm.vector.reduce.xor.nxv8i32(<vscale x 8 x i32> splat(i32 1))
+  ret i32 %x
+}
+
+define i32 @xor_1_scalable_vector_lane_count_not_known_even() {
+; CHECK-LABEL: @xor_1_scalable_vector_lane_count_not_known_even(
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.xor.nxv1i32(<vscale x 1 x i32> splat (i32 1))
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = call i32 @llvm.vector.reduce.xor.nxv8i32(<vscale x 1 x i32> splat(i32 1))
   ret i32 %x
 }
 
@@ -506,8 +519,7 @@ define i32 @xor_poison() {
 
 define i32 @xor_poison_scalable_vector() {
 ; CHECK-LABEL: @xor_poison_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.xor.nxv8i32(<vscale x 8 x i32> poison)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %x = call i32 @llvm.vector.reduce.xor.nxv8i32(<vscale x 8 x i32> poison)
   ret i32 %x
@@ -531,8 +543,7 @@ define i32 @smin_0() {
 
 define i32 @smin_0_scalable_vector() {
 ; CHECK-LABEL: @smin_0_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.smin.nxv8i32(<vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 0
 ;
   %x = call i32 @llvm.vector.reduce.smin.nxv8i32(<vscale x 8 x i32> zeroinitializer)
   ret i32 %x
@@ -548,8 +559,7 @@ define i32 @smin_1() {
 
 define i32 @smin_1_scalable_vector() {
 ; CHECK-LABEL: @smin_1_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.smin.nxv8i32(<vscale x 8 x i32> splat (i32 1))
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 1
 ;
   %x = call i32 @llvm.vector.reduce.smin.nxv8i32(<vscale x 8 x i32> splat(i32 1))
   ret i32 %x
@@ -608,8 +618,7 @@ define i32 @smin_poison() {
 
 define i32 @smin_poison_scalable_vector() {
 ; CHECK-LABEL: @smin_poison_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.smin.nxv8i32(<vscale x 8 x i32> poison)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %x = call i32 @llvm.vector.reduce.smin.nxv8i32(<vscale x 8 x i32> poison)
   ret i32 %x
@@ -633,8 +642,7 @@ define i32 @smax_0() {
 
 define i32 @smax_0_scalable_vector() {
 ; CHECK-LABEL: @smax_0_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.smax.nxv8i32(<vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 0
 ;
   %x = call i32 @llvm.vector.reduce.smax.nxv8i32(<vscale x 8 x i32> zeroinitializer)
   ret i32 %x
@@ -650,8 +658,7 @@ define i32 @smax_1() {
 
 define i32 @smax_1_scalable_vector() {
 ; CHECK-LABEL: @smax_1_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.smax.nxv8i32(<vscale x 8 x i32> splat (i32 1))
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 1
 ;
   %x = call i32 @llvm.vector.reduce.smax.nxv8i32(<vscale x 8 x i32> splat(i32 1))
   ret i32 %x
@@ -710,8 +717,7 @@ define i32 @smax_poison() {
 
 define i32 @smax_poison_scalable_vector() {
 ; CHECK-LABEL: @smax_poison_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.smax.nxv8i32(<vscale x 8 x i32> poison)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %x = call i32 @llvm.vector.reduce.smax.nxv8i32(<vscale x 8 x i32> poison)
   ret i32 %x
@@ -735,8 +741,7 @@ define i32 @umin_0() {
 
 define i32 @umin_0_scalable_vector() {
 ; CHECK-LABEL: @umin_0_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.umin.nxv8i32(<vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 0
 ;
   %x = call i32 @llvm.vector.reduce.umin.nxv8i32(<vscale x 8 x i32> zeroinitializer)
   ret i32 %x
@@ -752,8 +757,7 @@ define i32 @umin_1() {
 
 define i32 @umin_1_scalable_vector() {
 ; CHECK-LABEL: @umin_1_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.umin.nxv8i32(<vscale x 8 x i32> splat (i32 1))
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 1
 ;
   %x = call i32 @llvm.vector.reduce.umin.nxv8i32(<vscale x 8 x i32> splat (i32 1))
   ret i32 %x
@@ -812,8 +816,7 @@ define i32 @umin_poison() {
 
 define i32 @umin_poison_scalable_vector() {
 ; CHECK-LABEL: @umin_poison_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.umin.nxv8i32(<vscale x 8 x i32> poison)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %x = call i32 @llvm.vector.reduce.umin.nxv8i32(<vscale x 8 x i32> poison)
   ret i32 %x
@@ -837,8 +840,7 @@ define i32 @umax_0() {
 
 define i32 @umax_0_scalable_vector() {
 ; CHECK-LABEL: @umax_0_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.umax.nxv8i32(<vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 0
 ;
   %x = call i32 @llvm.vector.reduce.umax.nxv8i32(<vscale x 8 x i32> zeroinitializer)
   ret i32 %x
@@ -854,8 +856,7 @@ define i32 @umax_1() {
 
 define i32 @umax_1_scalable_vector() {
 ; CHECK-LABEL: @umax_1_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.umax.nxv8i32(<vscale x 8 x i32> splat (i32 1))
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 1
 ;
   %x = call i32 @llvm.vector.reduce.umax.nxv8i32(<vscale x 8 x i32> splat(i32 1))
   ret i32 %x
@@ -914,8 +915,7 @@ define i32 @umax_poison() {
 
 define i32 @umax_poison_scalable_vector() {
 ; CHECK-LABEL: @umax_poison_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.umax.nxv8i32(<vscale x 8 x i32> poison)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %x = call i32 @llvm.vector.reduce.umax.nxv8i32(<vscale x 8 x i32> poison)
   ret i32 %x
