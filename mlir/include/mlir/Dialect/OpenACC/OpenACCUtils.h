@@ -15,8 +15,6 @@
 namespace mlir {
 class DominanceInfo;
 class PostDominanceInfo;
-class Value;
-class Operation;
 namespace acc {
 
 /// Used to obtain the enclosing compute construct operation that contains
