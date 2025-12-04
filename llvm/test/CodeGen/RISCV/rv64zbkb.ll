@@ -646,8 +646,7 @@ define i32 @packh_zero_i32(i32 %a) nounwind {
 ;
 ; RV64ZBKB-LABEL: packh_zero_i32:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    slli a0, a0, 56
-; RV64ZBKB-NEXT:    srli a0, a0, 48
+; RV64ZBKB-NEXT:    packh a0, zero, a0
 ; RV64ZBKB-NEXT:    ret
   %shl = shl i32 %a, 8
   %and = and i32 %shl, 65280
@@ -663,8 +662,7 @@ define i32 @packh_zero_i32_2(i32 %a) nounwind {
 ;
 ; RV64ZBKB-LABEL: packh_zero_i32_2:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    zext.b a0, a0
-; RV64ZBKB-NEXT:    slli a0, a0, 8
+; RV64ZBKB-NEXT:    packh a0, zero, a0
 ; RV64ZBKB-NEXT:    ret
   %and = and i32 %a, 255
   %shl = shl i32 %and, 8
@@ -680,8 +678,7 @@ define i64 @packh_zero_i64(i64 %a) nounwind {
 ;
 ; RV64ZBKB-LABEL: packh_zero_i64:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    slli a0, a0, 56
-; RV64ZBKB-NEXT:    srli a0, a0, 48
+; RV64ZBKB-NEXT:    packh a0, zero, a0
 ; RV64ZBKB-NEXT:    ret
   %shl = shl i64 %a, 8
   %and = and i64 %shl, 65280
@@ -697,8 +694,7 @@ define i64 @packh_zero_i64_2(i64 %a) nounwind {
 ;
 ; RV64ZBKB-LABEL: packh_zero_i64_2:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    zext.b a0, a0
-; RV64ZBKB-NEXT:    slli a0, a0, 8
+; RV64ZBKB-NEXT:    packh a0, zero, a0
 ; RV64ZBKB-NEXT:    ret
   %and = and i64 %a, 255
   %shl = shl i64 %and, 8
@@ -714,8 +710,7 @@ define i32 @packh_zero_i8(i8 %a) nounwind {
 ;
 ; RV64ZBKB-LABEL: packh_zero_i8:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    zext.b a0, a0
-; RV64ZBKB-NEXT:    slli a0, a0, 8
+; RV64ZBKB-NEXT:    packh a0, zero, a0
 ; RV64ZBKB-NEXT:    ret
   %zext = zext i8 %a to i32
   %shl = shl i32 %zext, 8
