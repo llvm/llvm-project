@@ -50,6 +50,7 @@ int dsmil_metrics_init(const char *output_path) {
     if (output_path) {
         metrics_state.output_file = fopen(output_path, "w");
         if (!metrics_state.output_file) {
+            fprintf(stderr, "ERROR: Failed to open metrics output file: %s\n", output_path);
             return -1;
         }
     } else {
@@ -82,6 +83,10 @@ int dsmil_metrics_start_pass(const char *pass_name) {
     dsmil_pass_metrics_t *pass = &metrics_state.passes[pass_id];
     
     pass->pass_name = strdup(pass_name);
+    if (!pass->pass_name) {
+        metrics_state.num_passes--; /* Rollback on allocation failure */
+        return -1;
+    }
     pass->execution_time_ns = 0;
     pass->memory_peak_bytes = 0;
     pass->memory_avg_bytes = 0;
@@ -193,11 +198,21 @@ int dsmil_metrics_finalize(void) {
     fprintf(metrics_state.output_file, "  }\n");
     fprintf(metrics_state.output_file, "}\n");
 
-    if (metrics_state.output_file != stdout) {
+    /* Free allocated pass names */
+    for (uint32_t i = 0; i < metrics_state.num_passes; i++) {
+        if (metrics_state.passes[i].pass_name) {
+            free((void *)metrics_state.passes[i].pass_name);
+            metrics_state.passes[i].pass_name = NULL;
+        }
+    }
+
+    if (metrics_state.output_file && metrics_state.output_file != stdout) {
         fclose(metrics_state.output_file);
     }
 
     metrics_state.initialized = false;
+    metrics_state.num_passes = 0;
+    metrics_state.num_features = 0;
     return 0;
 }
 

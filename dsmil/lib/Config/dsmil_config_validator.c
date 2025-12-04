@@ -17,9 +17,14 @@
 
 /* JSON parsing (simplified - in production use proper JSON library) */
 static bool is_valid_json(const char *path) {
-    FILE *f = fopen(path, "r");
-    if (!f)
+    if (!path) {
         return false;
+    }
+    
+    FILE *f = fopen(path, "r");
+    if (!f) {
+        return false;
+    }
     
     /* Basic JSON validation: check for opening brace */
     int c = fgetc(f);

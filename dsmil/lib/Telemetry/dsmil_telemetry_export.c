@@ -94,14 +94,22 @@ int dsmil_telemetry_init(const dsmil_telemetry_options_t *options) {
     if (options->output_file) {
         telemetry_state.output_file = fopen(options->output_file, "a");
         if (!telemetry_state.output_file) {
+            fprintf(stderr, "ERROR: Failed to open telemetry output file: %s\n",
+                    options->output_file);
             return -1;
         }
     } else {
         const char *log_dir = dsmil_get_log_dir();
-        char log_path[1024];
-        snprintf(log_path, sizeof(log_path), "%s/telemetry.log", log_dir);
-        telemetry_state.output_file = fopen(log_path, "a");
-        if (!telemetry_state.output_file) {
+        if (log_dir) {
+            char log_path[1024];
+            snprintf(log_path, sizeof(log_path), "%s/telemetry.log", log_dir);
+            telemetry_state.output_file = fopen(log_path, "a");
+            if (!telemetry_state.output_file) {
+                fprintf(stderr, "WARNING: Failed to open telemetry log: %s, using stderr\n",
+                        log_path);
+                telemetry_state.output_file = stderr; /* Fallback */
+            }
+        } else {
             telemetry_state.output_file = stderr; /* Fallback */
         }
     }
