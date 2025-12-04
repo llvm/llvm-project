@@ -226,9 +226,9 @@ static void emitXATTR(raw_ostream &OS, StringRef Name,
 }
 
 static bool sameNameAsCSECT(MCSymbolGOFF *Sym) {
-  if (Sym->hasLDAttributes() && Sym->isInSection()) {
+  if (!Sym->isTemporary() && Sym->isDefined() && Sym->isInSection()) {
     MCSectionGOFF &ED = static_cast<MCSectionGOFF &>(Sym->getSection());
-    return Sym->getName() == ED.getParent()->getName();
+    return ED.isED() && Sym->getName() == ED.getParent()->getName();
   }
   return false;
 }
@@ -241,7 +241,8 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // Emit ENTRY statement only if not implied by CSECT.
   bool EmitEntry = !sameNameAsCSECT(Sym);
 
-  if (!Sym->isTemporary() && Sym->hasLDAttributes()) {
+  if (!Sym->isTemporary() && Sym->isDefined() &&
+      static_cast<MCSectionGOFF &>(Sym->getSection()).isED()) {
     if (EmitEntry) {
       OS << " ENTRY " << Sym->getName();
       EmitEOL();
@@ -358,14 +359,14 @@ void SystemZHLASMAsmStreamer::finishImpl() {
     if (Symbol.isTemporary())
       continue;
     if (Symbol.isRegistered()) {
+      if (Symbol.isDefined())
+        continue;
       auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
-      if (Sym.hasERAttributes()) {
-        OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
-        EmitEOL();
-        emitXATTR(OS, Sym.getName(), Sym.getLinkage(), Sym.getCodeData(),
-                  Sym.getBindingScope());
-        EmitEOL();
-      }
+      OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
+      EmitEOL();
+      emitXATTR(OS, Sym.getName(), Sym.getLinkage(), Sym.getCodeData(),
+                Sym.getBindingScope());
+      EmitEOL();
     }
   }
 

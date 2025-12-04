@@ -12,15 +12,6 @@
 
 using namespace llvm;
 
-bool MCSymbolGOFF::hasLDAttributes() const {
-  return !isTemporary() && isDefined() &&
-         static_cast<MCSectionGOFF &>(getSection()).isED();
-}
-
-bool MCSymbolGOFF::hasERAttributes() const {
-  return !isTemporary() && !isDefined() && isExternal();
-}
-
 bool MCSymbolGOFF::setSymbolAttribute(MCSymbolAttr Attribute) {
   switch (Attribute) {
   case MCSA_Invalid:

@@ -372,10 +372,12 @@ void GOFFWriter::defineSymbols() {
     if (Sym.isTemporary())
       continue;
     auto &Symbol = static_cast<const MCSymbolGOFF &>(Sym);
-    if (Symbol.hasLDAttributes()) {
+    bool IsDefined = Symbol.isDefined();
+    if (IsDefined &&
+         static_cast<MCSectionGOFF &>(Symbol.getSection()).isED()) {
       Symbol.setIndex(++Ordinal);
       defineLabel(Symbol);
-    } else if (Symbol.hasERAttributes()) {
+    } else if (!IsDefined) {
       Symbol.setIndex(++Ordinal);
       defineExtern(Symbol);
     }

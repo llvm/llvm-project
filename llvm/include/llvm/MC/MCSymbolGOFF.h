@@ -38,9 +38,6 @@ public:
   MCSymbolGOFF(const MCSymbolTableEntry *Name, bool IsTemporary)
       : MCSymbol(Name, IsTemporary) {}
 
-  bool hasLDAttributes() const;
-  bool hasERAttributes() const;
-
   void setADA(MCSectionGOFF *AssociatedDataArea) {
     ADA = AssociatedDataArea;
     AssociatedDataArea->RequiresNonZeroLength = true;
