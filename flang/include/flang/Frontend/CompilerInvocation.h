@@ -92,6 +92,10 @@ class CompilerInvocation : public CompilerInvocationBase {
   // intrinsic of iso_fortran_env.
   std::string allCompilerInvocOpts;
 
+  /// Location of the resource directory containing files specific to this
+  /// instance/version of Flang.
+  std::string resourceDir;
+
   /// Semantic options
   // TODO: Merge with or translate to frontendOpts. We shouldn't need two sets
   // of options.
@@ -176,6 +180,9 @@ public:
   std::unique_ptr<Fortran::semantics::SemanticsContext>
   getSemanticsCtx(Fortran::parser::AllCookedSources &allCookedSources,
                   const llvm::TargetMachine &);
+
+  std::string &getResourceDir() { return resourceDir; }
+  const std::string &getResourceDir() const { return resourceDir; }
 
   std::string &getModuleDir() { return moduleDir; }
   const std::string &getModuleDir() const { return moduleDir; }

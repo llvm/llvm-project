@@ -176,7 +176,9 @@ constexpr FeatureBitset FeaturesArrowlakeS =
 constexpr FeatureBitset FeaturesPantherlake =
     (FeaturesArrowlakeS ^ FeatureWIDEKL);
 constexpr FeatureBitset FeaturesNovalake =
-    FeaturesPantherlake | FeaturePREFETCHI;
+    FeaturesPantherlake | FeaturePREFETCHI | FeatureAVX10_2 | FeatureMOVRS |
+    FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 | FeaturePPX |
+    FeatureNDD | FeatureNF;
 constexpr FeatureBitset FeaturesClearwaterforest =
     (FeaturesSierraforest ^ FeatureWIDEKL) | FeatureAVXVNNIINT16 |
     FeatureSHA512 | FeatureSM3 | FeatureSM4 | FeaturePREFETCHI | FeatureUSERMSR;
@@ -544,6 +546,8 @@ constexpr FeatureBitset ImpliedFeaturesX87 = {};
 constexpr FeatureBitset ImpliedFeaturesXSAVE = {};
 constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE1 = {};
 constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE2 = {};
+constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE3 = {};
+constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE4 = {};
 
 // Not really CPU features, but need to be in the table because clang uses
 // target features to communicate them to the backend.
@@ -644,8 +648,6 @@ constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
     FeatureAVX512VBMI2 | FeatureAVX512BITALG | FeatureAVX512FP16 |
     FeatureAVX512DQ | FeatureAVX512VL;
 constexpr FeatureBitset ImpliedFeaturesAVX10_2 = FeatureAVX10_1;
-constexpr FeatureBitset ImpliedFeaturesAVX10_1_512 = FeatureAVX10_1;
-constexpr FeatureBitset ImpliedFeaturesAVX10_2_512 = FeatureAVX10_2;
 
 // APX Features
 constexpr FeatureBitset ImpliedFeaturesEGPR = {};

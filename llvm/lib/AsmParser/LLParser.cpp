@@ -315,11 +315,10 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       return error(NT.second.second,
                    "use of undefined type '%" + Twine(NT.first) + "'");
 
-  for (StringMap<std::pair<Type*, LocTy> >::iterator I =
-       NamedTypes.begin(), E = NamedTypes.end(); I != E; ++I)
-    if (I->second.second.isValid())
-      return error(I->second.second,
-                   "use of undefined type named '" + I->getKey() + "'");
+  for (const auto &[Name, TypeInfo] : NamedTypes)
+    if (TypeInfo.second.isValid())
+      return error(TypeInfo.second,
+                   "use of undefined type named '" + Name + "'");
 
   if (!ForwardRefComdats.empty())
     return error(ForwardRefComdats.begin()->second,
@@ -2552,6 +2551,10 @@ static std::optional<MemoryEffects::Location> keywordToLoc(lltok::Kind Tok) {
     return IRMemLocation::InaccessibleMem;
   case lltok::kw_errnomem:
     return IRMemLocation::ErrnoMem;
+  case lltok::kw_target_mem0:
+    return IRMemLocation::TargetMem0;
+  case lltok::kw_target_mem1:
+    return IRMemLocation::TargetMem1;
   default:
     return std::nullopt;
   }
@@ -7152,7 +7155,8 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
                               .Case("declare", RecordKind::ValueKind)
                               .Case("value", RecordKind::ValueKind)
                               .Case("assign", RecordKind::ValueKind)
-                              .Case("label", RecordKind::LabelKind);
+                              .Case("label", RecordKind::LabelKind)
+                              .Case("declare_value", RecordKind::ValueKind);
 
   // Parsing labels is trivial; parse here and early exit, otherwise go into the
   // full DbgVariableRecord processing stage.
@@ -7177,7 +7181,8 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
   LocType ValueType = StringSwitch<LocType>(Lex.getStrVal())
                           .Case("declare", LocType::Declare)
                           .Case("value", LocType::Value)
-                          .Case("assign", LocType::Assign);
+                          .Case("assign", LocType::Assign)
+                          .Case("declare_value", LocType::DeclareValue);
 
   Lex.Lex();
   if (parseToken(lltok::lparen, "Expected '(' here"))

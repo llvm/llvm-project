@@ -1697,11 +1697,16 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(unsigned BitWidth,
   MachineIRBuilder MIRBuilder(DepMBB, DepMBB.getFirstNonPHI());
   const MachineInstr *NewMI =
       createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        return BuildMI(MIRBuilder.getMBB(), *MIRBuilder.getInsertPt(),
-                       MIRBuilder.getDL(), TII.get(SPIRVOPcode))
-            .addDef(createTypeVReg(CurMF->getRegInfo()))
-            .addImm(BitWidth)
-            .addImm(0);
+        auto NewTypeMI = BuildMI(MIRBuilder.getMBB(), *MIRBuilder.getInsertPt(),
+                                 MIRBuilder.getDL(), TII.get(SPIRVOPcode))
+                             .addDef(createTypeVReg(CurMF->getRegInfo()))
+                             .addImm(BitWidth);
+        // Don't add Encoding to FP type
+        if (!Ty->isFloatTy()) {
+          return NewTypeMI.addImm(0);
+        } else {
+          return NewTypeMI;
+        }
       });
   add(Ty, false, NewMI);
   return finishCreatingSPIRVType(Ty, NewMI);

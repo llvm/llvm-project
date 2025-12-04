@@ -133,7 +133,7 @@ func.func @test_fir_derivedtype_in_parallel_defaultpresent() {
   return
 }
 
-// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {implicit = true, name = "aggrvar"}
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {acc.from_default, implicit = true, name = "aggrvar"}
 // CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) {dataClause = #acc<data_clause acc_present>, implicit = true, name = "aggrvar"}
 
 // -----
@@ -147,7 +147,7 @@ func.func @test_fir_derivedtype_in_kernels_defaultpresent() {
   return
 }
 
-// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {implicit = true, name = "aggrvar"}
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {acc.from_default, implicit = true, name = "aggrvar"}
 // CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) {dataClause = #acc<data_clause acc_present>, implicit = true, name = "aggrvar"}
 
 // -----
@@ -161,7 +161,7 @@ func.func @test_fir_array_in_parallel_defaultpresent() {
   return
 }
 
-// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {implicit = true, name = "arrayvar"}
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {acc.from_default, implicit = true, name = "arrayvar"}
 // CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, implicit = true, name = "arrayvar"}
 
 // -----
@@ -175,7 +175,7 @@ func.func @test_fir_array_in_kernels_defaultpresent() {
   return
 }
 
-// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {implicit = true, name = "arrayvar"}
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {acc.from_default, implicit = true, name = "arrayvar"}
 // CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, implicit = true, name = "arrayvar"}
 
 // -----

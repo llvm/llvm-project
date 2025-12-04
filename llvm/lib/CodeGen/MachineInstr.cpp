@@ -978,7 +978,7 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
   assert(getMF() && "Can't have an MF reference here!");
   // Most opcodes have fixed constraints in their MCInstrDesc.
   if (!isInlineAsm())
-    return TII->getRegClass(getDesc(), OpIdx, TRI);
+    return TII->getRegClass(getDesc(), OpIdx);
 
   if (!getOperand(OpIdx).isReg())
     return nullptr;

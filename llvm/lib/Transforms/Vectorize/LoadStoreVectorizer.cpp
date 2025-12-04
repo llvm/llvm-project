@@ -626,26 +626,38 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
   std::vector<Chain> Ret;
   Ret.push_back({C.front()});
 
+  unsigned ChainElemTyBits = DL.getTypeSizeInBits(getChainElemTy(C));
+  APInt PrevReadEnd = C[0].OffsetFromLeader +
+                      DL.getTypeStoreSize(getLoadStoreType(&*C[0].Inst));
   for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
-    // `prev` accesses offsets [PrevDistFromBase, PrevReadEnd).
     auto &CurChain = Ret.back();
-    const ChainElem &Prev = CurChain.back();
-    unsigned SzBits = DL.getTypeSizeInBits(getLoadStoreType(&*Prev.Inst));
-    assert(SzBits % 8 == 0 && "Non-byte sizes should have been filtered out by "
-                              "collectEquivalenceClass");
-    APInt PrevReadEnd = Prev.OffsetFromLeader + SzBits / 8;
+    unsigned SzBytes = DL.getTypeStoreSize(getLoadStoreType(&*It->Inst));
 
     // Add this instruction to the end of the current chain, or start a new one.
-    bool AreContiguous = It->OffsetFromLeader == PrevReadEnd;
-    LLVM_DEBUG(dbgs() << "LSV: Instructions are "
-                      << (AreContiguous ? "" : "not ") << "contiguous: "
-                      << *Prev.Inst << " (ends at offset " << PrevReadEnd
-                      << ") -> " << *It->Inst << " (starts at offset "
+    assert(
+        8 * SzBytes % ChainElemTyBits == 0 &&
+        "Every chain-element size must be a multiple of the element size after "
+        "vectorization.");
+    APInt ReadEnd = It->OffsetFromLeader + SzBytes;
+    // Allow redundancy: partial or full overlap counts as contiguous.
+    bool AreContiguous = false;
+    if (It->OffsetFromLeader.sle(PrevReadEnd)) {
+      // Check overlap is a multiple of the element size after vectorization.
+      uint64_t Overlap = (PrevReadEnd - It->OffsetFromLeader).getZExtValue();
+      if (8 * Overlap % ChainElemTyBits == 0)
+        AreContiguous = true;
+    }
+
+    LLVM_DEBUG(dbgs() << "LSV: Instruction is "
+                      << (AreContiguous ? "contiguous" : "chain-breaker")
+                      << *It->Inst << " (starts at offset "
                       << It->OffsetFromLeader << ")\n");
+
     if (AreContiguous)
       CurChain.push_back(*It);
     else
       Ret.push_back({*It});
+    PrevReadEnd = APIntOps::smax(PrevReadEnd, ReadEnd);
   }
 
   // Filter out length-1 chains, these are uninteresting.
@@ -727,14 +739,20 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
     // These chains are over the closed interval [CBegin, CEnd].
     SmallVector<std::pair<unsigned /*CEnd*/, unsigned /*SizeBytes*/>, 8>
         CandidateChains;
+    // Need to compute the size of every candidate chain from its beginning
+    // because of possible overlapping among chain elements.
+    unsigned Sz = DL.getTypeStoreSize(getLoadStoreType(C[CBegin].Inst));
+    APInt PrevReadEnd = C[CBegin].OffsetFromLeader + Sz;
     for (unsigned CEnd = CBegin + 1, Size = C.size(); CEnd < Size; ++CEnd) {
-      APInt Sz = C[CEnd].OffsetFromLeader +
-                 DL.getTypeStoreSize(getLoadStoreType(C[CEnd].Inst)) -
-                 C[CBegin].OffsetFromLeader;
-      if (Sz.sgt(VecRegBytes))
+      APInt ReadEnd = C[CEnd].OffsetFromLeader +
+                      DL.getTypeStoreSize(getLoadStoreType(C[CEnd].Inst));
+      unsigned BytesAdded =
+          PrevReadEnd.sle(ReadEnd) ? (ReadEnd - PrevReadEnd).getSExtValue() : 0;
+      Sz += BytesAdded;
+      if (Sz > VecRegBytes)
         break;
-      CandidateChains.emplace_back(CEnd,
-                                   static_cast<unsigned>(Sz.getLimitedValue()));
+      CandidateChains.emplace_back(CEnd, Sz);
+      PrevReadEnd = APIntOps::smax(PrevReadEnd, ReadEnd);
     }
 
     // Consider the longest chain first.
@@ -874,15 +892,24 @@ bool Vectorizer::vectorizeChain(Chain &C) {
   Type *VecElemTy = getChainElemTy(C);
   bool IsLoadChain = isa<LoadInst>(C[0].Inst);
   unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
-  unsigned ChainBytes = std::accumulate(
-      C.begin(), C.end(), 0u, [&](unsigned Bytes, const ChainElem &E) {
-        return Bytes + DL.getTypeStoreSize(getLoadStoreType(E.Inst));
-      });
-  assert(ChainBytes % DL.getTypeStoreSize(VecElemTy) == 0);
+  unsigned BytesAdded = DL.getTypeStoreSize(getLoadStoreType(&*C[0].Inst));
+  APInt PrevReadEnd = C[0].OffsetFromLeader + BytesAdded;
+  unsigned ChainBytes = BytesAdded;
+  for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
+    unsigned SzBytes = DL.getTypeStoreSize(getLoadStoreType(&*It->Inst));
+    APInt ReadEnd = It->OffsetFromLeader + SzBytes;
+    // Update ChainBytes considering possible overlap.
+    BytesAdded =
+        PrevReadEnd.sle(ReadEnd) ? (ReadEnd - PrevReadEnd).getSExtValue() : 0;
+    ChainBytes += BytesAdded;
+    PrevReadEnd = APIntOps::smax(PrevReadEnd, ReadEnd);
+  }
+
+  assert(8 * ChainBytes % DL.getTypeSizeInBits(VecElemTy) == 0);
   // VecTy is a power of 2 and 1 byte at smallest, but VecElemTy may be smaller
   // than 1 byte (e.g. VecTy == <32 x i1>).
-  Type *VecTy = FixedVectorType::get(
-      VecElemTy, 8 * ChainBytes / DL.getTypeSizeInBits(VecElemTy));
+  unsigned NumElem = 8 * ChainBytes / DL.getTypeSizeInBits(VecElemTy);
+  Type *VecTy = FixedVectorType::get(VecElemTy, NumElem);
 
   Align Alignment = getLoadStoreAlignment(C[0].Inst);
   // If this is a load/store of an alloca, we might have upgraded the alloca's
@@ -909,27 +936,32 @@ bool Vectorizer::vectorizeChain(Chain &C) {
         llvm::min_element(C, [](const auto &A, const auto &B) {
           return A.Inst->comesBefore(B.Inst);
         })->Inst);
-
+    // This can happen due to a chain of redundant loads.
+    // In this case, just use the element-type, and avoid ExtractElement.
+    if (NumElem == 1)
+      VecTy = VecElemTy;
     // Chain is in offset order, so C[0] is the instr with the lowest offset,
     // i.e. the root of the vector.
     VecInst = Builder.CreateAlignedLoad(VecTy,
                                         getLoadStorePointerOperand(C[0].Inst),
                                         Alignment);
 
-    unsigned VecIdx = 0;
     for (const ChainElem &E : C) {
       Instruction *I = E.Inst;
       Value *V;
       Type *T = getLoadStoreType(I);
+      unsigned EOffset =
+          (E.OffsetFromLeader - C[0].OffsetFromLeader).getZExtValue();
+      unsigned VecIdx = 8 * EOffset / DL.getTypeSizeInBits(VecElemTy);
       if (auto *VT = dyn_cast<FixedVectorType>(T)) {
         auto Mask = llvm::to_vector<8>(
             llvm::seq<int>(VecIdx, VecIdx + VT->getNumElements()));
         V = Builder.CreateShuffleVector(VecInst, Mask, I->getName());
-        VecIdx += VT->getNumElements();
-      } else {
+      } else if (VecTy != VecElemTy) {
         V = Builder.CreateExtractElement(VecInst, Builder.getInt32(VecIdx),
                                          I->getName());
-        ++VecIdx;
+      } else {
+        V = VecInst;
       }
       if (V->getType() != I->getType())
         V = Builder.CreateBitOrPointerCast(V, I->getType());
@@ -964,22 +996,25 @@ bool Vectorizer::vectorizeChain(Chain &C) {
 
     // Build the vector to store.
     Value *Vec = PoisonValue::get(VecTy);
-    unsigned VecIdx = 0;
-    auto InsertElem = [&](Value *V) {
+    auto InsertElem = [&](Value *V, unsigned VecIdx) {
       if (V->getType() != VecElemTy)
         V = Builder.CreateBitOrPointerCast(V, VecElemTy);
-      Vec = Builder.CreateInsertElement(Vec, V, Builder.getInt32(VecIdx++));
+      Vec = Builder.CreateInsertElement(Vec, V, Builder.getInt32(VecIdx));
     };
     for (const ChainElem &E : C) {
       auto *I = cast<StoreInst>(E.Inst);
+      unsigned EOffset =
+          (E.OffsetFromLeader - C[0].OffsetFromLeader).getZExtValue();
+      unsigned VecIdx = 8 * EOffset / DL.getTypeSizeInBits(VecElemTy);
       if (FixedVectorType *VT =
               dyn_cast<FixedVectorType>(getLoadStoreType(I))) {
         for (int J = 0, JE = VT->getNumElements(); J < JE; ++J) {
           InsertElem(Builder.CreateExtractElement(I->getValueOperand(),
-                                                  Builder.getInt32(J)));
+                                                  Builder.getInt32(J)),
+                     VecIdx++);
         }
       } else {
-        InsertElem(I->getValueOperand());
+        InsertElem(I->getValueOperand(), VecIdx);
       }
     }
 

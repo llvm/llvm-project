@@ -3,9 +3,10 @@
 cppcoreguidelines-avoid-do-while
 ================================
 
-Warns when using ``do-while`` loops. They are less readable than plain ``while``
-loops, since the termination condition is at the end and the condition is not
-checked prior to the first iteration. This can lead to subtle bugs.
+Warns when using ``do-while`` loops. They are less readable than plain
+``while`` loops, since the termination condition is at the end and the
+condition is not checked prior to the first iteration.
+This can lead to subtle bugs.
 
 This check implements `ES.75
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Res-do>`_

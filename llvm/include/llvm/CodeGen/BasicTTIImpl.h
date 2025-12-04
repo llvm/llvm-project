@@ -313,18 +313,17 @@ private:
     Type *Ty = getContainedTypes(RetTy).front();
     EVT VT = getTLI()->getValueType(DL, Ty);
 
-    EVT ScalarVT = VT.getScalarType();
     RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
 
     switch (ICA.getID()) {
     case Intrinsic::modf:
-      LC = RTLIB::getMODF(ScalarVT);
+      LC = RTLIB::getMODF(VT);
       break;
     case Intrinsic::sincospi:
-      LC = RTLIB::getSINCOSPI(ScalarVT);
+      LC = RTLIB::getSINCOSPI(VT);
       break;
     case Intrinsic::sincos:
-      LC = RTLIB::getSINCOS(ScalarVT);
+      LC = RTLIB::getSINCOS(VT);
       break;
     default:
       return std::nullopt;
@@ -335,27 +334,14 @@ private:
     if (LibcallImpl == RTLIB::Unsupported)
       return std::nullopt;
 
-    StringRef LCName =
-        RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl);
-
-    // Search for a corresponding vector variant.
-    //
-    // FIXME: Should use RuntimeLibcallsInfo, not TargetLibraryInfo to get the
-    // vector mapping.
     LLVMContext &Ctx = RetTy->getContext();
-    ElementCount VF = getVectorizedTypeVF(RetTy);
-    VecDesc const *VD = nullptr;
-    for (bool Masked : {false, true}) {
-      if ((VD = LibInfo->getVectorMappingInfo(LCName, VF, Masked)))
-        break;
-    }
-    if (!VD)
-      return std::nullopt;
 
     // Cost the call + mask.
     auto Cost =
         thisT()->getCallInstrCost(nullptr, RetTy, ICA.getArgTypes(), CostKind);
-    if (VD->isMasked()) {
+
+    if (RTLIB::RuntimeLibcallsInfo::hasVectorMaskArgument(LibcallImpl)) {
+      ElementCount VF = getVectorizedTypeVF(RetTy);
       auto VecTy = VectorType::get(IntegerType::getInt1Ty(Ctx), VF);
       Cost += thisT()->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
                                       VecTy, {}, CostKind, 0, nullptr, {});
@@ -1572,9 +1558,13 @@ public:
   }
 
   InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *DataTy, Align Alignment,
-                        unsigned AddressSpace,
+  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const override {
+    Type *DataTy = MICA.getDataType();
+    Align Alignment = MICA.getAlignment();
+    unsigned Opcode = MICA.getID() == Intrinsic::masked_load
+                          ? Instruction::Load
+                          : Instruction::Store;
     // TODO: Pass on AddressSpace when we have test coverage.
     return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, true, false,
                                        CostKind);
@@ -1631,10 +1621,12 @@ public:
 
     // Firstly, the cost of load/store operation.
     InstructionCost Cost;
-    if (UseMaskForCond || UseMaskForGaps)
-      Cost = thisT()->getMaskedMemoryOpCost(Opcode, VecTy, Alignment,
-                                            AddressSpace, CostKind);
-    else
+    if (UseMaskForCond || UseMaskForGaps) {
+      unsigned IID = Opcode == Instruction::Load ? Intrinsic::masked_load
+                                                 : Intrinsic::masked_store;
+      Cost = thisT()->getMaskedMemoryOpCost(
+          {IID, VecTy, Alignment, AddressSpace}, CostKind);
+    } else
       Cost = thisT()->getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace,
                                       CostKind);
 
@@ -2417,14 +2409,12 @@ public:
     case Intrinsic::masked_store: {
       Type *Ty = Tys[0];
       Align TyAlign = thisT()->DL.getABITypeAlign(Ty);
-      return thisT()->getMaskedMemoryOpCost(Instruction::Store, Ty, TyAlign, 0,
-                                            CostKind);
+      return thisT()->getMaskedMemoryOpCost({IID, Ty, TyAlign, 0}, CostKind);
     }
     case Intrinsic::masked_load: {
       Type *Ty = RetTy;
       Align TyAlign = thisT()->DL.getABITypeAlign(Ty);
-      return thisT()->getMaskedMemoryOpCost(Instruction::Load, Ty, TyAlign, 0,
-                                            CostKind);
+      return thisT()->getMaskedMemoryOpCost({IID, Ty, TyAlign, 0}, CostKind);
     }
     case Intrinsic::experimental_vp_strided_store: {
       auto *Ty = cast<VectorType>(ICA.getArgTypes()[0]);

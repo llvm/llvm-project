@@ -17,6 +17,7 @@
 #include "type-parser-implementation.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/STLExtras.h"
@@ -30,6 +31,7 @@
 #include <iterator>
 #include <list>
 #include <optional>
+#include <set>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -55,6 +57,35 @@ constexpr auto endOmpLine = space >> endOfLine;
 
 constexpr auto logicalConstantExpr{logical(constantExpr)};
 constexpr auto scalarLogicalConstantExpr{scalar(logicalConstantExpr)};
+
+// Parser that wraps the result of another parser into a Block. If the given
+// parser succeeds, the result is a block containing the ExecutionPartConstruct
+// result of the argument parser. Otherwise the parser fails.
+template <typename ExecParser> struct AsBlockParser {
+  using resultType = Block;
+  static_assert(
+      std::is_same_v<typename ExecParser::resultType, ExecutionPartConstruct>);
+
+  constexpr AsBlockParser(ExecParser epc) : epc_(epc) {}
+  std::optional<resultType> Parse(ParseState &state) const {
+    if (auto &&exec{attempt(epc_).Parse(state)}) {
+      Block body;
+      body.push_back(std::move(*exec));
+      return std::move(body); // std::move for GCC 7.5.0
+    }
+    return std::nullopt;
+  }
+
+private:
+  const ExecParser epc_;
+};
+
+template <typename ExecParser,
+    typename = std::enable_if<std::is_same_v<typename ExecParser::resultType,
+        ExecutionPartConstruct>>>
+constexpr auto asBlock(ExecParser epc) {
+  return AsBlockParser<ExecParser>(epc);
+}
 
 // Given a parser for a single element, and a parser for a list of elements
 // of the same type, create a parser that constructs the entire list by having
@@ -791,6 +822,12 @@ TYPE_PARSER(construct<OmpDirectiveNameModifier>(OmpDirectiveNameParser{}))
 TYPE_PARSER(construct<OmpExpectation>( //
     "PRESENT" >> pure(OmpExpectation::Value::Present)))
 
+TYPE_PARSER(construct<OmpFallbackModifier>("FALLBACK"_tok >>
+    parenthesized( //
+        "ABORT" >> pure(OmpFallbackModifier::Value::Abort) ||
+        "DEFAULT_MEM" >> pure(OmpFallbackModifier::Value::Default_Mem) ||
+        "NULL" >> pure(OmpFallbackModifier::Value::Null))))
+
 TYPE_PARSER(construct<OmpInteropRuntimeIdentifier>(
     construct<OmpInteropRuntimeIdentifier>(charLiteralConstant) ||
     construct<OmpInteropRuntimeIdentifier>(scalarIntConstantExpr)))
@@ -857,8 +894,7 @@ TYPE_PARSER(construct<OmpOrderingModifier>(
     "SIMD" >> pure(OmpOrderingModifier::Value::Simd)))
 
 TYPE_PARSER(construct<OmpPrescriptiveness>(
-    "STRICT" >> pure(OmpPrescriptiveness::Value::Strict) ||
-    "FALLBACK" >> pure(OmpPrescriptiveness::Value::Fallback)))
+    "STRICT" >> pure(OmpPrescriptiveness::Value::Strict)))
 
 TYPE_PARSER(construct<OmpPresentModifier>( //
     "PRESENT" >> pure(OmpPresentModifier::Value::Present)))
@@ -925,7 +961,7 @@ TYPE_PARSER( //
     sourced(construct<OmpDynGroupprivateClause::Modifier>(
         Parser<OmpAccessGroup>{})) ||
     sourced(construct<OmpDynGroupprivateClause::Modifier>(
-        Parser<OmpPrescriptiveness>{})))
+        Parser<OmpFallbackModifier>{})))
 
 TYPE_PARSER(
     sourced(construct<OmpDeviceClause::Modifier>(Parser<OmpDeviceModifier>{})))
@@ -1566,6 +1602,14 @@ static inline constexpr auto IsMemberOf(const DirectiveSet &dirs) {
   };
 }
 
+constexpr auto validEPC{//
+    predicated(executionPartConstruct, [](auto &epc) {
+      return !Unwrap<OpenMPMisplacedEndDirective>(epc) &&
+          !Unwrap<OpenMPMisplacedEndDirective>(epc);
+    })};
+
+constexpr auto validBlock{many(validEPC)};
+
 TYPE_PARSER(sourced(construct<OmpDirectiveName>(OmpDirectiveNameParser{})))
 
 OmpDirectiveSpecification static makeFlushFromOldSyntax(Verbatim &&text,
@@ -1623,7 +1667,7 @@ struct StrictlyStructuredBlockParser {
   std::optional<resultType> Parse(ParseState &state) const {
     // Detect BLOCK construct without parsing the entire thing.
     if (lookAhead(skipStuffBeforeStatement >> "BLOCK"_tok).Parse(state)) {
-      if (auto epc{Parser<ExecutionPartConstruct>{}.Parse(state)}) {
+      if (auto &&epc{executionPartConstruct.Parse(state)}) {
         if (GetFortranBlockConstruct(*epc) != nullptr) {
           Block body;
           body.emplace_back(std::move(*epc));
@@ -1643,10 +1687,90 @@ struct LooselyStructuredBlockParser {
     if (lookAhead(skipStuffBeforeStatement >> "BLOCK"_tok).Parse(state)) {
       return std::nullopt;
     }
-    if (auto &&body{block.Parse(state)}) {
+    if (auto &&body{validBlock.Parse(state)}) {
       // Empty body is ok.
       return std::move(body);
     }
+    return std::nullopt;
+  }
+};
+
+struct NonBlockDoConstructParser {
+  using resultType = Block;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    std::set<Label> labels;
+    Block body;
+
+    // Parse nests like
+    // do 20 i = 1, n     LabelDoStmt.t<Label> = 20
+    //   do 10 j = 1, m
+    //     ...
+    //   10 continue      Statement<...>.label = 10
+    // 20 continue
+
+    // Keep parsing ExecutionPartConstructs until the set of open label-do
+    // statements becomes empty, or until the EPC parser fails.
+    auto processEpc{[&](ExecutionPartConstruct &&epc) {
+      if (auto &&label{GetStatementLabel(epc)}) {
+        labels.erase(*label);
+      }
+      if (auto *labelDo{Unwrap<LabelDoStmt>(epc)}) {
+        labels.insert(std::get<Label>(labelDo->t));
+      }
+      body.push_back(std::move(epc));
+    }};
+
+    auto nonBlockDo{predicated(executionPartConstruct,
+        [](auto &epc) { return Unwrap<LabelDoStmt>(epc); })};
+
+    if (auto &&nbd{nonBlockDo.Parse(state)}) {
+      processEpc(std::move(*nbd));
+      while (auto &&epc{attempt(validEPC).Parse(state)}) {
+        processEpc(std::move(*epc));
+        if (labels.empty()) {
+          break;
+        }
+      }
+    }
+
+    if (!body.empty()) {
+      return std::move(body);
+    }
+    return std::nullopt;
+  }
+};
+
+struct LoopNestParser {
+  using resultType = Block;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    // Parse !$DIR as an ExecutionPartConstruct
+    auto fortranDirective{predicated(executionPartConstruct,
+        [](auto &epc) { return Unwrap<CompilerDirective>(epc); })};
+    // Parse DO loop as an ExecutionPartConstruct
+    auto fortranDoConstruct{predicated(executionPartConstruct,
+        [&](auto &epc) { return Unwrap<DoConstruct>(epc); })};
+    ParseState backtrack{state};
+
+    Block body;
+    llvm::move(*many(fortranDirective).Parse(state), std::back_inserter(body));
+
+    if (auto &&doLoop{attempt(fortranDoConstruct).Parse(state)}) {
+      body.push_back(std::move(*doLoop));
+      return std::move(body);
+    }
+    if (auto &&labelDo{attempt(NonBlockDoConstructParser{}).Parse(state)}) {
+      llvm::move(*labelDo, std::back_inserter(body));
+      return std::move(body);
+    }
+    if (auto &&sblock{attempt(StrictlyStructuredBlockParser{}).Parse(state)}) {
+      llvm::move(*sblock, std::back_inserter(body));
+      return std::move(body);
+    }
+    // If it's neither a DO-loop, nor a BLOCK, undo the parsing of the
+    // directives and fail.
+    state = backtrack;
     return std::nullopt;
   }
 };
@@ -1724,7 +1848,7 @@ struct OmpStatementConstructParser {
   std::optional<resultType> Parse(ParseState &state) const {
     if (auto begin{OmpBeginDirectiveParser(dir_).Parse(state)}) {
       Block body;
-      if (auto stmt{attempt(Parser<ExecutionPartConstruct>{}).Parse(state)}) {
+      if (auto stmt{attempt(validEPC).Parse(state)}) {
         body.emplace_back(std::move(*stmt));
       }
       // Allow empty block. Check for this in semantics.
@@ -1776,6 +1900,54 @@ struct OmpBlockConstructParser {
 
 private:
   llvm::omp::Directive dir_;
+};
+
+struct OmpLoopConstructParser {
+  using resultType = OpenMPLoopConstruct;
+
+  constexpr OmpLoopConstructParser(DirectiveSet dirs) : dirs_(dirs) {}
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    auto ompLoopConstruct{asBlock(predicated(executionPartConstruct,
+        [](auto &epc) { return Unwrap<OpenMPLoopConstruct>(epc); }))};
+    auto loopItem{LoopNestParser{} || ompLoopConstruct};
+
+    if (auto &&begin{OmpBeginDirectiveParser(dirs_).Parse(state)}) {
+      auto loopDir{begin->DirName().v};
+      auto assoc{llvm::omp::getDirectiveAssociation(loopDir)};
+      if (assoc == llvm::omp::Association::LoopNest) {
+        if (auto &&item{attempt(loopItem).Parse(state)}) {
+          auto end{maybe(OmpEndDirectiveParser{loopDir}).Parse(state)};
+          return OpenMPLoopConstruct{OmpBeginLoopDirective(std::move(*begin)),
+              std::move(*item),
+              llvm::transformOptional(std::move(*end),
+                  [](auto &&s) { return OmpEndLoopDirective(std::move(s)); })};
+        } else if (auto &&empty{pure<Block>().Parse(state)}) {
+          // Allow empty body.
+          auto end{maybe(OmpEndDirectiveParser{loopDir}).Parse(state)};
+          return OpenMPLoopConstruct{OmpBeginLoopDirective(std::move(*begin)),
+              std::move(*empty),
+              llvm::transformOptional(std::move(*end),
+                  [](auto &&s) { return OmpEndLoopDirective(std::move(s)); })};
+        }
+      } else if (assoc == llvm::omp::Association::LoopSeq) {
+        // Parse loop sequence as a block.
+        if (auto &&body{validBlock.Parse(state)}) {
+          auto end{maybe(OmpEndDirectiveParser{loopDir}).Parse(state)};
+          return OpenMPLoopConstruct{OmpBeginLoopDirective(std::move(*begin)),
+              std::move(*body),
+              llvm::transformOptional(std::move(*end),
+                  [](auto &&s) { return OmpEndLoopDirective(std::move(s)); })};
+        }
+      } else {
+        llvm_unreachable("Unexpected association");
+      }
+    }
+    return std::nullopt;
+  }
+
+private:
+  DirectiveSet dirs_;
 };
 
 struct OmpDeclarativeAllocateParser {
@@ -1857,11 +2029,9 @@ struct OmpAtomicConstructParser {
       return std::nullopt;
     }
 
-    auto exec{Parser<ExecutionPartConstruct>{}};
-    auto end{OmpEndDirectiveParser{llvm::omp::Directive::OMPD_atomic}};
     TailType tail;
 
-    if (ParseOne(exec, end, tail, state)) {
+    if (ParseOne(tail, state)) {
       if (!tail.first.empty()) {
         if (auto &&rest{attempt(LimitedTailParser(BodyLimit)).Parse(state)}) {
           for (auto &&s : rest->first) {
@@ -1888,13 +2058,12 @@ private:
 
   // Parse either an ExecutionPartConstruct, or atomic end-directive. When
   // successful, record the result in the "tail" provided, otherwise fail.
-  static std::optional<Success> ParseOne( //
-      Parser<ExecutionPartConstruct> &exec, OmpEndDirectiveParser &end,
-      TailType &tail, ParseState &state) {
-    auto isRecovery{[](const ExecutionPartConstruct &e) {
-      return std::holds_alternative<ErrorRecovery>(e.u);
+  static std::optional<Success> ParseOne(TailType &tail, ParseState &state) {
+    auto isUsable{[](const std::optional<ExecutionPartConstruct> &e) {
+      return e && !std::holds_alternative<ErrorRecovery>(e->u);
     }};
-    if (auto &&stmt{attempt(exec).Parse(state)}; stmt && !isRecovery(*stmt)) {
+    auto end{OmpEndDirectiveParser{llvm::omp::Directive::OMPD_atomic}};
+    if (auto &&stmt{attempt(validEPC).Parse(state)}; isUsable(stmt)) {
       tail.first.emplace_back(std::move(*stmt));
     } else if (auto &&dir{attempt(end).Parse(state)}) {
       tail.second = std::move(*dir);
@@ -1910,12 +2079,10 @@ private:
     constexpr LimitedTailParser(size_t count) : count_(count) {}
 
     std::optional<resultType> Parse(ParseState &state) const {
-      auto exec{Parser<ExecutionPartConstruct>{}};
-      auto end{OmpEndDirectiveParser{llvm::omp::Directive::OMPD_atomic}};
       TailType tail;
 
       for (size_t i{0}; i != count_; ++i) {
-        if (ParseOne(exec, end, tail, state)) {
+        if (ParseOne(tail, state)) {
           if (tail.second) {
             // Return when the end-directive was parsed.
             return std::move(tail);
@@ -2187,9 +2354,9 @@ TYPE_PARSER(sourced(construct<OpenMPSectionsConstruct>(
     Parser<OmpBeginSectionsDirective>{} / endOmpLine,
     cons( //
         construct<OpenMPConstruct>(sourced(
-            construct<OpenMPSectionConstruct>(maybe(sectionDir), block))),
-        many(construct<OpenMPConstruct>(
-            sourced(construct<OpenMPSectionConstruct>(sectionDir, block))))),
+            construct<OpenMPSectionConstruct>(maybe(sectionDir), validBlock))),
+        many(construct<OpenMPConstruct>(sourced(
+            construct<OpenMPSectionConstruct>(sectionDir, validBlock))))),
     maybe(Parser<OmpEndSectionsDirective>{} / endOmpLine))))
 
 static bool IsExecutionPart(const OmpDirectiveName &name) {
@@ -2255,19 +2422,24 @@ static constexpr DirectiveSet GetLoopDirectives() {
       unsigned(Directive::OMPD_teams_distribute_parallel_do_simd),
       unsigned(Directive::OMPD_teams_distribute_simd),
       unsigned(Directive::OMPD_teams_loop),
+      unsigned(Directive::OMPD_fuse),
       unsigned(Directive::OMPD_tile),
       unsigned(Directive::OMPD_unroll),
   };
   return loopDirectives;
 }
 
-TYPE_PARSER(sourced(construct<OmpBeginLoopDirective>(
-    sourced(OmpBeginDirectiveParser(GetLoopDirectives())))))
+TYPE_PARSER(sourced(construct<OpenMPLoopConstruct>(
+    OmpLoopConstructParser(GetLoopDirectives()))))
 
-// END OMP Loop directives
-TYPE_PARSER(sourced(construct<OmpEndLoopDirective>(
-    sourced(OmpEndDirectiveParser(GetLoopDirectives())))))
+static constexpr DirectiveSet GetAllDirectives() { //
+  return ~DirectiveSet{};
+}
 
-TYPE_PARSER(construct<OpenMPLoopConstruct>(
-    Parser<OmpBeginLoopDirective>{} / endOmpLine))
+TYPE_PARSER(construct<OpenMPMisplacedEndDirective>(
+    OmpEndDirectiveParser{GetAllDirectives()}))
+
+TYPE_PARSER( //
+    startOmpLine >> sourced(construct<OpenMPInvalidDirective>(
+                        !OmpDirectiveNameParser{} >> SkipTo<'\n'>{})))
 } // namespace Fortran::parser

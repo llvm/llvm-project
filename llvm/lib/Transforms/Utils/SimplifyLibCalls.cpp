@@ -2921,7 +2921,7 @@ Value *LibCallSimplifier::optimizeTrigInversionPairs(CallInst *CI,
                               .Case("asinh", LibFunc_sinh)
                               .Case("asinhf", LibFunc_sinhf)
                               .Case("asinhl", LibFunc_sinhl)
-                              .Default(NumLibFuncs); // Used as error value
+                              .Default(NotLibFunc); // Used as error value
     if (Func == inverseFunc)
       Ret = OpC->getArgOperand(0);
   }

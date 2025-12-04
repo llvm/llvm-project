@@ -31,6 +31,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
@@ -46,6 +47,31 @@ using namespace NVVM;
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc"
 
 static constexpr unsigned notIntrinsic = llvm::Intrinsic::not_intrinsic;
+
+//===----------------------------------------------------------------------===//
+// Helper/Utility methods
+//===----------------------------------------------------------------------===//
+
+static bool isPtrInAddrSpace(mlir::Value ptr, NVVMMemorySpace targetAS) {
+  auto ptrTy = llvm::cast<LLVM::LLVMPointerType>(ptr.getType());
+  return ptrTy.getAddressSpace() == static_cast<unsigned>(targetAS);
+}
+
+static bool isPtrInSharedCTASpace(mlir::Value ptr) {
+  return isPtrInAddrSpace(ptr, NVVMMemorySpace::Shared);
+}
+
+// Helper method to convert CtaGroupKind in NVVM Dialect to CtaGroupKind in LLVM
+static llvm::nvvm::CTAGroupKind
+getNVVMCtaGroupKind(NVVM::CTAGroupKind ctaGroup) {
+  switch (ctaGroup) {
+  case NVVM::CTAGroupKind::CTA_1:
+    return llvm::nvvm::CTAGroupKind::CG_1;
+  case NVVM::CTAGroupKind::CTA_2:
+    return llvm::nvvm::CTAGroupKind::CG_2;
+  }
+  llvm_unreachable("unsupported cta_group value");
+}
 
 //===----------------------------------------------------------------------===//
 // Verifier methods
@@ -196,6 +222,14 @@ LogicalResult CpAsyncBulkTensorReduceOp::verify() {
   case TMAStoreMode::TILE_SCATTER4:
     return emitError("Scatter mode unsupported for CpAsyncBulkTensorReduceOp");
   }
+  return success();
+}
+
+LogicalResult CpAsyncBulkGlobalToSharedClusterOp::verify() {
+  bool isSharedCTA = isPtrInSharedCTASpace(getDstMem());
+  if (isSharedCTA && getMulticastMask())
+    return emitError("Multicast is not supported with shared::cta mode.");
+
   return success();
 }
 
@@ -1504,6 +1538,15 @@ LogicalResult NVVM::BarrierOp::verify() {
   if (getNumberOfThreads() && !getBarrierId())
     return emitOpError(
         "barrier id is missing, it should be set between 0 to 15");
+
+  if (getBarrierId() && (getReductionOp() || getReductionPredicate()))
+    return emitOpError("reduction are only available when id is 0");
+
+  if ((getReductionOp() && !getReductionPredicate()) ||
+      (!getReductionOp() && getReductionPredicate()))
+    return emitOpError("reduction predicate and reduction operation must be "
+                       "specified together");
+
   return success();
 }
 
@@ -1741,24 +1784,68 @@ void Tcgen05MmaSmemDescOp::createSmemDescriptor(Operation &op,
 //===----------------------------------------------------------------------===//
 
 std::string NVVM::MBarrierInitOp::getPtx() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getAddr().getType()).getAddressSpace();
-  return (addressSpace == NVVMMemorySpace::Shared)
-             ? std::string("mbarrier.init.shared.b64 [%0], %1;")
-             : std::string("mbarrier.init.b64 [%0], %1;");
+  bool isShared = isPtrInSharedCTASpace(getAddr());
+  return isShared ? std::string("mbarrier.init.shared.b64 [%0], %1;")
+                  : std::string("mbarrier.init.b64 [%0], %1;");
+}
+
+std::string NVVM::MBarrierArriveExpectTxOp::getPtx() {
+  bool isShared = isPtrInSharedCTASpace(getAddr());
+  return isShared
+             ? std::string("mbarrier.arrive.expect_tx.shared.b64 _, [%0], %1;")
+             : std::string("mbarrier.arrive.expect_tx.b64 _, [%0], %1;");
+}
+
+std::string NVVM::MBarrierTryWaitParityOp::getPtx() {
+  bool isShared = isPtrInSharedCTASpace(getAddr());
+  llvm::StringRef space = isShared ? ".shared" : "";
+
+  return llvm::formatv("{\n\t"
+                       ".reg .pred       P1; \n\t"
+                       "LAB_WAIT: \n\t"
+                       "mbarrier.try_wait.parity{0}.b64 P1, [%0], %1, %2; \n\t"
+                       "@P1 bra.uni DONE; \n\t"
+                       "bra.uni     LAB_WAIT; \n\t"
+                       "DONE: \n\t"
+                       "}",
+                       space);
 }
 
 //===----------------------------------------------------------------------===//
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
 
-static bool isPtrInAddrSpace(mlir::Value ptr, NVVMMemorySpace targetAS) {
-  auto ptrTy = llvm::cast<LLVM::LLVMPointerType>(ptr.getType());
-  return ptrTy.getAddressSpace() == static_cast<unsigned>(targetAS);
-}
+mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::BarrierOp>(op);
+  llvm::Value *barrierId = thisOp.getBarrierId()
+                               ? mt.lookupValue(thisOp.getBarrierId())
+                               : builder.getInt32(0);
+  llvm::Intrinsic::ID id;
+  llvm::SmallVector<llvm::Value *> args;
+  if (thisOp.getNumberOfThreads()) {
+    id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count;
+    args.push_back(barrierId);
+    args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
+  } else if (thisOp.getReductionOp()) {
+    switch (*thisOp.getReductionOp()) {
+    case NVVM::BarrierReduction::AND:
+      id = llvm::Intrinsic::nvvm_barrier0_and;
+      break;
+    case NVVM::BarrierReduction::OR:
+      id = llvm::Intrinsic::nvvm_barrier0_or;
+      break;
+    case NVVM::BarrierReduction::POPC:
+      id = llvm::Intrinsic::nvvm_barrier0_popc;
+      break;
+    }
+    args.push_back(mt.lookupValue(thisOp.getReductionPredicate()));
+  } else {
+    id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
+    args.push_back(barrierId);
+  }
 
-static bool isPtrInSharedCTASpace(mlir::Value ptr) {
-  return isPtrInAddrSpace(ptr, NVVMMemorySpace::Shared);
+  return {id, std::move(args)};
 }
 
 mlir::NVVM::IDArgPair MBarrierInitOp::getIntrinsicIDAndArgs(
@@ -1914,11 +2001,15 @@ mlir::NVVM::IDArgPair CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
   args.push_back(mt.lookupValue(thisOp.getSrcMem()));
   args.push_back(mt.lookupValue(thisOp.getSize()));
 
-  // Multicast mask, if available.
+  // Multicast mask for shared::cluster only, if available.
   mlir::Value multicastMask = thisOp.getMulticastMask();
   const bool hasMulticastMask = static_cast<bool>(multicastMask);
-  llvm::Value *i16Unused = llvm::ConstantInt::get(builder.getInt16Ty(), 0);
-  args.push_back(hasMulticastMask ? mt.lookupValue(multicastMask) : i16Unused);
+  const bool isSharedCTA = isPtrInSharedCTASpace(thisOp.getDstMem());
+  if (!isSharedCTA) {
+    llvm::Value *i16Unused = llvm::ConstantInt::get(builder.getInt16Ty(), 0);
+    args.push_back(hasMulticastMask ? mt.lookupValue(multicastMask)
+                                    : i16Unused);
+  }
 
   // Cache hint, if available.
   mlir::Value cacheHint = thisOp.getL2CacheHint();
@@ -1927,11 +2018,14 @@ mlir::NVVM::IDArgPair CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
   args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
 
   // Flag arguments for multicast and cachehint.
-  args.push_back(builder.getInt1(hasMulticastMask));
+  if (!isSharedCTA)
+    args.push_back(builder.getInt1(hasMulticastMask));
   args.push_back(builder.getInt1(hasCacheHint));
 
   llvm::Intrinsic::ID id =
-      llvm::Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster;
+      isSharedCTA
+          ? llvm::Intrinsic::nvvm_cp_async_bulk_global_to_shared_cta
+          : llvm::Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster;
 
   return {id, std::move(args)};
 }
@@ -3008,6 +3102,605 @@ NVVM::IDArgPair ClusterLaunchControlQueryCancelOp::getIntrinsicIDAndArgs(
     break;
   }
   return {intrinsicID, args};
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.mma functions
+//===----------------------------------------------------------------------===//
+
+mlir::NVVM::IDArgPair
+Tcgen05MMAOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                    llvm::IRBuilderBase &builder) {
+
+  auto thisOp = cast<NVVM::Tcgen05MMAOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixD()));
+
+  llvm::Value *A = mt.lookupValue(thisOp.getMatrixA());
+  const bool isATensor = isa<llvm::PointerType>(A->getType());
+  args.push_back(A);
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixB()));
+  args.push_back(mt.lookupValue(thisOp.getIdesc()));
+  args.push_back(mt.lookupValue(thisOp.getEnableInputD()));
+
+  using EnableAShiftArray = std::array<llvm::Intrinsic::ID, 2>;
+  using CtaGroupArray = std::array<EnableAShiftArray, 2>;
+  using IsATensorArray = std::array<CtaGroupArray, 2>;
+  using HasScaleInputDArray = std::array<IsATensorArray, 2>;
+  using HasDisableOutputLaneArray = std::array<HasScaleInputDArray, 2>;
+
+  // [hasDisableOutputLane][hasScaleInputD][isATensor][CtaGroup][EnableAShift]
+  static constexpr HasDisableOutputLaneArray tcgen05MMAIDs = {
+      {  // without diable output lane
+       {{// without scale input D
+         {{
+             // shared
+             {{// cg1
+               {llvm::Intrinsic::nvvm_tcgen05_mma_shared, notIntrinsic},
+               // cg2
+               {llvm::Intrinsic::nvvm_tcgen05_mma_shared, notIntrinsic}}},
+             {{// tensor
+               {
+                   // cg1
+                   llvm::Intrinsic::nvvm_tcgen05_mma_tensor,
+                   llvm::Intrinsic::nvvm_tcgen05_mma_tensor_ashift,
+               },
+               {
+                   // cg2
+                   llvm::Intrinsic::nvvm_tcgen05_mma_tensor,
+                   llvm::Intrinsic::nvvm_tcgen05_mma_tensor_ashift,
+               }}},
+         }},
+         // with scale input D
+         {{  // shared
+           {{// cg1
+             {llvm::Intrinsic::nvvm_tcgen05_mma_shared_scale_d, notIntrinsic},
+             // cg2
+             {llvm::Intrinsic::nvvm_tcgen05_mma_shared_scale_d, notIntrinsic}}},
+           {{// tensor
+             {
+                 // cg1
+                 llvm::Intrinsic::nvvm_tcgen05_mma_tensor_scale_d,
+                 llvm::Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_ashift,
+             },
+             {
+                 // cg2
+                 llvm::Intrinsic::nvvm_tcgen05_mma_tensor_scale_d,
+                 llvm::Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_ashift,
+             }}}}}}},
+       // with disable output lane
+       {{    // without scale input D
+         {{  // shared
+           {{// cg1
+             {llvm::Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1,
+              notIntrinsic},
+             // cg2
+             {llvm::Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2,
+              notIntrinsic}}},
+           {{// cg1
+             {
+                 llvm::Intrinsic::
+                     nvvm_tcgen05_mma_tensor_disable_output_lane_cg1,
+                 llvm::Intrinsic::
+                     nvvm_tcgen05_mma_tensor_disable_output_lane_cg1_ashift,
+             },
+             // cg2
+             {
+                 llvm::Intrinsic::
+                     nvvm_tcgen05_mma_tensor_disable_output_lane_cg2,
+                 llvm::Intrinsic::
+                     nvvm_tcgen05_mma_tensor_disable_output_lane_cg2_ashift,
+             }}}}},
+         // with scale input D
+         {{  // shared
+           {{// cg1
+             {llvm::Intrinsic::
+                  nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1,
+              notIntrinsic},
+             // cg2
+             {llvm::Intrinsic::
+                  nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg2,
+              notIntrinsic}}},
+           // tensor
+           {{// cg1
+             {llvm::Intrinsic::
+                  nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1,
+              llvm::Intrinsic::
+                  nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1_ashift},
+             // cg2
+             {
+                 llvm::Intrinsic::
+                     nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2,
+                 llvm::Intrinsic::
+                     nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2_ashift,
+             }}}}}}}}};
+
+  llvm::Value *ScaleInputD = mt.lookupValue(thisOp.getScaleInputD());
+  bool hasScaleInputD = ScaleInputD != nullptr;
+
+  llvm::Value *DisableOutputLane =
+      mt.lookupValue(thisOp.getDisableOutputLane());
+  bool hasDisableOutputLane = DisableOutputLane != nullptr;
+
+  const unsigned ctaGroup =
+      static_cast<unsigned>(getNVVMCtaGroupKind(thisOp.getCtaGroup()));
+
+  llvm::Intrinsic::ID ID =
+      tcgen05MMAIDs[hasDisableOutputLane][hasScaleInputD][isATensor]
+                   [ctaGroup - 1][thisOp.getAShift()];
+
+  assert(ID != notIntrinsic && "Invalid intrinsic for Tcgen05MMAOp.");
+
+  if (hasScaleInputD)
+    args.push_back(ScaleInputD);
+
+  if (hasDisableOutputLane)
+    args.push_back(DisableOutputLane);
+
+  args.push_back(builder.getInt32(static_cast<unsigned>(thisOp.getKind())));
+
+  if (!hasDisableOutputLane)
+    args.push_back(builder.getInt32(ctaGroup));
+
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
+
+  return {ID, args};
+}
+
+static LogicalResult
+verifyTcgen05MMAOp(bool isATensor, mlir::Value disableOutputLane,
+                   NVVM::CTAGroupKind ctaGroup, bool hasAShift,
+                   NVVM::Tcgen05MMACollectorOp collectorOp, Location loc) {
+
+  if (disableOutputLane) {
+    mlir::VectorType disableOutputLaneType =
+        cast<mlir::VectorType>(disableOutputLane.getType());
+    if ((ctaGroup == NVVM::CTAGroupKind::CTA_1 &&
+         disableOutputLaneType.getNumElements() != 4) ||
+        (ctaGroup == NVVM::CTAGroupKind::CTA_2 &&
+         disableOutputLaneType.getNumElements() != 8))
+      return emitError(loc) << "Disable Output Lane of length "
+                            << disableOutputLaneType.getNumElements()
+                            << " is incompatible with CtaGroupAttr";
+  }
+
+  if (hasAShift && !isATensor)
+    return emitError(
+        loc, "A-shift can be applied only when matrix A is in tensor memory");
+
+  if (hasAShift == true && (collectorOp == Tcgen05MMACollectorOp::FILL ||
+                            collectorOp == Tcgen05MMACollectorOp::USE))
+    return emitError(
+        loc, "Cannot use collector buffer operation fill or use with ashift");
+
+  return success();
+}
+
+LogicalResult Tcgen05MMAOp::verify() {
+  return verifyTcgen05MMAOp(isa<LLVM::LLVMPointerType>(getMatrixA().getType()),
+                            getDisableOutputLane(), getCtaGroup(), getAShift(),
+                            getCollectorOp(), getLoc());
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.mma.sp functions
+//===----------------------------------------------------------------------===//
+
+mlir::NVVM::IDArgPair Tcgen05MMASparseOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+
+  auto thisOp = cast<NVVM::Tcgen05MMASparseOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixD()));
+
+  llvm::Value *A = mt.lookupValue(thisOp.getMatrixA());
+  bool isATensor = isa<llvm::PointerType>(A->getType());
+  args.push_back(A);
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixB()));
+  args.push_back(mt.lookupValue(thisOp.getIdesc()));
+  args.push_back(mt.lookupValue(thisOp.getEnableInputD()));
+  args.push_back(mt.lookupValue(thisOp.getSparseMetadata()));
+
+  using EnableAShiftArray = std::array<llvm::Intrinsic::ID, 2>;
+  using CtaGroupArray = std::array<EnableAShiftArray, 2>;
+  using IsATensorArray = std::array<CtaGroupArray, 2>;
+  using HasScaleInputDArray = std::array<IsATensorArray, 2>;
+  using HasDisableOutputLaneArray = std::array<HasScaleInputDArray, 2>;
+
+  // [hasDisableOutputLane][hasScaleInputD][isATensor][CtaGroup][EnableAShift]
+  static constexpr HasDisableOutputLaneArray tcgen05MMASparseIDs = {
+      {  // without diable output lane
+       {{// without scale input D
+         {{
+             // shared
+             {{// cg1
+               {llvm::Intrinsic::nvvm_tcgen05_mma_sp_shared, notIntrinsic},
+               // cg2
+               {llvm::Intrinsic::nvvm_tcgen05_mma_sp_shared, notIntrinsic}}},
+             {{// tensor
+               {
+                   // cg1
+                   llvm::Intrinsic::nvvm_tcgen05_mma_sp_tensor,
+                   llvm::Intrinsic::nvvm_tcgen05_mma_sp_tensor_ashift,
+               },
+               {
+                   // cg2
+                   llvm::Intrinsic::nvvm_tcgen05_mma_sp_tensor,
+                   llvm::Intrinsic::nvvm_tcgen05_mma_sp_tensor_ashift,
+               }}},
+         }},
+         // with scale input D
+         {{  // shared
+           {{// cg1
+             {llvm::Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d,
+              notIntrinsic},
+             // cg2
+             {llvm::Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d,
+              notIntrinsic}}},
+           {{// tensor
+             {
+                 // cg1
+                 llvm::Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d,
+                 llvm::Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_ashift,
+             },
+             {
+                 // cg2
+                 llvm::Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d,
+                 llvm::Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_ashift,
+             }}}}}}},
+       // with disable output lane
+       {{    // without scale input D
+         {{  // shared
+           {{// cg1
+             {llvm::Intrinsic::
+                  nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg1,
+              notIntrinsic},
+             // cg2
+             {llvm::Intrinsic::
+                  nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg2,
+              notIntrinsic}}},
+           {{// cg1
+             {
+                 llvm::Intrinsic::
+                     nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1,
+                 llvm::Intrinsic::
+                     nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1_ashift,
+             },
+             // cg2
+             {
+                 llvm::Intrinsic::
+                     nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2,
+                 llvm::Intrinsic::
+                     nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2_ashift,
+             }}}}},
+         // with scale input D
+         {{  // shared
+           {{// cg1
+             {llvm::Intrinsic::
+                  nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg1,
+              notIntrinsic},
+             // cg2
+             {llvm::Intrinsic::
+                  nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg2,
+              notIntrinsic}}},
+           // tensor
+           {{// cg1
+             {llvm::Intrinsic::
+                  nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1,
+              llvm::Intrinsic::
+                  nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1_ashift},
+             // cg2
+             {
+                 llvm::Intrinsic::
+                     nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2,
+                 llvm::Intrinsic::
+                     nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift,
+             }}}}}}}}};
+
+  llvm::Value *ScaleInputD = mt.lookupValue(thisOp.getScaleInputD());
+  bool hasScaleInputD = ScaleInputD != nullptr;
+
+  llvm::Value *DisableOutputLane =
+      mt.lookupValue(thisOp.getDisableOutputLane());
+  bool hasDisableOutputLane = DisableOutputLane != nullptr;
+
+  unsigned ctaGroup =
+      static_cast<unsigned>(getNVVMCtaGroupKind(thisOp.getCtaGroup()));
+
+  llvm::Intrinsic::ID ID =
+      tcgen05MMASparseIDs[hasDisableOutputLane][hasScaleInputD][isATensor]
+                         [ctaGroup - 1][thisOp.getAShift()];
+
+  assert(ID != notIntrinsic && "Invalid intrinsic for Tcgen05MMASparseOp.");
+
+  if (hasScaleInputD)
+    args.push_back(ScaleInputD);
+
+  if (hasDisableOutputLane)
+    args.push_back(DisableOutputLane);
+
+  args.push_back(builder.getInt32(static_cast<unsigned>(thisOp.getKind())));
+
+  if (!hasDisableOutputLane)
+    args.push_back(builder.getInt32(ctaGroup));
+
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
+
+  return {ID, args};
+}
+
+LogicalResult Tcgen05MMASparseOp::verify() {
+  return verifyTcgen05MMAOp(isa<LLVM::LLVMPointerType>(getMatrixA().getType()),
+                            getDisableOutputLane(), getCtaGroup(), getAShift(),
+                            getCollectorOp(), getLoc());
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.mma.block_scale functions
+//===----------------------------------------------------------------------===//
+
+mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+
+  auto thisOp = cast<NVVM::Tcgen05MMABlockScaleOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixD()));
+
+  llvm::Value *A = mt.lookupValue(thisOp.getMatrixA());
+  bool isATensor = isa<llvm::PointerType>(A->getType());
+  args.push_back(A);
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixB()));
+  args.push_back(mt.lookupValue(thisOp.getIdesc()));
+  args.push_back(mt.lookupValue(thisOp.getEnableInputD()));
+  args.push_back(mt.lookupValue(thisOp.getScaleA()));
+  args.push_back(mt.lookupValue(thisOp.getScaleB()));
+  args.push_back(builder.getInt32(
+      static_cast<unsigned>(getNVVMCtaGroupKind(thisOp.getCtaGroup()))));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
+
+  auto kind = thisOp.getKind();
+  auto blockScale = thisOp.getBlockScale();
+  llvm::Intrinsic::ID ID = [&]() {
+    if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF8F6F4) {
+      if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
+        return isATensor ? llvm::Intrinsic::
+                               nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale
+                         : llvm::Intrinsic::
+                               nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale;
+      } else if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
+        return isATensor
+                   ? llvm::Intrinsic::
+                         nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale_block32
+                   : llvm::Intrinsic::
+                         nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32;
+      }
+    } else if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF4) {
+      if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
+        return isATensor
+                   ? llvm::Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale
+                   : llvm::Intrinsic::nvvm_tcgen05_mma_shared_mxf4_block_scale;
+      } else if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
+        return isATensor ? llvm::Intrinsic::
+                               nvvm_tcgen05_mma_tensor_mxf4_block_scale_block32
+                         : llvm::Intrinsic::
+                               nvvm_tcgen05_mma_shared_mxf4_block_scale_block32;
+      }
+    } else if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF4NVF4) {
+      if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
+        return isATensor
+                   ? llvm::Intrinsic::
+                         nvvm_tcgen05_mma_tensor_mxf4nvf4_block_scale_block32
+                   : llvm::Intrinsic::
+                         nvvm_tcgen05_mma_shared_mxf4nvf4_block_scale_block32;
+
+      } else if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK16) {
+        return isATensor
+                   ? llvm::Intrinsic::
+                         nvvm_tcgen05_mma_tensor_mxf4nvf4_block_scale_block16
+                   : llvm::Intrinsic::
+                         nvvm_tcgen05_mma_shared_mxf4nvf4_block_scale_block16;
+      }
+    }
+    llvm_unreachable("Invalid tcgen05.mma.block_scale attributes");
+  }();
+
+  return {ID, args};
+}
+
+static LogicalResult
+verifyTcgen05MMABlockScaleOp(NVVM::Tcgen05MMACollectorOp collectorOp,
+                             NVVM::Tcgen05MMABlockScaleKind kind,
+                             NVVM::Tcgen05MMABlockScale blockScale,
+                             Location loc) {
+
+  if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT &&
+      kind == Tcgen05MMABlockScaleKind::MXF4NVF4)
+    return emitError(loc, "mxf4nvf4 requires block scale attribute");
+
+  if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK16 &&
+      kind != Tcgen05MMABlockScaleKind::MXF4NVF4)
+    return emitError(loc,
+                     llvm::formatv("{} kind does not support block16 attribute",
+                                   stringifyEnum(kind)));
+
+  return success();
+}
+
+LogicalResult Tcgen05MMABlockScaleOp::verify() {
+  return verifyTcgen05MMABlockScaleOp(getCollectorOp(), getKind(),
+                                      getBlockScale(), getLoc());
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.mma.sp.block_scale functions
+//===----------------------------------------------------------------------===//
+
+mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+
+  auto thisOp = cast<NVVM::Tcgen05MMASparseBlockScaleOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixD()));
+
+  llvm::Value *A = mt.lookupValue(thisOp.getMatrixA());
+  bool isATensor = isa<llvm::PointerType>(A->getType());
+  args.push_back(A);
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixB()));
+  args.push_back(mt.lookupValue(thisOp.getIdesc()));
+  args.push_back(mt.lookupValue(thisOp.getEnableInputD()));
+  args.push_back(mt.lookupValue(thisOp.getSparseMetadata()));
+  args.push_back(mt.lookupValue(thisOp.getScaleA()));
+  args.push_back(mt.lookupValue(thisOp.getScaleB()));
+  args.push_back(builder.getInt32(
+      static_cast<unsigned>(getNVVMCtaGroupKind(thisOp.getCtaGroup()))));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
+
+  auto kind = thisOp.getKind();
+  auto blockScale = thisOp.getBlockScale();
+  llvm::Intrinsic::ID ID = [&]() {
+    if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF8F6F4) {
+      if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
+        return isATensor ? llvm::Intrinsic::
+                               nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale
+                         : llvm::Intrinsic::
+                               nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale;
+      } else if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
+        return isATensor
+                   ? llvm::Intrinsic::
+                         nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale_block32
+                   : llvm::Intrinsic::
+                         nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale_block32;
+      }
+    } else if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF4) {
+      if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
+        return isATensor ? llvm::Intrinsic::
+                               nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale
+                         : llvm::Intrinsic::
+                               nvvm_tcgen05_mma_sp_shared_mxf4_block_scale;
+      } else if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
+        return isATensor
+                   ? llvm::Intrinsic::
+                         nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale_block32
+                   : llvm::Intrinsic::
+                         nvvm_tcgen05_mma_sp_shared_mxf4_block_scale_block32;
+      }
+    } else if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF4NVF4) {
+      if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
+        return isATensor
+                   ? llvm::Intrinsic::
+                         nvvm_tcgen05_mma_sp_tensor_mxf4nvf4_block_scale_block32
+                   : llvm::Intrinsic::
+                         nvvm_tcgen05_mma_sp_shared_mxf4nvf4_block_scale_block32;
+
+      } else if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK16) {
+        return isATensor
+                   ? llvm::Intrinsic::
+                         nvvm_tcgen05_mma_sp_tensor_mxf4nvf4_block_scale_block16
+                   : llvm::Intrinsic::
+                         nvvm_tcgen05_mma_sp_shared_mxf4nvf4_block_scale_block16;
+      }
+    }
+    llvm_unreachable("Invalid tcgen05.mma.sp.block_scale attributes");
+  }();
+
+  return {ID, args};
+}
+
+LogicalResult Tcgen05MMASparseBlockScaleOp::verify() {
+  return verifyTcgen05MMABlockScaleOp(getCollectorOp(), getKind(),
+                                      getBlockScale(), getLoc());
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.mma.ws functions
+//===----------------------------------------------------------------------===//
+
+mlir::NVVM::IDArgPair Tcgen05MMAWsOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+
+  auto thisOp = cast<NVVM::Tcgen05MMAWsOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixD()));
+
+  llvm::Value *A = mt.lookupValue(thisOp.getMatrixA());
+  bool isATensor = isa<llvm::PointerType>(A->getType());
+  args.push_back(A);
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixB()));
+  args.push_back(mt.lookupValue(thisOp.getIdesc()));
+  args.push_back(mt.lookupValue(thisOp.getEnableInputD()));
+
+  mlir::Value ZeroColMask = thisOp.getZeroColMask();
+  llvm::Intrinsic::ID ID = notIntrinsic;
+  if (ZeroColMask) {
+    args.push_back(mt.lookupValue(ZeroColMask));
+    ID = isATensor ? llvm::Intrinsic::nvvm_tcgen05_mma_ws_tensor_zero_col_mask
+                   : llvm::Intrinsic::nvvm_tcgen05_mma_ws_shared_zero_col_mask;
+  } else
+    ID = isATensor ? llvm::Intrinsic::nvvm_tcgen05_mma_ws_tensor
+                   : llvm::Intrinsic::nvvm_tcgen05_mma_ws_shared;
+
+  args.push_back(builder.getInt32(static_cast<unsigned>(thisOp.getKind())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorBBuffer())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
+
+  return {ID, args};
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.mma.ws.sp functions
+//===----------------------------------------------------------------------===//
+
+mlir::NVVM::IDArgPair Tcgen05MMAWsSparseOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+
+  auto thisOp = cast<NVVM::Tcgen05MMAWsSparseOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixD()));
+
+  llvm::Value *A = mt.lookupValue(thisOp.getMatrixA());
+  bool isATensor = isa<llvm::PointerType>(A->getType());
+  args.push_back(A);
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixB()));
+  args.push_back(mt.lookupValue(thisOp.getIdesc()));
+  args.push_back(mt.lookupValue(thisOp.getEnableInputD()));
+  args.push_back(mt.lookupValue(thisOp.getSparseMetadata()));
+
+  mlir::Value ZeroColMask = thisOp.getZeroColMask();
+  llvm::Intrinsic::ID ID = notIntrinsic;
+  if (ZeroColMask) {
+    args.push_back(mt.lookupValue(ZeroColMask));
+    ID = isATensor
+             ? llvm::Intrinsic::nvvm_tcgen05_mma_ws_sp_tensor_zero_col_mask
+             : llvm::Intrinsic::nvvm_tcgen05_mma_ws_sp_shared_zero_col_mask;
+  } else
+    ID = isATensor ? llvm::Intrinsic::nvvm_tcgen05_mma_ws_sp_tensor
+                   : llvm::Intrinsic::nvvm_tcgen05_mma_ws_sp_shared;
+
+  args.push_back(builder.getInt32(static_cast<unsigned>(thisOp.getKind())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorBBuffer())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
+
+  return {ID, args};
 }
 
 //===----------------------------------------------------------------------===//

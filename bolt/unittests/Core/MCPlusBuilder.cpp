@@ -143,6 +143,36 @@ TEST_P(MCPlusBuilderTester, AArch64_CmpJE) {
   ASSERT_EQ(Label, BB->getLabel());
 }
 
+TEST_P(MCPlusBuilderTester, AArch64_BTI) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  MCInst BTIjc;
+  BC->MIB->createBTI(BTIjc, true, true);
+  BB->addInstruction(BTIjc);
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), AArch64::HINT);
+  ASSERT_EQ(II->getOperand(0).getImm(), 38);
+
+  MCInst BTIj;
+  BC->MIB->createBTI(BTIj, false, true);
+  II = BB->addInstruction(BTIj);
+  ASSERT_EQ(II->getOpcode(), AArch64::HINT);
+  ASSERT_EQ(II->getOperand(0).getImm(), 36);
+
+  MCInst BTIc;
+  BC->MIB->createBTI(BTIc, true, false);
+  II = BB->addInstruction(BTIc);
+  ASSERT_EQ(II->getOpcode(), AArch64::HINT);
+  ASSERT_EQ(II->getOperand(0).getImm(), 34);
+
+  MCInst BTIinvalid;
+  ASSERT_DEATH(BC->MIB->createBTI(BTIinvalid, false, false),
+               "No target kinds!");
+}
+
 TEST_P(MCPlusBuilderTester, AArch64_CmpJNE) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();

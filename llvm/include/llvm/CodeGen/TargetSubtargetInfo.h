@@ -210,6 +210,10 @@ public:
   /// can be overridden.
   virtual bool enableJoinGlobalCopies() const;
 
+  /// Hack to bring up option. This should be unconditionally true, all targets
+  /// should enable it and delete this.
+  virtual bool enableTerminalRule() const { return false; }
+
   /// True if the subtarget should run a scheduler after register allocation.
   ///
   /// By default this queries the PostRAScheduling bit in the scheduling model

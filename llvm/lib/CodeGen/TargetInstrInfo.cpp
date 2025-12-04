@@ -58,9 +58,8 @@ static cl::opt<unsigned int> MaxAccumulatorWidth(
 
 TargetInstrInfo::~TargetInstrInfo() = default;
 
-const TargetRegisterClass *
-TargetInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-                             const TargetRegisterInfo *TRI) const {
+const TargetRegisterClass *TargetInstrInfo::getRegClass(const MCInstrDesc &MCID,
+                                                        unsigned OpNum) const {
   if (OpNum >= MCID.getNumOperands())
     return nullptr;
 
@@ -69,14 +68,14 @@ TargetInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
 
   // TODO: Remove isLookupPtrRegClass in favor of isLookupRegClassByHwMode
   if (OpInfo.isLookupPtrRegClass())
-    return TRI->getPointerRegClass(RegClass);
+    return TRI.getPointerRegClass(RegClass);
 
   // Instructions like INSERT_SUBREG do not have fixed register classes.
   if (RegClass < 0)
     return nullptr;
 
   // Otherwise just look it up normally.
-  return TRI->getRegClass(RegClass);
+  return TRI.getRegClass(RegClass);
 }
 
 /// insertNoop - Insert a noop into the instruction stream at the specified
@@ -223,13 +222,11 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   //   %1.sub = INST %1.sub(tied), %0.sub, implicit-def %1
   SmallVector<unsigned> UpdateImplicitDefIdx;
   if (HasDef && MI.hasImplicitDef()) {
-    const TargetRegisterInfo *TRI =
-        MI.getMF()->getSubtarget().getRegisterInfo();
     for (auto [OpNo, MO] : llvm::enumerate(MI.implicit_operands())) {
       Register ImplReg = MO.getReg();
       if ((ImplReg.isVirtual() && ImplReg == Reg0) ||
           (ImplReg.isPhysical() && Reg0.isPhysical() &&
-           TRI->isSubRegisterEq(ImplReg, Reg0)))
+           TRI.isSubRegisterEq(ImplReg, Reg0)))
         UpdateImplicitDefIdx.push_back(OpNo + MI.getNumExplicitOperands());
     }
   }
@@ -425,28 +422,27 @@ bool TargetInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
                                         unsigned SubIdx, unsigned &Size,
                                         unsigned &Offset,
                                         const MachineFunction &MF) const {
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   if (!SubIdx) {
-    Size = TRI->getSpillSize(*RC);
+    Size = TRI.getSpillSize(*RC);
     Offset = 0;
     return true;
   }
-  unsigned BitSize = TRI->getSubRegIdxSize(SubIdx);
+  unsigned BitSize = TRI.getSubRegIdxSize(SubIdx);
   // Convert bit size to byte size.
   if (BitSize % 8)
     return false;
 
-  int BitOffset = TRI->getSubRegIdxOffset(SubIdx);
+  int BitOffset = TRI.getSubRegIdxOffset(SubIdx);
   if (BitOffset < 0 || BitOffset % 8)
     return false;
 
   Size = BitSize / 8;
   Offset = (unsigned)BitOffset / 8;
 
-  assert(TRI->getSpillSize(*RC) >= (Offset + Size) && "bad subregister range");
+  assert(TRI.getSpillSize(*RC) >= (Offset + Size) && "bad subregister range");
 
   if (!MF.getDataLayout().isLittleEndian()) {
-    Offset = TRI->getSpillSize(*RC) - (Offset + Size);
+    Offset = TRI.getSpillSize(*RC) - (Offset + Size);
   }
   return true;
 }
@@ -454,8 +450,7 @@ bool TargetInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
 void TargetInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I,
                                     Register DestReg, unsigned SubIdx,
-                                    const MachineInstr &Orig,
-                                    const TargetRegisterInfo &TRI) const {
+                                    const MachineInstr &Orig) const {
   MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
   MI->substituteRegister(MI->getOperand(0).getReg(), DestReg, SubIdx, TRI);
   MBB.insert(I, MI);
@@ -726,7 +721,6 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
   // actual load size is.
   int64_t MemSize = 0;
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
   if (Flags & MachineMemOperand::MOStore) {
     MemSize = MFI.getObjectSize(FI);
@@ -735,7 +729,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
       int64_t OpSize = MFI.getObjectSize(FI);
 
       if (auto SubReg = MI.getOperand(OpIdx).getSubReg()) {
-        unsigned SubRegSize = TRI->getSubRegIdxSize(SubReg);
+        unsigned SubRegSize = TRI.getSubRegIdxSize(SubReg);
         if (SubRegSize > 0 && !(SubRegSize % 8))
           OpSize = SubRegSize / 8;
       }
@@ -800,11 +794,11 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
       // code.
       BuildMI(*MBB, Pos, MI.getDebugLoc(), get(TargetOpcode::KILL)).add(MO);
     } else {
-      storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC, TRI,
+      storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC,
                           Register());
     }
   } else
-    loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, TRI, Register());
+    loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, Register());
 
   return &*--Pos;
 }
@@ -880,8 +874,8 @@ static void transferImplicitOperands(MachineInstr *MI,
   }
 }
 
-void TargetInstrInfo::lowerCopy(MachineInstr *MI,
-                                const TargetRegisterInfo *TRI) const {
+void TargetInstrInfo::lowerCopy(
+    MachineInstr *MI, const TargetRegisterInfo * /*Remove me*/) const {
   if (MI->allDefsAreDead()) {
     MI->setDesc(get(TargetOpcode::KILL));
     return;
@@ -911,7 +905,7 @@ void TargetInstrInfo::lowerCopy(MachineInstr *MI,
               SrcMO.getReg().isPhysical() ? SrcMO.isRenamable() : false);
 
   if (MI->getNumOperands() > 2)
-    transferImplicitOperands(MI, TRI);
+    transferImplicitOperands(MI, &TRI);
   MI->eraseFromParent();
 }
 
@@ -1327,8 +1321,7 @@ void TargetInstrInfo::reassociateOps(
   MachineFunction *MF = Root.getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-  const TargetRegisterClass *RC = Root.getRegClassConstraint(0, TII, TRI);
+  const TargetRegisterClass *RC = Root.getRegClassConstraint(0, TII, &TRI);
 
   MachineOperand &OpA = Prev.getOperand(OperandIndices[1]);
   MachineOperand &OpB = Root.getOperand(OperandIndices[2]);
@@ -1337,9 +1330,12 @@ void TargetInstrInfo::reassociateOps(
   MachineOperand &OpC = Root.getOperand(0);
 
   Register RegA = OpA.getReg();
+  unsigned SubRegA = OpA.getSubReg();
   Register RegB = OpB.getReg();
   Register RegX = OpX.getReg();
+  unsigned SubRegX = OpX.getSubReg();
   Register RegY = OpY.getReg();
+  unsigned SubRegY = OpY.getSubReg();
   Register RegC = OpC.getReg();
 
   if (RegA.isVirtual())
@@ -1357,6 +1353,7 @@ void TargetInstrInfo::reassociateOps(
   // recycling RegB because the MachineCombiner's computation of the critical
   // path requires a new register definition rather than an existing one.
   Register NewVR = MRI.createVirtualRegister(RC);
+  unsigned SubRegNewVR = 0;
   InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
 
   auto [NewRootOpc, NewPrevOpc] = getReassociationOpcodes(Pattern, Root, Prev);
@@ -1369,6 +1366,7 @@ void TargetInstrInfo::reassociateOps(
 
   if (SwapPrevOperands) {
     std::swap(RegX, RegY);
+    std::swap(SubRegX, SubRegY);
     std::swap(KillX, KillY);
   }
 
@@ -1421,9 +1419,9 @@ void TargetInstrInfo::reassociateOps(
     if (Idx == 0)
       continue;
     if (Idx == PrevFirstOpIdx)
-      MIB1.addReg(RegX, getKillRegState(KillX));
+      MIB1.addReg(RegX, getKillRegState(KillX), SubRegX);
     else if (Idx == PrevSecondOpIdx)
-      MIB1.addReg(RegY, getKillRegState(KillY));
+      MIB1.addReg(RegY, getKillRegState(KillY), SubRegY);
     else
       MIB1.add(MO);
   }
@@ -1431,6 +1429,7 @@ void TargetInstrInfo::reassociateOps(
 
   if (SwapRootOperands) {
     std::swap(RegA, NewVR);
+    std::swap(SubRegA, SubRegNewVR);
     std::swap(KillA, KillNewVR);
   }
 
@@ -1442,9 +1441,9 @@ void TargetInstrInfo::reassociateOps(
     if (Idx == 0)
       continue;
     if (Idx == RootFirstOpIdx)
-      MIB2 = MIB2.addReg(RegA, getKillRegState(KillA));
+      MIB2 = MIB2.addReg(RegA, getKillRegState(KillA), SubRegA);
     else if (Idx == RootSecondOpIdx)
-      MIB2 = MIB2.addReg(NewVR, getKillRegState(KillNewVR));
+      MIB2 = MIB2.addReg(NewVR, getKillRegState(KillNewVR), SubRegNewVR);
     else
       MIB2 = MIB2.add(MO);
   }
@@ -1532,6 +1531,7 @@ void TargetInstrInfo::genAlternativeCodeSequence(
       if (IndexedReg.index() == 0)
         continue;
 
+      // FIXME: Losing subregisters
       MachineInstr *Instr = MRI.getUniqueVRegDef(IndexedReg.value());
       MachineInstrBuilder MIB;
       Register AccReg;
@@ -1704,8 +1704,7 @@ bool TargetInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   // stack slot reference to depend on the instruction that does the
   // modification.
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  return MI.modifiesRegister(TLI.getStackPointerRegisterToSaveRestore(), TRI);
+  return MI.modifiesRegister(TLI.getStackPointerRegisterToSaveRestore(), &TRI);
 }
 
 // Provide a global flag for disabling the PreRA hazard recognizer that targets
@@ -1738,11 +1737,11 @@ CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
 // Default implementation of getMemOperandWithOffset.
 bool TargetInstrInfo::getMemOperandWithOffset(
     const MachineInstr &MI, const MachineOperand *&BaseOp, int64_t &Offset,
-    bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
+    bool &OffsetIsScalable, const TargetRegisterInfo * /*RemoveMe*/) const {
   SmallVector<const MachineOperand *, 4> BaseOps;
   LocationSize Width = LocationSize::precise(0);
   if (!getMemOperandsWithOffsetWidth(MI, BaseOps, Offset, OffsetIsScalable,
-                                     Width, TRI) ||
+                                     Width, &TRI) ||
       BaseOps.size() != 1)
     return false;
   BaseOp = BaseOps.front();
@@ -1863,7 +1862,6 @@ std::optional<ParamLoadedValue>
 TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
                                      Register Reg) const {
   const MachineFunction *MF = MI.getMF();
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   DIExpression *Expr = DIExpression::get(MF->getFunction().getContext(), {});
   int64_t Offset;
   bool OffsetIsScalable;
@@ -1894,7 +1892,6 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     // Only describe memory which provably does not escape the function. As
     // described in llvm.org/PR43343, escaped memory may be clobbered by the
     // callee (or by another thread).
-    const auto &TII = MF->getSubtarget().getInstrInfo();
     const MachineFrameInfo &MFI = MF->getFrameInfo();
     const MachineMemOperand *MMO = MI.memoperands()[0];
     const PseudoSourceValue *PSV = MMO->getPseudoValue();
@@ -1905,8 +1902,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
       return std::nullopt;
 
     const MachineOperand *BaseOp;
-    if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable,
-                                      TRI))
+    if (!getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, &TRI))
       return std::nullopt;
 
     // FIXME: Scalable offsets are not yet handled in the offset code below.
@@ -2045,7 +2041,7 @@ bool TargetInstrInfo::getInsertSubregInputs(
 // Returns a MIRPrinter comment for this machine operand.
 std::string TargetInstrInfo::createMIROperandComment(
     const MachineInstr &MI, const MachineOperand &Op, unsigned OpIdx,
-    const TargetRegisterInfo *TRI) const {
+    const TargetRegisterInfo * /*RemoveMe*/) const {
 
   if (!MI.isInlineAsm())
     return "";
@@ -2078,12 +2074,8 @@ std::string TargetInstrInfo::createMIROperandComment(
   OS << F.getKindName();
 
   unsigned RCID;
-  if (!F.isImmKind() && !F.isMemKind() && F.hasRegClassConstraint(RCID)) {
-    if (TRI) {
-      OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
-    } else
-      OS << ":RC" << RCID;
-  }
+  if (!F.isImmKind() && !F.isMemKind() && F.hasRegClassConstraint(RCID))
+    OS << ':' << TRI.getRegClassName(TRI.getRegClass(RCID));
 
   if (F.isMemKind()) {
     InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();

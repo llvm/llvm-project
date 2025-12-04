@@ -31,16 +31,6 @@ static cl::opt<bool> DontExpandCondPseudos16(
   cl::Hidden);
 
 namespace {
-struct Mips16Libcall {
-  RTLIB::Libcall Libcall;
-  RTLIB::LibcallImpl Impl;
-  const char *Name; // FIXME: Remove this
-
-  bool operator<(const Mips16Libcall &RHS) const {
-    return std::strcmp(Name, RHS.Name) < 0;
-  }
-};
-
 struct Mips16IntrinsicHelperType{
   const char* Name;
   const char* Helper;
@@ -52,56 +42,27 @@ struct Mips16IntrinsicHelperType{
     return std::strcmp(Name, RHS.Name) == 0;
   }
 };
-}
+} // namespace
 
 // Libcalls for which no helper is generated. Sorted by name for binary search.
-static const Mips16Libcall HardFloatLibCalls[] = {
-    {RTLIB::ADD_F64, RTLIB::impl___mips16_adddf3, "__mips16_adddf3"},
-    {RTLIB::ADD_F32, RTLIB::impl___mips16_addsf3, "__mips16_addsf3"},
-    {RTLIB::DIV_F64, RTLIB::impl___mips16_divdf3, "__mips16_divdf3"},
-    {RTLIB::DIV_F32, RTLIB::impl___mips16_divsf3, "__mips16_divsf3"},
-    {RTLIB::OEQ_F64, RTLIB::impl___mips16_eqdf2, "__mips16_eqdf2"},
-    {RTLIB::OEQ_F32, RTLIB::impl___mips16_eqsf2, "__mips16_eqsf2"},
-    {RTLIB::FPEXT_F32_F64, RTLIB::impl___mips16_extendsfdf2,
-     "__mips16_extendsfdf2"},
-    {RTLIB::FPTOSINT_F64_I32, RTLIB::impl___mips16_fix_truncdfsi,
-     "__mips16_fix_truncdfsi"},
-    {RTLIB::FPTOSINT_F32_I32, RTLIB::impl___mips16_fix_truncsfsi,
-     "__mips16_fix_truncsfsi"},
-    {RTLIB::SINTTOFP_I32_F64, RTLIB::impl___mips16_floatsidf,
-     "__mips16_floatsidf"},
-    {RTLIB::SINTTOFP_I32_F32, RTLIB::impl___mips16_floatsisf,
-     "__mips16_floatsisf"},
-    {RTLIB::UINTTOFP_I32_F64, RTLIB::impl___mips16_floatunsidf,
-     "__mips16_floatunsidf"},
-    {RTLIB::UINTTOFP_I32_F32, RTLIB::impl___mips16_floatunsisf,
-     "__mips16_floatunsisf"},
-    {RTLIB::OGE_F64, RTLIB::impl___mips16_gedf2, "__mips16_gedf2"},
-    {RTLIB::OGE_F32, RTLIB::impl___mips16_gesf2, "__mips16_gesf2"},
-    {RTLIB::OGT_F64, RTLIB::impl___mips16_gtdf2, "__mips16_gtdf2"},
-    {RTLIB::OGT_F32, RTLIB::impl___mips16_gtsf2, "__mips16_gtsf2"},
-    {RTLIB::OLE_F64, RTLIB::impl___mips16_ledf2, "__mips16_ledf2"},
-    {RTLIB::OLE_F32, RTLIB::impl___mips16_lesf2, "__mips16_lesf2"},
-    {RTLIB::OLT_F64, RTLIB::impl___mips16_ltdf2, "__mips16_ltdf2"},
-    {RTLIB::OLT_F32, RTLIB::impl___mips16_ltsf2, "__mips16_ltsf2"},
-    {RTLIB::MUL_F64, RTLIB::impl___mips16_muldf3, "__mips16_muldf3"},
-    {RTLIB::MUL_F32, RTLIB::impl___mips16_mulsf3, "__mips16_mulsf3"},
-    {RTLIB::UNE_F64, RTLIB::impl___mips16_nedf2, "__mips16_nedf2"},
-    {RTLIB::UNE_F32, RTLIB::impl___mips16_nesf2, "__mips16_nesf2"},
-    {RTLIB::UNKNOWN_LIBCALL, RTLIB::impl___mips16_ret_dc,
-     "__mips16_ret_dc"}, // No associated libcall.
-    {RTLIB::UNKNOWN_LIBCALL, RTLIB::impl___mips16_ret_df,
-     "__mips16_ret_df"}, // No associated libcall.
-    {RTLIB::UNKNOWN_LIBCALL, RTLIB::impl___mips16_ret_sc,
-     "__mips16_ret_sc"}, // No associated libcall.
-    {RTLIB::UNKNOWN_LIBCALL, RTLIB::impl___mips16_ret_sf,
-     "__mips16_ret_sf"}, // No associated libcall.
-    {RTLIB::SUB_F64, RTLIB::impl___mips16_subdf3, "__mips16_subdf3"},
-    {RTLIB::SUB_F32, RTLIB::impl___mips16_subsf3, "__mips16_subsf3"},
-    {RTLIB::FPROUND_F64_F32, RTLIB::impl___mips16_truncdfsf2,
-     "__mips16_truncdfsf2"},
-    {RTLIB::UO_F64, RTLIB::impl___mips16_unorddf2, "__mips16_unorddf2"},
-    {RTLIB::UO_F32, RTLIB::impl___mips16_unordsf2, "__mips16_unordsf2"}};
+static const RTLIB::LibcallImpl HardFloatLibCalls[] = {
+    RTLIB::impl___mips16_adddf3,        RTLIB::impl___mips16_addsf3,
+    RTLIB::impl___mips16_divdf3,        RTLIB::impl___mips16_divsf3,
+    RTLIB::impl___mips16_eqdf2,         RTLIB::impl___mips16_eqsf2,
+    RTLIB::impl___mips16_extendsfdf2,   RTLIB::impl___mips16_fix_truncdfsi,
+    RTLIB::impl___mips16_fix_truncsfsi, RTLIB::impl___mips16_floatsidf,
+    RTLIB::impl___mips16_floatsisf,     RTLIB::impl___mips16_floatunsidf,
+    RTLIB::impl___mips16_floatunsisf,   RTLIB::impl___mips16_gedf2,
+    RTLIB::impl___mips16_gesf2,         RTLIB::impl___mips16_gtdf2,
+    RTLIB::impl___mips16_gtsf2,         RTLIB::impl___mips16_ledf2,
+    RTLIB::impl___mips16_lesf2,         RTLIB::impl___mips16_ltdf2,
+    RTLIB::impl___mips16_ltsf2,         RTLIB::impl___mips16_muldf3,
+    RTLIB::impl___mips16_mulsf3,        RTLIB::impl___mips16_nedf2,
+    RTLIB::impl___mips16_nesf2,         RTLIB::impl___mips16_ret_dc,
+    RTLIB::impl___mips16_ret_df,        RTLIB::impl___mips16_ret_sc,
+    RTLIB::impl___mips16_ret_sf,        RTLIB::impl___mips16_subdf3,
+    RTLIB::impl___mips16_subsf3,        RTLIB::impl___mips16_truncdfsf2,
+    RTLIB::impl___mips16_unorddf2,      RTLIB::impl___mips16_unordsf2};
 
 static const Mips16IntrinsicHelperType Mips16IntrinsicHelper[] = {
   {"__fixunsdfsi", "__mips16_call_stub_2" },
@@ -261,8 +222,9 @@ void Mips16TargetLowering::setMips16HardFloatLibCalls() {
   for (unsigned I = 0; I != std::size(HardFloatLibCalls); ++I) {
     assert((I == 0 || HardFloatLibCalls[I - 1] < HardFloatLibCalls[I]) &&
            "Array not sorted!");
-    if (HardFloatLibCalls[I].Libcall != RTLIB::UNKNOWN_LIBCALL)
-      setLibcallImpl(HardFloatLibCalls[I].Libcall, HardFloatLibCalls[I].Impl);
+    RTLIB::Libcall LC =
+        RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(HardFloatLibCalls[I]);
+    setLibcallImpl(LC, HardFloatLibCalls[I]);
   }
 }
 
@@ -417,6 +379,14 @@ const char* Mips16TargetLowering::
   return result;
 }
 
+static bool isMips16HardFloatLibcall(StringRef Name) {
+  // FIXME: Use getSupportedLibcallImpl instead of blindly parsing the name.
+  iota_range<RTLIB::LibcallImpl> ParsedLibcalls =
+      RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName(Name);
+  return !ParsedLibcalls.empty() &&
+         binary_search(HardFloatLibCalls, *ParsedLibcalls.begin());
+}
+
 void Mips16TargetLowering::
 getOpndList(SmallVectorImpl<SDValue> &Ops,
             std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
@@ -437,10 +407,7 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
     //
     bool LookupHelper = true;
     if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(CLI.Callee)) {
-      Mips16Libcall Find = {RTLIB::UNKNOWN_LIBCALL, RTLIB::Unsupported,
-                            S->getSymbol()};
-
-      if (llvm::binary_search(HardFloatLibCalls, Find))
+      if (isMips16HardFloatLibcall(S->getSymbol()))
         LookupHelper = false;
       else {
         const char *Symbol = S->getSymbol();
@@ -478,10 +445,8 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
       }
     } else if (GlobalAddressSDNode *G =
                    dyn_cast<GlobalAddressSDNode>(CLI.Callee)) {
-      Mips16Libcall Find = {RTLIB::UNKNOWN_LIBCALL, RTLIB::Unsupported,
-                            G->getGlobal()->getName().data()};
 
-      if (llvm::binary_search(HardFloatLibCalls, Find))
+      if (isMips16HardFloatLibcall(G->getGlobal()->getName()))
         LookupHelper = false;
     }
     if (LookupHelper)

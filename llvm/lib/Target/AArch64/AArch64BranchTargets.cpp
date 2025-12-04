@@ -18,6 +18,7 @@
 
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -135,13 +136,7 @@ void AArch64BranchTargets::addBTI(MachineBasicBlock &MBB, bool CouldCall,
                     << (CouldCall ? "c" : "") << " to " << MBB.getName()
                     << "\n");
 
-  unsigned HintNum = 32;
-  if (CouldCall)
-    HintNum |= 2;
-  if (CouldJump)
-    HintNum |= 4;
-  assert(HintNum != 32 && "No target kinds!");
-
+  unsigned HintNum = getBTIHintNum(CouldCall, CouldJump);
   auto MBBI = MBB.begin();
 
   // If the block starts with EH_LABEL(s), skip them first.

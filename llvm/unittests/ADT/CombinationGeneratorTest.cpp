@@ -13,7 +13,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
-#include <iterator>
 #include <vector>
 
 using namespace llvm;

@@ -24,6 +24,7 @@ llvm::getAllocTokenModeFromString(StringRef Name) {
       .Case("random", AllocTokenMode::Random)
       .Case("typehash", AllocTokenMode::TypeHash)
       .Case("typehashpointersplit", AllocTokenMode::TypeHashPointerSplit)
+      .Case("default", DefaultAllocTokenMode)
       .Default(std::nullopt);
 }
 

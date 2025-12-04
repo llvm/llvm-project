@@ -126,6 +126,9 @@ def err_drv_bad_offload_arch_combo : Error<
   "invalid offload arch combinations: '%0' and '%1' (for a specific processor, "
   "a feature should either exist in all offload archs, or not exist in any "
   "offload archs)">;
+def err_drv_unsupported_option_for_offload_arch_req_feature : Error<
+  "'%0' option for offload arch '%1' is not currently supported "
+  "there. Use it with an offload arch containing '%2' instead">;
 def warn_drv_unsupported_option_for_offload_arch_req_feature : Warning<
   "ignoring '%0' option for offload arch '%1' as it is not currently supported "
   "there. Use it with an offload arch containing '%2' instead">,
@@ -133,6 +136,13 @@ def warn_drv_unsupported_option_for_offload_arch_req_feature : Warning<
 def warn_drv_unsupported_option_for_target : Warning<
   "ignoring '%0' option as it is not currently supported for target '%1'">,
   InGroup<OptionIgnored>;
+def err_drv_unsupported_option_for_target : Error<
+  "'%0' option is not currently supported for target '%1'">;
+def warn_drv_unsupported_option_part_for_target : Warning<
+  "ignoring '%0' in '%1' option as it is not currently supported for target '%2'">,
+  InGroup<OptionIgnored>;
+def err_drv_unsupported_option_part_for_target : Error<
+  "'%0' in '%1' option is not currently supported for target '%2'">;
 def warn_drv_invalid_argument_for_flang : Warning<
   "'%0' is not valid for Fortran">,
   InGroup<OptionIgnored>;

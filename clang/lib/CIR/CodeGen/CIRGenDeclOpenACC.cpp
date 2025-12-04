@@ -11,13 +11,102 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenFunction.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "clang/AST/DeclOpenACC.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
+namespace {
+struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
+  mlir::acc::DeclareEnterOp enterOp;
+
+  OpenACCDeclareCleanup(mlir::acc::DeclareEnterOp enterOp) : enterOp(enterOp) {}
+
+  template <typename OutTy, typename InTy>
+  void createOutOp(CIRGenFunction &cgf, InTy inOp) {
+    if constexpr (std::is_same_v<OutTy, mlir::acc::DeleteOp>) {
+      auto outOp =
+          OutTy::create(cgf.getBuilder(), inOp.getLoc(), inOp,
+                        inOp.getStructured(), inOp.getImplicit(),
+                        llvm::Twine(inOp.getNameAttr()), inOp.getBounds());
+      outOp.setDataClause(inOp.getDataClause());
+      outOp.setModifiers(inOp.getModifiers());
+    } else {
+      auto outOp =
+          OutTy::create(cgf.getBuilder(), inOp.getLoc(), inOp, inOp.getVarPtr(),
+                        inOp.getStructured(), inOp.getImplicit(),
+                        llvm::Twine(inOp.getNameAttr()), inOp.getBounds());
+      outOp.setDataClause(inOp.getDataClause());
+      outOp.setModifiers(inOp.getModifiers());
+    }
+  }
+
+  void emit(CIRGenFunction &cgf) override {
+    auto exitOp = mlir::acc::DeclareExitOp::create(
+        cgf.getBuilder(), enterOp.getLoc(), enterOp, {});
+
+    // Some data clauses need to be referenced in 'exit', AND need to have an
+    // operation after the exit.  Copy these from the enter operation.
+    for (mlir::Value val : enterOp.getDataClauseOperands()) {
+      if (auto copyin = val.getDefiningOp<mlir::acc::CopyinOp>()) {
+        switch (copyin.getDataClause()) {
+        default:
+          llvm_unreachable(
+              "OpenACC local declare clause copyin unexpected data clause");
+          break;
+        case mlir::acc::DataClause::acc_copy:
+          createOutOp<mlir::acc::CopyoutOp>(cgf, copyin);
+          break;
+        case mlir::acc::DataClause::acc_copyin:
+          createOutOp<mlir::acc::DeleteOp>(cgf, copyin);
+          break;
+        }
+      } else if (auto create = val.getDefiningOp<mlir::acc::CreateOp>()) {
+        switch (create.getDataClause()) {
+        default:
+          llvm_unreachable(
+              "OpenACC local declare clause create unexpected data clause");
+          break;
+        case mlir::acc::DataClause::acc_copyout:
+          createOutOp<mlir::acc::CopyoutOp>(cgf, create);
+          break;
+        case mlir::acc::DataClause::acc_create:
+          createOutOp<mlir::acc::DeleteOp>(cgf, create);
+          break;
+        }
+      } else if (auto present = val.getDefiningOp<mlir::acc::PresentOp>()) {
+        createOutOp<mlir::acc::DeleteOp>(cgf, present);
+      } else if (auto dev_res =
+                     val.getDefiningOp<mlir::acc::DeclareDeviceResidentOp>()) {
+        createOutOp<mlir::acc::DeleteOp>(cgf, dev_res);
+      } else if (val.getDefiningOp<mlir::acc::DeclareLinkOp>()) {
+        // Link has no exit clauses, and shouldn't be copied.
+        continue;
+      } else if (val.getDefiningOp<mlir::acc::DevicePtrOp>()) {
+        // DevicePtr has no exit clauses, and shouldn't be copied.
+        continue;
+      } else {
+        llvm_unreachable("OpenACC local declare clause unexpected defining op");
+        continue;
+      }
+      exitOp.getDataClauseOperandsMutable().append(val);
+    }
+  }
+};
+} // namespace
+
 void CIRGenFunction::emitOpenACCDeclare(const OpenACCDeclareDecl &d) {
-  getCIRGenModule().errorNYI(d.getSourceRange(), "OpenACC Declare Construct");
+  mlir::Location exprLoc = cgm.getLoc(d.getBeginLoc());
+  auto enterOp = mlir::acc::DeclareEnterOp::create(
+      builder, exprLoc, mlir::acc::DeclareTokenType::get(&cgm.getMLIRContext()),
+      {});
+
+  emitOpenACCClauses(enterOp, OpenACCDirectiveKind::Declare, d.getBeginLoc(),
+                     d.clauses());
+
+  ehStack.pushCleanup<OpenACCDeclareCleanup>(CleanupKind::NormalCleanup,
+                                             enterOp);
 }
 
 void CIRGenFunction::emitOpenACCRoutine(const OpenACCRoutineDecl &d) {

@@ -3,8 +3,9 @@
 cppcoreguidelines-avoid-reference-coroutine-parameters
 ======================================================
 
-Warns when a coroutine accepts reference parameters. After a coroutine suspend point,
-references could be dangling and no longer valid. Instead, pass parameters as values.
+Warns when a coroutine accepts reference parameters. After a coroutine suspend
+point, references could be dangling and no longer valid. Instead, pass
+parameters as values.
 
 Examples:
 

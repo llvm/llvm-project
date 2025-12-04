@@ -1407,7 +1407,8 @@ bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
   //   http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#1677
   // Therefore, we use the C++1y behavior.
 
-  if (S.Current->getFunction() && S.Current->getFunction()->isConstructor() &&
+  if (!S.Current->isBottomFrame() &&
+      S.Current->getFunction()->isConstructor() &&
       S.Current->getThis().getDeclDesc()->asDecl() == S.EvaluatingDecl) {
     return true;
   }
@@ -1447,6 +1448,10 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
         << AK_Read << Ptr.toDiagnosticString(S.getASTContext());
     return false;
   }
+
+  // We can't get the field of something that's not a record.
+  if (!Ptr.getFieldDesc()->isRecord())
+    return false;
 
   if ((Ptr.getByteOffset() + Off) >= Ptr.block()->getSize())
     return false;

@@ -173,7 +173,6 @@ static bool applySuffixHeuristic(StringRef Arg, StringRef Param,
 
 static bool applySubstringHeuristic(StringRef Arg, StringRef Param,
                                     int8_t Threshold) {
-
   std::size_t MaxLength = 0;
   SmallVector<std::size_t, SmallVectorSize> Current(Param.size());
   SmallVector<std::size_t, SmallVectorSize> Previous(Param.size());

@@ -131,8 +131,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
       TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None)};
   EXPECT_NE(TranslatedArgs, nullptr);
   if (TranslatedArgs) {
-    auto *A = TranslatedArgs->getLastArg(
-        clang::driver::options::OPT_dxil_validator_version);
+    auto *A =
+        TranslatedArgs->getLastArg(clang::options::OPT_dxil_validator_version);
     EXPECT_NE(A, nullptr);
     if (A) {
       EXPECT_STREQ(A->getValue(), "1.1");

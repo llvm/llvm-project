@@ -1485,7 +1485,24 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+static bool
+mayRequireBroadcast(ValueTypeRange<mlir::OperandRange> operandTypes) {
+  const auto isDynamic = [](Type ty) {
+    const auto shapedTy = llvm::dyn_cast<ShapedType>(ty);
+    return !shapedTy || !shapedTy.hasStaticShape();
+  };
+
+  return llvm::any_of(operandTypes, isDynamic) ||
+         failed(verifyCompatibleShapes(operandTypes));
+}
+
 OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
+  // Select allows operand shapes to be broadcast to the output shape. For
+  // now, don't support folding when we cannot prove no broadcasting is
+  // involved.
+  if (mayRequireBroadcast(getOperandTypes()))
+    return {};
+
   if (getOnTrue() == getOnFalse())
     return getOnTrue();
 

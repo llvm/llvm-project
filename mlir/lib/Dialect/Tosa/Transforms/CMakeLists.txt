@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRTosaTransforms
   TosaTypeConverters.cpp
   TosaProfileCompliance.cpp
   TosaValidation.cpp
+  TosaNarrowI64ToI32.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tosa/Transforms
@@ -21,7 +22,9 @@ add_mlir_dialect_library(MLIRTosaTransforms
 
   LINK_LIBS PUBLIC
   MLIRFuncDialect
+  MLIRFuncTransformOps
   MLIRPass
   MLIRTosaDialect
   MLIRTransformUtils
+  MLIRFuncTransforms
   )

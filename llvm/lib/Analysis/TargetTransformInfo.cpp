@@ -609,6 +609,10 @@ bool TargetTransformInfo::useColdCCForColdCall(Function &F) const {
   return TTIImpl->useColdCCForColdCall(F);
 }
 
+bool TargetTransformInfo::useFastCCForInternalCall(Function &F) const {
+  return TTIImpl->useFastCCForInternalCall(F);
+}
+
 bool TargetTransformInfo::isTargetIntrinsicTriviallyScalarizable(
     Intrinsic::ID ID) const {
   return TTIImpl->isTargetIntrinsicTriviallyScalarizable(ID);
@@ -1183,10 +1187,9 @@ InstructionCost TargetTransformInfo::getMemoryOpCost(
 }
 
 InstructionCost TargetTransformInfo::getMaskedMemoryOpCost(
-    unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+    const MemIntrinsicCostAttributes &MICA,
     TTI::TargetCostKind CostKind) const {
-  InstructionCost Cost = TTIImpl->getMaskedMemoryOpCost(Opcode, Src, Alignment,
-                                                        AddressSpace, CostKind);
+  InstructionCost Cost = TTIImpl->getMaskedMemoryOpCost(MICA, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

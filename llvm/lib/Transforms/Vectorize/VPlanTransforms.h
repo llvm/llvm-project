@@ -23,6 +23,7 @@ namespace llvm {
 
 class InductionDescriptor;
 class Instruction;
+class LoopVersioning;
 class PHINode;
 class ScalarEvolution;
 class PredicatedScalarEvolution;
@@ -31,7 +32,8 @@ class VPBuilder;
 class VPRecipeBuilder;
 struct VFRange;
 
-extern cl::opt<bool> VerifyEachVPlan;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
 struct VPlanTransforms {
   /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
@@ -98,7 +100,7 @@ struct VPlanTransforms {
   ///      >[ ]     <-- original loop exit block(s), wrapped in VPIRBasicBlocks.
   LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
   buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy, DebugLoc IVDL,
-              PredicatedScalarEvolution &PSE);
+              PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
 
   /// Update \p Plan to account for all early exits.
   LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
@@ -180,7 +182,7 @@ struct VPlanTransforms {
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
   /// block merging.
-  static void optimize(VPlan &Plan);
+  LLVM_ABI_FOR_TEST static void optimize(VPlan &Plan);
 
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
   /// region block and remove the mask operand. Optimize the created regions by
@@ -307,6 +309,11 @@ struct VPlanTransforms {
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
 
+  /// Hoist single-scalar loads with invariant addresses out of the vector loop
+  /// to the preheader, if they are proven not to alias with any stores in the
+  /// plan using noalias metadata.
+  static void hoistInvariantLoads(VPlan &Plan);
+
   // Materialize vector trip counts for constants early if it can simply be
   // computed as (Original TC / VF * UF) * VF * UF.
   static void
@@ -348,7 +355,7 @@ struct VPlanTransforms {
   /// form of loop-aware SLP, where we use interleave groups to identify
   /// candidates.
   static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
-                                     unsigned VectorRegWidth);
+                                     TypeSize VectorRegWidth);
 
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
@@ -365,12 +372,12 @@ struct VPlanTransforms {
   addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
                                     std::optional<unsigned> VScaleForTuning);
 
-  /// Create resume phis in the scalar preheader for first-order recurrences,
-  /// reductions and inductions, and update the VPIRInstructions wrapping the
-  /// original phis in the scalar header. End values for inductions are added to
-  /// \p IVEndValues.
-  static void addScalarResumePhis(VPlan &Plan, VPRecipeBuilder &Builder,
-                                  DenseMap<VPValue *, VPValue *> &IVEndValues);
+  /// Update the resume phis in the scalar preheader after creating wide recipes
+  /// for first-order recurrences, reductions and inductions. End values for
+  /// inductions are added to \p IVEndValues.
+  static void
+  updateScalarResumePhis(VPlan &Plan,
+                         DenseMap<VPValue *, VPValue *> &IVEndValues);
 
   /// Handle users in the exit block for first order reductions in the original
   /// exit block. The penultimate value of recurrences is fed to their LCSSA phi

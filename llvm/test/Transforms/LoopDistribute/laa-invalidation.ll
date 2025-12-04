@@ -4,11 +4,11 @@
 define void @test_pr50940(ptr %A, ptr %B) {
 ; CHECK-LABEL: @test_pr50940(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; CHECK:       outer.header:
 ; CHECK-NEXT:    br i1 false, label [[OUTER_LATCH:%.*]], label [[INNER_PH:%.*]]
 ; CHECK:       inner.ph:
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    [[GEP_A_3:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 3
 ; CHECK-NEXT:    br label [[INNER_LVER_CHECK:%.*]]
 ; CHECK:       inner.lver.check:
