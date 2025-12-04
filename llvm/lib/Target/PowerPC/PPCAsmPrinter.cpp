@@ -111,6 +111,10 @@ static cl::opt<bool> IFuncLocalIfProven(
              "return local functions."),
     cl::Hidden);
 
+// this flag is used for testing only as it might generate bad code.
+static cl::opt<bool> IFuncWarnInsteadOfError("test-ifunc-warn-noerror",
+                                             cl::init(false), cl::ReallyHidden);
+
 // Specialize DenseMapInfo to allow
 // std::pair<const MCSymbol *, PPCMCExpr::Specifier> in DenseMap.
 // This specialization is needed here because that type is used as keys in the
@@ -3612,11 +3616,14 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
 
   // generate the code for .foo now:
   if (TOCRestoreNeededForCallToImplementation(GI)) {
-    reportFatalUsageError(
-        "unimplemented: TOC register save/restore needed for ifunc \"" +
-        Twine(GI.getName()) + "\", because couldn't prove all candidates "
-        "are static or hidden/protected visibility definitions");
-    return;
+    Twine Msg = "unimplemented: TOC register save/restore needed for ifunc \"" +
+                Twine(GI.getName()) +
+                "\", because couldn't prove all candidates "
+                "are static or hidden/protected visibility definitions";
+    if (!IFuncWarnInsteadOfError)
+      reportFatalUsageError(Msg);
+    else
+      dbgs() << Msg;
   }
 
   auto FnDescTOCEntryType = getTOCEntryTypeForLinkage(GI.getLinkage());
