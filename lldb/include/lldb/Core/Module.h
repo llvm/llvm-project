@@ -315,6 +315,15 @@ public:
                      const ModuleFunctionSearchOptions &options,
                      SymbolContextList &sc_list);
 
+  /// Find functions by a vector of lookup infos.
+  ///
+  /// If the function is an inlined function, it will have a block,
+  /// representing the inlined function, and the function will be the
+  /// containing function.  If it is not inlined, then the block will be NULL.
+  void FindFunctions(const std::vector<LookupInfo> &lookup_infos,
+                     const CompilerDeclContext &parent_decl_ctx,
+                     const ModuleFunctionSearchOptions &options,
+                     SymbolContextList &sc_list);
   /// Find functions by name.
   ///
   /// If the function is an inlined function, it will have a block,
@@ -917,8 +926,29 @@ public:
   public:
     LookupInfo() = default;
 
-    LookupInfo(ConstString name, lldb::FunctionNameType name_type_mask,
-               lldb::LanguageType language);
+    /// Creates a vector of lookup infos for function name resolution.
+    ///
+    /// \param[in] name
+    ///     The function name to search for. This can be a simple name like
+    ///     "foo" or a qualified name like "Class::method".
+    ///
+    /// \param[in] name_type_mask
+    ///     A bitmask specifying what types of names to search for
+    ///     (e.g., eFunctionNameTypeFull, eFunctionNameTypeBase,
+    ///     eFunctionNameTypeMethod, eFunctionNameTypeAuto). Multiple types
+    ///     can be combined with bitwise OR.
+    ///
+    /// \param[in] lang_type
+    ///     The language to create lookups for. If eLanguageTypeUnknown is
+    ///     passed, creates one LookupInfo for each language plugin currently
+    ///     available in LLDB. If a specific language is provided, creates only
+    //      a single LookupInfo for that language.
+    ///
+    /// \return
+    ///     A vector of LookupInfo objects, one per relevant language.
+    static std::vector<LookupInfo>
+    MakeLookupInfos(ConstString name, lldb::FunctionNameType name_type_mask,
+                    lldb::LanguageType lang_type);
 
     ConstString GetName() const { return m_name; }
 
@@ -959,6 +989,10 @@ public:
     /// If \b true, then demangled names that match will need to contain
     /// "m_name" in order to be considered a match
     bool m_match_name_after_lookup = false;
+
+  private:
+    LookupInfo(ConstString name, lldb::FunctionNameType name_type_mask,
+               lldb::LanguageType lang_type);
   };
 
   /// Get a unique hash for this module.
