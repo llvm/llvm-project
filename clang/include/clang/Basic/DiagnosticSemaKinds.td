@@ -13537,21 +13537,19 @@ def err_acc_clause_after_device_type
 def err_acc_clause_cannot_combine
     : Error<"OpenACC clause '%0' may not appear on the same construct as a "
             "'%1' clause on a '%2' construct">;
-def err_acc_clause_routine_cannot_combine_before_device_type
-    : Error<"OpenACC clause '%0' after 'device_type' clause on a 'routine' "
-              "conflicts with the '%1' clause before the first 'device_type'">;
-def err_acc_clause_routine_cannot_combine_same_device_type
-    : Error<"OpenACC clause '%0' on a 'routine' directive conflicts with the "
-            "'%1' clause applying to the same 'device_type'">;
+def err_acc_clause_cannot_combine_before_device_type
+    : Error<
+          "OpenACC clause '%1' after 'device_type' clause on a '%0' construct "
+          "conflicts with the '%2' clause before the first 'device_type'">;
+def err_acc_clause_cannot_combine_same_device_type
+    : Error<"OpenACC clause '%1' cannot combine with previous '%2' clause"
+            "%select{| in the same 'device_type' region}3 on a '%0' directive">;
+def err_acc_clause_conflicts_prev_dev_type
+    : Error<"OpenACC '%0' clause applies to 'device_type' '%1', which "
+            "conflicts with previous '%2' clause">;
 def err_acc_clause_routine_one_of_in_region
     : Error<"OpenACC 'routine' construct must have at least one 'gang', 'seq', "
             "'vector', or 'worker' clause that applies to each 'device_type'">;
-def err_acc_clause_since_last_device_type
-    : Error<"OpenACC '%0' clause cannot appear more than once%select{| in a "
-            "'device_type' region}2 on a '%1' directive">;
-def err_acc_clause_conflicts_prev_dev_type
-    : Error<"OpenACC '%0' clause applies to 'device_type' '%1', which "
-            "conflicts with previous '%0' clause">;
 
 def err_acc_reduction_num_gangs_conflict
     : Error<"OpenACC '%1' clause %select{|with more than 1 argument }0may not "
