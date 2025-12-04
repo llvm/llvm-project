@@ -26,16 +26,6 @@ aese v0.16b, v0.16b
 aesimc v0.16b, v0.16b
 aesmc v0.16b, v0.16b
 and v0.8b, v0.8b, v0.8b
-bfcvt h0, s0
-bfcvtn v0.4h, v0.4s
-bfcvtn2 v0.8h, v0.4s
-bfdot v0.2s, v0.4h, v0.4h
-bfdot v0.4s, v0.8h, v0.8h
-bfmlalb v0.4s, v0.8h, v0.8h
-bfmlalb v0.4s, v0.8h, v0.h[3]
-bfmlalt v0.4s, v0.8h, v0.8h
-bfmlalt v0.4s, v0.8h, v0.h[3]
-bfmmla v0.4s, v0.8h, v0.8h
 bic v0.4h, #15, lsl #8
 bic v0.8b, v0.8b, v0.8b
 bif v0.16b, v0.16b, v0.16b

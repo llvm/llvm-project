@@ -31,17 +31,6 @@ aese v0.16b, v0.16b
 aesimc v0.16b, v0.16b
 aesmc v0.16b, v0.16b
 and v0.8b, v0.8b, v0.8b
-bfcvt h0, s0
-bfcvtn v0.4h, v0.4s
-bfcvtn2 v0.8h, v0.4s
-bfdot v0.2s, v24.4h, v14.2h[2]
-bfdot v0.2s, v0.4h, v0.4h
-bfdot v0.4s, v0.8h, v0.8h
-bfmlalb v0.4s, v0.8h, v0.8h
-bfmlalb v0.4s, v0.8h, v0.h[3]
-bfmlalt v0.4s, v0.8h, v0.8h
-bfmlalt v0.4s, v0.8h, v0.h[3]
-bfmmla v0.4s, v0.8h, v0.8h
 bic v0.4h, #15, lsl #8
 bic v23.8h, #101
 bic v0.8b, v0.8b, v0.8b
@@ -1610,17 +1599,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.25                        aesimc	v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.25                        aesmc	v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.25                        and	v0.8b, v0.8b, v0.8b
-# CHECK-NEXT:  1      3     0.50                        bfcvt	h0, s0
-# CHECK-NEXT:  1      4     0.50                        bfcvtn	v0.4h, v0.4s
-# CHECK-NEXT:  1      4     0.50                        bfcvtn2	v0.8h, v0.4s
-# CHECK-NEXT:  1      4     0.25                        bfdot	v0.2s, v24.4h, v14.2h[2]
-# CHECK-NEXT:  1      4     0.25                        bfdot	v0.2s, v0.4h, v0.4h
-# CHECK-NEXT:  1      4     0.25                        bfdot	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  1      4     0.25                        bfmlalb	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  1      4     0.25                        bfmlalb	v0.4s, v0.8h, v0.h[3]
-# CHECK-NEXT:  1      4     0.25                        bfmlalt	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  1      4     0.25                        bfmlalt	v0.4s, v0.8h, v0.h[3]
-# CHECK-NEXT:  1      5     0.25                        bfmmla	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.25                        bic	v0.4h, #15, lsl #8
 # CHECK-NEXT:  1      2     0.25                        bic	v23.8h, #101
 # CHECK-NEXT:  1      2     0.25                        bic	v0.8b, v0.8b, v0.8b
@@ -3172,7 +3150,7 @@ zip2 v0.8h, v0.8h, v0.8h
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -      -      -      -      -      -     84.33  167.83 167.83 20.75  7.75   7.75   7.75   606.25 497.25 499.75 390.75
+# CHECK-NEXT:  -      -      -      -      -      -      -     84.33  167.83 167.83 20.75  7.75   7.75   7.75   602.75 495.25 496.25 388.75
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -3206,17 +3184,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   aesimc	v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   aesmc	v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   and	v0.8b, v0.8b, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     bfcvt	h0, s0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     bfcvtn	v0.4h, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     bfcvtn2	v0.8h, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   bfdot	v0.2s, v24.4h, v14.2h[2]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   bfdot	v0.2s, v0.4h, v0.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   bfdot	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   bfmlalb	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   bfmlalb	v0.4s, v0.8h, v0.h[3]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   bfmlalt	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   bfmlalt	v0.4s, v0.8h, v0.h[3]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   bfmmla	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   bic	v0.4h, #15, lsl #8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   bic	v23.8h, #101
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   bic	v0.8b, v0.8b, v0.8b
