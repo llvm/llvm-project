@@ -213,13 +213,3 @@ define <8 x i8> @vtbl1_all_poison_mask(<8 x i8> %a) {
   %tbl = call <8 x i8> @llvm.arm.neon.vtbl1(<8 x i8> %a, <8 x i8> poison)
   ret <8 x i8> %tbl
 }
-
-; Declarations
-declare <8 x i8> @llvm.arm.neon.vtbl1(<8 x i8>, <8 x i8>) nounwind readnone
-declare <8 x i8> @llvm.arm.neon.vtbl2(<8 x i8>, <8 x i8>, <8 x i8>) nounwind readnone
-declare <8 x i8> @llvm.arm.neon.vtbl3(<8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>) nounwind readnone
-declare <8 x i8> @llvm.arm.neon.vtbl4(<8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>) nounwind readnone
-declare <8 x i8> @llvm.arm.neon.vtbx1(<8 x i8>, <8 x i8>, <8 x i8>) nounwind readnone
-declare <8 x i8> @llvm.arm.neon.vtbx2(<8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>) nounwind readnone
-declare <8 x i8> @llvm.arm.neon.vtbx3(<8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>) nounwind readnone
-declare <8 x i8> @llvm.arm.neon.vtbx4(<8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>) nounwind readnone

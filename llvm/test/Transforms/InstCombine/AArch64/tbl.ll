@@ -259,21 +259,3 @@ define <16 x i8> @tbl1_all_poison_mask(<16 x i8> %a) {
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> %a, <16 x i8> poison)
   ret <16 x i8> %tbl
 }
-
-; "Real" declarations
-declare <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8>, <8 x i8>) nounwind readnone
-declare <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8>, <16 x i8>) nounwind readnone
-declare <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8>, <16 x i8>, <8 x i8>) nounwind readnone
-declare <16 x i8> @llvm.aarch64.neon.tbl2.v16i8(<16 x i8>, <16 x i8>, <16 x i8>) nounwind readnone
-declare <8 x i8> @llvm.aarch64.neon.tbl3.v8i8(<16 x i8>, <16 x i8>, <16 x i8>, <8 x i8>) nounwind readnone
-declare <16 x i8> @llvm.aarch64.neon.tbl3.v16i8(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>) nounwind readnone
-declare <8 x i8> @llvm.aarch64.neon.tbl4.v8i8(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <8 x i8>) nounwind readnone
-declare <16 x i8> @llvm.aarch64.neon.tbl4.v16i8(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>) nounwind readnone
-declare <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8>, <16 x i8>, <8 x i8>) nounwind readnone
-declare <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8>, <16 x i8>, <16 x i8>) nounwind readnone
-declare <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8>, <16 x i8>, <16 x i8>, <8 x i8>) nounwind readnone
-declare <16 x i8> @llvm.aarch64.neon.tbx2.v16i8(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>) nounwind readnone
-declare <8 x i8> @llvm.aarch64.neon.tbx3.v8i8(<8 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <8 x i8>) nounwind readnone
-declare <16 x i8> @llvm.aarch64.neon.tbx3.v16i8(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>) nounwind readnone
-declare <8 x i8> @llvm.aarch64.neon.tbx4.v8i8(<8 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <8 x i8>) nounwind readnone
-declare <16 x i8> @llvm.aarch64.neon.tbx4.v16i8(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>) nounwind readnone
