@@ -79,19 +79,19 @@ def simm5 : RISCVSImmLeafOp<5> {
 }
 
 def simm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
-  [{return (isInt<5>(Imm) && Imm != -16) || Imm == 16;}]> {
+  [{return Imm >= -15 && Imm <= 16;}]> {
   let ParserMatchClass = SImmAsmOperand<5, "Plus1">;
   let OperandType = "OPERAND_SIMM5_PLUS1";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
-      return (isInt<5>(Imm) && Imm != -16) || Imm == 16;
+      return Imm >= -15 && Imm <= 16;
     return MCOp.isBareSymbolRef();
   }];
 }
 
 def simm5_plus1_nonzero : ImmLeaf<XLenVT,
-  [{return Imm != 0 && ((isInt<5>(Imm) && Imm != -16) || Imm == 16);}]>;
+  [{return Imm != 0 && Imm >= -15 && Imm <= 16;}]>;
 
 //===----------------------------------------------------------------------===//
 // Scheduling definitions.

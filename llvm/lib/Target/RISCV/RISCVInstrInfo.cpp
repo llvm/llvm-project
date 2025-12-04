@@ -2904,7 +2904,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = isUInt<5>(Imm) && (Imm > 3);
           break;
         case RISCVOp::OPERAND_UIMM5_PLUS1:
-          Ok = (isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32);
+          Ok = Imm >= 1 && Imm <= 32;
           break;
         case RISCVOp::OPERAND_UIMM6_LSB0:
           Ok = isShiftedUInt<5, 1>(Imm);
@@ -2957,7 +2957,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_SIMM(26)
         // clang-format on
         case RISCVOp::OPERAND_SIMM5_PLUS1:
-          Ok = (isInt<5>(Imm) && Imm != -16) || Imm == 16;
+          Ok = Imm >= -15 && Imm <= 16;
           break;
         case RISCVOp::OPERAND_SIMM5_NONZERO:
           Ok = isInt<5>(Imm) && (Imm != 0);
