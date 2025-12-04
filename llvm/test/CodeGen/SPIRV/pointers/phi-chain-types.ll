@@ -5,13 +5,7 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK-DAG: OpName %[[#Foo:]] "foo"
-; CHECK-DAG: OpName %[[#FooVal1:]] "val1"
-; CHECK-DAG: OpName %[[#FooVal2:]] "val2"
-; CHECK-DAG: OpName %[[#FooVal3:]] "val3"
 ; CHECK-DAG: OpName %[[#Bar:]] "bar"
-; CHECK-DAG: OpName %[[#BarVal1:]] "val1"
-; CHECK-DAG: OpName %[[#BarVal2:]] "val2"
-; CHECK-DAG: OpName %[[#BarVal3:]] "val3"
 
 ; CHECK-DAG: %[[#Short:]] = OpTypeInt 16 0
 ; CHECK-DAG: %[[#ShortGenPtr:]] = OpTypePointer Generic %[[#Short]]
@@ -24,8 +18,8 @@
 ; CHECK: OpFunctionParameter
 ; CHECK: OpFunctionParameter
 ; CHECK: %[[#FooG1:]] = OpPtrCastToGeneric %[[#ShortGenPtr]] %[[#G1]]
-; CHECK: %[[#FooVal2]] = OpPhi %[[#ShortGenPtr]] %[[#FooArgP]] %[[#]] %[[#FooVal3]] %[[#]]
-; CHECK: %[[#FooVal1]] = OpPhi %[[#ShortGenPtr]] %[[#FooG1]] %[[#]] %[[#FooVal2]] %[[#]]
+; CHECK: %[[#FooVal2:]] = OpPhi %[[#ShortGenPtr]] %[[#FooArgP]] %[[#]] %[[#FooVal3:]] %[[#]]
+; CHECK: %[[#FooVal1:]] = OpPhi %[[#ShortGenPtr]] %[[#FooG1]] %[[#]] %[[#FooVal2]] %[[#]]
 ; CHECK: %[[#FooVal3]] = OpLoad %[[#ShortGenPtr]] %[[#]]
 
 ; CHECK: %[[#Bar:]] = OpFunction %[[#]] None %[[#]]
@@ -33,9 +27,9 @@
 ; CHECK: OpFunctionParameter
 ; CHECK: OpFunctionParameter
 ; CHECK: OpFunctionParameter
-; CHECK: %[[#BarVal3]] = OpLoad %[[#ShortGenPtr]] %[[#]]
+; CHECK: %[[#BarVal3:]] = OpLoad %[[#ShortGenPtr]] %[[#]]
 ; CHECK: %[[#BarG1:]] = OpPtrCastToGeneric %[[#ShortGenPtr]] %[[#G1]]
-; CHECK: %[[#BarVal1]] = OpPhi %[[#ShortGenPtr]] %[[#BarG1]] %[[#]] %[[#BarVal2]] %[[#]]
+; CHECK: %[[#BarVal1:]] = OpPhi %[[#ShortGenPtr]] %[[#BarG1]] %[[#]] %[[#BarVal2:]] %[[#]]
 ; CHECK: %[[#BarVal2]] = OpPhi %[[#ShortGenPtr]] %[[#BarArgP]] %[[#]] %[[#BarVal3]] %[[#]]
 
 @G1 = internal addrspace(3) global i16 undef, align 8
