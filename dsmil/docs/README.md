@@ -171,6 +171,12 @@ Welcome to the DSLLVM comprehensive documentation. This directory contains all d
 |----------|-------------|
 | [AI-INTEGRATION.md](AI-INTEGRATION.md) | Layer 5/7/8 AI integration for performance, mission planning, and security |
 
+### Enhancement Proposals
+
+| Document | Description |
+|----------|-------------|
+| [ENHANCEMENT-SUGGESTIONS.md](ENHANCEMENT-SUGGESTIONS.md) | 5 strategic enhancement proposals for v1.7+ |
+
 ---
 
 ## 🎯 Quick Start by Use Case

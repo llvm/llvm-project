@@ -431,6 +431,17 @@ All three features from Phase 2 (v1.4) are now implemented:
 - 🚧 LLVM pass implementations (remaining passes)
 - 🚧 Runtime library completion (sandbox, provenance)
 - 🚧 Tool wrappers (dsmil-clang, dsmil-verify)
+- 🚧 Dynamic path resolution runtime (v1.6.1) ✅ COMPLETE
+
+### 💡 Proposed Enhancements (v1.7+)
+
+See **[ENHANCEMENT-SUGGESTIONS.md](docs/ENHANCEMENT-SUGGESTIONS.md)** for 5 strategic enhancements:
+
+1. **Configuration Validation & Health Check Tool** - Automated config validation
+2. **Compile-Time Performance Profiling** - Build metrics and optimization insights
+3. **Interactive Setup Wizard** - Guided installation and configuration
+4. **Runtime Observability Integration** - Prometheus/OpenTelemetry/ELK support
+5. **Multi-Architecture Support** - ARM64, RISC-V, embedded targets
 
 ### 📋 Planned (v1.5 - System Intelligence)
 
