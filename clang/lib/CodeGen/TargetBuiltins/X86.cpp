@@ -630,15 +630,15 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
   // Calculate the index needed to access the correct field based on the
   // range. Also adjust the expected value.
   auto [Index, Value] = StringSwitch<std::pair<unsigned, unsigned>>(CPUStr)
-#define X86_VENDOR(ENUM, STRING)                                               \
+#define X86_VENDOR(ENUM, STRING, ABI_VALUE)                                    \
   .Case(STRING, {0u, static_cast<unsigned>(llvm::X86::ENUM)})
 #define X86_CPU_TYPE_ALIAS(ENUM, ALIAS)                                        \
   .Case(ALIAS, {1u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_TYPE(ENUM, STR)                                                \
+#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE)                                     \
   .Case(STR, {1u, static_cast<unsigned>(llvm::X86::ENUM)})
 #define X86_CPU_SUBTYPE_ALIAS(ENUM, ALIAS)                                     \
   .Case(ALIAS, {2u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_SUBTYPE(ENUM, STR)                                             \
+#define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE)                                  \
   .Case(STR, {2u, static_cast<unsigned>(llvm::X86::ENUM)})
 #include "llvm/TargetParser/X86TargetParser.def"
                                .Default({0, 0});
