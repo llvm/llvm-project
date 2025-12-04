@@ -51,6 +51,7 @@ getInstrProfSection(const object::ObjectFile &Obj, InstrProfSectKind IPSK) {
 const char *InstrProfCorrelator::FunctionNameAttributeName = "Function Name";
 const char *InstrProfCorrelator::CFGHashAttributeName = "CFG Hash";
 const char *InstrProfCorrelator::NumCountersAttributeName = "Num Counters";
+const char *InstrProfCorrelator::NumBitmapBitsAttributeName = "Num BitmapBits";
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator::Context>>
 InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
@@ -81,6 +82,17 @@ InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
   C->Buffer = std::move(Buffer);
   C->CountersSectionStart = CountersSection->getAddress();
   C->CountersSectionEnd = C->CountersSectionStart + CountersSection->getSize();
+
+  auto BitmapSection = getInstrProfSection(Obj, IPSK_bitmap);
+  if (auto E = BitmapSection.takeError()) {
+    // It is not an error if NumBitmapBytes of each function is zero.
+    consumeError(std::move(E));
+    C->BitmapSectionStart = 0;
+    C->BitmapSectionEnd = 0;
+  } else {
+    C->BitmapSectionStart = BitmapSection->getAddress();
+    C->BitmapSectionEnd = C->BitmapSectionStart + BitmapSection->getSize();
+  }
   // In COFF object file, there's a null byte at the beginning of the counter
   // section which doesn't exist in raw profile.
   if (Obj.getTripleObjectFormat() == Triple::COFF)
@@ -235,6 +247,7 @@ Error InstrProfCorrelatorImpl<IntPtrT>::correlateProfileData(int MaxWarnings) {
         "could not find any profile data metadata in correlated file");
   Error Result = correlateProfileNameImpl();
   this->CounterOffsets.clear();
+  this->BitmapOffsets.clear();
   this->NamesVec.clear();
   return Result;
 }
@@ -252,7 +265,9 @@ template <> struct yaml::MappingTraits<InstrProfCorrelator::Probe> {
     io.mapOptional("Linkage Name", P.LinkageName);
     io.mapRequired("CFG Hash", P.CFGHash);
     io.mapRequired("Counter Offset", P.CounterOffset);
+    io.mapRequired("Bitmap Offset", P.BitmapOffset);
     io.mapRequired("Num Counters", P.NumCounters);
+    io.mapRequired("Num BitmapBytes", P.NumBitmapBytes);
     io.mapOptional("File", P.FilePath);
     io.mapOptional("Line", P.LineNumber);
   }
@@ -277,13 +292,12 @@ Error InstrProfCorrelatorImpl<IntPtrT>::dumpYaml(int MaxWarnings,
 }
 
 template <class IntPtrT>
-void InstrProfCorrelatorImpl<IntPtrT>::addDataProbe(uint64_t NameRef,
-                                                    uint64_t CFGHash,
-                                                    IntPtrT CounterOffset,
-                                                    IntPtrT FunctionPtr,
-                                                    uint32_t NumCounters) {
+void InstrProfCorrelatorImpl<IntPtrT>::addDataProbe(
+    uint64_t NameRef, uint64_t CFGHash, IntPtrT CounterOffset,
+    IntPtrT BitmapOffset, IntPtrT FunctionPtr, uint32_t NumCounters,
+    uint32_t NumBitmapBytes) {
   // Check if a probe was already added for this counter offset.
-  if (!CounterOffsets.insert(CounterOffset).second)
+  if (CounterOffset && !CounterOffsets.insert(CounterOffset).second)
     return;
   Data.push_back({
       maybeSwap<uint64_t>(NameRef),
@@ -291,15 +305,13 @@ void InstrProfCorrelatorImpl<IntPtrT>::addDataProbe(uint64_t NameRef,
       // In this mode, CounterPtr actually stores the section relative address
       // of the counter.
       maybeSwap<IntPtrT>(CounterOffset),
-      // TODO: MC/DC is not yet supported.
-      /*BitmapOffset=*/maybeSwap<IntPtrT>(0),
+      maybeSwap<IntPtrT>(BitmapOffset),
       maybeSwap<IntPtrT>(FunctionPtr),
       // TODO: Value profiling is not yet supported.
       /*ValuesPtr=*/maybeSwap<IntPtrT>(0),
       maybeSwap<uint32_t>(NumCounters),
       /*NumValueSites=*/{maybeSwap<uint16_t>(0), maybeSwap<uint16_t>(0)},
-      // TODO: MC/DC is not yet supported.
-      /*NumBitmapBytes=*/maybeSwap<uint32_t>(0),
+      maybeSwap<uint32_t>(NumBitmapBytes),
   });
 }
 
@@ -330,7 +342,8 @@ DwarfInstrProfCorrelator<IntPtrT>::getLocation(const DWARFDie &Die) const {
 }
 
 template <class IntPtrT>
-bool DwarfInstrProfCorrelator<IntPtrT>::isDIEOfProbe(const DWARFDie &Die) {
+bool DwarfInstrProfCorrelator<IntPtrT>::isDIEOfProbe(const DWARFDie &Die,
+                                                     StringRef Prefix) {
   const auto &ParentDie = Die.getParent();
   if (!Die.isValid() || !ParentDie.isValid() || Die.isNULL())
     return false;
@@ -341,8 +354,211 @@ bool DwarfInstrProfCorrelator<IntPtrT>::isDIEOfProbe(const DWARFDie &Die) {
   if (!Die.hasChildren())
     return false;
   if (const char *Name = Die.getName(DINameKind::ShortName))
-    return StringRef(Name).starts_with(getInstrProfCountersVarPrefix());
+    return StringRef(Name).starts_with(Prefix);
   return false;
+}
+
+template <class IntPtrT>
+void DwarfInstrProfCorrelator<IntPtrT>::addCountersToDataProbe(
+    InstrProfCorrelator::CorrelationData *Data, const DWARFDie &Die,
+    const bool UnlimitedWarnings, int &NumSuppressedWarnings) {
+  using RawProfData = RawInstrProf::ProfileData<IntPtrT>;
+  std::optional<const char *> FunctionName;
+  std::optional<uint64_t> CFGHash;
+  std::optional<uint64_t> CounterPtr = getLocation(Die);
+  auto FnDie = Die.getParent();
+  auto FunctionPtr = dwarf::toAddress(FnDie.find(dwarf::DW_AT_low_pc));
+  std::optional<uint64_t> NumCounters;
+  for (const DWARFDie &Child : Die.children()) {
+    if (Child.getTag() != dwarf::DW_TAG_LLVM_annotation)
+      continue;
+    auto AnnotationFormName = Child.find(dwarf::DW_AT_name);
+    auto AnnotationFormValue = Child.find(dwarf::DW_AT_const_value);
+    if (!AnnotationFormName || !AnnotationFormValue)
+      continue;
+    auto AnnotationNameOrErr = AnnotationFormName->getAsCString();
+    if (auto Err = AnnotationNameOrErr.takeError()) {
+      consumeError(std::move(Err));
+      continue;
+    }
+    StringRef AnnotationName = *AnnotationNameOrErr;
+    if (AnnotationName == InstrProfCorrelator::FunctionNameAttributeName) {
+      if (auto EC = AnnotationFormValue->getAsCString().moveInto(FunctionName))
+        consumeError(std::move(EC));
+    } else if (AnnotationName == InstrProfCorrelator::CFGHashAttributeName) {
+      CFGHash = AnnotationFormValue->getAsUnsignedConstant();
+    } else if (AnnotationName ==
+               InstrProfCorrelator::NumCountersAttributeName) {
+      NumCounters = AnnotationFormValue->getAsUnsignedConstant();
+    }
+  }
+  // If there is no function and no counter, assume it was dead-stripped
+  if (!FunctionPtr && !CounterPtr)
+    return;
+  if (!FunctionName || !CFGHash || !CounterPtr || !NumCounters) {
+    if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
+      WithColor::warning() << "Incomplete DIE for function " << FunctionName
+                           << ": CFGHash=" << CFGHash
+                           << "  CounterPtr=" << CounterPtr
+                           << "  NumCounters=" << NumCounters << "\n";
+      LLVM_DEBUG(Die.dump(dbgs()));
+    }
+    return;
+  }
+  uint64_t CountersStart = this->Ctx->CountersSectionStart;
+  uint64_t CountersEnd = this->Ctx->CountersSectionEnd;
+  if (*CounterPtr < CountersStart || *CounterPtr >= CountersEnd) {
+    if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
+      WithColor::warning() << format(
+          "CounterPtr out of range for function %s: Actual=0x%x "
+          "Expected=[0x%x, 0x%x)\n",
+          *FunctionName, *CounterPtr, CountersStart, CountersEnd);
+      LLVM_DEBUG(Die.dump(dbgs()));
+    }
+    return;
+  }
+  if (!FunctionPtr && (UnlimitedWarnings || ++NumSuppressedWarnings < 1)) {
+    WithColor::warning() << format("Could not find address of function %s\n",
+                                   *FunctionName);
+    LLVM_DEBUG(Die.dump(dbgs()));
+  }
+  // In debug info correlation mode, the CounterPtr is an absolute address
+  // of the counter, but it's expected to be relative later when iterating
+  // Data.
+  IntPtrT CounterOffset = *CounterPtr - CountersStart;
+  if (Data) {
+    InstrProfCorrelator::Probe P;
+    P.FunctionName = *FunctionName;
+    if (const char *Name = FnDie.getName(DINameKind::LinkageName))
+      P.LinkageName = Name;
+    P.CFGHash = *CFGHash;
+    P.CounterOffset = CounterOffset;
+    P.BitmapOffset = 0;
+    P.NumCounters = *NumCounters;
+    P.NumBitmapBytes = 0;
+    auto FilePath = FnDie.getDeclFile(
+        DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath);
+    if (!FilePath.empty())
+      P.FilePath = FilePath;
+    if (auto LineNumber = FnDie.getDeclLine())
+      P.LineNumber = LineNumber;
+    // Try to find appropriate probe.
+    for (InstrProfCorrelator::Probe &Probe : Data->Probes) {
+      if (Probe.FunctionName == *FunctionName) {
+        Probe.LinkageName = P.LinkageName;
+        Probe.CFGHash = P.CFGHash;
+        Probe.CounterOffset = P.CounterOffset;
+        Probe.NumCounters = P.NumCounters;
+        Probe.FilePath = P.FilePath;
+        Probe.LineNumber = P.LineNumber;
+        return;
+      }
+    }
+    Data->Probes.push_back(P);
+  } else {
+    uint64_t NameRef = IndexedInstrProf::ComputeHash(*FunctionName);
+    for (const RawProfData &I : this->Data) {
+      if (I.NameRef == NameRef) {
+        const_cast<uint64_t &>(I.FuncHash) = *CFGHash;
+        const_cast<IntPtrT &>(I.CounterPtr) = CounterOffset;
+        const_cast<IntPtrT &>(I.FunctionPointer) = FunctionPtr.value_or(0);
+        const_cast<uint32_t &>(I.NumCounters) = *NumCounters;
+        return;
+      }
+    }
+    this->addDataProbe(NameRef, *CFGHash, CounterOffset, 0,
+                       FunctionPtr.value_or(0), *NumCounters, 0);
+    this->NamesVec.push_back(*FunctionName);
+  }
+}
+
+template <class IntPtrT>
+void DwarfInstrProfCorrelator<IntPtrT>::addBitmapToDataProbe(
+    InstrProfCorrelator::CorrelationData *Data, const DWARFDie &Die,
+    const bool UnlimitedWarnings, int &NumSuppressedWarnings) {
+  using RawProfData = RawInstrProf::ProfileData<IntPtrT>;
+  std::optional<const char *> FunctionName;
+  std::optional<uint64_t> BitmapPtr = getLocation(Die);
+  uint64_t NumBitmapBytes;
+  for (const DWARFDie &Child : Die.children()) {
+    if (Child.getTag() != dwarf::DW_TAG_LLVM_annotation)
+      continue;
+    auto AnnotationFormName = Child.find(dwarf::DW_AT_name);
+    auto AnnotationFormValue = Child.find(dwarf::DW_AT_const_value);
+    if (!AnnotationFormName || !AnnotationFormValue)
+      continue;
+    auto AnnotationNameOrErr = AnnotationFormName->getAsCString();
+    if (auto Err = AnnotationNameOrErr.takeError()) {
+      consumeError(std::move(Err));
+      continue;
+    }
+    StringRef AnnotationName = *AnnotationNameOrErr;
+    if (AnnotationName == InstrProfCorrelator::FunctionNameAttributeName) {
+      if (auto EC = AnnotationFormValue->getAsCString().moveInto(FunctionName))
+        consumeError(std::move(EC));
+    } else if (AnnotationName ==
+               InstrProfCorrelator::NumBitmapBitsAttributeName) {
+      std::optional<uint64_t> NumBitmapBits =
+          AnnotationFormValue->getAsUnsignedConstant();
+      NumBitmapBytes = alignTo(*NumBitmapBits, CHAR_BIT) / CHAR_BIT;
+    }
+  }
+  if (!FunctionName || !BitmapPtr || !NumBitmapBytes) {
+    if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
+      WithColor::warning() << "Incomplete DIE for function " << FunctionName
+                           << "  BitmapPtr=" << BitmapPtr
+                           << "  NumBitmapBytes=" << NumBitmapBytes << "\n";
+      LLVM_DEBUG(Die.dump(dbgs()));
+    }
+    return;
+  }
+  uint64_t BitmapStart = this->Ctx->BitmapSectionStart;
+  uint64_t BitmapEnd = this->Ctx->BitmapSectionEnd;
+  if (!BitmapStart && !BitmapEnd && NumBitmapBytes) {
+    auto E = make_error<InstrProfError>(
+        instrprof_error::unable_to_correlate_profile,
+        "could not find profile bitmap section in correlated file");
+    return;
+  }
+  if (*BitmapPtr < BitmapStart || (*BitmapPtr >= BitmapEnd && NumBitmapBytes)) {
+    if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
+      WithColor::warning() << format(
+          "BitmapPtr out of range for function %s: Actual=0x%x "
+          "Expected=[0x%x, 0x%x)\n",
+          *FunctionName, *BitmapPtr, BitmapStart, BitmapEnd);
+      LLVM_DEBUG(Die.dump(dbgs()));
+    }
+    return;
+  }
+  // In debug info correlation mode, the BitmapPtr is an absolute address of
+  // the bitmap, but it's expected to be relative later when iterating Data.
+  IntPtrT BitmapOffset = *BitmapPtr - BitmapStart;
+  // Add bitmap information to the corresponding profile data entry.
+  if (Data) {
+    InstrProfCorrelator::Probe P;
+    P.FunctionName = *FunctionName;
+    P.BitmapOffset = BitmapOffset;
+    P.NumBitmapBytes = NumBitmapBytes;
+    for (InstrProfCorrelator::Probe &Probe : Data->Probes) {
+      if (Probe.FunctionName == *FunctionName) {
+        Probe.BitmapOffset = P.BitmapOffset;
+        Probe.NumBitmapBytes = P.NumBitmapBytes;
+        return;
+      }
+    }
+    Data->Probes.push_back(P);
+  } else {
+    uint64_t NameRef = IndexedInstrProf::ComputeHash(*FunctionName);
+    for (const RawProfData &I : this->Data) {
+      if (I.NameRef == NameRef) {
+        const_cast<IntPtrT &>(I.BitmapPtr) = BitmapOffset;
+        const_cast<uint32_t &>(I.NumBitmapBytes) = NumBitmapBytes;
+        return;
+      }
+    }
+    this->addDataProbe(NameRef, 0, 0, BitmapOffset, 0, 0, NumBitmapBytes);
+    this->NamesVec.push_back(*FunctionName);
+  }
 }
 
 template <class IntPtrT>
@@ -351,99 +567,31 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
   bool UnlimitedWarnings = (MaxWarnings == 0);
   // -N suppressed warnings means we can emit up to N (unsuppressed) warnings
   int NumSuppressedWarnings = -MaxWarnings;
-  auto MaybeAddProbe = [&](DWARFDie Die) {
-    if (!isDIEOfProbe(Die))
-      return;
-    std::optional<const char *> FunctionName;
-    std::optional<uint64_t> CFGHash;
-    std::optional<uint64_t> CounterPtr = getLocation(Die);
-    auto FnDie = Die.getParent();
-    auto FunctionPtr = dwarf::toAddress(FnDie.find(dwarf::DW_AT_low_pc));
-    std::optional<uint64_t> NumCounters;
-    for (const DWARFDie &Child : Die.children()) {
-      if (Child.getTag() != dwarf::DW_TAG_LLVM_annotation)
-        continue;
-      auto AnnotationFormName = Child.find(dwarf::DW_AT_name);
-      auto AnnotationFormValue = Child.find(dwarf::DW_AT_const_value);
-      if (!AnnotationFormName || !AnnotationFormValue)
-        continue;
-      auto AnnotationNameOrErr = AnnotationFormName->getAsCString();
-      if (auto Err = AnnotationNameOrErr.takeError()) {
-        consumeError(std::move(Err));
-        continue;
-      }
-      StringRef AnnotationName = *AnnotationNameOrErr;
-      if (AnnotationName == InstrProfCorrelator::FunctionNameAttributeName) {
-        if (auto EC =
-                AnnotationFormValue->getAsCString().moveInto(FunctionName))
-          consumeError(std::move(EC));
-      } else if (AnnotationName == InstrProfCorrelator::CFGHashAttributeName) {
-        CFGHash = AnnotationFormValue->getAsUnsignedConstant();
-      } else if (AnnotationName ==
-                 InstrProfCorrelator::NumCountersAttributeName) {
-        NumCounters = AnnotationFormValue->getAsUnsignedConstant();
-      }
+  auto MaybeAddProbe = [&](DWARFDie Die, StringRef Prefix) {
+    if (!isDIEOfProbe(Die, Prefix))
+      return false;
+    if (Prefix == getInstrProfCountersVarPrefix()) {
+      addCountersToDataProbe(Data, Die, UnlimitedWarnings,
+                             NumSuppressedWarnings);
+    } else if (Prefix == getInstrProfBitmapVarPrefix()) {
+      addBitmapToDataProbe(Data, Die, UnlimitedWarnings, NumSuppressedWarnings);
     }
-    // If there is no function and no counter, assume it was dead-stripped
-    if (!FunctionPtr && !CounterPtr)
-      return;
-    if (!FunctionName || !CFGHash || !CounterPtr || !NumCounters) {
-      if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
-        WithColor::warning()
-            << "Incomplete DIE for function " << FunctionName
-            << ": CFGHash=" << CFGHash << "  CounterPtr=" << CounterPtr
-            << "  NumCounters=" << NumCounters << "\n";
-        LLVM_DEBUG(Die.dump(dbgs()));
-      }
-      return;
-    }
-    uint64_t CountersStart = this->Ctx->CountersSectionStart;
-    uint64_t CountersEnd = this->Ctx->CountersSectionEnd;
-    if (*CounterPtr < CountersStart || *CounterPtr >= CountersEnd) {
-      if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
-        WithColor::warning()
-            << format("CounterPtr out of range for function %s: Actual=0x%x "
-                      "Expected=[0x%x, 0x%x)\n",
-                      *FunctionName, *CounterPtr, CountersStart, CountersEnd);
-        LLVM_DEBUG(Die.dump(dbgs()));
-      }
-      return;
-    }
-    if (!FunctionPtr && (UnlimitedWarnings || ++NumSuppressedWarnings < 1)) {
-      WithColor::warning() << format("Could not find address of function %s\n",
-                                     *FunctionName);
-      LLVM_DEBUG(Die.dump(dbgs()));
-    }
-    // In debug info correlation mode, the CounterPtr is an absolute address of
-    // the counter, but it's expected to be relative later when iterating Data.
-    IntPtrT CounterOffset = *CounterPtr - CountersStart;
-    if (Data) {
-      InstrProfCorrelator::Probe P;
-      P.FunctionName = *FunctionName;
-      if (const char *Name = FnDie.getName(DINameKind::LinkageName))
-        P.LinkageName = Name;
-      P.CFGHash = *CFGHash;
-      P.CounterOffset = CounterOffset;
-      P.NumCounters = *NumCounters;
-      auto FilePath = FnDie.getDeclFile(
-          DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath);
-      if (!FilePath.empty())
-        P.FilePath = FilePath;
-      if (auto LineNumber = FnDie.getDeclLine())
-        P.LineNumber = LineNumber;
-      Data->Probes.push_back(P);
-    } else {
-      this->addDataProbe(IndexedInstrProf::ComputeHash(*FunctionName), *CFGHash,
-                         CounterOffset, FunctionPtr.value_or(0), *NumCounters);
-      this->NamesVec.push_back(*FunctionName);
-    }
+    return true;
   };
-  for (auto &CU : DICtx->normal_units())
-    for (const auto &Entry : CU->dies())
-      MaybeAddProbe(DWARFDie(CU.get(), &Entry));
-  for (auto &CU : DICtx->dwo_units())
-    for (const auto &Entry : CU->dies())
-      MaybeAddProbe(DWARFDie(CU.get(), &Entry));
+  for (auto &CU : DICtx->normal_units()) {
+    for (const auto &Entry : CU->dies()) {
+      DWARFDie Die = DWARFDie(CU.get(), &Entry);
+      if (!MaybeAddProbe(Die, getInstrProfCountersVarPrefix()))
+        MaybeAddProbe(Die, getInstrProfBitmapVarPrefix());
+    }
+  }
+  for (auto &CU : DICtx->dwo_units()) {
+    for (const auto &Entry : CU->dies()) {
+      DWARFDie Die = DWARFDie(CU.get(), &Entry);
+      if (!MaybeAddProbe(Die, getInstrProfCountersVarPrefix()))
+        MaybeAddProbe(Die, getInstrProfBitmapVarPrefix());
+    }
+  }
 
   if (!UnlimitedWarnings && NumSuppressedWarnings > 0)
     WithColor::warning() << format("Suppressed %d additional warnings\n",
@@ -487,11 +635,31 @@ void BinaryInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
                       (I - DataStart) * sizeof(RawProfData));
       }
     }
-    // In binary correlation mode, the CounterPtr is an absolute address of the
-    // counter, but it's expected to be relative later when iterating Data.
+    uint64_t BitmapPtr = this->template maybeSwap<IntPtrT>(I->BitmapPtr);
+    uint64_t BitmapStart = this->Ctx->BitmapSectionStart;
+    uint64_t BitmapEnd = this->Ctx->BitmapSectionEnd;
+    if (!BitmapStart && !BitmapEnd && I->NumBitmapBytes) {
+      auto E = make_error<InstrProfError>(
+          instrprof_error::unable_to_correlate_profile,
+          "could not find profile bitmap section in correlated file");
+      return;
+    }
+    if (BitmapPtr < BitmapStart ||
+        (BitmapPtr >= BitmapEnd && I->NumBitmapBytes)) {
+      if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
+        WithColor::warning()
+            << format("BitmapPtr out of range for function: Actual=0x%x "
+                      "Expected=[0x%x, 0x%x) at data offset=0x%x\n",
+                      BitmapPtr, BitmapStart, BitmapEnd,
+                      (I - DataStart) * sizeof(RawProfData));
+      }
+    }
+    // In binary correlation mode, CounterPtr and BitmapPtr are absolute
+    // addresses, but they're expected to be relative later when iterating Data.
     IntPtrT CounterOffset = CounterPtr - CountersStart;
-    this->addDataProbe(I->NameRef, I->FuncHash, CounterOffset,
-                       I->FunctionPointer, I->NumCounters);
+    IntPtrT BitmapOffset = BitmapPtr - BitmapStart;
+    this->addDataProbe(I->NameRef, I->FuncHash, CounterOffset, BitmapOffset,
+                       I->FunctionPointer, I->NumCounters, I->NumBitmapBytes);
   }
 }
 

@@ -69,6 +69,7 @@ public:
   LLVM_ABI static const char *FunctionNameAttributeName;
   LLVM_ABI static const char *CFGHashAttributeName;
   LLVM_ABI static const char *NumCountersAttributeName;
+  LLVM_ABI static const char *NumBitmapBitsAttributeName;
 
   enum InstrProfCorrelatorKind { CK_32Bit, CK_64Bit };
   InstrProfCorrelatorKind getKind() const { return Kind; }
@@ -83,6 +84,9 @@ protected:
     /// The address range of the __llvm_prf_cnts section.
     uint64_t CountersSectionStart;
     uint64_t CountersSectionEnd;
+    /// The address range of the __llvm_prf_bits section.
+    uint64_t BitmapSectionStart;
+    uint64_t BitmapSectionEnd;
     /// The pointer points to start/end of profile data/name sections if
     /// FileKind is Binary.
     const char *DataStart;
@@ -105,7 +109,9 @@ protected:
     std::optional<std::string> LinkageName;
     yaml::Hex64 CFGHash;
     yaml::Hex64 CounterOffset;
+    yaml::Hex64 BitmapOffset;
     uint32_t NumCounters;
+    uint32_t NumBitmapBytes;
     std::optional<std::string> FilePath;
     std::optional<int> LineNumber;
   };
@@ -159,8 +165,9 @@ protected:
   Error dumpYaml(int MaxWarnings, raw_ostream &OS) override;
 
   void addDataProbe(uint64_t FunctionName, uint64_t CFGHash,
-                    IntPtrT CounterOffset, IntPtrT FunctionPtr,
-                    uint32_t NumCounters);
+                    IntPtrT CounterOffset, IntPtrT BitmapOffset,
+                    IntPtrT FunctionPtr, uint32_t NumCounters,
+                    uint32_t NumBitmapBytes);
 
   // Byte-swap the value if necessary.
   template <class T> T maybeSwap(T Value) const {
@@ -172,6 +179,7 @@ private:
                           std::unique_ptr<InstrProfCorrelator::Context> Ctx)
       : InstrProfCorrelator(Kind, std::move(Ctx)){};
   llvm::DenseSet<IntPtrT> CounterOffsets;
+  llvm::DenseSet<IntPtrT> BitmapOffsets;
 };
 
 /// DwarfInstrProfCorrelator - A child of InstrProfCorrelatorImpl that takes
@@ -191,8 +199,16 @@ private:
   std::optional<uint64_t> getLocation(const DWARFDie &Die) const;
 
   /// Returns true if the provided DIE symbolizes an instrumentation probe
-  /// symbol.
-  static bool isDIEOfProbe(const DWARFDie &Die);
+  /// symbol of the necessary type.
+  static bool isDIEOfProbe(const DWARFDie &Die, StringRef Prefix);
+
+  void addCountersToDataProbe(InstrProfCorrelator::CorrelationData *Data,
+                              const DWARFDie &Die, const bool UnlimitedWarnings,
+                              int &NumSuppressedWarnings);
+
+  void addBitmapToDataProbe(InstrProfCorrelator::CorrelationData *Data,
+                            const DWARFDie &Die, const bool UnlimitedWarnings,
+                            int &NumSuppressedWarnings);
 
   /// Iterate over DWARF DIEs to find those that symbolize instrumentation
   /// probes and construct the ProfileData vector and Names string.
