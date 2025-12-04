@@ -348,6 +348,9 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
       {"operator<<A::B>", "", "operator<<A::B>"},
       {"A::operator<<<A::B>", "A", "operator<<<A::B>"},
       {"operator<<<A::B>", "", "operator<<<A::B>"},
+      // There are languages based on C++ in which `constant` is a keyword.
+      // Ensure we can still parse this in C++ even when that's the case.
+      {"Class::constant", "Class", "constant"},
   };
 
   llvm::StringRef context, basename;
