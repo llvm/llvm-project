@@ -177,7 +177,7 @@ transform::tune::AlternativesOp::apply(transform::TransformRewriter &rewriter,
                                  << " is only resolved through providing a "
                                     "`selected_region` attr/param";
 
-  if (*selectedRegionIdx >= getNumRegions())
+  if (*selectedRegionIdx < 0 || *selectedRegionIdx >= getNumRegions())
     return emitDefiniteFailure()
            << "'selected_region' attribute/param specifies region at index "
            << *selectedRegionIdx << " while op has only " << getNumRegions()
@@ -233,7 +233,7 @@ LogicalResult transform::tune::AlternativesOp::verify() {
 
   if (auto selectedRegionAttr = getSelectedRegionAttr()) {
     size_t regionIdx = selectedRegionAttr->getSExtValue();
-    if (regionIdx >= getNumRegions())
+    if (regionIdx < 0 || regionIdx >= getNumRegions())
       return emitOpError()
              << "'selected_region' attribute specifies region at index "
              << regionIdx << " while op has only " << getNumRegions()
