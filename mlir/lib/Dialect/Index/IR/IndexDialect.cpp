@@ -27,7 +27,7 @@ struct IndexInlinerInterface : public DialectInlinerInterface {
     return true;
   }
 };
-}
+} // namespace
 
 void IndexDialect::initialize() {
   registerAttributes();
