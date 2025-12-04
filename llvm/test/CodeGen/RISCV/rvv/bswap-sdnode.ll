@@ -21,7 +21,6 @@ define <vscale x 1 x i16> @bswap_nxv1i16(<vscale x 1 x i16> %va) {
   %a = call <vscale x 1 x i16> @llvm.bswap.nxv1i16(<vscale x 1 x i16> %va)
   ret <vscale x 1 x i16> %a
 }
-declare <vscale x 1 x i16> @llvm.bswap.nxv1i16(<vscale x 1 x i16>)
 
 define <vscale x 2 x i16> @bswap_nxv2i16(<vscale x 2 x i16> %va) {
 ; CHECK-LABEL: bswap_nxv2i16:
@@ -40,7 +39,6 @@ define <vscale x 2 x i16> @bswap_nxv2i16(<vscale x 2 x i16> %va) {
   %a = call <vscale x 2 x i16> @llvm.bswap.nxv2i16(<vscale x 2 x i16> %va)
   ret <vscale x 2 x i16> %a
 }
-declare <vscale x 2 x i16> @llvm.bswap.nxv2i16(<vscale x 2 x i16>)
 
 define <vscale x 4 x i16> @bswap_nxv4i16(<vscale x 4 x i16> %va) {
 ; CHECK-LABEL: bswap_nxv4i16:
@@ -59,7 +57,6 @@ define <vscale x 4 x i16> @bswap_nxv4i16(<vscale x 4 x i16> %va) {
   %a = call <vscale x 4 x i16> @llvm.bswap.nxv4i16(<vscale x 4 x i16> %va)
   ret <vscale x 4 x i16> %a
 }
-declare <vscale x 4 x i16> @llvm.bswap.nxv4i16(<vscale x 4 x i16>)
 
 define <vscale x 8 x i16> @bswap_nxv8i16(<vscale x 8 x i16> %va) {
 ; CHECK-LABEL: bswap_nxv8i16:
@@ -78,7 +75,6 @@ define <vscale x 8 x i16> @bswap_nxv8i16(<vscale x 8 x i16> %va) {
   %a = call <vscale x 8 x i16> @llvm.bswap.nxv8i16(<vscale x 8 x i16> %va)
   ret <vscale x 8 x i16> %a
 }
-declare <vscale x 8 x i16> @llvm.bswap.nxv8i16(<vscale x 8 x i16>)
 
 define <vscale x 16 x i16> @bswap_nxv16i16(<vscale x 16 x i16> %va) {
 ; CHECK-LABEL: bswap_nxv16i16:
@@ -97,7 +93,6 @@ define <vscale x 16 x i16> @bswap_nxv16i16(<vscale x 16 x i16> %va) {
   %a = call <vscale x 16 x i16> @llvm.bswap.nxv16i16(<vscale x 16 x i16> %va)
   ret <vscale x 16 x i16> %a
 }
-declare <vscale x 16 x i16> @llvm.bswap.nxv16i16(<vscale x 16 x i16>)
 
 define <vscale x 32 x i16> @bswap_nxv32i16(<vscale x 32 x i16> %va) {
 ; CHECK-LABEL: bswap_nxv32i16:
@@ -116,7 +111,6 @@ define <vscale x 32 x i16> @bswap_nxv32i16(<vscale x 32 x i16> %va) {
   %a = call <vscale x 32 x i16> @llvm.bswap.nxv32i16(<vscale x 32 x i16> %va)
   ret <vscale x 32 x i16> %a
 }
-declare <vscale x 32 x i16> @llvm.bswap.nxv32i16(<vscale x 32 x i16>)
 
 define <vscale x 1 x i32> @bswap_nxv1i32(<vscale x 1 x i32> %va) {
 ; CHECK-LABEL: bswap_nxv1i32:
@@ -143,7 +137,6 @@ define <vscale x 1 x i32> @bswap_nxv1i32(<vscale x 1 x i32> %va) {
   %a = call <vscale x 1 x i32> @llvm.bswap.nxv1i32(<vscale x 1 x i32> %va)
   ret <vscale x 1 x i32> %a
 }
-declare <vscale x 1 x i32> @llvm.bswap.nxv1i32(<vscale x 1 x i32>)
 
 define <vscale x 2 x i32> @bswap_nxv2i32(<vscale x 2 x i32> %va) {
 ; CHECK-LABEL: bswap_nxv2i32:
@@ -170,7 +163,6 @@ define <vscale x 2 x i32> @bswap_nxv2i32(<vscale x 2 x i32> %va) {
   %a = call <vscale x 2 x i32> @llvm.bswap.nxv2i32(<vscale x 2 x i32> %va)
   ret <vscale x 2 x i32> %a
 }
-declare <vscale x 2 x i32> @llvm.bswap.nxv2i32(<vscale x 2 x i32>)
 
 define <vscale x 4 x i32> @bswap_nxv4i32(<vscale x 4 x i32> %va) {
 ; CHECK-LABEL: bswap_nxv4i32:
@@ -197,7 +189,6 @@ define <vscale x 4 x i32> @bswap_nxv4i32(<vscale x 4 x i32> %va) {
   %a = call <vscale x 4 x i32> @llvm.bswap.nxv4i32(<vscale x 4 x i32> %va)
   ret <vscale x 4 x i32> %a
 }
-declare <vscale x 4 x i32> @llvm.bswap.nxv4i32(<vscale x 4 x i32>)
 
 define <vscale x 8 x i32> @bswap_nxv8i32(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: bswap_nxv8i32:
@@ -224,7 +215,6 @@ define <vscale x 8 x i32> @bswap_nxv8i32(<vscale x 8 x i32> %va) {
   %a = call <vscale x 8 x i32> @llvm.bswap.nxv8i32(<vscale x 8 x i32> %va)
   ret <vscale x 8 x i32> %a
 }
-declare <vscale x 8 x i32> @llvm.bswap.nxv8i32(<vscale x 8 x i32>)
 
 define <vscale x 16 x i32> @bswap_nxv16i32(<vscale x 16 x i32> %va) {
 ; CHECK-LABEL: bswap_nxv16i32:
@@ -251,7 +241,6 @@ define <vscale x 16 x i32> @bswap_nxv16i32(<vscale x 16 x i32> %va) {
   %a = call <vscale x 16 x i32> @llvm.bswap.nxv16i32(<vscale x 16 x i32> %va)
   ret <vscale x 16 x i32> %a
 }
-declare <vscale x 16 x i32> @llvm.bswap.nxv16i32(<vscale x 16 x i32>)
 
 define <vscale x 1 x i64> @bswap_nxv1i64(<vscale x 1 x i64> %va) {
 ; RV32-LABEL: bswap_nxv1i64:
@@ -335,7 +324,6 @@ define <vscale x 1 x i64> @bswap_nxv1i64(<vscale x 1 x i64> %va) {
   %a = call <vscale x 1 x i64> @llvm.bswap.nxv1i64(<vscale x 1 x i64> %va)
   ret <vscale x 1 x i64> %a
 }
-declare <vscale x 1 x i64> @llvm.bswap.nxv1i64(<vscale x 1 x i64>)
 
 define <vscale x 2 x i64> @bswap_nxv2i64(<vscale x 2 x i64> %va) {
 ; RV32-LABEL: bswap_nxv2i64:
@@ -419,7 +407,6 @@ define <vscale x 2 x i64> @bswap_nxv2i64(<vscale x 2 x i64> %va) {
   %a = call <vscale x 2 x i64> @llvm.bswap.nxv2i64(<vscale x 2 x i64> %va)
   ret <vscale x 2 x i64> %a
 }
-declare <vscale x 2 x i64> @llvm.bswap.nxv2i64(<vscale x 2 x i64>)
 
 define <vscale x 4 x i64> @bswap_nxv4i64(<vscale x 4 x i64> %va) {
 ; RV32-LABEL: bswap_nxv4i64:
@@ -503,7 +490,6 @@ define <vscale x 4 x i64> @bswap_nxv4i64(<vscale x 4 x i64> %va) {
   %a = call <vscale x 4 x i64> @llvm.bswap.nxv4i64(<vscale x 4 x i64> %va)
   ret <vscale x 4 x i64> %a
 }
-declare <vscale x 4 x i64> @llvm.bswap.nxv4i64(<vscale x 4 x i64>)
 
 define <vscale x 8 x i64> @bswap_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32-LABEL: bswap_nxv8i64:
@@ -609,4 +595,3 @@ define <vscale x 8 x i64> @bswap_nxv8i64(<vscale x 8 x i64> %va) {
   %a = call <vscale x 8 x i64> @llvm.bswap.nxv8i64(<vscale x 8 x i64> %va)
   ret <vscale x 8 x i64> %a
 }
-declare <vscale x 8 x i64> @llvm.bswap.nxv8i64(<vscale x 8 x i64>)

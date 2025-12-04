@@ -170,9 +170,71 @@ transform::TestFuseAndYieldOp::apply(TransformRewriter &rewriter,
 // TestFuseConsumerOp
 //===----------------------------------------------------------------------===//
 
+/// Fuse the consumer and store both the original consumer operation as well as
+/// the fused consumer operation.
+static LogicalResult
+applyFuseConsumer(RewriterBase &rewriter, Operation *transformOp,
+                  Operation *consumer,
+                  MutableArrayRef<LoopLikeOpInterface> loops,
+                  TransformResults &transformResults) {
+  SmallVector<Operation *> fusedConsumerOps;
+  rewriter.setInsertionPoint(consumer);
+
+  FailureOr<scf::SCFFuseConsumerOfSliceResult> fuseConsumerResults =
+      scf::tileAndFuseConsumer(rewriter, consumer, loops);
+  if (failed(fuseConsumerResults))
+    return consumer->emitOpError("failed to fuse consumer of slice");
+
+  // Report back the relevant handles to the transform op.
+  for (OpOperand *tiledAndFusedConsumerOperand :
+       fuseConsumerResults->tiledAndFusedConsumerOperands) {
+    fusedConsumerOps.push_back(tiledAndFusedConsumerOperand->getOwner());
+  }
+  transformResults.set(transformOp->getOpResult(0), fusedConsumerOps);
+  for (auto [index, loop] : llvm::enumerate(loops)) {
+    transformResults.set(transformOp->getOpResult(index + 1), {loop});
+  }
+  return success();
+}
+
+DiagnosedSilenceableFailure
+transform::TestFuseConsumerOp::apply(TransformRewriter &rewriter,
+                                     TransformResults &transformResults,
+                                     TransformState &state) {
+  Operation *consumer = *state.getPayloadOps(getConsumer()).begin();
+
+  SmallVector<LoopLikeOpInterface> loops;
+  // Since the matcher works inside-out, we need to iterate the loops in
+  // reverse.
+  for (auto loop : llvm::reverse(getLoops())) {
+    auto loopLikeOp =
+        dyn_cast<LoopLikeOpInterface>(*state.getPayloadOps(loop).begin());
+    if (!loopLikeOp) {
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
+    loops.push_back(loopLikeOp);
+  }
+  LogicalResult result = applyFuseConsumer(rewriter, getOperation(), consumer,
+                                           loops, transformResults);
+  return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
+                        : DiagnosedSilenceableFailure::success();
+}
+
+void transform::TestFuseConsumerOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getConsumerMutable(), effects);
+  consumesHandle(getLoopsMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
+  modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// TestFuseConsumerUsingSliceOp
+//===----------------------------------------------------------------------===//
+
 /// Apply fusing of consumer transformation to all payload ops and store both
 /// the original consumer operation as well as the fused consumer operation.
-static LogicalResult applyFuseConsumer(
+static LogicalResult applyFuseConsumerUsingSlices(
     RewriterBase &rewriter, Operation *transformOp,
     ArrayRef<Operation *> slices, MutableArrayRef<LoopLikeOpInterface> loops,
     uint32_t numConsumerToFuse, TransformResults &transformResults) {
@@ -204,10 +266,9 @@ static LogicalResult applyFuseConsumer(
   return success();
 }
 
-DiagnosedSilenceableFailure
-transform::TestFuseConsumerOp::apply(TransformRewriter &rewriter,
-                                     TransformResults &transformResults,
-                                     TransformState &state) {
+DiagnosedSilenceableFailure transform::TestFuseConsumerUsingSliceOp::apply(
+    TransformRewriter &rewriter, TransformResults &transformResults,
+    TransformState &state) {
   SmallVector<Operation *> slices;
   for (auto op : getTargets()) {
     auto sliceOp = *state.getPayloadOps(op).begin();
@@ -224,13 +285,13 @@ transform::TestFuseConsumerOp::apply(TransformRewriter &rewriter,
     loops.push_back(loopLikeOp);
   }
   LogicalResult result =
-      applyFuseConsumer(rewriter, getOperation(), slices, loops,
-                        getNumConsumerToFuse(), transformResults);
+      applyFuseConsumerUsingSlices(rewriter, getOperation(), slices, loops,
+                                   getNumConsumerToFuse(), transformResults);
   return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
                         : DiagnosedSilenceableFailure::success();
 }
 
-void transform::TestFuseConsumerOp::getEffects(
+void transform::TestFuseConsumerUsingSliceOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTargetsMutable(), effects);
   consumesHandle(getLoopsMutable(), effects);
