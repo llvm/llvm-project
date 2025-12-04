@@ -9,6 +9,7 @@
 #include "dsmil_layer7_llm.h"
 #include "dsmil_memory_budget.h"
 #include "dsmil_mlops_optimization.h"
+#include "dsmil_int8_quantization.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -185,4 +186,83 @@ int dsmil_device47_llm_unload(dsmil_device47_llm_ctx_t *ctx) {
     
     memset(ctx, 0, sizeof(*ctx));
     return 0;
+}
+
+int dsmil_device47_get_int8_params(const dsmil_device47_llm_ctx_t *ctx,
+                                    dsmil_int8_params_t *params) {
+    if (!ctx || !params) {
+        return -1;
+    }
+    
+    if (!ctx->int8_quantized) {
+        return -1;  // Model not quantized
+    }
+    
+    // Initialize default INT8 parameters
+    // Actual implementation would load from model metadata
+    memset(params, 0, sizeof(*params));
+    params->scheme = DSMIL_INT8_SYMMETRIC;
+    params->scale = 0.00390625f;  // 1/256 typical scale
+    params->zero_point = 0;
+    params->qmin = INT8_MIN_VAL;
+    params->qmax = INT8_MAX_VAL;
+    params->per_channel = false;
+    
+    return 0;
+}
+
+int dsmil_device47_int8_matmul(const dsmil_device47_llm_ctx_t *ctx,
+                                const int8_t *A, const int8_t *B,
+                                float *output, const char *layer_type) {
+    if (!ctx || !A || !B || !output) {
+        return -1;
+    }
+    
+    // Get INT8 parameters
+    dsmil_int8_params_t params;
+    if (dsmil_device47_get_int8_params(ctx, &params) != 0) {
+        return -1;
+    }
+    
+    // Determine matrix dimensions based on layer type
+    uint32_t M, N, K;
+    
+    if (layer_type && strcmp(layer_type, "attention") == 0) {
+        // Attention: (batch, seq_len, hidden) @ (hidden, hidden*3)
+        M = ctx->context_length;
+        N = ctx->context_length * 3;  // Q, K, V
+        K = 4096;  // Typical hidden size
+    } else if (layer_type && strcmp(layer_type, "ffn") == 0) {
+        // FFN: (batch, seq_len, hidden) @ (hidden, ffn_dim)
+        M = ctx->context_length;
+        N = 16384;  // Typical FFN dimension
+        K = 4096;
+    } else {
+        // Default dimensions
+        M = ctx->context_length;
+        N = 4096;
+        K = 4096;
+    }
+    
+    // Create matmul context
+    dsmil_int8_matmul_ctx_t matmul_ctx;
+    matmul_ctx.M = M;
+    matmul_ctx.N = N;
+    matmul_ctx.K = K;
+    matmul_ctx.A_params = &params;
+    matmul_ctx.B_params = &params;
+    matmul_ctx.C_params = &params;
+    matmul_ctx.use_hardware_accel = true;  // Use NPU/GPU acceleration
+    
+    // Perform INT8 matrix multiplication with bias
+    // (bias would be loaded from model)
+    float *bias = calloc(N, sizeof(float));  // Zero bias for now
+    if (!bias) {
+        return -1;
+    }
+    
+    int result = dsmil_int8_matmul_with_bias(&matmul_ctx, A, B, bias, output, "gelu");
+    
+    free(bias);
+    return result;
 }

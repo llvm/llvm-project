@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include "dsmil_int8_quantization.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,6 +69,30 @@ int dsmil_device47_llm_load(const char *model_path, dsmil_device47_llm_ctx_t *ct
  * @return true if quantization is valid, false otherwise
  */
 bool dsmil_device47_verify_int8_quantization(const dsmil_device47_llm_ctx_t *ctx);
+
+/**
+ * @brief Get INT8 quantization parameters for model
+ * 
+ * @param ctx LLM context
+ * @param params Output quantization parameters
+ * @return 0 on success, negative on error
+ */
+int dsmil_device47_get_int8_params(const dsmil_device47_llm_ctx_t *ctx,
+                                    dsmil_int8_params_t *params);
+
+/**
+ * @brief Perform INT8 matrix multiplication for attention/FFN layers
+ * 
+ * @param ctx LLM context
+ * @param A Input matrix A (INT8)
+ * @param B Weight matrix B (INT8)
+ * @param output Output matrix (FP32)
+ * @param layer_type Layer type ("attention", "ffn", "embedding")
+ * @return 0 on success, negative on error
+ */
+int dsmil_device47_int8_matmul(const dsmil_device47_llm_ctx_t *ctx,
+                                const int8_t *A, const int8_t *B,
+                                float *output, const char *layer_type);
 
 /**
  * @brief Get current memory usage

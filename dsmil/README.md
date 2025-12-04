@@ -402,6 +402,19 @@ DSMIL provides comprehensive runtime libraries for Layer 7 AI/ML workloads, quan
 - INT8 quantization enforcement (>95% accuracy)
 - KV cache optimization
 - Model lifecycle management
+- INT8 matrix operations for attention/FFN layers
+
+### Advanced INT8 Quantization Runtime ⭐ NEW
+- **Header**: `dsmil/include/dsmil_int8_quantization.h`
+- **Implementation**: `dsmil/lib/Runtime/dsmil_int8_quantization_runtime.c`
+- **Calibration**: FP32 → INT8 quantization parameter calculation
+- **Quantization Schemes**: Symmetric, asymmetric, per-tensor, per-channel, dynamic
+- **INT8 GEMM**: Matrix multiplication with INT8 inputs (NPU: 13.0 TOPS, GPU: 32.0 TOPS, CPU: 3.2 TOPS)
+- **Accuracy Validation**: >95% retention requirement enforcement
+- **Weight Quantization**: Per-layer and per-channel quantization for linear/conv layers
+- **Dynamic Quantization**: Runtime activation quantization
+- **Hardware Acceleration**: NPU/GPU/CPU INT8 TOPS utilization
+- **Speedup Estimation**: INT8 vs FP32 performance prediction
 
 ### Device 46 Quantum Runtime
 - **Header**: `dsmil/include/dsmil_quantum_runtime.h`
