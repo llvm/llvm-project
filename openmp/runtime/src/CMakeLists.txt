@@ -422,6 +422,48 @@ elseif(${LIBOMP_FORTRAN_MODULES})
   set(BUILD_FORTRAN_MODULES True)
 endif()
 
+if(BUILD_FORTRAN_MODULES)
+  if(NOT LIBOMP_FORTRAN_MODULES AND ${LIBOMP_FORTRAN_MODULES_COMPILER} STREQUAL "")
+    message(FATAL_ERROR
+      "Generating OpenMP Fortran modules now requires LIBOMP_FORTRAN_MODULES=ON "
+      "or LIBOMP_FORTRAN_MODULES_COMPILER to be set so the adaptor implementations "
+      "can be compiled and linked into libomp.")
+  endif()
+  target_sources(omp PRIVATE kmp_ftn_support.f90)
+  set_source_files_properties(kmp_ftn_support.f90
+                              PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_FFLAGS}")
+  add_dependencies(omp libomp-mod)
+  # Determine Fortran runtime libraries to link
+  # For LLVM flang, we need flang_rt.runtime (newer)
+  set(_LIBOMP_FORTRAN_LIBS "")
+  if(CMAKE_Fortran_COMPILER_ID MATCHES "LLVMFlang" OR CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+    # Derive paths from Fortran compiler location
+    get_filename_component(_FC_DIR "${CMAKE_Fortran_COMPILER}" DIRECTORY)
+    get_filename_component(_FC_PREFIX "${_FC_DIR}" DIRECTORY)
+
+    # Try to find the flang runtime in clang resource directory
+    # Path: <prefix>/lib/clang/<version>/lib/<target>/libflang_rt.runtime.a
+    file(GLOB _FLANG_RT_CANDIDATES
+      "${_FC_PREFIX}/lib/clang/*/lib/*/libflang_rt.runtime.a"
+    )
+    if(_FLANG_RT_CANDIDATES)
+      list(GET _FLANG_RT_CANDIDATES 0 _FLANG_RT_LIB)
+      list(APPEND _LIBOMP_FORTRAN_LIBS "${_FLANG_RT_LIB}")
+    else()
+      message(WARNING "Could not find LLVM Flang runtime libraries. "
+                      "libomp may fail to link.")
+    endif()
+  elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
+    set(_LIBOMP_FORTRAN_LIBS gfortran)
+  else()
+    # Fallback to CMake's auto-detected libs
+    set(_LIBOMP_FORTRAN_LIBS ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
+  endif()
+  if(_LIBOMP_FORTRAN_LIBS)
+    target_link_libraries(omp ${_LIBOMP_FORTRAN_LIBS})
+  endif()
+endif()
+
 # Move files to exports/ directory if requested
 if(${LIBOMP_COPY_EXPORTS})
   include(LibompExports)

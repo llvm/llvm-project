@@ -976,6 +976,17 @@
           integer, intent(in) :: resources(*)
         end function omp_get_submemspace
 
+        function omp_get_uid_from_device(device_num) result(uid)
+          import
+          integer (kind=omp_integer_kind), intent(in) :: device_num
+          character (:), pointer :: uid
+        end function omp_get_uid_from_device
+
+        function omp_get_device_from_uid(uid) result(device_num)
+          import
+          character (len=*), intent(in) :: uid
+          integer (kind=omp_integer_kind) :: device_num
+        end function omp_get_device_from_uid
 
 !       ***
 !       *** kmp_* entry points
