@@ -2007,18 +2007,26 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
         // LOAD_CNT is only relevant to vgpr or LDS.
         unsigned RegNo = FIRST_LDS_VGPR;
+        bool FoundAliasingStore = false;
         if (Ptr && Memop->getAAInfo()) {
           const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
           for (unsigned I = 0, E = LDSDMAStores.size(); I != E; ++I) {
-            if (MI.mayAlias(AA, *LDSDMAStores[I], true))
+            if (MI.mayAlias(AA, *LDSDMAStores[I], true)) {
+              FoundAliasingStore = true;
               ScoreBrackets.determineWait(LOAD_CNT, RegNo + I + 1, Wait);
+            }
           }
-        } else {
+        }
+
+        // TODO?: Is it possible to have cases where we'd alias with both a
+        // store tracked in LDSDMAStores, and one that isn't ? If so, the
+        // current system would only wait on the tracked store, and not the
+        // "generic" entry.
+        if (!FoundAliasingStore)
           ScoreBrackets.determineWait(LOAD_CNT, RegNo, Wait);
-        }
-        if (Memop->isStore()) {
+
+        if (Memop->isStore())
           ScoreBrackets.determineWait(EXP_CNT, RegNo, Wait);
-        }
       }
 
       // Loop over use and def operands.

@@ -223,6 +223,7 @@ define amdgpu_kernel void @buffer_load_lds_dword_10_arrays(<4 x i32> %rsrc, i32 
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    ds_read_b32 v7, v9 offset:1792
 ; GFX9-NEXT:    ; wave barrier
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_read_b32 v8, v9 offset:2048
 ; GFX9-NEXT:    ; wave barrier
 ; GFX9-NEXT:    ds_read_b32 v9, v9 offset:2304
@@ -288,6 +289,7 @@ define amdgpu_kernel void @buffer_load_lds_dword_10_arrays(<4 x i32> %rsrc, i32 
 ; GFX10-NEXT:    s_waitcnt vmcnt(2)
 ; GFX10-NEXT:    ds_read_b32 v7, v9 offset:1792
 ; GFX10-NEXT:    ; wave barrier
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ds_read_b32 v8, v9 offset:2048
 ; GFX10-NEXT:    ; wave barrier
 ; GFX10-NEXT:    ds_read_b32 v9, v9 offset:2304
@@ -374,7 +376,7 @@ define amdgpu_kernel void @global_load_lds_no_alias_ds_read(ptr addrspace(1) noc
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    s_lshl_b32 s0, s3, 2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_read_b32 v0, v0 offset:512
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_read_b32 v1, v1 offset:768
@@ -397,6 +399,7 @@ define amdgpu_kernel void @global_load_lds_no_alias_ds_read(ptr addrspace(1) noc
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-NEXT:    s_lshl_b32 s0, s3, 2
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s0
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ds_read_b32 v0, v0 offset:512
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(15)
 ; GFX10-NEXT:    ds_read_b32 v1, v1 offset:768
