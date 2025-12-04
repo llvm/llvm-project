@@ -354,6 +354,9 @@ void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
     if (!AR->isAffine())
       return;
 
+  // Clear output vector.
+  Subscripts.clear();
+
   LLVM_DEBUG(dbgs() << "\ncomputeAccessFunctions\n"
                     << "Memory Access Function: " << *Expr << "\n");
 
@@ -461,6 +464,10 @@ void llvm::delinearize(ScalarEvolution &SE, const SCEV *Expr,
                        SmallVectorImpl<const SCEV *> &Subscripts,
                        SmallVectorImpl<const SCEV *> &Sizes,
                        const SCEV *ElementSize) {
+  // Clear output vectors.
+  Subscripts.clear();
+  Sizes.clear();
+
   // First step: collect parametric terms.
   SmallVector<const SCEV *, 4> Terms;
   collectParametricTerms(SE, Expr, Terms);
@@ -638,6 +645,9 @@ bool llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
                                      SmallVectorImpl<const SCEV *> &Subscripts,
                                      SmallVectorImpl<const SCEV *> &Sizes,
                                      const SCEV *ElementSize) {
+  // Clear output vectors.
+  Subscripts.clear();
+  Sizes.clear();
 
   // First step: find the fixed array size.
   SmallVector<uint64_t, 4> ConstSizes;
@@ -824,12 +834,13 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
 bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
                                       const GetElementPtrInst *GEP,
                                       SmallVectorImpl<const SCEV *> &Subscripts,
-                                      SmallVectorImpl<int> &Sizes) {
+                                      SmallVectorImpl<const SCEV *> &Sizes) {
   assert(Subscripts.empty() && Sizes.empty() &&
          "Expected output lists to be empty on entry to this function.");
   assert(GEP && "getIndexExpressionsFromGEP called with a null GEP");
   LLVM_DEBUG(dbgs() << "\nGEP to delinearize: " << *GEP << "\n");
   Type *Ty = nullptr;
+  Type *IndexTy = SE.getEffectiveSCEVType(GEP->getPointerOperandType());
   bool DroppedFirstDim = false;
   for (unsigned i = 1; i < GEP->getNumOperands(); i++) {
     const SCEV *Expr = SE.getSCEV(GEP->getOperand(i));
@@ -855,7 +866,7 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
 
     Subscripts.push_back(Expr);
     if (!(DroppedFirstDim && i == 2))
-      Sizes.push_back(ArrayTy->getNumElements());
+      Sizes.push_back(SE.getConstant(IndexTy, ArrayTy->getNumElements()));
 
     Ty = ArrayTy->getElementType();
   }

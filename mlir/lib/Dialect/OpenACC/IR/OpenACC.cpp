@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/SymbolTable.h"
@@ -1446,6 +1447,28 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
     }
   }
 
+  return recipe;
+}
+
+std::optional<PrivateRecipeOp>
+PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
+                                   StringRef recipeName,
+                                   FirstprivateRecipeOp firstprivRecipe) {
+  // Create the private.recipe op with the same type as the firstprivate.recipe.
+  OpBuilder::InsertionGuard guard(builder);
+  auto varType = firstprivRecipe.getType();
+  auto recipe = PrivateRecipeOp::create(builder, loc, recipeName, varType);
+
+  // Clone the init region
+  IRMapping mapping;
+  firstprivRecipe.getInitRegion().cloneInto(&recipe.getInitRegion(), mapping);
+
+  // Clone destroy region if the firstprivate.recipe has one.
+  if (!firstprivRecipe.getDestroyRegion().empty()) {
+    IRMapping mapping;
+    firstprivRecipe.getDestroyRegion().cloneInto(&recipe.getDestroyRegion(),
+                                                 mapping);
+  }
   return recipe;
 }
 
@@ -4386,6 +4409,43 @@ void RoutineOp::addWorker(MLIRContext *context,
                           llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   setWorkerAttr(addDeviceTypeAffectedOperandHelper(context, getWorkerAttr(),
                                                    effectiveDeviceTypes));
+}
+
+void RoutineOp::addGang(MLIRContext *context,
+                        llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setGangAttr(addDeviceTypeAffectedOperandHelper(context, getGangAttr(),
+                                                 effectiveDeviceTypes));
+}
+
+void RoutineOp::addGang(MLIRContext *context,
+                        llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+                        uint64_t val) {
+  llvm::SmallVector<mlir::Attribute> dimValues;
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
+
+  if (getGangDimAttr())
+    llvm::copy(getGangDimAttr(), std::back_inserter(dimValues));
+  if (getGangDimDeviceTypeAttr())
+    llvm::copy(getGangDimDeviceTypeAttr(), std::back_inserter(deviceTypes));
+
+  assert(dimValues.size() == deviceTypes.size());
+
+  if (effectiveDeviceTypes.empty()) {
+    dimValues.push_back(
+        mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), val));
+    deviceTypes.push_back(
+        acc::DeviceTypeAttr::get(context, acc::DeviceType::None));
+  } else {
+    for (DeviceType dt : effectiveDeviceTypes) {
+      dimValues.push_back(
+          mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), val));
+      deviceTypes.push_back(acc::DeviceTypeAttr::get(context, dt));
+    }
+  }
+  assert(dimValues.size() == deviceTypes.size());
+
+  setGangDimAttr(mlir::ArrayAttr::get(context, dimValues));
+  setGangDimDeviceTypeAttr(mlir::ArrayAttr::get(context, deviceTypes));
 }
 
 //===----------------------------------------------------------------------===//
