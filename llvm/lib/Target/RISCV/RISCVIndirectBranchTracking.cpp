@@ -16,11 +16,12 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 
-#define DEBUG_TYPE "riscv-indrect-branch-tracking"
+#define DEBUG_TYPE "riscv-indirect-branch-tracking"
 #define PASS_NAME "RISC-V Indirect Branch Tracking"
 
 using namespace llvm;
@@ -54,11 +55,23 @@ FunctionPass *llvm::createRISCVIndirectBranchTrackingPass() {
   return new RISCVIndirectBranchTracking();
 }
 
-static void emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII,
-                     uint32_t Label) {
-  auto I = MBB.begin();
+static void
+emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII, uint32_t Label,
+         MachineBasicBlock::iterator I = MachineBasicBlock::iterator{}) {
+  if (!I.isValid())
+    I = MBB.begin();
   BuildMI(MBB, I, MBB.findDebugLoc(I), TII->get(RISCV::AUIPC), RISCV::X0)
       .addImm(Label);
+}
+
+static bool isCallReturnTwice(const MachineOperand &MOp) {
+  if (!MOp.isGlobal())
+    return false;
+  auto *CalleeFn = dyn_cast<Function>(MOp.getGlobal());
+  if (!CalleeFn)
+    return false;
+  AttributeList Attrs = CalleeFn->getAttributes();
+  return Attrs.hasFnAttr(Attribute::ReturnsTwice);
 }
 
 bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
@@ -97,6 +110,19 @@ bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
       if (MBB.getAlignment() < LpadAlign)
         MBB.setAlignment(LpadAlign);
       Changed = true;
+    }
+  }
+
+  // Check for calls to functions with ReturnsTwice attribute and insert
+  // LPAD after such calls
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
+      if (I->isCall() && I->getNumOperands() > 0 &&
+          isCallReturnTwice(I->getOperand(0))) {
+        auto NextI = std::next(I);
+        emitLpad(MBB, TII, FixedLabel, NextI);
+        Changed = true;
+      }
     }
   }
 
