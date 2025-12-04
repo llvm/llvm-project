@@ -839,9 +839,9 @@ bool HexagonGenWideningVecInstr::replaceWithVmpaIntrinsic(Instruction *Inst,
   NewVOP2 = IRB.CreateBitCast(NewVOP2, InType);
   Value *VecOP = IRB.CreateCall(ExtF, {NewVOP1, NewVOP2});
 
-  Intrinsic::ID VmpaIntID =
-      (NewResEltSize == 16) ? VmpaIntID = Intrinsic::hexagon_V6_vmpabus_128B
-                            : VmpaIntID = Intrinsic::hexagon_V6_vmpauhb_128B;
+  Intrinsic::ID VmpaIntID = (NewResEltSize == 16)
+                                ? Intrinsic::hexagon_V6_vmpabus_128B
+                                : Intrinsic::hexagon_V6_vmpauhb_128B;
   ExtF = Intrinsic::getOrInsertDeclaration(M, VmpaIntID);
   auto *ResType =
       FixedVectorType::get(getElementTy(NewResEltSize, IRB), NumElts);
