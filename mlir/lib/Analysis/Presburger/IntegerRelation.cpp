@@ -1791,9 +1791,8 @@ void IntegerRelation::pruneOrthogonalConstraints(unsigned pos) {
   // Prune all constraints not related to target variable.
   for (int constraintId = numConstraints - 1; constraintId >= 0;
        --constraintId) {
-    if (!relatedRows.contains(constraintId)) {
+    if (!relatedRows.contains(constraintId))
       removeConstraint((unsigned)constraintId);
-    }
   }
 }
 
