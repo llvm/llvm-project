@@ -16,6 +16,8 @@
 
 #include "llvm/ExecutionEngine/Orc/CallableTraitsHelper.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MSVCErrorWorkarounds.h"
 
 #include <type_traits>
 

@@ -96,25 +96,25 @@ TEST(CallSPSViaEPCTest, CallMainViaCallerSync) {
   SPSEPCCaller<int32_t(SPSSequence<SPSString>)> C(*EPC);
   std::vector<std::string> Args;
 
-  Expected<int32_t> R1 = C(std::promise<Expected<int32_t>>(),
+  Expected<int32_t> R1 = C(std::promise<MSVCPExpected<int32_t>>(),
                            ExecutorSymbolDef::fromPtr(mainWrapper), Args);
   ASSERT_THAT_EXPECTED(R1, Succeeded());
   EXPECT_EQ(*R1, 0);
 
   Args.push_back("foo");
-  Expected<int32_t> R2 = C(std::promise<Expected<int32_t>>(),
+  Expected<int32_t> R2 = C(std::promise<MSVCPExpected<int32_t>>(),
                            ExecutorSymbolDef::fromPtr(mainWrapper), Args);
   ASSERT_THAT_EXPECTED(R2, Succeeded());
   EXPECT_EQ(*R2, 1);
 
   Args.push_back("foo");
-  Expected<int32_t> R3 = C(std::promise<Expected<int32_t>>(),
+  Expected<int32_t> R3 = C(std::promise<MSVCPExpected<int32_t>>(),
                            ExecutorSymbolDef::fromPtr(mainWrapper), Args);
   ASSERT_THAT_EXPECTED(R3, Succeeded());
   EXPECT_EQ(*R3, 2);
 
   Args.clear();
-  Expected<int32_t> R4 = C(std::promise<Expected<int32_t>>(),
+  Expected<int32_t> R4 = C(std::promise<MSVCPExpected<int32_t>>(),
                            ExecutorSymbolDef::fromPtr(mainWrapper), Args);
   ASSERT_THAT_EXPECTED(R4, Succeeded());
   EXPECT_EQ(*R4, 0);
@@ -126,22 +126,22 @@ TEST(CallSPSViaEPCTest, CallMainViaGenericCallSync) {
       *EPC, ExecutorSymbolDef::fromPtr(mainWrapper));
   std::vector<std::string> Args;
 
-  Expected<int32_t> R1 = C(std::promise<Expected<int32_t>>(), Args);
+  Expected<int32_t> R1 = C(std::promise<MSVCPExpected<int32_t>>(), Args);
   ASSERT_THAT_EXPECTED(R1, Succeeded());
   EXPECT_EQ(*R1, 0);
 
   Args.push_back("foo");
-  Expected<int32_t> R2 = C(std::promise<Expected<int32_t>>(), Args);
+  Expected<int32_t> R2 = C(std::promise<MSVCPExpected<int32_t>>(), Args);
   ASSERT_THAT_EXPECTED(R2, Succeeded());
   EXPECT_EQ(*R2, 1);
 
   Args.push_back("foo");
-  Expected<int32_t> R3 = C(std::promise<Expected<int32_t>>(), Args);
+  Expected<int32_t> R3 = C(std::promise<MSVCPExpected<int32_t>>(), Args);
   ASSERT_THAT_EXPECTED(R3, Succeeded());
   EXPECT_EQ(*R3, 2);
 
   Args.clear();
-  Expected<int32_t> R4 = C(std::promise<Expected<int32_t>>(), Args);
+  Expected<int32_t> R4 = C(std::promise<MSVCPExpected<int32_t>>(), Args);
   ASSERT_THAT_EXPECTED(R4, Succeeded());
   EXPECT_EQ(*R4, 0);
 }
