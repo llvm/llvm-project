@@ -777,80 +777,39 @@ LogicalResult MakeDmaDescriptorOp::verify() {
   return success();
 }
 
-static bool maybeUpdateDynamicIndexList(
-    ArrayRef<int64_t> staticElements, ArrayRef<Attribute> foldedElements,
-    SmallVector<Value> dynamicElements, SmallVector<int64_t> &newStaticElements,
-    SmallVector<Value> &newDynamicElements) {
-  bool changed = false;
-  int64_t index = 0;
-
-  for (int64_t static_element : staticElements) {
-    if (ShapedType::isStatic(static_element)) {
-      newStaticElements.push_back(static_element);
-      continue;
-    }
-
-    Attribute folded_element = foldedElements[index++];
-    if (auto attr = dyn_cast<IntegerAttr>(folded_element)) {
-      newStaticElements.push_back(attr.getInt());
-      changed = true;
-      continue;
-    }
-
-    newStaticElements.push_back(ShapedType::kDynamic);
-    newDynamicElements.push_back(dynamicElements[index]);
-  }
-  return changed;
-}
-
 OpFoldResult MakeDmaDescriptorOp::fold(FoldAdaptor adaptor) {
-  ArrayRef<int64_t> oldGlobalStaticStrides = adaptor.getGlobalStaticStrides();
-  ArrayRef<Attribute> foldedGlobalDynamicStrides =
-      adaptor.getGlobalDynamicStrides();
-  SmallVector<Value> oldGlobalDynamicStrides = getGlobalDynamicStrides();
+  SmallVector<OpFoldResult> mixedGlobalSizes(getMixedGlobalSizes());
+  SmallVector<OpFoldResult> mixedGlobalStrides(getMixedGlobalStrides());
+  SmallVector<OpFoldResult> mixedSharedSizes(getMixedSharedSizes());
 
-  SmallVector<int64_t> newGlobalStaticStrides;
-  SmallVector<Value> newGlobalDynamicStrides;
+  if (failed(foldDynamicIndexList(mixedGlobalSizes, /*onlyNonNegative=*/true,
+                                  /*onlyNonZero=*/true)) &&
+      failed(foldDynamicIndexList(mixedGlobalStrides, /*onlyNonNegative=*/true,
+                                  /*onlyNonZero=*/true)) &&
+      failed(foldDynamicIndexList(mixedSharedSizes, /*onlyNonNegative=*/true,
+                                  /*onlyNonZero=*/true)))
+    return nullptr;
 
-  bool change = maybeUpdateDynamicIndexList(
-      oldGlobalStaticStrides, foldedGlobalDynamicStrides,
-      oldGlobalDynamicStrides, newGlobalStaticStrides, newGlobalDynamicStrides);
+  SmallVector<Value> dynamicGlobalSizes, dynamicGlobalStrides,
+      dynamicSharedSizes;
+  SmallVector<int64_t> staticGlobalSizes, staticGlobalStrides,
+      staticSharedSizes;
 
-  ArrayRef<int64_t> oldGlobalStaticSizes = adaptor.getGlobalStaticSizes();
-  ArrayRef<Attribute> foldedGlobalDynamicSizes =
-      adaptor.getGlobalDynamicSizes();
-  SmallVector<Value> oldGlobalDynamicSizes = getGlobalDynamicSizes();
+  dispatchIndexOpFoldResults(mixedGlobalSizes, dynamicGlobalSizes,
+                             staticGlobalSizes);
+  setGlobalStaticSizes(staticGlobalSizes);
+  getGlobalDynamicSizesMutable().assign(dynamicGlobalSizes);
 
-  SmallVector<int64_t> newGlobalStaticSizes;
-  SmallVector<Value> newGlobalDynamicSizes;
+  dispatchIndexOpFoldResults(mixedGlobalStrides, dynamicGlobalStrides,
+                             staticGlobalStrides);
+  setGlobalStaticStrides(staticGlobalStrides);
+  getGlobalDynamicStridesMutable().assign(dynamicGlobalStrides);
 
-  change |= maybeUpdateDynamicIndexList(
-      oldGlobalStaticSizes, foldedGlobalDynamicSizes, oldGlobalDynamicSizes,
-      newGlobalStaticSizes, newGlobalDynamicSizes);
-
-  ArrayRef<int64_t> oldSharedStaticSizes = adaptor.getSharedStaticSizes();
-  ArrayRef<Attribute> foldedSharedDynamicSizes =
-      adaptor.getSharedDynamicSizes();
-  SmallVector<Value> oldSharedDynamicSizes = getSharedDynamicSizes();
-
-  SmallVector<int64_t> newSharedStaticSizes;
-  SmallVector<Value> newSharedDynamicSizes;
-
-  change |= maybeUpdateDynamicIndexList(
-      oldSharedStaticSizes, foldedSharedDynamicSizes, oldSharedDynamicSizes,
-      newSharedStaticSizes, newSharedDynamicSizes);
-
-  if (change) {
-    setGlobalStaticStrides(newGlobalStaticStrides);
-    getGlobalDynamicStridesMutable().assign(newGlobalDynamicStrides);
-    setGlobalStaticSizes(newGlobalStaticSizes);
-    getGlobalDynamicSizesMutable().assign(newGlobalDynamicSizes);
-    setSharedStaticSizes(newSharedStaticSizes);
-    getSharedDynamicSizesMutable().assign(newSharedDynamicSizes);
-    return getResult();
-  }
-
-  return nullptr;
+  dispatchIndexOpFoldResults(mixedSharedSizes, dynamicSharedSizes,
+                             staticSharedSizes);
+  setSharedStaticSizes(staticSharedSizes);
+  getSharedDynamicSizesMutable().assign(dynamicSharedSizes);
+  return getResult();
 }
 
 //===----------------------------------------------------------------------===//
