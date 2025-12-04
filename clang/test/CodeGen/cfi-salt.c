@@ -27,9 +27,9 @@ typedef unsigned int (* __cfi_salt ufn_salt_t)(void);
 
 /// Must emit __kcfi_typeid symbols for address-taken function declarations
 // CHECK: module asm ".weak __kcfi_typeid_[[F4:[a-zA-Z0-9_]+]]"
-// CHECK: module asm ".set __kcfi_typeid_[[F4]], {{[0-9]+}} # [[#%d,LOW_SODIUM_HASH:]]"
+// CHECK: module asm ".set __kcfi_typeid_[[F4]], {{[0-9]+}} /* [[#%d,LOW_SODIUM_HASH:]] */"
 // CHECK: module asm ".weak __kcfi_typeid_[[F4_SALT:[a-zA-Z0-9_]+]]"
-// CHECK: module asm ".set __kcfi_typeid_[[F4_SALT]], {{[0-9]+}} # [[#%d,ASM_SALTY_HASH:]]"
+// CHECK: module asm ".set __kcfi_typeid_[[F4_SALT]], {{[0-9]+}} /* [[#%d,ASM_SALTY_HASH:]] */"
 
 /// Must not __kcfi_typeid symbols for non-address-taken declarations
 // CHECK-NOT: module asm ".weak __kcfi_typeid_f6"
