@@ -1504,8 +1504,8 @@ HexagonTargetLowering::LowerGlobalTLSAddress(SDValue Op,
 
 HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
                                              const HexagonSubtarget &ST)
-    : TargetLowering(TM), HTM(static_cast<const HexagonTargetMachine&>(TM)),
-      Subtarget(ST) {
+    : TargetLowering(TM, ST),
+      HTM(static_cast<const HexagonTargetMachine &>(TM)), Subtarget(ST) {
   auto &HRI = *Subtarget.getRegisterInfo();
 
   setPrefLoopAlignment(Align(16));
@@ -2115,7 +2115,7 @@ static Value *getUnderLyingObjectForBrevLdIntr(Value *V) {
 /// true and store the intrinsic information into the IntrinsicInfo that was
 /// passed to the function.
 bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                               const CallInst &I,
+                                               const CallBase &I,
                                                MachineFunction &MF,
                                                unsigned Intrinsic) const {
   switch (Intrinsic) {

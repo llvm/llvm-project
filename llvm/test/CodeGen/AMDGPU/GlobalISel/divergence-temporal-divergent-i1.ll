@@ -131,7 +131,7 @@ define amdgpu_cs void @loop_with_1break(ptr addrspace(1) %x, i32 %x.size, ptr ad
 ; GFX10-NEXT:    s_andn2_b32 s6, s9, exec_lo
 ; GFX10-NEXT:    s_and_b32 s5, exec_lo, s5
 ; GFX10-NEXT:    s_or_b32 s9, s6, s5
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s8
 ; GFX10-NEXT:    s_cbranch_execz .LBB2_5
 ; GFX10-NEXT:  .LBB2_3: ; %A
@@ -241,7 +241,7 @@ define void @nested_loops_temporal_divergence_inner(float %pre.cond.val, i32 %n.
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v7, s4, v5, v7, s4
 ; GFX10-NEXT:    s_or_b32 s8, vcc_lo, s8
 ; GFX10-NEXT:    flat_store_byte v[6:7], v0
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s8
 ; GFX10-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX10-NEXT:  ; %bb.4: ; %exit
@@ -332,7 +332,7 @@ define void @nested_loops_temporal_divergence_outer(float %pre.cond.val, i32 %n.
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v7, s4, v5, v7, s4
 ; GFX10-NEXT:    s_or_b32 s8, vcc_lo, s8
 ; GFX10-NEXT:    flat_store_byte v[6:7], v0
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s8
 ; GFX10-NEXT:    s_cbranch_execnz .LBB4_1
 ; GFX10-NEXT:  ; %bb.4: ; %exit
@@ -423,7 +423,7 @@ define void @nested_loops_temporal_divergence_both(float %pre.cond.val, i32 %n.i
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v9, s4, v5, v9, s4
 ; GFX10-NEXT:    s_or_b32 s8, vcc_lo, s8
 ; GFX10-NEXT:    flat_store_byte v[8:9], v0
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s8
 ; GFX10-NEXT:    s_cbranch_execnz .LBB5_1
 ; GFX10-NEXT:  ; %bb.4: ; %exit

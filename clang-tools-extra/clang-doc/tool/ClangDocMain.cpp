@@ -22,7 +22,6 @@
 #include "Generators.h"
 #include "Representation.h"
 #include "support/Utils.h"
-#include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/Tooling/AllTUsExecution.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"
@@ -41,7 +40,6 @@
 #include <mutex>
 #include <string>
 
-using namespace clang::ast_matchers;
 using namespace clang::tooling;
 using namespace clang;
 
@@ -153,6 +151,7 @@ static std::string getExecutablePath(const char *Argv0, void *MainAddr) {
   return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
 }
 
+// TODO: Rename this, since it only gets custom CSS/JS
 static llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   using DirIt = llvm::sys::fs::directory_iterator;
   std::error_code FileErr;
@@ -223,8 +222,8 @@ static llvm::Error getMustacheHtmlFiles(const char *Argv0,
     llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
                  << " falling back to default\n";
   if (IsDir) {
-    getMustacheHtmlFiles(UserAssetPath, CDCtx);
-    return llvm::Error::success();
+    if (auto Err = getAssetFiles(CDCtx))
+      return Err;
   }
   void *MainAddr = (void *)(intptr_t)getExecutablePath;
   std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
@@ -438,7 +437,8 @@ Example usage for a project using a compile commands database:
     // Run the generator.
     llvm::outs() << "Generating docs...\n";
 
-    ExitOnErr(G->generateDocs(OutDirectory, std::move(USRToInfo), CDCtx));
+    ExitOnErr(
+        G->generateDocumentation(OutDirectory, std::move(USRToInfo), CDCtx));
     llvm::outs() << "Generating assets for docs...\n";
     ExitOnErr(G->createResources(CDCtx));
     llvm::timeTraceProfilerEnd();

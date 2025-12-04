@@ -130,8 +130,8 @@ define i32 @consecutive_ptr_reverse(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i32 -3
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP5]] = add <4 x i32> [[VEC_PHI]], [[REVERSE]]
@@ -177,8 +177,8 @@ define i32 @consecutive_ptr_reverse(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; INTER-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
 ; INTER-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFFSET_IDX]]
-; INTER-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 0
-; INTER-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i32 -3
+; INTER-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 0
+; INTER-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 -3
 ; INTER-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 8
 ; INTER-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; INTER-NEXT:    [[TMP5]] = add <4 x i32> [[VEC_PHI]], [[REVERSE]]

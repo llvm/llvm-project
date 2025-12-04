@@ -60,8 +60,9 @@ unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
 }
 
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
-                                           const AMDGPUSubtarget &STI)
-    : TargetLowering(TM), Subtarget(&STI) {
+                                           const TargetSubtargetInfo &STI,
+                                           const AMDGPUSubtarget &AMDGPUSTI)
+    : TargetLowering(TM, STI), Subtarget(&AMDGPUSTI) {
   // Always lower memset, memcpy, and memmove intrinsics to load/store
   // instructions, rather then generating calls to memset, mempcy or memmove.
   MaxStoresPerMemset = MaxStoresPerMemsetOptSize = ~0U;
@@ -1411,7 +1412,12 @@ SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
       InVals.push_back(DAG.getPOISON(Arg.VT));
   }
 
-  return DAG.getEntryNode();
+  // FIXME: Hack because R600 doesn't handle callseq pseudos yet.
+  if (getTargetMachine().getTargetTriple().getArch() == Triple::r600)
+    return CLI.Chain;
+
+  SDValue Chain = DAG.getCALLSEQ_START(CLI.Chain, 0, 0, CLI.DL);
+  return DAG.getCALLSEQ_END(Chain, 0, 0, /*InGlue=*/SDValue(), CLI.DL);
 }
 
 SDValue AMDGPUTargetLowering::LowerCall(CallLoweringInfo &CLI,
@@ -1887,14 +1893,14 @@ SDValue AMDGPUTargetLowering::SplitVectorLoad(const SDValue Op,
   Align BaseAlign = Load->getAlign();
   Align HiAlign = commonAlignment(BaseAlign, Size);
 
-  SDValue LoLoad = DAG.getExtLoad(Load->getExtensionType(), SL, LoVT,
-                                  Load->getChain(), BasePtr, SrcValue, LoMemVT,
-                                  BaseAlign, Load->getMemOperand()->getFlags());
+  SDValue LoLoad = DAG.getExtLoad(
+      Load->getExtensionType(), SL, LoVT, Load->getChain(), BasePtr, SrcValue,
+      LoMemVT, BaseAlign, Load->getMemOperand()->getFlags(), Load->getAAInfo());
   SDValue HiPtr = DAG.getObjectPtrOffset(SL, BasePtr, TypeSize::getFixed(Size));
-  SDValue HiLoad =
-      DAG.getExtLoad(Load->getExtensionType(), SL, HiVT, Load->getChain(),
-                     HiPtr, SrcValue.getWithOffset(LoMemVT.getStoreSize()),
-                     HiMemVT, HiAlign, Load->getMemOperand()->getFlags());
+  SDValue HiLoad = DAG.getExtLoad(
+      Load->getExtensionType(), SL, HiVT, Load->getChain(), HiPtr,
+      SrcValue.getWithOffset(LoMemVT.getStoreSize()), HiMemVT, HiAlign,
+      Load->getMemOperand()->getFlags(), Load->getAAInfo());
 
   SDValue Join;
   if (LoVT == HiVT) {
@@ -1982,10 +1988,10 @@ SDValue AMDGPUTargetLowering::SplitVectorStore(SDValue Op,
 
   SDValue LoStore =
       DAG.getTruncStore(Chain, SL, Lo, BasePtr, SrcValue, LoMemVT, BaseAlign,
-                        Store->getMemOperand()->getFlags());
-  SDValue HiStore =
-      DAG.getTruncStore(Chain, SL, Hi, HiPtr, SrcValue.getWithOffset(Size),
-                        HiMemVT, HiAlign, Store->getMemOperand()->getFlags());
+                        Store->getMemOperand()->getFlags(), Store->getAAInfo());
+  SDValue HiStore = DAG.getTruncStore(
+      Chain, SL, Hi, HiPtr, SrcValue.getWithOffset(Size), HiMemVT, HiAlign,
+      Store->getMemOperand()->getFlags(), Store->getAAInfo());
 
   return DAG.getNode(ISD::TokenFactor, SL, MVT::Other, LoStore, HiStore);
 }
@@ -2766,7 +2772,6 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
   EVT VT = Op.getValueType();
   SDNodeFlags Flags = Op->getFlags();
   SDLoc DL(Op);
-
   const bool IsLog10 = Op.getOpcode() == ISD::FLOG10;
   assert(IsLog10 || Op.getOpcode() == ISD::FLOG);
 
@@ -2805,7 +2810,9 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
 
     SDValue C = DAG.getConstantFP(IsLog10 ? c_log10 : c_log, DL, VT);
     SDValue CC = DAG.getConstantFP(IsLog10 ? cc_log10 : cc_log, DL, VT);
-
+    // This adds correction terms for which contraction may lead to an increase
+    // in the error of the approximation, so disable it.
+    Flags.setAllowContract(false);
     R = DAG.getNode(ISD::FMUL, DL, VT, Y, C, Flags);
     SDValue NegR = DAG.getNode(ISD::FNEG, DL, VT, R, Flags);
     SDValue FMA0 = DAG.getNode(ISD::FMA, DL, VT, Y, C, NegR, Flags);
@@ -2828,7 +2835,9 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
     SDValue YHInt = DAG.getNode(ISD::AND, DL, MVT::i32, YAsInt, MaskConst);
     SDValue YH = DAG.getNode(ISD::BITCAST, DL, MVT::f32, YHInt);
     SDValue YT = DAG.getNode(ISD::FSUB, DL, VT, Y, YH, Flags);
-
+    // This adds correction terms for which contraction may lead to an increase
+    // in the error of the approximation, so disable it.
+    Flags.setAllowContract(false);
     SDValue YTCT = DAG.getNode(ISD::FMUL, DL, VT, YT, CT, Flags);
     SDValue Mad0 = getMad(DAG, DL, VT, YH, CT, YTCT, Flags);
     SDValue Mad1 = getMad(DAG, DL, VT, YT, CH, Mad0, Flags);
@@ -3054,8 +3063,11 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
 
   if (VT.getScalarType() == MVT::f16) {
     // v_exp_f16 (fmul x, log2e)
-    if (allowApproxFunc(DAG, Flags)) // TODO: Does this really require fast?
-      return lowerFEXPUnsafe(X, SL, DAG, Flags);
+
+    if (allowApproxFunc(DAG, Flags)) { // TODO: Does this really require fast?
+      return IsExp10 ? lowerFEXP10Unsafe(X, SL, DAG, Flags)
+                     : lowerFEXPUnsafe(X, SL, DAG, Flags);
+    }
 
     if (VT.isVector())
       return SDValue();
@@ -3065,7 +3077,8 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
 
     // Nothing in half is a denormal when promoted to f32.
     SDValue Ext = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, X, Flags);
-    SDValue Lowered = lowerFEXPUnsafe(Ext, SL, DAG, Flags);
+    SDValue Lowered = IsExp10 ? lowerFEXP10Unsafe(Ext, SL, DAG, Flags)
+                              : lowerFEXPUnsafe(Ext, SL, DAG, Flags);
     return DAG.getNode(ISD::FP_ROUND, SL, VT, Lowered,
                        DAG.getTargetConstant(0, SL, MVT::i32), Flags);
   }

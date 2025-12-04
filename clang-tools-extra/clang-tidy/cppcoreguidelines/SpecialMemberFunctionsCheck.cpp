@@ -102,7 +102,6 @@ toString(SpecialMemberFunctionsCheck::SpecialMemberFunctionKind K) {
 static std::string
 join(ArrayRef<SpecialMemberFunctionsCheck::SpecialMemberFunctionKind> SMFS,
      llvm::StringRef AndOr) {
-
   assert(!SMFS.empty() &&
          "List of defined or undefined members should never be empty.");
   std::string Buffer;
