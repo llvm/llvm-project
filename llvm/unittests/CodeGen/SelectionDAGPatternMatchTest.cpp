@@ -847,18 +847,18 @@ TEST_F(SelectionDAGPatternMatchTest, matchReassociatableOp) {
   SDValue A, B;
   EXPECT_TRUE(sd_match(
       ADD010, m_ReassociatableAdd(m_Value(A), m_Value(B), m_Deferred(A))));
-  EXPECT_TRUE(sd_match(Op0, m_Deferred(A)));
-  EXPECT_TRUE(sd_match(Op1, m_Deferred(B)));
-  EXPECT_FALSE(sd_match(Op0, m_Deferred(B)));
-  EXPECT_FALSE(sd_match(Op1, m_Deferred(A)));
+  EXPECT_EQ(Op0, A);
+  EXPECT_EQ(Op1, B);
+  EXPECT_NE(A, B);
+
   A.setNode(nullptr);
   B.setNode(nullptr);
   EXPECT_TRUE(sd_match(
       ADD010, m_ReassociatableAdd(m_Value(A), m_Value(B), m_Deferred(B))));
-  EXPECT_TRUE(sd_match(Op0, m_Deferred(B)));
-  EXPECT_TRUE(sd_match(Op1, m_Deferred(A)));
-  EXPECT_FALSE(sd_match(Op0, m_Deferred(A)));
-  EXPECT_FALSE(sd_match(Op1, m_Deferred(B)));
+  EXPECT_EQ(Op0, B);
+  EXPECT_EQ(Op1, A);
+  EXPECT_NE(A, B);
+
   A.setNode(nullptr);
   B.setNode(nullptr);
   EXPECT_FALSE(sd_match(
