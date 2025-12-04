@@ -836,11 +836,12 @@ TEST(ConstantsTest, BlockAddressCAPITest) {
 }
 
 TEST(ConstantsTest, Float128Test) {
-  LLVMTypeRef Ty128 = LLVMFP128TypeInContext(LLVMGetGlobalContext());
-  LLVMTypeRef TyPPC128 = LLVMPPCFP128TypeInContext(LLVMGetGlobalContext());
-  LLVMTypeRef TyFloat = LLVMFloatTypeInContext(LLVMGetGlobalContext());
-  LLVMTypeRef TyDouble = LLVMDoubleTypeInContext(LLVMGetGlobalContext());
-  LLVMTypeRef TyHalf = LLVMHalfTypeInContext(LLVMGetGlobalContext());
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMTypeRef Ty128 = LLVMFP128TypeInContext(C);
+  LLVMTypeRef TyPPC128 = LLVMPPCFP128TypeInContext(C);
+  LLVMTypeRef TyFloat = LLVMFloatTypeInContext(C);
+  LLVMTypeRef TyDouble = LLVMDoubleTypeInContext(C);
+  LLVMTypeRef TyHalf = LLVMHalfTypeInContext(C);
   LLVMBuilderRef Builder = LLVMCreateBuilder();
   uint64_t n[2] = {0x4000000000000000, 0x0}; //+2
   uint64_t m[2] = {0xC000000000000000, 0x0}; //-2
@@ -861,6 +862,7 @@ TEST(ConstantsTest, Float128Test) {
   uint64_t r[1] = {0x0000000000003c00}; //+1
   LLVMValueRef val7 = LLVMConstFPFromBits(TyHalf, r);
   EXPECT_TRUE(val7 != nullptr);
+  LLVMContextDispose(C);
 }
 
 } // end anonymous namespace
