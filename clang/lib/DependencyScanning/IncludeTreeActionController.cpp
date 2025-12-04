@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CachingActions.h"
 #include "clang/APINotes/APINotesManager.h"
 #include "clang/APINotes/APINotesReader.h"
 #include "clang/CAS/IncludeTree.h"
+#include "clang/DependencyScanning/CachingActions.h"
+#include "clang/DependencyScanning/ScanAndUpdateArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/CAS/ObjectStore.h"
@@ -17,7 +18,6 @@
 #include "llvm/Support/PrefixMappingFileSystem.h"
 
 using namespace clang;
-using namespace tooling;
 using namespace dependencies;
 using llvm::Error;
 
@@ -766,8 +766,8 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
       if (Module *M = MMap.findModule(ScanInstance.getLangOpts().CurrentModule))
         if (Error E = AddModule(M))
           return std::move(E);
-      if (Module *PM =
-          MMap.findModule(ScanInstance.getLangOpts().ModuleName + "_Private"))
+      if (Module *PM = MMap.findModule(ScanInstance.getLangOpts().ModuleName +
+                                       "_Private"))
         if (Error E = AddModule(PM))
           return std::move(E);
     }

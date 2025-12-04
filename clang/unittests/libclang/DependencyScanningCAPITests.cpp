@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-c/Dependencies.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
+#include "clang/DependencyScanning/DependencyScanningService.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
-using namespace tooling;
-using namespace dependencies;
+using namespace clang::dependencies;
 
 TEST(DependencyScanningCAPITests, DependencyScanningFSCacheOutOfDate) {
   // This test is setup to have two out-of-date file system cache entries,

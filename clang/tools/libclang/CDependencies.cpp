@@ -18,12 +18,12 @@
 
 #include "clang-c/Dependencies.h"
 
+#include "clang/DependencyScanning/DependencyScanningService.h"
+#include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/SerializedDiagnosticPrinter.h"
 #include "clang/Options/Options.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "clang/Tooling/DependencyScanningTool.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/Option/ArgList.h"
@@ -31,6 +31,7 @@
 #include "llvm/Support/Process.h"
 
 using namespace clang;
+using namespace clang::dependencies;
 using namespace clang::tooling::dependencies;
 
 namespace {

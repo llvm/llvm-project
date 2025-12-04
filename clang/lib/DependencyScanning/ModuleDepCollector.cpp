@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
+#include "clang/DependencyScanning/ModuleDepCollector.h"
 
 #include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/MakeSupport.h"
+#include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Frontend/CompileJobCacheKey.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/CAS/ObjectStore.h"
@@ -22,7 +22,6 @@
 #include <optional>
 
 using namespace clang;
-using namespace tooling;
 using namespace dependencies;
 
 void ModuleDeps::forEachFileDep(llvm::function_ref<void(StringRef)> Cb) const {
