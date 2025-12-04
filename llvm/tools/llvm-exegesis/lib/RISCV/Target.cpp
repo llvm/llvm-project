@@ -822,8 +822,8 @@ void ExegesisRISCVTarget::fillMemoryOperands(InstructionTemplate &IT,
   unsigned Opcode = I.getOpcode();
   if (Opcode == RISCV::C_LDSP || Opcode == RISCV::C_LWSP ||
       Opcode == RISCV::C_SDSP || Opcode == RISCV::C_SWSP) {
-    // Force base register to SP (X2)
     IT.getValueFor(I.Operands[0]) = MCOperand::createReg(RISCV::X2);
+    // Force base register to SP (X2)
     IT.getValueFor(MemOp) = MCOperand::createReg(RISCV::X2);
     return;
   }
