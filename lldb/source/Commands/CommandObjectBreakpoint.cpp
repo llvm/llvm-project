@@ -45,6 +45,40 @@ static void AddBreakpointDescription(Stream *s, Breakpoint *bp,
   s->EOL();
 }
 
+static bool GetDefaultFile(Target &target, StackFrame *cur_frame, FileSpec &file,
+                      CommandReturnObject &result) {
+  // First use the Source Manager's default file. Then use the current stack
+  // frame's file.
+  if (auto maybe_file_and_line =
+          target.GetSourceManager().GetDefaultFileAndLine()) {
+    file = maybe_file_and_line->support_file_nsp->GetSpecOnly();
+    return true;
+  }
+
+  if (cur_frame == nullptr) {
+    result.AppendError(
+        "No selected frame to use to find the default file.");
+    return false;
+  }
+  if (!cur_frame->HasDebugInformation()) {
+    result.AppendError("Cannot use the selected frame to find the default "
+                       "file, it has no debug info.");
+    return false;
+  }
+
+  const SymbolContext &sc =
+      cur_frame->GetSymbolContext(eSymbolContextLineEntry);
+  if (sc.line_entry.GetFile()) {
+    file = sc.line_entry.GetFile();
+  } else {
+    result.AppendError("Can't find the file for the selected frame to "
+                       "use as the default file.");
+    return false;
+  }
+  return true;
+}
+
+
 // Modifiable Breakpoint Options
 #pragma mark Modify::CommandOptions
 #define LLDB_OPTIONS_breakpoint_modify
@@ -317,93 +351,14 @@ static llvm::Expected<LanguageType>
 GetExceptionLanguageForLanguage(llvm::StringRef lang_name,
                                 char short_option = '\0',
                                 llvm::StringRef long_option = {}) {
-  LanguageType language = Language::GetLanguageTypeFromString(lang_name);
-  LanguageType exception_language = eLanguageTypeUnknown;
-
-  llvm::StringRef error_context;
-  switch (language) {
-  case eLanguageTypeC89:
-  case eLanguageTypeC:
-  case eLanguageTypeC99:
-  case eLanguageTypeC11:
-    exception_language = eLanguageTypeC;
-    break;
-  case eLanguageTypeC_plus_plus:
-  case eLanguageTypeC_plus_plus_03:
-  case eLanguageTypeC_plus_plus_11:
-  case eLanguageTypeC_plus_plus_14:
-    exception_language = eLanguageTypeC_plus_plus;
-    break;
-  case eLanguageTypeObjC_plus_plus:
-    error_context =
-        "Set exception breakpoints separately for c++ and objective-c";
-    break;
-  case eLanguageTypeUnknown:
-    error_context = "Unknown language type for exception breakpoint";
-    break;
-  default:
-    if (Language *languagePlugin = Language::FindPlugin(language)) {
-      if (languagePlugin->SupportsExceptionBreakpointsOnThrow() ||
-          languagePlugin->SupportsExceptionBreakpointsOnCatch()) {
-        exception_language = language;
-        break;
-      }
-    }
-    error_context = "Unsupported language type for exception breakpoint";
-  }
-  if (!error_context.empty())
+  llvm::Expected<LanguageType> exception_language = 
+      Language::GetExceptionLanguageForLanguage(lang_name);
+  if (!exception_language) {
+    std::string error_msg = llvm::toString(exception_language.takeError());
     return CreateOptionParsingError(lang_name, short_option, long_option,
-                                    error_context);
+                                    error_msg);
+  }
   return exception_language;
-}
-
-static bool GetDefaultFile(ExecutionContext exe_ctx, FileSpec &file,
-                           std::string &error_msg) {
-  // First use the Source Manager's default file. Then use the current stack
-  // frame's file.
-  if (!exe_ctx.HasTargetScope()) {
-    error_msg = "Can't get a default file with no target.";
-    return false;
-  }
-  Target &target = exe_ctx.GetTargetRef();
-
-  if (auto maybe_file_and_line =
-          target.GetSourceManager().GetDefaultFileAndLine()) {
-    file = maybe_file_and_line->support_file_sp->GetSpecOnly();
-    return true;
-  }
-
-  StackFrame *cur_frame = exe_ctx.GetFramePtr();
-  if (cur_frame == nullptr) {
-    error_msg = "No selected frame to use to find the default file.";
-    return false;
-  }
-  if (!cur_frame->HasDebugInformation()) {
-    error_msg = "Cannot use the selected frame to find the default "
-                "file, it has no debug info.";
-    return false;
-  }
-
-  const SymbolContext &sc =
-      cur_frame->GetSymbolContext(eSymbolContextLineEntry);
-  if (sc.line_entry.GetFile()) {
-    file = sc.line_entry.GetFile();
-  } else {
-    error_msg = "Can't find the file for the selected frame to "
-                "use as the default file.";
-    return false;
-  }
-  return true;
-}
-
-static bool GetDefaultFile(ExecutionContext exe_ctx, FileSpec &file,
-                           CommandReturnObject &result) {
-  std::string error_msg;
-  if (!GetDefaultFile(exe_ctx, file, error_msg)) {
-    result.AppendError(error_msg);
-    return false;
-  }
-  return true;
 }
 
 static Status CompleteLineEntry(ExecutionContext &exe_ctx,
@@ -413,9 +368,19 @@ static Status CompleteLineEntry(ExecutionContext &exe_ctx,
   if (!line_entry.GetFileSpec()) {
     FileSpec default_file_spec;
     std::string error_msg;
-    if (!GetDefaultFile(exe_ctx, default_file_spec, error_msg)) {
-      error.FromErrorStringWithFormatv("Couldn't get default file for "
-                                       "line {0}: {1}",
+    Target *target = exe_ctx.GetTargetPtr();
+    if (!target) {
+      error.FromErrorString("Can't complete a line entry with no "
+                            "target");
+      return error;
+    }
+    Debugger &dbg = target->GetDebugger();
+    CommandReturnObject result(dbg.GetUseColor());
+    if (!GetDefaultFile(*target, exe_ctx.GetFramePtr(), default_file_spec, 
+        result)) {
+      error.FromErrorStringWithFormatv("{0}/nCouldn't get default file for "
+                                       "line {1}: {2}",
+                                       result.GetErrorString(),
                                        line_num, error_msg);
       return error;
     }
@@ -650,10 +615,10 @@ protected:
     LanguageType exception_language = eLanguageTypeUnknown;
 
     if (command.size() == 0) {
-      result.AppendError("no languages specified.");
+      result.AppendError("no languages specified");
     } else if (command.size() > 1) {
       result.AppendError(
-          "can only set exception breakpoints on one language at a time.");
+          "can only set exception breakpoints on one language at a time");
     } else {
       llvm::Expected<LanguageType> language =
           GetExceptionLanguageForLanguage(command[0].ref());
@@ -792,7 +757,7 @@ public:
             return Status::FromErrorString("Can only specify one file and line "
                                            "pair at a time.");
 #if 0 // This code will be appropriate once we have a resolver that can take
-      // more than one linespec at a time.         
+      // more than one linespec at a time.
             error = CompleteLineEntry(*execution_context, m_cur_value);
             if (error.Fail())
               return error;
@@ -919,7 +884,8 @@ protected:
         // The argument is a plain number.  Treat that as a line number, and
         // allow it if we can find a default file & line.
         std::string error_msg;
-        if (!GetDefaultFile(m_exe_ctx, default_file, error_msg)) {
+        if (!GetDefaultFile(target, m_exe_ctx.GetFramePtr(), default_file, 
+            result)) {
           result.AppendErrorWithFormatv("Couldn't find default file for line "
                                         "input: {0} - {1}",
                                         line_value, error_msg);
@@ -1320,7 +1286,7 @@ protected:
 
     if (num_files == 0 && !m_options.m_all_files) {
       FileSpec file;
-      if (!GetDefaultFile(m_exe_ctx, file, result)) {
+      if (!GetDefaultFile(target, m_exe_ctx.GetFramePtr(), file, result)) {
         result.AppendError(
             "No files provided and could not find default file.");
         return;
@@ -1459,7 +1425,7 @@ protected:
         m_python_class_options.GetStructuredData(), &error);
     if (error.Fail()) {
       result.AppendErrorWithFormat(
-          "Error setting extra exception arguments: %s", error.AsCString());
+          "error setting extra exception arguments: %s", error.AsCString());
       target.RemoveBreakpointByID(bp_sp->GetID());
       return;
     }
@@ -1484,7 +1450,7 @@ protected:
       }
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendError("Breakpoint creation failed: No breakpoint created.");
+      result.AppendError("breakpoint creation failed: No breakpoint created.");
     }
   }
 
@@ -1878,7 +1844,7 @@ protected:
       FileSpec file;
       const size_t num_files = m_options.m_filenames.GetSize();
       if (num_files == 0) {
-        if (!GetDefaultFile(m_exe_ctx, file, result)) {
+        if (!GetDefaultFile(target, m_exe_ctx.GetFramePtr(), file, result)) {
           result.AppendError("no file supplied and no default file available.");
           return;
         }
@@ -1964,7 +1930,7 @@ protected:
 
       if (num_files == 0 && !m_options.m_all_files) {
         FileSpec file;
-        if (!GetDefaultFile(m_exe_ctx, file, result)) {
+        if (!GetDefaultFile(target, m_exe_ctx.GetFramePtr(), file, result)) {
           result.AppendError(
               "No files provided and could not find default file.");
           return;
@@ -2059,40 +2025,6 @@ protected:
   }
 
 private:
-  bool GetDefaultFile(Target &target, FileSpec &file,
-                      CommandReturnObject &result) {
-    // First use the Source Manager's default file. Then use the current stack
-    // frame's file.
-    if (auto maybe_file_and_line =
-            target.GetSourceManager().GetDefaultFileAndLine()) {
-      file = maybe_file_and_line->support_file_nsp->GetSpecOnly();
-      return true;
-    }
-
-      StackFrame *cur_frame = m_exe_ctx.GetFramePtr();
-      if (cur_frame == nullptr) {
-        result.AppendError(
-            "No selected frame to use to find the default file.");
-        return false;
-      }
-      if (!cur_frame->HasDebugInformation()) {
-        result.AppendError("Cannot use the selected frame to find the default "
-                           "file, it has no debug info.");
-        return false;
-      }
-
-        const SymbolContext &sc =
-            cur_frame->GetSymbolContext(eSymbolContextLineEntry);
-        if (sc.line_entry.GetFile()) {
-          file = sc.line_entry.GetFile();
-        } else {
-          result.AppendError("Can't find the file for the selected frame to "
-                             "use as the default file.");
-          return false;
-    }
-    return true;
-  }
-
   BreakpointOptionGroup m_bp_opts;
   BreakpointDummyOptionGroup m_dummy_options;
   OptionGroupPythonClassWithDict m_python_class_options;
