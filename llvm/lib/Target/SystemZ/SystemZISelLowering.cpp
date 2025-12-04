@@ -2562,7 +2562,7 @@ bool SystemZTargetLowering::CanLowerReturn(
   // Special case that we cannot easily detect in RetCC_SystemZ since
   // i128 may not be a legal type.
   for (auto &Out : Outs)
-    if (Out.ArgVT == MVT::i128)
+    if (Out.ArgVT.isScalarInteger() && Out.ArgVT.getSizeInBits() > 64)
       return false;
 
   SmallVector<CCValAssign, 16> RetLocs;
