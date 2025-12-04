@@ -267,25 +267,9 @@ fminp v0.4s, v0.4s, v0.4s
 fmla d0, d1, v0.d[1]
 fmla s0, s1, v0.s[3]
 fmla v0.2s, v0.2s, v0.2s
-fmlal v0.2s, v0.2h, v0.h[1]
-fmlal v0.4s, v0.4h, v0.h[3]
-fmlal v0.2s, v0.2h, v0.2h
-fmlal v0.4s, v0.4h, v0.4h
-fmlal2 v0.2s, v0.2h, v0.h[1]
-fmlal2 v0.4s, v0.4h, v0.h[3]
-fmlal2 v0.2s, v0.2h, v0.2h
-fmlal2 v0.4s, v0.4h, v0.4h
 fmls d0, d4, v0.d[1]
 fmls s3, s5, v0.s[3]
 fmls v0.2s, v0.2s, v0.2s
-fmlsl v0.2s, v0.2h, v0.h[1]
-fmlsl v0.4s, v0.4h, v0.h[3]
-fmlsl v0.2s, v0.2h, v0.2h
-fmlsl v0.4s, v0.4h, v0.4h
-fmlsl2 v0.2s, v0.2h, v0.h[1]
-fmlsl2 v0.4s, v0.4h, v0.h[3]
-fmlsl2 v0.2s, v0.2h, v0.2h
-fmlsl2 v0.4s, v0.4h, v0.4h
 fmov v0.2d, #-1.25
 fmov v0.2s, #13.0
 fmov v0.4s, #1.0
