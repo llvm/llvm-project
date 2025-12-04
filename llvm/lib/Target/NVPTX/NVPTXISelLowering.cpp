@@ -6867,18 +6867,27 @@ static std::optional<unsigned> getF16SubOpc(Intrinsic::ID AddIntrinsicID) {
 
 static SDValue combineF16AddWithNeg(SDNode *N, SelectionDAG &DAG,
                                     Intrinsic::ID AddIntrinsicID) {
+  SDValue Op1 = N->getOperand(1);
   SDValue Op2 = N->getOperand(2);
 
-  if (Op2.getOpcode() != ISD::FNEG)
+  SDValue SubOp1, SubOp2;
+
+  if(Op1.getOpcode() == ISD::FNEG) {
+    SubOp1 = Op2;
+    SubOp2 = Op1.getOperand(0);
+  } else if (Op2.getOpcode() == ISD::FNEG) {
+    SubOp1 = Op1;
+    SubOp2 = Op2.getOperand(0);
+  } else {
     return SDValue();
+  }
 
   std::optional<unsigned> SubOpc = getF16SubOpc(AddIntrinsicID);
   if (!SubOpc)
     return SDValue();
 
   SDLoc DL(N);
-  return DAG.getNode(*SubOpc, DL, N->getValueType(0), N->getOperand(1),
-                     Op2.getOperand(0));
+  return DAG.getNode(*SubOpc, DL, N->getValueType(0), SubOp1, SubOp2);
 }
 
 static SDValue combineIntrinsicWOChain(SDNode *N,
