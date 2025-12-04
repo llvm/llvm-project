@@ -3088,8 +3088,7 @@ bool IRTranslator::translateCallBr(const User &U,
     return false;
 
   // Retrieve successors.
-  SmallPtrSet<BasicBlock *, 8> Dests;
-  Dests.insert(I.getDefaultDest());
+  SmallPtrSet<BasicBlock *, 8> Dests = {I.getDefaultDest()};
   MachineBasicBlock *Return = &getMBB(*I.getDefaultDest());
 
   // Update successor info.
@@ -3100,12 +3099,12 @@ bool IRTranslator::translateCallBr(const User &U,
   // with setIsInlineAsmBrIndirectTarget so the machine verifier accepts them as
   // valid successors, even though they're not from inline asm.
   for (BasicBlock *Dest : I.getIndirectDests()) {
-    MachineBasicBlock *Target = &getMBB(*Dest);
-    Target->setIsInlineAsmBrIndirectTarget();
-    Target->setLabelMustBeEmitted();
+    MachineBasicBlock &Target = getMBB(*Dest);
+    Target.setIsInlineAsmBrIndirectTarget();
+    Target.setLabelMustBeEmitted();
     // Don't add duplicate machine successors.
     if (Dests.insert(Dest).second)
-      addSuccessorWithProb(CallBrMBB, Target, BranchProbability::getZero());
+      addSuccessorWithProb(CallBrMBB, &Target, BranchProbability::getZero());
   }
 
   CallBrMBB->normalizeSuccProbs();
