@@ -556,9 +556,11 @@ public:
 private:
   // These all get lowered before this pass.
   void visitInvoke(const InvokeInst &I);
-  void visitCallBr(const CallBrInst &I);
   void visitCallBrLandingPad(const CallInst &I);
   void visitResume(const ResumeInst &I);
+
+  void visitCallBr(const CallBrInst &I);
+  void visitCallBrIntrinsic(const CallBrInst &I);
 
   void visitUnary(const User &I, unsigned Opcode);
   void visitFNeg(const User &I) { visitUnary(I, ISD::FNEG); }

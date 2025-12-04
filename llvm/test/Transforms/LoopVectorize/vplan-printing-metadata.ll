@@ -7,11 +7,16 @@ define void @test_widen_metadata(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK:      <x1> vector loop: {
 ; CHECK:        vector.body:
-; CHECK:          WIDEN ir<%lv> = load vp<{{.*}}>
-; CHECK:          WIDEN-CAST ir<%conv> = sitofp ir<%lv> to float
-; CHECK:          WIDEN ir<%mul> = fmul ir<%conv>, ir<2.000000e+00>
+; CHECK:          WIDEN ir<%lv> = load vp<{{.*}}> (!tbaa ![[TBAA:[0-9]+]])
+; CHECK:          WIDEN-CAST ir<%conv> = sitofp ir<%lv> to float (!fpmath ![[FPMATH:[0-9]+]])
+; CHECK:          WIDEN ir<%mul> = fmul ir<%conv>, ir<2.000000e+00> (!fpmath ![[FPMATH]])
 ; CHECK:          WIDEN-CAST ir<%conv.back> = fptosi ir<%mul> to i32
-; CHECK:          WIDEN store vp<{{.*}}>, ir<%conv.back>
+; CHECK:          WIDEN store vp<{{.*}}>, ir<%conv.back> (!tbaa ![[TBAA]])
+; CHECK:      ir-bb<loop>:
+; CHECK:        IR   %lv = load i32, ptr %gep.A, align 4, !tbaa ![[TBAA]]
+; CHECK:        IR   %conv = sitofp i32 %lv to float, !fpmath ![[FPMATH]]
+; CHECK:        IR   %mul = fmul float %conv, 2.000000e+00, !fpmath ![[FPMATH]]
+; CHECK:        IR   store i32 %conv.back, ptr %gep.B, align 4, !tbaa ![[TBAA]]
 ;
 entry:
   br label %loop
@@ -40,9 +45,13 @@ define void @test_intrinsic_with_metadata(ptr noalias %A, ptr noalias %B, i32 %n
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK:      <x1> vector loop: {
 ; CHECK:        vector.body:
-; CHECK:          WIDEN ir<%lv> = load vp<{{.*}}>
-; CHECK:          WIDEN-INTRINSIC ir<%sqrt> = call llvm.sqrt(ir<%lv>)
-; CHECK:          WIDEN store vp<{{.*}}>, ir<%sqrt>
+; CHECK:          WIDEN ir<%lv> = load vp<{{.*}}> (!tbaa ![[TBAA2:[0-9]+]])
+; CHECK:          WIDEN-INTRINSIC ir<%sqrt> = call llvm.sqrt(ir<%lv>) (!fpmath ![[FPMATH2:[0-9]+]])
+; CHECK:          WIDEN store vp<{{.*}}>, ir<%sqrt> (!tbaa ![[TBAA2]])
+; CHECK:      ir-bb<loop>:
+; CHECK:        IR   %lv = load float, ptr %gep.A, align 4, !tbaa ![[TBAA2]]
+; CHECK:        IR   %sqrt = call float @llvm.sqrt.f32(float %lv), !fpmath ![[FPMATH2]]
+; CHECK:        IR   store float %sqrt, ptr %gep.B, align 4, !tbaa ![[TBAA2]]
 ;
 entry:
   br label %loop
@@ -67,11 +76,14 @@ define void @test_widen_with_multiple_metadata(ptr noalias %A, ptr noalias %B, i
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK:      <x1> vector loop: {
 ; CHECK:        vector.body:
-; CHECK:          WIDEN ir<%lv> = load vp<{{.*}}>
+; CHECK:          WIDEN ir<%lv> = load vp<{{.*}}> (!tbaa ![[TBAA3:[0-9]+]])
 ; CHECK:          WIDEN-CAST ir<%conv> = sitofp ir<%lv> to float
 ; CHECK:          WIDEN ir<%mul> = fmul ir<%conv>, ir<2.000000e+00>
 ; CHECK:          WIDEN-CAST ir<%conv.back> = fptosi ir<%mul> to i32
-; CHECK:          WIDEN store vp<{{.*}}>, ir<%conv.back>
+; CHECK:          WIDEN store vp<{{.*}}>, ir<%conv.back> (!tbaa ![[TBAA3]])
+; CHECK:      ir-bb<loop>:
+; CHECK:        IR   %lv = load i32, ptr %gep.A, align 4, !tbaa ![[TBAA3]]
+; CHECK:        IR   store i32 %conv.back, ptr %gep.B, align 4, !tbaa ![[TBAA3]]
 ;
 entry:
   br label %loop
