@@ -436,14 +436,12 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
   // 1) Starts/changes: iterate current_vars and compare with m_live_vars.
   for (const auto &KV : current_vars) {
     auto it = m_live_vars.find(KV.first);
-    if (it == m_live_vars.end()) {
+    if (it == m_live_vars.end())
       // Newly live.
       AddVariableAnnotationToVector(annotations, KV.second, true);
-    } else if (it->second.location_description !=
-               KV.second.location_description) {
+    else if (it->second.location_description != KV.second.location_description)
       // Location changed.
       AddVariableAnnotationToVector(annotations, KV.second, true);
-    }
   }
 
   // 2) Ends: anything that was live but is not in current_vars becomes
