@@ -27,6 +27,16 @@ define <8 x i8> @vtbl2_duplicate_operands(<8 x i8> %a) {
   ret <8 x i8> %tbl
 }
 
+; vtbl3 referencing 2 unique operands should optimize.
+define <8 x i8> @vtbl3_two_sources(<8 x i8> %a, <8 x i8> %b) {
+; CHECK-LABEL: @vtbl3_two_sources(
+; CHECK-NEXT:    [[TBL:%.*]] = shufflevector <8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 0, i32 1, i32 0, i32 0>
+; CHECK-NEXT:    ret <8 x i8> [[TBL]]
+;
+  %tbl = call <8 x i8> @llvm.arm.neon.vtbl3(<8 x i8> %a, <8 x i8> %b, <8 x i8> %a, <8 x i8> <i8 0, i8 1, i8 8, i8 9, i8 16, i8 17, i8 0, i8 0>)
+  ret <8 x i8> %tbl
+}
+
 ; vtbl4 with alternating duplicate operands should optimize (2 unique sources).
 define <8 x i8> @vtbl4_duplicate_operands(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: @vtbl4_duplicate_operands(

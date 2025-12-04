@@ -27,6 +27,16 @@ define <16 x i8> @tbl2_duplicate_operands(<16 x i8> %a) {
   ret <16 x i8> %tbl
 }
 
+; tbl3 referencing 2 unique operands should optimize.
+define <16 x i8> @tbl3_two_sources(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: @tbl3_two_sources(
+; CHECK-NEXT:    [[TBL:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 0, i32 1, i32 2, i32 3, i32 0, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    ret <16 x i8> [[TBL]]
+;
+  %tbl = call <16 x i8> @llvm.aarch64.neon.tbl3.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %a, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 16, i8 17, i8 18, i8 19, i8 32, i8 33, i8 34, i8 35, i8 0, i8 0, i8 0, i8 0>)
+  ret <16 x i8> %tbl
+}
+
 ; tbl4 with alternating duplicate operands should optimize (2 unique sources).
 define <16 x i8> @tbl4_duplicate_operands(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: @tbl4_duplicate_operands(
