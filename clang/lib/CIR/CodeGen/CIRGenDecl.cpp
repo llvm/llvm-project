@@ -834,7 +834,7 @@ template <class Derived> struct DestroyNRVOVariable : EHScopeStack::Cleanup {
   Address addr;
   QualType ty;
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     assert(!cir::MissingFeatures::cleanupDestroyNRVOVariable());
   }
 
