@@ -441,43 +441,16 @@ bool CGObjCRuntime::canClassObjectBeUnrealized(
       return false;
   }
 
-  // Heuristic 3: previously realized
-  // Heuristic 3.1: Walk through the current BasicBlock looking for calls that
-  // realize the class. All heuristics in this cluster share the same
-  // implementation pattern.
-  auto *BB = CGF.Builder.GetInsertBlock();
-  if (!BB)
-    return true; // No current block, assume unrealized
-
-  llvm::StringRef CalleeClassName = CalleeClassDecl->getName();
-
-  // Heuristic 3.2 / TODO: If realization happened in a dominating block, the
-  // class is realized Requires Dominator tree analysis. There should be an
-  // outer loop `for (BB: DominatingBasicBlocks)`
-  for (const auto &Inst : *BB) {
-    // Check if this is a call instruction
-    const auto *Call = llvm::dyn_cast<llvm::CallInst>(&Inst);
-    if (!Call)
-      continue;
-    llvm::Function *CalledFunc = Call->getCalledFunction();
-    if (!CalledFunc)
-      continue;
-
-    llvm::StringRef FuncNamePtr = CalledFunc->getName();
-    // Skip the \01 prefix if present
-    if (FuncNamePtr.starts_with("\01"))
-      FuncNamePtr = FuncNamePtr.drop_front(1);
-    // Check for instance method calls: "-[ClassName methodName]"
-    // or class method calls: "+[ClassName methodName]"
-    // Also check for thunks: "-[ClassName methodName]_thunk"
-    if ((FuncNamePtr.starts_with("-[") || FuncNamePtr.starts_with("+["))) {
-      FuncNamePtr = FuncNamePtr.drop_front(2);
-      // TODO: if the current class is the super class of the function that's
-      // used, it should've been realized as well
-      if (FuncNamePtr.starts_with(CalleeClassName))
-        return false;
-    }
-  }
+  // TODO: Heuristic 3: previously realized
+  // Walk through previous instructions can be inefficient, since
+  // `canClassObjectBeUnrealized` is called everytime we emit a class method.
+  // Besides, a realized subclass means parent class is realized. Therefore,
+  // a code like below also requires some special handling.
+  //
+  // ```
+  // +[Child foo];
+  // +[Parent foo];
+  // ```
 
   // Otherwise, assume it can be unrealized.
   return true;
