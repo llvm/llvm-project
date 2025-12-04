@@ -9524,11 +9524,11 @@ bool SelectionDAGBuilder::visitFPOperation(const CallInst &I, unsigned Opcode) {
     NodeVT = DAG.getVTList(VT);
 
   SDNodeFlags Flags;
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+    Flags.copyFMF(*FPOp);
   fp::ExceptionBehavior EB = I.getExceptionBehavior();
   if (EB == fp::ExceptionBehavior::ebIgnore)
     Flags.setNoFPExcept(true);
-  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
-    Flags.copyFMF(*FPOp);
 
   // Temporary solution: use STRICT_* nodes.
   if (HasChain)
