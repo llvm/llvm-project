@@ -19,6 +19,7 @@ Welcome to the DSLLVM comprehensive documentation. This directory contains all d
 | [DSLLVM-ROADMAP.md](DSLLVM-ROADMAP.md) | Strategic roadmap (v1.0 → v2.0) | Project Managers, Leadership |
 | [ATTRIBUTES.md](ATTRIBUTES.md) | Complete attribute reference guide | Developers |
 | [PIPELINES.md](PIPELINES.md) | Pass pipeline configurations | Compiler Engineers |
+| [PATH-CONFIGURATION.md](PATH-CONFIGURATION.md) | Dynamic path configuration and portable installations | DevOps, System Administrators |
 
 ---
 
@@ -180,6 +181,7 @@ Welcome to the DSLLVM comprehensive documentation. This directory contains all d
 1. Start with [DSLLVM-DESIGN.md](DSLLVM-DESIGN.md) - Core architecture
 2. Read [ATTRIBUTES.md](ATTRIBUTES.md) - Source-level attribute reference
 3. Review [PIPELINES.md](PIPELINES.md) - Compilation pipelines
+4. Check [PATH-CONFIGURATION.md](PATH-CONFIGURATION.md) - Dynamic path configuration
 
 **Build a classified military application**
 1. Read [C3-JADC2-INTEGRATION.md](C3-JADC2-INTEGRATION.md) - Classification security

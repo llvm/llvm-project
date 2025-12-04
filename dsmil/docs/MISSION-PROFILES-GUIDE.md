@@ -143,17 +143,28 @@ DSLLVM 1.3 includes four standard mission profiles:
 
 ### 1. Install Mission Profile Configuration
 
-The mission profile configuration file must be installed at `/etc/dsmil/mission-profiles.json`:
+The mission profile configuration file can be installed in multiple locations (checked in order):
+
+1. `${DSMIL_CONFIG_DIR}` (default: `${DSMIL_PREFIX}/etc` or `/etc/dsmil`)
+2. `${XDG_CONFIG_HOME}/dsmil` or `$HOME/.config/dsmil` (user-specific)
+3. System default: `/etc/dsmil`
 
 ```bash
 # System-wide installation (requires root)
-sudo mkdir -p /etc/dsmil
-sudo cp dsmil/config/mission-profiles.json /etc/dsmil/
-sudo chmod 644 /etc/dsmil/mission-profiles.json
+# Uses dynamic path resolution
+export DSMIL_CONFIG_DIR=/etc/dsmil  # Optional: override default
+sudo mkdir -p ${DSMIL_CONFIG_DIR:-/etc/dsmil}
+sudo cp dsmil/config/mission-profiles.json ${DSMIL_CONFIG_DIR:-/etc/dsmil}/
+sudo chmod 644 ${DSMIL_CONFIG_DIR:-/etc/dsmil}/mission-profiles.json
+
+# Or use runtime API in C code:
+# #include <dsmil_paths.h>
+# char config_path[PATH_MAX];
+# dsmil_resolve_config("mission-profiles.json", config_path, sizeof(config_path));
 
 # Verify installation
 dsmil-clang --version
-cat /etc/dsmil/mission-profiles.json | jq '.profiles | keys'
+cat ${DSMIL_CONFIG_DIR:-/etc/dsmil}/mission-profiles.json | jq '.profiles | keys'
 # Output: ["border_ops", "cyber_defence", "exercise_only", "lab_research"]
 ```
 
@@ -582,8 +593,8 @@ deploy:production:
   stage: deploy
   only: [tags]
   script:
-    - scp bin/production deploy-server:/opt/dsmil/bin/
-    - ssh deploy-server 'dsmil-inspect /opt/dsmil/bin/production'
+    - scp bin/production deploy-server:${DSMIL_BIN_DIR:-/opt/dsmil/bin}/
+    - ssh deploy-server "dsmil-inspect \${DSMIL_BIN_DIR:-/opt/dsmil/bin}/production"
 ```
 
 ## Troubleshooting
@@ -723,7 +734,7 @@ Production          →  border_ops or cyber_defence
 ```bash
 # Set up automatic recompilation for cyber_defence
 # (90-day expiration enforces this)
-0 0 * * 0 /opt/dsmil/scripts/rebuild-cyber-defence.sh
+0 0 * * 0 ${DSMIL_PREFIX:-/opt/dsmil}/scripts/rebuild-cyber-defence.sh
 ```
 
 ### 8. Archive Provenance Records

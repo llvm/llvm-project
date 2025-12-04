@@ -206,14 +206,18 @@ siem-upload --layer=62 --type=threat_signature sensor.sig.enc
 
 Suspicious binary found on network:
 ```bash
-/tmp/suspicious_binary
+${DSMIL_TMP_DIR:-/tmp}/suspicious_binary
 ```
 
 ### 2. Extract Signature
 
 ```bash
-# Extract threat signature from suspicious binary
-dsmil-extract-signature /tmp/suspicious_binary > suspicious.sig.json
+# Extract threat signature from suspicious binary (uses dynamic path resolution)
+dsmil-extract-signature ${DSMIL_TMP_DIR:-/tmp}/suspicious_binary > suspicious.sig.json
+# Or use runtime API:
+# #include <dsmil_paths.h>
+# char tmp_path[PATH_MAX];
+# snprintf(tmp_path, sizeof(tmp_path), "%s/suspicious_binary", dsmil_get_tmp_dir());
 ```
 
 ### 3. Query SIEM
@@ -353,7 +357,7 @@ siem-query --compare vendor.sig.json official_v1.2.3.sig.json
 **Solution**:
 ```bash
 # Scan all binaries
-for bin in /usr/bin/*; do
+for bin in ${DSMIL_BIN_DIR:-/opt/dsmil/bin}/*; do
     dsmil-extract-signature $bin | \
     siem-query --layer=62 --match
 done

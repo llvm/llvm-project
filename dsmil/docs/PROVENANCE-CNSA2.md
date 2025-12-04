@@ -557,14 +557,19 @@ Public key: rdk_pub.pem (distribute to build systems)
 
 **Runtime System**:
 - RDK private key: Kernel keyring, sealed with TPM
-- PSK/PRK/RTA public keys: `/etc/dsmil/truststore/`
+- PSK/PRK/RTA public keys: `${DSMIL_TRUSTSTORE_DIR}` (default: `${DSMIL_CONFIG_DIR}/truststore` or `/etc/dsmil/truststore`)
 
 ```bash
-/etc/dsmil/truststore/
+# Default location (configurable via DSMIL_TRUSTSTORE_DIR)
+${DSMIL_TRUSTSTORE_DIR:-/etc/dsmil/truststore}/
 ├── rta_cert.pem
 ├── prk_cert.pem
 ├── psk_cert.pem
 └── revocation_list.crl
+
+# Or use runtime API:
+#include <dsmil_paths.h>
+const char *truststore = dsmil_get_truststore_dir();
 ```
 
 ### 6.3 Key Rotation
@@ -596,8 +601,10 @@ $ dsmil-truststore publish-crl
 ### 7.1 `dsmil-verify` - Provenance Verification Tool
 
 ```bash
-# Basic verification
-$ dsmil-verify /usr/bin/llm_worker
+# Basic verification (uses dynamic path resolution)
+$ dsmil-verify ${DSMIL_BIN_DIR:-/opt/dsmil/bin}/llm_worker
+# Or if in PATH:
+$ dsmil-verify llm_worker
 ✓ Provenance present
 ✓ Signature valid (PSK-2025-SWORDIntel-DSMIL)
 ✓ Certificate chain valid
@@ -609,7 +616,7 @@ $ dsmil-verify /usr/bin/llm_worker
     Stage: serve
 
 # Verbose output
-$ dsmil-verify --verbose /usr/bin/llm_worker
+$ dsmil-verify --verbose ${DSMIL_BIN_DIR:-/opt/dsmil/bin}/llm_worker
 Provenance Schema: dsmil-provenance-v1
 Compiler: dsmil-clang 19.0.0-dsmil (commit a3f4b2c1)
 Source: https://github.com/SWORDIntel/dsmil-kernel (commit f8d29a1c, clean)
@@ -623,8 +630,11 @@ Certificate Chain: PSK → PRK → RTA (all valid)
 # JSON output for automation
 $ dsmil-verify --json /usr/bin/llm_worker > report.json
 
-# Batch verification
-$ find /opt/dsmil/bin -type f -exec dsmil-verify --quiet {} \;
+# Batch verification (uses dynamic path resolution)
+$ find ${DSMIL_BIN_DIR:-/opt/dsmil/bin} -type f -exec dsmil-verify --quiet {} \;
+# Or use runtime API in scripts:
+# #include <dsmil_paths.h>
+# const char *bin_dir = dsmil_get_bin_dir();
 ```
 
 ### 7.2 `dsmil-sign` - Manual Signing Tool
@@ -659,7 +669,7 @@ $ sudo dsmil-truststore revoke PSK-2024-SWORDIntel-DSMIL
 Revoked PSK-2024-SWORDIntel-DSMIL (reason: key_rotation)
 
 # Publish CRL
-$ sudo dsmil-truststore publish-crl --output /var/dsmil/revocation.crl
+$ sudo dsmil-truststore publish-crl --output ${DSMIL_RUNTIME_DIR:-/var/run/dsmil}/revocation.crl
 ```
 
 ---
@@ -699,10 +709,10 @@ audit_log(AUDIT_DSMIL_EXEC,
 
 Centralized logging for forensics:
 ```
-/var/log/dsmil/provenance.log
-2025-11-24T15:45:30Z [INFO] pid=4829 uid=1000 binary=/usr/bin/llm_worker prov_valid=1 psk_id=PSK-2025-SWORDIntel-DSMIL layer=7 device=47
-2025-11-24T15:46:12Z [WARN] pid=4871 uid=0 binary=/tmp/malicious prov_valid=0 reason=no_provenance
-2025-11-24T15:47:05Z [ERROR] pid=4903 uid=1000 binary=/opt/app/service prov_valid=0 reason=signature_failed
+${DSMIL_LOG_DIR:-/var/log/dsmil}/provenance.log
+2025-11-24T15:45:30Z [INFO] pid=4829 uid=1000 binary=${DSMIL_BIN_DIR:-/opt/dsmil/bin}/llm_worker prov_valid=1 psk_id=PSK-2025-SWORDIntel-DSMIL layer=7 device=47
+2025-11-24T15:46:12Z [WARN] pid=4871 uid=0 binary=${DSMIL_TMP_DIR:-/tmp}/malicious prov_valid=0 reason=no_provenance
+2025-11-24T15:47:05Z [ERROR] pid=4903 uid=1000 binary=${DSMIL_PREFIX:-/opt/dsmil}/app/service prov_valid=0 reason=signature_failed
 ```
 
 ---

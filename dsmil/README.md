@@ -334,11 +334,27 @@ dsmil-clang -O1 -fpass-pipeline=dsmil-lab -o output input.c
 - `DSMIL_BUILDER_ID`: Builder hostname/ID
 - `DSMIL_TSA_URL`: Timestamp authority URL (optional)
 
-### Runtime
+### Runtime Path Configuration ⭐ NEW
+
+DSLLVM supports dynamic path resolution for portable installations:
+
+- `DSMIL_PREFIX`: Base installation prefix (default: `/opt/dsmil`)
+- `DSMIL_CONFIG_DIR`: Configuration directory (default: `${DSMIL_PREFIX}/etc` or `/etc/dsmil`)
+- `DSMIL_BIN_DIR`: Binary directory (default: `${DSMIL_PREFIX}/bin`)
+- `DSMIL_LIB_DIR`: Library directory (default: `${DSMIL_PREFIX}/lib`)
+- `DSMIL_TRUSTSTORE_DIR`: Trust store directory (default: `${DSMIL_CONFIG_DIR}/truststore`)
+- `DSMIL_LOG_DIR`: Log directory (default: `${DSMIL_PREFIX}/var/log` or `/var/log/dsmil`)
+- `DSMIL_RUNTIME_DIR`: Runtime directory (default: `${XDG_RUNTIME_DIR}/dsmil` or `/var/run/dsmil`)
+- `DSMIL_CACHE_DIR`: Cache directory (default: `${XDG_CACHE_HOME}/dsmil` or `$HOME/.cache/dsmil`)
+- `DSMIL_TMP_DIR`: Temporary directory (default: `${TMPDIR}` or `/tmp`)
+
+See **[PATH-CONFIGURATION.md](docs/PATH-CONFIGURATION.md)** for complete path configuration guide.
+
+### Runtime Behavior
 
 - `DSMIL_SANDBOX_MODE`: Override sandbox mode (`enforce`, `warn`, `disabled`)
 - `DSMIL_POLICY`: Policy configuration (`production`, `development`, `lab`)
-- `DSMIL_TRUSTSTORE`: Path to trust store directory (default: `/etc/dsmil/truststore/`)
+- `DSMIL_MISSION_PROFILE_CONFIG`: Path to mission profile config (uses dynamic resolution)
 
 ---
 
@@ -350,6 +366,7 @@ dsmil-clang -O1 -fpass-pipeline=dsmil-lab -o output input.c
 - **[ATTRIBUTES.md](docs/ATTRIBUTES.md)**: Attribute reference guide
 - **[PROVENANCE-CNSA2.md](docs/PROVENANCE-CNSA2.md)**: Provenance system deep dive
 - **[PIPELINES.md](docs/PIPELINES.md)**: Pass pipeline configurations
+- **[PATH-CONFIGURATION.md](docs/PATH-CONFIGURATION.md)**: Dynamic path configuration guide ⭐ NEW
 
 ### Feature Guides (v1.3+)
 - **[MISSION-PROFILES-GUIDE.md](docs/MISSION-PROFILES-GUIDE.md)**: Mission profile system (Feature 1.1)
