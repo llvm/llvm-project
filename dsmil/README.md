@@ -391,6 +391,76 @@ See **[PATH-CONFIGURATION.md](docs/PATH-CONFIGURATION.md)** for complete path co
 
 ---
 
+## Runtime APIs ⭐ NEW
+
+DSMIL provides comprehensive runtime libraries for Layer 7 AI/ML workloads, quantum integration, memory management, hardware orchestration, and unified cryptographic operations:
+
+### Layer 7 Device 47 LLM Runtime
+- **Header**: `dsmil/include/dsmil_layer7_llm.h`
+- **Implementation**: `dsmil/lib/Runtime/dsmil_layer7_llm_runtime.c`
+- Memory management (40 GB Layer 7 budget)
+- INT8 quantization enforcement (>95% accuracy)
+- KV cache optimization
+- Model lifecycle management
+
+### Device 46 Quantum Runtime
+- **Header**: `dsmil/include/dsmil_quantum_runtime.h`
+- **Implementation**: `dsmil/lib/Runtime/dsmil_quantum_runtime.c`
+- Qiskit-based QAOA/QUBO optimization
+- Quantum feature maps for anomaly detection
+- Hybrid quantum-classical workflows
+- CPU-bound simulation (2 GB memory budget)
+
+### MLOps Pipeline Optimization
+- **Header**: `dsmil/include/dsmil_mlops_optimization.h`
+- **Implementation**: `dsmil/lib/Runtime/dsmil_mlops_optimization_runtime.c`
+- INT8 quantization verification (mandatory)
+- Pruning sparsity validation (50% target)
+- Combined speedup calculation (12× minimum, 30× target)
+- Model requirement verification
+
+### Cross-Layer Intelligence Flow
+- **Header**: `dsmil/include/dsmil_intelligence_flow.h`
+- **Implementation**: `dsmil/lib/Runtime/dsmil_intelligence_flow_runtime.c`
+- Upward intelligence flow pattern
+- Event-driven architecture
+- Security clearance verification
+- Layer-to-layer communication
+
+### Memory Budget Management
+- **Header**: `dsmil/include/dsmil_memory_budget.h`
+- **Implementation**: `dsmil/lib/Runtime/dsmil_memory_budget_runtime.c`
+- 62 GB total memory pool management
+- Layer-specific budgets (Layer 7: 40 GB max)
+- Dynamic allocation with global constraint enforcement
+- Thread-safe memory tracking
+
+### Hardware Integration Layer (HIL) Orchestration
+- **Header**: `dsmil/include/dsmil_hil_orchestration.h`
+- **Implementation**: `dsmil/lib/Runtime/dsmil_hil_orchestration_runtime.c`
+- NPU/GPU/CPU workload assignment (48.2 TOPS total)
+- Utilization monitoring
+- Availability checking
+- Device-aware workload routing
+
+### Device 255 Master Crypto Controller ⭐ NEW
+- **Header**: `dsmil/include/dsmil_device255_crypto.h`
+- **Implementation**: `dsmil/lib/Runtime/dsmil_device255_crypto_runtime.c`
+- Unified cryptographic operations (88 algorithms)
+- TPM 2.0 / Hardware / Software engine support
+- PQC algorithm support (ML-KEM-1024, ML-DSA-87)
+- Layer-aware crypto operations
+- Capability management and locking
+
+**Device 255 Integration Points**:
+- **Device 15 (CRYPTO)**: Wycheproof crypto operations via Device 255
+- **Device 47 (AI/ML)**: Model encryption/signing (AES-256-GCM, ML-DSA-87 CNSA 2.0)
+- **Device 46 (Quantum)**: PQC key generation and test vectors
+- **Layer 8 (ENHANCED_SEC)**: PQC-only mode enforcement
+- **MLOps Pipeline**: Model provenance signing (ML-DSA-87 CNSA 2.0)
+
+See **[DEVICE255-MASTER-CRYPTO-ENHANCEMENTS.md](docs/DEVICE255-MASTER-CRYPTO-ENHANCEMENTS.md)** and **[COMPREHENSIVE-PLAN-ALIGNMENT-ENHANCEMENTS.md](docs/COMPREHENSIVE-PLAN-ALIGNMENT-ENHANCEMENTS.md)** for complete details.
+
 ## Documentation
 
 ### Core Documentation
@@ -400,6 +470,10 @@ See **[PATH-CONFIGURATION.md](docs/PATH-CONFIGURATION.md)** for complete path co
 - **[PROVENANCE-CNSA2.md](docs/PROVENANCE-CNSA2.md)**: Provenance system deep dive
 - **[PIPELINES.md](docs/PIPELINES.md)**: Pass pipeline configurations
 - **[PATH-CONFIGURATION.md](docs/PATH-CONFIGURATION.md)**: Dynamic path configuration guide ⭐ NEW
+
+### Enhancement Documentation ⭐ NEW
+- **[COMPREHENSIVE-PLAN-ALIGNMENT-ENHANCEMENTS.md](docs/COMPREHENSIVE-PLAN-ALIGNMENT-ENHANCEMENTS.md)**: Alignment with comprehensive plan
+- **[DEVICE255-MASTER-CRYPTO-ENHANCEMENTS.md](docs/DEVICE255-MASTER-CRYPTO-ENHANCEMENTS.md)**: Device 255 integration guide
 
 ### Feature Guides (v1.3+)
 - **[MISSION-PROFILES-GUIDE.md](docs/MISSION-PROFILES-GUIDE.md)**: Mission profile system (Feature 1.1)
@@ -491,6 +565,23 @@ All three features from Phase 2 (v1.4) are now implemented:
   - ✅ OpenTelemetry integration
   - ✅ Structured JSON logging (ELK/Splunk)
   - ✅ Performance, security, and operational metrics
+
+### ✅ Completed (v1.6.1 - Runtime Enhancements) ⭐ NEW
+
+- ✅ **Layer 7 Device 47 LLM Runtime**: Memory management (40 GB budget), INT8 quantization enforcement (>95% accuracy), KV cache optimization, model lifecycle management
+- ✅ **Device 46 Quantum Runtime**: Qiskit integration, QAOA/QUBO optimization, quantum feature maps, hybrid quantum-classical workflows
+- ✅ **MLOps Pipeline Optimization**: INT8 verification, pruning validation (50% sparsity), combined speedup calculation (12× minimum, 30× target), model requirement verification
+- ✅ **Cross-Layer Intelligence Flow**: Upward flow pattern, event-driven architecture, security clearance verification, layer-to-layer communication
+- ✅ **Memory Budget Management**: 62 GB total pool management, layer-specific budgets (Layer 7: 40 GB max), dynamic allocation, thread-safe tracking
+- ✅ **HIL Orchestration**: NPU/GPU/CPU workload routing (48.2 TOPS total), utilization monitoring, availability checking, device-aware assignment
+- ✅ **Device 255 Master Crypto Controller**: Unified crypto API (88 algorithms), TPM/Hardware/Software engine support, PQC algorithms (ML-KEM-1024, ML-DSA-87), capability management
+- ✅ **Device Integration Runtimes**:
+  - ✅ Device 15 Wycheproof integration (crypto operations via Device 255)
+  - ✅ Device 47 model crypto (encryption/signing with AES-256-GCM, ML-DSA-87 CNSA 2.0)
+  - ✅ Device 46 PQC integration (key generation, test vectors)
+  - ✅ Layer 8 security crypto (PQC-only mode enforcement)
+  - ✅ MLOps crypto runtime (model provenance signing)
+- ✅ **Wycheproof Bundle Configs**: Device 255 integration YAML, intelligence flows configuration, schema updates (device255_metadata)
 
 ### 💡 Proposed Enhancements (v1.8+)
 

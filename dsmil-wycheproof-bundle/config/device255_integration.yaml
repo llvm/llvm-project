@@ -1,0 +1,107 @@
+# Device 255 (Master Crypto Controller) Integration Configuration
+# For Device 15 (CRYPTO) Wycheproof Operations
+
+version: 1
+device255_id: 255
+token_base: 0x8600
+token_max: 0x86FF
+
+integration:
+  device15_wycheproof:
+    enabled: true
+    engine_preference: "TPM"  # TPM, Hardware, Software
+    use_tpm_attestation: true
+    pcr_index: 17  # Device 15 crypto operations
+    capabilities:
+      - "HASH"
+      - "SYMMETRIC"
+      - "HMAC"
+      - "KDF"
+    algorithms:
+      hash:
+        - "SHA-256"
+        - "SHA-384"
+        - "SHA-512"
+      symmetric:
+        - "AES-128"
+        - "AES-256"
+        - "AES-256-GCM"
+      hmac:
+        - "HMAC-SHA256"
+        - "HMAC-SHA384"
+        - "HMAC-SHA512"
+    
+  device47_model_signing:
+    enabled: true
+    algorithm: "ML-DSA-87"  # CNSA 2.0
+    key_storage: "TPM"  # TPM-protected keys
+    hash_algorithm: "SHA-384"  # CNSA 2.0 requirement
+    layer: 7
+    use_cnsa_2_0: true
+    
+  device46_pqc_vectors:
+    enabled: true
+    algorithms:
+      - "ML-KEM-1024"
+      - "ML-DSA-87"
+    key_generation:
+      engine: "TPM"
+      attestation: true
+    test_vector_generation: true
+    
+  layer8_security:
+    enabled: true
+    pqc_only_mode: true
+    enforce_pqc: true
+    disable_classical:
+      - "RSA"
+      - "ECDSA"
+      - "ECDH"
+    allowed_pqc:
+      - "ML-KEM-1024"
+      - "ML-DSA-87"
+    
+  mlops_pipeline:
+    enabled: true
+    provenance_signing: true
+    algorithm: "ML-DSA-87"
+    hash_algorithm: "SHA-384"
+    verify_before_deploy: true
+    gate_verification: true
+
+capabilities:
+  available: 0xFFFF  # All capabilities
+  enabled: 0xFFFF
+  locked: 0x0000  # None locked by default
+  
+  categories:
+    hash: true
+    symmetric: true
+    asymmetric: true
+    ecc: true
+    kdf: true
+    hmac: true
+    signatures: true
+    key_agreement: true
+    mgf: true
+    post_quantum: true
+  
+  hardware:
+    aes_ni: true
+    sha_ni: true
+    avx512: true
+    tpm: true
+    secure_boot: true
+    key_storage: true
+
+performance:
+  engine_stats:
+    tpm:
+      operations: 0
+      bytes_processed: 0
+    hardware:
+      operations: 0
+      bytes_processed: 0
+    software:
+      operations: 0
+      bytes_processed: 0

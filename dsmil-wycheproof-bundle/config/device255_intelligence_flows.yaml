@@ -1,0 +1,165 @@
+# Device 255 Intelligence Flows Configuration
+# Defines encrypted data transfers and cryptographic operations
+# between Device 15, 46, 47, and 255
+
+version: 1
+namespace: dsmil.crypto.intelligence
+
+intelligence_flows:
+  - name: device15_to_device255
+    description: "Device 15 Wycheproof test vectors → Device 255 crypto operations"
+    source:
+      device_id: 15
+      layer: 3
+    target:
+      device_id: 255
+      layer: 0  # Device 255 spans all layers
+    flow_type: "crypto_operation"
+    encryption:
+      algorithm: "AES-256-GCM"
+      key_source: "TPM"
+      iv_generation: "Device255_RNG"
+    operations:
+      - "hash"
+      - "encrypt"
+      - "decrypt"
+      - "rng"
+    clearance_required: "SECRET"
+    
+  - name: device47_to_device255_model_signing
+    description: "Device 47 model signing via Device 255"
+    source:
+      device_id: 47
+      layer: 7
+    target:
+      device_id: 255
+      layer: 7
+    flow_type: "model_provenance"
+    encryption:
+      algorithm: "AES-256-GCM"
+      key_source: "TPM"
+    operations:
+      - "hash"  # SHA-384
+      - "sign"  # ML-DSA-87
+      - "verify"
+    clearance_required: "EXTENDED"
+    cnsa_2_0_compliant: true
+    
+  - name: device46_to_device255_pqc_keys
+    description: "Device 46 PQC key generation via Device 255"
+    source:
+      device_id: 46
+      layer: 7
+    target:
+      device_id: 255
+      layer: 7
+    flow_type: "pqc_key_generation"
+    encryption:
+      algorithm: "AES-256-GCM"
+      key_source: "TPM"
+    operations:
+      - "rng"  # Seed generation
+      - "key_generation"  # ML-KEM-1024, ML-DSA-87
+    clearance_required: "EXTENDED"
+    
+  - name: device46_to_device15_pqc_vectors
+    description: "Device 46 PQC test vectors → Device 15 Wycheproof"
+    source:
+      device_id: 46
+      layer: 7
+    target:
+      device_id: 15
+      layer: 3
+    flow_type: "test_vector_transfer"
+    encryption:
+      algorithm: "AES-256-GCM"
+      key_source: "TPM"
+    operations:
+      - "encrypt"  # Encrypt test vector
+      - "sign"  # Sign test vector (ML-DSA-87)
+    clearance_required: "SECRET"
+    via_device255: true
+    
+  - name: device255_to_layer8_audit
+    description: "Device 255 crypto statistics → Layer 8 security audit"
+    source:
+      device_id: 255
+      layer: 0
+    target:
+      device_id: 58  # Layer 8 security device
+      layer: 8
+    flow_type: "security_audit"
+    encryption:
+      algorithm: "AES-256-GCM"
+      key_source: "TPM"
+    operations:
+      - "encrypt"  # Encrypt audit data
+      - "sign"  # Sign audit report (ML-DSA-87)
+    clearance_required: "ENHANCED_SEC"
+    
+  - name: mlops_to_device255_provenance
+    description: "MLOps pipeline model provenance signing via Device 255"
+    source:
+      device_id: 47  # MLOps operates at Device 47
+      layer: 7
+    target:
+      device_id: 255
+      layer: 7
+    flow_type: "mlops_provenance"
+    encryption:
+      algorithm: "AES-256-GCM"
+      key_source: "TPM"
+    operations:
+      - "hash"  # SHA-384 hash of model + metadata
+      - "sign"  # ML-DSA-87 signature
+      - "verify"  # Gate verification
+    clearance_required: "EXTENDED"
+    cnsa_2_0_compliant: true
+    gate_verification: true
+
+security_boundaries:
+  - layer: 3
+    devices: [15]
+    allowed_operations:
+      - "hash"
+      - "encrypt"
+      - "decrypt"
+      - "rng"
+    requires_attestation: true
+    
+  - layer: 7
+    devices: [46, 47]
+    allowed_operations:
+      - "hash"
+      - "encrypt"
+      - "decrypt"
+      - "sign"
+      - "verify"
+      - "rng"
+      - "key_generation"
+    requires_attestation: true
+    pqc_preferred: true
+    
+  - layer: 8
+    devices: [58, 59, 60]
+    allowed_operations:
+      - "hash"
+      - "sign"
+      - "verify"
+      - "audit"
+    requires_attestation: true
+    pqc_only: true
+
+attestation:
+  tpm_pcr_indices:
+    device15: 17
+    device46: 18
+    device47: 19
+    device255: 20
+    layer8: 21
+  
+  attestation_required:
+    - "model_signing"
+    - "key_generation"
+    - "pqc_operations"
+    - "security_audit"

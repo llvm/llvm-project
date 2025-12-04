@@ -71,6 +71,36 @@ properties:
       hw_features:
         type: array
         items: { type: string }
+  device255_metadata:
+    type: object
+    description: "Device 255 (Master Crypto Controller) operation metadata"
+    properties:
+      engine_used:
+        type: string
+        enum: [ "TPM", "Hardware", "Software" ]
+      capabilities:
+        type: object
+        properties:
+          available: { type: integer }
+          enabled: { type: integer }
+          locked: { type: integer }
+      tpm_attestation:
+        type: object
+        properties:
+          attested: { type: boolean }
+          pcr_index: { type: [ "integer", "null" ] }
+          pcr_value: { type: [ "string", "null" ] }
+      performance_metrics:
+        type: object
+        properties:
+          operation_count: { type: integer }
+          bytes_processed: { type: integer }
+          engine_stats:
+            type: object
+            properties:
+              tpm_operations: { type: integer }
+              hardware_operations: { type: integer }
+              software_operations: { type: integer }
   timestamp:
     type: string
     format: date-time
