@@ -902,12 +902,12 @@ def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
 // Resume
 //===----------------------------------------------------------------------===//
 
-def CIR_SCFResumeOp : CIR_Op<"scf.resume", [
-  ReturnLike, Terminator
+def CIR_ResumeOp : CIR_Op<"resume", [
+  ReturnLike, Terminator, HasParent<"cir::TryOp">
 ]> {
   let summary = "Resumes execution after not catching exceptions";
   let description = [{
-    The `cir.scf.resume` operation handles an uncaught exception scenario.
+    The `cir.resume` operation handles an uncaught exception scenario.
 
     Used as the terminator of a `CatchUnwind` region of `cir.try`, where it
     does not receive any arguments (implied from the `cir.try` scope).
@@ -919,7 +919,7 @@ def CIR_SCFResumeOp : CIR_Op<"scf.resume", [
     cir.try {
       cir.yield
     } unwind {
-      cir.scf.resume
+      cir.resume
     }
     ```
   }];
