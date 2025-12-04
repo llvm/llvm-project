@@ -180,6 +180,10 @@ public:
 private:
   bool shouldCombineCSRLocalStackBump(uint64_t StackBumpBytes) const;
 
+  /// A helper for moving the SP to a negative offset from the FP, without
+  /// deallocating any stack in the range FP to FP + Offset.
+  void moveSPBelowFP(MachineBasicBlock::iterator MBBI, StackOffset Offset);
+
   void emitSwiftAsyncContextFramePointer(MachineBasicBlock::iterator MBBI,
                                          const DebugLoc &DL) const;
 

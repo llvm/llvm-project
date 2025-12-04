@@ -15,7 +15,7 @@ define void @PR49215(ptr %p, ptr %q) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult ptr [[Q:%.*]], [[G]]
 ; CHECK-NEXT:    [[UMIN]] = select i1 [[CMP2]], ptr [[Q]], ptr [[G]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], undef
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 123
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    [[UMIN_LCSSA:%.*]] = phi ptr [ [[UMIN]], [[FOR_BODY]] ]
@@ -31,7 +31,7 @@ for.body:
   %cmp2 = icmp ult ptr %q, %g
   %umin = select i1 %cmp2, ptr %q, ptr %g
   %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp eq i64 %iv.next, undef
+  %exitcond = icmp eq i64 %iv.next, 123
   br i1 %exitcond, label %loopexit, label %for.body
 
 loopexit:

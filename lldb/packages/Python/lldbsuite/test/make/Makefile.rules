@@ -249,6 +249,10 @@ ifeq ($(CC_TYPE), clang)
    MODULE_DEBUG_INFO_FLAGS += -gmodules
 endif
 
+ifeq "$(MAKE_PDB)" "YES"
+	DEBUG_INFO_FLAG ?= -g -gcodeview
+endif
+
 # If the OS is Windows, we need to pass -gdwarf to clang, otherwise it will build
 # with codeview by default but all the tests rely on dwarf.
 ifeq "$(OS)" "Windows_NT"
@@ -288,6 +292,11 @@ endif
 
 ifeq "$(MAKE_DEBUG_NAMES)" "YES"
 	CFLAGS += -gpubnames
+endif
+
+# Enable GNU POSIX extensions (e.g. kill(), usleep(), getpgid(), ...)
+ifeq "$(OS)" "Linux"
+	CFLAGS += -D_DEFAULT_SOURCE
 endif
 
 ifeq "$(USE_PRIVATE_MODULE_CACHE)" "YES"
@@ -330,9 +339,11 @@ endif
 # library to make ASAN tests work for most users, including the bots.
 ifeq "$(OS)" "Darwin"
 ifneq "$(ASAN_OPTIONS)" ""
-LD_FLAGS += -Wl,-lto_library -Wl,$(shell dirname $(shell xcrun -find clang))/../lib/libLTO.dylib
+ASAN_LDFLAGS = -Wl,-lto_library -Wl,$(shell dirname $(shell xcrun -find clang))/../lib/libLTO.dylib
 endif
 endif
+LDFLAGS += $(ASAN_LDFLAGS)
+
 OBJECTS =
 EXE ?= a.out
 

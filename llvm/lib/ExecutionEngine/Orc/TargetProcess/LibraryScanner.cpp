@@ -50,7 +50,7 @@ void handleError(Error Err, StringRef context = "") {
 }
 
 bool ObjectFileLoader::isArchitectureCompatible(const object::ObjectFile &Obj) {
-  Triple HostTriple(sys::getDefaultTargetTriple());
+  Triple HostTriple(sys::getProcessTriple());
   Triple ObjTriple = Obj.makeTriple();
 
   LLVM_DEBUG({
@@ -768,7 +768,7 @@ std::string LibraryScanHelper::resolveCanonical(StringRef Path,
 PathType LibraryScanHelper::classifyKind(StringRef Path) const {
   // Detect home directory
   const char *Home = getenv("HOME");
-  if (Home && Path.find(Home) == 0)
+  if (Home && Path.starts_with(Home))
     return PathType::User;
 
   static const std::array<std::string, 5> UserPrefixes = {
@@ -780,7 +780,7 @@ PathType LibraryScanHelper::classifyKind(StringRef Path) const {
   };
 
   for (const auto &Prefix : UserPrefixes) {
-    if (Path.find(Prefix) == 0)
+    if (Path.starts_with(Prefix))
       return PathType::User;
   }
 

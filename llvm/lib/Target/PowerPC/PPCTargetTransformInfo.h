@@ -150,6 +150,9 @@ public:
                              ArrayRef<Type *> Types) const override;
   bool supportsTailCallFor(const CallBase *CB) const override;
 
+  TargetTransformInfo::VPLegalization
+  getVPLegalizationStrategy(const VPIntrinsic &PI) const override;
+
 private:
   // The following constant is used for estimating costs on power9.
   static const InstructionCost::CostType P9PipelineFlushEstimate = 80;

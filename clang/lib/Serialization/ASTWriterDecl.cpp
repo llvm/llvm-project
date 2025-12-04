@@ -903,7 +903,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.push_back(D->getODRHash());
 
   if (D->isDefaulted() || D->isDeletedAsWritten()) {
-    if (auto *FDI = D->getDefalutedOrDeletedInfo()) {
+    if (auto *FDI = D->getDefaultedOrDeletedInfo()) {
       // Store both that there is an DefaultedOrDeletedInfo and whether it
       // contains a DeletedMessage.
       StringLiteral *DeletedMessage = FDI->getDeletedMessage();

@@ -1,11 +1,13 @@
 .. title:: clang-tidy - cert-msc50-cpp
+.. meta::
+   :http-equiv=refresh: 5;URL=../misc/predictable-rand.html
 
 cert-msc50-cpp
 ==============
 
-Pseudorandom number generators use mathematical algorithms to produce a sequence
-of numbers with good statistical properties, but the numbers produced are not
-genuinely random. The ``std::rand()`` function takes a seed (number), runs a
-mathematical operation on it and returns the result. By manipulating the seed
-the result can be predictable. This check warns for the usage of
-``std::rand()``.
+The `cert-msc50-cpp` check is an alias, please see
+:doc:`misc-predictable-rand <../misc/predictable-rand>` for more information.
+
+This check corresponds to the CERT C Coding Standard rule
+`MSC50-CPP. Do not use std::rand() for generating pseudorandom numbers
+<https://wiki.sei.cmu.edu/confluence/display/cplusplus/MSC50-CPP.+Do+not+use+std%3A%3Arand%28%29+for+generating+pseudorandom+numbers>`_.
