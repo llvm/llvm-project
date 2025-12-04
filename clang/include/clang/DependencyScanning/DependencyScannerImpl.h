@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNER_H
-#define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNER_H
+#ifndef LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNERIMPL_H
+#define LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNERIMPL_H
 
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/ModuleDepCollector.h"
@@ -193,4 +193,4 @@ public:
 } // namespace dependencies
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNERIMPL_H
