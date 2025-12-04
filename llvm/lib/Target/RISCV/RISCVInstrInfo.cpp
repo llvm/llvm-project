@@ -3063,7 +3063,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (Op.isReg() && Op.getReg().isValid()) {
       const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
       auto *RC = MRI.getRegClass(Op.getReg());
-      if (!RISCV::GPRRegClass.hasSubClassEq(RC)) {
+      if (!RISCV::GPRNoX0RegClass.hasSubClassEq(RC)) {
         ErrInfo = "Invalid register class for VL operand";
         return false;
       }
