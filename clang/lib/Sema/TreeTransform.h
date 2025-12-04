@@ -8555,7 +8555,7 @@ StmtResult TreeTransform<Derived>::TransformDeferStmt(DeferStmt *S) {
   StmtResult Result = getDerived().TransformStmt(S->getBody());
   if (!Result.isUsable())
     return StmtError();
-  return new (getSema().Context) DeferStmt(S->getDeferLoc(), Result.get());
+  return DeferStmt::Create(getSema().Context, S->getDeferLoc(), Result.get());
 }
 
 template<typename Derived>

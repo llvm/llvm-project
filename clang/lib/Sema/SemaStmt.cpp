@@ -3277,9 +3277,10 @@ static void CheckJumpOutOfSEHFinallyOrDefer(Sema &S, SourceLocation Loc,
 
   if (!S.CurrentDefer.empty()) {
     Scope *Parent = S.CurrentDefer.back().first;
+    assert(Parent);
 
     // Note: We don't create a new scope for defer statements, so 'Parent'
-    // is actually the scope that contains the 'defer'.
+    // is actually the scope that contains the '_Defer'.
     if (DestScope.Contains(*Parent) || &DestScope == Parent)
       S.Diag(Loc, diag::err_jump_out_of_defer_stmt) << DeferJumpKind;
   }
@@ -3960,7 +3961,7 @@ StmtResult Sema::ActOnEndOfDeferStmt(Stmt *Body,
   SourceLocation DeferLoc = CurrentDefer.pop_back_val().second;
   DiagnoseEmptyStmtBody(DeferLoc, Body, diag::warn_empty_defer_body);
   setFunctionHasBranchProtectedScope();
-  return new (Context) DeferStmt(DeferLoc, Body);
+  return DeferStmt::Create(Context, DeferLoc, Body);
 }
 
 static bool CheckSimplerImplicitMovesMSVCWorkaround(const Sema &S,

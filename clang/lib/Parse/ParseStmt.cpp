@@ -2376,7 +2376,9 @@ StmtResult Parser::ParseReturnStatement() {
 StmtResult Parser::ParseDeferStatement(SourceLocation *TrailingElseLoc) {
   assert(Tok.is(tok::kw__Defer));
   SourceLocation DeferLoc = ConsumeToken();
+
   Actions.ActOnStartOfDeferStmt(DeferLoc, getCurScope());
+
   auto OnError = llvm::make_scope_exit(
       [&] { Actions.ActOnDeferStmtError(getCurScope()); });
 

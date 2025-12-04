@@ -2010,13 +2010,12 @@ struct EmitDeferredStatement final : EHScopeStack::Cleanup {
   EmitDeferredStatement(const DeferStmt *Stmt) : Stmt(*Stmt) {}
 
   void Emit(CodeGenFunction &CGF, Flags) override {
-    // Take care that any cleanups pushed by the body of the 'defer' don't
-    // clobber the current cleanup slot value.
+    // Take care that any cleanups pushed by the body of a '_Defer' statement
+    // don't clobber the current cleanup slot value.
     //
-    // This situation warrants some explanation: Assume we have a scope that
-    // pushes a cleanup; when that scope is exited, we need to run that cleanup;
-    // this is accomplished by emitting the cleanup into a separate block and
-    // then branching to that block at scope exit.
+    // Assume we have a scope that pushes a cleanup; when that scope is exited,
+    // we need to run that cleanup; this is accomplished by emitting the cleanup
+    // into a separate block and then branching to that block at scope exit.
     //
     // Where this gets complicated is if we exit the scope in multiple different
     // ways; e.g. in a 'for' loop, we may exit the scope of its body by falling
@@ -2032,8 +2031,8 @@ struct EmitDeferredStatement final : EHScopeStack::Cleanup {
     // value of that variable and 'switch' on it to branch to the appropriate
     // continuation block.
     //
-    // The problem that arises once 'defer' statements are involved is that the
-    // body of a 'defer' is an arbitrary statement which itself can create more
+    // The problem that arises once '_Defer' statements are involved is that the
+    // body of a '_Defer' is an arbitrary statement which itself can create more
     // cleanups. This means we may end up overwriting the cleanup slot before we
     // ever have a chance to 'switch' on it, which means that once we *do* get
     // to the 'switch', we end up in whatever block the cleanup code happened to
@@ -2047,7 +2046,7 @@ struct EmitDeferredStatement final : EHScopeStack::Cleanup {
     //   4. Read value from cleanup slot.
     //   5. Branch to the block associated with 'X'.
     //
-    // But if we encounter a 'defer' statement that contains a cleanup, then
+    // But if we encounter a _Defer' statement that contains a cleanup, then
     // what might instead happen is:
     //
     //   1. Store 'X' to cleanup slot.

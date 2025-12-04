@@ -201,8 +201,10 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
-- Implemented the ``defer`` Technical Specification (n3589); it is enabled
-  in C mode by passing ``-fdefer-ts``.
+- Implemented the ``defer`` draft Technical Specification
+  (`WG14 N3734 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3734.pdf>`_); it is enabled in C mode by
+  passing ``-fdefer-ts``. Note, the details of this feature are subject to change given that the Technical
+  Specification is not yet ratified.
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^

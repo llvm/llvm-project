@@ -1656,11 +1656,11 @@ defm named_loops
           PosFlag<SetTrue, [], [CC1Option], "Enable support for named loops">,
           NegFlag<SetFalse>>;
 
-// C 'defer' TS
+// C '_Defer' TS
 defm defer_ts : BoolFOption<"defer-ts",
   LangOpts<"DeferTS">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Enable support for the C 'defer' Technical Specification">,
+          "Enable support for the C '_Defer' Technical Specification">,
   NegFlag<SetFalse>>,
   ShouldParseIf<!strconcat("!", cplusplus.KeyPath)>;
 

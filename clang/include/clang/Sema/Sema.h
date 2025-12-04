@@ -10918,8 +10918,8 @@ public:
   /// Stack of active SEH __finally scopes.  Can be empty.
   SmallVector<Scope *, 2> CurrentSEHFinally;
 
-  /// Stack of 'defer' statements that are currently being parsed, as well
-  /// as the locations of their 'defer' keywords. Can be empty.
+  /// Stack of '_Defer' statements that are currently being parsed, as well
+  /// as the locations of their '_Defer' keywords. Can be empty.
   SmallVector<std::pair<Scope *, SourceLocation>, 2> CurrentDefer;
 
   StmtResult ActOnExprStmt(ExprResult Arg, bool DiscardedValue = true);

@@ -3153,7 +3153,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case STMT_DEFER:
-      S = new (Context) DeferStmt(Empty);
+      S = DeferStmt::CreateEmpty(Context, Empty);
       break;
 
     case STMT_RETURN:

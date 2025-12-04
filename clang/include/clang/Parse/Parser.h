@@ -7507,7 +7507,7 @@ public:
   /// ParseDeferStatement
   /// \verbatim
   ///       defer-statement:
-  ///         'defer' deferred-block
+  ///         '_Defer' deferred-block
   ///
   ///       deferred-block:
   ///         unlabeled-statement

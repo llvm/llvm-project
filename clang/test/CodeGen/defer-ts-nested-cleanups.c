@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux -std=c23 -fdefer-ts -emit-llvm %s -o - -O1 -disable-llvm-passes | FileCheck %s
 
-// Test that cleanups emitted in a 'defer' don't clobber the cleanup slot; we
+// Test that cleanups emitted in a '_Defer' don't clobber the cleanup slot; we
 // test this using lifetime intrinsics, which are emitted starting at -O1.
 //
 // Note that the IR below contains fewer cleanup slots than one might intuitively

@@ -473,3 +473,31 @@ void t() {
 
    x(2);
 }
+
+// CHECK-LABEL: define {{.*}} void @stmt_expr()
+// CHECK: entry:
+// CHECK-NEXT:   %tmp = alloca i32, align 4
+// CHECK-NEXT:   call void @x(i32 {{.*}} 1)
+// CHECK-NEXT:   call void @x(i32 {{.*}} 2)
+// CHECK-NEXT:   call void @x(i32 {{.*}} 3)
+// CHECK-NEXT:   call void @x(i32 {{.*}} 4)
+// CHECK-NEXT:   store i32 6, ptr %tmp, align 4
+// CHECK-NEXT:   call void @x(i32 {{.*}} 5)
+// CHECK-NEXT:   %0 = load i32, ptr %tmp, align 4
+// CHECK-NEXT:   call void @x(i32 {{.*}} %0)
+// CHECK-NEXT:   ret void
+void stmt_expr() {
+  ({
+    _Defer x(4);
+    _Defer ({
+      _Defer x(3);
+      x(2);
+    });
+    x(1);
+  });
+
+  x(({
+    _Defer x(5);
+    6;
+  }));
+}

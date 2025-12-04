@@ -3230,13 +3230,13 @@ class DeferStmt : public Stmt {
   /// The deferred statement.
   Stmt *Body;
 
-public:
-  DeferStmt(SourceLocation DeferLoc, Stmt *Body) : Stmt(DeferStmtClass) {
-    setDeferLoc(DeferLoc);
-    setBody(Body);
-  }
+  DeferStmt(EmptyShell Empty);
+  DeferStmt(SourceLocation DeferLoc, Stmt *Body);
 
-  explicit DeferStmt(EmptyShell Empty) : Stmt(DeferStmtClass, Empty) {}
+public:
+  static DeferStmt *CreateEmpty(ASTContext &Context, EmptyShell Empty);
+  static DeferStmt *Create(ASTContext &Context, SourceLocation DeferLoc,
+                           Stmt *Body);
 
   SourceLocation getDeferLoc() const { return DeferStmtBits.DeferLoc; }
   void setDeferLoc(SourceLocation DeferLoc) {

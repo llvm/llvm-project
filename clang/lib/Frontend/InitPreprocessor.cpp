@@ -499,7 +499,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
                       llvm::itostr(static_cast<int>(EmbedResult::Empty)));
 
   // We define this to '1' here to indicate that we only support '_Defer'
-  // as a keyword; it will be set to '2' by <stddefer.h>.
+  // as a keyword.
   if (LangOpts.DeferTS)
     Builder.defineMacro("__STDC_DEFER_TS25755__", "1");
 
