@@ -750,8 +750,8 @@ static Instruction *simplifyNeonTbl(IntrinsicInst &II, InstCombiner &IC,
   unsigned NumIndexes = RetTy->getNumElements();
 
   // Only perform this transformation for <8 x i8> and <16 x i8> vector types.
-  if (!(RetTy->getElementType()->isIntegerTy(8) &&
-        (NumIndexes == 8 || NumIndexes == 16)))
+  if (!RetTy->getElementType()->isIntegerTy(8) ||
+      (NumIndexes != 8 && NumIndexes != 16))
     return nullptr;
 
   // For tbx instructions, the first argument is the "fallback" vector, which
@@ -768,9 +768,8 @@ static Instruction *simplifyNeonTbl(IntrinsicInst &II, InstCombiner &IC,
   // source size. However, our definitions of the intrinsics, at least in
   // IntrinsicsAArch64.td, allow for arbitrary destination vector sizes, so it
   // *could* technically happen.
-  if (NumIndexes > NumElementsPerSource) {
+  if (NumIndexes > NumElementsPerSource)
     return nullptr;
-  }
 
   // The tbl/tbx intrinsics take several source operands followed by a mask
   // operand.
@@ -827,23 +826,21 @@ static Instruction *simplifyNeonTbl(IntrinsicInst &II, InstCombiner &IC,
     // choose to extend its length with another shufflevector, but it's simpler
     // to just bail instead.
     if (cast<FixedVectorType>(SourceOperand->getType())->getNumElements() !=
-        NumElementsPerSource) {
+        NumElementsPerSource)
       return nullptr;
-    }
 
     // We now know the source operand referenced by this index. Make it a
     // shufflevector operand, if it isn't already.
     unsigned NumSlots = ValueToShuffleSlot.size();
     // This shuffle references more than two sources, and hence cannot be
     // represented as a shufflevector.
-    if (NumSlots == 2 && !ValueToShuffleSlot.contains(SourceOperand)) {
+    if (NumSlots == 2 && !ValueToShuffleSlot.contains(SourceOperand))
       return nullptr;
-    }
+
     auto [It, Inserted] =
         ValueToShuffleSlot.try_emplace(SourceOperand, NumSlots);
-    if (Inserted) {
+    if (Inserted)
       ShuffleOperands[It->getSecond()] = SourceOperand;
-    }
 
     unsigned RemappedIndex =
         (It->getSecond() * NumElementsPerSource) + SourceOperandElementIndex;
