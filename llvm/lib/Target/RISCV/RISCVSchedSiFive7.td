@@ -562,7 +562,7 @@ multiclass SiFive7WriteResBase<int VLEN,
   // resource, we do not need to use LMULSEWXXX constructors. However, we do
   // use the SEW from the name to determine the number of Cycles.
 
-  foreach mx = SchedMxListSX8 in {
+  foreach mx = SchedMxListEEW8 in {
     defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
     defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 8, VLEN>.c;
     defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
@@ -583,7 +583,7 @@ multiclass SiFive7WriteResBase<int VLEN,
     }
   }
 
-  foreach mx = SchedMxListSX16 in {
+  foreach mx = SchedMxListEEW16 in {
     defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
     defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 16, VLEN>.c;
     defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
@@ -603,7 +603,7 @@ multiclass SiFive7WriteResBase<int VLEN,
       defm : LMULWriteResMX<"WriteVSTOX16", [VCQ, VS], mx, IsWorstCase>;
     }
   }
-  foreach mx = SchedMxListSX32 in {
+  foreach mx = SchedMxListEEW32 in {
     defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
     defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 32, VLEN>.c;
     defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
@@ -623,7 +623,7 @@ multiclass SiFive7WriteResBase<int VLEN,
       defm : LMULWriteResMX<"WriteVSTOX32", [VCQ, VS], mx, IsWorstCase>;
     }
   }
-  foreach mx = SchedMxListSX64 in {
+  foreach mx = SchedMxListEEW64 in {
     defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
     defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 64, VLEN>.c;
     defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;

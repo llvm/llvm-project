@@ -437,7 +437,7 @@ foreach mx = SchedMxList in {
   defm "" : LMULWriteResMX<"WriteVSTM",    [AscalonLS], mx, IsWorstCase>;
 }
 
-foreach mx = SchedMxListSX8 in {
+foreach mx = SchedMxListEEW8 in {
   defvar Cycles = AscalonGetCyclesLMUL<mx, 2>.c;
   defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
   let Latency = Cycles in {
@@ -449,7 +449,7 @@ foreach mx = SchedMxListSX8 in {
     defm "" : LMULWriteResMX<"WriteVSTOX8", [AscalonLS], mx, IsWorstCase>;
   }
 }
-foreach mx = SchedMxListSX16 in {
+foreach mx = SchedMxListEEW16 in {
   defvar Cycles = AscalonGetCyclesLMUL<mx, 2>.c;
   defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
   let Latency = Cycles in {
@@ -461,7 +461,7 @@ foreach mx = SchedMxListSX16 in {
     defm "" : LMULWriteResMX<"WriteVSTOX16", [AscalonLS], mx, IsWorstCase>;
   }
 }
-foreach mx = SchedMxListSX32 in {
+foreach mx = SchedMxListEEW32 in {
   defvar Cycles = AscalonGetCyclesLMUL<mx, 2>.c;
   defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
   let Latency = Cycles in {
@@ -473,7 +473,7 @@ foreach mx = SchedMxListSX32 in {
     defm "" : LMULWriteResMX<"WriteVSTOX32", [AscalonLS], mx, IsWorstCase>;
   }
 }
-foreach mx = SchedMxListSX64 in {
+foreach mx = SchedMxListEEW64 in {
   defvar Cycles = AscalonGetCyclesLMUL<mx, 2>.c;
   defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
   let Latency = Cycles in {
