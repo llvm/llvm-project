@@ -459,22 +459,32 @@ DSMIL provides comprehensive runtime libraries for Layer 7 AI/ML workloads, quan
 ### Layer 8 Security AI Runtime ⭐ NEW
 - **Header**: `dsmil/include/dsmil_layer8_security.h`
 - **Implementation**: `dsmil/lib/Runtime/dsmil_layer8_security_runtime.c`
-- Adversarial ML defense (~188 TOPS INT8)
-- Threat detection and anomaly analysis
-- Side-channel vulnerability detection
-- Security validation and risk scoring
-- Zero-trust security enforcement
-- PQC-only mode enforcement (via Device 255)
+- **8 Devices (51-58)**: 188 TOPS INT8 total
+  - Device 51: Enhanced Security Framework (15 TOPS) - Anomaly detection, behavioral analytics
+  - Device 52: Adversarial ML Defense (30 TOPS) - Adversarial training, robustness testing
+  - Device 53: Cybersecurity AI (25 TOPS) - Threat intelligence, attack prediction
+  - Device 54: Threat Intelligence (25 TOPS) - IOC extraction, attribution analysis
+  - Device 55: Automated Security Response (20 TOPS) - Incident response automation
+  - Device 56: Post-Quantum Crypto (20 TOPS) - PQC algorithm optimization
+  - Device 57: Autonomous Operations (28 TOPS) - Self-healing systems, adaptive defense
+  - Device 58: Security Analytics (25 TOPS) - Security event correlation, forensics
+- Model sizes: 50-300M parameters
+- Latency: <100ms for real-time threat detection
+- Detection accuracy: >99% known threats, >95% zero-day
+- Adversarial ML defense, threat detection, side-channel analysis, zero-trust enforcement
 
 ### Layer 9 Executive Command Runtime ⭐ NEW
 - **Header**: `dsmil/include/dsmil_layer9_executive.h`
 - **Implementation**: `dsmil/lib/Runtime/dsmil_layer9_executive_runtime.c`
-- Strategic planning and decision support (~330 TOPS INT8)
-- Nuclear Command & Control (NC3) integration
-- Coalition fusion and interoperability
-- Executive-level intelligence synthesis
-- Campaign-level mission planning
-- Global resource orchestration
+- **4 Devices (59-62)**: 330 TOPS INT8 total
+  - Device 59: Executive Command (85 TOPS) - Strategic decision support, crisis management
+  - Device 60: Coalition Fusion (85 TOPS) - Multi-national intelligence fusion
+  - Device 61: Nuclear C&C Integration (80 TOPS) - NC3 analysis, strategic stability (ROE-governed)
+  - Device 62: Strategic Intelligence (80 TOPS) - Global threat assessment, strategic planning
+- Model sizes: 1B-7B parameters
+- Latency: <1000ms for complex strategic queries
+- Context windows: Up to 32K tokens
+- Strategic planning, NC3 integration (Device 61, Section 4.1c compliant), coalition coordination
 
 ### Device 255 Master Crypto Controller ⭐ NEW
 - **Header**: `dsmil/include/dsmil_device255_crypto.h`

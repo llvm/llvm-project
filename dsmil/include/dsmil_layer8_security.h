@@ -58,26 +58,45 @@ typedef struct {
 } dsmil_security_risk_t;
 
 /**
+ * @brief Layer 8 device types (51-58)
+ */
+typedef enum {
+    DSMIL_L8_DEVICE51_SECURITY_FRAMEWORK = 51,  // 15 TOPS - Anomaly detection, behavioral analytics
+    DSMIL_L8_DEVICE52_ADVERSARIAL_DEFENSE = 52, // 30 TOPS - Adversarial training, robustness testing
+    DSMIL_L8_DEVICE53_CYBERSECURITY_AI = 53,     // 25 TOPS - Threat intelligence, attack prediction
+    DSMIL_L8_DEVICE54_THREAT_INTELLIGENCE = 54, // 25 TOPS - IOC extraction, attribution analysis
+    DSMIL_L8_DEVICE55_AUTOMATED_RESPONSE = 55,  // 20 TOPS - Incident response automation
+    DSMIL_L8_DEVICE56_POST_QUANTUM_CRYPTO = 56, // 20 TOPS - PQC algorithm optimization
+    DSMIL_L8_DEVICE57_AUTONOMOUS_OPS = 57,      // 28 TOPS - Self-healing systems, adaptive defense
+    DSMIL_L8_DEVICE58_SECURITY_ANALYTICS = 58   // 25 TOPS - Security event correlation, forensics
+} dsmil_layer8_device_t;
+
+/**
  * @brief Security AI context
  */
 typedef struct {
-    uint32_t device_id;           // Device 80 (Primary Security AI)
+    uint32_t device_id;           // Device 51-58 (8 devices)
     uint8_t layer;                // 8
     uint64_t memory_budget_bytes; // 8 GB max
     uint64_t memory_used_bytes;
-    float tops_capacity;          // 188 TOPS INT8
+    float tops_capacity;          // Device-specific TOPS (15-30 TOPS)
+    float tops_total_capacity;   // 188 TOPS INT8 total for Layer 8
     float tops_utilization;      // Current utilization (0.0-1.0)
     uint64_t threats_detected;
     uint64_t anomalies_analyzed;
+    uint32_t model_size_params;   // 50-300M parameters typical
+    float detection_accuracy;    // >99% known threats, >95% zero-day
 } dsmil_layer8_security_ctx_t;
 
 /**
  * @brief Initialize Layer 8 Security AI runtime
  * 
+ * @param device_id Device ID (51-58)
  * @param ctx Output security context
  * @return 0 on success, negative on error
  */
-int dsmil_layer8_security_init(dsmil_layer8_security_ctx_t *ctx);
+int dsmil_layer8_security_init(dsmil_layer8_device_t device_id,
+                                dsmil_layer8_security_ctx_t *ctx);
 
 /**
  * @brief Analyze binary for security vulnerabilities
@@ -121,6 +140,8 @@ int dsmil_layer8_detect_adversarial(const void *input_data, size_t input_size,
  * - Power side-channels
  * - Branch prediction leaks
  * 
+ * Uses Device 52 (Adversarial ML Defense) for robustness testing.
+ * 
  * @param function_name Function name to analyze
  * @param binary_path Path to binary containing function
  * @param risk Output risk score
@@ -129,6 +150,40 @@ int dsmil_layer8_detect_adversarial(const void *input_data, size_t input_size,
 int dsmil_layer8_analyze_side_channel(const char *function_name,
                                      const char *binary_path,
                                      dsmil_security_risk_t *risk);
+
+/**
+ * @brief Extract threat intelligence indicators (IOC extraction)
+ * 
+ * Uses Device 54 (Threat Intelligence) for:
+ * - IOC (Indicators of Compromise) extraction
+ * - Attribution analysis using graph neural networks
+ * - NLP-based threat intelligence processing
+ * 
+ * @param threat_data Raw threat data
+ * @param data_size Data size
+ * @param iocs Output extracted IOCs
+ * @param ioc_count Output IOC count
+ * @return 0 on success, negative on error
+ */
+int dsmil_layer8_extract_iocs(const void *threat_data, size_t data_size,
+                              void *iocs, uint32_t *ioc_count);
+
+/**
+ * @brief Automated security incident response
+ * 
+ * Uses Device 55 (Automated Security Response) with RL-based automation:
+ * - Incident classification
+ * - Automated containment
+ * - Response orchestration
+ * 
+ * @param incident_data Incident data
+ * @param incident_size Incident data size
+ * @param response_actions Output response actions
+ * @param action_count Output action count
+ * @return 0 on success, negative on error
+ */
+int dsmil_layer8_automated_response(const void *incident_data, size_t incident_size,
+                                    void *response_actions, uint32_t *action_count);
 
 /**
  * @brief Detect anomalies in system behavior

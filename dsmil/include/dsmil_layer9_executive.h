@@ -67,27 +67,42 @@ typedef struct {
 } dsmil_strategic_decision_t;
 
 /**
+ * @brief Layer 9 device types (59-62)
+ */
+typedef enum {
+    DSMIL_L9_DEVICE59_EXECUTIVE_CMD = 59,  // 85 TOPS - Strategic decision support, crisis management
+    DSMIL_L9_DEVICE60_COALITION_FUSION = 60, // 85 TOPS - Multi-national intelligence fusion
+    DSMIL_L9_DEVICE61_NUCLEAR_CC = 61,     // 80 TOPS - NC3 analysis, strategic stability (ROE-governed)
+    DSMIL_L9_DEVICE62_STRATEGIC_INTEL = 62  // 80 TOPS - Global threat assessment, strategic planning
+} dsmil_layer9_device_t;
+
+/**
  * @brief Executive AI context
  */
 typedef struct {
-    uint32_t device_id;           // Device 90 (Strategic AI)
+    uint32_t device_id;           // Device 59-62 (4 devices)
     uint8_t layer;                // 9
     uint64_t memory_budget_bytes; // 12 GB max
     uint64_t memory_used_bytes;
-    float tops_capacity;          // 330 TOPS INT8
+    float tops_capacity;          // Device-specific TOPS (80-85 TOPS)
+    float tops_total_capacity;   // 330 TOPS INT8 total for Layer 9
     float tops_utilization;      // Current utilization (0.0-1.0)
     uint64_t decisions_made;
     uint64_t campaigns_planned;
-    bool nc3_enabled;
+    bool nc3_enabled;             // NC3 enabled (Device 61 only)
+    uint32_t model_size_params;   // 1B-7B parameters typical
+    uint32_t context_window_tokens; // Up to 32K tokens
 } dsmil_layer9_executive_ctx_t;
 
 /**
  * @brief Initialize Layer 9 Executive Command runtime
  * 
+ * @param device_id Device ID (59-62)
  * @param ctx Output executive context
  * @return 0 on success, negative on error
  */
-int dsmil_layer9_executive_init(dsmil_layer9_executive_ctx_t *ctx);
+int dsmil_layer9_executive_init(dsmil_layer9_device_t device_id,
+                                 dsmil_layer9_executive_ctx_t *ctx);
 
 /**
  * @brief Synthesize intelligence from lower layers
@@ -162,13 +177,15 @@ int dsmil_layer9_coordinate_coalition(const dsmil_layer9_executive_ctx_t *ctx,
 /**
  * @brief Validate NC3 (Nuclear Command & Control) decision
  * 
+ * Uses Device 61 (Nuclear C&C Integration) - ROE-governed per Rescindment 220330R NOV 25.
  * Ensures NC3-critical decisions meet:
  * - Two-person integrity requirements
  * - Proper authorization chain
  * - TPM attestation
  * - Audit trail
+ * - Section 4.1c compliance (ANALYSIS ONLY, NO kinetic control)
  * 
- * @param ctx Executive context
+ * @param ctx Executive context (must be Device 61)
  * @param decision_context Decision context
  * @param validation_result Output validation result
  * @return 0 if valid, negative if invalid
@@ -176,6 +193,22 @@ int dsmil_layer9_coordinate_coalition(const dsmil_layer9_executive_ctx_t *ctx,
 int dsmil_layer9_validate_nc3(const dsmil_layer9_executive_ctx_t *ctx,
                               const dsmil_strategic_decision_t *decision_context,
                               bool *validation_result);
+
+/**
+ * @brief Global threat assessment
+ * 
+ * Uses Device 62 (Strategic Intelligence) for:
+ * - Geopolitical modeling
+ * - Risk forecasting
+ * - Global threat analysis
+ * 
+ * @param ctx Executive context
+ * @param threat_assessment Output threat assessment
+ * @param assessment_size Assessment buffer size / actual length
+ * @return 0 on success, negative on error
+ */
+int dsmil_layer9_assess_global_threats(const dsmil_layer9_executive_ctx_t *ctx,
+                                       void *threat_assessment, size_t *assessment_size);
 
 /**
  * @brief Get executive resource utilization
