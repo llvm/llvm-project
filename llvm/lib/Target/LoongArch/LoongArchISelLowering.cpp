@@ -1832,6 +1832,39 @@ lowerVECTOR_SHUFFLE_VSHUF4I(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
                      DAG.getConstant(Imm, DL, GRLenVT));
 }
 
+/// Lower VECTOR_SHUFFLE into BSWAP (if possible).
+///
+/// It is possible to do optimization for VECTOR_SHUFFLE performing vector
+/// byte swap in each subvector whose mask likes:
+///   <7, 6, ..., 0, 15, 14, ..., 8>
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above forms.
+static SDValue lowerVECTOR_SHUFFLEAsBSWAP(const SDLoc &DL, ArrayRef<int> Mask,
+                                          MVT VT, SDValue V1,
+                                          SelectionDAG &DAG) {
+  // Only vectors with i8 type elements can be converted to BSWAP.
+  if (VT != MVT::v16i8 && VT != MVT::v32i8)
+    return SDValue();
+
+  // Only consider byte swap in each 64-bit subvector. Other cases (i.e.
+  // in each 32-bit or 16-bit subvector) can match VSHUF4I directly.
+  unsigned NumElts = VT.getVectorNumElements();
+  for (unsigned i = 0; i < NumElts; ++i) {
+    int M = Mask[i];
+    if (M == -1)
+      continue;
+    // Check that performing byte swap within each 8 elements.
+    if (M != (int)(i ^ 7))
+      return SDValue();
+  }
+
+  MVT ResVT = VT == MVT::v16i8 ? MVT::v2i64 : MVT::v4i64;
+  SDValue Result =
+      DAG.getNode(ISD::BSWAP, DL, ResVT, DAG.getBitcast(ResVT, V1));
+  return DAG.getBitcast(VT, Result);
+}
+
 /// Lower VECTOR_SHUFFLE whose result is the reversed source vector.
 ///
 /// It is possible to do optimization for VECTOR_SHUFFLE performing vector
@@ -2171,6 +2204,8 @@ static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
       return Result;
     if ((Result =
              lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG, Subtarget)))
+      return Result;
+    if ((Result = lowerVECTOR_SHUFFLEAsBSWAP(DL, Mask, VT, V1, DAG)))
       return Result;
     if ((Result =
              lowerVECTOR_SHUFFLE_IsReverse(DL, Mask, VT, V1, DAG, Subtarget)))
@@ -2784,6 +2819,8 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
       return Result;
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, Mask, VT, V1, V2, DAG,
                                                Subtarget)))
+      return Result;
+    if ((Result = lowerVECTOR_SHUFFLEAsBSWAP(DL, Mask, VT, V1, DAG)))
       return Result;
     // Try to widen vectors to gain more optimization opportunities.
     if (SDValue NewShuffle = widenShuffleMask(DL, Mask, VT, V1, V2, DAG))
