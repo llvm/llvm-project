@@ -404,26 +404,33 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_MERGE_VALUES(SDNode *N,
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
+  SDLoc DL(N);
   SDValue SourceValue = N->getOperand(0);
   SDValue SinkValue = N->getOperand(1);
-  SDValue EltSize = N->getOperand(2);
-  SDValue Offset = N->getOperand(3);
+  SDValue EltSizeInBytes = N->getOperand(2);
+  SDValue LaneOffset = N->getOperand(3);
+
   EVT PtrVT = SourceValue->getValueType(0);
-  SDLoc DL(N);
+  bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
 
-  // Increment the source pointer by the lane offset multiplied by the element
-  // size. A non-zero offset is normally used when a larger-than-legal mask has
-  // been split.
-  Offset = DAG.getNode(ISD::MUL, DL, PtrVT, Offset, EltSize);
-  SourceValue = DAG.getNode(ISD::ADD, DL, PtrVT, SourceValue, Offset);
-
+  // Take the difference between the pointers and divided by the element size,
+  // to see how many lanes separate them.
   SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
+  if (IsReadAfterWrite)
+    Diff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
+  Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSizeInBytes);
+
+  // The pointers do not alias if:
+  //  * Diff <= 0 || LaneOffset < Diff (WAR_MASK)
+  //  * Diff == 0 || LaneOffset < abs(Diff) (RAW_MASK)
+  // Note: If LaneOffset is zero, both cases will fold to "true".
   EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
                                      Diff.getValueType());
   SDValue Zero = DAG.getConstant(0, DL, PtrVT);
-  return DAG.getNode(ISD::OR, DL, CmpVT,
-                     DAG.getSetCC(DL, CmpVT, Diff, EltSize, ISD::SETGE),
-                     DAG.getSetCC(DL, CmpVT, Diff, Zero, ISD::SETEQ));
+  SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
+                             IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
+  return DAG.getNode(ISD::OR, DL, CmpVT, Cmp,
+                     DAG.getSetCC(DL, CmpVT, LaneOffset, Diff, ISD::SETULT));
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_BITCAST(SDNode *N) {
@@ -1699,23 +1706,23 @@ void DAGTypeLegalizer::SplitVecRes_BITCAST(SDNode *N, SDValue &Lo,
   Hi = DAG.getNode(ISD::BITCAST, dl, HiVT, Hi);
 }
 
-/// Split a loop dependence mask.
-/// This is done by creating a high and low mask, each of half the vector
-/// length. The low mask inherits the lane offset from the original mask, and
-/// the high mask adds half the vector length.
 void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
                                                         SDValue &Hi) {
   SDLoc DL(N);
   EVT LoVT, HiVT;
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
   SDValue PtrA = N->getOperand(0);
   SDValue PtrB = N->getOperand(1);
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
 
+  // The lane offset for the "Lo" half of the mask is unchanged.
   Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB,
                    /*ElementSizeInBytes=*/N->getOperand(2),
                    /*LaneOffset=*/N->getOperand(3));
+  // The lane offset for the "Hi" half of the mask is incremented by the number
+  // of elements in the "Lo" half.
   unsigned LaneOffset =
       N->getConstantOperandVal(3) + LoVT.getVectorMinNumElements();
+  // Note: The lane offset is implicitly scalable for scalable masks.
   Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB,
                    /*ElementSizeInBytes=*/N->getOperand(2),
                    /*LaneOffset=*/DAG.getConstant(LaneOffset, DL, MVT::i64));

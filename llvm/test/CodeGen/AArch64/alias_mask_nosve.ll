@@ -4,29 +4,16 @@
 define <16 x i1> @whilewr_8(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    subs x8, x1, x0
-; CHECK-NEXT:    adrp x9, .LCPI0_0
-; CHECK-NEXT:    adrp x10, .LCPI0_1
-; CHECK-NEXT:    dup v0.4s, w8
-; CHECK-NEXT:    adrp x11, .LCPI0_2
-; CHECK-NEXT:    ldr q1, [x9, :lo12:.LCPI0_0]
-; CHECK-NEXT:    adrp x9, .LCPI0_3
-; CHECK-NEXT:    ldr q2, [x10, :lo12:.LCPI0_1]
-; CHECK-NEXT:    ldr q3, [x11, :lo12:.LCPI0_2]
-; CHECK-NEXT:    ldr q4, [x9, :lo12:.LCPI0_3]
-; CHECK-NEXT:    cneg x9, x8, mi
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    cmhi v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmhi v2.4s, v0.4s, v2.4s
-; CHECK-NEXT:    cmhi v3.4s, v0.4s, v3.4s
-; CHECK-NEXT:    cmhi v0.4s, v0.4s, v4.4s
+; CHECK-NEXT:    sub x9, x1, x0
+; CHECK-NEXT:    adrp x8, .LCPI0_0
+; CHECK-NEXT:    cmp x9, #1
+; CHECK-NEXT:    dup v0.16b, w9
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
 ; CHECK-NEXT:    ccmp x9, #15, #2, ge
 ; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    uzp1 v1.8h, v2.8h, v1.8h
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v3.8h
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    dup v1.16b, w8
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    dup v2.16b, w8
+; CHECK-NEXT:    cmhi v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 1)

@@ -29,6 +29,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -42,7 +43,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
-#include <cmath>
 #include <cstdint>
 #include <iterator>
 #include <utility>
@@ -1811,85 +1811,84 @@ SDValue VectorLegalizer::ExpandVP_FCOPYSIGN(SDNode *Node) {
   return DAG.getNode(ISD::BITCAST, DL, VT, CopiedSign);
 }
 
-// Expand a loop dependence mask.
-// First the difference is taken between the pointers and divided by the element
-// size, to see how many lanes separate them. That difference is then splat and
-// compared with a step vector to produce a mask with lanes less than the
-// difference active and the rest inactive. To capture the case where the
-// pointers are the same (or the source pointer is greater than the sink pointer
-// for write-after-read), the difference is compared to zero and that result is
-// splat to another mask. Those two masks are then ORed to produce the final
-// loop dependence mask.
 SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   SDLoc DL(N);
+  EVT VT = N->getValueType(0);
   SDValue SourceValue = N->getOperand(0);
   SDValue SinkValue = N->getOperand(1);
-  SDValue EltSize = N->getOperand(2);
-  unsigned EltSizeInBytes = N->getConstantOperandVal(2);
-  unsigned LaneOffset = N->getConstantOperandVal(3);
+  SDValue EltSizeInBytes = N->getOperand(2);
+  const Function &F = DAG.getMachineFunction().getFunction();
 
-  bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
-  EVT VT = N->getValueType(0);
+  // Note: The lane offset is scalable if the mask is scalable.
+  ElementCount LaneOffset =
+      ElementCount::get(N->getConstantOperandVal(3), VT.isScalableVT());
+
   EVT PtrVT = SourceValue->getValueType(0);
+  bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
 
+  // Take the difference between the pointers and divided by the element size,
+  // to see how many lanes separate them.
   SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
   if (IsReadAfterWrite)
     Diff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
+  Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSizeInBytes);
 
-  Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSize);
-
-  // If the difference is positive then some elements may alias
-  EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                                     Diff.getValueType());
+  // The pointers do not alias if:
+  //  * Diff <= 0 (WAR_MASK)
+  //  * Diff == 0 (RAW_MASK)
+  EVT CmpVT = VT.getVectorElementType();
   SDValue Zero = DAG.getConstant(0, DL, PtrVT);
   SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
                              IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
 
-  // Create the mask with lanes less than the difference active and the rest
-  // inactive. For optimisation reaons we want to minimise the size of the
-  // integer used to splat the difference and add the lane offset. If we keep it
-  // as a 64 bit value then the splat will use lots of vectors unnecessarily.
-  int SplatBitWidth =
-      std::pow(2, Log2_32(VT.getVectorMinNumElements() * EltSizeInBytes) + 1);
-  SplatBitWidth = std::min(SplatBitWidth, 64);
-  EVT SplatVT = VT.changeElementType(MVT::getIntegerVT(SplatBitWidth));
+  // The pointers do not alias within the mask if Diff >= MaxMaskLane. As:
+  //  * `(ptrB - ptrA) >= elementSize * lane` (WAR_MASK)
+  //  * `(ptrB - ptrA) >= elementSize * lane` (RAW_MASK)
+  // Would both be all true.
+  ElementCount MaxMaskLaneEC = LaneOffset + VT.getVectorElementCount();
+  SDValue MaxMaskLane = DAG.getElementCount(DL, PtrVT, MaxMaskLaneEC);
+  Cmp = DAG.getNode(ISD::OR, DL, CmpVT, Cmp,
+                    DAG.getSetCC(DL, CmpVT, Diff, MaxMaskLane, ISD::SETUGE));
 
-  // Truncate and splat the diff. If this ends up being an unsafe truncate (i.e.
-  // diff > vector length), then it's ignored later on when it's ORed with
-  // abs(diff) >= vector_length.
-  SDValue DiffTrunc = DAG.getExtOrTrunc(!IsReadAfterWrite, Diff, DL,
-                                        SplatVT.getVectorElementType());
+  // Attempt to determine the max "meaningful" value of Diff for the comparison
+  // with the lane step_vector. We do not have to consider values that would
+  // result in an "all-true" mask due to any of the above cases. This puts a
+  // fairly low upper bound on the element bitwidth needed for the comparison,
+  // which results in efficient codegen (since fewer vectors are needed). Note:
+  // If the upper bound is scalable, we must know the vscale range (otherwise,
+  // we fall back to a very conservative bound).
+  unsigned MaxMeaningfulDiff = 0;
+  if (MaxMaskLaneEC.isScalable()) {
+    ConstantRange VScaleRange = getVScaleRange(&F, /*BitWidth*/ 64);
+    if (!VScaleRange.isFullSet())
+      MaxMeaningfulDiff = MaxMaskLaneEC.getKnownMinValue() *
+                          VScaleRange.getUpper().getZExtValue();
+  } else {
+    MaxMeaningfulDiff = MaxMaskLaneEC.getFixedValue();
+  }
+
+  // Note: MaxMeaningfulDiff is zero if the upper bound is unknown.
+  unsigned SplatBitWidth =
+      !MaxMeaningfulDiff
+          ? 32 // Surely 2**32 lanes is enough.
+          : std::max<unsigned>(PowerOf2Ceil(Log2_32(MaxMeaningfulDiff) + 1), 8);
+  EVT SplatEltVT = MVT::getIntegerVT(SplatBitWidth);
+  EVT SplatVT = VT.changeElementType(SplatEltVT);
+
+  // Truncate and splat the diff. If this ends up being an unsafe truncate (i.e,
+  // it does not fit within SplatBitWidth bits), the mask is already all-true.
+  SDValue DiffTrunc =
+      DAG.getExtOrTrunc(!IsReadAfterWrite, Diff, DL, SplatEltVT);
   SDValue DiffSplat = DAG.getSplat(SplatVT, DL, DiffTrunc);
+
   SDValue VectorStep = DAG.getStepVector(DL, SplatVT);
   // Add the lane offset. A non-zero lane offset often comes from a
   // larger-than-legal vector length being split in two.
-  VectorStep = DAG.getNode(
+  SDValue LaneIndices = DAG.getNode(
       ISD::ADD, DL, SplatVT, VectorStep,
-      DAG.getSplat(
-          SplatVT, DL,
-          DAG.getConstant(LaneOffset, DL, SplatVT.getVectorElementType())));
-  EVT MaskVT = VT.changeElementType(MVT::i1);
-  SDValue DiffMask =
-      DAG.getSetCC(DL, MaskVT, VectorStep, DiffSplat, ISD::CondCode::SETULT);
-
-  EVT EltVT = VT.getVectorElementType();
-  // Extend the diff setcc in case the intrinsic has been promoted to a vector
-  // type with elements larger than i1
-  if (EltVT.getScalarSizeInBits() > MaskVT.getScalarSizeInBits())
-    DiffMask = DAG.getNode(ISD::ANY_EXTEND, DL, VT, DiffMask);
-
-  if (CmpVT.getScalarSizeInBits() < EltVT.getScalarSizeInBits())
-    Cmp = DAG.getNode(ISD::ZERO_EXTEND, DL, EltVT, Cmp);
-
-  // If the pointer difference was greater than or equal to the max number of
-  // lanes in the mask, then the truncated pointer difference should be ignored
-  // since the truncate could have been unsafe. Use a mask of all active lanes
-  // instead since a pointer difference >= the number of lanes has no loop
-  // depedencies anyway.
-  SDValue AbsDiff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
-  SDValue NumElts = DAG.getConstant(VT.getVectorMinNumElements(), DL, PtrVT);
-  Cmp = DAG.getNode(ISD::OR, DL, CmpVT, Cmp,
-                    DAG.getSetCC(DL, CmpVT, AbsDiff, NumElts, ISD::SETUGE));
+      DAG.getSplat(SplatVT, DL,
+                   DAG.getElementCount(DL, SplatEltVT, LaneOffset)));
+  SDValue DiffMask = DAG.getSetCC(DL, VT, LaneIndices, DiffSplat, ISD::SETULT);
 
   SDValue Splat = DAG.getSplat(VT, DL, Cmp);
   return DAG.getNode(ISD::OR, DL, VT, DiffMask, Splat);
