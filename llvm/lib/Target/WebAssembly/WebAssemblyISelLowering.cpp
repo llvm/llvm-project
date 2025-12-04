@@ -409,7 +409,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
 
-  // Allow converting function ptrs in address space 0 to WASM funcref (address
+  // Allow converting function ptrs in address space 0 to Wasm funcref (address
   // space 20)
   setOperationAction(ISD::ADDRSPACECAST, MVT::funcref, Custom);
 
@@ -1892,7 +1892,7 @@ SDValue WebAssemblyTargetLowering::LowerADDRSPACECAST(SDValue Op,
           WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_DEFAULT ||
       ACN->getDestAddressSpace() !=
           WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
-    return Op;
+    return SDValue();
 
   if (ACN->getValueType(0) != MVT::funcref) {
     reportFatalInternalError("Cannot addrspacecast to funcref addrspace with "

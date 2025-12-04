@@ -14,7 +14,7 @@ define %funcref @cast_const_funcptr() {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    ref.func foo
 ; CHECK-NEXT:    # fallthrough-return
-  %result = addrspacecast ptr @foo to ptr addrspace(20)
+  %result = addrspacecast ptr @foo to %funcref
   ret %funcref %result
 }
 
@@ -32,7 +32,7 @@ define %funcref @cast_const_not_funcptr() {
 ; WASM64-NEXT:    i64.const global_var
 ; WASM64-NEXT:    table.get __indirect_function_table
 ; WASM64-NEXT:    # fallthrough-return
-  %result = addrspacecast ptr @global_var to ptr addrspace(20)
+  %result = addrspacecast ptr @global_var to %funcref
   ret %funcref %result
 }
 
@@ -50,6 +50,6 @@ define %funcref @cast_param_funcptr(ptr %funcptr) {
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    table.get __indirect_function_table
 ; WASM64-NEXT:    # fallthrough-return
-  %result = addrspacecast ptr %funcptr to ptr addrspace(20)
+  %result = addrspacecast ptr %funcptr to %funcref
   ret %funcref %result
 }
