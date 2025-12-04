@@ -180,7 +180,7 @@ class ShrinkWrapImpl {
       const TargetFrameLowering *TFI =
           MachineFunc->getSubtarget().getFrameLowering();
 
-      TFI->determineCalleeSaves(*MachineFunc, SavedRegs, RS);
+      TFI->determinePrologCalleeSaves(*MachineFunc, SavedRegs, RS);
 
       for (int Reg = SavedRegs.find_first(); Reg != -1;
            Reg = SavedRegs.find_next(Reg))

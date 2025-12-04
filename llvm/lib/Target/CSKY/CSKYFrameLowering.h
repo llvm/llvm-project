@@ -39,8 +39,8 @@ public:
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
 
-  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
-                            RegScavenger *RS) const override;
+  void determinePrologCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                                  RegScavenger *RS) const override;
 
   bool assignCalleeSavedSpillSlots(
       MachineFunction &MF, const TargetRegisterInfo *TRI,

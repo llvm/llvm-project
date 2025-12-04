@@ -3199,10 +3199,10 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
   return true;
 }
 
-void X86FrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                            BitVector &SavedRegs,
-                                            RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void X86FrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                  BitVector &SavedRegs,
+                                                  RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
 
   // Spill the BasePtr if it's used.
   if (TRI->hasBasePointer(MF)) {

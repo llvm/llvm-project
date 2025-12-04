@@ -2,7 +2,7 @@
 @bar = common global i32 0, align 4
 
 ; Leaf function which uses all callee-saved registers and allocates >= 256 bytes
-; on the stack this will cause determineCalleeSaves() to spill LR as an
+; on the stack this will cause determinePrologCalleeSaves() to spill LR as an
 ; additional scratch register.
 ;
 ; This is a crash-only regression test for rdar://15124582.

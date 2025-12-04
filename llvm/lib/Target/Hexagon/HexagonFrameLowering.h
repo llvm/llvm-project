@@ -80,8 +80,8 @@ public:
                                 MachineBasicBlock::iterator I) const override;
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
       RegScavenger *RS = nullptr) const override;
-  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
-      RegScavenger *RS) const override;
+  void determinePrologCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                                  RegScavenger *RS) const override;
 
   bool targetHandlesStackFrameRounding() const override {
     return true;

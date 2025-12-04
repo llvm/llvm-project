@@ -364,6 +364,10 @@ public:
   }
 
   virtual bool isRegisterReservedByUser(Register R) const { return false; }
+
+  // Return true if the target can ensure before PrologEpilogInsertion that
+  // callee-saved registers are preserved.
+  virtual bool savesCSRsEarly() const { return false; }
 };
 } // end namespace llvm
 

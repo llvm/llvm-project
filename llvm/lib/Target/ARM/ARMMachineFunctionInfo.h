@@ -52,7 +52,7 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   unsigned ReturnRegsCount = 0;
 
   /// HasStackFrame - True if this function has a stack frame. Set by
-  /// determineCalleeSaves().
+  /// determinePrologCalleeSaves().
   bool HasStackFrame = false;
 
   /// RestoreSPFromFP - True if epilogue should restore SP from FP. Set by

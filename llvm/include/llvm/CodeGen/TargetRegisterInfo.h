@@ -1066,7 +1066,7 @@ public:
   /// register is required, the first fixed stack object is reserved as its
   /// spill slot. This tells PEI not to create a new stack frame
   /// object for the given register. It should be called only after
-  /// determineCalleeSaves().
+  /// determinePrologCalleeSaves().
   virtual bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
                                     int &FrameIdx) const {
     return false;

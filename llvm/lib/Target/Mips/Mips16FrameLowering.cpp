@@ -136,10 +136,10 @@ Mips16FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
   return isInt<15>(MFI.getMaxCallFrameSize()) && !MFI.hasVarSizedObjects();
 }
 
-void Mips16FrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                               BitVector &SavedRegs,
-                                               RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void Mips16FrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                     BitVector &SavedRegs,
+                                                     RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
   const Mips16InstrInfo &TII =
       *static_cast<const Mips16InstrInfo *>(STI.getInstrInfo());
   const MipsRegisterInfo &RI = TII.getRegisterInfo();

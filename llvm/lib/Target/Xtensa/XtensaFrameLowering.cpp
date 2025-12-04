@@ -344,16 +344,16 @@ MachineBasicBlock::iterator XtensaFrameLowering::eliminateCallFramePseudoInstr(
   return MBB.erase(I);
 }
 
-void XtensaFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                               BitVector &SavedRegs,
-                                               RegScavenger *RS) const {
+void XtensaFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                     BitVector &SavedRegs,
+                                                     RegScavenger *RS) const {
   MCRegister FP = TRI->getFrameRegister(MF);
 
   if (STI.isWindowedABI()) {
     return;
   }
 
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
 
   // Mark $fp as used if function has dedicated frame pointer.
   if (hasFP(MF))

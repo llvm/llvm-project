@@ -257,7 +257,7 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
 
   // Determine which of the registers in the callee save list should be saved.
   BitVector SavedRegs;
-  TFI->determineCalleeSavesSGPR(MF, SavedRegs, RS);
+  TFI->determinePrologCalleeSavesSGPR(MF, SavedRegs, RS);
 
   // Add the code to save and restore the callee saved registers.
   if (!F.hasFnAttribute(Attribute::Naked)) {

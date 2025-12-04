@@ -379,10 +379,9 @@ uint64_t LoongArchFrameLowering::getFirstSPAdjustAmount(
   return 0;
 }
 
-void LoongArchFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                                  BitVector &SavedRegs,
-                                                  RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void LoongArchFrameLowering::determinePrologCalleeSaves(
+    MachineFunction &MF, BitVector &SavedRegs, RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
   // Unconditionally spill RA and FP only if the function uses a frame
   // pointer.
   if (hasFP(MF)) {

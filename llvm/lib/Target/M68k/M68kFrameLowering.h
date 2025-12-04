@@ -91,8 +91,8 @@ public:
   /// this function to save additional registers.
   /// This method also sets up the register scavenger ensuring there is a free
   /// register or a frameindex available.
-  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
-                            RegScavenger *RS = nullptr) const override;
+  void determinePrologCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                                  RegScavenger *RS = nullptr) const override;
 
   /// Allows target to override spill slot assignment logic.  If implemented,
   /// assignCalleeSavedSpillSlots() should assign frame slots to all CSI

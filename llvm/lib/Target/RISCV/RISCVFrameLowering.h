@@ -34,7 +34,9 @@ public:
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
 
-  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+  void determineUncondPrologCalleeSaves(MachineFunction &MF, const MCPhysReg *CSRegs, BitVector &UncondPrologCSRs) const override;
+
+  void determinePrologCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
 
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,

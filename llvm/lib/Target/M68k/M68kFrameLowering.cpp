@@ -768,10 +768,10 @@ void M68kFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 }
 
-void M68kFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                             BitVector &SavedRegs,
-                                             RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void M68kFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                   BitVector &SavedRegs,
+                                                   RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
 

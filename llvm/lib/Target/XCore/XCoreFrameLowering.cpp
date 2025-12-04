@@ -522,10 +522,10 @@ MachineBasicBlock::iterator XCoreFrameLowering::eliminateCallFramePseudoInstr(
   return MBB.erase(I);
 }
 
-void XCoreFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                              BitVector &SavedRegs,
-                                              RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void XCoreFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                    BitVector &SavedRegs,
+                                                    RegScavenger *RS) const {
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
 
   XCoreFunctionInfo *XFI = MF.getInfo<XCoreFunctionInfo>();
 

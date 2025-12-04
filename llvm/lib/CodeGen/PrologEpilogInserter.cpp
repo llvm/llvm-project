@@ -681,7 +681,7 @@ void PEIImpl::spillCalleeSavedRegs(MachineFunction &MF) {
 
   // Determine which of the registers in the callee save list should be saved.
   BitVector SavedRegs;
-  TFI->determineCalleeSaves(MF, SavedRegs, RS);
+  TFI->determinePrologCalleeSaves(MF, SavedRegs, RS);
 
   // Assign stack slots for any callee-saved registers that must be spilled.
   assignCalleeSavedSpillSlots(MF, SavedRegs, MinCSFrameIndex, MaxCSFrameIndex);

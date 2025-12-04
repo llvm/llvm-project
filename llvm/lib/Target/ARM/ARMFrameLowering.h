@@ -56,8 +56,8 @@ public:
 
   void getCalleeSaves(const MachineFunction &MF,
                       BitVector &SavedRegs) const override;
-  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
-                            RegScavenger *RS) const override;
+  void determinePrologCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                                  RegScavenger *RS) const override;
 
   /// Update the IsRestored flag on LR if it is spilled, based on the return
   /// instructions.

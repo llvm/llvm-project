@@ -85,11 +85,11 @@ static unsigned determineLastCalleeSave(ArrayRef<CalleeSavedInfo> CSI) {
   return Last;
 }
 
-void ARCFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                            BitVector &SavedRegs,
-                                            RegScavenger *RS) const {
+void ARCFrameLowering::determinePrologCalleeSaves(MachineFunction &MF,
+                                                  BitVector &SavedRegs,
+                                                  RegScavenger *RS) const {
   LLVM_DEBUG(dbgs() << "Determine Callee Saves: " << MF.getName() << "\n");
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  TargetFrameLowering::determinePrologCalleeSaves(MF, SavedRegs, RS);
   SavedRegs.set(ARC::BLINK);
 }
 
