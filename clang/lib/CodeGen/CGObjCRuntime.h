@@ -226,7 +226,7 @@ public:
   virtual llvm::Function *GenerateMethod(const ObjCMethodDecl *OMD,
                                          const ObjCContainerDecl *CD) = 0;
 
-/// Generates precondition checks for direct Objective-C Methods.
+  /// Generates precondition checks for direct Objective-C Methods.
   /// This includes [self self] for class methods and nil checks.
   virtual void GenerateDirectMethodsPreconditionCheck(
       CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
@@ -345,8 +345,8 @@ public:
   virtual bool canMessageReceiverBeNull(CodeGenFunction &CGF,
                                         const ObjCMethodDecl *method,
                                         bool isSuper,
-                                const ObjCInterfaceDecl *classReceiver,
-                                llvm::Value *receiver);
+                                        const ObjCInterfaceDecl *classReceiver,
+                                        llvm::Value *receiver);
 
   /// Check if a class object can be unrealized (not yet initialized).
   /// Returns true if the class may be unrealized, false if provably realized.
