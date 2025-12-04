@@ -4388,6 +4388,43 @@ void RoutineOp::addWorker(MLIRContext *context,
                                                    effectiveDeviceTypes));
 }
 
+void RoutineOp::addGang(MLIRContext *context,
+                        llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setGangAttr(addDeviceTypeAffectedOperandHelper(context, getGangAttr(),
+                                                 effectiveDeviceTypes));
+}
+
+void RoutineOp::addGang(MLIRContext *context,
+                        llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+                        uint64_t val) {
+  llvm::SmallVector<mlir::Attribute> dimValues;
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
+
+  if (getGangDimAttr())
+    llvm::copy(getGangDimAttr(), std::back_inserter(dimValues));
+  if (getGangDimDeviceTypeAttr())
+    llvm::copy(getGangDimDeviceTypeAttr(), std::back_inserter(deviceTypes));
+
+  assert(dimValues.size() == deviceTypes.size());
+
+  if (effectiveDeviceTypes.empty()) {
+    dimValues.push_back(
+        mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), val));
+    deviceTypes.push_back(
+        acc::DeviceTypeAttr::get(context, acc::DeviceType::None));
+  } else {
+    for (DeviceType dt : effectiveDeviceTypes) {
+      dimValues.push_back(
+          mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), val));
+      deviceTypes.push_back(acc::DeviceTypeAttr::get(context, dt));
+    }
+  }
+  assert(dimValues.size() == deviceTypes.size());
+
+  setGangDimAttr(mlir::ArrayAttr::get(context, dimValues));
+  setGangDimDeviceTypeAttr(mlir::ArrayAttr::get(context, deviceTypes));
+}
+
 //===----------------------------------------------------------------------===//
 // InitOp
 //===----------------------------------------------------------------------===//
