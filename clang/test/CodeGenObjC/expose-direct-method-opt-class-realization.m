@@ -7,7 +7,18 @@
 // ============================================================================
 
 __attribute__((objc_root_class))
-@interface ClassWithLoad
+@interface Root
++ (int)rootDirectMethod __attribute__((objc_direct));
+@end
+
+@implementation Root
+
+// CHECK-LABEL: define hidden i32 @"+[Root rootDirectMethod]"(ptr noundef %self)
++ (int)rootDirectMethod { return 100; }
+
+@end
+
+@interface ClassWithLoad : Root
 + (void)load;
 + (int)classDirectMethod __attribute__((objc_direct));
 @end
@@ -19,15 +30,12 @@ __attribute__((objc_root_class))
 }
 
 // CHECK-LABEL: define hidden i32 @"+[ClassWithLoad classDirectMethod]"(ptr noundef %self)
-+ (int)classDirectMethod {
-  return 42;
-}
++ (int)classDirectMethod { return 42; }
 
 @end
 
 // A class without +load method for comparison
-__attribute__((objc_root_class))
-@interface ClassWithoutLoad
+@interface ClassWithoutLoad : Root
 + (int)classDirectMethod __attribute__((objc_direct));
 @end
 
@@ -64,8 +72,7 @@ int testClassWithoutLoad(void) {
 // because if we're executing a method of the class, it must be realized.
 // ============================================================================
 
-__attribute__((objc_root_class))
-@interface SameClassTest
+@interface SameClassTest : Root
 + (int)classDirectMethod __attribute__((objc_direct));
 + (int)callerClassMethod __attribute__((objc_direct));
 - (int)callerInstanceMethod __attribute__((objc_direct));
@@ -86,7 +93,17 @@ __attribute__((objc_root_class))
   //
   // CHECK: call i32 @"+[SameClassTest classDirectMethod]"(ptr noundef
   // CHECK-NOT: call i32 @"+[SameClassTest classDirectMethod]_thunk"
-  return [SameClassTest classDirectMethod];
+  int a = [SameClassTest classDirectMethod];
+
+  // Calling the root class's class method from a subclass method.
+  // Root must be realized because SubClass inherits from it.
+  // Should call implementation directly, NOT through thunk.
+  //
+  // CHECK: call i32 @"+[Root rootDirectMethod]"(ptr noundef
+  // CHECK-NOT: call i32 @"+[Root rootDirectMethod]_thunk"
+  int b = [Root rootDirectMethod];
+
+  return a + b;
 }
 
 // CHECK-LABEL: define hidden i32 @"-[SameClassTest callerInstanceMethod]"(ptr noundef %self)
@@ -97,52 +114,17 @@ __attribute__((objc_root_class))
   //
   // CHECK: call i32 @"+[SameClassTest classDirectMethod]"(ptr noundef
   // CHECK-NOT: call i32 @"+[SameClassTest classDirectMethod]_thunk"
-  return [SameClassTest classDirectMethod];
-}
+  int a = [SameClassTest classDirectMethod];
 
-@end
-
-__attribute__((objc_root_class))
-@interface SuperClass
-+ (int)superClassMethod __attribute__((objc_direct));
-@end
-
-@implementation SuperClass
-
-// CHECK-LABEL: define hidden i32 @"+[SuperClass superClassMethod]"(ptr noundef %self)
-+ (int)superClassMethod {
-  return 100;
-}
-
-@end
-
-@interface SubClass : SuperClass
-+ (int)subCallerMethod __attribute__((objc_direct));
-- (int)subInstanceCaller __attribute__((objc_direct));
-@end
-
-@implementation SubClass
-
-// CHECK-LABEL: define hidden i32 @"+[SubClass subCallerMethod]"(ptr noundef %self)
-+ (int)subCallerMethod {
-  // Calling a superclass's class method from a subclass method.
-  // SuperClass must be realized because SubClass inherits from it.
+  // Calling the root class's class method from a subclass instance method.
+  // Root must be realized because SubClass inherits from it.
   // Should call implementation directly, NOT through thunk.
   //
-  // CHECK: call i32 @"+[SuperClass superClassMethod]"(ptr noundef
-  // CHECK-NOT: call i32 @"+[SuperClass superClassMethod]_thunk"
-  return [SuperClass superClassMethod];
-}
+  // CHECK: call i32 @"+[Root rootDirectMethod]"(ptr noundef
+  // CHECK-NOT: call i32 @"+[Root rootDirectMethod]_thunk"
+  int b = [Root rootDirectMethod];
 
-// CHECK-LABEL: define hidden i32 @"-[SubClass subInstanceCaller]"(ptr noundef %self)
-- (int)subInstanceCaller {
-  // Calling a superclass's class method from a subclass instance method.
-  // SuperClass must be realized because SubClass inherits from it.
-  // Should call implementation directly, NOT through thunk.
-  //
-  // CHECK: call i32 @"+[SuperClass superClassMethod]"(ptr noundef
-  // CHECK-NOT: call i32 @"+[SuperClass superClassMethod]_thunk"
-  return [SuperClass superClassMethod];
+  return a + b;
 }
 
 @end
