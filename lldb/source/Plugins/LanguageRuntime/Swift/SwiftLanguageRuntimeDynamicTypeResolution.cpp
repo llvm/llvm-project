@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLDBMemoryReader.h"
+#include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "ReflectionContextInterface.h"
 #include "SwiftLanguageRuntime.h"
@@ -33,7 +34,9 @@
 #include "lldb/ValueObject/ValueObjectMemory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 
+#include "lldb/lldb-enumerations.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTMangler.h"
 #include "swift/AST/ASTWalker.h"
@@ -728,7 +731,7 @@ class SwiftRuntimeTypeVisitor {
   CompilerType m_type;
   ValueObject *m_valobj = nullptr;
   bool m_hide_superclass = false;
-  bool m_include_clang_types = false;
+  bool m_omit_empty_base_classes = true;
   bool m_visit_superclass = false;
 
   void SetFlavor() {
@@ -757,26 +760,27 @@ public:
   using VisitCallback = std::function<llvm::Error(
       CompilerType, unsigned, GetChildNameClosure, GetChildInfoClosure)>;
   SwiftRuntimeTypeVisitor(SwiftLanguageRuntime &runtime, CompilerType type,
-                          ValueObject *valobj)
-      : m_runtime(runtime), m_type(type), m_valobj(valobj) {
+                          ValueObject *valobj, bool omit_empty_base_classes)
+      : m_runtime(runtime), m_type(type), m_valobj(valobj),
+        m_omit_empty_base_classes(omit_empty_base_classes) {
     if (valobj)
       m_exe_ctx = valobj->GetExecutionContextRef();
     SetFlavor();
   }
   SwiftRuntimeTypeVisitor(SwiftLanguageRuntime &runtime, CompilerType type,
                           ExecutionContextScope *exe_scope,
-                          bool hide_superclass, bool include_clang_types)
+                          bool hide_superclass, bool omit_empty_base_classes)
       : m_runtime(runtime), m_type(type), m_hide_superclass(hide_superclass),
-        m_include_clang_types(include_clang_types) {
+        m_omit_empty_base_classes(omit_empty_base_classes) {
     if (exe_scope)
       exe_scope->CalculateExecutionContext(m_exe_ctx);
     SetFlavor();
   }
   SwiftRuntimeTypeVisitor(SwiftLanguageRuntime &runtime, CompilerType type,
                           ExecutionContext *exe_ctx, bool hide_superclass,
-                          bool include_clang_types, bool visit_superclass)
+                          bool omit_empty_base_classes, bool visit_superclass)
       : m_runtime(runtime), m_type(type), m_hide_superclass(hide_superclass),
-        m_include_clang_types(include_clang_types),
+        m_omit_empty_base_classes(omit_empty_base_classes),
         m_visit_superclass(visit_superclass) {
     if (exe_ctx)
       m_exe_ctx = *exe_ctx;
@@ -800,9 +804,7 @@ private:
 
 llvm::Expected<unsigned>
 SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
-                                   VisitCallback visit_callback)
-
-{
+                                   VisitCallback visit_callback) {
   if (!m_type)
     return llvm::createStringError("invalid type");
 
@@ -854,19 +856,91 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
     return success;
   }
 
-  // FIXME: Remove this entire mode.
-  assert(!m_include_clang_types || (m_include_clang_types && count_only));
-  if (m_include_clang_types && count_only) {
+  auto visit_clang_type =
+      [&](CompilerType clang_type) -> llvm::Expected<unsigned> {
+    auto swiftify = [&](CompilerType type) {
+      if (!type.GetTypeSystem().isa_and_nonnull<TypeSystemClang>())
+        return type;
+      CompilerType swift_type = ts.ConvertClangTypeToSwiftType(type);
+      return swift_type ? swift_type : type;
+    };
+    unsigned depth = 0;
+    auto n_or_err =
+        clang_type.GetNumChildren(m_omit_empty_base_classes, &m_exe_ctx);
+    if (!n_or_err)
+      return n_or_err.takeError();
+    unsigned n = *n_or_err;
+    bool is_signed, is_enum = clang_type.IsEnumerationType(is_signed);
+    if (count_only)
+      return is_enum ? 1 : n;
+    if (is_enum) {
+      auto get_name = [&]() -> std::string { return "rawValue"; };
+      auto get_info = [&]() -> llvm::Expected<ChildInfo> {
+        auto ts =
+            clang_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+
+        if (!ts)
+          return llvm::createStringError("no clang type system");
+        clang::EnumDecl *enum_decl = ts->GetAsEnumDecl(clang_type);
+        if (!enum_decl)
+          return llvm::createStringError("no enum decl");
+        swift::Demangle::Demangler dem;
+        CompilerType raw_value =
+            CompilerType(ts, enum_decl->getIntegerType().getAsOpaquePtr());
+
+        auto bit_size =
+            raw_value.GetBitSize(m_exe_ctx.GetBestExecutionContextScope());
+        if (!bit_size)
+          return bit_size.takeError();
+        ChildInfo child;
+        child.byte_size = *bit_size / 8;
+        child.byte_offset = 0;
+        child.bitfield_bit_size = 0;
+        child.bitfield_bit_offset = 0;
+        child.is_base_class = false;
+        child.is_deref_of_parent = false;
+        child.language_flags = 0;
+        return child;
+      };
+      return visit_callback(clang_type, depth, get_name, get_info);
+    }
+    for (unsigned i = 0; i < n; ++i)
+      if (!visit_only || *visit_only == i) {
+        bool transparent_pointers = false;
+        bool ignore_array_bounds = false;
+        std::string child_name;
+        ChildInfo child;
+        auto child_type_or_err = clang_type.GetChildCompilerTypeAtIndex(
+            &m_exe_ctx, i, transparent_pointers, m_omit_empty_base_classes,
+            ignore_array_bounds, child_name, child.byte_size, child.byte_offset,
+            child.bitfield_bit_size, child.bitfield_bit_offset,
+            child.is_base_class, child.is_deref_of_parent, nullptr,
+            child.language_flags);
+        if (!child_type_or_err)
+          return child_type_or_err.takeError();
+        CompilerType type = swiftify(*child_type_or_err);
+        auto get_name = [&]() -> std::string { return child_name; };
+        auto get_info = [&]() -> llvm::Expected<ChildInfo> { return child; };
+        if (auto err = visit_callback(type, depth, get_name, get_info))
+          return err;
+      }
+    return success;
+  };
+
+  {
     CompilerType clang_type = m_runtime.LookupAnonymousClangType(
         m_type.GetMangledTypeName().AsCString());
     if (!clang_type)
       ts.IsImportedType(m_type.GetOpaqueQualType(), &clang_type);
     if (clang_type) {
       clang_type = GetTypedefedTypeRecursive(clang_type);
-      bool is_signed;
-      if (clang_type.IsEnumerationType(is_signed))
-        return 1;
-      return clang_type.GetNumChildren(true, &m_exe_ctx);
+      auto result = visit_clang_type(clang_type);
+      if (result)
+        return result;
+      // FIXME: It would be nice not to fall through here. CFStringRef
+      // needs this path right now.
+      LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), result.takeError(),
+                      "could not resolve as clang type: {0}");
     }
   }
 
@@ -1112,6 +1186,57 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
       // Static builtin types have no children.
       if (ts.IsBuiltinType(m_type))
         return 0;
+
+      // Resolve ObjC references via the ObjC runtime.
+      auto visit_objcclass = [&](const swift::reflection::ObjCClassTypeRef &tr)
+          -> llvm::Expected<unsigned> {
+        const std::string &name = tr.getName();
+        auto *process = m_exe_ctx.GetProcessPtr();
+        if (!process)
+          return llvm::createStringError(
+              "cannot resolve objc type without process");
+        auto objc_runtime = SwiftLanguageRuntime::GetObjCRuntime(*process);
+        if (!objc_runtime)
+          return llvm::createStringError("no Objective-C runtime");
+        AppleObjCRuntime::ObjCISA isa = objc_runtime->GetISA(ConstString(name));
+        if (!isa)
+          return llvm::createStringError("no Objective-C class " + name);
+        AppleObjCRuntime::ClassDescriptorSP desc_sp =
+            objc_runtime->GetClassDescriptorFromISA(isa);
+        if (!desc_sp)
+          return llvm::createStringError("no class descriptor for " + name);
+        bool has_super = !m_hide_superclass && desc_sp->GetSuperclass();
+        unsigned n = 0;
+        if (count_only)
+          return has_super ? n + 1 : n;
+
+        unsigned depth = 0;
+        if (has_super)
+          if (!visit_only || *visit_only == i) {
+            if (AppleObjCRuntime::ClassDescriptorSP superclass_desc_sp =
+                    desc_sp->GetSuperclass()) {
+              auto get_name = [&]() -> std::string {
+                return superclass_desc_sp->GetClassName().GetString();
+              };
+              auto get_info = [&]() -> llvm::Expected<ChildInfo> {
+                return ChildInfo();
+              };
+              CompilerType type;
+              if (TypeSP type_sp = superclass_desc_sp->GetType())
+                type = type_sp->GetForwardCompilerType();
+              if (auto err = visit_callback(type, depth, get_name, get_info))
+                return err;
+              if (visit_only)
+                return success;
+            }
+          }
+        // We could query the runtime for the children here but that
+        // would be inconsistent with SwiftASTContext.
+        return success;
+      };
+      if (auto *obj_tr =
+              llvm::dyn_cast_or_null<swift::reflection::ObjCClassTypeRef>(tr))
+        return visit_objcclass(*obj_tr);
 
       LLDBTypeInfoProvider tip(m_runtime, ts);
       auto cti_or_err = reflection_ctx->GetClassInstanceTypeInfo(
@@ -1452,9 +1577,9 @@ SwiftLanguageRuntime::GetNumFields(CompilerType type,
 
 llvm::Expected<uint32_t> SwiftLanguageRuntime::GetNumChildren(
     CompilerType type, ExecutionContextScope *exe_scope,
-    bool include_superclass, bool include_clang_types) {
+    bool include_superclass, bool omit_empty_base_classes) {
   SwiftRuntimeTypeVisitor visitor(*this, type, exe_scope, !include_superclass,
-                                  include_clang_types);
+                                  omit_empty_base_classes);
   return visitor.CountChildren();
 }
 
@@ -1622,8 +1747,10 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
 std::pair<SwiftLanguageRuntime::LookupResult, std::optional<size_t>>
 SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
     CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
-    bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
-  SwiftRuntimeTypeVisitor visitor(*this, type, exe_ctx, false, false, true);
+    bool omit_empty_base_classes, bool include_clang_types,
+    std::vector<uint32_t> &child_indexes) {
+  SwiftRuntimeTypeVisitor visitor(*this, type, exe_ctx, false,
+                                  include_clang_types, true);
   bool found = false;
   unsigned i = 0, last_depth = 0;
   llvm::Error error = visitor.VisitAllChildren(
@@ -1640,7 +1767,7 @@ SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
           return info_or_err.takeError();
         // All enum children are index 0.
         if (info_or_err->is_enum || name == get_child_name()) {
-          // The only access paths supperted are into base classes,
+          // The only access paths supported are into base classes,
           // which are always at index 0.
           for (unsigned j = 0; j < depth; ++j)
             child_indexes.push_back(0);
@@ -1670,7 +1797,7 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
     uint64_t &language_flags) {
   CompilerType child_type;
   bool found = false;
-  SwiftRuntimeTypeVisitor visitor(*this, type, valobj);
+  SwiftRuntimeTypeVisitor visitor(*this, type, valobj, omit_empty_base_classes);
   llvm::Error error = visitor.VisitChildAtIndex(
       idx,
       [&](CompilerType type, unsigned depth, auto get_child_name,

@@ -13,8 +13,6 @@ import json
 
 
 class MTCSwiftTestCase(TestBase):
-    @expectedFailureAll(bugnumber="rdar://60396797",
-                        setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @swiftTest
     def test(self):
