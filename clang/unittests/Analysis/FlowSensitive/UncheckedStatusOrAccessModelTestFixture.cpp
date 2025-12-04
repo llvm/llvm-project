@@ -1725,6 +1725,90 @@ TEST_P(UncheckedStatusOrAccessModelTest, QcheckMacro) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, CheckOkMacro) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      CHECK_OK(sor.status());
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      CHECK_OK(sor);
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUS s = Make<STATUS>();
+      CHECK_OK(s);
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, QcheckOkMacro) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      QCHECK_OK(sor.status());
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      QCHECK_OK(sor);
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUS s = Make<STATUS>();
+      QCHECK_OK(s);
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, CheckEqMacro) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      CHECK_EQ(sor.status(), absl::OkStatus());
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      CHECK_EQ(Make<STATUS>(), absl::OkStatus());
+      CHECK_EQ(absl::OkStatus(), Make<STATUS>());
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, QcheckEqMacro) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      QCHECK_EQ(sor.status(), absl::OkStatus());
+      sor.value();
+    }
+  )cc");
+}
+
 TEST_P(UncheckedStatusOrAccessModelTest, CheckNeMacro) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"

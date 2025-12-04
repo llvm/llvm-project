@@ -63,7 +63,6 @@ jobs:
           fetch-depth: 2
       - name: Build and Test
         timeout-minutes: 120
-        continue-on-error: ${{ runner.arch == 'ARM64' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
