@@ -188,3 +188,12 @@ void strcpy_and_friends() {
   strndup(FOO, sizeof(FOO)); // \
       // expected-warning {{'strndup' call operates on objects of type 'const char' while the size is based on a different type 'const char *'}} expected-note{{did you mean to provide an explicit length?}}
 }
+
+extern "C" int snprintf(char* buffer, __SIZE_TYPE__ buf_size, const char* format, ...);
+extern "C" void* malloc(unsigned size);
+
+void check_prints(){
+    char* a = (char*) malloc(20);
+    const char* b = "Hello World";
+    snprintf(a, sizeof(a), "%s", b); // expected-warning{{argument to 'sizeof' in 'snprintf' call is the same expression as the destination; did you mean to put an explicit length?}}
+}

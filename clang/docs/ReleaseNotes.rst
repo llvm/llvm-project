@@ -444,6 +444,9 @@ Improvements to Clang's diagnostics
   comparison operators when mixed with bitwise operators in enum value initializers.
   This can be locally disabled by explicitly casting the initializer value.
 
+- Clang now emits ``-Wsizeof-pointer-memaccess`` when snprintf/vsnprintf use the sizeof 
+  the destination buffer(dynamically allocated) in the len parameter(#GH162366)
+
 Improvements to Clang's time-trace
 ----------------------------------
 

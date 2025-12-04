@@ -1139,6 +1139,37 @@ static bool ProcessFormatStringLiteral(const Expr *FormatExpr,
   return false;
 }
 
+static const UnaryExprOrTypeTraitExpr *getAsSizeOfExpr(const Expr *E) {
+  if (const auto *Unary = dyn_cast<UnaryExprOrTypeTraitExpr>(E))
+    if (Unary->getKind() == UETT_SizeOf)
+      return Unary;
+  return nullptr;
+}
+
+/// If E is a sizeof expression, returns its argument expression,
+/// otherwise returns NULL.
+static const Expr *getSizeOfExprArg(const Expr *E) {
+  if (const UnaryExprOrTypeTraitExpr *SizeOf = getAsSizeOfExpr(E))
+    if (!SizeOf->isArgumentType())
+      return SizeOf->getArgumentExpr()->IgnoreParenImpCasts();
+  return nullptr;
+}
+
+/// If E is a sizeof expression, returns its argument type.
+static QualType getSizeOfArgType(const Expr *E) {
+  if (const UnaryExprOrTypeTraitExpr *SizeOf = getAsSizeOfExpr(E))
+    return SizeOf->getTypeOfArgument();
+  return QualType();
+}
+
+/// Check if two expressions refer to the same declaration.
+static bool referToTheSameDecl(const Expr *E1, const Expr *E2) {
+  if (const DeclRefExpr *D1 = dyn_cast_or_null<DeclRefExpr>(E1))
+    if (const DeclRefExpr *D2 = dyn_cast_or_null<DeclRefExpr>(E2))
+      return D1->getDecl() == D2->getDecl();
+  return false;
+}
+
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                                CallExpr *TheCall) {
   if (TheCall->isValueDependent() || TheCall->isTypeDependent() ||
@@ -1449,6 +1480,17 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       }
     }
     DestinationSize = ComputeSizeArgument(0);
+    const Expr *SizeOfArg = TheCall->getArg(1)->IgnoreParenImpCasts();
+    const Expr *Dest = TheCall->getArg(0)->IgnoreParenImpCasts();
+    const Expr *SizeOfArgExpr = getSizeOfExprArg(SizeOfArg);
+    const QualType SizeOfArgType = getSizeOfArgType(SizeOfArg);
+    const Type *ExprType = SizeOfArgType.getTypePtrOrNull();
+    if (ExprType && ExprType->isPointerType() &&
+        referToTheSameDecl(SizeOfArgExpr, Dest)) {
+      DiagRuntimeBehavior(SizeOfArg->getExprLoc(), Dest,
+                          PDiag(diag::warn_sizeof_pointer_dest_type_memacess)
+                              << FD->getNameInfo().getName());
+    }
   }
   }
 
@@ -9979,29 +10021,6 @@ static const CXXRecordDecl *getContainedDynamicClass(QualType T,
   return nullptr;
 }
 
-static const UnaryExprOrTypeTraitExpr *getAsSizeOfExpr(const Expr *E) {
-  if (const auto *Unary = dyn_cast<UnaryExprOrTypeTraitExpr>(E))
-    if (Unary->getKind() == UETT_SizeOf)
-      return Unary;
-  return nullptr;
-}
-
-/// If E is a sizeof expression, returns its argument expression,
-/// otherwise returns NULL.
-static const Expr *getSizeOfExprArg(const Expr *E) {
-  if (const UnaryExprOrTypeTraitExpr *SizeOf = getAsSizeOfExpr(E))
-    if (!SizeOf->isArgumentType())
-      return SizeOf->getArgumentExpr()->IgnoreParenImpCasts();
-  return nullptr;
-}
-
-/// If E is a sizeof expression, returns its argument type.
-static QualType getSizeOfArgType(const Expr *E) {
-  if (const UnaryExprOrTypeTraitExpr *SizeOf = getAsSizeOfExpr(E))
-    return SizeOf->getTypeOfArgument();
-  return QualType();
-}
-
 namespace {
 
 struct SearchNonTrivialToInitializeField
@@ -10497,14 +10516,6 @@ void Sema::CheckStrlcpycatArguments(const CallExpr *Call,
   Diag(OriginalSizeArg->getBeginLoc(), diag::note_strlcpycat_wrong_size)
       << FixItHint::CreateReplacement(OriginalSizeArg->getSourceRange(),
                                       OS.str());
-}
-
-/// Check if two expressions refer to the same declaration.
-static bool referToTheSameDecl(const Expr *E1, const Expr *E2) {
-  if (const DeclRefExpr *D1 = dyn_cast_or_null<DeclRefExpr>(E1))
-    if (const DeclRefExpr *D2 = dyn_cast_or_null<DeclRefExpr>(E2))
-      return D1->getDecl() == D2->getDecl();
-  return false;
 }
 
 static const Expr *getStrlenExprArg(const Expr *E) {
