@@ -3028,19 +3028,21 @@ bool hasDuplicateDeviceTypes(
 }
 
 /// Check for duplicates in the DeviceType array attribute.
-LogicalResult checkDeviceTypes(mlir::ArrayAttr deviceTypes) {
+/// Returns std::nullopt if no duplicates, or the duplicate DeviceType if found.
+static std::optional<mlir::acc::DeviceType>
+checkDeviceTypes(mlir::ArrayAttr deviceTypes) {
   llvm::SmallSet<mlir::acc::DeviceType, 3> crtDeviceTypes;
   if (!deviceTypes)
-    return success();
+    return std::nullopt;
   for (auto attr : deviceTypes) {
     auto deviceTypeAttr =
         mlir::dyn_cast_or_null<mlir::acc::DeviceTypeAttr>(attr);
     if (!deviceTypeAttr)
-      return failure();
+      return mlir::acc::DeviceType::None;
     if (!crtDeviceTypes.insert(deviceTypeAttr.getValue()).second)
-      return failure();
+      return deviceTypeAttr.getValue();
   }
-  return success();
+  return std::nullopt;
 }
 
 LogicalResult acc::LoopOp::verify() {
@@ -3067,9 +3069,10 @@ LogicalResult acc::LoopOp::verify() {
           getCollapseDeviceTypeAttr().getValue().size())
     return emitOpError() << "collapse attribute count must match collapse"
                          << " device_type count";
-  if (failed(checkDeviceTypes(getCollapseDeviceTypeAttr())))
-    return emitOpError()
-           << "duplicate device_type found in collapseDeviceType attribute";
+  if (auto duplicateDeviceType = checkDeviceTypes(getCollapseDeviceTypeAttr()))
+    return emitOpError() << "duplicate device_type `"
+                         << acc::stringifyDeviceType(*duplicateDeviceType)
+                         << "` found in collapseDeviceType attribute";
 
   // Check gang
   if (!getGangOperands().empty()) {
@@ -3082,8 +3085,12 @@ LogicalResult acc::LoopOp::verify() {
       return emitOpError() << "gangOperandsArgType attribute count must match"
                            << " gangOperands count";
   }
-  if (getGangAttr() && failed(checkDeviceTypes(getGangAttr())))
-    return emitOpError() << "duplicate device_type found in gang attribute";
+  if (getGangAttr()) {
+    if (auto duplicateDeviceType = checkDeviceTypes(getGangAttr()))
+      return emitOpError() << "duplicate device_type `"
+                           << acc::stringifyDeviceType(*duplicateDeviceType)
+                           << "` found in gang attribute";
+  }
 
   if (failed(verifyDeviceTypeAndSegmentCountMatch(
           *this, getGangOperands(), getGangOperandsSegmentsAttr(),
@@ -3091,22 +3098,30 @@ LogicalResult acc::LoopOp::verify() {
     return failure();
 
   // Check worker
-  if (failed(checkDeviceTypes(getWorkerAttr())))
-    return emitOpError() << "duplicate device_type found in worker attribute";
-  if (failed(checkDeviceTypes(getWorkerNumOperandsDeviceTypeAttr())))
-    return emitOpError() << "duplicate device_type found in "
-                            "workerNumOperandsDeviceType attribute";
+  if (auto duplicateDeviceType = checkDeviceTypes(getWorkerAttr()))
+    return emitOpError() << "duplicate device_type `"
+                         << acc::stringifyDeviceType(*duplicateDeviceType)
+                         << "` found in worker attribute";
+  if (auto duplicateDeviceType =
+          checkDeviceTypes(getWorkerNumOperandsDeviceTypeAttr()))
+    return emitOpError() << "duplicate device_type `"
+                         << acc::stringifyDeviceType(*duplicateDeviceType)
+                         << "` found in workerNumOperandsDeviceType attribute";
   if (failed(verifyDeviceTypeCountMatch(*this, getWorkerNumOperands(),
                                         getWorkerNumOperandsDeviceTypeAttr(),
                                         "worker")))
     return failure();
 
   // Check vector
-  if (failed(checkDeviceTypes(getVectorAttr())))
-    return emitOpError() << "duplicate device_type found in vector attribute";
-  if (failed(checkDeviceTypes(getVectorOperandsDeviceTypeAttr())))
-    return emitOpError() << "duplicate device_type found in "
-                            "vectorOperandsDeviceType attribute";
+  if (auto duplicateDeviceType = checkDeviceTypes(getVectorAttr()))
+    return emitOpError() << "duplicate device_type `"
+                         << acc::stringifyDeviceType(*duplicateDeviceType)
+                         << "` found in vector attribute";
+  if (auto duplicateDeviceType =
+          checkDeviceTypes(getVectorOperandsDeviceTypeAttr()))
+    return emitOpError() << "duplicate device_type `"
+                         << acc::stringifyDeviceType(*duplicateDeviceType)
+                         << "` found in vectorOperandsDeviceType attribute";
   if (failed(verifyDeviceTypeCountMatch(*this, getVectorOperands(),
                                         getVectorOperandsDeviceTypeAttr(),
                                         "vector")))
@@ -4096,7 +4111,8 @@ LogicalResult acc::RoutineOp::verify() {
 
     if (parallelism > 1 || (baseParallelism == 1 && parallelism == 1))
       return emitError() << "only one of `gang`, `worker`, `vector`, `seq` can "
-                            "be present at the same time";
+                            "be present at the same time for device_type `"
+                         << acc::stringifyDeviceType(dtype) << "`";
   }
 
   return success();
