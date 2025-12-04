@@ -257,6 +257,15 @@ TEST(ErrorTest, ErrorAsOutParameterUnchecked) {
       << "ErrorAsOutParameter did not clear the checked flag on destruction.";
 }
 
+// Test that we can construct an ErrorAsOutParameter from an Error&.
+TEST(ErrorTest, ErrorAsOutParameterRefConstructor) {
+  Error E = Error::success();
+  {
+    ErrorAsOutParameter _(E); // construct with Error&.
+  }
+  (void)!!E;
+}
+
 // Check 'Error::isA<T>' method handling.
 TEST(ErrorTest, IsAHandling) {
   // Check 'isA' handling.

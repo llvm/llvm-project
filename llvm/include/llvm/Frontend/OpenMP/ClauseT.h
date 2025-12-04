@@ -1307,7 +1307,7 @@ struct WriteT {
 };
 
 // V6: [6.4.7] Looprange clause
-template <typename T, typename I, typename E> struct LoopRangeT {
+template <typename T, typename I, typename E> struct LooprangeT {
   using Begin = E;
   using End = E;
 
@@ -1346,7 +1346,7 @@ using TupleClausesT =
                  DoacrossT<T, I, E>, DynGroupprivateT<T, I, E>, FromT<T, I, E>,
                  GrainsizeT<T, I, E>, IfT<T, I, E>, InitT<T, I, E>,
                  InReductionT<T, I, E>, LastprivateT<T, I, E>, LinearT<T, I, E>,
-                 LoopRangeT<T, I, E>, MapT<T, I, E>, NumTasksT<T, I, E>,
+                 LooprangeT<T, I, E>, MapT<T, I, E>, NumTasksT<T, I, E>,
                  OrderT<T, I, E>, ReductionT<T, I, E>, ScheduleT<T, I, E>,
                  TaskReductionT<T, I, E>, ToT<T, I, E>>;
 
