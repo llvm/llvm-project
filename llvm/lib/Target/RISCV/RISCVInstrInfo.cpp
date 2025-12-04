@@ -900,6 +900,10 @@ unsigned getLoadPredicatedOpcode(unsigned Opcode) {
     return RISCV::PseudoCCLHU;
   case RISCV::LW:
     return RISCV::PseudoCCLW;
+  case RISCV::LWU:
+    return RISCV::PseudoCCLWU;
+  case RISCV::LD:
+    return RISCV::PseudoCCLD;
   default:
     return 0;
   }
@@ -916,7 +920,8 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
   if (!STI.hasShortForwardBranchILoad() ||
       (LoadMI.getOpcode() != RISCV::LB && LoadMI.getOpcode() != RISCV::LBU &&
        LoadMI.getOpcode() != RISCV::LH && LoadMI.getOpcode() != RISCV::LHU &&
-       LoadMI.getOpcode() != RISCV::LW))
+       LoadMI.getOpcode() != RISCV::LW && LoadMI.getOpcode() != RISCV::LWU &&
+       LoadMI.getOpcode() != RISCV::LD))
     return nullptr;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();

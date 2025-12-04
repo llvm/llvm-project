@@ -138,6 +138,8 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoCCLW:
   case RISCV::PseudoCCLHU:
   case RISCV::PseudoCCLBU:
+  case RISCV::PseudoCCLWU:
+  case RISCV::PseudoCCLD:
   case RISCV::PseudoCCQC_LI:
   case RISCV::PseudoCCQC_E_LI:
   case RISCV::PseudoCCADDW:
@@ -253,6 +255,8 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
     case RISCV::PseudoCCLW:    NewOpc = RISCV::LW;    break;
     case RISCV::PseudoCCLHU:   NewOpc = RISCV::LHU;   break;
     case RISCV::PseudoCCLBU:   NewOpc = RISCV::LBU;   break;
+    case RISCV::PseudoCCLWU:   NewOpc = RISCV::LWU;   break;
+    case RISCV::PseudoCCLD:    NewOpc = RISCV::LD;    break;
     case RISCV::PseudoCCQC_LI:  NewOpc = RISCV::QC_LI;   break;
     case RISCV::PseudoCCQC_E_LI: NewOpc = RISCV::QC_E_LI;   break;
     case RISCV::PseudoCCADDI:  NewOpc = RISCV::ADDI;  break;
@@ -290,7 +294,8 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
     } else {
       BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
           .add(MI.getOperand(5))
-          .add(MI.getOperand(6));
+          .add(MI.getOperand(6))
+          .cloneMemRefs(MI);
     }
   }
 

@@ -138,6 +138,8 @@ def PseudoCCLH : SFBLoad;
 def PseudoCCLW : SFBLoad;
 def PseudoCCLHU : SFBLoad;
 def PseudoCCLBU : SFBLoad;
+def PseudoCCLWU : SFBLoad;
+def PseudoCCLD : SFBLoad;
 
 def PseudoCCADDI : SFBALU_ri;
 def PseudoCCANDI : SFBALU_ri;
