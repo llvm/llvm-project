@@ -484,6 +484,25 @@ define void @test_extract_vector_16(ptr %ret_ptr, ptr %a_ptr) {
   ret void
 }
 
+define void @test_extract_vector_16_elem1(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-RV32-LABEL: test_extract_vector_16_elem1:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    lhu a1, 2(a1)
+; CHECK-RV32-NEXT:    sh a1, 0(a0)
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_extract_vector_16_elem1:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    lw a1, 0(a1)
+; CHECK-RV64-NEXT:    srli a1, a1, 16
+; CHECK-RV64-NEXT:    sh a1, 0(a0)
+; CHECK-RV64-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %extracted = extractelement <2 x i16> %a, i32 1
+  store i16 %extracted, ptr %ret_ptr
+  ret void
+}
+
 define void @test_extract_vector_8(ptr %ret_ptr, ptr %a_ptr) {
 ; CHECK-LABEL: test_extract_vector_8:
 ; CHECK:       # %bb.0:
@@ -492,6 +511,19 @@ define void @test_extract_vector_8(ptr %ret_ptr, ptr %a_ptr) {
 ; CHECK-NEXT:    ret
   %a = load <4 x i8>, ptr %a_ptr
   %extracted = extractelement <4 x i8> %a, i32 0
+  store i8 %extracted, ptr %ret_ptr
+  ret void
+}
+
+define void @test_extract_vector_8_elem1(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_extract_vector_8_elem1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    srli a1, a1, 8
+; CHECK-NEXT:    sb a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %extracted = extractelement <4 x i8> %a, i32 1
   store i8 %extracted, ptr %ret_ptr
   ret void
 }
@@ -564,20 +596,44 @@ define void @test_build_vector_i16(ptr %ret_ptr, i16 %a, i16 %b) {
   ret void
 }
 
-; Intrinsic declarations
-declare <2 x i16> @llvm.sadd.sat.v2i16(<2 x i16>, <2 x i16>)
-declare <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16>, <2 x i16>)
-declare <2 x i16> @llvm.ssub.sat.v2i16(<2 x i16>, <2 x i16>)
-declare <2 x i16> @llvm.usub.sat.v2i16(<2 x i16>, <2 x i16>)
-declare <4 x i8> @llvm.sadd.sat.v4i8(<4 x i8>, <4 x i8>)
-declare <4 x i8> @llvm.uadd.sat.v4i8(<4 x i8>, <4 x i8>)
-declare <4 x i8> @llvm.ssub.sat.v4i8(<4 x i8>, <4 x i8>)
-declare <4 x i8> @llvm.usub.sat.v4i8(<4 x i8>, <4 x i8>)
-declare <2 x i16> @llvm.smin.v2i16(<2 x i16>, <2 x i16>)
-declare <2 x i16> @llvm.smax.v2i16(<2 x i16>, <2 x i16>)
-declare <2 x i16> @llvm.umin.v2i16(<2 x i16>, <2 x i16>)
-declare <2 x i16> @llvm.umax.v2i16(<2 x i16>, <2 x i16>)
-declare <4 x i8> @llvm.smin.v4i8(<4 x i8>, <4 x i8>)
-declare <4 x i8> @llvm.smax.v4i8(<4 x i8>, <4 x i8>)
-declare <4 x i8> @llvm.umin.v4i8(<4 x i8>, <4 x i8>)
-declare <4 x i8> @llvm.umax.v4i8(<4 x i8>, <4 x i8>)
+; Test logical shift left immediate for v2i16
+define void @test_pslli_h(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_pslli_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    pslli.h a1, a1, 2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %res = shl <2 x i16> %a, splat(i16 2)
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test logical shift left immediate for v4i8
+define void @test_pslli_b(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_pslli_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    pslli.b a1, a1, 2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %res = shl <4 x i8> %a, splat(i8 2)
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test arithmetic saturation shift left immediate for v2i16
+define void @test_psslai_h(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_psslai_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    psslai.h a1, a1, 2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %res = call <2 x i16> @llvm.sshl.sat.v2i16(<2 x i16> %a, <2 x i16> splat(i16 2))
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}

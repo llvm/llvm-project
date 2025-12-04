@@ -120,7 +120,8 @@ TEST_F(MemTransferLowerTest, MemCpyKnownLength) {
         MemCpyInst *MemCpyI = cast<MemCpyInst>(Inst);
         auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
         expandMemCpyAsLoop(MemCpyI, TTI, &SE);
-        auto *CopyLoopBB = getBasicBlockByName(F, "load-store-loop");
+        auto *CopyLoopBB =
+            getBasicBlockByName(F, "static-memcpy-expansion-main-body");
         Instruction *LoadInst =
             getInstructionByOpcode(*CopyLoopBB, Instruction::Load, 1);
         EXPECT_NE(nullptr, LoadInst->getMetadata(LLVMContext::MD_alias_scope));
@@ -203,7 +204,8 @@ TEST_F(MemTransferLowerTest, AtomicMemCpyKnownLength) {
         AnyMemCpyInst *MemCpyI = cast<AnyMemCpyInst>(Inst);
         auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
         expandAtomicMemCpyAsLoop(MemCpyI, TTI, &SE);
-        auto *CopyLoopBB = getBasicBlockByName(F, "load-store-loop");
+        auto *CopyLoopBB =
+            getBasicBlockByName(F, "static-memcpy-expansion-main-body");
         Instruction *LoadInst =
             getInstructionByOpcode(*CopyLoopBB, Instruction::Load, 1);
         EXPECT_TRUE(LoadInst->isAtomic());
@@ -248,7 +250,8 @@ TEST_F(MemTransferLowerTest, AtomicMemCpyUnKnownLength) {
         auto *MemCpyI = cast<AnyMemCpyInst>(Inst);
         auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
         expandAtomicMemCpyAsLoop(MemCpyI, TTI, &SE);
-        auto *CopyLoopBB = getBasicBlockByName(F, "loop-memcpy-expansion");
+        auto *CopyLoopBB =
+            getBasicBlockByName(F, "dynamic-memcpy-expansion-main-body");
         Instruction *LoadInst =
             getInstructionByOpcode(*CopyLoopBB, Instruction::Load, 1);
         EXPECT_TRUE(LoadInst->isAtomic());

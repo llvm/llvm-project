@@ -588,10 +588,17 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
   }
   // For integer types, we allow a mismatch in sizes as the index type in
   // MLIR might have a different size than the index type in the LLVM module.
-  if (auto intAttr = dyn_cast<IntegerAttr>(attr))
-    return llvm::ConstantInt::get(
-        llvmType,
-        intAttr.getValue().sextOrTrunc(llvmType->getIntegerBitWidth()));
+  if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+    // If the attribute is an unsigned integer or a 1-bit integer, zero-extend
+    // the value to the bit width of the LLVM type. Otherwise, sign-extend.
+    auto intTy = dyn_cast<IntegerType>(intAttr.getType());
+    APInt value;
+    if (intTy && (intTy.isUnsigned() || intTy.getWidth() == 1))
+      value = intAttr.getValue().zextOrTrunc(llvmType->getIntegerBitWidth());
+    else
+      value = intAttr.getValue().sextOrTrunc(llvmType->getIntegerBitWidth());
+    return llvm::ConstantInt::get(llvmType, value);
+  }
   if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
     const llvm::fltSemantics &sem = floatAttr.getValue().getSemantics();
     // Special case for 8-bit floats, which are represented by integers due to
@@ -892,10 +899,13 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
 llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
     llvm::IRBuilderBase &builder, llvm::Intrinsic::ID intrinsic,
     ArrayRef<llvm::Value *> args, ArrayRef<llvm::Type *> tys) {
-  llvm::Module *module = builder.GetInsertBlock()->getModule();
-  llvm::Function *fn =
-      llvm::Intrinsic::getOrInsertDeclaration(module, intrinsic, tys);
-  return builder.CreateCall(fn, args);
+  return builder.CreateIntrinsic(intrinsic, tys, args);
+}
+
+llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
+    llvm::IRBuilderBase &builder, llvm::Intrinsic::ID intrinsic,
+    llvm::Type *retTy, ArrayRef<llvm::Value *> args) {
+  return builder.CreateIntrinsic(retTy, intrinsic, args);
 }
 
 llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(

@@ -1412,7 +1412,12 @@ SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
       InVals.push_back(DAG.getPOISON(Arg.VT));
   }
 
-  return DAG.getEntryNode();
+  // FIXME: Hack because R600 doesn't handle callseq pseudos yet.
+  if (getTargetMachine().getTargetTriple().getArch() == Triple::r600)
+    return CLI.Chain;
+
+  SDValue Chain = DAG.getCALLSEQ_START(CLI.Chain, 0, 0, CLI.DL);
+  return DAG.getCALLSEQ_END(Chain, 0, 0, /*InGlue=*/SDValue(), CLI.DL);
 }
 
 SDValue AMDGPUTargetLowering::LowerCall(CallLoweringInfo &CLI,
@@ -3055,8 +3060,11 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
 
   if (VT.getScalarType() == MVT::f16) {
     // v_exp_f16 (fmul x, log2e)
-    if (allowApproxFunc(DAG, Flags)) // TODO: Does this really require fast?
-      return lowerFEXPUnsafe(X, SL, DAG, Flags);
+
+    if (allowApproxFunc(DAG, Flags)) { // TODO: Does this really require fast?
+      return IsExp10 ? lowerFEXP10Unsafe(X, SL, DAG, Flags)
+                     : lowerFEXPUnsafe(X, SL, DAG, Flags);
+    }
 
     if (VT.isVector())
       return SDValue();
@@ -3066,7 +3074,8 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
 
     // Nothing in half is a denormal when promoted to f32.
     SDValue Ext = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, X, Flags);
-    SDValue Lowered = lowerFEXPUnsafe(Ext, SL, DAG, Flags);
+    SDValue Lowered = IsExp10 ? lowerFEXP10Unsafe(Ext, SL, DAG, Flags)
+                              : lowerFEXPUnsafe(Ext, SL, DAG, Flags);
     return DAG.getNode(ISD::FP_ROUND, SL, VT, Lowered,
                        DAG.getTargetConstant(0, SL, MVT::i32), Flags);
   }

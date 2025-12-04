@@ -869,6 +869,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   unsigned HintType = Hint.first;
   Register Partner = Hint.second;
 
+  MCRegister TargetReg;
   if (HintType == RISCVRI::RegPairEven || HintType == RISCVRI::RegPairOdd) {
     // Check if we want the even or odd register of a consecutive pair
     bool WantOdd = (HintType == RISCVRI::RegPairOdd);
@@ -877,7 +878,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     if (Partner.isVirtual() && VRM && VRM->hasPhys(Partner)) {
       MCRegister PartnerPhys = VRM->getPhys(Partner);
       // Calculate the exact register we need for consecutive pairing
-      MCRegister TargetReg = PartnerPhys.id() + (WantOdd ? 1 : -1);
+      TargetReg = PartnerPhys.id() + (WantOdd ? 1 : -1);
 
       // Verify it's valid and available
       if (RISCV::GPRRegClass.contains(TargetReg) &&
@@ -888,7 +889,8 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     // Second priority: Try to find consecutive register pairs in the allocation
     // order
     for (MCPhysReg PhysReg : Order) {
-      if (!PhysReg)
+      // Don't add the hint if we already added above.
+      if (TargetReg == PhysReg)
         continue;
 
       unsigned RegNum = getEncodingValue(PhysReg);

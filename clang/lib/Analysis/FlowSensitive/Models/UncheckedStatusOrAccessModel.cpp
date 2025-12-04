@@ -650,8 +650,9 @@ static void transferLoggingCheckEqImpl(const CallExpr *Expr,
   if (EqVal == nullptr)
     return;
 
-  // TODO(sgatev): Model pointer nullability more accurately instead of
-  // assigning BoolValue as the value of an expression of pointer type.
+  // Consider modelling this more accurately instead of assigning BoolValue
+  // as the value of an expression of pointer type.
+  // For now, this is being handled in transferPointerToBoolean.
   State.Env.setValue(*Expr, State.Env.makeNot(*EqVal));
 }
 
@@ -687,6 +688,14 @@ static void transferAsStatusCallWithStatusOr(const CallExpr *Expr,
 
   auto &ExprVal = State.Env.create<PointerValue>(StatusLoc);
   State.Env.setValue(*Expr, ExprVal);
+}
+
+static void transferPointerToBoolean(const ImplicitCastExpr *Expr,
+                                     const MatchFinder::MatchResult &,
+                                     LatticeTransferState &State) {
+  if (auto *SubExprVal =
+          dyn_cast_or_null<BoolValue>(State.Env.getValue(*Expr->getSubExpr())))
+    State.Env.setValue(*Expr, *SubExprVal);
 }
 
 CFGMatchSwitch<LatticeTransferState>
@@ -758,12 +767,7 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                                        transferStatusConstructor)
       .CaseOfCFGStmt<ImplicitCastExpr>(
           implicitCastExpr(hasCastKind(CK_PointerToBoolean)),
-          [](const ImplicitCastExpr *Expr, const MatchFinder::MatchResult &,
-             LatticeTransferState &State) {
-            if (auto *SubExprVal = dyn_cast_or_null<BoolValue>(
-                    State.Env.getValue(*Expr->getSubExpr())))
-              State.Env.setValue(*Expr, *SubExprVal);
-          })
+          transferPointerToBoolean)
       .Build();
 }
 
