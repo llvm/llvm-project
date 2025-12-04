@@ -397,10 +397,12 @@ bool CGObjCRuntime::canMessageReceiverBeNull(
 
   // If we're emitting a method, and self is const (meaning just ARC, for now),
   // and the receiver is a load of self, then self is a valid object.
-  if (const auto *curMethod = dyn_cast_or_null<ObjCMethodDecl>(CGF.CurCodeDecl)) {
+  if (const auto *curMethod =
+          dyn_cast_or_null<ObjCMethodDecl>(CGF.CurCodeDecl)) {
     const auto *self = curMethod->getSelfDecl();
     if (self->getType().isConstQualified()) {
-      if (const auto *LI = dyn_cast<llvm::LoadInst>(receiver->stripPointerCasts())) {
+      if (const auto *LI =
+              dyn_cast<llvm::LoadInst>(receiver->stripPointerCasts())) {
         llvm::Value *selfAddr = CGF.GetAddrOfLocalVar(self).emitRawPointer(CGF);
         if (selfAddr == LI->getPointerOperand()) {
           return false;
