@@ -124,9 +124,9 @@ jobs:
         if: ${{ always() && !startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') }}
         continue-on-error: true
         with:
-          name: workflow-args
+          name: workflow-args-x86-linux
           path: |
-            comments
+            comments-Linux-x86_64
 
   premerge-checks-windows:
     name: Build and Test Windows
@@ -185,6 +185,14 @@ jobs:
           path: artifacts/
           retention-days: 5
           include-hidden-files: 'true'
+      - name: Upload Comment
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
+        continue-on-error: true
+        with:
+          name: workflow-args-windows
+          path: |
+            comments-Windows-x86_64
 
   premerge-check-macos:
     name: MacOS Premerge Checks
