@@ -855,10 +855,10 @@ TEST(ConstantsTest, Float128Test) {
   EXPECT_TRUE(val4 != nullptr);
   uint64_t p[1] = {0x0000000040000000}; //+2
   LLVMValueRef val5 = LLVMConstFPFromBits(TyFloat, p);
-  EXPECT_TRUE(val5 != nullptr);
+  EXPECT_EQ(APFloat(2.0f), unwrap<ConstantFP>(val5)->getValue());
   uint64_t q[1] = {0x4000000000000000}; //+2
   LLVMValueRef val6 = LLVMConstFPFromBits(TyDouble, q);
-  EXPECT_TRUE(val6 != nullptr);
+  EXPECT_EQ(APFloat(2.0), unwrap<ConstantFP>(val6)->getValue());
   uint64_t r[1] = {0x0000000000003c00}; //+1
   LLVMValueRef val7 = LLVMConstFPFromBits(TyHalf, r);
   EXPECT_TRUE(val7 != nullptr);
