@@ -761,7 +761,18 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
 
   const CGFunctionInfo &FI = CGM.getTypes().arrangeObjCMethodDeclaration(OMD);
   if (OMD->isDirectMethod()) {
-    Fn->setVisibility(llvm::Function::HiddenVisibility);
+    Fn->setVisibility(llvm::GlobalValue::HiddenVisibility);
+    if (CGM.shouldExposeSymbol(OMD)) {
+      // Find the decl that may have visibility set (property or method)
+      const NamedDecl *Decl = OMD;
+      if (const auto *PD = OMD->findPropertyDecl()) {
+        Decl = PD;
+      }
+      // and respect source level visibility setting
+      if (auto V = Decl->getExplicitVisibility(NamedDecl::VisibilityForValue)) {
+        Fn->setVisibility(CGM.GetLLVMVisibility(*V));
+      }
+    }
     CGM.SetLLVMFunctionAttributes(OMD, FI, Fn, /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(OMD, Fn);
   } else {
@@ -781,10 +792,6 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
                 OMD->getLocation(), StartLoc);
 
   if (OMD->isDirectMethod()) {
-    // This function is a direct call, it has to implement a nil check
-    // on entry.
-    //
-    // TODO: possibly have several entry points to elide the check
     CGM.getObjCRuntime().GenerateDirectMethodPrologue(*this, Fn, OMD, CD);
   }
 
