@@ -6704,15 +6704,13 @@ static unsigned getMinMaxOpcodeForClamp(bool IsMin, SDValue Operand1,
 
 // FIXME: use FMINIMUMNUM if possible, such as for RISC-V.
 static unsigned getMinMaxOpcodeForCompareFold(
-    SDValue Operand1, SDValue Operand2, SDNodeFlags LHSSetCCFlags,
-    SDNodeFlags RHSSetCCFlags, ISD::CondCode CC, unsigned OrAndOpcode,
-    SelectionDAG &DAG, bool isFMAXNUMFMINNUM_IEEE, bool isFMAXNUMFMINNUM) {
+    SDValue Operand1, SDValue Operand2, bool SetCCNoNaNs, ISD::CondCode CC,
+    unsigned OrAndOpcode, SelectionDAG &DAG, bool isFMAXNUMFMINNUM_IEEE,
+    bool isFMAXNUMFMINNUM) {
   // The optimization cannot be applied for all the predicates because
   // of the way FMINNUM/FMAXNUM and FMINNUM_IEEE/FMAXNUM_IEEE handle
   // NaNs. For FMINNUM_IEEE/FMAXNUM_IEEE, the optimization cannot be
   // applied at all if one of the operands is a signaling NaN.
-
-  bool SetCCNoNaNs = LHSSetCCFlags.hasNoNaNs() && RHSSetCCFlags.hasNoNaNs();
 
   // It is safe to use FMINNUM_IEEE/FMAXNUM_IEEE if all the operands
   // are non NaN values.
@@ -6869,8 +6867,9 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
           NewOpcode = IsSigned ? ISD::SMAX : ISD::UMAX;
       } else if (OpVT.isFloatingPoint())
         NewOpcode = getMinMaxOpcodeForCompareFold(
-            Operand1, Operand2, CC, LogicOp->getOpcode(), DAG,
-            isFMAXNUMFMINNUM_IEEE, isFMAXNUMFMINNUM);
+            Operand1, Operand2,
+            LHSSetCCFlags.hasNoNaNs() && RHSSetCCFlags.hasNoNaNs(), CC,
+            LogicOp->getOpcode(), DAG, isFMAXNUMFMINNUM_IEEE, isFMAXNUMFMINNUM);
 
       if (NewOpcode != ISD::DELETED_NODE) {
         // Propagate fast-math flags from setcc.
