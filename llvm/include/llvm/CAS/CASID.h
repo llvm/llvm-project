@@ -70,7 +70,7 @@ public:
   }
 
   /// Return a printable string for CASID.
-  std::string toString() const;
+  LLVM_ABI std::string toString() const;
 
   ArrayRef<uint8_t> getHash() const {
     return arrayRefFromStringRef<uint8_t>(Hash);

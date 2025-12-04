@@ -62,13 +62,14 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    First_ = Block,
 // CHECK-NEXT:    Declaration,
 // CHECK-NEXT:    Delimited,
-// CHECK-NEXT:    Loop,
+// CHECK-NEXT:    LoopNest,
+// CHECK-NEXT:    LoopSeq,
 // CHECK-NEXT:    None,
 // CHECK-NEXT:    Separating,
 // CHECK-NEXT:    Last_ = Separating,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 6;
+// CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 7;
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Category {
 // CHECK-NEXT:    Declarative,
@@ -159,8 +160,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL:      #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-NEXT: #undef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-EMPTY:
-// IMPL-NEXT: namespace llvm {
-// IMPL-NEXT: namespace tdl {
+// IMPL-NEXT: namespace llvm::tdl {
 // IMPL-EMPTY:
 // IMPL-NEXT:   // Sets for dira
 // IMPL-EMPTY:
@@ -177,8 +177,8 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-EMPTY:
 // IMPL-NEXT:   static  requiredClauses_TDLD_dira {
 // IMPL-NEXT:   };
-// IMPL-NEXT: } // namespace tdl
-// IMPL-NEXT: } // namespace llvm
+// IMPL-EMPTY:
+// IMPL-NEXT: } // namespace llvm::tdl
 // IMPL-EMPTY:
 // IMPL-NEXT: #endif // GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-EMPTY:

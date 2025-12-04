@@ -4,7 +4,7 @@ modernize-use-starts-ends-with
 ==============================
 
 Checks for common roundabout ways to express ``starts_with`` and ``ends_with``
-and suggests replacing with the simpler method when it is available. Notably, 
+and suggests replacing with the simpler method when it is available. Notably,
 this will work with ``std::string`` and ``std::string_view``.
 
 Covered scenarios:

@@ -807,6 +807,8 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_exp(T x)               returns the base-e exponential, e^x, of the specified value            floating point types
  T __builtin_elementwise_exp2(T x)              returns the base-2 exponential, 2^x, of the specified value            floating point types
  T __builtin_elementwise_exp10(T x)             returns the base-10 exponential, 10^x, of the specified value          floating point types
+ T __builtin_elementwise_ldexp(T x, IntT y)     returns the product of x and 2 raised to the power y.                  T: floating point types,
+                                                y must be an integer type matching the shape of x.                     IntT: integer types
 
  T __builtin_elementwise_sqrt(T x)              return the square root of a floating-point number                      floating point types
  T __builtin_elementwise_roundeven(T x)         round x to the nearest integer value in floating point format,         floating point types
@@ -4851,6 +4853,14 @@ are identical to the standard GNU / GCC atomic builtins but taking an extra
 memory scope argument. These are designed to be a generic alternative to the
 ``__opencl_atomic_*`` builtin functions for targets that support atomic memory
 scopes.
+
+Clang provides two additional __scoped_atomic builtins:
+
+* ``__scoped_atomic_uinc_wrap``
+* ``__scoped_atomic_udec_wrap``
+
+See LLVM IR `atomicrmw <https://llvm.org/docs/LangRef.html#atomicrmw-instruction>`_
+instruction for the semantics of uinc_wrap and udec_wrap.
 
 Atomic memory scopes are designed to assist optimizations for systems with
 several levels of memory hierarchy like GPUs. The following memory scopes are

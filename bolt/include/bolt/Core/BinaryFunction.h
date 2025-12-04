@@ -281,6 +281,14 @@ private:
   /// goto labels.
   std::set<uint64_t> ExternallyReferencedOffsets;
 
+  /// Relocations from data sections targeting internals of this function, i.e.
+  /// some code not at an entry point. These include, but are not limited to,
+  /// jump table relocations and computed goto tables.
+  ///
+  /// Since relocations can be removed/deallocated, we store relocation offsets
+  /// instead of pointers.
+  DenseSet<uint64_t> InternalRefDataRelocations;
+
   /// Offsets of indirect branches with unknown destinations.
   std::set<uint64_t> UnknownIndirectBranchOffsets;
 
@@ -638,6 +646,20 @@ private:
     if (!Islands)
       Islands = std::make_unique<IslandInfo>();
     Islands->CodeOffsets.emplace(Offset);
+  }
+
+  /// Register a relocation from data section referencing code at a non-zero
+  /// offset in this function.
+  void registerInternalRefDataRelocation(uint64_t FuncOffset,
+                                         uint64_t RelOffset) {
+    assert(FuncOffset != 0 && "Relocation should reference function internals");
+    registerReferencedOffset(FuncOffset);
+    InternalRefDataRelocations.insert(RelOffset);
+    const MCSymbol *ReferencedSymbol =
+        getOrCreateLocalLabel(getAddress() + FuncOffset);
+
+    // Track the symbol mapping since it's used in relocation handling.
+    BC.setSymbolToFunctionMap(ReferencedSymbol, this);
   }
 
   /// Register an internal offset in a function referenced from outside.
@@ -1298,6 +1320,12 @@ public:
   /// Assert if the \p Address is not inside this function.
   void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t RelType,
                      uint64_t Addend, uint64_t Value);
+
+  /// Return locations (offsets) of data section relocations targeting internals
+  /// of this functions.
+  const DenseSet<uint64_t> &getInternalRefDataRelocations() const {
+    return InternalRefDataRelocations;
+  }
 
   /// Return the name of the section this function originated from.
   std::optional<StringRef> getOriginSectionName() const {

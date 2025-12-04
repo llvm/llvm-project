@@ -96,6 +96,9 @@ public:
   bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Params,
                              SmallVectorImpl<SourceLocation> &Locs,
                              SmallVectorImpl<SmallString<64>> &NewParams);
+  bool checkSVETypeSupport(QualType Ty, SourceLocation Loc,
+                           const FunctionDecl *FD,
+                           const llvm::StringMap<bool> &FeatureMap);
 };
 
 SemaARM::ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD);

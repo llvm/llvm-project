@@ -43,7 +43,9 @@ STATISTIC(
 STATISTIC(
     NumSimplifiedSRem,
     "Number of IV signed remainder operations converted to unsigned remainder");
-STATISTIC(NumElimCmp     , "Number of IV comparisons eliminated");
+STATISTIC(NumElimCmp, "Number of IV comparisons eliminated");
+STATISTIC(NumInvariantCmp, "Number of IV comparisons made loop invariant");
+STATISTIC(NumSameSign, "Number of IV comparisons with new samesign flags");
 
 namespace {
   /// This is a utility for simplifying induction variables
@@ -390,7 +392,6 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
   // If the condition is always true or always false in the given context,
   // replace it with a constant value.
   SmallVector<Instruction *, 4> Users;
-  bool IsDead = false;
   for (auto *U : ICmp->users())
     Users.push_back(cast<Instruction>(U));
   const Instruction *CtxI = findCommonDominator(Users, *DT);
@@ -398,33 +399,36 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
     SE->forgetValue(ICmp);
     ICmp->replaceAllUsesWith(ConstantInt::getBool(ICmp->getContext(), *Ev));
     DeadInsts.emplace_back(ICmp);
-    IsDead = true;
     LLVM_DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');
-  } else if (makeIVComparisonInvariant(ICmp, IVOperand)) {
-    IsDead = true;
-  } else {
-    // If we were unable to make anything above, all we can is to canonicalize
-    // the comparison hoping that it will open the doors for other
-    // optimizations.
-    if (ICmpInst::isSigned(OriginalPred) && SE->isKnownNonNegative(S) &&
-        SE->isKnownNonNegative(X)) {
-      // If we find out that we compare two non-negative values,
-      // we turn the instruction's predicate to its unsigned version. Note that
-      // we cannot rely on Pred here unless we check if we have swapped it.
-      assert(ICmp->getPredicate() == OriginalPred && "Predicate changed?");
-      LLVM_DEBUG(dbgs() << "INDVARS: Turn to unsigned comparison: " << *ICmp
-                        << '\n');
-      ICmp->setPredicate(ICmpInst::getUnsignedPredicate(OriginalPred));
-      ICmp->setSameSign();
-      Changed = true;
-    }
-    if (forceEqualityForICmp(ICmp, IVOperand)) {
-      Changed = true;
-    }
+    ++NumElimCmp;
+    Changed = true;
+    return;
   }
 
-  if (IsDead) {
-    NumElimCmp++;
+  if (makeIVComparisonInvariant(ICmp, IVOperand)) {
+    ++NumInvariantCmp;
+    Changed = true;
+    return;
+  }
+
+  if ((ICmpInst::isSigned(OriginalPred) ||
+       (ICmpInst::isUnsigned(OriginalPred) && !ICmp->hasSameSign())) &&
+      SE->haveSameSign(S, X)) {
+    // Set the samesign flag on the compare if legal, and canonicalize to
+    // the unsigned variant (for signed compares) hoping that it will open
+    // the doors for other optimizations.  Note that we cannot rely on Pred
+    // here unless we check if we have swapped it.
+    assert(ICmp->getPredicate() == OriginalPred && "Predicate changed?");
+    LLVM_DEBUG(dbgs() << "INDVARS: Marking comparison samesign: " << *ICmp
+                      << '\n');
+    ICmp->setPredicate(ICmpInst::getUnsignedPredicate(OriginalPred));
+    ICmp->setSameSign();
+    NumSameSign++;
+    Changed = true;
+    return;
+  }
+
+  if (forceEqualityForICmp(ICmp, IVOperand)) {
     Changed = true;
   }
 }

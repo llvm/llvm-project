@@ -1471,7 +1471,7 @@ public:
 
   /// If this value is normal and has an exact, normal, multiplicative inverse,
   /// store it in inv and return true.
-  bool getExactInverse(APFloat *Inv) const;
+  LLVM_ABI bool getExactInverse(APFloat *Inv) const;
 
   // If this is an exact power of two, return the exponent while ignoring the
   // sign bit. If it's not an exact power of 2, return INT_MIN

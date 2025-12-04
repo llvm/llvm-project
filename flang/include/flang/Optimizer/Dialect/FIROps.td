@@ -80,8 +80,7 @@ def AnyRefOfConstantSizeAggregateType : TypeConstraint<
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
 
-def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
-    MemoryEffects<[MemAlloc<AutomaticAllocationScopeResource>]>]> {
+def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments]> {
   let summary = "allocate storage for a temporary on the stack given a type";
   let description = [{
     This primitive operation is used to allocate an object on the stack.  A
@@ -162,7 +161,9 @@ def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
     Variadic<AnyIntegerType>:$shape
   );
 
-  let results = (outs fir_ReferenceType);
+  let results =
+      (outs Res<fir_ReferenceType,
+                "", [MemAlloc<AutomaticAllocationScopeResource>]>:$res);
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
@@ -212,8 +213,7 @@ def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
   }];
 }
 
-def fir_AllocMemOp : fir_Op<"allocmem",
-    [MemoryEffects<[MemAlloc<DefaultResource>]>, AttrSizedOperandSegments]> {
+def fir_AllocMemOp : fir_Op<"allocmem", [AttrSizedOperandSegments]> {
   let summary = "allocate storage on the heap for an object of a given type";
 
   let description = [{
@@ -235,7 +235,7 @@ def fir_AllocMemOp : fir_Op<"allocmem",
     Variadic<AnyIntegerType>:$typeparams,
     Variadic<AnyIntegerType>:$shape
   );
-  let results = (outs fir_HeapType);
+  let results = (outs Res<fir_HeapType, "", [MemAlloc<DefaultResource>]>:$res);
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
@@ -306,7 +306,8 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface,
   }];
 
   let arguments = (ins AnyReferenceLike:$memref,
-      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal);
+      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal,
+      OptionalAttr<LLVM_AccessGroupArrayAttr>:$accessGroups);
 
   let builders = [OpBuilder<(ins "mlir::Value":$refVal)>,
                   OpBuilder<(ins "mlir::Type":$resTy, "mlir::Value":$refVal)>];
@@ -339,7 +340,8 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
   }];
 
   let arguments = (ins AnyType:$value, AnyReferenceLike:$memref,
-      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal);
+      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal,
+      OptionalAttr<LLVM_AccessGroupArrayAttr>:$accessGroups);
 
   let builders = [OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$memref)>];
 
@@ -806,7 +808,8 @@ def fir_HasValueOp : fir_Op<"has_value", [Terminator, HasParent<"GlobalOp">]> {
 // Operations on !fir.box<T> type objects
 //===----------------------------------------------------------------------===//
 
-def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
+def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
+                                   fir_FortranObjectViewOpInterface]> {
   let summary = "boxes a given reference and (optional) dimension information";
 
   let description = [{
@@ -870,10 +873,14 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
       return 1 + (getShape() ? 1 : 0) + (getSlice() ? 1 : 0)
           + numLenParams();
     }
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult);
   }];
 }
 
-def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments]> {
+def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments,
+                                   fir_FortranObjectViewOpInterface]> {
   let summary =
       "create a box given another box and (optional) dimension information";
 
@@ -923,6 +930,12 @@ def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments]> {
   }];
 
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getBox(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+  }];
 }
 
 def fir_ReboxAssumedRankOp : fir_Op<"rebox_assumed_rank",
@@ -1071,7 +1084,9 @@ def fir_UnboxProcOp : fir_SimpleOp<"unboxproc", [NoMemoryEffect]> {
   let results = (outs FunctionType, fir_ReferenceType:$refTuple);
 }
 
-def fir_BoxAddrOp : fir_SimpleOneResultOp<"box_addr", [NoMemoryEffect]> {
+def fir_BoxAddrOp
+    : fir_SimpleOneResultOp<"box_addr", [NoMemoryEffect,
+                                         fir_FortranObjectViewOpInterface]> {
   let summary = "return a memory reference to the boxed value";
 
   let description = [{
@@ -1094,6 +1109,12 @@ def fir_BoxAddrOp : fir_SimpleOneResultOp<"box_addr", [NoMemoryEffect]> {
   let hasFolder = 1;
 
   let builders = [OpBuilder<(ins "mlir::Value":$val)>];
+
+  let extraClassDeclaration = [{
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getVal(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+  }];
 }
 
 def fir_BoxCharLenOp : fir_SimpleOp<"boxchar_len", [NoMemoryEffect]> {
@@ -1766,8 +1787,9 @@ def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store",
 // Record and array type operations
 //===----------------------------------------------------------------------===//
 
-def fir_ArrayCoorOp : fir_Op<"array_coor",
-    [NoMemoryEffect, AttrSizedOperandSegments]> {
+def fir_ArrayCoorOp
+    : fir_Op<"array_coor", [NoMemoryEffect, AttrSizedOperandSegments,
+                            fir_FortranObjectViewOpInterface]> {
 
   let summary = "Find the coordinate of an element of an array";
 
@@ -1810,9 +1832,16 @@ def fir_ArrayCoorOp : fir_Op<"array_coor",
 
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
+  let extraClassDeclaration = [{
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+  }];
 }
 
-def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
+def fir_CoordinateOp
+    : fir_Op<"coordinate_of", [NoMemoryEffect,
+                               fir_FortranObjectViewOpInterface]> {
 
   let summary = "Finds the coordinate (location) of a value in memory";
 
@@ -1864,6 +1893,10 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
   let extraClassDeclaration = [{
     constexpr static int32_t kDynamicIndex = std::numeric_limits<int32_t>::min();
     CoordinateIndicesAdaptor getIndices();
+
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getRef(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult);
   }];
 }
 
@@ -2544,16 +2577,14 @@ def fir_CallOp : fir_Op<"call",
     ```
   }];
 
-  let arguments = (ins
-    OptionalAttr<SymbolRefAttr>:$callee,
-    Variadic<AnyType>:$args,
-    OptionalAttr<DictArrayAttr>:$arg_attrs,
-    OptionalAttr<DictArrayAttr>:$res_attrs,
-    OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs,
-    OptionalAttr<fir_FortranInlineAttr>:$inline_attr,
-    DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
-  );
+  let arguments = (ins OptionalAttr<SymbolRefAttr>:$callee,
+      Variadic<AnyType>:$args, OptionalAttr<DictArrayAttr>:$arg_attrs,
+      OptionalAttr<DictArrayAttr>:$res_attrs,
+      OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs,
+      OptionalAttr<fir_FortranInlineAttr>:$inline_attr,
+      OptionalAttr<LLVM_AccessGroupArrayAttr>:$accessGroups,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath);
   let results = (outs Variadic<AnyType>);
 
   let hasCustomAssemblyFormat = 1;
@@ -2830,7 +2861,8 @@ def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
 }
 
 def fir_ConvertOp
-    : fir_SimpleOneResultOp<"convert", [NoMemoryEffect, ViewLikeOpInterface]> {
+    : fir_SimpleOneResultOp<"convert", [NoMemoryEffect, ViewLikeOpInterface,
+                                        fir_FortranObjectViewOpInterface]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
   let description = [{
@@ -2868,7 +2900,13 @@ def fir_ConvertOp
     static bool isPointerCompatible(mlir::Type ty);
     static bool canBeConverted(mlir::Type inType, mlir::Type outType);
     static bool areVectorsCompatible(mlir::Type inTy, mlir::Type outTy);
+
+    // ViewLikeOpInterface methods:
     mlir::Value getViewSource() { return getValue(); }
+
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getValue(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
   }];
   let hasCanonicalizer = 1;
 }
@@ -3069,9 +3107,12 @@ def fir_TypeInfoOp : fir_Op<"type_info",
     between method identifiers and corresponding `FuncOp` symbols.
     The ordering of associations in the map is determined by the front end.
 
-    The "no_init" flag indicates that this type has no components requiring default
-    initialization (including setting allocatable component to a clean deallocated
-    state).
+    The "abstract" flag indicates that this type is an ABSTRACT derived type and
+    that it cannot be instantiated.
+
+    The "no_init" flag indicates that this type has no components requiring
+    default initialization (including setting allocatable component to a clean
+    deallocated state).
 
     The "no_destroy" flag indicates that there are no allocatable components
     that require deallocation.
@@ -3080,7 +3121,8 @@ def fir_TypeInfoOp : fir_Op<"type_info",
     for its parents ,or for components.
 
     ```
-      fir.type_info @_QMquuzTfoo noinit nofinal : !fir.type<_QMquuzTfoo{i:i32}> dispatch_table {
+      fir.type_info @_QMquuzTfoo abstract noinit nofinal
+        : !fir.type<_QMquuzTfoo{i:i32}> dispatch_table {
         fir.dt_entry method1, @_QFNMquuzTfooPmethod1AfooR
         fir.dt_entry method2, @_QFNMquuzTfooPmethod2AfooII
       }
@@ -3091,6 +3133,7 @@ def fir_TypeInfoOp : fir_Op<"type_info",
     SymbolNameAttr:$sym_name,
     TypeAttr:$type,
     OptionalAttr<TypeAttr>:$parent_type,
+    UnitAttr:$abstract,
     UnitAttr:$no_init,
     UnitAttr:$no_destroy,
     UnitAttr:$no_final
@@ -3109,8 +3152,9 @@ def fir_TypeInfoOp : fir_Op<"type_info",
   ];
 
   let assemblyFormat = [{
-    $sym_name (`noinit` $no_init^)? (`nodestroy` $no_destroy^)?
-    (`nofinal` $no_final^)? (`extends` $parent_type^)? attr-dict `:` $type
+    $sym_name (`abstract` $abstract^)? (`noinit` $no_init^)?
+    (`nodestroy` $no_destroy^)? (`nofinal` $no_final^)?
+    (`extends` $parent_type^)? attr-dict `:` $type
     (`dispatch_table` $dispatch_table^)?
     (`component_info` $component_info^)?
   }];
@@ -3136,23 +3180,34 @@ def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"TypeInfoOp">]> {
   let summary = "map entry in a dispatch table";
 
   let description = [{
-    An entry in a dispatch table.  Allows a function symbol to be bound
-    to a specifier method identifier.  A dispatch operation uses the dynamic
+    An entry in a dispatch table. Allows a function symbol to be bound
+    to a specifier method identifier. A dispatch operation uses the dynamic
     type of a distinguished argument to determine an exact dispatch table
     and uses the method identifier to select the type-bound procedure to
     be called.
 
+    The optional "deferred" flag indicates that the binding is a DEFERRED
+    type-bound procedure (declared but without an implementation at this
+    type level).
+
     ```
+      // Non-deferred binding
       fir.dt_entry method_name, @uniquedProcedure
+
+      // Deferred binding
+      fir.dt_entry method_name, @uniquedProcedure deferred
     ```
   }];
 
-  let arguments = (ins StrAttr:$method, SymbolRefAttr:$proc);
+  let arguments = (ins StrAttr:$method, SymbolRefAttr:$proc, UnitAttr:$deferred);
 
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef getProcAttrNameStr() { return "proc"; }
+    static constexpr llvm::StringRef getDeferredAttrNameStr() {
+      return "deferred";
+    }
   }];
 }
 
@@ -3221,7 +3276,8 @@ def fir_DeclareOp
     : fir_Op<"declare", [AttrSizedOperandSegments,
                          MemoryEffects<[MemAlloc<DebuggingResource>]>,
                          DeclareOpInterfaceMethods<
-                             fir_FortranVariableStorageOpInterface>]> {
+                             fir_FortranVariableStorageOpInterface>,
+                         fir_FortranObjectViewOpInterface]> {
   let summary = "declare a variable";
 
   let description = [{
@@ -3274,15 +3330,22 @@ def fir_DeclareOp
       DefaultValuedAttr<UI64Attr, "0">:$storage_offset,
       Builtin_StringAttr:$uniq_name,
       OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
-      OptionalAttr<cuf_DataAttributeAttr>:$data_attr);
+      OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
+      OptionalAttr<UI32Attr>:$dummy_arg_no);
 
   let results = (outs AnyRefOrBox);
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
-    (`dummy_scope` $dummy_scope^)?
+    (`dummy_scope` $dummy_scope^ (`arg` $dummy_arg_no^)?)?
     (`storage` `(` $storage^ `[` $storage_offset `]` `)`)?
     attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
   }];
 
   let hasVerifier = 1;
@@ -3707,7 +3770,7 @@ def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
     duplication at the moment. TODO Combine both ops into one. See:
     https://discourse.llvm.org/t/dialect-for-data-locality-sharing-specifiers-clauses-in-openmp-openacc-and-do-concurrent/86108.
 
-    Declares a `do concurrent` reduction. This requires two mandatory and three
+    Declares a `do concurrent` reduction. This requires two mandatory and four 
     optional regions.
 
       1. The optional alloc region specifies how to allocate the thread-local
@@ -3736,6 +3799,9 @@ def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
          allocated by the initializer region. The region has an argument that
          contains the value of the thread-local reduction accumulator. This will
          be executed after the reduction has completed.
+      6. The DataPtrPtr region specifies how to access the base address of a
+         boxed-value. This is used, in particular, for GPU reductions in order
+         know where partial reduction results are stored in remote lanes.
 
     Note that the MLIR type system does not allow for type-polymorphic
     reductions. Separate reduction declarations should be created for different
@@ -3743,23 +3809,30 @@ def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
 
     For initializer and reduction regions, the operand to `fir.yield` must
     match the parent operation's results.
+
+    * `$byref_element_type`: For by-ref reductions, we want to keep track of the
+      boxed/allocated type.  For example, for a `real, allocatable` variable, 
+      `real` should be stored in this attribute.
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
-                       TypeAttr:$type);
+                       TypeAttr:$type,
+                       OptionalAttr<TypeAttr>:$byref_element_type);
 
   let regions = (region MaxSizedRegion<1>:$allocRegion,
                         AnyRegion:$initializerRegion,
                         AnyRegion:$reductionRegion,
                         AnyRegion:$atomicReductionRegion,
-                        AnyRegion:$cleanupRegion);
+                        AnyRegion:$cleanupRegion,
+                        AnyRegion:$dataPtrPtrRegion);
 
   let assemblyFormat = "$sym_name `:` $type attr-dict-with-keyword "
                        "( `alloc` $allocRegion^ )? "
                        "`init` $initializerRegion "
                        "`combiner` $reductionRegion "
                        "( `atomic` $atomicReductionRegion^ )? "
-                       "( `cleanup` $cleanupRegion^ )? ";
+                       "( `cleanup` $cleanupRegion^ )? "
+                       "( `data_ptr_ptr` $dataPtrPtrRegion^ )? ";
 
   let extraClassDeclaration = [{
     mlir::BlockArgument getAllocMoldArg() {

@@ -251,8 +251,8 @@ def no_shlib_sigcheck: FF<"no-shlib-sigcheck">,
   HelpText<"Do not check signatures of functions defined in shared libraries.">;
 
 defm stack_first: B<"stack-first",
-    "Place stack at start of linear memory",
-    "Place the stack after static data refion (default)">;
+    "Place stack at start of linear memory (default)",
+    "Place the stack after static data region">;
 
 def table_base: JJ<"table-base=">,
   HelpText<"Table offset at which to place address taken functions (Defaults to 1)">;
