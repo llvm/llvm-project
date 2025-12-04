@@ -196,11 +196,10 @@ Language::GetExceptionLanguageForLanguage(llvm::StringRef lang_name) {
     error_context = "Unsupported language type for exception breakpoint";
   }
   if (!error_context.empty())
-    return llvm::createStringError(llvm::inconvertibleErrorCode(), 
-        error_context);
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   error_context);
   return exception_language;
 }
-
 
 bool Language::IsTopLevelFunction(Function &function) { return false; }
 

@@ -45,8 +45,8 @@ static void AddBreakpointDescription(Stream *s, Breakpoint *bp,
   s->EOL();
 }
 
-static bool GetDefaultFile(Target &target, StackFrame *cur_frame, FileSpec &file,
-                      CommandReturnObject &result) {
+static bool GetDefaultFile(Target &target, StackFrame *cur_frame,
+                           FileSpec &file, CommandReturnObject &result) {
   // First use the Source Manager's default file. Then use the current stack
   // frame's file.
   if (auto maybe_file_and_line =
@@ -56,8 +56,7 @@ static bool GetDefaultFile(Target &target, StackFrame *cur_frame, FileSpec &file
   }
 
   if (cur_frame == nullptr) {
-    result.AppendError(
-        "No selected frame to use to find the default file.");
+    result.AppendError("No selected frame to use to find the default file.");
     return false;
   }
   if (!cur_frame->HasDebugInformation()) {
@@ -77,7 +76,6 @@ static bool GetDefaultFile(Target &target, StackFrame *cur_frame, FileSpec &file
   }
   return true;
 }
-
 
 // Modifiable Breakpoint Options
 #pragma mark Modify::CommandOptions
@@ -351,7 +349,7 @@ static llvm::Expected<LanguageType>
 GetExceptionLanguageForLanguage(llvm::StringRef lang_name,
                                 char short_option = '\0',
                                 llvm::StringRef long_option = {}) {
-  llvm::Expected<LanguageType> exception_language = 
+  llvm::Expected<LanguageType> exception_language =
       Language::GetExceptionLanguageForLanguage(lang_name);
   if (!exception_language) {
     std::string error_msg = llvm::toString(exception_language.takeError());
@@ -376,12 +374,12 @@ static Status CompleteLineEntry(ExecutionContext &exe_ctx,
     }
     Debugger &dbg = target->GetDebugger();
     CommandReturnObject result(dbg.GetUseColor());
-    if (!GetDefaultFile(*target, exe_ctx.GetFramePtr(), default_file_spec, 
-        result)) {
+    if (!GetDefaultFile(*target, exe_ctx.GetFramePtr(), default_file_spec,
+                        result)) {
       error.FromErrorStringWithFormatv("{0}/nCouldn't get default file for "
                                        "line {1}: {2}",
-                                       result.GetErrorString(),
-                                       line_num, error_msg);
+                                       result.GetErrorString(), line_num,
+                                       error_msg);
       return error;
     }
     line_entry.SetFile(default_file_spec);
@@ -884,8 +882,8 @@ protected:
         // The argument is a plain number.  Treat that as a line number, and
         // allow it if we can find a default file & line.
         std::string error_msg;
-        if (!GetDefaultFile(target, m_exe_ctx.GetFramePtr(), default_file, 
-            result)) {
+        if (!GetDefaultFile(target, m_exe_ctx.GetFramePtr(), default_file,
+                            result)) {
           result.AppendErrorWithFormatv("Couldn't find default file for line "
                                         "input: {0} - {1}",
                                         line_value, error_msg);
