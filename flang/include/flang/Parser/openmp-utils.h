@@ -238,14 +238,13 @@ struct OmpAllocateInfo {
 OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x);
 
 namespace detail {
-template <bool IsConst, typename T>
-struct ConstIf {
+template <bool IsConst, typename T> struct ConstIf {
   using type = std::conditional_t<IsConst, std::add_const_t<T>, T>;
 };
 
 template <bool IsConst, typename T>
 using ConstIfT = typename ConstIf<IsConst, T>::type;
-}
+} // namespace detail
 
 template <bool IsConst> struct LoopRange {
   using QualBlock = detail::ConstIfT<IsConst, Block>;
