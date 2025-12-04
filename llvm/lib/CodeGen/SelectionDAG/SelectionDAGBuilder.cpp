@@ -9710,6 +9710,12 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         if (visitUnaryFloatCall(I, ISD::FROUND))
           return;
         break;
+      case LibFunc_roundeven:
+      case LibFunc_roundevenf:
+      case LibFunc_roundevenl:
+        if (visitUnaryFloatCall(I, ISD::FROUNDEVEN))
+          return;
+        break;
       case LibFunc_trunc:
       case LibFunc_truncf:
       case LibFunc_truncl:
