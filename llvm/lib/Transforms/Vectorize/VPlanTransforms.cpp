@@ -3013,7 +3013,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
       // TODO: Only convert reverse to vp.reverse if it uses the result of
       // vp.load, or defines the stored value of vp.store.
-      if (match(&R, m_VPInstruction<VPInstruction::Reverse>(m_VPValue(V1)))) {
+      if (match(&R, m_Reverse(m_VPValue(V1)))) {
         NewRecipe = new VPWidenIntrinsicRecipe(
             Intrinsic::experimental_vp_reverse, {V1, Plan.getTrue(), &EVL},
             TypeInfo.inferScalarType(R.getVPSingleValue()), {}, {},
