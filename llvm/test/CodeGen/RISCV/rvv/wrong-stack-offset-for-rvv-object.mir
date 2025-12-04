@@ -126,15 +126,15 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x2 = frame-setup ADDI $x2, -80
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 80
-  ; CHECK-NEXT:   SD killed $x1, $x2, 56 :: (store (s64) into %stack.2)
-  ; CHECK-NEXT:   SD killed $x8, $x2, 48 :: (store (s64) into %stack.3)
-  ; CHECK-NEXT:   SD killed $x9, $x2, 40 :: (store (s64) into %stack.4)
+  ; CHECK-NEXT:   frame-setup SD killed $x1, $x2, 56 :: (store (s64) into %stack.2)
+  ; CHECK-NEXT:   frame-setup SD killed $x8, $x2, 48 :: (store (s64) into %stack.3)
+  ; CHECK-NEXT:   frame-setup SD killed $x9, $x2, 40 :: (store (s64) into %stack.4)
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x1, -24
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x8, -32
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x9, -40
   ; CHECK-NEXT:   $x10 = frame-setup PseudoReadVLENB
   ; CHECK-NEXT:   $x2 = frame-setup SUB $x2, killed $x10
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xd0, 0x00, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_cfa_reg_scalable_offset $x2, 1, 80
   ; CHECK-NEXT:   renamable $x8 = COPY $x14
   ; CHECK-NEXT:   renamable $x9 = COPY $x11
   ; CHECK-NEXT:   $x10 = PseudoReadVLENB

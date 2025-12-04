@@ -669,86 +669,48 @@ void RISCVFrameLowering::allocateAndProbeStackForRVV(
   }
 }
 
-static void appendScalableVectorExpression(const TargetRegisterInfo &TRI,
-                                           SmallVectorImpl<char> &Expr,
-                                           int FixedOffset, int ScalableOffset,
-                                           llvm::raw_string_ostream &Comment) {
-  unsigned DwarfVLenB = TRI.getDwarfRegNum(RISCV::VLENB, true);
-  uint8_t Buffer[16];
-  if (FixedOffset) {
-    Expr.push_back(dwarf::DW_OP_consts);
-    Expr.append(Buffer, Buffer + encodeSLEB128(FixedOffset, Buffer));
-    Expr.push_back((uint8_t)dwarf::DW_OP_plus);
-    Comment << (FixedOffset < 0 ? " - " : " + ") << std::abs(FixedOffset);
-  }
-
-  Expr.push_back((uint8_t)dwarf::DW_OP_consts);
-  Expr.append(Buffer, Buffer + encodeSLEB128(ScalableOffset, Buffer));
-
-  Expr.push_back((uint8_t)dwarf::DW_OP_bregx);
-  Expr.append(Buffer, Buffer + encodeULEB128(DwarfVLenB, Buffer));
-  Expr.push_back(0);
-
-  Expr.push_back((uint8_t)dwarf::DW_OP_mul);
-  Expr.push_back((uint8_t)dwarf::DW_OP_plus);
-
-  Comment << (ScalableOffset < 0 ? " - " : " + ") << std::abs(ScalableOffset)
-          << " * vlenb";
-}
-
 static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
                                                Register Reg,
-                                               uint64_t FixedOffset,
-                                               uint64_t ScalableOffset) {
+                                               int64_t FixedOffset,
+                                               int64_t ScalableOffset) {
+  // TODO: here we pass FixedOffset as uint64_t but we use it as int64_t. Is
+  // this correct?
   assert(ScalableOffset != 0 && "Did not need to adjust CFA for RVV");
-  SmallString<64> Expr;
   std::string CommentBuffer;
   llvm::raw_string_ostream Comment(CommentBuffer);
   // Build up the expression (Reg + FixedOffset + ScalableOffset * VLENB).
-  unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
-  Expr.push_back((uint8_t)(dwarf::DW_OP_breg0 + DwarfReg));
-  Expr.push_back(0);
   if (Reg == SPReg)
     Comment << "sp";
   else
     Comment << printReg(Reg, &TRI);
+  if (FixedOffset)
+    Comment << (FixedOffset < 0 ? " - " : " + ") << std::abs(FixedOffset);
+  if (ScalableOffset)
+    Comment << (ScalableOffset < 0 ? " - " : " + ") << std::abs(ScalableOffset)
+            << " * vlenb";
 
-  appendScalableVectorExpression(TRI, Expr, FixedOffset, ScalableOffset,
-                                 Comment);
-
-  SmallString<64> DefCfaExpr;
-  uint8_t Buffer[16];
-  DefCfaExpr.push_back(dwarf::DW_CFA_def_cfa_expression);
-  DefCfaExpr.append(Buffer, Buffer + encodeULEB128(Expr.size(), Buffer));
-  DefCfaExpr.append(Expr.str());
-
-  return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(), SMLoc(),
-                                        Comment.str());
+  unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
+  return MCCFIInstruction::createLLVMDefCfaRegScalableOffset(
+      nullptr, DwarfReg, ScalableOffset, FixedOffset, SMLoc(), Comment.str());
 }
 
 static MCCFIInstruction createDefCFAOffset(const TargetRegisterInfo &TRI,
-                                           Register Reg, uint64_t FixedOffset,
-                                           uint64_t ScalableOffset) {
+                                           Register Reg, int64_t FixedOffset,
+                                           int64_t ScalableOffset) {
   assert(ScalableOffset != 0 && "Did not need to adjust CFA for RVV");
-  SmallString<64> Expr;
   std::string CommentBuffer;
   llvm::raw_string_ostream Comment(CommentBuffer);
   Comment << printReg(Reg, &TRI) << "  @ cfa";
+  if (FixedOffset)
+    Comment << (FixedOffset < 0 ? " - " : " + ") << std::abs(FixedOffset);
 
-  // Build up the expression (FixedOffset + ScalableOffset * VLENB).
-  appendScalableVectorExpression(TRI, Expr, FixedOffset, ScalableOffset,
-                                 Comment);
+  if (ScalableOffset)
+    Comment << (ScalableOffset < 0 ? " - " : " + ") << std::abs(ScalableOffset)
+            << " * vlenb";
 
-  SmallString<64> DefCfaExpr;
-  uint8_t Buffer[16];
   unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
-  DefCfaExpr.push_back(dwarf::DW_CFA_expression);
-  DefCfaExpr.append(Buffer, Buffer + encodeULEB128(DwarfReg, Buffer));
-  DefCfaExpr.append(Buffer, Buffer + encodeULEB128(Expr.size(), Buffer));
-  DefCfaExpr.append(Expr.str());
-
-  return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(), SMLoc(),
-                                        Comment.str());
+  return MCCFIInstruction::createLLVMRegAtScalableOffsetFromCfa(
+      nullptr, DwarfReg, ScalableOffset, FixedOffset, SMLoc(), Comment.str());
 }
 
 // Allocate stack space and probe it if necessary.

@@ -16,6 +16,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -23,6 +24,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 
@@ -35,10 +37,109 @@ static cl::opt<bool> RiscvAbiAttr(
     cl::desc("Enable emitting RISC-V ELF attributes for ABI features"),
     cl::Hidden);
 
-RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
+static void appendRegister(unsigned DwarfRegNum, SmallVectorImpl<char> &Expr) {
+  uint8_t Buffer[16];
+  if (DwarfRegNum < 32) {
+    Expr.push_back((uint8_t)(dwarf::DW_OP_breg0 + DwarfRegNum));
+  } else {
+    Expr.push_back((uint8_t)dwarf::DW_OP_bregx);
+    Expr.append(Buffer, Buffer + encodeULEB128(DwarfRegNum, Buffer));
+  }
+  Expr.push_back(0);
+}
+
+static void appendScalableVectorExpression(const MCRegisterInfo &MRI,
+                                           SmallVectorImpl<char> &Expr,
+                                           int FixedOffset,
+                                           int ScalableOffset) {
+  unsigned DwarfVLenB = MRI.getDwarfRegNum(RISCV::VLENB, true);
+  uint8_t Buffer[16];
+  if (FixedOffset) {
+    Expr.push_back(dwarf::DW_OP_consts);
+    Expr.append(Buffer, Buffer + encodeSLEB128(FixedOffset, Buffer));
+    Expr.push_back((uint8_t)dwarf::DW_OP_plus);
+  }
+
+  // TODO: case when ScalableOffset == 0
+  // TODO: case when ScalableOffset == 1
+  Expr.push_back((uint8_t)dwarf::DW_OP_consts);
+  Expr.append(Buffer, Buffer + encodeSLEB128(ScalableOffset, Buffer));
+
+  Expr.push_back((uint8_t)dwarf::DW_OP_bregx);
+  Expr.append(Buffer, Buffer + encodeULEB128(DwarfVLenB, Buffer));
+  Expr.push_back(0);
+
+  Expr.push_back((uint8_t)dwarf::DW_OP_mul);
+  Expr.push_back((uint8_t)dwarf::DW_OP_plus);
+}
+
+RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {
+  MRI = getContext().getRegisterInfo();
+}
 
 void RISCVTargetStreamer::finish() { finishAttributeSection(); }
 void RISCVTargetStreamer::reset() {}
+
+void RISCVTargetStreamer::emitCFILLVMDefCfaRegScalableOffset(
+    unsigned Register, int64_t ScalableOffset, int64_t FixedOffset, SMLoc Loc) {
+  SmallString<64> RegPlusScalableOffsetExpr;
+  uint8_t Buffer[16];
+  // Encode Register
+  appendRegister(Register, RegPlusScalableOffsetExpr);
+  // Encode scalable offset
+  appendScalableVectorExpression(*MRI, RegPlusScalableOffsetExpr, FixedOffset,
+                                 ScalableOffset);
+
+  // Wrap this into DW_CFA_def_cfa_expression.
+  SmallString<64> Expr;
+  Expr.push_back(dwarf::DW_CFA_def_cfa_expression);
+  Expr.append(Buffer,
+              Buffer + encodeULEB128(RegPlusScalableOffsetExpr.size(), Buffer));
+  Expr.append(RegPlusScalableOffsetExpr.str());
+
+  Streamer.emitCFIEscape(Expr.str(), Loc);
+}
+
+void RISCVTargetStreamer::emitCFILLVMRegAtScalableOffsetFromCfa(
+    unsigned Register, int64_t ScalableOffset, int64_t FixedOffset, SMLoc Loc) {
+  SmallString<64> RegPlusScalableOffsetExpr;
+  uint8_t Buffer[16];
+  // Value of CFA will be pushed onto the expression stack by  the
+  // DW_CFA_expression. Encode scalable offset
+  appendScalableVectorExpression(*MRI, RegPlusScalableOffsetExpr, FixedOffset,
+                                 ScalableOffset);
+  // Wrap this into DW_CFA_expression.
+  SmallString<64> Expr;
+  Expr.push_back(dwarf::DW_CFA_expression);
+  Expr.append(Buffer, Buffer + encodeULEB128(Register, Buffer));
+  Expr.append(Buffer,
+              Buffer + encodeULEB128(RegPlusScalableOffsetExpr.size(), Buffer));
+  Expr.append(RegPlusScalableOffsetExpr.str());
+
+  Streamer.emitCFIEscape(Expr.str(), Loc);
+}
+
+void RISCVTargetStreamer::emitCFILLVMRegAtScalableOffsetFromReg(
+    unsigned Register, unsigned Register2, int64_t ScalableOffset,
+    int64_t FixedOffset, SMLoc Loc) {
+  SmallString<64> RegPlusScalableOffsetExpr;
+  uint8_t Buffer[16];
+  // Encode Register2
+  appendRegister(Register2, RegPlusScalableOffsetExpr);
+  // Encode (Register2 + FixedOffset + ScalableOffset * VLENB)
+  appendScalableVectorExpression(*MRI, RegPlusScalableOffsetExpr, FixedOffset,
+                                 ScalableOffset);
+
+  // Wrap this into DW_CFA_expression.
+  SmallString<64> Expr;
+  Expr.push_back(dwarf::DW_CFA_expression);
+  Expr.append(Buffer, Buffer + encodeULEB128(Register, Buffer));
+  Expr.append(Buffer,
+              Buffer + encodeULEB128(RegPlusScalableOffsetExpr.size(), Buffer));
+  Expr.append(RegPlusScalableOffsetExpr.str());
+
+  Streamer.emitCFIEscape(Expr.str(), Loc);
+}
 
 void RISCVTargetStreamer::emitDirectiveOptionArch(
     ArrayRef<RISCVOptionArchArg> Args) {}

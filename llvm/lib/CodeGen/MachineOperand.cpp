@@ -725,6 +725,32 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     OS << ", " << CFI.getOffset();
     OS << ", " << CFI.getAddressSpace();
     break;
+  case MCCFIInstruction::OpLLVMDefCfaRegScalableOffset:
+    OS << "llvm_def_cfa_reg_scalable_offset ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister2(), OS, TRI);
+    OS << ", " << CFI.getScalableOffset();
+    OS << ", " << CFI.getFixedOffset();
+    break;
+  case MCCFIInstruction::OpLLVMRegAtScalableOffsetFromCfa:
+    OS << "llvm_reg_at_scalable_offset_from_cfa ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", " << CFI.getScalableOffset();
+    OS << ", " << CFI.getFixedOffset();
+    break;
+  case MCCFIInstruction::OpLLVMRegAtScalableOffsetFromReg:
+    OS << "llvm_reg_at_scalable_offset_from_reg ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", ";
+    printCFIRegister(CFI.getRegister2(), OS, TRI);
+    OS << ", " << CFI.getScalableOffset();
+    OS << ", " << CFI.getFixedOffset();
+    break;
   case MCCFIInstruction::OpRelOffset:
     OS << "rel_offset ";
     if (MCSymbol *Label = CFI.getLabel())

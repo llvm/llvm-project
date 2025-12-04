@@ -1,0 +1,33 @@
+# RUN: llc -mtriple=riscv64 -start-after=unpack-mi-bundles  -o - %s \
+# RUN: | FileCheck %s
+
+# Check that `llvm_def_cfa_reg_scalable_offset` generates an escape expression corresponding to `deref(Reg) + FixedOffset + ScalableOffset * deref(vlenb)`
+
+# |  0x0f  | def_cfa_expression         |
+# |  0x0d  | length of expression
+# |  0x72  | dw_op_breg2
+# |  0x00  |                            | deref($x2)
+# |  0x11  | consts
+# |  0x2a  | leb8(42) = 0x2a            | deref($x2), 42
+# |  0x22  | dw_op_plus                 | (42 + deref($x2))
+# |  0x11  | consts
+# |  0x05  | leb8(5) = 0x05             | (42 + deref($x2)), 5
+# |  0x92  | dw_op_bregx                |
+# |  0xa2  | vlenb reg number is 7202   |
+# |  0x38  | leb128(7202) = 0xa238      |
+# |  0x00  |                            | (deref($x1) + 42), 5, deref($vlenb)
+# |  0x1e  | dw_op_mul                  | (deref($x1) + 42), (5 * deref($vleb))
+# |  0x22  | dw_op_plus                 | (deref($x1) + 42 + 5 * deref(vlenb)
+
+name: func
+body: |
+  bb.0:
+    CFI_INSTRUCTION llvm_def_cfa_reg_scalable_offset $x2, 5, 42
+    PseudoRET
+# CHECK-LABEL: func:
+# CHECK: .cfi_startproc
+# CHECK: .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x2a, 0x22, 0x11, 0x05, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22
+# CHECK: ret
+# CHECK: .Lfunc_end0:
+# CHECK: .size   func, .Lfunc_end0-func
+# CHECK: .cfi_endproc

@@ -2589,6 +2589,44 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMDefAspaceCfa(
         nullptr, Reg, Offset, AddressSpace, SMLoc()));
     break;
+  case MIToken::kw_cfi_llvm_def_cfa_reg_scalable_offset: {
+    int ScalableOffset;
+    int FixedOffset;
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIOffset(ScalableOffset) || expectAndConsume(MIToken::comma) ||
+        parseCFIOffset(FixedOffset))
+      return true;
+    CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createLLVMDefCfaRegScalableOffset(
+            nullptr, Reg, ScalableOffset, FixedOffset));
+    break;
+  }
+  case MIToken::kw_cfi_llvm_reg_at_scalable_offset_from_cfa: {
+    int ScalableOffset;
+    int FixedOffset;
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIOffset(ScalableOffset) || expectAndConsume(MIToken::comma) ||
+        parseCFIOffset(FixedOffset))
+      return true;
+    CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createLLVMRegAtScalableOffsetFromCfa(
+            nullptr, Reg, ScalableOffset, FixedOffset));
+    break;
+  }
+  case MIToken::kw_cfi_llvm_reg_at_scalable_offset_from_reg: {
+    unsigned FrameReg;
+    int ScalableOffset;
+    int FixedOffset;
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIRegister(FrameReg) || expectAndConsume(MIToken::comma) ||
+        parseCFIOffset(ScalableOffset) || expectAndConsume(MIToken::comma) ||
+        parseCFIOffset(FixedOffset))
+      return true;
+    CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createLLVMRegAtScalableOffsetFromReg(
+            nullptr, Reg, FrameReg, ScalableOffset, FixedOffset));
+    break;
+  }
   case MIToken::kw_cfi_remember_state:
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
     break;
@@ -2971,6 +3009,9 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::kw_cfi_escape:
   case MIToken::kw_cfi_def_cfa:
   case MIToken::kw_cfi_llvm_def_aspace_cfa:
+  case MIToken::kw_cfi_llvm_def_cfa_reg_scalable_offset:
+  case MIToken::kw_cfi_llvm_reg_at_scalable_offset_from_cfa:
+  case MIToken::kw_cfi_llvm_reg_at_scalable_offset_from_reg:
   case MIToken::kw_cfi_register:
   case MIToken::kw_cfi_remember_state:
   case MIToken::kw_cfi_restore:

@@ -101,6 +101,25 @@ public:
   MCStreamer &getStreamer() { return Streamer; }
   MCContext &getContext();
 
+  virtual void emitCFILLVMDefCfaRegScalableOffset(unsigned Register,
+                                                  int64_t ScalableOffset,
+                                                  int64_t FixedOffset,
+                                                  SMLoc Loc = {}) {
+    llvm_unreachable("Not implemented!");
+  }
+  virtual void emitCFILLVMRegAtScalableOffsetFromCfa(unsigned Register,
+                                                     int64_t ScalableOffset,
+                                                     int64_t FixedOffset,
+                                                     SMLoc Loc = {}) {
+    llvm_unreachable("Not implemented!");
+  }
+  virtual void emitCFILLVMRegAtScalableOffsetFromReg(unsigned Register,
+                                                     unsigned Register2,
+                                                     int64_t ScalableOffset,
+                                                     int64_t FixedOffset,
+                                                     SMLoc Loc = {}) {
+    llvm_unreachable("Not implemented!");
+  }
   // Allow a target to add behavior to the EmitLabel of MCStreamer.
   virtual void emitLabel(MCSymbol *Symbol);
   // Allow a target to add behavior to the emitAssignment of MCStreamer.
