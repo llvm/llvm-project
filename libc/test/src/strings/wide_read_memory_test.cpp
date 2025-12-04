@@ -27,14 +27,13 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-
 class LlvmLibcWideAccessMemoryTest : public testing::Test {
   char *page0_;
   char *page1_;
   char *page2_;
   size_t page_size;
 
- public:
+public:
   void SetUp() override {
     page_size = getpagesize();
     page0_ =
@@ -57,15 +56,15 @@ class LlvmLibcWideAccessMemoryTest : public testing::Test {
 
   // Repeatedly runs "func" on copies of the data in "buf", each progressively
   // closer to the boundary of valid memory. Test will segfault if function
-  // under test examines invalid memory.
+  // under test accesses invalid memory.
   //
   // Func should test the function in question just as normal. Recommend making
   // the amount of data just over 1.5k, which guarantees a wind-up, multiple
   // iterations of the inner loop, and a wind-down, even on systems with
-  // 512-byte arrays. The termination condition, eg, end-of string or character
+  // 512-byte vectors. The termination condition, eg, end-of string or character
   // being searched for, should be near the end of the data.
   template <typename TestFunc>
-  void TestMemoryAccess(const std::vector<char>& buf, TestFunc func) {
+  void TestMemoryAccess(const std::vector<char> &buf, TestFunc func) {
     // Run func on data near the start boundary of valid memory.
     for (unsigned long offset = 0;
          offset < std::alignment_of<std::max_align_t>::value; ++offset) {
@@ -76,7 +75,7 @@ class LlvmLibcWideAccessMemoryTest : public testing::Test {
     // Run func on data near the end boundary of valid memory.
     for (unsigned long offset = 0;
          offset < std::alignment_of<std::max_align_t>::value; ++offset) {
-      char *test_addr = page2_  - buf.size() - offset - 1;
+      char *test_addr = page2_ - buf.size() - offset - 1;
       assert(test_addr + buf.size() < page2_);
       BasicMemCopy(test_addr, buf.data(), buf.size());
       func(test_addr);
@@ -89,10 +88,10 @@ TEST_F(LlvmLibcWideAccessMemoryTest, StringLength) {
   std::vector<char> buf(1536, 'a');
   // Make sure it is null terminated.
   buf.push_back('\0');
-  this->TestMemoryAccess(buf, [this, buf](const char* test_data) {
+  this->TestMemoryAccess(buf, [this, buf](const char *test_data) {
     // -1 for the null character.
     ASSERT_EQ(internal::string_length(test_data), size_t(buf.size() - 1));
   });
 }
 
-}
+} // namespace LIBC_NAMESPACE_DECL
