@@ -1913,28 +1913,19 @@ let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
 foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
   foreach ftz = ["", "_ftz"] in {
     foreach sat = ["", "_sat"] in {
-      def sub # rnd # ftz # sat # _node : 
-        SDNode<!toupper("NVPTXISD::SUB" # rnd # ftz # sat), SDTFPBinOp>;
-    }
-  }
-}
-
-foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
-  foreach ftz = ["", "_ftz"] in {
-    foreach sat = ["", "_sat"] in {
+      defvar add_intrin = !cast<Intrinsic>("int_nvvm_add" # rnd # ftz # sat # "_f");
       def INT_NVVM_SUB # rnd # ftz # sat # _F : 
         BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
           !subst("_", ".", "sub" # rnd # sat # ftz # "_f32"),
-          [(set f32:$dst, 
-           (!cast<SDNode>("sub" # rnd # ftz # sat # "_node") f32:$a, f32:$b))]>;
+          [(set f32:$dst, (add_intrin f32:$a, (f32 (fneg f32:$b))))]>;
     }
   }
   
+  defvar add_intrin = !cast<Intrinsic>("int_nvvm_add" # rnd # "_d");
   def INT_NVVM_SUB # rnd # _D : 
     BasicNVPTXInst<(outs B64:$dst), (ins B64:$a, B64:$b),
       !subst("_", ".", "sub" # rnd # "_f64"),
-      [(set f64:$dst, 
-       (!cast<SDNode>("sub" # rnd # "_node") f64:$a, f64:$b))]>;
+      [(set f64:$dst, (add_intrin f64:$a, (f64 (fneg f64:$b))))]>;
 }
 
 foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
