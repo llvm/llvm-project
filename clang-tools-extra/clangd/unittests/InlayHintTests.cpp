@@ -1147,20 +1147,6 @@ TEST(ParameterHints, CopyOrMoveConstructor) {
   )cpp");
 }
 
-TEST(ParameterHints, AggregateInit) {
-  // FIXME: This is not implemented yet, but it would be a natural
-  // extension to show member names as hints here.
-  assertParameterHints(R"cpp(
-    struct Point {
-      int x;
-      int y;
-    };
-    void bar() {
-      Point p{41, 42};
-    }
-  )cpp");
-}
-
 TEST(ParameterHints, UserDefinedLiteral) {
   // Do not hint call to user-defined literal operator.
   assertParameterHints(R"cpp(
@@ -1746,6 +1732,19 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
 }
 
 TEST(DesignatorHints, Basic) {
+  assertDesignatorHints(R"cpp(
+    struct Point {
+      int x;
+      int y;
+    };
+    void bar() {
+      Point p{$x[[41]], $y[[42]]};
+    }
+  )cpp",
+                        ExpectedHint{".x=", "x"}, ExpectedHint{".y=", "y"});
+}
+
+TEST(DesignatorHints, BasicArray) {
   assertDesignatorHints(R"cpp(
     struct S { int x, y, z; };
     S s {$x[[1]], $y[[2+2]]};
