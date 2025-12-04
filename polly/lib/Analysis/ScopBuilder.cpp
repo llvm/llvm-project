@@ -1464,7 +1464,7 @@ bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, ScopStmt *Stmt) {
     return false;
 
   SmallVector<const SCEV *, 4> Subscripts;
-  SmallVector<int, 4> Sizes;
+  SmallVector<const SCEV *, 4> Sizes;
   getIndexExpressionsFromGEP(SE, GEP, Subscripts, Sizes);
   auto *BasePtr = GEP->getOperand(0);
 
@@ -1475,8 +1475,6 @@ bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, ScopStmt *Stmt) {
   // offsets that have been added before this GEP is applied.
   if (BasePtr != BasePointer->getValue())
     return false;
-
-  std::vector<const SCEV *> SizesSCEV;
 
   const InvariantLoadsSetTy &ScopRIL = scop->getRequiredInvariantLoads();
 
@@ -1495,11 +1493,9 @@ bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, ScopStmt *Stmt) {
   if (Sizes.empty())
     return false;
 
+  std::vector<const SCEV *> SizesSCEV;
   SizesSCEV.push_back(nullptr);
-
-  for (auto V : Sizes)
-    SizesSCEV.push_back(SE.getSCEV(
-        ConstantInt::get(IntegerType::getInt64Ty(BasePtr->getContext()), V)));
+  SizesSCEV.insert(SizesSCEV.end(), Sizes.begin(), Sizes.end());
 
   addArrayAccess(Stmt, Inst, AccType, BasePointer->getValue(), ElementType,
                  true, Subscripts, SizesSCEV, Val);
