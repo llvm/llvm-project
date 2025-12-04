@@ -136,8 +136,7 @@ define amdgpu_kernel void @store_as4_2xi32(ptr addrspace(4) %p, <2 x i32> %v) {
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v2, s2
-; CHECK-NEXT:    v_mov_b32_e32 v3, s3
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
 ; CHECK-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
 ; CHECK-NEXT:    s_endpgm
   store <2 x i32> %v, ptr addrspace(4) %p
@@ -164,8 +163,7 @@ define amdgpu_kernel void @store_as4_2xfloat(ptr addrspace(4) %p, <2 x float> %v
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v2, s2
-; CHECK-NEXT:    v_mov_b32_e32 v3, s3
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
 ; CHECK-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
 ; CHECK-NEXT:    s_endpgm
   store <2 x float> %v, ptr addrspace(4) %p

@@ -355,3 +355,13 @@ func.func @do(%arg0 : !emitc.ptr<i32>) {
 
   return
 }
+
+func.func @address_of(%arg0: !emitc.lvalue<i32>) {
+  %1 = emitc.address_of %arg0 : !emitc.lvalue<i32>
+  return
+}
+
+func.func @dereference(%arg0: !emitc.ptr<i32>) {
+  %1 = emitc.dereference %arg0 : !emitc.ptr<i32>
+  return
+}

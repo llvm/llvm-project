@@ -351,7 +351,8 @@ def cuf_SharedMemoryOp
       OptionalAttr<StrAttr>:$bindc_name, Variadic<AnyIntegerType>:$typeparams,
       Variadic<AnyIntegerType>:$shape,
       // offset in bytes from the shared memory base address.
-      Optional<AnyIntegerType>:$offset, OptionalAttr<I64Attr>:$alignment);
+      Optional<AnyIntegerType>:$offset, OptionalAttr<I64Attr>:$alignment,
+      UnitAttr:$isStatic);
 
   let results = (outs fir_ReferenceType:$ptr);
 

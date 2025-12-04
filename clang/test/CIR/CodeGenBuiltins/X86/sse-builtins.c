@@ -71,3 +71,15 @@ __m128 test_mm_undefined_ps(void) {
   // OGCG: ret <4 x float> zeroinitializer
   return _mm_undefined_ps();
 }
+
+__m128 test_mm_shuffle_ps(__m128 A, __m128 B) {
+  // CIR-LABEL: _mm_shuffle_ps
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float>) [#cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<4> : !s32i, #cir.int<4> : !s32i] : !cir.vector<4 x !cir.float>
+
+  // LLVM-LABEL: test_mm_shuffle_ps
+  // LLVM: shufflevector <4 x float> {{.*}}, <4 x float> {{.*}}, <4 x i32> <i32 0, i32 0, i32 4, i32 4>
+
+  // OGCG-LABEL: test_mm_shuffle_ps
+  // OGCG: shufflevector <4 x float> {{.*}}, <4 x float> {{.*}}, <4 x i32> <i32 0, i32 0, i32 4, i32 4>
+  return _mm_shuffle_ps(A, B, 0);
+}

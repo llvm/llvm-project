@@ -48,4 +48,37 @@ exit:
   ret void
 }
 
+define i64 @sdiv_arg_outer_iv(ptr noalias %dst, ptr %src) {
+; CHECK: 'sdiv_arg_outer_iv'
+; CHECK: Cost of 0 for VF 2: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
+; CHECK: Cost of 0 for VF 4: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
+; CHECK: Cost of 0 for VF 8: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
+; CHECK: Cost of 0 for VF 16: REPLICATE ir<%div> = sdiv ir<%add.offset>, ir<8>
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i32 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  %offset = shl nsw i32 %outer.iv, 7
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %outer.header ], [ %iv.next, %loop ]
+  %iv.trunc = trunc i64 %iv to i32
+  %add.offset = add i32 %offset, %iv.trunc
+  %div = sdiv i32 %add.offset, 8
+  %div.ext = sext i32 %div to i64
+  %gep.src = getelementptr i8, ptr %src, i64 %div.ext
+  %l = load i8, ptr %gep.src, align 1
+  %gep.dst = getelementptr i8, ptr %dst, i64 %iv
+  store i8 %l, ptr %gep.dst, align 1
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 64
+  br i1 %ec, label %outer.latch, label %loop
+
+outer.latch:
+  %outer.iv.next = add nsw i32 %outer.iv, 1
+  br label %outer.header
+}
+
 attributes #0 = { "target-features"="+avx2" "tune-cpu"="alderlake" }

@@ -69,6 +69,12 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "const",
        "std::__1::ranges::__begin::__fn::operator()[abi:v160000]<char const, "
        "18ul>"},
+      {"bool Ball[abi:BALL]<int>::operator<<[abi:operator]<int>(int)", "bool",
+       "Ball[abi:BALL]<int>", "operator<<[abi:operator]<int>", "(int)", "",
+       "Ball[abi:BALL]<int>::operator<<[abi:operator]<int>"},
+      {"bool Ball[abi:BALL]<int>::operator>>[abi:operator]<int>(int)", "bool",
+       "Ball[abi:BALL]<int>", "operator>>[abi:operator]<int>", "(int)", "",
+       "Ball[abi:BALL]<int>::operator>>[abi:operator]<int>"},
       // Internal classes
       {"operator<<(Cls, Cls)::Subclass::function()", "",
        "operator<<(Cls, Cls)::Subclass", "function", "()", "",

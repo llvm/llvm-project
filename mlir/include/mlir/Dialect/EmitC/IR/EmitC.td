@@ -116,6 +116,37 @@ def EmitC_FileOp
   let skipDefaultBuilders = 1;
 }
 
+def EmitC_AddressOfOp : EmitC_Op<"address_of", [
+    CExpressionInterface,
+    TypesMatchWith<"input and result reference the same type", "reference", "result",
+                   "emitc::PointerType::get(::llvm::cast<emitc::LValueType>($_self).getValueType())">
+]> {
+  let summary = "Address operation";
+  let description = [{
+    This operation models the C & (address of) operator for a single operand,
+    which must be an emitc.lvalue, and returns an emitc pointer to its location.
+
+    Example:
+
+    ```mlir
+    // Custom form of applying the & operator.
+    %0 = emitc.address_of %arg0 : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+    ```
+  }];
+  let arguments = (ins EmitC_LValueType:$reference);
+  let results = (outs EmitC_PointerType:$result);
+  let assemblyFormat = [{
+    $reference `:` qualified(type($reference)) attr-dict
+  }];
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      return false;
+    }
+  }];
+}
+
 def EmitC_AddOp : EmitC_BinaryOp<"add", []> {
   let summary = "Addition operation";
   let description = [{
@@ -140,7 +171,7 @@ def EmitC_AddOp : EmitC_BinaryOp<"add", []> {
 }
 
 def EmitC_ApplyOp : EmitC_Op<"apply", [CExpressionInterface]> {
-  let summary = "Apply operation";
+  let summary = "Deprecated (use address_of/dereference)";
   let description = [{
     With the `emitc.apply` operation the operators & (address of) and * (contents of)
     can be applied to a single operand.
@@ -437,6 +468,31 @@ def EmitC_ConstantOp
       return !isFundamentalType(getResult().getType());
     }
   }];
+}
+
+def EmitC_DereferenceOp : EmitC_Op<"dereference", [
+    TypesMatchWith<"input and result reference the same type", "pointer", "result",
+                   "emitc::LValueType::get(::llvm::cast<emitc::PointerType>($_self).getPointee())">
+]> {
+  let summary = "Dereference operation";
+  let description = [{
+    This operation models the C * (dereference) operator, which must be of
+    !emitc.ptr<> type, returning an !emitc.lvalue<> the value pointed to by the
+    pointer.
+
+    Example:
+
+    ```mlir
+    // Custom form of the dereference operator.
+    %0 = emitc.dereference %arg0 : (!emitc.ptr<i32>) -> !emitc.lvalue<i32>
+    ```
+  }];
+  let arguments = (ins EmitC_PointerType:$pointer);
+  let results = (outs EmitC_LValueType:$result);
+  let assemblyFormat = [{
+    $pointer `:` qualified(type($pointer)) attr-dict
+  }];
+  let hasVerifier = 1;
 }
 
 def EmitC_DivOp : EmitC_BinaryOp<"div", []> {

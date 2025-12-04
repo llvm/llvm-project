@@ -968,6 +968,8 @@ __m128 test_mm256_cvtpd_ps(__m256d A) {
   return _mm256_cvtpd_ps(A);
 }
 
+TEST_CONSTEXPR(match_m128(_mm256_cvtpd_ps((__m256d){ 0.0, -1.0, +2.0, +3.5 }), 0.0f, -1.0f, +2.0f, +3.5f));
+
 __m256i test_mm256_cvtps_epi32(__m256 A) {
   // CHECK-LABEL: test_mm256_cvtps_epi32
   // CHECK: call <8 x i32> @llvm.x86.avx.cvt.ps2dq.256(<8 x float> %{{.*}})

@@ -31,6 +31,10 @@ static cl::opt<unsigned> HvxWidenThreshold("hexagon-hvx-widen",
   cl::Hidden, cl::init(16),
   cl::desc("Lower threshold (in bytes) for widening to HVX vectors"));
 
+static cl::opt<bool>
+    EnableFpFastConvert("hexagon-fp-fast-convert", cl::Hidden, cl::init(false),
+                        cl::desc("Enable FP fast conversion routine."));
+
 static const MVT LegalV64[] =  { MVT::v64i8,  MVT::v32i16,  MVT::v16i32 };
 static const MVT LegalW64[] =  { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
 static const MVT LegalV128[] = { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
@@ -466,6 +470,7 @@ HexagonTargetLowering::initializeHVXLowering() {
         setOperationAction(ISD::ANY_EXTEND,   VecTy, Custom);
         setOperationAction(ISD::SIGN_EXTEND,  VecTy, Custom);
         setOperationAction(ISD::ZERO_EXTEND,  VecTy, Custom);
+        setOperationAction(ISD::INTRINSIC_WO_CHAIN, VecTy, Custom);
         if (Subtarget.useHVXFloatingPoint()) {
           setOperationAction(ISD::FP_TO_SINT,   VecTy, Custom);
           setOperationAction(ISD::FP_TO_UINT,   VecTy, Custom);
@@ -2970,6 +2975,32 @@ HexagonTargetLowering::ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const {
   MVT ResTy = ty(Op);
   assert(InpTy.changeTypeToInteger() == ResTy);
 
+  // At this point this is an experiment under a flag.
+  // In arch before V81 the rounding mode is towards nearest value.
+  // The C/C++ standard requires rounding towards zero:
+  // C (C99 and later): ISO/IEC 9899:2018 (C18), section 6.3.1.4 — "When a
+  // finite value of real floating type is converted to an integer type, the
+  // fractional part is discarded (i.e., the value is truncated toward zero)."
+  // C++: ISO/IEC 14882:2020 (C++20), section 7.3.7 — "A prvalue of a
+  // floating-point type can be converted to a prvalue of an integer type. The
+  // conversion truncates; that is, the fractional part is discarded."
+  if (InpTy == MVT::v64f16) {
+    if (Subtarget.useHVXV81Ops()) {
+      // This is c/c++ compliant
+      SDValue ConvVec =
+          getInstr(Hexagon::V6_vconv_h_hf_rnd, dl, ResTy, {Op0}, DAG);
+      return ConvVec;
+    } else if (EnableFpFastConvert) {
+      // Vd32.h=Vu32.hf same as Q6_Vh_equals_Vhf
+      SDValue ConvVec = getInstr(Hexagon::V6_vconv_h_hf, dl, ResTy, {Op0}, DAG);
+      return ConvVec;
+    }
+  } else if (EnableFpFastConvert && InpTy == MVT::v32f32) {
+    // Vd32.w=Vu32.sf same as Q6_Vw_equals_Vsf
+    SDValue ConvVec = getInstr(Hexagon::V6_vconv_w_sf, dl, ResTy, {Op0}, DAG);
+    return ConvVec;
+  }
+
   // int32_t conv_f32_to_i32(uint32_t inp) {
   //   // s | exp8 | frac23
   //
@@ -3403,6 +3434,104 @@ HexagonTargetLowering::WidenHvxSetCC(SDValue Op, SelectionDAG &DAG) const {
                      {SetCC, getZero(dl, MVT::i32, DAG)});
 }
 
+SDValue HexagonTargetLowering::WidenHvxIntrinsic(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  const SDLoc &dl(Op);
+  unsigned HwWidth = 8 * Subtarget.getVectorLength();
+  bool IsResInterleaved = false;
+
+  SDValue WideRes = SDValue();
+  SDValue Op1 = Op.getOperand(1);
+  MVT ResTy = ty(Op);
+  MVT OpTy = ty(Op1);
+  if (!Subtarget.isHVXElementType(OpTy) || !Subtarget.isHVXElementType(ResTy))
+    return SDValue();
+
+  auto getFactor = [HwWidth](MVT Ty) {
+    unsigned Width = Ty.getSizeInBits();
+    assert(HwWidth % Width == 0);
+    return HwWidth / Width;
+  };
+
+  auto getWideTy = [getFactor](MVT Ty) {
+    unsigned WideLen = Ty.getVectorNumElements() * getFactor(Ty);
+    return MVT::getVectorVT(Ty.getVectorElementType(), WideLen);
+  };
+
+  unsigned IID = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  SDValue Op2 = Op.getOperand(2);
+  SDValue WideOp1 = appendUndef(Op1, getWideTy(OpTy), DAG);
+  SDValue WideOp2;
+  if (dyn_cast<const ConstantSDNode>(Op2.getNode())) {
+    WideOp2 = Op2;
+  } else {
+    WideOp2 = appendUndef(Op2, getWideTy(OpTy), DAG);
+  }
+  unsigned WidenFactor = getFactor(OpTy);
+  unsigned WideLen = ResTy.getVectorNumElements() * WidenFactor;
+  MVT WideResTy = MVT::getVectorVT(ResTy.getVectorElementType(), WideLen);
+
+  switch (IID) {
+  default:
+    return SDValue();
+  case Intrinsic::hexagon_vasrsat_su:
+  case Intrinsic::hexagon_vasrsat_uu:
+  case Intrinsic::hexagon_vasrsat_ss:
+    WideRes = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, WideResTy,
+                          DAG.getConstant(IID, dl, MVT::i32), WideOp1, WideOp2,
+                          Op.getOperand(3));
+    break;
+  case Intrinsic::hexagon_vadd_su:
+  case Intrinsic::hexagon_vadd_uu:
+  case Intrinsic::hexagon_vadd_ss:
+  case Intrinsic::hexagon_vadd_us:
+
+  case Intrinsic::hexagon_vsub_su:
+  case Intrinsic::hexagon_vsub_uu:
+  case Intrinsic::hexagon_vsub_ss:
+  case Intrinsic::hexagon_vsub_us:
+
+  case Intrinsic::hexagon_vmpy_su:
+  case Intrinsic::hexagon_vmpy_uu:
+  case Intrinsic::hexagon_vmpy_ss:
+  case Intrinsic::hexagon_vmpy_us:
+  case Intrinsic::hexagon_vmpy_ub_ub:
+  case Intrinsic::hexagon_vmpy_ub_b:
+  case Intrinsic::hexagon_vmpy_uh_uh:
+  case Intrinsic::hexagon_vmpy_h_h:
+    IsResInterleaved = true;
+    WideRes = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, WideResTy,
+                          DAG.getConstant(IID, dl, MVT::i32), WideOp1, WideOp2);
+    break;
+  case Intrinsic::hexagon_vavgu:
+  case Intrinsic::hexagon_vavgs:
+    WideRes = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, WideResTy,
+                          DAG.getConstant(IID, dl, MVT::i32), WideOp1, WideOp2);
+    break;
+  }
+  unsigned OrigLen = ResTy.getVectorNumElements();
+  assert(OrigLen % 2 == 0);
+  unsigned HalfOrigLen = OrigLen / 2;
+  unsigned SplitLen = WideLen / 2;
+  if (IsResInterleaved) {
+    // Get the valid odd and even elements from the widened vector-pair while
+    // maintaining their deinterleaved order. The following shuffle_vector will
+    // produce a vector-pair with all the valid elements (even followed by odd)
+    // accumulated together followed by undefs.
+    SmallVector<int, 128> ShuffV;
+    for (unsigned j = 0; j < WidenFactor; j++) {
+      for (unsigned i = 0; i < HalfOrigLen; i++)
+        ShuffV.push_back(j * HalfOrigLen + i);
+      for (unsigned i = 0; i < HalfOrigLen; i++)
+        ShuffV.push_back(SplitLen + j * HalfOrigLen + i);
+    }
+    WideRes = DAG.getVectorShuffle(WideResTy, dl, WideRes,
+                                   DAG.getUNDEF(WideResTy), ShuffV);
+  }
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ResTy,
+                     {WideRes, getZero(dl, MVT::i32, DAG)});
+}
+
 SDValue
 HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
@@ -3669,6 +3798,12 @@ HexagonTargetLowering::LowerHvxOperationWrapper(SDNode *N,
         Results.push_back(S);
       }
       break;
+    case ISD::INTRINSIC_WO_CHAIN:
+      if (shouldWidenToHvx(ty(Op.getOperand(1)), DAG)) {
+        if (SDValue T = WidenHvxIntrinsic(Op, DAG))
+          Results.push_back(T);
+      }
+      break;
     case ISD::SINT_TO_FP:
     case ISD::UINT_TO_FP:
     case ISD::FP_TO_SINT:
@@ -3728,6 +3863,11 @@ HexagonTargetLowering::ReplaceHvxNodeResults(SDNode *N,
         SDValue C = LowerHvxBitcast(Op, DAG);
         Results.push_back(C);
       }
+      break;
+    case ISD::INTRINSIC_WO_CHAIN:
+      assert(shouldWidenToHvx(ty(N->getOperand(1)), DAG) && "Not widening?");
+      if (SDValue T = WidenHvxIntrinsic(Op, DAG))
+        Results.push_back(T);
       break;
     case ISD::FP_TO_SINT:
     case ISD::FP_TO_UINT:

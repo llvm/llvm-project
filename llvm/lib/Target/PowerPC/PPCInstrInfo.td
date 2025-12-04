@@ -2121,14 +2121,21 @@ def LHARXL : XForm_1_memOp<31,  116, (outs gprc:$RST), (ins (memrr $RA, $RB):$ad
 
 def LWARXL : XForm_1_memOp<31,  20, (outs gprc:$RST), (ins (memrr $RA, $RB):$addr),
                      "lwarx $RST, $addr, 1", IIC_LdStLWARX, []>, isRecordForm;
+}
 
 // The atomic instructions use the destination register as well as the next one
 // or two registers in order (modulo 31).
-let hasExtraSrcRegAllocReq = 1 in
-def LWAT : X_RD5_RS5_IM5<31, 582, (outs gprc:$RST), (ins gprc:$RA, u5imm:$RB),
+let hasExtraSrcRegAllocReq = 1, mayLoad = 1, mayStore = 1 in
+def LWAT : X_RD5_RS5_IM5<31, 582, (outs g8prc:$RST), (ins g8prc:$RSTi, ptr_rc_nor0:$RA, u5imm:$RB),
                          "lwat $RST, $RA, $RB", IIC_LdStLoad>,
-           Requires<[IsISA3_0]>;
-}
+           Requires<[IsISA3_0]>,
+           RegConstraint<"$RSTi = $RST">;
+
+def LWAT_PSEUDO : PPCCustomInserterPseudo<
+    (outs gprc:$dst),
+    (ins ptr_rc_nor0:$ptr, gprc:$val, u5imm:$fc),
+    "#LWAT_PSEUDO",
+    [(set i32:$dst, (int_ppc_amo_lwat ptr_rc_nor0:$ptr, gprc:$val, timm:$fc))]>;
 
 let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
 def STBCX : XForm_1_memOp<31, 694, (outs), (ins gprc:$RST, (memrr $RA, $RB):$addr),

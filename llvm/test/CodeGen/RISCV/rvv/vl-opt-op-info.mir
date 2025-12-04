@@ -1346,10 +1346,10 @@ name: vmerge_vim
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vim
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK: %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vrnov0 = PseudoVMERGE_VIM_M1 $noreg, %x, 9, $v0, 1, 3 /* e8 */
     ; CHECK-NEXT: $v8 = COPY %y
-    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
     %y:vrnov0 = PseudoVMERGE_VIM_M1 $noreg, %x, 9, $v0, 1, 3 /* e8 */
     $v8 = COPY %y
 ...
@@ -1358,10 +1358,10 @@ name: vmerge_vim_incompatible_eew
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vim_incompatible_eew
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK: %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vrnov0 = PseudoVMERGE_VIM_M1 $noreg, %x, 9, $v0, 1, 3 /* e8 */
     ; CHECK-NEXT: $v8 = COPY %y
-    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
+    %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
     %y:vrnov0 = PseudoVMERGE_VIM_M1 $noreg, %x, 9, $v0, 1, 3 /* e8 */
     $v8 = COPY %y
 ...
@@ -1370,10 +1370,10 @@ name: vmerge_vim_incompatible_emul
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vim_incompatible_emul
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK: %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vrnov0 = PseudoVMERGE_VIM_MF2 $noreg, %x, 9, $v0, 1, 3 /* e8 */
     ; CHECK-NEXT: $v8 = COPY %y
-    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
     %y:vrnov0 = PseudoVMERGE_VIM_MF2 $noreg, %x, 9, $v0, 1, 3 /* e8 */
     $v8 = COPY %y
 ...
@@ -1382,10 +1382,10 @@ name: vmerge_vxm
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vxm
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK: %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vrnov0 = PseudoVMERGE_VXM_M1 $noreg, %x, $noreg, $v0, 1, 3 /* e8 */
     ; CHECK-NEXT: $v8 = COPY %y
-    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
     %y:vrnov0 = PseudoVMERGE_VXM_M1 $noreg, %x, $noreg, $v0, 1, 3 /* e8 */
     $v8 = COPY %y
 ...
@@ -1394,10 +1394,10 @@ name: vmerge_vxm_incompatible_eew
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vxm_incompatible_eew
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK: %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vrnov0 = PseudoVMERGE_VXM_M1 $noreg, %x, $noreg, $v0, 1, 3 /* e8 */
     ; CHECK-NEXT: $v8 = COPY %y
-    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
+    %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
     %y:vrnov0 = PseudoVMERGE_VXM_M1 $noreg, %x, $noreg, $v0, 1, 3 /* e8 */
     $v8 = COPY %y
 ...
@@ -1406,10 +1406,10 @@ name: vmerge_vxm_incompatible_emul
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vxm_incompatible_emul
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK: %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vrnov0 = PseudoVMERGE_VXM_MF2 $noreg, %x, $noreg, $v0, 1, 3 /* e8 */
     ; CHECK-NEXT: $v8 = COPY %y
-    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
     %y:vrnov0 = PseudoVMERGE_VXM_MF2 $noreg, %x, $noreg, $v0, 1, 3 /* e8 */
     $v8 = COPY %y
 ...
@@ -1418,10 +1418,10 @@ name: vmerge_vvm
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vvm
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK: %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, $noreg, %x, $v0, 1, 3 /* e8 */
     ; CHECK-NEXT: $v8 = COPY %y
-    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
     %y:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, $noreg, %x, $v0, 1, 3 /* e8 */
     $v8 = COPY %y
 ...
@@ -1430,10 +1430,10 @@ name: vmerge_vvm_incompatible_eew
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vvm_incompatible_eew
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK: %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, $noreg, %x, $v0, 1, 3 /* e8 */
     ; CHECK-NEXT: $v8 = COPY %y
-    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
+    %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
     %y:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, $noreg, %x, $v0, 1, 3 /* e8 */
     $v8 = COPY %y
 ...
@@ -1442,10 +1442,10 @@ name: vmerge_vvm_incompatible_emul
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vvm_incompatible_emul
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK: %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vrnov0 = PseudoVMERGE_VVM_MF2 $noreg, $noreg, %x, $v0, 1, 3 /* e8 */
     ; CHECK-NEXT: $v8 = COPY %y
-    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
     %y:vrnov0 = PseudoVMERGE_VVM_MF2 $noreg, $noreg, %x, $v0, 1, 3 /* e8 */
     $v8 = COPY %y
 ...

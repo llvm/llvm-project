@@ -133,6 +133,7 @@ LLVM_ABI void initializeGlobalMergeFuncPassWrapperPass(PassRegistry &);
 LLVM_ABI void initializeGlobalMergePass(PassRegistry &);
 LLVM_ABI void initializeGlobalsAAWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeHardwareLoopsLegacyPass(PassRegistry &);
+LLVM_ABI void initializeLibcallLoweringInfoWrapperPass(PassRegistry &);
 LLVM_ABI void initializeMIRProfileLoaderPassPass(PassRegistry &);
 LLVM_ABI void initializeIRSimilarityIdentifierWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeIRTranslatorPass(PassRegistry &);

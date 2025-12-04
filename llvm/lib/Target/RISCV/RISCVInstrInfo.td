@@ -507,7 +507,7 @@ def ixlenimm_li_restricted : Operand<XLenVT> {
 
 // A 12-bit signed immediate plus one where the imm range will be -2047~2048.
 def simm12_plus1 : ImmLeaf<XLenVT,
-  [{return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
+  [{return Imm >= -2047 && Imm <= 2048;}]>;
 
 // A 6-bit constant greater than 32.
 def uimm6gt32 : ImmLeaf<XLenVT, [{

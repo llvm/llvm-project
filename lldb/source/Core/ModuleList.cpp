@@ -453,21 +453,22 @@ void ModuleList::FindFunctions(ConstString name,
                                FunctionNameType name_type_mask,
                                const ModuleFunctionSearchOptions &options,
                                SymbolContextList &sc_list) const {
-  const size_t old_size = sc_list.GetSize();
-
   if (name_type_mask & eFunctionNameTypeAuto) {
-    Module::LookupInfo lookup_info(name, name_type_mask, eLanguageTypeUnknown);
-
+    std::vector<Module::LookupInfo> lookup_infos =
+        Module::LookupInfo::MakeLookupInfos(name, name_type_mask,
+                                            eLanguageTypeUnknown);
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-    for (const ModuleSP &module_sp : m_modules) {
-      module_sp->FindFunctions(lookup_info, CompilerDeclContext(), options,
-                               sc_list);
+    for (const auto &lookup_info : lookup_infos) {
+      const size_t old_size = sc_list.GetSize();
+      for (const ModuleSP &module_sp : m_modules) {
+        module_sp->FindFunctions(lookup_info, CompilerDeclContext(), options,
+                                 sc_list);
+      }
+
+      const size_t new_size = sc_list.GetSize();
+      if (old_size < new_size)
+        lookup_info.Prune(sc_list, old_size);
     }
-
-    const size_t new_size = sc_list.GetSize();
-
-    if (old_size < new_size)
-      lookup_info.Prune(sc_list, old_size);
   } else {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     for (const ModuleSP &module_sp : m_modules) {
@@ -480,21 +481,24 @@ void ModuleList::FindFunctions(ConstString name,
 void ModuleList::FindFunctionSymbols(ConstString name,
                                      lldb::FunctionNameType name_type_mask,
                                      SymbolContextList &sc_list) {
-  const size_t old_size = sc_list.GetSize();
-
   if (name_type_mask & eFunctionNameTypeAuto) {
-    Module::LookupInfo lookup_info(name, name_type_mask, eLanguageTypeUnknown);
+    std::vector<Module::LookupInfo> lookup_infos =
+        Module::LookupInfo::MakeLookupInfos(name, name_type_mask,
+                                            eLanguageTypeUnknown);
 
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-    for (const ModuleSP &module_sp : m_modules) {
-      module_sp->FindFunctionSymbols(lookup_info.GetLookupName(),
-                                     lookup_info.GetNameTypeMask(), sc_list);
+    for (const auto &lookup_info : lookup_infos) {
+      const size_t old_size = sc_list.GetSize();
+      for (const ModuleSP &module_sp : m_modules) {
+        module_sp->FindFunctionSymbols(lookup_info.GetLookupName(),
+                                       lookup_info.GetNameTypeMask(), sc_list);
+      }
+
+      const size_t new_size = sc_list.GetSize();
+
+      if (old_size < new_size)
+        lookup_info.Prune(sc_list, old_size);
     }
-
-    const size_t new_size = sc_list.GetSize();
-
-    if (old_size < new_size)
-      lookup_info.Prune(sc_list, old_size);
   } else {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     for (const ModuleSP &module_sp : m_modules) {

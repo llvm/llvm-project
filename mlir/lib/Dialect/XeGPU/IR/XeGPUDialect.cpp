@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
@@ -61,7 +60,7 @@ genCoordinates(OpBuilder &builder, Location loc,
   // Get the offset of `subShape` within a distribution unit.
   SmallVector<Value> distUnitLocalOffset = llvm::map_to_vector(
       llvm::zip(delinearizedId, subShape), [&](const auto &t) -> Value {
-        return builder.createOrFold<index::MulOp>(
+        return builder.createOrFold<arith::MulIOp>(
             loc, std::get<0>(t),
             builder.createOrFold<arith::ConstantIndexOp>(loc, std::get<1>(t)));
       });
@@ -84,7 +83,7 @@ genCoordinates(OpBuilder &builder, Location loc,
     // Do not go beyond `srcShape` bounds.
     SmallVector<Value> mods = llvm::map_to_vector(
         llvm::zip_equal(adds, srcShape), [&](const auto &t) -> Value {
-          return builder.createOrFold<index::RemUOp>(
+          return builder.createOrFold<arith::RemUIOp>(
               loc, std::get<0>(t),
               arith::ConstantIndexOp::create(builder, loc, std::get<1>(t)));
         });
@@ -343,7 +342,7 @@ LayoutAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId) {
     /// e.g., linearId=22, dimSize=4: 22 % 4 = 2 (we're at position 2 within
     /// this dimension)
     result[dimIdx] =
-        builder.createOrFold<index::RemUOp>(loc, remaining, dimSizeVal);
+        builder.createOrFold<arith::RemUIOp>(loc, remaining, dimSizeVal);
 
     /// Update remaining for the next dimension by removing what we've already
     /// processed. Division tells us "how many complete groups of this dimension
@@ -352,7 +351,7 @@ LayoutAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId) {
     /// no next dimension to process
     if (i < order.size() - 1) {
       remaining =
-          builder.createOrFold<index::DivUOp>(loc, remaining, dimSizeVal);
+          builder.createOrFold<arith::DivUIOp>(loc, remaining, dimSizeVal);
     }
   }
   return result;

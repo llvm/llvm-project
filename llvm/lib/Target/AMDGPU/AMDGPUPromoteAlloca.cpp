@@ -122,6 +122,7 @@ private:
   /// Check whether we have enough local memory for promotion.
   bool hasSufficientLocalMem(const Function &F);
 
+  FixedVectorType *getVectorTypeForAlloca(Type *AllocaTy) const;
   bool tryPromoteAllocaToVector(AllocaInst &I);
   bool tryPromoteAllocaToLDS(AllocaInst &I, bool SufficientLDS);
 
@@ -791,16 +792,13 @@ static BasicBlock::iterator skipToNonAllocaInsertPt(BasicBlock &BB,
   return I;
 }
 
-// FIXME: Should try to pick the most likely to be profitable allocas first.
-bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
-  LLVM_DEBUG(dbgs() << "Trying to promote to vector: " << Alloca << '\n');
-
+FixedVectorType *
+AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   if (DisablePromoteAllocaToVector) {
-    LLVM_DEBUG(dbgs() << "  Promote alloca to vector is disabled\n");
-    return false;
+    LLVM_DEBUG(dbgs() << "  Promote alloca to vectors is disabled\n");
+    return nullptr;
   }
 
-  Type *AllocaTy = Alloca.getAllocatedType();
   auto *VectorTy = dyn_cast<FixedVectorType>(AllocaTy);
   if (auto *ArrayTy = dyn_cast<ArrayType>(AllocaTy)) {
     uint64_t NumElems = 1;
@@ -832,10 +830,9 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       }
     }
   }
-
   if (!VectorTy) {
     LLVM_DEBUG(dbgs() << "  Cannot convert type to vector\n");
-    return false;
+    return nullptr;
   }
 
   const unsigned MaxElements =
@@ -845,8 +842,28 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       VectorTy->getNumElements() < 2) {
     LLVM_DEBUG(dbgs() << "  " << *VectorTy
                       << " has an unsupported number of elements\n");
-    return false;
+    return nullptr;
   }
+
+  Type *VecEltTy = VectorTy->getElementType();
+  unsigned ElementSizeInBits = DL->getTypeSizeInBits(VecEltTy);
+  if (ElementSizeInBits != DL->getTypeAllocSizeInBits(VecEltTy)) {
+    LLVM_DEBUG(dbgs() << "  Cannot convert to vector if the allocation size "
+                         "does not match the type's size\n");
+    return nullptr;
+  }
+
+  return VectorTy;
+}
+
+// FIXME: Should try to pick the most likely to be profitable allocas first.
+bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
+  LLVM_DEBUG(dbgs() << "Trying to promote to vectors: " << Alloca << '\n');
+
+  Type *AllocaTy = Alloca.getAllocatedType();
+  FixedVectorType *VectorTy = getVectorTypeForAlloca(AllocaTy);
+  if (!VectorTy)
+    return false;
 
   std::map<GetElementPtrInst *, WeakTrackingVH> GEPVectorIdx;
   SmallVector<Instruction *> WorkList;
@@ -869,13 +886,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   LLVM_DEBUG(dbgs() << "  Attempting promotion to: " << *VectorTy << "\n");
 
   Type *VecEltTy = VectorTy->getElementType();
-  unsigned ElementSizeInBits = DL->getTypeSizeInBits(VecEltTy);
-  if (ElementSizeInBits != DL->getTypeAllocSizeInBits(VecEltTy)) {
-    LLVM_DEBUG(dbgs() << "  Cannot convert to vector if the allocation size "
-                         "does not match the type's size\n");
-    return false;
-  }
-  unsigned ElementSize = ElementSizeInBits / 8;
+  unsigned ElementSize = DL->getTypeSizeInBits(VecEltTy) / 8;
   assert(ElementSize > 0);
   for (auto *U : Uses) {
     Instruction *Inst = cast<Instruction>(U->getUser());

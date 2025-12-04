@@ -1637,3 +1637,14 @@ test::TestCreateTensorOp::getBufferType(
 
   return convertTensorToBuffer(getOperation(), options, type);
 }
+
+// Define a custom builder for ManyRegionsOp declared in TestOps.td.
+//  OpBuilder<(ins "::std::unique_ptr<::mlir::Region>":$firstRegion,
+//                 "::std::unique_ptr<::mlir::Region>":$secondRegion)>
+void test::ManyRegionsOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &state,
+    llvm::SmallVectorImpl<std::unique_ptr<mlir::Region>> &&regions) {
+  for (auto &&regionPtr : std::move(regions))
+    state.addRegion(std::move(regionPtr));
+  ManyRegionsOp::build(builder, state, {}, regions.size());
+}

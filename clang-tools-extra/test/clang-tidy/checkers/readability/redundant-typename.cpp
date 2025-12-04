@@ -267,3 +267,27 @@ WHOLE_TYPE_IN_MACRO Macro2;
 
 #define WHOLE_DECLARATION_IN_MACRO typename NotDependent::R Macro3
 WHOLE_DECLARATION_IN_MACRO;
+
+template <typename T> struct Wrapper {};
+template <typename T>
+struct ClassWrapper {
+    using R = T;
+    Wrapper<R> f();
+};
+
+template <typename T>
+Wrapper<typename ClassWrapper<T>::R> ClassWrapper<T>::f() {
+    return {};
+}
+
+template <typename T> struct StructWrapper {};
+template <typename T>
+class ClassWithNestedStruct {
+  struct Nested {};
+  StructWrapper<Nested> f();
+};
+
+template <typename T>
+StructWrapper<typename ClassWithNestedStruct<T>::Nested> ClassWithNestedStruct<T>::f() {
+  return {};
+}

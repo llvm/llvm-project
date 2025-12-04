@@ -218,19 +218,22 @@ StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
 
 void BreakpointResolverName::AddNameLookup(ConstString name,
                                            FunctionNameType name_type_mask) {
-
-  Module::LookupInfo lookup(name, name_type_mask, m_language);
-  m_lookups.emplace_back(lookup);
+  std::vector<Module::LookupInfo> infos =
+      Module::LookupInfo::MakeLookupInfos(name, name_type_mask, m_language);
+  llvm::append_range(m_lookups, infos);
 
   auto add_variant_funcs = [&](Language *lang) {
     for (Language::MethodNameVariant variant :
          lang->GetMethodNameVariants(name)) {
       // FIXME: Should we be adding variants that aren't of type Full?
       if (variant.GetType() & lldb::eFunctionNameTypeFull) {
-        Module::LookupInfo variant_lookup(name, variant.GetType(),
-                                          lang->GetLanguageType());
-        variant_lookup.SetLookupName(variant.GetName());
-        m_lookups.emplace_back(variant_lookup);
+        std::vector<Module::LookupInfo> variant_lookups =
+            Module::LookupInfo::MakeLookupInfos(name, variant.GetType(),
+                                                lang->GetLanguageType());
+        llvm::for_each(variant_lookups, [&](auto &variant_lookup) {
+          variant_lookup.SetLookupName(variant.GetName());
+        });
+        llvm::append_range(m_lookups, variant_lookups);
       }
     }
     return IterationAction::Continue;
@@ -401,14 +404,22 @@ void BreakpointResolverName::GetDescription(Stream *s) {
   if (m_match_type == Breakpoint::Regexp)
     s->Printf("regex = '%s'", m_regex.GetText().str().c_str());
   else {
-    size_t num_names = m_lookups.size();
-    if (num_names == 1)
-      s->Printf("name = '%s'", m_lookups[0].GetName().GetCString());
+    // Since there may be many lookups objects for the same name breakpoint (one
+    // per language available), unique them by name, and operate on those unique
+    // names.
+    std::vector<ConstString> unique_lookups;
+    for (auto &lookup : m_lookups) {
+      if (!llvm::is_contained(unique_lookups, lookup.GetName()))
+        unique_lookups.push_back(lookup.GetName());
+    }
+    if (unique_lookups.size() == 1)
+      s->Printf("name = '%s'", unique_lookups[0].GetCString());
     else {
+      size_t num_names = unique_lookups.size();
       s->Printf("names = {");
       for (size_t i = 0; i < num_names; i++) {
         s->Printf("%s'%s'", (i == 0 ? "" : ", "),
-                  m_lookups[i].GetName().GetCString());
+                  unique_lookups[i].GetCString());
       }
       s->Printf("}");
     }

@@ -255,7 +255,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; SDAG-GFX942-NEXT:    s_mov_b32 s17, s10
 ; SDAG-GFX942-NEXT:    s_mov_b32 s2, s9
 ; SDAG-GFX942-NEXT:    s_or_b64 s[12:13], s[2:3], s[16:17]
-; SDAG-GFX942-NEXT:  .LBB0_1: ; %load-store-loop
+; SDAG-GFX942-NEXT:  .LBB0_1: ; %static-memcpy-expansion-main-body
 ; SDAG-GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-GFX942-NEXT:    s_add_i32 s1, s0, s16
 ; SDAG-GFX942-NEXT:    v_mov_b32_e32 v0, s1
@@ -312,7 +312,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; SDAG-GFX942-NEXT:    s_waitcnt vmcnt(15)
 ; SDAG-GFX942-NEXT:    buffer_store_dwordx4 a[0:3], v0, s[12:15], 0 offen offset:240
 ; SDAG-GFX942-NEXT:    s_cbranch_scc1 .LBB0_1
-; SDAG-GFX942-NEXT:  ; %bb.2: ; %memcpy-split
+; SDAG-GFX942-NEXT:  ; %bb.2: ; %static-memcpy-post-expansion
 ; SDAG-GFX942-NEXT:    s_endpgm
 ;
 ; SDAG-GFX1100-LABEL: memcpy_known:
@@ -341,7 +341,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s3, s16
 ; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-GFX1100-NEXT:    s_or_b64 s[12:13], s[2:3], s[16:17]
-; SDAG-GFX1100-NEXT:  .LBB0_1: ; %load-store-loop
+; SDAG-GFX1100-NEXT:  .LBB0_1: ; %static-memcpy-expansion-main-body
 ; SDAG-GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-GFX1100-NEXT:    s_add_i32 s1, s0, s16
 ; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -400,7 +400,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-GFX1100-NEXT:    buffer_store_b128 v[60:63], v64, s[12:15], 0 offen offset:240
 ; SDAG-GFX1100-NEXT:    s_cbranch_scc1 .LBB0_1
-; SDAG-GFX1100-NEXT:  ; %bb.2: ; %memcpy-split
+; SDAG-GFX1100-NEXT:  ; %bb.2: ; %static-memcpy-post-expansion
 ; SDAG-GFX1100-NEXT:    s_endpgm
 ;
 ; GISEL-GFX942-LABEL: memcpy_known:
@@ -419,7 +419,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; GISEL-GFX942-NEXT:    s_mov_b32 s5, s14
 ; GISEL-GFX942-NEXT:    s_mov_b32 s6, s15
 ; GISEL-GFX942-NEXT:    v_mov_b32_e32 v1, s16
-; GISEL-GFX942-NEXT:  .LBB0_1: ; %load-store-loop
+; GISEL-GFX942-NEXT:  .LBB0_1: ; %static-memcpy-expansion-main-body
 ; GISEL-GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-GFX942-NEXT:    v_add_u32_e32 v62, s0, v1
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[2:5], v62, s[8:11], 0 offen
@@ -477,7 +477,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v63, s[4:7], 0 offen offset:240
 ; GISEL-GFX942-NEXT:    s_cbranch_vccnz .LBB0_1
-; GISEL-GFX942-NEXT:  ; %bb.2: ; %memcpy-split
+; GISEL-GFX942-NEXT:  ; %bb.2: ; %static-memcpy-post-expansion
 ; GISEL-GFX942-NEXT:    s_endpgm
 ;
 ; GISEL-GFX1100-LABEL: memcpy_known:
@@ -497,7 +497,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s12, s9
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s13, s10
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s14, s11
-; GISEL-GFX1100-NEXT:  .LBB0_1: ; %load-store-loop
+; GISEL-GFX1100-NEXT:  .LBB0_1: ; %static-memcpy-expansion-main-body
 ; GISEL-GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-GFX1100-NEXT:    v_add_nc_u32_e32 v61, s0, v0
 ; GISEL-GFX1100-NEXT:    v_add_nc_u32_e32 v65, s8, v0
@@ -553,7 +553,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) 
 ; GISEL-GFX1100-NEXT:    buffer_store_b128 v[61:64], v65, s[12:15], 0 offen offset:240
 ; GISEL-GFX1100-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x2000, v0
 ; GISEL-GFX1100-NEXT:    s_cbranch_vccnz .LBB0_1
-; GISEL-GFX1100-NEXT:  ; %bb.2: ; %memcpy-split
+; GISEL-GFX1100-NEXT:  ; %bb.2: ; %static-memcpy-post-expansion
 ; GISEL-GFX1100-NEXT:    s_endpgm
   call void @llvm.memcpy.p7.p7.i32(ptr addrspace(7) noundef nonnull align 16 %dst, ptr addrspace(7) noundef nonnull align 16 %src, i32 8192, i1 false)
   ret void
@@ -787,7 +787,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; SDAG-GFX942-NEXT:    s_mov_b32 s17, s10
 ; SDAG-GFX942-NEXT:    s_mov_b32 s2, s9
 ; SDAG-GFX942-NEXT:    s_or_b64 s[12:13], s[2:3], s[16:17]
-; SDAG-GFX942-NEXT:  .LBB1_1: ; %load-store-loop
+; SDAG-GFX942-NEXT:  .LBB1_1: ; %static-memcpy-expansion-main-body
 ; SDAG-GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-GFX942-NEXT:    s_add_i32 s1, s0, s16
 ; SDAG-GFX942-NEXT:    v_mov_b32_e32 v0, s1
@@ -844,7 +844,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; SDAG-GFX942-NEXT:    s_waitcnt vmcnt(15)
 ; SDAG-GFX942-NEXT:    buffer_store_dwordx4 a[0:3], v0, s[12:15], 0 offen offset:240
 ; SDAG-GFX942-NEXT:    s_cbranch_scc1 .LBB1_1
-; SDAG-GFX942-NEXT:  ; %bb.2: ; %memcpy-split
+; SDAG-GFX942-NEXT:  ; %bb.2: ; %static-memcpy-post-expansion
 ; SDAG-GFX942-NEXT:    s_endpgm
 ;
 ; SDAG-GFX1100-LABEL: memcpy_known_medium:
@@ -873,7 +873,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s3, s16
 ; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-GFX1100-NEXT:    s_or_b64 s[12:13], s[2:3], s[16:17]
-; SDAG-GFX1100-NEXT:  .LBB1_1: ; %load-store-loop
+; SDAG-GFX1100-NEXT:  .LBB1_1: ; %static-memcpy-expansion-main-body
 ; SDAG-GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-GFX1100-NEXT:    s_add_i32 s1, s0, s16
 ; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -932,7 +932,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-GFX1100-NEXT:    buffer_store_b128 v[60:63], v64, s[12:15], 0 offen offset:240
 ; SDAG-GFX1100-NEXT:    s_cbranch_scc1 .LBB1_1
-; SDAG-GFX1100-NEXT:  ; %bb.2: ; %memcpy-split
+; SDAG-GFX1100-NEXT:  ; %bb.2: ; %static-memcpy-post-expansion
 ; SDAG-GFX1100-NEXT:    s_endpgm
 ;
 ; GISEL-GFX942-LABEL: memcpy_known_medium:
@@ -951,7 +951,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; GISEL-GFX942-NEXT:    s_mov_b32 s5, s14
 ; GISEL-GFX942-NEXT:    s_mov_b32 s6, s15
 ; GISEL-GFX942-NEXT:    v_mov_b32_e32 v1, s16
-; GISEL-GFX942-NEXT:  .LBB1_1: ; %load-store-loop
+; GISEL-GFX942-NEXT:  .LBB1_1: ; %static-memcpy-expansion-main-body
 ; GISEL-GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-GFX942-NEXT:    v_add_u32_e32 v62, s0, v1
 ; GISEL-GFX942-NEXT:    buffer_load_dwordx4 v[2:5], v62, s[8:11], 0 offen
@@ -1009,7 +1009,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-GFX942-NEXT:    buffer_store_dwordx4 v[2:5], v63, s[4:7], 0 offen offset:240
 ; GISEL-GFX942-NEXT:    s_cbranch_vccnz .LBB1_1
-; GISEL-GFX942-NEXT:  ; %bb.2: ; %memcpy-split
+; GISEL-GFX942-NEXT:  ; %bb.2: ; %static-memcpy-post-expansion
 ; GISEL-GFX942-NEXT:    s_endpgm
 ;
 ; GISEL-GFX1100-LABEL: memcpy_known_medium:
@@ -1029,7 +1029,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s12, s9
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s13, s10
 ; GISEL-GFX1100-NEXT:    s_mov_b32 s14, s11
-; GISEL-GFX1100-NEXT:  .LBB1_1: ; %load-store-loop
+; GISEL-GFX1100-NEXT:  .LBB1_1: ; %static-memcpy-expansion-main-body
 ; GISEL-GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-GFX1100-NEXT:    v_add_nc_u32_e32 v61, s0, v0
 ; GISEL-GFX1100-NEXT:    v_add_nc_u32_e32 v65, s8, v0
@@ -1085,7 +1085,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrsp
 ; GISEL-GFX1100-NEXT:    buffer_store_b128 v[61:64], v65, s[12:15], 0 offen offset:240
 ; GISEL-GFX1100-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x100, v0
 ; GISEL-GFX1100-NEXT:    s_cbranch_vccnz .LBB1_1
-; GISEL-GFX1100-NEXT:  ; %bb.2: ; %memcpy-split
+; GISEL-GFX1100-NEXT:  ; %bb.2: ; %static-memcpy-post-expansion
 ; GISEL-GFX1100-NEXT:    s_endpgm
   call void @llvm.memcpy.p7.p7.i32(ptr addrspace(7) noundef nonnull align 16 %dst, ptr addrspace(7) noundef nonnull align 16 %src, i32 256, i1 false)
   ret void

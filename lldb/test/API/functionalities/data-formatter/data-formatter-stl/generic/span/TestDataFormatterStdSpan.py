@@ -74,7 +74,7 @@ class StdSpanDataFormatterTestCase(TestBase):
             result_summary="item 0 is 1",
         )
 
-        self.runCmd("type summary delete span")
+        self.runCmd("type summary clear")
 
         # New span with strings
         lldbutil.continue_to_breakpoint(process, bkpt)
@@ -155,12 +155,6 @@ class StdSpanDataFormatterTestCase(TestBase):
         )
         self.check_size("nested", 2)
 
-    @skipIf(compiler="clang", compiler_version=["<", "11.0"])
-    @add_test_categories(["libc++"])
-    def test_libcxx(self):
-        self.build(dictionary={"USE_LIBCPP": 1})
-        self.do_test()
-
     def do_test_ref_and_ptr(self):
         """Test that std::span is correctly formatted when passed by ref and ptr"""
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
@@ -176,6 +170,24 @@ class StdSpanDataFormatterTestCase(TestBase):
 
     @skipIf(compiler="clang", compiler_version=["<", "11.0"])
     @add_test_categories(["libc++"])
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    @skipIf(compiler="clang", compiler_version=["<", "11.0"])
+    @add_test_categories(["libc++"])
     def test_ref_and_ptr_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_ref_and_ptr()
+
+    @skipIf(compiler="clang", compiler_version=["<", "11.0"])
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()
+
+    @skipIf(compiler="clang", compiler_version=["<", "11.0"])
+    @add_test_categories(["libstdcxx"])
+    def test_ref_and_ptr_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test_ref_and_ptr()
