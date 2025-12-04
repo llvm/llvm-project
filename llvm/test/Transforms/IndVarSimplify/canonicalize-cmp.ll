@@ -21,7 +21,7 @@ define i32 @test_01(i32 %a, i32 %b, ptr %p) {
 ; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[IV]], 100
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i32 [[IV]], 100
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[B3:%.*]], label [[B4:%.*]]
 ; CHECK:       b3:
 ; CHECK-NEXT:    store i32 [[IV]], ptr [[P]], align 4
@@ -89,7 +89,7 @@ define i32 @test_02(i32 %a, i32 %b, ptr %p) {
 ; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 100, [[IV]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ugt i32 100, [[IV]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[B3:%.*]], label [[B4:%.*]]
 ; CHECK:       b3:
 ; CHECK-NEXT:    store i32 [[IV]], ptr [[P]], align 4

@@ -15,18 +15,6 @@
 namespace clang::lifetimes::internal {
 using llvm::isa_and_present;
 
-static bool isGslPointerType(QualType QT) {
-  if (const auto *RD = QT->getAsCXXRecordDecl()) {
-    // We need to check the template definition for specializations.
-    if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-      return CTSD->getSpecializedTemplate()
-          ->getTemplatedDecl()
-          ->hasAttr<PointerAttr>();
-    return RD->hasAttr<PointerAttr>();
-  }
-  return false;
-}
-
 static bool isPointerType(QualType QT) {
   return QT->isPointerOrReferenceType() || isGslPointerType(QT);
 }

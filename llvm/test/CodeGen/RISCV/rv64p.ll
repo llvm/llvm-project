@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-p -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s
 
-declare i32 @llvm.ctlz.i32(i32, i1)
-
 define signext i32 @ctlz_i32(i32 signext %a) nounwind {
 ; CHECK-LABEL: ctlz_i32:
 ; CHECK:       # %bb.0:
@@ -66,8 +64,6 @@ define i32 @ctlz_lshr_i32(i32 signext %a) {
   ret i32 %2
 }
 
-declare i64 @llvm.ctlz.i64(i64, i1)
-
 define i64 @ctlz_i64(i64 %a) nounwind {
 ; CHECK-LABEL: ctlz_i64:
 ; CHECK:       # %bb.0:
@@ -76,8 +72,6 @@ define i64 @ctlz_i64(i64 %a) nounwind {
   %1 = call i64 @llvm.ctlz.i64(i64 %a, i1 false)
   ret i64 %1
 }
-
-declare i32 @llvm.cttz.i32(i32, i1)
 
 define signext i32 @cttz_i32(i32 signext %a) nounwind {
 ; CHECK-LABEL: cttz_i32:
@@ -150,8 +144,6 @@ define signext i32 @ffs_i32(i32 signext %a) nounwind {
   %4 = select i1 %3, i32 0, i32 %2
   ret i32 %4
 }
-
-declare i64 @llvm.cttz.i64(i64, i1)
 
 define i64 @cttz_i64(i64 %a) nounwind {
 ; CHECK-LABEL: cttz_i64:
@@ -292,8 +284,6 @@ define i64 @maxu_i64(i64 %a, i64 %b) nounwind {
   ret i64 %cond
 }
 
-declare i32 @llvm.abs.i32(i32, i1 immarg)
-
 define i32 @abs_i32(i32 %x) {
 ; CHECK-LABEL: abs_i32:
 ; CHECK:       # %bb.0:
@@ -312,8 +302,6 @@ define signext i32 @abs_i32_sext(i32 signext %x) {
   ret i32 %abs
 }
 
-declare i64 @llvm.abs.i64(i64, i1 immarg)
-
 define i64 @abs_i64(i64 %x) {
 ; CHECK-LABEL: abs_i64:
 ; CHECK:       # %bb.0:
@@ -322,8 +310,6 @@ define i64 @abs_i64(i64 %x) {
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
   ret i64 %abs
 }
-
-declare i32 @llvm.bswap.i32(i32)
 
 define signext i32 @bswap_i32(i32 signext %a) nounwind {
 ; CHECK-LABEL: bswap_i32:
@@ -347,8 +333,6 @@ define void @bswap_i32_nosext(i32 signext %a, ptr %x) nounwind {
   store i32 %1, ptr %x
   ret void
 }
-
-declare i64 @llvm.bswap.i64(i64)
 
 define i64 @bswap_i64(i64 %a) {
 ; CHECK-LABEL: bswap_i64:

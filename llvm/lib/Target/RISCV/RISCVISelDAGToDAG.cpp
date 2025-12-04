@@ -1867,6 +1867,43 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->RemoveDeadNode(Node);
     return;
   }
+  case RISCVISD::PPACK_DH: {
+    assert(Subtarget->enablePExtCodeGen() && Subtarget->isRV32());
+
+    SDValue Val0 = Node->getOperand(0);
+    SDValue Val1 = Node->getOperand(1);
+    SDValue Val2 = Node->getOperand(2);
+    SDValue Val3 = Node->getOperand(3);
+
+    SDValue Ops[] = {
+        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32), Val0,
+        CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32), Val2,
+        CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
+    SDValue RegPair0 =
+        SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                       MVT::Untyped, Ops),
+                0);
+    SDValue Ops1[] = {
+        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32), Val1,
+        CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32), Val3,
+        CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
+    SDValue RegPair1 =
+        SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                       MVT::Untyped, Ops1),
+                0);
+
+    MachineSDNode *PackDH = CurDAG->getMachineNode(
+        RISCV::PPACK_DH, DL, MVT::Untyped, {RegPair0, RegPair1});
+
+    SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
+                                                MVT::i32, SDValue(PackDH, 0));
+    SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL,
+                                                MVT::i32, SDValue(PackDH, 0));
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntNo = Node->getConstantOperandVal(0);
     switch (IntNo) {
@@ -2696,7 +2733,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::SCALAR_TO_VECTOR:
     if (Subtarget->enablePExtCodeGen()) {
       MVT SrcVT = Node->getOperand(0).getSimpleValueType();
-      if (VT == MVT::v2i32 && SrcVT == MVT::i64) {
+      if ((VT == MVT::v2i32 && SrcVT == MVT::i64) ||
+          (VT == MVT::v4i8 && SrcVT == MVT::i32)) {
         ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
         CurDAG->RemoveDeadNode(Node);
         return;
