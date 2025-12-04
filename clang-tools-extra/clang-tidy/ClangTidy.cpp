@@ -212,7 +212,7 @@ public:
           continue;
         }
         const StringRef Code = Buffer.get()->getBuffer();
-        auto Style = format::getStyle(
+        llvm::Expected<clang::format::FormatStyle> Style = format::getStyle(
             *Context.getOptionsForFile(File).FormatStyle, File, "none");
         if (!Style) {
           llvm::errs() << llvm::toString(Style.takeError()) << "\n";

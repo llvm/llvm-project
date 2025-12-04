@@ -53,7 +53,7 @@ class LintArgs:
 
 
 class LintHelper:
-    COMMENT_TAG = "<!--LLVM CODE LINT COMMENT: {linter}-->"
+    COMMENT_TAG: Final = "<!--LLVM CODE LINT COMMENT: {linter}-->"
     name: str
     friendly_name: str
     comment: Dict[str, Any] = {}
@@ -180,8 +180,8 @@ class ClangTidyLintHelper(LintHelper):
     name: Final = "clang-tidy"
     friendly_name: Final = "C/C++ code linter"
 
-    def instructions(self, cpp_files: Sequence[str], args: LintArgs) -> str:
-        files_str = " ".join(cpp_files)
+    def instructions(self, files_to_lint: Sequence[str], args: LintArgs) -> str:
+        files_str = " ".join(files_to_lint)
         return f"""
 git diff -U0 origin/main...HEAD -- {files_str} |
 python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
@@ -207,8 +207,8 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
         # TODO: Add more rules when enabling other projects to use clang-tidy in CI.
         return filepath.startswith("clang-tools-extra/clang-tidy/")
 
-    def run_linter_tool(self, cpp_files: Sequence[str], args: LintArgs) -> str:
-        if not cpp_files:
+    def run_linter_tool(self, files_to_lint: Sequence[str], args: LintArgs) -> str:
+        if not files_to_lint:
             return ""
 
         git_diff_cmd = [
@@ -218,7 +218,7 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
             f"{args.start_rev}...{args.end_rev}",
             "--",
         ]
-        git_diff_cmd.extend(cpp_files)
+        git_diff_cmd.extend(files_to_lint)
 
         diff_proc = subprocess.run(
             git_diff_cmd,
