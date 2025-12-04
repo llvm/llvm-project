@@ -727,12 +727,39 @@ class MetadataLoader::MetadataLoaderImpl {
     return Error::success();
   }
 
-  void upgradeDebugInfo(bool ModuleLevel) {
+  /// Specifies which kind of debug info upgrade should be performed.
+  enum class DebugInfoUpgradeMode {
+    /// No debug info upgrade.
+    None,
+    /// Debug info upgrade after loading function-level metadata block.
+    Partial,
+    /// Debug info upgrade after loading module-level metadata block.
+    ModuleLevel,
+  };
+
+  void upgradeDebugInfo(DebugInfoUpgradeMode Mode) {
+    if (Mode == DebugInfoUpgradeMode::None)
+      return;
     upgradeCUSubprograms();
     upgradeCUVariables();
-    if (ModuleLevel)
+    if (Mode == DebugInfoUpgradeMode::ModuleLevel)
       upgradeCULocals();
-    DISubprogram::cleanupRetainedNodes(std::exchange(NewDistinctSPs, {}));
+  }
+
+  /// Prepare loaded metadata nodes to be used by loader clients.
+  void resolveLoadedMetadata(PlaceholderQueue &Placeholders,
+                             DebugInfoUpgradeMode DIUpgradeMode) {
+    resolveForwardRefsAndPlaceholders(Placeholders);
+    upgradeDebugInfo(DIUpgradeMode);
+    DISubprogram::cleanupRetainedNodes(NewDistinctSPs);
+    NewDistinctSPs.clear();
+  }
+
+  void resolveLoadedMetadata(PlaceholderQueue &Placeholders,
+                             bool IsModuleLevelDIUpgrade) {
+    resolveLoadedMetadata(Placeholders, IsModuleLevelDIUpgrade
+                                            ? DebugInfoUpgradeMode::ModuleLevel
+                                            : DebugInfoUpgradeMode::Partial);
   }
 
   void callMDTypeCallback(Metadata **Val, unsigned TypeID);
@@ -760,7 +787,7 @@ public:
     if (ID < (MDStringRef.size() + GlobalMetadataBitPosIndex.size())) {
       PlaceholderQueue Placeholders;
       lazyLoadOneMetadata(ID, Placeholders);
-      resolveForwardRefsAndPlaceholders(Placeholders);
+      resolveLoadedMetadata(Placeholders, DebugInfoUpgradeMode::None);
       return MetadataList.lookup(ID);
     }
     return MetadataList.getMetadataFwdRef(ID);
@@ -1109,8 +1136,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
 
       // Reading the named metadata created forward references and/or
       // placeholders, that we flush here.
-      resolveForwardRefsAndPlaceholders(Placeholders);
-      upgradeDebugInfo(ModuleLevel);
+      resolveLoadedMetadata(Placeholders, ModuleLevel);
       // Return at the beginning of the block, since it is easy to skip it
       // entirely from there.
       Stream.ReadBlockEnd(); // Pop the abbrev block context.
@@ -1140,8 +1166,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      resolveForwardRefsAndPlaceholders(Placeholders);
-      upgradeDebugInfo(ModuleLevel);
+      resolveLoadedMetadata(Placeholders, ModuleLevel);
       return Error::success();
     case BitstreamEntry::Record:
       // The interesting case.
@@ -2510,7 +2535,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      resolveForwardRefsAndPlaceholders(Placeholders);
+      resolveLoadedMetadata(Placeholders, DebugInfoUpgradeMode::None);
       return Error::success();
     case BitstreamEntry::Record:
       // The interesting case.
@@ -2553,7 +2578,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
           // Load the attachment if it is in the lazy-loadable range and hasn't
           // been loaded yet.
           lazyLoadOneMetadata(Idx, Placeholders);
-          resolveForwardRefsAndPlaceholders(Placeholders);
+          resolveLoadedMetadata(Placeholders, DebugInfoUpgradeMode::None);
         }
 
         Metadata *Node = MetadataList.getMetadataFwdRef(Idx);
