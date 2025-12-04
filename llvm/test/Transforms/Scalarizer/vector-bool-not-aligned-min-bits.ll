@@ -5,23 +5,19 @@ define void @vector_scalar_not_aligned(ptr addrspace(1) %arg0, ptr addrspace(1) 
 ; CHECK-LABEL: @vector_scalar_not_aligned(
 ; CHECK-NEXT:    [[VAL_I1:%.*]] = load <11 x i32>, ptr addrspace(1) [[ARG_0:%.*]], align 4
 ; CHECK-NEXT:    [[VAL_I2:%.*]] = load <11 x i32>, ptr addrspace(1) [[ARG_1:%.*]], align 4
-; CHECK-NEXT:    [[BOOL_VEC_B1:%.*]] = icmp ne <11 x i32> [[VAL_I1]], zeroinitializer
-; CHECK-NEXT:    [[BOOL_VEC_B1_I0:%.*]] = shufflevector <11 x i1> [[BOOL_VEC_B1]], <11 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[BOOL_VEC_B1_I1:%.*]] = shufflevector <11 x i1> [[BOOL_VEC_B1]], <11 x i1> poison, <3 x i32> <i32 8, i32 9, i32 10>
-; CHECK-NEXT:    [[BOOL_VEC_B2:%.*]] = icmp ne <11 x i32> [[VAL_I2]], zeroinitializer
-; CHECK-NEXT:    [[BOOL_VEC_B2_I0:%.*]] = shufflevector <11 x i1> [[BOOL_VEC_B2]], <11 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[BOOL_RESULT_I0:%.*]] = xor <8 x i1> [[BOOL_VEC_B1_I0]], [[BOOL_VEC_B2_I0]]
-; CHECK-NEXT:    [[BOOL_VEC_B2_I1:%.*]] = shufflevector <11 x i1> [[BOOL_VEC_B2]], <11 x i1> poison, <3 x i32> <i32 8, i32 9, i32 10>
-; CHECK-NEXT:    [[BOOL_RESULT_I1:%.*]] = xor <3 x i1> [[BOOL_VEC_B1_I1]], [[BOOL_VEC_B2_I1]]
-; CHECK-NEXT:    [[ELEM_1:%.*]] = shufflevector <8 x i1> [[BOOL_RESULT_I0]], <8 x i1> [[BOOL_RESULT_I0]], <11 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[ELEM_2:%.*]] = shufflevector <3 x i1> [[BOOL_RESULT_I1]], <3 x i1> [[BOOL_RESULT_I1]], <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK-NEXT:    [[ELEM_3:%.*]] = extractelement <3 x i1> [[ELEM_2]], i64 0
-; CHECK-NEXT:    [[ELEM_4:%.*]] = insertelement <11 x i1> [[ELEM_1]], i1 [[ELEM_3]], i64 8
-; CHECK-NEXT:    [[ELEM_5:%.*]] = extractelement <3 x i1> [[ELEM_2]], i64 1
-; CHECK-NEXT:    [[ELEM_6:%.*]] = insertelement <11 x i1> [[ELEM_4]], i1 [[ELEM_5]], i64 9
-; CHECK-NEXT:    [[ELEM_7:%.*]] = extractelement <3 x i1> [[ELEM_2]], i64 2
-; CHECK-NEXT:    [[BOOL_RESULT:%.*]] = insertelement <11 x i1> [[ELEM_6]], i1 [[ELEM_7]], i64 10
-; CHECK-NEXT:    [[EXT:%.*]] = zext <11 x i1> [[BOOL_RESULT]] to <11 x i32>
+; CHECK-NEXT:    [[BOOLVEC1:%.*]] = icmp ne <11 x i32> [[VAL_I1]], zeroinitializer
+; CHECK-NEXT:    [[BOOLVEC1_I0:%.*]] = shufflevector <11 x i1> [[BOOLVEC1]] <11 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[BOOLVEC1_I1:%.*]] = shufflevector <11 x i1> [[BOOLVEC1]], <11 x i1> poison, <3 x i32> <i32 8, i32 9, i32 10>
+; CHECK-NEXT:    [[BOOLVEC2:%.*]] = icmp ne <11 x i32> [[VAL_I2]], zeroinitializer
+; CHECK-NEXT:    [[BOOLVEC2_I0:%.*]] = shufflevector <11 x i1> [[BOOLVEC2]], <11 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[BOOLRESULT_I0:%.*]] = xor <8 x i1> [[BOOLVEC1_I0]], [[BOOLVEC2_I0]]
+; CHECK-NEXT:    [[BOOLVEC2_I1:%.*]] = shufflevector <11 x i1> [[BOOLVEC2]], <11 x i1> poison, <3 x i32> <i32 8, i32 9, i32 10>
+; CHECK-NEXT:    [[BOOLRESULT_I1:%.*]] = xor <3 x i1> [[BOOLVEC1_I1]], [[BOOLVEC2_I1]]
+; CHECK-NEXT:    [[SSA1:%.*]] = shufflevector <8 x i1> [[BOOLRESULT_I0]], <8 x i1> [[BOOLRESULT_I0]], <11 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[SSA2:%.*]] = shufflevector <3 x i1> [[BOOLRESULT_I1]], <3 x i1> [[BOOLRESULT_I1]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[SSA3:%.*]] = shufflevector <6 x i1> [[SSA2]], <6 x i1> [[SSA2]], <11 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[BOOLRESULT:%.*]] = shufflevector <11 x i1> [[SSA1]], <11 x i1> [[SSA3]], <11 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 11, i32 12, i32 13>
+; CHECK-NEXT:    [[EXT:%.*]] = zext <11 x i1> [[BOOLRESULT]] to <11 x i32>
 ; CHECK-NEXT:    ret void
 
   %val1 = load <11 x i32>, ptr addrspace(1) %arg0, align 4

@@ -252,9 +252,16 @@ static Value *concatenate(IRBuilder<> &Builder, ArrayRef<Value *> Fragments,
       Res = Builder.CreateInsertElement(Res, Fragment, I * VS.NumPacked,
                                         Name + ".upto" + Twine(I));
     } else {
-      if (NumPacked < VS.NumPacked) {
+      unsigned remainedSize = NumPacked;
+      while (remainedSize <= VS.NumPacked / 2) {
         // If last pack of remained bits not aligned to target pack size.
-        ExtendMask.resize(NumPacked);
+        remainedSize = remainedSize * 2;
+        SmallVector<int> SmallExtendMask;
+        SmallExtendMask.resize(remainedSize, -1);
+        for (unsigned I = 0; I < remainedSize; ++I)
+          SmallExtendMask[I] = I;
+        Fragment =
+            Builder.CreateShuffleVector(Fragment, Fragment, SmallExtendMask);
       }
 
       Fragment = Builder.CreateShuffleVector(Fragment, Fragment, ExtendMask);
@@ -263,19 +270,8 @@ static Value *concatenate(IRBuilder<> &Builder, ArrayRef<Value *> Fragments,
       } else {
         for (unsigned J = 0; J < NumPacked; ++J)
           InsertMask[I * VS.NumPacked + J] = NumElements + J;
-
-        if (NumPacked < VS.NumPacked) {
-          for (unsigned J = 0; J < NumPacked; ++J) {
-            auto FragmentBit = Builder.CreateExtractElement(Fragment, J);
-            Res = Builder.CreateInsertElement(Res, FragmentBit,
-                                              I * VS.NumPacked + J);
-          }
-          Res->setName(Name + ".upto" + Twine(I));
-        } else {
-          Res = Builder.CreateShuffleVector(Res, Fragment, InsertMask,
-                                            Name + ".upto" + Twine(I));
-        }
-
+        Res = Builder.CreateShuffleVector(Res, Fragment, InsertMask,
+                                          Name + ".upto" + Twine(I));
         for (unsigned J = 0; J < NumPacked; ++J)
           InsertMask[I * VS.NumPacked + J] = I * VS.NumPacked + J;
       }
