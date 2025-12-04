@@ -2556,63 +2556,6 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   CaseRangeBlock = SavedCRBlock;
 }
 
-static std::string SimplifyConstraint(
-    const char *Constraint, const TargetInfo &Target,
-    SmallVectorImpl<TargetInfo::ConstraintInfo> *OutCons = nullptr) {
-  // If we have only the {...} constraint, do not do any simplifications. This
-  // already maps to the lower level LLVM inline assembly IR that tells the
-  // backend to allocate a specific register. Any validations would have already
-  // been done in the Sema stage or will be done in the AddVariableConstraints
-  // function.
-  if (Constraint[0] == '{' || (Constraint[0] == '&' && Constraint[1] == '{'))
-    return std::string(Constraint);
-
-  std::string Result;
-
-  while (*Constraint) {
-    switch (*Constraint) {
-    default:
-      Result += Target.convertConstraint(Constraint);
-      break;
-    // Ignore these
-    case '*':
-    case '?':
-    case '!':
-    case '=': // Will see this and the following in mult-alt constraints.
-    case '+':
-      break;
-    case '#': // Ignore the rest of the constraint alternative.
-      while (Constraint[1] && Constraint[1] != ',')
-        Constraint++;
-      break;
-    case '&':
-    case '%':
-      Result += *Constraint;
-      while (Constraint[1] && Constraint[1] == *Constraint)
-        Constraint++;
-      break;
-    case ',':
-      Result += "|";
-      break;
-    case 'g':
-      Result += "imr";
-      break;
-    case '[': {
-      assert(OutCons &&
-             "Must pass output names to constraints with a symbolic name");
-      unsigned Index;
-      bool result = Target.resolveSymbolicName(Constraint, *OutCons, Index);
-      assert(result && "Could not resolve symbolic name"); (void)result;
-      Result += llvm::utostr(Index);
-      break;
-    }
-    }
-
-    Constraint++;
-  }
-
-  return Result;
-}
 /// Is it valid to apply a register constraint for a variable marked with
 /// the "register asm" construct?
 /// Optionally, if it is determined that we can, we set "Register" to the

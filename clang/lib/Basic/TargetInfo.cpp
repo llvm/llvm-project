@@ -1121,6 +1121,14 @@ void TargetInfo::copyAuxTarget(const TargetInfo *Aux) {
 std::string
 TargetInfo::simplifyConstraint(StringRef Constraint,
                                SmallVectorImpl<ConstraintInfo> *OutCons) const {
+  // If we have only the {...} constraint, do not do any simplifications. This
+  // already maps to the lower level LLVM inline assembly IR that tells the
+  // backend to allocate a specific register. Any validations would have already
+  // been done in the Sema stage or will be done in the AddVariableConstraints
+  // function.
+  if (Constraint[0] == '{' || (Constraint[0] == '&' && Constraint[1] == '{'))
+    return std::string(Constraint);
+
   std::string Result;
 
   for (const char *I = Constraint.begin(), *E = Constraint.end(); I < E; I++) {
