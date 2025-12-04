@@ -53,8 +53,7 @@ Base ISAs
 =========
 
 The specification defines five base instruction sets: RV32I, RV32E, RV64I,
-RV64E, and RV128I. Currently, LLVM fully supports RV32I, and RV64I.  RV32E and
-RV64E are supported by the assembly-based tools only.  RV128I is not supported.
+RV64E, and RV128I. Currently, RV128I is not supported.
 
 To specify the target triple:
 
