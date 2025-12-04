@@ -7,7 +7,7 @@ define i64 @base(ptr %ptr) {
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V3:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; CHECK-NEXT:    [[V5:%.*]] = and i64 [[V3]], 2
-; CHECK-NEXT:    ret i64 [[V5]]
+; CHECK-NEXT:    ret i64 0
 ;
   %v1 = load i32, ptr %ptr, align 4
   %v3 = ptrtoint ptr %ptr to i64
@@ -22,7 +22,7 @@ define i64 @best_alignment(ptr %ptr) {
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[PTR]], align 16
 ; CHECK-NEXT:    [[V3:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; CHECK-NEXT:    [[V5:%.*]] = and i64 [[V3]], 15
-; CHECK-NEXT:    ret i64 [[V5]]
+; CHECK-NEXT:    ret i64 0
 ;
   %v1 = load i32, ptr %ptr, align 8
   %v2 = load i32, ptr %ptr, align 16
@@ -55,7 +55,7 @@ define i64 @ptrtoaddr(ptr %ptr) {
 ; CHECK-NEXT:    [[V3:%.*]] = ptrtoaddr ptr [[PTR]] to i64
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V5:%.*]] = and i64 [[V3]], 2
-; CHECK-NEXT:    ret i64 [[V5]]
+; CHECK-NEXT:    ret i64 0
 ;
   %v3 = ptrtoaddr ptr %ptr to i64
   %v1 = load i32, ptr %ptr, align 4
