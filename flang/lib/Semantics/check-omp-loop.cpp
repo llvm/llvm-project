@@ -270,8 +270,8 @@ static bool IsLoopTransforming(llvm::omp::Directive dir) {
   }
 }
 
-void OmpStructureChecker::CheckNestedBlock(const parser::OpenMPLoopConstruct &x,
-    const parser::Block &body) {
+void OmpStructureChecker::CheckNestedBlock(
+    const parser::OpenMPLoopConstruct &x, const parser::Block &body) {
   for (auto &stmt : body) {
     if (auto *dir{parser::Unwrap<parser::CompilerDirective>(stmt)}) {
       context_.Say(dir->source,
