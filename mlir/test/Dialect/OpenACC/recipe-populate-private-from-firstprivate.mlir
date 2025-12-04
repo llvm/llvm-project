@@ -31,10 +31,12 @@ func.func @test_scalar_from_firstprivate() {
 // CHECK:   memref.dealloc %[[VAL]] : memref<?x?xf32>
 // CHECK:   acc.terminator
 // CHECK: }
+// CHECK-NOT: destroy
 
 func.func @test_dynamic_from_firstprivate(%arg0: index, %arg1: index) {
   %0 = memref.alloc(%arg0, %arg1) {test.var = "dynamic_d2"} : memref<?x?xf32>
   return
 }
+
 
 
