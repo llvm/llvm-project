@@ -44,20 +44,14 @@ public:
         CASOpts(CASOpts), EmitDependencyFile(EmitDependencyFile),
         DiagGenerationAsCompilation(DiagGenerationAsCompilation),
         VerboseOS(VerboseOS) {}
-  bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
+  bool runInvocation(std::string Executable,
+                     std::shared_ptr<CompilerInvocation> Invocation,
                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer);
 
   bool hasScanned() const { return Scanned; }
   bool hasDiagConsumerFinished() const { return DiagConsumerFinished; }
-
-  /// Take the cc1 arguments corresponding to the most recent invocation used
-  /// with this action. Any modifications implied by the discovered dependencies
-  /// will have already been applied.
-  std::vector<std::string> takeLastCC1Arguments();
-
-  std::optional<std::string> takeLastCC1CacheKey();
 
 private:
   DependencyScanningService &Service;
@@ -71,8 +65,6 @@ private:
   std::optional<StringRef> ModuleName;
   std::optional<CompilerInstance> ScanInstanceStorage;
   std::shared_ptr<ModuleDepCollector> MDC;
-  std::vector<std::string> LastCC1Arguments;
-  std::optional<std::string> LastCC1CacheKey;
   bool Scanned = false;
   bool DiagConsumerFinished = false;
   raw_ostream *VerboseOS;

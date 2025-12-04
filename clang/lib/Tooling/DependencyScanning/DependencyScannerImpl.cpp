@@ -800,7 +800,7 @@ dependencies::initializeScanInstanceDependencyCollector(
 }
 
 bool DependencyScanningAction::runInvocation(
-    std::shared_ptr<CompilerInvocation> Invocation,
+    std::string Executable, std::shared_ptr<CompilerInvocation> Invocation,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     DiagnosticConsumer *DiagConsumer) {
@@ -823,7 +823,7 @@ bool DependencyScanningAction::runInvocation(
 
     // Scanning runs once for the first -cc1 invocation in a chain of driver
     // jobs. For any dependent jobs, reuse the scanning result and just
-    // update the LastCC1Arguments to correspond to the new invocation.
+    // update the new invocation.
     // FIXME: to support multi-arch builds, each arch requires a separate scan
     if (MDC)
       MDC->applyDiscoveredDependencies(OriginalInvocation);
@@ -831,8 +831,12 @@ bool DependencyScanningAction::runInvocation(
     if (Error E = Controller.finalize(ScanInstance, OriginalInvocation))
       return reportError(std::move(E));
 
-    LastCC1Arguments = OriginalInvocation.getCC1CommandLine();
-    LastCC1CacheKey = Controller.getCacheKey(OriginalInvocation);
+    std::optional<std::string> CacheKey =
+        Controller.getCacheKey(OriginalInvocation);
+
+    Consumer.handleBuildCommand({Executable,
+                                 OriginalInvocation.getCC1CommandLine(),
+                                 std::move(CacheKey)});
     return true;
   }
 
@@ -891,35 +895,28 @@ bool DependencyScanningAction::runInvocation(
   // ExecuteAction is responsible for calling finish.
   DiagConsumerFinished = true;
 
-  if (!ScanInstance.ExecuteAction(*Action))
-    return false;
+  const bool Result = ScanInstance.ExecuteAction(*Action);
 
-  if (MDC)
-    MDC->applyDiscoveredDependencies(OriginalInvocation);
+  if (Result) {
+    if (MDC)
+      MDC->applyDiscoveredDependencies(OriginalInvocation);
 
-  if (Error E = Controller.finalize(ScanInstance, OriginalInvocation))
-    return reportError(std::move(E));
+    if (Error E = Controller.finalize(ScanInstance, OriginalInvocation))
+      return reportError(std::move(E));
 
-  // Forward any CAS results to consumer.
-  std::string ID = OriginalInvocation.getFrontendOpts().CASIncludeTreeID;
-  if (!ID.empty())
-    Consumer.handleIncludeTreeID(std::move(ID));
+    // Forward any CAS results to consumer.
+    std::string ID = OriginalInvocation.getFrontendOpts().CASIncludeTreeID;
+    if (!ID.empty())
+      Consumer.handleIncludeTreeID(std::move(ID));
 
-  LastCC1Arguments = OriginalInvocation.getCC1CommandLine();
-  LastCC1CacheKey = Controller.getCacheKey(OriginalInvocation);
+    std::optional<std::string> CacheKey =
+        Controller.getCacheKey(OriginalInvocation);
 
-  return true;
-}
+    Consumer.handleBuildCommand({Executable,
+                                 OriginalInvocation.getCC1CommandLine(),
+                                 std::move(CacheKey)});
+  }
 
-std::vector<std::string> DependencyScanningAction::takeLastCC1Arguments() {
-  std::vector<std::string> Result;
-  std::swap(Result, LastCC1Arguments); // Reset LastCC1Arguments to empty.
-  return Result;
-}
-
-std::optional<std::string> DependencyScanningAction::takeLastCC1CacheKey() {
-  std::optional<std::string> Result;
-  std::swap(Result, LastCC1CacheKey);
   return Result;
 }
 
