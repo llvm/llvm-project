@@ -177,12 +177,23 @@ static constexpr StringLiteral getDeclareActionAttrName() {
 }
 
 static constexpr StringLiteral getRoutineInfoAttrName() {
-  return StringLiteral("acc.routine_info");
+  return RoutineInfoAttr::name;
 }
 
-/// Used to check whether the current operation is an `acc routine`
-inline bool isAccRoutineOp(mlir::Operation *op) {
+static constexpr StringLiteral getSpecializedRoutineAttrName() {
+  return SpecializedRoutineAttr::name;
+}
+
+/// Used to check whether the current operation is marked with
+/// `acc routine`. The operation passed in should be a function.
+inline bool isAccRoutine(mlir::Operation *op) {
   return op->hasAttr(mlir::acc::getRoutineInfoAttrName());
+}
+
+/// Used to check whether this is a specialized accelerator version of
+/// `acc routine` function.
+inline bool isSpecializedAccRoutine(mlir::Operation *op) {
+  return op->hasAttr(mlir::acc::getSpecializedRoutineAttrName());
 }
 
 static constexpr StringLiteral getFromDefaultClauseAttrName() {
