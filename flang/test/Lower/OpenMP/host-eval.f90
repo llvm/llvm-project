@@ -7,7 +7,7 @@ subroutine teams()
   ! BOTH: omp.target
 
   ! HOST-SAME: host_eval(%{{.*}} -> %[[NUM_TEAMS:.*]], %{{.*}} -> %[[THREAD_LIMIT:.*]] : i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
   !$omp target
@@ -34,9 +34,9 @@ end subroutine teams
 ! BOTH-LABEL: func.func @_QPdistribute_parallel_do
 subroutine distribute_parallel_do()
   ! BOTH: omp.target
-  
+
   ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]], %{{.*}} -> %[[NUM_THREADS:.*]] : i32, i32, i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
 
@@ -101,9 +101,9 @@ end subroutine distribute_parallel_do
 ! BOTH-LABEL: func.func @_QPdistribute_parallel_do_simd
 subroutine distribute_parallel_do_simd()
   ! BOTH: omp.target
-  
+
   ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]], %{{.*}} -> %[[NUM_THREADS:.*]] : i32, i32, i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
 
@@ -172,9 +172,9 @@ end subroutine distribute_parallel_do_simd
 ! BOTH-LABEL: func.func @_QPdistribute
 subroutine distribute()
   ! BOTH: omp.target
-  
+
   ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
 
@@ -224,9 +224,9 @@ end subroutine distribute
 ! BOTH-LABEL: func.func @_QPdistribute_simd
 subroutine distribute_simd()
   ! BOTH: omp.target
-  
+
   ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
 
@@ -281,9 +281,9 @@ end subroutine distribute_simd
 ! BOTH-LABEL: func.func @_QPloop
 subroutine loop()
   ! BOTH: omp.target
-  
+
   ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
-  
+
   ! DEVICE-NOT: host_eval({{.*}})
   ! DEVICE-SAME: {
 
