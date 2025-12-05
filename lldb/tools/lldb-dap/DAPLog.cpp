@@ -21,7 +21,7 @@ namespace lldb_dap {
 Log::Log(StringRef filename, std::error_code &EC) : m_stream(filename, EC) {}
 
 void Log::WriteMessage(StringRef message) {
-  const std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::mutex> lock(m_mutex);
   const llvm::sys::TimePoint<> time = std::chrono::system_clock::now();
   m_stream << formatv("[{0:%H:%M:%S.%L}] ", time) << message << '\n';
   m_stream.flush();
