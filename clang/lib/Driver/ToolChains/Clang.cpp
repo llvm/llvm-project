@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #include "Clang.h"
 #include "AMDGPUOpenMP.h"
 #include "Arch/ARM.h"

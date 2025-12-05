@@ -27,7 +27,9 @@ namespace NVPTX {
 class LLVM_LIBRARY_VISIBILITY Assembler final : public Tool {
 public:
   Assembler(const ToolChain &TC) : Tool("NVPTX::Assembler", "ptxas", TC) {}
+
   bool hasIntegratedCPP() const override { return false; }
+
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
@@ -38,7 +40,9 @@ public:
 class LLVM_LIBRARY_VISIBILITY FatBinary : public Tool {
 public:
   FatBinary(const ToolChain &TC) : Tool("NVPTX::Linker", "fatbinary", TC) {}
+
   bool hasIntegratedCPP() const override { return false; }
+
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
@@ -50,6 +54,7 @@ public:
   Linker(const ToolChain &TC) : Tool("NVPTX::Linker", "nvlink", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
+
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
@@ -59,7 +64,9 @@ class LLVM_LIBRARY_VISIBILITY OpenMPLinker : public Tool {
  public:
    OpenMPLinker(const ToolChain &TC)
        : Tool("NVPTX::OpenMPLinker", "nvlink", TC) {}
+       
    bool hasIntegratedCPP() const override { return false; }
+
    void ConstructJob(Compilation &C, const JobAction &JA,
                      const InputInfo &Output, const InputInfoList &Inputs,
                      const llvm::opt::ArgList &TCArgs,
@@ -158,6 +165,7 @@ public:
   void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
   SanitizerMask getSupportedSanitizers() const override;
+  
   VersionTuple
   computeMSVCVersion(const Driver *D,
                      const llvm::opt::ArgList &Args) const override;

@@ -1300,6 +1300,7 @@ bool Driver::loadConfigFiles() {
         UserConfigDir = static_cast<std::string>(CfgDir);
     }
   }
+  
   // Prepare list of directories where config file is searched for.
   StringRef CfgFileSearchDirs[] = {UserConfigDir, SystemConfigDir, Dir};
   ExpCtx.setSearchDirs(CfgFileSearchDirs);
