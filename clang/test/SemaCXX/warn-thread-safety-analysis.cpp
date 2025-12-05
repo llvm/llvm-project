@@ -1881,7 +1881,7 @@ public:
 };
 // FIXME: This is a false-positive as the lock is released by the dtor.
 void do_something(MutexWrapper mw) {
-  mw.Lock(); // expectred-note {{mutex acquired here}}
+  mw.Lock(); // expected-note {{mutex acquired here}}
 }            // expected-warning {{mutex 'mw.mu_' is still held at the end of function}}
 
 } // namespace test_function_param_lock_unlock
