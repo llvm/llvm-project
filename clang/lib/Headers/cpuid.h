@@ -279,6 +279,7 @@
 #endif
 
 /// Queries the processor to determine the highest supported \c CPUID leaf.
+/// This intrinsic is only available on x86 and x64.
 ///
 /// \headerfile <cpuid.h>
 ///
@@ -291,10 +292,10 @@
 ///    \c CPUID information is returned.
 /// \param __sig
 ///    If the \a __sig pointer is non-null, the first four bytes of the
-///    signature (as found in the \c ebx register) are returned in the
+///    signature (as found in the \c EBX register) are returned in the
 ///    location pointed to by \a __sig.
 /// \returns Returns 0 if \c CPUID is supported; otherwise returns the value
-///    that \c CPUID returns in the \c eax register.
+///    that \c CPUID returns in the \c EAX register.
 static __inline unsigned int __get_cpuid_max (unsigned int __leaf,
                                               unsigned int *__sig)
 {
@@ -341,16 +342,16 @@ static __inline unsigned int __get_cpuid_max (unsigned int __leaf,
 ///    An unsigned integer that identifies the level (also called "leaf") at
 ///    which the \c CPUID instruction will be executed.
 /// \param __eax
-///    A pointer to an integer that corresponds to the \c eax register where
+///    A pointer to an integer that corresponds to the \c EAX register where
 ///    \c CPUID stores output results.
 /// \param __ebx
-///    A pointer to an integer that corresponds to the \c ebx register where
+///    A pointer to an integer that corresponds to the \c EBX register where
 ///    \c CPUID stores output results.
 /// \param __ecx
-///    A pointer to an integer that corresponds to the \c ecx register where
+///    A pointer to an integer that corresponds to the \c ECX register where
 ///    \c CPUID stores output results.
 /// \param __edx
-///    A pointer to an integer that corresponds to the \c edx register where
+///    A pointer to an integer that corresponds to the \c EDX register where
 ///    \c CPUID stores output results.
 /// \returns Returns 1 if the requested \c CPUID leaf is supported; otherwise
 ///    returns 0.
@@ -384,16 +385,16 @@ static __inline int __get_cpuid (unsigned int __leaf, unsigned int *__eax,
 ///    An unsigned integer that identifies the sublevel (also called
 ///    "subleaf") at which the \c CPUID instruction will be executed.
 /// \param __eax
-///    A pointer to an integer that corresponds to the \c eax register where
+///    A pointer to an integer that corresponds to the \c EAX register where
 ///    \c CPUID stores output results.
 /// \param __ebx
-///    A pointer to an integer that corresponds to the \c ebx register where
+///    A pointer to an integer that corresponds to the \c EBX register where
 ///    \c CPUID stores output results.
 /// \param __ecx
-///    A pointer to an integer that corresponds to the \c ecx register where
+///    A pointer to an integer that corresponds to the \c ECX register where
 ///    \c CPUID stores output results.
 /// \param __edx
-///    A pointer to an integer that corresponds to the \c edx register where
+///    A pointer to an integer that corresponds to the \c EDX register where
 ///    \c CPUID stores output results.
 /// \returns Returns 1 if the requested \c CPUID leaf is supported; otherwise
 ///    returns 0.
@@ -419,7 +420,8 @@ static __inline int __get_cpuid_count (unsigned int __leaf,
 // to explicitly check for some offloading cases.
 #if !defined(__NVPTX__) && !defined(__AMDGPU__) && !defined(__SPIRV__)
 /// Executes the \c CPUID instruction with the specified leaf and subleaf
-/// values, and returns the results from the CPU's registers.
+/// values, and returns the results from the CPU's registers. This intrinsic
+/// is only available on x86 and x64.
 ///
 /// \headerfile <cpuid.h>
 ///
@@ -428,10 +430,10 @@ static __inline int __get_cpuid_count (unsigned int __leaf,
 /// \param __cpu_info
 ///    An output array of four integers:
 ///    <ul>
-///    <li>\a __cpuInfo[0] receives the value of the \c eax register.</li>
-///    <li>\a__cpuInfo[1] receives the value of the \c ebx register.</li>
-///    <li>\a__cpuInfo[2] receives the value of the \c ecx register.</li>
-///    <li>\a__cpuInfo[3] receives the value of the \c edx register.</li>
+///    <li>\a __cpuInfo[0] receives the value of the \c EAX register.</li>
+///    <li>\a __cpuInfo[1] receives the value of the \c EBX register.</li>
+///    <li>\a __cpuInfo[2] receives the value of the \c ECX register.</li>
+///    <li>\a __cpuInfo[3] receives the value of the \c EDX register.</li>
 ///    </ul>
 /// \param __leaf
 ///    An unsigned integer that identifies the level (also called the "leaf")
