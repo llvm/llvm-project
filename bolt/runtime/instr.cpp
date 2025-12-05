@@ -1691,12 +1691,9 @@ instrumentIndirectCall(uint64_t Target, uint64_t IndCallID) {
 extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
 {
 #if defined(__aarch64__)
-  // the target address is placed on stack
-  // the identifier of the indirect call site is placed in X1 register
-
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
-                       "ldr x0, [sp, #272]\n"
+                       "ldp x0, x1, [sp, #288]\n"
                        "bl instrumentIndirectCall\n"
                        RESTORE_ALL
                        "ret\n"
@@ -1731,12 +1728,9 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
 extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall()
 {
 #if defined(__aarch64__)
-  // the target address is placed on stack
-  // the identifier of the indirect call site is placed in X1 register
-
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
-                       "ldr x0, [sp, #272]\n"
+                       "ldp x0, x1, [sp, #288]\n"
                        "bl instrumentIndirectCall\n"
                        RESTORE_ALL
                        "ret\n"
