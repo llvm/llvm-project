@@ -27,32 +27,28 @@ endif:          ; preds = %entry
   ret i32 %tmp.2
 }
 
-; We fail to reach a fixpoint, because sunk instructions get revisited too
-; early. In @test2 the sunk add is revisited before the dominating condition
-; is visited and added to the DomConditionCache.
+; This used to fail to reach a fixpoint, because sunk instructions got
+; revisited before the dominating condition was visited and added to the
+; DomConditionCache.
 
 ;; PHI use, sink divide before call.
-define i32 @test2(i32 %x) nounwind ssp "instcombine-no-verify-fixpoint" {
+define i32 @test2(i32 %x) nounwind ssp {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[X_ADDR_17:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_ADDR_0:%.*]], [[BB2:%.*]] ]
-; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP4:%.*]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X_ADDR_17]], 0
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP4:%.*]], [[BB2:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X_ADDR_17:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[BB1:%.*]], label [[BB2]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[X_ADDR_17]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i32 [[TMP1]], [[X_ADDR_17]]
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @bar() #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @bar() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[X_ADDR_0]] = phi i32 [ [[TMP2]], [[BB1]] ], [ [[X_ADDR_17]], [[BB]] ]
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw i32 [[I_06]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[TMP4]], 1000000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB4:%.*]], label [[BB]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    ret i32 [[X_ADDR_0]]
+; CHECK-NEXT:    ret i32 [[X_ADDR_17]]
 ;
 entry:
   br label %bb

@@ -5902,6 +5902,7 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
     // live successor. Otherwise assume all successors are live.
     Instruction *TI = BB->getTerminator();
     if (BranchInst *BI = dyn_cast<BranchInst>(TI); BI && BI->isConditional()) {
+      DC.registerBranch(BI);
       if (isa<UndefValue>(BI->getCondition())) {
         // Branch on undef is UB.
         HandleOnlyLiveSuccessor(BB, nullptr);
