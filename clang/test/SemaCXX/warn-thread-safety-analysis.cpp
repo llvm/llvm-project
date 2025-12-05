@@ -1849,6 +1849,29 @@ struct TestScopedLockable {
   }
 };
 
+namespace test_function_param_lock_unlock {
+class A {
+ public:
+  A() EXCLUSIVE_LOCK_FUNCTION(mu_) { mu_.Lock(); }
+  ~A() UNLOCK_FUNCTION(mu_) { mu_.Unlock(); }
+ private:
+  Mutex mu_;
+};
+int do_something(A a) { return 0; }
+
+// Unlock in dtor without lock in ctor.
+// FIXME: We cannot detect that we are releasing a lock that was never held!
+class B {
+ public:
+  B() {}
+  B(int) {}
+  ~B() UNLOCK_FUNCTION(mu_) { mu_.Unlock(); }
+ private:
+  Mutex mu_;
+};
+int do_something(B b) { return 0; }
+} // namespace test_function_param_lock_unlock
+
 } // end namespace test_scoped_lockable
 
 
@@ -7622,26 +7645,3 @@ void testLoopConditionalReassignment(Foo *f1, Foo *f2, bool cond) {
   ptr->mu.Unlock(); // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
 } // expected-warning{{mutex 'f1->mu' is still held at the end of function}}
 }  // namespace CapabilityAliases
-
-namespace test_function_param_lock_unlock {
-class A {
- public:
-  A() EXCLUSIVE_LOCK_FUNCTION(mu_) { mu_.Lock(); }
-  ~A() UNLOCK_FUNCTION(mu_) { mu_.Unlock(); }
- private:
-  Mutex mu_;
-};
-int do_something(A a) { return 0; }
-
-// Unlock in dtor without lock in ctor.
-// FIXME: We cannot detect that we are releasing a lock that was never held!
-class B {
- public:
-  B() {}
-  B(int) {}
-  ~B() UNLOCK_FUNCTION(mu_) { mu_.Unlock(); }
- private:
-  Mutex mu_;
-};
-int do_something(B b) { return 0; }
-} // namespace test_function_param_lock_unlock
