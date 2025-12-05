@@ -92,7 +92,7 @@ emptyAndDetachBlock(BasicBlock *BB,
          "applying corresponding DTU updates.");
 }
 
-static bool HasLoopOrEntryConvergenceToken(const BasicBlock *BB) {
+bool llvm::HasLoopOrEntryConvergenceToken(const BasicBlock *BB) {
   for (const Instruction &I : *BB) {
     const ConvergenceControlInst *CCI = dyn_cast<ConvergenceControlInst>(&I);
     if (CCI && (CCI->isLoop() || CCI->isEntry()))
