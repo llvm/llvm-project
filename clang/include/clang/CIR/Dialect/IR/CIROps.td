@@ -1174,6 +1174,35 @@ def CIR_SwitchOp : CIR_Op<"switch", [
 }
 
 //===----------------------------------------------------------------------===//
+// IsConstantOp
+//===----------------------------------------------------------------------===//
+
+def CIR_IsConstantOp : CIR_Op<"is_constant", [Pure]> {
+  let summary = "Test for manifest compile-time constant";
+  let description = [{
+    Returns `true` if the argument is known to be a manifest compile-time
+    constant otherwise returns `false`. If the argument is a constant expression
+    which refers to a global (the address of which _is_ a constant, but not
+    manifest during the compile), then the intrinsic evaluates to `false`.
+
+    This is used to represent `__builtin_constant_p` in cases where the argument
+    isn't known to be constant during initial translation of the source code but
+    might be proven to be constant after later optimizations.
+
+    Example:
+    ```
+    %1 = cir.is_constant %2 : !s32i -> !cir.bool
+    ```
+  }];
+  let arguments = (ins CIR_AnyType:$val);
+  let results = (outs CIR_BoolType:$result);
+
+  let assemblyFormat = [{
+    $val `:` qualified(type($val)) `->` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // SwitchFlatOp
 //===----------------------------------------------------------------------===//
 
@@ -4735,6 +4764,13 @@ def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
     a result of the same type.
 
     Floating-point exceptions are ignored, and it does not set `errno`.
+
+    Example:
+
+    ```mlir
+    // $x : !cir.double
+    %y = cir.floor %x : !cir.double
+    ```
   }];
 }
 
@@ -4817,6 +4853,37 @@ def CIR_VAEndOp : CIR_Op<"va_end"> {
 
   let assemblyFormat = [{
     $arg_list attr-dict `:` type(operands)
+  }];
+}
+
+def CIR_VACopyOp : CIR_Op<"va_copy"> {
+  let summary = "Copied a variable argument list";
+  let description = [{
+    The `cir.copy` operation models the C/C++ va_copy macro.
+    The variable argument list passed as the `$src_list` is copied to an
+    unitialized `va_list` in the destination operand. The next argument that
+    can be extracted from the copied list is the same as the next argument in
+    the source list. The copied list must be destroyed with `va_end`.
+
+    Example:
+
+    ```mlir
+    // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+    %p = cir.cast array_to_ptrdecay %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+          -> !cir.ptr<!rec___va_list_tag>
+    cir.va_copy %p to %dst
+          : (!cir.ptr<!rec___va_list_tag>, !cir.ptr<!rec___va_list_tag>)
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_PointerType:$dst_list,
+    CIR_PointerType:$src_list
+  );
+
+  let assemblyFormat = [{
+    $src_list `to` $dst_list attr-dict `:` type(operands)
   }];
 }
 

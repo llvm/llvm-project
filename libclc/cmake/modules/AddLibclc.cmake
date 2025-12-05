@@ -29,9 +29,13 @@ function(compile_to_bc)
   if( NOT ${FILE_EXT} STREQUAL ".ll" )
     # Pass '-c' when not running the preprocessor
     set( PP_OPTS -c )
+    set( EXTRA_OPTS ${ARG_EXTRA_OPTS} )
   else()
     set( PP_OPTS -E;-P )
     set( TMP_SUFFIX .tmp )
+    string( REPLACE "-Xclang;-fdeclare-opencl-builtins;-Xclang;-finclude-default-header"
+      "" EXTRA_OPTS "${ARG_EXTRA_OPTS}"
+    )
   endif()
 
   set( TARGET_ARG )
@@ -48,7 +52,7 @@ function(compile_to_bc)
     COMMAND ${clang_exe}
       ${TARGET_ARG}
       ${PP_OPTS}
-      ${ARG_EXTRA_OPTS}
+      ${EXTRA_OPTS}
       -MD -MF ${ARG_OUTPUT}.d -MT ${ARG_OUTPUT}${TMP_SUFFIX}
       # LLVM 13 enables standard includes by default - we don't want
       # those when pre-processing IR. We disable it unconditionally.
