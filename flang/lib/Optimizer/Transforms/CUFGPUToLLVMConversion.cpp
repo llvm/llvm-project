@@ -249,8 +249,13 @@ struct CUFSharedMemoryOpConversion
                       "cuf.shared_memory must have an offset for code gen");
 
     auto gpuMod = op->getParentOfType<gpu::GPUModuleOp>();
+
     std::string sharedGlobalName =
-        (getFuncName(op) + llvm::Twine(cudaSharedMemSuffix)).str();
+        op.getIsStatic()
+            ? (getFuncName(op) + llvm::Twine(cudaSharedMemSuffix) +
+               *op.getBindcName())
+                  .str()
+            : (getFuncName(op) + llvm::Twine(cudaSharedMemSuffix)).str();
     mlir::Value sharedGlobalAddr =
         createAddressOfOp(rewriter, loc, gpuMod, sharedGlobalName);
 
