@@ -2557,7 +2557,7 @@ Value *LibCallSimplifier::optimizeFMinimumnumFMaximumnum(CallInst *CI,
       return Ret;
 
   // The new fminimum_num/fmaximum_num functions, unlike fmin/fmax, *are*
-  // sensitive to the sigh of zero, so we don't change the fast-math flags like
+  // sensitive to the sign of zero, so we don't change the fast-math flags like
   // we did for those.
 
   Intrinsic::ID IID = Callee->getName().starts_with("fminimum_num")
