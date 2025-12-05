@@ -9325,6 +9325,35 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtPattern(
     NewPattern = CXXExpansionStmtPattern::CreateEnumerating(
         SemaRef.Context, NewESD, Init, ExpansionVarStmt, S->getLParenLoc(),
         S->getColonLoc(), S->getRParenLoc());
+  } else if (S->isIterating()) {
+    StmtResult Range = getDerived().TransformStmt(S->getRangeVarStmt());
+    if (Range.isInvalid())
+      return StmtError();
+
+    StmtResult Begin = getDerived().TransformStmt(S->getBeginVarStmt());
+    StmtResult End = getDerived().TransformStmt(S->getEndVarStmt());
+    if (Begin.isInvalid() || End.isInvalid())
+      return StmtError();
+
+    NewPattern = CXXExpansionStmtPattern::CreateIterating(
+        SemaRef.Context, NewESD, Init, ExpansionVarStmt,
+        Range.getAs<DeclStmt>(), Begin.getAs<DeclStmt>(), End.getAs<DeclStmt>(),
+        S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc());
+  } else if (S->isDependent()) {
+    ExprResult ExpansionInitializer =
+        getDerived().TransformExpr(S->getExpansionInitializer());
+    if (ExpansionInitializer.isInvalid())
+      return StmtError();
+
+    StmtResult Res = SemaRef.BuildNonEnumeratingCXXExpansionStmtPattern(
+        NewESD, Init, ExpansionVarStmt, ExpansionInitializer.get(),
+        S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc(),
+        /*LifetimeExtendTemps=*/{});
+
+    if (Res.isInvalid())
+      return StmtError();
+
+    NewPattern = cast<CXXExpansionStmtPattern>(Res.get());
   } else {
     llvm_unreachable("TODO");
   }

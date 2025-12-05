@@ -165,6 +165,8 @@ def err_ice_too_large : Error<
 def err_expr_not_string_literal : Error<"expression is not a string literal">;
 def note_constexpr_assert_failed : Note<
   "assertion failed during evaluation of constant expression">;
+def err_expansion_size_expr_not_ice : Error<
+  "expansion size is not a constant expression">;
 
 // Semantic analysis of constant literals.
 def ext_predef_outside_function : Warning<
@@ -3709,6 +3711,13 @@ def err_conflicting_codeseg_attribute : Error<
   "conflicting code segment specifiers">;
 def warn_duplicate_codeseg_attribute : Warning<
   "duplicate code segment specifiers">, InGroup<Section>;
+
+def err_expansion_stmt_vla : Error<
+  "cannot expand variable length array type %0">;
+def err_expansion_stmt_incomplete : Error<
+  "cannot expand expression of incomplete type %0">;
+def err_expansion_stmt_lambda : Error<
+  "cannot expand lambda closure type">;
 
 def err_attribute_patchable_function_entry_invalid_section
     : Error<"section argument to 'patchable_function_entry' attribute is not "
