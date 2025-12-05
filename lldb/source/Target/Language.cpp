@@ -626,9 +626,10 @@ GetParentFunctionsWhileClosure(const SymbolContext &sc,
 
     // Find the enclosing function, if it exists.
     SymbolContextList sc_list;
-    Module::LookupInfo lookup_info(
-        ConstString(parent), lldb::FunctionNameType::eFunctionNameTypeFull,
-        lldb::eLanguageTypeSwift);
+    std::vector<Module::LookupInfo> lookup_info =
+        Module::LookupInfo::MakeLookupInfos(
+            ConstString(parent), lldb::FunctionNameType::eFunctionNameTypeFull,
+            lldb::eLanguageTypeSwift);
     sc.module_sp->FindFunctions(lookup_info, CompilerDeclContext(),
                                 ModuleFunctionSearchOptions(), sc_list);
     if (sc_list.GetSize() != 1 || sc_list[0].function == nullptr)
