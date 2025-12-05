@@ -11956,8 +11956,7 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
 
   // NOTE: TrailingElts must be clamped so as not to read outside of V1:V2.
   TypeSize EltByteSize = VT.getVectorElementType().getStoreSize();
-  SDValue TrailingBytes =
-      DAG.getConstant(Imm * EltByteSize, DL, PtrVT);
+  SDValue TrailingBytes = DAG.getConstant(Imm * EltByteSize, DL, PtrVT);
 
   if (Imm > VT.getVectorMinNumElements())
     TrailingBytes = DAG.getNode(ISD::UMIN, DL, PtrVT, TrailingBytes, VTBytes);
