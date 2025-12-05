@@ -611,8 +611,8 @@ static Value *emitBinaryMaybeConstrainedFPBuiltin(
   CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
   if (CGF.Builder.getIsFPConstrained()) {
     Function *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID, Src0->getType());
-    return CGF.Builder.CreateConstrainedFPCall(F, {Src0, Src1}, "",
-                                               std::nullopt, std::nullopt, &FMF);
+    return CGF.Builder.CreateConstrainedFPCall(
+        F, {Src0, Src1}, "", std::nullopt, std::nullopt, &FMF);
   } else {
     Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
     return CGF.Builder.CreateCall(F, {Src0, Src1}, "", nullptr, &FMF);
