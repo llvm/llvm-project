@@ -315,7 +315,7 @@ def GPR32NONZERO : RegisterClass<"Mips", [i32], 32, (add
   // Reserved
   K0, K1, GP, SP, FP, RA)>;
 
-def DSPR  : GPR32Class<[v4i8, v2i16]>;
+def DSPR  : GPR32Class<[v4i8, v2i16, i32]>;
 
 def GPRMM16 : RegisterClass<"Mips", [i32], 32, (add
   // Callee save
