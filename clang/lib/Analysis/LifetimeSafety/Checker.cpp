@@ -55,13 +55,14 @@ private:
   const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
   LifetimeSafetyReporter *Reporter;
+  AnalysisDeclContext &AC;
 
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                   const LiveOriginsAnalysis &LiveOrigins, const FactManager &FM,
                   AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter)
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
-        Reporter(Reporter) {
+        Reporter(Reporter), AC(ADC) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -70,6 +71,7 @@ public:
           checkAnnotations(OEF);
     issuePendingWarnings();
     suggestAnnotations();
+    inferAnnotations();
   }
 
   /// Checks if an escaping origin holds a placeholder loan, indicating a
@@ -157,41 +159,18 @@ public:
   void suggestAnnotations() {
     if (!Reporter)
       return;
+    for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap)
+      Reporter->suggestAnnotation(PVD, EscapeExpr);
+  }
+
+  void inferAnnotations() {
     for (const auto &[ConstPVD, EscapeExpr] : AnnotationWarningsMap) {
       ParmVarDecl *PVD = const_cast<ParmVarDecl *>(ConstPVD);
-
+      if (PVD->hasAttr<LifetimeBoundAttr>())
+        continue;
       ASTContext &Ctx = AC.getASTContext();
-
-      // 1. Get the IdentifierInfo for the attribute's name ("lifetimebound").
-      IdentifierInfo *Ident = &Ctx.Idents.get("lifetimebound");
-
-      // 2. Construct the AttributeCommonInfo for an implicit attribute.
-      // We use the constructor that takes a name, range, and form.
-      // Form::Implicit() tells Clang this attribute is not from source code.
-      AttributeCommonInfo AttrInfo(Ident, SourceRange(),
-                                   AttributeCommonInfo::Form::Implicit());
-
-      // 3. Create the final LifetimeBoundAttr.
-      auto *Attr = new (Ctx) LifetimeBoundAttr(Ctx, AttrInfo);
-
-      // 4. Add the attribute to the parameter declaration.
+      auto *Attr = LifetimeBoundAttr::CreateImplicit(Ctx, SourceLocation());
       PVD->addAttr(Attr);
-
-      if (const FunctionDecl *FD =
-              dyn_cast<FunctionDecl>(PVD->getDeclContext())) {
-        for (const FunctionDecl *Redecl : FD->redecls()) {
-          if (Redecl != FD) {
-            const ParmVarDecl *RedeclPVD =
-                Redecl->getParamDecl(PVD->getFunctionScopeIndex());
-            if (RedeclPVD) {
-              auto *NewAttr = new (Ctx) LifetimeBoundAttr(Ctx, AttrInfo);
-              const_cast<ParmVarDecl *>(RedeclPVD)->addAttr(NewAttr);
-            }
-          }
-        }
-      }
-
-      Reporter->suggestAnnotation(ConstPVD, EscapeExpr);
     }
   }
 };
