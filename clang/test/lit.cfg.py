@@ -89,7 +89,9 @@ config.substitutions.append(("%target_triple", config.target_triple))
 
 config.substitutions.append(("%PATH%", config.environment["PATH"]))
 
-sed_cmd = "/opt/freeware/bin/sed" if "system-aix" in config.available_features else "sed"
+sed_cmd = (
+    "/opt/freeware/bin/sed" if "system-aix" in config.available_features else "sed"
+)
 
 # Filtering command for testing SARIF output against reference output.
 config.substitutions.append(
@@ -103,7 +105,7 @@ config.substitutions.append(
             # Strip directories from file URIs
             r's/"file:(\/+)([^"\/]+\/)*([^"]+)"/"file:\1[...]\/\3"/',
             # Set "length" to -1
-            r's/"length": [[:digit:]]+/"length": -1/'
+            r's/"length": [[:digit:]]+/"length": -1/',
         ),
     )
 )
