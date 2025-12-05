@@ -45,6 +45,8 @@ public:
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const override;
 
+  MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
+
 private:
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Chain, uint64_t Offset) const;
@@ -332,7 +334,7 @@ public:
   MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
   MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
+  bool getTgtMemIntrinsic(IntrinsicInfo &, const CallBase &,
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
 

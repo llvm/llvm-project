@@ -151,7 +151,7 @@ program main
    if (i .eq. j + 1) then
       i = j
    end if
-   
+
 !$omp atomic compare acquire
    if (i .eq. j) then
       i = k
@@ -178,7 +178,7 @@ program main
    if (i .eq. k) then
       i = j
    end if
-   
+
 !ATOMIC
 !$omp atomic
    i = j

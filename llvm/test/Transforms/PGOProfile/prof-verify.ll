@@ -6,7 +6,7 @@
 
 ; RUN: opt -passes=prof-inject %s -S -o - | FileCheck %s --check-prefix=INJECT
 ; RUN: not opt -passes=prof-verify %s -S -o - 2>&1 | FileCheck %s --check-prefix=VERIFY
-; RUN: opt -passes=prof-inject,prof-verify %s --disable-output
+; RUN: opt -passes='function(prof-inject),module(prof-verify)' %s --disable-output
 ; RUN: opt -enable-profcheck %s -S -o - | FileCheck %s --check-prefix=INJECT
 
 define void @foo(i32 %i) !prof !0 {

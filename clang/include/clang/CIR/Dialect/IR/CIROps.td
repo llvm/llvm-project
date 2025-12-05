@@ -899,6 +899,36 @@ def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Resume
+//===----------------------------------------------------------------------===//
+
+def CIR_ResumeOp : CIR_Op<"resume", [
+  ReturnLike, Terminator, HasParent<"cir::TryOp">
+]> {
+  let summary = "Resumes execution after not catching exceptions";
+  let description = [{
+    The `cir.resume` operation handles an uncaught exception scenario.
+
+    Used as the terminator of a `CatchUnwind` region of `cir.try`, where it
+    does not receive any arguments (implied from the `cir.try` scope).
+
+    This operation is used only before the CFG flatterning pass.
+
+    Examples:
+    ```mlir
+    cir.try {
+      cir.yield
+    } unwind {
+      cir.resume
+    }
+    ```
+  }];
+
+  let assemblyFormat = "attr-dict";
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // ScopeOp
 //===----------------------------------------------------------------------===//
 
@@ -1171,6 +1201,35 @@ def CIR_SwitchOp : CIR_Op<"switch", [
   }];
 
   let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// IsConstantOp
+//===----------------------------------------------------------------------===//
+
+def CIR_IsConstantOp : CIR_Op<"is_constant", [Pure]> {
+  let summary = "Test for manifest compile-time constant";
+  let description = [{
+    Returns `true` if the argument is known to be a manifest compile-time
+    constant otherwise returns `false`. If the argument is a constant expression
+    which refers to a global (the address of which _is_ a constant, but not
+    manifest during the compile), then the intrinsic evaluates to `false`.
+
+    This is used to represent `__builtin_constant_p` in cases where the argument
+    isn't known to be constant during initial translation of the source code but
+    might be proven to be constant after later optimizations.
+
+    Example:
+    ```
+    %1 = cir.is_constant %2 : !s32i -> !cir.bool
+    ```
+  }];
+  let arguments = (ins CIR_AnyType:$val);
+  let results = (outs CIR_BoolType:$result);
+
+  let assemblyFormat = [{
+    $val `:` qualified(type($val)) `->` qualified(type($result)) attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2564,9 +2623,9 @@ def CIR_FuncOp : CIR_Op<"func", [
     Similarly, for global destructors both `global_dtor` and
     `global_dtor(<priority>)` are available.
 
-    The `inline(never)` keyword marks a function that should not be inlined.
-    The `inline(always)` keyword marks a function that should always be inlined.
-    The `inline(hint)` keyword suggests that the function should be inlined.
+    The `no_inline` attribute marks a function that should not be inlined.
+    The `always_inline` attribute marks a function that should always be inlined.
+    The `inline_hint` attribute suggests that the function should be inlined.
 
     Example:
 
@@ -2580,7 +2639,10 @@ def CIR_FuncOp : CIR_Op<"func", [
 
     // Linkage information
     cir.func linkonce_odr @some_method(...)
-    ```
+
+    // Inline information
+    cir.func no_inline @some_method(...)
+    
     // Builtin function
     cir.func builtin @__builtin_coro_end(!cir.ptr<i8>, !cir.bool) -> !cir.bool
     // Coroutine
@@ -2592,26 +2654,29 @@ def CIR_FuncOp : CIR_Op<"func", [
     ```
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name,
-                       CIR_VisibilityAttr:$global_visibility,
-                       TypeAttrOf<CIR_FuncType>:$function_type,
-                       UnitAttr:$builtin,
-                       UnitAttr:$coroutine,
-                       UnitAttr:$lambda,
-                       UnitAttr:$no_proto,
-                       UnitAttr:$dso_local,
-                       DefaultValuedAttr<CIR_GlobalLinkageKind,
-                                         "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
-                       OptionalAttr<CIR_InlineAttr>:$inline_kind,
-                       OptionalAttr<StrAttr>:$sym_visibility,
-                       UnitAttr:$comdat,
-                       OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs,
-                       OptionalAttr<FlatSymbolRefAttr>:$aliasee,
-                       CIR_OptionalPriorityAttr:$global_ctor_priority,
-                       CIR_OptionalPriorityAttr:$global_dtor_priority,
-                       OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member
-   );
+  let arguments = (ins 
+    SymbolNameAttr:$sym_name,
+    CIR_VisibilityAttr:$global_visibility,
+    TypeAttrOf<CIR_FuncType>:$function_type,
+    UnitAttr:$builtin,
+    UnitAttr:$coroutine,
+    OptionalAttr<CIR_InlineKind>:$inline_kind,
+    UnitAttr:$lambda,
+    UnitAttr:$no_proto,
+    UnitAttr:$dso_local,
+    DefaultValuedAttr<
+      CIR_GlobalLinkageKind,
+      "cir::GlobalLinkageKind::ExternalLinkage"
+    >:$linkage,
+    OptionalAttr<StrAttr>:$sym_visibility,
+    UnitAttr:$comdat,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs,
+    OptionalAttr<FlatSymbolRefAttr>:$aliasee,
+    CIR_OptionalPriorityAttr:$global_ctor_priority,
+    CIR_OptionalPriorityAttr:$global_dtor_priority,
+    OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member
+  );
 
   let regions = (region AnyRegion:$body);
 
@@ -4722,6 +4787,23 @@ def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   }];
 }
 
+def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
+  let summary = "Computes the floating-point floor value";
+  let description = [{
+    `cir.floor` computes the floor of a floating-point operand and returns
+    a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+
+    Example:
+
+    ```mlir
+    // $x : !cir.double
+    %y = cir.floor %x : !cir.double
+    ```
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Variadic Operations
 //===----------------------------------------------------------------------===//
@@ -4801,6 +4883,37 @@ def CIR_VAEndOp : CIR_Op<"va_end"> {
 
   let assemblyFormat = [{
     $arg_list attr-dict `:` type(operands)
+  }];
+}
+
+def CIR_VACopyOp : CIR_Op<"va_copy"> {
+  let summary = "Copied a variable argument list";
+  let description = [{
+    The `cir.copy` operation models the C/C++ va_copy macro.
+    The variable argument list passed as the `$src_list` is copied to an
+    unitialized `va_list` in the destination operand. The next argument that
+    can be extracted from the copied list is the same as the next argument in
+    the source list. The copied list must be destroyed with `va_end`.
+
+    Example:
+
+    ```mlir
+    // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+    %p = cir.cast array_to_ptrdecay %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+          -> !cir.ptr<!rec___va_list_tag>
+    cir.va_copy %p to %dst
+          : (!cir.ptr<!rec___va_list_tag>, !cir.ptr<!rec___va_list_tag>)
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_PointerType:$dst_list,
+    CIR_PointerType:$src_list
+  );
+
+  let assemblyFormat = [{
+    $src_list `to` $dst_list attr-dict `:` type(operands)
   }];
 }
 
@@ -5075,6 +5188,11 @@ def CIR_AtomicFetchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Min", 7, "min">
 ]>;
 
+def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
+  I32EnumAttrCase<"SingleThread", 0, "single_thread">,
+  I32EnumAttrCase<"System", 1, "system">
+]>;
+
 def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
   AllTypesMatch<["result", "val"]>,
   TypesMatchWith<"type of 'val' must match the pointee type of 'ptr'",
@@ -5295,6 +5413,36 @@ def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
     $mem_order $ptr
     (`volatile` $is_volatile^)?
     `:` qualified(type($ptr)) attr-dict
+  }];
+}
+
+def CIR_AtomicFence : CIR_Op<"atomic.fence"> {
+  let summary = "Atomic thread fence";
+  let description = [{
+    C/C++ Atomic thread fence synchronization primitive. Implements the builtin
+    `__atomic_thread_fence` which enforces memory ordering constraints across
+    threads within the specified synchronization scope.
+
+    This handles all variations including:
+      - `__atomic_thread_fence`
+      - `__atomic_signal_fence`
+      - `__c11_atomic_thread_fence`
+      - `__c11_atomic_signal_fence`
+
+    Example:
+    ```mlir
+      cir.atomic.fence syncscope(system) seq_cst
+      cir.atomic.fence syncscope(single_thread) seq_cst
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_MemOrder, "memory order">:$ordering,
+    OptionalAttr<CIR_SyncScopeKind>:$syncscope
+  );
+
+  let assemblyFormat = [{
+    (`syncscope` `(` $syncscope^ `)`)? $ordering attr-dict
   }];
 }
 

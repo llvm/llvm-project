@@ -237,6 +237,7 @@ public:
   void setNormalBlock(mlir::Block *bb) { normalBlock = bb; }
 
   bool isNormalCleanup() const { return cleanupBits.isNormalCleanup; }
+  bool isEHCleanup() const { return cleanupBits.isEHCleanup; }
 
   bool isActive() const { return cleanupBits.isActive; }
   void setActive(bool isActive) { cleanupBits.isActive = isActive; }
