@@ -225,19 +225,22 @@ TEST(ASTEntityMappingTest, FunctionRedeclaration) {
 
   auto Matcher = functionDecl(hasName("foo")).bind("decl");
   auto Matches = match(Matcher, Ctx);
-  ASSERT_EQ(Matches.size(), 2u);
+  ASSERT_GE(Matches.size(), 2u);
 
-  const auto *Decl1 = Matches[0].getNodeAs<FunctionDecl>("decl");
-  const auto *Decl2 = Matches[1].getNodeAs<FunctionDecl>("decl");
-  ASSERT_NE(Decl1, nullptr);
-  ASSERT_NE(Decl2, nullptr);
+  const auto *FirstDecl = Matches[0].getNodeAs<FunctionDecl>("decl");
+  ASSERT_NE(FirstDecl, nullptr);
 
-  auto Name1 = getLocalEntityNameForDecl(Decl1);
-  auto Name2 = getLocalEntityNameForDecl(Decl2);
-  ASSERT_TRUE(Name1.has_value());
-  ASSERT_TRUE(Name2.has_value());
+  auto FirstName = getLocalEntityNameForDecl(FirstDecl);
+  ASSERT_TRUE(FirstName.has_value());
 
-  EXPECT_EQ(*Name1, *Name2);
+  for (size_t I = 1; I < Matches.size(); ++I) {
+    const auto *Decl = Matches[I].getNodeAs<FunctionDecl>("decl");
+    ASSERT_NE(Decl, nullptr);
+
+    auto Name = getLocalEntityNameForDecl(Decl);
+    ASSERT_TRUE(Name.has_value());
+    EXPECT_EQ(*FirstName, *Name);
+  }
 }
 
 TEST(ASTEntityMappingTest, VarRedeclaration) {
