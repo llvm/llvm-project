@@ -82,6 +82,7 @@ cc_binary(
         ":lib",
         "//clang:ast",
         "//clang:ast_matchers",
+        "//clang:basic",
         "//clang:driver",
         "//clang:frontend",
         "//clang:tooling",

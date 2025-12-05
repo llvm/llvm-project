@@ -783,4 +783,22 @@ let Predicates = [HasStdExtZvfbfa] in {
                    TAIL_AGNOSTIC)>;
     }
   }
+
+  defm : VPatBinaryFPSDNode_VV_VF_RM<any_fadd, "PseudoVFADD_ALT",
+                                     isSEWAware=1, isBF16=1>;
+  defm : VPatBinaryFPSDNode_VV_VF_RM<any_fsub, "PseudoVFSUB_ALT",
+                                     isSEWAware=1, isBF16=1>;
+  defm : VPatBinaryFPSDNode_VV_VF_RM<any_fmul, "PseudoVFMUL_ALT",
+                                     isSEWAware=1, isBF16=1>;
+  defm : VPatBinaryFPSDNode_R_VF_RM<any_fsub, "PseudoVFRSUB_ALT",
+                                    isSEWAware=1, isBF16=1>;
+
+  defm : VPatBinaryFPVL_VV_VF_RM<any_riscv_fadd_vl, "PseudoVFADD_ALT",
+                                 isSEWAware=1, isBF16=1>;
+  defm : VPatBinaryFPVL_VV_VF_RM<any_riscv_fsub_vl, "PseudoVFSUB_ALT",
+                                 isSEWAware=1, isBF16=1>;
+  defm : VPatBinaryFPVL_VV_VF_RM<any_riscv_fmul_vl, "PseudoVFMUL_ALT",
+                                 isSEWAware=1, isBF16=1>;
+  defm : VPatBinaryFPVL_R_VF_RM<any_riscv_fsub_vl, "PseudoVFRSUB_ALT",
+                                isSEWAware=1, isBF16=1>;
 } // Predicates = [HasStdExtZvfbfa]

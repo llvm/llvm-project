@@ -1,5 +1,13 @@
-// RUN: %check_clang_tidy -std=c++11 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++11 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- \
+// RUN:   -config='{CheckOptions: { \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection" \
+// RUN:   }}' -- \
+// RUN:   -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- \
+// RUN:   -config='{CheckOptions: { \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection" \
+// RUN:   }}' -- \
+// RUN:   -fno-delayed-template-parsing
 
 typedef decltype(nullptr) nullptr_t;
 
@@ -1645,3 +1653,53 @@ void create() {
 }
 
 } // namespace issue82023
+
+namespace custom_invalidation
+{
+
+template<class T = int>
+struct Database {
+  template<class...>
+  void CloseConnection(T = T()) {}
+  template<class...>
+  static void StaticCloseConnection(Database&, T = T()) {}
+  template<class...>
+  friend void FriendCloseConnection(Database&, T = T()) {}
+  void Query();
+};
+
+void Run() {
+  using DB = Database<>;
+
+  DB db1;
+  db1.CloseConnection();
+  db1.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db1' used after it was invalidated
+  // CHECK-NOTES: [[@LINE-3]]:7: note: invalidation occurred here
+
+  DB db2;
+  DB::StaticCloseConnection(db2);
+  db2.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db2' used after it was invalidated
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db3;
+  DB().StaticCloseConnection(db3);
+  db3.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db3' used after it was invalidated
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db4;
+  FriendCloseConnection(db4);
+  db4.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db4' used after it was invalidated
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db5;
+  FriendCloseConnection(db5, /*disconnect timeout*/ 5);
+  db5.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db5' used after it was invalidated
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+}
+
+} // namespace custom_invalidation

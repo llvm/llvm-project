@@ -408,6 +408,10 @@ Changes in existing checks
   suffix when the reason starts with the character `>` in the `CustomFunctions`
   option.
 
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check by adding
+  `InvalidationFunctions` option to support custom invalidation functions.
+
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
   by adding a new option `AllowThreadLocal` that suppresses warnings on
