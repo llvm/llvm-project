@@ -179,7 +179,6 @@ AArch64PrologueEpilogueCommon::convertCalleeSaveRestoreToSPPrePostIncDec(
   (void)Success;
   assert(Success && "unknown load/store opcode");
 
-  const auto *TRI = Subtarget.getRegisterInfo();
   // If the first store isn't right where we want SP then we can't fold the
   // update in so create a normal arithmetic instruction instead.
   //
@@ -194,8 +193,8 @@ AArch64PrologueEpilogueCommon::convertCalleeSaveRestoreToSPPrePostIncDec(
       CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue() ||
       (NeedsWinCFI &&
        (NewOpc == AArch64::LDPXpost || NewOpc == AArch64::STPXpre) &&
-       TRI->getEncodingValue(MBBI->getOperand(0).getReg()) + 1 !=
-           TRI->getEncodingValue(MBBI->getOperand(1).getReg()))) {
+       RegInfo->getEncodingValue(MBBI->getOperand(0).getReg()) + 1 !=
+           RegInfo->getEncodingValue(MBBI->getOperand(1).getReg()))) {
     // If we are destroying the frame, make sure we add the increment after the
     // last frame operation.
     if (FrameFlag == MachineInstr::FrameDestroy) {
