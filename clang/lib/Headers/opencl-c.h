@@ -17525,6 +17525,13 @@ void       __ovld __conv intel_sub_group_block_write_ui8( __global uint* p, uint
 
 #endif // defined(cl_intel_subgroups_char) || defined(cl_intel_subgroups_short) ||
        // defined(cl_intel_subgroups_long)
+
+#if defined(cl_intel_subgroup_buffer_prefetch)
+void       __ovld __conv intel_sub_group_block_prefetch_ui(const __global uint *p);
+void       __ovld __conv intel_sub_group_block_prefetch_ui2(const __global uint *p);
+void       __ovld __conv intel_sub_group_block_prefetch_ui4(const __global uint *p);
+void       __ovld __conv intel_sub_group_block_prefetch_ui8(const __global uint *p);
+#endif // defined(cl_intel_subgroup_buffer_prefetch)
 #endif // cl_intel_subgroups
 
 #if defined(cl_intel_subgroups_short)
@@ -17660,6 +17667,14 @@ void        __ovld __conv intel_sub_group_block_write_us2( __global ushort* p, u
 void        __ovld __conv intel_sub_group_block_write_us4( __global ushort* p, ushort4 data );
 void        __ovld __conv intel_sub_group_block_write_us8( __global ushort* p, ushort8 data );
 void        __ovld __conv intel_sub_group_block_write_us16( __global ushort* p, ushort16 data );
+
+#if defined(cl_intel_subgroup_buffer_prefetch)
+void        __ovld __conv intel_sub_group_block_prefetch_us(const __global ushort *p);
+void        __ovld __conv intel_sub_group_block_prefetch_us2(const __global ushort *p);
+void        __ovld __conv intel_sub_group_block_prefetch_us4(const __global ushort *p);
+void        __ovld __conv intel_sub_group_block_prefetch_us8(const __global ushort *p);
+void        __ovld __conv intel_sub_group_block_prefetch_us16(const __global ushort *p);
+#endif // defined(cl_intel_subgroup_buffer_prefetch)
 #endif // cl_intel_subgroups_short
 
 #if defined(cl_intel_subgroups_char)
@@ -17795,6 +17810,14 @@ void        __ovld __conv intel_sub_group_block_write_uc2( __global uchar* p, uc
 void        __ovld __conv intel_sub_group_block_write_uc4( __global uchar* p, uchar4 data );
 void        __ovld __conv intel_sub_group_block_write_uc8( __global uchar* p, uchar8 data );
 void        __ovld __conv intel_sub_group_block_write_uc16( __global uchar* p, uchar16 data );
+
+#if defined(cl_intel_subgroup_buffer_prefetch)
+void        __ovld __conv intel_sub_group_block_prefetch_uc(const __global uchar *p);
+void        __ovld __conv intel_sub_group_block_prefetch_uc2(const __global uchar *p);
+void        __ovld __conv intel_sub_group_block_prefetch_uc4(const __global uchar *p);
+void        __ovld __conv intel_sub_group_block_prefetch_uc8(const __global uchar *p);
+void        __ovld __conv intel_sub_group_block_prefetch_uc16(const __global uchar *p);
+#endif // defined(cl_intel_subgroup_buffer_prefetch)
 #endif // cl_intel_subgroups_char
 
 #if defined(cl_intel_subgroups_long)
@@ -17839,6 +17862,13 @@ void        __ovld __conv intel_sub_group_block_write_ul(  __global ulong* p, ul
 void        __ovld __conv intel_sub_group_block_write_ul2( __global ulong* p, ulong2 data );
 void        __ovld __conv intel_sub_group_block_write_ul4( __global ulong* p, ulong4 data );
 void        __ovld __conv intel_sub_group_block_write_ul8( __global ulong* p, ulong8 data);
+
+#if defined(cl_intel_subgroup_buffer_prefetch)
+void        __ovld __conv intel_sub_group_block_prefetch_ul(const __global ulong *p);
+void        __ovld __conv intel_sub_group_block_prefetch_ul2(const __global ulong *p);
+void        __ovld __conv intel_sub_group_block_prefetch_ul4(const __global ulong *p);
+void        __ovld __conv intel_sub_group_block_prefetch_ul8(const __global ulong *p);
+#endif // defined(cl_intel_subgroup_buffer_prefetch)
 #endif // cl_intel_subgroups_long
 
 #if defined(cl_intel_subgroup_local_block_io)

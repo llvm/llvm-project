@@ -121,7 +121,6 @@ private:
   SDValue LowerMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
   SDValue Replace128Op(SDNode *N, SelectionDAG &DAG) const;
   SDValue LowerUADDO(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
 
   // Custom DAG combine hooks
   SDValue
