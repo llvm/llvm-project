@@ -2963,18 +2963,6 @@ bool AsmPrinter::doFinalization(Module &M) {
     }
   }
 
-  // Emit symbol attributes for declarations (GOFF only).
-  if (TM.getTargetTriple().isOSBinFormatGOFF()) {
-    for (auto &GO : M.global_objects()) {
-      if (GO.isDeclaration()) {
-        MCSymbol *Sym = TM.getSymbol(&GO);
-        OutStreamer->emitSymbolAttribute(Sym, isa<Function>(GO)
-                                                  ? MCSA_ELF_TypeFunction
-                                                  : MCSA_ELF_TypeObject);
-      }
-    }
-  }
-
   // Allow the target to emit any magic that it wants at the end of the file,
   // after everything else has gone out.
   emitEndOfAsmFile(M);
