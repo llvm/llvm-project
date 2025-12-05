@@ -949,7 +949,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesFromComputeConstruct) {
   // Create a parallel op
   OwningOpRef<ParallelOp> parallelOp =
       ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
-  
+
   // Set the data clause operands
   parallelOp->getDataClauseOperandsMutable().append(copyinOp->getAccVar());
 
@@ -997,10 +997,10 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesFromEnclosingDataOp) {
   // Create a data op
   OwningOpRef<DataOp> dataOp =
       DataOp::create(b, loc, TypeRange{}, ValueRange{});
-  
+
   // Set the data clause operands
   dataOp->getDataClauseOperandsMutable().append(copyinOp->getAccVar());
-  
+
   Region &dataRegion = dataOp->getRegion();
   Block *dataBlock = &dataRegion.emplaceBlock();
 
@@ -1023,8 +1023,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesFromEnclosingDataOp) {
   EXPECT_EQ(dataClauses[0], copyinOp->getAccVar());
 }
 
-TEST_F(OpenACCUtilsTest,
-       getDominatingDataClausesFromComputeAndEnclosingData) {
+TEST_F(OpenACCUtilsTest, getDominatingDataClausesFromComputeAndEnclosingData) {
   // Create a module to hold a function
   OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
   Block *moduleBlock = module->getBody();
@@ -1063,10 +1062,10 @@ TEST_F(OpenACCUtilsTest,
   // Create a data op
   OwningOpRef<DataOp> dataOp =
       DataOp::create(b, loc, TypeRange{}, ValueRange{});
-  
+
   // Set the data clause operands for data op
   dataOp->getDataClauseOperandsMutable().append(copyinOp1->getAccVar());
-  
+
   Region &dataRegion = dataOp->getRegion();
   Block *dataBlock = &dataRegion.emplaceBlock();
 
@@ -1075,7 +1074,7 @@ TEST_F(OpenACCUtilsTest,
   // Create a parallel op inside the data region
   OwningOpRef<ParallelOp> parallelOp =
       ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
-  
+
   // Set the data clause operands for parallel op
   parallelOp->getDataClauseOperandsMutable().append(copyinOp2->getAccVar());
 
@@ -1198,10 +1197,10 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesMultipleDataConstructs) {
   // Create outer data op
   OwningOpRef<DataOp> outerDataOp =
       DataOp::create(b, loc, TypeRange{}, ValueRange{});
-  
+
   // Set the data clause operands for outer data op
   outerDataOp->getDataClauseOperandsMutable().append(copyinOp1->getAccVar());
-  
+
   Region &outerDataRegion = outerDataOp->getRegion();
   Block *outerDataBlock = &outerDataRegion.emplaceBlock();
 
@@ -1210,10 +1209,10 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesMultipleDataConstructs) {
   // Create inner data op
   OwningOpRef<DataOp> innerDataOp =
       DataOp::create(b, loc, TypeRange{}, ValueRange{});
-  
+
   // Set the data clause operands for inner data op
   innerDataOp->getDataClauseOperandsMutable().append(copyinOp2->getAccVar());
-  
+
   Region &innerDataRegion = innerDataOp->getRegion();
   Block *innerDataBlock = &innerDataRegion.emplaceBlock();
 
@@ -1222,7 +1221,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesMultipleDataConstructs) {
   // Create a parallel op
   OwningOpRef<ParallelOp> parallelOp =
       ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
-  
+
   // Set the data clause operands for parallel op
   parallelOp->getDataClauseOperandsMutable().append(copyinOp3->getAccVar());
 
@@ -1272,7 +1271,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesKernelsOp) {
   // Create a kernels op
   OwningOpRef<KernelsOp> kernelsOp =
       KernelsOp::create(b, loc, TypeRange{}, ValueRange{});
-  
+
   // Set the data clause operands
   kernelsOp->getDataClauseOperandsMutable().append(copyinOp->getAccVar());
 
@@ -1320,7 +1319,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesSerialOp) {
   // Create a serial op
   OwningOpRef<SerialOp> serialOp =
       SerialOp::create(b, loc, TypeRange{}, ValueRange{});
-  
+
   // Set the data clause operands
   serialOp->getDataClauseOperandsMutable().append(copyinOp->getAccVar());
 
@@ -1368,4 +1367,3 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesEmpty) {
   // Should be empty
   EXPECT_EQ(dataClauses.size(), 0ul);
 }
-
