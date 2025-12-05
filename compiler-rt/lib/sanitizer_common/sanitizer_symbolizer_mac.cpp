@@ -78,13 +78,20 @@ class AtosSymbolizerProcess final : public SymbolizerProcess {
   }
 
   bool ReachedEndOfOutput(const char *buffer, uptr length) const override {
-    return (length >= 1 && buffer[length - 1] == '\n');
+    if (common_flags()->symbolize_inline_frames) {
+      return length >= 2 && buffer[length - 1] == '\n' &&
+             buffer[length - 2] == '\n';
+    } else {
+      return length >= 1 && buffer[length - 1] == '\n';
+    }
   }
 
   void GetArgV(const char *path_to_binary,
                const char *(&argv)[kArgVMax]) const override {
     int i = 0;
     argv[i++] = path_to_binary;
+    if (common_flags()->symbolize_inline_frames)
+      argv[i++] = "-i";
     argv[i++] = "-p";
     argv[i++] = &pid_str_[0];
     if (GetMacosAlignedVersion() == MacosVersion(10, 9)) {
@@ -102,12 +109,12 @@ class AtosSymbolizerProcess final : public SymbolizerProcess {
 
 #undef K_ATOS_ENV_VAR
 
-static bool ParseCommandOutput(const char *str, uptr addr, char **out_name,
-                               char **out_module, char **out_file, uptr *line,
-                               uptr *start_address) {
+static bool ParseCommandOutput(const char** str, uptr addr, char** out_name,
+                               char** out_module, char** out_file, uptr* line,
+                               uptr* start_address) {
   // Trim ending newlines.
   char *trim;
-  ExtractTokenUpToDelimiter(str, "\n", &trim);
+  *str = ExtractTokenUpToDelimiter(*str, "\n", &trim);
 
   // The line from `atos` is in one of these formats:
   //   myfunction (in library.dylib) (sourcefile.c:17)
@@ -161,31 +168,57 @@ bool AtosSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   char command[32];
   internal_snprintf(command, sizeof(command), "0x%zx\n", addr);
   const char *buf = process_->SendCommand(command);
-  if (!buf) return false;
-  uptr line;
-  uptr start_address = AddressInfo::kUnknown;
-  if (!ParseCommandOutput(buf, addr, &stack->info.function, &stack->info.module,
-                          &stack->info.file, &line, &start_address)) {
-    Report("WARNING: atos failed to symbolize address \"0x%zx\"\n", addr);
+  if (!buf)
     return false;
-  }
-  stack->info.line = (int)line;
 
-  if (start_address == AddressInfo::kUnknown) {
-    // Fallback to dladdr() to get function start address if atos doesn't report
-    // it.
-    Dl_info info;
-    int result = dladdr((const void *)addr, &info);
-    if (result)
-      start_address = reinterpret_cast<uptr>(info.dli_saddr);
+  SymbolizedStack* last = stack;
+  bool top_frame = true;
+
+  while (*buf != '\n') {
+    uptr line;
+    uptr start_address = AddressInfo::kUnknown;
+
+    SymbolizedStack* cur;
+    if (top_frame) {
+      cur = stack;
+    } else {
+      cur = SymbolizedStack::New(stack->info.address);
+      cur->info.FillModuleInfo(stack->info.module, stack->info.module_offset,
+                               stack->info.module_arch);
+      last->next = cur;
+      last = cur;
+    }
+
+    if (!ParseCommandOutput(&buf, addr, &cur->info.function, &cur->info.module,
+                            &cur->info.file, &line, &start_address)) {
+      Report("WARNING: atos failed to symbolize buf address \"0x%zx\"\n", addr);
+      break;
+      // return false;
+    }
+    cur->info.line = (int)line;
+
+    if (top_frame && start_address == AddressInfo::kUnknown) {
+      // Fallback to dladdr() to get function start address if atos doesn't
+      // report it.
+      Dl_info info;
+      int result = dladdr((const void*)addr, &info);
+      if (result)
+        start_address = reinterpret_cast<uptr>(info.dli_saddr);
+    }
+
+    // Only assign to `function_offset` if we were able to get the function's
+    // start address and we got a sensible `start_address` (dladdr doesn't
+    // always ensure that `addr >= sym_addr`).
+    if (start_address != AddressInfo::kUnknown && addr >= start_address) {
+      cur->info.function_offset = addr - start_address;
+    }
+
+    if (!common_flags()->symbolize_inline_frames)
+      break;
+
+    top_frame = false;
   }
 
-  // Only assign to `function_offset` if we were able to get the function's
-  // start address and we got a sensible `start_address` (dladdr doesn't always
-  // ensure that `addr >= sym_addr`).
-  if (start_address != AddressInfo::kUnknown && addr >= start_address) {
-    stack->info.function_offset = addr - start_address;
-  }
   return true;
 }
 
@@ -195,7 +228,7 @@ bool AtosSymbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   internal_snprintf(command, sizeof(command), "0x%zx\n", addr);
   const char *buf = process_->SendCommand(command);
   if (!buf) return false;
-  if (!ParseCommandOutput(buf, addr, &info->name, &info->module, nullptr,
+  if (!ParseCommandOutput(&buf, addr, &info->name, &info->module, nullptr,
                           nullptr, &info->start)) {
     process_ = nullptr;
     return false;
