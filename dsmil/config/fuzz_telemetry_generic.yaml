@@ -1,0 +1,117 @@
+# DSLLVM General-Purpose Fuzzing & Telemetry Configuration
+# Generic configuration template for any fuzzing target
+
+# Target configuration
+target:
+  name: "generic_target"
+  type: "generic"  # generic, protocol, parser, api, etc.
+  input_format: "binary"  # binary, text, structured
+  max_input_size: 1048576  # 1MB default
+  
+  # Advanced fuzzing techniques
+  enable_grammar_fuzzing: false
+  grammar_file: ""
+  enable_structure_aware: false
+  enable_ml_guided: false
+  ml_model_path: ""
+  enable_dictionary: false
+  dictionary: []
+  
+  # Distributed fuzzing
+  enable_distributed: false
+  worker_id: 0
+  num_workers: 1
+  
+  # Performance
+  enable_perf_counters: false
+  
+  # Target-specific options (key-value pairs)
+  options: {}
+
+# Operation budgets (for critical operations)
+operation_budgets:
+  default:
+    max_branches: 10000
+    max_loads: 50000
+    max_stores: 25000
+    max_delta_cycles: 5000
+
+# API misuse policies
+api_misuse_policies:
+  buffer_write:
+    check_bounds: true
+    check_null: true
+    abort_on_violation: false
+  
+  memory_alloc:
+    check_size: true
+    check_overflow: true
+    abort_on_violation: true
+
+# Telemetry settings
+telemetry:
+  ring_buffer_size: 1048576  # 1MB
+  flush_on_exit: true
+  output_file: "fuzz_telemetry.bin"
+  enable_timing: false
+  enable_perf_counters: false
+  enable_ml_integration: false
+  
+  # Compression
+  compress_output: true
+  compression_level: 6
+  
+  # Export formats
+  export_formats:
+    - "json"
+    - "protobuf"
+
+# State machine budgets
+state_machine_budgets:
+  default:
+    max_transitions: 100
+    max_depth: 20
+
+# Mutation strategies
+mutation_strategies:
+  bit_flip:
+    enabled: true
+    probability: 0.3
+  
+  byte_insert:
+    enabled: true
+    probability: 0.2
+  
+  byte_delete:
+    enabled: true
+    probability: 0.2
+  
+  crossover:
+    enabled: true
+    probability: 0.1
+  
+  dictionary_insert:
+    enabled: true
+    probability: 0.1
+  
+  ml_guided:
+    enabled: false
+    probability: 0.1
+
+# Coverage feedback
+coverage_feedback:
+  interestingness_threshold: 0.7
+  use_ml_scoring: false
+  coverage_map_size: 1048576
+  edge_map_size: 524288
+  state_map_size: 65536
+  feedback_interval: 1000
+
+# Performance optimization
+performance:
+  enable_parallel: false
+  num_threads: 1
+  enable_batch: false
+  batch_size: 1000
+  preallocate_buffers: true
+  buffer_size: 1048576

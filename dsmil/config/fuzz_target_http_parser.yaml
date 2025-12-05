@@ -1,0 +1,22 @@
+# HTTP Parser Fuzzing Configuration
+target:
+  name: "http_parser"
+  type: "parser"
+  input_format: "text"
+  max_input_size: 65536
+  
+  enable_structure_aware: true
+  enable_dictionary: true
+  dictionary:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "HTTP/1.1"
+    - "HTTP/1.0"
+    - "Content-Length"
+    - "Content-Type"
+    - "Host"
+  
+  enable_grammar_fuzzing: true
+  grammar_file: "http_grammar.bnf"
