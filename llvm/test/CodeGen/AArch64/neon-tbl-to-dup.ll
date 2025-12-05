@@ -4,9 +4,7 @@
 define <4 x i32> @tbl_v16i8_broadcast_i32_lane0(<4 x i32> %v) {
 ; CHECK-LABEL: tbl_v16i8_broadcast_i32_lane0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
-; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    dup v0.4s, v0.s[0]
 ; CHECK-NEXT:    ret
   %bc = bitcast <4 x i32> %v to <16 x i8>
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> %bc, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3>)
@@ -17,9 +15,7 @@ define <4 x i32> @tbl_v16i8_broadcast_i32_lane0(<4 x i32> %v) {
 define <4 x i32> @tbl_v16i8_broadcast_i32_lane2(<4 x i32> %v) {
 ; CHECK-LABEL: tbl_v16i8_broadcast_i32_lane2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
-; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    dup v0.4s, v0.s[2]
 ; CHECK-NEXT:    ret
   %bc = bitcast <4 x i32> %v to <16 x i8>
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> %bc, <16 x i8> <i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11>)
@@ -30,8 +26,7 @@ define <4 x i32> @tbl_v16i8_broadcast_i32_lane2(<4 x i32> %v) {
 define <8 x i16> @tbl_v16i8_broadcast_i16_lane0(<8 x i16> %v) {
 ; CHECK-LABEL: tbl_v16i8_broadcast_i16_lane0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.8h, #1, lsl #8
-; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
 ; CHECK-NEXT:    ret
   %bc = bitcast <8 x i16> %v to <16 x i8>
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> %bc, <16 x i8> <i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1>)
@@ -42,9 +37,7 @@ define <8 x i16> @tbl_v16i8_broadcast_i16_lane0(<8 x i16> %v) {
 define <8 x i16> @tbl_v16i8_broadcast_i16_lane5(<8 x i16> %v) {
 ; CHECK-LABEL: tbl_v16i8_broadcast_i16_lane5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI3_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
-; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    dup v0.8h, v0.h[5]
 ; CHECK-NEXT:    ret
   %bc = bitcast <8 x i16> %v to <16 x i8>
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> %bc, <16 x i8> <i8 10, i8 11, i8 10, i8 11, i8 10, i8 11, i8 10, i8 11, i8 10, i8 11, i8 10, i8 11, i8 10, i8 11, i8 10, i8 11>)
@@ -55,9 +48,7 @@ define <8 x i16> @tbl_v16i8_broadcast_i16_lane5(<8 x i16> %v) {
 define <2 x i64> @tbl_v16i8_broadcast_i64_lane1(<2 x i64> %v) {
 ; CHECK-LABEL: tbl_v16i8_broadcast_i64_lane1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI4_0]
-; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    dup v0.2d, v0.d[1]
 ; CHECK-NEXT:    ret
   %bc = bitcast <2 x i64> %v to <16 x i8>
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> %bc, <16 x i8> <i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)

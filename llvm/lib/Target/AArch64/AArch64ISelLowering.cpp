@@ -14648,6 +14648,31 @@ static SDValue constructDup(SDValue V, int Lane, SDLoc DL, EVT VT,
   return DAG.getNode(Opcode, DL, VT, V, DAG.getConstant(Lane, DL, MVT::i64));
 }
 
+/// Try to lower a vector with all elements broadcasting a single lane to a DUP
+/// instruction by trying different lane sizes (64, 32, 16 bits).
+static SDValue tryLowerToWideDUP(ArrayRef<int> Indices, EVT IndicesVT,
+                                 SDValue Data, EVT ResultVT, const SDLoc &DL,
+                                 SelectionDAG &DAG) {
+  for (unsigned LaneSize : {64U, 32U, 16U}) {
+    unsigned Lane = 0;
+    if (isWideDUPMask(Indices, IndicesVT, LaneSize, Lane)) {
+      unsigned Opcode = LaneSize == 64   ? AArch64ISD::DUPLANE64
+                        : LaneSize == 32 ? AArch64ISD::DUPLANE32
+                                         : AArch64ISD::DUPLANE16;
+      // Cast Data to an integer vector with required lane size
+      MVT NewEltTy = MVT::getIntegerVT(LaneSize);
+      unsigned NewEltCount = Data.getValueSizeInBits() / LaneSize;
+      MVT NewVecTy = MVT::getVectorVT(NewEltTy, NewEltCount);
+      SDValue CastVec = DAG.getBitcast(NewVecTy, Data);
+      // Construct the DUP instruction
+      SDValue Dup = constructDup(CastVec, Lane, DL, NewVecTy, Opcode, DAG);
+      // Cast back to the original type
+      return DAG.getBitcast(ResultVT, Dup);
+    }
+  }
+  return SDValue();
+}
+
 // Try to widen element type to get a new mask value for a better permutation
 // sequence, so that we can use NEON shuffle instructions, such as zip1/2,
 // UZP1/2, TRN1/2, REV, INS, etc.
@@ -14843,23 +14868,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   }
 
   // Check if the mask matches a DUP for a wider element
-  for (unsigned LaneSize : {64U, 32U, 16U}) {
-    unsigned Lane = 0;
-    if (isWideDUPMask(ShuffleMask, VT, LaneSize, Lane)) {
-      unsigned Opcode = LaneSize == 64 ? AArch64ISD::DUPLANE64
-                                       : LaneSize == 32 ? AArch64ISD::DUPLANE32
-                                                        : AArch64ISD::DUPLANE16;
-      // Cast V1 to an integer vector with required lane size
-      MVT NewEltTy = MVT::getIntegerVT(LaneSize);
-      unsigned NewEltCount = VT.getSizeInBits() / LaneSize;
-      MVT NewVecTy = MVT::getVectorVT(NewEltTy, NewEltCount);
-      V1 = DAG.getBitcast(NewVecTy, V1);
-      // Construct the DUP instruction
-      V1 = constructDup(V1, Lane, DL, NewVecTy, Opcode, DAG);
-      // Cast back to the original type
-      return DAG.getBitcast(VT, V1);
-    }
-  }
+  if (SDValue WideDup = tryLowerToWideDUP(ShuffleMask, VT, V1, VT, DL, DAG))
+    return WideDup;
 
   unsigned NumElts = VT.getVectorNumElements();
   unsigned EltSize = VT.getScalarSizeInBits();
@@ -23178,6 +23188,41 @@ static SDValue combineSVEBitSel(unsigned IID, SDNode *N, SelectionDAG &DAG) {
   }
 }
 
+// Try to convert TBL instructions that broadcast a single element to DUP.
+static SDValue tryConvertTBLToDUP(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+         "Expected intrinsic node");
+
+  // TBL1 has the data in operand 1 and indices in operand 2
+  SDValue Data = N->getOperand(1);
+  SDValue Indices = N->getOperand(2);
+
+  // Only handle constant index vectors
+  const auto *IndicesNode = dyn_cast<BuildVectorSDNode>(Indices);
+  if (!IndicesNode)
+    return SDValue();
+
+  // TODO: handle tb1.v8i8 as well
+  EVT IndicesVT = Indices.getValueType();
+  if (IndicesVT != MVT::v16i8)
+    return SDValue();
+
+  const unsigned NumBytes = IndicesVT.getVectorNumElements();
+
+  // Extract all byte index values
+  SmallVector<int, 16> ByteIndices;
+  for (unsigned I = 0; I < NumBytes; ++I) {
+    const auto *Idx = dyn_cast<ConstantSDNode>(IndicesNode->getOperand(I));
+    if (!Idx || Idx->getSExtValue() < 0)
+      return SDValue();
+    ByteIndices.push_back(Idx->getSExtValue());
+  }
+
+  SDLoc DL(N);
+  EVT ResultVT = N->getValueType(0);
+  return tryLowerToWideDUP(ByteIndices, IndicesVT, Data, ResultVT, DL, DAG);
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -23238,6 +23283,10 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_neon_uabd:
     return DAG.getNode(ISD::ABDU, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2));
+  case Intrinsic::aarch64_neon_tbl1:
+    if (SDValue DUP = tryConvertTBLToDUP(N, DAG))
+      return DUP;
+    break;
   case Intrinsic::aarch64_neon_fcvtzs:
     return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTZS_HALF, DAG);
   case Intrinsic::aarch64_neon_fcvtzu:
