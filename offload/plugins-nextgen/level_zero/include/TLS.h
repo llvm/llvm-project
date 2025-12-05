@@ -38,29 +38,27 @@ public:
   L0ThreadTLSTy &operator=(const L0ThreadTLSTy &&) = delete;
   ~L0ThreadTLSTy() {}
 
-  void clear() {}
-
   AsyncQueueTy *getAsyncQueue() {
-    AsyncQueueTy *ret = nullptr;
+    AsyncQueueTy *Ret = nullptr;
     if (UsedQueues < PerThreadQueues) {
       // there's a free queue in this thread, find it
-      for (int32_t q = 0; q < PerThreadQueues; q++) {
-        if (!AsyncQueues[q].InUse) {
+      for (int32_t Queue = 0; Queue < PerThreadQueues; Queue++) {
+        if (!AsyncQueues[Queue].InUse) {
           UsedQueues++;
-          ret = &AsyncQueues[q];
+          Ret = &AsyncQueues[Queue];
           break;
         }
       }
-      assert(ret && "A queue should have been found!");
-      ret->InUse = true;
+      assert(Ret && "A queue should have been found!");
+      Ret->InUse = true;
     }
-    return ret;
+    return Ret;
   }
 
-  bool releaseAsyncQueue(AsyncQueueTy *queue) {
-    if (queue >= &AsyncQueues[0] && queue < &AsyncQueues[PerThreadQueues]) {
+  bool releaseAsyncQueue(AsyncQueueTy *Queue) {
+    if (Queue >= &AsyncQueues[0] && Queue < &AsyncQueues[PerThreadQueues]) {
       // it's a local queue
-      queue->InUse = false;
+      Queue->InUse = false;
       UsedQueues--;
       return true;
     }
@@ -68,11 +66,7 @@ public:
   }
 };
 
-struct L0ThreadTblTy : public PerThread<L0ThreadTLSTy> {
-  void clear() {
-    PerThread::clear([](auto &Entry) { Entry.clear(); });
-  }
-};
+using L0ThreadTblTy = PerThread<L0ThreadTLSTy>;
 
 } // namespace plugin
 } // namespace target

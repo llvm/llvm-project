@@ -121,7 +121,6 @@ Error LevelZeroPluginTy::deinitImpl() {
   if (auto Err = ContextTLSTable.deinit())
     return Err;
   DeviceTLSTable.clear();
-  ThreadTLSTable.clear();
   for (auto &Context : ContextList)
     if (auto Err = Context.deinit())
       return Err;
