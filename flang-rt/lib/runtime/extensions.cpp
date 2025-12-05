@@ -467,6 +467,14 @@ void FORTRAN_PROCEDURE_NAME(srand)(int *seed) {
   rand_seed_lock.Drop();
 }
 
+void RTNAME(ShowDescriptor)(const Fortran::runtime::Descriptor *descr) {
+  if (descr) {
+    descr->Dump(stderr, /*dumpRawType=*/false);
+  } else {
+    std::fprintf(stderr, "NULL\n");
+  }
+}
+
 // Extension procedures related to I/O
 
 namespace io {
