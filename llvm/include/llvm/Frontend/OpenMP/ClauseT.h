@@ -763,8 +763,9 @@ struct InitT {
 template <typename T, typename I, typename E> //
 struct InitializerT {
   using InitializerExpr = E;
+  using List = ListT<InitializerExpr>;
   using WrapperTrait = std::true_type;
-  InitializerExpr v;
+  List v;
 };
 
 // V5.2: [5.5.10] `in_reduction` clause
