@@ -2447,6 +2447,12 @@ struct AMDGPUMakeDmaDescriptorLowering
       return sgpr1;
 
     Value atomicBarrierAddress = adaptor.getAtomicBarrierAddress();
+    auto barrierAddressTy =
+        cast<MemRefType>(op.getAtomicBarrierAddress().getType());
+    ValueRange atomicBarrierIndices = adaptor.getAtomicBarrierIndices();
+    atomicBarrierAddress =
+        getStridedElementPtr(rewriter, loc, barrierAddressTy,
+                             atomicBarrierAddress, atomicBarrierIndices);
     IntegerType i32 = rewriter.getI32Type();
     // pre-condition: atomicBarrierAddress is aligned to 8 bytes which implies
     // that the 3 LSBs are zero.
