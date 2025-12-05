@@ -110,10 +110,9 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[SCALAR_PHI:%.+]]> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:   WIDEN-PHI ir<%iv> = phi [ vp<[[INDUCTION]]>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
 ; CHECK-NEXT:   CLONE ir<%q> = getelementptr ir<%p>, vp<[[SCALAR_PHI]]>
-; CHECK-NEXT:   vp<%8> = vector-pointer ir<%q>
-; CHECK-NEXT:   WIDEN ir<%x> = load vp<%8>
+; CHECK-NEXT:   WIDEN ir<%x> = load ir<%q>
 ; CHECK-NEXT:   WIDEN ir<%y> = add ir<%x>, ir<%iv>
-; CHECK-NEXT:   WIDEN store vp<%8>, ir<%y>
+; CHECK-NEXT:   WIDEN store ir<%q>, ir<%y>
 ; CHECK-NEXT:   EMIT vp<%index.next> = add nuw vp<[[SCALAR_PHI]]>, ir<8>
 ; CHECK-NEXT:   EMIT vp<%vec.ind.next> = add ir<%iv>, vp<[[BROADCAST_INC]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<%index.next>, vp<%n.vec>
