@@ -218,9 +218,7 @@ public:
     return AUIP->doInitialization(M);
   }
 
-  bool doFinalization(Module &M) override {
-    return AUIP->doFinalization(M);
-  }
+  bool doFinalization(Module &M) override { return AUIP->doFinalization(M); }
 
   void print(raw_ostream &OS, const Module *M = nullptr) const override {
     AUIP->print(OS, M);

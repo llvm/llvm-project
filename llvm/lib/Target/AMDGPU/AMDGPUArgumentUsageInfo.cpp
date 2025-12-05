@@ -86,9 +86,8 @@ void AMDGPUArgumentUsageInfo::print(raw_ostream &OS, const Module *M) const {
   }
 }
 
-bool AMDGPUArgumentUsageInfo::invalidate(
-    Module &M, const PreservedAnalyses &PA,
-    ModuleAnalysisManager::Invalidator &) {
+bool AMDGPUArgumentUsageInfo::invalidate(Module &M, const PreservedAnalyses &PA,
+                                         ModuleAnalysisManager::Invalidator &) {
   auto PAC = PA.getChecker<AMDGPUArgumentUsageAnalysis>();
   return !PAC.preservedWhenStateless();
 }
