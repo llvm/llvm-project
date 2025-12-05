@@ -420,20 +420,11 @@ bool CGObjCRuntime::canClassObjectBeUnrealized(
   if (!CalleeClassDecl || isWeakLinkedClass(CalleeClassDecl))
     return true;
 
-  // Heuristic 1: +load method on this class
-  // If the class has a +load method, it's realized when the binary is loaded.
-  ASTContext &Ctx = CGM.getContext();
-  const IdentifierInfo *LoadII = &Ctx.Idents.get("load");
-  Selector LoadSel = Ctx.Selectors.getSelector(0, &LoadII);
-
-  // TODO: if one if the child had +load, this class is guaranteed to be
-  // realized as well. We can't search for all child classes here. Ideally, we
-  // should have a translation unit level `SmallSet` to include all classes with
-  // +load. Every time a class has +load, put itself and all parents in it, and
-  // we can just query that `SmallSet` here.
-  if (CalleeClassDecl->lookupMethod(LoadSel, /*isInstance=*/false,
-                                    /*shallowCategoryLookup=*/false,
-                                    /*followSuper=*/false))
+  // Heuristic 1: +load method on this class or any subclass
+  // If the class or any of its subclasses has a +load method, it's realized
+  // when the binary is loaded. We cache this information to avoid repeatedly
+  // scanning the translation unit.
+  if (getOrPopulateRealizedClasses().contains(CalleeClassDecl))
     return false;
 
   // Heuristic 2: using Self / Super
@@ -459,6 +450,38 @@ bool CGObjCRuntime::canClassObjectBeUnrealized(
 
   // Otherwise, assume it can be unrealized.
   return true;
+}
+
+const RealizedClassSet &CGObjCRuntime::getOrPopulateRealizedClasses() const {
+  if (RealizedClasses)
+    return *RealizedClasses;
+  RealizedClasses = llvm::DenseSet<const ObjCInterfaceDecl *>();
+
+  ASTContext &Ctx = CGM.getContext();
+  const IdentifierInfo *LoadII = &Ctx.Idents.get("load");
+  Selector LoadSel = Ctx.Selectors.getSelector(0, &LoadII);
+
+  TranslationUnitDecl *TUDecl = Ctx.getTranslationUnitDecl();
+  llvm::DenseSet<const ObjCInterfaceDecl *> VisitedClasses;
+  for (const auto *D : TUDecl->decls()) {
+    if (const auto *OID = dyn_cast<ObjCInterfaceDecl>(D)) {
+      if (VisitedClasses.contains(OID))
+        continue;
+      // Check if this class has a +load method
+      if (OID->lookupMethod(LoadSel, /*isInstance=*/false,
+                            /*shallowCategoryLookup=*/false,
+                            /*followSuper=*/false)) {
+        // Add this class and all its superclasses to the realized set
+        const ObjCInterfaceDecl *Cls = OID;
+        while (Cls) {
+          RealizedClasses->insert(Cls);
+          VisitedClasses.insert(Cls);
+          Cls = Cls->getSuperClass();
+        }
+      }
+    }
+  }
+  return *RealizedClasses;
 }
 
 bool CGObjCRuntime::isWeakLinkedClass(const ObjCInterfaceDecl *ID) {
