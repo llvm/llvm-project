@@ -18,7 +18,6 @@
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/PrettyPrinter.h"
-#include "clang/AST/TypeBase.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/Lexer.h"
