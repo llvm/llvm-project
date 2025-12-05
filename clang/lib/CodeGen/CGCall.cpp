@@ -4976,7 +4976,8 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     // expression.
     if (!CGM.getCodeGenOpts().NoLifetimeMarkersForTemporaries &&
         EmitLifetimeStart(ArgSlotAlloca.getPointer()))
-      pushFullExprCleanup<CallLifetimeEnd>(NormalAndEHCleanup, ArgSlotAlloca);
+      pushFullExprCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker,
+                                           ArgSlotAlloca);
   }
 
   args.add(EmitAnyExpr(E, ArgSlot), type);
