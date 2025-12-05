@@ -851,9 +851,11 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, T I) {
 
   while (true) {
     unsigned BlockOrCode = 0;
-    Cursor Res = skipUntilRecordOrBlock(BlockOrCode);
+    llvm::Expected<Cursor> C = skipUntilRecordOrBlock(BlockOrCode);
+    if (!C)
+      return C.takeError();
 
-    switch (Res) {
+    switch (*C) {
     case Cursor::BadBlock:
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "bad block found");
@@ -989,45 +991,39 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
   }
 }
 
-ClangDocBitcodeReader::Cursor
+llvm::Expected<ClangDocBitcodeReader::Cursor>
 ClangDocBitcodeReader::skipUntilRecordOrBlock(unsigned &BlockOrRecordID) {
   llvm::TimeTraceScope("Reducing infos", "skipUntilRecordOrBlock");
   BlockOrRecordID = 0;
 
   while (!Stream.AtEndOfStream()) {
-    Expected<unsigned> MaybeCode = Stream.ReadCode();
-    if (!MaybeCode) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeCode.takeError());
-      return Cursor::BadBlock;
-    }
+    Expected<unsigned> Code = Stream.ReadCode();
+    if (!Code)
+      return Code.takeError();
 
-    unsigned Code = MaybeCode.get();
-    if (Code >= static_cast<unsigned>(llvm::bitc::FIRST_APPLICATION_ABBREV)) {
-      BlockOrRecordID = Code;
+    if (*Code >= static_cast<unsigned>(llvm::bitc::FIRST_APPLICATION_ABBREV)) {
+      BlockOrRecordID = *Code;
       return Cursor::Record;
     }
-    switch (static_cast<llvm::bitc::FixedAbbrevIDs>(Code)) {
+    switch (static_cast<llvm::bitc::FixedAbbrevIDs>(*Code)) {
     case llvm::bitc::ENTER_SUBBLOCK:
       if (Expected<unsigned> MaybeID = Stream.ReadSubBlockID())
         BlockOrRecordID = MaybeID.get();
-      else {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeID.takeError());
-      }
+      else
+        return MaybeID.takeError();
       return Cursor::BlockBegin;
     case llvm::bitc::END_BLOCK:
       if (Stream.ReadBlockEnd())
-        return Cursor::BadBlock;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "error at end of block");
       return Cursor::BlockEnd;
     case llvm::bitc::DEFINE_ABBREV:
-      if (llvm::Error Err = Stream.ReadAbbrevRecord()) {
-        // FIXME this drops the error on the floor.
-        consumeError(std::move(Err));
-      }
+      if (llvm::Error Err = Stream.ReadAbbrevRecord())
+        return std::move(Err);
       continue;
     case llvm::bitc::UNABBREV_RECORD:
-      return Cursor::BadBlock;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "found unabbreviated record");
     case llvm::bitc::FIRST_APPLICATION_ABBREV:
       llvm_unreachable("Unexpected abbrev id.");
     }
@@ -1153,10 +1149,8 @@ ClangDocBitcodeReader::readBitcode() {
         return std::move(Err);
       continue;
     default:
-      if (llvm::Error Err = Stream.SkipBlock()) {
-        // FIXME this drops the error on the floor.
-        consumeError(std::move(Err));
-      }
+      if (llvm::Error Err = Stream.SkipBlock())
+        return std::move(Err);
       continue;
     }
   }
