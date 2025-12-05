@@ -40,15 +40,11 @@ template <class T> void C<T>::not_to_be_instantiated() noexcept {}
 // Attach the attribute to class template declaration instead of instantiation declaration.
 template <class T>
 struct __declspec(dllexport) D {
-  // This should be exported by the class-level attribute.
-  void to_be_exported() noexcept;
-
-  // This also should be exported by the class-level attribute but currently not.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void also_to_be_exported() noexcept;
+  // This will be exported if and only if no explicit instantiations are provided.
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void to_be_exported_iff_no_explicit_instantiation() noexcept;
 };
 
-template <class T> void D<T>::to_be_exported() noexcept {}
-template <class T> void D<T>::also_to_be_exported() noexcept {}
+template <class T> void D<T>::to_be_exported_iff_no_explicit_instantiation() noexcept {}
 
 // Interaction with VTables.
 template <class T>
@@ -70,23 +66,23 @@ template <class T> void E<T>::to_be_instantiated() noexcept {}
 template <class T> void E<T>::to_be_exported_explicitly() noexcept {}
 
 // MSC: $"?to_be_exported@?$C@H@@QEAAXXZ" = comdat any
-// MSC: $"?to_be_exported@?$D@H@@QEAAXXZ" = comdat any
 // MSC: $"?to_be_exported@?$E@H@@UEAAXXZ" = comdat any
 // MSC: $"?to_be_exported@?$E@I@@UEAAXXZ" = comdat any
 // MSC: $"?to_be_exported_explicitly@?$C@H@@QEAAXXZ" = comdat any
 // MSC: $"?not_to_be_exported@?$C@H@@QEAAXXZ" = comdat any
-// MSC: $"?also_to_be_exported@?$D@H@@QEAAXXZ" = comdat any
+// MSC: $"?to_be_exported_iff_no_explicit_instantiation@?$D@H@@QEAAXXZ" = comdat any
+// MSC: $"?to_be_exported_iff_no_explicit_instantiation@?$D@I@@QEAAXXZ" = comdat any
 // MSC: $"?to_be_instantiated@?$E@H@@UEAAXXZ" = comdat any
 // MSC: $"?to_be_exported_explicitly@?$E@H@@UEAAXXZ" = comdat any
 // MSC: $"?to_be_instantiated@?$E@I@@UEAAXXZ" = comdat any
 // MSC: $"?to_be_exported_explicitly@?$E@I@@UEAAXXZ" = comdat any
 // GNU: $_ZN1CIiE14to_be_exportedEv = comdat any
-// GNU: $_ZN1DIiE14to_be_exportedEv = comdat any
 // GNU: $_ZN1EIiE14to_be_exportedEv = comdat any
 // GNU: $_ZN1EIjE14to_be_exportedEv = comdat any
 // GNU: $_ZN1CIiE25to_be_exported_explicitlyEv = comdat any
 // GNU: $_ZN1CIiE18not_to_be_exportedEv = comdat any
-// GNU: $_ZN1DIiE19also_to_be_exportedEv = comdat any
+// GNU: $_ZN1DIiE44to_be_exported_iff_no_explicit_instantiationEv = comdat any
+// GNU: $_ZN1DIjE44to_be_exported_iff_no_explicit_instantiationEv = comdat any
 // GNU: $_ZN1EIiE18to_be_instantiatedEv = comdat any
 // GNU: $_ZN1EIiE25to_be_exported_explicitlyEv = comdat any
 // GNU: $_ZN1EIjE18to_be_instantiatedEv = comdat any
@@ -106,10 +102,10 @@ template <class T> void E<T>::to_be_exported_explicitly() noexcept {}
 template struct __declspec(dllexport) C<int>;
 
 // MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$D@H@@QEAAAEAU0@AEBU0@@Z"
-// MSC: define weak_odr dso_local dllexport{{.*}} void @"?to_be_exported@?$D@H@@QEAAXXZ"
 // GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN1DIiEaSERKS0_
-// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN1DIiE14to_be_exportedEv
-template struct D<int>;
+template struct D<int>; // No dllexport here.
+// Don't provide explicit instantiation for D<unsigned>.
+
 
 // MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$E@H@@QEAAAEAU0@AEBU0@@Z"
 // MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??0?$E@H@@QEAA@XZ"
@@ -127,6 +123,8 @@ template struct __declspec(dllexport) E<int>;
 // GNU: define weak_odr dso_local{{.*}} void @_ZN1EIjE14to_be_exportedEv
 template struct E<unsigned int>;
 
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$D@I@@QEAAAEAU0@AEBU0@@Z"
+
 void use() {
   C<int> c;
 
@@ -138,11 +136,17 @@ void use() {
   // GNU: call void @_ZN1CIiE18not_to_be_exportedEv
   c.not_to_be_exported(); // implicitly instantiated here
 
-  D<int> d;
+  D<int> di;
 
-  // MSC: call void @"?also_to_be_exported@?$D@H@@QEAAXXZ"
-  // GNU: call void @_ZN1DIiE19also_to_be_exportedEv
-  d.also_to_be_exported(); // implicitly instantiated here
+  // MSC: call void @"?to_be_exported_iff_no_explicit_instantiation@?$D@H@@QEAAXXZ"
+  // GNU: call void @_ZN1DIiE44to_be_exported_iff_no_explicit_instantiationEv
+  di.to_be_exported_iff_no_explicit_instantiation(); // implicitly instantiated here
+
+  D<unsigned> dj;
+
+  // MSC: call void @"?to_be_exported_iff_no_explicit_instantiation@?$D@I@@QEAAXXZ"
+  // GNU: call void @_ZN1DIjE44to_be_exported_iff_no_explicit_instantiationEv
+  dj.to_be_exported_iff_no_explicit_instantiation(); // implicitly instantiated here
 }
 
 // MSC: define weak_odr dso_local dllexport{{.*}} void @"?to_be_exported_explicitly@?$C@H@@QEAAXXZ"
@@ -151,8 +155,10 @@ void use() {
 // MSC: define linkonce_odr dso_local void @"?not_to_be_exported@?$C@H@@QEAAXXZ"
 // GNU: define linkonce_odr dso_local void @_ZN1CIiE18not_to_be_exportedEv
 
-// MSC: define linkonce_odr dso_local void @"?also_to_be_exported@?$D@H@@QEAAXXZ"
-// GNU: define linkonce_odr dso_local void @_ZN1DIiE19also_to_be_exportedEv
+// MSC: define linkonce_odr dso_local void @"?to_be_exported_iff_no_explicit_instantiation@?$D@H@@QEAAXXZ"
+// MSC: define weak_odr dso_local dllexport void @"?to_be_exported_iff_no_explicit_instantiation@?$D@I@@QEAAXXZ"
+// GNU: define linkonce_odr dso_local void @_ZN1DIiE44to_be_exported_iff_no_explicit_instantiationEv
+// GNU: define weak_odr dso_local dllexport void @_ZN1DIjE44to_be_exported_iff_no_explicit_instantiationEv
 
 // MSC: define linkonce_odr dso_local void @"?to_be_instantiated@?$E@H@@UEAAXXZ"
 // MSC: define weak_odr dso_local dllexport void @"?to_be_exported_explicitly@?$E@H@@UEAAXXZ"

@@ -39,15 +39,11 @@ template <class T> void C<T>::not_to_be_instantiated() noexcept {}
 // Attach the attribute to class template declaration instead of instantiation declaration.
 template <class T>
 struct __declspec(dllimport) D {
-  // This will be imported by the class-level attribute.
-  void to_be_imported() noexcept;
-
-  // This also should be imported by the class-level attribute but currently not.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void also_to_be_imported() noexcept;
+  // This will be imported if and only if no explicit instantiations are provided.
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void to_be_imported_iff_no_explicit_instantiation() noexcept;
 };
 
-template <class T> void D<T>::to_be_imported() noexcept {}
-template <class T> void D<T>::also_to_be_imported() noexcept {}
+template <class T> void D<T>::to_be_imported_iff_no_explicit_instantiation() noexcept {}
 
 // Interaction with VTables.
 template <class T>
@@ -82,9 +78,9 @@ template <class T> void E<T>::to_be_imported() noexcept {}
 template <class T> void E<T>::to_be_instantiated() noexcept {}
 
 // MSC: $"?not_to_be_imported@?$C@H@@QEAAXXZ" = comdat any
-// MSC: $"?also_to_be_imported@?$D@H@@QEAAXXZ" = comdat any
+// MSC: $"?to_be_imported_iff_no_explicit_instantiation@?$D@H@@QEAAXXZ" = comdat any
 // GNU: $_ZN1CIiE18not_to_be_importedEv = comdat any
-// GNU: $_ZN1DIiE19also_to_be_importedEv = comdat any
+// GNU: $_ZN1DIiE44to_be_imported_iff_no_explicit_instantiationEv = comdat any
 // GNU: @_ZTV1EIiE = external dllimport unnamed_addr
 // GNU: @_ZTV1EIjE = external unnamed_addr
 
@@ -95,7 +91,8 @@ template <class T> void E<T>::to_be_instantiated() noexcept {}
 
 extern template struct __declspec(dllimport) C<int>;
 
-extern template struct D<int>;
+extern template struct D<int>; // No dllimport here.
+// Don't provide explicit instantiation for D<unsigned>.
 
 extern template struct __declspec(dllimport) E<int>;      // $E@H, 1EIiE
 extern template struct E<unsigned>;                       // $E@I, 1EIjE
@@ -117,15 +114,17 @@ void use() {
   // GNU: call void @_ZN1CIiE18not_to_be_importedEv
   c.not_to_be_imported(); // implicitly instantiated here
 
-  D<int> d;
+  D<int> di;
 
-  // MSC: call void @"?to_be_imported@?$D@H@@QEAAXXZ"
-  // GNU: call void @_ZN1DIiE14to_be_importedEv
-  d.to_be_imported(); // implicitly instantiated here
+  // MSC: call void @"?to_be_imported_iff_no_explicit_instantiation@?$D@H@@QEAAXXZ"
+  // GNU: call void @_ZN1DIiE44to_be_imported_iff_no_explicit_instantiationEv
+  di.to_be_imported_iff_no_explicit_instantiation(); // implicitly instantiated here
 
-  // MSC: call void @"?also_to_be_imported@?$D@H@@QEAAXXZ"
-  // GNU: call void @_ZN1DIiE19also_to_be_importedEv
-  d.also_to_be_imported(); // implicitly instantiated here
+  D<unsigned> dj;
+
+  // MSC: call void @"?to_be_imported_iff_no_explicit_instantiation@?$D@I@@QEAAXXZ"
+  // GNU: call void @_ZN1DIjE44to_be_imported_iff_no_explicit_instantiationEv
+  dj.to_be_imported_iff_no_explicit_instantiation(); // implicitly instantiated here
 
   E<int> ei{1};
 
@@ -133,7 +132,7 @@ void use() {
 
   E<long int> el{1L};
 
-  E<unsigned long int> eu{1L};
+  E<unsigned long int> em{1L};
 }
 
 // MSC: declare dllimport void @"?to_be_imported@?$C@H@@QEAAXXZ"
@@ -145,11 +144,10 @@ void use() {
 // MSC: define linkonce_odr dso_local void @"?not_to_be_imported@?$C@H@@QEAAXXZ"
 // GNU: define linkonce_odr dso_local void @_ZN1CIiE18not_to_be_importedEv
 
-// MSC: declare dllimport void @"?to_be_imported@?$D@H@@QEAAXXZ"
-// GNU: declare dllimport void @_ZN1DIiE14to_be_importedEv
-
-// MSC: define linkonce_odr dso_local void @"?also_to_be_imported@?$D@H@@QEAAXXZ"
-// GNU: define linkonce_odr dso_local void @_ZN1DIiE19also_to_be_importedEv
+// MSC: define linkonce_odr dso_local void @"?to_be_imported_iff_no_explicit_instantiation@?$D@H@@QEAAXXZ"
+// MSC: declare dllimport void @"?to_be_imported_iff_no_explicit_instantiation@?$D@I@@QEAAXXZ"
+// GNU: define linkonce_odr dso_local void @_ZN1DIiE44to_be_imported_iff_no_explicit_instantiationEv
+// GNU: declare dllimport void @_ZN1DIjE44to_be_imported_iff_no_explicit_instantiationEv
 
 // MSC: declare dllimport noundef ptr @"??0?$E@J@@QEAA@J@Z"
 // MSC: declare dso_local noundef ptr @"??0?$E@K@@QEAA@J@Z"
