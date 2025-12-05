@@ -242,6 +242,10 @@ Each pass supports configuration via `-mllvm` flags:
 - [x] `DsmilFuzzExportPass.cpp` - Implemented ✓
 - [x] `DsmilTelemetryCheckPass.cpp` - Implemented ✓
 
+**Telemetry Expansion Passes** (v1.9):
+- [x] `DsmilTelemetryPass.cpp` - Enhanced with telemetry levels and generic annotations ✓
+- [x] `DsmilMetricsPass.cpp` - Metrics collection and manifest generation ✓
+
 **AI Integration Passes** (v1.1):
 - [ ] `DsmilAIAdvisorAnnotatePass.cpp` - Planned (Phase 4)
 - [ ] `DsmilAISecurityScanPass.cpp` - Planned (Phase 4)

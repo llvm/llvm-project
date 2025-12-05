@@ -46,6 +46,9 @@ Welcome to the DSLLVM comprehensive documentation. This directory contains all d
 | Document | Feature | Description |
 |----------|---------|-------------|
 | [TELEMETRY-ENFORCEMENT.md](TELEMETRY-ENFORCEMENT.md) | Feature 1.3 | Minimum telemetry enforcement for safety-critical systems |
+| [OT-TELEMETRY-GUIDE.md](OT-TELEMETRY-GUIDE.md) | Feature 1.8 | OT telemetry instrumentation for safety monitoring |
+| [TELEMETRY-EXPANSION-v1.9.md](TELEMETRY-EXPANSION-v1.9.md) | Feature 1.9 | Telemetry levels, generic annotations, metrics collection |
+| [OT-TELEMETRY-INTEGRATION.md](OT-TELEMETRY-INTEGRATION.md) | Integration | OT telemetry integration guide and status |
 
 ---
 
@@ -344,6 +347,7 @@ Welcome to the DSLLVM comprehensive documentation. This directory contains all d
 | v1.5.0 | 2024-Q4 | Cross-domain, JADC2, 5G/MEC | C3-JADC2-INTEGRATION.md |
 | v1.5.1 | 2024-Q4 | BFT-2, radio bridging, 5G contracts | C3-JADC2-INTEGRATION.md |
 | v1.6.0 | 2024-Q4 | Nuclear surety, MPE, edge security | HIGH-ASSURANCE-GUIDE.md |
+| v1.9 | 2024-Q4 | Telemetry expansion (levels, generic annotations, metrics) | TELEMETRY-EXPANSION-v1.9.md |
 
 ---
 

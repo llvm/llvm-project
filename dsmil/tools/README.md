@@ -248,6 +248,40 @@ dsmil-telemetry-collector --format=json --output=/var/log/dsmil/telemetry.json
 
 **Documentation**: [RUNTIME-OBSERVABILITY.md](../docs/RUNTIME-OBSERVABILITY.md)
 
+### Telemetry Analysis (v1.9+) ⭐ NEW
+
+#### `dsmil-telemetry-summary`
+Aggregates telemetry metrics from all modules and generates global summary.
+
+**Usage**:
+```bash
+# Aggregate all metrics files
+dsmil-telemetry-summary \
+    --input-glob "*.dsmil.metrics.json" \
+    --output dsmil.global.metrics.json
+
+# With telemetry JSON files
+dsmil-telemetry-summary \
+    --input-glob "*.dsmil.metrics.json" \
+    --telemetry-json "*.telemetry.json" \
+    --output global_summary.json
+
+# Custom input pattern
+dsmil-telemetry-summary \
+    --input-glob "build/**/*.dsmil.metrics.json" \
+    --output /tmp/global_metrics.json
+```
+
+**Output**: Generates `dsmil.global.metrics.json` with aggregated statistics:
+- Total modules, functions, instrumented counts
+- Coverage percentages
+- Category distribution
+- Authority tier distribution
+- Telecom statistics
+- Mission profile distribution
+
+**Documentation**: [TELEMETRY-EXPANSION-v1.9.md](../docs/TELEMETRY-EXPANSION-v1.9.md)
+
 ---
 
 ## Implementation Status
@@ -268,6 +302,9 @@ dsmil-telemetry-collector --format=json --output=/var/log/dsmil/telemetry.json
 - [x] `dsmil-setup` - ✅ Complete
 - [x] `dsmil-metrics` - ✅ Complete
 - [x] `dsmil-telemetry-collector` - ✅ Complete
+
+### v1.9 Tools ✅ COMPLETE
+- [x] `dsmil-telemetry-summary` - ✅ Complete (Telemetry metrics aggregation)
 
 ## Testing
 
