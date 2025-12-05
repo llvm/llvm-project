@@ -299,18 +299,17 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   if (IgnoreConditionVariableStatements && CondDeclStmt)
     return;
 
-  const bool IsSafe = isSingleVarWithSafeDestructor(Result);
-  if (Dtor && !IsLast && !IsSafe)
-    return;
-
-  if (LTE)
-    return;
-
-  if (Stealing)
+  if (!IsLast) {
+    const bool IsSafe = isSingleVarWithSafeDestructor(Result);
+    if (Dtor && !IsSafe)
       return;
 
-  if (StealingAsThis && !IsSafe)
-    return;
+    if (Stealing || (StealingAsThis && !IsSafe))
+        return;
+    
+    if (LTE)
+      return;
+  }
 
   // Don't emit warnings for statements inside macro expansions
   if (Statement->getBeginLoc().isMacroID())

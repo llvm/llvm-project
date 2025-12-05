@@ -293,8 +293,6 @@ void good_stolen_reference1_const_int_ptr() {
 
 template<typename T> const T* get_pointer(const T& ref) { return &ref; }
 
-// TODO: allow stealing when no code after if??
-// TODO: BTW also materialization must be allowed after if
 void good_stolen_reference2() {
     const int* pi = nullptr;
     int i1 = 0;
@@ -598,15 +596,31 @@ void bad_multiple_not_all_used() {
     }
 }
 
-// void bad_unique_lock() {
-//     static std::mutex counter_mutex;
+void bad_unique_lock() {
+    static std::mutex counter_mutex;
+    static int counter;
 
-//     std::unique_lock<std::mutex> lock(counter_mutex); DUMMY_TOKEN
-//     if (lock.owns_lock()) {
-// // FIXME: fixit must be here
-//         do_some();
-//     }
-// }
+    std::unique_lock<std::mutex> lock(counter_mutex); DUMMY_TOKEN
+    if (lock.owns_lock()) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'lock' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (std::unique_lock<std::mutex> lock(counter_mutex); lock.owns_lock()) {
+        do_some();
+    }
+}
+
+void bad_unique_lock_lifetime_extension() {
+    static std::mutex counter_mutex;
+    static int counter;
+
+    const auto& lock = std::unique_lock<std::mutex>{counter_mutex}; DUMMY_TOKEN
+    if (lock.owns_lock()) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'lock' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (const auto& lock = std::unique_lock<std::mutex>{counter_mutex}; lock.owns_lock()) {
+        do_some();
+    }
+}
 
 void bad_pointer_to_unique_lock() {
     static std::mutex counter_mutex;
@@ -809,6 +823,62 @@ void bad_prevents_redeclaration4() {
 //             break;
 //         }
 //     }
+}
+
+void bad_stolen_reference1_no_use_after() {
+    {
+        const int* pi = nullptr;
+        int i1 = 0; DUMMY_TOKEN
+        if (i1 == 0) {
+// CHECK-MESSAGES: [[@LINE-2]]:9: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (int i1 = 0; i1 == 0) {
+            do_some();
+            pi = &i1;
+        }
+    }
+
+    {
+        const int* pi = nullptr;
+        int i2 = 0; DUMMY_TOKEN
+        switch (i2) {
+// CHECK-MESSAGES: [[@LINE-2]]:9: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (int i2 = 0; i2) {
+            case 0:
+                do_some();
+                pi = &i2;
+                break;
+        }
+    }
+}
+
+void bad_stolen_reference_as_this_no_use_after() {
+    {
+        const UserDefined* pa = nullptr;
+        UserDefined a; DUMMY_TOKEN
+        if (a.a == 0) {
+// CHECK-MESSAGES: [[@LINE-2]]:9: warning: variable 'a' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (UserDefined a; a.a == 0) {
+            do_some();
+            pa = a.get_pointer_to_this();
+        }
+    }
+
+    {
+        const UserDefined* pa = nullptr;
+        UserDefined b; DUMMY_TOKEN
+        switch (b.a) {
+// CHECK-MESSAGES: [[@LINE-2]]:9: warning: variable 'b' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (UserDefined b; b.a) {
+            case 0:
+                do_some();
+                pa = b.get_pointer_to_this();
+                break;
+        }
+    }
 }
 
 void bad_stolen_reference1() {
