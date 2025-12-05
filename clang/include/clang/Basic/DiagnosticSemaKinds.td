@@ -8672,7 +8672,7 @@ def err_conditional_vector_has_void : Error<
 def err_conditional_vector_operand_type
     : Error<"enumeration type %0 is not allowed in a vector conditional">;
 def err_conditional_vector_cond_result_mismatch
-    : Error<"cannot mix vectors and extended vectors in a vector conditional">;
+    : Error<"cannot mix vectors and %select{sizeless|extended}0 vectors in a vector conditional">;
 def err_conditional_vector_mismatched
     : Error<"vector operands to the vector conditional must be the same type "
             "%diff{($ and $)|}0,1}">;
