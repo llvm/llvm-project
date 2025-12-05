@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks -Wno-vla-cxx-extension -fconstexpr-steps=1000 -verify
+// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks -Wno-vla-cxx-extension -fconstexpr-steps=10000 -verify=expected,old-interp
+// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks -Wno-vla-cxx-extension -fconstexpr-steps=10000 -verify=expected,new-interp -fexperimental-new-constant-interpreter
 namespace std {
 template <typename T>
 struct initializer_list {
@@ -154,10 +155,12 @@ struct NegativeSize {
 void negative_size() {
   static constexpr NegativeSize n;
   template for (auto x : n) g(x); // expected-error {{expansion size is not a constant expression}} \
-                                     expected-note {{constexpr evaluation hit maximum step limit}} \
+                                     old-interp-note {{constexpr evaluation hit maximum step limit}} \
+                                     new-interp-note {{cannot refer to element 5 of array of 4 elements in a constant expression}} \
                                      expected-note {{in call to}}
   template for (constexpr auto x : n) g(x); // expected-error {{expansion size is not a constant expression}} \
-                                               expected-note {{constexpr evaluation hit maximum step limit}} \
+                                               old-interp-note {{constexpr evaluation hit maximum step limit}} \
+                                               new-interp-note {{cannot refer to element 5 of array of 4 elements in a constant expression}} \
                                                expected-note {{in call to}}
 }
 
@@ -626,24 +629,26 @@ static_assert(f(c1, c2) == 5);
 // TODO: This entire example should work without issuing any diagnostics once
 // we have full support for references to constexpr variables (P2686).
 consteval int f() {
-  constexpr Array<int, 3> arr {1, 2, 3}; // expected-note{{add 'static' to give it a constant address}}
+  constexpr Array<int, 3> arr {1, 2, 3}; // expected-note{{add 'static' to give it a constant address}} \
+  new-interp-note 2 {{add 'static' to give it a constant address}}
 
   int result = 0;
 
   // expected-error@#invalid-ref {{constexpr variable '__range1' must be initialized by a constant expression}}
   // expected-error@#invalid-ref {{constexpr variable '__begin1' must be initialized by a constant expression}}
   // expected-error@#invalid-ref {{constexpr variable '__end1' must be initialized by a constant expression}}
-  // expected-error@#invalid-ref {{expansion size is not a constant expression}}
-  // expected-note@#invalid-ref 3 {{member call on variable '__range1' whose value is not known}}
-  // expected-note@#invalid-ref 3 {{declared here}}
   // expected-note@#invalid-ref {{reference to 'arr' is not a constant expression}}
-  // expected-note@#invalid-ref {{in call to}}
+  // old-interp-error@#invalid-ref {{expansion size is not a constant expression}}
+  // old-interp-note@#invalid-ref {{in call to}}
+  // old-interp-note@#invalid-ref 3 {{member call on variable '__range1' whose value is not known}}
+  // old-interp-note@#invalid-ref 3 {{declared here}}
+  // new-interp-note@#invalid-ref 2 {{pointer to subobject of 'arr' is not a constant expression}}
   template for (constexpr int s : arr) { // #invalid-ref                // OK, iterating expansion statement
     result += sizeof(char[s]);
   }
   return result;
 }
-static_assert(f() == 6); // expected-error {{static assertion failed due to requirement 'f() == 6'}} expected-note {{expression evaluates to '0 == 6'}}
+static_assert(f() == 6); // old-interp-error {{static assertion failed due to requirement 'f() == 6'}} old-interp-note {{expression evaluates to '0 == 6'}}
 
 struct S {
   int i;
@@ -666,8 +671,9 @@ void not_constant_expression() {
                                              expected-note {{temporary created here}} \
                                              expected-error {{constexpr variable 'x' must be initialized by a constant expression}} \
                                              expected-note {{in instantiation of expansion statement requested here}} \
-                                             expected-note {{read of variable '[__u0]' whose value is not known}} \
-                                             expected-note {{declared here}}
+                                             old-interp-note {{read of variable '[__u0]' whose value is not known}} \
+                                             old-interp-note {{declared here}} \
+                                             new-interp-note {{cannot access field of null pointer}}
     g(x);
   }
 }
@@ -1105,12 +1111,15 @@ constexpr int f1() {
 constexpr int f2() {
   Array<int, 3> a{1, 2, 3};
   int j = 0;
-  template for (auto i : a) j +=i;
+  template for (auto i : a) j +=i; // new-interp-error {{expansion size is not a constant expression}} \
+                                      new-interp-note {{initializer of '__range1' is not a constant expression}} \
+                                      new-interp-note {{declared here}}
   return j;
 }
 
 static_assert(f1() == 6);
-static_assert(f2() == 6);
+static_assert(f2() == 6); // new-interp-error {{static assertion failed due to requirement 'f2() == 6'}} \
+                             new-interp-note {{expression evaluates to '0 == 6'}}
 
 template <typename T>
 struct Span {

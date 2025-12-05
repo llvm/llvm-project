@@ -247,7 +247,8 @@ public:
   bool visitDefaultStmt(const DefaultStmt *S);
   bool visitAttributedStmt(const AttributedStmt *S);
   bool visitCXXTryStmt(const CXXTryStmt *S);
-
+  bool
+  visitCXXExpansionStmtInstantiation(const CXXExpansionStmtInstantiation *S);
 protected:
   bool visitStmt(const Stmt *S);
   bool visitExpr(const Expr *E, bool DestroyToplevelScope) override;
