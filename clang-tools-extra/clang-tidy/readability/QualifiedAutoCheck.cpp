@@ -44,18 +44,18 @@ findQualToken(const VarDecl *Decl, Qualifier Qual,
   SourceLocation BeginLoc = Decl->getQualifierLoc().getBeginLoc();
   if (BeginLoc.isInvalid())
     BeginLoc = Decl->getBeginLoc();
-  SourceLocation EndLoc = Decl->getLocation();
+  const SourceLocation EndLoc = Decl->getLocation();
 
-  CharSourceRange FileRange = Lexer::makeFileCharRange(
+  const CharSourceRange FileRange = Lexer::makeFileCharRange(
       CharSourceRange::getCharRange(BeginLoc, EndLoc), *Result.SourceManager,
       Result.Context->getLangOpts());
 
   if (FileRange.isInvalid())
     return std::nullopt;
 
-  tok::TokenKind Tok = Qual == Qualifier::Const      ? tok::kw_const
-                       : Qual == Qualifier::Volatile ? tok::kw_volatile
-                                                     : tok::kw_restrict;
+  const tok::TokenKind Tok = Qual == Qualifier::Const      ? tok::kw_const
+                             : Qual == Qualifier::Volatile ? tok::kw_volatile
+                                                           : tok::kw_restrict;
 
   return utils::lexer::getQualifyingToken(Tok, FileRange, *Result.Context,
                                           *Result.SourceManager);
@@ -90,13 +90,13 @@ mergeReplacementRange(SourceRange &TypeSpecifier, const Token &ConstToken) {
 }
 
 static bool isPointerConst(QualType QType) {
-  QualType Pointee = QType->getPointeeType();
+  const QualType Pointee = QType->getPointeeType();
   assert(!Pointee.isNull() && "can't have a null Pointee");
   return Pointee.isConstQualified();
 }
 
 static bool isAutoPointerConst(QualType QType) {
-  QualType Pointee =
+  const QualType Pointee =
       cast<AutoType>(QType->getPointeeType().getTypePtr())->desugar();
   assert(!Pointee.isNull() && "can't have a null Pointee");
   return Pointee.isConstQualified();
@@ -146,7 +146,6 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
     return qualType(anyOf(qualType(pointerType(pointee(InnerMatchers...))),
                           qualType(substTemplateTypeParmType(hasReplacementType(
                               pointerType(pointee(InnerMatchers...)))))));
-   
   };
 
   auto IsAutoDeducedToPointer =
@@ -223,33 +222,34 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
     if (Var->getLocation() == TypeSpecifier.getEnd().getLocWithOffset(1))
       TypeSpecifier.setEnd(TypeSpecifier.getEnd().getLocWithOffset(1));
 
-    CharSourceRange FixItRange = CharSourceRange::getCharRange(TypeSpecifier);
+    const CharSourceRange FixItRange =
+        CharSourceRange::getCharRange(TypeSpecifier);
     if (FixItRange.isInvalid())
       return;
 
     SourceLocation FixitLoc = FixItRange.getBegin();
-    for (SourceRange &Range : RemoveQualifiersRange) {
+    for (const SourceRange &Range : RemoveQualifiersRange) {
       if (Range.getBegin() < FixitLoc)
         FixitLoc = Range.getBegin();
     }
 
-    std::string ReplStr = [&] {
-      llvm::StringRef PtrConst = isPointerConst(Var->getType()) ? "const " : "";
-      llvm::StringRef LocalConst = IsLocalConst ? "const " : "";
-      llvm::StringRef LocalVol = IsLocalVolatile ? "volatile " : "";
-      llvm::StringRef LocalRestrict = IsLocalRestrict ? "__restrict " : "";
+    const std::string ReplStr = [&] {
+      const StringRef PtrConst = isPointerConst(Var->getType()) ? "const " : "";
+      const StringRef LocalConst = IsLocalConst ? "const " : "";
+      const StringRef LocalVol = IsLocalVolatile ? "volatile " : "";
+      const StringRef LocalRestrict = IsLocalRestrict ? "__restrict " : "";
       return (PtrConst + "auto *" + LocalConst + LocalVol + LocalRestrict)
           .str();
     }();
 
-    DiagnosticBuilder Diag =
+    const DiagnosticBuilder Diag =
         diag(FixitLoc,
              "'%select{|const }0%select{|volatile }1%select{|__restrict }2auto "
              "%3' can be declared as '%4%3'")
         << IsLocalConst << IsLocalVolatile << IsLocalRestrict << Var->getName()
         << ReplStr;
 
-    for (SourceRange &Range : RemoveQualifiersRange) {
+    for (const SourceRange &Range : RemoveQualifiersRange) {
       Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(Range));
     }
 
@@ -286,7 +286,7 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
       if (TypeSpec->isInvalid() || TypeSpec->getBegin().isMacroID() ||
           TypeSpec->getEnd().isMacroID())
         return;
-      SourceLocation InsertPos = TypeSpec->getBegin();
+      const SourceLocation InsertPos = TypeSpec->getBegin();
       diag(InsertPos,
            "'auto *%select{|const }0%select{|volatile }1%2' can be declared as "
            "'const auto *%select{|const }0%select{|volatile }1%2'")
@@ -308,7 +308,7 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
       if (TypeSpec->isInvalid() || TypeSpec->getBegin().isMacroID() ||
           TypeSpec->getEnd().isMacroID())
         return;
-      SourceLocation InsertPos = TypeSpec->getBegin();
+      const SourceLocation InsertPos = TypeSpec->getBegin();
       diag(InsertPos, "'auto &%0' can be declared as 'const auto &%0'")
           << Var->getName() << FixItHint::CreateInsertion(InsertPos, "const ");
     }

@@ -567,3 +567,7 @@ bool HLSLToolChain::isLastJob(DerivedArgList &Args,
   // output to the result file.
   return true;
 }
+
+void HLSLToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+  CC1Args.push_back("-Wconversion");
+}

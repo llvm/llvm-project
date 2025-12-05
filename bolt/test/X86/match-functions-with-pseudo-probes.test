@@ -1,0 +1,41 @@
+## Test function matching using pseudo probe information.
+## Binaries are built from test-coro.cpp, with inlining and w/o inline:
+## clang++ -stdlib=libc++ -std=c++20 -fpseudo-probe-for-profiling
+## clang++ -stdlib=libc++ -std=c++20 -fpseudo-probe-for-profiling -O3
+# RUN: yaml2obj %p/Inputs/test-coro-probes.yaml &> %t-noinline.exe
+# RUN: yaml2obj %p/Inputs/test-coro-probes-inline.yaml &> %t-inline.exe
+#
+# Check inlined probes in %t-inline
+# RUN: llvm-profgen --binary=%t-inline.exe --perfscript=1 \
+# RUN:   --output=%t-inline.profgen --show-disassembly-only --show-pseudo-probe \
+# RUN:   | FileCheck %s --check-prefix=CHECK-PROFGEN
+# CHECK-PROFGEN: <main>:
+# CHECK-PROFGEN: [Probe]: FUNC: _ZNKSt3__15dequeINS_8functionIFbvEEENS_9allocatorIS3_EEE4sizeB8ne220000Ev Index: 1  Type: Block
+# CHECK-PROFGEN: [Probe]: FUNC: main Index: 1  Type: Block
+#
+# Check inlining profile into binary function
+# PREAGG-NOINLINE: B X:0 #_ZNKSt3__15dequeINS_8functionIFbvEEENS_9allocatorIS3_EEE4sizeB8ne220000Ev# 1 0
+# RUN: link_fdata %s %t-noinline.exe %t-noinline.pa PREAGG-NOINLINE
+# RUN: perf2bolt %t-noinline.exe -p %t-noinline.pa --pa -o %t.null -w %t-noinline.yaml \
+# RUN:   --profile-write-pseudo-probes
+# RUN: FileCheck %s --input-file %t-noinline.yaml --check-prefix=CHECK-NOINLINE-YAML
+# CHECK-NOINLINE-YAML: _ZNKSt3__15dequeINS_8functionIFbvEEENS_9allocatorIS3_EEE4sizeB8ne220000Ev
+# Check that the profile is attached into main
+# RUN: llvm-bolt %t-inline.exe -data %t-noinline.yaml -o %t.null --print-cfg \
+# RUN:   --infer-stale-profile --stale-matching-with-pseudo-probes \
+# RUN:   --print-only=main | FileCheck %s --check-prefix=CHECK-INLINE-PROFILE
+# CHECK-INLINE-PROFILE: main
+#
+# Check splitting profile across binary functions
+# PREAGG-INLINE: B X:0 #main# 1 0
+# RUN: link_fdata %s %t-inline.exe %t-inline.pa PREAGG-INLINE
+# RUN: perf2bolt %t-inline.exe -p %t-inline.pa --pa -o %t.null -w %t-inline.yaml \
+# RUN:   --profile-write-pseudo-probes
+# RUN: FileCheck %s --input-file %t-inline.yaml --check-prefix=CHECK-INLINE-YAML
+# CHECK-INLINE-YAML: main
+# Check that the profile is shared among inlinees
+# RUN: llvm-bolt %t-noinline -data %t-inline -o %t.null --print-cfg \
+# RUN:   --infer-stale-profile --stale-matching-with-pseudo-probes \
+# RUN:   --print-only=_ZNKSt3__15dequeINS_8functionIFbvEEENS_9allocatorIS3_EEE4sizeB8ne220000Ev \
+# RUN:   | FileCheck %s --check-prefix=CHECK-SPLIT-PROFILE
+# CHECK-SPLIT-PROFILE: _ZNKSt3__15dequeINS_8functionIFbvEEENS_9allocatorIS3_EEE4sizeB8ne220000Ev

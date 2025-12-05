@@ -62,8 +62,7 @@ def getTestSuite(item, litConfig, cache):
                 cfgpath = target
 
         # We found a test suite, create a new config for it and load it.
-        if litConfig.debug:
-            litConfig.note("loading suite config %r" % cfgpath)
+        litConfig.dbg("loading suite config %r" % cfgpath)
 
         cfg = TestingConfig.fromdefaults(litConfig)
         cfg.load_from_path(cfgpath, litConfig)
@@ -115,8 +114,7 @@ def getLocalConfig(ts, path_in_suite, litConfig, cache):
         # Otherwise, copy the current config and load the local configuration
         # file into it.
         config = copy.deepcopy(parent)
-        if litConfig.debug:
-            litConfig.note("loading local config %r" % cfgpath)
+        litConfig.dbg("loading local config %r" % cfgpath)
         config.load_from_path(cfgpath, litConfig)
         return config
 
@@ -137,8 +135,7 @@ def getTests(path, litConfig, testSuiteCache, localConfigCache):
         litConfig.warning("unable to find test suite for %r" % path)
         return (), ()
 
-    if litConfig.debug:
-        litConfig.note("resolved input %r to %r::%r" % (path, ts.name, path_in_suite))
+    litConfig.dbg("resolved input %r to %r::%r" % (path, ts.name, path_in_suite))
 
     return ts, getTestsInSuite(
         ts,

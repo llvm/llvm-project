@@ -21,7 +21,7 @@ static StringRef copyStringWithNull(Context &ctx, StringRef str) {
     return str;
 
   char *data = ctx.getAllocator().Allocate<char>(str.size() + 1);
-  std::copy(str.begin(), str.end(), data);
+  llvm::copy(str, data);
   data[str.size()] = 0;
   return StringRef(data, str.size());
 }

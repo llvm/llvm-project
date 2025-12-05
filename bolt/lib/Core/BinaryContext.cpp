@@ -1010,14 +1010,12 @@ bool BinaryContext::hasValidCodePadding(const BinaryFunction &BF) {
     return Offset - StartOffset;
   };
 
-  // Skip a sequence of zero bytes. For AArch64 we only skip 4 bytes of zeros
-  // in case the following zeros belong to constant island or veneer.
+  // Skip a sequence of zero bytes. For AArch64 we only skip 4's exact
+  // multiple number of zeros in case the following zeros belong to veneer.
   auto skipZeros = [&]() {
     const uint64_t StartOffset = Offset;
     uint64_t CurrentOffset = Offset;
-    for (; CurrentOffset < BF.getMaxSize() &&
-           (!isAArch64() || CurrentOffset < StartOffset + 4);
-         ++CurrentOffset)
+    for (; CurrentOffset < BF.getMaxSize(); ++CurrentOffset)
       if ((*FunctionData)[CurrentOffset] != 0)
         break;
 
@@ -1521,6 +1519,17 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
     // NB: there's no need to update BinaryDataMap and GlobalSymbols.
   }
   ChildBF.getSymbols().clear();
+
+  // Reset function mapping for local symbols.
+  for (uint64_t RelOffset : ChildBF.getInternalRefDataRelocations()) {
+    const Relocation *Rel = getRelocationAt(RelOffset);
+    if (!Rel || !Rel->Symbol)
+      continue;
+
+    WriteSymbolMapLock.lock();
+    SymbolToFunctionMap[Rel->Symbol] = nullptr;
+    WriteSymbolMapLock.unlock();
+  }
 
   // Move other names the child function is known under.
   llvm::move(ChildBF.Aliases, std::back_inserter(ParentBF.Aliases));

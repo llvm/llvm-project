@@ -354,9 +354,6 @@ public:
   /// Newly created segments.
   std::vector<SegmentInfo> NewSegments;
 
-  /// Symbols that are expected to be undefined in MCContext during emission.
-  std::unordered_set<MCSymbol *> UndefinedSymbols;
-
   /// [name] -> [BinaryData*] map used for global symbol resolution.
   using SymbolMapType = StringMap<BinaryData *>;
   SymbolMapType GlobalSymbols;
@@ -500,7 +497,7 @@ public:
   ///
   /// As we fold identical functions, multiple symbols can point
   /// to the same BinaryFunction.
-  std::unordered_map<const MCSymbol *, BinaryFunction *> SymbolToFunctionMap;
+  DenseMap<const MCSymbol *, BinaryFunction *> SymbolToFunctionMap;
 
   /// A mutex that is used to control parallel accesses to SymbolToFunctionMap
   mutable llvm::sys::RWMutex SymbolToFunctionMapMutex;
@@ -805,6 +802,15 @@ public:
   /// Address of the code/function that is going to be executed right before
   /// the execution of the binary is completed.
   std::optional<uint64_t> FiniFunctionAddress;
+
+  /// DT_INIT.
+  std::optional<uint64_t> InitAddress;
+
+  /// DT_INIT_ARRAY. Only used when DT_INIT is not set.
+  std::optional<uint64_t> InitArrayAddress;
+
+  /// DT_INIT_ARRAYSZ. Only used when DT_INIT is not set.
+  std::optional<uint64_t> InitArraySize;
 
   /// DT_FINI.
   std::optional<uint64_t> FiniAddress;

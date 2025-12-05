@@ -159,8 +159,6 @@ std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
 }
 }
 
-constexpr uint64_t DataAggregator::KernelBaseAddr;
-
 DataAggregator::~DataAggregator() { deleteTempFiles(); }
 
 namespace {
@@ -2389,10 +2387,8 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       if (PseudoProbeDecoder) {
         DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>
             InlineTreeNodeId;
-        if (BF->getGUID()) {
-          InlineTreeNodeId = YAMLProfileWriter::convertBFInlineTree(
-              *PseudoProbeDecoder, InlineTree, *BF, YamlBF);
-        }
+        InlineTreeNodeId = YAMLProfileWriter::convertBFInlineTree(
+            *PseudoProbeDecoder, InlineTree, *BF, YamlBF);
         // Fetch probes belonging to all fragments
         const AddressProbesMap &ProbeMap =
             PseudoProbeDecoder->getAddress2ProbesMap();

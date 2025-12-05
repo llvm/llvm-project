@@ -2029,10 +2029,10 @@ define amdgpu_ps void @test_alloca(float %data, i32 %a, i32 %idx) nounwind {
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[0:1]
 ; GFX9-W64-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
+; GFX9-W64-NEXT:    s_mov_b32 s2, 0
 ; GFX9-W64-NEXT:    buffer_store_dword v1, off, s[8:11], 0
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-W64-NEXT:    v_mov_b32_e32 v1, 0
-; GFX9-W64-NEXT:    v_lshl_add_u32 v1, v2, 2, v1
+; GFX9-W64-NEXT:    v_lshl_add_u32 v1, v2, 2, s2
 ; GFX9-W64-NEXT:    buffer_load_dword v1, v1, s[8:11], 0 offen
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[0:1]
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)

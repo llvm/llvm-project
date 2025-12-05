@@ -16,18 +16,18 @@ gpu.module @test_round_robin_assignment {
   gpu.func @create_nd_tdesc_with_shared_data(%src: memref<256x128xf32>) {
     // CHECK: %[[SGID:.*]] = gpu.subgroup_id : index
     // CHECK: %[[C4:.*]] = arith.constant 4 : index
-    // CHECK: %[[IDX:.*]] = index.remu %[[SGID]], %[[C4]]
-    // CHECK: %[[IDY_DIV:.*]] = index.divu %[[SGID]], %[[C4]]
+    // CHECK: %[[IDX:.*]] = arith.remui %[[SGID]], %[[C4]]
+    // CHECK: %[[IDY_DIV:.*]] = arith.divui %[[SGID]], %[[C4]]
     // CHECK: %[[C8:.*]] = arith.constant 8 : index
-    // CHECK: %[[IDY:.*]] = index.remu %[[IDY_DIV]], %[[C8]]
+    // CHECK: %[[IDY:.*]] = arith.remui %[[IDY_DIV]], %[[C8]]
     // CHECK: %[[C16:.*]] = arith.constant 16 : index
-    // CHECK: %[[LY:.*]] = index.mul %[[IDY]], %[[C16]]
+    // CHECK: %[[LY:.*]] = arith.muli %[[IDY]], %[[C16]]
     // CHECK: %[[C64:.*]] = arith.constant 64 : index
-    // CHECK: %[[LX:.*]] = index.mul %[[IDX]], %[[C64]]
+    // CHECK: %[[LX:.*]] = arith.muli %[[IDX]], %[[C64]]
     // CHECK: %[[C128:.*]] = arith.constant 128 : index
-    // CHECK: %[[OFFY:.*]] = index.remu %[[LY]], %[[C128]]
+    // CHECK: %[[OFFY:.*]] = arith.remui %[[LY]], %[[C128]]
     // CHECK: %[[C64_1:.*]] = arith.constant 64 : index
-    // CHECK: %[[OFFX:.*]] = index.remu %[[LX]], %[[C64_1]]
+    // CHECK: %[[OFFX:.*]] = arith.remui %[[LX]], %[[C64_1]]
     // CHECK: xegpu.create_nd_tdesc %[[ARG_0]][%[[OFFY]], %[[OFFX]]] : memref<256x128xf32> -> !xegpu.tensor_desc<16x64xf32>
     %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<256x128xf32>
       -> !xegpu.tensor_desc<128x64xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 64]>>

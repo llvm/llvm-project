@@ -5,7 +5,7 @@
 ; RUN:   | FileCheck -check-prefixes=RV32,RV32IF %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zicond -target-abi=ilp32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32,RV32ZICOND %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-opt,+conditional-cmv-fusion -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-ialu,+conditional-cmv-fusion -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64,RV64I %s
@@ -177,9 +177,11 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
 ;
 ; RV32IXQCI-LABEL: select_const_fp:
 ; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    lui a2, 263168
 ; RV32IXQCI-NEXT:    lui a1, 264192
-; RV32IXQCI-NEXT:    qc.mvnei a1, a0, 0, a2
+; RV32IXQCI-NEXT:    beqz a0, .LBB4_2
+; RV32IXQCI-NEXT:  # %bb.1:
+; RV32IXQCI-NEXT:    lui a1, 263168
+; RV32IXQCI-NEXT:  .LBB4_2:
 ; RV32IXQCI-NEXT:    mv a0, a1
 ; RV32IXQCI-NEXT:    ret
 ;
@@ -653,9 +655,11 @@ define i32 @select_nonnegative_lui_addi(i32 signext %x) {
 ;
 ; RV32IXQCI-LABEL: select_nonnegative_lui_addi:
 ; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    lui a2, 4
 ; RV32IXQCI-NEXT:    li a1, 25
-; RV32IXQCI-NEXT:    qc.mvgei a1, a0, 0, a2
+; RV32IXQCI-NEXT:    bltz a0, .LBB21_2
+; RV32IXQCI-NEXT:  # %bb.1:
+; RV32IXQCI-NEXT:    lui a1, 4
+; RV32IXQCI-NEXT:  .LBB21_2:
 ; RV32IXQCI-NEXT:    mv a0, a1
 ; RV32IXQCI-NEXT:    ret
 ;
@@ -724,9 +728,11 @@ define i32 @select_nonnegative_lui_addi_swapped(i32 signext %x) {
 ;
 ; RV32IXQCI-LABEL: select_nonnegative_lui_addi_swapped:
 ; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    li a2, 25
+; RV32IXQCI-NEXT:    li a1, 25
+; RV32IXQCI-NEXT:    bgez a0, .LBB22_2
+; RV32IXQCI-NEXT:  # %bb.1:
 ; RV32IXQCI-NEXT:    lui a1, 4
-; RV32IXQCI-NEXT:    qc.mvgei a1, a0, 0, a2
+; RV32IXQCI-NEXT:  .LBB22_2:
 ; RV32IXQCI-NEXT:    mv a0, a1
 ; RV32IXQCI-NEXT:    ret
 ;
