@@ -808,12 +808,6 @@ class DwordAddrPat<ValueType vt, RegisterClass rc> : AMDGPUPat <
   (vt rc:$addr)
 >;
 
-// rotr pattern
-class ROTRPattern <Instruction BIT_ALIGN> : AMDGPUPat <
-  (rotr i32:$src0, i32:$src1),
-  (BIT_ALIGN $src0, $src0, $src1)
->;
-
 // Special conversion patterns
 
 def cvt_rpi_i32_f32 : PatFrag <
