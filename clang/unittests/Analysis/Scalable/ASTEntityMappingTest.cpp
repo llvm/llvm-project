@@ -26,7 +26,9 @@ const DeclType *findDecl(ASTContext &Ctx, StringRef Name) {
   auto Matches = match(Matcher, Ctx);
   if (Matches.empty())
     return nullptr;
-  return Matches[0].getNodeAs<DeclType>("decl");
+  if (auto Result = Matches[0].getNodeAs<DeclType>("decl"))
+    return dyn_cast<DeclType>(Result->getCanonicalDecl());
+  return nullptr;
 }
 
 TEST(ASTEntityMappingTest, FunctionDecl) {
