@@ -2179,7 +2179,7 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_MIN_F64", "atomic_load_fmin_"#as, f64>;
 defm : FlatAtomicPat <"FLAT_ATOMIC_MAX_F64", "atomic_load_fmax_"#as, f64>;
 }
 
-let SubtargetPredicate = isGFX12Plus in {
+let SubtargetPredicate = HasAtomicCondSubClampFlatInsts in {
   defm : FlatAtomicRtnPat<"FLAT_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_"  #as, i32 >;
 
   defm : FlatAtomicNoRtnPat<"FLAT_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_"#as, i32>;
