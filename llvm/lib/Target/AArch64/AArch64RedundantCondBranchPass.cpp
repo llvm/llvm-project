@@ -1,4 +1,4 @@
-//=- AArch64RedundantCondBranch.cpp - Remove redundant cbz wzr --------------=//
+//=- AArch64RedundantCondBranch.cpp - Remove redundant conditional branches -=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,7 +45,8 @@ INITIALIZE_PASS(AArch64RedundantCondBranch, "aarch64-redundantcondbranch",
                 "AArch64 Redundant Conditional Branch Elimination pass", false,
                 false)
 
-static bool optimizeTerminators(MachineBasicBlock *MBB) {
+static bool optimizeTerminators(MachineBasicBlock *MBB,
+                                const TargetInstrInfo &TII) {
   for (MachineInstr &MI : make_early_inc_range(MBB->terminators())) {
     unsigned Opc = MI.getOpcode();
     switch (Opc) {
@@ -53,26 +54,20 @@ static bool optimizeTerminators(MachineBasicBlock *MBB) {
     case AArch64::CBZX:
     case AArch64::TBZW:
     case AArch64::TBZX:
-      // CBZ XZR -> B
+      // CBZ/TBZ with WZR/XZR -> unconditional B
       if (MI.getOperand(0).getReg() == AArch64::WZR ||
           MI.getOperand(0).getReg() == AArch64::XZR) {
         LLVM_DEBUG(dbgs() << "Removing redundant branch: " << MI);
-        MachineBasicBlock *Target =
-            MI.getOperand(Opc == AArch64::TBZW || Opc == AArch64::TBZX ? 2 : 1)
-                .getMBB();
-        MachineBasicBlock *MBB = MI.getParent();
+        MachineBasicBlock *Target = TII.getBranchDestBlock(MI);
         SmallVector<MachineBasicBlock *> Succs(MBB->successors());
         for (auto *S : Succs)
           if (S != Target)
             MBB->removeSuccessor(S);
-        SmallVector<MachineInstr *> DeadInstrs;
-        for (auto It = MI.getIterator(); It != MBB->end(); ++It)
-          DeadInstrs.push_back(&*It);
-        const MachineFunction *MF = MBB->getParent();
-        const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-        BuildMI(MBB, MI.getDebugLoc(), TII->get(AArch64::B)).addMBB(Target);
-        for (auto It : DeadInstrs)
-          It->eraseFromParent();
+        DebugLoc DL = MI.getDebugLoc();
+        while (MBB->rbegin() != &MI)
+          MBB->rbegin()->eraseFromParent();
+        MI.eraseFromParent();
+        BuildMI(MBB, DL, TII.get(AArch64::B)).addMBB(Target);
         return true;
       }
       break;
@@ -80,14 +75,11 @@ static bool optimizeTerminators(MachineBasicBlock *MBB) {
     case AArch64::CBNZX:
     case AArch64::TBNZW:
     case AArch64::TBNZX:
-      // CBNZ XZR -> nop
+      // CBNZ/TBNZ with WZR/XZR -> never taken, remove branch and successor
       if (MI.getOperand(0).getReg() == AArch64::WZR ||
           MI.getOperand(0).getReg() == AArch64::XZR) {
         LLVM_DEBUG(dbgs() << "Removing redundant branch: " << MI);
-        MachineBasicBlock *Target =
-            MI.getOperand((Opc == AArch64::TBNZW || Opc == AArch64::TBNZX) ? 2
-                                                                           : 1)
-                .getMBB();
+        MachineBasicBlock *Target = TII.getBranchDestBlock(MI);
         MI.getParent()->removeSuccessor(Target);
         MI.eraseFromParent();
         return true;
@@ -102,9 +94,11 @@ bool AArch64RedundantCondBranch::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF)
-    Changed |= optimizeTerminators(&MBB);
+    Changed |= optimizeTerminators(&MBB, TII);
   return Changed;
 }
 
