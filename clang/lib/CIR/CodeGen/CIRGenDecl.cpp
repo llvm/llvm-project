@@ -840,9 +840,9 @@ template <class Derived> struct DestroyNRVOVariable : EHScopeStack::Cleanup {
 
     CIRGenBuilderTy &builder = cgf.getBuilder();
     mlir::OpBuilder::InsertionGuard guard(builder);
-    mlir::Location loc = addr.getPointer().getLoc();
     if (nrvo) {
       // If we exited via NRVO, we skip the destructor call.
+      mlir::Location loc = addr.getPointer().getLoc();
       mlir::Value didNRVO = builder.createFlagLoad(loc, nrvoFlag);
       mlir::Value notNRVO = builder.createNot(didNRVO);
       cir::IfOp::create(builder, loc, notNRVO, /*withElseRegion=*/false,
