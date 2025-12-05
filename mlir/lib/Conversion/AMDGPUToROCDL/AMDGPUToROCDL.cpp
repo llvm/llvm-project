@@ -2628,7 +2628,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     IntegerType i32 = rewriter.getI32Type();
     Type v8i32 = this->typeConverter->convertType(VectorType::get(8, i32));
     assert(v8i32 && "expected type conversion to succeed");
-    Value dgroup1 = LLVM::UndefOp::create(rewriter, loc, v8i32);
+    Value dgroup1 = LLVM::PoisonOp::create(rewriter, loc, v8i32);
 
     for (auto [sgpr, constant] : llvm::zip_equal(sgprs, consts)) {
       dgroup1 =

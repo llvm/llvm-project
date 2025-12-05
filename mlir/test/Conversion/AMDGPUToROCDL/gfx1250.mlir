@@ -292,7 +292,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
   // CHECK: %[[TENSOR_DIM_1_STRIDE_LOW_SHIFTED:.+]] = llvm.shl %[[TENSOR_DIM_1_STRIDE_LOW]], %[[SHIFT]]
   // CHECK-DAG: %[[SGPR6:.+]] = llvm.or %[[SGPR6_0]], %[[TENSOR_DIM_1_STRIDE_LOW_SHIFTED]]
 
-  // CHECK: %[[V8I32:.+]] = llvm.mlir.undef : vector<8xi32>
+  // CHECK: %[[V8I32:.+]] = llvm.mlir.poison : vector<8xi32>
   // CHECK: %[[DGROUP1_0:.+]] = llvm.insertelement %[[SGPR0]], %[[V8I32]][%[[C0]] : i32]
   // CHECK: %[[DGROUP1_1:.+]] = llvm.insertelement %[[SGPR1]], %[[DGROUP1_0]][%[[C1]] : i32]
   // CHECK: %[[DGROUP1_2:.+]] = llvm.insertelement %[[SGPR2]], %[[DGROUP1_1]][%[[C2]] : i32]
