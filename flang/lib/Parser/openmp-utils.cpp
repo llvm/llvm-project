@@ -123,7 +123,7 @@ const OmpObjectList *GetOmpObjectList(const OmpClause &clause) {
 const OmpObjectList *GetOmpObjectList(const OmpClause::Depend &clause) {
   return common::visit(
       common::visitors{
-          [](const OmpDoacross &) { return nullptr; },
+          [](const OmpDoacross &) -> const OmpObjectList * { return nullptr; },
           [](const OmpDependClause::TaskDep &x) { return GetOmpObjectList(x); },
       },
       clause.v.u);
