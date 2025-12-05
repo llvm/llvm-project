@@ -17,6 +17,12 @@ namespace std {
         ~string() {}
         bool empty() const { return true; }
     };
+    class string_view {
+    public:
+        string_view() {}
+        string_view(const string&) {}
+        bool empty() const { return true; }
+    };
 }
 #define DUMMY_TOKEN // crutch because CHECK-FIXES unable to match empty string
 
@@ -288,6 +294,26 @@ void good_stolen_reference2() {
             break;
     }
     do_some(*pi);
+}
+
+void good_stolen_reference1_string() {
+    const std::string* ps = nullptr;
+    std::string s1;
+    if (s1.empty()) {
+        do_some();
+        ps = &s1;
+    }
+    ps->empty();
+}
+
+void good_stolen_reference2_string() {
+    std::string_view sv;
+    std::string s1;
+    if (s1.empty()) {
+        do_some();
+        sv = s1;
+    }
+    sv.empty();
 }
 
 int get_temporary() { return 0; }
@@ -623,9 +649,6 @@ void bad_safe_string_default() {
     }
     do_some(); // Additional statement after if
 }
-
-// TODO: make a test with real stealing from string
-// TODO: also string might be stolen by string_view
 
 void bad_condition_with_declaration() {
     int i1 = 0; DUMMY_TOKEN

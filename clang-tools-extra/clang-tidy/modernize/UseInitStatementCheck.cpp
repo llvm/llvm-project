@@ -100,13 +100,10 @@ void UseInitStatementCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
-  // Helper to create a complete matcher for if/switch statements
-  const auto MakeCompoundStmtMatcher = [](const auto &StmtMatcher,
-                                          const std::string &StmtName,
-                                          const auto &PrevStmtMatcher,
-                                          const auto &RefToBoundMatcher) {
-    const auto HasConflict = hasDescendant(
-        varDecl(anyOf(hasSameNameAsBoundNode("singleVar"), hasSameNameAsBoundNode("bindingDecl"))).bind("conflict"));
+  // Helper to create a complete matcher to prevent generating stealing cases
+  // Sample of stealing: `int* p; if (int v;cond) { p=&v; } use(p);`
+  const auto MakeHasStealingMatcher = [](const auto &Condition,
+                                         const std::string &Name) {
     const auto IsStealingViaPointer =
         hasParent(unaryOperator(hasOperatorName("&")));
     const auto PassesByValue =
@@ -121,17 +118,30 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
         // `a=0`, `a+=0`, etc
         hasParent(binaryOperator()));
     const auto IsStealingViaReference = unless(ReferencesWhitelistForStealing);
-    const auto StealingAsThis = hasParent(memberExpr().bind("stealing_as_this"));
     const auto HasStealing = hasDescendant(
         declRefExpr(to(varDecl(equalsBoundNode("singleVar"), unless(hasType(referenceType())))), anyOf(IsStealingViaPointer, IsStealingViaReference),
-         optionally(anyOf(StealingAsThis, hasParent(implicitCastExpr(hasCastKind(CK_NoOp), StealingAsThis)))))
-            .bind("stealing"));
+         Condition).bind(Name));
+    return HasStealing;
+  };
+
+  // Helper to create a complete matcher for if/switch statements
+  const auto MakeCompoundStmtMatcher = [&](const auto &StmtMatcher,
+                                          const std::string &StmtName,
+                                          const auto &PrevStmtMatcher,
+                                          const auto &RefToBoundMatcher) {
+    const auto HasConflict = hasDescendant(
+        varDecl(anyOf(hasSameNameAsBoundNode("singleVar"), hasSameNameAsBoundNode("bindingDecl"))).bind("conflict"));
+
+    const auto StealingAsThis = anyOf(
+        hasParent(memberExpr()),
+        hasParent(implicitCastExpr(hasCastKind(CK_NoOp), hasParent(memberExpr()) )));
 
     const auto StmtMatcherWithCondition =
         StmtMatcher(unless(hasInitStatement(anything())),
                     hasCondition(expr().bind("condition")),
                     optionally(HasConflict),
-                    optionally(HasStealing),
+                    optionally(MakeHasStealingMatcher(unless(StealingAsThis),"stealing")),
+                    optionally(MakeHasStealingMatcher(StealingAsThis,"stealing_as_this")),
                     optionally(hasConditionVariableStatement(
                         declStmt().bind("condDeclStmt"))))
             .bind(StmtName);
@@ -271,6 +281,7 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *LTE = Result.Nodes.getNodeAs<MaterializeTemporaryExpr>("lte");
   const auto *Conflict = Result.Nodes.getNodeAs<VarDecl>("conflict");
   const auto *Stealing = Result.Nodes.getNodeAs<DeclRefExpr>("stealing");
+  const auto *StealingAsThis = Result.Nodes.getNodeAs<DeclRefExpr>("stealing_as_this");
   const auto *PrevDecl = Result.Nodes.getNodeAs<DeclStmt>("prevDecl");
   const auto *Condition = Result.Nodes.getNodeAs<Expr>("condition");
   const auto *CondDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("condDeclStmt");
@@ -295,12 +306,11 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   if (LTE)
     return;
 
-  if (Stealing ) {
-    const bool IsSafeStealing = !!Result.Nodes.getNodeAs<MemberExpr>("stealing_as_this")
-                                && IsSafe;
-    if (!IsSafeStealing)
+  if (Stealing)
       return;
-  }
+
+  if (StealingAsThis && !IsSafe)
+    return;
 
   // Don't emit warnings for statements inside macro expansions
   if (Statement->getBeginLoc().isMacroID())
