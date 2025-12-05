@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fexpansion-limit=32 -verify
+// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fexpansion-limit=32 -verify -fexperimental-new-constant-interpreter
 
 void g(int);
 
