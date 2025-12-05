@@ -28,6 +28,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/WithColor.h"
+#include "llvm/Support/raw_ostream.h"
 #include <mutex>
 #include <utility>
 
@@ -449,10 +451,15 @@ void HandleTargetEvent(const lldb::SBEvent &event, Log *log) {
       }
     }
   } else if (event_mask & lldb::SBTarget::eBroadcastBitNewTargetCreated) {
+    // This feature is only supported if lldb-dap is running in server mode,
+    // otherwise multiple clients cannot connect over stdio.
     if (!DAPSessionManager::GetInstance().GetServerMode()) {
-      dap->SendOutput(OutputType::Console,
-                      "lldb-dap: Enable server mode for automatically "
-                      "attaching to new debugger targets.");
+      std::string message;
+      raw_string_ostream OS(message);
+      llvm::WithColor::remark(OS)
+          << "lldb-dap: Enable server mode for automatically attaching to new "
+             "debugger targets.";
+      dap->SendOutput(OutputType::Console, message);
       return;
     }
 
