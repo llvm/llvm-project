@@ -115,7 +115,7 @@ public:
     }
     std::vector<LoanID> LID;
     for (const Loan *L : Analysis.getFactManager().getLoanMgr().getLoans())
-      if (const auto *BL = dyn_cast<BorrowLoan>(L))
+      if (const auto *BL = dyn_cast<PathLoan>(L))
         if (BL->getAccessPath().D == VD)
           LID.push_back(L->getID());
     if (LID.empty()) {

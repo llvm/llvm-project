@@ -10,7 +10,7 @@
 
 namespace clang::lifetimes::internal {
 
-void BorrowLoan::dump(llvm::raw_ostream &OS) const {
+void PathLoan::dump(llvm::raw_ostream &OS) const {
   OS << getID() << " (Path: ";
   OS << Path.D->getNameAsString() << ")";
 }

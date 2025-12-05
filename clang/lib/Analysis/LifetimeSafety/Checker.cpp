@@ -135,7 +135,7 @@ public:
       return;
     for (const auto &[LID, Warning] : FinalWarningsMap) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
-      const auto *BL = cast<BorrowLoan>(L);
+      const auto *BL = cast<PathLoan>(L);
       const Expr *IssueExpr = BL->getIssueExpr();
       llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
           CausingFact = Warning.CausingFact;

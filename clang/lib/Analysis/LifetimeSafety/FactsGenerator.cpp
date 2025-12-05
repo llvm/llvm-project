@@ -31,12 +31,12 @@ static bool hasOrigin(const VarDecl *VD) {
 /// This function should be called whenever a DeclRefExpr represents a borrow.
 /// \param DRE The declaration reference expression that initiates the borrow.
 /// \return The new Loan on success, nullptr otherwise.
-static const BorrowLoan *createLoan(FactManager &FactMgr,
-                                    const DeclRefExpr *DRE) {
+static const PathLoan *createLoan(FactManager &FactMgr,
+                                  const DeclRefExpr *DRE) {
   if (const auto *VD = dyn_cast<ValueDecl>(DRE->getDecl())) {
     AccessPath Path(VD);
     // The loan is created at the location of the DeclRefExpr.
-    return FactMgr.getLoanMgr().createLoan<BorrowLoan>(Path, DRE);
+    return FactMgr.getLoanMgr().createLoan<PathLoan>(Path, DRE);
   }
   return nullptr;
 }
@@ -230,7 +230,7 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
     return;
   // Iterate through all loans to see if any expire.
   for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
-    if (const auto *BL = dyn_cast<BorrowLoan>(Loan)) {
+    if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
       // Check if the loan is for a stack variable and if that variable
       // is the one being destructed.
       if (BL->getAccessPath().D == LifetimeEndsVD)

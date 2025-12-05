@@ -34,17 +34,16 @@ struct AccessPath {
   AccessPath(const clang::ValueDecl *D) : D(D) {}
 };
 
-/// An abstract base class for a single "Loan" which represents a lifetime
-/// dependency.
+/// An abstract base class for a single "Loan" which represents lending a
+/// storage in memory.
 class Loan {
   /// TODO: Represent opaque loans.
   /// TODO: Represent nullptr: loans to no path. Accessing it UB! Currently it
   /// is represented as empty LoanSet
 public:
   enum class Kind : uint8_t {
-    /// A regular borrow of a variable within the function that has a path and
-    /// can expire.
-    Borrow,
+    /// A loan with an access path to a storage location.
+    Path,
     /// A non-expiring placeholder loan for a parameter, representing a borrow
     /// from the function's caller.
     Placeholder
@@ -63,30 +62,30 @@ private:
   const LoanID ID;
 };
 
-/// Information about a single borrow loan. A borrow loan is created when a
-/// reference or pointer is created.
-class BorrowLoan : public Loan {
+/// PathLoan represents lending a storage location that is visible within the
+/// function's scope (e.g., a local variable on stack).
+class PathLoan : public Loan {
   AccessPath Path;
   /// The expression that creates the loan, e.g., &x.
   const Expr *IssueExpr;
 
 public:
-  BorrowLoan(LoanID ID, AccessPath Path, const Expr *IssueExpr)
-      : Loan(Kind::Borrow, ID), Path(Path), IssueExpr(IssueExpr) {}
+  PathLoan(LoanID ID, AccessPath Path, const Expr *IssueExpr)
+      : Loan(Kind::Path, ID), Path(Path), IssueExpr(IssueExpr) {}
 
   const AccessPath &getAccessPath() const { return Path; }
   const Expr *getIssueExpr() const { return IssueExpr; }
 
   void dump(llvm::raw_ostream &OS) const override;
 
-  static bool classof(const Loan *L) { return L->getKind() == Kind::Borrow; }
+  static bool classof(const Loan *L) { return L->getKind() == Kind::Path; }
 };
 
 /// A placeholder loan held by a function parameter, representing a borrow from
 /// the caller's scope.
 ///
 /// Created at function entry for each pointer or reference parameter with an
-/// origin. Unlike BorrowLoan, placeholder loans:
+/// origin. Unlike PathLoan, placeholder loans:
 /// - Have no IssueExpr (created at function entry, not at a borrow site)
 /// - Have no AccessPath (the borrowed object is not visible to the function)
 /// - Do not currently expire, but may in the future when modeling function
@@ -120,9 +119,9 @@ public:
   template <typename LoanType, typename... Args>
   LoanType *createLoan(Args &&...args) {
     static_assert(
-        std::is_same_v<LoanType, BorrowLoan> ||
+        std::is_same_v<LoanType, PathLoan> ||
             std::is_same_v<LoanType, PlaceholderLoan>,
-        "createLoan can only be used with BorrowLoan or PlaceholderLoan");
+        "createLoan can only be used with PathLoan or PlaceholderLoan");
     void *Mem = LoanAllocator.Allocate<LoanType>();
     auto *NewLoan =
         new (Mem) LoanType(getNextLoanID(), std::forward<Args>(args)...);
