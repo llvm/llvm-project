@@ -1868,9 +1868,6 @@ def FpMinMax {
   dag F32Max = (COPY_TO_REGCLASS (XSMAXDP (COPY_TO_REGCLASS $A, VSFRC),
                                           (COPY_TO_REGCLASS $B, VSFRC)),
                                  VSSRC);
-  dag F32Can = (COPY_TO_REGCLASS (XSMAXDP (COPY_TO_REGCLASS $A, VSFRC),
-                                          (COPY_TO_REGCLASS $A, VSFRC)),
-                                 VSSRC);
 }
 
 def ScalarLoads {
@@ -2801,7 +2798,9 @@ def : Pat<(f32 (fminnum f32:$A, f32:$B)),
 def : Pat<(f32 (fmaxnum f32:$A, f32:$B)),
           (f32 FpMinMax.F32Max)>;
 def : Pat<(f32 (fcanonicalize f32:$A)),
-          (f32 FpMinMax.F32Can)>;
+          (f32 (COPY_TO_REGCLASS (XSMAXDP
+               (COPY_TO_REGCLASS $A, VSFRC),
+               (COPY_TO_REGCLASS $A, VSFRC)), VSSRC))>;
 def : Pat<(f64 (fminnum_ieee f64:$A, f64:$B)),
           (f64 (XSMINDP $A, $B))>;
 def : Pat<(f64 (fmaxnum_ieee f64:$A, f64:$B)),
