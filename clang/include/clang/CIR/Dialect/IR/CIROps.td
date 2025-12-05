@@ -4764,6 +4764,13 @@ def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
     a result of the same type.
 
     Floating-point exceptions are ignored, and it does not set `errno`.
+
+    Example:
+
+    ```mlir
+    // $x : !cir.double
+    %y = cir.floor %x : !cir.double
+    ```
   }];
 }
 
