@@ -14,6 +14,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "CIRGenTBAA.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
@@ -69,7 +70,8 @@ Address CIRGenFunction::emitAddrOfFieldStorage(Address base,
 /// Given an expression of pointer type, try to
 /// derive a more accurate bound on the alignment of the pointer.
 Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
-                                                 LValueBaseInfo *baseInfo) {
+                                                 LValueBaseInfo *baseInfo,
+                                                 TBAAAccessInfo *tbaaInfo) {
   // We allow this with ObjC object pointers because of fragile ABIs.
   assert(expr->getType()->isPointerType() ||
          expr->getType()->isObjCObjectPointerType());
@@ -98,11 +100,17 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
           *baseInfo = innerBaseInfo;
 
         if (isa<ExplicitCastExpr>(ce)) {
-          LValueBaseInfo targetTypeBaseInfo;
-
           const QualType pointeeType = expr->getType()->getPointeeType();
+
+          LValueBaseInfo targetTypeBaseInfo;
           const CharUnits align =
               cgm.getNaturalTypeAlignment(pointeeType, &targetTypeBaseInfo);
+
+          if (tbaaInfo) {
+            TBAAAccessInfo targetTypeTbaaInfo =
+                cgm.getTBAAAccessInfo(pointeeType);
+            *tbaaInfo = cgm.mergeTBAAInfoForCast(*tbaaInfo, targetTypeTbaaInfo);
+          }
 
           // If the source l-value is opaque, honor the alignment of the
           // casted-to type.
@@ -316,7 +324,8 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isVolatile, QualType ty,
-                                       LValueBaseInfo baseInfo, bool isInit,
+                                       LValueBaseInfo baseInfo,
+                                       TBAAAccessInfo tbaaInfo, bool isInit,
                                        bool isNontemporal) {
   assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
 
@@ -339,8 +348,7 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
 
   value = emitToMemory(value, ty);
 
-  assert(!cir::MissingFeatures::opLoadStoreTbaa());
-  LValue atomicLValue = LValue::makeAddr(addr, ty, baseInfo);
+  LValue atomicLValue = LValue::makeAddr(addr, ty, baseInfo, tbaaInfo);
   if (ty->isAtomicType() ||
       (!isInit && isLValueSuitableForInlineAtomic(atomicLValue))) {
     emitAtomicStore(RValue::get(value), atomicLValue, isInit);
@@ -358,14 +366,14 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   }
 
   assert(currSrcLoc && "must pass in source location");
-  builder.createStore(*currSrcLoc, value, addr, isVolatile);
+  cir::StoreOp store =
+      builder.createStore(*currSrcLoc, value, addr, isVolatile);
+  cgm.decorateOperationWithTBAA(store, tbaaInfo);
 
   if (isNontemporal) {
     cgm.errorNYI(addr.getPointer().getLoc(), "emitStoreOfScalar nontemporal");
     return;
   }
-
-  assert(!cir::MissingFeatures::opTBAA());
 }
 
 // TODO: Replace this with a proper TargetInfo function call.
@@ -427,6 +435,8 @@ Address CIRGenFunction::getAddrOfBitFieldStorage(LValue base,
 LValue CIRGenFunction::emitLValueForBitField(LValue base,
                                              const FieldDecl *field) {
   LValueBaseInfo baseInfo = base.getBaseInfo();
+  TBAAAccessInfo tbaaInfo{};
+
   const CIRGenRecordLayout &layout =
       cgm.getTypes().getCIRGenRecordLayout(field->getParent());
   const CIRGenBitFieldInfo &info = layout.getBitFieldInfo(field);
@@ -445,7 +455,7 @@ LValue CIRGenFunction::emitLValueForBitField(LValue base,
   // TODO(cir): Support TBAA for bit fields.
   assert(!cir::MissingFeatures::opTBAA());
   LValueBaseInfo fieldBaseInfo(baseInfo.getAlignmentSource());
-  return LValue::makeBitfield(addr, info, fieldType, fieldBaseInfo);
+  return LValue::makeBitfield(addr, info, fieldType, fieldBaseInfo, tbaaInfo);
 }
 
 LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
@@ -458,7 +468,10 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
   const RecordDecl *rec = field->getParent();
   AlignmentSource baseAlignSource = baseInfo.getAlignmentSource();
   LValueBaseInfo fieldBaseInfo(getFieldAlignmentSource(baseAlignSource));
-  assert(!cir::MissingFeatures::opTBAA());
+  TBAAAccessInfo fieldTbaaInfo{};
+
+  // TODO(cir): Initialize tbaa info
+  assert(!MissingFeatures::opTBAA());
 
   Address addr = base.getAddress();
   if (auto *classDecl = dyn_cast<CXXRecordDecl>(rec)) {
@@ -490,11 +503,12 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
   // If this is a reference field, load the reference right now.
   if (fieldType->isReferenceType()) {
     assert(!cir::MissingFeatures::opTBAA());
-    LValue refLVal = makeAddrLValue(addr, fieldType, fieldBaseInfo);
+    LValue refLVal =
+        makeAddrLValue(addr, fieldType, fieldBaseInfo, fieldTbaaInfo);
     if (recordCVR & Qualifiers::Volatile)
       refLVal.getQuals().addVolatile();
     addr = emitLoadOfReference(refLVal, getLoc(field->getSourceRange()),
-                               &fieldBaseInfo);
+                               &fieldBaseInfo, &fieldTbaaInfo);
 
     // Qualifiers on the struct don't apply to the referencee.
     recordCVR = 0;
@@ -562,13 +576,15 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
   }
 
   emitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
-                    lvalue.getType(), lvalue.getBaseInfo(), isInit,
+                    lvalue.getType(), lvalue.getBaseInfo(),
+                    lvalue.getTBAAInfo(), isInit,
                     /*isNontemporal=*/false);
 }
 
 mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
                                              QualType ty, SourceLocation loc,
-                                             LValueBaseInfo baseInfo) {
+                                             LValueBaseInfo baseInfo,
+                                             TBAAAccessInfo tbaaInfo) {
   assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
   mlir::Type eltTy = addr.getElementType();
 
@@ -587,8 +603,7 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
                    "emitLoadOfScalar Vec3 & PreserveVec3Type disabled");
   }
 
-  assert(!cir::MissingFeatures::opLoadStoreTbaa());
-  LValue atomicLValue = LValue::makeAddr(addr, ty, baseInfo);
+  LValue atomicLValue = LValue::makeAddr(addr, ty, baseInfo, tbaaInfo);
   if (ty->isAtomicType() || isLValueSuitableForInlineAtomic(atomicLValue))
     cgm.errorNYI("emitLoadOfScalar: load atomic");
 
@@ -597,7 +612,9 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
 
   assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck());
 
-  mlir::Value loadOp = builder.createLoad(getLoc(loc), addr, isVolatile);
+  cir::LoadOp loadOp = builder.createLoad(getLoc(loc), addr, isVolatile);
+  cgm.decorateOperationWithTBAA(loadOp, tbaaInfo);
+
   if (!ty->isBooleanType() && ty->hasBooleanRepresentation())
     cgm.errorNYI("emitLoadOfScalar: boolean type with boolean representation");
 
@@ -607,9 +624,9 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
 mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
                                              SourceLocation loc) {
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
-  assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return emitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
-                          lvalue.getType(), loc, lvalue.getBaseInfo());
+                          lvalue.getType(), loc, lvalue.getBaseInfo(),
+                          lvalue.getTBAAInfo());
 }
 
 /// Given an expression that represents a value lvalue, this
@@ -2319,17 +2336,20 @@ RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {
 }
 
 Address CIRGenFunction::emitLoadOfReference(LValue refLVal, mlir::Location loc,
-                                            LValueBaseInfo *pointeeBaseInfo) {
+                                            LValueBaseInfo *pointeeBaseInfo,
+                                            TBAAAccessInfo *pointeeTbaaInfo) {
   if (refLVal.isVolatile())
     cgm.errorNYI(loc, "load of volatile reference");
 
+  QualType pointeeType = refLVal.getType()->getPointeeType();
   cir::LoadOp load =
       cir::LoadOp::create(builder, loc, refLVal.getAddress().getElementType(),
                           refLVal.getAddress().getPointer());
 
-  assert(!cir::MissingFeatures::opTBAA());
+  cgm.decorateOperationWithTBAA(load, refLVal.getTBAAInfo());
+  if (pointeeTbaaInfo)
+    *pointeeTbaaInfo = cgm.getTBAAAccessInfo(pointeeType);
 
-  QualType pointeeType = refLVal.getType()->getPointeeType();
   CharUnits align = cgm.getNaturalTypeAlignment(pointeeType, pointeeBaseInfo);
   return Address(load, convertTypeForMem(pointeeType), align);
 }
@@ -2340,10 +2360,11 @@ LValue CIRGenFunction::emitLoadOfReferenceLValue(Address refAddr,
                                                  AlignmentSource source) {
   LValue refLVal = makeAddrLValue(refAddr, refTy, LValueBaseInfo(source));
   LValueBaseInfo pointeeBaseInfo;
-  assert(!cir::MissingFeatures::opTBAA());
-  Address pointeeAddr = emitLoadOfReference(refLVal, loc, &pointeeBaseInfo);
+  TBAAAccessInfo tbaaAccessInfo;
+  Address pointeeAddr =
+      emitLoadOfReference(refLVal, loc, &pointeeBaseInfo, &tbaaAccessInfo);
   return makeAddrLValue(pointeeAddr, refLVal.getType()->getPointeeType(),
-                        pointeeBaseInfo);
+                        pointeeBaseInfo, tbaaAccessInfo);
 }
 
 void CIRGenFunction::emitTrap(mlir::Location loc, bool createNewBlock) {

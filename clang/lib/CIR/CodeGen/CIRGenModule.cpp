@@ -20,12 +20,15 @@
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "CIRGenFunctionInfo.h"
+#include "CIRGenTBAA.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
@@ -96,6 +99,12 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
               astContext.getTargetInfo().getPointerAlign(LangAS::Default))
           .getQuantity();
 
+  // Enable TBAA unless it's suppressed. TSan and TySan need TBAA even at O0.
+  if (langOpts.Sanitize.hasOneOf(SanitizerKind::Thread | SanitizerKind::Type) ||
+      (!codeGenOpts.RelaxedAliasing && codeGenOpts.OptimizationLevel > 0))
+    tbaa = std::make_unique<CIRGenTBAA>(&mlirContext, astContext, getTypes(),
+                                        theModule, codeGenOpts, getLangOpts());
+
   const unsigned charSize = astContext.getTargetInfo().getCharWidth();
   uCharTy = cir::IntType::get(&getMLIRContext(), charSize, /*isSigned=*/false);
 
@@ -160,7 +169,6 @@ CharUnits CIRGenModule::getClassPointerAlignment(const CXXRecordDecl *rd) {
 
 CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t,
                                                 LValueBaseInfo *baseInfo) {
-  assert(!cir::MissingFeatures::opTBAA());
 
   // FIXME: This duplicates logic in ASTContext::getTypeAlignIfKnown, but
   // that doesn't return the information we need to compute baseInfo.
@@ -2497,4 +2505,73 @@ DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
 DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
                                          llvm::StringRef feature) {
   return errorNYI(loc.getBegin(), feature) << loc;
+}
+
+cir::TBAAAttr CIRGenModule::getTBAATypeInfo(QualType type) {
+  if (!tbaa) {
+    return nullptr;
+  }
+  return tbaa->getTypeInfo(type);
+}
+
+TBAAAccessInfo CIRGenModule::getTBAAAccessInfo(QualType accessType) {
+  if (!tbaa) {
+    return TBAAAccessInfo{};
+  }
+  if (getLangOpts().CUDAIsDevice) {
+    llvm_unreachable("TBAA access NYI");
+  }
+  return tbaa->getAccessInfo(accessType);
+}
+
+TBAAAccessInfo
+CIRGenModule::getTBAAVTablePtrAccessInfo(mlir::Type vTablePtrType) {
+  if (!tbaa)
+    return TBAAAccessInfo{};
+
+  llvm_unreachable("TBAA vtable pointer access NYI");
+  return tbaa->getVTablePtrAccessInfo(vTablePtrType);
+}
+
+mlir::ArrayAttr CIRGenModule::getTBAAStructInfo(QualType type) {
+  if (!tbaa)
+    return nullptr;
+  return tbaa->getTBAAStructInfo(type);
+}
+
+cir::TBAAAttr CIRGenModule::getTBAABaseTypeInfo(QualType type) {
+  if (!tbaa) {
+    return nullptr;
+  }
+  return tbaa->getBaseTypeInfo(type);
+}
+
+mlir::ArrayAttr CIRGenModule::getTBAAAccessTagInfo(TBAAAccessInfo tbaaInfo) {
+  if (!tbaa) {
+    return nullptr;
+  }
+  return tbaa->getAccessTagInfo(tbaaInfo);
+}
+
+TBAAAccessInfo CIRGenModule::mergeTBAAInfoForCast(TBAAAccessInfo sourceInfo,
+                                                  TBAAAccessInfo targetInfo) {
+  if (!tbaa)
+    return TBAAAccessInfo();
+  return tbaa->mergeTBAAInfoForCast(sourceInfo, targetInfo);
+}
+
+TBAAAccessInfo
+CIRGenModule::mergeTBAAInfoForConditionalOperator(TBAAAccessInfo infoA,
+                                                  TBAAAccessInfo infoB) {
+  if (!tbaa)
+    return TBAAAccessInfo();
+  return tbaa->mergeTBAAInfoForConditionalOperator(infoA, infoB);
+}
+
+TBAAAccessInfo
+CIRGenModule::mergeTBAAInfoForMemoryTransfer(TBAAAccessInfo destInfo,
+                                             TBAAAccessInfo srcInfo) {
+  if (!tbaa)
+    return TBAAAccessInfo();
+  return tbaa->mergeTBAAInfoForConditionalOperator(destInfo, srcInfo);
 }

@@ -586,7 +586,10 @@ def CIR_LoadOp : CIR_Op<"load", [
                        UnitAttr:$isDeref,
                        UnitAttr:$is_volatile,
                        OptionalAttr<I64Attr>:$alignment,
-                       OptionalAttr<CIR_MemOrder>:$mem_order);
+                       OptionalAttr<CIR_MemOrder>:$mem_order,
+                       OptionalAttr<ArrayAttr>:$tbaa
+  );
+
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
@@ -595,6 +598,7 @@ def CIR_LoadOp : CIR_Op<"load", [
     (`align` `(` $alignment^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
+    (`tbaa` `(` $tbaa^ `)`)?
   }];
 
   // FIXME: add verifier.
@@ -638,13 +642,16 @@ def CIR_StoreOp : CIR_Op<"store", [
                            [MemWrite]>:$addr,
                        UnitAttr:$is_volatile,
                        OptionalAttr<I64Attr>:$alignment,
-                       OptionalAttr<CIR_MemOrder>:$mem_order);
+                       OptionalAttr<CIR_MemOrder>:$mem_order,
+                       OptionalAttr<ArrayAttr>:$tbaa
+  );
 
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
     (`align` `(` $alignment^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
+    (`tbaa` `(` $tbaa^ `)`)?
   }];
 
   // FIXME: add verifier.
@@ -3134,12 +3141,16 @@ def CIR_CopyOp : CIR_Op<"copy",[
   let arguments = (ins
       Arg<CIR_PointerType, "", [MemWrite]>:$dst,
       Arg<CIR_PointerType, "", [MemRead]>:$src,
-      UnitAttr:$is_volatile
+      UnitAttr:$is_volatile,
+      OptionalAttr<ArrayAttr>:$tbaa
   );
 
-  let assemblyFormat = [{$src `to` $dst (`volatile` $is_volatile^)?
-                        attr-dict `:` qualified(type($dst))
+  let assemblyFormat = [{
+    $src `to` $dst (`volatile` $is_volatile^)?
+    attr-dict `:` qualified(type($dst))
+    (`tbaa` `(` $tbaa^ `)`)?
   }];
+
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
@@ -3149,7 +3160,7 @@ def CIR_CopyOp : CIR_Op<"copy",[
     /// Returns the number of bytes to be copied.
     unsigned getLength(const mlir::DataLayout &dt) {
       return dt.getTypeSize(getType().getPointee());
-    }    
+    }
   }];
 }
 

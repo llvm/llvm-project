@@ -308,6 +308,7 @@ struct MissingFeatures {
   static bool openCL() { return false; }
   static bool openMP() { return false; }
   static bool opTBAA() { return false; }
+  static bool opTBAAStruct() { return false; }
   static bool peepholeProtection() { return false; }
   static bool pgoUse() { return false; }
   static bool pointerAuthentication() { return false; }

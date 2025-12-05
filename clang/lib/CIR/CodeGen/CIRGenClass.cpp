@@ -444,7 +444,16 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
       builder, loc, builder.getPtrToVPtrType(), classAddr.getPointer());
   Address vtableField = Address(vtablePtr, classAddr.getAlignment());
   builder.createStore(loc, vtableAddressPoint, vtableField);
-  assert(!cir::MissingFeatures::opTBAA());
+
+  cir::StoreOp storeOp =
+      builder.createStore(loc, vtableAddressPoint, vtableField);
+  TBAAAccessInfo tbaaInfo =
+      cgm.getTBAAVTablePtrAccessInfo(vtableAddressPoint.getType());
+  cgm.decorateOperationWithTBAA(storeOp, tbaaInfo);
+  if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
+      cgm.getCodeGenOpts().StrictVTablePointers) {
+  }
+
   assert(!cir::MissingFeatures::createInvariantGroup());
 }
 

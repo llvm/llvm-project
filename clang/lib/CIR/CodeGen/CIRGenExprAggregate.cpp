@@ -983,7 +983,13 @@ void CIRGenFunction::emitAggregateCopy(LValue dest, LValue src, QualType ty,
   [[maybe_unused]] cir::CopyOp copyOp =
       builder.createCopy(destPtr.getPointer(), srcPtr.getPointer(), isVolatile);
 
-  assert(!cir::MissingFeatures::opTBAA());
+  assert(!cir::MissingFeatures::opTBAAStruct());
+
+  if (cgm.getCodeGenOpts().NewStructPathTBAA) {
+    TBAAAccessInfo tbaaInfo = cgm.mergeTBAAInfoForMemoryTransfer(
+        dest.getTBAAInfo(), src.getTBAAInfo());
+    cgm.decorateOperationWithTBAA(copyOp, tbaaInfo);
+  }
 }
 
 // TODO(cir): This could be shared with classic codegen.

@@ -16,6 +16,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenCall.h"
 #include "CIRGenModule.h"
+#include "CIRGenTBAA.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenValue.h"
 #include "EHScopeStack.h"
@@ -864,11 +865,13 @@ public:
 
   LValue makeAddrLValue(Address addr, QualType ty,
                         AlignmentSource source = AlignmentSource::Type) {
-    return makeAddrLValue(addr, ty, LValueBaseInfo(source));
+    return makeAddrLValue(addr, ty, LValueBaseInfo(source),
+                          cgm.getTBAAAccessInfo(ty));
   }
 
-  LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo) {
-    return LValue::makeAddr(addr, ty, baseInfo);
+  LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo,
+                        TBAAAccessInfo tbaaInfo = {}) {
+    return LValue::makeAddr(addr, ty, baseInfo, tbaaInfo);
   }
 
   void initializeVTablePointers(mlir::Location loc,
@@ -1705,7 +1708,8 @@ public:
   RValue emitLoadOfLValue(LValue lv, SourceLocation loc);
 
   Address emitLoadOfReference(LValue refLVal, mlir::Location loc,
-                              LValueBaseInfo *pointeeBaseInfo);
+                              LValueBaseInfo *pointeeBaseInfo,
+                              TBAAAccessInfo *pointeeTbaaInfo);
   LValue emitLoadOfReferenceLValue(Address refAddr, mlir::Location loc,
                                    QualType refTy, AlignmentSource source);
 
@@ -1715,7 +1719,8 @@ public:
   /// l-value.
   mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
   mlir::Value emitLoadOfScalar(Address addr, bool isVolatile, QualType ty,
-                               SourceLocation loc, LValueBaseInfo baseInfo);
+                               SourceLocation loc, LValueBaseInfo baseInfo,
+                               TBAAAccessInfo tbaaInfo);
 
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
@@ -1754,7 +1759,8 @@ public:
   /// reasonable to just ignore the returned alignment when it isn't from an
   /// explicit source.
   Address emitPointerWithAlignment(const clang::Expr *expr,
-                                   LValueBaseInfo *baseInfo = nullptr);
+                                   LValueBaseInfo *baseInfo = nullptr,
+                                   TBAAAccessInfo *tbaaInfo = nullptr);
 
   /// Emits a reference binding to the passed in expression.
   RValue emitReferenceBindingToExpr(const Expr *e);
@@ -1784,7 +1790,8 @@ public:
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
                          clang::QualType ty, LValueBaseInfo baseInfo,
-                         bool isInit = false, bool isNontemporal = false);
+                         TBAAAccessInfo tbaaInfo, bool isInit = false,
+                         bool isNontemporal = false);
   void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
   /// Store the specified rvalue into the specified
