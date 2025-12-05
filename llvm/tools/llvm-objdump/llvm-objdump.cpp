@@ -3540,17 +3540,15 @@ static void mcpuHelp() {
   if (!TripleName.empty()) {
     TheTriple.setTriple(TripleName);
   } else {
-    // If the target triple is derived from the files, we display help message
-    // when disassembling them.
-    if (Disassemble)
-      return;
-    if (InputFilenames.size() != 1)
-      reportWarning("When multiple files are specified, only the first file is "
-                    "used to retrieve the help message.",
-                    InputFilenames[0]);
-    OwningBinary<Binary> OBinary =
-        unwrapOrError(createBinary(InputFilenames[0]), InputFilenames[0]);
-    Binary *Bin = OBinary.getBinary();
+    // We can guarantee that InputFilenames won't be empty.
+    Expected<OwningBinary<Binary>> OBinary = createBinary(InputFilenames[0]);
+    // OwningBinary<Binary> OBinary =
+    if (!OBinary)
+      reportError(InputFilenames[0],
+                  "A target triple was not specified and could "
+                  " not be inferred from the input file.");
+
+    Binary *Bin = OBinary->getBinary();
     if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin))
       TheTriple = Obj->makeTriple();
   }
@@ -3857,23 +3855,30 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
 
   const bool PrintCpuHelp = (MCPU == "help" || is_contained(MAttrs, "help"));
 
-  if (!ArchiveHeaders && !Disassemble && DwarfDumpType == DIDT_Null &&
-      !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
-      !Relocations && !SectionHeaders && !SectionContents && !SymbolTable &&
-      !DynamicSymbolTable && !UnwindInfo && !FaultMapSection && !Offloading &&
-      !PrintCpuHelp &&
-      !(MachOOpt &&
-        (Bind || DataInCode || ChainedFixups || DyldInfo || DylibId ||
-         DylibsUsed || ExportsTrie || FirstPrivateHeader ||
-         FunctionStartsType != FunctionStartsMode::None || IndirectSymbols ||
-         InfoPlist || LazyBind || LinkOptHints || ObjcMetaData || Rebase ||
-         Rpaths || UniversalHeaders || WeakBind || !FilterSections.empty()))) {
+  bool ShouldDump =
+      ArchiveHeaders || Disassemble || DwarfDumpType != DIDT_Null ||
+      DynamicRelocations || FileHeaders || PrivateHeaders || RawClangAST ||
+      Relocations || SectionHeaders || SectionContents || SymbolTable ||
+      DynamicSymbolTable || UnwindInfo || FaultMapSection || Offloading ||
+      (MachOOpt &&
+       (Bind || DataInCode || ChainedFixups || DyldInfo || DylibId ||
+        DylibsUsed || ExportsTrie || FirstPrivateHeader ||
+        FunctionStartsType != FunctionStartsMode::None || IndirectSymbols ||
+        InfoPlist || LazyBind || LinkOptHints || ObjcMetaData || Rebase ||
+        Rpaths || UniversalHeaders || WeakBind || !FilterSections.empty()));
+
+  if (!ShouldDump && !PrintCpuHelp) {
     T->printHelp(ToolName);
     return 2;
   }
 
-  if (PrintCpuHelp)
+  // If the target triple is derived from the files, we display help message
+  // when disassembling them.
+  if (!Disassemble && PrintCpuHelp) {
     mcpuHelp();
+    if (!ShouldDump)
+      return EXIT_SUCCESS;
+  }
 
   DisasmSymbolSet.insert_range(DisassembleSymbols);
 

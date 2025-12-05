@@ -1,12 +1,38 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-objdump -d %t --mattr=help 2>&1 | FileCheck %s
-# RUN: llvm-objdump -d %t --mcpu=help 2>&1 | FileCheck %s
+# RUN: llvm-objdump -d %t --mattr=help 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-DISASSEMBLE
+# RUN: llvm-objdump -d %t --mcpu=help 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-DISASSEMBLE
+
+## We should be able to retrieve help message without -d.
+# RUN: llvm-objdump --mattr=help %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK
+# RUN: llvm-objdump --mcpu=help %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK
+
+## We still handle other options.
+# RUN: llvm-objdump --mattr=help --section-headers %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-SECTION-HEADERS
+# RUN: llvm-objdump --mcpu=help --section-headers %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-SECTION-HEADERS
+
+## We report error when we can't infer triple.
+# RUN: not llvm-objdump --mattr=help 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
+# RUN: not llvm-objdump --mcpu=help 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
+
 # REQUIRES: x86-registered-target
 
 # CHECK: Available CPUs for this target:
 # CHECK: Available features for this target:
 ## To check we still disassemble the file:
-# CHECK: file format elf64-x86-64
+# CHECK-DISASSEMBLE: file format elf64-x86-64
+
+# CHECK-SECTION-HEADERS: Sections:
+# CHECK-SECTION-HEADERS: Idx Name               Size     VMA              Type
+
+# CHECK-ERROR: A target triple was not specified and could not be inferred from the input file.
 
 --- !ELF
 FileHeader:

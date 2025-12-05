@@ -1,33 +1,25 @@
 # RUN: yaml2obj %s -o %t
-# REQUIRES: arm-registered-target,x86-registered-target
+# REQUIRES: mips-registered-target,x86-registered-target
 
-## Check if we can handle without -d
-# RUN: llvm-objdump --mcpu=help %t 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM
+## We shoule be able to retrieve help message by triple.
+# RUN: llvm-objdump --mattr=help --triple=mips 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-MIPS
+# RUN: llvm-objdump --mcpu=help --triple=mips 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-MIPS
 
-## Check if we can handle without file
-# RUN: not llvm-objdump --mcpu=help --triple=arm 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM
+## The help message will always depends on --triple.
+# RUN: llvm-objdump --mattr=help --triple=mips %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-MIPS
+# RUN: llvm-objdump --mcpu=help --triple=mips %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-MIPS
 
-## Check triple priority
-# RUN: llvm-objdump --mcpu=help --triple=x86_64 -d %t 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-X86,CHECK-DISASM
-
-## Check if we can handle multiple files
-# RUN: llvm-objdump --mcpu=help %t %t 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-MULTI-FILE,CHECK-HELP,CHECK-ARM
-
-# CHECK-MULTI-FILE: When multiple files are specified, only the first file is used to retrieve the help message.
 # CHECK-HELP: Available CPUs for this target:
-# CHECK-ARM: arm
-# CHECK-X86: i386
+# CHECK-MIPS: mips
 # CHECK-HELP: Available features for this target:
-## To check we still disassemble the file:
-# CHECK-DISASM: file format elf32-littlearm
 
 --- !ELF
 FileHeader:
   Class:           ELFCLASS32
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
-  Machine:         EM_ARM
+  Machine:         EM_X86_64
