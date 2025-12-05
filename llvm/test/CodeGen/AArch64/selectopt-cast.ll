@@ -915,7 +915,7 @@ define void @sext_i128(ptr %a) {
 ; CHECK-NEXT:    [[CMP1_FROZEN:%.*]] = freeze i1 [[CMP1]]
 ; CHECK-NEXT:    br i1 [[CMP1_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%.*]]
 ; CHECK:       select.true.sink:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i128 18446744073709551615, 0
+; CHECK-NEXT:    [[TMP0:%.*]] = add i128 -1, 0
 ; CHECK-NEXT:    br label [[SELECT_END]]
 ; CHECK:       select.end:
 ; CHECK-NEXT:    [[ADD:%.*]] = phi i128 [ [[TMP0]], [[SELECT_TRUE_SINK]] ], [ 0, [[LOOP]] ]
