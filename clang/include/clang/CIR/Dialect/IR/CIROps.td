@@ -5184,6 +5184,33 @@ def CIR_TryOp : CIR_Op<"try",[
 }
 
 //===----------------------------------------------------------------------===//
+// CatchParamOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"cir::TryOp">]> {
+  let summary = "Represents catch clause formal parameter";
+  let description = [{
+    The `cir.catch_param` operate in the catch regions of `cir.try`.
+
+    This operation is used only before the CFG flatterning pass.
+
+    Example:
+
+    ```mlir
+    %exception = cir.catch_param -> !cir.ptr<!void>
+    ```
+  }];
+
+  let results = (outs Optional<CIR_AnyType>:$param);
+  let assemblyFormat = [{
+    (`:` qualified(type($param))^)?
+    attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // Exception related: EhInflightOp
 //===----------------------------------------------------------------------===//
 
