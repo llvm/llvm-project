@@ -91,3 +91,17 @@ hlfir::ElementalOp Fortran::lower::isTransferWithConversion(mlir::Value rhs) {
       return elOp;
   return {};
 }
+
+bool Fortran::lower::hasDoubleDescriptor(mlir::Value addr) {
+  if (auto declareOp =
+          mlir::dyn_cast_or_null<hlfir::DeclareOp>(addr.getDefiningOp())) {
+    if (mlir::isa_and_nonnull<fir::AddrOfOp>(
+            declareOp.getMemref().getDefiningOp())) {
+      if (declareOp.getDataAttr() &&
+          *declareOp.getDataAttr() == cuf::DataAttribute::Pinned)
+        return false;
+      return true;
+    }
+  }
+  return false;
+}

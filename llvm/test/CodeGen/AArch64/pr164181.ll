@@ -288,7 +288,6 @@ define void @f(i1 %var_0, i16 %var_1, i64 %var_2, i8 %var_3, i16 %var_4, i1 %var
 ; CHECK-NEXT:    // Parent Loop BB0_8 Depth=3
 ; CHECK-NEXT:    // Parent Loop BB0_10 Depth=4
 ; CHECK-NEXT:    // => This Inner Loop Header: Depth=5
-; CHECK-NEXT:    cbnz wzr, .LBB0_30
 ; CHECK-NEXT:  // %bb.29: // %if.then222.us
 ; CHECK-NEXT:    // in Loop: Header=BB0_28 Depth=5
 ; CHECK-NEXT:    adrp x27, :got:var_32
@@ -299,7 +298,7 @@ define void @f(i1 %var_0, i16 %var_1, i64 %var_2, i8 %var_3, i16 %var_4, i1 %var
 ; CHECK-NEXT:    bic w25, w8, w8, asr #31
 ; CHECK-NEXT:    b .LBB0_31
 ; CHECK-NEXT:    .p2align 5, , 16
-; CHECK-NEXT:  .LBB0_30: // in Loop: Header=BB0_28 Depth=5
+; CHECK-NEXT:  // %bb.30:
 ; CHECK-NEXT:    mov w25, wzr
 ; CHECK-NEXT:  .LBB0_31: // %if.end239.us
 ; CHECK-NEXT:    // in Loop: Header=BB0_28 Depth=5

@@ -44,20 +44,17 @@ static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
                                                   const StringInit *ArgName,
                                                   const Record *Op,
                                                   const CodeGenTarget &T) {
-  if (Op->isSubClassOf("RegisterClass") ||
-      Op->isSubClassOf("RegisterOperand")) {
-    const Record *OpRC =
-        Op->isSubClassOf("RegisterClass") ? Op : Op->getValueAsDef("RegClass");
-
+  if (const Record *OpRC = T.getAsRegClassLike(Op)) {
     if (const auto *ArgDef = dyn_cast<DefInit>(Arg)) {
       const Record *ArgRec = ArgDef->getDef();
 
       // Match 'RegClass:$name' or 'RegOp:$name'.
       if (const Record *ArgRC = T.getInitValueAsRegClassLike(Arg)) {
         if (ArgRC->isSubClassOf("RegisterClass")) {
-          if (!T.getRegisterClass(OpRC).hasSubClass(&T.getRegisterClass(ArgRC)))
+          if (!OpRC->isSubClassOf("RegisterClass") ||
+              !T.getRegisterClass(OpRC).hasSubClass(&T.getRegisterClass(ArgRC)))
             return createStringError(
-                "argument register class" + ArgRC->getName() +
+                "argument register class " + ArgRC->getName() +
                 " is not a subclass of operand register class " +
                 OpRC->getName());
           if (!ArgName)
@@ -111,11 +108,9 @@ static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
       return ResultOperand::createRecord(ArgName->getAsUnquotedString(),
                                          ArgDef->getDef());
     }
-
-    return createStringError("argument must be a subclass of Operand");
   }
-
-  llvm_unreachable("Unknown operand kind");
+  return createStringError("argument must be a subclass of 'Operand' but got " +
+                           Op->getName() + " instead");
 }
 
 static Expected<ResultOperand> matchComplexOperand(const Init *Arg,

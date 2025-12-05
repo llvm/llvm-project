@@ -31,6 +31,11 @@ Remark::Arg::Arg(llvm::StringRef k, Type t) : key(k) {
   os << t;
 }
 
+Remark::Arg::Arg(llvm::StringRef k, Attribute a) : key(k), attr(a) {
+  llvm::raw_string_ostream os(val);
+  os << a;
+}
+
 void Remark::insert(llvm::StringRef s) { args.emplace_back(s); }
 void Remark::insert(Arg a) { args.push_back(std::move(a)); }
 

@@ -3583,12 +3583,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::IntegerType *IntTy = cast<llvm::IntegerType>(ArgValue->getType());
     assert(IntTy && "LLVM's __builtin_bswapg only supports integer variants");
-    assert(((IntTy->getBitWidth() % 16 == 0 && IntTy->getBitWidth() != 0) ||
-            IntTy->getBitWidth() == 8) &&
+    if (IntTy->getBitWidth() == 1 || IntTy->getBitWidth() == 8)
+      return RValue::get(ArgValue);
+    assert(((IntTy->getBitWidth() % 16 == 0 && IntTy->getBitWidth() != 0)) &&
            "LLVM's __builtin_bswapg only supports integer variants that has a "
            "multiple of 16 bits as well as a single byte");
-    if (IntTy->getBitWidth() == 8)
-      return RValue::get(ArgValue);
     return RValue::get(
         emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bswap));
   }

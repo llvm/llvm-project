@@ -1013,20 +1013,29 @@ static Status LaunchProcessXPC(const char *exe_path,
   xpc_dictionary_set_int64(message, LauncherXPCServicePosixspawnFlagsKey,
                            GetPosixspawnFlags(launch_info));
   const FileAction *file_action = launch_info.GetFileActionForFD(STDIN_FILENO);
-  if (file_action && !file_action->GetPath().empty()) {
+  std::string file_action_path;
+  if (file_action)
+    file_action_path = file_action->GetFileSpec().GetPath();
+
+  if (!file_action_path.empty())
     xpc_dictionary_set_string(message, LauncherXPCServiceStdInPathKeyKey,
-                              file_action->GetPath().str().c_str());
-  }
+                              file_action_path.c_str());
+
   file_action = launch_info.GetFileActionForFD(STDOUT_FILENO);
-  if (file_action && !file_action->GetPath().empty()) {
+  if (file_action)
+    file_action_path = file_action->GetFileSpec().GetPath();
+
+  if (!file_action_path.empty())
     xpc_dictionary_set_string(message, LauncherXPCServiceStdOutPathKeyKey,
-                              file_action->GetPath().str().c_str());
-  }
+                              file_action_path.c_str());
+
   file_action = launch_info.GetFileActionForFD(STDERR_FILENO);
-  if (file_action && !file_action->GetPath().empty()) {
+  if (file_action)
+    file_action_path = file_action->GetFileSpec().GetPath();
+
+  if (!file_action_path.empty())
     xpc_dictionary_set_string(message, LauncherXPCServiceStdErrPathKeyKey,
-                              file_action->GetPath().str().c_str());
-  }
+                              file_action_path.c_str());
 
   xpc_object_t reply =
       xpc_connection_send_message_with_reply_sync(conn, message);
@@ -1135,16 +1144,16 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
       if (oflag & O_CREAT)
         mode = 0640;
 
-      error = Status(::posix_spawn_file_actions_addopen(
-                         file_actions, info->GetFD(),
-                         info->GetPath().str().c_str(), oflag, mode),
-                     eErrorTypePOSIX);
+      const std::string file_path(info->GetFileSpec().GetPath());
+      error = Status(
+          ::posix_spawn_file_actions_addopen(file_actions, info->GetFD(),
+                                             file_path.c_str(), oflag, mode),
+          eErrorTypePOSIX);
       if (error.Fail())
         LLDB_LOG(log,
                  "error: {0}, posix_spawn_file_actions_addopen (action={1}, "
                  "fd={2}, path='{3}', oflag={4}, mode={5})",
-                 error, file_actions, info->GetFD(), info->GetPath(), oflag,
-                 mode);
+                 error, file_actions, info->GetFD(), file_path, oflag, mode);
     }
     break;
   }

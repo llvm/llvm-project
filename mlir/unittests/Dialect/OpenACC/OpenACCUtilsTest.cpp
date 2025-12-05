@@ -913,3 +913,457 @@ TEST_F(OpenACCUtilsTest, isValidSymbolUseNullDefiningOpPtr) {
 
   EXPECT_TRUE(result);
 }
+
+//===----------------------------------------------------------------------===//
+// getDominatingDataClauses Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsTest, getDominatingDataClausesFromComputeConstruct) {
+  // Create a module to hold a function
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function
+  auto funcType = b.getFunctionType({}, {});
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, "test_func", funcType);
+  Block *funcBlock = funcOp->addEntryBlock();
+
+  b.setInsertionPointToStart(funcBlock);
+
+  // Create a memref for the data clause
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(allocOp->getResult());
+
+  // Create a copyin op to represent a data clause
+  OwningOpRef<CopyinOp> copyinOp =
+      CopyinOp::create(b, loc, varPtr, /*structured=*/true, /*implicit=*/false,
+                       /*name=*/"test_var");
+
+  // Create a parallel op
+  OwningOpRef<ParallelOp> parallelOp =
+      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+
+  // Set the data clause operands
+  parallelOp->getDataClauseOperandsMutable().append(copyinOp->getAccVar());
+
+  // Create dominance info
+  DominanceInfo domInfo(funcOp.get());
+  PostDominanceInfo postDomInfo(funcOp.get());
+
+  // Get dominating data clauses
+  auto dataClauses =
+      getDominatingDataClauses(parallelOp.get(), domInfo, postDomInfo);
+
+  // Should contain the copyin from the parallel op
+  EXPECT_EQ(dataClauses.size(), 1ul);
+  EXPECT_EQ(dataClauses[0], copyinOp->getAccVar());
+}
+
+TEST_F(OpenACCUtilsTest, getDominatingDataClausesFromEnclosingDataOp) {
+  // Create a module to hold a function
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function
+  auto funcType = b.getFunctionType({}, {});
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, "test_func", funcType);
+  Block *funcBlock = funcOp->addEntryBlock();
+
+  b.setInsertionPointToStart(funcBlock);
+
+  // Create a memref for the data clause
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(allocOp->getResult());
+
+  // Create a copyin op for the data construct
+  OwningOpRef<CopyinOp> copyinOp =
+      CopyinOp::create(b, loc, varPtr, /*structured=*/true, /*implicit=*/false,
+                       /*name=*/"test_var");
+
+  // Create a data op
+  OwningOpRef<DataOp> dataOp =
+      DataOp::create(b, loc, TypeRange{}, ValueRange{});
+
+  // Set the data clause operands
+  dataOp->getDataClauseOperandsMutable().append(copyinOp->getAccVar());
+
+  Region &dataRegion = dataOp->getRegion();
+  Block *dataBlock = &dataRegion.emplaceBlock();
+
+  b.setInsertionPointToStart(dataBlock);
+
+  // Create a parallel op inside the data region (no data clauses on parallel)
+  OwningOpRef<ParallelOp> parallelOp =
+      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+
+  // Create dominance info
+  DominanceInfo domInfo(funcOp.get());
+  PostDominanceInfo postDomInfo(funcOp.get());
+
+  // Get dominating data clauses
+  auto dataClauses =
+      getDominatingDataClauses(parallelOp.get(), domInfo, postDomInfo);
+
+  // Should contain the copyin from the enclosing data op
+  EXPECT_EQ(dataClauses.size(), 1ul);
+  EXPECT_EQ(dataClauses[0], copyinOp->getAccVar());
+}
+
+TEST_F(OpenACCUtilsTest, getDominatingDataClausesFromComputeAndEnclosingData) {
+  // Create a module to hold a function
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function
+  auto funcType = b.getFunctionType({}, {});
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, "test_func", funcType);
+  Block *funcBlock = funcOp->addEntryBlock();
+
+  b.setInsertionPointToStart(funcBlock);
+
+  // Create two memrefs for different data clauses
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp1 =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr1 =
+      cast<TypedValue<PointerLikeType>>(allocOp1->getResult());
+
+  OwningOpRef<memref::AllocaOp> allocOp2 =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr2 =
+      cast<TypedValue<PointerLikeType>>(allocOp2->getResult());
+
+  // Create copyin ops
+  OwningOpRef<CopyinOp> copyinOp1 =
+      CopyinOp::create(b, loc, varPtr1, /*structured=*/true, /*implicit=*/false,
+                       /*name=*/"var1");
+  OwningOpRef<CopyinOp> copyinOp2 =
+      CopyinOp::create(b, loc, varPtr2, /*structured=*/true, /*implicit=*/false,
+                       /*name=*/"var2");
+
+  // Create a data op
+  OwningOpRef<DataOp> dataOp =
+      DataOp::create(b, loc, TypeRange{}, ValueRange{});
+
+  // Set the data clause operands for data op
+  dataOp->getDataClauseOperandsMutable().append(copyinOp1->getAccVar());
+
+  Region &dataRegion = dataOp->getRegion();
+  Block *dataBlock = &dataRegion.emplaceBlock();
+
+  b.setInsertionPointToStart(dataBlock);
+
+  // Create a parallel op inside the data region
+  OwningOpRef<ParallelOp> parallelOp =
+      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+
+  // Set the data clause operands for parallel op
+  parallelOp->getDataClauseOperandsMutable().append(copyinOp2->getAccVar());
+
+  // Create dominance info
+  DominanceInfo domInfo(funcOp.get());
+  PostDominanceInfo postDomInfo(funcOp.get());
+
+  // Get dominating data clauses
+  auto dataClauses =
+      getDominatingDataClauses(parallelOp.get(), domInfo, postDomInfo);
+
+  // Should contain both copyins (from data op and parallel op)
+  EXPECT_EQ(dataClauses.size(), 2ul);
+  // Note: Order might not be guaranteed, so check both are present
+  EXPECT_TRUE(llvm::is_contained(dataClauses, copyinOp1->getAccVar()));
+  EXPECT_TRUE(llvm::is_contained(dataClauses, copyinOp2->getAccVar()));
+}
+
+TEST_F(OpenACCUtilsTest, getDominatingDataClausesWithDeclareDirectives) {
+  // Create a module to hold a function
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function
+  auto funcType = b.getFunctionType({}, {});
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, "test_func", funcType);
+  Block *funcBlock = funcOp->addEntryBlock();
+
+  b.setInsertionPointToStart(funcBlock);
+
+  // Create a memref for the declare directive
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(allocOp->getResult());
+
+  // Create a copyin op for declare
+  OwningOpRef<CopyinOp> copyinOp =
+      CopyinOp::create(b, loc, varPtr, /*structured=*/false, /*implicit=*/false,
+                       /*name=*/"declare_var");
+
+  // Create a declare_enter op
+  OwningOpRef<DeclareEnterOp> declareEnterOp = DeclareEnterOp::create(
+      b, loc, TypeRange{b.getType<acc::DeclareTokenType>()},
+      ValueRange{copyinOp->getAccVar()});
+
+  // Create a parallel op
+  OwningOpRef<ParallelOp> parallelOp =
+      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+
+  // Create a declare_exit op that post-dominates the parallel
+  OwningOpRef<DeclareExitOp> declareExitOp = DeclareExitOp::create(
+      b, loc, declareEnterOp->getToken(), ValueRange{copyinOp->getAccVar()});
+
+  // Add a return to complete the function
+  OwningOpRef<func::ReturnOp> returnOp = func::ReturnOp::create(b, loc);
+
+  // Create dominance info
+  DominanceInfo domInfo(funcOp.get());
+  PostDominanceInfo postDomInfo(funcOp.get());
+
+  // Get dominating data clauses
+  auto dataClauses =
+      getDominatingDataClauses(parallelOp.get(), domInfo, postDomInfo);
+
+  // Should contain the copyin from the declare directive
+  EXPECT_EQ(dataClauses.size(), 1ul);
+  EXPECT_EQ(dataClauses[0], copyinOp->getAccVar());
+}
+
+TEST_F(OpenACCUtilsTest, getDominatingDataClausesMultipleDataConstructs) {
+  // Create a module to hold a function
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function
+  auto funcType = b.getFunctionType({}, {});
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, "test_func", funcType);
+  Block *funcBlock = funcOp->addEntryBlock();
+
+  b.setInsertionPointToStart(funcBlock);
+
+  // Create three memrefs
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp1 =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr1 =
+      cast<TypedValue<PointerLikeType>>(allocOp1->getResult());
+
+  OwningOpRef<memref::AllocaOp> allocOp2 =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr2 =
+      cast<TypedValue<PointerLikeType>>(allocOp2->getResult());
+
+  OwningOpRef<memref::AllocaOp> allocOp3 =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr3 =
+      cast<TypedValue<PointerLikeType>>(allocOp3->getResult());
+
+  // Create copyin ops
+  OwningOpRef<CopyinOp> copyinOp1 =
+      CopyinOp::create(b, loc, varPtr1, /*structured=*/true, /*implicit=*/false,
+                       /*name=*/"var1");
+  OwningOpRef<CopyinOp> copyinOp2 =
+      CopyinOp::create(b, loc, varPtr2, /*structured=*/true, /*implicit=*/false,
+                       /*name=*/"var2");
+  OwningOpRef<CopyinOp> copyinOp3 =
+      CopyinOp::create(b, loc, varPtr3, /*structured=*/true, /*implicit=*/false,
+                       /*name=*/"var3");
+
+  // Create outer data op
+  OwningOpRef<DataOp> outerDataOp =
+      DataOp::create(b, loc, TypeRange{}, ValueRange{});
+
+  // Set the data clause operands for outer data op
+  outerDataOp->getDataClauseOperandsMutable().append(copyinOp1->getAccVar());
+
+  Region &outerDataRegion = outerDataOp->getRegion();
+  Block *outerDataBlock = &outerDataRegion.emplaceBlock();
+
+  b.setInsertionPointToStart(outerDataBlock);
+
+  // Create inner data op
+  OwningOpRef<DataOp> innerDataOp =
+      DataOp::create(b, loc, TypeRange{}, ValueRange{});
+
+  // Set the data clause operands for inner data op
+  innerDataOp->getDataClauseOperandsMutable().append(copyinOp2->getAccVar());
+
+  Region &innerDataRegion = innerDataOp->getRegion();
+  Block *innerDataBlock = &innerDataRegion.emplaceBlock();
+
+  b.setInsertionPointToStart(innerDataBlock);
+
+  // Create a parallel op
+  OwningOpRef<ParallelOp> parallelOp =
+      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+
+  // Set the data clause operands for parallel op
+  parallelOp->getDataClauseOperandsMutable().append(copyinOp3->getAccVar());
+
+  // Create dominance info
+  DominanceInfo domInfo(funcOp.get());
+  PostDominanceInfo postDomInfo(funcOp.get());
+
+  // Get dominating data clauses
+  auto dataClauses =
+      getDominatingDataClauses(parallelOp.get(), domInfo, postDomInfo);
+
+  // Should contain all three copyins
+  EXPECT_EQ(dataClauses.size(), 3ul);
+  EXPECT_TRUE(llvm::is_contained(dataClauses, copyinOp1->getAccVar()));
+  EXPECT_TRUE(llvm::is_contained(dataClauses, copyinOp2->getAccVar()));
+  EXPECT_TRUE(llvm::is_contained(dataClauses, copyinOp3->getAccVar()));
+}
+
+TEST_F(OpenACCUtilsTest, getDominatingDataClausesKernelsOp) {
+  // Test with KernelsOp instead of ParallelOp
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function
+  auto funcType = b.getFunctionType({}, {});
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, "test_func", funcType);
+  Block *funcBlock = funcOp->addEntryBlock();
+
+  b.setInsertionPointToStart(funcBlock);
+
+  // Create a memref
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(allocOp->getResult());
+
+  // Create a copyin op
+  OwningOpRef<CopyinOp> copyinOp =
+      CopyinOp::create(b, loc, varPtr, /*structured=*/true, /*implicit=*/false,
+                       /*name=*/"test_var");
+
+  // Create a kernels op
+  OwningOpRef<KernelsOp> kernelsOp =
+      KernelsOp::create(b, loc, TypeRange{}, ValueRange{});
+
+  // Set the data clause operands
+  kernelsOp->getDataClauseOperandsMutable().append(copyinOp->getAccVar());
+
+  // Create dominance info
+  DominanceInfo domInfo(funcOp.get());
+  PostDominanceInfo postDomInfo(funcOp.get());
+
+  // Get dominating data clauses
+  auto dataClauses =
+      getDominatingDataClauses(kernelsOp.get(), domInfo, postDomInfo);
+
+  // Should contain the copyin from the kernels op
+  EXPECT_EQ(dataClauses.size(), 1ul);
+  EXPECT_EQ(dataClauses[0], copyinOp->getAccVar());
+}
+
+TEST_F(OpenACCUtilsTest, getDominatingDataClausesSerialOp) {
+  // Test with SerialOp
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function
+  auto funcType = b.getFunctionType({}, {});
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, "test_func", funcType);
+  Block *funcBlock = funcOp->addEntryBlock();
+
+  b.setInsertionPointToStart(funcBlock);
+
+  // Create a memref
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(allocOp->getResult());
+
+  // Create a copyin op
+  OwningOpRef<CopyinOp> copyinOp =
+      CopyinOp::create(b, loc, varPtr, /*structured=*/true, /*implicit=*/false,
+                       /*name=*/"test_var");
+
+  // Create a serial op
+  OwningOpRef<SerialOp> serialOp =
+      SerialOp::create(b, loc, TypeRange{}, ValueRange{});
+
+  // Set the data clause operands
+  serialOp->getDataClauseOperandsMutable().append(copyinOp->getAccVar());
+
+  // Create dominance info
+  DominanceInfo domInfo(funcOp.get());
+  PostDominanceInfo postDomInfo(funcOp.get());
+
+  // Get dominating data clauses
+  auto dataClauses =
+      getDominatingDataClauses(serialOp.get(), domInfo, postDomInfo);
+
+  // Should contain the copyin from the serial op
+  EXPECT_EQ(dataClauses.size(), 1ul);
+  EXPECT_EQ(dataClauses[0], copyinOp->getAccVar());
+}
+
+TEST_F(OpenACCUtilsTest, getDominatingDataClausesEmpty) {
+  // Test with no data clauses at all
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function
+  auto funcType = b.getFunctionType({}, {});
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, "test_func", funcType);
+  Block *funcBlock = funcOp->addEntryBlock();
+
+  b.setInsertionPointToStart(funcBlock);
+
+  // Create a parallel op with no data clauses
+  OwningOpRef<ParallelOp> parallelOp =
+      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+
+  // Create dominance info
+  DominanceInfo domInfo(funcOp.get());
+  PostDominanceInfo postDomInfo(funcOp.get());
+
+  // Get dominating data clauses
+  auto dataClauses =
+      getDominatingDataClauses(parallelOp.get(), domInfo, postDomInfo);
+
+  // Should be empty
+  EXPECT_EQ(dataClauses.size(), 0ul);
+}

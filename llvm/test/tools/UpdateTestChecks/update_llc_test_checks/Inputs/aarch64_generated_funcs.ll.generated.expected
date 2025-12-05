@@ -71,14 +71,16 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    stur xzr, [x29, #-8]
-; CHECK-NEXT:    cbz wzr, .LBB0_3
+; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    str w8, [sp, #16]
 ; CHECK-NEXT:    ldur w8, [x29, #-8]
 ; CHECK-NEXT:    cbz w8, .LBB0_4
 ; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    str w8, [sp, #16]
 ; CHECK-NEXT:    b .LBB0_5

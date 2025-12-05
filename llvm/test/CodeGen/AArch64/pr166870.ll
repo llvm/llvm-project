@@ -26,7 +26,6 @@ define i32 @widget(i32 %arg, i32 %arg1, i1 %arg2, ptr %arg3, i1 %arg4) #0 nounwi
 ; CHECK-NEXT:    mov x21, x1
 ; CHECK-NEXT:    bl baz
 ; CHECK-NEXT:    mov w0, #0 // =0x0
-; CHECK-NEXT:    cbnz wzr, .LBB0_11
 ; CHECK-NEXT:  // %bb.5: // %bb6
 ; CHECK-NEXT:    mov w10, #1 // =0x1
 ; CHECK-NEXT:    cbnz w10, .LBB0_11
