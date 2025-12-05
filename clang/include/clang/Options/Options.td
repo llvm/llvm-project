@@ -4207,6 +4207,15 @@ def ftrivial_auto_var_init_max_size : Joined<["-"], "ftrivial-auto-var-init-max-
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   HelpText<"Stop initializing trivial automatic stack variables if var size exceeds the specified number of instances (in bytes)">,
   MarshallingInfoInt<LangOpts<"TrivialAutoVarInitMaxSize">>;
+defm mitigation_analysis
+    : BoolFOption<"mitigation-analysis", CodeGenOpts<"MitigationAnalysis">,
+                  DefaultFalse,
+                  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+                  BothFlags<[], [ClangOption], " mitigation analysis">>,
+      DocBrief<"Instrument mitigations/preventions (Stack Protectors, "
+               "Auto-Var-Init, StackClashProtection, etc.) to analyze their "
+               "coverage">;
 def fstandalone_debug : Flag<["-"], "fstandalone-debug">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Emit full debug info for all types used by the program">;

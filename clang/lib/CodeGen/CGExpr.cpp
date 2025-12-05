@@ -37,6 +37,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/CodeGen/MitigationTagging.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -6602,6 +6603,11 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
 
   bool CFIUnchecked = CalleeType->hasPointeeToCFIUncheckedCalleeFunctionType();
+
+  if (CGM.getCodeGenOpts().MitigationAnalysis &&
+      (!TargetDecl || !isa<FunctionDecl>(TargetDecl)))
+    AttachMitigationMetadataToFunction(*this, llvm::MitigationKey::CFI_ICALL,
+                                       SanOpts.has(SanitizerKind::CFIICall));
 
   // If we are checking indirect calls and this call is indirect, check that the
   // function pointer is a member of the bit set for the function type.

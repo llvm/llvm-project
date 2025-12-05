@@ -19,6 +19,7 @@
 #include "TargetInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "clang/CodeGen/MitigationTagging.h"
 #include "llvm/IR/Intrinsics.h"
 
 using namespace clang;
@@ -414,6 +415,12 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       std::tie(VTable, RD) = CGM.getCXXABI().LoadVTablePtr(
           *this, This.getAddress(), CalleeDecl->getParent());
       EmitVTablePtrCheckForCall(RD, VTable, CFITCK_NVCall, CE->getBeginLoc());
+    }
+
+    if (CGM.getCodeGenOpts().MitigationAnalysis &&
+        MD->getParent()->isDynamicClass()) {
+      AttachMitigationMetadataToFunction(*this, llvm::MitigationKey::CFI_NVCALL,
+                                         SanOpts.has(SanitizerKind::CFINVCall));
     }
 
     if (getLangOpts().AppleKext && MD->isVirtual() && HasQualifier)

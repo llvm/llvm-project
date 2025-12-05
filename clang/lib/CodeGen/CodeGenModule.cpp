@@ -47,6 +47,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "clang/CodeGen/MitigationTagging.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -2746,6 +2747,28 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     B.addAttribute(llvm::Attribute::StackProtectStrong);
   else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq))
     B.addAttribute(llvm::Attribute::StackProtectReq);
+
+  if (CodeGenOpts.MitigationAnalysis) {
+    AttachMitigationMetadataToFunction(
+        *F, llvm::MitigationKey::STACK_CLASH_PROTECTION,
+        CodeGenOpts.StackClashProtector);
+
+    if (!(D && D->hasAttr<NoStackProtectorAttr>())) {
+      bool stackProtectOn =
+          isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn);
+      bool stackProtectStrong =
+          isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPStrong);
+      bool stackProtectAll =
+          isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq);
+
+      AttachMitigationMetadataToFunction(
+          *F, llvm::MitigationKey::STACK_PROTECTOR, stackProtectOn);
+      AttachMitigationMetadataToFunction(
+          *F, llvm::MitigationKey::STACK_PROTECTOR_STRONG, stackProtectStrong);
+      AttachMitigationMetadataToFunction(
+          *F, llvm::MitigationKey::STACK_PROTECTOR_ALL, stackProtectAll);
+    }
+  }
 
   if (!D) {
     // Non-entry HLSL functions must always be inlined.

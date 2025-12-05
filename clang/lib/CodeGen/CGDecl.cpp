@@ -33,6 +33,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "clang/CodeGen/MitigationTagging.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1987,6 +1988,12 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
         hasNoTrivialAutoVarInitAttr(CurFuncDecl))
            ? LangOptions::TrivialAutoVarInitKind::Uninitialized
            : getContext().getLangOpts().getTrivialAutoVarInit());
+
+  if (CGM.getCodeGenOpts().MitigationAnalysis)
+    AttachMitigationMetadataToFunction(
+        *this, llvm::MitigationKey::AUTO_VAR_INIT,
+        trivialAutoVarInit !=
+            LangOptions::TrivialAutoVarInitKind::Uninitialized);
 
   auto initializeWhatIsTechnicallyUninitialized = [&](Address Loc) {
     if (trivialAutoVarInit ==

@@ -26,6 +26,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "clang/CodeGen/MitigationTagging.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -2846,6 +2847,10 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
     llvm::Value *TypeTest =
         Builder.CreateCall(CGM.getIntrinsic(IID), {VTable, TypeId});
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::assume), TypeTest);
+
+    if (CGM.getCodeGenOpts().MitigationAnalysis)
+      AttachMitigationMetadataToFunction(*this, llvm::MitigationKey::CFI_VCALL,
+                                         SanOpts.has(SanitizerKind::CFIVCall));
   }
 }
 
@@ -3031,6 +3036,14 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
       !getContext().getNoSanitizeList().containsType(SanitizerKind::CFIVCall,
                                                      TypeName)) {
     EmitCheck(std::make_pair(CheckResult, CheckOrdinal), CheckHandler, {}, {});
+  }
+
+  if (CGM.getCodeGenOpts().MitigationAnalysis) {
+    auto CFIVCallEnabled = SanOpts.has(SanitizerKind::CFIVCall) &&
+                           !getContext().getNoSanitizeList().containsType(
+                               SanitizerKind::CFIVCall, TypeName);
+    AttachMitigationMetadataToFunction(*this, llvm::MitigationKey::CFI_VCALL,
+                                       CFIVCallEnabled);
   }
 
   return Builder.CreateBitCast(Builder.CreateExtractValue(CheckedLoad, 0),

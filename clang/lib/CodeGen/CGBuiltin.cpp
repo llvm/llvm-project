@@ -28,6 +28,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGen/MitigationTagging.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
@@ -154,6 +155,9 @@ static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
   switch (CGF.getLangOpts().getTrivialAutoVarInit()) {
   case LangOptions::TrivialAutoVarInitKind::Uninitialized:
     // Nothing to initialize.
+    if (CGF.CGM.getCodeGenOpts().MitigationAnalysis)
+      AttachMitigationMetadataToFunction(CGF, MitigationKey::AUTO_VAR_INIT,
+                                         false);
     return;
   case LangOptions::TrivialAutoVarInitKind::Zero:
     Byte = CGF.Builder.getInt8(0x00);
@@ -165,8 +169,14 @@ static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
     break;
   }
   }
-  if (CGF.CGM.stopAutoInit())
+
+  if (CGF.CGM.getCodeGenOpts().MitigationAnalysis)
+    AttachMitigationMetadataToFunction(CGF, MitigationKey::AUTO_VAR_INIT,
+                                       !CGF.CGM.stopAutoInit());
+
+  if (CGF.CGM.stopAutoInit()) {
     return;
+  }
   auto *I = CGF.Builder.CreateMemSet(AI, Byte, Size, AlignmentInBytes);
   I->addAnnotationMetadata("auto-init");
 }

@@ -112,6 +112,7 @@ add_clang_library(clangCodeGen
   LinkInModulesPass.cpp
   MacroPPCallbacks.cpp
   MicrosoftCXXABI.cpp
+  MitigationTagging.cpp
   ModuleBuilder.cpp
   ObjectFilePCHContainerWriter.cpp
   PatternInit.cpp

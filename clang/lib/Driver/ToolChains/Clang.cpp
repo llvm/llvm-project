@@ -6826,6 +6826,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   RenderSCPOptions(TC, Args, CmdArgs);
   RenderTrivialAutoVarInitOptions(D, TC, Args, CmdArgs);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_fmitigation_analysis,
+                    options::OPT_fno_mitigation_analysis);
+
   Args.AddLastArg(CmdArgs, options::OPT_fswift_async_fp_EQ);
 
   Args.addOptInFlag(CmdArgs, options::OPT_mstackrealign,

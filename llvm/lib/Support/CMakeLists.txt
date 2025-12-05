@@ -222,6 +222,7 @@ add_llvm_component_library(LLVMSupport
   MemAlloc.cpp
   MemoryBuffer.cpp
   MemoryBufferRef.cpp
+  MitigationMarker.cpp
   ModRef.cpp
   MD5.cpp
   MSP430Attributes.cpp
