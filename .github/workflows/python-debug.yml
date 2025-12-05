@@ -1,0 +1,13 @@
+name: Python Debug
+on: 
+  push:
+
+jobs:
+  test:
+    runs-on: windows-2022
+    steps:
+      - Name: Upload
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          path: |
+            /c/hostedtoolcache/windows/Python/3.9.13/x64/
