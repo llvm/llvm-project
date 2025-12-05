@@ -153,6 +153,7 @@ convertSRPoints(ModuleSlotTracker &MST,
                 std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
                 const llvm::SaveRestorePoints &SRPoints,
                 const TargetRegisterInfo *TRI);
+
 static void convertStackObjects(yaml::MachineFunction &YMF,
                                 const MachineFunction &MF,
                                 ModuleSlotTracker &MST, MFPrintState &State);

@@ -201,6 +201,10 @@ public:
     return false;
   }
 
+  /// enableCSRSaveRestorePointsSplit - Returns true if the target support
+  /// multiple save/restore points in shrink wrapping.
+  virtual bool enableCSRSaveRestorePointsSplit() const { return false; }
+
   /// Returns true if the stack slot holes in the fixed and callee-save stack
   /// area should be used when allocating other stack locations to reduce stack
   /// size.

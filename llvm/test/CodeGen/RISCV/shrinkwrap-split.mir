@@ -1,0 +1,290 @@
+# RUN: llc -march=riscv64 -run-pass shrink-wrap -enable-shrink-wrap-into-multiple-points=true  %s -o - | FileCheck  %s
+
+# CHECK:       savePoint:
+# CHECK-NEXT:    - point:           '%bb.0'
+# CHECK-NEXT:      registers:
+# CHECK-NEXT:        - '$x1'
+# CHECK-NEXT:        - '$x26'
+# CHECK-NEXT:        - '$x27'
+# CHECK-NEXT:        - '$x9'
+# CHECK-NEXT:    - point:           '%bb.2'
+# CHECK-NEXT:      registers:
+# CHECK-NEXT:        - '$x18'
+# CHECK-NEXT:        - '$x19'
+# CHECK-NEXT:        - '$x20'
+# CHECK-NEXT:        - '$x21'
+# CHECK-NEXT:        - '$x22'
+# CHECK-NEXT:        - '$x23'
+# CHECK-NEXT:        - '$x24'
+# CHECK-NEXT:        - '$x25'
+# CHECK-NEXT:        - '$x8'
+# CHECK-NEXT:  restorePoint:
+# CHECK-NEXT:    - point:           '%bb.7'
+# CHECK-NEXT:      registers:
+# CHECK-NEXT:        - '$x18'
+# CHECK-NEXT:        - '$x19'
+# CHECK-NEXT:        - '$x20'
+# CHECK-NEXT:        - '$x21'
+# CHECK-NEXT:        - '$x22'
+# CHECK-NEXT:        - '$x23'
+# CHECK-NEXT:        - '$x24'
+# CHECK-NEXT:        - '$x25'
+# CHECK-NEXT:        - '$x8'
+# CHECK-NEXT:    - point:           '%bb.8'
+# CHECK-NEXT:      registers:
+# CHECK-NEXT:        - '$x1'
+# CHECK-NEXT:        - '$x26'
+# CHECK-NEXT:        - '$x27'
+# CHECK-NEXT:        - '$x9'
+
+--- |
+  ; ModuleID = 'shrinkwrap-split.ll'
+  %struct.task = type { i32, i32, [20 x i32] }
+
+  define i32 @test(ptr %t, i32 %i, i1 %cond) {
+  entry:
+    %arr = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2
+    %0 = load i32, ptr %arr, align 4
+    %arrayidx2 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 1
+    %1 = load i32, ptr %arrayidx2, align 4
+    %arrayidx4 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 2
+    %2 = load i32, ptr %arrayidx4, align 4
+    %arrayidx6 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 3
+    %3 = load i32, ptr %arrayidx6, align 4
+    %arrayidx8 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 4
+    %4 = load i32, ptr %arrayidx8, align 4
+    %arrayidx10 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 5
+    %5 = load i32, ptr %arrayidx10, align 4
+    %arrayidx12 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 6
+    %6 = load i32, ptr %arrayidx12, align 4
+    %arrayidx14 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 7
+    %7 = load i32, ptr %arrayidx14, align 4
+    %arrayidx16 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 8
+    %8 = load i32, ptr %arrayidx16, align 4
+    %arrayidx18 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 9
+    %9 = load i32, ptr %arrayidx18, align 4
+    %arrayidx20 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 10
+    %10 = load i32, ptr %arrayidx20, align 4
+    %arrayidx22 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 11
+    %11 = load i32, ptr %arrayidx22, align 4
+    %arrayidx24 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 12
+    %12 = load i32, ptr %arrayidx24, align 4
+    %arrayidx26 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 13
+    %13 = load i32, ptr %arrayidx26, align 4
+    %arrayidx28 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 14
+    %14 = load i32, ptr %arrayidx28, align 4
+    %arrayidx30 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 15
+    %15 = load i32, ptr %arrayidx30, align 4
+    %arrayidx32 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 16
+    %16 = load i32, ptr %arrayidx32, align 4
+    %arrayidx34 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 17
+    %17 = load i32, ptr %arrayidx34, align 4
+    %arrayidx36 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 18
+    %18 = load i32, ptr %arrayidx36, align 4
+    %arrayidx38 = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 2, i64 19
+    %19 = load i32, ptr %arrayidx38, align 4
+    %20 = load i32, ptr %t, align 4
+    %add = add i32 %10, %0
+    %add39 = add i32 %add, %20
+    %cmp = icmp slt i32 %add39, %i
+    br i1 %cmp, label %for.cond.preheader, label %cleanup
+
+  for.cond.preheader:                               ; preds = %entry
+    %y = getelementptr inbounds %struct.task, ptr %t, i64 0, i32 1
+    %21 = load i32, ptr %y, align 4
+    %cmp40.not119 = icmp eq i32 %21, 0
+    br i1 %cmp40.not119, label %for.cond.cleanup, label %for.body.preheader
+
+  for.body.preheader:                               ; preds = %for.cond.preheader
+    %22 = add i32 %21, -1
+    %cond41 = select i1 %cond, i32 %22, i32 %i
+    store i32 %cond41, ptr %t, align 4
+    br label %for.cond.cleanup
+
+  for.cond.cleanup:                                 ; preds = %for.body.preheader, %for.cond.preheader
+    %23 = phi i32 [ %cond41, %for.body.preheader ], [ %20, %for.cond.preheader ]
+    %tobool44 = icmp ne i32 %21, 0
+    %conv = zext i1 %tobool44 to i32
+    %add48 = add i32 %1, %0
+    %add49 = add i32 %add48, %2
+    %add50 = add i32 %add49, %3
+    %add51 = add i32 %add50, %4
+    %add52 = add i32 %add51, %5
+    %add53 = add i32 %add52, %6
+    %add54 = add i32 %add53, %7
+    %add55 = add i32 %add54, %8
+    %add56 = add i32 %add55, %9
+    %add57 = add i32 %add56, %10
+    %add58 = add i32 %add57, %11
+    %add59 = add i32 %add58, %12
+    %add60 = add i32 %add59, %13
+    %add61 = add i32 %add60, %14
+    %add62 = add i32 %add61, %15
+    %add63 = add i32 %add62, %16
+    %add64 = add i32 %add63, %17
+    %add65 = add i32 %add64, %18
+    %add66 = add i32 %add65, %19
+    %add67 = add i32 %add66, %conv
+    %add68 = add i32 %add67, %23
+    br label %cleanup
+
+  cleanup:                                          ; preds = %for.cond.cleanup, %entry
+    %retval.0 = phi i32 [ %add68, %for.cond.cleanup ], [ %i, %entry ]
+    ret i32 %retval.0
+  }
+...
+---
+name: test
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$x10', virtual-reg: '' }
+  - { reg: '$x11', virtual-reg: '' }
+  - { reg: '$x12', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  varArgsFrameIndex: 0
+  varArgsSaveSize: 0
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.8(0x40000000)
+    liveins: $x10, $x11, $x12
+
+    renamable $x13 = COPY $x10
+    renamable $x9 = LW $x10, 8 :: (load (s32) from %ir.arr)
+    renamable $x16 = LW $x10, 48 :: (load (s32) from %ir.arrayidx20)
+    renamable $x15 = LW $x10, 0 :: (load (s32) from %ir.t)
+    renamable $x14 = ADD renamable $x16, renamable $x9
+    renamable $x10 = COPY $x11
+    renamable $x14 = ADDW killed renamable $x14, renamable $x15
+    BLT killed renamable $x14, $x11, %bb.1
+
+  bb.8:
+    successors: %bb.7(0x80000000)
+    liveins: $x10
+
+    PseudoBR %bb.7
+
+  bb.1.for.cond.preheader:
+    successors: %bb.6(0x30000000), %bb.2(0x50000000)
+    liveins: $x9, $x10, $x12, $x13, $x15, $x16
+
+    renamable $x20 = LW renamable $x13, 12 :: (load (s32) from %ir.arrayidx2)
+    renamable $x30 = LW renamable $x13, 16 :: (load (s32) from %ir.arrayidx4)
+    renamable $x24 = LW renamable $x13, 20 :: (load (s32) from %ir.arrayidx6)
+    renamable $x31 = LW renamable $x13, 24 :: (load (s32) from %ir.arrayidx8)
+    renamable $x25 = LW renamable $x13, 28 :: (load (s32) from %ir.arrayidx10)
+    renamable $x7 = LW renamable $x13, 32 :: (load (s32) from %ir.arrayidx12)
+    renamable $x21 = LW renamable $x13, 36 :: (load (s32) from %ir.arrayidx14)
+    renamable $x14 = LW renamable $x13, 40 :: (load (s32) from %ir.arrayidx16)
+    renamable $x23 = LW renamable $x13, 44 :: (load (s32) from %ir.arrayidx18)
+    renamable $x29 = LW renamable $x13, 52 :: (load (s32) from %ir.arrayidx22)
+    renamable $x22 = LW renamable $x13, 56 :: (load (s32) from %ir.arrayidx24)
+    renamable $x6 = LW renamable $x13, 60 :: (load (s32) from %ir.arrayidx26)
+    renamable $x17 = LW renamable $x13, 64 :: (load (s32) from %ir.arrayidx28)
+    renamable $x5 = LW renamable $x13, 68 :: (load (s32) from %ir.arrayidx30)
+    renamable $x28 = LW renamable $x13, 72 :: (load (s32) from %ir.arrayidx32)
+    renamable $x18 = LW renamable $x13, 76 :: (load (s32) from %ir.arrayidx34)
+    renamable $x19 = LW renamable $x13, 80 :: (load (s32) from %ir.arrayidx36)
+    renamable $x8 = LW renamable $x13, 4 :: (load (s32) from %ir.y)
+    renamable $x11 = LW renamable $x13, 84 :: (load (s32) from %ir.arrayidx38)
+    BEQ renamable $x8, $x0, %bb.6
+    PseudoBR %bb.2
+
+  bb.2.for.body.preheader:
+    successors: %bb.4(0x40000000), %bb.3(0x40000000)
+    liveins: $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x28, $x29, $x30, $x31
+
+    BEQ killed renamable $x12, $x0, %bb.4
+
+  bb.3:
+    successors: %bb.5(0x80000000)
+    liveins: $x5, $x6, $x7, $x8, $x9, $x11, $x13, $x14, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x28, $x29, $x30, $x31
+
+    renamable $x10 = ADDIW renamable $x8, -1
+    PseudoBR %bb.5
+
+  bb.4.for.body.preheader:
+    successors: %bb.5(0x80000000)
+    liveins: $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x13, $x14, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x28, $x29, $x30, $x31
+
+
+  bb.5.for.body.preheader:
+    successors: %bb.6(0x80000000)
+    liveins: $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x13, $x14, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x28, $x29, $x30, $x31
+
+    SW renamable $x10, killed renamable $x13, 0 :: (store (s32) into %ir.t)
+    renamable $x15 = COPY killed renamable $x10
+
+  bb.6.for.cond.cleanup:
+    successors: %bb.7(0x80000000)
+    liveins: $x5, $x6, $x7, $x8, $x9, $x11, $x14, $x15, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x28, $x29, $x30, $x31
+
+    renamable $x9 = ADD killed renamable $x20, killed renamable $x9
+    renamable $x30 = ADD killed renamable $x30, killed renamable $x24
+    renamable $x30 = ADD killed renamable $x9, killed renamable $x30
+    renamable $x31 = ADD killed renamable $x31, killed renamable $x25
+    renamable $x14 = ADD killed renamable $x21, killed renamable $x14
+    renamable $x7 = ADD killed renamable $x31, killed renamable $x7
+    renamable $x14 = ADD killed renamable $x14, killed renamable $x23
+    renamable $x7 = ADD killed renamable $x30, killed renamable $x7
+    renamable $x14 = ADD killed renamable $x14, killed renamable $x16
+    renamable $x10 = SLTU $x0, killed renamable $x8
+    renamable $x14 = ADD killed renamable $x7, killed renamable $x14
+    renamable $x29 = ADD killed renamable $x29, killed renamable $x22
+    renamable $x28 = ADD killed renamable $x28, killed renamable $x18
+    renamable $x6 = ADD killed renamable $x29, killed renamable $x6
+    renamable $x28 = ADD killed renamable $x28, killed renamable $x19
+    renamable $x17 = ADD killed renamable $x6, killed renamable $x17
+    renamable $x11 = ADD killed renamable $x28, killed renamable $x11
+    renamable $x17 = ADD killed renamable $x17, killed renamable $x5
+    renamable $x10 = ADD killed renamable $x11, killed renamable $x10
+    renamable $x14 = ADD killed renamable $x14, killed renamable $x17
+    renamable $x10 = ADD killed renamable $x10, killed renamable $x15
+    renamable $x10 = ADDW killed renamable $x14, killed renamable $x10
+
+  bb.7.cleanup:
+    liveins: $x10
+
+    PseudoRET implicit $x10
+
+...
