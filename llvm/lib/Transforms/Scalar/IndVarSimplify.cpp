@@ -164,6 +164,9 @@ class IndVarSimplify {
 
   bool sinkUnusedInvariants(Loop *L);
 
+  bool rewritePtrIncrementWithOffsettAddressing(
+      Loop *L, SmallVectorImpl<WeakTrackingVH> &DeadInsts);
+
 public:
   IndVarSimplify(LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
                  const DataLayout &DL, TargetLibraryInfo *TLI,
@@ -2039,6 +2042,111 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   return Changed;
 }
 
+bool IndVarSimplify::rewritePtrIncrementWithOffsettAddressing(
+    Loop *L, SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+  SmallVector<PHINode *, 8> LoopPhis(
+      llvm::make_pointer_range(L->getHeader()->phis()));
+  bool Changed = false;
+
+  auto IsPtrToOffsetAddressingCandidate = [&](PHINode *PHI) -> bool {
+    if (PHI->user_empty())
+      return false;
+
+    if (PHI->hasConstantValue())
+      return false;
+
+    // TODO: is this necessary.
+    if (L->getCanonicalInductionVariable() == PHI)
+      return false;
+
+    // We are only concerned with simple PHI nodes
+    // with two incoming values.
+    if (PHI->getNumIncomingValues() != 2)
+      return false;
+
+    return true;
+  };
+
+  auto NonInvariantPHIOp = [&](Value *Op0, Value *Op1) -> Value * {
+    // One of the two incoming values must be loop invariant
+    // but not both
+    if (!(L->isLoopInvariant(Op0) != L->isLoopInvariant(Op1)))
+      return nullptr;
+
+    return (L->isLoopInvariant(Op0)) ? Op1 : Op0;
+  };
+
+  auto IsConstantIncrement = [&](GetElementPtrInst *GEP) -> bool {
+    if (GEP->getNumIndices() != 1)
+      return false;
+
+    if (GEP->hasAllConstantIndices())
+      return true;
+
+    for (Value *V : GEP->indices())
+      if (!L->isLoopInvariant(V))
+        return false;
+
+    return true;
+  };
+
+  auto AdjustWidth = [&](Value *V, IRBuilder<> &IR,
+                         unsigned TargetWidth, bool IsSigned) -> Value * {
+    if (V->getType()->getIntegerBitWidth() == TargetWidth)
+      return V;
+    if (IsSigned)
+      return IR.CreateSExt(V, IntegerType::get(V->getContext(), TargetWidth));
+    return IR.CreateZExt(V, IntegerType::get(V->getContext(), TargetWidth));
+  };
+
+  IRBuilder<> Builder(L->getHeader()->getFirstNonPHI());
+  for (auto *PHI : LoopPhis) {
+    if (!IsPtrToOffsetAddressingCandidate(PHI))
+      continue;
+
+    Value *CanonicalIV = L->getCanonicalInductionVariable();
+    if (!CanonicalIV)
+      continue;
+    if (!L->getLatchCmpInst())
+      return false;
+
+    Value *Op0 = PHI->getIncomingValue(0);
+    Value *Op1 = PHI->getIncomingValue(1);
+    Value *LoopDependentIncomingVal = NonInvariantPHIOp(Op0, Op1);
+    if (!LoopDependentIncomingVal)
+      continue;
+
+    if (auto *LoopStrideGEPInst =
+            dyn_cast<GetElementPtrInst>(LoopDependentIncomingVal)) {
+      Value *InvariantIncomingVal =
+          (Op0 == LoopDependentIncomingVal) ? Op1 : Op0;
+      if (!dyn_cast<GetElementPtrInst>(InvariantIncomingVal))
+        continue;
+
+      if (!IsConstantIncrement(LoopStrideGEPInst))
+        continue;
+
+      // Replace PHI with offset addressing GEP
+      Value *Stride = LoopStrideGEPInst->getOperand(1);
+      bool IsSigned = L->getLatchCmpInst()->isSigned();
+      unsigned MaxWidth = std::max(CanonicalIV->getType()->getIntegerBitWidth(),
+                                   Stride->getType()->getIntegerBitWidth());
+
+      CanonicalIV = AdjustWidth(CanonicalIV, Builder, MaxWidth, IsSigned);
+      Stride = AdjustWidth(Stride, Builder, MaxWidth, IsSigned);
+
+      Value *Mul = Builder.CreateMul(CanonicalIV, Stride);
+      Value *NewGEP =
+          Builder.CreateInBoundsGEP(LoopStrideGEPInst->getResultElementType(),
+                                    InvariantIncomingVal, ArrayRef(Mul));
+      PHI->replaceAllUsesWith(NewGEP);
+      DeadInsts.emplace_back(PHI);
+      Changed |= true;
+    }
+  }
+  return Changed;
+}
+
 //===----------------------------------------------------------------------===//
 //  IndVarSimplify driver. Manage several subpasses of IV simplification.
 //===----------------------------------------------------------------------===//
@@ -2115,6 +2223,9 @@ bool IndVarSimplify::run(Loop *L) {
     // Given we've changed exit counts, notify SCEV
     SE->forgetLoop(L);
   }
+
+  // Try to rewrite ptr increments with ptr offset addressing
+  Changed |= rewritePtrIncrementWithOffsettAddressing(L, DeadInsts);
 
   // If we have a trip count expression, rewrite the loop's exit condition
   // using it.
