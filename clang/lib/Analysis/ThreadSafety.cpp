@@ -43,6 +43,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/raw_ostream.h"
@@ -2820,6 +2821,12 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
           const auto *DD = AD.getDestructorDecl(AC.getASTContext());
+          // Ignore dtor for parameters as the corresponding constructor does
+          // not happen in the callee context but in the caller context. It is
+          // not possible to know which constuctor was used for its construction
+          // so avoid reading the destructor as well.
+          if (isa_and_nonnull<ParmVarDecl>(AD.getVarDecl()))
+            break;
           if (!DD || !DD->hasAttrs())
             break;
 
