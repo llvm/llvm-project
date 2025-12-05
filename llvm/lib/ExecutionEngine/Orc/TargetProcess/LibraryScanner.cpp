@@ -65,15 +65,14 @@ static std::string getHostFileFormatName() {
 }
 
 bool ObjectFileLoader::isArchitectureCompatible(const object::ObjectFile &Obj) {
-  return  Obj.getFileFormatName() == getHostFileFormatName();
+  return Obj.getFileFormatName() == getHostFileFormatName();
 }
 
 Expected<object::OwningBinary<object::ObjectFile>>
 ObjectFileLoader::loadObjectFileWithOwnership(StringRef FilePath) {
   LLVM_DEBUG(dbgs() << "ObjectFileLoader: Attempting to open file " << FilePath
                     << "\n";);
-  if (auto ObjOrErr =
-          object::ObjectFile::createObjectFile(FilePath)) {
+  if (auto ObjOrErr = object::ObjectFile::createObjectFile(FilePath)) {
 
     LLVM_DEBUG(dbgs() << "ObjectFileLoader: Detected object file\n";);
 
@@ -157,8 +156,8 @@ ObjectFileLoader::loadObjectFileWithOwnership(StringRef FilePath) {
   }
 
   return createStringError(inconvertibleErrorCode(),
-                          "Not a compatible object file : %s",
-                          FilePath.str().c_str());
+                           "Not a compatible object file : %s",
+                           FilePath.str().c_str());
 }
 
 template <class ELFT>

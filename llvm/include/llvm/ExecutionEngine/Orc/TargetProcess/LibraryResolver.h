@@ -24,6 +24,7 @@
 
 namespace llvm {
 namespace orc {
+
 class LibraryManager;
 
 enum class LibState : uint8_t { Unloaded = 0, Loaded = 1, Queried = 2 };

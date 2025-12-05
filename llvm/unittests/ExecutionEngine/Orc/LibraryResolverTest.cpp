@@ -715,7 +715,7 @@ TEST_F(LibraryResolverIT, ResolveViaLoaderPathAndRPathSubstitution) {
 #if defined(__linux__)
 TEST_F(LibraryResolverIT, ResolveViaOriginAndRPathSubstitution) {
   auto LibPathCache = std::make_shared<LibraryPathCache>();
-  auto PResolver = std::make_shared<PathResolver>(LibPathCach);
+  auto PResolver = std::make_shared<PathResolver>(LibPathCache);
 
   DylibPathValidator validator(*PResolver, *LibPathCache);
 
