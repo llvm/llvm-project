@@ -150,11 +150,21 @@ public:
 
   bool hasOneUse() const { return getNumUsers() == 1; }
 
+  /// Returns true if the value has exactly one unique user, ignoring multiple
+  /// uses by the same user.
+  bool hasOneUser() const {
+    if (getNumUsers() == 0)
+      return false;
+    if (hasOneUse())
+      return true;
+    return std::equal(std::next(user_begin()), user_end(), user_begin());
+  }
+
   /// Return the single user of this value, or nullptr if there is not exactly
   /// one user.
-  VPUser *getSingleUser() { return hasOneUse() ? *user_begin() : nullptr; }
+  VPUser *getSingleUser() { return hasOneUser() ? *user_begin() : nullptr; }
   const VPUser *getSingleUser() const {
-    return hasOneUse() ? *user_begin() : nullptr;
+    return hasOneUser() ? *user_begin() : nullptr;
   }
 
   void replaceAllUsesWith(VPValue *New);
