@@ -420,8 +420,8 @@ std::optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
 // by an exit condition. Returns the number of iterations to peel off (at the
 // moment either 0 or 1).
 static unsigned peelToTurnInvariantLoadsDereferenceable(Loop &L,
-                                                      DominatorTree &DT,
-                                                      AssumptionCache *AC) {
+                                                        DominatorTree &DT,
+                                                        AssumptionCache *AC) {
   // Skip loops with a single exiting block, because there should be no benefit
   // for the heuristic below.
   if (L.getExitingBlock())
