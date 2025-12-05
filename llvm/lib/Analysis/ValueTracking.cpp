@@ -10824,7 +10824,7 @@ void ConstantComparesGatherer::gather(Value *V) {
 
 Value *ConstantComparesGatherer::createBitMapSeq(ConstantInt *BitMap,
                                                  Value *Index,
-                                                 IRBuilder<> &Builder,
+                                                 IRBuilderBase *Builder,
                                                  IntegerType *BitMapElementTy) {
   // Type of the bitmap (e.g. i59).
   IntegerType *MapTy = BitMap->getIntegerType();
@@ -10832,17 +10832,18 @@ Value *ConstantComparesGatherer::createBitMapSeq(ConstantInt *BitMap,
   // Cast Index to the same type as the bitmap.
   // Note: The Index is <= the number of elements in the table, so
   // truncating it to the width of the bitmask is safe.
-  Value *ShiftAmt = Builder.CreateZExtOrTrunc(Index, MapTy, "switch.cast");
+  Value *ShiftAmt = Builder->CreateZExtOrTrunc(Index, MapTy, "switch.cast");
 
   // Multiply the shift amount by the element width. NUW/NSW can always be
   // set, because wouldFitInRegister guarantees Index * ShiftAmt is in
   // BitMap's bit width.
-  ShiftAmt = Builder.CreateMul(
+  ShiftAmt = Builder->CreateMul(
       ShiftAmt, ConstantInt::get(MapTy, BitMapElementTy->getBitWidth()),
       "switch.shiftamt", /*HasNUW =*/true, /*HasNSW =*/true);
 
   // Shift down.
-  Value *DownShifted = Builder.CreateLShr(BitMap, ShiftAmt, "switch.downshift");
+  Value *DownShifted =
+      Builder->CreateLShr(BitMap, ShiftAmt, "switch.downshift");
   // Mask off.
-  return Builder.CreateTrunc(DownShifted, BitMapElementTy, "switch.masked");
+  return Builder->CreateTrunc(DownShifted, BitMapElementTy, "switch.masked");
 }
