@@ -25,10 +25,10 @@ There are two lld options related to setting the linker script,
 
 ::
 
-  # This sets `--script=<file>` option under the hood.
+  # `-T` is the alias for `--script` option.
   lld -T linker_script.lds
 
-  # This sets `--default-script=<file>` option under the hood.
+  # `-dT` is the alias for `--default-script` option.
   lld -dT linker_script.lds
 
 When both options are given, `--script=<file>` takes precedence.
