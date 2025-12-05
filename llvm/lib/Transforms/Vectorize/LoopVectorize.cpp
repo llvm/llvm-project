@@ -8339,10 +8339,13 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                                 *Plan))
     return nullptr;
 
+  // Create partial reduction recipes for scaled reductions and transform
+  // recipes to abstract recipes if it is legal and beneficial and clamp the
+  // range for better cost estimation.
+  // TODO: Enable following transform when the EVL-version of extended-reduction
+  // and mulacc-reduction are implemented.
   if (!CM.foldTailWithEVL()) {
-    // Create partial reduction recipes for scaled reductions.
     VPlanTransforms::createPartialReductions(*Plan, Range, &TTI, CM.CostKind);
-
     VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind,
                           CM.PSE, OrigLoop);
     VPlanTransforms::runPass(VPlanTransforms::convertToAbstractRecipes, *Plan,
