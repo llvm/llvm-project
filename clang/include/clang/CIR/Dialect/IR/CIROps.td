@@ -5197,7 +5197,7 @@ def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"cir::TryOp">]> {
     Example:
 
     ```mlir
-    %exception = cir.catch_param -> !cir.ptr<!void>
+    %exception = cir.catch_param : !cir.ptr<!void>
     ```
   }];
 
