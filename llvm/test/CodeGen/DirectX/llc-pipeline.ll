@@ -5,6 +5,7 @@
 
 ; CHECK-LABEL: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
+; CHECK-NEXT: Runtime Library Function Analysis
 ; CHECK-NEXT: DXIL Resource Type Analysis
 ; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: Assumption Cache Tracker

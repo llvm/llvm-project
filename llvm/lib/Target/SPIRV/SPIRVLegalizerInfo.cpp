@@ -127,7 +127,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   auto allIntScalars = {s8, s16, s32, s64};
 
-  auto allFloatScalars = {s16, s32, s64};
+  auto allFloatScalarsAndF16Vector2AndVector4s = {s16, s32, s64, v2s16, v4s16};
 
   auto allFloatScalarsAndVectors = {
       s16,   s32,   s64,   v2s16, v2s32, v2s64, v3s16,  v3s32,  v3s64,
@@ -351,7 +351,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(
       {G_ATOMICRMW_FADD, G_ATOMICRMW_FSUB, G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
-      .legalForCartesianProduct(allFloatScalars, allPtrs);
+      .legalForCartesianProduct(allFloatScalarsAndF16Vector2AndVector4s,
+                                allPtrs);
 
   getActionDefinitionsBuilder(G_ATOMICRMW_XCHG)
       .legalForCartesianProduct(allFloatAndIntScalarsAndPtrs, allPtrs);

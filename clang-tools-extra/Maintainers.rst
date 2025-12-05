@@ -33,6 +33,9 @@ clang-tidy
 | Piotr Zegar
 | me@piotrzegar.pl (email), PiotrZSL (GitHub), PiotrZSL (Discourse), PiotrZSL (Discord)
 
+| Victor Baranov
+| bar.victor.2002@gmail.com (email), vbvictor (GitHub), vbvictor (Discourse), vbvictor  (Discord)
+
 
 clang-query
 -----------

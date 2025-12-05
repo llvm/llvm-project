@@ -9,6 +9,7 @@
 #include "DAPLog.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
 #include <mutex>
@@ -21,9 +22,9 @@ void Log::Emit(StringRef message) { Emit(message, "", 0); }
 
 void Log::Emit(StringRef message, StringRef file, size_t line) {
   std::lock_guard<Log::Mutex> lock(m_mutex);
-  std::chrono::duration<double> now{
-      std::chrono::system_clock::now().time_since_epoch()};
-  m_stream << formatv("{0:f9}", now.count()) << " ";
+  std::lock_guard<std::mutex> lock(m_mutex);
+  const llvm::sys::TimePoint<> time = std::chrono::system_clock::now();
+  m_stream << formatv("[{0:%H:%M:%S.%L}]", time) << " ";
   if (!file.empty())
     m_stream << sys::path::filename(file) << ":" << line << " ";
   if (!m_prefix.empty())
