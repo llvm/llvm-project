@@ -1361,6 +1361,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         }
         break; // No other 'expermental.vector.reduce.*'.
       }
+
+      if (Name.consume_front("splice"))
+        return true;
       break; // No other 'experimental.vector.*'.
     }
     if (Name.consume_front("experimental.stepvector.")) {
@@ -4716,7 +4719,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     bool IsARM = Name.consume_front("arm.");
     bool IsAMDGCN = Name.consume_front("amdgcn.");
     bool IsDbg = Name.consume_front("dbg.");
-    bool IsOldSplice = Name.consume_front("vector.splice") &&
+    bool IsOldSplice = (Name.consume_front("experimental.vector.splice") ||
+                        Name.consume_front("vector.splice")) &&
                        !(Name.starts_with(".down") || Name.starts_with(".up"));
     Value *Rep = nullptr;
 
