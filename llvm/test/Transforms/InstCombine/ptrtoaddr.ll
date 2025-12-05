@@ -206,7 +206,7 @@ define ptr @gep_sub_ptrtoaddr_different_obj(ptr %p, ptr %p2, ptr %p3) {
   ret ptr %gep
 }
 
-; The use in ptrtoaddr should be replaced. The uses in ptrtoint and icmp should
+; The use in ptrtoaddr and icmp should be replaced. The use in ptrtoint should
 ; not be replaced, as the non-address bits differ. The use in the return value
 ; should not be replaced as the provenace differs.
 define ptr addrspace(1) @gep_sub_ptrtoaddr_different_obj_addrsize(ptr addrspace(1) %p, ptr addrspace(1) %p2, ptr addrspace(1) %p3) {
@@ -216,7 +216,7 @@ define ptr addrspace(1) @gep_sub_ptrtoaddr_different_obj_addrsize(ptr addrspace(
 ; CHECK-NEXT:    [[P2_ADDR:%.*]] = ptrtoaddr ptr addrspace(1) [[P2]] to i32
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[P2_ADDR]], [[P_ADDR]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(1) [[P]], i32 [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(1) [[GEP]], [[P3]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(1) [[P2]], [[P3]]
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[GEP]] to i64
 ; CHECK-NEXT:    [[INT:%.*]] = trunc i64 [[TMP1]] to i32
