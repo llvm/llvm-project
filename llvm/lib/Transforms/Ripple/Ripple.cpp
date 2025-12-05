@@ -647,7 +647,7 @@ void TensorShapeAny<SizeTy>::printAsSignature(raw_ostream &O,
   // Print the type
   if (ScalarType->isBFloatTy())
     O << "bf16";
-  if (ScalarType->isHalfTy())
+  else if (ScalarType->isHalfTy())
     O << "f16";
   else if (ScalarType->isFloatTy())
     O << "f32";
@@ -10258,6 +10258,11 @@ ExternalRippleFunction::tryMatchFirstArgWithBlockShape(const Ripple &Ripple,
         Ripple.getBlockShapeIntrinsic(CI->getArgOperandUse(*FirstNonSret));
   }
   return BlockShapeAsFirstArg;
+}
+
+// Explicit class instantiation
+namespace llvm {
+template class TensorShapeAny<size_t>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

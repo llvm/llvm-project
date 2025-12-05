@@ -18,6 +18,7 @@ add_llvm_component_library(LLVMRippleBase
   CodeGen
   Support
   TransformUtils
+  SelectionDAG
 )
 
 add_subdirectory(Preprocess)
