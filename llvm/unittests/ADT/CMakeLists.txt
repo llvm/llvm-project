@@ -19,6 +19,8 @@ add_llvm_unittest(ADTTests
   CoalescingBitVectorTest.cpp
   CombinationGeneratorTest.cpp
   ConcurrentHashtableTest.cpp
+  CondGroupTest.cpp
+  ConstexprUtilsTest.cpp
   CountCopyAndMove.cpp
   DAGDeltaAlgorithmTest.cpp
   DeltaAlgorithmTest.cpp
@@ -55,6 +57,7 @@ add_llvm_unittest(ADTTests
   LazyAtomicPointerTest.cpp
   MappedIteratorTest.cpp
   MapVectorTest.cpp
+  MetaSetTest.cpp
   PackedVectorTest.cpp
   PagedVectorTest.cpp
   PointerEmbeddedIntTest.cpp
