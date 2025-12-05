@@ -285,7 +285,7 @@ public:
     SmallVector<CanQualType, 5> Params;
     Params.push_back(Ctx.VoidPtrTy);
     Params.push_back(Ctx.VoidPtrTy);
-    Params.push_back(Ctx.getSizeType());
+    Params.push_back(Ctx.getCanonicalSizeType());
     Params.push_back(Ctx.BoolTy);
     Params.push_back(Ctx.BoolTy);
     llvm::FunctionType *FTy = Types.GetFunctionType(
@@ -338,7 +338,7 @@ public:
   /// GcReadWeakFn -- LLVM objc_read_weak (id *src) function.
   llvm::FunctionCallee getGcReadWeakFn() {
     // id objc_read_weak (id *)
-    llvm::Type *args[] = {CGM.UnqualPtrTy};
+    llvm::Type *args[] = {CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_read_weak");
   }
@@ -346,7 +346,7 @@ public:
   /// GcAssignWeakFn -- LLVM objc_assign_weak function.
   llvm::FunctionCallee getGcAssignWeakFn() {
     // id objc_assign_weak (id, id *)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_weak");
   }
@@ -354,7 +354,7 @@ public:
   /// GcAssignGlobalFn -- LLVM objc_assign_global function.
   llvm::FunctionCallee getGcAssignGlobalFn() {
     // id objc_assign_global(id, id *)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_global");
   }
@@ -362,7 +362,7 @@ public:
   /// GcAssignThreadLocalFn -- LLVM objc_assign_threadlocal function.
   llvm::FunctionCallee getGcAssignThreadLocalFn() {
     // id objc_assign_threadlocal(id src, id * dest)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_threadlocal");
   }
@@ -370,7 +370,7 @@ public:
   /// GcAssignIvarFn -- LLVM objc_assign_ivar function.
   llvm::FunctionCallee getGcAssignIvarFn() {
     // id objc_assign_ivar(id, id *, ptrdiff_t)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy, CGM.PtrDiffTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy, CGM.PtrDiffTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_ivar");
   }
@@ -386,7 +386,7 @@ public:
   /// GcAssignStrongCastFn -- LLVM objc_assign_strongCast function.
   llvm::FunctionCallee getGcAssignStrongCastFn() {
     // id objc_assign_strongCast(id, id *)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_strongCast");
   }
@@ -517,7 +517,7 @@ public:
 
   /// ExceptionTryEnterFn - LLVM objc_exception_try_enter function.
   llvm::FunctionCallee getExceptionTryEnterFn() {
-    llvm::Type *params[] = {CGM.UnqualPtrTy};
+    llvm::Type *params[] = {CGM.DefaultPtrTy};
     return CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(CGM.VoidTy, params, false),
         "objc_exception_try_enter");
@@ -525,7 +525,7 @@ public:
 
   /// ExceptionTryExitFn - LLVM objc_exception_try_exit function.
   llvm::FunctionCallee getExceptionTryExitFn() {
-    llvm::Type *params[] = {CGM.UnqualPtrTy};
+    llvm::Type *params[] = {CGM.DefaultPtrTy};
     return CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(CGM.VoidTy, params, false),
         "objc_exception_try_exit");
@@ -533,7 +533,7 @@ public:
 
   /// ExceptionExtractFn - LLVM objc_exception_extract function.
   llvm::FunctionCallee getExceptionExtractFn() {
-    llvm::Type *params[] = {CGM.UnqualPtrTy};
+    llvm::Type *params[] = {CGM.DefaultPtrTy};
     return CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(ObjectPtrTy, params, false),
         "objc_exception_extract");
@@ -550,7 +550,7 @@ public:
   /// SetJmpFn - LLVM _setjmp function.
   llvm::FunctionCallee getSetJmpFn() {
     // This is specifically the prototype for x86.
-    llvm::Type *params[] = {CGM.UnqualPtrTy};
+    llvm::Type *params[] = {CGM.DefaultPtrTy};
     return CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(CGM.Int32Ty, params, false), "_setjmp",
         llvm::AttributeList::get(CGM.getLLVMContext(),
@@ -1927,7 +1927,7 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   // If we don't already have it, construct the type for a constant NSString.
   if (!NSConstantStringType) {
     NSConstantStringType =
-        llvm::StructType::create({CGM.UnqualPtrTy, CGM.Int8PtrTy, CGM.IntTy},
+        llvm::StructType::create({CGM.DefaultPtrTy, CGM.Int8PtrTy, CGM.IntTy},
                                  "struct.__builtin_NSString");
   }
 
@@ -1935,7 +1935,9 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   auto Fields = Builder.beginStruct(NSConstantStringType);
 
   // Class pointer.
-  Fields.add(Class);
+  Fields.addSignedPointer(Class,
+                          CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                          GlobalDecl(), QualType());
 
   // String pointer.
   llvm::Constant *C =
@@ -2313,7 +2315,7 @@ void IvarLayoutBuilder::visitBlock(const CGBlockInfo &blockInfo) {
     }
 
     assert(!type->isArrayType() && "array variable should not be caught");
-    if (const RecordType *record = type->getAs<RecordType>()) {
+    if (const RecordType *record = type->getAsCanonical<RecordType>()) {
       visitRecord(record, fieldOffset);
       continue;
     }
@@ -2407,7 +2409,7 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
       if (FQT->isUnionType())
         HasUnion = true;
 
-      BuildRCBlockVarRecordLayout(FQT->castAs<RecordType>(),
+      BuildRCBlockVarRecordLayout(FQT->castAsCanonical<RecordType>(),
                                   BytePos + FieldOffset, HasUnion);
       continue;
     }
@@ -2424,7 +2426,7 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
       }
       if (FQT->isRecordType() && ElCount) {
         int OldIndex = RunSkipBlockVars.size() - 1;
-        auto *RT = FQT->castAs<RecordType>();
+        auto *RT = FQT->castAsCanonical<RecordType>();
         BuildRCBlockVarRecordLayout(RT, BytePos + FieldOffset, HasUnion);
 
         // Replicate layout information for each array element. Note that
@@ -2493,7 +2495,7 @@ void CGObjCCommonMac::BuildRCBlockVarRecordLayout(const RecordType *RT,
                                                   CharUnits BytePos,
                                                   bool &HasUnion,
                                                   bool ByrefLayout) {
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
   SmallVector<const FieldDecl *, 16> Fields(RD->fields());
   llvm::Type *Ty = CGM.getTypes().ConvertType(QualType(RT, 0));
   const llvm::StructLayout *RecLayout =
@@ -2829,7 +2831,7 @@ void CGObjCCommonMac::fillRunSkipBlockVars(CodeGenModule &CGM,
 
     assert(!type->isArrayType() && "array variable should not be caught");
     if (!CI.isByRef())
-      if (const RecordType *record = type->getAs<RecordType>()) {
+      if (const auto *record = type->getAsCanonical<RecordType>()) {
         BuildRCBlockVarRecordLayout(record, fieldOffset, hasUnion);
         continue;
       }
@@ -2863,7 +2865,7 @@ llvm::Constant *CGObjCCommonMac::BuildByrefLayout(CodeGen::CodeGenModule &CGM,
   CharUnits fieldOffset;
   RunSkipBlockVars.clear();
   bool hasUnion = false;
-  if (const RecordType *record = T->getAs<RecordType>()) {
+  if (const auto *record = T->getAsCanonical<RecordType>()) {
     BuildRCBlockVarRecordLayout(record, fieldOffset, hasUnion,
                                 true /*ByrefLayout */);
     llvm::Constant *Result = getBitmapBlockLayout(true);
@@ -3351,8 +3353,8 @@ static bool hasWeakMember(QualType type) {
     return true;
   }
 
-  if (auto recType = type->getAs<RecordType>()) {
-    for (auto *field : recType->getDecl()->fields()) {
+  if (auto *RD = type->getAsRecordDecl()) {
+    for (auto *field : RD->fields()) {
       if (hasWeakMember(field->getType()))
         return true;
     }
@@ -4975,10 +4977,7 @@ enum ImageInfoFlags {
   eImageInfo_GCOnly              = (1 << 2),
   eImageInfo_OptimizedByDyld     = (1 << 3), // This flag is set by the dyld shared cache.
 
-  // A flag indicating that the module has no instances of a @synthesize of a
-  // superclass variable. This flag used to be consumed by the runtime to work
-  // around miscompile by gcc.
-  eImageInfo_CorrectedSynthesize = (1 << 4), // This flag is no longer set by clang.
+  eImageInfo_SignedClassRO       = (1 << 4), // Reused (was _CorrectedSynthesize)
   eImageInfo_ImageIsSimulated    = (1 << 5),
   eImageInfo_ClassProperties     = (1 << 6)
 };
@@ -5036,6 +5035,17 @@ void CGObjCCommonMac::EmitImageInfo() {
   // Indicate whether we are generating class properties.
   Mod.addModuleFlag(llvm::Module::Error, "Objective-C Class Properties",
                     eImageInfo_ClassProperties);
+
+  // Indicate whether we want enforcement of pointer signing for class_ro_t
+  // pointers.
+  if (CGM.getLangOpts().PointerAuthObjcClassROPointers)
+    Mod.addModuleFlag(llvm::Module::Error,
+                      "Objective-C Enforce ClassRO Pointer Signing",
+                      eImageInfo_SignedClassRO);
+  else
+    Mod.addModuleFlag(llvm::Module::Error,
+                      "Objective-C Enforce ClassRO Pointer Signing",
+                      llvm::ConstantInt::get(Int8Ty, 0));
 }
 
 // struct objc_module {
@@ -5174,7 +5184,7 @@ CGObjCCommonMac::GetIvarLayoutName(IdentifierInfo *Ident,
 }
 
 void IvarLayoutBuilder::visitRecord(const RecordType *RT, CharUnits offset) {
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
 
   // If this is a union, remember that we had one, because it might mess
   // up the ordering of layout entries.
@@ -5236,7 +5246,7 @@ void IvarLayoutBuilder::visitField(const FieldDecl *field,
     return;
 
   // Recurse if the base element type is a record type.
-  if (auto recType = fieldType->getAs<RecordType>()) {
+  if (const auto *recType = fieldType->getAsCanonical<RecordType>()) {
     size_t oldEnd = IvarsInfo.size();
 
     visitRecord(recType, fieldOffset);
@@ -5357,7 +5367,7 @@ IvarLayoutBuilder::buildBitmap(CGObjCCommonMac &CGObjC,
 
     // Ignore scan requests that don't start at an even multiple of the
     // word size.  We can't encode them.
-    if ((beginOfScan % WordSize) != 0)
+    if (!beginOfScan.isMultipleOf(WordSize))
       continue;
 
     // Ignore scan requests that start before the instance start.
@@ -5660,7 +5670,7 @@ ObjCCommonTypesHelper::ObjCCommonTypesHelper(CodeGen::CodeGenModule &cgm)
                                 nullptr, false, ICIS_NoInit));
   RD->completeDefinition();
 
-  SuperCTy = Ctx.getTagDeclType(RD);
+  SuperCTy = Ctx.getCanonicalTagType(RD);
   SuperPtrCTy = Ctx.getPointerType(SuperCTy);
 
   SuperTy = cast<llvm::StructType>(Types.ConvertType(SuperCTy));
@@ -5949,7 +5959,7 @@ ObjCNonFragileABITypesHelper::ObjCNonFragileABITypesHelper(
       Int8PtrTy, PropertyListPtrTy);
 
   // ImpnfABITy - LLVM for id (*)(id, SEL, ...)
-  ImpnfABITy = CGM.UnqualPtrTy;
+  ImpnfABITy = CGM.DefaultPtrTy;
 
   // struct _class_t {
   //   struct _class_t *isa;
@@ -6006,7 +6016,7 @@ ObjCNonFragileABITypesHelper::ObjCNonFragileABITypesHelper(
                                 false, ICIS_NoInit));
   RD->completeDefinition();
 
-  MessageRefCTy = Ctx.getTagDeclType(RD);
+  MessageRefCTy = Ctx.getCanonicalTagType(RD);
   MessageRefCPtrTy = Ctx.getPointerType(MessageRefCTy);
   MessageRefTy = cast<llvm::StructType>(Types.ConvertType(MessageRefCTy));
 
@@ -6223,11 +6233,19 @@ llvm::GlobalVariable *CGObjCNonFragileABIMac::BuildClassRoTInitializer(
         methods.push_back(MD);
   }
 
-  values.add(emitMethodList(ID->getObjCRuntimeNameAsString(),
-                            (flags & NonFragileABI_Class_Meta)
-                                ? MethodListType::ClassMethods
-                                : MethodListType::InstanceMethods,
-                            methods));
+  llvm::Constant *MethListPtr = emitMethodList(
+      ID->getObjCRuntimeNameAsString(),
+      (flags & NonFragileABI_Class_Meta) ? MethodListType::ClassMethods
+                                         : MethodListType::InstanceMethods,
+      methods);
+
+  const PointerAuthSchema &MethListSchema =
+      CGM.getCodeGenOpts().PointerAuth.ObjCMethodListPointer;
+  if (!MethListPtr->isNullValue())
+    values.addSignedPointer(MethListPtr, MethListSchema, GlobalDecl(),
+                            QualType());
+  else
+    values.add(MethListPtr);
 
   const ObjCInterfaceDecl *OID = ID->getClassInterface();
   assert(OID && "CGObjCNonFragileABIMac::BuildClassRoTInitializer");
@@ -6275,15 +6293,20 @@ llvm::GlobalVariable *CGObjCNonFragileABIMac::BuildClassObject(
     bool HiddenVisibility) {
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct(ObjCTypes.ClassnfABITy);
-  values.add(IsAGV);
-  if (SuperClassGV) {
-    values.add(SuperClassGV);
-  } else {
+  const PointerAuthOptions &PointerAuthOpts = CGM.getCodeGenOpts().PointerAuth;
+  values.addSignedPointer(IsAGV, PointerAuthOpts.ObjCIsaPointers, GlobalDecl(),
+                          QualType());
+  if (SuperClassGV)
+    values.addSignedPointer(SuperClassGV, PointerAuthOpts.ObjCSuperPointers,
+                            GlobalDecl(), QualType());
+  else
     values.addNullPointer(ObjCTypes.ClassnfABIPtrTy);
-  }
+
   values.add(ObjCEmptyCacheVar);
   values.add(ObjCEmptyVtableVar);
-  values.add(ClassRoGV);
+
+  values.addSignedPointer(ClassRoGV, PointerAuthOpts.ObjCClassROPointers,
+                          GlobalDecl(), QualType());
 
   llvm::GlobalVariable *GV = cast<llvm::GlobalVariable>(
       GetClassGlobal(CI, isMetaclass, ForDefinition));
@@ -6357,7 +6380,7 @@ void CGObjCNonFragileABIMac::GenerateClass(const ObjCImplementationDecl *ID) {
           CGM.getModule(), ObjCTypes.ImpnfABITy, false,
           llvm::GlobalValue::ExternalLinkage, nullptr, "_objc_empty_vtable");
     else
-      ObjCEmptyVtableVar = llvm::ConstantPointerNull::get(CGM.UnqualPtrTy);
+      ObjCEmptyVtableVar = llvm::ConstantPointerNull::get(CGM.DefaultPtrTy);
   }
 
   // FIXME: Is this correct (that meta class size is never computed)?
@@ -6543,15 +6566,27 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
     }
   }
 
-  auto instanceMethodList = emitMethodList(
+  llvm::Constant *InstanceMethodList = emitMethodList(
       listName, MethodListType::CategoryInstanceMethods, instanceMethods);
-  auto classMethodList = emitMethodList(
+  const PointerAuthSchema &MethListSchema =
+      CGM.getCodeGenOpts().PointerAuth.ObjCMethodListPointer;
+  if (!InstanceMethodList->isNullValue())
+    values.addSignedPointer(InstanceMethodList, MethListSchema, GlobalDecl(),
+                            QualType());
+  else
+    values.add(InstanceMethodList);
+
+  llvm::Constant *ClassMethodList = emitMethodList(
       listName, MethodListType::CategoryClassMethods, classMethods);
-  values.add(instanceMethodList);
-  values.add(classMethodList);
+  if (!ClassMethodList->isNullValue())
+    values.addSignedPointer(ClassMethodList, MethListSchema, GlobalDecl(),
+                            QualType());
+  else
+    values.add(ClassMethodList);
+
   // Keep track of whether we have actual metadata to emit.
   bool isEmptyCategory =
-      instanceMethodList->isNullValue() && classMethodList->isNullValue();
+      InstanceMethodList->isNullValue() && ClassMethodList->isNullValue();
 
   const ObjCCategoryDecl *Category =
       Interface->FindCategoryDeclaration(OCD->getIdentifier());
@@ -6629,7 +6664,13 @@ void CGObjCNonFragileABIMac::emitMethodConstant(ConstantArrayBuilder &builder,
   } else {
     llvm::Function *fn = GetMethodDefinition(MD);
     assert(fn && "no definition for method?");
-    method.add(fn);
+    if (const PointerAuthSchema &Schema =
+            CGM.getCodeGenOpts().PointerAuth.ObjCMethodListFunctionPointers) {
+      llvm::Constant *Bitcast =
+          llvm::ConstantExpr::getBitCast(fn, ObjCTypes.Int8PtrProgramASTy);
+      method.addSignedPointer(Bitcast, Schema, GlobalDecl(), QualType());
+    } else
+      method.add(fn);
   }
 
   method.finishAndAddTo(builder);
@@ -7672,10 +7713,15 @@ CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
   }
 
   llvm::Value *VTableIdx = llvm::ConstantInt::get(CGM.Int32Ty, 2);
+  llvm::Constant *VTablePtr = llvm::ConstantExpr::getInBoundsGetElementPtr(
+      VTableGV->getValueType(), VTableGV, VTableIdx);
+
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct(ObjCTypes.EHTypeTy);
-  values.add(llvm::ConstantExpr::getInBoundsGetElementPtr(
-      VTableGV->getValueType(), VTableGV, VTableIdx));
+  const PointerAuthSchema &TypeInfoSchema =
+      CGM.getCodeGenOpts().PointerAuth.CXXTypeInfoVTablePointer;
+  values.addSignedPointer(VTablePtr, TypeInfoSchema, GlobalDecl(), QualType());
+
   values.add(GetClassName(ClassName));
   values.add(GetClassGlobal(ID, /*metaclass*/ false, NotForDefinition));
 

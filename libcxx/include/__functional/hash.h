@@ -21,6 +21,7 @@
 #include <__type_traits/is_enum.h>
 #include <__type_traits/is_floating_point.h>
 #include <__type_traits/is_integral.h>
+#include <__type_traits/is_unqualified.h>
 #include <__type_traits/underlying_type.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
@@ -355,7 +356,8 @@ struct __hash_impl {
 };
 
 template <class _Tp>
-struct __hash_impl<_Tp, __enable_if_t<is_enum<_Tp>::value> > : __unary_function<_Tp, size_t> {
+struct __hash_impl<_Tp, __enable_if_t<is_enum<_Tp>::value && __is_unqualified_v<_Tp> > >
+    : __unary_function<_Tp, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT {
     using type = __underlying_type_t<_Tp>;
     return hash<type>()(static_cast<type>(__v));
@@ -363,17 +365,21 @@ struct __hash_impl<_Tp, __enable_if_t<is_enum<_Tp>::value> > : __unary_function<
 };
 
 template <class _Tp>
-struct __hash_impl<_Tp, __enable_if_t<is_integral<_Tp>::value && (sizeof(_Tp) <= sizeof(size_t))> >
+struct __hash_impl<
+    _Tp,
+    __enable_if_t<is_integral<_Tp>::value && __is_unqualified_v<_Tp> && (sizeof(_Tp) <= sizeof(size_t))> >
     : __unary_function<_Tp, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
 };
 
 template <class _Tp>
-struct __hash_impl<_Tp, __enable_if_t<is_integral<_Tp>::value && (sizeof(_Tp) > sizeof(size_t))> >
+struct __hash_impl<_Tp,
+                   __enable_if_t<is_integral<_Tp>::value && __is_unqualified_v<_Tp> && (sizeof(_Tp) > sizeof(size_t))> >
     : __scalar_hash<_Tp> {};
 
 template <class _Tp>
-struct __hash_impl<_Tp, __enable_if_t<is_floating_point<_Tp>::value> > : __scalar_hash<_Tp> {
+struct __hash_impl<_Tp, __enable_if_t<is_floating_point<_Tp>::value && __is_unqualified_v<_Tp> > >
+    : __scalar_hash<_Tp> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT {
     // -0.0 and 0.0 should return same hash
     if (__v == 0.0f)
@@ -427,13 +433,10 @@ struct __hash_impl<long double> : __scalar_hash<long double> {
 template <class _Tp>
 struct hash : public __hash_impl<_Tp> {};
 
-#if _LIBCPP_STD_VER >= 17
-
 template <>
 struct hash<nullptr_t> : public __unary_function<nullptr_t, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(nullptr_t) const _NOEXCEPT { return 662607004ull; }
 };
-#endif
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Key, class _Hash>
@@ -446,18 +449,12 @@ template <class _Key, class _Hash = hash<_Key> >
 using __has_enabled_hash _LIBCPP_NODEBUG =
     integral_constant<bool, __check_hash_requirements<_Key, _Hash>::value && is_default_constructible<_Hash>::value >;
 
-#  if _LIBCPP_STD_VER >= 17
 template <class _Type, class>
 using __enable_hash_helper_imp _LIBCPP_NODEBUG = _Type;
 
 template <class _Type, class... _Keys>
 using __enable_hash_helper _LIBCPP_NODEBUG =
     __enable_hash_helper_imp<_Type, __enable_if_t<__all<__has_enabled_hash<_Keys>::value...>::value> >;
-#  else
-template <class _Type, class...>
-using __enable_hash_helper _LIBCPP_NODEBUG = _Type;
-#  endif
-
 #endif // !_LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_STD

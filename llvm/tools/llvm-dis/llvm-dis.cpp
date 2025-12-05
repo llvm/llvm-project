@@ -80,11 +80,6 @@ static cl::opt<bool>
                     cl::desc("Add informational comments to the .ll file"),
                     cl::cat(DisCategory));
 
-static cl::opt<bool> PreserveAssemblyUseListOrder(
-    "preserve-ll-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden, cl::cat(DisCategory));
-
 static cl::opt<bool>
     MaterializeMetadata("materialize-metadata",
                         cl::desc("Load module without materializing metadata, "
@@ -106,13 +101,26 @@ static void printDebugLoc(const DebugLoc &DL, formatted_raw_ostream &OS) {
   }
 }
 class CommentWriter : public AssemblyAnnotationWriter {
+private:
+  bool canSafelyAccessUses(const Value &V) {
+    // Can't safely access uses, if module not materialized.
+    const GlobalValue *GV = dyn_cast<GlobalValue>(&V);
+    return !GV || (GV->getParent() && GV->getParent()->isMaterialized());
+  }
+
 public:
   void emitFunctionAnnot(const Function *F,
                          formatted_raw_ostream &OS) override {
+    if (!canSafelyAccessUses(*F))
+      return;
+
     OS << "; [#uses=" << F->getNumUses() << ']';  // Output # uses
     OS << '\n';
   }
   void printInfoComment(const Value &V, formatted_raw_ostream &OS) override {
+    if (!canSafelyAccessUses(V))
+      return;
+
     bool Padded = false;
     if (!V.getType()->isVoidTy()) {
       OS.PadToColumn(50);
@@ -130,20 +138,6 @@ public:
         OS << " [debug line = ";
         printDebugLoc(DL,OS);
         OS << "]";
-      }
-      if (const DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(I)) {
-        if (!Padded) {
-          OS.PadToColumn(50);
-          OS << ";";
-        }
-        OS << " [debug variable = " << DDI->getVariable()->getName() << "]";
-      }
-      else if (const DbgValueInst *DVI = dyn_cast<DbgValueInst>(I)) {
-        if (!Padded) {
-          OS.PadToColumn(50);
-          OS << ";";
-        }
-        OS << " [debug variable = " << DVI->getVariable()->getName() << "]";
       }
     }
   }
@@ -269,7 +263,8 @@ int main(int argc, char **argv) {
       if (!DontPrint) {
         if (M) {
           M->removeDebugIntrinsicDeclarations();
-          M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
+          M->print(Out->os(), Annotator.get(),
+                   /* ShouldPreserveUseListOrder */ false);
         }
         if (Index)
           Index->print(Out->os());

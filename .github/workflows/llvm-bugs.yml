@@ -14,13 +14,13 @@ jobs:
     runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     steps:
-      - uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
-          node-version: 18
+          node-version: 24
           check-latest: true
       - run: npm install mailgun.js form-data
       - name: Send notification
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         env:
           MAILGUN_API_KEY: ${{ secrets.LLVM_BUGS_KEY }}
         with:
@@ -39,6 +39,12 @@ jobs:
               repo: context.repo.repo
             })
             .then((issue) => {
+              var maybeTruncatedBody = issue.data.body;
+              if (maybeTruncatedBody.length > 15000) {
+                maybeTruncatedBody = maybeTruncatedBody.substring(0,
+                    15000) +
+                  "<truncated>Please see the issue for the entire body."
+              }
               const payload = {
                 author : issue.data.user.login,
                 issue  : issue.data.number,
@@ -46,7 +52,7 @@ jobs:
                 url    : issue.data.html_url,
                 labels : issue.data.labels.map((label) => label.name),
                 assignee : issue.data.assignees.map((assignee) => assignee.login),
-                body   : issue.data.body
+                body   : maybeTruncatedBody
               };
 
               const data = {

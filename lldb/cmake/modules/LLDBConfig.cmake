@@ -173,10 +173,54 @@ if (LLDB_ENABLE_PYTHON)
     ${default_embed_python_home})
 
   include_directories(${Python3_INCLUDE_DIRS})
+
   if (LLDB_EMBED_PYTHON_HOME)
     get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)
     set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
+  endif()
+
+  # Enable targeting the Python Limited C API.
+  set(PYTHON_LIMITED_API_MIN_SWIG_VERSION "4.2")
+  if (SWIG_VERSION VERSION_EQUAL "4.4.0" AND Python3_VERSION VERSION_GREATER_EQUAL "3.13")
+    set(AFFECTED_BY_SWIG_BUG TRUE)
+  else()
+    set(AFFECTED_BY_SWIG_BUG FALSE)
+  endif()
+
+  if (SWIG_VERSION VERSION_GREATER_EQUAL PYTHON_LIMITED_API_MIN_SWIG_VERSION
+      AND NOT LLDB_EMBED_PYTHON_HOME AND NOT AFFECTED_BY_SWIG_BUG)
+    set(default_enable_python_limited_api ON)
+  else()
+    set(default_enable_python_limited_api OFF)
+  endif()
+
+  option(LLDB_ENABLE_PYTHON_LIMITED_API "Force LLDB to only use the Python Limited API (requires SWIG 4.2 or later)"
+    ${default_enable_python_limited_api})
+
+  # Diagnose unsupported configurations.
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND AFFECTED_BY_SWIG_BUG)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with SWIG 4.4.0 and Python >= 3.13 due to a bug in SWIG: https://github.com/swig/swig/issues/3283")
+  endif()
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND LLDB_EMBED_PYTHON_HOME)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with LLDB_EMBED_PYTHON_HOME")
+  endif()
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND SWIG_VERSION VERSION_LESS PYTHON_LIMITED_API_MIN_SWIG_VERSION)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with SWIG ${SWIG_VERSION} (requires SWIG ${PYTHON_LIMITED_API_MIN_SWIG_VERSION})")
+  endif()
+
+else()
+  # Even if Python scripting is disabled, we still need a Python interpreter to
+  # build, for example to generate SBLanguages.h.
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+  # Remove lldb-python-scripts from distribution components.
+  # LLVM_DISTRIBUTION_COMPONENTS is set in a cache where LLDB_ENABLE_PYTHON does
+  # not yet have a value. We have to touch up LLVM_DISTRIBUTION_COMPONENTS after
+  # the fact.
+  if(LLVM_DISTRIBUTION_COMPONENTS)
+    list(REMOVE_ITEM LLVM_DISTRIBUTION_COMPONENTS lldb-python-scripts)
+    set(LLVM_DISTRIBUTION_COMPONENTS ${LLVM_DISTRIBUTION_COMPONENTS} CACHE STRING "" FORCE)
   endif()
 endif()
 
@@ -321,6 +365,32 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     set(LLDB_CAN_USE_DEBUGSERVER ON)
 else()
     set(LLDB_CAN_USE_DEBUGSERVER OFF)
+endif()
+
+# In a cross-compile build, we need to skip building the generated
+# lldb-rpc sources in the first phase of host build so that they can
+# get built using the just-built Clang toolchain in the second phase.
+if (NOT DEFINED LLDB_CAN_USE_LLDB_RPC_SERVER)
+  set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
+else()
+  if ((CMAKE_CROSSCOMPILING OR LLVM_HOST_TRIPLE MATCHES "${LLVM_DEFAULT_TARGET_TRIPLE}") AND
+      CMAKE_SYSTEM_NAME MATCHES "AIX|Android|Darwin|FreeBSD|Linux|NetBSD|OpenBSD|Windows")
+    set(LLDB_CAN_USE_LLDB_RPC_SERVER ON)
+  else()
+    set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
+  endif()
+endif()
+
+
+if (NOT DEFINED LLDB_BUILD_LLDBRPC)
+  set(LLDB_BUILD_LLDBRPC OFF)
+else()
+  if (CMAKE_CROSSCOMPILING)
+    set(LLDB_BUILD_LLDBRPC OFF CACHE BOOL "")
+    get_host_tool_path(lldb-rpc-gen LLDB_RPC_GEN_EXE lldb_rpc_gen_exe lldb_rpc_gen_target)
+  else()
+    set(LLDB_BUILD_LLDBRPC ON CACHE BOOL "")
+  endif()
 endif()
 
 include(LLDBGenerateConfig)

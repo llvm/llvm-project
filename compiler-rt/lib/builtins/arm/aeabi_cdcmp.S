@@ -128,7 +128,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmple)
         msr APSR_nzcvq, ip
 #if defined(__ARM_FEATURE_PAC_DEFAULT)
         pop {r0-r3, r12, lr}
-        bxaut r12, lr, sp
+        PAC_RETURN
 #else
         pop {r0-r3}
         POP_PC()

@@ -14,7 +14,7 @@
 #include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPCELFStreamer.h"
-#include "PPCMCExpr.h"
+#include "PPCMCAsmInfo.h"
 #include "PPCTargetStreamer.h"
 #include "PPCXCOFFStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
@@ -211,9 +211,9 @@ public:
       : PPCTargetStreamer(S), OS(OS) {}
 
   void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
-    if (const MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(&S)) {
+    if (getContext().isXCOFF()) {
       MCSymbolXCOFF *TCSym =
-          cast<MCSectionXCOFF>(Streamer.getCurrentSectionOnly())
+          static_cast<const MCSectionXCOFF *>(Streamer.getCurrentSectionOnly())
               ->getQualNameSymbol();
       // On AIX, we have TLS variable offsets (symbol@({gd|ie|le|ld}) depending
       // on the TLS access method (or model). For the general-dynamic access
@@ -225,10 +225,10 @@ public:
       if (Kind == PPC::S_AIX_TLSGD || Kind == PPC::S_AIX_TLSGDM ||
           Kind == PPC::S_AIX_TLSIE || Kind == PPC::S_AIX_TLSLE ||
           Kind == PPC::S_AIX_TLSLD || Kind == PPC::S_AIX_TLSML)
-        OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
+        OS << "\t.tc " << TCSym->getName() << "," << S.getName() << "@"
            << getContext().getAsmInfo()->getSpecifierName(Kind) << '\n';
       else
-        OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
+        OS << "\t.tc " << TCSym->getName() << "," << S.getName() << '\n';
 
       if (TCSym->hasRename())
         Streamer.emitXCOFFRenameDirective(TCSym, TCSym->getSymbolTableName());
@@ -308,7 +308,7 @@ public:
   }
 
   void emitAssignment(MCSymbol *S, const MCExpr *Value) override {
-    auto *Symbol = cast<MCSymbolELF>(S);
+    auto *Symbol = static_cast<MCSymbolELF *>(S);
 
     // When encoding an assignment to set symbol A to symbol B, also copy
     // the st_other bits encoding the local entry point offset.
@@ -335,7 +335,7 @@ private:
     auto *Ref = dyn_cast<const MCSymbolRefExpr>(S);
     if (!Ref)
       return false;
-    const auto &RhsSym = cast<MCSymbolELF>(Ref->getSymbol());
+    auto &RhsSym = static_cast<const MCSymbolELF &>(Ref->getSymbol());
     unsigned Other = D->getOther();
     Other &= ~ELF::STO_PPC64_LOCAL_MASK;
     Other |= RhsSym.getOther() & ELF::STO_PPC64_LOCAL_MASK;
@@ -399,10 +399,8 @@ public:
     const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
     const unsigned PointerSize = MAI->getCodePointerSize();
     Streamer.emitValueToAlignment(Align(PointerSize));
-    Streamer.emitValue(
-        MCSymbolRefExpr::create(&S, MCSymbolRefExpr::VariantKind(Kind),
-                                Streamer.getContext()),
-        PointerSize);
+    Streamer.emitValue(MCSymbolRefExpr::create(&S, Kind, Streamer.getContext()),
+                       PointerSize);
   }
 
   void emitMachine(StringRef CPU) override {

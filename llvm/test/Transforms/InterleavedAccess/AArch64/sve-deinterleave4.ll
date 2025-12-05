@@ -49,8 +49,16 @@ define void @wide_deinterleave4(ptr %src) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP7]], <vscale x 4 x i32> [[TMP15]], i64 4)
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN1]], 3
 ; CHECK-NEXT:    [[TMP18:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP9]], <vscale x 4 x i32> [[TMP17]], i64 4)
-; CHECK-NEXT:    [[SUM:%.*]] = add <vscale x 8 x i32> [[TMP12]], [[TMP14]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub <vscale x 8 x i32> [[TMP16]], [[TMP18]]
+; CHECK-NEXT:    [[TMP19:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } poison, <vscale x 8 x i32> [[TMP12]], 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP19]], <vscale x 8 x i32> [[TMP14]], 1
+; CHECK-NEXT:    [[TMP21:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP20]], <vscale x 8 x i32> [[TMP16]], 2
+; CHECK-NEXT:    [[TMP22:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP21]], <vscale x 8 x i32> [[TMP18]], 3
+; CHECK-NEXT:    [[TMP23:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP22]], 0
+; CHECK-NEXT:    [[TMP24:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP22]], 1
+; CHECK-NEXT:    [[TMP25:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP22]], 2
+; CHECK-NEXT:    [[TMP26:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP22]], 3
+; CHECK-NEXT:    [[SUM:%.*]] = add <vscale x 8 x i32> [[TMP23]], [[TMP24]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <vscale x 8 x i32> [[TMP25]], [[TMP26]]
 ; CHECK-NEXT:    ret void
 ;
   %load = load <vscale x 32 x i32>, ptr %src, align 4
@@ -73,8 +81,8 @@ define void @mix_deinterleave4_deinterleave2(ptr %src) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 3
 ; CHECK-NEXT:    [[LDN1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld2.sret.nxv4i32(<vscale x 4 x i1> splat (i1 true), ptr [[SRC]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN1]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN1]], 1
+; CHECK-NEXT:    [[LD2_1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN1]], 0
+; CHECK-NEXT:    [[LD2_2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN1]], 1
 ; CHECK-NEXT:    ret void
 ;
 
@@ -95,12 +103,11 @@ define void @mix_deinterleave4_deinterleave2(ptr %src) {
 define void @negative_deinterleave4_test(ptr %src) {
 ; CHECK-LABEL: define void @negative_deinterleave4_test
 ; CHECK-SAME: (ptr [[SRC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 16 x i32>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[DEINTERLEAVE:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave4.nxv16i32(<vscale x 16 x i32> [[LOAD]])
-; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[DEINTERLEAVE]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[DEINTERLEAVE]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[DEINTERLEAVE]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[DEINTERLEAVE]], 2
+; CHECK-NEXT:    [[LDN:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4.sret.nxv4i32(<vscale x 4 x i1> splat (i1 true), ptr [[SRC]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 2
 ; CHECK-NEXT:    ret void
 ;
   %load = load <vscale x 16 x i32>, ptr %src, align 4

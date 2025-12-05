@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s modernize-pass-by-value %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s modernize-pass-by-value %t -- -- -fno-delayed-template-parsing
 
 namespace {
 // POD types are trivially move constructible.
@@ -92,7 +92,7 @@ struct H {
 using namespace ns_H;
 H::H(const HMovable &M) : M(M) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: pass by value and use std::move
-// CHECK-FIXES: H(HMovable M) : M(std::move(M)) {}
+// CHECK-FIXES: H::H(HMovable M) : M(std::move(M)) {}
 
 // Try messing up with macros.
 #define MOVABLE_PARAM(Name) const Movable & Name
@@ -251,4 +251,63 @@ struct W3 {
   W3(const W1 &, const Movable &M) : M(M) {}
   W3(W1 &&, Movable &&M);
   Movable M;
+};
+
+struct ProtectedMovable {
+  ProtectedMovable() = default;
+  ProtectedMovable(const ProtectedMovable &) {}
+protected:
+  ProtectedMovable(ProtectedMovable &&) {}
+};
+
+struct PrivateMovable {
+  PrivateMovable() = default;
+  PrivateMovable(const PrivateMovable &) {}
+private:
+  PrivateMovable(PrivateMovable &&) {}
+
+  friend struct X5;
+};
+
+struct InheritedProtectedMovable : ProtectedMovable {
+  InheritedProtectedMovable() = default;
+  InheritedProtectedMovable(const InheritedProtectedMovable &) {}
+  InheritedProtectedMovable(InheritedProtectedMovable &&) {}
+};
+
+struct InheritedPrivateMovable : PrivateMovable {
+  InheritedPrivateMovable() = default;
+  InheritedPrivateMovable(const InheritedPrivateMovable &) {}
+  InheritedPrivateMovable(InheritedPrivateMovable &&) {}
+};
+
+struct X1 {
+  X1(const ProtectedMovable &M) : M(M) {}
+  ProtectedMovable M;
+};
+
+struct X2 {
+  X2(const PrivateMovable &M) : M(M) {}
+  PrivateMovable M;
+};
+
+struct X3 {
+  X3(const InheritedProtectedMovable &M) : M(M) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: pass by value and use std::move
+  // CHECK-FIXES: X3(InheritedProtectedMovable M) : M(std::move(M)) {}
+  InheritedProtectedMovable M;
+};
+
+struct X4 {
+  X4(const InheritedPrivateMovable &M) : M(M) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: pass by value and use std::move
+  // CHECK-FIXES: X4(InheritedPrivateMovable M) : M(std::move(M)) {}
+  InheritedPrivateMovable M;
+};
+
+struct X5 {
+  X5(const PrivateMovable &M) : M(M) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: pass by value and use std::move
+  // CHECK-FIXES: X5(PrivateMovable M) : M(std::move(M)) {}
+  PrivateMovable M;
 };

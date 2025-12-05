@@ -27,6 +27,8 @@ namespace mlir {
 /// This is intended as the simplest and most lightweight pattern rewriter in
 /// cases when a simple walk gets the job done.
 ///
+/// The driver will skip unreachable blocks.
+///
 /// Note: Does not apply patterns to the given operation itself.
 void walkAndApplyPatterns(Operation *op,
                           const FrozenRewritePatternSet &patterns,

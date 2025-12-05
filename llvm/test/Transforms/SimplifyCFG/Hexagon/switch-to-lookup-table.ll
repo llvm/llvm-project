@@ -7,13 +7,13 @@ target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i
 target triple = "hexagon-unknown--elf"
 
 ; Function Attrs: noinline nounwind
-define i32 @foo(i32 %x) #0 section ".tcm_text" {
+define i32 @foo(i32 %x) section ".tcm_text" {
 ; ENABLE-LABEL: @foo(
 ; ENABLE-NEXT:  entry:
 ; ENABLE-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X:%.*]], 6
 ; ENABLE-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; ENABLE:       switch.lookup:
-; ENABLE-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds nuw [6 x i32], ptr @switch.table.foo, i32 0, i32 [[X]]
+; ENABLE-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds nuw i32, ptr @switch.table.foo, i32 [[X]]
 ; ENABLE-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; ENABLE-NEXT:    br label [[RETURN]]
 ; ENABLE:       return:
@@ -92,5 +92,3 @@ return:                                           ; preds = %sw.default, %sw.bb5
   %1 = load i32, ptr %retval, align 4
   ret i32 %1
 }
-
-attributes #0 = { noinline nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" "unsafe-fp-math"="false" "use-soft-float"="false" }

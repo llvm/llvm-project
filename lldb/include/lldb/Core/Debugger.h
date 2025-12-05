@@ -181,7 +181,15 @@ public:
     return m_target_list.GetSelectedTarget();
   }
 
+  /// Get the execution context representing the selected entities in the
+  /// selected target.
   ExecutionContext GetSelectedExecutionContext();
+
+  /// Similar to GetSelectedExecutionContext but returns a
+  /// ExecutionContextRef, and will hold the dummy target if no target is
+  /// currently selected.
+  ExecutionContextRef GetSelectedExecutionContextRef();
+
   /// Get accessor for the target list.
   ///
   /// The target list is part of the global debugger object. This the single
@@ -226,6 +234,8 @@ public:
   const char *GetIOHandlerCommandPrefix();
 
   const char *GetIOHandlerHelpPrologue();
+
+  void RefreshIOHandler();
 
   void ClearIOHandlers();
 
@@ -365,7 +375,7 @@ public:
 
   bool GetNotifyVoid() const;
 
-  const std::string &GetInstanceName() { return m_instance_name; }
+  const std::string &GetInstanceName() const { return m_instance_name; }
 
   bool GetShowInlineDiagnostics() const;
 
@@ -417,7 +427,7 @@ public:
   void CancelInterruptRequest();
 
   /// Redraw the statusline if enabled.
-  void RedrawStatusline(bool update = true);
+  void RedrawStatusline(std::optional<ExecutionContextRef> exe_ctx_ref);
 
   /// This is the correct way to query the state of Interruption.
   /// If you are on the RunCommandInterpreter thread, it will check the
@@ -602,10 +612,6 @@ public:
   void FlushProcessOutput(Process &process, bool flush_stdout,
                           bool flush_stderr);
 
-  void AddProtocolServer(lldb::ProtocolServerSP protocol_server_sp);
-  void RemoveProtocolServer(lldb::ProtocolServerSP protocol_server_sp);
-  lldb::ProtocolServerSP GetProtocolServer(llvm::StringRef protocol) const;
-
   SourceManager::SourceFileCache &GetSourceFileCache() {
     return m_source_file_cache;
   }
@@ -676,6 +682,7 @@ protected:
   lldb::LockableStreamFileSP GetErrorStreamSP() { return m_error_stream_sp; }
   /// @}
 
+  bool IsEscapeCodeCapableTTY();
   bool StatuslineSupported();
 
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
@@ -703,9 +710,9 @@ protected:
 
   void HandleBreakpointEvent(const lldb::EventSP &event_sp);
 
-  void HandleProcessEvent(const lldb::EventSP &event_sp);
+  lldb::ProcessSP HandleProcessEvent(const lldb::EventSP &event_sp);
 
-  void HandleThreadEvent(const lldb::EventSP &event_sp);
+  lldb::ThreadSP HandleThreadEvent(const lldb::EventSP &event_sp);
 
   void HandleProgressEvent(const lldb::EventSP &event_sp);
 
@@ -775,8 +782,6 @@ protected:
   llvm::SmallVector<ProgressReport, 4> m_progress_reports;
   mutable std::mutex m_progress_reports_mutex;
   /// @}
-
-  llvm::SmallVector<lldb::ProtocolServerSP> m_protocol_servers;
 
   std::mutex m_destroy_callback_mutex;
   lldb::callback_token_t m_destroy_callback_next_token = 0;

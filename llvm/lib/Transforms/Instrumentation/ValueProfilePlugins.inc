@@ -21,7 +21,9 @@
 using namespace llvm;
 using CandidateInfo = ValueProfileCollector::CandidateInfo;
 
+namespace llvm {
 extern cl::opt<bool> MemOPOptMemcmpBcmp;
+} // end namespace llvm
 
 ///--------------------------- MemIntrinsicPlugin ------------------------------
 class MemIntrinsicPlugin : public InstVisitor<MemIntrinsicPlugin> {
@@ -102,12 +104,12 @@ public:
   void run(std::vector<CandidateInfo> &Candidates) {
     std::vector<Instruction *> Result = findVTableAddrs(F);
     for (Instruction *I : Result) {
-      Instruction *InsertPt = I->getNextNonDebugInstruction();
+      Instruction *InsertPt = I->getNextNode();
       // When finding an insertion point, keep PHI and EH pad instructions
       // before vp intrinsics. This is similar to
       // `BasicBlock::getFirstInsertionPt`.
       while (InsertPt && (dyn_cast<PHINode>(InsertPt) || InsertPt->isEHPad()))
-        InsertPt = InsertPt->getNextNonDebugInstruction();
+        InsertPt = InsertPt->getNextNode();
       // Skip instrumentating the value if InsertPt is the last instruction.
       // FIXME: Set InsertPt to the end of basic block to instrument the value
       // if InsertPt is the last instruction.

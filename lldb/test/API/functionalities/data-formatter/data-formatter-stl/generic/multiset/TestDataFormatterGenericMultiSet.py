@@ -8,11 +8,10 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-USE_LIBSTDCPP = "USE_LIBSTDCPP"
-USE_LIBCPP = "USE_LIBCPP"
-
 
 class GenericMultiSetDataFormatterTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         TestBase.setUp(self)
         self.namespace = "std"
@@ -37,9 +36,8 @@ class GenericMultiSetDataFormatterTestCase(TestBase):
             var_name, type=self.getVariableType(var_name), children=children
         )
 
-    def do_test_with_run_command(self, stdlib_type):
+    def do_test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
-        self.build(dictionary={stdlib_type: "1"})
         (self.target, process, _, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Set break point at this line.", lldb.SBFileSpec("main.cpp", False)
         )
@@ -129,9 +127,8 @@ class GenericMultiSetDataFormatterTestCase(TestBase):
             ],
         )
 
-    def do_test_ref_and_ptr(self, stdlib_type):
+    def do_test_ref_and_ptr(self):
         """Test that the data formatters work on ref and ptr."""
-        self.build(dictionary={stdlib_type: "1"})
         (self.target, process, _, bkpt) = lldbutil.run_to_source_breakpoint(
             self,
             "Stop here to check by ref and ptr.",
@@ -145,16 +142,31 @@ class GenericMultiSetDataFormatterTestCase(TestBase):
 
     @add_test_categories(["libstdcxx"])
     def test_with_run_command_libstdcpp(self):
-        self.do_test_with_run_command(USE_LIBSTDCPP)
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_with_run_command()
 
     @add_test_categories(["libc++"])
     def test_with_run_command_libcpp(self):
-        self.do_test_with_run_command(USE_LIBCPP)
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_with_run_command()
+
+    @add_test_categories(["msvcstl"])
+    def test_with_run_command_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
+        self.do_test_with_run_command()
 
     @add_test_categories(["libstdcxx"])
     def test_ref_and_ptr_libstdcpp(self):
-        self.do_test_ref_and_ptr(USE_LIBSTDCPP)
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_ref_and_ptr()
 
     @add_test_categories(["libc++"])
     def test_ref_and_ptr_libcpp(self):
-        self.do_test_ref_and_ptr(USE_LIBCPP)
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_ref_and_ptr()
+
+    @add_test_categories(["msvcstl"])
+    def test_ref_and_ptr_msvcstl(self):
+        self.build()
+        self.do_test_ref_and_ptr()

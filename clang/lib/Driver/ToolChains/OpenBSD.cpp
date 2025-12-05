@@ -13,8 +13,8 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -161,7 +161,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Nopie || Profiling)
     CmdArgs.push_back("-nopie");
 
-  if (Triple.isRISCV64()) {
+  if (Triple.isLoongArch64() || Triple.isRISCV64()) {
     CmdArgs.push_back("-X");
     if (Args.hasArg(options::OPT_mno_relax))
       CmdArgs.push_back("--no-relax");
@@ -315,7 +315,7 @@ void OpenBSD::AddClangSystemIncludeArgs(
     llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
 
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {

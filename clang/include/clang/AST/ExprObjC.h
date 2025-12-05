@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_EXPROBJC_H
 #define LLVM_CLANG_AST_EXPROBJC_H
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -246,8 +247,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<ObjCArrayLiteral *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<ObjCArrayLiteral *>(this)->children();
   }
 
   static bool classof(const Stmt *T) {
@@ -393,8 +393,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<ObjCDictionaryLiteral *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<ObjCDictionaryLiteral *>(this)->children();
   }
 
   static bool classof(const Stmt *T) {
@@ -789,8 +788,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<ObjCPropertyRefExpr *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<ObjCPropertyRefExpr *>(this)->children();
   }
 
   static bool classof(const Stmt *T) {
@@ -1233,6 +1231,19 @@ public:
   /// It is also not always the declared return type of the method because
   /// of `instancetype` (in that case it's an expression type).
   QualType getCallReturnType(ASTContext &Ctx) const;
+
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttr(ASTContext &Ctx) const {
+    return getUnusedResultAttrImpl(getMethodDecl(), getCallReturnType(Ctx));
+  }
+
+  /// Returns true if this message send should warn on unused results.
+  bool hasUnusedResultAttr(ASTContext &Ctx) const {
+    return getUnusedResultAttr(Ctx).second != nullptr;
+  }
 
   /// Source range of the receiver.
   SourceRange getReceiverRange() const;

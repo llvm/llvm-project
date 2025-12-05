@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/MSP430MCAsmInfo.h"
+#include "MCTargetDesc/MSP430MCTargetDesc.h"
 #include "MSP430.h"
 #include "MSP430RegisterInfo.h"
-#include "MCTargetDesc/MSP430MCTargetDesc.h"
 #include "TargetInfo/MSP430TargetInfo.h"
 
 #include "llvm/ADT/APInt.h"
@@ -35,7 +36,6 @@ namespace {
 
 /// Parses MSP430 assembly from a stream.
 class MSP430AsmParser : public MCTargetAsmParser {
-  const MCSubtargetInfo &STI;
   MCAsmParser &Parser;
   const MCRegisterInfo *MRI;
 
@@ -78,7 +78,7 @@ class MSP430AsmParser : public MCTargetAsmParser {
 public:
   MSP430AsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                   const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), STI(STI), Parser(Parser) {
+      : MCTargetAsmParser(Options, STI, MII), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
@@ -224,26 +224,27 @@ public:
   SMLoc getStartLoc() const override { return Start; }
   SMLoc getEndLoc() const override { return End; }
 
-  void print(raw_ostream &O) const override {
+  void print(raw_ostream &O, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case k_Tok:
       O << "Token " << Tok;
       break;
     case k_Reg:
-      O << "Register " << Reg;
+      O << "Register " << Reg.id();
       break;
     case k_Imm:
-      O << "Immediate " << *Imm;
+      O << "Immediate ";
+      MAI.printExpr(O, *Imm);
       break;
     case k_Mem:
       O << "Memory ";
-      O << *Mem.Offset << "(" << Reg << ")";
+      MAI.printExpr(O, *Mem.Offset);
       break;
     case k_IndReg:
-      O << "RegInd " << Reg;
+      O << "RegInd " << Reg.id();
       break;
     case k_PostIndReg:
-      O << "PostInc " << Reg;
+      O << "PostInc " << Reg.id();
       break;
     }
   }
@@ -262,7 +263,7 @@ bool MSP430AsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
   switch (MatchResult) {
   case Match_Success:
     Inst.setLoc(Loc);
-    Out.emitInstruction(Inst, STI);
+    Out.emitInstruction(Inst, *STI);
     return false;
   case Match_MnemonicFail:
     return Error(Loc, "invalid instruction mnemonic");

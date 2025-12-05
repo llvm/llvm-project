@@ -108,8 +108,9 @@ TEST(ProtocolTypesTest, Breakpoint) {
   breakpoint.id = 42;
   breakpoint.verified = true;
   breakpoint.message = "Breakpoint set successfully";
-  breakpoint.source = Source{"test.cpp", "/path/to/test.cpp", 123,
-                             Source::eSourcePresentationHintNormal};
+  breakpoint.source =
+      Source{"test.cpp", "/path/to/test.cpp", 123,
+             Source::eSourcePresentationHintNormal, std::nullopt};
   breakpoint.line = 10;
   breakpoint.column = 5;
   breakpoint.endLine = 15;
@@ -567,8 +568,9 @@ TEST(ProtocolTypesTest, DisassembledInstruction) {
   instruction.instructionBytes = "0F 1F 00";
   instruction.instruction = "mov eax, ebx";
   instruction.symbol = "main";
-  instruction.location = Source{"test.cpp", "/path/to/test.cpp", 123,
-                                Source::eSourcePresentationHintNormal};
+  instruction.location =
+      Source{"test.cpp", "/path/to/test.cpp", 123,
+             Source::eSourcePresentationHintNormal, std::nullopt};
   instruction.line = 10;
   instruction.column = 5;
   instruction.endLine = 15;
@@ -605,15 +607,17 @@ TEST(ProtocolTypesTest, DisassembledInstruction) {
       parse<DisassembledInstruction>(R"({"address":1})",
                                      "disassemblyInstruction"),
       FailedWithMessage("expected string at disassemblyInstruction.address"));
-  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(R"({"address":"-1"})",
-                                                      "disassemblyInstruction"),
-                       FailedWithMessage("expected string encoded uint64_t at "
-                                         "disassemblyInstruction.address"));
-  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(
-                           R"({"address":"0xfffffffffffffffffffffffffff"})",
-                           "disassemblyInstruction"),
-                       FailedWithMessage("expected string encoded uint64_t at "
-                                         "disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(
+      parse<DisassembledInstruction>(R"({"address":"-1"})",
+                                     "disassemblyInstruction"),
+      FailedWithMessage(
+          "malformed memory reference at disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(
+      parse<DisassembledInstruction>(
+          R"({"address":"0xfffffffffffffffffffffffffff"})",
+          "disassemblyInstruction"),
+      FailedWithMessage(
+          "malformed memory reference at disassemblyInstruction.address"));
 }
 
 TEST(ProtocolTypesTest, Thread) {
@@ -780,7 +784,7 @@ TEST(ProtocolTypesTest, ReadMemoryArguments) {
 
 TEST(ProtocolTypesTest, ReadMemoryResponseBody) {
   ReadMemoryResponseBody response;
-  response.address = "0xdeadbeef";
+  response.address = 0xdeadbeef;
   const std::string data_str = "hello world!";
   std::transform(data_str.begin(), data_str.end(),
                  std::back_inserter(response.data),
@@ -788,7 +792,387 @@ TEST(ProtocolTypesTest, ReadMemoryResponseBody) {
   response.unreadableBytes = 1;
 
   Expected<Value> expected = json::parse(
-      R"({ "address": "0xdeadbeef", "data": "aGVsbG8gd29ybGQh", "unreadableBytes": 1})");
+      R"({ "address": "0xDEADBEEF", "data": "aGVsbG8gd29ybGQh", "unreadableBytes": 1})");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(pp(*expected), pp(response));
+}
+
+TEST(ProtocolTypesTest, Modules) {
+  Module module;
+  module.id = "AC805E8E-B6A4-CD92-4B05-5CFA7CE24AE8-8926C776";
+  module.name = "libm.so.6";
+  module.path = "/some/path/to/libm.so.6";
+  module.isOptimized = true;
+  module.isUserCode = true;
+  module.version = "0.0.1";
+  module.symbolStatus = "Symbol not found.";
+  module.symbolFilePath = "/some/file/path/to/the/symbol/module";
+  module.dateTimeStamp = "2020-12-09T16:09:53+00:00";
+  module.addressRange = "0xcafeface";
+  module.debugInfoSizeBytes = 1572864;
+
+  Expected<json::Value> expected = json::parse(
+      R"({
+                  "id" : "AC805E8E-B6A4-CD92-4B05-5CFA7CE24AE8-8926C776",
+                  "name": "libm.so.6",
+                  "path": "/some/path/to/libm.so.6",
+                  "isOptimized": true,
+                  "isUserCode": true,
+                  "version": "0.0.1",
+                  "symbolStatus": "Symbol not found.",
+                  "symbolFilePath": "/some/file/path/to/the/symbol/module",
+                  "dateTimeStamp": "2020-12-09T16:09:53+00:00",
+                  "addressRange": "0xcafeface",
+                  "debugInfoSize": "1.5MB" })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(module));
+
+  // Test without optional values.
+  module.path.clear();
+  module.isOptimized = false;
+  module.isUserCode = false;
+  module.version.clear();
+  module.symbolStatus.clear();
+  module.symbolFilePath.clear();
+  module.dateTimeStamp.clear();
+  module.addressRange.clear();
+  module.debugInfoSizeBytes = 0;
+  EXPECT_NE(pp(*expected), pp(module));
+
+  Expected<json::Value> expected_no_opt = json::parse(
+      R"({
+                  "id" : "AC805E8E-B6A4-CD92-4B05-5CFA7CE24AE8-8926C776",
+                  "name": "libm.so.6"})");
+  ASSERT_THAT_EXPECTED(expected_no_opt, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected_no_opt), pp(module));
+}
+
+TEST(ProtocolTypesTest, ModulesArguments) {
+  ModulesArguments args;
+
+  llvm::Expected<ModulesArguments> expected = parse<ModulesArguments>(R"({})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(args.startModule, expected->startModule);
+  EXPECT_EQ(args.moduleCount, expected->moduleCount);
+
+  // Non Default values.
+  args.startModule = 1;
+  args.moduleCount = 2;
+  llvm::Expected<ModulesArguments> expected_no_default =
+      parse<ModulesArguments>(R"({ "startModule": 1, "moduleCount": 2})");
+  ASSERT_THAT_EXPECTED(expected_no_default, llvm::Succeeded());
+  EXPECT_EQ(args.startModule, expected_no_default->startModule);
+  EXPECT_EQ(args.moduleCount, expected_no_default->moduleCount);
+}
+
+TEST(ProtocolTypesTest, ModulesResponseBody) {
+  ModulesResponseBody response;
+  Module module1;
+  module1.id = "first id";
+  module1.name = "first name";
+
+  Module module2;
+  module2.id = "second id";
+  module2.name = "second name";
+  response.modules = {std::move(module1), std::move(module2)};
+  response.totalModules = 2;
+
+  Expected<json::Value> expected = json::parse(
+      R"({
+                  "modules": [
+                    { "id": "first id", "name": "first name"},
+                    { "id": "second id", "name": "second name"}
+                  ],
+                  "totalModules": 2 })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(response));
+}
+
+TEST(ProtocolTypesTest, VariablePresentationHint) {
+  VariablePresentationHint hint;
+  hint.kind = "kind";
+  hint.attributes = {"a", "b", "c"};
+  hint.visibility = "public";
+  hint.lazy = true;
+
+  const StringRef json = R"({
+  "attributes": [
+    "a",
+    "b",
+    "c"
+  ],
+  "kind": "kind",
+  "lazy": true,
+  "visibility": "public"
+})";
+
+  EXPECT_EQ(pp(Value(hint)), json);
+  EXPECT_THAT_EXPECTED(json::parse(json), HasValue(Value(hint)));
+}
+
+TEST(ProtocolTypesTest, Variable) {
+  Variable var;
+  var.name = "var1";
+  var.variablesReference = 42;
+  var.value = "value";
+  var.type = "type";
+
+  VariablePresentationHint hint;
+  hint.kind = "kind";
+  var.presentationHint = std::move(hint);
+  var.evaluateName = "my_name";
+  var.namedVariables = 7;
+  var.indexedVariables = 7;
+  var.memoryReference = 291u;
+  var.declarationLocationReference = 24;
+  var.valueLocationReference = 100;
+
+  const StringRef json = R"({
+  "declarationLocationReference": 24,
+  "evaluateName": "my_name",
+  "indexedVariables": 7,
+  "memoryReference": "0x123",
+  "name": "var1",
+  "namedVariables": 7,
+  "presentationHint": {
+    "kind": "kind"
+  },
+  "type": "type",
+  "value": "value",
+  "valueLocationReference": 100,
+  "variablesReference": 42
+})";
+
+  EXPECT_EQ(pp(Value(var)), json);
+  EXPECT_THAT_EXPECTED(json::parse(json), HasValue(Value(var)));
+}
+
+TEST(ProtocolTypesTest, VariablesArguments) {
+  llvm::Expected<VariablesArguments> expected = parse<VariablesArguments>(R"({
+    "variablesReference": 42,
+    "filter": "indexed",
+    "start": 10,
+    "count": 5,
+    "format": {
+      "hex": true
+    }
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->variablesReference, 42u);
+  EXPECT_EQ(expected->filter, VariablesArguments::eVariablesFilterIndexed);
+  EXPECT_EQ(expected->start, 10u);
+  EXPECT_EQ(expected->count, 5u);
+  EXPECT_EQ(expected->format->hex, true);
+
+  EXPECT_THAT_EXPECTED(
+      parse<VariablesArguments>(R"({})"),
+      FailedWithMessage("missing value at (root).variablesReference"));
+  EXPECT_THAT_EXPECTED(
+      parse<VariablesArguments>(
+          R"({"variablesReference": 42, "filter": "my-filter"})"),
+      FailedWithMessage(
+          "unexpected value, expected 'named' or 'indexed' at (root).filter"));
+}
+
+TEST(ProtocolTypesTest, VariablesResponseBody) {
+  Variable var1;
+  var1.name = "var1";
+  var1.variablesReference = 42;
+  var1.value = "<var1-value>";
+
+  Variable var2;
+  var2.name = "var2";
+  var2.variablesReference = 3;
+  var2.value = "<var2-value>";
+
+  VariablesResponseBody response{{var1, var2}};
+
+  Expected<json::Value> expected = json::parse(R"({
+      "variables": [
+        {
+          "name": "var1",
+          "value": "<var1-value>",
+          "variablesReference": 42
+        },
+        {
+          "name": "var2",
+          "value": "<var2-value>",
+          "variablesReference": 3
+        }
+      ]
+    })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(response));
+}
+
+TEST(ProtocolTypesTest, CompletionItem) {
+  CompletionItem item;
+  item.label = "label";
+  item.text = "text";
+  item.sortText = "sortText";
+  item.detail = "detail";
+  item.type = eCompletionItemTypeConstructor;
+  item.start = 1;
+  item.length = 3;
+  item.selectionStart = 4;
+  item.selectionLength = 8;
+
+  const StringRef json = R"({
+  "detail": "detail",
+  "label": "label",
+  "length": 3,
+  "selectionLength": 8,
+  "selectionStart": 4,
+  "sortText": "sortText",
+  "start": 1,
+  "text": "text",
+  "type": "constructor"
+})";
+
+  EXPECT_EQ(pp(Value(item)), json);
+  EXPECT_THAT_EXPECTED(json::parse(json), HasValue(Value(item)));
+}
+
+TEST(ProtocolTypesTest, CompletionsArguments) {
+  llvm::Expected<CompletionsArguments> expected =
+      parse<CompletionsArguments>(R"({
+    "column": 8,
+    "frameId": 7,
+    "line": 9,
+    "text": "abc"
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->frameId, 7u);
+  EXPECT_EQ(expected->text, "abc");
+  EXPECT_EQ(expected->column, 8);
+  EXPECT_EQ(expected->line, 9);
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<CompletionsArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).text"));
+  EXPECT_THAT_EXPECTED(parse<CompletionsArguments>(R"({"text":"abc"})"),
+                       FailedWithMessage("missing value at (root).column"));
+}
+
+TEST(ProtocolTypesTest, CompletionsResponseBody) {
+  CompletionItem item;
+  item.label = "label";
+  item.text = "text";
+  item.detail = "detail";
+  CompletionsResponseBody response{{item}};
+
+  Expected<json::Value> expected = json::parse(R"({
+      "targets": [
+        {
+          "detail": "detail",
+          "label": "label",
+          "text": "text"
+        }
+      ]
+    })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(response));
+}
+
+TEST(ProtocolTypesTest, InvalidatedEventBody) {
+  InvalidatedEventBody body;
+  body.areas = {InvalidatedEventBody::eAreaStacks,
+                InvalidatedEventBody::eAreaThreads};
+  body.stackFrameId = 1;
+  body.threadId = 20;
+  Expected<json::Value> expected = json::parse(R"({
+    "areas": [
+      "stacks",
+      "threads"
+    ],
+    "stackFrameId": 1,
+    "threadId": 20
+    })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(body));
+}
+
+TEST(ProtocolTypesTest, MemoryEventBody) {
+  MemoryEventBody body;
+  body.memoryReference = 12345;
+  body.offset = 0;
+  body.count = 4;
+  StringRef json = R"({
+  "count": 4,
+  "memoryReference": "0x3039",
+  "offset": 0
+})";
+  EXPECT_EQ(json, pp(body));
+}
+
+TEST(ProtocolTypesTest, DataBreakpointInfoArguments) {
+  llvm::Expected<DataBreakpointInfoArguments> expected =
+      parse<DataBreakpointInfoArguments>(R"({
+    "name": "data",
+    "variablesReference": 8,
+    "frameId": 9,
+    "bytes": 10,
+    "asAddress": false,
+    "mode": "source"
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->name, "data");
+  EXPECT_EQ(expected->variablesReference, 8);
+  EXPECT_EQ(expected->frameId, 9u);
+  EXPECT_EQ(expected->bytes, 10);
+  EXPECT_EQ(expected->asAddress, false);
+  EXPECT_EQ(expected->mode, "source");
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<DataBreakpointInfoArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).name"));
+  EXPECT_THAT_EXPECTED(parse<DataBreakpointInfoArguments>(R"({"name":"data"})"),
+                       llvm::Succeeded());
+}
+
+TEST(ProtocolTypesTest, ExceptionBreakMode) {
+  const std::vector<std::pair<ExceptionBreakMode, llvm::StringRef>> test_cases =
+      {{ExceptionBreakMode::eExceptionBreakModeAlways, "always"},
+       {ExceptionBreakMode::eExceptionBreakModeNever, "never"},
+       {ExceptionBreakMode::eExceptionBreakModeUnhandled, "unhandled"},
+       {ExceptionBreakMode::eExceptionBreakModeUserUnhandled, "userUnhandled"}};
+
+  for (const auto [value, expected] : test_cases) {
+    json::Value const serialized = toJSON(value);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), expected);
+  }
+}
+
+TEST(ProtocolTypesTest, ExceptionDetails) {
+  ExceptionDetails details;
+
+  // Check required keys.
+  Expected<json::Value> expected = parse(R"({})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(details));
+
+  // Check optional keys.
+  details.message = "SIGABRT exception";
+  details.typeName = "signal";
+  details.fullTypeName = "SIGABRT";
+  details.evaluateName = "process handle SIGABRT";
+  details.stackTrace = "some stacktrace";
+  ExceptionDetails inner_details;
+  inner_details.message = "inner message";
+  details.innerException = {std::move(inner_details)};
+
+  Expected<json::Value> expected_opt = parse(R"({
+    "message": "SIGABRT exception",
+    "typeName": "signal",
+    "fullTypeName": "SIGABRT",
+    "evaluateName": "process handle SIGABRT",
+    "stackTrace": "some stacktrace",
+    "innerException": [{
+      "message": "inner message"
+    }]
+    })");
+
+  ASSERT_THAT_EXPECTED(expected_opt, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected_opt), pp(details));
 }

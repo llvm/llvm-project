@@ -2,7 +2,7 @@
 
 // This verifies that hotpatch function attributes are correctly propagated through LLVM IR when compiling with LTO.
 //
-// RUN: %clang_cl -c --target=x86_64-windows-msvc -O2 /Z7 -fms-secure-hotpatch-functions-list=this_gets_hotpatched -flto /Fo%t.bc %s
+// RUN: %clang_cl -c --target=x86_64-windows-msvc -O2 /Z7 -fms-secure-hotpatch-functions-list=this_gets_hotpatched -flto /Fo%t.bc -- %s
 // RUN: llvm-dis %t.bc -o - | FileCheck %s
 //
 // CHECK-LABEL: define dso_local noundef i32 @this_gets_hotpatched()

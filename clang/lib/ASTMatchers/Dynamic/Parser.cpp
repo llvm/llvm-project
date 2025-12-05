@@ -490,6 +490,11 @@ bool Parser::parseMatcherBuilder(MatcherCtor Ctor, const TokenInfo &NameToken,
               << CommaToken.Text;
           return false;
         }
+        // Allow for a trailing , token and possibly a new line.
+        Tokenizer->SkipNewlines();
+        if (Tokenizer->nextTokenKind() == TokenInfo::TK_CloseParen) {
+          continue;
+        }
       }
 
       Diagnostics::Context Ctx(Diagnostics::Context::MatcherArg, Error,
@@ -657,6 +662,11 @@ bool Parser::parseMatcherExpressionImpl(const TokenInfo &NameToken,
           Error->addError(CommaToken.Range, Error->ET_ParserNoComma)
               << CommaToken.Text;
           return false;
+        }
+        // Allow for a trailing , token and possibly a new line.
+        Tokenizer->SkipNewlines();
+        if (Tokenizer->nextTokenKind() == TokenInfo::TK_CloseParen) {
+          continue;
         }
       }
 

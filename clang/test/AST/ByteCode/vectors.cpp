@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
+// RUN: %clang_cc1 -Wno-c++20-extensions -fexperimental-new-constant-interpreter -verify=expected,both -flax-vector-conversions=none %s
+// RUN: %clang_cc1 -Wno-c++20-extensions -verify=ref,both -flax-vector-conversions=none %s
 
 typedef int __attribute__((vector_size(16))) VI4;
 constexpr VI4 A = {1,2,3,4};
@@ -58,7 +58,7 @@ namespace Vector {
 
 namespace {
   typedef float __attribute__((vector_size(16))) VI42;
-  constexpr VI42 A2 = A;
+  constexpr VI42 A2 = {1.f, 2.f, 3.f, 4.f};
 }
 
 namespace BoolToSignedIntegralCast{
@@ -142,4 +142,41 @@ namespace {
   constexpr __m128 kf1 {-1.0f,+2.0f,-3.0f,+4.0f};
   constexpr __m128d v_mm_cvtps_pd = _mm_cvtps_pd(kf1);
   static_assert(v_mm_cvtps_pd[0] == -1.0 && v_mm_cvtps_pd[1] == +2.0);
+}
+
+namespace Assign {
+  constexpr int a2() {
+      VI a = {0, 0, 0, 0};
+      VI b;
+
+      b = {1,1,1,1};
+      return b[0] + b[1] + b[2] + b[3];
+  }
+
+  static_assert(a2() == 4);
+
+  typedef short          v2int16_t __attribute__((ext_vector_type(2)));
+  typedef unsigned short v2int_t __attribute__((ext_vector_type(2)));
+
+
+  constexpr bool invalid() {
+    v2int16_t a = {0, 0};
+    v2int_t b;
+    b = a; // both-error {{incompatible type}}
+
+    return true;
+  }
+  static_assert(invalid()); // both-error {{not an integral constant expression}}
+}
+
+namespace CopyArrayDummy {
+  struct S {
+    long a, b, c, d;
+  };
+  typedef long T __attribute__((vector_size(4 * sizeof(long))));
+
+  void foo(void) {
+    struct S s;
+    *(T *)&s = (T){0, 1, 2, 3};
+  }
 }

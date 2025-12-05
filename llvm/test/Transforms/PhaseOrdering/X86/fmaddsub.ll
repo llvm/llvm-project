@@ -15,7 +15,7 @@
 ; Ideally, this should reach the backend with 1 fmul, 1 fsub, 1 fadd, and 1 shuffle.
 ; That may require some coordination between VectorCombine, SLP, and other passes.
 
-define <4 x float> @buildvector_mul_addsub_ps128(<4 x float> %C, <4 x float> %D, <4 x float> %B) #0 {
+define <4 x float> @buildvector_mul_addsub_ps128(<4 x float> %C, <4 x float> %D, <4 x float> %B) {
 ; CHECK-LABEL: @buildvector_mul_addsub_ps128(
 ; CHECK-NEXT:    [[A:%.*]] = fmul <4 x float> [[C:%.*]], [[D:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = fsub <4 x float> [[A]], [[B:%.*]]
@@ -43,7 +43,7 @@ define <4 x float> @buildvector_mul_addsub_ps128(<4 x float> %C, <4 x float> %D,
   ret <4 x float> %vecinsert4
 }
 
-define <2 x double> @buildvector_mul_addsub_pd128(<2 x double> %C, <2 x double> %D, <2 x double> %B) #0 {
+define <2 x double> @buildvector_mul_addsub_pd128(<2 x double> %C, <2 x double> %D, <2 x double> %B) {
 ; CHECK-LABEL: @buildvector_mul_addsub_pd128(
 ; CHECK-NEXT:    [[A:%.*]] = fmul <2 x double> [[C:%.*]], [[D:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = fsub <2 x double> [[A]], [[B:%.*]]
@@ -63,7 +63,7 @@ define <2 x double> @buildvector_mul_addsub_pd128(<2 x double> %C, <2 x double> 
   ret <2 x double> %vecinsert2
 }
 
-define <8 x float> @buildvector_mul_addsub_ps256(<8 x float> %C, <8 x float> %D, <8 x float> %B) #0 {
+define <8 x float> @buildvector_mul_addsub_ps256(<8 x float> %C, <8 x float> %D, <8 x float> %B) {
 ; SSE2-LABEL: @buildvector_mul_addsub_ps256(
 ; SSE2-NEXT:    [[A:%.*]] = fmul <8 x float> [[C:%.*]], [[D:%.*]]
 ; SSE2-NEXT:    [[TMP0:%.*]] = fsub <8 x float> [[A]], [[B:%.*]]
@@ -123,7 +123,7 @@ define <8 x float> @buildvector_mul_addsub_ps256(<8 x float> %C, <8 x float> %D,
   ret <8 x float> %vecinsert8
 }
 
-define <4 x double> @buildvector_mul_addsub_pd256(<4 x double> %C, <4 x double> %D, <4 x double> %B) #0 {
+define <4 x double> @buildvector_mul_addsub_pd256(<4 x double> %C, <4 x double> %D, <4 x double> %B) {
 ; CHECK-LABEL: @buildvector_mul_addsub_pd256(
 ; CHECK-NEXT:    [[A:%.*]] = fmul <4 x double> [[C:%.*]], [[D:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = fsub <4 x double> [[A]], [[B:%.*]]
@@ -151,7 +151,7 @@ define <4 x double> @buildvector_mul_addsub_pd256(<4 x double> %C, <4 x double> 
   ret <4 x double> %vecinsert4
 }
 
-define <16 x float> @buildvector_mul_addsub_ps512(<16 x float> %C, <16 x float> %D, <16 x float> %B) #0 {
+define <16 x float> @buildvector_mul_addsub_ps512(<16 x float> %C, <16 x float> %D, <16 x float> %B) {
 ; SSE2-LABEL: @buildvector_mul_addsub_ps512(
 ; SSE2-NEXT:    [[A:%.*]] = fmul <16 x float> [[C:%.*]], [[D:%.*]]
 ; SSE2-NEXT:    [[TMP1:%.*]] = fsub <16 x float> [[A]], [[B:%.*]]
@@ -243,7 +243,7 @@ define <16 x float> @buildvector_mul_addsub_ps512(<16 x float> %C, <16 x float> 
   ret <16 x float> %vecinsert16
 }
 
-define <16 x float> @buildvector_mul_addsub_ps512_partial(<16 x float> %C, <16 x float> %D, <16 x float> %B) #0 {
+define <16 x float> @buildvector_mul_addsub_ps512_partial(<16 x float> %C, <16 x float> %D, <16 x float> %B) {
 ; SSE-LABEL: @buildvector_mul_addsub_ps512_partial(
 ; SSE-NEXT:    [[A:%.*]] = fmul <16 x float> [[C:%.*]], [[D:%.*]]
 ; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[A]], <16 x float> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 13>
@@ -350,7 +350,7 @@ define <16 x float> @buildvector_mul_addsub_ps512_partial(<16 x float> %C, <16 x
   ret <16 x float> %vecinsert16
 }
 
-define <8 x double> @buildvector_mul_addsub_pd512(<8 x double> %C, <8 x double> %D, <8 x double> %B) #0 {
+define <8 x double> @buildvector_mul_addsub_pd512(<8 x double> %C, <8 x double> %D, <8 x double> %B) {
 ; SSE2-LABEL: @buildvector_mul_addsub_pd512(
 ; SSE2-NEXT:    [[A:%.*]] = fmul <8 x double> [[C:%.*]], [[D:%.*]]
 ; SSE2-NEXT:    [[TMP1:%.*]] = fsub <8 x double> [[A]], [[B:%.*]]
@@ -410,7 +410,7 @@ define <8 x double> @buildvector_mul_addsub_pd512(<8 x double> %C, <8 x double> 
   ret <8 x double> %vecinsert8
 }
 
-define <8 x double> @buildvector_mul_addsub_pd512_partial(<8 x double> %C, <8 x double> %D, <8 x double> %B) #0 {
+define <8 x double> @buildvector_mul_addsub_pd512_partial(<8 x double> %C, <8 x double> %D, <8 x double> %B) {
 ; SSE-LABEL: @buildvector_mul_addsub_pd512_partial(
 ; SSE-NEXT:    [[A:%.*]] = fmul <8 x double> [[C:%.*]], [[D:%.*]]
 ; SSE-NEXT:    [[TMP1:%.*]] = fsub <8 x double> [[A]], [[B:%.*]]
@@ -507,7 +507,7 @@ define <8 x double> @buildvector_mul_addsub_pd512_partial(<8 x double> %C, <8 x 
   ret <8 x double> %vecinsert8
 }
 
-define <4 x float> @buildvector_mul_subadd_ps128(<4 x float> %C, <4 x float> %D, <4 x float> %B) #0 {
+define <4 x float> @buildvector_mul_subadd_ps128(<4 x float> %C, <4 x float> %D, <4 x float> %B) {
 ; CHECK-LABEL: @buildvector_mul_subadd_ps128(
 ; CHECK-NEXT:    [[A:%.*]] = fmul <4 x float> [[C:%.*]], [[D:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = fadd <4 x float> [[A]], [[B:%.*]]
@@ -535,7 +535,7 @@ define <4 x float> @buildvector_mul_subadd_ps128(<4 x float> %C, <4 x float> %D,
   ret <4 x float> %vecinsert4
 }
 
-define <2 x double> @buildvector_mul_subadd_pd128(<2 x double> %C, <2 x double> %D, <2 x double> %B) #0 {
+define <2 x double> @buildvector_mul_subadd_pd128(<2 x double> %C, <2 x double> %D, <2 x double> %B) {
 ; CHECK-LABEL: @buildvector_mul_subadd_pd128(
 ; CHECK-NEXT:    [[A:%.*]] = fmul <2 x double> [[C:%.*]], [[D:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> [[A]], [[B:%.*]]
@@ -555,7 +555,7 @@ define <2 x double> @buildvector_mul_subadd_pd128(<2 x double> %C, <2 x double> 
   ret <2 x double> %vecinsert2
 }
 
-define <8 x float> @buildvector_mul_subadd_ps256(<8 x float> %C, <8 x float> %D, <8 x float> %B) #0 {
+define <8 x float> @buildvector_mul_subadd_ps256(<8 x float> %C, <8 x float> %D, <8 x float> %B) {
 ; SSE2-LABEL: @buildvector_mul_subadd_ps256(
 ; SSE2-NEXT:    [[A:%.*]] = fmul <8 x float> [[C:%.*]], [[D:%.*]]
 ; SSE2-NEXT:    [[TMP0:%.*]] = fadd <8 x float> [[A]], [[B:%.*]]
@@ -567,22 +567,19 @@ define <8 x float> @buildvector_mul_subadd_ps256(<8 x float> %C, <8 x float> %D,
 ;
 ; SSE4-LABEL: @buildvector_mul_subadd_ps256(
 ; SSE4-NEXT:    [[A:%.*]] = fmul <8 x float> [[C:%.*]], [[D:%.*]]
-; SSE4-NEXT:    [[TMP0:%.*]] = fsub <8 x float> [[A]], [[B:%.*]]
-; SSE4-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; SSE4-NEXT:    [[TMP2:%.*]] = fadd <8 x float> [[A]], [[B]]
+; SSE4-NEXT:    [[TMP2:%.*]] = fadd <8 x float> [[A]], [[B:%.*]]
 ; SSE4-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE4-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE4-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; SSE4-NEXT:    [[TMP6:%.*]] = shufflevector <8 x float> [[TMP5]], <8 x float> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; SSE4-NEXT:    [[TMP5:%.*]] = fsub <8 x float> [[A]], [[B]]
+; SSE4-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP5]], <8 x float> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE4-NEXT:    [[TMP6:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> [[TMP4]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
 ; SSE4-NEXT:    ret <8 x float> [[TMP6]]
 ;
 ; AVX_FMA4-LABEL: @buildvector_mul_subadd_ps256(
 ; AVX_FMA4-NEXT:    [[A:%.*]] = fmul <8 x float> [[C:%.*]], [[D:%.*]]
-; AVX_FMA4-NEXT:    [[TMP0:%.*]] = fsub <8 x float> [[A]], [[B:%.*]]
-; AVX_FMA4-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; AVX_FMA4-NEXT:    [[TMP2:%.*]] = fadd <8 x float> [[A]], [[B]]
+; AVX_FMA4-NEXT:    [[TMP2:%.*]] = fadd <8 x float> [[A]], [[B:%.*]]
 ; AVX_FMA4-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX_FMA4-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; AVX_FMA4-NEXT:    [[TMP7:%.*]] = fsub <8 x float> [[A]], [[B]]
+; AVX_FMA4-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP7]], <8 x float> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX_FMA4-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; AVX_FMA4-NEXT:    [[TMP6:%.*]] = shufflevector <8 x float> [[TMP5]], <8 x float> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 ; AVX_FMA4-NEXT:    ret <8 x float> [[TMP6]]
@@ -637,7 +634,7 @@ define <8 x float> @buildvector_mul_subadd_ps256(<8 x float> %C, <8 x float> %D,
   ret <8 x float> %vecinsert8
 }
 
-define <4 x double> @buildvector_mul_subadd_pd256(<4 x double> %C, <4 x double> %D, <4 x double> %B) #0 {
+define <4 x double> @buildvector_mul_subadd_pd256(<4 x double> %C, <4 x double> %D, <4 x double> %B) {
 ; CHECK-LABEL: @buildvector_mul_subadd_pd256(
 ; CHECK-NEXT:    [[A:%.*]] = fmul <4 x double> [[C:%.*]], [[D:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = fadd <4 x double> [[A]], [[B:%.*]]
@@ -665,7 +662,7 @@ define <4 x double> @buildvector_mul_subadd_pd256(<4 x double> %C, <4 x double> 
   ret <4 x double> %vecinsert4
 }
 
-define <16 x float> @buildvector_mul_subadd_ps512(<16 x float> %C, <16 x float> %D, <16 x float> %B) #0 {
+define <16 x float> @buildvector_mul_subadd_ps512(<16 x float> %C, <16 x float> %D, <16 x float> %B) {
 ; SSE-LABEL: @buildvector_mul_subadd_ps512(
 ; SSE-NEXT:    [[A:%.*]] = fmul <16 x float> [[C:%.*]], [[D:%.*]]
 ; SSE-NEXT:    [[TMP1:%.*]] = fadd <16 x float> [[A]], [[B:%.*]]
@@ -677,13 +674,11 @@ define <16 x float> @buildvector_mul_subadd_ps512(<16 x float> %C, <16 x float> 
 ;
 ; AVX_FMA-LABEL: @buildvector_mul_subadd_ps512(
 ; AVX_FMA-NEXT:    [[A:%.*]] = fmul <16 x float> [[C:%.*]], [[D:%.*]]
-; AVX_FMA-NEXT:    [[TMP1:%.*]] = fsub <16 x float> [[A]], [[B:%.*]]
-; AVX_FMA-NEXT:    [[TMP2:%.*]] = shufflevector <16 x float> [[TMP1]], <16 x float> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-; AVX_FMA-NEXT:    [[TMP3:%.*]] = fadd <16 x float> [[A]], [[B]]
+; AVX_FMA-NEXT:    [[TMP3:%.*]] = fadd <16 x float> [[A]], [[B:%.*]]
 ; AVX_FMA-NEXT:    [[TMP4:%.*]] = shufflevector <16 x float> [[TMP3]], <16 x float> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX_FMA-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX_FMA-NEXT:    [[TMP6:%.*]] = shufflevector <16 x float> [[TMP4]], <16 x float> [[TMP5]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-; AVX_FMA-NEXT:    [[TMP7:%.*]] = shufflevector <16 x float> [[TMP6]], <16 x float> poison, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+; AVX_FMA-NEXT:    [[TMP5:%.*]] = fsub <16 x float> [[A]], [[B]]
+; AVX_FMA-NEXT:    [[TMP6:%.*]] = shufflevector <16 x float> [[TMP5]], <16 x float> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; AVX_FMA-NEXT:    [[TMP7:%.*]] = shufflevector <16 x float> [[TMP4]], <16 x float> [[TMP6]], <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
 ; AVX_FMA-NEXT:    ret <16 x float> [[TMP7]]
 ;
 ; AVX512-LABEL: @buildvector_mul_subadd_ps512(
@@ -761,7 +756,7 @@ define <16 x float> @buildvector_mul_subadd_ps512(<16 x float> %C, <16 x float> 
   ret <16 x float> %vecinsert16
 }
 
-define <16 x float> @buildvector_mul_subadd_ps512_partial(<16 x float> %C, <16 x float> %D, <16 x float> %B) #0 {
+define <16 x float> @buildvector_mul_subadd_ps512_partial(<16 x float> %C, <16 x float> %D, <16 x float> %B) {
 ; SSE-LABEL: @buildvector_mul_subadd_ps512_partial(
 ; SSE-NEXT:    [[A:%.*]] = fmul <16 x float> [[C:%.*]], [[D:%.*]]
 ; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[A]], <16 x float> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 13>
@@ -868,7 +863,7 @@ define <16 x float> @buildvector_mul_subadd_ps512_partial(<16 x float> %C, <16 x
   ret <16 x float> %vecinsert16
 }
 
-define <8 x double> @buildvector_mul_subadd_pd512(<8 x double> %C, <8 x double> %D, <8 x double> %B) #0 {
+define <8 x double> @buildvector_mul_subadd_pd512(<8 x double> %C, <8 x double> %D, <8 x double> %B) {
 ; SSE-LABEL: @buildvector_mul_subadd_pd512(
 ; SSE-NEXT:    [[A:%.*]] = fmul <8 x double> [[C:%.*]], [[D:%.*]]
 ; SSE-NEXT:    [[TMP0:%.*]] = fadd <8 x double> [[A]], [[B:%.*]]
@@ -880,13 +875,11 @@ define <8 x double> @buildvector_mul_subadd_pd512(<8 x double> %C, <8 x double> 
 ;
 ; AVX_FMA-LABEL: @buildvector_mul_subadd_pd512(
 ; AVX_FMA-NEXT:    [[A:%.*]] = fmul <8 x double> [[C:%.*]], [[D:%.*]]
-; AVX_FMA-NEXT:    [[TMP1:%.*]] = fsub <8 x double> [[A]], [[B:%.*]]
-; AVX_FMA-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; AVX_FMA-NEXT:    [[TMP3:%.*]] = fadd <8 x double> [[A]], [[B]]
+; AVX_FMA-NEXT:    [[TMP3:%.*]] = fadd <8 x double> [[A]], [[B:%.*]]
 ; AVX_FMA-NEXT:    [[TMP4:%.*]] = shufflevector <8 x double> [[TMP3]], <8 x double> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX_FMA-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX_FMA-NEXT:    [[TMP6:%.*]] = shufflevector <8 x double> [[TMP4]], <8 x double> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; AVX_FMA-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[TMP6]], <8 x double> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; AVX_FMA-NEXT:    [[TMP5:%.*]] = fsub <8 x double> [[A]], [[B]]
+; AVX_FMA-NEXT:    [[TMP6:%.*]] = shufflevector <8 x double> [[TMP5]], <8 x double> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; AVX_FMA-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[TMP4]], <8 x double> [[TMP6]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
 ; AVX_FMA-NEXT:    ret <8 x double> [[TMP7]]
 ;
 ; AVX512-LABEL: @buildvector_mul_subadd_pd512(
@@ -932,7 +925,7 @@ define <8 x double> @buildvector_mul_subadd_pd512(<8 x double> %C, <8 x double> 
   ret <8 x double> %vecinsert8
 }
 
-define <8 x double> @buildvector_mul_subadd_pd512_partial(<8 x double> %C, <8 x double> %D, <8 x double> %B) #0 {
+define <8 x double> @buildvector_mul_subadd_pd512_partial(<8 x double> %C, <8 x double> %D, <8 x double> %B) {
 ; SSE-LABEL: @buildvector_mul_subadd_pd512_partial(
 ; SSE-NEXT:    [[A:%.*]] = fmul <8 x double> [[C:%.*]], [[D:%.*]]
 ; SSE-NEXT:    [[TMP1:%.*]] = fadd <8 x double> [[A]], [[B:%.*]]
@@ -1028,5 +1021,3 @@ define <8 x double> @buildvector_mul_subadd_pd512_partial(<8 x double> %C, <8 x 
   %vecinsert8 = insertelement <8 x double> %vecinsert7, double %add7, i32 7
   ret <8 x double> %vecinsert8
 }
-
-attributes #0 = { nounwind "unsafe-fp-math"="true" }

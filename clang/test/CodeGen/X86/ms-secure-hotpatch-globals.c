@@ -4,7 +4,7 @@
 //
 // RUN: %clang_cl -c --target=x86_64-windows-msvc -O2 /Z7 \
 // RUN:   -fms-secure-hotpatch-functions-list=hp1,hp2,hp3,hp4,hp5_phi_ptr_mixed,hp_phi_ptr_both,hp_const_ptr_sub \
-// RUN:   /clang:-S /clang:-o- %s | FileCheck %s
+// RUN:   /clang:-S /clang:-o- -- %s | FileCheck %s
 
 #ifdef __clang__
 #define NO_TAIL __attribute__((disable_tail_calls))

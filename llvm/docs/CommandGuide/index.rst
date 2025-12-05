@@ -27,6 +27,7 @@ Basic Commands
    llvm-dis
    llvm-dwarfdump
    llvm-dwarfutil
+   llvm-ir2vec
    llvm-lib
    llvm-libtool-darwin
    llvm-link
@@ -91,6 +92,7 @@ Developer Tools
    llvm-pdbutil
    llvm-profgen
    llvm-tli-checker
+   llvm-offload-binary
 
 Remarks Tools
 ~~~~~~~~~~~~~~

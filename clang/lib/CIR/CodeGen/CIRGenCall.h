@@ -33,7 +33,8 @@ public:
   CIRGenCalleeInfo(const clang::FunctionProtoType *calleeProtoTy,
                    clang::GlobalDecl calleeDecl)
       : calleeProtoTy(calleeProtoTy), calleeDecl(calleeDecl) {}
-  CIRGenCalleeInfo(clang::GlobalDecl calleeDecl) : calleeDecl(calleeDecl) {}
+  CIRGenCalleeInfo(clang::GlobalDecl calleeDecl)
+      : calleeProtoTy(nullptr), calleeDecl(calleeDecl) {}
 
   const clang::FunctionProtoType *getCalleeFunctionProtoType() const {
     return calleeProtoTy;
@@ -45,13 +46,24 @@ class CIRGenCallee {
   enum class SpecialKind : uintptr_t {
     Invalid,
     Builtin,
+    PseudoDestructor,
+    Virtual,
 
-    Last = Builtin,
+    Last = Virtual
   };
 
   struct BuiltinInfoStorage {
     const clang::FunctionDecl *decl;
     unsigned id;
+  };
+  struct PseudoDestructorInfoStorage {
+    const clang::CXXPseudoDestructorExpr *expr;
+  };
+  struct VirtualInfoStorage {
+    const clang::CallExpr *ce;
+    clang::GlobalDecl md;
+    Address addr;
+    cir::FuncType fTy;
   };
 
   SpecialKind kindOrFunctionPtr;
@@ -59,6 +71,8 @@ class CIRGenCallee {
   union {
     CIRGenCalleeInfo abstractInfo;
     BuiltinInfoStorage builtinInfo;
+    PseudoDestructorInfoStorage pseudoDestructorInfo;
+    VirtualInfoStorage virtualInfo;
   };
 
   explicit CIRGenCallee(SpecialKind kind) : kindOrFunctionPtr(kind) {}
@@ -97,6 +111,22 @@ public:
     return result;
   }
 
+  static CIRGenCallee
+  forPseudoDestructor(const clang::CXXPseudoDestructorExpr *expr) {
+    CIRGenCallee result(SpecialKind::PseudoDestructor);
+    result.pseudoDestructorInfo.expr = expr;
+    return result;
+  }
+
+  bool isPseudoDestructor() const {
+    return kindOrFunctionPtr == SpecialKind::PseudoDestructor;
+  }
+
+  const CXXPseudoDestructorExpr *getPseudoDestructorExpr() const {
+    assert(isPseudoDestructor());
+    return pseudoDestructorInfo.expr;
+  }
+
   bool isOrdinary() const {
     return uintptr_t(kindOrFunctionPtr) > uintptr_t(SpecialKind::Last);
   }
@@ -106,7 +136,8 @@ public:
   CIRGenCallee prepareConcreteCallee(CIRGenFunction &cgf) const;
 
   CIRGenCalleeInfo getAbstractInfo() const {
-    assert(!cir::MissingFeatures::opCallVirtual());
+    if (isVirtual())
+      return virtualInfo.md;
     assert(isOrdinary());
     return abstractInfo;
   }
@@ -114,6 +145,44 @@ public:
   mlir::Operation *getFunctionPointer() const {
     assert(isOrdinary());
     return reinterpret_cast<mlir::Operation *>(kindOrFunctionPtr);
+  }
+
+  bool isVirtual() const { return kindOrFunctionPtr == SpecialKind::Virtual; }
+
+  static CIRGenCallee forVirtual(const clang::CallExpr *ce,
+                                 clang::GlobalDecl md, Address addr,
+                                 cir::FuncType fTy) {
+    CIRGenCallee result(SpecialKind::Virtual);
+    result.virtualInfo.ce = ce;
+    result.virtualInfo.md = md;
+    result.virtualInfo.addr = addr;
+    result.virtualInfo.fTy = fTy;
+    return result;
+  }
+
+  const clang::CallExpr *getVirtualCallExpr() const {
+    assert(isVirtual());
+    return virtualInfo.ce;
+  }
+
+  clang::GlobalDecl getVirtualMethodDecl() const {
+    assert(isVirtual());
+    return virtualInfo.md;
+  }
+
+  Address getThisAddress() const {
+    assert(isVirtual());
+    return virtualInfo.addr;
+  }
+
+  cir::FuncType getVirtualFunctionType() const {
+    assert(isVirtual());
+    return virtualInfo.fTy;
+  }
+
+  void setFunctionPointer(mlir::Operation *functionPtr) {
+    assert(isOrdinary());
+    kindOrFunctionPtr = SpecialKind(reinterpret_cast<uintptr_t>(functionPtr));
   }
 };
 
@@ -131,7 +200,7 @@ private:
 
   /// A data-flow flag to make sure getRValue and/or copyInto are not
   /// called twice for duplicated IR emission.
-  mutable bool isUsed;
+  [[maybe_unused]] mutable bool isUsed;
 
 public:
   clang::QualType ty;
@@ -155,6 +224,8 @@ public:
   }
 
   bool isAggregate() const { return hasLV || rv.isAggregate(); }
+
+  void copyInto(CIRGenFunction &cgf, Address addr, mlir::Location loc) const;
 };
 
 class CallArgList : public llvm::SmallVector<CallArg, 8> {
@@ -187,6 +258,7 @@ public:
   ReturnValueSlot() = default;
   ReturnValueSlot(Address addr) : addr(addr) {}
 
+  bool isNull() const { return !addr.isValid(); }
   Address getValue() const { return addr; }
 };
 

@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --extra-arg -std=c++20 --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/GlobalNamespace/MyClass.json
+// RUN: FileCheck %s < %t/json/GlobalNamespace/_ZTV7MyClass.json
 
 template<typename T>
 concept Addable = requires(T a, T b) {
@@ -20,6 +20,7 @@ struct MyClass;
 // CHECK-NEXT:  "Template": {
 // CHECK-NEXT:    "Constraints": [
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "End": true,
 // CHECK-NEXT:        "Expression": "Addable<T>",
 // CHECK-NEXT:        "Name": "Addable",
 // CHECK-NEXT:        "Path": "",

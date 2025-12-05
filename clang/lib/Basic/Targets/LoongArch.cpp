@@ -81,38 +81,46 @@ LoongArchTargetInfo::getGCCRegAliases() const {
       {{"s6", "$s6", "r29"}, "$r29"},
       {{"s7", "$s7", "r30"}, "$r30"},
       {{"s8", "$s8", "r31"}, "$r31"},
-      {{"$fa0"}, "$f0"},
-      {{"$fa1"}, "$f1"},
-      {{"$fa2"}, "$f2"},
-      {{"$fa3"}, "$f3"},
-      {{"$fa4"}, "$f4"},
-      {{"$fa5"}, "$f5"},
-      {{"$fa6"}, "$f6"},
-      {{"$fa7"}, "$f7"},
-      {{"$ft0"}, "$f8"},
-      {{"$ft1"}, "$f9"},
-      {{"$ft2"}, "$f10"},
-      {{"$ft3"}, "$f11"},
-      {{"$ft4"}, "$f12"},
-      {{"$ft5"}, "$f13"},
-      {{"$ft6"}, "$f14"},
-      {{"$ft7"}, "$f15"},
-      {{"$ft8"}, "$f16"},
-      {{"$ft9"}, "$f17"},
-      {{"$ft10"}, "$f18"},
-      {{"$ft11"}, "$f19"},
-      {{"$ft12"}, "$f20"},
-      {{"$ft13"}, "$f21"},
-      {{"$ft14"}, "$f22"},
-      {{"$ft15"}, "$f23"},
-      {{"$fs0"}, "$f24"},
-      {{"$fs1"}, "$f25"},
-      {{"$fs2"}, "$f26"},
-      {{"$fs3"}, "$f27"},
-      {{"$fs4"}, "$f28"},
-      {{"$fs5"}, "$f29"},
-      {{"$fs6"}, "$f30"},
-      {{"$fs7"}, "$f31"},
+      {{"fa0", "$fa0", "f0"}, "$f0"},
+      {{"fa1", "$fa1", "f1"}, "$f1"},
+      {{"fa2", "$fa2", "f2"}, "$f2"},
+      {{"fa3", "$fa3", "f3"}, "$f3"},
+      {{"fa4", "$fa4", "f4"}, "$f4"},
+      {{"fa5", "$fa5", "f5"}, "$f5"},
+      {{"fa6", "$fa6", "f6"}, "$f6"},
+      {{"fa7", "$fa7", "f7"}, "$f7"},
+      {{"ft0", "$ft0", "f8"}, "$f8"},
+      {{"ft1", "$ft1", "f9"}, "$f9"},
+      {{"ft2", "$ft2", "f10"}, "$f10"},
+      {{"ft3", "$ft3", "f11"}, "$f11"},
+      {{"ft4", "$ft4", "f12"}, "$f12"},
+      {{"ft5", "$ft5", "f13"}, "$f13"},
+      {{"ft6", "$ft6", "f14"}, "$f14"},
+      {{"ft7", "$ft7", "f15"}, "$f15"},
+      {{"ft8", "$ft8", "f16"}, "$f16"},
+      {{"ft9", "$ft9", "f17"}, "$f17"},
+      {{"ft10", "$ft10", "f18"}, "$f18"},
+      {{"ft11", "$ft11", "f19"}, "$f19"},
+      {{"ft12", "$ft12", "f20"}, "$f20"},
+      {{"ft13", "$ft13", "f21"}, "$f21"},
+      {{"ft14", "$ft14", "f22"}, "$f22"},
+      {{"ft15", "$ft15", "f23"}, "$f23"},
+      {{"fs0", "$fs0", "f24"}, "$f24"},
+      {{"fs1", "$fs1", "f25"}, "$f25"},
+      {{"fs2", "$fs2", "f26"}, "$f26"},
+      {{"fs3", "$fs3", "f27"}, "$f27"},
+      {{"fs4", "$fs4", "f28"}, "$f28"},
+      {{"fs5", "$fs5", "f29"}, "$f29"},
+      {{"fs6", "$fs6", "f30"}, "$f30"},
+      {{"fs7", "$fs7", "f31"}, "$f31"},
+      {{"fcc0"}, "$fcc0"},
+      {{"fcc1"}, "$fcc1"},
+      {{"fcc2"}, "$fcc2"},
+      {{"fcc3"}, "$fcc3"},
+      {{"fcc4"}, "$fcc4"},
+      {{"fcc5"}, "$fcc5"},
+      {{"fcc6"}, "$fcc6"},
+      {{"fcc7"}, "$fcc7"},
   };
   return llvm::ArrayRef(GCCRegAliases);
 }
@@ -234,6 +242,7 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__loongarch_simd_width", "256");
     Builder.defineMacro("__loongarch_sx", Twine(1));
     Builder.defineMacro("__loongarch_asx", Twine(1));
+    Builder.defineMacro("__loongarch_asx_sx_conv", Twine(1));
   } else if (HasFeatureLSX) {
     Builder.defineMacro("__loongarch_simd_width", "128");
     Builder.defineMacro("__loongarch_sx", Twine(1));
@@ -453,6 +462,8 @@ LoongArchTargetInfo::parseTargetAttr(StringRef Features) const {
 
     case AttrFeatureKind::Feature:
       Ret.Features.push_back("+" + Value.str());
+      if (Value == "lasx")
+        Ret.Features.push_back("+lsx");
       break;
     }
   }

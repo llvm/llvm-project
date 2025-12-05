@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -46,7 +47,7 @@ namespace orc {
 // (5) V -- A JITDylib associated with ES.
 class CoreAPIsBasedStandardTest : public testing::Test {
 public:
-  ~CoreAPIsBasedStandardTest() {
+  ~CoreAPIsBasedStandardTest() override {
     if (auto Err = ES.endSession())
       ES.reportError(std::move(Err));
   }

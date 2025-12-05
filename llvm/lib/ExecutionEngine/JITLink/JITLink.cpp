@@ -16,6 +16,7 @@
 #include "llvm/ExecutionEngine/JITLink/XCOFF.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
+#include "llvm/ExecutionEngine/JITLink/systemz.h"
 #include "llvm/ExecutionEngine/JITLink/x86.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Support/raw_ostream.h"
@@ -280,6 +281,9 @@ std::vector<Block *> LinkGraph::splitBlockImpl(std::vector<Block *> Blocks,
 void LinkGraph::dump(raw_ostream &OS) {
   DenseMap<Block *, std::vector<Symbol *>> BlockSymbols;
 
+  OS << "LinkGraph \"" << getName()
+     << "\" (triple = " << getTargetTriple().str() << ")\n";
+
   // Map from blocks to the symbols pointing at them.
   for (auto *Sym : defined_symbols())
     BlockSymbols[&Sym->getBlock()].push_back(Sym);
@@ -476,6 +480,8 @@ AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT) {
   case Triple::loongarch32:
   case Triple::loongarch64:
     return loongarch::createAnonymousPointer;
+  case Triple::systemz:
+    return systemz::createAnonymousPointer;
   default:
     return nullptr;
   }
@@ -492,6 +498,8 @@ PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT) {
   case Triple::loongarch32:
   case Triple::loongarch64:
     return loongarch::createAnonymousPointerJumpStub;
+  case Triple::systemz:
+    return systemz::createAnonymousPointerJumpStub;
   default:
     return nullptr;
   }

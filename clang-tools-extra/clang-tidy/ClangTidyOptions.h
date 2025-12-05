@@ -1,4 +1,4 @@
-//===--- ClangTidyOptions.h - clang-tidy ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYOPTIONS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYOPTIONS_H
 
+#include "clang/Basic/DiagnosticIDs.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
@@ -129,6 +130,19 @@ struct ClangTidyOptions {
   /// Key-value mapping used to store check-specific options.
   OptionMap CheckOptions;
 
+  struct CustomCheckDiag {
+    std::string BindName;
+    std::string Message;
+    std::optional<DiagnosticIDs::Level> Level;
+  };
+  struct CustomCheckValue {
+    std::string Name;
+    std::string Query;
+    llvm::SmallVector<CustomCheckDiag> Diags;
+  };
+  using CustomCheckValueList = llvm::SmallVector<CustomCheckValue>;
+  std::optional<CustomCheckValueList> CustomChecks;
+
   using ArgList = std::vector<std::string>;
 
   /// Add extra compilation arguments to the end of the list.
@@ -157,7 +171,7 @@ public:
   static const char OptionsSourceTypeCheckCommandLineOption[];
   static const char OptionsSourceTypeConfigCommandLineOption[];
 
-  virtual ~ClangTidyOptionsProvider() {}
+  virtual ~ClangTidyOptionsProvider() = default;
 
   /// Returns global options, which are independent of the file.
   virtual const ClangTidyGlobalOptions &getGlobalOptions() = 0;

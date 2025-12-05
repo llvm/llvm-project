@@ -163,7 +163,7 @@ define <8 x i16> @interleave_v4i16(<4 x i16> %x, <4 x i16> %y) {
 ; ZIP-NEXT:    ri.vzip2a.vv v10, v8, v9
 ; ZIP-NEXT:    vmv.v.v v8, v10
 ; ZIP-NEXT:    ret
-  %a = shufflevector <4 x i16> %x, <4 x i16> %y, <8 x i32> <i32 0, i32 4, i32 undef, i32 5, i32 2, i32 undef, i32 3, i32 7>
+  %a = shufflevector <4 x i16> %x, <4 x i16> %y, <8 x i32> <i32 0, i32 4, i32 poison, i32 5, i32 2, i32 poison, i32 3, i32 7>
   ret <8 x i16> %a
 }
 
@@ -598,43 +598,54 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; ZIP-NEXT:    addi sp, sp, -16
 ; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    slli a0, a0, 5
-; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 32 * vlenb
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    li a1, 24
+; ZIP-NEXT:    li a1, 40
 ; ZIP-NEXT:    mul a0, a0, a1
+; ZIP-NEXT:    sub sp, sp, a0
+; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x28, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 40 * vlenb
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    slli a0, a0, 5
 ; ZIP-NEXT:    add a0, sp, a0
 ; ZIP-NEXT:    addi a0, a0, 16
 ; ZIP-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; ZIP-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; ZIP-NEXT:    vslidedown.vi v24, v8, 16
 ; ZIP-NEXT:    li a0, 32
-; ZIP-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; ZIP-NEXT:    ri.vzip2a.vv v16, v24, v0
-; ZIP-NEXT:    csrr a1, vlenb
-; ZIP-NEXT:    li a2, 24
-; ZIP-NEXT:    mul a1, a1, a2
-; ZIP-NEXT:    add a1, sp, a1
-; ZIP-NEXT:    addi a1, a1, 16
-; ZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; ZIP-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; ZIP-NEXT:    vslidedown.vi v24, v24, 16
-; ZIP-NEXT:    csrr a1, vlenb
-; ZIP-NEXT:    slli a1, a1, 4
-; ZIP-NEXT:    add a1, sp, a1
-; ZIP-NEXT:    addi a1, a1, 16
-; ZIP-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
-; ZIP-NEXT:    lui a1, 699051
-; ZIP-NEXT:    addi a1, a1, -1366
-; ZIP-NEXT:    vmv.s.x v0, a1
+; ZIP-NEXT:    vslidedown.vi v16, v8, 16
+; ZIP-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; ZIP-NEXT:    ri.vzip2a.vv v8, v16, v0
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    slli a1, a1, 3
 ; ZIP-NEXT:    add a1, sp, a1
 ; ZIP-NEXT:    addi a1, a1, 16
 ; ZIP-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; ZIP-NEXT:    csrr a1, vlenb
+; ZIP-NEXT:    slli a1, a1, 5
+; ZIP-NEXT:    add a1, sp, a1
+; ZIP-NEXT:    addi a1, a1, 16
+; ZIP-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
+; ZIP-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; ZIP-NEXT:    vslidedown.vi v16, v16, 16
+; ZIP-NEXT:    csrr a1, vlenb
+; ZIP-NEXT:    li a2, 24
+; ZIP-NEXT:    mul a1, a1, a2
+; ZIP-NEXT:    add a1, sp, a1
+; ZIP-NEXT:    addi a1, a1, 16
+; ZIP-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; ZIP-NEXT:    lui a1, 699051
+; ZIP-NEXT:    addi a1, a1, -1366
+; ZIP-NEXT:    vmv.s.x v0, a1
+; ZIP-NEXT:    csrr a1, vlenb
+; ZIP-NEXT:    slli a1, a1, 4
+; ZIP-NEXT:    add a1, sp, a1
+; ZIP-NEXT:    addi a1, a1, 16
+; ZIP-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; ZIP-NEXT:    csrr a1, vlenb
+; ZIP-NEXT:    li a2, 24
+; ZIP-NEXT:    mul a1, a1, a2
+; ZIP-NEXT:    add a1, sp, a1
+; ZIP-NEXT:    addi a1, a1, 16
+; ZIP-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    slli a1, a1, 4
 ; ZIP-NEXT:    add a1, sp, a1
@@ -646,19 +657,21 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; ZIP-NEXT:    addi a1, a1, 16
 ; ZIP-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
 ; ZIP-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
-; ZIP-NEXT:    ri.vzip2a.vv v16, v8, v24, v0.t
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    li a1, 24
-; ZIP-NEXT:    mul a0, a0, a1
-; ZIP-NEXT:    add a0, sp, a0
-; ZIP-NEXT:    addi a0, a0, 16
-; ZIP-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; ZIP-NEXT:    addi a0, sp, 16
-; ZIP-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; ZIP-NEXT:    ri.vzip2a.vv v0, v8, v24
-; ZIP-NEXT:    vmv.v.v v8, v0
+; ZIP-NEXT:    ri.vzip2a.vv v8, v24, v16, v0.t
+; ZIP-NEXT:    vmv.v.v v24, v8
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 5
+; ZIP-NEXT:    add a0, sp, a0
+; ZIP-NEXT:    addi a0, a0, 16
+; ZIP-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
+; ZIP-NEXT:    addi a0, sp, 16
+; ZIP-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; ZIP-NEXT:    ri.vzip2a.vv v0, v8, v16
+; ZIP-NEXT:    vmv.v.v v8, v0
+; ZIP-NEXT:    vmv.v.v v16, v24
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    li a1, 40
+; ZIP-NEXT:    mul a0, a0, a1
 ; ZIP-NEXT:    add sp, sp, a0
 ; ZIP-NEXT:    .cfi_def_cfa sp, 16
 ; ZIP-NEXT:    addi sp, sp, 16
@@ -889,7 +902,7 @@ define <8 x i8> @unary_interleave_v8i8(<8 x i8> %x) {
 ; ZIP-NEXT:    ri.vzip2a.vv v9, v8, v10
 ; ZIP-NEXT:    vmv1r.v v8, v9
 ; ZIP-NEXT:    ret
-  %a = shufflevector <8 x i8> %x, <8 x i8> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 undef, i32 6, i32 3, i32 7>
+  %a = shufflevector <8 x i8> %x, <8 x i8> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 poison, i32 6, i32 3, i32 7>
   ret <8 x i8> %a
 }
 
@@ -923,7 +936,7 @@ define <8 x i16> @unary_interleave_v8i16(<8 x i16> %x) {
 ; ZIP-NEXT:    ri.vzip2a.vv v9, v10, v8
 ; ZIP-NEXT:    vmv.v.v v8, v9
 ; ZIP-NEXT:    ret
-  %a = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 4, i32 undef, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3>
+  %a = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 4, i32 poison, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3>
   ret <8 x i16> %a
 }
 
@@ -979,7 +992,7 @@ define <4 x i8> @unary_interleave_10uu_v4i8(<4 x i8> %x) {
 ; ZIP-NEXT:    vsll.vi v8, v8, 8
 ; ZIP-NEXT:    vor.vv v8, v8, v9
 ; ZIP-NEXT:    ret
-  %a = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
+  %a = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 1, i32 0, i32 poison, i32 poison>
   ret <4 x i8> %a
 }
 
@@ -1011,8 +1024,8 @@ define <16 x i16> @interleave_slp(<8 x i16> %v0, <8 x i16> %v1) {
 ; ZIP-NEXT:    vmv.v.v v8, v10
 ; ZIP-NEXT:    ret
 entry:
-  %v2 = shufflevector <8 x i16> %v0, <8 x i16> poison, <16 x i32> <i32 0, i32 undef, i32 1, i32 undef, i32 2, i32 undef, i32 3, i32 undef, i32 4, i32 undef, i32 5, i32 undef, i32 6, i32 undef, i32 7, i32 undef>
-  %v3 = shufflevector <8 x i16> %v1, <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %v2 = shufflevector <8 x i16> %v0, <8 x i16> poison, <16 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 poison, i32 3, i32 poison, i32 4, i32 poison, i32 5, i32 poison, i32 6, i32 poison, i32 7, i32 poison>
+  %v3 = shufflevector <8 x i16> %v1, <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %v4 = shufflevector <16 x i16> %v2, <16 x i16> %v3, <16 x i32> <i32 0, i32 16, i32 2, i32 17, i32 4, i32 18, i32 6, i32 19, i32 8, i32 20, i32 10, i32 21, i32 12, i32 22, i32 14, i32 23>
   ret <16 x i16> %v4
 }

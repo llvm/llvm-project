@@ -56,7 +56,7 @@ entry:
 }
 
 define i32 @test_read_global() {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, argmem: none, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, argmem: none, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define i32 @test_read_global
 ; FNATTRS-SAME: () #[[ATTR2:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
@@ -76,7 +76,7 @@ entry:
 }
 
 define i32 @test_read_loaded_ptr(ptr %ptr) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define i32 @test_read_loaded_ptr
 ; FNATTRS-SAME: (ptr readonly captures(none) [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
@@ -119,7 +119,7 @@ entry:
 }
 
 define void @test_write_global() {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define void @test_write_global
 ; FNATTRS-SAME: () #[[ATTR5:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
@@ -243,7 +243,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 @arr = global [32 x i8] zeroinitializer
 
 define void @test_memcpy_src_global(ptr %dst) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define void @test_memcpy_src_global
 ; FNATTRS-SAME: (ptr writeonly captures(none) initializes((0, 32)) [[DST:%.*]]) #[[ATTR11:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
@@ -263,7 +263,7 @@ entry:
 }
 
 define void @test_memcpy_dst_global(ptr %src) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define void @test_memcpy_dst_global
 ; FNATTRS-SAME: (ptr readonly captures(none) [[SRC:%.*]]) #[[ATTR11]] {
 ; FNATTRS-NEXT:  entry:
@@ -388,7 +388,7 @@ define void @test_inaccessibleorargmemonly_readwrite(ptr %arg) {
 }
 
 define void @test_recursive_argmem_read(ptr %p) {
-; FNATTRS: Function Attrs: nofree nosync nounwind memory(read, inaccessiblemem: none)
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(read, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define void @test_recursive_argmem_read
 ; FNATTRS-SAME: (ptr readonly captures(none) [[P:%.*]]) #[[ATTR16:[0-9]+]] {
 ; FNATTRS-NEXT:    [[PVAL:%.*]] = load ptr, ptr [[P]], align 8
@@ -408,7 +408,7 @@ define void @test_recursive_argmem_read(ptr %p) {
 }
 
 define void @test_recursive_argmem_readwrite(ptr %p) {
-; FNATTRS: Function Attrs: nofree nosync nounwind memory(readwrite, inaccessiblemem: none)
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(readwrite, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define void @test_recursive_argmem_readwrite
 ; FNATTRS-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR17:[0-9]+]] {
 ; FNATTRS-NEXT:    [[PVAL:%.*]] = load ptr, ptr [[P]], align 8
@@ -454,7 +454,7 @@ define void @test_recursive_argmem_read_alloca(ptr %p) {
 }
 
 define void @test_scc_argmem_read_1(ptr %p) {
-; FNATTRS: Function Attrs: nofree nosync nounwind memory(read, inaccessiblemem: none)
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(read, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define void @test_scc_argmem_read_1
 ; FNATTRS-SAME: (ptr readonly captures(none) [[P:%.*]]) #[[ATTR16]] {
 ; FNATTRS-NEXT:    [[PVAL:%.*]] = load ptr, ptr [[P]], align 8
@@ -474,7 +474,7 @@ define void @test_scc_argmem_read_1(ptr %p) {
 }
 
 define void @test_scc_argmem_read_2(ptr %p) {
-; FNATTRS: Function Attrs: nofree nosync nounwind memory(read, inaccessiblemem: none)
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(read, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define void @test_scc_argmem_read_2
 ; FNATTRS-SAME: (ptr readonly captures(none) [[P:%.*]]) #[[ATTR16]] {
 ; FNATTRS-NEXT:    call void @test_scc_argmem_read_1(ptr [[P]])
@@ -518,7 +518,7 @@ entry:
 
 ; FIXME: This could be `memory(argmem: read)`.
 define i64 @select_different_obj(i1 %c, ptr %p, ptr %p2) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define i64 @select_different_obj
 ; FNATTRS-SAME: (i1 [[C:%.*]], ptr readonly captures(none) [[P:%.*]], ptr readonly captures(none) [[P2:%.*]]) #[[ATTR3]] {
 ; FNATTRS-NEXT:  entry:
@@ -580,7 +580,7 @@ join:
 
 ; FIXME: This could be `memory(argmem: read)`.
 define i64 @phi_different_obj(i1 %c, ptr %p, ptr %p2) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define i64 @phi_different_obj
 ; FNATTRS-SAME: (i1 [[C:%.*]], ptr readonly captures(none) [[P:%.*]], ptr readonly captures(none) [[P2:%.*]]) #[[ATTR3]] {
 ; FNATTRS-NEXT:  entry:

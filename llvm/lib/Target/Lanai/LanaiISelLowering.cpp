@@ -70,7 +70,7 @@ static cl::opt<int> LanaiLowerConstantMulThreshold(
 
 LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
                                          const LanaiSubtarget &STI)
-    : TargetLowering(TM) {
+    : TargetLowering(TM, STI) {
   // Set up the register classes.
   addRegisterClass(MVT::i32, &Lanai::GPRRegClass);
 
@@ -149,10 +149,6 @@ LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
   // as this was causing bad performance compared to a large group of if
   // statements. Re-evaluate this on new benchmarks.
   setMinimumJumpTableEntries(100);
-
-  // Use fast calling convention for library functions.
-  for (RTLIB::Libcall LC : RTLIB::libcalls())
-    setLibcallCallingConv(LC, CallingConv::Fast);
 
   MaxStoresPerMemset = 16; // For @llvm.memset -> sequence of stores
   MaxStoresPerMemsetOptSize = 8;
@@ -357,16 +353,15 @@ void LanaiTargetLowering::LowerAsmOperandForConstraint(
 
 #include "LanaiGenCallingConv.inc"
 
-static unsigned NumFixedArgs;
 static bool CC_Lanai32_VarArg(unsigned ValNo, MVT ValVT, MVT LocVT,
                               CCValAssign::LocInfo LocInfo,
-                              ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                              ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                              CCState &State) {
   // Handle fixed arguments with default CC.
   // Note: Both the default and fast CC handle VarArg the same and hence the
   // calling convention of the function is not considered here.
-  if (ValNo < NumFixedArgs) {
-    return CC_Lanai32(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State);
-  }
+  if (!ArgFlags.isVarArg())
+    return CC_Lanai32(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy, State);
 
   // Promote i8/i16 args to i32
   if (LocVT == MVT::i8 || LocVT == MVT::i16) {
@@ -607,15 +602,9 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
   GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
-  NumFixedArgs = 0;
-  if (IsVarArg && G) {
-    const Function *CalleeFn = dyn_cast<Function>(G->getGlobal());
-    if (CalleeFn)
-      NumFixedArgs = CalleeFn->getFunctionType()->getNumParams();
-  }
-  if (NumFixedArgs)
+  if (IsVarArg) {
     CCInfo.AnalyzeCallOperands(Outs, CC_Lanai32_VarArg);
-  else {
+  } else {
     if (CallConv == CallingConv::Fast)
       CCInfo.AnalyzeCallOperands(Outs, CC_Lanai32_Fast);
     else
@@ -712,9 +701,8 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
   // Build a sequence of copy-to-reg nodes chained together with token chain and
   // flag operands which copy the outgoing args into registers.  The InGlue in
   // necessary since all emitted instructions must be stuck together.
-  for (unsigned I = 0, E = RegsToPass.size(); I != E; ++I) {
-    Chain = DAG.getCopyToReg(Chain, DL, RegsToPass[I].first,
-                             RegsToPass[I].second, InGlue);
+  for (const auto &[Reg, N] : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, DL, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
 
@@ -745,9 +733,8 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
 
   // Add argument registers to the end of the list so that they are
   // known live into the call.
-  for (unsigned I = 0, E = RegsToPass.size(); I != E; ++I)
-    Ops.push_back(DAG.getRegister(RegsToPass[I].first,
-                                  RegsToPass[I].second.getValueType()));
+  for (const auto &[Reg, N] : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   if (InGlue.getNode())
     Ops.push_back(InGlue);

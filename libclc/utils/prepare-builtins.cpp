@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if HAVE_LLVM > 0x0390
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
-#else
-#include "llvm/Bitcode/ReaderWriter.h"
-#endif
 
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
@@ -62,12 +58,8 @@ int main(int argc, char **argv) {
       std::unique_ptr<MemoryBuffer> &BufferPtr = BufferOrErr.get();
       SMDiagnostic Err;
       std::unique_ptr<llvm::Module> MPtr =
-#if HAVE_LLVM > 0x0390
           ExitOnErr(Expected<std::unique_ptr<llvm::Module>>(
               parseIR(BufferPtr.get()->getMemBufferRef(), Err, Context)));
-#else
-          parseIR(BufferPtr.get()->getMemBufferRef(), Err, Context);
-#endif
       M = MPtr.release();
     }
   }
@@ -106,13 +98,8 @@ int main(int argc, char **argv) {
   }
 
   std::error_code EC;
-#if HAVE_LLVM >= 0x0600
   std::unique_ptr<ToolOutputFile> Out(
       new ToolOutputFile(OutputFilename, EC, sys::fs::OF_None));
-#else
-  std::unique_ptr<tool_output_file> Out(
-      new tool_output_file(OutputFilename, EC, sys::fs::OF_None));
-#endif
   if (EC) {
     errs() << EC.message() << '\n';
     exit(1);
@@ -121,11 +108,7 @@ int main(int argc, char **argv) {
   if (TextualOut)
     M->print(Out->os(), nullptr, true);
   else
-#if HAVE_LLVM >= 0x0700
     WriteBitcodeToFile(*M, Out->os());
-#else
-    WriteBitcodeToFile(M, Out->os());
-#endif
 
   // Declare success.
   Out->keep();

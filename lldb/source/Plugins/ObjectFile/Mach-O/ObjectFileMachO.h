@@ -133,6 +133,8 @@ public:
 
   bool GetCorefileThreadExtraInfos(std::vector<lldb::tid_t> &tids) override;
 
+  lldb_private::StructuredData::ObjectSP GetCorefileProcessMetadata() override;
+
   bool LoadCoreFileImages(lldb_private::Process &process) override;
 
   lldb::RegisterContextSP
@@ -159,6 +161,8 @@ public:
   bool AllowAssemblyEmulationUnwindPlans() override;
 
   lldb_private::Section *GetMachHeaderSection();
+
+  bool IsGOTSection(const lldb_private::Section &section) const override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
@@ -261,12 +265,150 @@ protected:
   // in virtual address layout from the start of the TEXT segment, and
   // that span may be larger than 4GB.
   struct SymtabCommandLargeOffsets {
+    SymtabCommandLargeOffsets() {}
+    SymtabCommandLargeOffsets(const llvm::MachO::symtab_command &in)
+        : cmd(in.cmd), cmdsize(in.cmdsize), symoff(in.symoff), nsyms(in.nsyms),
+          stroff(in.stroff), strsize(in.strsize) {}
+    void operator=(const llvm::MachO::symtab_command &in) {
+      cmd = in.cmd;
+      cmdsize = in.cmdsize;
+      symoff = in.symoff;
+      nsyms = in.nsyms;
+      stroff = in.stroff;
+      strsize = in.strsize;
+    }
     uint32_t cmd = 0;          /* LC_SYMTAB */
     uint32_t cmdsize = 0;      /* sizeof(struct symtab_command) */
     lldb::offset_t symoff = 0; /* symbol table offset */
     uint32_t nsyms = 0;        /* number of symbol table entries */
     lldb::offset_t stroff = 0; /* string table offset */
     uint32_t strsize = 0;      /* string table size in bytes */
+  };
+
+  // The LC_DYLD_INFO's dyld_info_command has 32-bit file offsets
+  // that we will use as virtual address offsets, and may need to span
+  // more than 4GB in virtual memory.
+  struct DyldInfoCommandLargeOffsets {
+    DyldInfoCommandLargeOffsets() {}
+    DyldInfoCommandLargeOffsets(const llvm::MachO::dyld_info_command &in)
+        : cmd(in.cmd), cmdsize(in.cmdsize), rebase_off(in.rebase_off),
+          rebase_size(in.rebase_size), bind_off(in.bind_off),
+          bind_size(in.bind_size), weak_bind_off(in.weak_bind_off),
+          weak_bind_size(in.weak_bind_size), lazy_bind_off(in.lazy_bind_off),
+          lazy_bind_size(in.lazy_bind_size), export_off(in.export_off),
+          export_size(in.export_size) {}
+
+    void operator=(const llvm::MachO::dyld_info_command &in) {
+      cmd = in.cmd;
+      cmdsize = in.cmdsize;
+      rebase_off = in.rebase_off;
+      rebase_size = in.rebase_size;
+      bind_off = in.bind_off;
+      bind_size = in.bind_size;
+      weak_bind_off = in.weak_bind_off;
+      weak_bind_size = in.weak_bind_size;
+      lazy_bind_off = in.lazy_bind_off;
+      lazy_bind_size = in.lazy_bind_size;
+      export_off = in.export_off;
+      export_size = in.export_size;
+    };
+
+    /// LC_DYLD_INFO or LC_DYLD_INFO_ONLY
+    uint32_t cmd = 0;
+    uint32_t cmdsize = 0;             /* sizeof(struct dyld_info_command) */
+    lldb::offset_t rebase_off = 0;    /* file offset to rebase info  */
+    uint32_t rebase_size = 0;         /* size of rebase info   */
+    lldb::offset_t bind_off = 0;      /* file offset to binding info   */
+    uint32_t bind_size = 0;           /* size of binding info  */
+    lldb::offset_t weak_bind_off = 0; /* file offset to weak binding info   */
+    uint32_t weak_bind_size = 0;      /* size of weak binding info  */
+    lldb::offset_t lazy_bind_off = 0; /* file offset to lazy binding info */
+    uint32_t lazy_bind_size = 0;      /* size of lazy binding infs */
+    lldb::offset_t export_off = 0;    /* file offset to lazy binding info */
+    uint32_t export_size = 0;         /* size of lazy binding infs */
+  };
+
+  /// The LC_DYSYMTAB's dysymtab_command has 32-bit file offsets
+  /// that we will use as virtual address offsets, and may need to span
+  /// more than 4GB in virtual memory.
+  struct DysymtabCommandLargeOffsets {
+    DysymtabCommandLargeOffsets() {}
+    DysymtabCommandLargeOffsets(const llvm::MachO::dysymtab_command &in)
+        : cmd(in.cmd), cmdsize(in.cmdsize), ilocalsym(in.ilocalsym),
+          nlocalsym(in.nlocalsym), iextdefsym(in.iextdefsym),
+          nextdefsym(in.nextdefsym), iundefsym(in.iundefsym),
+          nundefsym(in.nundefsym), tocoff(in.tocoff), ntoc(in.ntoc),
+          modtaboff(in.modtaboff), nmodtab(in.nmodtab),
+          extrefsymoff(in.extrefsymoff), nextrefsyms(in.nextrefsyms),
+          indirectsymoff(in.indirectsymoff), nindirectsyms(in.nindirectsyms),
+          extreloff(in.extreloff), nextrel(in.nextrel), locreloff(in.locreloff),
+          nlocrel(in.nlocrel) {}
+
+    void operator=(const llvm::MachO::dysymtab_command &in) {
+      cmd = in.cmd;
+      cmdsize = in.cmdsize;
+      ilocalsym = in.ilocalsym;
+      nlocalsym = in.nlocalsym;
+      iextdefsym = in.iextdefsym;
+      nextdefsym = in.nextdefsym;
+      iundefsym = in.iundefsym;
+      nundefsym = in.nundefsym;
+      tocoff = in.tocoff;
+      ntoc = in.ntoc;
+      modtaboff = in.modtaboff;
+      nmodtab = in.nmodtab;
+      extrefsymoff = in.extrefsymoff;
+      nextrefsyms = in.nextrefsyms;
+      indirectsymoff = in.indirectsymoff;
+      nindirectsyms = in.nindirectsyms;
+      extreloff = in.extreloff;
+      nextrel = in.nextrel;
+      locreloff = in.locreloff;
+      nlocrel = in.nlocrel;
+    };
+
+    uint32_t cmd = 0;             /* LC_DYSYMTAB */
+    uint32_t cmdsize = 0;         /* sizeof(struct dysymtab_command) */
+    uint32_t ilocalsym = 0;       /* index to local symbols */
+    uint32_t nlocalsym = 0;       /* number of local symbols */
+    uint32_t iextdefsym = 0;      /* index to externally defined symbols */
+    uint32_t nextdefsym = 0;      /* number of externally defined symbols */
+    uint32_t iundefsym = 0;       /* index to undefined symbols */
+    uint32_t nundefsym = 0;       /* number of undefined symbols */
+    lldb::offset_t tocoff = 0;    /* file offset to table of contents */
+    uint32_t ntoc = 0;            /* number of entries in table of contents */
+    lldb::offset_t modtaboff = 0; /* file offset to module table */
+    uint32_t nmodtab = 0;         /* number of module table entries */
+    lldb::offset_t extrefsymoff = 0; /* offset to referenced symbol table */
+    uint32_t nextrefsyms = 0; /* number of referenced symbol table entries */
+    lldb::offset_t indirectsymoff =
+        0;                        /* file offset to the indirect symbol table */
+    uint32_t nindirectsyms = 0;   /* number of indirect symbol table entries */
+    lldb::offset_t extreloff = 0; /* offset to external relocation entries */
+    uint32_t nextrel = 0;         /* number of external relocation entries */
+    lldb::offset_t locreloff = 0; /* offset to local relocation entries */
+    uint32_t nlocrel = 0;         /* number of local relocation entries */
+  };
+
+  // The linkedit_data_command is used in several load commands including
+  // LC_FUNCTION_STARTS and LC_DYLD_EXPORTS_TRIE.  It has a 32-bit file offset
+  // that may need to span more than 4GB in real virtual addresses.
+  struct LinkeditDataCommandLargeOffsets {
+    LinkeditDataCommandLargeOffsets() {}
+    LinkeditDataCommandLargeOffsets(
+        const llvm::MachO::linkedit_data_command &in)
+        : cmd(in.cmd), cmdsize(in.cmdsize), dataoff(in.dataoff),
+          datasize(in.datasize) {}
+    void operator=(const llvm::MachO::linkedit_data_command &in) {
+      cmd = in.cmd;
+      cmdsize = in.cmdsize;
+      dataoff = in.dataoff;
+      datasize = in.datasize;
+    }
+    uint32_t cmd = 0;     /* LC_FUNCTION_STARTS, LC_DYLD_EXPORTS_TRIE, etc */
+    uint32_t cmdsize = 0; /* sizeof(struct linkedit_data_command) */
+    lldb::offset_t dataoff = 0; /* file offset of data in __LINKEDIT segment */
+    uint32_t datasize = 0;      /* file size of data in __LINKEDIT segment  */
   };
 
   /// Get the list of binary images that were present in the process

@@ -13,12 +13,6 @@
 namespace mlir {
 class LLVMTypeConverter;
 
-/// Collect a set of patterns to convert from Vector contractions to LLVM Matrix
-/// Intrinsics. To lower to assembly, the LLVM flag -lower-matrix-intrinsics
-/// will be needed when invoking LLVM.
-void populateVectorToLLVMMatrixConversionPatterns(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns);
-
 /// Collect a set of patterns to convert from the Vector dialect to LLVM.
 void populateVectorToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,

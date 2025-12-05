@@ -232,17 +232,11 @@ define float @fcvt_s_wu(i32 %a) nounwind {
 }
 
 define float @fcvt_s_wu_load(ptr %p) nounwind {
-; RV32IF-LABEL: fcvt_s_wu_load:
-; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    lw a0, 0(a0)
-; RV32IF-NEXT:    fcvt.s.wu fa0, a0
-; RV32IF-NEXT:    ret
-;
-; RV64IF-LABEL: fcvt_s_wu_load:
-; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    lwu a0, 0(a0)
-; RV64IF-NEXT:    fcvt.s.wu fa0, a0
-; RV64IF-NEXT:    ret
+; CHECKIF-LABEL: fcvt_s_wu_load:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    lw a0, 0(a0)
+; CHECKIF-NEXT:    fcvt.s.wu fa0, a0
+; CHECKIF-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_s_wu_load:
 ; RV32I:       # %bb.0:

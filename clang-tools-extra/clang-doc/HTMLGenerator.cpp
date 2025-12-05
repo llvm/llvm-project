@@ -897,9 +897,9 @@ class HTMLGenerator : public Generator {
 public:
   static const char *Format;
 
-  llvm::Error generateDocs(StringRef RootDir,
-                           llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                           const ClangDocContext &CDCtx) override;
+  llvm::Error generateDocumentation(
+      StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+      const ClangDocContext &CDCtx, std::string DirName) override;
   llvm::Error createResources(ClangDocContext &CDCtx) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
@@ -907,10 +907,9 @@ public:
 
 const char *HTMLGenerator::Format = "html";
 
-llvm::Error
-HTMLGenerator::generateDocs(StringRef RootDir,
-                            llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                            const ClangDocContext &CDCtx) {
+llvm::Error HTMLGenerator::generateDocumentation(
+    StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+    const ClangDocContext &CDCtx, std::string DirName) {
   // Track which directories we already tried to create.
   llvm::StringSet<> CreatedDirs;
 
@@ -987,6 +986,7 @@ llvm::Error HTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
     break;
   case InfoType::IT_concept:
   case InfoType::IT_variable:
+  case InfoType::IT_friend:
     break;
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -1018,6 +1018,8 @@ static std::string getRefType(InfoType IT) {
     return "concept";
   case InfoType::IT_variable:
     return "variable";
+  case InfoType::IT_friend:
+    return "friend";
   }
   llvm_unreachable("Unknown InfoType");
 }

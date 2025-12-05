@@ -34,6 +34,7 @@
 //  Q -> target builtin type, followed by a character to distinguish the builtin type
 //    Qa -> AArch64 svcount_t builtin type.
 //    Qb -> AMDGPU __amdgpu_buffer_rsrc_t builtin type.
+//    Qt -> AMDGPU __amdgpu_texture_t builtin type.
 //  E -> ext_vector, followed by the number of elements and the base type.
 //  X -> _Complex, followed by the base type.
 //  Y -> ptrdiff_t
@@ -42,6 +43,7 @@
 //  SJ -> sigjmp_buf
 //  K -> ucontext_t
 //  p -> pid_t
+//  e -> _Float16 for HIP/C++ and __fp16 for OpenCL
 //  . -> "...".  This may only occur at the end of the function list.
 //
 // Types may be prefixed with the following modifiers:
@@ -66,7 +68,8 @@
 
 // The third value provided to the macro specifies information about attributes
 // of the function.  These must be kept in sync with the predicates in the
-// Builtin::Context class.  Currently we have:
+// Builtin::Context class.  Note: In the descriptions below, {num} is a
+// placeholder for an integer.  Currently we have:
 //  n -> nothrow
 //  r -> noreturn
 //  U -> pure
@@ -82,23 +85,23 @@
 //  h -> this function requires a specific header or an explicit declaration.
 //  i -> this is a runtime library implemented function without the
 //       '__builtin_' prefix. It will be implemented in compiler-rt or libgcc.
-//  p:N: -> this is a printf-like function whose Nth argument is the format
-//          string.
-//  P:N: -> similar to the p:N: attribute, but the function is like vprintf
-//          in that it accepts its arguments as a va_list rather than
-//          through an ellipsis
-//  s:N: -> this is a scanf-like function whose Nth argument is the format
-//          string.
-//  S:N: -> similar to the s:N: attribute, but the function is like vscanf
-//          in that it accepts its arguments as a va_list rather than
-//          through an ellipsis
+//  p:{num}: -> this is a printf-like function whose {num}th argument is the
+//              format string.
+//  P:{num}: -> similar to the p:{num}: attribute, but the function is like
+//              vprintf in that it accepts its arguments as a va_list rather than
+//              through an ellipsis
+//  s:{num}: -> this is a scanf-like function whose {num}th argument is the
+//              format string.
+//  S:{num}: -> similar to the s:{num}: attribute, but the function is like
+//              vscanf in that it accepts its arguments as a va_list rather than
+//              through an ellipsis
 //  e -> const, but only when -fno-math-errno and FP exceptions are ignored
 //  g -> const when FP exceptions are ignored
 //  j -> returns_twice (like setjmp)
 //  u -> arguments are not evaluated for their side-effects
-//  V:N: -> requires vectors of at least N bits to be legal
-//  C<N,M_0,...,M_k> -> callback behavior: argument N is called with argument
-//                      M_0, ..., M_k as payload
+//  V:{num}: -> requires vectors of at least {num} bits to be legal
+//  C<{num},M_0,...,M_k> -> callback behavior: argument {num} is called with
+//                          argument M_0, ..., M_k as payload
 //  z -> this is a function in (possibly-versioned) namespace std
 //  E -> this function can be constant evaluated by Clang frontend
 //  G -> this is a C++20 consteval function

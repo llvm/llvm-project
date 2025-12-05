@@ -7,10 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/expm1.h"
-#include "common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
-#include "explogxf.h"         // ziv_test_denorm.
 #include "src/__support/CPP/bit.h"
-#include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -18,13 +15,14 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
-#include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/math/common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
+#include "src/__support/math/exp_constants.h"
 
 #if ((LIBC_MATH & LIBC_MATH_SKIP_ACCURATE_PASS) != 0)
 #define LIBC_MATH_EXPM1_SKIP_ACCURATE_PASS
@@ -61,6 +59,8 @@ constexpr double MLOG_2_EXP2_M12_MID_30 = 0x1.718432ap-47;
 constexpr double MLOG_2_EXP2_M12_LO = 0x1.b0e2633fe0685p-79;
 
 namespace {
+
+using namespace common_constants_internal;
 
 // Polynomial approximations with double precision:
 // Return expm1(dx) / x ~ 1 + dx / 2 + dx^2 / 6 + dx^3 / 24.

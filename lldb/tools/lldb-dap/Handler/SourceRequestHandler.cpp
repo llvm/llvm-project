@@ -29,34 +29,42 @@ namespace lldb_dap {
 /// the source code for a given source reference.
 llvm::Expected<protocol::SourceResponseBody>
 SourceRequestHandler::Run(const protocol::SourceArguments &args) const {
-  const auto source =
+
+  uint32_t source_ref =
       args.source->sourceReference.value_or(args.sourceReference);
+  const std::optional<lldb::addr_t> source_addr_opt =
+      dap.GetSourceReferenceAddress(source_ref);
 
-  if (!source)
+  if (!source_addr_opt)
     return llvm::make_error<DAPError>(
-        "invalid arguments, expected source.sourceReference to be set");
+        llvm::formatv("Unknown source reference {}", source_ref));
 
-  lldb::SBAddress address(source, dap.target);
+  lldb::SBAddress address(*source_addr_opt, dap.target);
   if (!address.IsValid())
     return llvm::make_error<DAPError>("source not found");
 
   lldb::SBSymbol symbol = address.GetSymbol();
+  lldb::SBInstructionList insts;
+
+  if (symbol.IsValid()) {
+    insts = symbol.GetInstructions(dap.target);
+  } else {
+    // No valid symbol, just return the disassembly.
+    insts = dap.target.ReadInstructions(
+        address, dap.k_number_of_assembly_lines_for_nodebug);
+  }
+
+  if (!insts || insts.GetSize() == 0)
+    return llvm::make_error<DAPError>(
+        llvm::formatv("no instruction source for address {}",
+                      address.GetLoadAddress(dap.target)));
 
   lldb::SBStream stream;
   lldb::SBExecutionContext exe_ctx(dap.target);
-
-  if (symbol.IsValid()) {
-    lldb::SBInstructionList insts = symbol.GetInstructions(dap.target);
-    insts.GetDescription(stream, exe_ctx);
-  } else {
-    // No valid symbol, just return the disassembly.
-    lldb::SBInstructionList insts = dap.target.ReadInstructions(
-        address, dap.k_number_of_assembly_lines_for_nodebug);
-    insts.GetDescription(stream, exe_ctx);
-  }
-
+  insts.GetDescription(stream, exe_ctx);
   return protocol::SourceResponseBody{/*content=*/stream.GetData(),
-                                      /*mimeType=*/"text/x-lldb.disassembly"};
+                                      /*mimeType=*/
+                                      "text/x-lldb.disassembly"};
 }
 
 } // namespace lldb_dap

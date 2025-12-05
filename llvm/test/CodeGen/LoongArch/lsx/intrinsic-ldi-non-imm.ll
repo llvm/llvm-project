@@ -1,3 +1,4 @@
+; RUN: not llc --mtriple=loongarch32 --mattr=+32s,+lsx < %s 2>&1 | FileCheck %s
 ; RUN: not llc --mtriple=loongarch64 --mattr=+lsx < %s 2>&1 | FileCheck %s
 
 declare <2 x i64> @llvm.loongarch.lsx.vldi(i32)

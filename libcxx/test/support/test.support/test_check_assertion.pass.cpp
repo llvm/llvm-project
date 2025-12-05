@@ -21,11 +21,11 @@ template <class Func>
 bool TestDeathTest(
     Outcome expected_outcome, DeathCause expected_cause, const char* stmt, Func&& func, const Matcher& matcher) {
   auto get_matcher = [&] {
-#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
-    return matcher;
-#else
+#if _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE
     (void)matcher;
     return MakeAnyMatcher();
+#else
+    return matcher;
 #endif
   };
 
@@ -53,7 +53,7 @@ bool TestDeathTest(
   }
 
   if (!maybe_failure_description.empty()) {
-    test_case.PrintFailureDetails(maybe_failure_description, stmt, test_result.cause());
+    test_case.PrintFailureDetails("EXPECT_DEATH", maybe_failure_description, stmt, test_result.cause());
     return false;
   }
 
@@ -69,16 +69,16 @@ bool TestDeathTest(
 
 // clang-format on
 
-#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+#if _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
 DeathCause assertion_death_cause = DeathCause::VerboseAbort;
 #else
 DeathCause assertion_death_cause = DeathCause::Trap;
 #endif
 
 int main(int, char**) {
-  auto fail_assert     = [] { _LIBCPP_ASSERT(false, "Some message"); };
-  Matcher good_matcher = MakeAssertionMessageMatcher("Some message");
-  Matcher bad_matcher  = MakeAssertionMessageMatcher("Bad expected message");
+  [[maybe_unused]] auto fail_assert = [] { _LIBCPP_ASSERT(false, "Some message"); };
+  Matcher good_matcher              = MakeAssertionMessageMatcher("Some message");
+  Matcher bad_matcher               = MakeAssertionMessageMatcher("Bad expected message");
 
   // Test the implementation of death tests. We're bypassing the assertions added by the actual `EXPECT_DEATH` macros
   // which allows us to test failure cases (where the assertion would fail) as well.
@@ -89,16 +89,22 @@ int main(int, char**) {
     // Success -- trapping.
     TEST_DEATH_TEST(Outcome::Success, DeathCause::Trap, __builtin_trap());
 
+    // `_LIBCPP_ASSERT` does not terminate the program if the `observe` semantic is used, so these tests would fail with
+    // `DidNotDie` cause.
+#if _LIBCPP_ASSERTION_SEMANTIC != _LIBCPP_ASSERTION_SEMANTIC_OBSERVE
+
     // Success -- assertion failure with any matcher.
     TEST_DEATH_TEST_MATCHES(Outcome::Success, assertion_death_cause, MakeAnyMatcher(), fail_assert());
 
     // Success -- assertion failure with a specific matcher.
     TEST_DEATH_TEST_MATCHES(Outcome::Success, assertion_death_cause, good_matcher, fail_assert());
 
-#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+#  if _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
     // Failure -- error message doesn't match.
     TEST_DEATH_TEST_MATCHES(Outcome::UnexpectedErrorMessage, assertion_death_cause, bad_matcher, fail_assert());
-#endif
+#  endif
+
+#endif // _LIBCPP_ASSERTION_SEMANTIC != _LIBCPP_ASSERTION_SEMANTIC_OBSERVE
 
     // Invalid cause -- child did not die.
     TEST_DEATH_TEST(Outcome::InvalidCause, DeathCause::DidNotDie, ((void)0));
@@ -125,7 +131,9 @@ int main(int, char**) {
     EXPECT_DEATH_MATCHES(simple_matcher, invoke_verbose_abort());
     EXPECT_STD_ABORT(invoke_abort());
     EXPECT_STD_TERMINATE([] { std::terminate(); });
+#if _LIBCPP_ASSERTION_SEMANTIC != _LIBCPP_ASSERTION_SEMANTIC_OBSERVE
     TEST_LIBCPP_ASSERT_FAILURE(fail_assert(), "Some message");
+#endif
   }
 
   return 0;

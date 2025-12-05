@@ -12,8 +12,7 @@ define <16 x i8> @knownbits_bitcast_masked_shift(<16 x i8> %arg1, <16 x i8> %arg
 ; CHECK-NEXT:    [[BITCAST4:%.*]] = bitcast <16 x i8> [[OR]] to <8 x i16>
 ; CHECK-NEXT:    [[SHL5:%.*]] = shl nuw <8 x i16> [[BITCAST4]], splat (i16 2)
 ; CHECK-NEXT:    [[BITCAST6:%.*]] = bitcast <8 x i16> [[SHL5]] to <16 x i8>
-; CHECK-NEXT:    [[AND7:%.*]] = and <16 x i8> [[BITCAST6]], splat (i8 -52)
-; CHECK-NEXT:    ret <16 x i8> [[AND7]]
+; CHECK-NEXT:    ret <16 x i8> [[BITCAST6]]
 ;
   %and = and <16 x i8> %arg1, splat (i8 3)
   %and3 = and <16 x i8> %arg2, splat (i8 48)
@@ -33,8 +32,7 @@ define <16 x i8> @knownbits_shuffle_masked_nibble_shift(<16 x i8> %arg)  {
 ; CHECK-NEXT:    [[BITCAST1:%.*]] = bitcast <16 x i8> [[SHUFFLEVECTOR]] to <8 x i16>
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <8 x i16> [[BITCAST1]], splat (i16 4)
 ; CHECK-NEXT:    [[BITCAST2:%.*]] = bitcast <8 x i16> [[SHL]] to <16 x i8>
-; CHECK-NEXT:    [[AND3:%.*]] = and <16 x i8> [[BITCAST2]], splat (i8 -16)
-; CHECK-NEXT:    ret <16 x i8> [[AND3]]
+; CHECK-NEXT:    ret <16 x i8> [[BITCAST2]]
 ;
   %and = and <16 x i8> %arg, splat (i8 15)
   %shufflevector = shufflevector <16 x i8> %and, <16 x i8> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
@@ -53,8 +51,7 @@ define <16 x i8> @knownbits_reverse_shuffle_masked_shift(<16 x i8> %arg)  {
 ; CHECK-NEXT:    [[BITCAST1:%.*]] = bitcast <16 x i8> [[SHUFFLEVECTOR]] to <8 x i16>
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <8 x i16> [[BITCAST1]], splat (i16 4)
 ; CHECK-NEXT:    [[BITCAST2:%.*]] = bitcast <8 x i16> [[SHL]] to <16 x i8>
-; CHECK-NEXT:    [[AND3:%.*]] = and <16 x i8> [[BITCAST2]], splat (i8 -16)
-; CHECK-NEXT:    ret <16 x i8> [[AND3]]
+; CHECK-NEXT:    ret <16 x i8> [[BITCAST2]]
 ;
   %and = and <16 x i8> %arg, splat (i8 15)
   %shufflevector = shufflevector <16 x i8> %and, <16 x i8> poison, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
@@ -70,8 +67,7 @@ define <16 x i8> @knownbits_extract_bit(<8 x i16> %arg)  {
 ; CHECK-SAME: <8 x i16> [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <8 x i16> [[ARG]], splat (i16 15)
 ; CHECK-NEXT:    [[BITCAST1:%.*]] = bitcast <8 x i16> [[LSHR]] to <16 x i8>
-; CHECK-NEXT:    [[AND:%.*]] = and <16 x i8> [[BITCAST1]], splat (i8 1)
-; CHECK-NEXT:    ret <16 x i8> [[AND]]
+; CHECK-NEXT:    ret <16 x i8> [[BITCAST1]]
 ;
   %lshr = lshr <8 x i16> %arg, splat (i16 15)
   %bitcast1 = bitcast <8 x i16> %lshr to <16 x i8>
@@ -88,7 +84,8 @@ define { i32, i1 } @knownbits_popcount_add_with_overflow(<2 x i64> %arg1, <2 x i
 ; CHECK-NEXT:    [[CALL9:%.*]] = tail call range(i64 0, 65) <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[ARG2]])
 ; CHECK-NEXT:    [[BITCAST10:%.*]] = bitcast <2 x i64> [[CALL9]] to <4 x i32>
 ; CHECK-NEXT:    [[EXTRACTELEMENT11:%.*]] = extractelement <4 x i32> [[BITCAST10]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[EXTRACTELEMENT]], i32 [[EXTRACTELEMENT11]])
+; CHECK-NEXT:    [[CALL12:%.*]] = add nuw nsw i32 [[EXTRACTELEMENT]], [[EXTRACTELEMENT11]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 poison, i1 false }, i32 [[CALL12]], 0
 ; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
 ;
   %call = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %arg1)
@@ -110,11 +107,7 @@ define <16 x i8> @knownbits_shuffle_add_shift_v32i8(<16 x i8> %arg1, <8 x i16> %
 ; CHECK-NEXT:    [[BITCAST11:%.*]] = bitcast <8 x i16> [[SHL10]] to <16 x i8>
 ; CHECK-NEXT:    [[ADD12:%.*]] = add <16 x i8> [[BITCAST11]], [[BITCAST7]]
 ; CHECK-NEXT:    [[ADD14:%.*]] = add <16 x i8> [[ADD12]], [[ARG1]]
-; CHECK-NEXT:    [[BITCAST14:%.*]] = bitcast <16 x i8> [[ADD12]] to <8 x i16>
-; CHECK-NEXT:    [[SHL15:%.*]] = shl <8 x i16> [[BITCAST14]], splat (i16 8)
-; CHECK-NEXT:    [[BITCAST16:%.*]] = bitcast <8 x i16> [[SHL15]] to <16 x i8>
-; CHECK-NEXT:    [[ADD13:%.*]] = add <16 x i8> [[ADD14]], [[BITCAST16]]
-; CHECK-NEXT:    ret <16 x i8> [[ADD13]]
+; CHECK-NEXT:    ret <16 x i8> [[ADD14]]
 ;
   %shl6 = shl <8 x i16> %arg2, splat (i16 8)
   %bitcast7 = bitcast <8 x i16> %shl6 to <16 x i8>

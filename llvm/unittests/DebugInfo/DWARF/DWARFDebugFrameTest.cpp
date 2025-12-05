@@ -13,6 +13,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnwindTablePrinter.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 

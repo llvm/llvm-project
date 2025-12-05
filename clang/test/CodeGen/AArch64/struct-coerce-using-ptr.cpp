@@ -82,7 +82,7 @@ struct Sppp {
     int *x, *y, *z;
 };
 // CHECK-A64-LABEL: define dso_local void @_Z4Tppp4Sppp(
-// CHECK-A64-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// CHECK-A64-SAME: ptr dead_on_return noundef [[S:%.*]]) #[[ATTR0]] {
 // CHECK-A64-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-A64-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
@@ -490,7 +490,7 @@ struct Spa3 {
     int* xs[3];
 };
 // CHECK-A64-LABEL: define dso_local void @_Z4Tpa34Spa3(
-// CHECK-A64-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// CHECK-A64-SAME: ptr dead_on_return noundef [[S:%.*]]) #[[ATTR0]] {
 // CHECK-A64-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-A64-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
@@ -575,19 +575,21 @@ void TSpp_align16(SSpp_align16 s) { *s.a.x = 1; }
 struct Sempty {
 };
 // CHECK-A64-LABEL: define dso_local void @_Z6Tempty6Sempty(
-// CHECK-A64-SAME: i8 [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SEMPTY:%.*]], align 1
 // CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SEMPTY]], ptr [[S]], i32 0, i32 0
-// CHECK-A64-NEXT:    store i8 [[S_COERCE]], ptr [[COERCE_DIVE]], align 1
+// CHECK-A64-NEXT:    [[COERCE_VAL_II:%.*]] = trunc i64 [[S_COERCE]] to i8
+// CHECK-A64-NEXT:    store i8 [[COERCE_VAL_II]], ptr [[COERCE_DIVE]], align 1
 // CHECK-A64-NEXT:    ret void
 //
 // CHECK-A64_32-LABEL: define void @_Z6Tempty6Sempty(
-// CHECK-A64_32-SAME: i8 [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64_32-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SEMPTY:%.*]], align 1
 // CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SEMPTY]], ptr [[S]], i32 0, i32 0
-// CHECK-A64_32-NEXT:    store i8 [[S_COERCE]], ptr [[COERCE_DIVE]], align 1
+// CHECK-A64_32-NEXT:    [[COERCE_VAL_II:%.*]] = trunc i64 [[S_COERCE]] to i8
+// CHECK-A64_32-NEXT:    store i8 [[COERCE_VAL_II]], ptr [[COERCE_DIVE]], align 1
 // CHECK-A64_32-NEXT:    ret void
 //
 void Tempty(Sempty s) { }

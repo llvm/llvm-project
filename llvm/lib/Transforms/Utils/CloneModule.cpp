@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm-c/Core.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/Cloning.h"

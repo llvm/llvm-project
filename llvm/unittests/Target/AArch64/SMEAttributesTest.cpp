@@ -1,4 +1,4 @@
-#include "Utils/AArch64SMEAttributes.h"
+#include "AArch64SMEAttributes.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -78,7 +78,7 @@ TEST(SMEAttributes, Constructors) {
                             "ret void\n}");
   CallBase &Call =
       cast<CallBase>((CallModule->getFunction("foo")->begin()->front()));
-  ASSERT_TRUE(SMECallAttrs(Call).callsite().hasUndefZT0());
+  ASSERT_TRUE(SMECallAttrs(Call, nullptr).callsite().hasUndefZT0());
 
   // Invalid combinations.
   EXPECT_DEBUG_DEATH(SA(SA::SM_Enabled | SA::SM_Compatible),
@@ -309,7 +309,7 @@ TEST(SMEAttributes, Transitions) {
 
   // Shared ZA -> Private ZA Interface
   ASSERT_FALSE(CA(ZA_Shared, Private_ZA).requiresDisablingZABeforeCall());
-  ASSERT_TRUE(CA(ZA_Shared, Private_ZA).requiresEnablingZAAfterCall());
+  ASSERT_FALSE(CA(ZA_Shared, Private_ZA).requiresEnablingZAAfterCall());
 
   // Shared ZT0 -> Private ZA Interface
   ASSERT_TRUE(CA(ZT0_Shared, Private_ZA).requiresDisablingZABeforeCall());
@@ -328,7 +328,7 @@ TEST(SMEAttributes, Transitions) {
   // Shared ZA & ZT0 -> Private ZA Interface
   ASSERT_FALSE(CA(ZA_ZT0_Shared, Private_ZA).requiresDisablingZABeforeCall());
   ASSERT_TRUE(CA(ZA_ZT0_Shared, Private_ZA).requiresPreservingZT0());
-  ASSERT_TRUE(CA(ZA_ZT0_Shared, Private_ZA).requiresEnablingZAAfterCall());
+  ASSERT_FALSE(CA(ZA_ZT0_Shared, Private_ZA).requiresEnablingZAAfterCall());
 
   // Shared ZA -> Shared ZA Interface
   ASSERT_FALSE(CA(ZA_Shared, ZT0_Shared).requiresDisablingZABeforeCall());

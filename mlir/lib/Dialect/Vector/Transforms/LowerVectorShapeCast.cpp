@@ -21,6 +21,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/STLExtras.h"
 #include <numeric>
 
 #define DEBUG_TYPE "vector-shape-cast-lowering"
@@ -137,11 +138,12 @@ class ShapeCastOpRewritePattern : public OpRewritePattern<vector::ShapeCastOp> {
     const int64_t resultLeading = delta > 0 ? 0 : -delta;
 
     const Value source = shapeCast.getSource();
-    const Value poison = rewriter.create<ub::PoisonOp>(loc, resultType);
-    const Value extracted = rewriter.create<vector::ExtractOp>(
-        loc, source, SmallVector<int64_t>(sourceLeading, 0));
-    const Value result = rewriter.create<vector::InsertOp>(
-        loc, extracted, poison, SmallVector<int64_t>(resultLeading, 0));
+    const Value poison = ub::PoisonOp::create(rewriter, loc, resultType);
+    const Value extracted = vector::ExtractOp::create(
+        rewriter, loc, source, SmallVector<int64_t>(sourceLeading, 0));
+    const Value result =
+        vector::InsertOp::create(rewriter, loc, extracted, poison,
+                                 SmallVector<int64_t>(resultLeading, 0));
 
     rewriter.replaceOp(shapeCast, result);
     return success();
@@ -165,20 +167,17 @@ class ShapeCastOpRewritePattern : public OpRewritePattern<vector::ShapeCastOp> {
     const VectorType resultType = shapeCast.getResultVectorType();
     const ArrayRef<int64_t> resultShape = resultType.getShape();
 
-    const int64_t nSlices =
-        std::accumulate(sourceShape.begin(), sourceShape.begin() + sourceDim, 1,
-                        std::multiplies<int64_t>());
-
+    const int64_t nSlices = llvm::product_of(sourceShape.take_front(sourceDim));
     SmallVector<int64_t> extractIndex(sourceDim, 0);
     SmallVector<int64_t> insertIndex(resultDim, 0);
-    Value result = rewriter.create<ub::PoisonOp>(loc, resultType);
+    Value result = ub::PoisonOp::create(rewriter, loc, resultType);
 
     for (int i = 0; i < nSlices; ++i) {
       Value extracted =
-          rewriter.create<vector::ExtractOp>(loc, source, extractIndex);
+          vector::ExtractOp::create(rewriter, loc, source, extractIndex);
 
-      result = rewriter.create<vector::InsertOp>(loc, extracted, result,
-                                                 insertIndex);
+      result = vector::InsertOp::create(rewriter, loc, extracted, result,
+                                        insertIndex);
 
       inplaceAdd(1, sourceShape.take_front(sourceDim), extractIndex);
       inplaceAdd(1, resultShape.take_front(resultDim), insertIndex);
@@ -188,7 +187,7 @@ class ShapeCastOpRewritePattern : public OpRewritePattern<vector::ShapeCastOp> {
   }
 
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ShapeCastOp op,
                                 PatternRewriter &rewriter) const override {
@@ -276,9 +275,9 @@ public:
     Value extracted = {};
     Value extractedStrided = {};
     Value insertedSlice = {};
-    Value result = rewriter.create<ub::PoisonOp>(loc, resultType);
+    Value result = ub::PoisonOp::create(rewriter, loc, resultType);
     const Value partResult =
-        rewriter.create<ub::PoisonOp>(loc, insertStridedType);
+        ub::PoisonOp::create(rewriter, loc, insertStridedType);
 
     for (size_t i = 0; i < nAtomicSlices; ++i) {
 
@@ -288,28 +287,28 @@ public:
       // vector.extract
       if (extractStridedPhase == 0) {
         extracted =
-            rewriter.create<vector::ExtractOp>(loc, source, extractIndex);
+            vector::ExtractOp::create(rewriter, loc, source, extractIndex);
         inplaceAdd(1, sourceShape.take_front(sourceSuffixStartDim),
                    extractIndex);
       }
 
       // vector.extract_strided_slice
       extractOffsets[0] = extractStridedPhase * greatestCommonDivisor;
-      extractedStrided = rewriter.create<vector::ExtractStridedSliceOp>(
-          loc, extracted, extractOffsets, atomicShape, sizes);
+      extractedStrided = vector::ExtractStridedSliceOp::create(
+          rewriter, loc, extracted, extractOffsets, atomicShape, sizes);
 
       // vector.insert_strided_slice
       if (insertStridedPhase == 0) {
         insertedSlice = partResult;
       }
       insertOffsets[0] = insertStridedPhase * greatestCommonDivisor;
-      insertedSlice = rewriter.create<vector::InsertStridedSliceOp>(
-          loc, extractedStrided, insertedSlice, insertOffsets, sizes);
+      insertedSlice = vector::InsertStridedSliceOp::create(
+          rewriter, loc, extractedStrided, insertedSlice, insertOffsets, sizes);
 
       // vector.insert
       if (insertStridedPhase + 1 == insertPeriod) {
-        result = rewriter.create<vector::InsertOp>(loc, insertedSlice, result,
-                                                   insertIndex);
+        result = vector::InsertOp::create(rewriter, loc, insertedSlice, result,
+                                          insertIndex);
         inplaceAdd(1, resultType.getShape().take_front(resultSuffixStartDim),
                    insertIndex);
       }
@@ -355,7 +354,7 @@ public:
 class ScalableShapeCastOpRewritePattern
     : public OpRewritePattern<vector::ShapeCastOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ShapeCastOp op,
                                 PatternRewriter &rewriter) const override {
@@ -394,7 +393,7 @@ public:
     auto extractionVectorType = VectorType::get(
         {minExtractionSize}, sourceVectorType.getElementType(), {true});
 
-    Value result = rewriter.create<ub::PoisonOp>(loc, resultVectorType);
+    Value result = ub::PoisonOp::create(rewriter, loc, resultVectorType);
     SmallVector<int64_t> srcIdx(srcRank, 0);
     SmallVector<int64_t> resIdx(resRank, 0);
 
@@ -406,16 +405,18 @@ public:
       // 1. Extract a scalable subvector from the source vector.
       if (!currentSourceScalableVector) {
         if (srcRank != 1) {
-          currentSourceScalableVector = rewriter.create<vector::ExtractOp>(
-              loc, op.getSource(), llvm::ArrayRef(srcIdx).drop_back());
+          currentSourceScalableVector =
+              vector::ExtractOp::create(rewriter, loc, op.getSource(),
+                                        llvm::ArrayRef(srcIdx).drop_back());
         } else {
           currentSourceScalableVector = op.getSource();
         }
       }
       Value sourceSubVector = currentSourceScalableVector;
       if (minExtractionSize < minSourceTrailingSize) {
-        sourceSubVector = rewriter.create<vector::ScalableExtractOp>(
-            loc, extractionVectorType, sourceSubVector, srcIdx.back());
+        sourceSubVector = vector::ScalableExtractOp::create(
+            rewriter, loc, extractionVectorType, sourceSubVector,
+            srcIdx.back());
       }
 
       // 2. Insert the scalable subvector into the result vector.
@@ -423,15 +424,16 @@ public:
         if (minExtractionSize == minResultTrailingSize) {
           currentResultScalableVector = sourceSubVector;
         } else if (resRank != 1) {
-          currentResultScalableVector = rewriter.create<vector::ExtractOp>(
-              loc, result, llvm::ArrayRef(resIdx).drop_back());
+          currentResultScalableVector = vector::ExtractOp::create(
+              rewriter, loc, result, llvm::ArrayRef(resIdx).drop_back());
         } else {
           currentResultScalableVector = result;
         }
       }
       if (minExtractionSize < minResultTrailingSize) {
-        currentResultScalableVector = rewriter.create<vector::ScalableInsertOp>(
-            loc, sourceSubVector, currentResultScalableVector, resIdx.back());
+        currentResultScalableVector = vector::ScalableInsertOp::create(
+            rewriter, loc, sourceSubVector, currentResultScalableVector,
+            resIdx.back());
       }
 
       // 3. Update the source and result scalable vectors if needed.
@@ -439,9 +441,9 @@ public:
           currentResultScalableVector != result) {
         // Finished row of result. Insert complete scalable vector into result
         // (n-D) vector.
-        result = rewriter.create<vector::InsertOp>(
-            loc, currentResultScalableVector, result,
-            llvm::ArrayRef(resIdx).drop_back());
+        result = vector::InsertOp::create(rewriter, loc,
+                                          currentResultScalableVector, result,
+                                          llvm::ArrayRef(resIdx).drop_back());
         currentResultScalableVector = {};
       }
       if (srcIdx.back() + minExtractionSize >= minSourceTrailingSize) {

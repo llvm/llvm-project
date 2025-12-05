@@ -11,7 +11,7 @@
 define i32 @alias_with_different_offsets(ptr nocapture %A) {
 ; CHECK-LABEL: 'alias_with_different_offsets'
 ; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 1 --> Dst: store i32 2, ptr %arrayidx, align 1
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 1 --> Dst: %0 = load i32, ptr %A, align 1
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %A, align 1 --> Dst: %0 = load i32, ptr %A, align 1
@@ -27,15 +27,15 @@ entry:
 define i32 @alias_with_parametric_offset(ptr nocapture %A, i64 %n) {
 ; CHECK-LABEL: 'alias_with_parametric_offset'
 ; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 1 --> Dst: store i32 2, ptr %arrayidx, align 1
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output []!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
 ; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 1 --> Dst: %0 = load i32, ptr %A, align 1
 ; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %A, align 1 --> Dst: %0 = load i32, ptr %A, align 1
 ; CHECK-NEXT:    da analyze - none!
-; CHECK-NEXT:  Runtime Assumptions:
-; CHECK-NEXT:  Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
 ;
 entry:
   %arrayidx = getelementptr inbounds i8, ptr %A, i64 %n
@@ -47,17 +47,18 @@ entry:
 define i32 @alias_with_parametric_expr(ptr nocapture %A, i64 %n, i64 %m) {
 ; CHECK-LABEL: 'alias_with_parametric_expr'
 ; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 1 --> Dst: store i32 2, ptr %arrayidx, align 1
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output []!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (zext i2 ((trunc i64 %m to i2) + (-2 * (trunc i64 %n to i2))) to i64) == 0
 ; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 1 --> Dst: %0 = load i32, ptr %arrayidx1, align 1
 ; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Equal predicate: (zext i2 ((trunc i64 %m to i2) + (-2 * (trunc i64 %n to i2))) to i64) == 0
 ; CHECK-NEXT:    Equal predicate: (zext i2 (-2 + (trunc i64 %m to i2)) to i64) == 0
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx1, align 1 --> Dst: %0 = load i32, ptr %arrayidx1, align 1
-; CHECK-NEXT:    da analyze - none!
-; CHECK-NEXT:  Runtime Assumptions:
-; CHECK-NEXT:  Equal predicate: (zext i2 ((trunc i64 %m to i2) + (-2 * (trunc i64 %n to i2))) to i64) == 0
-; CHECK-NEXT:  Equal predicate: (zext i2 (-2 + (trunc i64 %m to i2)) to i64) == 0
+; CHECK-NEXT:    da analyze - consistent input []!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (zext i2 (-2 + (trunc i64 %m to i2)) to i64) == 0
 ;
 entry:
   %mul = mul nsw i64 %n, 10
@@ -74,15 +75,15 @@ entry:
 define i32 @gep_i8_vs_i32(ptr nocapture %A, i64 %n, i64 %m) {
 ; CHECK-LABEL: 'gep_i8_vs_i32'
 ; CHECK-NEXT:  Src: store i32 42, ptr %arrayidx0, align 1 --> Dst: store i32 42, ptr %arrayidx0, align 1
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output []!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
 ; CHECK-NEXT:  Src: store i32 42, ptr %arrayidx0, align 1 --> Dst: store i32 42, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - output [|<]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
 ; CHECK-NEXT:  Src: store i32 42, ptr %arrayidx1, align 4 --> Dst: store i32 42, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - none!
-; CHECK-NEXT:  Runtime Assumptions:
-; CHECK-NEXT:  Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
 ;
 entry:
   %arrayidx0 = getelementptr inbounds i8, ptr %A, i64 %n
@@ -100,7 +101,7 @@ define void @linearized_accesses(i64 %n, i64 %m, i64 %o, ptr %A) {
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx1, align 4
 ; CHECK-NEXT:    da analyze - output [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx1, align 4 --> Dst: store i32 1, ptr %idx1, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* * *]!
 ;
 entry:
   br label %for.i
@@ -149,8 +150,7 @@ define void @multidim_accesses(ptr %A) {
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx0, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx1, align 4
-; FIXME: the dependence distance is not constant. Distance vector should be [* * *|<]!
-; CHECK-NEXT:    da analyze - consistent output [0 0 0|<]!
+; CHECK-NEXT:    da analyze - output [<= * *|<]!
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx1, align 4 --> Dst: store i32 1, ptr %idx1, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;
@@ -175,13 +175,59 @@ for.j:
 
 for.k:
   %k = phi i64 [ 0, %for.j ], [ %k.inc, %for.k.inc ]
-  %idx0 = getelementptr inbounds [256 x [256 x [256 x i64]]], ptr %A, i64 %i, i64 %j, i64 %k
+  %idx0 = getelementptr inbounds [256 x [256 x [256 x i64]]], ptr %A, i64 0, i64 %i, i64 %j, i64 %k
   store i32 1, ptr %idx0
-  %idx1 = getelementptr inbounds [256 x [256 x [256 x i32]]], ptr %A, i64 %i, i64 %j, i64 %k
+  %idx1 = getelementptr inbounds [256 x [256 x [256 x i32]]], ptr %A, i64 0, i64 %i, i64 %j, i64 %k
   store i32 1, ptr %idx1
   br label %for.k.inc
 
 for.k.inc:
+  %k.inc = add nsw i64 %k, 1
+  %k.exitcond = icmp eq i64 %k.inc, 256
+  br i1 %k.exitcond, label %for.j.inc, label %for.k
+
+for.j.inc:
+  %j.inc = add nsw i64 %j, 1
+  %j.exitcond = icmp eq i64 %j.inc, 256
+  br i1 %j.exitcond, label %for.i.inc, label %for.j
+
+for.i.inc:
+  %i.inc = add nsw i64 %i, 1
+  %i.exitcond = icmp eq i64 %i.inc, 256
+  br i1 %i.exitcond, label %end, label %for.i
+
+end:
+  ret void
+}
+
+; for (int i = 0; i < 256; i++)
+;   for (int j = 0; j < 256; j++)
+;      for (int k = 0; k < 256; k++) {
+;        int *idx = (int *)((int *)(A) + 256*256*i + 256*j + k);
+;        *((long long *)idx) = 1;
+;      }
+;
+; There are loop-carried dependencies across iterations in the store.
+define void @multidim_accesses2(ptr %A) {
+; CHECK-LABEL: 'multidim_accesses2'
+; CHECK-NEXT:  Src: store i64 1, ptr %idx, align 4 --> Dst: store i64 1, ptr %idx, align 4
+; CHECK-NEXT:    da analyze - confused!
+;
+entry:
+  br label %for.i
+
+for.i:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %for.i.inc ]
+  br label %for.j
+
+for.j:
+  %j = phi i64 [ 0, %for.i ], [ %j.inc, %for.j.inc ]
+  br label %for.k
+
+for.k:
+  %k = phi i64 [ 0, %for.j ], [ %k.inc, %for.k ]
+  %idx = getelementptr inbounds [256 x [256 x [256 x i32]]], ptr %A, i64 0, i64 %i, i64 %j, i64 %k
+  store i64 1, ptr %idx
   %k.inc = add nsw i64 %k, 1
   %k.exitcond = icmp eq i64 %k.inc, 256
   br i1 %k.exitcond, label %for.j.inc, label %for.k

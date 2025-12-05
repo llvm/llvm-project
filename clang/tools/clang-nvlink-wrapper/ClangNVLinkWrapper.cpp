@@ -165,6 +165,19 @@ void diagnosticHandler(const DiagnosticInfo &DI) {
   }
 }
 
+bool hasFatBinary(const ArgList &Args, MemoryBufferRef Buffer) {
+  if (Args.hasArg(OPT_dry_run) && Args.hasArg(OPT_assume_device_object))
+    return false;
+  if (identify_magic(Buffer.getBuffer()) != file_magic::elf_relocatable)
+    return false;
+  Expected<std::unique_ptr<ObjectFile>> ObjFile =
+      ObjectFile::createObjectFile(Buffer);
+  if (!ObjFile) // Assume fatbin if the object creation fails.
+    return !errorToBool(ObjFile.takeError());
+  return (*ObjFile)->getArch() != Triple::nvptx &&
+         (*ObjFile)->getArch() != Triple::nvptx64;
+}
+
 Expected<StringRef> createTempFile(const ArgList &Args, const Twine &Prefix,
                                    StringRef Extension) {
   SmallString<128> OutputFile;
@@ -286,12 +299,16 @@ struct Symbol {
 };
 
 Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
-  std::string CudaPath = Args.getLastArgValue(OPT_cuda_path_EQ).str();
-  std::string GivenPath = Args.getLastArgValue(OPT_ptxas_path_EQ).str();
-  Expected<std::string> PTXAsPath =
-      findProgram(Args, "ptxas", {CudaPath + "/bin", GivenPath});
+  SmallVector<StringRef, 1> SearchPaths;
+  if (Arg *A = Args.getLastArg(OPT_cuda_path_EQ))
+    SearchPaths.push_back(Args.MakeArgString(A->getValue() + Twine("/bin")));
+  if (Arg *A = Args.getLastArg(OPT_ptxas_path_EQ))
+    SearchPaths.push_back(Args.MakeArgString(A->getValue()));
+
+  Expected<std::string> PTXAsPath = findProgram(Args, "ptxas", SearchPaths);
   if (!PTXAsPath)
     return PTXAsPath.takeError();
+
   if (!Args.hasArg(OPT_arch))
     return createStringError(
         "must pass in an explicit nvptx64 gpu architecture to 'ptxas'");
@@ -552,6 +569,11 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       if (!Input)
         continue;
 
+      if (hasFatBinary(Args, *Input)) {
+        LinkerInput.emplace_back(std::move(Input));
+        continue;
+      }
+
       // Archive members only extract if they define needed symbols. We will
       // re-scan all the inputs if any files were extracted for the link job.
       Expected<bool> ExtractOrErr = getSymbols(*Input, SymTab, IsLazy);
@@ -670,7 +692,8 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
   // of this input files could be extracted from an archive.
   for (auto &Input : LinkerInput) {
     auto TempFileOrErr = createTempFile(
-        Args, sys::path::stem(Input->getBufferIdentifier()), "cubin");
+        Args, sys::path::stem(Input->getBufferIdentifier()),
+        hasFatBinary(Args, Input->getMemBufferRef()) ? "o" : "cubin");
     if (!TempFileOrErr)
       return TempFileOrErr.takeError();
     Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
@@ -691,9 +714,11 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
   if (Args.hasArg(OPT_lto_emit_asm) || Args.hasArg(OPT_lto_emit_llvm))
     return Error::success();
 
-  std::string CudaPath = Args.getLastArgValue(OPT_cuda_path_EQ).str();
-  Expected<std::string> NVLinkPath =
-      findProgram(Args, "nvlink", {CudaPath + "/bin"});
+  SmallVector<StringRef, 1> SearchPaths;
+  if (Arg *A = Args.getLastArg(OPT_cuda_path_EQ))
+    SearchPaths.push_back(Args.MakeArgString(A->getValue() + Twine("/bin")));
+
+  Expected<std::string> NVLinkPath = findProgram(Args, "nvlink", SearchPaths);
   if (!NVLinkPath)
     return NVLinkPath.takeError();
 
