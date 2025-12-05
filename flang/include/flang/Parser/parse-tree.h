@@ -4982,7 +4982,7 @@ struct OmpClauseList {
 // --- Directives and constructs
 
 struct OmpDirectiveSpecification {
-  ENUM_CLASS(Flag, DeprecatedSyntax)
+  ENUM_CLASS(Flag, DeprecatedSyntax, CrossesLabelDo)
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
