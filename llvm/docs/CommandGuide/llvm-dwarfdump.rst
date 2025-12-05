@@ -198,7 +198,7 @@ OPTIONS
             Show per-variable coverage metrics. The output format is described
             in the section below (:ref:`variable-coverage-format`).
 
-.. option:: --combine-instances
+.. option:: --combine-inline-variable-instances
 
             Use with :option:`--show-variable-coverage` to average variable
             coverage across inlined subroutine instances instead of printing
@@ -267,12 +267,14 @@ across compilations and better reflects the debugging experience. The output is
 a tab-separated table containing the following columns:
 
       - `Function` ==> Name of the function the variable was found in
-      - `InstanceCount` (when :option:`--combine-instances` is specified) ==>
-        Number of instances of the function; this is 1 for functions that have
-        not been inlined, and n+1 for functions that have been inlined n times
-      - `InlChain` (when :option:`--combine-instances` is not specified) ==>
-        Chain of call sites (file and line number) that the function has been
-        inlined into; this will be empty if the function has not been inlined
+      - `InstanceCount` (when :option:`--combine-inline-variable-instances` is
+        specified) ==> Number of instances of the function; this is 1 for
+        functions that have not been inlined, and n+1 for functions that have
+        been inlined n times
+      - `InlChain` (when :option:`--combine-inline-variable-instances` is not
+        specified) ==> Chain of call sites (file and line number) that the
+        function has been inlined into; this will be empty if the function has
+        not been inlined
       - `Variable` ==> Name of the variable
       - `Decl` ==> Source location (file and line number) of the variable's
         declaration

@@ -339,7 +339,7 @@ static opt<bool>
                          desc("Show per-variable coverage metrics."),
                          cat(DwarfDumpCategory));
 static opt<bool> CombineInstances(
-    "combine-instances",
+    "combine-inline-variable-instances",
     desc(
         "Use with --show-variable-coverage to average variable coverage across "
         "inlined subroutine instances instead of printing them separately."),

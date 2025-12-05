@@ -28,23 +28,28 @@ using namespace llvm::dwarf;
 using namespace llvm::object;
 
 typedef std::pair<std::string, std::string> StringPair;
+/// Pair of file index and line number representing a source location.
+typedef std::pair<uint16_t, std::size_t> SourceLocation;
 
-static std::optional<std::set<std::pair<uint16_t, uint32_t>>>
-computeVariableCoverage(DWARFContext &DICtx, DWARFDie DIE,
+/// Returns the set of source lines covered by a variable's debug information.
+static std::optional<std::set<SourceLocation>>
+computeVariableCoverage(DWARFContext &DICtx, DWARFDie VariableDIE,
                         const DWARFDebugLine::LineTable *const LineTable) {
+  /// Adds source locations to the set that correspond to an address range.
   auto addLines = [](const DWARFDebugLine::LineTable *LineTable,
-                     std::set<std::pair<uint16_t, uint32_t>> &Lines,
-                     DWARFAddressRange Range,
+                     std::set<SourceLocation> &Lines, DWARFAddressRange Range,
                      std::map<std::string, uint16_t, std::less<>> &FileNames) {
     std::vector<uint32_t> Rows;
     if (LineTable->lookupAddressRange({Range.LowPC, Range.SectionIndex},
                                       Range.HighPC - Range.LowPC, Rows)) {
       for (const auto &RowI : Rows) {
         const auto Row = LineTable->Rows[RowI];
+        // Lookup can return addresses below the LowPC - filter these out.
         if (Row.Address.Address < Range.LowPC)
           continue;
         const auto FileIndex = Row.File;
 
+        // Add the file's name to the map if not present.
         if (!any_of(FileNames,
                     [FileIndex](auto &FN) { return FN.second == FileIndex; })) {
           std::string Name;
@@ -55,7 +60,7 @@ computeVariableCoverage(DWARFContext &DICtx, DWARFDie DIE,
         }
 
         const auto Line = Row.Line;
-        if (Line) // ignore zero lines
+        if (Line) // Ignore zero lines.
           Lines.insert({FileIndex, Line});
       }
     }
@@ -63,8 +68,12 @@ computeVariableCoverage(DWARFContext &DICtx, DWARFDie DIE,
 
   std::map<std::string, uint16_t, std::less<>> FileNames;
 
-  auto Locations = DIE.getLocations(DW_AT_location);
-  std::optional<std::set<std::pair<uint16_t, uint32_t>>> Lines;
+  // The optionals below will be empty if no address ranges were found, and
+  // present (but containing an empty set) if ranges were found but contained no
+  // source locations, in order to distinguish the two cases.
+
+  auto Locations = VariableDIE.getLocations(DW_AT_location);
+  std::optional<std::set<SourceLocation>> Lines;
   if (Locations) {
     for (const auto &L : Locations.get()) {
       if (L.Range) {
@@ -77,20 +86,22 @@ computeVariableCoverage(DWARFContext &DICtx, DWARFDie DIE,
     consumeError(Locations.takeError());
   }
 
-  auto Ranges = DIE.getParent().getAddressRanges();
-  std::optional<std::set<std::pair<uint16_t, uint32_t>>> ParentLines;
-  if (Ranges) {
+  // DW_AT_location attribute may contain overly broad address ranges, or none
+  // at all, so we also consider the parent scope's address ranges if present.
+  auto ParentRanges = VariableDIE.getParent().getAddressRanges();
+  std::optional<std::set<SourceLocation>> ParentLines;
+  if (ParentRanges) {
     ParentLines = {{}};
-    for (const auto &R : Ranges.get())
+    for (const auto &R : ParentRanges.get())
       addLines(LineTable, *ParentLines, R, FileNames);
   } else {
-    consumeError(Ranges.takeError());
+    consumeError(ParentRanges.takeError());
   }
 
   if (!Lines && ParentLines) {
     Lines = ParentLines;
   } else if (ParentLines) {
-    std::set<std::pair<uint16_t, uint32_t>> Intersection;
+    std::set<SourceLocation> Intersection;
     std::set_intersection(Lines->begin(), Lines->end(), ParentLines->begin(),
                           ParentLines->end(),
                           std::inserter(Intersection, Intersection.begin()));
@@ -103,11 +114,14 @@ computeVariableCoverage(DWARFContext &DICtx, DWARFDie DIE,
 static const SmallVector<DWARFDie> getParentSubroutines(DWARFDie DIE) {
   SmallVector<DWARFDie> Parents;
   DWARFDie Parent = DIE;
-  do
-    if (Parent.getTag() == DW_TAG_subprogram ||
-        Parent.getTag() == DW_TAG_inlined_subroutine)
+  do {
+    if (Parent.getTag() == DW_TAG_subprogram) {
       Parents.push_back(Parent);
-  while ((Parent = Parent.getParent()));
+      break;
+    }
+    if (Parent.getTag() == DW_TAG_inlined_subroutine)
+      Parents.push_back(Parent);
+  } while ((Parent = Parent.getParent()));
   return Parents;
 }
 
@@ -178,6 +192,7 @@ static void displayVariableCoverage(const VarKey &Key, const VarCoverage &Var,
   if (CombineInstances)
     OS << Var.Instances;
   else if (Var.Parents.size())
+    // FIXME: This may overflow the terminal if the inlining chain is large.
     displayParents(Var.Parents, OS);
   OS << "\t";
   WithColor(OS, HighlightColor::String) << Key.Name;
@@ -189,8 +204,6 @@ static void displayVariableCoverage(const VarKey &Key, const VarCoverage &Var,
 bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
                                      bool CombineInstances, raw_ostream &OS) {
   VarMap Vars;
-
-  WithColor(errs(), HighlightColor::Remark) << "Processing DIEs...\n";
 
   for (const auto &U : DICtx.info_section_units()) {
     const auto *const LT = DICtx.getLineTableForUnit(U.get());
