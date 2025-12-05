@@ -2978,10 +2978,11 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
 
   if (ST->hasExtendedWaitCounts()) {
     IsExpertMode = ST->hasExpertSchedulingMode() &&
-                   (MF.getFunction()
-                        .getFnAttribute("amdgpu-expert-scheduling-mode")
-                        .getValueAsBool() ||
-                    ExpertSchedulingModeFlag);
+                   (ExpertSchedulingModeFlag.getNumOccurrences()
+                        ? ExpertSchedulingModeFlag
+                        : MF.getFunction()
+                              .getFnAttribute("amdgpu-expert-scheduling-mode")
+                              .getValueAsBool());
     MaxCounter = IsExpertMode ? NUM_EXPERT_INST_CNTS : NUM_EXTENDED_INST_CNTS;
     WCGGFX12Plus = WaitcntGeneratorGFX12Plus(MF, MaxCounter, IsExpertMode);
     WCG = &WCGGFX12Plus;
