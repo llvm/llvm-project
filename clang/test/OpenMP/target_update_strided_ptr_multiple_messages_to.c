@@ -1,20 +1,11 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
-extern void *malloc(__SIZE_TYPE__);
-extern void free(void *);
-
-double *data;
-double *data1;
-double *data2;
-
 int main(int argc, char **argv) {
   int len = 12;
-  
-  // Allocate memory for explicit pointers
-  data = (double *)malloc(len * sizeof(double));
-  data1 = (double *)malloc(len * sizeof(double));
-  data2 = (double *)malloc(len * sizeof(double));
+  double *data;
+  double *data1;
+  double *data2;
   
   // Valid multiple strided array sections
   #pragma omp target update to(data1[0:6:2], data2[0:4:3]) // OK - different strides
@@ -57,8 +48,5 @@ int main(int argc, char **argv) {
   
   #pragma omp target update to(data[0:4:2], data1[0:3:2:1], data2[0:2:3]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
   
-  free(data);
-  free(data1);
-  free(data2);
   return 0;
 }

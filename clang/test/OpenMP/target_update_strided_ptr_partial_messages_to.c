@@ -1,12 +1,9 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
-extern void *malloc(__SIZE_TYPE__);
-extern void free(void *);
-
 int main(int argc, char **argv) {
   int len = 11;
-  double *data = (double *)malloc(len * sizeof(double));
+  double *data;
   
   // Valid partial strided sections with TO
   #pragma omp target update to(data[0:2:3]) // OK - partial coverage
@@ -35,6 +32,5 @@ int main(int argc, char **argv) {
   // Compile-time invalid strides
   #pragma omp target update to(data[1:2:-3]) // expected-error {{section stride is evaluated to a non-positive value -3}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
   
-  free(data);
   return 0;
 }

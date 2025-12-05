@@ -1,12 +1,9 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
-extern void *malloc(__SIZE_TYPE__);
-extern void free(void *);
-
 int main(int argc, char **argv) {
   int len = 16;
-  double *data = (double *)malloc(len * sizeof(double));
+  double *data;
   
   // Valid strided array sections with TO
   #pragma omp target update to(data[0:8:2]) // OK - even indices
@@ -39,6 +36,5 @@ int main(int argc, char **argv) {
   #pragma omp target update to(data[0:4:2:1]) // expected-error {{expected ']'}} expected-note {{to match this '['}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
   {}
   
-  free(data);
   return 0;
 }
