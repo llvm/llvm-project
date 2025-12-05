@@ -2692,11 +2692,6 @@ struct AMDGPUMakeDmaDescriptorLowering
 
     Location loc = op.getLoc();
 
-    IntegerType i32 = rewriter.getI32Type();
-    [[maybe_unused]] Type v4i32 =
-        this->typeConverter->convertType(VectorType::get(4, i32));
-    assert(v4i32 && "expected type conversion to succeed");
-
     SmallVector<Value> consts;
     for (int64_t i = 0; i < 8; i++)
       consts.push_back(createI32Constant(rewriter, loc, i));
