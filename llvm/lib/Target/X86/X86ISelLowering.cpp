@@ -7571,7 +7571,8 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 
   // REVERSE - attempt to match the loads in reverse and then shuffle back.
   // TODO: Do this for any permute or mismatching element counts.
-  if (Depth == 0 && !ZeroMask && TLI.isTypeLegal(VT) && VT.isVector() &&
+  if (Depth == 0 && ZeroMask.isZero() && UndefMask.isZero() &&
+      TLI.isTypeLegal(VT) && VT.isVector() &&
       NumElems == VT.getVectorNumElements()) {
     SmallVector<SDValue, 16> ReverseElts(Elts.rbegin(), Elts.rend());
     if (SDValue RevLd = EltsFromConsecutiveLoads(
