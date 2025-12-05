@@ -18,13 +18,9 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 
 void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      typeLoc(loc(TypeMatcher(anyOf(typedefType(), tagType(),
-                                    deducedTemplateSpecializationType(),
-                                    templateSpecializationType()))),
-              unless(hasAncestor(decl(isInstantiated()))))
-          .bind("nonDependentTypeLoc"),
-      this);
+  Finder->addMatcher(traverse(TK_IgnoreUnlessSpelledInSource,
+                              typeLoc().bind("nonDependentTypeLoc")),
+                     this);
 
   if (!getLangOpts().CPlusPlus20)
     return;
