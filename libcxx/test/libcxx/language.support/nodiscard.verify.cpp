@@ -8,10 +8,14 @@
 
 // UNSUPPORTED: c++03
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION
+
 // Check that functions are marked [[nodiscard]]
 
 #include <compare>
 #include <coroutine>
+#include <exception>
 #include <functional>
 #include <initializer_list>
 
@@ -80,6 +84,40 @@ void test() {
     }
   }
 #endif
+
+  { // <exception>
+    {
+      std::bad_exception bex;
+
+      bex.what(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    }
+    {
+      std::exception ex;
+
+      ex.what(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    }
+    {
+      std::nested_exception nex;
+
+      nex.nested_ptr(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    }
+
+#if TEST_STD_VER <= 14
+    std::get_unexpected(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
+
+    std::get_terminate(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+#if _LIBCPP_STD_VER <= 17
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::uncaught_exception();
+#endif
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::uncaught_exceptions();
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::current_exception();
+  }
 
   { // <initializer_list>
     std::initializer_list<int> il{94, 82, 49};
