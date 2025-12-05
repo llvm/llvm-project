@@ -21,7 +21,7 @@
 #include "llvm/Support/FileSystem.h"
 
 #ifdef _WIN32
-#include "lldb/Host/windows/PseudoTerminalWindows.h"
+#include "lldb/Host/windows/PseudoConsole.h"
 #else
 #include <climits>
 #endif
@@ -35,7 +35,7 @@ ProcessLaunchInfo::ProcessLaunchInfo()
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(0),
       m_file_actions(), m_monitor_callback(nullptr) {
 #ifdef _WIN32
-  m_pty = std::make_shared<PseudoTerminalWindows>();
+  m_pty = std::make_shared<PseudoConsole>();
 #else
   m_pty = std::make_shared<PseudoTerminal>();
 #endif
@@ -49,7 +49,7 @@ ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(launch_flags),
       m_file_actions() {
 #ifdef _WIN32
-  m_pty = std::make_shared<PseudoTerminalWindows>();
+  m_pty = std::make_shared<PseudoConsole>();
 #else
   m_pty = std::make_shared<PseudoTerminal>();
 #endif
@@ -221,13 +221,12 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
 
   LLDB_LOG(log, "Generating a pty to use for stdin/out/err");
 
-  int open_flags = O_RDWR | O_NOCTTY;
-#if !defined(_WIN32)
-  // We really shouldn't be specifying platform specific flags that are
-  // intended for a system call in generic code.  But this will have to
-  // do for now.
-  open_flags |= O_CLOEXEC;
-#endif
+#ifdef _WIN32
+  if (llvm::Error Err = m_pty->OpenPseudoConsole())
+    return Err;
+  return llvm::Error::success();
+#else
+  int open_flags = O_RDWR | O_NOCTTY | O_CLOEXEC;
   if (llvm::Error Err = m_pty->OpenFirstAvailablePrimary(open_flags))
     return Err;
 
@@ -242,6 +241,7 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   if (stderr_free)
     AppendOpenFileAction(STDERR_FILENO, secondary_file_spec, false, true);
   return llvm::Error::success();
+#endif
 }
 
 bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(

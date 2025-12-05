@@ -82,16 +82,6 @@ public:
   /// \see PseudoTerminal::ReleasePrimaryFileDescriptor()
   int GetPrimaryFileDescriptor() const;
 
-  /// The primary HANDLE accessor.
-  ///
-  /// This object retains ownership of the primary HANDLE when this
-  /// accessor is used.
-  ///
-  /// \return
-  ///     The primary HANDLE, or INVALID_HANDLE_VALUE if the primary HANDLE is
-  ///     not currently valid.
-  virtual void *GetPrimaryHandle() const { return ((void *)(long long)-1); };
-
   /// The secondary file descriptor accessor.
   ///
   /// This object retains ownership of the secondary file descriptor when this
@@ -106,8 +96,6 @@ public:
   /// \see PseudoTerminal::ReleaseSecondaryFileDescriptor()
   int GetSecondaryFileDescriptor() const;
 
-  virtual void *GetSecondaryHandle() const { return ((void *)(long long)-1); };
-
   /// Get the name of the secondary pseudo terminal.
   ///
   /// A primary pseudo terminal should already be valid prior to
@@ -117,17 +105,7 @@ public:
   ///     The name of the secondary pseudo terminal.
   ///
   /// \see PseudoTerminal::OpenFirstAvailablePrimary()
-  virtual std::string GetSecondaryName() const;
-
-  /// The underlying Windows Pseudo Terminal HANDLE's accessor.
-  ///
-  /// This object retains ownership of the ConPTY's HANDLE when this
-  /// accessor is used.
-  ///
-  /// \return
-  ///     The primary HANDLE, or INVALID_HANDLE_VALUE if the primary HANDLE is
-  ///     not currently valid.
-  virtual void *GetPseudoTerminalHandle() { return ((void *)(long long)-1); };
+  std::string GetSecondaryName() const;
 
   /// Open the first available pseudo terminal.
   ///
@@ -148,7 +126,7 @@ public:
   ///
   /// \see PseudoTerminal::GetPrimaryFileDescriptor() @see
   /// PseudoTerminal::ReleasePrimaryFileDescriptor()
-  virtual llvm::Error OpenFirstAvailablePrimary(int oflag);
+  llvm::Error OpenFirstAvailablePrimary(int oflag);
 
   /// Open the secondary for the current primary pseudo terminal.
   ///

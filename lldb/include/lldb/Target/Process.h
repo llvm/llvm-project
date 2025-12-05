@@ -2534,6 +2534,30 @@ void PruneThreadPlans();
 
   void CalculateExecutionContext(ExecutionContext &exe_ctx) override;
 
+#ifdef _WIN32
+  /// Associates a ConPTY read and write HANDLEs with the process' STDIO
+  /// handling and configures an asynchronous reading of that ConPTY's stdout
+  /// HANDLE.
+  ///
+  /// This method installs a ConnectionGenericFile for the passed ConPTY and
+  /// starts a dedicated read thread. If the read thread starts successfully,
+  /// the method also ensures that an IOHandlerProcessSTDIOWindows is created to
+  /// manage user input to the process.
+  ///
+  /// When data is successfully read from the ConPTY, it is stored in
+  /// m_stdout_data. There is no differentiation between stdout and stderr.
+  ///
+  /// \param[in] pty
+  ///     The ConPTY to use for process STDIO communication. It's
+  ///     assumed to be valid.
+  ///
+  /// \see lldb_private::Process::STDIOReadThreadBytesReceived()
+  /// \see lldb_private::IOHandlerProcessSTDIOWindows
+  /// \see lldb_private::PseudoConsole
+  virtual void
+  SetPseudoConsoleHandle(const std::shared_ptr<PseudoConsole> &pty) {};
+#endif
+
   /// Associates a file descriptor with the process' STDIO handling
   /// and configures an asynchronous reading of that descriptor.
   ///
@@ -2557,15 +2581,6 @@ void PruneThreadPlans();
   /// \see lldb_private::IOHandlerProcessSTDIO
   /// \see lldb_private::ConnectionFileDescriptor
   void SetSTDIOFileDescriptor(int file_descriptor);
-
-  /// Windows equivalent of Process::SetSTDIOFileDescriptor, with a
-  /// PseudoTerminalWindows instead of a file descriptor.
-  ///
-  /// \param pty
-  ///     The PseudoTerminal to use for process STDIO communication. It is not
-  ///     managed by the created read thread.
-  virtual void
-  SetPseudoTerminalHandle(const std::shared_ptr<PseudoTerminal> &pty) {};
 
   // Add a permanent region of memory that should never be read or written to.
   // This can be used to ensure that memory reads or writes to certain areas of

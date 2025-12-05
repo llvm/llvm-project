@@ -38,9 +38,7 @@ PseudoTerminal::PseudoTerminal() = default;
 // are valid and ownership has not been released using the
 // ReleasePrimaryFileDescriptor() or the ReleaseSaveFileDescriptor() member
 // functions.
-PseudoTerminal::~PseudoTerminal() { Close(); }
-
-void PseudoTerminal::Close() {
+PseudoTerminal::~PseudoTerminal() {
   ClosePrimaryFileDescriptor();
   CloseSecondaryFileDescriptor();
 }

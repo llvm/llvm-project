@@ -17,7 +17,11 @@
 
 #include "lldb/Host/FileAction.h"
 #include "lldb/Host/Host.h"
+#ifdef _WIN32
+#include "lldb/Host/windows/PseudoConsole.h"
+#else
 #include "lldb/Host/PseudoTerminal.h"
+#endif
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/ProcessInfo.h"
 
@@ -118,9 +122,15 @@ public:
 
   bool MonitorProcess() const;
 
+#ifdef _WIN32
+  PseudoConsole &GetPTY() const { return *m_pty; }
+
+  std::shared_ptr<PseudoConsole> GetPTYSP() const { return m_pty; }
+#else
   PseudoTerminal &GetPTY() const { return *m_pty; }
 
   std::shared_ptr<PseudoTerminal> GetPTYSP() const { return m_pty; }
+#endif
 
   void SetLaunchEventData(const char *data) { m_event_data.assign(data); }
 
@@ -138,7 +148,11 @@ protected:
   FileSpec m_shell;
   Flags m_flags; // Bitwise OR of bits from lldb::LaunchFlags
   std::vector<FileAction> m_file_actions; // File actions for any other files
+#ifdef _WIN32
+  std::shared_ptr<PseudoConsole> m_pty;
+#else
   std::shared_ptr<PseudoTerminal> m_pty;
+#endif
   uint32_t m_resume_count = 0; // How many times do we resume after launching
   Host::MonitorChildProcessCallback m_monitor_callback;
   std::string m_event_data; // A string passed to the plugin launch, having no

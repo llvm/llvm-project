@@ -9,6 +9,7 @@
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Host/windows/PseudoConsole.h"
 #include "lldb/Host/windows/windows.h"
 
 #include "llvm/ADT/ScopeExit.h"
@@ -140,7 +141,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
       error = Status(inherited_handles_or_err.getError());
       return HostProcess();
     }
-    inherited_handles = *inherited_handles_or_err;
+    inherited_handles = std::move(*inherited_handles_or_err);
   }
 
   const char *hide_console_var =

@@ -1087,10 +1087,10 @@ private:
   bool m_is_running = false;
 };
 
-void ProcessWindows::SetPseudoTerminalHandle(
-    const std::shared_ptr<PseudoTerminal> &pty) {
+void ProcessWindows::SetPseudoConsoleHandle(
+    const std::shared_ptr<PseudoConsole> &pty) {
   m_stdio_communication.SetConnection(
-      std::make_unique<ConnectionGenericFile>(pty->GetPrimaryHandle(), false));
+      std::make_unique<ConnectionGenericFile>(pty->GetSTDOUTHandle(), false));
   if (m_stdio_communication.IsConnected()) {
     m_stdio_communication.SetReadThreadBytesReceivedCallback(
         STDIOReadThreadBytesReceived, this);
@@ -1101,7 +1101,7 @@ void ProcessWindows::SetPseudoTerminalHandle(
       std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
       if (!m_process_input_reader)
         m_process_input_reader = std::make_shared<IOHandlerProcessSTDIOWindows>(
-            this, pty->GetSecondaryHandle());
+            this, pty->GetSTDINHandle());
     }
   }
 }

@@ -524,7 +524,7 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
     return nullptr;
   error = process_sp->Launch(launch_info);
   if (error.Success())
-    process_sp->SetPseudoTerminalHandle(launch_info.GetPTYSP());
+    process_sp->SetPseudoConsoleHandle(launch_info.GetPTYSP());
   else
     LLDB_LOGF(log, "Platform::%s LaunchProcess() failed: %s", __FUNCTION__,
               error.AsCString());

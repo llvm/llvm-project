@@ -9,7 +9,7 @@
 #ifndef liblldb_Plugins_Process_Windows_Common_ProcessWindows_H_
 #define liblldb_Plugins_Process_Windows_Common_ProcessWindows_H_
 
-#include "lldb/Host/windows/PseudoTerminalWindows.h"
+#include "lldb/Host/windows/PseudoConsole.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
@@ -99,7 +99,7 @@ public:
                            bool notify = true) override;
 
   void
-  SetPseudoTerminalHandle(const std::shared_ptr<PseudoTerminal> &pty) override;
+  SetPseudoConsoleHandle(const std::shared_ptr<PseudoConsole> &pty) override;
 
 protected:
   ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
