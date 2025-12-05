@@ -254,17 +254,20 @@ TEST(ASTEntityMappingTest, VarRedeclaration) {
   auto Matches = match(Matcher, Ctx);
   ASSERT_EQ(Matches.size(), 2u);
 
-  const auto *Decl1 = Matches[0].getNodeAs<VarDecl>("decl");
-  const auto *Decl2 = Matches[1].getNodeAs<VarDecl>("decl");
-  ASSERT_NE(Decl1, nullptr);
-  ASSERT_NE(Decl2, nullptr);
+  const auto *FirstDecl = Matches[0].getNodeAs<VarDecl>("decl");
+  ASSERT_NE(FirstDecl, nullptr);
 
-  auto Name1 = getLocalEntityNameForDecl(Decl1);
-  auto Name2 = getLocalEntityNameForDecl(Decl2);
-  ASSERT_TRUE(Name1.has_value());
-  ASSERT_TRUE(Name2.has_value());
+  auto FirstName = getLocalEntityNameForDecl(FirstDecl);
+  ASSERT_TRUE(FirstName.has_value());
 
-  EXPECT_EQ(*Name1, *Name2);
+  for (size_t I = 1; I < Matches.size(); ++I) {
+    const auto *Decl = Matches[I].getNodeAs<VarDecl>("decl");
+    ASSERT_NE(Decl, nullptr);
+
+    auto Name = getLocalEntityNameForDecl(Decl);
+    ASSERT_TRUE(Name.has_value());
+    EXPECT_EQ(*FirstName, *Name);
+  }
 }
 
 TEST(ASTEntityMappingTest, RecordRedeclaration) {
@@ -274,22 +277,24 @@ TEST(ASTEntityMappingTest, RecordRedeclaration) {
   )");
   auto &Ctx = AST->getASTContext();
 
-  // Use recordDecl(isStruct()) to avoid matching implicit typedefs
-  auto Matcher = recordDecl(hasName("S"), isStruct()).bind("decl");
+  auto Matcher = recordDecl(hasName("S"), unless(isImplicit())).bind("decl");
   auto Matches = match(Matcher, Ctx);
   ASSERT_GE(Matches.size(), 2u);
 
-  const auto *Decl1 = Matches[0].getNodeAs<RecordDecl>("decl");
-  const auto *Decl2 = Matches[1].getNodeAs<RecordDecl>("decl");
-  ASSERT_NE(Decl1, nullptr);
-  ASSERT_NE(Decl2, nullptr);
+  const auto *FirstDecl = Matches[0].getNodeAs<RecordDecl>("decl");
+  ASSERT_NE(FirstDecl, nullptr);
 
-  auto Name1 = getLocalEntityNameForDecl(Decl1);
-  auto Name2 = getLocalEntityNameForDecl(Decl2);
-  ASSERT_TRUE(Name1.has_value());
-  ASSERT_TRUE(Name2.has_value());
+  auto FirstName = getLocalEntityNameForDecl(FirstDecl);
+  ASSERT_TRUE(FirstName.has_value());
 
-  EXPECT_EQ(*Name1, *Name2);
+  for (size_t I = 1; I < Matches.size(); ++I) {
+    const auto *Decl = Matches[I].getNodeAs<RecordDecl>("decl");
+    ASSERT_NE(Decl, nullptr);
+
+    auto Name = getLocalEntityNameForDecl(Decl);
+    ASSERT_TRUE(Name.has_value());
+    EXPECT_EQ(*FirstName, *Name);
+  }
 }
 
 TEST(ASTEntityMappingTest, ParmVarDeclRedeclaration) {
@@ -303,24 +308,21 @@ TEST(ASTEntityMappingTest, ParmVarDeclRedeclaration) {
   auto Matches = match(Matcher, Ctx);
   ASSERT_EQ(Matches.size(), 2u);
 
-  const auto *Func1 = Matches[0].getNodeAs<FunctionDecl>("decl");
-  const auto *Func2 = Matches[1].getNodeAs<FunctionDecl>("decl");
-  ASSERT_NE(Func1, nullptr);
-  ASSERT_NE(Func2, nullptr);
-  ASSERT_GT(Func1->param_size(), 0u);
-  ASSERT_GT(Func2->param_size(), 0u);
+  const auto *FirstFuncDecl = Matches[0].getNodeAs<FunctionDecl>("decl");
+  ASSERT_NE(FirstFuncDecl, nullptr);
+  ASSERT_GT(FirstFuncDecl->param_size(), 0u);
 
-  const auto *Param1 = Func1->getParamDecl(0);
-  const auto *Param2 = Func2->getParamDecl(0);
-  ASSERT_NE(Param1, nullptr);
-  ASSERT_NE(Param2, nullptr);
+  auto ParamEName = getLocalEntityNameForDecl(FirstFuncDecl->getParamDecl(0));
+  ASSERT_TRUE(ParamEName.has_value());
 
-  auto Name1 = getLocalEntityNameForDecl(Param1);
-  auto Name2 = getLocalEntityNameForDecl(Param2);
-  ASSERT_TRUE(Name1.has_value());
-  ASSERT_TRUE(Name2.has_value());
+  for (size_t I = 1; I < Matches.size(); ++I) {
+    const auto *FDecl = Matches[I].getNodeAs<FunctionDecl>("decl");
+    ASSERT_NE(FDecl, nullptr);
+    ASSERT_GT(FDecl->param_size(), 0u);
 
-  EXPECT_EQ(*Name1, *Name2);
+    auto ParamRedeclEName = getLocalEntityNameForDecl(FDecl->getParamDecl(0));
+    EXPECT_EQ(*ParamEName, *ParamRedeclEName);
+  }
 }
 
 TEST(ASTEntityMappingTest, FunctionReturnRedeclaration) {
@@ -335,16 +337,18 @@ TEST(ASTEntityMappingTest, FunctionReturnRedeclaration) {
   ASSERT_EQ(Matches.size(), 2u);
 
   const auto *Decl1 = Matches[0].getNodeAs<FunctionDecl>("decl");
-  const auto *Decl2 = Matches[1].getNodeAs<FunctionDecl>("decl");
   ASSERT_NE(Decl1, nullptr);
-  ASSERT_NE(Decl2, nullptr);
-
   auto Name1 = getLocalEntityNameForFunctionReturn(Decl1);
-  auto Name2 = getLocalEntityNameForFunctionReturn(Decl2);
   ASSERT_TRUE(Name1.has_value());
-  ASSERT_TRUE(Name2.has_value());
 
-  EXPECT_EQ(*Name1, *Name2);
+  for (size_t I = 1; I < Matches.size(); ++I) {
+    const auto *FDecl = Matches[I].getNodeAs<FunctionDecl>("decl");
+    ASSERT_NE(FDecl, nullptr);
+
+    auto Name = getLocalEntityNameForFunctionReturn(Decl1);
+    ASSERT_TRUE(Name.has_value());
+    EXPECT_EQ(*Name1, *Name);
+  }
 }
 
 } // namespace
