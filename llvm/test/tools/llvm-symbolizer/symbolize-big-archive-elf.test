@@ -1,27 +1,54 @@
 # Test archive member recognition by name (ELF format).
 
-# Generate object files from YAML using parameterization.
-RUN: yaml2obj -DSYMBOL=foo1 -o %t-1.o %S/Inputs/elf-ppc64le.yaml
-RUN: yaml2obj -DSYMBOL=foo2 -o %t-2.o %S/Inputs/elf-ppc64le.yaml
+# RUN: yaml2obj -DSYMBOL=foo1 %s -o %t-1.o
+# RUN: yaml2obj -DSYMBOL=foo2 %s -o %t-2.o
 
-# Create archive with differently named members.
-RUN: rm -f %t.a
-RUN: llvm-ar crv %t.a %t-1.o %t-2.o
+# RUN: rm -f %t.a
+# RUN: llvm-ar crv %t.a %t-1.o %t-2.o
 
-# Test symbolization by member name.
-RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a(%{t:stem}.tmp-1.o)" 0x0 | FileCheck %s --check-prefix=CHECK-1
-RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp-1.o):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-1
-RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a(%{t:stem}.tmp-2.o)" 0x0 | FileCheck %s --check-prefix=CHECK-2
-RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp-2.o):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-2
-CHECK-1: foo1
-CHECK-2: foo2
+## Test symbolization by member name with architecture via --default-arch flag.
+# RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a(%{t:stem}.tmp-1.o)" 0x0 | FileCheck %s --check-prefix=CHECK-1
+# RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a(%{t:stem}.tmp-2.o)" 0x0 | FileCheck %s --check-prefix=CHECK-2
 
-# Test error cases.
-RUN: not llvm-symbolizer --obj="%t.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-CHECK-ERROR: error: {{.*}}no matching member{{.*}}
+## Test architecture specified via :arch suffix notation.
+# RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp-1.o):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-1
+# RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp-2.o):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-2
 
-RUN: not llvm-symbolizer --obj="%t-1.o(%{t:stem}.tmp-1.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOTARCHIVE
-CHECK-NOTARCHIVE: error: '{{.*}}' is not a valid archive
+# CHECK-1: foo1
+# CHECK-2: foo2
 
-RUN: not llvm-symbolizer --obj="%t.a()" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOSYMBOL
-CHECK-NOSYMBOL: {{.*}}no matching member{{.*}}
+## Test error cases.
+
+# RUN: not llvm-symbolizer --obj="%t.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+# CHECK-ERROR: error: {{.*}}no matching member{{.*}}
+
+# RUN: not llvm-symbolizer --obj="%t-1.o(%{t:stem}.tmp-1.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOTARCHIVE
+# CHECK-NOTARCHIVE: error: '{{.*}}' is not a valid archive
+
+# RUN: not llvm-symbolizer --obj="%t.a()" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOSYMBOL
+# CHECK-NOSYMBOL: {{.*}}no matching member{{.*}}
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_PPC64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         '2000804E000000000000000000000000'
+Symbols:
+  - Name:            [[SYMBOL]].c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            [[SYMBOL]]
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x10
