@@ -23,11 +23,11 @@ define i1 @or_icmp_3(i32 signext noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_3(
 ; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TYPE]], 6
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TYPE]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TYPE]], 15
-; CHECK-NEXT:    [[OR_COND1:%.*]] = or i1 [[CMP2]], [[OR_COND]]
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[TYPE]] to i16
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -32703, [[SWITCH_CAST]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i16 [[SWITCH_DOWNSHIFT]] to i1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[TYPE]], 16
+; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
 ; CHECK-NEXT:    ret i1 [[OR_COND1]]
 ;
 entry:
@@ -103,11 +103,11 @@ define i1 @or_icmp_ltu(i32 signext noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_ltu(
 ; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TYPE]], 6
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[TYPE]], 4
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TYPE]], 15
-; CHECK-NEXT:    [[OR_COND1:%.*]] = or i1 [[CMP2]], [[OR_COND]]
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[TYPE]] to i16
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -32689, [[SWITCH_CAST]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i16 [[SWITCH_DOWNSHIFT]] to i1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[TYPE]], 16
+; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
 ; CHECK-NEXT:    ret i1 [[OR_COND1]]
 ;
 entry:
@@ -123,11 +123,11 @@ define i1 @or_icmp_7(i32 signext noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_7(
 ; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TYPE]], 6
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TYPE]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TYPE]], 17
-; CHECK-NEXT:    [[OR_COND1:%.*]] = or i1 [[CMP2]], [[OR_COND]]
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[TYPE]] to i18
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i18 -131007, [[SWITCH_CAST]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i18 [[SWITCH_DOWNSHIFT]] to i1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[TYPE]], 18
+; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[TYPE]], 3
 ; CHECK-NEXT:    [[OR_COND2:%.*]] = or i1 [[CMP3]], [[OR_COND1]]
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[TYPE]], 31
@@ -215,11 +215,11 @@ define i1 @or_icmp_i64(i64 signext noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_i64(
 ; CHECK-SAME: i64 noundef signext [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TYPE]], 6
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[TYPE]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[TYPE]], 15
-; CHECK-NEXT:    [[OR_COND1:%.*]] = or i1 [[CMP2]], [[OR_COND]]
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i64 [[TYPE]] to i16
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -32703, [[SWITCH_CAST]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i16 [[SWITCH_DOWNSHIFT]] to i1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[TYPE]], 16
+; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
 ; CHECK-NEXT:    ret i1 [[OR_COND1]]
 ;
 entry:
@@ -464,11 +464,11 @@ define i1 @or_icmp_i128(i128 signext noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_i128(
 ; CHECK-SAME: i128 noundef signext [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i128 [[TYPE]], 6
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i128 [[TYPE]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i128 [[TYPE]], 15
-; CHECK-NEXT:    [[OR_COND1:%.*]] = or i1 [[CMP2]], [[OR_COND]]
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i128 [[TYPE]] to i16
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -32703, [[SWITCH_CAST]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i16 [[SWITCH_DOWNSHIFT]] to i1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i128 [[TYPE]], 16
+; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
 ; CHECK-NEXT:    ret i1 [[OR_COND1]]
 ;
 entry:

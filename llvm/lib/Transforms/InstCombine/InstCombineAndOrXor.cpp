@@ -4104,6 +4104,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *X = foldIntegerPackFromVector(I, Builder, DL))
     return X;
 
+  if (Value *V = combineAndOrOfImmCmpToBitExtract(I, Builder, DL))
+    return replaceInstUsesWith(I, V);
+
   // (A & B) | (C & D) -> A ^ D where A == ~C && B == ~D
   // (A & B) | (C & D) -> A ^ C where A == ~D && B == ~C
   if (Value *V = foldOrOfInversions(I, Builder))
