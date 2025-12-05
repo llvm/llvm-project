@@ -1999,7 +1999,7 @@ bool RewriteScheduleStage::initHeuristics(
         SmallVector<SlotIndex, 8> DstUsesReachingDefs;
         findReachingDefs(*RUOp, DAG.LIS, DstUsesReachingDefs);
 
-        for (auto RDIndex : DstUsesReachingDefs) {
+        for (SlotIndex RDIndex : DstUsesReachingDefs) {
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
           if (TII->isMAI(*RD))
             continue;
@@ -2106,7 +2106,7 @@ int64_t RewriteScheduleStage::getRewriteCost(
     uint64_t UseFreq =
         EntryFreq ? MBFI.getBlockFreq(UseBlock).getFrequency() / EntryFreq : 1;
 
-    for (auto UseReg : UseRegs) {
+    for (Register UseReg : UseRegs) {
       unsigned RegSize =
           DAG.TRI->getRegSizeInBits(*DAG.MRI.getRegClass(UseReg));
       unsigned NumRegs = std::max(RegSize / 32, (unsigned)1);
@@ -2142,7 +2142,7 @@ bool RewriteScheduleStage::rewrite(
   DenseMap<MachineInstr *, unsigned> LastMIToRegion;
 
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
-    auto Entry = DAG.Regions[Region];
+   RegionBoundaries Entry = DAG.Regions[Region];
     if (Entry.first == Entry.second)
       continue;
 
@@ -2190,7 +2190,7 @@ bool RewriteScheduleStage::rewrite(
   // up creating illegal instructions.
 
   // The original registers of the MFMA that need to be reclassified as AGPR.
-  std::set<Register> RewriteRegs;
+  DenseSet<Register> RewriteRegs;
   // The map of an original register in the MFMA to a new register (result of a
   // copy) that it should be replaced with.
   DenseMap<Register, Register> RedefMap;
@@ -2204,7 +2204,6 @@ bool RewriteScheduleStage::rewrite(
       ReachingUseTracker;
 
   for (auto &[MI, OriginalOpcode] : RewriteCands) {
-
     int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode());
     if (ReplacementOp == -1)
       continue;
@@ -2212,7 +2211,6 @@ bool RewriteScheduleStage::rewrite(
 
     // Case 1: insert copies for the reaching defs of the Src2Reg.
     MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-
     if (Src2->isReg()) {
       Register Src2Reg = Src2->getReg();
       if (!Src2Reg.isVirtual())
@@ -2223,7 +2221,7 @@ bool RewriteScheduleStage::rewrite(
       findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
       SmallVector<MachineInstr *, 8> Src2DefsReplace;
 
-      for (auto RDIndex : Src2ReachingDefs) {
+      for (SlotIndex RDIndex : Src2ReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
         if (TII->isMAI(*RD))
           continue;
@@ -2234,8 +2232,9 @@ bool RewriteScheduleStage::rewrite(
       }
 
       if (!Src2DefsReplace.empty()) {
-        if (RedefMap.contains(Src2Reg)) {
-          MappedReg = RedefMap[Src2Reg];
+        DenseMap<Register, Register>::iterator RI = RedefMap.find(Src2Reg);
+        if (RI != RedefMap.end()) {
+          MappedReg = RI->second;
         } else {
           assert(!ReachingDefCopyMap.contains(Src2Reg));
           const TargetRegisterClass *Src2RC = DAG.MRI.getRegClass(Src2Reg);
@@ -2304,7 +2303,7 @@ bool RewriteScheduleStage::rewrite(
       SmallVector<SlotIndex, 8> DstUsesReachingDefs;
       findReachingDefs(*RUOp, DAG.LIS, DstUsesReachingDefs);
 
-      for (auto RDIndex : DstUsesReachingDefs) {
+      for (SlotIndex RDIndex : DstUsesReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
         if (TII->isMAI(*RD))
           continue;
@@ -2317,9 +2316,10 @@ bool RewriteScheduleStage::rewrite(
     }
 
     if (!DstUseDefsReplace.empty()) {
-      if (RedefMap.contains(DstReg))
-        MappedReg = RedefMap[DstReg];
-      else {
+      DenseMap<Register, Register>::iterator RI = RedefMap.find(DstReg);
+      if (RI != RedefMap.end()) {
+        MappedReg = RI->second;
+      } else {
         assert(!ReachingDefCopyMap.contains(DstReg));
         const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
         const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
@@ -2343,8 +2343,10 @@ bool RewriteScheduleStage::rewrite(
 
           // If this reaching def was the last MI in the region, update the
           // region boundaries.
-          if (LastMIToRegion.contains(RD)) {
-            unsigned UpdateRegion = LastMIToRegion[RD];
+          DenseMap<MachineInstr *, unsigned>::iterator LMI =
+              LastMIToRegion.find(RD);
+          if (LMI != LastMIToRegion.end()) {
+            unsigned UpdateRegion = LMI->second;
             DAG.Regions[UpdateRegion].second = VGPRCopy;
             LastMIToRegion.erase(RD);
           }
@@ -2389,13 +2391,16 @@ bool RewriteScheduleStage::rewrite(
   }
 
   // Handle the copies for dst uses.
-  for (auto RUBlockEntry : ReachingUseTracker) {
-    for (auto RUDst : RUBlockEntry.second) {
+  using RUBType =
+      std::pair<unsigned, DenseMap<Register, SmallPtrSet<MachineOperand *, 8>>>;
+  for (RUBType RUBlockEntry : ReachingUseTracker) {
+    using RUDType = std::pair<Register, SmallPtrSet<MachineOperand *, 8>>;
+    for (RUDType RUDst : RUBlockEntry.second) {
       MachineOperand *OpBegin = *RUDst.second.begin();
       SlotIndex InstPt = DAG.LIS->getInstructionIndex(*OpBegin->getParent());
 
       // Find the earliest use in this block.
-      for (auto *User : RUDst.second) {
+      for (MachineOperand *User : RUDst.second) {
         SlotIndex NewInstPt = DAG.LIS->getInstructionIndex(*User->getParent());
         if (SlotIndex::isEarlierInstr(NewInstPt, InstPt))
           InstPt = NewInstPt;
@@ -2415,8 +2420,10 @@ bool RewriteScheduleStage::rewrite(
 
       // If this UseInst was the first MI in the region, update the region
       // boundaries.
-      if (FirstMIToRegion.contains(UseInst)) {
-        unsigned UpdateRegion = FirstMIToRegion[UseInst];
+      DenseMap<MachineInstr *, unsigned>::iterator FI =
+          FirstMIToRegion.find(UseInst);
+      if (FI != FirstMIToRegion.end()) {
+        unsigned UpdateRegion = FI->second;
         DAG.Regions[UpdateRegion].first = VGPRCopy;
         FirstMIToRegion.erase(UseInst);
       }
@@ -2434,7 +2441,7 @@ bool RewriteScheduleStage::rewrite(
   // We may have needed to insert copies after the reaching defs of the MFMAs.
   // Replace the original register with the result of the copy for all relevant
   // operands.
-  for (auto NewDef : RedefMap) {
+  for (std::pair<Register, Register> NewDef : RedefMap) {
     Register OldReg = NewDef.first;
     Register NewReg = NewDef.second;
 
