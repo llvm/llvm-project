@@ -332,7 +332,8 @@ bool AArch64PrologueEpilogueCommon::shouldCombineCSRLocalStackBump(
   // decrement with.
   //
   // Note that for certain paired saves, like "x19, lr", we can't actually
-  // combine the save, but packed unwind still expects a separate stack bump.
+  // emit an predecrement stp, but packed unwind still expects a separate stack
+  // adjustment.
   //
   // This is potentially marginally slower, but allows using the packed
   // unwind format for functions that both have a local area and callee saved
