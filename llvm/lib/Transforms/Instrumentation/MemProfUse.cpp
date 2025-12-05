@@ -455,7 +455,7 @@ handleAllocSite(Instruction &I, CallBase *CI,
             AllocInfo->Info.getTotalSize(), AllocType};
       }
       ORE.emit(
-          OptimizationRemark(DEBUG_TYPE, "MemprofContext", CI)
+          OptimizationRemark(DEBUG_TYPE, "MemProfUse", CI)
           << ore::NV("AllocationCall", CI) << " in function "
           << ore::NV("Caller", CI->getFunction())
           << " matched alloc context with alloc type "
@@ -549,7 +549,7 @@ static void handleCallSite(
         append_range(CallStack, InlinedCallStack);
         MatchedCallSites.insert(std::move(CallStack));
       }
-      ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofContext", &I)
+      ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemProfUse", &I)
                << ore::NV("CallSite", &I) << " in function "
                << ore::NV("Caller", I.getFunction())
                << " matched callsite with frame count "
