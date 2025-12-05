@@ -2393,6 +2393,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     if (!iterate_enable)
       return sgpr0;
 
+    // TODO: In future PR, add other required fields for iteration.
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 19);
   }
 
@@ -2485,6 +2486,7 @@ struct AMDGPUMakeDmaDescriptorLowering
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr2, Value sgpr3,
                                         ArrayRef<Value> consts) const {
+    // TODO: Generalize to setTensorDimX.
     SmallVector<OpFoldResult> mixedGlobalSizes = op.getMixedGlobalSizes();
     OpFoldResult tensorDim1OpFoldResult = *(mixedGlobalSizes.rbegin() + 1);
     Value tensorDim1;
