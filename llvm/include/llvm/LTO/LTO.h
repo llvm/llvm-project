@@ -623,17 +623,18 @@ private:
   LLVMRemarkFileHandle DiagnosticOutputFile;
 
 public:
-  /// DTLTO mode.
+  // DTLTO mode.
   bool Dtlto = false;
 
   BumpPtrAllocator PtrAlloc;
   StringSaver Saver{PtrAlloc};
 
   // Array of input bitcode files for LTO.
-  std::vector<std::unique_ptr<llvm::lto::InputFile>> InputFiles;
+  std::vector<std::shared_ptr<lto::InputFile>> InputFiles;
   std::unique_ptr<dtlto::TempFilesRemover> TempsRemover;
 
-  Expected<lto::InputFile *> addInput(std::unique_ptr<lto::InputFile> InputPtr);
+  Expected<std::shared_ptr<lto::InputFile>>
+  addInput(std::unique_ptr<lto::InputFile> InputPtr);
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

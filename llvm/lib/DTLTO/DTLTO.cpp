@@ -133,16 +133,16 @@ Expected<bool> isThinArchive(const StringRef ArchivePath) {
 // thin archive member file.
 // 3. For regular archive members, generates a new unique module ID.
 // 4. Updates the bitcode module's identifier.
-Expected<lto::InputFile *>
+Expected<std::shared_ptr<lto::InputFile>>
 lto::LTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
 
   // Skip processing if not in DTLTO mode.
   if (!Dtlto)
-    return InputPtr.release();
+    return std::shared_ptr<lto::InputFile>(InputPtr.release());
 
   // Add the input file to the LTO object.
-  InputFiles.push_back(std::move(InputPtr));
-  lto::InputFile *Input = InputFiles.back().get();
+  InputFiles.emplace_back(InputPtr.release());
+  std::shared_ptr<lto::InputFile> &Input = InputFiles.back();
 
   StringRef ModuleId = Input->getName();
   StringRef ArchivePath = Input->getArchivePath();

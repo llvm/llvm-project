@@ -739,10 +739,11 @@ Error LTO::add(std::unique_ptr<InputFile> InputPtr,
   llvm::TimeTraceScope timeScope("LTO add input", InputPtr->getName());
   assert(!CalledGetMaxTasks);
 
-  Expected<InputFile *> InputOrErr = dtlto::addInput(this, std::move(InputPtr));
+  Expected<std::shared_ptr<InputFile>> InputOrErr =
+      addInput(std::move(InputPtr));
   if (!InputOrErr)
     return InputOrErr.takeError();
-  InputFile *Input = *InputOrErr;
+  InputFile *Input = (*InputOrErr).get();
 
   if (Conf.ResolutionFile)
     writeToResolutionFile(*Conf.ResolutionFile, Input, Res);
@@ -761,7 +762,6 @@ Error LTO::add(std::unique_ptr<InputFile> InputPtr,
   }
 
   assert(Res.empty());
-  if (!Dtlto) delete Input;
   return Error::success();
 }
 
