@@ -32,6 +32,5 @@ int main(int argc, char **argv) {
   // Compile-time invalid strides
   #pragma omp target update from(data[1:2:-3]) // expected-error {{section stride is evaluated to a non-positive value -3}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
   
-  free(data);
   return 0;
 }

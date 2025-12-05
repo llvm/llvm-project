@@ -49,8 +49,5 @@ int main(int argc, char **argv) {
   
   #pragma omp target update to(data[0:4:2], data1[0:3:2:1], data2[0:2:3]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
   
-  free(data);
-  free(data1);
-  free(data2);
   return 0;
 }

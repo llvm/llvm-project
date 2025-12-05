@@ -35,6 +35,5 @@ int main(int argc, char **argv) {
   #pragma omp target update to(data[0:4:2:1]) // expected-error {{expected ']'}} expected-note {{to match this '['}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
   {}
   
-  free(data);
   return 0;
 }
