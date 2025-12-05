@@ -432,20 +432,20 @@ void PEIImpl::calculateCallFrameInfo(MachineFunction &MF) {
 /// Compute two sets of blocks for placing prolog and epilog code respectively.
 void PEIImpl::calculatePrologEpilogBlocks(MachineFunction &MF) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineBasicBlock *Prolog = MFI.getProlog();
-  MachineBasicBlock *Epilog = MFI.getEpilog();
+  PrologBlocks = MFI.getPrologPoints();
+  EpilogBlocks = MFI.getEpilogPoints();
 
-  if (Prolog)
-    PrologBlocks.push_back(Prolog);
-
-  if (Epilog)
-    EpilogBlocks.push_back(Epilog);
-
-  if (!Prolog && !SaveBlocks.empty())
-    PrologBlocks = SaveBlocks;
-
-  if (!Epilog && !RestoreBlocks.empty())
-    EpilogBlocks = RestoreBlocks;
+  if (PrologBlocks.empty()) {
+    assert(EpilogBlocks.empty() &&
+           "Both PrologBlocks and EpilogBlocks should be empty");
+    PrologBlocks.push_back(&MF.front());
+    for (MachineBasicBlock &MBB : MF) {
+      if (MBB.isEHFuncletEntry())
+        PrologBlocks.push_back(&MBB);
+      if (MBB.isReturnBlock())
+        EpilogBlocks.push_back(&MBB);
+    }
+  }
 }
 
 /// Compute the sets of entry and return blocks for saving and restoring

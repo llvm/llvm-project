@@ -155,23 +155,25 @@ class ShrinkWrapImpl {
       SRPoints.insert(Point);
     }
 
-    std::vector<MachineBasicBlock *> insertReg(
-        Register Reg, MachineBasicBlock *MBB,
-        std::optional<std::vector<MachineBasicBlock *>> SaveRestoreBlockList) {
+    std::set<MachineBasicBlock *>
+    insertReg(Register Reg, MachineBasicBlock *MBB,
+              std::optional<std::set<MachineBasicBlock *>> SaveRestoreBlockSet =
+                  std::nullopt) {
       assert(MBB && "MBB is nullptr");
       if (SRPoints.contains(MBB)) {
         SRPoints[MBB].push_back(CalleeSavedInfo(Reg));
-        if (SaveRestoreBlockList.has_value())
-          return SaveRestoreBlockList.value();
-        return std::vector<MachineBasicBlock *>();
+        if (SaveRestoreBlockSet.has_value())
+          return SaveRestoreBlockSet.value();
+        return std::set<MachineBasicBlock *>();
       }
-      std::vector CSInfos{CalleeSavedInfo(Reg)};
+      std::vector<CalleeSavedInfo> CSInfos{};
+      CSInfos.push_back(CalleeSavedInfo(Reg));
       SRPoints.insert(std::make_pair(MBB, CSInfos));
-      if (SaveRestoreBlockList.has_value()) {
-        SaveRestoreBlockList->push_back(MBB);
-        return SaveRestoreBlockList.value();
+      if (SaveRestoreBlockSet.has_value()) {
+        SaveRestoreBlockSet->insert(MBB);
+        return SaveRestoreBlockSet.value();
       }
-      return std::vector<MachineBasicBlock *>();
+      return std::set<MachineBasicBlock *>();
     }
 
     void print(raw_ostream &OS, const TargetRegisterInfo *TRI) const {
@@ -198,11 +200,11 @@ class ShrinkWrapImpl {
   /// block.
   SaveRestorePoints RestorePoints;
 
-  std::vector<MachineBasicBlock *> SaveBlocks;
-  std::vector<MachineBasicBlock *> RestoreBlocks;
+  std::set<MachineBasicBlock *> SaveBlocks;
+  std::set<MachineBasicBlock *> RestoreBlocks;
 
-  MachineBasicBlock *Prolog = nullptr;
-  MachineBasicBlock *Epilog = nullptr;
+  SmallVector<MachineBasicBlock *, 4> PrologPoints;
+  SmallVector<MachineBasicBlock *, 4> EpilogPoints;
 
   /// Hold the information of the basic block frequency.
   /// Use to check the profitability of the new points.
@@ -280,13 +282,14 @@ class ShrinkWrapImpl {
     return TargetCSRs;
   }
 
-  void setupSaveRestorePoints(MachineFunction &MF);
+  void setupSaveRestorePoints(RegScavenger *RS);
 
-  void insertUnusedCSRs(MachineFunction &MF);
+  void placeAdditionalCSRs();
 
   void performSimpleShrinkWrap(RegScavenger *RS, MachineBasicBlock &SavePoint);
 
   bool canSplitSaveRestorePoints(
+      MachineFrameInfo &MFI,
       const ReversePostOrderTraversal<MachineBasicBlock *> &RPOT,
       RegScavenger *RS);
 
@@ -310,6 +313,8 @@ class ShrinkWrapImpl {
                           RegScavenger *RS, MachineBasicBlock *Save,
                           MachineBasicBlock *Restore);
 
+  void setupPrologEpilog();
+
   /// This function analyzes if the restore point can split to create a new
   /// restore point. This function collects
   /// 1. Any preds of current restore that are reachable by callee save/FI
@@ -331,8 +336,8 @@ class ShrinkWrapImpl {
     SavedRegs.clear();
     SavePoints.clear();
     RestorePoints.clear();
-    Prolog = nullptr;
-    Epilog = nullptr;
+    PrologPoints.clear();
+    EpilogPoints.clear();
     SaveBlocks.clear();
     RestoreBlocks.clear();
     EntryFreq = MBFI->getEntryFreq();
@@ -842,8 +847,10 @@ bool ShrinkWrapImpl::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
   std::vector<CalleeSavedInfo> CSIV = getTargetCSIList(MF);
   SavePoints.insert(std::make_pair(Save, CSIV));
   RestorePoints.insert(std::make_pair(Restore, CSIV));
-  Prolog = Save;
-  Epilog = Restore;
+  PrologPoints.clear();
+  EpilogPoints.clear();
+  PrologPoints.push_back(Save);
+  EpilogPoints.push_back(Restore);
   return true;
 }
 
@@ -990,74 +997,57 @@ static bool giveUpWithRemarks(MachineOptimizationRemarkEmitter *ORE,
   LLVM_DEBUG(dbgs() << RemarkMessage << '\n');
   return false;
 }
-void ShrinkWrapImpl::insertUnusedCSRs(MachineFunction &MF) {
-  MachineBasicBlock *InsertPt = Prolog ? Prolog : &MF.front();
-  for (CalleeSavedInfo CSI : getTargetCSIList(MF)) {
-    auto Reg = CSI.getReg();
+
+void ShrinkWrapImpl::setupSaveRestorePoints(RegScavenger *RS) {
+  for (unsigned Reg : getCurrentCSRs(RS)) {
     auto [Save, Restore] = SavedRegs[Reg];
     if (SavedRegs.contains(Reg) && Save && Restore)
       continue;
 
-    SavePoints.insertReg(Reg, InsertPt, std::nullopt);
-    if (Epilog)
-      RestorePoints.insertReg(Reg, Epilog, std::nullopt);
-    else {
-      for (MachineBasicBlock &MBB : MF) {
-        if (MBB.isEHFuncletEntry())
-          SavePoints.insertReg(Reg, &MBB, std::nullopt);
-        if (MBB.isReturnBlock())
-          RestorePoints.insertReg(Reg, &MBB, std::nullopt);
-      }
+    SaveBlocks = SavePoints.insertReg(Reg, &MachineFunc->front(), SaveBlocks);
+    for (MachineBasicBlock &MBB : *MachineFunc) {
+      if (MBB.isEHFuncletEntry())
+        SaveBlocks = SavePoints.insertReg(Reg, &MBB, SaveBlocks);
+      if (MBB.isReturnBlock())
+        RestoreBlocks = RestorePoints.insertReg(Reg, &MBB, RestoreBlocks);
     }
   }
-}
 
-void ShrinkWrapImpl::setupSaveRestorePoints(MachineFunction &MF) {
   for (auto [Reg, SaveRestoreBlocks] : SavedRegs) {
     auto [Save, Restore] = SaveRestoreBlocks;
     if (Save && Restore) {
       SaveBlocks = SavePoints.insertReg(Reg, Save, SaveBlocks);
-      if (!Restore->succ_empty() || Restore->isReturnBlock())
-        RestoreBlocks = RestorePoints.insertReg(Reg, Restore, RestoreBlocks);
-      else
-        RestorePoints.insertReg(Reg, Restore, std::nullopt);
+      // if (!Restore->succ_empty() || Restore->isReturnBlock())
+      RestoreBlocks = RestorePoints.insertReg(Reg, Restore, RestoreBlocks);
+      // else {
+      // dbgs() << "Here\n";
+      // RestorePoints.insertReg(Reg, Restore);
+      //}
     }
   }
 }
 
 bool ShrinkWrapImpl::canSplitSaveRestorePoints(
+    MachineFrameInfo &MFI,
     const ReversePostOrderTraversal<MachineBasicBlock *> &RPOT,
     RegScavenger *RS) {
+  if (MFI.hasVarSizedObjects()) {
+    LLVM_DEBUG(dbgs() << "Can't split save/restore points, because frame "
+                         "contains var sized objects\n");
+    return false;
+  }
+
   for (MachineBasicBlock *MBB : RPOT) {
     if (MBB->isEHPad() || MBB->isInlineAsmBrIndirectTarget())
       return false;
-
-    // Check if we found any stack accesses in the predecessors. We are not
-    // doing a full dataflow analysis here to keep things simple but just
-    // rely on a reverse portorder traversal (RPOT) to guarantee predecessors
-    // are already processed except for loops (and accept the conservative
-    // result for loops).
-    bool StackAddressUsed = any_of(MBB->predecessors(), [&](auto *Pred) {
-      return StackAddressUsedBlockInfo.test(Pred->getNumber());
-    });
-
-    for (const MachineInstr &MI : *MBB) {
-      if (useOrDefFI(MI, RS, StackAddressUsed))
-        return false;
-
-      if (useOrDefCSR(MI, RS, nullptr))
-        StackAddressUsed = true;
-    }
-
-    StackAddressUsedBlockInfo[MBB->getNumber()] = StackAddressUsed;
   }
+
   return true;
 }
 
 void ShrinkWrapImpl::performSimpleShrinkWrap(RegScavenger *RS,
                                              MachineBasicBlock &SavePoint) {
-  auto MF = SavePoint.getParent();
-  auto CSIV = getTargetCSIList(*MF);
+  auto CSIV = getTargetCSIList(*MachineFunc);
   if (!CSIV.empty()) {
     for (CalleeSavedInfo CSI : CSIV) {
       auto Reg = CSI.getReg();
@@ -1076,7 +1066,8 @@ bool ShrinkWrapImpl::performShrinkWrapping(
   const TargetFrameLowering *TFI =
       MachineFunc->getSubtarget().getFrameLowering();
 
-  bool canSplit = canSplitSaveRestorePoints(RPOT, RS);
+  MachineFrameInfo &MFI = MachineFunc->getFrameInfo();
+  bool canSplit = canSplitSaveRestorePoints(MFI, RPOT, RS);
   StackAddressUsedBlockInfo.set();
 
   for (MachineBasicBlock *MBB : RPOT) {
@@ -1116,28 +1107,34 @@ bool ShrinkWrapImpl::performShrinkWrapping(
     }
 
     std::set<Register> RegsToSave;
-
     for (const MachineInstr &MI : *MBB) {
       RegsToSave.clear();
-      if (useOrDefFI(MI, RS, StackAddressUsed)) {
-        performSimpleShrinkWrap(RS, *MBB);
-        if (!AreCandidatesFound(false /* splitEnabled */)) {
-          LLVM_DEBUG(dbgs() << "No Shrink wrap candidate found!~\n");
-          return false;
-        }
-        StackAddressUsed = true;
-        continue;
-      }
-
-      if (useOrDefCSR(MI, RS, &RegsToSave)) {
+      bool UseOrDefCSR = useOrDefCSR(MI, RS, &RegsToSave);
+      bool UseOrDefFI = useOrDefFI(MI, RS, StackAddressUsed);
+      if (UseOrDefCSR || UseOrDefFI) {
         if (!EnableShrinkWrapSplitOpt ||
-            !TFI->enableCSRSaveRestorePointsSplit() || !canSplit)
+            !TFI->enableCSRSaveRestorePointsSplit() || !canSplit) {
           performSimpleShrinkWrap(RS, *MBB);
-        else {
-          for (auto Reg : RegsToSave) {
-            // Save (resp. restore) point must dominate (resp. post dominate)
-            // MI. Look for the proper basic block for those.
-            updateSaveRestorePoints(*MBB, Reg, RS);
+          if (!AreCandidatesFound(false /* splitEnabled */)) {
+            LLVM_DEBUG(
+                dbgs()
+                << "No candidates in simple case prevents shrink-wrapping\n");
+            return false;
+          }
+        } else {
+          if (UseOrDefCSR) {
+            for (auto Reg : RegsToSave) {
+              // Save (resp. restore) point must dominate (resp. post dominate)
+              // MI. Look for the proper basic block for those.
+              updateSaveRestorePoints(*MBB, Reg, RS);
+            }
+          }
+          if (UseOrDefFI) {
+            performSimpleShrinkWrap(RS, *MBB);
+            if (!AreCandidatesFound(true /* splitEnabled */)) {
+              LLVM_DEBUG(dbgs() << "No Shrink wrap candidate found!\n");
+              return false;
+            }
           }
         }
         StackAddressUsed = true;
@@ -1145,7 +1142,7 @@ bool ShrinkWrapImpl::performShrinkWrapping(
     }
     StackAddressUsedBlockInfo[MBB->getNumber()] = StackAddressUsed;
   }
-  if (!AreCandidatesFound(true /* splitEnabled */)) {
+  if (!AreCandidatesFound(canSplit /* splitEnabled */)) {
     // If the points are not interesting at this point, then they must be null
     // because it means we did not encounter any frame/CSR related code.
     // Otherwise, we would have returned from the previous loop.
@@ -1200,6 +1197,30 @@ bool ShrinkWrapImpl::performShrinkWrapping(
   return true;
 }
 
+void ShrinkWrapImpl::setupPrologEpilog() {
+  MachineBasicBlock *Prolog =
+      SaveBlocks.empty()
+          ? nullptr
+          : MDT->findNearestCommonDominator(iterator_range(SaveBlocks));
+  MachineBasicBlock *Epilog =
+      RestoreBlocks.empty()
+          ? nullptr
+          : MPDT->findNearestCommonDominator(iterator_range(RestoreBlocks));
+  if (Prolog && Epilog) {
+    PrologPoints.push_back(Prolog);
+    if (Epilog->isReturnBlock() || !Epilog->succ_empty())
+      EpilogPoints.push_back(Epilog);
+  } else {
+    PrologPoints.push_back(&MachineFunc->front());
+    for (MachineBasicBlock &MBB : *MachineFunc) {
+      if (MBB.isEHFuncletEntry())
+        PrologPoints.push_back(&MBB);
+      if (MBB.isReturnBlock())
+        EpilogPoints.push_back(&MBB);
+    }
+  }
+}
+
 bool ShrinkWrapImpl::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "**** Analysing " << MF.getName() << '\n');
 
@@ -1232,15 +1253,11 @@ bool ShrinkWrapImpl::run(MachineFunction &MF) {
   StackAddressUsedBlockInfo.clear();
 
   if (HasCandidates) {
-    setupSaveRestorePoints(MF);
-    Prolog = SaveBlocks.empty()
-                 ? nullptr
-                 : MDT->findNearestCommonDominator(iterator_range(SaveBlocks));
-    Epilog =
-        RestoreBlocks.empty()
-            ? nullptr
-            : MPDT->findNearestCommonDominator(iterator_range(RestoreBlocks));
-    insertUnusedCSRs(MF);
+    /* Fill SavePoints and RestorePoints with CSRs, for which both Save and
+     * Restore are found */
+    setupSaveRestorePoints(RS.get());
+
+    setupPrologEpilog();
   }
 
   if (!HasCandidates ||
@@ -1269,9 +1286,8 @@ bool ShrinkWrapImpl::run(MachineFunction &MF) {
   LLVM_DEBUG(RestorePoints.dump(TRI));
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-
-  MFI.setProlog(Prolog);
-  MFI.setEpilog(Epilog);
+  MFI.setPrologPoints(PrologPoints);
+  MFI.setEpilogPoints(EpilogPoints);
   MFI.setSavePoints(SavePoints.get());
   MFI.setRestorePoints(RestorePoints.get());
   ++NumCandidates;

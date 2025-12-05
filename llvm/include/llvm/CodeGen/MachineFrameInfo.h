@@ -336,9 +336,9 @@ private:
   bool HasTailCall = false;
 
   /// Not null, if shrink-wrapping found a better place for the prologue.
-  MachineBasicBlock *Prolog = nullptr;
+  SmallVector<MachineBasicBlock *, 4> PrologPoints;
   /// Not null, if shrink-wrapping found a better place for the epilogue.
-  MachineBasicBlock *Epilog = nullptr;
+  SmallVector<MachineBasicBlock *, 4> EpilogPoints;
 
   /// Not empty, if shrink-wrapping found a better place for saving callee
   /// saves.
@@ -891,10 +891,18 @@ public:
     RestorePoints = std::move(NewRestorePoints);
   }
 
-  MachineBasicBlock *getProlog() const { return Prolog; }
-  void setProlog(MachineBasicBlock *BB) { Prolog = BB; }
-  MachineBasicBlock *getEpilog() const { return Epilog; }
-  void setEpilog(MachineBasicBlock *BB) { Epilog = BB; }
+  const SmallVector<MachineBasicBlock *, 4> &getPrologPoints() const {
+    return PrologPoints;
+  }
+  void setPrologPoints(SmallVector<MachineBasicBlock *, 4> Points) {
+    PrologPoints = Points;
+  }
+  const SmallVector<MachineBasicBlock *, 4> &getEpilogPoints() const {
+    return EpilogPoints;
+  }
+  void setEpilogPoints(SmallVector<MachineBasicBlock *, 4> Points) {
+    EpilogPoints = Points;
+  }
 
   void clearSavePoints() { SavePoints.clear(); }
   void clearRestorePoints() { RestorePoints.clear(); }

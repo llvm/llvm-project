@@ -553,10 +553,13 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       bool SpilledRestoredInPrologEpilog = true;
       // If we didn't managed to find NCD (NCPD) for the list of Save (Restore)
       // blocks, spill (restore) will be unconditionally in Prolog (Epilog)
-      if (MI.mayStore() && MFI.getProlog())
-        SpilledRestoredInPrologEpilog = SpilledIn == MFI.getProlog();
-      else if (MI.mayLoad() && MFI.getEpilog())
-        SpilledRestoredInPrologEpilog = RestoredIn == MFI.getEpilog();
+      if (MI.mayStore() && !MFI.getPrologPoints().empty()) {
+        SpilledRestoredInPrologEpilog =
+            (llvm::count(MFI.getPrologPoints(), SpilledIn) > 0);
+      } else if (MI.mayLoad() && !MFI.getEpilogPoints().empty()) {
+        SpilledRestoredInPrologEpilog =
+            (llvm::count(MFI.getEpilogPoints(), RestoredIn) > 0);
+      }
 
       // For spills/restores performed not in Prolog/Epilog we need to add full
       // SP offset, despite SPAdjusment optimization, because at the end of
