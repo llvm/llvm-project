@@ -15,6 +15,7 @@
 #include "Generators.h"
 #include "Representation.h"
 #include "support/File.h"
+#include "clang/Basic/Diagnostic.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
