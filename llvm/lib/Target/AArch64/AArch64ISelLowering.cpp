@@ -7788,8 +7788,8 @@ SDValue AArch64TargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
 
   // All SVE intrinsics expect to operate on full bf16 vector types.
   if (UseSVEBFMLAL) {
-    LHS = Reinterpret(Op.getOperand(0), MVT::nxv8bf16);
-    RHS = Reinterpret(Op.getOperand(1), MVT::nxv8bf16);
+    LHS = Reinterpret(LHS, MVT::nxv8bf16);
+    RHS = Reinterpret(RHS, MVT::nxv8bf16);
   }
 
   SDValue BottomF32 = Reinterpret(BFMLALB(AccVT, Zero, LHS, RHS), MVT::nxv4f32);
