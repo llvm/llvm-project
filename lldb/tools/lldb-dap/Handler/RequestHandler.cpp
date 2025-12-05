@@ -17,6 +17,7 @@
 #include "RunInTerminal.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBEnvironment.h"
+#include "lldb/API/SBStream.h"
 #include "llvm/Support/Error.h"
 #include <mutex>
 
@@ -259,6 +260,26 @@ void BaseRequestHandler::PrintWelcomeMessage() const {
 #ifdef LLDB_DAP_WELCOME_MESSAGE
   dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
 #endif
+}
+
+void BaseRequestHandler::PrintIntroductionMessage() const {
+  lldb::SBStream msg;
+  msg.Print("To get started with the lldb-dap debug console try "
+            "\"<variable>\", \"help [<cmd-name>]\", or \"apropos "
+            "<search-word>\".\r\nFor more information visit "
+            "https://github.com/llvm/llvm-project/blob/main/lldb/tools/"
+            "lldb-dap/README.md\r\n");
+  if (dap.target && dap.target.GetExecutable()) {
+    char path[PATH_MAX] = {0};
+    dap.target.GetExecutable().GetPath(path, sizeof(path));
+    msg.Printf("Executable binary set to '%s' (%s).\r\n", path,
+               dap.target.GetTriple());
+  }
+  if (dap.target.GetProcess()) {
+    msg.Printf("Attached to process %llu.\r\n",
+               dap.target.GetProcess().GetProcessID());
+  }
+  dap.SendOutput(OutputType::Console, {msg.GetData(), msg.GetSize()});
 }
 
 bool BaseRequestHandler::HasInstructionGranularity(
