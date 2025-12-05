@@ -84,16 +84,13 @@ LogicalResult moveOperationDependencies(RewriterBase &rewriter, Operation *op,
 /// Move definitions of `values` before an insertion point. Current support is
 /// only for movement of definitions within the same basic block. Note that this
 /// is an all-or-nothing approach. Either definitions of all values are moved
-/// before insertion point, or none of them are.
-/// If `ignoreSideEffect` is set, this will allow movement of all dependent
-/// producers regardless of whether they are side effecting.
+/// before insertion point, or none of them are. Any side-effecting operations
+/// in the producer chain pessimistically blocks movement.
 LogicalResult moveValueDefinitions(RewriterBase &rewriter, ValueRange values,
                                    Operation *insertionPoint,
-                                   DominanceInfo &dominance,
-                                   bool ignoreSideEffects = true);
+                                   DominanceInfo &dominance);
 LogicalResult moveValueDefinitions(RewriterBase &rewriter, ValueRange values,
-                                   Operation *insertionPoint,
-                                   bool ignoreSideEffects = true);
+                                   Operation *insertionPoint);
 
 /// Run a set of structural simplifications over the given regions. This
 /// includes transformations like unreachable block elimination, dead argument

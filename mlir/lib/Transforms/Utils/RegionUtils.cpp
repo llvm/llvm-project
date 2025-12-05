@@ -1145,14 +1145,12 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
 LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
                                          ValueRange values,
                                          Operation *insertionPoint,
-                                         DominanceInfo &dominance,
-                                         bool ignoreSideEffects) {
+                                         DominanceInfo &dominance) {
   // Remove the values that already dominate the insertion point.
   SmallVector<Value> prunedValues;
   for (auto value : values) {
-    if (dominance.properlyDominates(value, insertionPoint)) {
+    if (dominance.properlyDominates(value, insertionPoint))
       continue;
-    }
     // Block arguments are not supported.
     if (isa<BlockArgument>(value)) {
       return rewriter.notifyMatchFailure(
@@ -1183,9 +1181,8 @@ LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
   options.filter = [&](Operation *sliceBoundaryOp) {
     bool mustMove =
         !dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
-    if (mustMove && !isPure(sliceBoundaryOp)) {
+    if (mustMove && !isPure(sliceBoundaryOp))
       dependsOnSideEffectingOp = true;
-    }
     return mustMove;
   };
   llvm::SetVector<Operation *> slice;
@@ -1196,7 +1193,7 @@ LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
   }
 
   // Check if any operation in the slice is side-effecting.
-  if (!ignoreSideEffects && dependsOnSideEffectingOp)
+  if (dependsOnSideEffectingOp)
     return failure();
 
   // If the slice contains `insertionPoint` cannot move the dependencies.
@@ -1209,17 +1206,14 @@ LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
   // Sort operations topologically before moving.
   mlir::topologicalSort(slice);
 
-  for (Operation *op : slice) {
+  for (Operation *op : slice)
     rewriter.moveOpBefore(op, insertionPoint);
-  }
   return success();
 }
 
 LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
                                          ValueRange values,
-                                         Operation *insertionPoint,
-                                         bool ignoreSideEffects) {
+                                         Operation *insertionPoint) {
   DominanceInfo dominance(insertionPoint);
-  return moveValueDefinitions(rewriter, values, insertionPoint, dominance,
-                              ignoreSideEffects);
+  return moveValueDefinitions(rewriter, values, insertionPoint, dominance);
 }

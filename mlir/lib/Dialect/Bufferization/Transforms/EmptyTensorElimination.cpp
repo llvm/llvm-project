@@ -109,10 +109,8 @@ Value mlir::bufferization::buildSubsetExtraction(RewriterBase &rewriter,
   if (!insertionPoint) {
     // If no already suitable insertion point was found, attempt to move all
     // needed values before the user.
-    if (failed(moveValueDefinitions(rewriter, neededValues, user,
-                                    /*ignoreSideEffects=*/false))) {
+    if (failed(moveValueDefinitions(rewriter, neededValues, user)))
       return {};
-    }
     insertionPoint = user;
   }
 
