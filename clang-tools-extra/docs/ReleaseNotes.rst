@@ -579,6 +579,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check to
   generate correct fix-its for forms without a space after the directive.
 
+- Improved :doc:`readability-use-std-min-max
+  <clang-tidy/checks/readability/use-std-min-max>` check by ensuring that
+  comments between the ``if`` condition and the ``then`` block are preserved
+  when applying the fix.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
