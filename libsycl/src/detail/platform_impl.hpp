@@ -13,7 +13,6 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/platform.hpp>
 
-#include <detail/common.hpp>
 #include <detail/offload/offload_utils.hpp>
 
 #include <OffloadAPI.h>

@@ -11,8 +11,6 @@
 
 #include <sycl/__impl/detail/config.hpp>
 
-#include <detail/common.hpp>
-
 #include <OffloadAPI.h>
 
 #include <cassert>
@@ -22,6 +20,16 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
+
+// Minimal span-like view
+template <class T> struct range_view {
+  T *ptr{};
+  size_t len{};
+  T *begin() const { return ptr; }
+  T *end() const { return ptr + len; }
+  T &operator[](size_t i) const { return ptr[i]; }
+  size_t size() const { return len; }
+};
 
 using PlatformWithDevStorageType =
     std::unordered_map<ol_platform_handle_t, std::vector<ol_device_handle_t>>;
