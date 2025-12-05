@@ -2249,6 +2249,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::ShuffleVector: {
+    if (auto *Splat = getSplatValue(I)) {
+      computeKnownBits(Splat, Known, Q, Depth + 1);
+      break;
+    }
+
     auto *Shuf = dyn_cast<ShuffleVectorInst>(I);
     // FIXME: Do we need to handle ConstantExpr involving shufflevectors?
     if (!Shuf) {
@@ -5877,6 +5882,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::ShuffleVector: {
+    // Handle vector splat idiom
+    if (Value *Splat = getSplatValue(V)) {
+      computeKnownFPClass(Splat, Known, InterestedClasses, Q, Depth + 1);
+      break;
+    }
+
     // For undef elements, we don't know anything about the common state of
     // the shuffle result.
     APInt DemandedLHS, DemandedRHS;

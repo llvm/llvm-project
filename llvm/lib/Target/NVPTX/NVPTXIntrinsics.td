@@ -2071,34 +2071,36 @@ def : Pat<(int_nvvm_ull2d_rp i64:$a), (CVT_f64_u64 $a, CvtRP)>;
 def : Pat<(int_nvvm_f2h_rn_ftz f32:$a), (CVT_f16_f32 $a, CvtRN_FTZ)>;
 def : Pat<(int_nvvm_f2h_rn f32:$a), (CVT_f16_f32 $a, CvtRN)>;
 
-def : Pat<(int_nvvm_ff_to_e4m3x2_rn f32:$a, f32:$b),
-          (CVT_e4m3x2_f32 $a, $b, CvtRN)>;
-def : Pat<(int_nvvm_ff_to_e4m3x2_rn_relu f32:$a, f32:$b),
-          (CVT_e4m3x2_f32 $a, $b, CvtRN_RELU)>;
-def : Pat<(int_nvvm_ff_to_e5m2x2_rn f32:$a, f32:$b),
-          (CVT_e5m2x2_f32 $a, $b, CvtRN)>;
-def : Pat<(int_nvvm_ff_to_e5m2x2_rn_relu f32:$a, f32:$b),
-          (CVT_e5m2x2_f32 $a, $b, CvtRN_RELU)>;
+let Predicates = [callSubtarget<"hasFP8ConversionSupport">] in {
+  def : Pat<(int_nvvm_ff_to_e4m3x2_rn f32:$a, f32:$b),
+            (CVT_e4m3x2_f32 $a, $b, CvtRN)>;
+  def : Pat<(int_nvvm_ff_to_e4m3x2_rn_relu f32:$a, f32:$b),
+            (CVT_e4m3x2_f32 $a, $b, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_ff_to_e5m2x2_rn f32:$a, f32:$b),
+            (CVT_e5m2x2_f32 $a, $b, CvtRN)>;
+  def : Pat<(int_nvvm_ff_to_e5m2x2_rn_relu f32:$a, f32:$b),
+            (CVT_e5m2x2_f32 $a, $b, CvtRN_RELU)>;
 
-def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn v2f16:$a),
-          (CVT_e4m3x2_f16x2 $a, CvtRN)>;
-def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn_relu v2f16:$a),
-          (CVT_e4m3x2_f16x2 $a, CvtRN_RELU)>;
-def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn v2f16:$a),
-          (CVT_e5m2x2_f16x2 $a, CvtRN)>;
-def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn_relu v2f16:$a),
-          (CVT_e5m2x2_f16x2 $a, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn v2f16:$a),
+            (CVT_e4m3x2_f16x2 $a, CvtRN)>;
+  def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn_relu v2f16:$a),
+            (CVT_e4m3x2_f16x2 $a, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn v2f16:$a),
+            (CVT_e5m2x2_f16x2 $a, CvtRN)>;
+  def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn_relu v2f16:$a),
+            (CVT_e5m2x2_f16x2 $a, CvtRN_RELU)>;
 
-def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn i16:$a),
-          (CVT_f16x2_e4m3x2 $a, CvtRN)>;
-def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn_relu i16:$a),
-          (CVT_f16x2_e4m3x2 $a, CvtRN_RELU)>;
-def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn i16:$a),
-          (CVT_f16x2_e5m2x2 $a, CvtRN)>;
-def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn_relu i16:$a),
-          (CVT_f16x2_e5m2x2 $a, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn i16:$a),
+            (CVT_f16x2_e4m3x2 $a, CvtRN)>;
+  def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn_relu i16:$a),
+            (CVT_f16x2_e4m3x2 $a, CvtRN_RELU)>;
+  def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn i16:$a),
+            (CVT_f16x2_e5m2x2 $a, CvtRN)>;
+  def : Pat<(int_nvvm_e5m2x2_to_f16x2_rn_relu i16:$a),
+            (CVT_f16x2_e5m2x2 $a, CvtRN_RELU)>;
+}
 
-let Predicates = [hasPTX<86>, hasSM<100>, hasArchAccelFeatures] in {
+let Predicates = [callSubtarget<"hasNarrowFPConversionSupport">] in {
   def : Pat<(int_nvvm_ff_to_e2m3x2_rn_satfinite f32:$a, f32:$b),
             (CVT_e2m3x2_f32_sf $a, $b, CvtRN)>;
   def : Pat<(int_nvvm_ff_to_e2m3x2_rn_relu_satfinite f32:$a, f32:$b),
@@ -2550,7 +2552,10 @@ def LDU_GLOBAL_v4i32 : VLDU_G_ELE_V4<B32>;
 // during the lifetime of the kernel.
 
 class LDG_G<NVPTXRegClass regclass>
-  : NVPTXInst<(outs regclass:$result), (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
+  : NVPTXInst<(outs regclass:$result),
+              (ins AtomicCode:$Sign, i32imm:$fromWidth,
+                   UsedBytesMask:$usedBytes, ADDR:$src),
+               "${usedBytes}"
                "ld.global.nc.${Sign:sign}$fromWidth \t$result, [$src];">;
 
 def LD_GLOBAL_NC_i16 : LDG_G<B16>;
@@ -2562,19 +2567,25 @@ def LD_GLOBAL_NC_i64 : LDG_G<B64>;
 // Elementized vector ldg
 class VLDG_G_ELE_V2<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-            (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
+            (ins AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
+             ADDR:$src),
+            "${usedBytes}"
             "ld.global.nc.v2.${Sign:sign}$fromWidth \t{{$dst1, $dst2}}, [$src];">;
 
 
 class VLDG_G_ELE_V4<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4), 
-            (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
+            (ins AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
+             ADDR:$src),
+            "${usedBytes}"
             "ld.global.nc.v4.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];">;
 
 class VLDG_G_ELE_V8<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4,
                   regclass:$dst5, regclass:$dst6, regclass:$dst7, regclass:$dst8),
-             (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
+            (ins AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
+             ADDR:$src),
+            "${usedBytes}"
              "ld.global.nc.v8.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, [$src];">;
 
 // FIXME: 8-bit LDG should be fixed once LDG/LDU nodes are made into proper loads.
@@ -4682,7 +4693,8 @@ def INT_PTX_SREG_WARPSIZE :
 // the fields commonly used to implement specific PTX instruction -- register
 // types and names, constraints, parts of assembly, etc.
 class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "">
-      : WMMA_REGS<r.geom, r.frag, r.ptx_elt_type, !eq(op, "mma.sp")> {
+      : WMMA_REGS<r.geom, r.frag, r.ptx_elt_type,
+                  !or(!eq(op, "mma.sp"), !eq(op, "mma.sp.block_scale"))> {
   // NVPTX register types used to carry fragment data.
   NVPTXRegClass regclass = !cond(
     !eq(ptx_elt_type, "e4m3") : B32,
@@ -4722,6 +4734,9 @@ class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "
   // longer the case, we can concat all per-fragment predicates to enforce that
   // all fragments of the instruction are viable.
   list<Predicate> Predicates = !cond(
+    !or(!eq(op, "mma.block_scale"),
+        !eq(op, "mma.sp.block_scale")) : [hasSM120a, hasPTX<88>],
+
     !or(!eq(ptx_elt_type, "e3m2"),
         !eq(ptx_elt_type, "e2m3"),
         !eq(ptx_elt_type, "e2m1"),
@@ -4734,9 +4749,9 @@ class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "
     !or(!eq(ptx_elt_type, "e4m3"),
         !eq(ptx_elt_type, "e5m2")) : [hasSM<89>, hasPTX<84>],
 
-    !and(!eq(op, "mma.sp"),
+    !and(isSparse,
          !ne(metadata, "sp")) : [hasSM<80>, hasPTX<85>],
-    !eq(op, "mma.sp") : [hasSM<80>, hasPTX<71>],
+    isSparse : [hasSM<80>, hasPTX<71>],
 
     // fp16 -> fp16/fp32 @ m16n16k16
     !and(!eq(geom, "m16n16k16"),
@@ -5085,6 +5100,67 @@ defset list<WMMA_INSTR> MMAs  = {
 } // defset
 }
 
+// MMA.block_scale
+class MMA_BLOCK_SCALE<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
+                      WMMA_REGINFO FragC, WMMA_REGINFO FragD,
+                      string Kind, string SType, string ScaleVecSize>
+  : WMMA_INSTR<MMA_BLOCK_SCALE_NAME<Kind, SType, ScaleVecSize,
+                                    FragA, FragB, FragC, FragD>.record_name,
+                                    [FragA.Ins, FragB.Ins, FragC.Ins,
+                                     (ins B32:$scale_a, B16:$byte_id_a,
+                                          B16:$thread_id_a, B32:$scale_b,
+                                          B16:$byte_id_b, B16:$thread_id_b)]>,
+    // Requires does not seem to have effect on Instruction w/o Patterns.
+    // We set it here anyways and propagate to the Pat<> we construct below.
+  Requires<FragA.Predicates> {
+  let OutOperandList = FragD.Outs;
+  let InOperandList  = !con(Args, (ins MmaCode:$ptx));
+  string TypeList = !interleave([FragD.ptx_elt_type,
+                                 FragA.ptx_elt_type,
+                                 FragB.ptx_elt_type,
+                                 FragC.ptx_elt_type], ".");
+  string ScaleVecSizeStr = !cond(
+    !eq(ScaleVecSize, "") : "",
+    !eq(ScaleVecSize, ".scale_1x") : ".scale_vec::1X",
+    !eq(ScaleVecSize, ".scale_2x") : ".scale_vec::2X",
+    !eq(ScaleVecSize, ".scale_4x") : ".scale_vec::4X"
+  );
+  let AsmString = "mma.sync.aligned."
+                  # FragA.geom
+                  # ".row.col"
+                  # ".kind::" # Kind
+                  # ".block_scale"
+                  # ScaleVecSizeStr
+                  # "." # TypeList
+                  # "." # SType # " \n\t\t"
+                  # FragD.regstring # ",\n\t\t"
+                  # FragA.regstring # ",\n\t\t"
+                  # FragB.regstring # ",\n\t\t"
+                  # FragC.regstring # ",\n\t\t"
+                  # "$scale_a, {{$byte_id_a, $thread_id_a}}" # ",\n\t\t"
+                  # "$scale_b, {{$byte_id_b, $thread_id_b}};";
+}
+
+let isConvergent = true in {
+defset list<WMMA_INSTR> MMA_BLOCK_SCALEs  = {
+  foreach kind = ["mxf4", "mxf4nvf4", "mxf8f6f4"] in {
+    foreach scale_vec_size = ["", ".scale_1x", ".scale_2x", ".scale_4x"] in {
+      foreach stype = ["ue8m0", "ue4m3"] in {
+        foreach op = NVVM_MMA_OPS.all_mma_block_scale_ops in {
+          if NVVM_MMA_BLOCK_SCALE_SUPPORTED<op, kind, stype, scale_vec_size>.ret then {
+            def : MMA_BLOCK_SCALE<WMMA_REGINFO<op[0], "mma.block_scale", "", kind>,
+                                  WMMA_REGINFO<op[1], "mma.block_scale", "", kind>,
+                                  WMMA_REGINFO<op[2], "mma.block_scale", "", kind>,
+                                  WMMA_REGINFO<op[3], "mma.block_scale", "", kind>,
+                                  kind, stype, scale_vec_size>;
+          }
+        } // op
+      } // stype
+    } // scale_vec_size
+  } // kind
+} // defset
+}
+
 // MMA SP
 class MMA_SP<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
              WMMA_REGINFO FragC, WMMA_REGINFO FragD,
@@ -5138,6 +5214,72 @@ defset list<WMMA_INSTR> MMA_SPs = {
       } // satf
     } // kind
   } // metadata
+} // defset
+}
+
+// MMA SP BLOCK SCALE
+class MMA_SP_BLOCK_SCALE<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
+                         WMMA_REGINFO FragC, WMMA_REGINFO FragD,
+                         string Kind, string SType, string ScaleVecSize>
+  : WMMA_INSTR<MMA_SP_BLOCK_SCALE_NAME<Kind, SType, ScaleVecSize,
+                                       FragA, FragB, FragC, FragD>.record_name,
+               [FragA.Ins, FragB.Ins, FragC.Ins,
+                (ins B32:$metadata, i32imm:$selector,
+                     B32:$scale_a, B16:$byte_id_a, B16:$thread_id_a,
+                     B32:$scale_b, B16:$byte_id_b, B16:$thread_id_b)]>,
+    // Requires does not seem to have effect on Instruction w/o Patterns.
+    // We set it here anyways and propagate to the Pat<> we construct below.
+    Requires<!listconcat(FragA.Predicates,
+                         FragB.Predicates,
+                         FragC.Predicates,
+                         FragD.Predicates)> {
+  let OutOperandList = FragD.Outs;
+  let InOperandList = !con(Args, (ins MmaCode:$ptx));
+  string TypeList = "." # FragD.ptx_elt_type
+                    # "." # FragA.ptx_elt_type
+                    # "." # FragB.ptx_elt_type
+                    # "." # FragC.ptx_elt_type;
+  string ScaleVecSizeStr = !cond(
+    !eq(ScaleVecSize, "") : "",
+    !eq(ScaleVecSize, ".scale_1x") : ".scale_vec::1X",
+    !eq(ScaleVecSize, ".scale_2x") : ".scale_vec::2X",
+    !eq(ScaleVecSize, ".scale_4x") : ".scale_vec::4X"
+  );
+  let AsmString = "mma.sp::ordered_metadata.sync.aligned."
+                  # FragA.geom
+                  # ".row.col"
+                  # ".kind::" # Kind
+                  # ".block_scale"
+                  # ScaleVecSizeStr
+                  # TypeList
+                  # "." # SType # "\n\t\t"
+                  # FragD.regstring # ",\n\t\t"
+                  # FragA.regstring # ",\n\t\t"
+                  # FragB.regstring # ",\n\t\t"
+                  # FragC.regstring # ",\n\t\t"
+                  # "$metadata" # ",\n\t\t"
+                  # "$selector" # ",\n\t\t"
+                  # "$scale_a, {{$byte_id_a, $thread_id_a}}" # ",\n\t\t"
+                  # "$scale_b, {{$byte_id_b, $thread_id_b}};";
+}
+
+let isConvergent = true in {
+defset list<WMMA_INSTR> MMA_SP_BLOCK_SCALEs = {
+  foreach kind = ["mxf4", "mxf4nvf4", "mxf8f6f4"] in {
+    foreach scale_vec_size = ["", ".scale_1x", ".scale_2x", ".scale_4x"] in {
+      foreach stype = ["ue8m0", "ue4m3"] in {
+      foreach op = NVVM_MMA_OPS.all_mma_sp_block_scale_ops in {
+        if NVVM_MMA_SP_BLOCK_SCALE_SUPPORTED<op, kind, stype, scale_vec_size>.ret then {
+          def : MMA_SP_BLOCK_SCALE<WMMA_REGINFO<op[0], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
+                       WMMA_REGINFO<op[1], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
+                       WMMA_REGINFO<op[2], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
+                       WMMA_REGINFO<op[3], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
+                       kind, stype, scale_vec_size>;
+        }
+      } // op
+      } // stype
+    } // scale_vec_size
+  } // kind
 } // defset
 }
 
@@ -5222,7 +5364,8 @@ class MMA_PAT<WMMA_INSTR wi>
         Requires<wi.Predicates>;
 
 // Build intrinsic->instruction patterns for all MMA instructions.
-foreach mma = !listconcat(MMAs, WMMAs, MMA_LDSTs, LDMATRIXs, STMATRIXs, MMA_SPs) in
+foreach mma = !listconcat(MMAs, MMA_BLOCK_SCALEs, WMMAs, MMA_LDSTs, LDMATRIXs,
+                          STMATRIXs, MMA_SPs, MMA_SP_BLOCK_SCALEs) in
   def : MMA_PAT<mma>;
 
 multiclass MAPA<string suffix, Intrinsic Intr> {

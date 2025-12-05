@@ -41,6 +41,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
@@ -52,6 +53,10 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/PackedVersion.h"
+
+#if !_WIN32
+#include <sys/mman.h>
+#endif
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -292,12 +297,13 @@ struct DeferredFile {
 using DeferredFiles = std::vector<DeferredFile>;
 
 #if LLVM_ENABLE_THREADS
-class SerialBackgroundQueue {
+class SerialBackgroundWorkQueue {
   std::deque<std::function<void()>> queue;
   std::thread *running;
   std::mutex mutex;
 
 public:
+  std::atomic_bool stopAllWork = false;
   void queueWork(std::function<void()> work) {
     mutex.lock();
     if (running && queue.empty()) {
@@ -312,7 +318,7 @@ public:
       queue.emplace_back(std::move(work));
       if (!running)
         running = new std::thread([&]() {
-          while (true) {
+          while (!stopAllWork) {
             mutex.lock();
             if (queue.empty()) {
               mutex.unlock();
@@ -331,6 +337,8 @@ public:
   }
 };
 
+static SerialBackgroundWorkQueue pageInQueue;
+
 // Most input files have been mapped but not yet paged in.
 // This code forces the page-ins on multiple threads so
 // the process is not stalled waiting on disk buffer i/o.
@@ -339,8 +347,8 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
   static const size_t largeArchive = 10 * 1024 * 1024;
 #ifndef NDEBUG
   using namespace std::chrono;
-  std::atomic_int numDeferedFilesTouched = 0;
   static std::atomic_uint64_t totalBytes = 0;
+  std::atomic_int numDeferedFilesAdvised = 0;
   auto t0 = high_resolution_clock::now();
 #endif
 
@@ -348,24 +356,34 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
     const StringRef &buff = deferredFile.buffer.getBuffer();
     if (buff.size() > largeArchive)
       return;
+
 #ifndef NDEBUG
     totalBytes += buff.size();
-    numDeferedFilesTouched += 1;
+    numDeferedFilesAdvised += 1;
 #endif
-
+#if _WIN32
     // Reference all file's mmap'd pages to load them into memory.
-    for (const char *page = buff.data(), *end = page + buff.size(); page < end;
-         page += pageSize) {
+    for (const char *page = buff.data(), *end = page + buff.size();
+         page < end && !pageInQueue.stopAllWork; page += pageSize) {
       [[maybe_unused]] volatile char t = *page;
       (void)t;
     }
+#else
+#define DEBUG_TYPE "lld-madvise"
+    auto aligned =
+        llvm::alignDown(reinterpret_cast<uintptr_t>(buff.data()), pageSize);
+    if (madvise((void *)aligned, buff.size(), MADV_WILLNEED) < 0)
+      LLVM_DEBUG(llvm::dbgs() << "madvise error: " << strerror(errno) << "\n");
+#undef DEBUG_TYPE
+#endif
   };
+
   { // Create scope for waiting for the taskGroup
     std::atomic_size_t index = 0;
     llvm::parallel::TaskGroup taskGroup;
     for (int w = 0; w < config->readWorkers; w++)
       taskGroup.spawn([&index, &preloadDeferredFile, &deferred]() {
-        while (true) {
+        while (!pageInQueue.stopAllWork) {
           size_t localIndex = index.fetch_add(1);
           if (localIndex >= deferred.size())
             break;
@@ -373,17 +391,17 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
         }
       });
   }
+
 #ifndef NDEBUG
   auto dt = high_resolution_clock::now() - t0;
   if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
     llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/"
-                 << numDeferedFilesTouched << "/" << deferred.size() << "/"
+                 << numDeferedFilesAdvised << "/" << deferred.size() << "/"
                  << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
 #endif
 }
 
 static void multiThreadedPageIn(const DeferredFiles &deferred) {
-  static SerialBackgroundQueue pageInQueue;
   pageInQueue.queueWork([=]() {
     DeferredFiles files = deferred;
     multiThreadedPageInBackground(files);
@@ -489,7 +507,7 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
             continue;
           }
 
-          if (archiveContents)
+          if (config->readWorkers && archiveContents)
             archiveContents->push_back({path, isLazy, *mb});
           if (!hasObjCSection(*mb))
             continue;
@@ -1447,6 +1465,8 @@ static void createFiles(const InputArgList &args) {
       multiThreadedPageIn(archiveContents);
     for (auto *archive : archives)
       archive->addLazySymbols();
+
+    pageInQueue.stopAllWork = true;
   }
 #endif
 }
@@ -1845,8 +1865,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
             "'");
     config->readWorkers = workers;
 #else
-    error(arg->getSpelling() +
-          ": option unavailable because lld was not built with thread support");
+    warn(arg->getSpelling() +
+         ": option unavailable because lld was not built with thread support");
 #endif
   }
   if (auto *arg = args.getLastArg(OPT_threads_eq)) {
@@ -1995,6 +2015,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
                    OPT_no_separate_cstring_literal_sections, false);
   config->tailMergeStrings =
       args.hasFlag(OPT_tail_merge_strings, OPT_no_tail_merge_strings, false);
+  if (auto *arg = args.getLastArg(OPT_slop_scale_eq)) {
+    StringRef v(arg->getValue());
+    unsigned slop = 0;
+    if (!llvm::to_integer(v, slop))
+      error(arg->getSpelling() +
+            ": expected a non-negative integer, but got '" + v + "'");
+    config->slopScale = slop;
+  }
 
   auto IncompatWithCGSort = [&](StringRef firstArgStr) {
     // Throw an error only if --call-graph-profile-sort is explicitly specified

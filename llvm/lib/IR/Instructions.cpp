@@ -620,7 +620,8 @@ bool CallBase::hasReadingOperandBundles() const {
   // ptrauth) forces a callsite to be at least readonly.
   return hasOperandBundlesOtherThan({LLVMContext::OB_ptrauth,
                                      LLVMContext::OB_kcfi,
-                                     LLVMContext::OB_convergencectrl}) &&
+                                     LLVMContext::OB_convergencectrl,
+                                     LLVMContext::OB_deactivation_symbol}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
@@ -628,7 +629,8 @@ bool CallBase::hasClobberingOperandBundles() const {
   return hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
               LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi,
-              LLVMContext::OB_convergencectrl}) &&
+              LLVMContext::OB_convergencectrl,
+              LLVMContext::OB_deactivation_symbol}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 

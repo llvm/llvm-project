@@ -55,6 +55,10 @@ public:
   void destroy(unsigned Idx);
   void initScope(unsigned Idx);
   void destroyScopes();
+  void enableLocal(unsigned Idx);
+  bool isLocalEnabled(unsigned Idx) const {
+    return localInlineDesc(Idx)->IsActive;
+  }
 
   /// Describes the frame with arguments for diagnostic purposes.
   void describe(llvm::raw_ostream &OS) const override;
@@ -109,6 +113,7 @@ public:
   /// Returns the 'this' pointer.
   const Pointer &getThis() const {
     assert(hasThisPointer());
+    assert(!isBottomFrame());
     return stackRef<Pointer>(ThisPointerOffset);
   }
 
@@ -116,6 +121,7 @@ public:
   const Pointer &getRVOPtr() const {
     assert(Func);
     assert(Func->hasRVO());
+    assert(!isBottomFrame());
     return stackRef<Pointer>(0);
   }
 
