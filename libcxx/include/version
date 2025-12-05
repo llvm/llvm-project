@@ -607,7 +607,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_ranges_concat                        202403L
 # define __cpp_lib_ranges_indices                       202506L
 # define __cpp_lib_ratio                                202306L
-// # define __cpp_lib_rcu                                  202306L
+# if _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
+#   define __cpp_lib_rcu                                202306L
+# endif
 # define __cpp_lib_reference_wrapper                    202403L
 # define __cpp_lib_saturation_arithmetic                202311L
 // # define __cpp_lib_senders                              202406L

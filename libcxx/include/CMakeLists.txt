@@ -753,6 +753,8 @@ set(files
   __ranges/views.h
   __ranges/zip_transform_view.h
   __ranges/zip_view.h
+  __rcu/rcu_domain.h
+  __rcu/rcu_obj_base.h
   __split_buffer
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
@@ -1063,6 +1065,7 @@ set(files
   ranges
   ratio
   regex
+  rcu
   scoped_allocator
   semaphore
   set

@@ -39,6 +39,8 @@ Implemented Papers
 ------------------
 
 - P2440R1 (partial): ``ranges::iota`` and ``ranges::shift_left`` are supported (`Github <https://llvm.org/PR105184>`__)
+- P2545R4: Read-Copy Update (RCU) (`Github <https://llvm.org/PR105361>`__) This feature is currently experimental and
+  therefore requires ``-fexperimental-library``.
 
 Improvements and New Features
 -----------------------------

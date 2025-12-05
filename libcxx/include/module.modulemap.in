@@ -1971,6 +1971,13 @@ module std [system] {
     export *
   }
 
+  module rcu {
+    module rcu_domain      { header "__rcu/rcu_domain.h" }
+    module rcu_obj_base    { header "__rcu/rcu_obj_base.h" }
+    header "rcu"
+    export *
+  }
+
   module regex {
     header "regex"
     export *
