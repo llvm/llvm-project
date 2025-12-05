@@ -1752,8 +1752,8 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_time_linux_clock_conversion",
-    hdrs = ["src/__support/time/linux/clock_conversion.h"],
+    name = "__support_time_clock_conversion",
+    hdrs = ["src/__support/time/clock_conversion.h"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -1789,8 +1789,8 @@ libc_support_library(
     }),
     deps = [
         ":__support_libc_assert",
+        ":__support_time_clock_conversion",
         ":__support_time_linux_abs_timeout",
-        ":__support_time_linux_clock_conversion",
         ":hdr_time_macros",
     ],
 )
