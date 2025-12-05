@@ -845,6 +845,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
     if (ConstantFP *CFP2 = dyn_cast<ConstantFP>(C2)) {
       const APFloat &C1V = CFP1->getValueAPF();
       const APFloat &C2V = CFP2->getValueAPF();
+      if (C1V.isNaN() || C2V.isNaN())
+        return nullptr;
       APFloat C3V = C1V;  // copy for modification
       switch (Opcode) {
       default:

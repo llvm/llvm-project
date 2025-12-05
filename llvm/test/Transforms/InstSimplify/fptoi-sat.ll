@@ -139,7 +139,8 @@ define i32 @fptosi_f64_to_i32_neg_inf() {
 
 define i32 @fptosi_f64_to_i32_nan1() {
 ; CHECK-LABEL: @fptosi_f64_to_i32_nan1(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptosi.sat.i32.f64(double 0x7FF8000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptosi.sat.i32.f64(double 0x7ff8000000000000)
   ret i32 %r
@@ -147,7 +148,8 @@ define i32 @fptosi_f64_to_i32_nan1() {
 
 define i32 @fptosi_f64_to_i32_nan2() {
 ; CHECK-LABEL: @fptosi_f64_to_i32_nan2(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptosi.sat.i32.f64(double 0x7FF4000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptosi.sat.i32.f64(double 0x7ff4000000000000)
   ret i32 %r
@@ -155,7 +157,8 @@ define i32 @fptosi_f64_to_i32_nan2() {
 
 define i32 @fptosi_f64_to_i32_nan3() {
 ; CHECK-LABEL: @fptosi_f64_to_i32_nan3(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptosi.sat.i32.f64(double 0xFFF8000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptosi.sat.i32.f64(double 0xfff8000000000000)
   ret i32 %r
@@ -163,7 +166,8 @@ define i32 @fptosi_f64_to_i32_nan3() {
 
 define i32 @fptosi_f64_to_i32_nan4() {
 ; CHECK-LABEL: @fptosi_f64_to_i32_nan4(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptosi.sat.i32.f64(double 0xFFF4000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptosi.sat.i32.f64(double 0xfff4000000000000)
   ret i32 %r
@@ -281,7 +285,8 @@ define i32 @fptoui_f64_to_i32_neg_inf() {
 
 define i32 @fptoui_f64_to_i32_nan1() {
 ; CHECK-LABEL: @fptoui_f64_to_i32_nan1(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptoui.sat.i32.f64(double 0x7FF8000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptoui.sat.i32.f64(double 0x7ff8000000000000)
   ret i32 %r
@@ -289,7 +294,8 @@ define i32 @fptoui_f64_to_i32_nan1() {
 
 define i32 @fptoui_f64_to_i32_nan2() {
 ; CHECK-LABEL: @fptoui_f64_to_i32_nan2(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptoui.sat.i32.f64(double 0x7FF4000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptoui.sat.i32.f64(double 0x7ff4000000000000)
   ret i32 %r
@@ -297,7 +303,8 @@ define i32 @fptoui_f64_to_i32_nan2() {
 
 define i32 @fptoui_f64_to_i32_nan3() {
 ; CHECK-LABEL: @fptoui_f64_to_i32_nan3(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptoui.sat.i32.f64(double 0xFFF8000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptoui.sat.i32.f64(double 0xfff8000000000000)
   ret i32 %r
@@ -305,7 +312,8 @@ define i32 @fptoui_f64_to_i32_nan3() {
 
 define i32 @fptoui_f64_to_i32_nan4() {
 ; CHECK-LABEL: @fptoui_f64_to_i32_nan4(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptoui.sat.i32.f64(double 0xFFF4000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptoui.sat.i32.f64(double 0xfff4000000000000)
   ret i32 %r
@@ -439,7 +447,8 @@ define i32 @fptosi_f32_to_i32_neg_inf() {
 
 define i32 @fptosi_f32_to_i32_nan1() {
 ; CHECK-LABEL: @fptosi_f32_to_i32_nan1(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptosi.sat.i32.f32(float 0x7FF8000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptosi.sat.i32.f32(float 0x7ff8000000000000)
   ret i32 %r
@@ -447,7 +456,8 @@ define i32 @fptosi_f32_to_i32_nan1() {
 
 define i32 @fptosi_f32_to_i32_nan2() {
 ; CHECK-LABEL: @fptosi_f32_to_i32_nan2(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptosi.sat.i32.f32(float 0x7FF4000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptosi.sat.i32.f32(float 0x7ff4000000000000)
   ret i32 %r
@@ -455,7 +465,8 @@ define i32 @fptosi_f32_to_i32_nan2() {
 
 define i32 @fptosi_f32_to_i32_nan3() {
 ; CHECK-LABEL: @fptosi_f32_to_i32_nan3(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptosi.sat.i32.f32(float 0xFFF8000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptosi.sat.i32.f32(float 0xfff8000000000000)
   ret i32 %r
@@ -463,7 +474,8 @@ define i32 @fptosi_f32_to_i32_nan3() {
 
 define i32 @fptosi_f32_to_i32_nan4() {
 ; CHECK-LABEL: @fptosi_f32_to_i32_nan4(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptosi.sat.i32.f32(float 0xFFF4000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptosi.sat.i32.f32(float 0xfff4000000000000)
   ret i32 %r
@@ -573,7 +585,8 @@ define i32 @fptoui_f32_to_i32_neg_inf() {
 
 define i32 @fptoui_f32_to_i32_nan1() {
 ; CHECK-LABEL: @fptoui_f32_to_i32_nan1(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptoui.sat.i32.f32(float 0x7FF8000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptoui.sat.i32.f32(float 0x7ff8000000000000)
   ret i32 %r
@@ -581,7 +594,8 @@ define i32 @fptoui_f32_to_i32_nan1() {
 
 define i32 @fptoui_f32_to_i32_nan2() {
 ; CHECK-LABEL: @fptoui_f32_to_i32_nan2(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptoui.sat.i32.f32(float 0x7FF4000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptoui.sat.i32.f32(float 0x7ff4000000000000)
   ret i32 %r
@@ -589,7 +603,8 @@ define i32 @fptoui_f32_to_i32_nan2() {
 
 define i32 @fptoui_f32_to_i32_nan3() {
 ; CHECK-LABEL: @fptoui_f32_to_i32_nan3(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptoui.sat.i32.f32(float 0xFFF8000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptoui.sat.i32.f32(float 0xfff8000000000000)
   ret i32 %r
@@ -597,7 +612,8 @@ define i32 @fptoui_f32_to_i32_nan3() {
 
 define i32 @fptoui_f32_to_i32_nan4() {
 ; CHECK-LABEL: @fptoui_f32_to_i32_nan4(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fptoui.sat.i32.f32(float 0xFFF4000000000000)
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.fptoui.sat.i32.f32(float 0xfff4000000000000)
   ret i32 %r
