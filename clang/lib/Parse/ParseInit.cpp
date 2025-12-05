@@ -516,6 +516,25 @@ ExprResult Parser::ParseBraceInitializer() {
   return ExprError(); // an error occurred.
 }
 
+ExprResult Parser::ParseExpansionInitList() {
+  BalancedDelimiterTracker T(*this, tok::l_brace);
+  T.consumeOpen();
+
+  ExprVector InitExprs;
+
+  if (!Tok.is(tok::r_brace) &&
+      ParseExpressionList(InitExprs, /*ExpressionStarts=*/{},
+                          /*FailImmediatelyOnInvalidExpr=*/false,
+                          /*ParsingExpansionInitList=*/true)) {
+    T.consumeClose();
+    return ExprError();
+  }
+
+  T.consumeClose();
+  return Actions.ActOnCXXExpansionInitList(InitExprs, T.getOpenLocation(),
+                                           T.getCloseLocation());
+}
+
 bool Parser::ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
                                                     bool &InitExprsOk) {
   bool trailingComma = false;

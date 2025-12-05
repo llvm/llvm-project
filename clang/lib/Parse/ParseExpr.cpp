@@ -3166,7 +3166,8 @@ void Parser::injectEmbedTokens() {
 
 bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                                  llvm::function_ref<void()> ExpressionStarts,
-                                 bool FailImmediatelyOnInvalidExpr) {
+                                 bool FailImmediatelyOnInvalidExpr,
+                                 bool ParsingExpansionInitList) {
   bool SawError = false;
   while (true) {
     if (ExpressionStarts)
@@ -3195,7 +3196,11 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
       SawError = true;
       if (FailImmediatelyOnInvalidExpr)
         break;
-      SkipUntil(tok::comma, tok::r_paren, StopAtSemi | StopBeforeMatch);
+
+      // We expect '}' rather than ')' at the end of an expansion-init-list.
+      SkipUntil(tok::comma,
+                ParsingExpansionInitList ? tok::r_brace : tok::r_paren,
+                StopAtSemi | StopBeforeMatch);
     } else {
       Exprs.push_back(Expr.get());
     }
@@ -3205,6 +3210,11 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
     // Move to the next argument, remember where the comma was.
     Token Comma = Tok;
     ConsumeToken();
+
+    // CWG 3061: Trailing commas are allowed in expansion-init-lists.
+    if (ParsingExpansionInitList && Tok.is(tok::r_brace))
+      break;
+
     checkPotentialAngleBracketDelimiter(Comma);
   }
   return SawError;
