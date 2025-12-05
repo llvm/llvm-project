@@ -95,7 +95,8 @@ public:
                   OpenMPConstruct &omp{construct.value()};
                   if (CanonicalizeIfMatch(
                           block, stack, i, omp::GetFinalLabel(omp))) {
-                    MarkOpenMPConstruct(omp);
+                    MarkOpenMPConstruct(
+                        omp, OmpDirectiveSpecification::Flag::CrossesLabelDo);
                   }
                 },
             },
@@ -150,17 +151,17 @@ private:
     }
   }
 
-  void MarkOpenMPConstruct(OpenMPConstruct &omp) {
+  void MarkOpenMPConstruct(
+      OpenMPConstruct &omp, OmpDirectiveSpecification::Flag flag) {
     common::visit(
-        [](const auto &s) {
+        [&](const auto &s) {
           using S = std::decay_t<decltype(s)>;
           if constexpr (std::is_base_of_v<OmpBlockConstruct, S> ||
               std::is_same_v<OpenMPLoopConstruct, S>) {
             const OmpDirectiveSpecification &beginSpec{s.BeginDir()};
             auto &flags{
                 std::get<OmpDirectiveSpecification::Flags>(beginSpec.t)};
-            const_cast<OmpDirectiveSpecification::Flags &>(flags).set(
-                OmpDirectiveSpecification::Flag::CrossesLabelDo);
+            const_cast<OmpDirectiveSpecification::Flags &>(flags).set(flag);
           }
         },
         omp.u);

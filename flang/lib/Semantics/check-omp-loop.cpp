@@ -291,19 +291,22 @@ void OmpStructureChecker::CheckNestedConstruct(
   size_t nestedCount{0};
   unsigned version{context_.langOptions().OpenMPVersion};
 
-  if (version <= 50) {
-    const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
-    auto &flags{
-        std::get<parser::OmpDirectiveSpecification::Flags>(beginSpec.t)};
-    if (flags.test(parser::OmpDirectiveSpecification::Flag::CrossesLabelDo)) {
-      if (auto &endSpec{x.EndDir()}) {
-        parser::CharBlock beginSource{beginSpec.DirName().source};
-        context_
-            .Say(endSpec->DirName().source,
-                "END %s directive is not allowed when the construct does not contain all loops that shares a loop-terminating statement"_err_en_US,
-                parser::ToUpperCaseLetters(beginSource.ToString()))
-            .Attach(beginSource, "The construct starts here"_en_US);
-      }
+  // End-directive is not allowed in such cases:
+  //   do 100 i = ...
+  //     !$omp do
+  //     do 100 j = ...
+  //   100 continue
+  //   !$omp end do    ! error
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  auto &flags{std::get<parser::OmpDirectiveSpecification::Flags>(beginSpec.t)};
+  if (flags.test(parser::OmpDirectiveSpecification::Flag::CrossesLabelDo)) {
+    if (auto &endSpec{x.EndDir()}) {
+      parser::CharBlock beginSource{beginSpec.DirName().source};
+      context_
+          .Say(endSpec->DirName().source,
+              "END %s directive is not allowed when the construct does not contain all loops that shares a loop-terminating statement"_err_en_US,
+              parser::ToUpperCaseLetters(beginSource.ToString()))
+          .Attach(beginSource, "The construct starts here"_en_US);
     }
   }
 

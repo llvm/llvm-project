@@ -64,7 +64,6 @@
      do 100 j=1, N
         a = 3.14
 100     continue
-    !This is only an error in OpenMP 5.0-.
     !ERROR: END DO directive is not allowed when the construct does not contain all loops that shares a loop-terminating statement
     !$omp enddo
 

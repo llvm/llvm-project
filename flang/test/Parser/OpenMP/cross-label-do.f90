@@ -1,5 +1,5 @@
-!RUN: %flang_fc1 -fdebug-unparse -fopenmp -fopenmp-version=51 %s | FileCheck --ignore-case --check-prefix="UNPARSE" %s
-!RUN: %flang_fc1 -fdebug-dump-parse-tree -fopenmp -fopenmp-version=51 %s | FileCheck --check-prefix="PARSE-TREE" %s
+!RUN: %flang_fc1 -fdebug-unparse -fopenmp %s | FileCheck --ignore-case --check-prefix="UNPARSE" %s
+!RUN: %flang_fc1 -fdebug-dump-parse-tree -fopenmp %s | FileCheck --check-prefix="PARSE-TREE" %s
 
 subroutine f00
   integer :: i, j
@@ -7,7 +7,6 @@ subroutine f00
 !$omp do
     do 100 j = 1,10
     100 continue
-!$omp end do    ! This is legal in OpenMP 5.1+
 end
 
 !UNPARSE:  SUBROUTINE f00
