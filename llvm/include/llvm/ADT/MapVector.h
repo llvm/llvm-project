@@ -99,6 +99,11 @@ public:
     return try_emplace_impl(Key).first->second;
   }
 
+  [[nodiscard]] auto keys() { return make_first_range(Vector); }
+  [[nodiscard]] auto keys() const { return make_first_range(Vector); }
+  [[nodiscard]] auto values() { return make_second_range(Vector); }
+  [[nodiscard]] auto values() const { return make_second_range(Vector); }
+
   // Returns a copy of the value.  Only allowed if ValueT is copyable.
   [[nodiscard]] ValueT lookup(const KeyT &Key) const {
     static_assert(std::is_copy_constructible_v<ValueT>,
@@ -148,14 +153,28 @@ public:
 
   [[nodiscard]] iterator find(const KeyT &Key) {
     typename MapType::const_iterator Pos = Map.find(Key);
-    return Pos == Map.end()? Vector.end() :
-                            (Vector.begin() + Pos->second);
+    return Pos == Map.end() ? Vector.end() : (Vector.begin() + Pos->second);
   }
 
   [[nodiscard]] const_iterator find(const KeyT &Key) const {
     typename MapType::const_iterator Pos = Map.find(Key);
-    return Pos == Map.end()? Vector.end() :
-                            (Vector.begin() + Pos->second);
+    return Pos == Map.end() ? Vector.end() : (Vector.begin() + Pos->second);
+  }
+
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.
+  [[nodiscard]] ValueT &at(const KeyT &Key) {
+    auto Pos = Map.find(Key);
+    assert(Pos != Map.end() && "MapVector::at failed due to a missing key");
+    return Vector[Pos->second].second;
+  }
+
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.
+  [[nodiscard]] const ValueT &at(const KeyT &Key) const {
+    auto Pos = Map.find(Key);
+    assert(Pos != Map.end() && "MapVector::at failed due to a missing key");
+    return Vector[Pos->second].second;
   }
 
   /// Remove the last element from the vector.

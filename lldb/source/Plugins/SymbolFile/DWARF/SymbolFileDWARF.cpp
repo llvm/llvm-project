@@ -794,12 +794,12 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
     } else {
       ModuleSP module_sp(m_objfile_sp->GetModule());
       if (module_sp) {
-        auto initialize_cu = [&](lldb::SupportFileSP support_file_sp,
+        auto initialize_cu = [&](SupportFileNSP support_file_nsp,
                                  LanguageType cu_language,
                                  SupportFileList &&support_files = {}) {
           BuildCuTranslationTable();
           cu_sp = std::make_shared<CompileUnit>(
-              module_sp, &dwarf_cu, support_file_sp,
+              module_sp, &dwarf_cu, support_file_nsp,
               *GetDWARFUnitIndex(dwarf_cu.GetID()), cu_language,
               eLazyBoolCalculate, std::move(support_files));
 
@@ -1560,8 +1560,8 @@ bool SymbolFileDWARF::HasForwardDeclForCompilerType(
   auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (!clang_type_system)
     return false;
-  DWARFASTParserClang *ast_parser =
-      static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
+  auto *ast_parser =
+      llvm::cast<DWARFASTParserClang>(clang_type_system->GetDWARFParser());
   return ast_parser->GetClangASTImporter().CanImport(compiler_type);
 }
 
@@ -1569,8 +1569,8 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (clang_type_system) {
-    DWARFASTParserClang *ast_parser =
-        static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
+    auto *ast_parser =
+        llvm::cast<DWARFASTParserClang>(clang_type_system->GetDWARFParser());
     if (ast_parser &&
         ast_parser->GetClangASTImporter().CanImport(compiler_type))
       return ast_parser->GetClangASTImporter().CompleteType(compiler_type);
@@ -1614,8 +1614,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
 
   if (decl_die != def_die) {
     GetDIEToType()[def_die.GetDIE()] = type;
-    DWARFASTParserClang *ast_parser =
-        static_cast<DWARFASTParserClang *>(dwarf_ast);
+    auto *ast_parser = llvm::cast<DWARFASTParserClang>(dwarf_ast);
     ast_parser->MapDeclDIEToDefDIE(decl_die, def_die);
   }
 
@@ -2341,7 +2340,7 @@ void SymbolFileDWARF::FindGlobalVariables(
   bool name_is_mangled = Mangled::GetManglingScheme(name.GetStringRef()) !=
                          Mangled::eManglingSchemeNone;
 
-  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name.GetCString(),
+  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name.GetStringRef(),
                                                       context, basename))
     basename = name.GetStringRef();
 
@@ -2482,7 +2481,7 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
         sc.block = function_block.FindBlockByID(inlined_die.GetOffset());
     }
 
-    sc_list.Append(sc);
+    sc_list.AppendIfUnique(sc, /*merge_symbol_into_function=*/true);
     return true;
   }
 
@@ -2516,7 +2515,6 @@ static llvm::StringRef ClangToItaniumDtorKind(clang::CXXDtorType kind) {
   case clang::CXXDtorType::Dtor_Unified:
     return "D4";
   case clang::CXXDtorType::Dtor_Comdat:
-  case clang::CXXDtorType::Dtor_VectorDeleting:
     llvm_unreachable("Unexpected destructor kind.");
   }
   llvm_unreachable("Fully covered switch above");
@@ -2551,11 +2549,11 @@ SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label,
                                         const DWARFDIE &declaration) {
   auto do_lookup = [this](llvm::StringRef lookup_name) -> DWARFDIE {
     DWARFDIE found;
-    Module::LookupInfo info(ConstString(lookup_name),
-                            lldb::eFunctionNameTypeFull,
-                            lldb::eLanguageTypeUnknown);
+    auto lookup_infos = Module::LookupInfo::MakeLookupInfos(
+        ConstString(lookup_name), lldb::eFunctionNameTypeFull,
+        lldb::eLanguageTypeUnknown);
 
-    m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
+    m_index->GetFunctions(lookup_infos, *this, {}, [&](DWARFDIE entry) {
       if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
         return IterationAction::Continue;
 

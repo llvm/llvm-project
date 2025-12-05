@@ -70,6 +70,7 @@ static inline LogicalResult interleaveCommaWithError(const Container &c,
 /// imply higher precedence.
 static FailureOr<int> getOperatorPrecedence(Operation *operation) {
   return llvm::TypeSwitch<Operation *, FailureOr<int>>(operation)
+      .Case<emitc::AddressOfOp>([&](auto op) { return 15; })
       .Case<emitc::AddOp>([&](auto op) { return 12; })
       .Case<emitc::ApplyOp>([&](auto op) { return 15; })
       .Case<emitc::BitwiseAndOp>([&](auto op) { return 7; })
@@ -173,8 +174,11 @@ struct CppEmitter {
   /// Emits the operands of the operation. All operands are emitted in order.
   LogicalResult emitOperands(Operation &op);
 
-  /// Emits value as an operands of an operation
-  LogicalResult emitOperand(Value value);
+  /// Emits value as an operand of some operation. Unless \p isInBrackets is
+  /// true, operands emitted as sub-expressions will be parenthesized if needed
+  /// in order to enforce correct evaluation based on precedence and
+  /// associativity.
+  LogicalResult emitOperand(Value value, bool isInBrackets = false);
 
   /// Emit an expression as a C expression.
   LogicalResult emitExpression(ExpressionOp expressionOp);
@@ -250,8 +254,8 @@ struct CppEmitter {
     return !fileId.empty() && file.getId() == fileId;
   }
 
-  /// Get expression currently being emitted.
-  ExpressionOp getEmittedExpression() { return emittedExpression; }
+  /// Is expression currently being emitted.
+  bool isEmittingExpression() { return emittedExpression; }
 
   /// Determine whether given value is part of the expression potentially being
   /// emitted.
@@ -394,6 +398,15 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::DereferenceOp dereferenceOp) {
+  std::string out;
+  llvm::raw_string_ostream ss(out);
+  ss << "*" << emitter.getOrCreateName(dereferenceOp.getPointer());
+  emitter.cacheDeferredOpResult(dereferenceOp.getResult(), out);
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::GetFieldOp getFieldOp) {
   emitter.cacheDeferredOpResult(getFieldOp.getResult(),
                                 getFieldOp.getFieldName());
@@ -474,6 +487,17 @@ static LogicalResult printConstantOp(CppEmitter &emitter, Operation *operation,
   if (failed(emitter.emitAssignPrefix(*operation)))
     return failure();
   return emitter.emitAttribute(operation->getLoc(), value);
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::AddressOfOp addressOfOp) {
+  raw_ostream &os = emitter.ostream();
+  Operation &op = *addressOfOp.getOperation();
+
+  if (failed(emitter.emitAssignPrefix(op)))
+    return failure();
+  os << "&";
+  return emitter.emitOperand(addressOfOp.getReference());
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
@@ -1578,7 +1602,7 @@ LogicalResult CppEmitter::emitExpression(ExpressionOp expressionOp) {
   return success();
 }
 
-LogicalResult CppEmitter::emitOperand(Value value) {
+LogicalResult CppEmitter::emitOperand(Value value, bool isInBrackets) {
   if (isPartOfCurrentExpression(value)) {
     Operation *def = value.getDefiningOp();
     assert(def && "Expected operand to be defined by an operation");
@@ -1586,10 +1610,12 @@ LogicalResult CppEmitter::emitOperand(Value value) {
     if (failed(precedence))
       return failure();
 
-    // Sub-expressions with equal or lower precedence need to be parenthesized,
-    // as they might be evaluated in the wrong order depending on the shape of
-    // the expression tree.
-    bool encloseInParenthesis = precedence.value() <= getExpressionPrecedence();
+    // Unless already in brackets, sub-expressions with equal or lower
+    // precedence need to be parenthesized as they might be evaluated in the
+    // wrong order depending on the shape of the expression tree.
+    bool encloseInParenthesis =
+        !isInBrackets && precedence.value() <= getExpressionPrecedence();
+
     if (encloseInParenthesis)
       os << "(";
     pushExpressionPrecedence(precedence.value());
@@ -1628,15 +1654,9 @@ LogicalResult CppEmitter::emitOperand(Value value) {
 
 LogicalResult CppEmitter::emitOperands(Operation &op) {
   return interleaveCommaWithError(op.getOperands(), os, [&](Value operand) {
-    // If an expression is being emitted, push lowest precedence as these
-    // operands are either wrapped by parenthesis.
-    if (getEmittedExpression())
-      pushExpressionPrecedence(lowestPrecedence());
-    if (failed(emitOperand(operand)))
-      return failure();
-    if (getEmittedExpression())
-      popExpressionPrecedence();
-    return success();
+    // Emit operand under guarantee that if it's part of an expression then it
+    // is being emitted within brackets.
+    return emitOperand(operand, /*isInBrackets=*/true);
   });
 }
 
@@ -1718,7 +1738,7 @@ LogicalResult CppEmitter::emitGlobalVariable(GlobalOp op) {
 
 LogicalResult CppEmitter::emitAssignPrefix(Operation &op) {
   // If op is being emitted as part of an expression, bail out.
-  if (getEmittedExpression())
+  if (isEmittingExpression())
     return success();
 
   switch (op.getNumResults()) {
@@ -1769,14 +1789,14 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<cf::BranchOp, cf::CondBranchOp>(
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
-          .Case<emitc::AddOp, emitc::ApplyOp, emitc::AssignOp,
-                emitc::BitwiseAndOp, emitc::BitwiseLeftShiftOp,
+          .Case<emitc::AddressOfOp, emitc::AddOp, emitc::ApplyOp,
+                emitc::AssignOp, emitc::BitwiseAndOp, emitc::BitwiseLeftShiftOp,
                 emitc::BitwiseNotOp, emitc::BitwiseOrOp,
                 emitc::BitwiseRightShiftOp, emitc::BitwiseXorOp, emitc::CallOp,
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::ClassOp,
                 emitc::CmpOp, emitc::ConditionalOp, emitc::ConstantOp,
-                emitc::DeclareFuncOp, emitc::DivOp, emitc::DoOp,
-                emitc::ExpressionOp, emitc::FieldOp, emitc::FileOp,
+                emitc::DeclareFuncOp, emitc::DereferenceOp, emitc::DivOp,
+                emitc::DoOp, emitc::ExpressionOp, emitc::FieldOp, emitc::FileOp,
                 emitc::ForOp, emitc::FuncOp, emitc::GetFieldOp,
                 emitc::GetGlobalOp, emitc::GlobalOp, emitc::IfOp,
                 emitc::IncludeOp, emitc::LiteralOp, emitc::LoadOp,
@@ -1800,7 +1820,7 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
   if (hasDeferredEmission(&op))
     return success();
 
-  if (getEmittedExpression() ||
+  if (isEmittingExpression() ||
       (isa<emitc::ExpressionOp>(op) &&
        shouldBeInlined(cast<emitc::ExpressionOp>(op))))
     return success();

@@ -465,19 +465,19 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                     - Radeon RX 7900 XT
                                                                         IDs                           - Radeon RX 7900 GRE
 
-     ``gfx1101``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+     ``gfx1101``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 7800 XT
+                                                    - wavefrontsize64   flat                          - Radeon RX 7700 XT
+                                                                        scratch                       - Radeon RX 7700
                                                                       - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item
+                                                                        IDs
 
-     ``gfx1102``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+     ``gfx1102``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 7600 XT
+                                                    - wavefrontsize64   flat                          - Radeon RX 7600
+                                                                        scratch
                                                                       - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item
+                                                                        IDs
 
      ``gfx1103``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
@@ -5896,7 +5896,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      GFX950
                                                        roundup(lds-size / (320 * 4))
                                                      GFX125*
-                                                       roundup(lds-size / (256 * 4))
+                                                       roundup(lds-size / (512 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
                      _INVALID_OPERATION              with specified exceptions

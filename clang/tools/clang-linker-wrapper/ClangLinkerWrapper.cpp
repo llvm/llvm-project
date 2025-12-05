@@ -228,11 +228,13 @@ std::string getMainExecutable(const char *Name) {
 Expected<StringRef> createOutputFile(const Twine &Prefix, StringRef Extension) {
   std::scoped_lock<decltype(TempFilesMutex)> Lock(TempFilesMutex);
   SmallString<128> OutputFile;
+  std::string PrefixStr = clang::sanitizeTargetIDInFileName(Prefix.str());
+
   if (SaveTemps) {
-    (Prefix + "." + Extension).toNullTerminatedStringRef(OutputFile);
+    (PrefixStr + "." + Extension).toNullTerminatedStringRef(OutputFile);
   } else {
     if (std::error_code EC =
-            sys::fs::createTemporaryFile(Prefix, Extension, OutputFile))
+            sys::fs::createTemporaryFile(PrefixStr, Extension, OutputFile))
       return createFileError(OutputFile, EC);
   }
 
@@ -439,8 +441,11 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
         Args.MakeArgString(Twine("-compression-level=") + Arg->getValue()));
 
   SmallVector<StringRef> Targets = {"-targets=host-x86_64-unknown-linux-gnu"};
-  for (const auto &[File, Arch] : InputFiles)
-    Targets.push_back(Saver.save("hip-amdgcn-amd-amdhsa--" + Arch));
+  for (const auto &[File, Arch] : InputFiles) {
+    Targets.push_back(Saver.save(Arch == "amdgcnspirv"
+                                     ? "hip-spirv64-amd-amdhsa--" + Arch
+                                     : "hip-amdgcn-amd-amdhsa--" + Arch));
+  }
   CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
 
 #ifdef _WIN32
@@ -622,7 +627,6 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
   SmallString<128> Filename;
   (Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch())
       .toVector(Filename);
-  llvm::replace(Filename, ':', '-');
   auto TempFileOrErr = createOutputFile(Filename, "o");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();

@@ -1469,6 +1469,9 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
                                      Constant::getNullValue(F->getType()));
     Value *Select = Builder.CreateSelect(ICmp, JT,
                                          Constant::getNullValue(F->getType()));
+
+    if (auto *SI = dyn_cast<SelectInst>(Select))
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
     // For phi nodes, we need to update the incoming value for all operands
     // with the same predecessor.
     if (PN)
@@ -1551,12 +1554,7 @@ void LowerTypeTestsModule::createJumpTable(
 
   // Align the whole table by entry size.
   F->setAlignment(Align(getJumpTableEntrySize(JumpTableArch)));
-  // Skip prologue.
-  // Disabled on win32 due to https://llvm.org/bugs/show_bug.cgi?id=28641#c3.
-  // Luckily, this function does not get any prologue even without the
-  // attribute.
-  if (OS != Triple::Win32)
-    F->addFnAttr(Attribute::Naked);
+  F->addFnAttr(Attribute::Naked);
   if (JumpTableArch == Triple::arm)
     F->addFnAttr("target-features", "-thumb-mode");
   if (JumpTableArch == Triple::thumb) {
