@@ -202,7 +202,7 @@ void PHINode::growOperands() {
   if (NumOps < 2) NumOps = 2;      // 2 op PHI nodes are VERY common.
 
   ReservedSpace = NumOps;
-  growHungoffUses(ReservedSpace, /* IsPhi */ true);
+  growHungoffUses(ReservedSpace, /*WithExtraValues=*/true);
 }
 
 /// hasConstantValue - If the specified PHI node always merges together the same
@@ -4076,7 +4076,7 @@ SwitchInst::SwitchInst(Value *Value, BasicBlock *Default, unsigned NumCases,
                        InsertPosition InsertBefore)
     : Instruction(Type::getVoidTy(Value->getContext()), Instruction::Switch,
                   AllocMarker, InsertBefore) {
-  init(Value, Default, 2+NumCases*2);
+  init(Value, Default, 2 + NumCases);
 }
 
 SwitchInst::SwitchInst(const SwitchInst &SI)
@@ -4084,10 +4084,12 @@ SwitchInst::SwitchInst(const SwitchInst &SI)
   init(SI.getCondition(), SI.getDefaultDest(), SI.getNumOperands());
   setNumHungOffUseOperands(SI.getNumOperands());
   Use *OL = getOperandList();
+  ConstantInt **VL = case_values();
   const Use *InOL = SI.getOperandList();
-  for (unsigned i = 2, E = SI.getNumOperands(); i != E; i += 2) {
+  ConstantInt *const *InVL = SI.case_values();
+  for (unsigned i = 2, E = SI.getNumOperands(); i != E; ++i) {
     OL[i] = InOL[i];
-    OL[i+1] = InOL[i+1];
+    VL[i - 2] = InVL[i - 2];
   }
   SubclassOptionalData = SI.SubclassOptionalData;
 }
@@ -4097,11 +4099,11 @@ SwitchInst::SwitchInst(const SwitchInst &SI)
 void SwitchInst::addCase(ConstantInt *OnVal, BasicBlock *Dest) {
   unsigned NewCaseIdx = getNumCases();
   unsigned OpNo = getNumOperands();
-  if (OpNo+2 > ReservedSpace)
+  if (OpNo + 1 > ReservedSpace)
     growOperands();  // Get more space!
   // Initialize some new operands.
-  assert(OpNo+1 < ReservedSpace && "Growing didn't work!");
-  setNumHungOffUseOperands(OpNo+2);
+  assert(OpNo < ReservedSpace && "Growing didn't work!");
+  setNumHungOffUseOperands(OpNo + 1);
   CaseHandle Case(this, NewCaseIdx);
   Case.setValue(OnVal);
   Case.setSuccessor(Dest);
@@ -4112,21 +4114,22 @@ void SwitchInst::addCase(ConstantInt *OnVal, BasicBlock *Dest) {
 SwitchInst::CaseIt SwitchInst::removeCase(CaseIt I) {
   unsigned idx = I->getCaseIndex();
 
-  assert(2 + idx*2 < getNumOperands() && "Case index out of range!!!");
+  assert(2 + idx < getNumOperands() && "Case index out of range!!!");
 
   unsigned NumOps = getNumOperands();
   Use *OL = getOperandList();
+  ConstantInt **VL = case_values();
 
   // Overwrite this case with the end of the list.
-  if (2 + (idx + 1) * 2 != NumOps) {
-    OL[2 + idx * 2] = OL[NumOps - 2];
-    OL[2 + idx * 2 + 1] = OL[NumOps - 1];
+  if (2 + idx + 1 != NumOps) {
+    OL[2 + idx] = OL[NumOps - 1];
+    VL[idx] = VL[NumOps - 2 - 1];
   }
 
   // Nuke the last value.
-  OL[NumOps-2].set(nullptr);
-  OL[NumOps-2+1].set(nullptr);
-  setNumHungOffUseOperands(NumOps-2);
+  OL[NumOps - 1].set(nullptr);
+  VL[NumOps - 2 - 1] = nullptr;
+  setNumHungOffUseOperands(NumOps - 1);
 
   return CaseIt(this, idx);
 }
@@ -4139,7 +4142,7 @@ void SwitchInst::growOperands() {
   unsigned NumOps = e*3;
 
   ReservedSpace = NumOps;
-  growHungoffUses(ReservedSpace);
+  growHungoffUses(ReservedSpace, /*WithExtraValues=*/true);
 }
 
 void SwitchInstProfUpdateWrapper::init() {

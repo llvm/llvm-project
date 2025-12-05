@@ -2768,6 +2768,12 @@ llvm_target_lib_list = [lib for lib in [
                 ],
             ),
             (
+                ["-gen-sd-node-info"],
+                [
+                    "lib/Target/Mips/MipsGenSDNodeInfo.inc",
+                ],
+            ),
+            (
                 ["-gen-subtarget"],
                 "lib/Target/Mips/MipsGenSubtargetInfo.inc",
             ),

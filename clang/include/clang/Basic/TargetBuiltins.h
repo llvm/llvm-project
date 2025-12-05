@@ -397,7 +397,9 @@ namespace clang {
     }
     bool isOverloadDefault() const { return !(Flags & OverloadKindMask); }
     bool isOverloadWhileRW() const { return Flags & IsOverloadWhileRW; }
-    bool isOverloadCvt() const { return Flags & IsOverloadCvt; }
+    bool isOverloadFirstandLast() const {
+      return Flags & IsOverloadFirstandLast;
+    }
     bool isPrefetch() const { return Flags & IsPrefetch; }
     bool isReverseCompare() const { return Flags & ReverseCompare; }
     bool isAppendSVALL() const { return Flags & IsAppendSVALL; }
