@@ -14,12 +14,12 @@ define void @test(i1 %P, ptr %Q) {
   br i1 %P, label %T, label %F
 T:              ; preds = %0
   store i32 1, ptr %Q
-  %A = load i32, ptr %Q               ; <i32> [#uses=1]
+  %A = load i32, ptr %Q
   call void @bar( i32 %A )
   ret void
 F:              ; preds = %0
   store i32 1, ptr %Q
-  %B = load i32, ptr %Q               ; <i32> [#uses=1]
+  %B = load i32, ptr %Q
   call void @bar( i32 %B )
   ret void
 }
@@ -38,17 +38,17 @@ define void @test_switch(i64 %i, ptr %Q) {
   ]
 bb0:              ; preds = %0
   store i32 1, ptr %Q
-  %A = load i32, ptr %Q               ; <i32> [#uses=1]
+  %A = load i32, ptr %Q
   call void @bar( i32 %A )
   ret void
 bb1:              ; preds = %0
   store i32 1, ptr %Q
-  %B = load i32, ptr %Q               ; <i32> [#uses=1]
+  %B = load i32, ptr %Q
   call void @bar( i32 %B )
   ret void
 bb2:              ; preds = %0
   store i32 1, ptr %Q
-  %C = load i32, ptr %Q               ; <i32> [#uses=1]
+  %C = load i32, ptr %Q
   call void @bar( i32 %C )
   ret void
 }
@@ -618,17 +618,17 @@ define void @test_switch_with_multicases_dest(i64 %i, ptr %Q) {
   ]
 bb0:              ; preds = %0
   store i32 1, ptr %Q
-  %A = load i32, ptr %Q               ; <i32> [#uses=1]
+  %A = load i32, ptr %Q
   call void @bar( i32 %A )
   ret void
 bb1:              ; preds = %0
   store i32 1, ptr %Q
-  %B = load i32, ptr %Q               ; <i32> [#uses=1]
+  %B = load i32, ptr %Q
   call void @bar( i32 %B )
   ret void
 bb2:              ; preds = %0
   store i32 1, ptr %Q
-  %C = load i32, ptr %Q               ; <i32> [#uses=1]
+  %C = load i32, ptr %Q
   call void @bar( i32 %C )
   ret void
 }
