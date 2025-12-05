@@ -3671,12 +3671,14 @@ static unsigned maxNestingDepth(const AnnotatedLine &Line) {
 // Returns the token after the first qualifier of the name, or nullptr if there
 // is no qualifier.
 static FormatToken *skipNameQualifier(const FormatToken *Tok) {
+  assert(Tok);
+
   // Qualified names must start with an identifier.
-  if (!Tok->is(tok::identifier))
+  if (Tok->isNot(tok::identifier))
     return nullptr;
 
   Tok = Tok->getNextNonComment();
-  if (Tok == nullptr)
+  if (!Tok)
     return nullptr;
 
   // Consider:       A::B::B()
@@ -3687,15 +3689,16 @@ static FormatToken *skipNameQualifier(const FormatToken *Tok) {
   // Consider:       A<float>::B<int>::B()
   //            Tok --^
   if (Tok->is(TT_TemplateOpener)) {
-    if (!Tok->MatchingParen)
+    Tok = Tok->MatchingParen;
+    if (!Tok)
       return nullptr;
 
-    Tok = Tok->MatchingParen;
-    if (Tok->startsSequence(TT_TemplateCloser, tok::coloncolon))
-      return Tok->getNextNonComment()->getNextNonComment();
+    Tok = Tok->getNextNonComment();
+    if (!Tok)
+      return nullptr;
   }
 
-  return nullptr;
+  return Tok->is(tok::coloncolon) ? Tok->getNextNonComment() : nullptr;
 }
 
 // Returns the name of a function with no return type, e.g. a constructor or
@@ -3740,8 +3743,6 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
         return nullptr;
 
       Tok = Tok->MatchingParen;
-      if (!Tok)
-        return nullptr;
 
       continue;
     }
@@ -3754,7 +3755,7 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
     }
 
     // Skip to the unqualified part of the name.
-    while (FormatToken *Next = skipNameQualifier(Tok))
+    while (auto *Next = skipNameQualifier(Tok))
       Tok = Next;
 
     if (!Tok)
