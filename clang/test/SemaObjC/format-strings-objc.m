@@ -130,7 +130,7 @@ NSString *test_literal_propagation(void) {
   printf(s2); // expected-warning {{more '%' conversions than data arguments}}
 
   const char * const s3 = (const char *)0;
-  printf(s3); // no-warning (NULL is a valid format string)
+  printf(s3); // expected-warning {{null passed to a callee that requires a non-null argument}}
 
   NSString * const ns1 = @"constant string %s"; // expected-note {{format string is defined here}}
   NSLog(ns1); // expected-warning {{more '%' conversions than data arguments}}
@@ -260,6 +260,7 @@ void testByValueObjectInFormat(Foo *obj) {
   printf("%d %d %d", 1L, *obj, 1L); // expected-error {{cannot pass object with interface type 'Foo' by value to variadic function; expected type from format string was 'int'}} expected-warning 2 {{format specifies type 'int' but the argument has type 'long'}}
   printf("%!", *obj); // expected-error {{cannot pass object with interface type 'Foo' by value through variadic function}} expected-warning {{invalid conversion specifier}}
   printf(0, *obj); // expected-error {{cannot pass object with interface type 'Foo' by value through variadic function}}
+  // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
 
   [Bar log2:@"%d", *obj]; // expected-error {{cannot pass object with interface type 'Foo' by value to variadic method; expected type from format string was 'int'}}
 }
