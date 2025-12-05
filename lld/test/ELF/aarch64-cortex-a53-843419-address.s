@@ -41,7 +41,6 @@
 // CHECK-NEXT:      ff8:        d0000020        adrp    x0, 0x6000
 // CHECK-NEXT:      ffc:        f9400021        ldr             x1, [x1]
 // CHECK-NEXT:     1000:        14000ff9        b       0x4fe4
-// CHECK: <__CortexA53843419_1000_ret>:
 // CHECK-NEXT:     1004:        d65f03c0        ret
         .section .text.01, "ax", %progbits
         .balign 4096
@@ -64,7 +63,6 @@ $x.999:
 // CHECK-NEXT:     1ffc:        b0000020        adrp    x0, 0x6000
 // CHECK-NEXT:     2000:        bd400021        ldr             s1, [x1]
 // CHECK-NEXT:     2004:        14000bfa        b       0x4fec
-// CHECK: <__CortexA53843419_2004_ret>:
 // CHECK-NEXT:     2008:        d65f03c0        ret
         .globl t3_ffc_ldrsimd
         .type t3_ffc_ldrsimd, %function
@@ -102,7 +100,6 @@ t3_ff8_ldralldata:
 // CHECK-NEXT:     3ff8:        f0000000        adrp    x0, 0x6000
 // CHECK-NEXT:     3ffc:        f9400021        ldr             x1, [x1]
 // CHECK-NEXT:     4000:        140003fd        b       0x4ff4
-// CHECK: <__CortexA53843419_4000_ret>:
 // CHECK-NEXT:     4004:        d65f03c0        ret
         .space 4096 - 12
         .globl t3_ffc_ldr
@@ -135,7 +132,6 @@ t3_ff8_ldralldata:
 // CHECK-NEXT:     4ffc:        d0000000        adrp    x0, 0x6000
 // CHECK-NEXT:     5000:        f9000021        str             x1, [x1]
 // CHECK-NEXT:     5004:        140003fb        b       0x5ff0
-// CHECK: <__CortexA53843419_5004_ret>:
 // CHECK-NEXT:     5008:        d65f03c0        ret
 
         .section .newisd, "ax", %progbits
@@ -161,7 +157,6 @@ t3_ffc_str:
 // CHECK-NEXT:     5ff8:        b0000000        adrp    x0, 0x6000
 // CHECK-NEXT:     5ffc:        f9000021        str             x1, [x1]
 // CHECK-NEXT:     6000:        14000003        b       0x600c
-// CHECK: <__CortexA53843419_6000_ret>:
 // CHECK-NEXT:     6004:        d65f03c0        ret
 
         .section .newos, "ax", %progbits

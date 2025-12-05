@@ -45,7 +45,6 @@ t3_ff8_ldr:
 // CHECK3-NEXT:    211ff8:       f00400e0        adrp    x0, 0x8230000
 // CHECK3-NEXT:    211ffc:       f9400021        ldr     x1, [x1]
 // CHECK3-NEXT:    212000:       15800802        b       0x6214008
-// CHECK3: <__CortexA53843419_211000_ret>:
 // CHECK3-NEXT:    212004:       d65f03c0        ret
 
         .section .text.04, "ax", %progbits
@@ -67,7 +66,6 @@ t3_ff8_str:
 // CHECK4-NEXT:  4213ff8:       b00200e0        adrp    x0, 0x8230000
 // CHECK4-NEXT:  4213ffc:       f9400021        ldr     x1, [x1]
 // CHECK4-NEXT:  4214000:       14800004        b       0x6214010
-// CHECK4: <__CortexA53843419_4213000_ret>:
 // CHECK4-NEXT:  4214004:       d65f03c0        ret
 
         .section .text.06, "ax", %progbits
@@ -107,7 +105,6 @@ t3_ffc_ldr:
 // CHECK7-NEXT:  8211ffc:       f00000e0        adrp    x0, 0x8230000
 // CHECK7-NEXT:  8212000:       f9400021        ldr     x1, [x1]
 // CHECK7-NEXT:  8212004:       14000002        b       0x821200c
-// CHECK7: <__CortexA53843419_8212004_ret>:
 // CHECK7-NEXT:  8212008:       d65f03c0        ret
 // CHECK7: <__CortexA53843419_8212004>:
 // CHECK7-NEXT:  821200c:       f9400000        ldr     x0, [x0]

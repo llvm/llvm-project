@@ -1,16 +1,20 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -mattr=+bti -filetype=obj -triple=aarch64 %s -o %t.o
-// RUN: echo "SECTIONS { .text 0x10000 : { *(.text.01); . += 0x8000000; *(.text.far); } }" > %t.script
-// RUN: ld.lld -z force-bti --script %t.script -fix-cortex-a53-843419 -verbose %t.o -o %t2 \
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: llvm-mc -mattr=+bti -filetype=obj -triple=aarch64 asm -o a.o
+// RUN: ld.lld --script lds -fix-cortex-a53-843419 -verbose a.o -o exe \
 // RUN:   2>&1 | FileCheck -check-prefix=CHECK-PRINT %s
-// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --triple=aarch64-linux-gnu -d %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --triple=aarch64-linux-gnu -d exe | FileCheck %s
 
-/// Test case for specific crash wrt interaction between thunks where
-/// relocations end up putting a BTI section in an unexpected position.
-/// This case has been observed on a Chromium build and, although it is possible
-/// to reproduce without the Cortex-A53 Erratum 843419 thunk, I kept it to
-/// keep it as close as possible to the original situation.
+/// Test case for specific crash wrt interaction between thunks and errata
+/// patches where the size of the added thunks meant that a range-extension
+/// thunk to the patch was required. We need to check that a BTI Thunk is
+/// generated for the patch, and that the patch's direct branch return is also
+/// range extended, possibly needing another BTI Thunk.
+///
+/// The asm below is based on a crash that was happening in Chromium.
+/// For more information see https://issues.chromium.org/issues/440019454
 
+//--- asm
 .section .note.gnu.property,"a"
 .p2align 3
 .long 4
@@ -46,23 +50,58 @@ dat:    .quad 0
 
 // CHECK-PRINT: detected cortex-a53-843419 erratum sequence starting at 8010FFC in unpatched output.
 
-// Sanity check
 // CHECK: 0000000000010000 <_start>:
-// CHECK-NEXT: bl      0x10008 <__AArch64AbsLongThunk_far_away_no_bti>
+// CHECK-NEXT: 10000:       bl      0x10008 <__AArch64AbsLongThunk_far_away_no_bti>
 
-// Check that the BTI thunks are kept small, they didn't moved and they do contain the landing pad
-// CHECK: 0000000000010008 <__AArch64AbsLongThunk_far_away_no_bti>:
-// CHECK: 0000000008010018 <__AArch64BTIThunk_far_away_no_bti>:
-// CHECK-NEXT: bti     c
-// CHECK: 0000000008010020 <__AArch64AbsLongThunk___CortexA53843419_8011004>:
+// CHECK: <__AArch64AbsLongThunk_far_away_no_bti>:
+// CHECK-NEXT: 10008:       ldr     x16, 0x10010
+// CHECK-NEXT:              br      x16
+// CHECK-NEXT: 10010: 18 00 01 08   .word   0x08010018
 
-// CHECK: 0000000008010030 <__AArch64BTIThunk___CortexA53843419_8011004_ret>:
-// CHECK-NEXT: bti     c
-// CHECK: 0000000008010038 <far_away_no_bti>:
-// CHECK: b       0x8010020 <__AArch64AbsLongThunk___CortexA53843419_8011004>
-// CHECK: 0000000008011028 <__CortexA53843419_8011004_ret>:
+// Check that the BTI thunks do NOT have their size rounded up to 4 KiB.
+// They precede the patch and they contain the landing pad.
+// CHECK: <__AArch64BTIThunk_far_away_no_bti>:
+// CHECK-NEXT: 8010018:       bti     c
+// CHECK-NEXT:                b       0x8010038 <far_away_no_bti>
+
+// CHECK: <__AArch64AbsLongThunk___CortexA53843419_8011004>:
+// CHECK-NEXT: 8010020:       ldr     x16, 0x8010028
+// CHECK-NEXT:                br      x16
+// CHECK-NEXT: 8010028: 34 10 01 10   .word   0x10011034
+
+// CHECK: <__AArch64BTIThunk_$x>:
+// CHECK-NEXT: 8010030:       bti     c
+// CHECK-NEXT:                b       0x8011028 <far_away_no_bti+0xff0>
+
+// CHECK: 8010038 <far_away_no_bti>:
+// CHECK-NEXT: ...
+// CHECK-NEXT: 801101c:       adrp    x0, 0x10012000
+// CHECK-NEXT:                ldr     x1, [x1]
+// CHECK-NEXT:                b       0x8010020 <__AArch64AbsLongThunk___CortexA53843419_8011004>
+// CHECK-NEXT: ...
+// CHECK-NEXT: 10011028:       ret
 
 // Check that the errata thunk does NOT contain a landing pad
-// CHECK: 000000001001102c <__CortexA53843419_8011004>:
-// CHECK-NEXT: ldr     x0, [x0, #64]
+// CHECK: <__CortexA53843419_8011004>:
+// CHECK-NEXT: 1001102c:       ldr     x0, [x0, #64]
+// CHECK-NEXT:                 b       0x10011040 <__AArch64AbsLongThunk_$x>
+
+// Rest of generated code for readability
+// CHECK: <__AArch64BTIThunk___CortexA53843419_8011004>:
+// CHECK-NEXT: 10011034:       bti     c
+// CHECK-NEXT:                 b       0x1001102c <__CortexA53843419_8011004>
+
+// CHECK: <__AArch64AbsLongThunk_$x>
+// CHECK-NEXT: 10011040:       ldr     x16, 0x10011048
+// CHECK-NEXT:                 br      x16
+// CHECK-NEXT: 10011048: 30 00 01 08   .word   0x08010030
+
+//--- lds
+SECTIONS {
+  .text 0x10000 : {
+    *(.text.01);
+    . += 0x8000000;
+    *(.text.far);
+  }
+}
 

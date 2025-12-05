@@ -2010,6 +2010,12 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
     // 2.) The InputSectionDescription is larger than 4 KiB. This will prevent
     //     any assertion failures that an InputSectionDescription is < 4 KiB
     //     in size.
+    //
+    // isPrefix is a ThunkSection explicitly inserted before its target
+    // section. We suppress the rounding up of the size of these ThunkSections
+    // as unlike normal ThunkSections, they are small in size, but when BTI is
+    // enabled very frequent. This can bloat code-size and push the errata
+    // patches out of branch range.
     uint64_t isdSize = isd->sections.back()->outSecOff +
                        isd->sections.back()->getSize() -
                        isd->sections.front()->outSecOff;

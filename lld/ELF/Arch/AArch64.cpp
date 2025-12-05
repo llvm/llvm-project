@@ -49,9 +49,8 @@ bool elf::isAArch64BTILandingPad(Ctx &ctx, Symbol &s, int64_t a) {
     return true;
   const uint8_t *buf = isec->content().begin();
   // Synthetic sections may have a size but empty data - Assume that they won't contain a landing pad
-  if (buf == nullptr && dyn_cast<SyntheticSection>(isec) != nullptr) {
+  if (buf == nullptr && isa<SyntheticSection>(isec))
     return false;
-  }
 
   const uint32_t instr = read32le(buf + off);
   // All BTI instructions are HINT instructions which all have same encoding
