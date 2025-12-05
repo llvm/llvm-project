@@ -7626,15 +7626,22 @@ void testLoopConditionalReassignment(Foo *f1, Foo *f2, bool cond) {
 namespace test_function_param_lock_unlock {
 class A {
  public:
-  A() EXCLUSIVE_LOCK_FUNCTION(mu_) {
-    mu_.Lock();
-  }
+  A() EXCLUSIVE_LOCK_FUNCTION(mu_) { mu_.Lock(); }
   ~A() UNLOCK_FUNCTION(mu_) { mu_.Unlock(); }
  private:
   Mutex mu_;
 };
+int do_something(A a) { return 0; }
 
-int do_something(A a) {
-  return 0;
-}
+// Unlock in dtor without lock in ctor.
+// FIXME: We cannot detect that we are releasing a lock that was never held!
+class B {
+ public:
+  B() {}
+  B(int) {}
+  ~B() UNLOCK_FUNCTION(mu_) { mu_.Unlock(); }
+ private:
+  Mutex mu_;
+};
+int do_something(B b) { return 0; }
 } // namespace test_function_param_lock_unlock

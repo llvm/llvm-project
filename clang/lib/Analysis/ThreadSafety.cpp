@@ -2821,10 +2821,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
           const auto *DD = AD.getDestructorDecl(AC.getASTContext());
-          // Ignore dtor for parameters as the corresponding constructor does
-          // not happen in the callee context but in the caller context. It is
-          // not possible to know which constuctor was used for its construction
-          // so avoid reading the destructor as well.
+          // Ignore parameter dtors: their ctors happen in caller context.
           if (isa_and_nonnull<ParmVarDecl>(AD.getVarDecl()))
             break;
           if (!DD || !DD->hasAttrs())
