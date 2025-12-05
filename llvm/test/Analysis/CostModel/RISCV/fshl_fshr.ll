@@ -14,11 +14,11 @@ define i32 @rotl_i32_3rd_arg_const(i32 %a) {
 ; RV64-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; RV32ZBB-LABEL: 'rotl_i32_3rd_arg_const'
-; RV32ZBB-NEXT:  Cost Model: Found costs of 4 for: %r = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 9)
+; RV32ZBB-NEXT:  Cost Model: Found costs of 1 for: %r = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 9)
 ; RV32ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; RV64ZBB-LABEL: 'rotl_i32_3rd_arg_const'
-; RV64ZBB-NEXT:  Cost Model: Found costs of 4 for: %r = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 9)
+; RV64ZBB-NEXT:  Cost Model: Found costs of 1 for: %r = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 9)
 ; RV64ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 entry:
@@ -36,11 +36,11 @@ define i32 @rotl_i32_3rd_arg_var(i32 %a, i32 %c) {
 ; RV64-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; RV32ZBB-LABEL: 'rotl_i32_3rd_arg_var'
-; RV32ZBB-NEXT:  Cost Model: Found costs of 5 for: %r = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 %c)
+; RV32ZBB-NEXT:  Cost Model: Found costs of 1 for: %r = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 %c)
 ; RV32ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; RV64ZBB-LABEL: 'rotl_i32_3rd_arg_var'
-; RV64ZBB-NEXT:  Cost Model: Found costs of 5 for: %r = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 %c)
+; RV64ZBB-NEXT:  Cost Model: Found costs of 1 for: %r = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 %c)
 ; RV64ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 entry:
@@ -62,7 +62,7 @@ define i64 @rotl_i64_3rd_arg_const(i64 %a) {
 ; RV32ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 ; RV64ZBB-LABEL: 'rotl_i64_3rd_arg_const'
-; RV64ZBB-NEXT:  Cost Model: Found costs of 4 for: %r = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 9)
+; RV64ZBB-NEXT:  Cost Model: Found costs of 1 for: %r = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 9)
 ; RV64ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 entry:
@@ -84,7 +84,7 @@ define i64 @rotl_i64_3rd_arg_var(i64 %a, i64 %c) {
 ; RV32ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 ; RV64ZBB-LABEL: 'rotl_i64_3rd_arg_var'
-; RV64ZBB-NEXT:  Cost Model: Found costs of 5 for: %r = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 %c)
+; RV64ZBB-NEXT:  Cost Model: Found costs of 1 for: %r = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 %c)
 ; RV64ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 entry:
@@ -102,11 +102,11 @@ define i32 @rotr_i32_3rd_arg_const(i32 %a) {
 ; RV64-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; RV32ZBB-LABEL: 'rotr_i32_3rd_arg_const'
-; RV32ZBB-NEXT:  Cost Model: Found costs of 4 for: %r = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 9)
+; RV32ZBB-NEXT:  Cost Model: Found costs of 1 for: %r = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 9)
 ; RV32ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; RV64ZBB-LABEL: 'rotr_i32_3rd_arg_const'
-; RV64ZBB-NEXT:  Cost Model: Found costs of 4 for: %r = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 9)
+; RV64ZBB-NEXT:  Cost Model: Found costs of 1 for: %r = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 9)
 ; RV64ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 entry:
@@ -124,11 +124,11 @@ define i32 @rotr_i32_3rd_arg_var(i32 %a, i32 %c) {
 ; RV64-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; RV32ZBB-LABEL: 'rotr_i32_3rd_arg_var'
-; RV32ZBB-NEXT:  Cost Model: Found costs of 5 for: %r = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 %c)
+; RV32ZBB-NEXT:  Cost Model: Found costs of 1 for: %r = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 %c)
 ; RV32ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; RV64ZBB-LABEL: 'rotr_i32_3rd_arg_var'
-; RV64ZBB-NEXT:  Cost Model: Found costs of 5 for: %r = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 %c)
+; RV64ZBB-NEXT:  Cost Model: Found costs of 1 for: %r = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 %c)
 ; RV64ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 entry:
@@ -150,7 +150,7 @@ define i64 @rotr_i64_3rd_arg_const(i64 %a) {
 ; RV32ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 ; RV64ZBB-LABEL: 'rotr_i64_3rd_arg_const'
-; RV64ZBB-NEXT:  Cost Model: Found costs of 4 for: %r = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 9)
+; RV64ZBB-NEXT:  Cost Model: Found costs of 1 for: %r = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 9)
 ; RV64ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 entry:
@@ -172,7 +172,7 @@ define i64 @rotr_i64_3rd_arg_var(i64 %a, i64 %c) {
 ; RV32ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 ; RV64ZBB-LABEL: 'rotr_i64_3rd_arg_var'
-; RV64ZBB-NEXT:  Cost Model: Found costs of 5 for: %r = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 %c)
+; RV64ZBB-NEXT:  Cost Model: Found costs of 1 for: %r = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 %c)
 ; RV64ZBB-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 entry:
