@@ -37,6 +37,7 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -1263,6 +1264,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   switch (BuiltinID) {
   default:
     return;
+  case Builtin::BI__builtin_strcat:
+  case Builtin::BIstrcat:
   case Builtin::BI__builtin_stpcpy:
   case Builtin::BIstpcpy:
   case Builtin::BI__builtin_strcpy:
@@ -1273,6 +1276,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BI__builtin___strcat_chk:
   case Builtin::BI__builtin___stpcpy_chk:
   case Builtin::BI__builtin___strcpy_chk: {
     DiagID = diag::warn_fortify_strlen_overflow;
@@ -1512,7 +1516,7 @@ static bool checkBuiltinInferAllocToken(Sema &S, CallExpr *TheCall) {
       return S.Diag(Arg->getBeginLoc(), diag::err_param_with_void_type);
   }
 
-  TheCall->setType(S.Context.UnsignedLongLongTy);
+  TheCall->setType(S.Context.getSizeType());
   return false;
 }
 
@@ -4479,6 +4483,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__scoped_atomic_or_fetch:
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_nand_fetch:
+  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
+  case AtomicExpr::AO__scoped_atomic_udec_wrap:
     Form = Arithmetic;
     break;
 
@@ -6356,13 +6362,13 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
     return true;
 
   // For simplicity, we support only limited expressions for the argument.
-  // Specifically a pointer to a flexible array member:'ptr->array'. This
-  // allows us to reject arguments with complex casting, which really shouldn't
-  // be a huge problem.
+  // Specifically a flexible array member or a pointer with counted_by:
+  // 'ptr->array' or 'ptr->pointer'. This allows us to reject arguments with
+  // complex casting, which really shouldn't be a huge problem.
   const Expr *Arg = ArgRes.get()->IgnoreParenImpCasts();
-  if (!isa<PointerType>(Arg->getType()) && !Arg->getType()->isArrayType())
+  if (!Arg->getType()->isPointerType() && !Arg->getType()->isArrayType())
     return Diag(Arg->getBeginLoc(),
-                diag::err_builtin_counted_by_ref_must_be_flex_array_member)
+                diag::err_builtin_counted_by_ref_invalid_arg)
            << Arg->getSourceRange();
 
   if (Arg->HasSideEffects(Context))
@@ -6371,24 +6377,27 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
            << Arg->getSourceRange();
 
   if (const auto *ME = dyn_cast<MemberExpr>(Arg)) {
-    if (!ME->isFlexibleArrayMemberLike(
-            Context, getLangOpts().getStrictFlexArraysLevel()))
-      return Diag(Arg->getBeginLoc(),
-                  diag::err_builtin_counted_by_ref_must_be_flex_array_member)
-             << Arg->getSourceRange();
+    const auto *CATy =
+        ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
 
-    if (auto *CATy =
-            ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
-        CATy && CATy->getKind() == CountAttributedType::CountedBy) {
-      const auto *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
-      if (const FieldDecl *CountFD = FAMDecl->findCountedByField()) {
+    if (CATy && CATy->getKind() == CountAttributedType::CountedBy) {
+      // Member has counted_by attribute - return pointer to count field
+      const auto *MemberDecl = cast<FieldDecl>(ME->getMemberDecl());
+      if (const FieldDecl *CountFD = MemberDecl->findCountedByField()) {
         TheCall->setType(Context.getPointerType(CountFD->getType()));
         return false;
       }
     }
+
+    // FAMs and pointers without counted_by return void*
+    QualType MemberTy = ME->getMemberDecl()->getType();
+    if (!MemberTy->isArrayType() && !MemberTy->isPointerType())
+      return Diag(Arg->getBeginLoc(),
+                  diag::err_builtin_counted_by_ref_invalid_arg)
+             << Arg->getSourceRange();
   } else {
     return Diag(Arg->getBeginLoc(),
-                diag::err_builtin_counted_by_ref_must_be_flex_array_member)
+                diag::err_builtin_counted_by_ref_invalid_arg)
            << Arg->getSourceRange();
   }
 
@@ -12565,9 +12574,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       if (SourceMgr.isInSystemMacro(CC))
         return;
       return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_vector_scalar);
-    } else if (getLangOpts().HLSL &&
-               Target->castAs<VectorType>()->getNumElements() <
-                   Source->castAs<VectorType>()->getNumElements()) {
+    }
+    if (getLangOpts().HLSL &&
+        Target->castAs<VectorType>()->getNumElements() <
+            Source->castAs<VectorType>()->getNumElements()) {
       // Diagnose vector truncation but don't return. We may also want to
       // diagnose an element conversion.
       DiagnoseImpCast(*this, E, T, CC,
@@ -12583,9 +12593,22 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
     Source = cast<VectorType>(Source)->getElementType().getTypePtr();
     Target = cast<VectorType>(Target)->getElementType().getTypePtr();
   }
-  if (auto VecTy = dyn_cast<VectorType>(Target))
+  if (const auto *VecTy = dyn_cast<VectorType>(Target))
     Target = VecTy->getElementType().getTypePtr();
 
+  if (isa<ConstantMatrixType>(Source)) {
+    if (Target->isScalarType())
+      return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_matrix_scalar);
+
+    if (getLangOpts().HLSL &&
+        Target->castAs<ConstantMatrixType>()->getNumElementsFlattened() <
+            Source->castAs<ConstantMatrixType>()->getNumElementsFlattened()) {
+      // Diagnose Matrix truncation but don't return. We may also want to
+      // diagnose an element conversion.
+      DiagnoseImpCast(*this, E, T, CC,
+                      diag::warn_hlsl_impcast_matrix_truncation);
+    }
+  }
   // Strip complex types.
   if (isa<ComplexType>(Source)) {
     if (!isa<ComplexType>(Target)) {
