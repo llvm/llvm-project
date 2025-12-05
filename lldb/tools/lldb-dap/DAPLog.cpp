@@ -17,23 +17,18 @@ using namespace llvm;
 
 namespace lldb_dap {
 
-void Log::Emit(StringRef message) {
-  std::lock_guard<Log::Mutex> lock(m_mutex);
-  std::chrono::duration<double> now{
-      std::chrono::system_clock::now().time_since_epoch()};
-  m_stream << formatv("{0:f9} ", now.count()).str() << m_prefix << message
-           << "\n";
-  m_stream.flush();
-}
+void Log::Emit(StringRef message) { Emit(message, "", 0); }
 
-void Log::Emit(StringRef file, size_t line, StringRef message) {
+void Log::Emit(StringRef message, StringRef file, size_t line) {
   std::lock_guard<Log::Mutex> lock(m_mutex);
   std::chrono::duration<double> now{
       std::chrono::system_clock::now().time_since_epoch()};
-  m_stream << formatv("{0:f9} {1}:{2} ", now.count(), sys::path::filename(file),
-                      line)
-                  .str()
-           << m_prefix << message << "\n";
+  m_stream << formatv("{0:f9}", now.count()) << " ";
+  if (!file.empty())
+    m_stream << sys::path::filename(file) << ":" << line << " ";
+  if (!m_prefix.empty())
+    m_stream << m_prefix;
+  m_stream << message << "\n";
   m_stream.flush();
 }
 

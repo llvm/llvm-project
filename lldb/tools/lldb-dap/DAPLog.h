@@ -20,7 +20,7 @@
 #define DAP_LOG(log, ...)                                                      \
   do {                                                                         \
     ::lldb_dap::Log &log_private = (log);                                      \
-    log_private.Emit(__FILE__, __LINE__, ::llvm::formatv(__VA_ARGS__).str());  \
+    log_private.Emit(::llvm::formatv(__VA_ARGS__).str(), __FILE__, __LINE__);  \
   } while (0)
 
 // Write message to log, if error is set. In the log message refer to the error
@@ -31,8 +31,8 @@
     ::llvm::Error error_private = (error);                                     \
     if (error_private)                                                         \
       log_private.Emit(                                                        \
-          __FILE__, __LINE__,                                                  \
-          ::lldb_dap::FormatError(::std::move(error_private), __VA_ARGS__));   \
+          ::lldb_dap::FormatError(::std::move(error_private), __VA_ARGS__),    \
+          __FILE__, __LINE__);                                                 \
   } while (0)
 
 namespace lldb_dap {
@@ -61,7 +61,7 @@ public:
 
   /// Emit writes a message to the underlying stream, including the file and
   /// line the message originated from.
-  void Emit(llvm::StringRef file, size_t line, llvm::StringRef message);
+  void Emit(llvm::StringRef message, llvm::StringRef file, size_t line);
 
 private:
   std::string m_prefix;

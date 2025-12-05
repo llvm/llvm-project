@@ -38,12 +38,12 @@ TEST(DAPLog, Emit) {
   EXPECT_THAT(last_line(outs),
               MatchesRegex(TIMESTAMP_PATTERN "my_prefix: foobar\n"));
 
-  log.Emit("file.cpp", 42, "Hello from a file/line.");
+  log.Emit("Hello from a file/line.", "file.cpp", 42);
   EXPECT_THAT(
       last_line(outs),
       MatchesRegex(TIMESTAMP_PATTERN "file.cpp:42 Hello from a file/line.\n"));
 
-  inner_log.Emit("file.cpp", 42, "Hello from a file/line.");
+  inner_log.Emit("Hello from a file/line.", "file.cpp", 42);
   EXPECT_THAT(last_line(outs),
               MatchesRegex(TIMESTAMP_PATTERN
                            "file.cpp:42 my_prefix: Hello from a file/line.\n"));
