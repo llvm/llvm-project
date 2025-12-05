@@ -41,7 +41,6 @@ add_clang_library(clangTooling
   clangBasic
   clangDependencyScanning
   clangDriver
-  clangDependencyScanning
   clangOptions
   clangFormat
   clangFrontend
