@@ -6480,16 +6480,18 @@ static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  // Let E be the expression std​::​meta​::​reflect_constant(CE). E shall be a
-  // constant expression; the result of E is the underlying constant of the
-  // annotation.
-  // Among other requirements it means for we need to check they obey
-  // is_copy_construbtible.
+  // Let E be the expression std​::​meta​::​reflect_constant(CE). E
+  // shall be a constant expression; the result of E is the underlying constant
+  // of the annotation. Among other requirements it means for we need to check
+  // they obey is_copy_construbtible.
   if (const CXXRecordDecl *RD = CE->getType()->getAsCXXRecordDecl(); RD) {
-    for (auto * Ctor : RD->ctors()) {
-      if (Ctor->isCopyOrMoveConstructor() && (Ctor->isDeleted() || Ctor->getAccess() == AS_private)) {
-        S.Diag(CE->getBeginLoc(), diag::err_annotation_argument_copy_precondition);
-        S.Diag(Ctor->getBeginLoc(), diag::note_availability_specified_here) << Ctor << /* deleted */ 1;
+    for (auto *Ctor : RD->ctors()) {
+      if (Ctor->isCopyOrMoveConstructor() &&
+          (Ctor->isDeleted() || Ctor->getAccess() == AS_private)) {
+        S.Diag(CE->getBeginLoc(),
+               diag::err_annotation_argument_copy_precondition);
+        S.Diag(Ctor->getBeginLoc(), diag::note_availability_specified_here)
+            << Ctor << /* deleted */ 1;
         return;
       }
     }
@@ -6506,7 +6508,8 @@ static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
       ExprResult CopyResult = Seq.Perform(S, Entity, Kind, CE);
       if (CopyResult.isInvalid()) {
-        S.Diag(CE->getBeginLoc(), diag::err_annotation_argument_copy_precondition);
+        S.Diag(CE->getBeginLoc(),
+               diag::err_annotation_argument_copy_precondition);
         return;
       }
       CE = CopyResult.get();
@@ -6530,10 +6533,9 @@ static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
   // Argument to annotation must be usable as template argument.
-  ConstantExprKind CEKind =
-      (CE->getType()->isClassType()
-            ? ConstantExprKind::ClassTemplateArgument
-            : ConstantExprKind::NonClassTemplateArgument);
+  ConstantExprKind CEKind = (CE->getType()->isClassType()
+                                 ? ConstantExprKind::ClassTemplateArgument
+                                 : ConstantExprKind::NonClassTemplateArgument);
   if (!CE->EvaluateAsConstantExpr(Result, S.Context, CEKind)) {
     S.Diag(CE->getBeginLoc(), diag::err_attribute_argument_type)
         << "C++26 annotation" << /*template arg=*/4 << CE->getSourceRange();
