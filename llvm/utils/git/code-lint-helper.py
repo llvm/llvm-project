@@ -122,11 +122,11 @@ View the output from {self.name} here.
             self.comment = {"body": comment_text}
 
 
-    def run(self, changed_files: Sequence[str], args: LintArgs) -> bool:
+    def run(self, args: LintArgs) -> bool:
         if args.verbose:
-            print(f"got changed files: {changed_files}")
+            print(f"got changed files: {args.changed_files}")
 
-        files_to_lint = self.filter_changed_files(changed_files)
+        files_to_lint = self.filter_changed_files(args.changed_files)
 
         if not files_to_lint and args.verbose:
             print("no modified files found")
@@ -338,46 +338,28 @@ if __name__ == "__main__":
     parsed_args = parser.parse_args()
     args = LintArgs(parsed_args)
 
-    changed_files = args.changed_files
-
-    overall_success = True
     failed_linters: List[str] = []
-    all_comments: List[Dict[str, Any]] = []
+    comments: List[Dict[str, Any]] = []
 
     for linter in ALL_LINTERS:
         if args.verbose:
             print(f"running linter {linter.name}")
 
-        linter_passed = linter.run(changed_files, args)
-        if not linter_passed:
-            overall_success = False
+        if not linter.run(args):
             failed_linters.append(linter.name)
             if args.verbose:
                 print(f"linter {linter.name} failed")
 
         # Write comments file if we have a comment
         if linter.comment:
+            comments.append(linter.comment)
             if args.verbose:
                 print(f"linter {linter.name} has comment: {linter.comment}")
-            all_comments.append(linter.comment)
 
-    if len(all_comments):
-        existing_comments = []
-        if os.path.exists("comments"):
-            try:
-                with open("comments", "r") as f:
-                    existing_comments = json.load(f)
-                    if not isinstance(existing_comments, list):
-                        existing_comments = []
-            except Exception:
-                existing_comments = []
-
-        existing_comments.extend(all_comments)
-
+    if len(comments):
         with open("comments", "w") as f:
-            json.dump(existing_comments, f)
+            json.dump(comments, f)
 
-    if not overall_success:
-        for name in failed_linters:
-            print(f"error: linter {name} failed")
+    if len(failed_linters) > 0:
+        print(f"error: some linters failed: {' '.join(failed_linters)}")
         sys.exit(1)
