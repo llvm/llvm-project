@@ -1472,7 +1472,7 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   const auto *decl = cast<DeclRefExpr>(e->getSubExpr())->getDecl();
 
   // A member function pointer.
-  if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl)) {
+  if (isa<CXXMethodDecl>(decl)) {
     errorNYI(e->getSourceRange(), "emitMemberPointerConstant: method pointer");
     return {};
   }
