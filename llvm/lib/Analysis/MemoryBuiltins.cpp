@@ -379,7 +379,8 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
 
   // Handle strdup-like functions separately.
   if (FnData->AllocTy == StrDupLike) {
-    APInt Size(IntTyBits, GetStringLength(Mapper(CB->getArgOperand(0))));
+    APInt Size(IntTyBits, getStringLength(Mapper(CB->getArgOperand(0)),
+                                          DL.getByteWidth()));
     if (!Size)
       return std::nullopt;
 
