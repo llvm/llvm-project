@@ -2821,8 +2821,10 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
           const auto *DD = AD.getDestructorDecl(AC.getASTContext());
-          // Ignore parameter dtors: their ctors happen in caller context, so
-          // we can't match lock/unlock pairs for thread safety analysis.
+          // Function parameters as they are constructed in callee's context and
+          // the CFG does not contain the ctors. Ignore them as their
+          // capabilities cannot be analysed because of this missing
+          // information.
           if (isa_and_nonnull<ParmVarDecl>(AD.getVarDecl()))
             break;
           if (!DD || !DD->hasAttrs())
