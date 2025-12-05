@@ -501,11 +501,10 @@ void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
     return;
 
   SmallVector<RegionSuccessor> successors;
-  if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op))
-    terminator.getSuccessorRegions(*operands, successors);
-  else
-    branch.getSuccessorRegions(op->getParentRegion(), successors);
-
+  auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op);
+  if (!terminator)
+    return;
+  terminator.getSuccessorRegions(*operands, successors);
   visitRegionBranchEdges(branch, op, successors);
 }
 
@@ -522,14 +521,14 @@ void DeadCodeAnalysis::visitRegionBranchEdges(
     // Mark the entry block as executable.
     auto *state = getOrCreate<Executable>(point);
     propagateIfChanged(state, state->setToLive());
-    LDBG() << "Marked region successor live: " << point;
+    LDBG() << "Marked region successor live: " << *point;
 
     // Add the parent op as a predecessor.
     auto *predecessors = getOrCreate<PredecessorState>(point);
     propagateIfChanged(
         predecessors,
         predecessors->join(predecessorOp, successor.getSuccessorInputs()));
-    LDBG() << "Added region branch as predecessor for successor: " << point;
+    LDBG() << "Added region branch as predecessor for successor: " << *point;
   }
 }
 

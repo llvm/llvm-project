@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ALTERA_SINGLE_WORK_ITEM_BARRIER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ALTERA_SINGLE_WORK_ITEM_BARRIER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ALTERA_SINGLEWORKITEMBARRIERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ALTERA_SINGLEWORKITEMBARRIERCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -18,7 +18,7 @@ namespace clang::tidy::altera {
 /// kernels, which may be inefficient or cause an error.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/altera/single-work-item-barrier.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/altera/single-work-item-barrier.html
 class SingleWorkItemBarrierCheck : public ClangTidyCheck {
   const unsigned AOCVersion;
 
@@ -33,4 +33,4 @@ public:
 
 } // namespace clang::tidy::altera
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ALTERA_SINGLE_WORK_ITEM_BARRIER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ALTERA_SINGLEWORKITEMBARRIERCHECK_H

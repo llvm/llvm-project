@@ -1,11 +1,11 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: Valid Region for Scop: if.end.1631 => for.cond.1647.outer
 ;
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
-define void @qtm_decompress() #0 {
+define void @qtm_decompress() {
 entry:
   br label %if.end.1631
 
@@ -44,8 +44,6 @@ if.then.1742:                                     ; preds = %land.lhs.true.1736
 cleanup.1785:                                     ; preds = %if.then.1659
   ret void
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

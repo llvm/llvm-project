@@ -73,13 +73,14 @@
   !0 = !{i32 2, !"Debug Info Version", i32 3}
   !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "beards", isOptimized: true, runtimeVersion: 4, emissionKind: FullDebug)
   !2 = !DIFile(filename: "bees.cpp", directory: "")
-  !3 = distinct !DISubprogram(name: "nope", scope: !1, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !8)
-  !33 = distinct !DISubprogram(name: "alsonope", scope: !1, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !8)
+  !3 = distinct !DISubprogram(name: "nope", scope: !1, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !9)
+  !33 = distinct !DISubprogram(name: "alsonope", scope: !1, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !9)
   !4 = !DILocalVariable(name: "bees", scope: !3, type: !5)
   !5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, size: 64)
   !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
   !7 = !DILocation(line: 0, scope: !3)
   !8 = !{!4}
+  !9 = !{}
 
 
   ; CHECK: ![[METAVAR:[0-9]+]] = !DILocalVariable(name: "bees",

@@ -3,18 +3,11 @@
 ; RUN: llc --mtriple=loongarch64 --mattr=+lsx < %s | FileCheck %s --check-prefixes=CHECK,LA64
 
 define void @extract_16xi8(ptr %src, ptr %dst) nounwind {
-; LA32-LABEL: extract_16xi8:
-; LA32:       # %bb.0:
-; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; LA32-NEXT:    st.b $a0, $a1, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: extract_16xi8:
-; LA64:       # %bb.0:
-; LA64-NEXT:    vld $vr0, $a0, 0
-; LA64-NEXT:    vstelm.b $vr0, $a1, 0, 1
-; LA64-NEXT:    ret
+; CHECK-LABEL: extract_16xi8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vstelm.b $vr0, $a1, 0, 1
+; CHECK-NEXT:    ret
   %v = load volatile <16 x i8>, ptr %src
   %e = extractelement <16 x i8> %v, i32 1
   store i8 %e, ptr %dst
@@ -22,18 +15,11 @@ define void @extract_16xi8(ptr %src, ptr %dst) nounwind {
 }
 
 define void @extract_8xi16(ptr %src, ptr %dst) nounwind {
-; LA32-LABEL: extract_8xi16:
-; LA32:       # %bb.0:
-; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; LA32-NEXT:    st.h $a0, $a1, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: extract_8xi16:
-; LA64:       # %bb.0:
-; LA64-NEXT:    vld $vr0, $a0, 0
-; LA64-NEXT:    vstelm.h $vr0, $a1, 0, 1
-; LA64-NEXT:    ret
+; CHECK-LABEL: extract_8xi16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vstelm.h $vr0, $a1, 0, 1
+; CHECK-NEXT:    ret
   %v = load volatile <8 x i16>, ptr %src
   %e = extractelement <8 x i16> %v, i32 1
   store i16 %e, ptr %dst

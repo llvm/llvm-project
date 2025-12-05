@@ -14,8 +14,8 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -51,15 +51,15 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
   // translation.
 
   return llvm::StringSwitch<llvm::Triple::ArchType>(Str)
-      .Cases("i386", "i486", "i486SX", "i586", "i686", llvm::Triple::x86)
-      .Cases("pentium", "pentpro", "pentIIm3", "pentIIm5", "pentium4",
+      .Cases({"i386", "i486", "i486SX", "i586", "i686"}, llvm::Triple::x86)
+      .Cases({"pentium", "pentpro", "pentIIm3", "pentIIm5", "pentium4"},
              llvm::Triple::x86)
-      .Cases("x86_64", "x86_64h", llvm::Triple::x86_64)
+      .Cases({"x86_64", "x86_64h"}, llvm::Triple::x86_64)
       // This is derived from the driver.
-      .Cases("arm", "armv4t", "armv5", "armv6", "armv6m", llvm::Triple::arm)
-      .Cases("armv7", "armv7em", "armv7k", "armv7m", llvm::Triple::arm)
-      .Cases("armv7s", "xscale", llvm::Triple::arm)
-      .Cases("arm64", "arm64e", llvm::Triple::aarch64)
+      .Cases({"arm", "armv4t", "armv5", "armv6", "armv6m"}, llvm::Triple::arm)
+      .Cases({"armv7", "armv7em", "armv7k", "armv7m"}, llvm::Triple::arm)
+      .Cases({"armv7s", "xscale"}, llvm::Triple::arm)
+      .Cases({"arm64", "arm64e"}, llvm::Triple::aarch64)
       .Case("arm64_32", llvm::Triple::aarch64_32)
       .Case("r600", llvm::Triple::r600)
       .Case("amdgcn", llvm::Triple::amdgcn)
@@ -1035,12 +1035,12 @@ static const char *ArmMachOArchName(StringRef Arch) {
       .Case("xscale", "xscale")
       .Case("armv4t", "armv4t")
       .Case("armv7", "armv7")
-      .Cases("armv7a", "armv7-a", "armv7")
-      .Cases("armv7r", "armv7-r", "armv7")
-      .Cases("armv7em", "armv7e-m", "armv7em")
-      .Cases("armv7k", "armv7-k", "armv7k")
-      .Cases("armv7m", "armv7-m", "armv7m")
-      .Cases("armv7s", "armv7-s", "armv7s")
+      .Cases({"armv7a", "armv7-a"}, "armv7")
+      .Cases({"armv7r", "armv7-r"}, "armv7")
+      .Cases({"armv7em", "armv7e-m"}, "armv7em")
+      .Cases({"armv7k", "armv7-k"}, "armv7k")
+      .Cases({"armv7m", "armv7-m"}, "armv7m")
+      .Cases({"armv7s", "armv7-s"}, "armv7s")
       .Default(nullptr);
 }
 
@@ -1079,7 +1079,7 @@ StringRef MachO::getMachOArchName(const ArgList &Args) const {
 
   case llvm::Triple::thumb:
   case llvm::Triple::arm:
-    if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ))
+    if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
       if (const char *Arch = ArmMachOArchName(A->getValue()))
         return Arch;
 
@@ -1609,7 +1609,12 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_dynamiclib)) {
       AddLinkSanitizerLibArgs(Args, CmdArgs, "fuzzer", /*shared=*/false);
 
-        // Libfuzzer is written in C++ and requires libcxx.
+      // Libfuzzer is written in C++ and requires libcxx.
+      // Since darwin::Linker::ConstructJob already adds -lc++ for clang++
+      // by default if ShouldLinkCXXStdlib(Args), we only add the option if
+      // !ShouldLinkCXXStdlib(Args). This avoids duplicate library errors
+      // on Darwin.
+      if (!ShouldLinkCXXStdlib(Args))
         AddCXXStdlibLibArgs(Args, CmdArgs);
     }
     if (Sanitize.needsStatsRt()) {
@@ -2841,11 +2846,49 @@ void AppleMachO::AddCXXStdlibLibArgs(const ArgList &Args,
   CXXStdlibType Type = GetCXXStdlibType(Args);
 
   switch (Type) {
-  case ToolChain::CST_Libcxx:
-    CmdArgs.push_back("-lc++");
+  case ToolChain::CST_Libcxx: {
+    // On Darwin, we prioritize a libc++ located in the toolchain to a libc++
+    // located in the sysroot. Unlike the driver for most other platforms, on
+    // Darwin we do that by explicitly passing the library path to the linker
+    // to avoid having to add the toolchain's `lib/` directory to the linker
+    // search path, which would make other libraries findable as well.
+    //
+    // Prefering the toolchain library over the sysroot library matches the
+    // behavior we have for headers, where we prefer headers in the toolchain
+    // over headers in the sysroot if there are any. Note that it's important
+    // for the header search path behavior to match the link-time search path
+    // behavior to ensure that we link the program against a library that
+    // matches the headers that were used to compile it.
+    //
+    // Otherwise, we end up compiling against some set of headers and then
+    // linking against a different library (which, confusingly, shares the same
+    // name) which may have been configured with different options, be at a
+    // different version, etc.
+    SmallString<128> InstallLib = llvm::sys::path::parent_path(getDriver().Dir);
+    llvm::sys::path::append(InstallLib, "lib"); // <install>/lib
+    auto Link = [&](StringRef Library) {
+      SmallString<128> Shared(InstallLib);
+      llvm::sys::path::append(Shared,
+                              SmallString<4>("lib") + Library + ".dylib");
+      SmallString<128> Static(InstallLib);
+      llvm::sys::path::append(Static, SmallString<4>("lib") + Library + ".a");
+      SmallString<32> Relative("-l");
+      Relative += Library;
+
+      if (getVFS().exists(Shared)) {
+        CmdArgs.push_back(Args.MakeArgString(Shared));
+      } else if (getVFS().exists(Static)) {
+        CmdArgs.push_back(Args.MakeArgString(Static));
+      } else {
+        CmdArgs.push_back(Args.MakeArgString(Relative));
+      }
+    };
+
+    Link("c++");
     if (Args.hasArg(options::OPT_fexperimental_library))
-      CmdArgs.push_back("-lc++experimental");
+      Link("c++experimental");
     break;
+  }
 
   case ToolChain::CST_Libstdcxx:
     // Unfortunately, -lstdc++ doesn't always exist in the standard search path;
@@ -2988,7 +3031,7 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
   if (!BoundArch.empty()) {
     StringRef Name = BoundArch;
     const Option MCpu = Opts.getOption(options::OPT_mcpu_EQ);
-    const Option MArch = Opts.getOption(clang::driver::options::OPT_march_EQ);
+    const Option MArch = Opts.getOption(options::OPT_march_EQ);
 
     // This code must be kept in sync with LLVM's getArchTypeForDarwinArch,
     // which defines the list of which architectures we accept.

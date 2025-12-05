@@ -451,7 +451,7 @@ void X86InstPrinterCommon::printVKPair(const MCInst *MI, unsigned OpNo,
   // the assembly would look something like:
   // "vp2intersect %zmm5, %zmm7, {%k2, %k3}"
   // but this can work too.
-  switch (MI->getOperand(OpNo).getReg()) {
+  switch (MI->getOperand(OpNo).getReg().id()) {
   case X86::K0_K1:
     printRegName(OS, X86::K0);
     return;
@@ -463,25 +463,6 @@ void X86InstPrinterCommon::printVKPair(const MCInst *MI, unsigned OpNo,
     return;
   case X86::K6_K7:
     printRegName(OS, X86::K6);
-    return;
-  }
-  llvm_unreachable("Unknown mask pair register name");
-}
-
-void X86InstPrinterCommon::printTILEPair(const MCInst *MI, unsigned OpNo,
-                                         raw_ostream &OS) {
-  switch (MI->getOperand(OpNo).getReg()) {
-  case X86::TMM0_TMM1:
-    printRegName(OS, X86::TMM0);
-    return;
-  case X86::TMM2_TMM3:
-    printRegName(OS, X86::TMM2);
-    return;
-  case X86::TMM4_TMM5:
-    printRegName(OS, X86::TMM4);
-    return;
-  case X86::TMM6_TMM7:
-    printRegName(OS, X86::TMM6);
     return;
   }
   llvm_unreachable("Unknown mask pair register name");

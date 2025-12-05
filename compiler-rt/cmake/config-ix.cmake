@@ -408,12 +408,18 @@ if(APPLE)
   include(CompilerRTDarwinUtils)
 
   find_darwin_sdk_dir(DARWIN_osx_SYSROOT macosx)
-  find_darwin_sdk_dir(DARWIN_iossim_SYSROOT iphonesimulator)
-  find_darwin_sdk_dir(DARWIN_ios_SYSROOT iphoneos)
-  find_darwin_sdk_dir(DARWIN_watchossim_SYSROOT watchsimulator)
-  find_darwin_sdk_dir(DARWIN_watchos_SYSROOT watchos)
-  find_darwin_sdk_dir(DARWIN_tvossim_SYSROOT appletvsimulator)
-  find_darwin_sdk_dir(DARWIN_tvos_SYSROOT appletvos)
+  if(COMPILER_RT_ENABLE_IOS)
+    find_darwin_sdk_dir(DARWIN_iossim_SYSROOT iphonesimulator)
+    find_darwin_sdk_dir(DARWIN_ios_SYSROOT iphoneos)
+  endif()
+  if(COMPILER_RT_ENABLE_WATCHOS)
+    find_darwin_sdk_dir(DARWIN_watchossim_SYSROOT watchsimulator)
+    find_darwin_sdk_dir(DARWIN_watchos_SYSROOT watchos)
+  endif()
+  if(COMPILER_RT_ENABLE_TVOS)
+    find_darwin_sdk_dir(DARWIN_tvossim_SYSROOT appletvsimulator)
+    find_darwin_sdk_dir(DARWIN_tvos_SYSROOT appletvos)
+  endif()
 
   if(NOT DARWIN_osx_SYSROOT)
     message(WARNING "Could not determine OS X sysroot, trying /usr/include")
@@ -501,8 +507,23 @@ if(APPLE)
   set(CMAKE_OSX_DEPLOYMENT_TARGET "")
 
   set(DARWIN_COMMON_CFLAGS -stdlib=libc++)
+
+  # This is tricky: We want to link against libc++, however the libc++ for the
+  # architecture we're currently building may not have been built yet, since
+  # compiler-rt on Darwin builds for all targets at once while libc++ builds for
+  # a single target. Hence, we pass -nostdlib++ to disable the default mechanism
+  # for finding libc++, and we pass -lc++ which will end up finding libc++ in the
+  # SDK currently in use. That libc++ is the wrong libc++ to use if we're using
+  # headers from a just-built libc++, but at least it contains all the architectures
+  # we should be interested in.
+  #
+  # Fixing this properly would require removing the impedence mismatch between
+  # the compiler-rt build on Darwin (which wants to build all architectures at
+  # once) and the libc++ build, which produces a single architecture per CMake
+  # invocation.
   set(DARWIN_COMMON_LINK_FLAGS
     -stdlib=libc++
+    -nostdlib++
     -lc++
     -lc++abi)
 
@@ -850,6 +871,7 @@ else()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND TYSAN_SUPPORTED_ARCH AND
+        "tysan" IN_LIST COMPILER_RT_SANITIZERS_TO_BUILD AND
         OS_NAME MATCHES "Linux|Darwin")
   set(COMPILER_RT_HAS_TYSAN TRUE)
 else()

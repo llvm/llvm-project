@@ -32,7 +32,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -284,12 +283,13 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     reportFatalUsageError("64-bit code requested on a subtarget that doesn't "
                           "support it!");
 
-  // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD, and for all
+  // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD, Hurd and for all
   // 64-bit targets.  On Solaris (32-bit), stack alignment is 4 bytes
   // following the i386 psABI, while on Illumos it is always 16 bytes.
   if (StackAlignOverride)
     stackAlignment = *StackAlignOverride;
-  else if (isTargetDarwin() || isTargetLinux() || isTargetKFreeBSD() || Is64Bit)
+  else if (isTargetDarwin() || isTargetLinux() || isTargetKFreeBSD() ||
+           isTargetHurd() || Is64Bit)
     stackAlignment = Align(16);
 
   // Consume the vector width attribute or apply any target specific limit.

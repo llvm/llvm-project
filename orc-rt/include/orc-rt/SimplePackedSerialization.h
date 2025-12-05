@@ -172,6 +172,28 @@ public:
   }
 };
 
+class SPSSize;
+
+/// SPSSize is serializable to/from size_t. Wire size is 64-bits.
+template <> class SPSSerializationTraits<SPSSize, size_t> {
+public:
+  static size_t size(const size_t &Value) {
+    return SPSArgList<uint64_t>::size(static_cast<uint64_t>(Value));
+  }
+  static bool serialize(SPSOutputBuffer &OB, const size_t &Value) {
+    return SPSArgList<uint64_t>::serialize(OB, static_cast<uint64_t>(Value));
+  }
+  static bool deserialize(SPSInputBuffer &IB, size_t &Value) {
+    uint64_t Tmp;
+    if (!SPSArgList<uint64_t>::deserialize(IB, Tmp))
+      return false;
+    if (Tmp > std::numeric_limits<size_t>::max())
+      return false;
+    Value = Tmp;
+    return true;
+  }
+};
+
 /// Any empty placeholder suitable as a substitute for void when deserializing
 class SPSEmpty {};
 
@@ -530,6 +552,26 @@ public:
     if (!SPSArgList<uint64_t>::deserialize(IB, Value))
       return false;
     A = ExecutorAddr(Value);
+    return true;
+  }
+};
+
+/// Allow SPSExectorAddr serialization to/from T*.
+template <typename T> class SPSSerializationTraits<SPSExecutorAddr, T *> {
+public:
+  static size_t size(T *const &P) {
+    return SPSArgList<SPSExecutorAddr>::size(ExecutorAddr::fromPtr(P));
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, T *const &P) {
+    return SPSArgList<SPSExecutorAddr>::serialize(OB, ExecutorAddr::fromPtr(P));
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, T *&P) {
+    ExecutorAddr Value;
+    if (!SPSArgList<SPSExecutorAddr>::deserialize(IB, Value))
+      return false;
+    P = Value.toPtr<T *>();
     return true;
   }
 };

@@ -160,9 +160,6 @@ static cl::opt<bool> EnablePhiOfOps("enable-phi-of-ops", cl::init(true),
 //===----------------------------------------------------------------------===//
 
 // Anchor methods.
-namespace llvm {
-namespace GVNExpression {
-
 Expression::~Expression() = default;
 BasicExpression::~BasicExpression() = default;
 CallExpression::~CallExpression() = default;
@@ -170,9 +167,6 @@ LoadExpression::~LoadExpression() = default;
 StoreExpression::~StoreExpression() = default;
 AggregateValueExpression::~AggregateValueExpression() = default;
 PHIExpression::~PHIExpression() = default;
-
-} // end namespace GVNExpression
-} // end namespace llvm
 
 namespace {
 
@@ -434,10 +428,6 @@ private:
   int StoreCount = 0;
 };
 
-} // end anonymous namespace
-
-namespace llvm {
-
 struct ExactEqualsExpression {
   const Expression &E;
 
@@ -449,8 +439,9 @@ struct ExactEqualsExpression {
     return E.exactlyEquals(Other);
   }
 };
+} // end anonymous namespace
 
-template <> struct DenseMapInfo<const Expression *> {
+template <> struct llvm::DenseMapInfo<const Expression *> {
   static const Expression *getEmptyKey() {
     auto Val = static_cast<uintptr_t>(-1);
     Val <<= PointerLikeTypeTraits<const Expression *>::NumLowBitsAvailable;
@@ -492,8 +483,6 @@ template <> struct DenseMapInfo<const Expression *> {
     return *LHS == *RHS;
   }
 };
-
-} // end namespace llvm
 
 namespace {
 
@@ -1646,10 +1635,6 @@ NewGVN::performSymbolicPredicateInfoEvaluation(BitCastInst *I) const {
 // Evaluate read only and pure calls, and create an expression result.
 NewGVN::ExprResult NewGVN::performSymbolicCallEvaluation(Instruction *I) const {
   auto *CI = cast<CallInst>(I);
-  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    if (auto *ReturnedValue = II->getReturnedArgOperand())
-      return ExprResult::some(createVariableOrConstant(ReturnedValue));
-  }
 
   // FIXME: Currently the calls which may access the thread id may
   // be considered as not accessing the memory. But this is
@@ -2070,6 +2055,7 @@ NewGVN::performSymbolicEvaluation(Instruction *I,
   case Instruction::FPTrunc:
   case Instruction::FPExt:
   case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
   case Instruction::IntToPtr:
   case Instruction::Select:
   case Instruction::ExtractElement:

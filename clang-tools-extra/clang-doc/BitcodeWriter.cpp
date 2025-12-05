@@ -303,8 +303,6 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
 
 // AbbreviationMap
 
-constexpr unsigned char BitCodeConstants::Signature[];
-
 void ClangDocBitcodeWriter::AbbreviationMap::add(RecordId RID,
                                                  unsigned AbbrevID) {
   assert(RecordIdNameMap[RID] && "Unknown RecordId.");
@@ -771,7 +769,9 @@ bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
     emitBlock(*static_cast<FriendInfo *>(I));
     break;
   case InfoType::IT_default:
-    llvm::errs() << "Unexpected info, unable to write.\n";
+    unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                        "Unexpected info, unable to write.");
+    Diags.Report(ID);
     return true;
   }
   return false;

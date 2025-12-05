@@ -13,7 +13,9 @@
 define void @main() {
 entry:
   %0 = alloca <2 x i32>, align 4
+  store <2 x i32> zeroinitializer, ptr %0, align 4
   %1 = getelementptr <2 x i32>, ptr %0, i32 0, i32 0
   %2 = alloca float, align 4
+  store float 0.0, ptr %2, align 4
   ret void
 }

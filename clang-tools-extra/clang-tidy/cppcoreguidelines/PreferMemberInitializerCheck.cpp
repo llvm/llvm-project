@@ -164,12 +164,12 @@ void PreferMemberInitializerCheck::check(
   llvm::DenseMap<const FieldDecl *, AssignedLevel> AssignedFields{};
 
   for (const CXXCtorInitializer *Init : Ctor->inits())
-    if (FieldDecl *Field = Init->getMember())
+    if (const FieldDecl *Field = Init->getMember())
       updateAssignmentLevel(Field, Init->getInit(), Ctor, AssignedFields);
 
   for (const Stmt *S : Body->body()) {
     if (S->getBeginLoc().isMacroID()) {
-      StringRef MacroName = Lexer::getImmediateMacroName(
+      const StringRef MacroName = Lexer::getImmediateMacroName(
           S->getBeginLoc(), *Result.SourceManager, getLangOpts());
       if (MacroName.contains_insensitive("assert"))
         return;
@@ -206,7 +206,7 @@ void PreferMemberInitializerCheck::check(
     bool AddComma = false;
     bool AddBrace = false;
     bool InvalidFix = false;
-    unsigned Index = Field->getFieldIndex();
+    const unsigned Index = Field->getFieldIndex();
     const CXXCtorInitializer *LastInListInit = nullptr;
     for (const CXXCtorInitializer *Init : Ctor->inits()) {
       if (!Init->isWritten() || Init->isInClassMemberInitializer())
@@ -276,7 +276,7 @@ void PreferMemberInitializerCheck::check(
                 << Field;
     if (InvalidFix)
       continue;
-    StringRef NewInit = Lexer::getSourceText(
+    const StringRef NewInit = Lexer::getSourceText(
         Result.SourceManager->getExpansionRange(InitValue->getSourceRange()),
         *Result.SourceManager, getLangOpts());
     if (HasInitAlready) {
@@ -288,8 +288,8 @@ void PreferMemberInitializerCheck::check(
       else
         Diag << FixItHint::CreateReplacement(ReplaceRange, NewInit);
     } else {
-      SmallString<128> Insertion({InsertPrefix, Field->getName(), "(", NewInit,
-                                  AddComma ? "), " : ")"});
+      const SmallString<128> Insertion({InsertPrefix, Field->getName(), "(",
+                                        NewInit, AddComma ? "), " : ")"});
       Diag << FixItHint::CreateInsertion(InsertPos, Insertion,
                                          FirstToCtorInits);
       FirstToCtorInits = areDiagsSelfContained();

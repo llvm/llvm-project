@@ -72,10 +72,22 @@ enum SpecialFrameAddr {
 
 using RangesTy = std::vector<std::pair<uint64_t, uint64_t>>;
 
+enum DwarfNameStatus {
+  // Dwarf name matches with the symbol table (or symbol table just doesn't have
+  // this entry)
+  Matched = 0,
+  // Dwarf name is missing, but we fixed it with the name from symbol table
+  Missing = 1,
+  // Symbol table has different names on this. Log these GUIDs in
+  // AlternativeFunctionGUIDs
+  Mismatch = 2,
+};
+
 struct BinaryFunction {
   StringRef FuncName;
   // End of range is an exclusive bound.
   RangesTy Ranges;
+  DwarfNameStatus NameStatus = DwarfNameStatus::Matched;
 
   uint64_t getFuncSize() {
     uint64_t Sum = 0;
@@ -228,19 +240,27 @@ class ProfiledBinary {
   // A list of binary functions that have samples.
   std::unordered_set<const BinaryFunction *> ProfiledFunctions;
 
-  // GUID to Elf symbol start address map
+  // GUID to symbol start address map
   DenseMap<uint64_t, uint64_t> SymbolStartAddrs;
+
+  // Binary function to GUID mapping that stores the alternative names in symbol
+  // table, despite the original name from DWARF info
+  std::unordered_multimap<const BinaryFunction *, uint64_t>
+      AlternativeFunctionGUIDs;
+
+  // Mapping of profiled binary function to its pseudo probe name
+  std::unordered_map<const BinaryFunction *, StringRef> PseudoProbeNames;
 
   // These maps are for temporary use of warning diagnosis.
   DenseSet<int64_t> AddrsWithMultipleSymbols;
   DenseSet<std::pair<uint64_t, uint64_t>> AddrsWithInvalidInstruction;
 
-  // Start address to Elf symbol GUID map
+  // Start address to symbol GUID map
   std::unordered_multimap<uint64_t, uint64_t> StartAddrToSymMap;
 
   // An ordered map of mapping function's start address to function range
-  // relevant info. Currently to determine if the offset of ELF is the start of
-  // a real function, we leverage the function range info from DWARF.
+  // relevant info. Currently to determine if the offset of ELF/COFF is the
+  // start of a real function, we leverage the function range info from DWARF.
   std::map<uint64_t, FuncRange> StartAddrToFuncRangeMap;
 
   // Address to context location map. Used to expand the context.
@@ -335,9 +355,9 @@ class ProfiledBinary {
   void setPreferredTextSegmentAddresses(const object::COFFObjectFile *Obj,
                                         StringRef FileName);
 
-  void checkPseudoProbe(const object::ELFObjectFileBase *Obj);
+  void checkPseudoProbe(const object::ObjectFile *Obj);
 
-  void decodePseudoProbe(const object::ELFObjectFileBase *Obj);
+  void decodePseudoProbe(const object::ObjectFile *Obj);
 
   void checkUseFSDiscriminator(
       const object::ObjectFile *Obj,
@@ -353,8 +373,11 @@ class ProfiledBinary {
   // Load debug info from DWARF unit.
   void loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit);
 
-  // Create elf symbol to its start address mapping.
-  void populateElfSymbolAddressList(const object::ELFObjectFileBase *O);
+  // Create symbol to its start address mapping.
+  void populateSymbolAddressList(const object::ObjectFile *O);
+
+  // Load functions from its symbol table (when DWARF info is missing).
+  void loadSymbolsFromSymtab(const object::ObjectFile *O);
 
   // A function may be spilt into multiple non-continuous address ranges. We use
   // this to set whether start a function range is the real entry of the
@@ -598,6 +621,10 @@ public:
                                          uint64_t EndAddress);
 
   void computeInlinedContextSizeForFunc(const BinaryFunction *Func);
+
+  void loadSymbolsFromPseudoProbe();
+
+  StringRef findPseudoProbeName(const BinaryFunction *Func);
 
   const MCDecodedPseudoProbe *getCallProbeForAddr(uint64_t Address) const {
     return ProbeDecoder.getCallProbeForAddr(Address);

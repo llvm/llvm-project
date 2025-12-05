@@ -130,10 +130,8 @@ StaticDataSplitter::getConstant(const MachineOperand &Op,
   if (Op.isGlobal()) {
     // Find global variables with local linkage.
     const GlobalVariable *GV = getLocalLinkageGlobalVariable(Op.getGlobal());
-    // Skip 'llvm.'-prefixed global variables conservatively because they are
-    // often handled specially, and skip those not in static data
-    // sections.
-    if (!GV || GV->getName().starts_with("llvm.") ||
+    // Skip those not eligible for annotation or not in static data sections.
+    if (!GV || !llvm::memprof::IsAnnotationOK(*GV) ||
         !inStaticDataSection(*GV, TM))
       return nullptr;
     return GV;
