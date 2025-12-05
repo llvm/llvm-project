@@ -43,6 +43,4 @@ add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces PLUGIN
     ${LLDB_LIBEDIT_LIBS}
   )
 
-message("PYTHON3 LIBRARIES: ${Python3_LIBRARIES} LIBEDIT LIBS: ${LLDB_LIBEDIT_LIBS}")
-
 
