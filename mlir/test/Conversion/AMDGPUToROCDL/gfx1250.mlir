@@ -239,7 +239,7 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>
 
 // CHECK-LABEL: func @make_dma_descriptor
 // CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
-func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_descriptor {
+func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_descriptor<2> {
   // CHECK-DAG: %[[DGROUP0:.+]] = builtin.unrealized_conversion_cast %[[BASE]]
 
   // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32)
@@ -304,9 +304,9 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
   // CHECK: %[[DGROUP1_6:.+]] = llvm.insertelement %[[SGPR6]], %[[DGROUP1_5]][%[[C6]] : i32]
   // CHECK: %[[DGROUP1:.+]] = llvm.insertelement %[[SGPR7]], %[[DGROUP1_6]][%[[C7]] : i32]
 
-  // CHECK: %[[DGROUPS:.+]] = builtin.unrealized_conversion_cast %[[DGROUP0]], %[[DGROUP1]] : vector<4xi32>, vector<8xi32> to !amdgpu.tdm_descriptor
-  %descriptor = amdgpu.make_dma_descriptor %base globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
-  func.return %descriptor : !amdgpu.tdm_descriptor
+  // CHECK: %[[DGROUPS:.+]] = builtin.unrealized_conversion_cast %[[DGROUP0]], %[[DGROUP1]] : vector<4xi32>, vector<8xi32> to !amdgpu.tdm_descriptor<2>
+  %descriptor = amdgpu.make_dma_descriptor %base globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor<2>
+  func.return %descriptor : !amdgpu.tdm_descriptor<2>
 }
 
 // -----
@@ -317,7 +317,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
 
 // CHECK-LABEL: func @make_dma_descriptor_atomic_barrier
 // CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[BARRIER:.+]]: {{.*}}, %[[IDX:.+]]: index)
-func.func @make_dma_descriptor_atomic_barrier(%base: !amdgpu.tdm_base<i32>, %barrier : memref<8xi32, #gpu_lds_addrspace>, %idx: index) -> !amdgpu.tdm_descriptor {
+func.func @make_dma_descriptor_atomic_barrier(%base: !amdgpu.tdm_base<i32>, %barrier : memref<8xi32, #gpu_lds_addrspace>, %idx: index) -> !amdgpu.tdm_descriptor<2> {
   // CHECK-DAG: %[[INDEX:.+]] = builtin.unrealized_conversion_cast %[[IDX]] : index to i64
   // CHECK-DAG: %[[BARRIER_MEMREF_DESC:.+]] = builtin.unrealized_conversion_cast %[[BARRIER]]
   // CHECK-DAG: %[[DGROUP0:.+]] = builtin.unrealized_conversion_cast %[[BASE]]
@@ -361,8 +361,8 @@ func.func @make_dma_descriptor_atomic_barrier(%base: !amdgpu.tdm_base<i32>, %bar
                 globalStride [64, 1]
                 sharedSize [128, 64]
                 atomicBarrier(%barrier[%idx] : memref<8xi32, #gpu_lds_addrspace>)
-                : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
-  func.return %descriptor : !amdgpu.tdm_descriptor
+                : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor<2>
+  func.return %descriptor : !amdgpu.tdm_descriptor<2>
 }
 
 // -----

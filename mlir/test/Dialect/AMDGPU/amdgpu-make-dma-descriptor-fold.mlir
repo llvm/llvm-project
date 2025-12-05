@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: @make_dma_descriptor_fold
 // CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[IDX:.+]]: index)
-func.func @make_dma_descriptor_fold(%base: !amdgpu.tdm_base<i32>, %idx: index) -> !amdgpu.tdm_descriptor {
+func.func @make_dma_descriptor_fold(%base: !amdgpu.tdm_base<i32>, %idx: index) -> !amdgpu.tdm_descriptor<2> {
   %c64 = arith.constant 64 : index
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
@@ -14,6 +14,6 @@ func.func @make_dma_descriptor_fold(%base: !amdgpu.tdm_base<i32>, %idx: index) -
         // CHECK-SAME: sharedSize [64, 64]
         sharedSize [%c64, %c64]
         iterate %idx, %idx, %idx
-        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
-  func.return %0 : !amdgpu.tdm_descriptor
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor<2>
+  func.return %0 : !amdgpu.tdm_descriptor<2>
 }
