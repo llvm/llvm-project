@@ -890,10 +890,8 @@ multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
                                   ValueType vt, string frag> {
   def : DSAtomicRetPat<inst, vt,
                         !cast<PatFrag>(frag#"_local_addrspace")>;
-
-  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
-    def : DSAtomicRetPat<noRetInst, vt,
-                          !cast<PatFrag>(frag#"_noret_local_addrspace"), /* complexity */ 1>;
+  def : DSAtomicRetPat<noRetInst, vt,
+                        !cast<PatFrag>(frag#"_noret_local_addrspace"), /* complexity */ 1>;
 }
 
 defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_atomic_cond_sub_u32">;
@@ -1278,6 +1276,14 @@ let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
 defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
 defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_BF16, DS_PK_ADD_BF16, v2bf16, "atomic_load_fadd">;
 }
+
+let SubtargetPredicate = HasAtomicDsCondSubClampInsts in {
+
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "atomic_load_usub_cond">;
+
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_SUB_CLAMP_RTN_U32, DS_SUB_CLAMP_U32, i32, "atomic_load_usub_sat">;
+
+} // let SubtargetPredicate = HasAtomicDsCondSubClampInsts
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 defm : DSAtomicCmpXChgSwapped_mc<DS_CMPST_RTN_B32, DS_CMPST_B32, i32, "atomic_cmp_swap">;
