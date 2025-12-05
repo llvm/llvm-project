@@ -1597,6 +1597,147 @@
 /** @} */
 
 /**
+ * @defgroup DSMIL_TELEMETRY_ANNOTATIONS Generic Telemetry Annotations (v1.9)
+ * @{
+ */
+
+/**
+ * @brief Mark function for network I/O telemetry
+ *
+ * Functions annotated with DSMIL_NET_IO are instrumented with telemetry
+ * for network operations (connect, send, recv, etc.).
+ *
+ * Example:
+ * @code
+ * DSMIL_NET_IO
+ * int connect_to_server(const char *host, int port) {
+ *     // Automatically instrumented with network I/O telemetry
+ *     return socket_connect(host, port);
+ * }
+ * @endcode
+ *
+ * @note Maps to DSMIL_TELEMETRY_NET_IO event type
+ * @note Category: "net"
+ */
+#define DSMIL_NET_IO \
+    __attribute__((annotate("dsmil.net_io")))
+
+/**
+ * @brief Mark function for cryptographic operation telemetry
+ *
+ * Functions annotated with DSMIL_CRYPTO are instrumented with telemetry
+ * for cryptographic operations (encrypt, decrypt, sign, verify, etc.).
+ *
+ * Example:
+ * @code
+ * DSMIL_CRYPTO
+ * int aes_encrypt(const uint8_t *key, const uint8_t *plaintext, uint8_t *ciphertext) {
+ *     // Automatically instrumented with crypto telemetry
+ *     return do_aes_encrypt(key, plaintext, ciphertext);
+ * }
+ * @endcode
+ *
+ * @note Maps to DSMIL_TELEMETRY_CRYPTO event type
+ * @note Category: "crypto"
+ */
+#define DSMIL_CRYPTO \
+    __attribute__((annotate("dsmil.crypto")))
+
+/**
+ * @brief Mark function for process/system operation telemetry
+ *
+ * Functions annotated with DSMIL_PROCESS are instrumented with telemetry
+ * for process/system operations (fork, exec, kill, etc.).
+ *
+ * Example:
+ * @code
+ * DSMIL_PROCESS
+ * int spawn_child_process(const char *cmd) {
+ *     // Automatically instrumented with process telemetry
+ *     return fork_and_exec(cmd);
+ * }
+ * @endcode
+ *
+ * @note Maps to DSMIL_TELEMETRY_PROCESS event type
+ * @note Category: "process"
+ */
+#define DSMIL_PROCESS \
+    __attribute__((annotate("dsmil.process")))
+
+/**
+ * @brief Mark function for file I/O telemetry
+ *
+ * Functions annotated with DSMIL_FILE are instrumented with telemetry
+ * for file operations (open, read, write, close, etc.).
+ *
+ * Example:
+ * @code
+ * DSMIL_FILE
+ * FILE* open_config_file(const char *filename) {
+ *     // Automatically instrumented with file I/O telemetry
+ *     return fopen(filename, "r");
+ * }
+ * @endcode
+ *
+ * @note Maps to DSMIL_TELEMETRY_FILE event type
+ * @note Category: "file"
+ */
+#define DSMIL_FILE \
+    __attribute__((annotate("dsmil.file")))
+
+/**
+ * @brief Mark function handling untrusted data
+ *
+ * Functions annotated with DSMIL_UNTRUSTED are instrumented with telemetry
+ * for operations on untrusted data (network input, user input, etc.).
+ *
+ * Example:
+ * @code
+ * DSMIL_UNTRUSTED
+ * void process_user_input(const char *input) {
+ *     // Automatically instrumented with untrusted data telemetry
+ *     validate_and_process(input);
+ * }
+ * @endcode
+ *
+ * @note Maps to DSMIL_TELEMETRY_UNTRUSTED event type
+ * @note Category: "untrusted"
+ * @note Related to DSMIL_UNTRUSTED_INPUT attribute
+ */
+#define DSMIL_UNTRUSTED \
+    __attribute__((annotate("dsmil.untrusted")))
+
+/**
+ * @brief Mark function as error handler
+ *
+ * Functions annotated with DSMIL_ERROR_HANDLER are instrumented with telemetry
+ * for error handling operations. If function name suggests panic (e.g., panic,
+ * fatal), emits PANIC events instead of ERROR events.
+ *
+ * Example:
+ * @code
+ * DSMIL_ERROR_HANDLER
+ * void handle_error(int err_code, const char *msg) {
+ *     // Automatically instrumented with error telemetry
+ *     log_error(err_code, msg);
+ * }
+ *
+ * DSMIL_ERROR_HANDLER
+ * void panic(const char *msg) {
+ *     // Automatically emits PANIC events (name suggests panic)
+ *     abort();
+ * }
+ * @endcode
+ *
+ * @note Maps to DSMIL_TELEMETRY_ERROR or DSMIL_TELEMETRY_PANIC event type
+ * @note Category: "error"
+ */
+#define DSMIL_ERROR_HANDLER \
+    __attribute__((annotate("dsmil.error_handler")))
+
+/** @} */
+
+/**
  * @defgroup DSMIL_MEMORY Memory and Performance Attributes
  * @{
  */

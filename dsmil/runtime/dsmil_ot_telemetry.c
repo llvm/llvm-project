@@ -28,6 +28,73 @@ typedef struct {
 static ring_buffer_entry_t ring_buffer[RING_BUFFER_SIZE];
 static _Atomic size_t ring_buffer_head = 0;
 static _Atomic int telemetry_enabled = -1;  // -1 = uninitialized, 0 = disabled, 1 = enabled
+static _Atomic dsmil_telemetry_level_t telemetry_level = DSMIL_TELEMETRY_LEVEL_NORMAL;
+static _Atomic int telemetry_level_initialized = 0;
+
+/**
+ * Parse telemetry level from string
+ */
+static dsmil_telemetry_level_t parse_telemetry_level(const char *str) {
+    if (!str) return DSMIL_TELEMETRY_LEVEL_NORMAL;
+    
+    if (strcmp(str, "off") == 0) return DSMIL_TELEMETRY_LEVEL_OFF;
+    if (strcmp(str, "min") == 0) return DSMIL_TELEMETRY_LEVEL_MIN;
+    if (strcmp(str, "normal") == 0) return DSMIL_TELEMETRY_LEVEL_NORMAL;
+    if (strcmp(str, "debug") == 0) return DSMIL_TELEMETRY_LEVEL_DEBUG;
+    if (strcmp(str, "trace") == 0) return DSMIL_TELEMETRY_LEVEL_TRACE;
+    
+    return DSMIL_TELEMETRY_LEVEL_NORMAL;  // Default
+}
+
+/**
+ * Get compile-time telemetry level (from weak symbol or module flag)
+ */
+static dsmil_telemetry_level_t get_compile_time_level(void) {
+    // Try to read from weak symbol emitted by pass
+    // For now, default to normal
+    extern dsmil_telemetry_level_t __start_dsmil_config __attribute__((weak));
+    if (&__start_dsmil_config != NULL) {
+        // In a full implementation, would read from __start_dsmil_config
+        // For now, check environment variable as fallback
+    }
+    return DSMIL_TELEMETRY_LEVEL_NORMAL;
+}
+
+/**
+ * Initialize telemetry level (combines compile-time and runtime)
+ */
+static void init_telemetry_level(void) {
+    if (atomic_load(&telemetry_level_initialized)) {
+        return;
+    }
+    
+    dsmil_telemetry_level_t compile_level = get_compile_time_level();
+    dsmil_telemetry_level_t runtime_level = DSMIL_TELEMETRY_LEVEL_NORMAL;
+    
+    // Check runtime override
+    const char *env_level = getenv("DSMIL_TELEMETRY_LEVEL");
+    if (env_level) {
+        runtime_level = parse_telemetry_level(env_level);
+    }
+    
+    // Enforce lattice: take maximum (more verbose)
+    dsmil_telemetry_level_t final_level = compile_level > runtime_level ? compile_level : runtime_level;
+    
+    // Mission profile overrides (check DSMIL_MISSION_PROFILE)
+    const char *mission_profile = getenv("DSMIL_MISSION_PROFILE");
+    if (mission_profile) {
+        // Production profiles force minimum levels unless CLI demanded stricter
+        if (strcmp(mission_profile, "ics_prod") == 0 || 
+            strcmp(mission_profile, "border_ops") == 0) {
+            if (final_level < DSMIL_TELEMETRY_LEVEL_MIN) {
+                final_level = DSMIL_TELEMETRY_LEVEL_MIN;
+            }
+        }
+    }
+    
+    atomic_store(&telemetry_level, final_level);
+    atomic_store(&telemetry_level_initialized, 1);
+}
 
 /**
  * Check if telemetry is enabled (lazy initialization)
@@ -98,6 +165,32 @@ static size_t format_event_json(const dsmil_telemetry_event_t *ev, char *buf, si
             ev->signal_name, ev->signal_value, ev->signal_min, ev->signal_max);
     }
 
+    // Add generic annotation fields if present (backward compatible)
+    if (ev->category) {
+        written += snprintf(buf + written, buf_size - written,
+            ",\"category\":\"%s\"", ev->category);
+    }
+    if (ev->op) {
+        written += snprintf(buf + written, buf_size - written,
+            ",\"op\":\"%s\"", ev->op);
+    }
+    if (ev->status_code != 0) {
+        written += snprintf(buf + written, buf_size - written,
+            ",\"status_code\":%d", ev->status_code);
+    }
+    if (ev->resource) {
+        written += snprintf(buf + written, buf_size - written,
+            ",\"resource\":\"%s\"", ev->resource);
+    }
+    if (ev->error_msg) {
+        written += snprintf(buf + written, buf_size - written,
+            ",\"error_msg\":\"%s\"", ev->error_msg);
+    }
+    if (ev->elapsed_ns > 0) {
+        written += snprintf(buf + written, buf_size - written,
+            ",\"elapsed_ns\":%llu", (unsigned long long)ev->elapsed_ns);
+    }
+
     written += snprintf(buf + written, buf_size - written, "}\n");
     return (size_t)written;
 }
@@ -156,6 +249,14 @@ void dsmil_telemetry_event(const dsmil_telemetry_event_t *ev) {
         return;
     }
 
+    // Initialize telemetry level if needed
+    init_telemetry_level();
+
+    // Check level gating
+    if (!dsmil_telemetry_level_allows(ev->event_type, ev->category)) {
+        return;  // Filtered by level
+    }
+
     // Simple implementation: write directly to stderr
     // In production, could use ring buffer + background thread
     log_to_stderr(ev);
@@ -190,4 +291,42 @@ void dsmil_ot_telemetry_shutdown(void) {
 
 int dsmil_ot_telemetry_is_enabled(void) {
     return check_telemetry_enabled();
+}
+
+dsmil_telemetry_level_t dsmil_telemetry_get_level(void) {
+    init_telemetry_level();
+    return atomic_load(&telemetry_level);
+}
+
+int dsmil_telemetry_level_allows(dsmil_telemetry_event_type_t event_type,
+                                  const char *category) {
+    dsmil_telemetry_level_t level = dsmil_telemetry_get_level();
+    
+    // Off level: no telemetry
+    if (level == DSMIL_TELEMETRY_LEVEL_OFF) {
+        return 0;
+    }
+    
+    // Min level: only safety-critical (OT events, errors, panics)
+    if (level == DSMIL_TELEMETRY_LEVEL_MIN) {
+        return (event_type <= DSMIL_TELEMETRY_INVARIANT_FAIL) ||
+               (event_type == DSMIL_TELEMETRY_ERROR) ||
+               (event_type == DSMIL_TELEMETRY_PANIC);
+    }
+    
+    // Normal level: entry probes for annotated functions
+    // (all OT events, generic annotation events 30-36)
+    if (level == DSMIL_TELEMETRY_LEVEL_NORMAL) {
+        return event_type >= DSMIL_TELEMETRY_OT_PATH_ENTRY &&
+               event_type <= DSMIL_TELEMETRY_PANIC;
+    }
+    
+    // Debug level: entry + exit + timing
+    // (all events, but exit events only at debug+)
+    if (level == DSMIL_TELEMETRY_LEVEL_DEBUG) {
+        return 1;  // All events allowed
+    }
+    
+    // Trace level: everything including sampling
+    return 1;  // All events allowed
 }

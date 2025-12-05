@@ -3029,6 +3029,12 @@ def finstrument_function_entry_bare : Flag<["-"], "finstrument-function-entry-ba
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Instrument function entry only, after inlining, without arguments to the instrumentation call">,
   MarshallingInfoFlag<CodeGenOpts<"InstrumentFunctionEntryBare">>;
+def fdsmil_telemetry_level_EQ : Joined<["-"], "fdsmil-telemetry-level=">,
+  Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Set DSMIL telemetry instrumentation level: off, min, normal, debug, trace">,
+  Values<"off,min,normal,debug,trace">,
+  MarshallingInfoString<CodeGenOpts<"DSMILTelemetryLevel">, "normal">;
 def fcf_protection_EQ : Joined<["-"], "fcf-protection=">,
   Visibility<[ClangOption, CLOption, CC1Option]>, Group<f_Group>,
   HelpText<"Instrument control-flow architecture protection">, Values<"return,branch,full,none">;

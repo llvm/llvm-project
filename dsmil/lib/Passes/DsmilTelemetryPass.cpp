@@ -21,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -54,7 +55,23 @@ static cl::opt<std::string> MissionProfile(
     cl::desc("Mission profile name"),
     cl::init(""));
 
+static cl::opt<std::string> TelemetryLevel(
+    "dsmil-telemetry-level",
+    cl::desc("Telemetry instrumentation level: off, min, normal, debug, trace"),
+    cl::init("normal"));
+
 namespace {
+
+/**
+ * Telemetry level enum
+ */
+enum TelemetryLevel {
+    LEVEL_OFF = 0,
+    LEVEL_MIN = 1,
+    LEVEL_NORMAL = 2,
+    LEVEL_DEBUG = 3,
+    LEVEL_TRACE = 4
+};
 
 /**
  * Function metadata extracted from annotations
@@ -63,12 +80,20 @@ struct FunctionMetadata {
     std::string name;
     bool ot_critical = false;
     bool ses_gate = false;
+    bool net_io = false;
+    bool crypto = false;
+    bool process = false;
+    bool file = false;
+    bool untrusted = false;
+    bool error_handler = false;
     uint8_t authority_tier = 3;  // Default: analytics/advisory
     uint8_t layer = 0;
     uint8_t device = 0;
     std::string stage;
     std::string file;
     uint32_t line = 0;
+    std::string category;  // Derived from annotation
+    std::string op;        // Operation name (heuristic or annotation)
 };
 
 /**
@@ -89,6 +114,7 @@ class DsmilTelemetryPass : public PassInfoMixin<DsmilTelemetryPass> {
 private:
     Module *M;
     std::string MissionProfileName;
+    TelemetryLevel CurrentLevel = LEVEL_NORMAL;
     std::map<Function*, FunctionMetadata> FunctionMetadataMap;
     std::map<GlobalVariable*, SafetySignalMetadata> SafetySignals;
     std::vector<FunctionMetadata> ManifestFunctions;
@@ -243,10 +269,100 @@ private:
     }
 
     /**
+     * Parse telemetry level from string
+     */
+    TelemetryLevel parseTelemetryLevel(const std::string &level) {
+        if (level == "off") return LEVEL_OFF;
+        if (level == "min") return LEVEL_MIN;
+        if (level == "normal") return LEVEL_NORMAL;
+        if (level == "debug") return LEVEL_DEBUG;
+        if (level == "trace") return LEVEL_TRACE;
+        return LEVEL_NORMAL;  // Default
+    }
+
+    /**
+     * Get telemetry level from module flag or command-line
+     */
+    TelemetryLevel getTelemetryLevel(Module &Mod) {
+        // Check module flag first
+        if (MDNode *MD = Mod.getModuleFlag("dsmil.telemetry.level")) {
+            if (MDString *Str = dyn_cast<MDString>(MD->getOperand(0))) {
+                return parseTelemetryLevel(Str->getString().str());
+            }
+        }
+        
+        // Fall back to command-line option
+        if (!TelemetryLevel.empty()) {
+            return parseTelemetryLevel(TelemetryLevel);
+        }
+        
+        return LEVEL_NORMAL;  // Default
+    }
+
+    /**
+     * Detect operation name from function name (heuristic)
+     */
+    std::string detectOperationName(const std::string &funcName) {
+        // Common patterns
+        if (funcName.find("connect") != std::string::npos) return "connect";
+        if (funcName.find("send") != std::string::npos) return "send";
+        if (funcName.find("recv") != std::string::npos) return "recv";
+        if (funcName.find("open") != std::string::npos) return "open";
+        if (funcName.find("read") != std::string::npos) return "read";
+        if (funcName.find("write") != std::string::npos) return "write";
+        if (funcName.find("encrypt") != std::string::npos) return "encrypt";
+        if (funcName.find("decrypt") != std::string::npos) return "decrypt";
+        if (funcName.find("sign") != std::string::npos) return "sign";
+        if (funcName.find("verify") != std::string::npos) return "verify";
+        return "";
+    }
+
+    /**
+     * Detect well-known libc symbols and map to categories
+     */
+    void detectLibcSymbols(Function &F, FunctionMetadata &MD) {
+        std::string name = F.getName().str();
+        
+        // Network I/O
+        if (name == "connect" || name == "send" || name == "recv" ||
+            name == "sendto" || name == "recvfrom" || name == "socket") {
+            MD.net_io = true;
+            MD.category = "net";
+            MD.op = name;
+        }
+        
+        // File I/O
+        if (name == "fopen" || name == "open" || name == "read" ||
+            name == "write" || name == "fread" || name == "fwrite" ||
+            name == "close" || name == "fclose") {
+            MD.file = true;
+            MD.category = "file";
+            MD.op = name;
+        }
+        
+        // Process operations
+        if (name == "fork" || name == "exec" || name == "execve" ||
+            name == "kill" || name == "wait" || name == "waitpid") {
+            MD.process = true;
+            MD.category = "process";
+            MD.op = name;
+        }
+    }
+
+    /**
      * Collect function metadata
      */
     void collectFunctionMetadata(Function &F) {
-        if (F.isDeclaration()) return;
+        if (F.isDeclaration()) {
+            // Still check for libc symbols
+            FunctionMetadata MD;
+            MD.name = F.getName().str();
+            detectLibcSymbols(F, MD);
+            if (MD.net_io || MD.file || MD.process) {
+                FunctionMetadataMap[&F] = MD;
+            }
+            return;
+        }
 
         FunctionMetadata MD;
         MD.name = F.getName().str();
@@ -254,6 +370,47 @@ private:
         // Check for OT annotations
         MD.ot_critical = hasAnnotation(F, "dsmil.ot_critical");
         MD.ses_gate = hasAnnotation(F, "dsmil.ses_gate");
+
+        // Check for generic annotations
+        MD.net_io = hasAnnotation(F, "dsmil.net_io");
+        MD.crypto = hasAnnotation(F, "dsmil.crypto");
+        MD.process = hasAnnotation(F, "dsmil.process");
+        MD.file = hasAnnotation(F, "dsmil.file");
+        MD.untrusted = hasAnnotation(F, "dsmil.untrusted");
+        MD.error_handler = hasAnnotation(F, "dsmil.error_handler");
+
+        // Determine category and operation
+        if (MD.net_io) {
+            MD.category = "net";
+            MD.op = detectOperationName(MD.name);
+        } else if (MD.crypto) {
+            MD.category = "crypto";
+            MD.op = detectOperationName(MD.name);
+        } else if (MD.process) {
+            MD.category = "process";
+            MD.op = detectOperationName(MD.name);
+        } else if (MD.file) {
+            MD.category = "file";
+            MD.op = detectOperationName(MD.name);
+        } else if (MD.untrusted) {
+            MD.category = "untrusted";
+        } else if (MD.error_handler) {
+            MD.category = "error";
+            // Check if function name suggests panic
+            if (MD.name.find("panic") != std::string::npos ||
+                MD.name.find("fatal") != std::string::npos ||
+                MD.name.find("abort") != std::string::npos) {
+                MD.op = "panic";
+            } else {
+                MD.op = "error";
+            }
+        }
+
+        // If no annotation found, try libc symbol detection
+        if (!MD.net_io && !MD.crypto && !MD.process && !MD.file &&
+            !MD.untrusted && !MD.error_handler && !MD.ot_critical) {
+            detectLibcSymbols(F, MD);
+        }
 
         // Extract authority tier
         std::string tier_str = extractAnnotationParam(F, "dsmil.ot_tier");
@@ -273,7 +430,9 @@ private:
         MD.stage = extractStage(F);
         getDebugLocation(F, MD.file, MD.line);
 
-        if (MD.ot_critical || MD.ses_gate) {
+        // Add to map if has any annotation
+        if (MD.ot_critical || MD.ses_gate || MD.net_io || MD.crypto ||
+            MD.process || MD.file || MD.untrusted || MD.error_handler) {
             FunctionMetadataMap[&F] = MD;
             ManifestFunctions.push_back(MD);
         }
@@ -391,11 +550,51 @@ private:
     }
 
     /**
+     * Get event type from function metadata
+     */
+    uint32_t getEventType(FunctionMetadata &MD, bool isExit = false) {
+        if (isExit) {
+            return 2;  // DSMIL_TELEMETRY_OT_PATH_EXIT
+        }
+        
+        if (MD.ses_gate) {
+            return 3;  // DSMIL_TELEMETRY_SES_INTENT
+        }
+        if (MD.error_handler) {
+            if (MD.op == "panic") {
+                return 36;  // DSMIL_TELEMETRY_PANIC
+            }
+            return 35;  // DSMIL_TELEMETRY_ERROR
+        }
+        if (MD.net_io) {
+            return 30;  // DSMIL_TELEMETRY_NET_IO
+        }
+        if (MD.crypto) {
+            return 31;  // DSMIL_TELEMETRY_CRYPTO
+        }
+        if (MD.process) {
+            return 32;  // DSMIL_TELEMETRY_PROCESS
+        }
+        if (MD.file) {
+            return 33;  // DSMIL_TELEMETRY_FILE
+        }
+        if (MD.untrusted) {
+            return 34;  // DSMIL_TELEMETRY_UNTRUSTED
+        }
+        if (MD.ot_critical) {
+            return 1;  // DSMIL_TELEMETRY_OT_PATH_ENTRY
+        }
+        
+        return 1;  // Default
+    }
+
+    /**
      * Create telemetry event structure and call logging function
      */
     void createTelemetryCall(IRBuilder<> &Builder, FunctionMetadata &MD,
                             uint32_t EventType,
-                            const std::string &ModuleID) {
+                            const std::string &ModuleID,
+                            Value *ElapsedNs = nullptr) {
         LLVMContext &Ctx = M->getContext();
         Function *TelemetryFn = getTelemetryEventFunction();
 
@@ -409,6 +608,8 @@ private:
         Constant *FileStr = ConstantDataArray::getString(Ctx, MD.file, true);
         Constant *StageStr = ConstantDataArray::getString(Ctx, MD.stage.empty() ? "" : MD.stage, true);
         Constant *ProfileStr = ConstantDataArray::getString(Ctx, MissionProfileName, true);
+        Constant *CategoryStr = ConstantDataArray::getString(Ctx, MD.category.empty() ? "" : MD.category, true);
+        Constant *OpStr = ConstantDataArray::getString(Ctx, MD.op.empty() ? "" : MD.op, true);
 
         // Create global variables for strings
         GlobalVariable *ModuleIDGV = new GlobalVariable(
@@ -426,6 +627,12 @@ private:
         GlobalVariable *ProfileGV = new GlobalVariable(
             *M, ProfileStr->getType(), true, GlobalValue::PrivateLinkage,
             ProfileStr, "telemetry_profile");
+        GlobalVariable *CategoryGV = new GlobalVariable(
+            *M, CategoryStr->getType(), true, GlobalValue::PrivateLinkage,
+            CategoryStr, "telemetry_category");
+        GlobalVariable *OpGV = new GlobalVariable(
+            *M, OpStr->getType(), true, GlobalValue::PrivateLinkage,
+            OpStr, "telemetry_op");
 
         // Get pointers to string data
         Value *ModuleIDPtr = Builder.CreateConstGEP2_32(
@@ -438,6 +645,10 @@ private:
             StageStr->getType(), StageGV, 0, 0);
         Value *ProfilePtr = Builder.CreateConstGEP2_32(
             ProfileStr->getType(), ProfileGV, 0, 0);
+        Value *CategoryPtr = Builder.CreateConstGEP2_32(
+            CategoryStr->getType(), CategoryGV, 0, 0);
+        Value *OpPtr = Builder.CreateConstGEP2_32(
+            OpStr->getType(), OpGV, 0, 0);
 
         // Create event struct type (simplified - using opaque pointer)
         // In a full implementation, we'd create the exact struct type
@@ -463,7 +674,14 @@ private:
             PointerType::getInt8PtrTy(Ctx),  // signal_name
             Type::getDoubleTy(Ctx),         // signal_value
             Type::getDoubleTy(Ctx),         // signal_min
-            Type::getDoubleTy(Ctx)          // signal_max
+            Type::getDoubleTy(Ctx),         // signal_max
+            // ... telecom fields ...
+            PointerType::getInt8PtrTy(Ctx),  // category
+            PointerType::getInt8PtrTy(Ctx),  // op
+            Type::getInt32Ty(Ctx),           // status_code
+            PointerType::getInt8PtrTy(Ctx),  // resource
+            PointerType::getInt8PtrTy(Ctx),  // error_msg
+            Type::getInt64Ty(Ctx)           // elapsed_ns
         };
         EventTy->setBody(Fields);
 
@@ -499,6 +717,14 @@ private:
         Builder.CreateStore(ZeroDouble, Builder.CreateStructGEP(EventTy, EventAlloca, 13));  // signal_value
         Builder.CreateStore(ZeroDouble, Builder.CreateStructGEP(EventTy, EventAlloca, 14));  // signal_min
         Builder.CreateStore(ZeroDouble, Builder.CreateStructGEP(EventTy, EventAlloca, 15));  // signal_max
+        // ... telecom fields would go here ...
+        Builder.CreateStore(MD.category.empty() ? NullPtr : CategoryPtr, Builder.CreateStructGEP(EventTy, EventAlloca, 16));  // category
+        Builder.CreateStore(MD.op.empty() ? NullPtr : OpPtr, Builder.CreateStructGEP(EventTy, EventAlloca, 17));  // op
+        Builder.CreateStore(Zero32, Builder.CreateStructGEP(EventTy, EventAlloca, 18));  // status_code
+        Builder.CreateStore(NullPtr, Builder.CreateStructGEP(EventTy, EventAlloca, 19));  // resource
+        Builder.CreateStore(NullPtr, Builder.CreateStructGEP(EventTy, EventAlloca, 20));  // error_msg
+        Value *ElapsedVal = ElapsedNs ? ElapsedNs : Zero64;
+        Builder.CreateStore(ElapsedVal, Builder.CreateStructGEP(EventTy, EventAlloca, 21));  // elapsed_ns
 
         // Cast to void* for function call
         Value *EventPtr = Builder.CreateBitCast(EventAlloca, PointerType::getInt8PtrTy(Ctx));
@@ -506,10 +732,26 @@ private:
     }
 
     /**
+     * Get cycle counter (for timing)
+     */
+    Value* getCycleCounter(IRBuilder<> &Builder) {
+        LLVMContext &Ctx = M->getContext();
+        // Use llvm.readcyclecounter intrinsic
+        Function *ReadCycleCounter = Intrinsic::getDeclaration(
+            M, Intrinsic::readcyclecounter);
+        CallInst *CycleCounter = Builder.CreateCall(ReadCycleCounter);
+        return CycleCounter;
+    }
+
+    /**
      * Instrument function entry
      */
     void instrumentFunctionEntry(Function &F, FunctionMetadata &MD) {
         if (F.isDeclaration()) return;
+
+        // Check if level allows instrumentation
+        if (CurrentLevel == LEVEL_OFF) return;
+        if (CurrentLevel == LEVEL_MIN && !MD.ot_critical && !MD.error_handler) return;
 
         BasicBlock &EntryBB = F.getEntryBlock();
         IRBuilder<> Builder(&EntryBB, EntryBB.begin());
@@ -519,9 +761,17 @@ private:
             ModuleID = "unknown_module";
         }
 
-        uint32_t EventType = 1;  // DSMIL_TELEMETRY_OT_PATH_ENTRY
-        if (MD.ses_gate) {
-            EventType = 3;  // DSMIL_TELEMETRY_SES_INTENT
+        uint32_t EventType = getEventType(MD, false);
+
+        // For debug/trace levels, capture cycle counter at entry
+        Value *StartCycle = nullptr;
+        if (CurrentLevel >= LEVEL_DEBUG) {
+            StartCycle = getCycleCounter(Builder);
+            // Store start cycle in alloca for later use
+            AllocaInst *StartCycleAlloca = Builder.CreateAlloca(
+                Type::getInt64Ty(M->getContext()), nullptr, "start_cycle");
+            Builder.CreateStore(StartCycle, StartCycleAlloca);
+            // Store alloca in function metadata (simplified - would use map in full impl)
         }
 
         createTelemetryCall(Builder, MD, EventType, ModuleID);
@@ -533,6 +783,9 @@ private:
     void instrumentFunctionExits(Function &F, FunctionMetadata &MD) {
         if (F.isDeclaration()) return;
 
+        // Exit instrumentation only at debug/trace levels
+        if (CurrentLevel < LEVEL_DEBUG) return;
+
         std::string ModuleID = M->getName().str();
         if (ModuleID.empty()) {
             ModuleID = "unknown_module";
@@ -542,7 +795,20 @@ private:
             Instruction *Term = BB.getTerminator();
             if (isa<ReturnInst>(Term) || isa<ResumeInst>(Term)) {
                 IRBuilder<> Builder(Term);
-                createTelemetryCall(Builder, MD, 2, ModuleID);  // DSMIL_TELEMETRY_OT_PATH_EXIT
+                
+                // Calculate elapsed time
+                Value *ElapsedNs = nullptr;
+                if (CurrentLevel >= LEVEL_DEBUG) {
+                    // Read current cycle counter
+                    Value *EndCycle = getCycleCounter(Builder);
+                    // In a full implementation, would load StartCycle from alloca
+                    // and calculate difference, convert to nanoseconds
+                    // For now, pass nullptr (runtime can use timestamp diff)
+                    ElapsedNs = ConstantInt::get(Type::getInt64Ty(M->getContext()), 0);
+                }
+                
+                uint32_t EventType = getEventType(MD, true);
+                createTelemetryCall(Builder, MD, EventType, ModuleID, ElapsedNs);
             }
         }
     }
@@ -608,7 +874,15 @@ private:
             Out << "      \"stage\": \"" << MD.stage << "\",\n";
             Out << "      \"ot_critical\": " << (MD.ot_critical ? "true" : "false") << ",\n";
             Out << "      \"authority_tier\": " << (int)MD.authority_tier << ",\n";
-            Out << "      \"ses_gate\": " << (MD.ses_gate ? "true" : "false") << "\n";
+            Out << "      \"ses_gate\": " << (MD.ses_gate ? "true" : "false") << ",\n";
+            Out << "      \"net_io\": " << (MD.net_io ? "true" : "false") << ",\n";
+            Out << "      \"crypto\": " << (MD.crypto ? "true" : "false") << ",\n";
+            Out << "      \"process\": " << (MD.process ? "true" : "false") << ",\n";
+            Out << "      \"file\": " << (MD.file ? "true" : "false") << ",\n";
+            Out << "      \"untrusted\": " << (MD.untrusted ? "true" : "false") << ",\n";
+            Out << "      \"error_handler\": " << (MD.error_handler ? "true" : "false") << ",\n";
+            Out << "      \"category\": \"" << MD.category << "\",\n";
+            Out << "      \"op\": \"" << MD.op << "\"\n";
             Out << "    }";
             if (i < ManifestFunctions.size() - 1) Out << ",";
             Out << "\n";
@@ -644,8 +918,24 @@ public:
 
         M = &Mod;
         MissionProfileName = MissionProfile.empty() ? "default" : MissionProfile;
+        CurrentLevel = getTelemetryLevel(Mod);
 
-        outs() << "[DSMIL OT Telemetry] Instrumenting module: " << Mod.getName() << "\n";
+        // Set module flag for telemetry level
+        if (CurrentLevel != LEVEL_NORMAL) {
+            std::string levelStr;
+            switch (CurrentLevel) {
+                case LEVEL_OFF: levelStr = "off"; break;
+                case LEVEL_MIN: levelStr = "min"; break;
+                case LEVEL_NORMAL: levelStr = "normal"; break;
+                case LEVEL_DEBUG: levelStr = "debug"; break;
+                case LEVEL_TRACE: levelStr = "trace"; break;
+            }
+            Mod.addModuleFlag(Module::ModFlagBehavior::Error, "dsmil.telemetry.level",
+                            MDString::get(Mod.getContext(), levelStr));
+        }
+
+        outs() << "[DSMIL OT Telemetry] Instrumenting module: " << Mod.getName() 
+               << " at level: " << CurrentLevel << "\n";
 
         // Collect metadata from all functions
         for (Function &F : Mod) {
@@ -658,18 +948,20 @@ public:
         outs() << "  OT-Critical Functions: " << FunctionMetadataMap.size() << "\n";
         outs() << "  Safety Signals: " << SafetySignals.size() << "\n";
 
-        // Instrument functions
+        // Instrument functions based on annotations and level
         for (auto &Pair : FunctionMetadataMap) {
             Function *F = Pair.first;
             FunctionMetadata &MD = Pair.second;
 
-            if (MD.ot_critical) {
+            // Instrument based on annotations
+            if (MD.ot_critical || MD.ses_gate || MD.net_io || MD.crypto ||
+                MD.process || MD.file || MD.untrusted || MD.error_handler) {
                 instrumentFunctionEntry(*F, MD);
-                instrumentFunctionExits(*F, MD);
-            }
-
-            if (MD.ses_gate) {
-                instrumentFunctionEntry(*F, MD);  // SES intent logging
+                
+                // Exit instrumentation only at debug/trace levels
+                if (CurrentLevel >= LEVEL_DEBUG) {
+                    instrumentFunctionExits(*F, MD);
+                }
             }
 
             // Instrument safety signals in this function
