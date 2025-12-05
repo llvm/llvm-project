@@ -3634,7 +3634,7 @@ static void handleEnumExtensibilityAttr(Sema &S, Decl *D,
 }
 
 /// Handle __attribute__((format_arg((idx)))) attribute based on
-/// http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html
+/// https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html
 static void handleFormatArgAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const Expr *IdxExpr = AL.getArgAsExpr(0);
   ParamIdx Idx;
@@ -3833,7 +3833,7 @@ struct FormatAttrCommon {
 };
 
 /// Handle __attribute__((format(type,idx,firstarg))) attributes based on
-/// http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html
+/// https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html
 static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
                                    FormatAttrCommon *Info) {
   // Checks the first two arguments of the attribute; this is shared between
