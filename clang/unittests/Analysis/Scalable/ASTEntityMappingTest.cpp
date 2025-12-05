@@ -59,7 +59,7 @@ TEST(ASTEntityMappingTest, ParmVarDecl) {
 
   const auto *FD = findDecl<FunctionDecl>(Ctx, "foo");
   ASSERT_NE(FD, nullptr);
-  ASSERT_GT(FD->param_size(), 0u);
+  ASSERT_EQ(FD->param_size(), 1u);
 
   const auto *PVD = FD->getParamDecl(0);
   ASSERT_NE(PVD, nullptr);
