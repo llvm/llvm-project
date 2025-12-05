@@ -547,7 +547,23 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
         assert(reg_info.byte_size != 0);
         registers.push_back(reg_info);
       } else {
-        break; // ensure exit before reg_num is incremented
+        // Only warn if we were offered Target XML and could not use it, and
+        // the qRegisterInfo fallback failed. This is something a user could
+        // take action on by getting an lldb with libxml2.
+        //
+        // It's possible we weren't offered Target XML and qRegisterInfo failed,
+        // but there's no much a user can do about that. It may be the intended
+        // way the debug stub works, so we do not warn for that case.
+        if (response_type == StringExtractorGDBRemote::eUnsupported &&
+            m_gdb_comm.GetQXferFeaturesReadSupported() &&
+            !XMLDocument::XMLEnabled()) {
+          Debugger::ReportWarning(
+              "the debug server supports Target Description XML but LLDB does "
+              "not have XML parsing enabled. Using \"qRegisterInfo\" was also "
+              "not possible. Register information may be incorrect or missing.",
+              GetTarget().GetDebugger().GetID());
+        }
+        break;
       }
     } else {
       break;
