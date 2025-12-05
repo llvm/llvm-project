@@ -922,6 +922,7 @@ bool WaitcntBrackets::hasPointSamplePendingVmemTypes(
 
 void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
   InstCounterType T = eventCounter(Context->WaitEventMaskForInst, E);
+  assert(T < Context->MaxCounter);
 
   unsigned UB = getScoreUB(T);
   unsigned CurrScore = UB + 1;
