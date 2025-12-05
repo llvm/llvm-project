@@ -18,6 +18,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <sys/ioctl.h>
 
 #define DEFAULT_RING_BUFFER_SIZE 1048576  // 1MB for high-throughput
 #define MAX_COVERAGE_MAP_SIZE 1048576

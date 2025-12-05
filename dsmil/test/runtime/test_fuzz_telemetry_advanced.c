@@ -13,11 +13,12 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "dsmil/include/dsmil_fuzz_telemetry_advanced.h"
+#include "dsmil_fuzz_telemetry_advanced.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
 
 // Test utilities
 static int test_passed = 0;
@@ -171,7 +172,7 @@ static void test_telemetry_stats(void) {
     
     // Record some events
     dsmil_advanced_fuzz_event_t event = {0};
-    event.event_type = DSMIL_ADVANCED_FUZZ_EVENT_COVERAGE;
+    event.base.event_type = DSMIL_FUZZ_EVENT_COVERAGE_HIT;
     dsmil_fuzz_record_advanced_event(&event);
     
     uint64_t total_events;
@@ -193,7 +194,7 @@ static void test_advanced_export(void) {
     
     // Record some events
     dsmil_advanced_fuzz_event_t event = {0};
-    event.event_type = DSMIL_ADVANCED_FUZZ_EVENT_COVERAGE;
+    event.base.event_type = DSMIL_FUZZ_EVENT_COVERAGE_HIT;
     dsmil_fuzz_record_advanced_event(&event);
     
     int ret = dsmil_fuzz_export_for_ml("/tmp/dsmil_test_ml.json", "json");
@@ -210,7 +211,7 @@ static void test_advanced_flush(void) {
     dsmil_fuzz_telemetry_advanced_init(NULL, 0, 0, 0);
     
     dsmil_advanced_fuzz_event_t event = {0};
-    event.event_type = DSMIL_ADVANCED_FUZZ_EVENT_COVERAGE;
+    event.base.event_type = DSMIL_FUZZ_EVENT_COVERAGE_HIT;
     dsmil_fuzz_record_advanced_event(&event);
     
     int ret = dsmil_fuzz_flush_advanced_events("/tmp/dsmil_test_advanced.bin", 0);
