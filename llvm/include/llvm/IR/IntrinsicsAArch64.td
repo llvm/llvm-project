@@ -2797,7 +2797,16 @@ def int_aarch64_sve_sudot_lane : AdvSIMD_SVE_DOT_Indexed_Intrinsic<[IntrSpeculat
 //
 // SVE ACLE: 7.4/5. FP64/FP32 matrix multiply extensions
 //
-def int_aarch64_sve_fmmla : AdvSIMD_3VectorArg_Intrinsic;
+
+def int_aarch64_sve_fmmla
+  : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                          [LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<1>],
+                          [IntrNoMem]>;
+
+def int_aarch64_sve_fp8_fmmla
+  : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                          [LLVMMatchType<0>, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+                          [IntrReadMem, IntrInaccessibleMemOnly]>;
 
 //
 // SVE ACLE: 7.2. BFloat16 extensions
