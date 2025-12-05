@@ -304,13 +304,13 @@ declare float @cbrtf(float)
 ; CHECK: declare x86_fp80 @cbrtl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare x86_fp80 @cbrtl(x86_fp80)
 
-; CHECK: declare double @ceil(double) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare double @ceil(double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare double @ceil(double)
 
-; CHECK: declare float @ceilf(float) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare float @ceilf(float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare float @ceilf(float)
 
-; CHECK: declare x86_fp80 @ceill(x86_fp80) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare x86_fp80 @ceill(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare x86_fp80 @ceill(x86_fp80)
 
 ; The second argument of int chmod(FILE*, mode_t) is a 32-bit int on most
@@ -909,13 +909,13 @@ declare x86_fp80 @rintl(x86_fp80)
 ; CHECK: declare noundef i32 @rmdir(ptr noundef readonly captures(none)) [[NOFREE_NOUNWIND]]
 declare i32 @rmdir(ptr)
 
-; CHECK: declare double @round(double) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare double @round(double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare double @round(double)
 
-; CHECK: declare float @roundf(float) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare float @roundf(float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare float @roundf(float)
 
-; CHECK: declare x86_fp80 @roundl(x86_fp80) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare x86_fp80 @roundl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare x86_fp80 @roundl(x86_fp80)
 
 ; CHECK: declare double @scalbln(double, i64) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
