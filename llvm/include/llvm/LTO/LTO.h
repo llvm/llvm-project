@@ -39,16 +39,6 @@ class LTO;
 }
 } // namespace llvm
 
-namespace dtlto {
-class TempFilesRemover {
-  llvm::lto::LTO *Lto = nullptr;
-
-public:
-  TempFilesRemover(llvm::lto::LTO *LtoObj) : Lto{LtoObj} {}
-  ~TempFilesRemover();
-};
-
-} // namespace dtlto
 
 namespace llvm {
 
@@ -629,9 +619,17 @@ public:
   BumpPtrAllocator PtrAlloc;
   StringSaver Saver{PtrAlloc};
 
+  class TempFilesRemover {
+    LTO *Lto;
+
+  public:
+    TempFilesRemover(LTO *P) : Lto{P} {};
+    ~TempFilesRemover();
+  };
+
   // Array of input bitcode files for LTO.
   std::vector<std::shared_ptr<lto::InputFile>> InputFiles;
-  std::unique_ptr<dtlto::TempFilesRemover> TempsRemover;
+  TempFilesRemover TempsRemover{ this };
 
   Expected<std::shared_ptr<lto::InputFile>>
   addInput(std::unique_ptr<lto::InputFile> InputPtr);

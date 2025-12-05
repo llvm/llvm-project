@@ -32,16 +32,18 @@
 
 using namespace llvm;
 
-namespace dtlto {
 
 // Removes any temporary regular archive member files that were created during
 // processing.
-TempFilesRemover::~TempFilesRemover() {
+lto::LTO::TempFilesRemover::~TempFilesRemover() {
   for (auto &Input : Lto->InputFiles) {
     if (Input->isMemberOfArchive())
       sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
   }
 }
+
+namespace dtlto {
+
 
 // Writes the content of a memory buffer into a file.
 static llvm::Error saveBuffer(StringRef FileBuffer, StringRef FilePath) {
@@ -214,9 +216,6 @@ Error saveInputArchiveMembers(lto::LTO &LtoObj) {
 llvm::Error process(llvm::lto::LTO &LtoObj) {
   if (!LtoObj.Dtlto)
     return Error::success();
-
-  // Set up cleanup handler for temporary files
-  LtoObj.TempsRemover = std::make_unique<TempFilesRemover>(&LtoObj);
 
   // Process and save archive members to separate files if needed.
   if (Error EC = saveInputArchiveMembers(LtoObj))
