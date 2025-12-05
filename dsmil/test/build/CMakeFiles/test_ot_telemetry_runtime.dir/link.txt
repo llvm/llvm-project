@@ -1,0 +1,1 @@
+/usr/bin/cc -g CMakeFiles/test_ot_telemetry_runtime.dir/runtime/test_ot_telemetry.c.o -o test_ot_telemetry_runtime  libdsmil_ot_telemetry.a 

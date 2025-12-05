@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdsmil_ot_telemetry.a CMakeFiles/dsmil_ot_telemetry.dir/workspace/dsmil/runtime/dsmil_ot_telemetry.c.o
+/usr/bin/ranlib libdsmil_ot_telemetry.a

@@ -1,0 +1,14 @@
+/workspace/dsmil/test/build/CMakeFiles/dsmil_ot_telemetry.dir
+/workspace/dsmil/test/build/CMakeFiles/dsmil_fuzz_telemetry.dir
+/workspace/dsmil/test/build/CMakeFiles/dsmil_fuzz_telemetry_advanced.dir
+/workspace/dsmil/test/build/CMakeFiles/test_ot_telemetry_runtime.dir
+/workspace/dsmil/test/build/CMakeFiles/test_fuzz_telemetry_runtime.dir
+/workspace/dsmil/test/build/CMakeFiles/test_fuzz_telemetry_advanced_runtime.dir
+/workspace/dsmil/test/build/CMakeFiles/test_telecom_macros.dir
+/workspace/dsmil/test/build/CMakeFiles/test_attributes.dir
+/workspace/dsmil/test/build/CMakeFiles/test_ot_telemetry_pass.dir
+/workspace/dsmil/test/build/CMakeFiles/test_telecom_pass.dir
+/workspace/dsmil/test/build/CMakeFiles/test_fuzz_coverage_pass.dir
+/workspace/dsmil/test/build/CMakeFiles/check-dsmil-runtime.dir
+/workspace/dsmil/test/build/CMakeFiles/edit_cache.dir
+/workspace/dsmil/test/build/CMakeFiles/rebuild_cache.dir
