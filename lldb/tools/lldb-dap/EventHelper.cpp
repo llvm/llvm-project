@@ -449,6 +449,13 @@ void HandleTargetEvent(const lldb::SBEvent &event, Log *log) {
       }
     }
   } else if (event_mask & lldb::SBTarget::eBroadcastBitNewTargetCreated) {
+    if (!DAPSessionManager::GetInstance().GetServerMode()) {
+      dap->SendOutput(OutputType::Console,
+                      "lldb-dap: Enable server mode for automatically "
+                      "attaching to new debugger targets.");
+      return;
+    }
+
     // For NewTargetCreated events, GetTargetFromEvent returns the parent
     // target, and GetCreatedTargetFromEvent returns the newly created target.
     lldb::SBTarget created_target =
