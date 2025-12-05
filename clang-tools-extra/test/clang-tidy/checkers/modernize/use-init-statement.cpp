@@ -250,7 +250,6 @@ void good_include() {
     }
 }
 
-// TODO: all same tests for pointers
 // TODO: all same tests for structured binding
 
 void good_stolen_reference1() {
@@ -272,11 +271,30 @@ void good_stolen_reference1() {
     do_some(*pi);
 }
 
+void good_stolen_reference1_const_int_ptr() {
+    int value = 0;
+    const int** ppi = nullptr;
+    const int* pi1 = &value;
+    if (pi1 != nullptr) {
+        do_some();
+        ppi = &pi1;
+    }
+    do_some(**ppi);
+
+    const int* pi2 = &value;
+    switch (pi2 != nullptr ? 0 : 1) {
+        case 0:
+            do_some();
+            ppi = &pi2;
+            break;
+    }
+    do_some(**ppi);
+}
+
 template<typename T> const T* get_pointer(const T& ref) { return &ref; }
 
 // TODO: allow stealing when no code after if??
 // TODO: BTW also materialization must be allowed after if
-// TODO: pointers also might be stolen via `auto**`
 void good_stolen_reference2() {
     const int* pi = nullptr;
     int i1 = 0;
@@ -294,6 +312,32 @@ void good_stolen_reference2() {
             break;
     }
     do_some(*pi);
+}
+
+struct UserDefined {
+    int a = 0;
+    const UserDefined* get_pointer_to_this() const {
+        return this;
+    }
+};
+
+void good_stolen_reference_as_this() {
+    const UserDefined* pa = nullptr;
+    UserDefined a;
+    if (a.a == 0) {
+        do_some();
+        pa = a.get_pointer_to_this();
+    }
+    do_some(pa->a);
+
+    UserDefined b;
+    switch (b.a) {
+        case 0:
+            do_some();
+            pa = b.get_pointer_to_this();
+            break;
+    }
+    do_some(pa->a);
 }
 
 void good_stolen_reference1_string() {
