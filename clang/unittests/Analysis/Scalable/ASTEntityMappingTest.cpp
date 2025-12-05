@@ -137,10 +137,11 @@ TEST(ASTEntityMappingTest, BuiltinFunction) {
   ASSERT_NE(CE, nullptr);
 
   const auto *Callee = CE->getDirectCallee();
-  if (Callee && Callee->getBuiltinID()) {
-    auto EntityName = getLocalEntityNameForDecl(Callee);
-    EXPECT_FALSE(EntityName.has_value());
-  }
+  ASSERT_NE(Callee, nullptr);
+  ASSERT_NE(Callee->getBuiltinID(), 0u /* not a built-in */);
+
+  auto EntityName = getLocalEntityNameForDecl(Callee);
+  EXPECT_FALSE(EntityName.has_value());
 }
 
 TEST(ASTEntityMappingTest, UnsupportedDecl) {
