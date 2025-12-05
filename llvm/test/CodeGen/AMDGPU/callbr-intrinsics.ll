@@ -32,14 +32,21 @@ define void @test_kill(ptr %src, ptr %dst, i1 %c) {
 ; GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GISEL-NEXT:    s_andn2_b64 s[6:7], exec, vcc
 ; GISEL-NEXT:    s_andn2_b64 s[4:5], s[4:5], s[6:7]
-; GISEL-NEXT:    s_cbranch_scc0 .LBB0_2
+; GISEL-NEXT:    s_cbranch_scc0 .LBB0_4
 ; GISEL-NEXT:  ; %bb.1:
 ; GISEL-NEXT:    s_and_b64 exec, exec, s[4:5]
+; GISEL-NEXT:  ; %bb.2: ; %cont
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    flat_store_dword v[2:3], v0
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
-; GISEL-NEXT:  .LBB0_2:
+; GISEL-NEXT:  .LBB0_3: ; Inline asm indirect target
+; GISEL-NEXT:    ; %kill
+; GISEL-NEXT:    ; Label of block must be emitted
+; GISEL-NEXT:    ; divergent unreachable
+; GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GISEL-NEXT:  .LBB0_4:
 ; GISEL-NEXT:    s_mov_b64 exec, 0
 ; GISEL-NEXT:    s_endpgm
   %a = load i32, ptr %src, align 4
@@ -81,14 +88,21 @@ define void @test_kill_block_order(ptr %src, ptr %dst, i1 %c) {
 ; GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GISEL-NEXT:    s_andn2_b64 s[6:7], exec, vcc
 ; GISEL-NEXT:    s_andn2_b64 s[4:5], s[4:5], s[6:7]
-; GISEL-NEXT:    s_cbranch_scc0 .LBB1_2
+; GISEL-NEXT:    s_cbranch_scc0 .LBB1_4
 ; GISEL-NEXT:  ; %bb.1:
 ; GISEL-NEXT:    s_and_b64 exec, exec, s[4:5]
+; GISEL-NEXT:  ; %bb.2: ; %cont
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    flat_store_dword v[2:3], v0
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
-; GISEL-NEXT:  .LBB1_2:
+; GISEL-NEXT:  .LBB1_3: ; Inline asm indirect target
+; GISEL-NEXT:    ; %kill
+; GISEL-NEXT:    ; Label of block must be emitted
+; GISEL-NEXT:    ; divergent unreachable
+; GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GISEL-NEXT:  .LBB1_4:
 ; GISEL-NEXT:    s_mov_b64 exec, 0
 ; GISEL-NEXT:    s_endpgm
   %a = load i32, ptr %src, align 4
