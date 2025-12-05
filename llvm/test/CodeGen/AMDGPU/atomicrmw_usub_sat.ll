@@ -891,9 +891,9 @@ define i16 @global_atomic_usub_sat_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB6_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1003,9 +1003,9 @@ define i16 @global_atomic_usub_sat_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB6_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1120,9 +1120,9 @@ define i16 @global_atomic_usub_sat_offset_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1233,9 +1233,9 @@ define i16 @global_atomic_usub_sat_offset_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1346,9 +1346,9 @@ define void @global_atomic_usub_sat_nortn_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v4, v3
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1453,9 +1453,9 @@ define void @global_atomic_usub_sat_nortn_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v4, v3
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1566,9 +1566,9 @@ define void @global_atomic_usub_sat_offset_nortn_16(ptr addrspace(1) %ptr, i16 %
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v4, v3
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1675,9 +1675,9 @@ define void @global_atomic_usub_sat_offset_nortn_16(ptr addrspace(1) %ptr, i16 %
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v4, v3
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1809,9 +1809,9 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_16(ptr addrsp
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB10_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1945,9 +1945,9 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_16(ptr addrsp
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB10_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2067,9 +2067,9 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_16(ptr 
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, v0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB11_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2182,9 +2182,9 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_16(ptr 
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, v0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB11_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2314,9 +2314,9 @@ define i8 @global_atomic_usub_sat_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB12_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2433,9 +2433,9 @@ define i8 @global_atomic_usub_sat_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB12_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2566,9 +2566,9 @@ define i8 @global_atomic_usub_sat_offset_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB13_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2685,9 +2685,9 @@ define i8 @global_atomic_usub_sat_offset_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB13_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2814,9 +2814,9 @@ define void @global_atomic_usub_sat_nortn_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, v2
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB14_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2928,9 +2928,9 @@ define void @global_atomic_usub_sat_nortn_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v3, v2
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB14_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3055,9 +3055,9 @@ define void @global_atomic_usub_sat_offset_nortn_8(ptr addrspace(1) %ptr, i8 %da
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, v2
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB15_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3169,9 +3169,9 @@ define void @global_atomic_usub_sat_offset_nortn_8(ptr addrspace(1) %ptr, i8 %da
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v3, v2
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB15_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3321,9 +3321,9 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_8(ptr addrspa
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB16_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3463,9 +3463,9 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_8(ptr addrspa
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB16_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3604,9 +3604,9 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_8(ptr a
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, v0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB17_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3725,9 +3725,9 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_8(ptr a
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, v0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB17_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
