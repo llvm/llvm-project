@@ -147,6 +147,11 @@ class TypeInterface<string name, list<Interface> baseInterfaces = []>
 			!if(!empty(cppNamespace),"", cppNamespace # "::") # name
     >;
 
+// DialectInterface represents a Dialect Interface.
+class DialectInterface<string name, list<Interface> baseInterfaces = []>
+  : Interface<name, baseInterfaces>, OpInterfaceTrait<name>;
+
+
 // Whether to declare the interface methods in the user entity's header. This
 // class simply wraps an Interface but is used to indicate that the method
 // declarations should be generated. This class takes an optional set of methods
