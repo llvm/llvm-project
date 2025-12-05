@@ -9,10 +9,25 @@
 #include "ClangDocTest.h"
 #include "Representation.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "gtest/gtest.h"
 
 namespace clang {
 namespace doc {
+
+ClangDocContextTest::ClangDocContextTest()
+    : DiagID(new DiagnosticIDs()),
+      Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()) {}
+
+ClangDocContextTest::~ClangDocContextTest() = default;
+
+ClangDocContext ClangDocContextTest::getClangDocContext(
+    std::vector<std::string> UserStylesheets, StringRef RepositoryUrl,
+    StringRef RepositoryLinePrefix, StringRef Base) {
+  return ClangDocContext(nullptr, "test-project", false, "", "", RepositoryUrl,
+                         RepositoryLinePrefix, Base, UserStylesheets, Diags,
+                         false);
+}
 
 NamespaceInfo *InfoAsNamespace(Info *I) {
   assert(I->IT == InfoType::IT_namespace);

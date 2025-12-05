@@ -27,7 +27,8 @@ namespace doc {
 // Class to read bitstream into an InfoSet collection
 class ClangDocBitcodeReader {
 public:
-  ClangDocBitcodeReader(llvm::BitstreamCursor &Stream) : Stream(Stream) {}
+  ClangDocBitcodeReader(llvm::BitstreamCursor &Stream, DiagnosticsEngine &Diags)
+      : Stream(Stream), Diags(Diags) {}
 
   // Main entry point, calls readBlock to read each block in the given stream.
   llvm::Expected<std::vector<std::unique_ptr<Info>>> readBitcode();
@@ -72,6 +73,7 @@ private:
   llvm::BitstreamCursor &Stream;
   std::optional<llvm::BitstreamBlockInfo> BlockInfo;
   FieldId CurrentReferenceField;
+  DiagnosticsEngine &Diags;
 };
 
 } // namespace doc

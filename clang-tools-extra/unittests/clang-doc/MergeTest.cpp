@@ -13,7 +13,9 @@
 namespace clang {
 namespace doc {
 
-TEST(MergeTest, mergeNamespaceInfos) {
+class MergeTest : public ClangDocContextTest {};
+
+TEST_F(MergeTest, mergeNamespaceInfos) {
   NamespaceInfo One;
   One.Name = "Namespace";
   One.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -75,7 +77,7 @@ TEST(MergeTest, mergeNamespaceInfos) {
                      InfoAsNamespace(Actual.get().get()));
 }
 
-TEST(MergeTest, mergeRecordInfos) {
+TEST_F(MergeTest, mergeRecordInfos) {
   RecordInfo One;
   One.Name = "r";
   One.IsTypeDef = true;
@@ -153,7 +155,7 @@ TEST(MergeTest, mergeRecordInfos) {
                   InfoAsRecord(Actual.get().get()));
 }
 
-TEST(MergeTest, mergeFunctionInfos) {
+TEST_F(MergeTest, mergeFunctionInfos) {
   FunctionInfo One;
   One.Name = "f";
   One.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -228,7 +230,7 @@ TEST(MergeTest, mergeFunctionInfos) {
                     InfoAsFunction(Actual.get().get()));
 }
 
-TEST(MergeTest, mergeEnumInfos) {
+TEST_F(MergeTest, mergeEnumInfos) {
   EnumInfo One;
   One.Name = "e";
   One.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
