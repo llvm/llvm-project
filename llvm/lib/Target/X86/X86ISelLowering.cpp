@@ -18462,16 +18462,20 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
   SmallVector<int> Mask(OrigMask);
 
   // Canonicalize the shuffle with any horizontal ops inputs.
+  // Don't attempt this if the shuffle can still be widened as we may lose
+  // whole lane shuffle patterns.
   // NOTE: This may update Ops and Mask.
-  if (SDValue HOp = canonicalizeShuffleMaskWithHorizOp(
-          Ops, Mask, VT.getSizeInBits(), DL, DAG, Subtarget))
-    return DAG.getBitcast(VT, HOp);
+  if (!canWidenShuffleElements(Mask)) {
+    if (SDValue HOp = canonicalizeShuffleMaskWithHorizOp(
+            Ops, Mask, VT.getSizeInBits(), DL, DAG, Subtarget))
+      return DAG.getBitcast(VT, HOp);
 
-  V1 = DAG.getBitcast(VT, Ops[0]);
-  V2 = DAG.getBitcast(VT, Ops[1]);
-  assert(NumElements == (int)Mask.size() &&
-         "canonicalizeShuffleMaskWithHorizOp "
-         "shouldn't alter the shuffle mask size");
+    V1 = DAG.getBitcast(VT, Ops[0]);
+    V2 = DAG.getBitcast(VT, Ops[1]);
+    assert(NumElements == (int)Mask.size() &&
+           "canonicalizeShuffleMaskWithHorizOp "
+           "shouldn't alter the shuffle mask size");
+  }
 
   // Canonicalize zeros/ones/fp splat constants to ensure no undefs.
   // These will be materialized uniformly anyway, so make splat matching easier.
