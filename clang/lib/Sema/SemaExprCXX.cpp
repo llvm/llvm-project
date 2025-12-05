@@ -5689,8 +5689,10 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
   QualType LHSType = LHS.get()->getType();
   QualType RHSType = RHS.get()->getType();
 
-  bool LHSIsVector = LHSType->isVectorType() || LHSType->isSizelessVectorType();
-  bool RHSIsVector = RHSType->isVectorType() || RHSType->isSizelessVectorType();
+  bool LHSSizelessVector = LHSType->isSizelessVectorType();
+  bool RHSSizelessVector = RHSType->isSizelessVectorType();
+  bool LHSIsVector = LHSType->isVectorType() || LHSSizelessVector;
+  bool RHSIsVector = RHSType->isVectorType() || RHSSizelessVector;
 
   auto GetVectorInfo =
       [&](QualType Type) -> std::pair<QualType, llvm::ElementCount> {
@@ -5708,7 +5710,7 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
   if (LHSIsVector && RHSIsVector) {
     if (CondType->isExtVectorType() != LHSType->isExtVectorType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_cond_result_mismatch)
-          << /*isExtVector*/ CondType->isExtVectorType();
+          << /*isExtVectorNotSizeless=*/1;
       return {};
     }
 
@@ -5720,7 +5722,13 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
     }
     ResultType = Context.getCommonSugaredType(LHSType, RHSType);
   } else if (LHSIsVector || RHSIsVector) {
-    if (CondType->isSizelessVectorType())
+    bool ResultSizeless = LHSSizelessVector || RHSSizelessVector;
+    if (ResultSizeless != CondType->isSizelessVectorType()) {
+      Diag(QuestionLoc, diag::err_conditional_vector_cond_result_mismatch)
+          << /*isExtVectorNotSizeless=*/0;
+      return {};
+    }
+    if (ResultSizeless)
       ResultType = CheckSizelessVectorOperands(LHS, RHS, QuestionLoc,
                                                /*IsCompAssign*/ false,
                                                ArithConvKind::Conditional);

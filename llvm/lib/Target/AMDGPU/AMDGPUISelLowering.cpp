@@ -2961,19 +2961,28 @@ SDValue AMDGPUTargetLowering::lowerFEXP2(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::FMUL, SL, VT, Exp2, ResultScale, Flags);
 }
 
+SDValue AMDGPUTargetLowering::lowerFEXPUnsafeImpl(SDValue X, const SDLoc &SL,
+                                                  SelectionDAG &DAG,
+                                                  SDNodeFlags Flags,
+                                                  bool IsExp10) const {
+  // exp(x) -> exp2(M_LOG2E_F * x);
+  // exp10(x) -> exp2(log2(10) * x);
+  EVT VT = X.getValueType();
+  SDValue Const =
+      DAG.getConstantFP(IsExp10 ? 0x1.a934f0p+1f : numbers::log2e, SL, VT);
+
+  SDValue Mul = DAG.getNode(ISD::FMUL, SL, VT, X, Const, Flags);
+  return DAG.getNode(VT == MVT::f32 ? (unsigned)AMDGPUISD::EXP
+                                    : (unsigned)ISD::FEXP2,
+                     SL, VT, Mul, Flags);
+}
+
 SDValue AMDGPUTargetLowering::lowerFEXPUnsafe(SDValue X, const SDLoc &SL,
                                               SelectionDAG &DAG,
                                               SDNodeFlags Flags) const {
   EVT VT = X.getValueType();
-  const SDValue Log2E = DAG.getConstantFP(numbers::log2e, SL, VT);
-
-  if (VT != MVT::f32 || !needsDenormHandlingF32(DAG, X, Flags)) {
-    // exp2(M_LOG2E_F * f);
-    SDValue Mul = DAG.getNode(ISD::FMUL, SL, VT, X, Log2E, Flags);
-    return DAG.getNode(VT == MVT::f32 ? (unsigned)AMDGPUISD::EXP
-                                      : (unsigned)ISD::FEXP2,
-                       SL, VT, Mul, Flags);
-  }
+  if (VT != MVT::f32 || !needsDenormHandlingF32(DAG, X, Flags))
+    return lowerFEXPUnsafeImpl(X, SL, DAG, Flags, /*IsExp10=*/false);
 
   EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
 
@@ -2987,6 +2996,7 @@ SDValue AMDGPUTargetLowering::lowerFEXPUnsafe(SDValue X, const SDLoc &SL,
   SDValue AdjustedX =
       DAG.getNode(ISD::SELECT, SL, VT, NeedsScaling, ScaledX, X);
 
+  const SDValue Log2E = DAG.getConstantFP(numbers::log2e, SL, VT);
   SDValue ExpInput = DAG.getNode(ISD::FMUL, SL, VT, AdjustedX, Log2E, Flags);
 
   SDValue Exp2 = DAG.getNode(AMDGPUISD::EXP, SL, VT, ExpInput, Flags);
@@ -3005,6 +3015,7 @@ SDValue AMDGPUTargetLowering::lowerFEXP10Unsafe(SDValue X, const SDLoc &SL,
                                                 SelectionDAG &DAG,
                                                 SDNodeFlags Flags) const {
   const EVT VT = X.getValueType();
+
   const unsigned Exp2Op = VT == MVT::f32 ? static_cast<unsigned>(AMDGPUISD::EXP)
                                          : static_cast<unsigned>(ISD::FEXP2);
 
@@ -3072,13 +3083,15 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
     if (VT.isVector())
       return SDValue();
 
+    // Nothing in half is a denormal when promoted to f32.
+    //
     // exp(f16 x) ->
     //   fptrunc (v_exp_f32 (fmul (fpext x), log2e))
-
-    // Nothing in half is a denormal when promoted to f32.
+    //
+    // exp10(f16 x) ->
+    //   fptrunc (v_exp_f32 (fmul (fpext x), log2(10)))
     SDValue Ext = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, X, Flags);
-    SDValue Lowered = IsExp10 ? lowerFEXP10Unsafe(Ext, SL, DAG, Flags)
-                              : lowerFEXPUnsafe(Ext, SL, DAG, Flags);
+    SDValue Lowered = lowerFEXPUnsafeImpl(Ext, SL, DAG, Flags, IsExp10);
     return DAG.getNode(ISD::FP_ROUND, SL, VT, Lowered,
                        DAG.getTargetConstant(0, SL, MVT::i32), Flags);
   }

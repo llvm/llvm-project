@@ -1523,6 +1523,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     for (auto VT : {MVT::v16i8, MVT::v8i8, MVT::v4i16, MVT::v2i32})
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Custom);
+
+    for (auto VT : {MVT::v8f16, MVT::v4f32, MVT::v2f64})
+      setOperationAction(ISD::FMA, VT, Custom);
   }
 
   if (Subtarget->isSVEorStreamingSVEAvailable()) {
@@ -7781,6 +7784,46 @@ SDValue AArch64TargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
   return FCVTNT(VT, BottomBF16, Pg, TopF32);
 }
 
+SDValue AArch64TargetLowering::LowerFMA(SDValue Op, SelectionDAG &DAG) const {
+  SDValue OpA = Op->getOperand(0);
+  SDValue OpB = Op->getOperand(1);
+  SDValue OpC = Op->getOperand(2);
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+
+  assert(VT.isVector() && "Scalar fma lowering should be handled by patterns");
+
+  // Bail early if we're definitely not looking to merge FNEGs into the FMA.
+  if (VT != MVT::v8f16 && VT != MVT::v4f32 && VT != MVT::v2f64)
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);
+
+  if (OpC.getOpcode() != ISD::FNEG)
+    return useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable())
+               ? LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED)
+               : Op; // Fallback to NEON lowering.
+
+  // Convert FMA/FNEG nodes to SVE to enable the following patterns:
+  // fma(a, b, neg(c)) -> fnmls(a, b, c)
+  // fma(neg(a), b, neg(c)) -> fnmla(a, b, c)
+  // fma(a, neg(b), neg(c)) -> fnmla(a, b, c)
+  SDValue Pg = getPredicateForVector(DAG, DL, VT);
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+
+  auto ConvertToScalableFnegMt = [&](SDValue Op) {
+    if (Op.getOpcode() == ISD::FNEG)
+      Op = LowerToPredicatedOp(Op, DAG, AArch64ISD::FNEG_MERGE_PASSTHRU);
+    return convertToScalableVector(DAG, ContainerVT, Op);
+  };
+
+  OpA = ConvertToScalableFnegMt(OpA);
+  OpB = ConvertToScalableFnegMt(OpB);
+  OpC = ConvertToScalableFnegMt(OpC);
+
+  SDValue ScalableRes =
+      DAG.getNode(AArch64ISD::FMA_PRED, DL, ContainerVT, Pg, OpA, OpB, OpC);
+  return convertFromScalableVector(DAG, VT, ScalableRes);
+}
+
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -7857,7 +7900,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::FMUL:
     return LowerFMUL(Op, DAG);
   case ISD::FMA:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);
+    return LowerFMA(Op, DAG);
   case ISD::FDIV:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FDIV_PRED);
   case ISD::FNEG:
