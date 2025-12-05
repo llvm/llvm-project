@@ -183,11 +183,7 @@ AArch64PrologueEpilogueCommon::convertCalleeSaveRestoreToSPPrePostIncDec(
   // update in so create a normal arithmetic instruction instead.
   //
   // On Windows, some register pairs involving LR can't be folded because
-  // there isn't a corresponding unwind opcode. (Note that packed unwind expects
-  // a sequence like "sub sp, sp, #16; stp x19, lr, [sp]; sub sp, sp, #16",
-  // but we currently generate "sub sp, sp, #32; stp x19, lr, [sp, #16]". We
-  // could handle that here, but it's not clearly profitable; it saves up to
-  // 4 words of xdata, but it costs 2 instructions.)
+  // there isn't a corresponding unwind opcode.
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
       CSStackSizeInc < MinOffset * (int64_t)Scale.getFixedValue() ||
       CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue() ||
@@ -334,6 +330,10 @@ bool AArch64PrologueEpilogueCommon::shouldCombineCSRLocalStackBump(
   // (to force a stp with predecrement) to match the packed unwind format,
   // provided that there actually are any callee saved registers to merge the
   // decrement with.
+  //
+  // Note that for certain paired saves, like "x19, lr", we can't actually
+  // combine the save, but packed unwind still expects a separate stack bump.
+  //
   // This is potentially marginally slower, but allows using the packed
   // unwind format for functions that both have a local area and callee saved
   // registers. Using the packed unwind format notably reduces the size of
