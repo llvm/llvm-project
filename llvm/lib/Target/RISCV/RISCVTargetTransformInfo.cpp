@@ -1569,9 +1569,9 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // instruction.
     if ((ST->hasStdExtZbb() || ST->hasStdExtZbkb()) && RetTy->isIntegerTy() &&
         ICA.getArgs()[0] == ICA.getArgs()[1] &&
-        (RetTy->getPrimitiveSizeInBits() == 32 ||
-         RetTy->getPrimitiveSizeInBits() == 64) &&
-        RetTy->getPrimitiveSizeInBits() <= ST->getXLen()) {
+        (RetTy->getIntegerBitWidth() == 32 ||
+         RetTy->getIntegerBitWidth() == 64) &&
+        RetTy->getIntegerBitWidth() <= ST->getXLen()) {
       return 1;
     }
     break;
