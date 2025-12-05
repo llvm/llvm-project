@@ -131,7 +131,7 @@ TEST(ASTEntityMappingTest, BuiltinFunction) {
   // Find the builtin call
   auto Matcher = callExpr().bind("call");
   auto Matches = match(Matcher, Ctx);
-  ASSERT_FALSE(Matches.empty());
+  ASSERT_EQ(Matches.size(), 1ul);
 
   const auto *CE = Matches[0].getNodeAs<CallExpr>("call");
   ASSERT_NE(CE, nullptr);
