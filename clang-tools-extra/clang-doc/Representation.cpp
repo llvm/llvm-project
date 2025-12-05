@@ -398,7 +398,7 @@ BaseRecordInfo::BaseRecordInfo() : RecordInfo() {}
 BaseRecordInfo::BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path,
                                bool IsVirtual, AccessSpecifier Access,
                                bool IsParent)
-    : RecordInfo(USR, Name, Path), IsVirtual(IsVirtual), Access(Access),
+    : RecordInfo(USR, Name, Path), Access(Access), IsVirtual(IsVirtual),
       IsParent(IsParent) {}
 
 llvm::SmallString<16> Info::extractName() const {
