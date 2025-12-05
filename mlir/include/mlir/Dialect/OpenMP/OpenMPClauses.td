@@ -22,6 +22,7 @@
 include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/IR/BuiltinAttributes.td"
 
 //===----------------------------------------------------------------------===//
 // V5.2: [6.3] `align` clause
@@ -776,10 +777,9 @@ class OpenMP_LinearClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
-  let arguments = (ins
-    Variadic<AnyType>:$linear_vars,
-    Variadic<I32>:$linear_step_vars
-  );
+  let arguments = (ins Variadic<AnyType>:$linear_vars,
+      Variadic<I32>:$linear_step_vars,
+      OptionalAttr<ArrayAttr>:$linear_var_types);
 
   let optAssemblyFormat = [{
     `linear` `(`
