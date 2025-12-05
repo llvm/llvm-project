@@ -8,6 +8,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_RAW_MUTEX_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_RAW_MUTEX_H
 
+#include "hdr/errno_macros.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
@@ -16,7 +17,6 @@
 #include "src/__support/macros/optimization.h"
 #include "src/__support/threads/sleep.h"
 #include "src/__support/time/abs_timeout.h"
-#include <sys/errno.h>
 
 #include <stdio.h>
 
