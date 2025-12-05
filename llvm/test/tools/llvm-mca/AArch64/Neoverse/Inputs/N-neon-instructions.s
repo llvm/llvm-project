@@ -16,6 +16,15 @@ addhn2 v0.4s, v0.2d, v0.2d
 addhn2 v0.8h, v0.4s, v0.4s
 addp v0.2d, v0.2d, v0.2d
 addp v0.8b, v0.8b, v0.8b
+addv s0, v0.4s
+addv h0, v0.4h
+addv h0, v0.8h
+addv b0, v0.8b
+addv b0, v0.16b
+aesd v0.16b, v0.16b
+aese v0.16b, v0.16b
+aesimc v0.16b, v0.16b
+aesmc v0.16b, v0.16b
 and v0.8b, v0.8b, v0.8b
 bic v0.4h, #15, lsl #8
 bic v0.8b, v0.8b, v0.8b
@@ -65,6 +74,17 @@ dup v0.4h,w28
 dup v0.4s,w28
 dup v0.8b,w28
 dup v0.8h,w28
+dup b0, v0.b[1]
+dup d0, v0.d[1]
+dup h0, v0.h[1]
+dup s0, v0.s[1]
+dup v0.16b, v0.b[1]
+dup v0.2d, v0.d[1]
+dup v0.2s, v0.s[1]
+dup v0.4h, v0.h[1]
+dup v0.4s, v0.s[1]
+dup v0.8b, v0.b[1]
+dup v0.8h, v0.h[1]
 eor v0.16b, v0.16b, v0.16b
 ext v0.16b, v0.16b, v0.16b, #3
 ext v0.8b, v0.8b, v0.8b, #3
@@ -111,6 +131,7 @@ fcmlt s10, s11, #0.0
 fcmlt v0.4s, v0.4s, #0.0
 fcvtas d21, d14
 fcvtas s12, s13
+fcvtas h12, h13
 fcvtas v0.2d, v0.2d
 fcvtas v0.2s, v0.2s
 fcvtas v0.4h, v0.4h
@@ -118,6 +139,7 @@ fcvtas v0.4s, v0.4s
 fcvtas v0.8h, v0.8h
 fcvtau d21, d14
 fcvtau s12, s13
+fcvtau h12, h13
 fcvtau v0.2d, v0.2d
 fcvtau v0.2s, v0.2s
 fcvtau v0.4h, v0.4h
@@ -129,6 +151,7 @@ fcvtl2 v0.2d, v0.4s
 fcvtl2 v0.4s, v0.8h
 fcvtms d21, d14
 fcvtms s22, s13
+fcvtms h22, h13
 fcvtms v0.2d, v0.2d
 fcvtms v0.2s, v0.2s
 fcvtms v0.4h, v0.4h
@@ -136,6 +159,7 @@ fcvtms v0.4s, v0.4s
 fcvtms v0.8h, v0.8h
 fcvtmu d21, d14
 fcvtmu s12, s13
+fcvtmu h12, h13
 fcvtmu v0.2d, v0.2d
 fcvtmu v0.2s, v0.2s
 fcvtmu v0.4h, v0.4h
@@ -147,6 +171,7 @@ fcvtn2 v0.4s, v0.2d
 fcvtn2 v0.8h, v0.4s
 fcvtns d21, d14
 fcvtns s22, s13
+fcvtns h22, h13
 fcvtns v0.2d, v0.2d
 fcvtns v0.2s, v0.2s
 fcvtns v0.4h, v0.4h
@@ -154,6 +179,7 @@ fcvtns v0.4s, v0.4s
 fcvtns v0.8h, v0.8h
 fcvtnu d21, d14
 fcvtnu s12, s13
+fcvtnu h12, h13
 fcvtnu v0.2d, v0.2d
 fcvtnu v0.2s, v0.2s
 fcvtnu v0.4h, v0.4h
@@ -161,6 +187,7 @@ fcvtnu v0.4s, v0.4s
 fcvtnu v0.8h, v0.8h
 fcvtps d21, d14
 fcvtps s22, s13
+fcvtps h22, h13
 fcvtps v0.2d, v0.2d
 fcvtps v0.2s, v0.2s
 fcvtps v0.4h, v0.4h
@@ -168,6 +195,7 @@ fcvtps v0.4s, v0.4s
 fcvtps v0.8h, v0.8h
 fcvtpu d21, d14
 fcvtpu s12, s13
+fcvtpu h12, h13
 fcvtpu v0.2d, v0.2d
 fcvtpu v0.2s, v0.2s
 fcvtpu v0.4h, v0.4h
@@ -180,6 +208,8 @@ fcvtzs d21, d12, #1
 fcvtzs d21, d14
 fcvtzs s12, s13
 fcvtzs s21, s12, #1
+fcvtzs h21, h14
+fcvtzs h21, h12, #1
 fcvtzs v0.2d, v0.2d
 fcvtzs v0.2d, v0.2d, #3
 fcvtzs v0.2s, v0.2s
@@ -192,6 +222,8 @@ fcvtzu d21, d12, #1
 fcvtzu d21, d14
 fcvtzu s12, s13
 fcvtzu s21, s12, #1
+fcvtzu h12, h13
+fcvtzu h21, h12, #1
 fcvtzu v0.2d, v0.2d
 fcvtzu v0.2d, v0.2d, #3
 fcvtzu v0.2s, v0.2s
@@ -200,7 +232,11 @@ fcvtzu v0.4h, v0.4h
 fcvtzu v0.4s, v0.4s
 fcvtzu v0.4s, v0.4s, #3
 fcvtzu v0.8h, v0.8h
+fdiv v0.2d, v0.2d, v0.2d
 fdiv v0.2s, v0.2s, v0.2s
+fdiv v0.4h, v0.4h, v0.4h
+fdiv v0.4s, v0.4s, v0.4s
+fdiv v0.8h, v0.8h, v0.8h
 fmax v0.2d, v0.2d, v0.2d
 fmax v0.2s, v0.2s, v0.2s
 fmax v0.4s, v0.4s, v0.4s
@@ -213,6 +249,9 @@ fmaxnmp v0.4s, v0.4s, v0.4s
 fmaxp v0.2d, v0.2d, v0.2d
 fmaxp v0.2s, v0.2s, v0.2s
 fmaxp v0.4s, v0.4s, v0.4s
+fmaxv h0, v0.4h
+fmaxv h0, v0.8h
+fmaxv s0, v0.4s
 fmin v0.2d, v0.2d, v0.2d
 fmin v0.2s, v0.2s, v0.2s
 fmin v0.4s, v0.4s, v0.4s
@@ -457,6 +496,11 @@ saddlp v0.2s, v0.4h
 saddlp v0.4h, v0.8b
 saddlp v0.4s, v0.8h
 saddlp v0.8h, v0.16b
+saddlv d0, v0.4s
+saddlv s0, v0.4h
+saddlv s0, v0.8h
+saddlv h0, v0.8b
+saddlv h0, v0.16b
 saddw v0.2d, v0.2d, v0.2s
 saddw v0.4s, v0.4s, v0.4h
 saddw v0.8h, v0.8h, v0.8b
@@ -475,6 +519,10 @@ scvtf v0.4h, v0.4h
 scvtf v0.4s, v0.4s
 scvtf v0.4s, v0.4s, #3
 scvtf v0.8h, v0.8h
+sdot v0.2s, v0.8b, v0.4b[2]
+sdot v0.2s, v0.8b, v0.8b
+sdot v0.4s, v0.16b, v0.16b
+sdot v0.4s, v0.16b, v0.4b[2]
 shadd v0.8b, v0.8b, v0.8b
 shl d7, d10, #12
 shl v0.16b, v0.16b, #3
@@ -515,12 +563,22 @@ smax v0.8b, v0.8b, v0.8b
 smaxp v0.2s, v0.2s, v0.2s
 smaxp v0.4h, v0.4h, v0.4h
 smaxp v0.8b, v0.8b, v0.8b
+smaxv b0, v0.8b
+smaxv b0, v0.16b
+smaxv h0, v0.4h
+smaxv h0, v0.8h
+smaxv s0, v0.4s
 smin v0.16b, v0.16b, v0.16b
 smin v0.4s, v0.4s, v0.4s
 smin v0.8h, v0.8h, v0.8h
 sminp v0.16b, v0.16b, v0.16b
 sminp v0.4s, v0.4s, v0.4s
 sminp v0.8h, v0.8h, v0.8h
+sminv b0, v0.8b
+sminv b0, v0.16b
+sminv h0, v0.4h
+sminv h0, v0.8h
+sminv s0, v0.4s
 smlal v0.2d, v0.2s, v0.2s
 smlal v0.4s, v0.4h, v0.4h
 smlal v0.8h, v0.8b, v0.8b
@@ -594,6 +652,30 @@ sqneg v0.4h, v0.4h
 sqneg v0.4s, v0.4s
 sqneg v0.8b, v0.8b
 sqneg v0.8h, v0.8h
+sqrdmlah h0, h1, v2.h[3]
+sqrdmlah v0.4h, v1.4h, v2.h[3]
+sqrdmlah v0.8h, v1.8h, v2.h[3]
+sqrdmlah s0, s1, v2.s[1]
+sqrdmlah v0.2s, v1.2s, v2.s[1]
+sqrdmlah v0.4s, v1.4s, v2.s[1]
+sqrdmlah h0, h1, h2
+sqrdmlah v0.4h, v1.4h, v2.4h
+sqrdmlah v0.8h, v1.8h, v2.8h
+sqrdmlah s0, s1, s2
+sqrdmlah v0.2s, v1.2s, v2.2s
+sqrdmlah v0.4s, v1.4s, v2.4s
+sqrdmlsh h0, h1, v2.h[3]
+sqrdmlsh v0.4h, v1.4h, v2.h[3]
+sqrdmlsh v0.8h, v1.8h, v2.h[3]
+sqrdmlsh s0, s1, v2.s[1]
+sqrdmlsh v0.2s, v1.2s, v2.s[1]
+sqrdmlsh v0.4s, v1.4s, v2.s[1]
+sqrdmlsh h0, h1, h2
+sqrdmlsh v0.4h, v1.4h, v2.4h
+sqrdmlsh v0.8h, v1.8h, v2.8h
+sqrdmlsh s0, s1, s2
+sqrdmlsh v0.2s, v1.2s, v2.2s
+sqrdmlsh v0.4s, v1.4s, v2.4s
 sqrdmulh h10, h11, h12
 sqrdmulh h7, h15, v0.h[3]
 sqrdmulh s15, s14, v0.s[1]
@@ -777,7 +859,7 @@ st3 { v0.h, v1.h, v2.h }[7], [x15], #6
 st4 { v0.2s, v1.2s, v2.2s, v3.2s }, [sp]
 st4 { v0.4s, v1.4s, v2.4s, v3.4s }, [sp], #64
 st4 { v0.b, v1.b, v2.b, v3.b }[9], [x0]
-st4 { v0.b, v1.b, v2.b, v3.b }[9], [x0], x5
+st4 { v0.d, v1.d, v2.d, v3.d }[1], [x0], x5
 sub d15, d5, d16
 sub v0.2d, v0.2d, v0.2d
 suqadd b19, b14
@@ -853,6 +935,11 @@ uaddlp v0.2s, v0.4h
 uaddlp v0.4h, v0.8b
 uaddlp v0.4s, v0.8h
 uaddlp v0.8h, v0.16b
+uaddlv d0, v0.4s
+uaddlv s0, v0.4h
+uaddlv s0, v0.8h
+uaddlv h0, v0.8b
+uaddlv h0, v0.16b
 uaddw v0.2d, v0.2d, v0.2s
 uaddw v0.4s, v0.4s, v0.4h
 uaddw v0.8h, v0.8h, v0.8b
@@ -871,6 +958,10 @@ ucvtf v0.4h, v0.4h
 ucvtf v0.4s, v0.4s
 ucvtf v0.4s, v0.4s, #3
 ucvtf v0.8h, v0.8h
+udot v0.2s, v0.8b, v0.4b[2]
+udot v0.2s, v0.8b, v0.8b
+udot v0.4s, v0.16b, v0.16b
+udot v0.4s, v0.16b, v0.4b[2]
 uhadd v0.16b, v0.16b, v0.16b
 uhadd v0.8h, v0.8h, v0.8h
 uhsub v0.4s, v0.4s, v0.4s
@@ -880,12 +971,22 @@ umax v0.8h, v0.8h, v0.8h
 umaxp v0.16b, v0.16b, v0.16b
 umaxp v0.4s, v0.4s, v0.4s
 umaxp v0.8h, v0.8h, v0.8h
+umaxv b0, v0.8b
+umaxv b0, v0.16b
+umaxv h0, v0.4h
+umaxv h0, v0.8h
+umaxv s0, v0.4s
 umin v0.2s, v0.2s, v0.2s
 umin v0.4h, v0.4h, v0.4h
 umin v0.8b, v0.8b, v0.8b
 uminp v0.2s, v0.2s, v0.2s
 uminp v0.4h, v0.4h, v0.4h
 uminp v0.8b, v0.8b, v0.8b
+uminv b0, v0.8b
+uminv b0, v0.16b
+uminv h0, v0.4h
+uminv h0, v0.8h
+uminv s0, v0.4s
 umlal v0.2d, v0.2s, v0.2s
 umlal v0.4s, v0.4h, v0.4h
 umlal v0.8h, v0.8b, v0.8b
@@ -898,6 +999,10 @@ umlsl v0.8h, v0.8b, v0.8b
 umlsl2 v0.2d, v0.4s, v0.4s
 umlsl2 v0.4s, v0.8h, v0.8h
 umlsl2 v0.8h, v0.16b, v0.16b
+umov w0, v0.b[1]
+umov w0, v0.h[1]
+umov w0, v0.s[1]
+umov x0, v0.d[1]
 umull v0.2d, v0.2s, v0.2s
 umull v0.4s, v0.4h, v0.4h
 umull v0.8h, v0.8b, v0.8b
@@ -1000,6 +1105,11 @@ ushr v0.4h, v0.4h, #3
 ushr v0.4s, v0.4s, #3
 ushr v0.8b, v0.8b, #3
 ushr v0.8h, v0.8h, #3
+smov w0, v0.b[1]
+smov w0, v0.h[1]
+smov x0, v0.b[1]
+smov x0, v0.h[1]
+smov x0, v0.s[1]
 usqadd b19, b14
 usqadd d18, d22
 usqadd h20, h15
