@@ -157,6 +157,13 @@ struct TypeInterface : public Interface {
 
   static bool classof(const Interface *interface);
 };
+// An interface that is registered to a Dialect.
+struct DialectInterface : public Interface {
+  using Interface::Interface;
+
+  static bool classof(const Interface *interface);
+};
+
 } // namespace tblgen
 } // namespace mlir
 

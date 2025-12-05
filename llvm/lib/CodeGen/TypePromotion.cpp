@@ -512,6 +512,14 @@ void IRPromoter::PromoteTree() {
         I->setOperand(i, ConstantInt::get(ExtTy, 0));
     }
 
+    // For switch, also mutate case values, which are not operands.
+    if (auto *SI = dyn_cast<SwitchInst>(I)) {
+      for (auto Case : SI->cases()) {
+        APInt NewConst = Case.getCaseValue()->getValue().zext(PromotedWidth);
+        Case.setValue(ConstantInt::get(SI->getContext(), NewConst));
+      }
+    }
+
     // Mutate the result type, unless this is an icmp or switch.
     if (!isa<ICmpInst>(I) && !isa<SwitchInst>(I)) {
       I->mutateType(ExtTy);
