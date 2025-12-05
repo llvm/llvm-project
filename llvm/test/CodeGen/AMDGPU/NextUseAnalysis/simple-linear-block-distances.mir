@@ -3,8 +3,6 @@
 
 
 
-
-
 # CHECK-LABEL: === NextUseAnalysis Results for test1 ===
 # CHECK: --- MBB_0 ---
 # CHECK: Instr: %10:vgpr_32 = COPY killed $vgpr4
@@ -24,27 +22,27 @@
 # CHECK: Vreg: %10[ 10 ]
 # CHECK: Instr: %6:vgpr_32 = COPY killed $vgpr0
 # CHECK-NEXT: Next-use distances:
-# CHECK: Vreg: %7[ 5 ]
+# CHECK: Vreg: %7[ 12 ]
 # CHECK: Vreg: %9[ 8 ]
 # CHECK: Vreg: %8[ 1 ]
 # CHECK: Vreg: %10[ 9 ]
 # CHECK: Instr: %14:vgpr_32 = V_AND_B32_e64 1, killed %8, implicit $exec
 # CHECK-NEXT: Next-use distances:
-# CHECK: Vreg: %7[ 4 ]
+# CHECK: Vreg: %7[ 11 ]
 # CHECK: Vreg: %9[ 7 ]
 # CHECK: Vreg: %6[ 3 ]
 # CHECK: Vreg: %8[ 0 ]
 # CHECK: Vreg: %10[ 8 ]
 # CHECK: Instr: %15:sreg_32 = V_CMP_NE_U32_e64 1, killed %14, implicit $exec
 # CHECK-NEXT: Next-use distances:
-# CHECK: Vreg: %7[ 3 ]
+# CHECK: Vreg: %7[ 10 ]
 # CHECK: Vreg: %14[ 0 ]
 # CHECK: Vreg: %9[ 6 ]
 # CHECK: Vreg: %6[ 2 ]
 # CHECK: Vreg: %10[ 7 ]
 # CHECK: Instr: %0:sreg_32 = SI_IF killed %15, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 # CHECK-NEXT: Next-use distances:
-# CHECK: Vreg: %7[ 2 ]
+# CHECK: Vreg: %7[ 9 ]
 # CHECK: Vreg: %9[ 5 ]
 # CHECK: Vreg: %6[ 1 ]
 # CHECK: Vreg: %15[ 0 ]
@@ -52,13 +50,13 @@
 # CHECK: Instr: S_BRANCH %bb.3
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 1 ]
-# CHECK: Vreg: %7[ 1 ]
+# CHECK: Vreg: %7[ 8 ]
 # CHECK: Vreg: %9[ 4 ]
 # CHECK: Vreg: %6[ 0 ]
 # CHECK: Vreg: %10[ 5 ]
 # CHECK: Block End Distances:
 # CHECK: Vreg: %0[ 1 ]
-# CHECK: Vreg: %7[ 1 ]
+# CHECK: Vreg: %7[ 8 ]
 # CHECK: Vreg: %9[ 4 ]
 # CHECK: Vreg: %6[ 0 ]
 # CHECK: Vreg: %10[ 5 ]
@@ -82,41 +80,41 @@
 # CHECK: Vreg: %0[ 0 ]
 # CHECK: Vreg: %9[ 3 ]
 # CHECK: Vreg: %1[ 1 ]
-# CHECK: Vreg: %72[ 2 ]
+# CHECK: Vreg: %72[ 9 ]
 # CHECK: Vreg: %10[ 4 ]
 # CHECK: Instr: S_BRANCH %bb.2
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %2[ 1 ]
 # CHECK: Vreg: %9[ 2 ]
 # CHECK: Vreg: %1[ 0 ]
-# CHECK: Vreg: %72[ 1 ]
+# CHECK: Vreg: %72[ 8 ]
 # CHECK: Vreg: %10[ 3 ]
 # CHECK: Block End Distances:
 # CHECK: Vreg: %2[ 1 ]
 # CHECK: Vreg: %9[ 2 ]
 # CHECK: Vreg: %1[ 0 ]
-# CHECK: Vreg: %72[ 1 ]
+# CHECK: Vreg: %72[ 8 ]
 # CHECK: Vreg: %10[ 3 ]
 # CHECK: --- MBB_2 ---
 # CHECK: Instr: %33:vgpr_32 = DS_READ_U8_gfx9 %72, 0, 0, implicit $exec
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %2[ 17 ]
 # CHECK: Vreg: %9[ 18 ]
-# CHECK: Vreg: %72[ 0 ]
+# CHECK: Vreg: %72[ 7 ]
 # CHECK: Vreg: %10[ 19 ]
 # CHECK: Instr: %34:vgpr_32 = DS_READ_U8_gfx9 %72, 1, 0, implicit $exec
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %33[ 10 ]
 # CHECK: Vreg: %2[ 16 ]
 # CHECK: Vreg: %9[ 17 ]
-# CHECK: Vreg: %72[ 0 ]
+# CHECK: Vreg: %72[ 6 ]
 # CHECK: Vreg: %10[ 18 ]
 # CHECK: Instr: %35:vgpr_32 = DS_READ_U8_gfx9 %72, 2, 0, implicit $exec
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %33[ 9 ]
 # CHECK: Vreg: %2[ 15 ]
 # CHECK: Vreg: %9[ 16 ]
-# CHECK: Vreg: %72[ 0 ]
+# CHECK: Vreg: %72[ 5 ]
 # CHECK: Vreg: %34[ 9 ]
 # CHECK: Vreg: %10[ 17 ]
 # CHECK: Instr: %36:vgpr_32 = DS_READ_U8_gfx9 %72, 3, 0, implicit $exec
@@ -125,7 +123,7 @@
 # CHECK: Vreg: %2[ 14 ]
 # CHECK: Vreg: %9[ 15 ]
 # CHECK: Vreg: %35[ 9 ]
-# CHECK: Vreg: %72[ 0 ]
+# CHECK: Vreg: %72[ 4 ]
 # CHECK: Vreg: %34[ 8 ]
 # CHECK: Vreg: %10[ 16 ]
 # CHECK: Instr: %37:vgpr_32 = DS_READ_U8_gfx9 %72, 4, 0, implicit $exec
@@ -134,7 +132,7 @@
 # CHECK: Vreg: %2[ 13 ]
 # CHECK: Vreg: %9[ 14 ]
 # CHECK: Vreg: %35[ 8 ]
-# CHECK: Vreg: %72[ 0 ]
+# CHECK: Vreg: %72[ 3 ]
 # CHECK: Vreg: %34[ 7 ]
 # CHECK: Vreg: %10[ 15 ]
 # CHECK: Vreg: %36[ 8 ]
@@ -145,7 +143,7 @@
 # CHECK: Vreg: %9[ 13 ]
 # CHECK: Vreg: %35[ 7 ]
 # CHECK: Vreg: %37[ 3 ]
-# CHECK: Vreg: %72[ 0 ]
+# CHECK: Vreg: %72[ 2 ]
 # CHECK: Vreg: %34[ 6 ]
 # CHECK: Vreg: %10[ 14 ]
 # CHECK: Vreg: %36[ 7 ]
@@ -156,7 +154,7 @@
 # CHECK: Vreg: %9[ 12 ]
 # CHECK: Vreg: %35[ 6 ]
 # CHECK: Vreg: %37[ 2 ]
-# CHECK: Vreg: %72[ 0 ]
+# CHECK: Vreg: %72[ 1 ]
 # CHECK: Vreg: %34[ 5 ]
 # CHECK: Vreg: %10[ 13 ]
 # CHECK: Vreg: %36[ 6 ]
@@ -265,20 +263,20 @@
 # CHECK: Instr: %16:vgpr_32 = DS_READ_U8_gfx9 %7, 0, 0, implicit $exec
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 17 ]
-# CHECK: Vreg: %7[ 0 ]
+# CHECK: Vreg: %7[ 7 ]
 # CHECK: Vreg: %9[ 20 ]
 # CHECK: Vreg: %10[ 21 ]
 # CHECK: Instr: %17:vgpr_32 = DS_READ_U8_gfx9 %7, 1, 0, implicit $exec
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 16 ]
-# CHECK: Vreg: %7[ 0 ]
+# CHECK: Vreg: %7[ 6 ]
 # CHECK: Vreg: %9[ 19 ]
 # CHECK: Vreg: %16[ 10 ]
 # CHECK: Vreg: %10[ 20 ]
 # CHECK: Instr: %18:vgpr_32 = DS_READ_U8_gfx9 %7, 2, 0, implicit $exec
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 15 ]
-# CHECK: Vreg: %7[ 0 ]
+# CHECK: Vreg: %7[ 5 ]
 # CHECK: Vreg: %9[ 18 ]
 # CHECK: Vreg: %16[ 9 ]
 # CHECK: Vreg: %10[ 19 ]
@@ -286,7 +284,7 @@
 # CHECK: Instr: %19:vgpr_32 = DS_READ_U8_gfx9 %7, 3, 0, implicit $exec
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 14 ]
-# CHECK: Vreg: %7[ 0 ]
+# CHECK: Vreg: %7[ 4 ]
 # CHECK: Vreg: %9[ 17 ]
 # CHECK: Vreg: %16[ 8 ]
 # CHECK: Vreg: %18[ 9 ]
@@ -295,7 +293,7 @@
 # CHECK: Instr: %20:vgpr_32 = DS_READ_U8_gfx9 %7, 4, 0, implicit $exec
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 13 ]
-# CHECK: Vreg: %7[ 0 ]
+# CHECK: Vreg: %7[ 3 ]
 # CHECK: Vreg: %9[ 16 ]
 # CHECK: Vreg: %16[ 7 ]
 # CHECK: Vreg: %18[ 8 ]
@@ -305,7 +303,7 @@
 # CHECK: Instr: %21:vgpr_32 = DS_READ_U8_gfx9 %7, 5, 0, implicit $exec
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 12 ]
-# CHECK: Vreg: %7[ 0 ]
+# CHECK: Vreg: %7[ 2 ]
 # CHECK: Vreg: %9[ 15 ]
 # CHECK: Vreg: %16[ 6 ]
 # CHECK: Vreg: %18[ 7 ]
@@ -316,7 +314,7 @@
 # CHECK: Instr: %22:vgpr_32 = DS_READ_U8_gfx9 %7, 6, 0, implicit $exec
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 11 ]
-# CHECK: Vreg: %7[ 0 ]
+# CHECK: Vreg: %7[ 1 ]
 # CHECK: Vreg: %21[ 2 ]
 # CHECK: Vreg: %9[ 14 ]
 # CHECK: Vreg: %16[ 5 ]
@@ -472,7 +470,7 @@
 # CHECK: (no register uses)
 # CHECK: Block End Distances:
 # CHECK: (no registers live at block end)
-# CHECK: === End NextUseAnalysis Results ===
+# CHECK-LABEL: === End NextUseAnalysis Results ===
 
 ---
 name:            test1

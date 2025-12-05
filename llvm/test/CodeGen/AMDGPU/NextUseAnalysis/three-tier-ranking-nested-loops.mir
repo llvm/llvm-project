@@ -57,26 +57,26 @@
 # CHECK: (no register uses)
 # CHECK: Instr: %1:sgpr_32 = S_MOV_B32 5
 # CHECK-NEXT: Next-use distances:
-# CHECK: Vreg: %0[ 4 ]
+# CHECK: Vreg: %0[ 3 ]
 # CHECK: Instr: %2:sgpr_32 = S_MOV_B32 0
 # CHECK-NEXT: Next-use distances:
-# CHECK: Vreg: %0[ 3 ]
-# CHECK: Vreg: %1[ 9 ]
+# CHECK: Vreg: %0[ 2 ]
+# CHECK: Vreg: %1[ 2 ]
 # CHECK: Instr: %8:sgpr_32 = S_MOV_B32 999
 # CHECK-NEXT: Next-use distances:
-# CHECK: Vreg: %0[ 2 ]
+# CHECK: Vreg: %0[ 1 ]
 # CHECK: Vreg: %2[ 1 ]
-# CHECK: Vreg: %1[ 8 ]
+# CHECK: Vreg: %1[ 1 ]
 # CHECK: Instr: S_BRANCH %bb.1
 # CHECK-NEXT: Next-use distances:
-# CHECK: Vreg: %0[ 1 ]
+# CHECK: Vreg: %0[ 0 ]
 # CHECK: Vreg: %2[ 0 ]
-# CHECK: Vreg: %1[ 7 ]
+# CHECK: Vreg: %1[ 0 ]
 # CHECK: Vreg: %8[ 4 ]
 # CHECK: Block End Distances:
-# CHECK: Vreg: %0[ 1 ]
+# CHECK: Vreg: %0[ 0 ]
 # CHECK: Vreg: %2[ 0 ]
-# CHECK: Vreg: %1[ 7 ]
+# CHECK: Vreg: %1[ 0 ]
 # CHECK: Vreg: %8[ 4 ]
 # CHECK: --- MBB_1 ---
 # CHECK: Instr: %3:sgpr_32 = PHI %2, %bb.0, %7, %bb.4
@@ -84,49 +84,49 @@
 # CHECK: Vreg: %0[ 1 ]
 # CHECK: Vreg: %7[ 0 ]
 # CHECK: Vreg: %2[ 0 ]
-# CHECK: Vreg: %1[ 7 ]
+# CHECK: Vreg: %1[ 5 ]
 # CHECK: Vreg: %8[ LoopTag+4 ]
 # CHECK: Instr: S_CMP_LT_I32 %3, %0, implicit-def $scc
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 0 ]
-# CHECK: Vreg: %1[ 6 ]
+# CHECK: Vreg: %1[ 4 ]
 # CHECK: Vreg: %8[ LoopTag+3 ]
 # CHECK: Vreg: %3[ 0 ]
 # CHECK: Instr: S_CBRANCH_SCC1 %bb.2, implicit $scc
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 11 ]
-# CHECK: Vreg: %1[ 5 ]
+# CHECK: Vreg: %1[ 3 ]
 # CHECK: Vreg: %8[ LoopTag+2 ]
 # CHECK: Vreg: %3[ 9 ]
 # CHECK: Instr: S_BRANCH %bb.5
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 10 ]
-# CHECK: Vreg: %1[ 4 ]
+# CHECK: Vreg: %1[ 2 ]
 # CHECK: Vreg: %8[ LoopTag+1 ]
 # CHECK: Vreg: %3[ 8 ]
 # CHECK: Block End Distances:
 # CHECK: Vreg: %0[ 10 ]
-# CHECK: Vreg: %1[ 4 ]
+# CHECK: Vreg: %1[ 2 ]
 # CHECK: Vreg: %8[ LoopTag+1 ]
 # CHECK: Vreg: %3[ 8 ]
 # CHECK: --- MBB_2 ---
 # CHECK: Instr: %4:sgpr_32 = S_MOV_B32 0
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 9 ]
-# CHECK: Vreg: %1[ 3 ]
+# CHECK: Vreg: %1[ 1 ]
 # CHECK: Vreg: %8[ LoopTag+12 ]
 # CHECK: Vreg: %3[ 7 ]
 # CHECK: Instr: S_BRANCH %bb.3
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 8 ]
 # CHECK: Vreg: %4[ 0 ]
-# CHECK: Vreg: %1[ 2 ]
+# CHECK: Vreg: %1[ 0 ]
 # CHECK: Vreg: %8[ LoopTag+11 ]
 # CHECK: Vreg: %3[ 6 ]
 # CHECK: Block End Distances:
 # CHECK: Vreg: %0[ 8 ]
 # CHECK: Vreg: %4[ 0 ]
-# CHECK: Vreg: %1[ 2 ]
+# CHECK: Vreg: %1[ 0 ]
 # CHECK: Vreg: %8[ LoopTag+11 ]
 # CHECK: Vreg: %3[ 6 ]
 # CHECK: --- MBB_3 ---
@@ -144,14 +144,14 @@
 # CHECK: Vreg: %1[ 1 ]
 # CHECK: Vreg: %8[ LoopTag*2+10 ]
 # CHECK: Vreg: %3[ LoopTag+5 ]
-# CHECK: Vreg: %5[ 1 ]
+# CHECK: Vreg: %5[ 2 ]
 # CHECK: Instr: S_CMP_LT_I32 %5, %1, implicit-def $scc
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ LoopTag+6 ]
 # CHECK: Vreg: %1[ 0 ]
 # CHECK: Vreg: %8[ LoopTag*2+9 ]
 # CHECK: Vreg: %3[ LoopTag+4 ]
-# CHECK: Vreg: %5[ 0 ]
+# CHECK: Vreg: %5[ 1 ]
 # CHECK: Instr: %6:sgpr_32 = S_ADD_U32 %5, 1, implicit-def $scc
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ LoopTag+5 ]
@@ -183,19 +183,19 @@
 # CHECK: Instr: %7:sgpr_32 = S_ADD_U32 %3, 1, implicit-def $scc
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 2 ]
-# CHECK: Vreg: %1[ 8 ]
+# CHECK: Vreg: %1[ 6 ]
 # CHECK: Vreg: %8[ LoopTag+5 ]
 # CHECK: Vreg: %3[ 0 ]
 # CHECK: Instr: S_BRANCH %bb.1
 # CHECK-NEXT: Next-use distances:
 # CHECK: Vreg: %0[ 1 ]
 # CHECK: Vreg: %7[ 0 ]
-# CHECK: Vreg: %1[ 7 ]
+# CHECK: Vreg: %1[ 5 ]
 # CHECK: Vreg: %8[ LoopTag+4 ]
 # CHECK: Block End Distances:
 # CHECK: Vreg: %0[ 1 ]
 # CHECK: Vreg: %7[ 0 ]
-# CHECK: Vreg: %1[ 7 ]
+# CHECK: Vreg: %1[ 5 ]
 # CHECK: Vreg: %8[ LoopTag+4 ]
 # CHECK: --- MBB_5 ---
 # CHECK: Instr: %9:sgpr_32 = S_ADD_U32 %3, %8, implicit-def $scc
@@ -207,7 +207,7 @@
 # CHECK: (no register uses)
 # CHECK: Block End Distances:
 # CHECK: (no registers live at block end)
-# CHECK: === End NextUseAnalysis Results ===
+# CHECK-LABEL: === End NextUseAnalysis Results ===
 
 ---
 name:            test_proper_nested_loops

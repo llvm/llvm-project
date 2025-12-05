@@ -114,30 +114,34 @@ void NextUseResult::analyze(const MachineFunction &MF) {
         }
 
         if (LI->getLoopDepth(MBB) < LI->getLoopDepth(Succ)) {
-          // MBB->Succ is entering the Succ's loop
-          // Clear out the Loop-Exiting weights.
+          // MBB->Succ is entering the Succ's loop (analysis exiting the loop)
+          // Two transformations:
+          // 1. Outside-loop uses (>= LoopTag): subtract LoopTag
+          // 2. Inside-loop uses (< LoopTag): reset to preheader position
+          //    This models: if spilled before loop, reload at preheader
           for (auto &P : SuccDist) {
             auto &Dists = P.second;
-            // Collect items that need to be updated to avoid iterator
-            // invalidation
-            SmallVector<std::pair<LaneBitmask, int64_t>, 4> ToUpdate;
+            VRegDistances::SortedRecords NewDists;
             for (auto R : Dists) {
               if (R.second >= LoopTag) {
-                ToUpdate.push_back(R);
+                // Outside-loop use: subtract LoopTag
+                R.second -= LoopTag;
+              } else {
+                // Inside-loop use: reset so distance = 0 at preheader bottom
+                R.second = -(int64_t)EntryOff[SuccNum];
               }
+              NewDists.insert(R);
             }
-            // Now apply the updates
-            for (auto R : ToUpdate) {
-              Dists.erase(R);
-              R.second -= LoopTag;
-              Dists.insert(R);
-            }
+            Dists = std::move(NewDists);
           }
         }
         LLVM_DEBUG({
           dbgs() << "\nCurr:";
           printVregDistances(Curr /*, 0 - we're at the block bottom*/);
-          dbgs() << "\nSucc:";
+          if (EdgeWeight != 0)
+            dbgs() << "\nSucc (EdgeWeight " << EdgeWeight << " applied):";
+          else
+            dbgs() << "\nSucc:";
           printVregDistances(SuccDist, EntryOff[SuccNum], EdgeWeight);
         });
 

@@ -90,6 +90,27 @@ class NextUseResult {
 
     bool contains(unsigned Key) { return NextUseMap.contains(Key); }
 
+    // Compare two stored distances: returns true if A is closer or equal to B.
+    // Handles mixed-sign values correctly:
+    // - Negative stored values (finite distances): larger (less negative) =
+    // closer
+    // - Non-negative stored values (LoopTag distances): smaller = closer
+    // - Mixed: negative (finite) is always closer than non-negative
+    // (loop-tagged)
+    // TODO: Investigate making LoopTag/DeadTag negative for consistent sign
+    // convention
+    static bool isCloserOrEqual(int64_t A, int64_t B) {
+      // Both negative (finite): larger = closer
+      if (A < 0 && B < 0)
+        return A >= B;
+      // Both non-negative (loop-tagged): smaller = closer
+      if (A >= 0 && B >= 0)
+        return A <= B;
+      // Mixed: negative (finite) is always closer than non-negative
+      // (loop-tagged)
+      return A < 0;
+    }
+
     bool insert(VRegMaskPair VMP, int64_t Dist) {
       Record R(VMP.getLaneMask(), Dist);
       if (NextUseMap.contains(VMP.getVReg())) {
@@ -103,8 +124,8 @@ class NextUseResult {
 
             // Check if existing use covers the new use
             if ((R.first & D.first) == R.first) {
-              // Existing use covers new use
-              if (D.second <= R.second) {
+              // Existing use covers new use - keep if existing is closer
+              if (isCloserOrEqual(D.second, R.second)) {
                 // Existing use is closer or equal → reject new use
                 return false;
               }
@@ -113,8 +134,8 @@ class NextUseResult {
 
             // Check if new use covers existing use
             if ((D.first & R.first) == D.first) {
-              // New use covers existing use
-              if (R.second <= D.second) {
+              // New use covers existing use - evict if new is closer
+              if (isCloserOrEqual(R.second, D.second)) {
                 // New use is closer → mark existing for removal
                 ToErase.push_back(It);
               } else {
@@ -186,31 +207,17 @@ class NextUseResult {
     }
 
     // Adjust 'Other' (which is in successor's frame) into *this* frame,
-    // then take pointwise min by LaneBitmask.
+    // then merge using insert's coverage logic.
     void merge(const VRegDistances &Other, unsigned SuccEntryOff,
                int64_t EdgeWeight = 0) {
       for (const auto &P : Other) {
         unsigned Key = P.getFirst();
         const auto &OtherDists = P.getSecond();
-        auto &MineDists = NextUseMap[Key]; // creates empty if not present
 
         for (const auto &D : OtherDists) {
-          // D.second is the successor's STORED value (signed, relative to succ)
           int64_t Rebased = rebaseFromSucc(D.second, SuccEntryOff, EdgeWeight);
-
-          // Try to find existing record with the same LaneBitmask
-          auto It =
-              std::find_if(MineDists.begin(), MineDists.end(),
-                           [&](const Record &R) { return R.first == D.first; });
-
-          if (It == MineDists.end()) {
-            // No record → insert
-            MineDists.insert({D.first, Rebased});
-          } else if (It->second > Rebased) { // take MIN in the current frame
-            // Furthest wins (adjusted is more distant) → replace
-            MineDists.erase(It);
-            MineDists.insert({D.first, Rebased});
-          }
+          // Use insert's coverage logic for consistent handling
+          insert(VRegMaskPair(Register(Key), D.first), Rebased);
         }
       }
     }

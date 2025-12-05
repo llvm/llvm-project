@@ -343,8 +343,10 @@ protected:
     std::string Line;
 
     while (std::getline(File, Line)) {
-      if (Line.find("# CHECK") == 0) {
-        Patterns.push_back(Line);
+      // Strip "# " prefix from MIR comment lines, store just the CHECK
+      // directive
+      if (Line.find("# CHECK") == 0 && Line.size() > 2) {
+        Patterns.push_back(Line.substr(2));
       }
     }
 
