@@ -54,6 +54,26 @@ using namespace clang;
 using namespace sema;
 
 namespace {
+
+/// Return true if two associated-constraint sets are semantically equal.
+static bool HaveSameAssociatedConstraints(
+    Sema &SemaRef, const NamedDecl *Old, ArrayRef<AssociatedConstraint> OldACs,
+    const NamedDecl *New, ArrayRef<AssociatedConstraint> NewACs) {
+  if (OldACs.size() != NewACs.size())
+    return false;
+  if (OldACs.empty())
+    return true;
+
+  // General case: pairwise compare each associated constraint expression.
+  Sema::TemplateCompareNewDeclInfo NewInfo(New);
+  for (size_t I = 0, E = OldACs.size(); I != E; ++I)
+    if (!SemaRef.AreConstraintExpressionsEqual(
+            Old, OldACs[I].ConstraintExpr, NewInfo, NewACs[I].ConstraintExpr))
+      return false;
+
+  return true;
+}
+
 /// Tree transform to "extract" a transformed type from a class template's
 /// constructor to a deduction guide.
 class ExtractTypeForDeductionGuide
@@ -218,9 +238,51 @@ buildDeductionGuide(Sema &SemaRef, TemplateDecl *OriginalTemplate,
       TInfo->getTypeLoc().castAs<FunctionProtoTypeLoc>().getParams();
 
   // Build the implicit deduction guide template.
+  QualType GuideType = TInfo->getType();
+
+  // In CUDA/HIP mode, avoid duplicate implicit guides that differ only in CUDA
+  // target attributes (same constructor signature and constraints).
+  if (IsImplicit && Ctor && SemaRef.getLangOpts().CUDA) {
+    SmallVector<AssociatedConstraint, 4> NewACs;
+    Ctor->getAssociatedConstraints(NewACs);
+
+    for (NamedDecl *Existing : DC->lookup(DeductionGuideName)) {
+      auto *ExistingFT = dyn_cast<FunctionTemplateDecl>(Existing);
+      auto *ExistingGuide =
+          ExistingFT
+              ? dyn_cast<CXXDeductionGuideDecl>(ExistingFT->getTemplatedDecl())
+              : dyn_cast<CXXDeductionGuideDecl>(Existing);
+      if (!ExistingGuide)
+        continue;
+
+      // Only consider guides that were also synthesized from a constructor.
+      auto *ExistingCtor = ExistingGuide->getCorrespondingConstructor();
+      if (!ExistingCtor)
+        continue;
+
+      // If the underlying constructors are overloads (different signatures once
+      // CUDA attributes are ignored), they should each get their own guides.
+      if (SemaRef.IsOverload(Ctor, ExistingCtor,
+                             /*UseMemberUsingDeclRules=*/false,
+                             /*ConsiderCudaAttrs=*/false))
+        continue;
+
+      // At this point, the constructors have the same signature ignoring CUDA
+      // attributes. Decide whether their associated constraints are also the
+      // same; only in that case do we treat one guide as a duplicate of the
+      // other.
+      SmallVector<AssociatedConstraint, 4> ExistingACs;
+      ExistingCtor->getAssociatedConstraints(ExistingACs);
+
+      if (HaveSameAssociatedConstraints(SemaRef, ExistingCtor, ExistingACs,
+                                        Ctor, NewACs))
+        return Existing;
+    }
+  }
+
   auto *Guide = CXXDeductionGuideDecl::Create(
-      SemaRef.Context, DC, LocStart, ES, Name, TInfo->getType(), TInfo, LocEnd,
-      Ctor, DeductionCandidate::Normal, FunctionTrailingRC);
+      SemaRef.Context, DC, LocStart, ES, Name, GuideType, TInfo, LocEnd, Ctor,
+      DeductionCandidate::Normal, FunctionTrailingRC);
   Guide->setImplicit(IsImplicit);
   Guide->setParams(Params);
 
