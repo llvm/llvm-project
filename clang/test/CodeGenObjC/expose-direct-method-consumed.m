@@ -4,21 +4,10 @@
 
 // RUN: %clang -Xclang -fobjc-expose-direct-methods   \
 // RUN:   -target arm64-apple-darwin -fobjc-arc \
-// RUN:   -O0 -S -emit-llvm %s -o -
-
-// RUN: %clang -fobjc-expose-direct-methods   \
-// RUN:   -target arm64-apple-darwin -fobjc-arc \
-// RUN:   -O2 -S -emit-llvm %s -o -
-//
-// | FileCheck %s --check-prefix=OPT
-
-// RUN: %clang -Xclang -fobjc-expose-direct-methods   \
-// RUN:   -target arm64-apple-darwin -fobjc-arc \
 // RUN:   -O2 -framework Foundation %s -o %t/shape
 
 // RUN: %t/shape 1 2 3 4 | FileCheck %s --check-prefix=EXE
 
-// OPT: adlfk
 #import <Foundation/Foundation.h>
 #include "math.h"
 
