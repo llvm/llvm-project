@@ -5561,7 +5561,7 @@ struct AAAlignCallSiteReturned final
               std::min(this->getAssumedAlign(), Alignment).value());
         break;
       }
-      // FIX ME: Should introduce target specific sub-attributes and letting
+      // FIXME: Should introduce target specific sub-attributes and letting
       // getAAfor<AAAlign> lead to create sub-attribute to handle target
       // specific intrinsics.
       case Intrinsic::amdgcn_make_buffer_rsrc: {
