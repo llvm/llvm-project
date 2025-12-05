@@ -2407,8 +2407,6 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   // iteration.
   bool FirstLaneOnly = vputils::onlyFirstLaneUsed(this);
   // Compute the scalar steps and save the results in State.
-  Type *IntStepTy =
-      IntegerType::get(BaseIVTy->getContext(), BaseIVTy->getScalarSizeInBits());
 
   unsigned StartLane = 0;
   unsigned EndLane = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
@@ -2417,20 +2415,10 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     EndLane = StartLane + 1;
   }
   Value *StartIdx0;
-  if (getUnrollPart(*this) == 0)
-    StartIdx0 = ConstantInt::get(IntStepTy, 0);
-  else {
-    StartIdx0 = State.get(getOperand(2), true);
-    if (getUnrollPart(*this) != 1) {
-      StartIdx0 =
-          Builder.CreateMul(StartIdx0, ConstantInt::get(StartIdx0->getType(),
-                                                        getUnrollPart(*this)));
-    }
-    StartIdx0 = Builder.CreateSExtOrTrunc(StartIdx0, IntStepTy);
-  }
-
-  if (BaseIVTy->isFloatingPointTy())
-    StartIdx0 = Builder.CreateSIToFP(StartIdx0, BaseIVTy);
+  if (getNumOperands() == 3) {
+    StartIdx0 = getSignedIntOrFpConstant(BaseIVTy, 0);
+  } else
+    StartIdx0 = State.get(getOperand(3), true);
 
   for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
     Value *StartIdx = Builder.CreateBinOp(
