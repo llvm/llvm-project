@@ -1523,8 +1523,9 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
 
   bool PrintedKindDecoration = false;
   if (T->isCanonicalUnqualified()) {
-    if (Policy.SuppressTagKeyword ==
-            llvm::to_underlying(PrintingPolicy::SuppressTagKeywordMode::None) &&
+    if (Policy.SuppressTagKeyword <
+            llvm::to_underlying(
+                PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames) &&
         !D->getTypedefNameForAnonDecl()) {
       PrintedKindDecoration = true;
       OS << D->getKindName();
@@ -1553,10 +1554,9 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
     clang::PrintingPolicy Copy(Policy);
 
     // Suppress the redundant tag keyword if we just printed one.
-    if (PrintedKindDecoration) {
-      Copy.SuppressTagKeywordInAnonymousTagNames = true;
-      Copy.SuppressTagKeyword = true;
-    }
+    if (PrintedKindDecoration)
+      Copy.SuppressTagKeyword =
+          llvm::to_underlying(PrintingPolicy::SuppressTagKeywordMode::All);
 
     D->printName(OS, Copy);
   }

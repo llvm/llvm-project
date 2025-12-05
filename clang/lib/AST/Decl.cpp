@@ -1799,8 +1799,8 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       //
       // I.e., suppress tag locations, suppress leading keyword, *don't*
       // suppress tag in name
-      Copy.SuppressTagKeyword = true;
-      Copy.SuppressTagKeywordInAnonymousTagNames = false;
+      Copy.SuppressTagKeyword = llvm::to_underlying(
+          PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames);
       Copy.AnonymousTagLocations = false;
       RD->printName(OS, Copy);
     } else if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
@@ -4969,11 +4969,18 @@ void TagDecl::printAnonymousTagDecl(llvm::raw_ostream &OS,
     return;
   }
 
-  bool SuppressTagKeywordInName = Policy.SuppressTagKeywordInAnonymousTagNames;
+  bool SuppressTagKeywordInName =
+      (Policy.SuppressTagKeyword ==
+       llvm::to_underlying(
+           PrintingPolicy::SuppressTagKeywordMode::InAnonNames)) ||
+      (Policy.SuppressTagKeyword ==
+       llvm::to_underlying(PrintingPolicy::SuppressTagKeywordMode::All));
 
   // Emit leading keyword. Since we printed a leading keyword make sure we
   // don't print the tag as part of the name too.
-  if (!Policy.SuppressTagKeyword) {
+  if (Policy.SuppressTagKeyword <
+      llvm::to_underlying(
+          PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames)) {
     OS << getKindName() << ' ';
     SuppressTagKeywordInName = true;
   }
