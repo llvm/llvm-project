@@ -436,6 +436,7 @@ protected:
         ++__first;
         if (__first == __last) {
           __err |= ios_base::eofbit;
+          __v = 0;
           return __first;
         }
         // __c2 == 'x' || __c2 == 'X'
@@ -444,6 +445,7 @@ protected:
           ++__first;
         } else {
           __base = 8;
+          __parsed_num = true; // We only swallowed '0', so we've started to parse a number
         }
       } else {
         __base = 10;
