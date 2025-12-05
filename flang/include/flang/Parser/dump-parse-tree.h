@@ -18,6 +18,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -229,6 +230,8 @@ public:
   NODE(CompilerDirective, NoInline)
   NODE(CompilerDirective, Unrecognized)
   NODE(CompilerDirective, VectorAlways)
+  NODE_ENUM(CompilerDirective::VectorLength, VectorLength::Kind)
+  NODE(CompilerDirective, VectorLength)
   NODE(CompilerDirective, Unroll)
   NODE(CompilerDirective, UnrollAndJam)
   NODE(CompilerDirective, NoVector)
@@ -643,7 +646,7 @@ public:
   NODE_ENUM(OmpLinearModifier, Value)
   NODE(parser, OmpLocator)
   NODE(parser, OmpLocatorList)
-  NODE(parser, OmpLoopRangeClause)
+  NODE(parser, OmpLooprangeClause)
   NODE(parser, OmpMapClause)
   NODE(OmpMapClause, Modifier)
   NODE(parser, OmpMapper)
