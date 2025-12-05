@@ -54,12 +54,12 @@ __from_chars(const char* __first, const char* __last, _Fp& __value, chars_format
   return {__first + __r.__n, __r.__ec};
 }
 
-[[nodiscard]] _LIBCPP_AVAILABILITY_FROM_CHARS_FLOATING_POINT _LIBCPP_HIDE_FROM_ABI inline from_chars_result
+_LIBCPP_AVAILABILITY_FROM_CHARS_FLOATING_POINT _LIBCPP_HIDE_FROM_ABI inline from_chars_result
 from_chars(const char* __first, const char* __last, float& __value, chars_format __fmt = chars_format::general) {
   return std::__from_chars<float>(__first, __last, __value, __fmt);
 }
 
-[[nodiscard]] _LIBCPP_AVAILABILITY_FROM_CHARS_FLOATING_POINT _LIBCPP_HIDE_FROM_ABI inline from_chars_result
+_LIBCPP_AVAILABILITY_FROM_CHARS_FLOATING_POINT _LIBCPP_HIDE_FROM_ABI inline from_chars_result
 from_chars(const char* __first, const char* __last, double& __value, chars_format __fmt = chars_format::general) {
   return std::__from_chars<double>(__first, __last, __value, __fmt);
 }
