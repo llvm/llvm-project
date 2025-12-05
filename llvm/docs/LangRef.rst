@@ -20730,7 +20730,7 @@ All arguments must be vectors of the same type whereby their logical
 concatenation matches the result type.
 
 '``llvm.vector.splice.down``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -20782,7 +20782,7 @@ For a scalable vector, if the value of ``imm`` exceeds the runtime length of the
 source vector type, the result is a :ref:`poison value <poisonvalues>`.
 
 '``llvm.vector.splice.up``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -20800,7 +20800,7 @@ The '``llvm.vector.splice.up.*``' intrinsics construct a vector by
 concatenating two vectors together, shifting the elements up by ``imm``, and
 extracting the upper half.
 
-This is equivalent to :ref:`llvm.fshr.* <int_fshl>`, but operating on elements instead
+This is equivalent to :ref:`llvm.fshl.* <int_fshl>`, but operating on elements instead
 of bits.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
