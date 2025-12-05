@@ -1186,7 +1186,8 @@ feature_test_macros = [
             "headers": [
                 "rcu"  # TODO verify this entry since the paper was underspecified.
             ],
-            "unimplemented": True,
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU)",
+            "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU",
         },
         {
             "name": "__cpp_lib_reference_from_temporary",
