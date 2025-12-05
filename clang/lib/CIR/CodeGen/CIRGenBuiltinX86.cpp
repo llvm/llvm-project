@@ -989,6 +989,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_extracti64x2_256_mask:
   case X86::BI__builtin_ia32_extractf64x2_512_mask:
   case X86::BI__builtin_ia32_extracti64x2_512_mask:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_vinsertf128_pd256:
   case X86::BI__builtin_ia32_vinsertf128_ps256:
   case X86::BI__builtin_ia32_vinsertf128_si256:
@@ -1004,7 +1008,33 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_insertf64x2_256:
   case X86::BI__builtin_ia32_inserti64x2_256:
   case X86::BI__builtin_ia32_insertf64x2_512:
-  case X86::BI__builtin_ia32_inserti64x2_512:
+  case X86::BI__builtin_ia32_inserti64x2_512: {
+    unsigned dstNumElts = cast<cir::VectorType>(ops[0].getType()).getSize();
+    unsigned srcNumElts = cast<cir::VectorType>(ops[1].getType()).getSize();
+    unsigned subVectors = dstNumElts / srcNumElts;
+    assert(llvm::isPowerOf2_32(subVectors) && "Expected power of 2 subvectors");
+
+    uint64_t index = getZExtIntValueFromConstOp(ops[2]);
+    index &= subVectors - 1; // Remove any extra bits.
+    index *= srcNumElts;
+
+    int64_t indices[16];
+    for (unsigned i = 0; i != dstNumElts; ++i)
+      indices[i] = (i >= srcNumElts) ? srcNumElts + (i % srcNumElts) : i;
+
+    mlir::Value op1 = builder.createVecShuffle(
+        getLoc(expr->getExprLoc()), ops[1], ArrayRef(indices, dstNumElts));
+
+    for (unsigned i = 0; i != dstNumElts; ++i) {
+      if (i >= index && i < (index + srcNumElts))
+        indices[i] = (i - index) + dstNumElts;
+      else
+        indices[i] = i;
+    }
+
+    return builder.createVecShuffle(getLoc(expr->getExprLoc()), ops[0], op1,
+                                    ArrayRef(indices, dstNumElts));
+  }
   case X86::BI__builtin_ia32_pmovqd512_mask:
   case X86::BI__builtin_ia32_pmovwb512_mask:
   case X86::BI__builtin_ia32_pblendw128:
