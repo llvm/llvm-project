@@ -2066,6 +2066,11 @@ SDValue SelectionDAG::getExternalSymbol(const char *Sym, EVT VT) {
   return SDValue(N, 0);
 }
 
+SDValue SelectionDAG::getExternalSymbol(RTLIB::LibcallImpl Libcall, EVT VT) {
+  StringRef SymName = TLI->getLibcallImplName(Libcall);
+  return getExternalSymbol(SymName.data(), VT);
+}
+
 SDValue SelectionDAG::getMCSymbol(MCSymbol *Sym, EVT VT) {
   SDNode *&N = MCSymbols[Sym];
   if (N)

@@ -115,6 +115,10 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_THREAD_MODE=${LIBC_CONF_THREAD_MODE}")
   endif()
 
+  if(LIBC_CONF_TRAP_ON_RAISE_FP_EXCEPT)
+    list(APPEND config_options "-DLIBC_TRAP_ON_RAISE_FP_EXCEPT")
+  endif()
+
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_config)
 

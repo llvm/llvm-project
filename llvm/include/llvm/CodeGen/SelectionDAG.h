@@ -793,6 +793,7 @@ public:
   // to provide debug info for the BB at that time, so keep this one around.
   LLVM_ABI SDValue getBasicBlock(MachineBasicBlock *MBB);
   LLVM_ABI SDValue getExternalSymbol(const char *Sym, EVT VT);
+  LLVM_ABI SDValue getExternalSymbol(RTLIB::LibcallImpl LCImpl, EVT VT);
   LLVM_ABI SDValue getTargetExternalSymbol(const char *Sym, EVT VT,
                                            unsigned TargetFlags = 0);
   LLVM_ABI SDValue getMCSymbol(MCSymbol *Sym, EVT VT);

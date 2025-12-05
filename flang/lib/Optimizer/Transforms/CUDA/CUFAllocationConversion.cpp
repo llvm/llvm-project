@@ -322,15 +322,7 @@ struct CUFAllocateOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    bool isPointer = false;
-
-    if (auto declareOp =
-            mlir::dyn_cast_or_null<fir::DeclareOp>(op.getBox().getDefiningOp()))
-      if (declareOp.getFortranAttrs() &&
-          bitEnumContainsAny(*declareOp.getFortranAttrs(),
-                             fir::FortranVariableFlagsEnum::pointer))
-        isPointer = true;
-
+    bool isPointer = op.getPointer();
     if (op.getHasDoubleDescriptor()) {
       // Allocation for module variable are done with custom runtime entry point
       // so the descriptors can be synchronized.

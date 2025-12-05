@@ -18,8 +18,6 @@
 // CHECK: -fexperimental-library
 
 // Depending on the stdlib in use, we should (or not) pass -lc++experimental.
-// Note that we don't check for `-lc++experimental` specifically, since some targets
-// like Darwin pass the path to the library explicitly instead of using `-lx`.
-// CHECK-LIBCXX: c++experimental
-// CHECK-LIBSTDCXX-NOT: c++experimental
-// CHECK-NOSTDLIB-NOT: c++experimental
+// CHECK-LIBCXX: -lc++experimental
+// CHECK-LIBSTDCXX-NOT: -lc++experimental
+// CHECK-NOSTDLIB-NOT: -lc++experimental

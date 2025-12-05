@@ -241,7 +241,6 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
   secattr.nLength = sizeof(SECURITY_ATTRIBUTES);
   secattr.bInheritHandle = TRUE;
 
-  llvm::StringRef path = action->GetPath();
   DWORD access = 0;
   DWORD share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
   DWORD create = 0;
@@ -258,6 +257,7 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
       flags = FILE_FLAG_WRITE_THROUGH;
   }
 
+  const std::string path = action->GetFileSpec().GetPath();
   std::wstring wpath;
   llvm::ConvertUTF8toWide(path, wpath);
   HANDLE result = ::CreateFileW(wpath.c_str(), access, share, &secattr, create,
