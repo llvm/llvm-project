@@ -22,6 +22,7 @@ def SDT_MipsFSelect : SDTypeProfile<1, 3, [SDTCisFP<1>,
                                            SDTCisSameAs<0,2>,
                                            SDTCisSameAs<2,3>]>;
 
+// Floating point select
 def MipsFSelect : SDNode<"MipsISD::FSELECT", SDT_MipsFSelect>;
 
 //===----------------------------------------------------------------------===//
@@ -1225,4 +1226,3 @@ let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
                                                              GPR32Opnd>,
                                     ISA_MIPS32R6;
 }
-
