@@ -122,6 +122,12 @@ static inline size_t getpagesize(void) {
 #endif
 #endif /* defined(_WIN32) */
 
+#ifdef COMPILER_RT_PROFILE_BAREMETAL
+// Baremetal doesn't support logging
+#define PROF_ERR(Format, ...)
+#define PROF_WARN(Format, ...)
+#define PROF_NOTE(Format, ...)
+#else
 #define PROF_ERR(Format, ...)                                                  \
   fprintf(stderr, "LLVM Profile Error: " Format, __VA_ARGS__);
 
@@ -130,6 +136,7 @@ static inline size_t getpagesize(void) {
 
 #define PROF_NOTE(Format, ...)                                                 \
   fprintf(stderr, "LLVM Profile Note: " Format, __VA_ARGS__);
+#endif /* COMPILER_RT_PROFILE_BAREMETAL */
 
 #ifndef MAP_FILE
 #define MAP_FILE 0
