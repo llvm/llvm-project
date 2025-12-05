@@ -477,6 +477,7 @@ set(files
   __iterator/aliasing_iterator.h
   __iterator/back_insert_iterator.h
   __iterator/bounded_iter.h
+  __iterator/capacity_aware_iterator.h
   __iterator/common_iterator.h
   __iterator/concepts.h
   __iterator/counted_iterator.h
@@ -516,7 +517,6 @@ set(files
   __iterator/sortable.h
   __iterator/static_bounded_iter.h
   __iterator/unreachable_sentinel.h
-  __iterator/upper_bounded_iterator.h
   __iterator/wrap_iter.h
   __locale
   __locale_dir/check_grouping.h

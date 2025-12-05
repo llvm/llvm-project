@@ -271,7 +271,7 @@ namespace std {
 #  include <__functional/unary_function.h>
 #  include <__fwd/functional.h>
 #  include <__iterator/bounded_iter.h>
-#  include <__iterator/upper_bounded_iterator.h>
+#  include <__iterator/capacity_aware_iterator.h>
 #  include <__iterator/wrap_iter.h>
 #  include <__memory/addressof.h>
 #  include <__memory/construct_at.h>
@@ -719,7 +719,7 @@ private:
 
 #    if _LIBCPP_STD_VER >= 26
   template <typename _Underlying>
-  using __iter _LIBCPP_NODEBUG = __upper_bounded_iterator<_Underlying, __optional_iterator, 1>;
+  using __iter _LIBCPP_NODEBUG = __capacity_aware_iterator<_Underlying, optional<_Tp>, 1>;
 
 public:
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
