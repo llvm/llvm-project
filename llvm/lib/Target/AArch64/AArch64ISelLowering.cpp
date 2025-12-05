@@ -15654,9 +15654,10 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     }
   }
 
-  // 128-bit NEON vectors: writing to the 64-bit low half with DUP/SCALAR_TO_VECTOR
-  // already zeroes the other 64 bits, so if the low half is a splat and the
-  // upper half is zero/undef we can materialise just that low half.
+  // 128-bit NEON vectors: writing to the 64-bit low half with
+  // DUP/SCALAR_TO_VECTOR already zeroes the other 64 bits, so if the low half
+  // is a splat and the upper half is zero/undef we can materialise just that
+  // low half.
   if (VT.isFixedLengthVector() && VT.getSizeInBits() == 128) {
     EVT LaneVT = VT.getVectorElementType();
     const unsigned HalfElts = NumElts >> 1;
@@ -15674,10 +15675,8 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
         })) {
       EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
 
-      SDValue HiZero =
-          LaneVT.isInteger()
-              ? DAG.getConstant(0, DL, HalfVT)
-              : DAG.getConstantFP(0.0, DL, HalfVT);
+      SDValue HiZero = LaneVT.isInteger() ? DAG.getConstant(0, DL, HalfVT)
+                                          : DAG.getConstantFP(0.0, DL, HalfVT);
 
       SDValue LoHalf =
           LaneVT.getSizeInBits() == 64
