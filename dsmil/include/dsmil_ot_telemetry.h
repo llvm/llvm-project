@@ -36,7 +36,14 @@ typedef enum {
     DSMIL_TELEMETRY_SES_ACCEPT    = 4,  /**< SES intent accepted */
     DSMIL_TELEMETRY_SES_REJECT    = 5,  /**< SES intent rejected */
     DSMIL_TELEMETRY_INVARIANT_HIT = 6,  /**< Safety invariant checked (passed) */
-    DSMIL_TELEMETRY_INVARIANT_FAIL = 7  /**< Safety invariant violation */
+    DSMIL_TELEMETRY_INVARIANT_FAIL = 7, /**< Safety invariant violation */
+
+    // Telecom / SS7 / SIGTRAN event types
+    DSMIL_TELEMETRY_SS7_MSG_RX = 20,      /**< SS7 message received */
+    DSMIL_TELEMETRY_SS7_MSG_TX = 21,      /**< SS7 message transmitted */
+    DSMIL_TELEMETRY_SIGTRAN_MSG_RX = 22,  /**< SIGTRAN message received */
+    DSMIL_TELEMETRY_SIGTRAN_MSG_TX = 23,  /**< SIGTRAN message transmitted */
+    DSMIL_TELEMETRY_SIG_ANOMALY = 24      /**< Signaling anomaly detected */
 } dsmil_telemetry_event_type_t;
 
 /**
@@ -61,6 +68,22 @@ typedef struct {
     double      signal_value;                 /**< Current signal value */
     double      signal_min;                   /**< Minimum allowed value */
     double      signal_max;                   /**< Maximum allowed value */
+
+    // Optional telecom / SS7 / SIGTRAN fields
+    const char *telecom_stack;                /**< Telecom stack: "ss7", "sigtran", "sip", "diameter" */
+    const char *ss7_role;                     /**< SS7 role: "STP", "MSC", "HLR", "VLR", "SMSC", "GWMSC", "IN", "GMSC" */
+    const char *sigtran_role;                 /**< SIGTRAN role: "SG", "AS", "ASP", "IPSP" */
+    const char *telecom_env;                  /**< Environment: "prod", "lab", "honeypot", "fuzz", "sim" */
+    const char *telecom_if;                   /**< Interface: "e1", "t1", "sctp", "m2pa", "m2ua", "m3ua", "sua" */
+    const char *telecom_ep;                   /**< Logical endpoint (e.g., "upstream_stp", "core_msc") */
+
+    // High-level signaling context (if available)
+    uint32_t    ss7_opc;                     /**< SS7 Originating Point Code */
+    uint32_t    ss7_dpc;                     /**< SS7 Destination Point Code */
+    uint8_t     ss7_sio;                     /**< SS7 Service Information Octet */
+    uint32_t    sigtran_rctx;                 /**< SIGTRAN Routing Context (M3UA/SUA), 0 if not set */
+    uint8_t     ss7_msg_class;                /**< MTP3/TCAP/CAP message class (if mapped) */
+    uint8_t     ss7_msg_type;                 /**< Message type (approximate mapping) */
 } dsmil_telemetry_event_t;
 
 /**

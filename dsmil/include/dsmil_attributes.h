@@ -1403,6 +1403,200 @@
 /** @} */
 
 /**
+ * @defgroup DSMIL_TELECOM SS7/SIGTRAN Telecom Attributes (v1.8)
+ * @{
+ */
+
+/**
+ * @brief Mark code that implements or directly interacts with a telecom stack
+ * @param name Telecom stack identifier: "ss7", "sigtran", "sip", "diameter"
+ *
+ * Marks functions or modules that implement or directly interact with telecom
+ * signaling stacks. Used for compile-time manifest generation and runtime
+ * telemetry routing.
+ *
+ * Example:
+ * @code
+ * DSMIL_TELECOM_STACK("ss7")
+ * DSMIL_LAYER(3)
+ * DSMIL_DEVICE(31)
+ * void ss7_mtp3_process(const uint8_t *msg, size_t len) {
+ *     // SS7 MTP3 processing
+ * }
+ * @endcode
+ *
+ * @note Used by DsmilTelecomPass for manifest generation
+ * @note Integrates with Layer 8/9 for telecom-aware monitoring
+ */
+#define DSMIL_TELECOM_STACK(name) \
+    __attribute__((annotate("dsmil.telecom_stack=" #name)))
+
+/**
+ * @brief Mark node role in classical SS7 network
+ * @param role SS7 node role: "STP", "MSC", "HLR", "VLR", "SMSC", "GWMSC", "IN", "GMSC"
+ *
+ * Identifies the SS7 node role for classical SS7 signaling. Used for
+ * network topology awareness and security policy enforcement.
+ *
+ * Common roles:
+ * - "STP": Signal Transfer Point (routing/switching)
+ * - "MSC": Mobile Switching Center
+ * - "HLR": Home Location Register
+ * - "VLR": Visitor Location Register
+ * - "SMSC": Short Message Service Center
+ * - "GWMSC": Gateway MSC
+ * - "IN": Intelligent Network node
+ * - "GMSC": Gateway MSC
+ *
+ * Example:
+ * @code
+ * DSMIL_SS7_ROLE("STP")
+ * DSMIL_TELECOM_STACK("ss7")
+ * void stp_routing_function(const uint8_t *msg) {
+ *     // STP routing logic
+ * }
+ * @endcode
+ *
+ * @note Used in telecom manifest for role identification
+ */
+#define DSMIL_SS7_ROLE(role) \
+    __attribute__((annotate("dsmil.ss7_role=" #role)))
+
+/**
+ * @brief Mark role in SIGTRAN (SS7 over IP) network
+ * @param role SIGTRAN role: "SG", "AS", "ASP", "IPSP"
+ *
+ * Identifies the SIGTRAN role for SS7-over-IP signaling:
+ * - "SG": Signaling Gateway (bridges SS7 and IP)
+ * - "AS": Application Server (logical entity)
+ * - "ASP": Application Server Process (instance)
+ * - "IPSP": IP Signaling Point (peer-to-peer)
+ *
+ * Example:
+ * @code
+ * DSMIL_SIGTRAN_ROLE("SG")
+ * DSMIL_TELECOM_STACK("sigtran")
+ * void sigtran_sg_function(const uint8_t *msg) {
+ *     // Signaling Gateway processing
+ * }
+ * @endcode
+ *
+ * @note Used for SIGTRAN-aware telemetry and manifest generation
+ */
+#define DSMIL_SIGTRAN_ROLE(role) \
+    __attribute__((annotate("dsmil.sigtran_role=" #role)))
+
+/**
+ * @brief Mark environment for signaling code
+ * @param env Environment: "prod", "lab", "honeypot", "fuzz", "sim"
+ *
+ * Identifies the operational environment for telecom code. Critical for
+ * security policy enforcement (e.g., honeypot code must not run in production).
+ *
+ * Environments:
+ * - "prod": Production deployment
+ * - "lab": Laboratory/testing environment
+ * - "honeypot": Honeypot/deception environment
+ * - "fuzz": Fuzzing/testing environment
+ * - "sim": Simulation environment
+ *
+ * Example:
+ * @code
+ * DSMIL_TELECOM_ENV("honeypot")
+ * DSMIL_TELECOM_STACK("ss7")
+ * void honeypot_ss7_handler(const uint8_t *msg) {
+ *     // Honeypot SS7 handler (must not run in production)
+ * }
+ * @endcode
+ *
+ * @warning Compile-time error if environment mismatch with mission profile
+ * @note Used for security policy enforcement
+ */
+#define DSMIL_TELECOM_ENV(env) \
+    __attribute__((annotate("dsmil.telecom_env=" #env)))
+
+/**
+ * @brief Mark security posture / sensitivity of signaling context
+ * @param level Security level: "high_assurance", "defense_lab", "redteam_sim", "low"
+ *
+ * Identifies the security posture and sensitivity level of signaling code.
+ * Used for access control and telemetry routing.
+ *
+ * Security levels:
+ * - "high_assurance": High-assurance production code
+ * - "defense_lab": Defense laboratory environment
+ * - "redteam_sim": Red team simulation/testing
+ * - "low": Low sensitivity (e.g., test code)
+ *
+ * Example:
+ * @code
+ * DSMIL_SIG_SECURITY("defense_lab")
+ * DSMIL_TELECOM_ENV("lab")
+ * DSMIL_TELECOM_STACK("ss7")
+ * void defense_lab_ss7_analyzer(const uint8_t *msg) {
+ *     // Defense lab analysis code
+ * }
+ * @endcode
+ *
+ * @note Used for Layer 8 Security AI routing
+ */
+#define DSMIL_SIG_SECURITY(level) \
+    __attribute__((annotate("dsmil.sig_security=" #level)))
+
+/**
+ * @brief Mark code handling a specific telecom interface type
+ * @param name Interface type: "e1", "t1", "sctp", "m2pa", "m2ua", "m3ua", "sua"
+ *
+ * Identifies the physical or protocol interface type for telecom code.
+ * Used for interface-specific telemetry and manifest generation.
+ *
+ * Interface types:
+ * - "e1": E1/T1 physical interfaces
+ * - "t1": T1 physical interfaces
+ * - "sctp": SCTP transport (SIGTRAN)
+ * - "m2pa": M2PA (MTP2 User Adaptation)
+ * - "m2ua": M2UA (MTP2 User Adaptation)
+ * - "m3ua": M3UA (MTP3 User Adaptation)
+ * - "sua": SUA (SCCP User Adaptation)
+ *
+ * Example:
+ * @code
+ * DSMIL_TELECOM_INTERFACE("m3ua")
+ * DSMIL_TELECOM_STACK("sigtran")
+ * void m3ua_message_handler(const uint8_t *msg) {
+ *     // M3UA message processing
+ * }
+ * @endcode
+ *
+ * @note Used for interface-specific telemetry routing
+ */
+#define DSMIL_TELECOM_INTERFACE(name) \
+    __attribute__((annotate("dsmil.telecom_if=" #name)))
+
+/**
+ * @brief Mark specific logical endpoint in telecom network
+ * @param name Endpoint identifier (e.g., "upstream_stp", "core_msc", "edge_sg")
+ *
+ * Identifies a specific logical endpoint in the telecom network topology.
+ * Used for network-aware telemetry and routing decisions.
+ *
+ * Example:
+ * @code
+ * DSMIL_TELECOM_ENDPOINT("upstream_stp")
+ * DSMIL_TELECOM_STACK("ss7")
+ * void upstream_stp_handler(const uint8_t *msg) {
+ *     // Upstream STP message handling
+ * }
+ * @endcode
+ *
+ * @note Used for network topology awareness in Layer 8/9
+ */
+#define DSMIL_TELECOM_ENDPOINT(name) \
+    __attribute__((annotate("dsmil.telecom_ep=" #name)))
+
+/** @} */
+
+/**
  * @defgroup DSMIL_MEMORY Memory and Performance Attributes
  * @{
  */
