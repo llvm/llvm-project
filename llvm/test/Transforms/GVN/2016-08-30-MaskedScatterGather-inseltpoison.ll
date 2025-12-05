@@ -16,12 +16,12 @@ define spir_kernel void @test(<2 x ptr> %in1, <2 x ptr> %in2, ptr %out) {
 ; CHECK-NEXT:    [[TMP_1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TMP_I:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP_0]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = insertelement <2 x ptr> [[TMP_I]], ptr [[TMP_1]], i32 1
-; CHECK-NEXT:    [[IN1_V:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> [[IN1]], i32 1, <2 x i1> splat (i1 true), <2 x i32> undef)
-; CHECK-NEXT:    [[IN2_V:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> [[IN2]], i32 1, <2 x i1> splat (i1 true), <2 x i32> undef)
-; CHECK-NEXT:    call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> [[IN1_V]], <2 x ptr> [[TMP]], i32 1, <2 x i1> splat (i1 true))
-; CHECK-NEXT:    [[TMP_V_0:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> [[TMP]], i32 1, <2 x i1> splat (i1 true), <2 x i32> undef)
-; CHECK-NEXT:    call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> [[IN2_V]], <2 x ptr> [[TMP]], i32 1, <2 x i1> splat (i1 true))
-; CHECK-NEXT:    [[TMP_V_1:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> [[TMP]], i32 1, <2 x i1> splat (i1 true), <2 x i32> undef)
+; CHECK-NEXT:    [[IN1_V:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 1 [[IN1]], <2 x i1> splat (i1 true), <2 x i32> undef)
+; CHECK-NEXT:    [[IN2_V:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 1 [[IN2]], <2 x i1> splat (i1 true), <2 x i32> undef)
+; CHECK-NEXT:    call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> [[IN1_V]], <2 x ptr> align 1 [[TMP]], <2 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP_V_0:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 1 [[TMP]], <2 x i1> splat (i1 true), <2 x i32> undef)
+; CHECK-NEXT:    call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> [[IN2_V]], <2 x ptr> align 1 [[TMP]], <2 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP_V_1:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 1 [[TMP]], <2 x i1> splat (i1 true), <2 x i32> undef)
 ; CHECK-NEXT:    [[TMP_V_1_0:%.*]] = extractelement <2 x i32> [[TMP_V_1]], i32 0
 ; CHECK-NEXT:    [[TMP_V_1_1:%.*]] = extractelement <2 x i32> [[TMP_V_1]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP_V_1_0]], ptr [[OUT]], align 4

@@ -46,13 +46,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTarget() {
 
 namespace {
 
-Reloc::Model getEffectiveRelocModel(const Triple &TT,
-                                    std::optional<Reloc::Model> RM) {
+Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   // If not defined we default to static
-  if (!RM.has_value())
-    return Reloc::Static;
-
-  return *RM;
+  return RM.value_or(Reloc::Static);
 }
 
 CodeModel::Model getEffectiveCodeModel(std::optional<CodeModel::Model> CM,
@@ -73,7 +69,7 @@ M68kTargetMachine::M68kTargetMachine(const Target &T, const Triple &TT,
                                      std::optional<CodeModel::Model> CM,
                                      CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
-                               getEffectiveRelocModel(TT, RM),
+                               getEffectiveRelocModel(RM),
                                ::getEffectiveCodeModel(CM, JIT), OL),
       TLOF(std::make_unique<M68kELFTargetObjectFile>()),
       Subtarget(TT, CPU, FS, *this) {

@@ -2191,7 +2191,7 @@ public:
                       FMFSource);
   }
   Value *CreatePtrToAddr(Value *V, const Twine &Name = "") {
-    return CreateCast(Instruction::PtrToInt, V,
+    return CreateCast(Instruction::PtrToAddr, V,
                       BB->getDataLayout().getAddressType(V->getType()), Name);
   }
   Value *CreatePtrToInt(Value *V, Type *DestTy,
@@ -2547,6 +2547,11 @@ public:
       Function *Callee, ArrayRef<Value *> Args, const Twine &Name = "",
       std::optional<RoundingMode> Rounding = std::nullopt,
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
+
+  LLVM_ABI Value *CreateSelectWithUnknownProfile(Value *C, Value *True,
+                                                 Value *False,
+                                                 StringRef PassName,
+                                                 const Twine &Name = "");
 
   LLVM_ABI Value *CreateSelect(Value *C, Value *True, Value *False,
                                const Twine &Name = "",

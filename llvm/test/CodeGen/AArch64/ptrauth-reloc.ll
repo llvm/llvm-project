@@ -87,7 +87,7 @@
 ; CHECK-MACHO-NEXT:  _g.offset.ref.da.0:
 ; CHECK-MACHO-NEXT:    .quad (_g+16)@AUTH(da,0)
 
-@g.offset.ref.da.0 = constant ptr ptrauth (i8* getelementptr (i8, ptr @g, i64 16), i32 2)
+@g.offset.ref.da.0 = constant ptr ptrauth (ptr getelementptr (i8, ptr @g, i64 16), i32 2)
 
 ; CHECK-ELF-LABEL:     .globl g.big_offset.ref.da.0
 ; CHECK-ELF-NEXT:      .p2align 3
@@ -99,7 +99,7 @@
 ; CHECK-MACHO-NEXT:  _g.big_offset.ref.da.0:
 ; CHECK-MACHO-NEXT:    .quad (_g+2147549185)@AUTH(da,0)
 
-@g.big_offset.ref.da.0 = constant ptr ptrauth (i8* getelementptr (i8, ptr @g, i64 add (i64 2147483648, i64 65537)), i32 2)
+@g.big_offset.ref.da.0 = constant ptr ptrauth (ptr getelementptr (i8, ptr @g, i64 add (i64 2147483648, i64 65537)), i32 2)
 
 ; CHECK-ELF-LABEL:     .globl g.weird_ref.da.0
 ; CHECK-ELF-NEXT:      .p2align 3
@@ -111,7 +111,7 @@
 ; CHECK-MACHO-NEXT:  _g.weird_ref.da.0:
 ; CHECK-MACHO-NEXT:    .quad (_g+16)@AUTH(da,0)
 
-@g.weird_ref.da.0 = constant i64 ptrtoint (ptr inttoptr (i64 ptrtoint (ptr ptrauth (i8* getelementptr (i8, ptr @g, i64 16), i32 2) to i64) to ptr) to i64)
+@g.weird_ref.da.0 = constant i64 ptrtoint (ptr inttoptr (i64 ptrtoint (ptr ptrauth (ptr getelementptr (i8, ptr @g, i64 16), i32 2) to i64) to ptr) to i64)
 
 ; CHECK-ELF-LABEL:     .globl g_weak.ref.ia.42
 ; CHECK-ELF-NEXT:      .p2align 3

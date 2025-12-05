@@ -181,40 +181,38 @@ define zeroext i1 @segmentedStack(ptr readonly %vk1, ptr readonly %vk2, i64 %key
 ; CHECK-LABEL: segmentedStack:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    cmpq %gs:816, %rsp
-; CHECK-NEXT:    jbe LBB3_6
+; CHECK-NEXT:    jbe LBB3_7
 ; CHECK-NEXT:  LBB3_1: ## %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    testq %rsi, %rsi
-; CHECK-NEXT:    sete %cl
-; CHECK-NEXT:    orb %al, %cl
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne LBB3_4
-; CHECK-NEXT:  ## %bb.2: ## %if.end4.i
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    je LBB3_5
+; CHECK-NEXT:  ## %bb.2: ## %entry
+; CHECK-NEXT:    testq %rsi, %rsi
+; CHECK-NEXT:    je LBB3_5
+; CHECK-NEXT:  ## %bb.3: ## %if.end4.i
 ; CHECK-NEXT:    movq 8(%rdi), %rdx
 ; CHECK-NEXT:    cmpq 8(%rsi), %rdx
-; CHECK-NEXT:    jne LBB3_5
-; CHECK-NEXT:  ## %bb.3: ## %land.rhs.i.i
+; CHECK-NEXT:    jne LBB3_6
+; CHECK-NEXT:  ## %bb.4: ## %land.rhs.i.i
 ; CHECK-NEXT:    movq (%rsi), %rsi
 ; CHECK-NEXT:    movq (%rdi), %rdi
 ; CHECK-NEXT:    callq _memcmp
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    sete %al
-; CHECK-NEXT:  LBB3_4: ## %__go_ptr_strings_equal.exit
-; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
-; CHECK-NEXT:    popq %rcx
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB3_5:
-; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:  LBB3_5: ## %__go_ptr_strings_equal.exit
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB3_6:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  LBB3_7:
 ; CHECK-NEXT:    movl $8, %r10d
 ; CHECK-NEXT:    movl $0, %r11d
 ; CHECK-NEXT:    callq ___morestack
@@ -224,43 +222,41 @@ define zeroext i1 @segmentedStack(ptr readonly %vk1, ptr readonly %vk2, i64 %key
 ; NOCOMPACTUNWIND-LABEL: segmentedStack:
 ; NOCOMPACTUNWIND:       # %bb.0:
 ; NOCOMPACTUNWIND-NEXT:    cmpq %fs:112, %rsp
-; NOCOMPACTUNWIND-NEXT:    jbe .LBB3_6
+; NOCOMPACTUNWIND-NEXT:    jbe .LBB3_7
 ; NOCOMPACTUNWIND-NEXT:  .LBB3_1: # %entry
 ; NOCOMPACTUNWIND-NEXT:    pushq %rax
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 16
-; NOCOMPACTUNWIND-NEXT:    testq %rdi, %rdi
-; NOCOMPACTUNWIND-NEXT:    sete %al
-; NOCOMPACTUNWIND-NEXT:    testq %rsi, %rsi
-; NOCOMPACTUNWIND-NEXT:    sete %cl
-; NOCOMPACTUNWIND-NEXT:    orb %al, %cl
 ; NOCOMPACTUNWIND-NEXT:    movq %rdi, %rax
 ; NOCOMPACTUNWIND-NEXT:    orq %rsi, %rax
 ; NOCOMPACTUNWIND-NEXT:    sete %al
-; NOCOMPACTUNWIND-NEXT:    testb %cl, %cl
-; NOCOMPACTUNWIND-NEXT:    jne .LBB3_4
-; NOCOMPACTUNWIND-NEXT:  # %bb.2: # %if.end4.i
+; NOCOMPACTUNWIND-NEXT:    testq %rdi, %rdi
+; NOCOMPACTUNWIND-NEXT:    je .LBB3_5
+; NOCOMPACTUNWIND-NEXT:  # %bb.2: # %entry
+; NOCOMPACTUNWIND-NEXT:    testq %rsi, %rsi
+; NOCOMPACTUNWIND-NEXT:    je .LBB3_5
+; NOCOMPACTUNWIND-NEXT:  # %bb.3: # %if.end4.i
 ; NOCOMPACTUNWIND-NEXT:    movq 8(%rdi), %rdx
 ; NOCOMPACTUNWIND-NEXT:    cmpq 8(%rsi), %rdx
-; NOCOMPACTUNWIND-NEXT:    jne .LBB3_5
-; NOCOMPACTUNWIND-NEXT:  # %bb.3: # %land.rhs.i.i
+; NOCOMPACTUNWIND-NEXT:    jne .LBB3_6
+; NOCOMPACTUNWIND-NEXT:  # %bb.4: # %land.rhs.i.i
 ; NOCOMPACTUNWIND-NEXT:    movq (%rsi), %rsi
 ; NOCOMPACTUNWIND-NEXT:    movq (%rdi), %rdi
 ; NOCOMPACTUNWIND-NEXT:    callq memcmp@PLT
 ; NOCOMPACTUNWIND-NEXT:    testl %eax, %eax
 ; NOCOMPACTUNWIND-NEXT:    sete %al
-; NOCOMPACTUNWIND-NEXT:  .LBB3_4: # %__go_ptr_strings_equal.exit
+; NOCOMPACTUNWIND-NEXT:  .LBB3_5: # %__go_ptr_strings_equal.exit
 ; NOCOMPACTUNWIND-NEXT:    # kill: def $al killed $al killed $eax
 ; NOCOMPACTUNWIND-NEXT:    popq %rcx
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 8
 ; NOCOMPACTUNWIND-NEXT:    retq
-; NOCOMPACTUNWIND-NEXT:  .LBB3_5:
+; NOCOMPACTUNWIND-NEXT:  .LBB3_6:
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 16
 ; NOCOMPACTUNWIND-NEXT:    xorl %eax, %eax
 ; NOCOMPACTUNWIND-NEXT:    # kill: def $al killed $al killed $eax
 ; NOCOMPACTUNWIND-NEXT:    popq %rcx
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 8
 ; NOCOMPACTUNWIND-NEXT:    retq
-; NOCOMPACTUNWIND-NEXT:  .LBB3_6:
+; NOCOMPACTUNWIND-NEXT:  .LBB3_7:
 ; NOCOMPACTUNWIND-NEXT:    movl $8, %r10d
 ; NOCOMPACTUNWIND-NEXT:    movl $0, %r11d
 ; NOCOMPACTUNWIND-NEXT:    callq __morestack

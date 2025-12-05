@@ -3575,21 +3575,17 @@ define void @SpinningCube() {
 ; SSE2-NEXT:    xorps %xmm0, %xmm0
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,1]
-; SSE2-NEXT:    xorps %xmm2, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,0]
-; SSE2-NEXT:    movss {{.*#+}} xmm3 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; SSE2-NEXT:    movapd {{.*#+}} xmm4 = [u,u,-2.0E+0,u]
-; SSE2-NEXT:    movsd {{.*#+}} xmm4 = xmm3[0],xmm4[1]
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm4[2,0]
-; SSE2-NEXT:    movq {{.*#+}} xmm3 = xmm3[0],zero
-; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[2,0],xmm1[2,0]
-; SSE2-NEXT:    addps %xmm0, %xmm3
-; SSE2-NEXT:    movaps %xmm3, (%rax)
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; SSE2-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    addps %xmm2, %xmm0
-; SSE2-NEXT:    movaps %xmm0, (%rax)
+; SSE2-NEXT:    movd {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    movq {{.*#+}} xmm2 = xmm2[0],zero
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[2,0]
+; SSE2-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
+; SSE2-NEXT:    movaps %xmm2, (%rax)
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE2-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    addps %xmm0, %xmm1
+; SSE2-NEXT:    movaps %xmm1, (%rax)
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: SpinningCube:
@@ -3598,54 +3594,43 @@ define void @SpinningCube() {
 ; SSSE3-NEXT:    xorps %xmm0, %xmm0
 ; SSSE3-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,1]
-; SSSE3-NEXT:    xorps %xmm2, %xmm2
-; SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,0]
-; SSSE3-NEXT:    movss {{.*#+}} xmm3 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; SSSE3-NEXT:    movapd {{.*#+}} xmm4 = [u,u,-2.0E+0,u]
-; SSSE3-NEXT:    movsd {{.*#+}} xmm4 = xmm3[0],xmm4[1]
-; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm4[2,0]
-; SSSE3-NEXT:    movq {{.*#+}} xmm3 = xmm3[0],zero
-; SSSE3-NEXT:    shufps {{.*#+}} xmm3 = xmm3[2,0],xmm1[2,0]
-; SSSE3-NEXT:    addps %xmm0, %xmm3
-; SSSE3-NEXT:    movaps %xmm3, (%rax)
-; SSSE3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,2]
-; SSSE3-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSSE3-NEXT:    addps %xmm2, %xmm0
-; SSSE3-NEXT:    movaps %xmm0, (%rax)
+; SSSE3-NEXT:    movd {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSSE3-NEXT:    movq {{.*#+}} xmm2 = xmm2[0],zero
+; SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[2,0]
+; SSSE3-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
+; SSSE3-NEXT:    movaps %xmm2, (%rax)
+; SSSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,2]
+; SSSE3-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSSE3-NEXT:    addps %xmm0, %xmm1
+; SSSE3-NEXT:    movaps %xmm1, (%rax)
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: SpinningCube:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = zero,zero,zero,mem[0]
-; SSE41-NEXT:    movaps {{.*#+}} xmm1 = [0.0E+0,0.0E+0,-2.0E+0,u]
-; SSE41-NEXT:    movss {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; SSE41-NEXT:    movaps %xmm1, %xmm3
-; SSE41-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1,2],xmm2[0]
-; SSE41-NEXT:    movaps %xmm0, %xmm4
-; SSE41-NEXT:    insertps {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[2,3]
-; SSE41-NEXT:    addps %xmm3, %xmm4
-; SSE41-NEXT:    movaps %xmm4, (%rax)
-; SSE41-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0,0,2]
-; SSE41-NEXT:    mulps %xmm1, %xmm2
-; SSE41-NEXT:    addps %xmm0, %xmm2
-; SSE41-NEXT:    movaps %xmm2, (%rax)
+; SSE41-NEXT:    movaps %xmm0, %xmm1
+; SSE41-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; SSE41-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
+; SSE41-NEXT:    movaps %xmm1, (%rax)
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,2]
+; SSE41-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    addps %xmm0, %xmm1
+; SSE41-NEXT:    movaps %xmm1, (%rax)
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: SpinningCube:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
 ; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [0.0E+0,0.0E+0,0.0E+0,1.0E+0]
-; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [0.0E+0,0.0E+0,-2.0E+0,u]
-; AVX-NEXT:    vmovss {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm3 = xmm1[0,1,2],xmm2[0]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],xmm2[0],xmm0[2,3]
-; AVX-NEXT:    vaddps %xmm2, %xmm3, %xmm2
-; AVX-NEXT:    vmovaps %xmm2, (%rax)
-; AVX-NEXT:    vbroadcastss (%rax), %xmm2
-; AVX-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0],mem[0],xmm0[2,3]
+; AVX-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vmovaps %xmm1, (%rax)
+; AVX-NEXT:    vbroadcastss (%rax), %xmm1
+; AVX-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovaps %xmm0, (%rax)
 ; AVX-NEXT:    retq

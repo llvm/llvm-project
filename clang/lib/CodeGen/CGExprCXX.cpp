@@ -503,6 +503,10 @@ RValue CodeGenFunction::EmitCXXOperatorMemberCallExpr(
 RValue CodeGenFunction::EmitCUDAKernelCallExpr(const CUDAKernelCallExpr *E,
                                                ReturnValueSlot ReturnValue,
                                                llvm::CallBase **CallOrInvoke) {
+  // Emit as a device kernel call if CUDA device code is to be generated.
+  if (getLangOpts().CUDAIsDevice)
+    return CGM.getCUDARuntime().EmitCUDADeviceKernelCallExpr(
+        *this, E, ReturnValue, CallOrInvoke);
   return CGM.getCUDARuntime().EmitCUDAKernelCallExpr(*this, E, ReturnValue,
                                                      CallOrInvoke);
 }
@@ -1236,8 +1240,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
   if (auto *ILE = dyn_cast<InitListExpr>(Init)) {
     if (const RecordType *RType =
             ILE->getType()->getAsCanonical<RecordType>()) {
-      if (RType->getOriginalDecl()->isStruct()) {
-        const RecordDecl *RD = RType->getOriginalDecl()->getDefinitionOrSelf();
+      if (RType->getDecl()->isStruct()) {
+        const RecordDecl *RD = RType->getDecl()->getDefinitionOrSelf();
         unsigned NumElements = 0;
         if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
           NumElements = CXXRD->getNumBases();

@@ -55,7 +55,7 @@ Some important things to think about w.r.t. canonicalization patterns:
 *   It is always good to eliminate operations entirely when possible, e.g. by
     folding known identities (like "x + 0 = x").
 
-*   Pattens with expensive running time (i.e. have O(n) complexity) or
+*   Patterns with expensive running time (i.e. have O(n) complexity) or
     complicated cost models don't belong to canonicalization: since the
     algorithm is executed iteratively until fixed-point we want patterns that
     execute quickly (in particular their matching phase).

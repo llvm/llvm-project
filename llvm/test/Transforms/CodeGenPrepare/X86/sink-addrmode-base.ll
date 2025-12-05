@@ -951,3 +951,41 @@ fallthrough:
   %v = add i32 %v1, %v2
   ret i32 %v
 }
+
+; Make sure we don't simplify an incomplete expression tree.
+define i8 @pr163453(ptr %p, i1 %cond) {
+; CHECK-LABEL: define i8 @pr163453(
+; CHECK-SAME: ptr [[P:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P_ADDR_0:%.*]] = getelementptr i8, ptr [[P]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[INCDEC_PTR11:%.*]] = getelementptr i8, ptr [[P]], i64 2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND]], ptr [[P_ADDR_0]], ptr [[INCDEC_PTR11]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[SPEC_SELECT]], align 1
+; CHECK-NEXT:    ret i8 [[LOAD]]
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  %p.pn = phi ptr [ %p, %entry ], [ %p.addr.0, %for.inc ]
+  %p.addr.0 = getelementptr i8, ptr %p.pn, i64 1
+  br i1 false, label %exit, label %for.body
+
+for.body:
+  %1 = load i8, ptr %p.pn, align 1
+  br i1 false, label %for.inc, label %if.else
+
+if.else:
+  %incdec.ptr11 = getelementptr i8, ptr %p.pn, i64 2
+  %spec.select = select i1 %cond, ptr %p.addr.0, ptr %incdec.ptr11
+  br label %exit
+
+for.inc:
+  br label %for.cond
+
+exit:
+  %p.addr.3 = phi ptr [ %spec.select, %if.else ], [ %p.addr.0, %for.cond ]
+  %load = load i8, ptr %p.addr.3, align 1
+  ret i8 %load
+}

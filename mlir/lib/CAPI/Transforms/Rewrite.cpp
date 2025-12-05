@@ -341,7 +341,7 @@ private:
 
 } // namespace mlir
 
-MlirRewritePattern mlirOpRewritePattenCreate(
+MlirRewritePattern mlirOpRewritePatternCreate(
     MlirStringRef rootName, unsigned benefit, MlirContext context,
     MlirRewritePatternCallbacks callbacks, void *userData,
     size_t nGeneratedNames, MlirStringRef *generatedNames) {

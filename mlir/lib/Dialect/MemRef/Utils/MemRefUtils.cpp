@@ -133,17 +133,20 @@ getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
 }
 
 /// Returns true if all the uses of op are not read/load.
-/// There can be SubviewOp users as long as all its users are also
+/// There can be view-like-op users as long as all its users are also
 /// StoreOp/transfer_write. If return true it also fills out the uses, if it
 /// returns false uses is unchanged.
 static bool resultIsNotRead(Operation *op, std::vector<Operation *> &uses) {
   std::vector<Operation *> opUses;
   for (OpOperand &use : op->getUses()) {
     Operation *useOp = use.getOwner();
+    // Use escaped the scope
+    if (useOp->mightHaveTrait<OpTrait::IsTerminator>())
+      return false;
     if (isa<memref::DeallocOp>(useOp) ||
         (useOp->getNumResults() == 0 && useOp->getNumRegions() == 0 &&
          !mlir::hasEffect<MemoryEffects::Read>(useOp)) ||
-        (isa<memref::SubViewOp>(useOp) && resultIsNotRead(useOp, opUses))) {
+        (isa<ViewLikeOpInterface>(useOp) && resultIsNotRead(useOp, opUses))) {
       opUses.push_back(useOp);
       continue;
     }

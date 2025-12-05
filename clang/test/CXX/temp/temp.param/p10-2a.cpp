@@ -95,8 +95,8 @@ concept OneOf = (is_same_v<T, Ts> || ...); // #OneOf
 // expected-note@#OneOf 3{{because 'is_same_v<int, char[1]>' evaluated to false}}
 // expected-note@#OneOf 3{{and 'is_same_v<int, char[2]>' evaluated to false}}
 // expected-note@#OneOf {{because 'is_same_v<decltype(nullptr), char>' evaluated to false}}
-// expected-note@#OneOf {{because 'is_same_v<decltype(nullptr), char>' evaluated to false}}
-// expected-note@#OneOf {{and 'is_same_v<decltype(nullptr), int>' evaluated to false}}
+// expected-note@#OneOf {{because 'is_same_v<std::nullptr_t, char>' evaluated to false}}
+// expected-note@#OneOf {{and 'is_same_v<std::nullptr_t, int>' evaluated to false}}
 // expected-note@#OneOf {{and 'is_same_v<decltype(nullptr), int>' evaluated to false}}
 
 template<OneOf<char[1], char[2]> T, OneOf<int, long, char> U>

@@ -55,7 +55,7 @@ NamespaceAliaser::createAlias(ASTContext &Context, const Stmt &Statement,
   }
 
   for (const auto &Abbreviation : Abbreviations) {
-    DeclarationMatcher ConflictMatcher = namedDecl(hasName(Abbreviation));
+    const DeclarationMatcher ConflictMatcher = namedDecl(hasName(Abbreviation));
     const auto HasConflictingChildren =
         !match(findAll(ConflictMatcher), *Function, Context).empty();
     const auto HasConflictingAncestors =
@@ -65,10 +65,10 @@ NamespaceAliaser::createAlias(ASTContext &Context, const Stmt &Statement,
     if (HasConflictingAncestors || HasConflictingChildren)
       continue;
 
-    std::string Declaration =
+    const std::string Declaration =
         (llvm::Twine("\nnamespace ") + Abbreviation + " = " + Namespace + ";")
             .str();
-    SourceLocation Loc =
+    const SourceLocation Loc =
         Lexer::getLocForEndOfToken(Function->getBody()->getBeginLoc(), 0,
                                    SourceMgr, Context.getLangOpts());
     AddedAliases[Function][Namespace.str()] = Abbreviation;

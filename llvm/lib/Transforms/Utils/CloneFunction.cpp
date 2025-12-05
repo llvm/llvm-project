@@ -826,7 +826,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
       BasicBlock::iterator I = NewBB->begin();
       for (; (PN = dyn_cast<PHINode>(I)); ++I) {
         for (const auto &[Pred, Count] : PredCount) {
-          for (unsigned _ : llvm::seq<unsigned>(Count))
+          for ([[maybe_unused]] unsigned _ : llvm::seq<unsigned>(Count))
             PN->removeIncomingValue(Pred, false);
         }
       }

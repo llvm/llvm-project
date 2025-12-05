@@ -1066,6 +1066,115 @@ TEST_F(ConstantFPRangeTest, sub) {
 #endif
 }
 
+TEST_F(ConstantFPRangeTest, mul) {
+  EXPECT_EQ(Full.mul(Full), NonNaN.unionWith(QNaN));
+  EXPECT_EQ(Full.mul(Empty), Empty);
+  EXPECT_EQ(Empty.mul(Full), Empty);
+  EXPECT_EQ(Empty.mul(Empty), Empty);
+  EXPECT_EQ(One.mul(One), ConstantFPRange(APFloat(1.0)));
+  EXPECT_EQ(Some.mul(Some),
+            ConstantFPRange::getNonNaN(APFloat(-9.0), APFloat(9.0)));
+  EXPECT_EQ(SomePos.mul(SomeNeg),
+            ConstantFPRange::getNonNaN(APFloat(-9.0), APFloat(-0.0)));
+  EXPECT_EQ(PosInf.mul(PosInf), PosInf);
+  EXPECT_EQ(NegInf.mul(NegInf), PosInf);
+  EXPECT_EQ(PosInf.mul(Finite), NonNaN.unionWith(QNaN));
+  EXPECT_EQ(NegInf.mul(Finite), NonNaN.unionWith(QNaN));
+  EXPECT_EQ(PosInf.mul(NegInf), NegInf);
+  EXPECT_EQ(NegInf.mul(PosInf), NegInf);
+  EXPECT_EQ(PosZero.mul(NegZero), NegZero);
+  EXPECT_EQ(PosZero.mul(Zero), Zero);
+  EXPECT_EQ(NegZero.mul(NegZero), PosZero);
+  EXPECT_EQ(NegZero.mul(Zero), Zero);
+  EXPECT_EQ(NaN.mul(NaN), QNaN);
+  EXPECT_EQ(NaN.mul(Finite), QNaN);
+
+#if defined(EXPENSIVE_CHECKS)
+  EnumerateTwoInterestingConstantFPRanges(
+      [](const ConstantFPRange &LHS, const ConstantFPRange &RHS) {
+        ConstantFPRange Res = LHS.mul(RHS);
+        ConstantFPRange Expected =
+            ConstantFPRange::getEmpty(LHS.getSemantics());
+        EnumerateValuesInConstantFPRange(
+            LHS,
+            [&](const APFloat &LHSC) {
+              EnumerateValuesInConstantFPRange(
+                  RHS,
+                  [&](const APFloat &RHSC) {
+                    APFloat Prod = LHSC * RHSC;
+                    EXPECT_TRUE(Res.contains(Prod))
+                        << "Wrong result for " << LHS << " * " << RHS
+                        << ". The result " << Res << " should contain " << Prod;
+                    if (!Expected.contains(Prod))
+                      Expected = Expected.unionWith(ConstantFPRange(Prod));
+                  },
+                  /*IgnoreNaNPayload=*/true);
+            },
+            /*IgnoreNaNPayload=*/true);
+        EXPECT_EQ(Res, Expected)
+            << "Suboptimal result for " << LHS << " * " << RHS << ". Expected "
+            << Expected << ", but got " << Res;
+      },
+      SparseLevel::SpecialValuesOnly);
+#endif
+}
+
+TEST_F(ConstantFPRangeTest, div) {
+  EXPECT_EQ(Full.div(Full), NonNaN.unionWith(QNaN));
+  EXPECT_EQ(Full.div(Empty), Empty);
+  EXPECT_EQ(Empty.div(Full), Empty);
+  EXPECT_EQ(Empty.div(Empty), Empty);
+  EXPECT_EQ(One.div(One), ConstantFPRange(APFloat(1.0)));
+  EXPECT_EQ(Some.div(Some), NonNaN.unionWith(QNaN));
+  EXPECT_EQ(SomePos.div(SomeNeg),
+            ConstantFPRange(APFloat::getInf(Sem, /*Negative=*/true),
+                            APFloat::getZero(Sem, /*Negative=*/true),
+                            /*MayBeQNaN=*/true, /*MayBeSNaN=*/false));
+  EXPECT_EQ(PosInf.div(PosInf), QNaN);
+  EXPECT_EQ(NegInf.div(NegInf), QNaN);
+  EXPECT_EQ(PosInf.div(Finite), NonNaN);
+  EXPECT_EQ(NegInf.div(Finite), NonNaN);
+  EXPECT_EQ(PosInf.div(NegInf), QNaN);
+  EXPECT_EQ(NegInf.div(PosInf), QNaN);
+  EXPECT_EQ(Zero.div(Zero), QNaN);
+  EXPECT_EQ(SomePos.div(PosInf), PosZero);
+  EXPECT_EQ(SomeNeg.div(PosInf), NegZero);
+  EXPECT_EQ(PosInf.div(SomePos), PosInf);
+  EXPECT_EQ(NegInf.div(SomeNeg), PosInf);
+  EXPECT_EQ(NegInf.div(Some), NonNaN);
+  EXPECT_EQ(NaN.div(NaN), QNaN);
+  EXPECT_EQ(NaN.div(Finite), QNaN);
+
+#if defined(EXPENSIVE_CHECKS)
+  EnumerateTwoInterestingConstantFPRanges(
+      [](const ConstantFPRange &LHS, const ConstantFPRange &RHS) {
+        ConstantFPRange Res = LHS.div(RHS);
+        ConstantFPRange Expected =
+            ConstantFPRange::getEmpty(LHS.getSemantics());
+        EnumerateValuesInConstantFPRange(
+            LHS,
+            [&](const APFloat &LHSC) {
+              EnumerateValuesInConstantFPRange(
+                  RHS,
+                  [&](const APFloat &RHSC) {
+                    APFloat Val = LHSC / RHSC;
+                    EXPECT_TRUE(Res.contains(Val))
+                        << "Wrong result for " << LHS << " / " << RHS
+                        << ". The result " << Res << " should contain " << Val;
+                    if (!Expected.contains(Val))
+                      Expected = Expected.unionWith(ConstantFPRange(Val));
+                  },
+                  /*IgnoreNaNPayload=*/true);
+            },
+            /*IgnoreNaNPayload=*/true);
+        EXPECT_EQ(Res, Expected)
+            << "Suboptimal result for " << LHS << " / " << RHS << ". Expected "
+            << Expected << ", but got " << Res;
+      },
+      SparseLevel::SpecialValuesOnly);
+#endif
+}
+
 TEST_F(ConstantFPRangeTest, flushDenormals) {
   const fltSemantics &FP8Sem = APFloat::Float8E4M3();
   APFloat NormalVal = APFloat::getSmallestNormalized(FP8Sem);

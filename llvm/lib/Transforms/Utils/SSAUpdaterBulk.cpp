@@ -269,8 +269,7 @@ static bool replaceIfIdentical(PHINode &PHI, PHINode &ReplPHI) {
 
 bool EliminateNewDuplicatePHINodes(BasicBlock *BB,
                                    BasicBlock::phi_iterator FirstExistingPN) {
-  auto NewPHIs = make_range(BB->phis().begin(), FirstExistingPN);
-  assert(!PHIAreRefEachOther(NewPHIs));
+  assert(!PHIAreRefEachOther(make_range(BB->phis().begin(), FirstExistingPN)));
 
   // Deduplicate new PHIs first to reduce the number of comparisons on the
   // following new -> existing pass.

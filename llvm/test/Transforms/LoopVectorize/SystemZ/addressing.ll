@@ -6,7 +6,7 @@
 
 ; Check that the addresses for a scalarized memory access is not extracted
 ; from a vector register.
-define i32 @foo(ptr nocapture %A) {
+define void @foo(ptr nocapture %A) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -27,7 +27,7 @@ define i32 @foo(ptr nocapture %A) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 poison
+; CHECK-NEXT:    ret void
 ;
 
 entry:
@@ -44,12 +44,12 @@ for.body:
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
-  ret i32 poison
+  ret void
 }
 
 
 ; Check that a load of address is scalarized.
-define i32 @foo1(ptr nocapture noalias %A, ptr nocapture %PtrPtr) {
+define void @foo1(ptr nocapture noalias %A, ptr nocapture %PtrPtr) {
 ; CHECK-LABEL: @foo1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -74,7 +74,7 @@ define i32 @foo1(ptr nocapture noalias %A, ptr nocapture %PtrPtr) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 poison
+; CHECK-NEXT:    ret void
 ;
 
 entry:
@@ -93,5 +93,5 @@ for.body:
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
-  ret i32 poison
+  ret void
 }

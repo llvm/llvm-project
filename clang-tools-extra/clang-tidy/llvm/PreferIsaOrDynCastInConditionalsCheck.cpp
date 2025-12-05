@@ -68,8 +68,8 @@ void PreferIsaOrDynCastInConditionalsCheck::check(
   //   llvm::cast<T>(x)
   //         ^  ^
   //  StartLoc  EndLoc
-  SourceLocation StartLoc = Callee->getLocation();
-  SourceLocation EndLoc = Callee->getNameInfo().getEndLoc();
+  const SourceLocation StartLoc = Callee->getLocation();
+  const SourceLocation EndLoc = Callee->getNameInfo().getEndLoc();
 
   if (Result.Nodes.getNodeAs<VarDecl>("var")) {
     diag(StartLoc,

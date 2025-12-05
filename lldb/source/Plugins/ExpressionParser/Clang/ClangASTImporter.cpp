@@ -332,8 +332,7 @@ CompilerType ClangASTImporter::DeportType(TypeSystemClang &dst,
   DeclContextOverride decl_context_override;
 
   if (auto *t = ClangUtil::GetQualType(src_type)->getAs<TagType>())
-    decl_context_override.OverrideAllDeclsFromContainingFunction(
-        t->getOriginalDecl());
+    decl_context_override.OverrideAllDeclsFromContainingFunction(t->getDecl());
 
   CompleteTagDeclsScope complete_scope(*this, &dst.getASTContext(),
                                        &src_ctxt->getASTContext());
@@ -393,7 +392,7 @@ bool ClangASTImporter::CanImport(const CompilerType &type) {
   case clang::Type::Record:
     return CanImport(qual_type->getAsCXXRecordDecl());
   case clang::Type::Enum:
-    return CanImport(llvm::cast<clang::EnumType>(qual_type)->getOriginalDecl());
+    return CanImport(llvm::cast<clang::EnumType>(qual_type)->getDecl());
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface: {
     const clang::ObjCObjectType *objc_class_type =
@@ -452,7 +451,7 @@ bool ClangASTImporter::Import(const CompilerType &type) {
 
   case clang::Type::Enum: {
     clang::EnumDecl *enum_decl =
-        llvm::cast<clang::EnumType>(qual_type)->getOriginalDecl();
+        llvm::cast<clang::EnumType>(qual_type)->getDecl();
     if (enum_decl) {
       if (GetDeclOrigin(enum_decl).Valid())
         return CompleteAndFetchChildren(qual_type);
@@ -591,7 +590,7 @@ bool ExtractBaseOffsets(const ASTRecordLayout &record_layout,
       return false;
 
     DeclFromUser<RecordDecl> origin_base_record(
-        origin_base_record_type->getOriginalDecl());
+        origin_base_record_type->getDecl());
 
     if (origin_base_record.IsInvalid())
       return false;
@@ -722,8 +721,7 @@ bool ClangASTImporter::importRecordLayoutFromOrigin(
 
         QualType base_type = bi->getType();
         const RecordType *base_record_type = base_type->getAs<RecordType>();
-        DeclFromParser<RecordDecl> base_record(
-            base_record_type->getOriginalDecl());
+        DeclFromParser<RecordDecl> base_record(base_record_type->getDecl());
         DeclFromParser<CXXRecordDecl> base_cxx_record =
             DynCast<CXXRecordDecl>(base_record);
 
@@ -855,7 +853,7 @@ bool ClangASTImporter::CompleteAndFetchChildren(clang::QualType type) {
   Log *log = GetLog(LLDBLog::Expressions);
 
   if (const TagType *tag_type = type->getAs<TagType>()) {
-    TagDecl *tag_decl = tag_type->getOriginalDecl();
+    TagDecl *tag_decl = tag_type->getDecl();
 
     DeclOrigin decl_origin = GetDeclOrigin(tag_decl);
 
@@ -923,7 +921,7 @@ bool ClangASTImporter::RequireCompleteType(clang::QualType type) {
     return false;
 
   if (const TagType *tag_type = type->getAs<TagType>()) {
-    TagDecl *tag_decl = tag_type->getOriginalDecl();
+    TagDecl *tag_decl = tag_type->getDecl();
 
     if (tag_decl->getDefinition())
       return true;

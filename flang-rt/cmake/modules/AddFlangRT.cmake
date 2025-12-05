@@ -231,6 +231,27 @@ function (add_flangrt_library name)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -funwind-tables -fno-asynchronous-unwind-tables>
         )
+
+      # We define our own _GLIBCXX_THROW_OR_ABORT here because, as of
+      # GCC 15.1, the libstdc++ header file <bits/c++config> uses
+      # (void)_EXC in its definition of _GLIBCXX_THROW_OR_ABORT to
+      # silence a warning.
+      #
+      # This is a problem for us because some compilers, specifically
+      # clang, do not always optimize away that (void)_EXC even though
+      # it is unreachable since it occurs after a call to
+      # _builtin_abort().  Because _EXC is typically an object derived
+      # from std::exception, (void)_EXC, when not optimized away,
+      # calls std::exception methods defined in the libstdc++ shared
+      # library.  We shouldn't link against that library since our
+      # build version may conflict with the version used by a hybrid
+      # Fortran/C++ application.
+      #
+      # Redefining _GLIBCXX_THROW_OR_ABORT in this manner is not
+      # supported by the maintainers of libstdc++, so future changes
+      # to libstdc++ may require future changes to this build script
+      # and/or future changes to the Fortran runtime source code.
+      target_compile_options(${tgtname} PUBLIC "-D_GLIBCXX_THROW_OR_ABORT(_EXC)=(__builtin_abort())")
     elseif (MSVC)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->

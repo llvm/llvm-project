@@ -101,7 +101,7 @@ TEST_F(LlvmLibcFILETest, SimpleFileOperations) {
 
   // This is not a readable file.
   ASSERT_THAT(LIBC_NAMESPACE::fread(data, 1, 1, file),
-              returns(EQ(0)).with_errno(NE(0)));
+              returns(EQ(size_t(0))).with_errno(NE(0)));
 
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 
@@ -175,7 +175,7 @@ TEST_F(LlvmLibcFILETest, FOpenFWriteSizeGreaterThanOne) {
   // Trying to read more should fetch nothing.
   ASSERT_THAT(
       LIBC_NAMESPACE::fread(read_data, sizeof(MyStruct), WRITE_NMEMB, file),
-      returns(EQ(0)).with_errno(EQ(0)));
+      returns(EQ(size_t(0))).with_errno(EQ(0)));
   EXPECT_NE(LIBC_NAMESPACE::feof(file), 0);
   EXPECT_EQ(LIBC_NAMESPACE::ferror(file), 0);
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
