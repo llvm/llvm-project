@@ -101,7 +101,6 @@ llvm.func @sections_private(%x : !llvm.ptr) {
 
 // -----
 
-<<<<<<< HEAD
 llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-warning@below {{ignored clause: linear in omp.simd operation}}
   omp.simd linear(%x = %step : !llvm.ptr) {
@@ -114,8 +113,6 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // -----
 
-=======
->>>>>>> 290b32a699ae
 omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
@@ -435,10 +432,7 @@ llvm.func @wsloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 }
 
 // -----
-<<<<<<< HEAD
 
-=======
->>>>>>> 290b32a699ae
 llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
   // expected-error@below {{not yet implemented: Unhandled clause order in omp.wsloop operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
