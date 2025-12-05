@@ -151,15 +151,16 @@ void NVPTXDwarfDebug::recordSourceLineAndInlinedAt(const MachineInstr &MI,
   }
 }
 
-// NVPTX-specific function initialization hook.
-void NVPTXDwarfDebug::beginFunctionHook(const MachineFunction &MF) {
+// NVPTX-specific debug info initialization.
+void NVPTXDwarfDebug::initializeTargetDebugInfo(const MachineFunction &MF) {
   InlinedAtLocs.clear();
   collectInlinedAtLocations(MF);
 }
 
 // NVPTX-specific source line recording with inlined_at support.
-void NVPTXDwarfDebug::recordSourceLineHook(const MachineInstr &MI,
-                                           const DebugLoc &DL, unsigned Flags) {
+void NVPTXDwarfDebug::recordTargetSourceLine(const MachineInstr &MI,
+                                             const DebugLoc &DL,
+                                             unsigned Flags) {
   // Call NVPTX-specific implementation that handles inlined_at.
   recordSourceLineAndInlinedAt(MI, Flags);
 }

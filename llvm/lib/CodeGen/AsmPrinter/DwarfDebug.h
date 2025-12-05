@@ -717,13 +717,13 @@ protected:
 
   void skippedNonDebugFunction() override;
 
-  /// Target-specific hook for custom initialization,
-  /// default implementation is empty, only being used for NVPTX target
-  virtual void beginFunctionHook(const MachineFunction &MF) {}
+  /// Target-specific debug info initialization at function start.
+  /// Default implementation is empty, overridden by NVPTX target.
+  virtual void initializeTargetDebugInfo(const MachineFunction &MF) {}
 
-  /// Target-specific hook for custom source line recording
-  virtual void recordSourceLineHook(const MachineInstr &MI, const DebugLoc &DL,
-                                    unsigned Flags);
+  /// Target-specific source line recording.
+  virtual void recordTargetSourceLine(const MachineInstr &MI,
+                                      const DebugLoc &DL, unsigned Flags);
 
   const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
     return InfoHolder.getUnits();

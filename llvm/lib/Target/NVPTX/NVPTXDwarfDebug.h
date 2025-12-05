@@ -36,11 +36,11 @@ public:
   void collectInlinedAtLocations(const MachineFunction &MF);
 
 protected:
-  /// Override hook to collect inlined_at locations.
-  void beginFunctionHook(const MachineFunction &MF) override;
-  /// Override hook to record source line information with inlined_at support.
-  void recordSourceLineHook(const MachineInstr &MI, const DebugLoc &DL,
-                            unsigned Flags) override;
+  /// Override to collect inlined_at locations.
+  void initializeTargetDebugInfo(const MachineFunction &MF) override;
+  /// Override to record source line information with inlined_at support.
+  void recordTargetSourceLine(const MachineInstr &MI, const DebugLoc &DL,
+                              unsigned Flags) override;
 
 private:
   /// NVPTX-specific source line recording with inlined_at support.
