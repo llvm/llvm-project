@@ -11,6 +11,8 @@
 
 #include "llvm/Testing/Support/Error.h"
 
+#include <future>
+
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -26,7 +28,7 @@ static CWrapperFunctionResult mainWrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-TEST(CallSPSViaEPCTest, CallMainViaCaller) {
+TEST(CallSPSViaEPCTest, CallMainViaCallerAsync) {
   auto EPC = cantFail(SelfExecutorProcessControl::Create());
   SPSEPCCaller<int32_t(SPSSequence<SPSString>)> C(*EPC);
   std::vector<std::string> Args;
@@ -59,7 +61,7 @@ TEST(CallSPSViaEPCTest, CallMainViaCaller) {
   EXPECT_EQ(**R4, 0);
 }
 
-TEST(CallSPSViaEPCTest, CallMainViaGenericCall) {
+TEST(CallSPSViaEPCTest, CallMainViaGenericCallAsync) {
   auto EPC = cantFail(SelfExecutorProcessControl::Create());
   SPSEPCCall<int32_t(SPSSequence<SPSString>)> C(
       *EPC, ExecutorSymbolDef::fromPtr(mainWrapper));
@@ -87,4 +89,59 @@ TEST(CallSPSViaEPCTest, CallMainViaGenericCall) {
   C([&](Expected<int32_t> R) { R4 = std::move(R); }, Args);
   ASSERT_THAT_EXPECTED(*R4, Succeeded());
   EXPECT_EQ(**R4, 0);
+}
+
+TEST(CallSPSViaEPCTest, CallMainViaCallerSync) {
+  auto EPC = cantFail(SelfExecutorProcessControl::Create());
+  SPSEPCCaller<int32_t(SPSSequence<SPSString>)> C(*EPC);
+  std::vector<std::string> Args;
+
+  Expected<int32_t> R1 = C(std::promise<MSVCPExpected<int32_t>>(),
+                           ExecutorSymbolDef::fromPtr(mainWrapper), Args);
+  ASSERT_THAT_EXPECTED(R1, Succeeded());
+  EXPECT_EQ(*R1, 0);
+
+  Args.push_back("foo");
+  Expected<int32_t> R2 = C(std::promise<MSVCPExpected<int32_t>>(),
+                           ExecutorSymbolDef::fromPtr(mainWrapper), Args);
+  ASSERT_THAT_EXPECTED(R2, Succeeded());
+  EXPECT_EQ(*R2, 1);
+
+  Args.push_back("foo");
+  Expected<int32_t> R3 = C(std::promise<MSVCPExpected<int32_t>>(),
+                           ExecutorSymbolDef::fromPtr(mainWrapper), Args);
+  ASSERT_THAT_EXPECTED(R3, Succeeded());
+  EXPECT_EQ(*R3, 2);
+
+  Args.clear();
+  Expected<int32_t> R4 = C(std::promise<MSVCPExpected<int32_t>>(),
+                           ExecutorSymbolDef::fromPtr(mainWrapper), Args);
+  ASSERT_THAT_EXPECTED(R4, Succeeded());
+  EXPECT_EQ(*R4, 0);
+}
+
+TEST(CallSPSViaEPCTest, CallMainViaGenericCallSync) {
+  auto EPC = cantFail(SelfExecutorProcessControl::Create());
+  SPSEPCCall<int32_t(SPSSequence<SPSString>)> C(
+      *EPC, ExecutorSymbolDef::fromPtr(mainWrapper));
+  std::vector<std::string> Args;
+
+  Expected<int32_t> R1 = C(std::promise<MSVCPExpected<int32_t>>(), Args);
+  ASSERT_THAT_EXPECTED(R1, Succeeded());
+  EXPECT_EQ(*R1, 0);
+
+  Args.push_back("foo");
+  Expected<int32_t> R2 = C(std::promise<MSVCPExpected<int32_t>>(), Args);
+  ASSERT_THAT_EXPECTED(R2, Succeeded());
+  EXPECT_EQ(*R2, 1);
+
+  Args.push_back("foo");
+  Expected<int32_t> R3 = C(std::promise<MSVCPExpected<int32_t>>(), Args);
+  ASSERT_THAT_EXPECTED(R3, Succeeded());
+  EXPECT_EQ(*R3, 2);
+
+  Args.clear();
+  Expected<int32_t> R4 = C(std::promise<MSVCPExpected<int32_t>>(), Args);
+  ASSERT_THAT_EXPECTED(R4, Succeeded());
+  EXPECT_EQ(*R4, 0);
 }
