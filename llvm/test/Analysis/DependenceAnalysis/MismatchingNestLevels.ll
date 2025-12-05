@@ -81,7 +81,6 @@ define dso_local void @test2(i32 noundef zeroext %n, ptr noundef %A, ptr noalias
 ; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,(4 * (zext i32 (1 + %n) to i64))<nuw><nsw>}<%for.i> to i128) == {0,+,(4 * (zext i32 (1 + %n) to i128))<nuw><nsw>}<%for.i>
 ; CHECK-NEXT:    Equal predicate: (sext i64 {(4 * (zext i32 (1 + %n) to i64))<nuw><nsw>,+,(4 * (zext i32 (1 + %n) to i64))<nuw><nsw>}<%for.i> to i128) == ((sext i64 {0,+,(4 * (zext i32 (1 + %n) to i64))<nuw><nsw>}<%for.i> to i128) + (4 * (zext i32 (1 + %n) to i128))<nuw><nsw>)
 ; CHECK-NEXT:    Equal predicate: (sext i64 {(-1 + (4 * (zext i32 (1 + %n) to i64))<nuw><nsw>)<nsw>,+,(4 * (zext i32 (1 + %n) to i64))<nuw><nsw>}<%for.i> to i128) == (-1 + (sext i64 {(4 * (zext i32 (1 + %n) to i64))<nuw><nsw>,+,(4 * (zext i32 (1 + %n) to i64))<nuw><nsw>}<%for.i> to i128))<nsw>
-; CHECK-NEXT:    Compare predicate: (1 + (zext i32 %n to i64))<nuw><nsw> slt) (zext i32 (1 + %n) to i64)
 ; CHECK-NEXT:  Src: store float 1.230000e+02, ptr %arrayidx7, align 4 --> Dst: store float %conv13, ptr %arrayidx17, align 4
 ; CHECK-NEXT:    da analyze - output [0|<]!
 ; CHECK-NEXT:    Runtime Assumptions:

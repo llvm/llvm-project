@@ -97,7 +97,6 @@ define void @weakzerodst1(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,(4 * %n)}<%for.body> to i128) == ((sext i64 (4 * %n) to i128) * (sext i64 {0,+,1}<nuw><%for.body> to i128))
 ; CHECK-NEXT:    Equal predicate: (sext i64 {(4 * %n),+,(4 * %n)}<%for.body> to i128) == ((sext i64 (4 * %n) to i128) + (sext i64 {0,+,(4 * %n)}<%for.body> to i128))
 ; CHECK-NEXT:    Equal predicate: (sext i64 {(-1 + (4 * %n)),+,(4 * %n)}<%for.body> to i128) == (-1 + (sext i64 {(4 * %n),+,(4 * %n)}<%for.body> to i128))<nsw>
-; CHECK-NEXT:    Compare predicate: 10 slt) %n
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - flow [p<=|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4

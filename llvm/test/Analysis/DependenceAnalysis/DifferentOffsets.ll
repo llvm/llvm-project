@@ -106,8 +106,6 @@ define void @linearized_accesses(i64 %n, i64 %m, i64 %o, ptr %A) {
 ; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,(8 * %m * %o)}<%for.i> to i128) == ((sext i64 (4 * %m * %o) to i128) * (sext i64 {0,+,2}<%for.i> to i128))
 ; CHECK-NEXT:    Equal predicate: (sext i64 {(4 * %m * %o),+,(8 * %m * %o)}<%for.i> to i128) == ((sext i64 (4 * %m * %o) to i128) + (sext i64 {0,+,(8 * %m * %o)}<%for.i> to i128))
 ; CHECK-NEXT:    Equal predicate: (sext i64 {(-1 + (4 * %m * %o)),+,(8 * %m * %o)}<%for.i> to i128) == (-1 + (sext i64 {(4 * %m * %o),+,(8 * %m * %o)}<%for.i> to i128))<nsw>
-; CHECK-NEXT:    Compare predicate: {0,+,2}<%for.j> slt) %m
-; CHECK-NEXT:    Compare predicate: {0,+,2}<%for.k> slt) %o
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx1, align 4
 ; CHECK-NEXT:    da analyze - output [* * *|<]!
 ; CHECK-NEXT:    Runtime Assumptions:

@@ -763,6 +763,15 @@ bool llvm::validateDelinearizationResult(
   //
   // where the size of the outermost dimension is unknown (UNK).
 
+  // Helper to add a predicate only if it's not already in the list.
+  // SCEV interns predicates, so pointer comparison is sufficient.
+  auto AddPredicate = [&](const SCEVPredicate *Pred) {
+    if (!Pred || !Assume)
+      return;
+    if (!llvm::is_contained(*Assume, Pred))
+      Assume->push_back(Pred);
+  };
+
   // Unify types of two SCEVs to the wider type.
   auto UnifyTypes =
       [&](const SCEV *&A,
@@ -782,7 +791,7 @@ bool llvm::validateDelinearizationResult(
                                                      /*Signed=*/true, A, B)) {
       if (!Assume)
         return nullptr;
-      Assume->push_back(Pred);
+      AddPredicate(Pred);
     }
     return SE.getAddExpr(A, B);
   };
@@ -797,7 +806,7 @@ bool llvm::validateDelinearizationResult(
                                                      /*Signed=*/true, A, B)) {
       if (!Assume)
         return nullptr;
-      Assume->push_back(Pred);
+      AddPredicate(Pred);
     }
     return SE.getMulExpr(A, B);
   };
@@ -811,7 +820,7 @@ bool llvm::validateDelinearizationResult(
                                                      /*Signed=*/true, A, B)) {
       if (!Assume)
         return false;
-      Assume->push_back(Pred);
+      AddPredicate(Pred);
     }
     return true;
   };
@@ -827,7 +836,7 @@ bool llvm::validateDelinearizationResult(
         return false;
       const SCEVPredicate *Pred = SE.getComparePredicate(
           ICmpInst::ICMP_SGE, Subscript, SE.getZero(Subscript->getType()));
-      Assume->push_back(Pred);
+      AddPredicate(Pred);
     }
 
     // Check Subscript < Size.
@@ -840,7 +849,7 @@ bool llvm::validateDelinearizationResult(
       const SCEV *SizeExt = SE.getNoopOrSignExtend(Size, WiderType);
       const SCEVPredicate *Pred =
           SE.getComparePredicate(ICmpInst::ICMP_SLT, SubscriptExt, SizeExt);
-      Assume->push_back(Pred);
+      AddPredicate(Pred);
     }
   }
 

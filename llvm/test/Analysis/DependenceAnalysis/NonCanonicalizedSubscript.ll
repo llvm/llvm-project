@@ -60,7 +60,6 @@ define void @coupled_miv_type_mismatch(i32 %n) {
 ; CHECK-NEXT:    da analyze - consistent input [0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: {10003,+,1}<nw><%for.cond1> slt) 10005
-; CHECK-NEXT:    Compare predicate: {10003,+,1}<nw><%for.cond1> slt) 10005
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx5, align 4 --> Dst: store i32 %add6, ptr %arrayidx10, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %add6, ptr %arrayidx10, align 4 --> Dst: store i32 %add6, ptr %arrayidx10, align 4

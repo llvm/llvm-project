@@ -271,7 +271,6 @@ define void @nested_loop_step(ptr %a, i64 %n, i64 %m, i64 %step) {
 ; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%loop.i.header> slt) %step
 ; CHECK-NEXT:    Equal predicate: (sext i64 {%step,+,%step}<nw><%loop.j> to i128) == {(sext i64 %step to i128),+,(sext i64 %step to i128)}<nw><%loop.j>
 ; CHECK-NEXT:    Equal predicate: (sext i64 {(-1 + %step),+,%step}<nw><%loop.j> to i128) == (-1 + (sext i64 {%step,+,%step}<nw><%loop.j> to i128))<nsw>
-; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%loop.i.header> slt) %step
 ;
 entry:
   %guard.i = icmp sgt i64 %n, 0

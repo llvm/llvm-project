@@ -22,7 +22,6 @@ define void @unknown_sign(ptr %a, i64 %k) {
 ; CHECK-NEXT:    Equal predicate: {0,+,(sext i64 (-1 * %k) to i128)}<nsw><%loop> == {0,+,(-1 * (sext i64 %k to i128))<nsw>}<%loop>
 ; CHECK-NEXT:    Equal predicate: (sext i64 {%k,+,(-1 * %k)}<nw><%loop> to i128) == {(sext i64 %k to i128),+,(sext i64 (-1 * %k) to i128)}<nw><%loop>
 ; CHECK-NEXT:    Equal predicate: (sext i64 {(-1 + %k),+,(-1 * %k)}<nw><%loop> to i128) == (-1 + (sext i64 {%k,+,(-1 * %k)}<nw><%loop> to i128))<nsw>
-; CHECK-NEXT:    Compare predicate: 0 slt) %k
 ; CHECK-NEXT:  Src: store i8 1, ptr %idx.0, align 1 --> Dst: store i8 2, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i8 2, ptr %idx.1, align 1 --> Dst: store i8 2, ptr %idx.1, align 1
@@ -32,7 +31,6 @@ define void @unknown_sign(ptr %a, i64 %k) {
 ; CHECK-NEXT:    Equal predicate: (sext i64 {(2 * %k),+,(-1 * %k)}<%loop> to i128) == {(2 * (sext i64 %k to i128))<nsw>,+,(-1 * (sext i64 %k to i128))<nsw>}<%loop>
 ; CHECK-NEXT:    Equal predicate: (sext i64 {(3 * %k),+,(-1 * %k)}<%loop> to i128) == ((sext i64 {(2 * %k),+,(-1 * %k)}<%loop> to i128) + (sext i64 %k to i128))
 ; CHECK-NEXT:    Equal predicate: (sext i64 {(-1 + (3 * %k)),+,(-1 * %k)}<%loop> to i128) == (-1 + (sext i64 {(3 * %k),+,(-1 * %k)}<%loop> to i128))<nsw>
-; CHECK-NEXT:    Compare predicate: 1 slt) %k
 ;
 entry:
   %k.neg = sub nsw i64 0, %k
