@@ -477,6 +477,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     )
 
     list( APPEND build_flags
+      -Xclang -fdeclare-opencl-builtins -Xclang -finclude-default-header
       -I${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
     )
 
