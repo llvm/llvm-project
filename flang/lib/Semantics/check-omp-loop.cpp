@@ -289,7 +289,6 @@ void OmpStructureChecker::CheckNestedBlock(const parser::OpenMPLoopConstruct &x,
 void OmpStructureChecker::CheckNestedConstruct(
     const parser::OpenMPLoopConstruct &x) {
   size_t nestedCount{0};
-  unsigned version{context_.langOptions().OpenMPVersion};
 
   // End-directive is not allowed in such cases:
   //   do 100 i = ...
