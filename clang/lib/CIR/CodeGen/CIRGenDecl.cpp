@@ -98,8 +98,22 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
       if (const RecordDecl *rd = ty->getAsRecordDecl()) {
         if (const auto *cxxrd = dyn_cast<CXXRecordDecl>(rd);
             (cxxrd && !cxxrd->hasTrivialDestructor()) ||
-            rd->isNonTrivialToPrimitiveDestroy())
-          cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: set NRVO flag");
+            rd->isNonTrivialToPrimitiveDestroy()) {
+          // In LLVM: Create a flag that is used to indicate when the NRVO was
+          // applied to this variable. Set it to zero to indicate that NRVO was
+          // not applied. For now, use the same approach for CIRGen until we can
+          // be sure it's worth doing something more aggressive.
+          cir::ConstantOp falseNVRO = builder.getFalse(loc);
+          Address nrvoFlag = createTempAlloca(falseNVRO.getType(),
+                                              CharUnits::One(), loc, "nrvo",
+                                              /*arraySize=*/nullptr, &address);
+          assert(builder.getInsertionBlock());
+          builder.createStore(loc, falseNVRO, nrvoFlag);
+
+          // Record the NRVO flag for this variable.
+          nrvoFlags[&d] = nrvoFlag.getPointer();
+          emission.nrvoFlag = nrvoFlag.getPointer();
+        }
       }
     } else {
       // A normal fixed sized variable becomes an alloca in the entry block,
@@ -798,21 +812,53 @@ namespace {
 struct DestroyObject final : EHScopeStack::Cleanup {
   DestroyObject(Address addr, QualType type,
                 CIRGenFunction::Destroyer *destroyer)
-      : addr(addr), type(type), destroyer(destroyer) {}
+      : addr(addr), type(type), destroyer(destroyer) {
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
+  }
 
   Address addr;
   QualType type;
   CIRGenFunction::Destroyer *destroyer;
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
     cgf.emitDestroy(addr, type, destroyer);
+  }
+};
+
+template <class Derived> struct DestroyNRVOVariable : EHScopeStack::Cleanup {
+  DestroyNRVOVariable(Address addr, QualType type, mlir::Value nrvoFlag)
+      : nrvoFlag(nrvoFlag), addr(addr), ty(type) {}
+
+  mlir::Value nrvoFlag;
+  Address addr;
+  QualType ty;
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    assert(!cir::MissingFeatures::cleanupDestroyNRVOVariable());
+  }
+
+  virtual ~DestroyNRVOVariable() = default;
+};
+
+struct DestroyNRVOVariableCXX final
+    : DestroyNRVOVariable<DestroyNRVOVariableCXX> {
+  DestroyNRVOVariableCXX(Address addr, QualType type,
+                         const CXXDestructorDecl *dtor, mlir::Value nrvoFlag)
+      : DestroyNRVOVariable<DestroyNRVOVariableCXX>(addr, type, nrvoFlag),
+        dtor(dtor) {}
+
+  const CXXDestructorDecl *dtor;
+
+  void emitDestructorCall(CIRGenFunction &cgf) {
+    assert(!cir::MissingFeatures::cleanupDestroyNRVOVariable());
   }
 };
 
 struct CallStackRestore final : EHScopeStack::Cleanup {
   Address stack;
   CallStackRestore(Address stack) : stack(stack) {}
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     mlir::Location loc = stack.getPointer().getLoc();
     mlir::Value v = cgf.getBuilder().createLoad(loc, stack);
     cgf.getBuilder().createStackRestore(loc, v);
@@ -914,6 +960,7 @@ void CIRGenFunction::emitDestroy(Address addr, QualType type,
     return;
 
   mlir::Value begin = addr.getPointer();
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
   emitArrayDestroy(begin, length, type, elementAlign, destroyer);
 
   // If the array destroy didn't use the length op, we can erase it.
@@ -965,7 +1012,10 @@ void CIRGenFunction::emitAutoVarTypeCleanup(
     // If there's an NRVO flag on the emission, we need a different
     // cleanup.
     if (emission.nrvoFlag) {
-      cgm.errorNYI(var->getSourceRange(), "emitAutoVarTypeCleanup: NRVO");
+      assert(!type->isArrayType());
+      CXXDestructorDecl *dtor = type->getAsCXXRecordDecl()->getDestructor();
+      ehStack.pushCleanup<DestroyNRVOVariableCXX>(cleanupKind, addr, type, dtor,
+                                                  emission.nrvoFlag);
       return;
     }
     // Otherwise, this is handled below.
@@ -983,7 +1033,7 @@ void CIRGenFunction::emitAutoVarTypeCleanup(
   if (!destroyer)
     destroyer = getDestroyer(dtorKind);
 
-  assert(!cir::MissingFeatures::ehCleanupFlags());
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
   ehStack.pushCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
 }
 

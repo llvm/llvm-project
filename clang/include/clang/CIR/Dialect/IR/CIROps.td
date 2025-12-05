@@ -899,6 +899,36 @@ def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Resume
+//===----------------------------------------------------------------------===//
+
+def CIR_ResumeOp : CIR_Op<"resume", [
+  ReturnLike, Terminator, HasParent<"cir::TryOp">
+]> {
+  let summary = "Resumes execution after not catching exceptions";
+  let description = [{
+    The `cir.resume` operation handles an uncaught exception scenario.
+
+    Used as the terminator of a `CatchUnwind` region of `cir.try`, where it
+    does not receive any arguments (implied from the `cir.try` scope).
+
+    This operation is used only before the CFG flatterning pass.
+
+    Examples:
+    ```mlir
+    cir.try {
+      cir.yield
+    } unwind {
+      cir.resume
+    }
+    ```
+  }];
+
+  let assemblyFormat = "attr-dict";
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // ScopeOp
 //===----------------------------------------------------------------------===//
 
@@ -4764,6 +4794,13 @@ def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
     a result of the same type.
 
     Floating-point exceptions are ignored, and it does not set `errno`.
+
+    Example:
+
+    ```mlir
+    // $x : !cir.double
+    %y = cir.floor %x : !cir.double
+    ```
   }];
 }
 
