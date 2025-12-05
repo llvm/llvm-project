@@ -91,6 +91,11 @@ static bool isStaticallyAbsent(llvm::ArrayRef<mlir::Value> args,
                                size_t argIndex) {
   return args.size() <= argIndex || !args[argIndex];
 }
+static bool isOptional(mlir::Value value) {
+  auto varIface = mlir::dyn_cast_or_null<fir::FortranVariableOpInterface>(
+      value.getDefiningOp());
+  return varIface && varIface.isOptional();
+}
 
 /// Test if an ExtendedValue is present. This is used to test if an intrinsic
 /// argument is present at compile time. This does not imply that the related
@@ -303,6 +308,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"back", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"floor", &I::genFloor},
+    {"flush",
+     &I::genFlush,
+     {{{"unit", asAddr}}},
+     /*isElemental=*/false},
     {"fraction", &I::genFraction},
     {"free", &I::genFree},
     {"fseek",
@@ -339,6 +348,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"status", asAddr, handleDynamicOptional},
        {"trim_name", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"get_team",
+     &I::genGetTeam,
+     {{{"level", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"getcwd",
      &I::genGetCwd,
@@ -486,6 +499,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"irand",
+     &I::genIrand,
+     {{{"i", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"is_contiguous",
      &I::genIsContiguous,
      {{{"array", asBox}}},
@@ -612,6 +629,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genPutenv,
      {{{"str", asAddr}, {"status", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"rand",
+     &I::genRand,
+     {{{"i", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"random_init",
      &I::genRandomInit,
      {{{"repeatable", asValue}, {"image_distinct", asValue}}},
@@ -706,6 +727,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"shifta", &I::genShiftA},
     {"shiftl", &I::genShift<mlir::arith::ShLIOp>},
     {"shiftr", &I::genShift<mlir::arith::ShRUIOp>},
+    {"show_descriptor",
+     &I::genShowDescriptor,
+     {{{"d", asBox}}},
+     /*isElemental=*/false},
     {"sign", &I::genSign},
     {"signal",
      &I::genSignalSubroutine,
@@ -749,6 +774,10 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"tand", &I::genTand},
     {"tanpi", &I::genTanpi},
+    {"team_number",
+     &I::genTeamNumber,
+     {{{"team", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"this_image",
      &I::genThisImage,
      {{{"coarray", asBox},
@@ -3934,6 +3963,40 @@ mlir::Value IntrinsicLibrary::genFloor(mlir::Type resultType,
   return builder.createConvert(loc, resultType, floor);
 }
 
+// FLUSH
+void IntrinsicLibrary::genFlush(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+
+  mlir::Value unit;
+  if (isStaticallyAbsent(args[0]))
+    // Give a sentinal value of `-1` on the `()` case.
+    unit = builder.createIntegerConstant(loc, builder.getI32Type(), -1);
+  else {
+    unit = fir::getBase(args[0]);
+    if (isOptional(unit)) {
+      mlir::Value isPresent =
+          fir::IsPresentOp::create(builder, loc, builder.getI1Type(), unit);
+      unit = builder
+                 .genIfOp(loc, builder.getI32Type(), isPresent,
+                          /*withElseRegion=*/true)
+                 .genThen([&]() {
+                   mlir::Value loaded = fir::LoadOp::create(builder, loc, unit);
+                   fir::ResultOp::create(builder, loc, loaded);
+                 })
+                 .genElse([&]() {
+                   mlir::Value negOne = builder.createIntegerConstant(
+                       loc, builder.getI32Type(), -1);
+                   fir::ResultOp::create(builder, loc, negOne);
+                 })
+                 .getResults()[0];
+    } else {
+      unit = fir::LoadOp::create(builder, loc, unit);
+    }
+  }
+
+  fir::runtime::genFlush(builder, loc, unit);
+}
+
 // FRACTION
 mlir::Value IntrinsicLibrary::genFraction(mlir::Type resultType,
                                           llvm::ArrayRef<mlir::Value> args) {
@@ -4011,6 +4074,15 @@ IntrinsicLibrary::genFtell(std::optional<mlir::Type> resultType,
     }
     return {};
   }
+}
+
+// GET_TEAM
+mlir::Value IntrinsicLibrary::genGetTeam(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 1);
+  return mif::GetTeamOp::create(builder, loc, fir::BoxType::get(resultType),
+                                /*level*/ args[0]);
 }
 
 // GETCWD
@@ -6098,6 +6170,20 @@ IntrinsicLibrary::genIparity(mlir::Type resultType,
                       "IPARITY", resultType, args);
 }
 
+// IRAND
+fir::ExtendedValue
+IntrinsicLibrary::genIrand(mlir::Type resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value i =
+      isStaticallyPresent(args[0])
+          ? fir::getBase(args[0])
+          : fir::AbsentOp::create(builder, loc,
+                                  builder.getRefType(builder.getI32Type()))
+                .getResult();
+  return fir::runtime::genIrand(builder, loc, i);
+}
+
 // IS_CONTIGUOUS
 fir::ExtendedValue
 IntrinsicLibrary::genIsContiguous(mlir::Type resultType,
@@ -6279,12 +6365,6 @@ IntrinsicLibrary::genCharacterCompare(mlir::Type resultType,
   return fir::runtime::genCharCompare(
       builder, loc, pred, fir::getBase(args[0]), fir::getLen(args[0]),
       fir::getBase(args[1]), fir::getLen(args[1]));
-}
-
-static bool isOptional(mlir::Value value) {
-  auto varIface = mlir::dyn_cast_or_null<fir::FortranVariableOpInterface>(
-      value.getDefiningOp());
-  return varIface && varIface.isOptional();
 }
 
 // LOC
@@ -6509,11 +6589,9 @@ static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
   auto mod = builder.getModule();
-  bool dontUseFastRealMod = false;
-  bool canUseApprox = mlir::arith::bitEnumContainsAny(
-      builder.getFastMathFlags(), mlir::arith::FastMathFlags::afn);
-  if (auto attr = mod->getAttrOfType<mlir::BoolAttr>("fir.no_fast_real_mod"))
-    dontUseFastRealMod = attr.getValue();
+  bool useFastRealMod = false;
+  if (auto attr = mod->getAttrOfType<mlir::BoolAttr>("fir.fast_real_mod"))
+    useFastRealMod = attr.getValue();
 
   assert(args.size() == 2);
   if (resultType.isUnsignedInteger()) {
@@ -6526,7 +6604,7 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
   if (mlir::isa<mlir::IntegerType>(resultType))
     return mlir::arith::RemSIOp::create(builder, loc, args[0], args[1]);
 
-  if (resultType.isFloat() && canUseApprox && !dontUseFastRealMod) {
+  if (resultType.isFloat() && useFastRealMod) {
     // Treat MOD as an approximate function and code-gen inline code
     // instead of calling into the Fortran runtime library.
     return builder.createConvert(loc, resultType,
@@ -7130,6 +7208,19 @@ IntrinsicLibrary::genPutenv(std::optional<mlir::Type> resultType,
   }
 
   return {};
+}
+
+// RAND
+fir::ExtendedValue
+IntrinsicLibrary::genRand(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value i =
+      isStaticallyPresent(args[0])
+          ? fir::getBase(args[0])
+          : fir::AbsentOp::create(builder, loc,
+                                  builder.getRefType(builder.getI32Type()))
+                .getResult();
+  return fir::runtime::genRand(builder, loc, i);
 }
 
 // RANDOM_INIT
@@ -7797,6 +7888,16 @@ mlir::Value IntrinsicLibrary::genShiftA(mlir::Type resultType,
   return result;
 }
 
+void IntrinsicLibrary::genShowDescriptor(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1 && "expected single argument for show_descriptor");
+  const mlir::Value descriptor = fir::getBase(args[0]);
+
+  assert(fir::isa_box_type(descriptor.getType()) &&
+         "argument must have been lowered to box type");
+  fir::runtime::genShowDescriptor(builder, loc, descriptor);
+}
+
 // SIGNAL
 void IntrinsicLibrary::genSignalSubroutine(
     llvm::ArrayRef<fir::ExtendedValue> args) {
@@ -7951,6 +8052,16 @@ mlir::Value IntrinsicLibrary::genTanpi(mlir::Type resultType,
   mlir::Value factor = builder.createRealConstant(loc, resultType, pi);
   mlir::Value arg = mlir::arith::MulFOp::create(builder, loc, args[0], factor);
   return getRuntimeCallGenerator("tan", ftype)(builder, loc, {arg});
+}
+
+// TEAM_NUMBER
+fir::ExtendedValue
+IntrinsicLibrary::genTeamNumber(mlir::Type,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 1);
+  return mif::TeamNumberOp::create(builder, loc,
+                                   /*team*/ fir::getBase(args[0]));
 }
 
 // THIS_IMAGE

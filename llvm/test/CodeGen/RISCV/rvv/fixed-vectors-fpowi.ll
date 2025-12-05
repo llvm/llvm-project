@@ -34,7 +34,6 @@ define <1 x float> @powi_v1f32(<1 x float> %x, i32 %y) nounwind {
   %a = call <1 x float> @llvm.powi.v1f32.i32(<1 x float> %x, i32 %y)
   ret <1 x float> %a
 }
-declare <1 x float> @llvm.powi.v1f32.i32(<1 x float>, i32)
 
 define <2 x float> @powi_v2f32(<2 x float> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v2f32:
@@ -100,7 +99,6 @@ define <2 x float> @powi_v2f32(<2 x float> %x, i32 %y) nounwind {
   %a = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> %x, i32 %y)
   ret <2 x float> %a
 }
-declare <2 x float> @llvm.powi.v2f32.i32(<2 x float>, i32)
 
 define <3 x float> @powi_v3f32(<3 x float> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v3f32:
@@ -208,7 +206,6 @@ define <3 x float> @powi_v3f32(<3 x float> %x, i32 %y) nounwind {
   %a = call <3 x float> @llvm.powi.v3f32.i32(<3 x float> %x, i32 %y)
   ret <3 x float> %a
 }
-declare <3 x float> @llvm.powi.v3f32.i32(<3 x float>, i32)
 
 define <4 x float> @powi_v4f32(<4 x float> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v4f32:
@@ -340,7 +337,6 @@ define <4 x float> @powi_v4f32(<4 x float> %x, i32 %y) nounwind {
   %a = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> %x, i32 %y)
   ret <4 x float> %a
 }
-declare <4 x float> @llvm.powi.v4f32.i32(<4 x float>, i32)
 
 define <8 x float> @powi_v8f32(<8 x float> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v8f32:
@@ -602,7 +598,6 @@ define <8 x float> @powi_v8f32(<8 x float> %x, i32 %y) nounwind {
   %a = call <8 x float> @llvm.powi.v8f32.i32(<8 x float> %x, i32 %y)
   ret <8 x float> %a
 }
-declare <8 x float> @llvm.powi.v8f32.i32(<8 x float>, i32)
 
 define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v16f32:
@@ -851,7 +846,6 @@ define <16 x float> @powi_v16f32(<16 x float> %x, i32 %y) nounwind {
   %a = call <16 x float> @llvm.powi.v16f32.i32(<16 x float> %x, i32 %y)
   ret <16 x float> %a
 }
-declare <16 x float> @llvm.powi.v16f32.i32(<16 x float>, i32)
 
 define <1 x double> @powi_v1f64(<1 x double> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v1f64:
@@ -883,7 +877,6 @@ define <1 x double> @powi_v1f64(<1 x double> %x, i32 %y) nounwind {
   %a = call <1 x double> @llvm.powi.v1f64.i32(<1 x double> %x, i32 %y)
   ret <1 x double> %a
 }
-declare <1 x double> @llvm.powi.v1f64.i32(<1 x double>, i32)
 
 define <2 x double> @powi_v2f64(<2 x double> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v2f64:
@@ -949,7 +942,6 @@ define <2 x double> @powi_v2f64(<2 x double> %x, i32 %y) nounwind {
   %a = call <2 x double> @llvm.powi.v2f64.i32(<2 x double> %x, i32 %y)
   ret <2 x double> %a
 }
-declare <2 x double> @llvm.powi.v2f64.i32(<2 x double>, i32)
 
 define <4 x double> @powi_v4f64(<4 x double> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v4f64:
@@ -1095,7 +1087,6 @@ define <4 x double> @powi_v4f64(<4 x double> %x, i32 %y) nounwind {
   %a = call <4 x double> @llvm.powi.v4f64.i32(<4 x double> %x, i32 %y)
   ret <4 x double> %a
 }
-declare <4 x double> @llvm.powi.v4f64.i32(<4 x double>, i32)
 
 define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
 ; RV32-LABEL: powi_v8f64:
@@ -1248,4 +1239,3 @@ define <8 x double> @powi_v8f64(<8 x double> %x, i32 %y) nounwind {
   %a = call <8 x double> @llvm.powi.v8f64.i32(<8 x double> %x, i32 %y)
   ret <8 x double> %a
 }
-declare <8 x double> @llvm.powi.v8f64.i32(<8 x double>, i32)

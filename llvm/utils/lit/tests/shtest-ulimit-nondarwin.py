@@ -4,7 +4,7 @@
 # These tests are specific to options that Darwin does not support.
 # UNSUPPORTED: system-windows, system-cygwin, system-darwin, system-aix, system-solaris
 
-# RUN: not %{lit} -a -v %{inputs}/shtest-ulimit-nondarwin | FileCheck %s
+# RUN: not %{lit} -v %{inputs}/shtest-ulimit-nondarwin | FileCheck %s
 
 # CHECK: -- Testing: 2 tests{{.*}}
 

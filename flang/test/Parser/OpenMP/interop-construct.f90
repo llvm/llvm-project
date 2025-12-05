@@ -1,5 +1,5 @@
 ! REQUIRES: openmp_runtime
-! RUN: %flang_fc1 -fdebug-unparse -fopenmp-version=52 %openmp_flags %s | FileCheck --ignore-case --check-prefix="UNPARSE" %s 
+! RUN: %flang_fc1 -fdebug-unparse -fopenmp-version=52 %openmp_flags %s | FileCheck --ignore-case --check-prefix="UNPARSE" %s
 ! RUN: %flang_fc1 -fdebug-dump-parse-tree-no-sema -fopenmp-version=52 %openmp_flags %s | FileCheck --check-prefix="PARSE-TREE" %s
 
 SUBROUTINE test_interop_01()
@@ -15,13 +15,13 @@ END SUBROUTINE test_interop_01
 !PARSE-TREE: | SubroutineStmt
 !PARSE-TREE: | | Name = 'test_interop_01'
 !PARSE-TREE: | SpecificationPart
-!PARSE-TREE: | | ImplicitPart -> 
+!PARSE-TREE: | | ImplicitPart ->
 !PARSE-TREE: | ExecutionPart -> Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = interop
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '1'
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant
@@ -47,7 +47,7 @@ END SUBROUTINE test_interop_02
 !PARSE-TREE: | SpecificationPart
 !PARSE-TREE: | | UseStmt
 !PARSE-TREE: | | | Name = 'omp_lib'
-!PARSE-TREE: | | ImplicitPart -> 
+!PARSE-TREE: | | ImplicitPart ->
 !PARSE-TREE: | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
 !PARSE-TREE: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec -> KindSelector -> Scalar -> Integer -> Constant -> Expr -> Designator -> DataRef -> Name = 'omp_interop_kind'
 !PARSE-TREE: | | | EntityDecl
@@ -64,7 +64,7 @@ END SUBROUTINE test_interop_02
 !PARSE-TREE: | | | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | | | OmpClause -> Use -> OmpUseClause -> OmpObject -> Designator -> DataRef -> Name = 'obj1'
 !PARSE-TREE: | | | OmpClause -> Destroy -> OmpDestroyClause -> OmpObject -> Designator -> DataRef -> Name = 'obj3'
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant
@@ -90,7 +90,7 @@ END SUBROUTINE test_interop_03
 !PARSE-TREE: | SpecificationPart
 !PARSE-TREE: | | UseStmt
 !PARSE-TREE: | | | Name = 'omp_lib'
-!PARSE-TREE: | | ImplicitPart -> 
+!PARSE-TREE: | | ImplicitPart ->
 !PARSE-TREE: | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
 !PARSE-TREE: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec -> KindSelector -> Scalar -> Integer -> Constant -> Expr -> Designator -> DataRef -> Name = 'omp_interop_kind'
 !PARSE-TREE: | | | EntityDecl
@@ -104,7 +104,7 @@ END SUBROUTINE test_interop_03
 !PARSE-TREE: | | | OmpClause -> Depend -> OmpDependClause -> TaskDep
 !PARSE-TREE: | | | | Modifier -> OmpTaskDependenceType -> Value = Inout
 !PARSE-TREE: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'obj'
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant
@@ -133,13 +133,13 @@ END SUBROUTINE test_interop_04
 !PARSE-TREE: | SpecificationPart
 !PARSE-TREE: | | UseStmt
 !PARSE-TREE: | | | Name = 'omp_lib'
-!PARSE-TREE: | | ImplicitPart -> 
+!PARSE-TREE: | | ImplicitPart ->
 !PARSE-TREE: | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
 !PARSE-TREE: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec -> KindSelector -> Scalar -> Integer -> Constant -> Expr -> Designator -> DataRef -> Name = 'omp_interop_kind'
 !PARSE-TREE: | | | EntityDecl
 !PARSE-TREE: | | | | Name = 'obj'
 !PARSE-TREE: | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
-!PARSE-TREE: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec -> 
+!PARSE-TREE: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | AttrSpec -> ArraySpec -> ExplicitShapeSpec
 !PARSE-TREE: | | | | SpecificationExpr -> Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '1'
 !PARSE-TREE: | | | ExplicitShapeSpec
@@ -159,7 +159,7 @@ END SUBROUTINE test_interop_04
 !PARSE-TREE: | | | | Modifier -> OmpTaskDependenceType -> Value = Inout
 !PARSE-TREE: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'arr'
 !PARSE-TREE: | | | OmpClause -> Nowait
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant
@@ -185,7 +185,7 @@ END SUBROUTINE test_interop_05
 !PARSE-TREE: | SpecificationPart
 !PARSE-TREE: | | UseStmt
 !PARSE-TREE: | | | Name = 'omp_lib'
-!PARSE-TREE: | | ImplicitPart -> 
+!PARSE-TREE: | | ImplicitPart ->
 !PARSE-TREE: | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
 !PARSE-TREE: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec -> KindSelector -> Scalar -> Integer -> Constant -> Expr -> Designator -> DataRef -> Name = 'omp_interop_kind'
 !PARSE-TREE: | | | EntityDecl
@@ -200,7 +200,7 @@ END SUBROUTINE test_interop_05
 !PARSE-TREE: | | | OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: | | | | Modifier -> OmpDeviceModifier -> Value = Device_Num
 !PARSE-TREE: | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '0'
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant

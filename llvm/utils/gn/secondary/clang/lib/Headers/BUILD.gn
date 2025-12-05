@@ -131,6 +131,7 @@ copy("Headers") {
     "altivec.h",
     "amdgpuintrin.h",
     "ammintrin.h",
+    "amo.h",
     "amxavx512intrin.h",
     "amxcomplexintrin.h",
     "amxfp16intrin.h",

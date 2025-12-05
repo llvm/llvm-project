@@ -60,7 +60,7 @@ define dso_local arm_aapcscc void @test(ptr nocapture %pDest, ptr nocapture read
 ; CHECK-NEXT:    [[ADD_PTR23]] = getelementptr inbounds i16, ptr [[PSRCB_ADDR_173]], i32 4
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i32, ptr [[PDEST_ADDR_175]], i32 1
 ; CHECK-NEXT:    [[ADD24]] = add nuw nsw i32 [[J_076]], 4
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[ADD24]], [[TMP0]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i32 [[ADD24]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    [[ADD_PTR_LCSSA:%.*]] = phi ptr [ [[ADD_PTR]], [[FOR_BODY3]] ]
@@ -77,8 +77,6 @@ define dso_local arm_aapcscc void @test(ptr nocapture %pDest, ptr nocapture read
 ; CHECK-NEXT:    [[CMP2780:%.*]] = icmp ugt i32 [[ADD25]], [[J_0_LCSSA]]
 ; CHECK-NEXT:    br i1 [[CMP2780]], label [[FOR_BODY29_PREHEADER:%.*]], label [[FOR_END40]]
 ; CHECK:       for.body29.preheader:
-; CHECK-NEXT:    [[TMP10:%.*]] = sub nsw i32 [[ADD25]], [[J_0_LCSSA]]
-; CHECK-NEXT:    [[SCEVGEP93:%.*]] = getelementptr i16, ptr [[PSRCB_ADDR_1_LCSSA]], i32 [[TMP10]]
 ; CHECK-NEXT:    br label [[FOR_BODY29:%.*]]
 ; CHECK:       for.body29:
 ; CHECK-NEXT:    [[J_184:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY29]] ], [ [[J_0_LCSSA]], [[FOR_BODY29_PREHEADER]] ]
@@ -102,6 +100,8 @@ define dso_local arm_aapcscc void @test(ptr nocapture %pDest, ptr nocapture read
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[ADD25]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END40_LOOPEXIT:%.*]], label [[FOR_BODY29]]
 ; CHECK:       for.end40.loopexit:
+; CHECK-NEXT:    [[TMP10:%.*]] = sub nsw i32 [[ADD25]], [[J_0_LCSSA]]
+; CHECK-NEXT:    [[SCEVGEP93:%.*]] = getelementptr i16, ptr [[PSRCB_ADDR_1_LCSSA]], i32 [[TMP10]]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, ptr [[PSRCA_ADDR_1_LCSSA]], i32 [[TMP10]]
 ; CHECK-NEXT:    [[SCEVGEP94:%.*]] = getelementptr i32, ptr [[PDEST_ADDR_1_LCSSA]], i32 [[TMP10]]
 ; CHECK-NEXT:    br label [[FOR_END40]]

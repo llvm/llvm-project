@@ -836,36 +836,3 @@ entry:
   ret void
 }
 
-declare void @llvm.masked.compressstore.v1i8(<1 x i8>, ptr, <1 x i1>)
-declare void @llvm.masked.compressstore.v2i8(<2 x i8>, ptr, <2 x i1>)
-declare void @llvm.masked.compressstore.v4i8(<4 x i8>, ptr, <4 x i1>)
-declare void @llvm.masked.compressstore.v8i8(<8 x i8>, ptr, <8 x i1>)
-declare void @llvm.masked.compressstore.v16i8(<16 x i8>, ptr, <16 x i1>)
-declare void @llvm.masked.compressstore.v32i8(<32 x i8>, ptr, <32 x i1>)
-declare void @llvm.masked.compressstore.v64i8(<64 x i8>, ptr, <64 x i1>)
-declare void @llvm.masked.compressstore.v128i8(<128 x i8>, ptr, <128 x i1>)
-declare void @llvm.masked.compressstore.v256i8(<256 x i8>, ptr, <256 x i1>)
-
-declare void @llvm.masked.compressstore.v1i16(<1 x i16>, ptr, <1 x i1>)
-declare void @llvm.masked.compressstore.v2i16(<2 x i16>, ptr, <2 x i1>)
-declare void @llvm.masked.compressstore.v4i16(<4 x i16>, ptr, <4 x i1>)
-declare void @llvm.masked.compressstore.v8i16(<8 x i16>, ptr, <8 x i1>)
-declare void @llvm.masked.compressstore.v16i16(<16 x i16>, ptr, <16 x i1>)
-declare void @llvm.masked.compressstore.v32i16(<32 x i16>, ptr, <32 x i1>)
-declare void @llvm.masked.compressstore.v64i16(<64 x i16>, ptr, <64 x i1>)
-declare void @llvm.masked.compressstore.v128i16(<128 x i16>, ptr, <128 x i1>)
-
-declare void @llvm.masked.compressstore.v1i32(<1 x i32>, ptr, <1 x i1>)
-declare void @llvm.masked.compressstore.v2i32(<2 x i32>, ptr, <2 x i1>)
-declare void @llvm.masked.compressstore.v4i32(<4 x i32>, ptr, <4 x i1>)
-declare void @llvm.masked.compressstore.v8i32(<8 x i32>, ptr, <8 x i1>)
-declare void @llvm.masked.compressstore.v16i32(<16 x i32>, ptr, <16 x i1>)
-declare void @llvm.masked.compressstore.v32i32(<32 x i32>, ptr, <32 x i1>)
-declare void @llvm.masked.compressstore.v64i32(<64 x i32>, ptr, <64 x i1>)
-
-declare void @llvm.masked.compressstore.v1i64(<1 x i64>, ptr, <1 x i1>)
-declare void @llvm.masked.compressstore.v2i64(<2 x i64>, ptr, <2 x i1>)
-declare void @llvm.masked.compressstore.v4i64(<4 x i64>, ptr, <4 x i1>)
-declare void @llvm.masked.compressstore.v8i64(<8 x i64>, ptr, <8 x i1>)
-declare void @llvm.masked.compressstore.v16i64(<16 x i64>, ptr, <16 x i1>)
-declare void @llvm.masked.compressstore.v32i64(<32 x i64>, ptr, <32 x i1>)

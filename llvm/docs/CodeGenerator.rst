@@ -269,7 +269,7 @@ Each register in the processor description has an associated
 indicate whether one register overlaps with another).
 
 In addition to the per-register description, the ``TargetRegisterInfo`` class
-exposes a set of processor specific register classes (instances of the
+exposes a set of processor-specific register classes (instances of the
 ``TargetRegisterClass`` class).  Each register class contains sets of registers
 that have the same properties (for example, they are all 32-bit integer
 registers).  Each SSA virtual register created by the instruction selector has
@@ -1295,7 +1295,7 @@ Physical registers, in LLVM, are grouped in *Register Classes*.  Elements in the
 same register class are functionally equivalent, and can be interchangeably
 used. Each virtual register can only be mapped to physical registers of a
 particular class. For instance, in the X86 architecture, some virtuals can only
-be allocated to 8 bit registers.  A register class is described by
+be allocated to 8-bit registers.  A register class is described by
 ``TargetRegisterClass`` objects.  To discover if a virtual register is
 compatible with a given physical, this code can be used:
 

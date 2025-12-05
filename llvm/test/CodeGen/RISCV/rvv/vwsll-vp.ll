@@ -8,8 +8,6 @@
 ; i32 -> i64
 ; ==============================================================================
 
-declare <vscale x 2 x i64> @llvm.vp.shl.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i64> @vwsll_vv_nxv2i64_sext(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vwsll_vv_nxv2i64_sext:
 ; CHECK:       # %bb.0:
@@ -263,8 +261,6 @@ define <vscale x 2 x i64> @vwsll_vi_nxv2i64(<vscale x 2 x i32> %a, <vscale x 2 x
 ; i16 -> i32
 ; ==============================================================================
 
-declare <vscale x 4 x i32> @llvm.vp.shl.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x i32> @vwsll_vv_nxv4i32_sext(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b, <vscale x 4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vwsll_vv_nxv4i32_sext:
 ; CHECK:       # %bb.0:
@@ -486,12 +482,9 @@ define <vscale x 4 x i32> @vwsll_vi_nxv4i32(<vscale x 4 x i16> %a, <vscale x 4 x
   ret <vscale x 4 x i32> %z
 }
 
-
 ; ==============================================================================
 ; i8 -> i16
 ; ==============================================================================
-
-declare <vscale x 8 x i16> @llvm.vp.shl.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i16> @vwsll_vv_nxv8i16_sext(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b, <vscale x 8 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vwsll_vv_nxv8i16_sext:
