@@ -2449,7 +2449,9 @@ def int_aarch64_sve_sqrdmlsh_lane : AdvSIMD_3VectorArgIndexed_Intrinsic<[IntrSpe
 def int_aarch64_sve_sqrdmulh      : AdvSIMD_2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sqrdmulh_lane : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sqrshl        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_sqrshl_u      : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sqshl         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_sqshl_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sqshlu        : AdvSIMD_SVE_ShiftByImm_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sqsub         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sqsub_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
@@ -2457,6 +2459,7 @@ def int_aarch64_sve_sqsubr        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpecul
 def int_aarch64_sve_srhadd        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sri           : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_srshl         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_srshl_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_srshr         : AdvSIMD_SVE_ShiftByImm_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_srsra         : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_ssra          : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpeculatable]>;
@@ -2467,13 +2470,16 @@ def int_aarch64_sve_uhsub         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpecul
 def int_aarch64_sve_uhsubr        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqadd         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqrshl        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_uqrshl_u      : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqshl         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_uqshl_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqsub         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqsub_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqsubr        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_urecpe        : AdvSIMD_Merged1VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_urhadd        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_urshl         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_urshl_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_urshr         : AdvSIMD_SVE_ShiftByImm_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_ursqrte       : AdvSIMD_Merged1VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_ursra         : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpeculatable]>;
