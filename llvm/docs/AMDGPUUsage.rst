@@ -6679,8 +6679,8 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 
   * There is no other barrier operation *thread-barrier-ordered<BO>* after ``L``. :sup:`WIP`
 
-* *Barrier-executes-before* is a strict partial order of all barrier operations. It is a union of all the following
-  orders:
+* *Barrier-executes-before* is a strict partial order of all barrier operations. It is the transitive closure of all
+  the following orders:
 
   * *Thread-barrier-order<BO>* for every barrier object ``BO``.
   * *Barrier-participates-in<BO>* for every barrier object ``BO``.
@@ -6727,6 +6727,38 @@ All barrier *objects* have the following additional target-specific properties:
 See :ref:`amdgpu-llvm-ir-intrinsics-table` for more information on how to perform barrier operations using
 LLVM IR intrinsic calls, or see the sections below to perform barrier operations using machine code.
 
+.. _amdgpu-amdhsa-execution-barriers-workgroup-barriers:
+
+Workgroup Barrier Operations
+############################
+
+.. note::
+
+  This section only applies when it is referenced by one of the target code sequence table below.
+
+This section covers properties of barrier operation on *workgroup barrier objects* implemented in AMDGPU
+hardware.
+
+The following barrier operations can never be performed by the shader on *workgroup barrier objects*.
+The hardware will instead perform them automatically under certain conditions.
+
+* Barrier *init*:
+
+  * The hardware automatically initializes *workgroup barrier objects* when a workgroup is launched:
+    The *expected count* of the barrier object is set to the number of waves in the workgroup
+  * The number of waves in the workgroup is not known until all waves of the workgroup have launched.
+    Thus, the *expected count* of *workgrou barrier object* can never be equal to its *signal count*
+    until all wavefronts of the workgroup launched.
+
+* Barrier *join*:
+
+  * Any thread launched within a workgroup automatically *joins* *workgroup barrier objects*.
+
+* Barrier *leave*
+
+  * When a thread ends, it automatically *leaves* any *workgroup barrier object* it had previously *joined*.
+
+
 Informational Notes
 +++++++++++++++++++
 
@@ -6757,22 +6789,14 @@ by all barrier operations.
      ===================== ====================== ===========================================================
      **Init, Join and Leave**
      --------------------------------------------------------------------------------------------------------
-     *init*                - *Workgroup barrier*  The hardware automatically initializes this barrier *object*
-                                                  when a workgroup is launched: The *expected count* of the
-                                                  *workgroup barrier* barrier object is set to the number of
-                                                  waves in the workgroup
+     *init*                - *Workgroup barrier*  See barrier *ini* in
+                                                  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
 
-                                                  The number of waves in the workgroup is not known until all
-                                                  waves of the workgroup have launched. Thus, the
-                                                  *expected count* of this barrier *object* can never be
-                                                  equal to its *signal count* until all wavefronts of the
-                                                  workgroup launched.
+     *join*                - *Workgroup barrier*  See barrier *join* in
+                                                  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
 
-     *join*                - *Workgroup barrier*  Any thread launched within a workgroup automatically
-                                                  *joins* this barrier *object*.
-
-     *leave*               - *Workgroup barrier*  When a thread ends, it automatically *leaves* this
-                                                  barrier *object* if it had previously *joined* it.
+     *leave*               - *Workgroup barrier*  See barrier *leave* in
+                                                  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
 
      **Signal and Wait**
      --------------------------------------------------------------------------------------------------------
@@ -6814,22 +6838,14 @@ GFX12 targets have the split-barrier feature, and also offer multiple barrier *o
      ===================== =========================== ===========================================================
      **Join and Leave**
      -------------------------------------------------------------------------------------------------------------
-     *init*                - *Workgroup barrier*       The hardware automatically initializes this barrier *object*
-                           - *Workgroup trap barrier*  when a workgroup is launched: The *expected count* of the
-                                                       barrier object is set to the number of
-                                                       waves in the workgroup
+     *init*                - *Workgroup barrier*       See barrier *init* in
+                           - *Workgroup trap barrier*  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
 
-                                                       The number of waves in the workgroup is not known until all
-                                                       waves of the workgroup have launched. Thus, the
-                                                       *expected count* of this barrier *object* can never be
-                                                       equal to its *signal count* until all wavefronts of the
-                                                       workgroup launched.
+     *join*                - *Workgroup barrier*       See barrier *join* in
+                           - *Workgroup trap barrier*  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
 
-     *join*                - *Workgroup barrier*       Any thread launched within a workgroup automatically
-                           - *Workgroup trap barrier*  *joins* this barrier *object*.
-
-     *leave*               - *Workgroup barrier*       When a thread ends, it automatically *leaves* this
-                           - *Workgroup trap barrier*  barrier *object* if it had previously *joined* it.
+     *leave*               - *Workgroup barrier*       See barrier *leave* in
+                           - *Workgroup trap barrier*  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
 
      **Signal and Wait**
      -------------------------------------------------------------------------------------------------------------
