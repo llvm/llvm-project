@@ -956,7 +956,7 @@ public:
 
   /// Emit the function prologue: declare function arguments in the symbol table.
   void emitFunctionProlog(const FunctionArgList &args, mlir::Block *entryBB,
-                          const FunctionDecl *fd);
+                          const FunctionDecl *fd, SourceLocation bodyBeginLoc);
 
   /// Emit code for the start of a function.
   /// \param loc       The location to be associated with the function.

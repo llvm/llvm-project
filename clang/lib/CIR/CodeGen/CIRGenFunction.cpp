@@ -445,7 +445,8 @@ static mlir::Value emitArgumentDemotion(CIRGenFunction &cgf, const VarDecl *var,
 
 void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
                                         mlir::Block *entryBB,
-                                        const FunctionDecl *fd) {
+                                        const FunctionDecl *fd,
+                                        SourceLocation bodyBeginLoc) {
   // Declare all the function arguments in the symbol table.
   for (const auto nameValue : llvm::zip(args, entryBB->getArguments())) {
     const VarDecl *paramVar = std::get<0>(nameValue);
@@ -472,7 +473,7 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
 
     // Location of the store to the param storage tracked as beginning of
     // the function body.
-    mlir::Location fnBodyBegin = getLoc(fd->getBody()->getBeginLoc());
+    mlir::Location fnBodyBegin = getLoc(bodyBeginLoc);
     builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal, addrVal);
   }
   assert(builder.getInsertionBlock() && "Should be valid");
@@ -499,13 +500,33 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
 
-  emitFunctionProlog(args, entryBB, fd);
+  // Determine the function body begin location for the prolog.
+  // If fd is null or has no body, use startLoc as fallback.
+  SourceLocation bodyBeginLoc = startLoc;
+  if (fd) {
+    if (Stmt *body = fd->getBody())
+      bodyBeginLoc = body->getBeginLoc();
+    else
+      bodyBeginLoc = fd->getLocation();
+  }
+
+  emitFunctionProlog(args, entryBB, fd, bodyBeginLoc);
 
   // When the current function is not void, create an address to store the
   // result value.
-  if (!returnType->isVoidType())
-    emitAndUpdateRetAlloca(returnType, getLoc(fd->getBody()->getEndLoc()),
+  if (!returnType->isVoidType()) {
+    // Determine the function body end location.
+    // If fd is null or has no body, use loc as fallback.
+    SourceLocation bodyEndLoc = loc;
+    if (fd) {
+      if (Stmt *body = fd->getBody())
+        bodyEndLoc = body->getEndLoc();
+      else
+        bodyEndLoc = fd->getLocation();
+    }
+    emitAndUpdateRetAlloca(returnType, getLoc(bodyEndLoc),
                            getContext().getTypeAlignInChars(returnType));
+  }
 
   if (isa_and_nonnull<CXXMethodDecl>(d) &&
       cast<CXXMethodDecl>(d)->isInstance()) {
