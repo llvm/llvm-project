@@ -9252,7 +9252,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   SDLoc DL(Op);
   MachineFunction &MF = DAG.getMachineFunction();
   const GCNSubtarget *ST = &MF.getSubtarget<GCNSubtarget>();
-  unsigned IntrOpcode = Intr->BaseOpcode;
+  AMDGPU::MIMGBaseOpcode IntrOpcode = Intr->BaseOpcode;
   // For image atomic: use no-return opcode if result is unused.
   if (Intr->AtomicNoRetBaseOpcode != Intr->BaseOpcode &&
       !Op.getNode()->hasAnyUseOfValue(0))
@@ -9287,10 +9287,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     VData = Op.getOperand(2);
 
     IsAtomicPacked16Bit =
-        (IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16 ||
-         IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16_NORTN ||
-         IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16 ||
-         IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16_NORTN);
+        (IntrOpcode == AMDGPU::MIMGBaseOpcode::IMAGE_ATOMIC_PK_ADD_F16 ||
+         IntrOpcode == AMDGPU::MIMGBaseOpcode::IMAGE_ATOMIC_PK_ADD_F16_NORTN ||
+         IntrOpcode == AMDGPU::MIMGBaseOpcode::IMAGE_ATOMIC_PK_ADD_BF16 ||
+         IntrOpcode == AMDGPU::MIMGBaseOpcode::IMAGE_ATOMIC_PK_ADD_BF16_NORTN);
 
     bool Is64Bit = VData.getValueSizeInBits() == 64;
     if (BaseOpcode->AtomicX2) {
@@ -10722,8 +10722,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     const unsigned NumVDataDwords = 10;
     const unsigned NumVAddrDwords = IsBVH8 ? 11 : 12;
     int Opcode = AMDGPU::getMIMGOpcode(
-        IsBVH8 ? AMDGPU::IMAGE_BVH8_INTERSECT_RAY
-               : AMDGPU::IMAGE_BVH_DUAL_INTERSECT_RAY,
+        IsBVH8 ? AMDGPU::MIMGBaseOpcode::IMAGE_BVH8_INTERSECT_RAY
+               : AMDGPU::MIMGBaseOpcode::IMAGE_BVH_DUAL_INTERSECT_RAY,
         AMDGPU::MIMGEncGfx12, NumVDataDwords, NumVAddrDwords);
     assert(Opcode != -1);
 
@@ -10774,10 +10774,11 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     const bool UseNSA = (Subtarget->hasNSAEncoding() &&
                          NumVAddrs <= Subtarget->getNSAMaxSize()) ||
                         IsGFX12Plus;
-    const unsigned BaseOpcodes[2][2] = {
-        {AMDGPU::IMAGE_BVH_INTERSECT_RAY, AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16},
-        {AMDGPU::IMAGE_BVH64_INTERSECT_RAY,
-         AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16}};
+    const AMDGPU::MIMGBaseOpcode BaseOpcodes[2][2] = {
+        {AMDGPU::MIMGBaseOpcode::IMAGE_BVH_INTERSECT_RAY,
+         AMDGPU::MIMGBaseOpcode::IMAGE_BVH_INTERSECT_RAY_a16},
+        {AMDGPU::MIMGBaseOpcode::IMAGE_BVH64_INTERSECT_RAY,
+         AMDGPU::MIMGBaseOpcode::IMAGE_BVH64_INTERSECT_RAY_a16}};
     int Opcode;
     if (UseNSA) {
       Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
