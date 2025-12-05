@@ -2146,7 +2146,8 @@ TypeSystemClang::GetDeclarationName(llvm::StringRef name,
 
 PrintingPolicy TypeSystemClang::GetTypePrintingPolicy() {
   clang::PrintingPolicy printing_policy(getASTContext().getPrintingPolicy());
-  printing_policy.SuppressTagKeyword = true;
+  printing_policy.SuppressTagKeyword = llvm::to_underlying(
+      PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames);
   // Inline namespaces are important for some type formatters (e.g., libc++
   // and libstdc++ are differentiated by their inline namespaces).
   printing_policy.SuppressInlineNamespace =
@@ -3868,7 +3869,8 @@ TypeSystemClang::GetDisplayTypeName(lldb::opaque_compiler_type_t type) {
 
   clang::QualType qual_type(GetQualType(type));
   clang::PrintingPolicy printing_policy(getASTContext().getPrintingPolicy());
-  printing_policy.SuppressTagKeyword = true;
+  printing_policy.SuppressTagKeyword = llvm::to_underlying(
+      PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames);
   printing_policy.SuppressScope = false;
   printing_policy.SuppressUnwrittenScope = true;
   printing_policy.SuppressInlineNamespace =

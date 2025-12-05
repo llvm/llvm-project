@@ -161,11 +161,12 @@ TEST(TypePrinter, TemplateArgumentsSubstitution) {
        }
   )cpp";
   auto Matcher = typedefNameDecl(hasName("A"), hasType(qualType().bind("id")));
-  ASSERT_TRUE(PrintedTypeMatches(Code, {}, Matcher, "X<int>",
-                                 [](PrintingPolicy &Policy) {
-                                   Policy.SuppressTagKeyword = false;
-                                   Policy.SuppressScope = true;
-                                 }));
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {}, Matcher, "X<int>", [](PrintingPolicy &Policy) {
+        Policy.SuppressTagKeyword =
+            llvm::to_underlying(PrintingPolicy::SuppressTagKeywordMode::None);
+        Policy.SuppressScope = true;
+      }));
 }
 
 TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
