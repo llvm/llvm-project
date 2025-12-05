@@ -271,6 +271,25 @@ void good_stolen_reference1() {
     do_some(*pi);
 }
 
+void good_stolen_reference1_multiple() {
+    const int* pi = nullptr;
+    int i1 = 0, k1 = 0, j1 = 0;
+    if (i1 == 0 && k1 == 0 && j1 == 0) {
+        do_some();
+        pi = &i1;
+    }
+    do_some(*pi);
+
+    int i2 = 0, k2 = 0, j2 = 0;
+    switch (i2 + k2 + j2) {
+        case 0:
+            do_some();
+            pi = &i2;
+            break;
+    }
+    do_some(*pi);
+}
+
 void good_stolen_reference1_const_int_ptr() {
     int value = 0;
     const int** ppi = nullptr;
