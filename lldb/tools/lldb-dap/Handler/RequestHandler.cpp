@@ -17,8 +17,8 @@
 #include "RunInTerminal.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBEnvironment.h"
-#include "lldb/API/SBStream.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 #include <mutex>
 
 #if !defined(_WIN32)
@@ -260,26 +260,48 @@ void BaseRequestHandler::PrintWelcomeMessage() const {
 #ifdef LLDB_DAP_WELCOME_MESSAGE
   dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
 #endif
+
+  std::string message;
+  llvm::raw_string_ostream OS(message);
+  OS << "To get started with the lldb-dap debug console try ";
+
+  switch (dap.repl_mode) {
+  case ReplMode::Auto:
+    OS << "\"<variable>\", \"<lldb-cmd>\" or \"help [<cmd-name>]\" for more "
+          "information.\r\n";
+    OS << "Use '" << dap.configuration.commandEscapePrefix
+       << "' to prefix commands that may conflict with local variables.\r\n";
+    break;
+  case ReplMode::Command:
+    OS << "\"<lldb-cmd>\" or \"help [<cmd-name>]\" for more information.\r\n";
+    break;
+  case ReplMode::Variable:
+    OS << "\"<variable>\" or \"" << dap.configuration.commandEscapePrefix
+       << "help [<cmd-name>]\" for more information.\r\n";
+    break;
+  }
+
+  OS << "For more information visit "
+        "https://github.com/llvm/llvm-project/blob/main/lldb/tools/"
+        "lldb-dap/README.md#debug-console\r\n";
+
+  dap.SendOutput(OutputType::Console, message);
 }
 
 void BaseRequestHandler::PrintIntroductionMessage() const {
-  lldb::SBStream msg;
-  msg.Print("To get started with the lldb-dap debug console try "
-            "\"<variable>\", \"help [<cmd-name>]\", or \"apropos "
-            "<search-word>\".\r\nFor more information visit "
-            "https://github.com/llvm/llvm-project/blob/main/lldb/tools/"
-            "lldb-dap/README.md\r\n");
+  std::string msg;
+  llvm::raw_string_ostream os(msg);
   if (dap.target && dap.target.GetExecutable()) {
     char path[PATH_MAX] = {0};
     dap.target.GetExecutable().GetPath(path, sizeof(path));
-    msg.Printf("Executable binary set to '%s' (%s).\r\n", path,
-               dap.target.GetTriple());
+    os << llvm::formatv("Executable binary set to '{0}' ({1}).\r\n", path,
+                        dap.target.GetTriple());
   }
   if (dap.target.GetProcess()) {
-    msg.Printf("Attached to process %llu.\r\n",
-               dap.target.GetProcess().GetProcessID());
+    os << llvm::formatv("Attached to process {0}\r\n",
+                        dap.target.GetProcess().GetProcessID());
   }
-  dap.SendOutput(OutputType::Console, {msg.GetData(), msg.GetSize()});
+  dap.SendOutput(OutputType::Console, msg);
 }
 
 bool BaseRequestHandler::HasInstructionGranularity(
