@@ -14,6 +14,7 @@
 #include <cassert>
 #include <cmath>
 #include <limits>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "type_algorithms.h"

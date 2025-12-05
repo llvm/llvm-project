@@ -1076,6 +1076,68 @@ entry:
   ret <16 x half> %c
 }
 
+;;;;;;;;;;;;;;;;  max_f128
+define fp128 @max_fp128(fp128 %x, fp128 %y) {
+; AARCH64-LABEL: max_fp128:
+; AARCH64:       // %bb.0: // %start
+; AARCH64-NEXT:    sub sp, sp, #48
+; AARCH64-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; AARCH64-NEXT:    .cfi_def_cfa_offset 48
+; AARCH64-NEXT:    .cfi_offset w30, -16
+; AARCH64-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
+; AARCH64-NEXT:    mov v1.16b, v0.16b
+; AARCH64-NEXT:    bl __unordtf2
+; AARCH64-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; AARCH64-NEXT:    cmp w0, #0
+; AARCH64-NEXT:    b.eq .LBB32_2
+; AARCH64-NEXT:  // %bb.1: // %start
+; AARCH64-NEXT:    str q0, [sp] // 16-byte Spill
+; AARCH64-NEXT:  .LBB32_2: // %start
+; AARCH64-NEXT:    mov v1.16b, v0.16b
+; AARCH64-NEXT:    bl __unordtf2
+; AARCH64-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
+; AARCH64-NEXT:    cmp w0, #0
+; AARCH64-NEXT:    b.eq .LBB32_4
+; AARCH64-NEXT:  // %bb.3: // %start
+; AARCH64-NEXT:    mov v1.16b, v0.16b
+; AARCH64-NEXT:  .LBB32_4: // %start
+; AARCH64-NEXT:    ldr q0, [sp] // 16-byte Reload
+; AARCH64-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; AARCH64-NEXT:    bl __gttf2
+; AARCH64-NEXT:    ldr q0, [sp] // 16-byte Reload
+; AARCH64-NEXT:    cmp w0, #0
+; AARCH64-NEXT:    b.le .LBB32_6
+; AARCH64-NEXT:  // %bb.5: // %start
+; AARCH64-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; AARCH64-NEXT:  .LBB32_6: // %start
+; AARCH64-NEXT:    str q0, [sp] // 16-byte Spill
+; AARCH64-NEXT:    bl __trunctfsf2
+; AARCH64-NEXT:    fmov w8, s0
+; AARCH64-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; AARCH64-NEXT:    mov v1.16b, v0.16b
+; AARCH64-NEXT:    cmp w8, #0
+; AARCH64-NEXT:    b.ne .LBB32_8
+; AARCH64-NEXT:  // %bb.7: // %start
+; AARCH64-NEXT:    ldr q1, [sp] // 16-byte Reload
+; AARCH64-NEXT:  .LBB32_8: // %start
+; AARCH64-NEXT:    adrp x8, .LCPI32_0
+; AARCH64-NEXT:    str q1, [sp] // 16-byte Spill
+; AARCH64-NEXT:    ldr q1, [x8, :lo12:.LCPI32_0]
+; AARCH64-NEXT:    bl __eqtf2
+; AARCH64-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; AARCH64-NEXT:    cmp w0, #0
+; AARCH64-NEXT:    b.ne .LBB32_10
+; AARCH64-NEXT:  // %bb.9: // %start
+; AARCH64-NEXT:    ldr q0, [sp] // 16-byte Reload
+; AARCH64-NEXT:  .LBB32_10: // %start
+; AARCH64-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; AARCH64-NEXT:    add sp, sp, #48
+; AARCH64-NEXT:    ret
+start:
+  %0 = tail call fp128 @llvm.maximumnum.f128(fp128 %x, fp128 %y)
+  ret fp128 %0
+}
+
 ;;;;;;;;;;;;;;;;  max_f64
 define double @max_f64(double %a, double %b) {
 ; AARCH64-LABEL: max_f64:
@@ -1656,6 +1718,68 @@ define <16 x half> @max_v16f16(<16 x half> %a, <16 x half> %b) {
 entry:
   %c = call <16 x half> @llvm.maximumnum.v16f16(<16 x half> %a, <16 x half> %b)
   ret <16 x half> %c
+}
+
+;;;;;;;;;;;;;;;;  min_f128
+define fp128 @min_fp128(fp128 %x, fp128 %y) {
+; AARCH64-LABEL: min_fp128:
+; AARCH64:       // %bb.0: // %start
+; AARCH64-NEXT:    sub sp, sp, #48
+; AARCH64-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; AARCH64-NEXT:    .cfi_def_cfa_offset 48
+; AARCH64-NEXT:    .cfi_offset w30, -16
+; AARCH64-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
+; AARCH64-NEXT:    mov v1.16b, v0.16b
+; AARCH64-NEXT:    bl __unordtf2
+; AARCH64-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; AARCH64-NEXT:    cmp w0, #0
+; AARCH64-NEXT:    b.eq .LBB49_2
+; AARCH64-NEXT:  // %bb.1: // %start
+; AARCH64-NEXT:    str q0, [sp] // 16-byte Spill
+; AARCH64-NEXT:  .LBB49_2: // %start
+; AARCH64-NEXT:    mov v1.16b, v0.16b
+; AARCH64-NEXT:    bl __unordtf2
+; AARCH64-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
+; AARCH64-NEXT:    cmp w0, #0
+; AARCH64-NEXT:    b.eq .LBB49_4
+; AARCH64-NEXT:  // %bb.3: // %start
+; AARCH64-NEXT:    mov v1.16b, v0.16b
+; AARCH64-NEXT:  .LBB49_4: // %start
+; AARCH64-NEXT:    ldr q0, [sp] // 16-byte Reload
+; AARCH64-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; AARCH64-NEXT:    bl __gttf2
+; AARCH64-NEXT:    ldr q0, [sp] // 16-byte Reload
+; AARCH64-NEXT:    cmp w0, #0
+; AARCH64-NEXT:    b.le .LBB49_6
+; AARCH64-NEXT:  // %bb.5: // %start
+; AARCH64-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; AARCH64-NEXT:  .LBB49_6: // %start
+; AARCH64-NEXT:    str q0, [sp] // 16-byte Spill
+; AARCH64-NEXT:    bl __trunctfsf2
+; AARCH64-NEXT:    fmov w8, s0
+; AARCH64-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; AARCH64-NEXT:    mov v1.16b, v0.16b
+; AARCH64-NEXT:    cmp w8, #0
+; AARCH64-NEXT:    b.ne .LBB49_8
+; AARCH64-NEXT:  // %bb.7: // %start
+; AARCH64-NEXT:    ldr q1, [sp] // 16-byte Reload
+; AARCH64-NEXT:  .LBB49_8: // %start
+; AARCH64-NEXT:    adrp x8, .LCPI49_0
+; AARCH64-NEXT:    str q1, [sp] // 16-byte Spill
+; AARCH64-NEXT:    ldr q1, [x8, :lo12:.LCPI49_0]
+; AARCH64-NEXT:    bl __eqtf2
+; AARCH64-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; AARCH64-NEXT:    cmp w0, #0
+; AARCH64-NEXT:    b.ne .LBB49_10
+; AARCH64-NEXT:  // %bb.9: // %start
+; AARCH64-NEXT:    ldr q0, [sp] // 16-byte Reload
+; AARCH64-NEXT:  .LBB49_10: // %start
+; AARCH64-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; AARCH64-NEXT:    add sp, sp, #48
+; AARCH64-NEXT:    ret
+start:
+  %0 = tail call fp128 @llvm.maximumnum.f128(fp128 %x, fp128 %y)
+  ret fp128 %0
 }
 
 ;;;;;;;;;;;;;;;;  min_f64

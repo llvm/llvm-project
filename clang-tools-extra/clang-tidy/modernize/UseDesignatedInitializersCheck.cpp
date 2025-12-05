@@ -49,7 +49,6 @@ static unsigned getNumberOfDesignated(const InitListExpr *SyntacticInitList) {
 namespace {
 
 struct Designators {
-
   Designators(const InitListExpr *InitList) : InitList(InitList) {
     assert(InitList->isSyntacticForm());
   };
@@ -152,7 +151,7 @@ void UseDesignatedInitializersCheck::check(
     if (IgnoreMacros && InitList->getBeginLoc().isMacroID())
       return;
     {
-      DiagnosticBuilder Diag =
+      const DiagnosticBuilder Diag =
           diag(InitList->getLBraceLoc(),
                "use designated initializer list to initialize %0");
       Diag << InitList->getType() << InitList->getSourceRange();

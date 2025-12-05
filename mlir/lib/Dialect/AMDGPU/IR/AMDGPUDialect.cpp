@@ -55,6 +55,10 @@ void AMDGPUDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"
       >();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc"
+      >();
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc"
@@ -339,19 +343,45 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// ScaledExtPacked816Op
+// ScaledExtPackedMatrixOp
 //===----------------------------------------------------------------------===//
-LogicalResult ScaledExtPacked816Op::verify() {
+LogicalResult ScaledExtPackedMatrixOp::verify() {
   int blockSize = getBlockSize();
-  assert((blockSize == 16 || blockSize == 32) && "invalid block size");
+  assert(llvm::is_contained({16, 32}, blockSize) && "invalid block size");
+
   int firstScaleByte = getFirstScaleByte();
-  if (blockSize == 16 && !llvm::is_contained({0, 1}, firstScaleByte)) {
-    return emitOpError(
-        "blockSize of 16 can only have firstScaleByte be 0 or 1.");
-  }
-  if (blockSize == 32 && !llvm::is_contained({0, 2}, firstScaleByte)) {
-    return emitOpError(
-        "blockSize of 32 can only have firstScaleByte be 0 or 2.");
+  int firstScaleLane = getFirstScaleLane();
+  auto sourceType = cast<VectorType>(getSource().getType());
+  Type elementType = sourceType.getElementType();
+  auto floatType = cast<FloatType>(elementType);
+  unsigned bitWidth = floatType.getWidth();
+
+  assert(llvm::is_contained(llvm::ArrayRef<unsigned>{4, 6, 8}, bitWidth));
+
+  const bool is_fp8 = bitWidth == 8;
+  const bool is_block_16 = blockSize == 16;
+
+  if (!is_fp8) {
+    if (is_block_16) {
+      if (!llvm::is_contained({0, 1}, firstScaleByte)) {
+        return emitOpError("blockSize of 16 can only have firstScaleByte be 0 "
+                           "or 1 for f4 and f6.");
+      }
+    } else {
+      if (!llvm::is_contained({0, 2}, firstScaleByte)) {
+        return emitOpError("blockSize of 32 can only have firstScaleByte be 0 "
+                           "or 2 for f4 and f6.");
+      }
+    }
+  } else {
+    if (is_block_16) {
+      bool is_valid = ((firstScaleLane == 0) && (firstScaleByte == 0)) ||
+                      ((firstScaleLane == 16) && (firstScaleByte == 2));
+      if (!is_valid) {
+        return emitOpError("blockSize of 16 can only have (firstScaleLane, "
+                           "firstScaleByte) be (0, 0) or (16, 2) for f8.");
+      }
+    }
   }
 
   return success();
@@ -676,6 +706,62 @@ LogicalResult TransposeLoadOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// MakeDmaBaseOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MakeDmaBaseOp::verify() {
+  MemRefType ldsType = cast<MemRefType>(getLds().getType());
+  MemRefType globalType = cast<MemRefType>(getGlobal().getType());
+  if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace())) {
+    return emitOpError(
+        "lds memref must have workgroup address space attribute.");
+  }
+  if (!hasGlobalMemorySpace(globalType.getMemorySpace())) {
+    return emitOpError(
+        "global memref must have global address space attribute.");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MakeDmaDescriptorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MakeDmaDescriptorOp::verify() {
+  ArrayRef<int64_t> globalStaticStrides = getGlobalStaticStrides();
+
+  if (globalStaticStrides.empty()) {
+    return emitOpError("strides must not be empty.");
+  }
+  if (globalStaticStrides.back() != 1) {
+    return emitOpError("strides for the innermost dimension must be 1.");
+  }
+
+  ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
+  size_t rank = globalStaticSizes.size();
+  if (rank != globalStaticStrides.size()) {
+    return emitOpError("strides and sizes must have same rank.");
+  }
+
+  ArrayRef<int64_t> sharedStaticSizes = getSharedStaticSizes();
+  if (rank != sharedStaticSizes.size()) {
+    return emitOpError("tensor must have same rank as tile.");
+  }
+
+  if (Value atomicBarrierAddress = getAtomicBarrierAddress()) {
+    MemRefType atomicBarrierAddressType =
+        cast<MemRefType>(atomicBarrierAddress.getType());
+    bool barrierInLDS =
+        hasWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
+    if (!barrierInLDS) {
+      return emitOpError("atomic barrier address must be in LDS.");
+    }
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ScaledMFMAOp
 //===----------------------------------------------------------------------===//
 
@@ -812,6 +898,9 @@ void ScaledMFMAOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"

@@ -2103,17 +2103,32 @@ static MaybeExpr ImplicitConvertTo(const Symbol &sym, Expr<SomeType> &&expr,
 }
 
 MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
-    parser::CharBlock typeName, const semantics::DerivedTypeSpec &spec,
+    parser::CharBlock typeName, const semantics::DerivedTypeSpec &spec0,
     std::list<ComponentSpec> &&componentSpecs) {
+  semantics::Scope &scope{context_.FindScope(typeName)};
+  FoldingContext &foldingContext{GetFoldingContext()};
+  const semantics::DerivedTypeSpec *effectiveSpec{&spec0};
+  if (foldingContext.pdtInstance() && spec0.MightBeParameterized()) {
+    // We're processing a structure constructor in the context of a derived
+    // type instantiation, and the derived type of the structure constructor
+    // is parameterized.  Evaluate its parameters in the context of the
+    // instantiation in progress so that the components in constructor's scope
+    // have the correct types.
+    semantics::DerivedTypeSpec newSpec{spec0};
+    newSpec.ReevaluateParameters(context());
+    const semantics::DeclTypeSpec &instantiatedType{
+        semantics::FindOrInstantiateDerivedType(
+            scope, std::move(newSpec), semantics::DeclTypeSpec::TypeDerived)};
+    effectiveSpec = &instantiatedType.derivedTypeSpec();
+  }
+  const semantics::DerivedTypeSpec &spec{*effectiveSpec};
   const Symbol &typeSymbol{spec.typeSymbol()};
   if (!spec.scope() || !typeSymbol.has<semantics::DerivedTypeDetails>()) {
     return std::nullopt; // error recovery
   }
-  const semantics::Scope &scope{context_.FindScope(typeName)};
   const semantics::Scope *pureContext{FindPureProcedureContaining(scope)};
   const auto &typeDetails{typeSymbol.get<semantics::DerivedTypeDetails>()};
   const Symbol *parentComponent{typeDetails.GetParentComponent(*spec.scope())};
-
   if (typeSymbol.attrs().test(semantics::Attr::ABSTRACT)) { // C796
     AttachDeclaration(
         Say(typeName,
@@ -2153,6 +2168,9 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
     parser::CharBlock exprSource{componentSpec.exprSource};
     auto restorer{messages.SetLocation(source)};
     const Symbol *symbol{componentSpec.keywordSymbol};
+    if (symbol) {
+      symbol = spec.scope()->FindComponent(symbol->name());
+    }
     MaybeExpr &maybeValue{componentSpec.expr};
     if (!maybeValue.has_value()) {
       return std::nullopt;
@@ -2328,7 +2346,6 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
       // convert would cause a segfault. Lowering will deal with
       // conditionally converting and preserving the lower bounds in this
       // case.
-      FoldingContext &foldingContext{GetFoldingContext()};
       if (MaybeExpr converted{ImplicitConvertTo(*symbol, std::move(value),
               /*keepConvertImplicit=*/IsAllocatable(*symbol),
               foldingContext)}) {

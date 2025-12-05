@@ -134,6 +134,7 @@ public:
   /// The index is used to check and prevent recursive (backtracking) matches.
   /// The value is a node map and scale factor, used to downscale outlined
   /// profile when inlining it into the function.
+  /// TODO: replace scale with map call site -> scale
   using RootIdxToMapTy =
       std::map<uint32_t, std::pair<InlineTreeNodeMapTy, float>>;
   /// Probe matching specification: map from \p BinaryFunctionProfile to the
@@ -170,7 +171,7 @@ private:
   StringMap<std::unordered_set<BinaryFunction *>> LTOCommonNameFunctionMap;
 
   /// For pseudo probe function matching.
-  /// Set of profile GUIDs.
+  /// Set of profile GUIDs with probes having profile.
   std::unordered_set<uint64_t> YamlGUIDs;
   /// Map binary function GUID to binary function.
   std::unordered_multimap<uint64_t, BinaryFunction *> GUIDToBF;
@@ -253,6 +254,9 @@ private:
     ProfiledFunctions.emplace(&BF);
   }
 
+  /// Uncompress probes, inline trees, and pseudo probe descriptor.
+  void decodeYamlInlineTree(yaml::bolt::BinaryFunctionProfile &YamlBF);
+
   /// Return a top-level binary inline tree node for a given \p BF
   const MCDecodedPseudoProbeInlineTree *
   lookupTopLevelNode(const BinaryFunction &BF);
@@ -260,7 +264,7 @@ private:
   /// Match up \p BF binary inline trees starting at root or \p Node if set, and
   /// \p YamlBF profile starting at \p NodeIdx and record the mapping in
   /// BFToProbeMatchSpecs.
-  void matchInlineTrees(BinaryFunction &BF,
+  bool matchInlineTrees(BinaryFunction &BF,
                         const MCDecodedPseudoProbeInlineTree *Node,
                         yaml::bolt::BinaryFunctionProfile &YamlBF,
                         uint32_t NodeIdx, float Scale);

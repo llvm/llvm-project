@@ -239,8 +239,7 @@ static bool isDeInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
 /// I.e. <0, LaneLen, ... , LaneLen*(Factor - 1), 1, LaneLen + 1, ...>
 /// E.g. For a Factor of 2 (LaneLen=4): <0, 4, 1, 5, 2, 6, 3, 7>
 static bool isReInterleaveMask(ShuffleVectorInst *SVI, unsigned &Factor,
-                               unsigned MaxFactor,
-                               bool InterleaveWithShuffles) {
+                               unsigned MaxFactor) {
   unsigned NumElts = SVI->getShuffleMask().size();
   if (NumElts < 4)
     return false;
@@ -251,13 +250,6 @@ static bool isReInterleaveMask(ShuffleVectorInst *SVI, unsigned &Factor,
       return true;
   }
 
-  if (InterleaveWithShuffles) {
-    for (unsigned i = 1; MaxFactor * i <= 16; i *= 2) {
-      Factor = i * MaxFactor;
-      if (SVI->isInterleave(Factor))
-        return true;
-    }
-  }
   return false;
 }
 
@@ -536,8 +528,7 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
       cast<FixedVectorType>(SVI->getType())->getNumElements();
   // Check if the shufflevector is RE-interleave shuffle.
   unsigned Factor;
-  if (!isReInterleaveMask(SVI, Factor, MaxFactor,
-                          TLI->isProfitableToInterleaveWithGatherScatter()))
+  if (!isReInterleaveMask(SVI, Factor, MaxFactor))
     return false;
   assert(NumStoredElements % Factor == 0 &&
          "number of stored element should be a multiple of Factor");

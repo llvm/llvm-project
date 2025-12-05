@@ -351,6 +351,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zvqdotq``
   LLVM implements the `0.0.1 draft specification <https://github.com/riscv/riscv-dot-product/releases/tag/v0.0.1>`__.
 
+``experimental-smpmpmt``
+  LLVM implements the `0.6 draft specification <https://github.com/riscv/riscv-isa-manual/blob/smpmpmt/src/smpmpmt.adoc>`__.
+
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
 Vendor Extensions
@@ -548,7 +551,7 @@ The current vendor extensions supported are:
   LLVM implements `version 5.0.0 of the Andes Vector Dot Product Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
 
 ``XSMTVDot``
-  SpacemiT defines `Intrinsic Matrix Extension (IME) specification <https://github.com/space-mit/riscv-ime-extension-spec/releases/tag/v0429>`__.
+  SpacemiT defines `Integrated Matrix Extension (IME) specification <https://github.com/spacemit-com/riscv-ime-extension-spec/releases/tag/v1.0>`__.
   LLVM implement the hardware-adapted subset for SpacemiT X60, defined in the `feature document <https://developer.spacemit.com/documentation?token=BWbGwbx7liGW21kq9lucSA6Vnpb#2.1>`__ by SpacemiT. All instructions are prefixed with `smt.` as described in the implementation guide. Note that this implemented subset is `version 1.0.0 of the SpacemiT Vector Dot Product Extension specification`, which is strictly a subset of the full IME specification to reflect the capabilities of SpacemiT X60 hardware correctly.
 
 Experimental C Intrinsics

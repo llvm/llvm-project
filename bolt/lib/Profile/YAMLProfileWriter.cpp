@@ -240,10 +240,9 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   YamlBF.ExecCount = BF.getKnownExecutionCount();
   YamlBF.ExternEntryCount = BF.getExternEntryCount();
   DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
-  if (PseudoProbeDecoder && BF.getGUID()) {
+  if (PseudoProbeDecoder)
     std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
         convertBFInlineTree(*PseudoProbeDecoder, InlineTree, BF);
-  }
 
   BinaryFunction::BasicBlockOrderType Order;
   llvm::copy(UseDFS ? BF.dfs() : BF.getLayout().blocks(),

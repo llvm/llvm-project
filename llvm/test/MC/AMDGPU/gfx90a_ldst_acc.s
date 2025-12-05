@@ -706,107 +706,107 @@ flat_load_short_d16_hi a5, v[2:3] offset:4095 glc
 flat_load_short_d16_hi a5, v[2:3] offset:4095 slc
 
 // GFX90A: flat_atomic_swap a0, v[2:3], a2 offset:4095 glc ; encoding: [0xff,0x0f,0x01,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_swap a0, v[2:3], a2 offset:4095 glc
 
 // GFX90A: flat_atomic_cmpswap a0, v[2:3], a[2:3] offset:4095 glc ; encoding: [0xff,0x0f,0x05,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_cmpswap a0, v[2:3], a[2:3] offset:4095 glc
 
 // GFX90A: flat_atomic_add a0, v[2:3], a2 offset:4095 glc ; encoding: [0xff,0x0f,0x09,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_add a0, v[2:3], a2 offset:4095 glc
 
 // GFX90A: flat_atomic_sub a0, v[2:3], a2 offset:4095 glc ; encoding: [0xff,0x0f,0x0d,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_sub a0, v[2:3], a2 offset:4095 glc
 
 // GFX90A: flat_atomic_smin a0, v[2:3], a2 offset:4095 glc ; encoding: [0xff,0x0f,0x11,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_smin a0, v[2:3], a2 offset:4095 glc
 
 // GFX90A: flat_atomic_umin a0, v[2:3], a2 offset:4095 glc ; encoding: [0xff,0x0f,0x15,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_umin a0, v[2:3], a2 offset:4095 glc
 
 // GFX90A: flat_atomic_smax a0, v[2:3], a2 offset:4095 glc ; encoding: [0xff,0x0f,0x19,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_smax a0, v[2:3], a2 offset:4095 glc
 
 // GFX90A: flat_atomic_umax a0, v[2:3], a2 offset:4095 glc ; encoding: [0xff,0x0f,0x1d,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_umax a0, v[2:3], a2 offset:4095 glc
 
 // GFX90A: flat_atomic_and a0, v[2:3], a2 offset:4095 glc ; encoding: [0xff,0x0f,0x21,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_and a0, v[2:3], a2 offset:4095 glc
 
 // GFX90A: flat_atomic_or a0, v[2:3], a2 offset:4095 glc ; encoding: [0xff,0x0f,0x25,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_or a0, v[2:3], a2 offset:4095 glc
 
 // GFX90A: flat_atomic_xor a0, v[2:3], a2 offset:4095 glc ; encoding: [0xff,0x0f,0x29,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_xor a0, v[2:3], a2 offset:4095 glc
 
 // GFX90A: flat_atomic_inc a0, v[2:3], a2 offset:4095 glc ; encoding: [0xff,0x0f,0x2d,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_inc a0, v[2:3], a2 offset:4095 glc
 
 // GFX90A: flat_atomic_dec a0, v[2:3], a2 offset:4095 glc ; encoding: [0xff,0x0f,0x31,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_dec a0, v[2:3], a2 offset:4095 glc
 
 // GFX90A: flat_atomic_swap_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc ; encoding: [0xff,0x0f,0x81,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_swap_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc
 
 // GFX90A: flat_atomic_cmpswap_x2 a[0:1], v[2:3], a[2:5] offset:4095 glc ; encoding: [0xff,0x0f,0x85,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_cmpswap_x2 a[0:1], v[2:3], a[2:5] offset:4095 glc
 
 // GFX90A: flat_atomic_add_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc ; encoding: [0xff,0x0f,0x89,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_add_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc
 
 // GFX90A: flat_atomic_sub_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc ; encoding: [0xff,0x0f,0x8d,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_sub_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc
 
 // GFX90A: flat_atomic_smin_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc ; encoding: [0xff,0x0f,0x91,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_smin_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc
 
 // GFX90A: flat_atomic_umin_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc ; encoding: [0xff,0x0f,0x95,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_umin_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc
 
 // GFX90A: flat_atomic_smax_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc ; encoding: [0xff,0x0f,0x99,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_smax_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc
 
 // GFX90A: flat_atomic_umax_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc ; encoding: [0xff,0x0f,0x9d,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_umax_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc
 
 // GFX90A: flat_atomic_and_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc ; encoding: [0xff,0x0f,0xa1,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_and_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc
 
 // GFX90A: flat_atomic_or_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc ; encoding: [0xff,0x0f,0xa5,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_or_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc
 
 // GFX90A: flat_atomic_xor_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc ; encoding: [0xff,0x0f,0xa9,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_xor_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc
 
 // GFX90A: flat_atomic_inc_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc ; encoding: [0xff,0x0f,0xad,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_inc_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc
 
 // GFX90A: flat_atomic_dec_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc ; encoding: [0xff,0x0f,0xb1,0xdd,0x02,0x02,0x80,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 flat_atomic_dec_x2 a[0:1], v[2:3], a[2:3] offset:4095 glc
 
 // GFX90A: flat_atomic_swap v[2:3], a2 offset:4095 ; encoding: [0xff,0x0f,0x00,0xdd,0x02,0x02,0x80,0x00]
@@ -9782,63 +9782,63 @@ ds_condxchg32_rtn_b64 a[6:7], v1, a[2:3]
 ds_condxchg32_rtn_b64 a[6:7], v1, a[2:3] offset:4
 
 // GFX90A: ds_gws_init a0 offset:65535 gds ; encoding: [0xff,0xff,0x33,0xdb,0x00,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_init a0 offset:65535 gds
 
 // GFX90A: ds_gws_init a254 offset:65535 gds ; encoding: [0xff,0xff,0x33,0xdb,0xfe,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_init a254 offset:65535 gds
 
 // GFX90A: ds_gws_init a2 gds ; encoding: [0x00,0x00,0x33,0xdb,0x02,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_init a2 gds
 
 // GFX90A: ds_gws_init a0 gds ; encoding: [0x00,0x00,0x33,0xdb,0x00,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_init a0 gds
 
 // GFX90A: ds_gws_init a0 offset:4 gds ; encoding: [0x04,0x00,0x33,0xdb,0x00,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_init a0 offset:4 gds
 
 // GFX90A: ds_gws_sema_br a2 offset:65535 gds ; encoding: [0xff,0xff,0x37,0xdb,0x02,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_sema_br a2 offset:65535 gds
 
 // GFX90A: ds_gws_sema_br a254 offset:65535 gds ; encoding: [0xff,0xff,0x37,0xdb,0xfe,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_sema_br a254 offset:65535 gds
 
 // GFX90A: ds_gws_sema_br a0 gds ; encoding: [0x00,0x00,0x37,0xdb,0x00,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_sema_br a0 gds
 
 // GFX90A: ds_gws_sema_br a2 gds ; encoding: [0x00,0x00,0x37,0xdb,0x02,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_sema_br a2 gds
 
 // GFX90A: ds_gws_sema_br a0 offset:4 gds ; encoding: [0x04,0x00,0x37,0xdb,0x00,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_sema_br a0 offset:4 gds
 
 // GFX90A: ds_gws_barrier a2 offset:65535 gds ; encoding: [0xff,0xff,0x3b,0xdb,0x02,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_barrier a2 offset:65535 gds
 
 // GFX90A: ds_gws_barrier a254 offset:65535 gds ; encoding: [0xff,0xff,0x3b,0xdb,0xfe,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_barrier a254 offset:65535 gds
 
 // GFX90A: ds_gws_barrier a0 gds ; encoding: [0x00,0x00,0x3b,0xdb,0x00,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_barrier a0 gds
 
 // GFX90A: ds_gws_barrier a2 gds ; encoding: [0x00,0x00,0x3b,0xdb,0x02,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_barrier a2 gds
 
 // GFX90A: ds_gws_barrier a0 offset:4 gds ; encoding: [0x04,0x00,0x3b,0xdb,0x00,0x00,0x00,0x00]
-// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_gws_barrier a0 offset:4 gds
 
 // GFX90A: ds_consume a5 offset:65535      ; encoding: [0xff,0xff,0x7a,0xdb,0x00,0x00,0x00,0x05]
