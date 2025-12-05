@@ -2078,6 +2078,8 @@ public:
     return static_cast<unsigned>(DeclsLoaded.size());
   }
 
+  unsigned getNumDeclsLoaded() const;
+
   /// Returns the number of submodules known.
   unsigned getTotalNumSubmodules() const {
     return static_cast<unsigned>(SubmodulesLoaded.size());

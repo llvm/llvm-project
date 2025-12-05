@@ -989,6 +989,10 @@ protected:
   /// Decl subclasses that can be redeclared should override this method so that
   /// Decl::redecl_iterator can iterate over them.
   virtual Decl *getNextRedeclarationImpl() { return this; }
+  /// Returns the next redeclaration without loading.
+  /// FIXME: We may be able to erase such unneccesary virtual function call by
+  /// introduce CRTP.
+  virtual Decl *getNextRedeclarationNoUpdateImpl() { return this; }
 
   /// Implementation of getPreviousDecl(), to be overridden by any
   /// subclass that has a redeclaration chain.
@@ -1000,7 +1004,8 @@ protected:
 
 public:
   /// Iterates through all the redeclarations of the same decl.
-  class redecl_iterator {
+  template <bool Update = true>
+  class redecl_iterator_impl {
     /// Current - The current declaration.
     Decl *Current = nullptr;
     Decl *Starter;
@@ -1012,36 +1017,37 @@ public:
     using iterator_category = std::forward_iterator_tag;
     using difference_type = std::ptrdiff_t;
 
-    redecl_iterator() = default;
-    explicit redecl_iterator(Decl *C) : Current(C), Starter(C) {}
+    redecl_iterator_impl() = default;
+    explicit redecl_iterator_impl(Decl *C) : Current(C), Starter(C) {}
 
     reference operator*() const { return Current; }
     value_type operator->() const { return Current; }
 
-    redecl_iterator& operator++() {
+    redecl_iterator_impl& operator++() {
       assert(Current && "Advancing while iterator has reached end");
       // Get either previous decl or latest decl.
-      Decl *Next = Current->getNextRedeclarationImpl();
+      Decl *Next = Update ? Current->getNextRedeclarationImpl() : Current->getNextRedeclarationNoUpdateImpl(); 
       assert(Next && "Should return next redeclaration or itself, never null!");
       Current = (Next != Starter) ? Next : nullptr;
       return *this;
     }
 
-    redecl_iterator operator++(int) {
+    redecl_iterator_impl operator++(int) {
       redecl_iterator tmp(*this);
       ++(*this);
       return tmp;
     }
 
-    friend bool operator==(redecl_iterator x, redecl_iterator y) {
+    friend bool operator==(redecl_iterator_impl x, redecl_iterator_impl y) {
       return x.Current == y.Current;
     }
 
-    friend bool operator!=(redecl_iterator x, redecl_iterator y) {
+    friend bool operator!=(redecl_iterator_impl x, redecl_iterator_impl y) {
       return x.Current != y.Current;
     }
   };
 
+  using redecl_iterator = redecl_iterator_impl</*update=*/true>;
   using redecl_range = llvm::iterator_range<redecl_iterator>;
 
   /// Returns an iterator range for all the redeclarations of the same
@@ -1055,6 +1061,19 @@ public:
   }
 
   redecl_iterator redecls_end() const { return redecl_iterator(); }
+
+  using noload_redecl_iterator = redecl_iterator_impl</*update=*/false>;
+  using noload_redecl_range = llvm::iterator_range<noload_redecl_iterator>;
+
+  noload_redecl_range noload_redecls() const {
+    return noload_redecl_range(noload_redecls_begin(), noload_redecls_end());
+  }
+
+  noload_redecl_iterator noload_redecls_begin() const {
+    return noload_redecl_iterator(const_cast<Decl *>(this));
+  }
+
+  noload_redecl_iterator noload_redecls_end() const { return noload_redecl_iterator(); }
 
   /// Retrieve the previous declaration that declares the same entity
   /// as this declaration, or NULL if there is no previous declaration.

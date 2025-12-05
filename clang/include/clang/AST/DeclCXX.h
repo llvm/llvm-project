@@ -3229,6 +3229,7 @@ class NamespaceAliasDecl : public NamespaceBaseDecl,
   using redeclarable_base = Redeclarable<NamespaceAliasDecl>;
 
   NamespaceAliasDecl *getNextRedeclarationImpl() override;
+  NamespaceAliasDecl *getNextRedeclarationNoUpdateImpl() override;
   NamespaceAliasDecl *getPreviousDeclImpl() override;
   NamespaceAliasDecl *getMostRecentDeclImpl() override;
 
@@ -3412,6 +3413,10 @@ class UsingShadowDecl : public NamedDecl, public Redeclarable<UsingShadowDecl> {
 
   UsingShadowDecl *getNextRedeclarationImpl() override {
     return getNextRedeclaration();
+  }
+
+  UsingShadowDecl *getNextRedeclarationNoUpdateImpl() override {
+    return getNextRedeclarationNoUpdate();
   }
 
   UsingShadowDecl *getPreviousDeclImpl() override {

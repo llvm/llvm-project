@@ -2107,8 +2107,18 @@ void ASTDeclMerger::MergeDefinitionData(
     auto *Def = DD.Definition;
     DD = std::move(MergeDD);
     DD.Definition = Def;
-    for (auto *D : Def->redecls())
-      cast<CXXRecordDecl>(D)->DefinitionData = &DD;
+
+#ifndef NDEBUG
+    unsigned OldLoadedSize = Reader.getNumDeclsLoaded();
+#endif
+
+    for (auto *RD : Def->noload_redecls())
+      cast<CXXRecordDecl>(RD)->DefinitionData = &DD;
+
+#ifndef NDEBUG
+    assert(Reader.getNumDeclsLoaded() == OldLoadedSize && "We shouldn't load new decls during merge definition data for class");
+#endif
+
     return;
   }
 

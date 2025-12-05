@@ -1006,6 +1006,11 @@ ObjCMethodDecl *ObjCMethodDecl::getNextRedeclarationImpl() {
   return Redecl ? Redecl : this;
 }
 
+// FIXME: make sure ObjCMethodDecl::getNextRedeclarationImpl wont't load.
+ObjCMethodDecl *ObjCMethodDecl::getNextRedeclarationNoUpdateImpl() {
+  return getNextRedeclarationImpl();
+}
+
 ObjCMethodDecl *ObjCMethodDecl::getCanonicalDecl() {
   auto *CtxD = cast<Decl>(getDeclContext());
   const auto &Sel = getSelector();
