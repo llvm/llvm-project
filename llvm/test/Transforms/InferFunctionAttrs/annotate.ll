@@ -473,6 +473,24 @@ declare float @fminf(float, float)
 ; CHECK: declare x86_fp80 @fminl(x86_fp80, x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare x86_fp80 @fminl(x86_fp80, x86_fp80)
 
+; CHECK: declare double @fmaximum_num(double, double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare double @fmaximum_num(double, double)
+
+; CHECK: declare float @fmaximum_numf(float, float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare float @fmaximum_numf(float, float)
+
+; CHECK: declare x86_fp80 @fmaximum_numl(x86_fp80, x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare x86_fp80 @fmaximum_numl(x86_fp80, x86_fp80)
+
+; CHECK: declare double @fminimum_num(double, double) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare double @fminimum_num(double, double)
+
+; CHECK: declare float @fminimum_numf(float, float) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare float @fminimum_numf(float, float)
+
+; CHECK: declare x86_fp80 @fminimum_numl(x86_fp80, x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+declare x86_fp80 @fminimum_numl(x86_fp80, x86_fp80)
+
 ; CHECK: declare double @fmod(double, double) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare double @fmod(double, double)
 
