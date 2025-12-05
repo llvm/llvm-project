@@ -104,7 +104,7 @@ struct VarCreationState {
   bool notCreated() const { return !S; }
 };
 
-enum class ScopeKind { Call, Block };
+enum class ScopeKind { Block, FullExpression, Call };
 
 /// Compilation context for expressions.
 template <class Emitter>
@@ -330,13 +330,11 @@ protected:
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
                                   bool IsVolatile = false,
-                                  const ValueDecl *ExtendingDecl = nullptr,
                                   ScopeKind SC = ScopeKind::Block,
                                   bool IsConstexprUnknown = false);
 
   /// Allocates a space storing a local given its type.
   UnsignedOrNone allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
-                               const ValueDecl *ExtendingDecl = nullptr,
                                ScopeKind = ScopeKind::Block,
                                bool IsConstexprUnknown = false);
   UnsignedOrNone allocateTemporary(const Expr *E);
@@ -476,9 +474,8 @@ extern template class Compiler<EvalEmitter>;
 /// Scope chain managing the variable lifetimes.
 template <class Emitter> class VariableScope {
 public:
-  VariableScope(Compiler<Emitter> *Ctx, const ValueDecl *VD,
-                ScopeKind Kind = ScopeKind::Block)
-      : Ctx(Ctx), Parent(Ctx->VarScope), ValDecl(VD), Kind(Kind) {
+  VariableScope(Compiler<Emitter> *Ctx, ScopeKind Kind = ScopeKind::Block)
+      : Ctx(Ctx), Parent(Ctx->VarScope), Kind(Kind) {
     if (Parent)
       this->LocalsAlwaysEnabled = Parent->LocalsAlwaysEnabled;
     Ctx->VarScope = this;
@@ -489,28 +486,6 @@ public:
   virtual void addLocal(Scope::Local Local) {
     llvm_unreachable("Shouldn't be called");
   }
-
-  void addExtended(const Scope::Local &Local, const ValueDecl *ExtendingDecl) {
-    // Walk up the chain of scopes until we find the one for ExtendingDecl.
-    // If there is no such scope, attach it to the parent one.
-    VariableScope *P = this;
-    while (P) {
-      if (P->ValDecl == ExtendingDecl) {
-        P->addLocal(Local);
-        return;
-      }
-      P = P->Parent;
-      if (!P)
-        break;
-    }
-
-    // Use the parent scope.
-    if (this->Parent)
-      this->Parent->addLocal(Local);
-    else
-      this->addLocal(Local);
-  }
-
   /// Like addExtended, but adds to the nearest scope of the given kind.
   void addForScopeKind(const Scope::Local &Local, ScopeKind Kind) {
     VariableScope *P = this;
@@ -523,6 +498,7 @@ public:
       if (!P)
         break;
     }
+
     // Add to this scope.
     this->addLocal(Local);
   }
@@ -542,7 +518,6 @@ protected:
   Compiler<Emitter> *Ctx;
   /// Link to the parent scope.
   VariableScope *Parent;
-  const ValueDecl *ValDecl = nullptr;
   ScopeKind Kind;
 };
 
@@ -550,9 +525,7 @@ protected:
 template <class Emitter> class LocalScope : public VariableScope<Emitter> {
 public:
   LocalScope(Compiler<Emitter> *Ctx, ScopeKind Kind = ScopeKind::Block)
-      : VariableScope<Emitter>(Ctx, nullptr, Kind) {}
-  LocalScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
-      : VariableScope<Emitter>(Ctx, VD) {}
+      : VariableScope<Emitter>(Ctx, Kind) {}
 
   /// Emit a Destroy op for this scope.
   ~LocalScope() override {
