@@ -34,6 +34,15 @@ subroutine mapType_array
   !$omp end target
 end subroutine mapType_array
 
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] [i64 8]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 33]
+subroutine mapType_is_device_ptr
+  use iso_c_binding, only : c_ptr
+  type(c_ptr) :: p
+  !$omp target is_device_ptr(p)
+  !$omp end target
+end subroutine mapType_is_device_ptr
+
 !CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [3 x i64] [i64 24, i64 0, i64 24]
 !CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [3 x i64] [i64 16933, i64 515, i64 32772]
 subroutine mapType_ptr
