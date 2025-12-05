@@ -2846,11 +2846,49 @@ void AppleMachO::AddCXXStdlibLibArgs(const ArgList &Args,
   CXXStdlibType Type = GetCXXStdlibType(Args);
 
   switch (Type) {
-  case ToolChain::CST_Libcxx:
-    CmdArgs.push_back("-lc++");
+  case ToolChain::CST_Libcxx: {
+    // On Darwin, we prioritize a libc++ located in the toolchain to a libc++
+    // located in the sysroot. Unlike the driver for most other platforms, on
+    // Darwin we do that by explicitly passing the library path to the linker
+    // to avoid having to add the toolchain's `lib/` directory to the linker
+    // search path, which would make other libraries findable as well.
+    //
+    // Prefering the toolchain library over the sysroot library matches the
+    // behavior we have for headers, where we prefer headers in the toolchain
+    // over headers in the sysroot if there are any. Note that it's important
+    // for the header search path behavior to match the link-time search path
+    // behavior to ensure that we link the program against a library that
+    // matches the headers that were used to compile it.
+    //
+    // Otherwise, we end up compiling against some set of headers and then
+    // linking against a different library (which, confusingly, shares the same
+    // name) which may have been configured with different options, be at a
+    // different version, etc.
+    SmallString<128> InstallLib = llvm::sys::path::parent_path(getDriver().Dir);
+    llvm::sys::path::append(InstallLib, "lib"); // <install>/lib
+    auto Link = [&](StringRef Library) {
+      SmallString<128> Shared(InstallLib);
+      llvm::sys::path::append(Shared,
+                              SmallString<4>("lib") + Library + ".dylib");
+      SmallString<128> Static(InstallLib);
+      llvm::sys::path::append(Static, SmallString<4>("lib") + Library + ".a");
+      SmallString<32> Relative("-l");
+      Relative += Library;
+
+      if (getVFS().exists(Shared)) {
+        CmdArgs.push_back(Args.MakeArgString(Shared));
+      } else if (getVFS().exists(Static)) {
+        CmdArgs.push_back(Args.MakeArgString(Static));
+      } else {
+        CmdArgs.push_back(Args.MakeArgString(Relative));
+      }
+    };
+
+    Link("c++");
     if (Args.hasArg(options::OPT_fexperimental_library))
-      CmdArgs.push_back("-lc++experimental");
+      Link("c++experimental");
     break;
+  }
 
   case ToolChain::CST_Libstdcxx:
     // Unfortunately, -lstdc++ doesn't always exist in the standard search path;
