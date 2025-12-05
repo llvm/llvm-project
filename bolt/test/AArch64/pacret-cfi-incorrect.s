@@ -1,4 +1,4 @@
-# This test checks that MarkRAStates pass ignores functions with
+# This test checks that PointerAuthCFIAnalyzer pass ignores functions with
 # malformed .cfi_negate_ra_state sequences in the input binary.
 
 # The cases checked are:
