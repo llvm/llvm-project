@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 int main(int argc, char **argv) {
+  double *data;
   int len = 16;
   
   // Valid strided array sections with FROM
