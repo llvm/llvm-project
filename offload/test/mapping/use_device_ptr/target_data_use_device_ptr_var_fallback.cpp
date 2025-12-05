@@ -1,4 +1,8 @@
-// RUN: %libomptarget-compilexx-run-and-check-generic
+// RUN: %libomptarget-compilexx-generic
+// RUN: %libomptarget-run-generic 2>&1 \
+// RUN: | %fcheck-generic
+// RUN: env OMP_TARGET_OFFLOAD=disabled %libomptarget-run-generic 2>&1 \
+// RUN: | %fcheck-generic
 
 // Test that when a use_device_ptr lookup fails, the
 // privatized pointer retains its original value by
