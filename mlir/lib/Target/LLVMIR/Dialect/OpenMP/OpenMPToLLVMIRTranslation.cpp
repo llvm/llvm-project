@@ -32,6 +32,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/MDBuilder.h"
@@ -153,11 +154,48 @@ private:
   llvm::BasicBlock *linearLastIterExitBB;
 
 public:
+  void registerType(llvm::Type *ty) { linearVarTypes.push_back(ty); }
+
   // Register type for the linear variables
   void registerType(LLVM::ModuleTranslation &moduleTranslation,
-                    mlir::Attribute &ty) {
-    linearVarTypes.push_back(moduleTranslation.convertType(
+                    mlir::Attribute ty) {
+    registerType(moduleTranslation.convertType(
         mlir::cast<mlir::TypeAttr>(ty).getValue()));
+  }
+
+  LogicalResult registerTypes(LLVM::ModuleTranslation &moduleTranslation,
+                              ValueRange linearVars,
+                              std::optional<ArrayAttr> linearVarTypesAttr,
+                              Operation *op) {
+    if (linearVarTypesAttr) {
+      for (Attribute linearVarType : *linearVarTypesAttr)
+        registerType(moduleTranslation, linearVarType);
+      return success();
+    }
+
+    for (Value linearVar : linearVars) {
+      llvm::Value *llvmVar = moduleTranslation.lookupValue(linearVar);
+      if (!llvmVar) {
+        op->emitError("missing translation for linear variable");
+        return failure();
+      }
+
+      if (auto *alloca = dyn_cast<llvm::AllocaInst>(llvmVar)) {
+        registerType(alloca->getAllocatedType());
+        continue;
+      }
+
+      if (auto *global = dyn_cast<llvm::GlobalValue>(llvmVar)) {
+        registerType(global->getValueType());
+        continue;
+      }
+
+      op->emitError(
+          "linear_var_types attribute required to deduce linear variable type");
+      return failure();
+    }
+
+    return success();
   }
 
   // Allocate space for linear variabes
@@ -2707,9 +2745,10 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   LinearClauseProcessor linearClauseProcessor;
 
   if (!wsloopOp.getLinearVars().empty()) {
-    auto linearVarTypes = wsloopOp.getLinearVarTypes().value();
-    for (mlir::Attribute linearVarType : linearVarTypes)
-      linearClauseProcessor.registerType(moduleTranslation, linearVarType);
+    if (failed(linearClauseProcessor.registerTypes(
+            moduleTranslation, wsloopOp.getLinearVars(),
+            wsloopOp.getLinearVarTypes(), &opInst)))
+      return failure();
 
     for (auto [idx, linearVar] : llvm::enumerate(wsloopOp.getLinearVars()))
       linearClauseProcessor.createLinearVar(builder, moduleTranslation,
@@ -3030,9 +3069,10 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   LinearClauseProcessor linearClauseProcessor;
 
   if (!simdOp.getLinearVars().empty()) {
-    auto linearVarTypes = simdOp.getLinearVarTypes().value();
-    for (mlir::Attribute linearVarType : linearVarTypes)
-      linearClauseProcessor.registerType(moduleTranslation, linearVarType);
+    if (failed(linearClauseProcessor.registerTypes(
+            moduleTranslation, simdOp.getLinearVars(),
+            simdOp.getLinearVarTypes(), &opInst)))
+      return failure();
     for (auto [idx, linearVar] : llvm::enumerate(simdOp.getLinearVars()))
       linearClauseProcessor.createLinearVar(builder, moduleTranslation,
                                             linearVar, idx);
