@@ -1293,25 +1293,25 @@ defm SVRSQRTE : SInstZPZ<"svrsqrte", "Ui",   "aarch64_sve_ursqrte">;
 
 //------------------------------------------------------------------------------
 
-multiclass SInstZPZxZ<string name, string types, string pat_v, string pat_n, string intrinsic, list<FlagType> flags=[]> {
-  def _M   : SInst<name # "[_{d}]", pat_v, types, MergeOp1,  intrinsic, flags>;
-  def _X   : SInst<name # "[_{d}]", pat_v, types, MergeAny,  intrinsic, flags>;
-  def _Z   : SInst<name # "[_{d}]", pat_v, types, MergeZero, intrinsic, flags>;
+multiclass SInstZPZxZ<string name, string types, string pat_v, string pat_n, string m_intrinsic, string x_intrinsic, list<FlagType> flags=[]> {
+  def _M   : SInst<name # "[_{d}]", pat_v, types, MergeOp1,  m_intrinsic, flags>;
+  def _X   : SInst<name # "[_{d}]", pat_v, types, MergeAny,  x_intrinsic, flags>;
+  def _Z   : SInst<name # "[_{d}]", pat_v, types, MergeZero, m_intrinsic, flags>;
 
-  def _N_M : SInst<name # "[_n_{d}]", pat_n, types, MergeOp1,  intrinsic, flags>;
-  def _N_X : SInst<name # "[_n_{d}]", pat_n, types, MergeAny,  intrinsic, flags>;
-  def _N_Z : SInst<name # "[_n_{d}]", pat_n, types, MergeZero, intrinsic, flags>;
+  def _N_M : SInst<name # "[_n_{d}]", pat_n, types, MergeOp1,  m_intrinsic, flags>;
+  def _N_X : SInst<name # "[_n_{d}]", pat_n, types, MergeAny,  x_intrinsic, flags>;
+  def _N_Z : SInst<name # "[_n_{d}]", pat_n, types, MergeZero, m_intrinsic, flags>;
 }
 
 let SVETargetGuard = "sve2|sme" in {
-defm SVQRSHL_S : SInstZPZxZ<"svqrshl", "csil",     "dPdx", "dPdK", "aarch64_sve_sqrshl", [VerifyRuntimeMode]>;
-defm SVQRSHL_U : SInstZPZxZ<"svqrshl", "UcUsUiUl", "dPdx", "dPdK", "aarch64_sve_uqrshl", [VerifyRuntimeMode]>;
-defm SVQSHL_S  : SInstZPZxZ<"svqshl",  "csil",     "dPdx", "dPdK", "aarch64_sve_sqshl", [VerifyRuntimeMode]>;
-defm SVQSHL_U  : SInstZPZxZ<"svqshl",  "UcUsUiUl", "dPdx", "dPdK", "aarch64_sve_uqshl", [VerifyRuntimeMode]>;
-defm SVRSHL_S  : SInstZPZxZ<"svrshl",  "csil",     "dPdx", "dPdK", "aarch64_sve_srshl", [VerifyRuntimeMode]>;
-defm SVRSHL_U  : SInstZPZxZ<"svrshl",  "UcUsUiUl", "dPdx", "dPdK", "aarch64_sve_urshl", [VerifyRuntimeMode]>;
-defm SVSQADD   : SInstZPZxZ<"svsqadd", "UcUsUiUl", "dPdx", "dPdK", "aarch64_sve_usqadd", [VerifyRuntimeMode]>;
-defm SVUQADD   : SInstZPZxZ<"svuqadd", "csil",     "dPdu", "dPdL", "aarch64_sve_suqadd", [VerifyRuntimeMode]>;
+defm SVQRSHL_S : SInstZPZxZ<"svqrshl", "csil",     "dPdx", "dPdK", "aarch64_sve_sqrshl", "aarch64_sve_sqrshl_u", [VerifyRuntimeMode]>;
+defm SVQRSHL_U : SInstZPZxZ<"svqrshl", "UcUsUiUl", "dPdx", "dPdK", "aarch64_sve_uqrshl", "aarch64_sve_uqrshl_u", [VerifyRuntimeMode]>;
+defm SVQSHL_S  : SInstZPZxZ<"svqshl",  "csil",     "dPdx", "dPdK", "aarch64_sve_sqshl",  "aarch64_sve_sqshl_u", [VerifyRuntimeMode]>;
+defm SVQSHL_U  : SInstZPZxZ<"svqshl",  "UcUsUiUl", "dPdx", "dPdK", "aarch64_sve_uqshl",  "aarch64_sve_uqshl_u", [VerifyRuntimeMode]>;
+defm SVRSHL_S  : SInstZPZxZ<"svrshl",  "csil",     "dPdx", "dPdK", "aarch64_sve_srshl",  "aarch64_sve_srshl_u", [VerifyRuntimeMode]>;
+defm SVRSHL_U  : SInstZPZxZ<"svrshl",  "UcUsUiUl", "dPdx", "dPdK", "aarch64_sve_urshl",  "aarch64_sve_urshl_u", [VerifyRuntimeMode]>;
+defm SVSQADD   : SInstZPZxZ<"svsqadd", "UcUsUiUl", "dPdx", "dPdK", "aarch64_sve_usqadd", "aarch64_sve_usqadd", [VerifyRuntimeMode]>;
+defm SVUQADD   : SInstZPZxZ<"svuqadd", "csil",     "dPdu", "dPdL", "aarch64_sve_suqadd", "aarch64_sve_suqadd", [VerifyRuntimeMode]>;
 
 def SVABA_S   : SInst<"svaba[_{d}]",     "dddd", "csil"    , MergeNone, "aarch64_sve_saba", [VerifyRuntimeMode]>;
 def SVABA_U   : SInst<"svaba[_{d}]",     "dddd", "UcUsUiUl", MergeNone, "aarch64_sve_uaba", [VerifyRuntimeMode]>;
@@ -2080,6 +2080,17 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2,sve-b16b16"in {
   // bfminnm, bfmaxnm (single, multi)
   defm SVBFMINNM : BfSingleMultiVector<"minnm">;
   defm SVBFMAXNM : BfSingleMultiVector<"maxnm">;
+}
+
+let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2,sve-bfscale" in {
+  // BFMUL
+  defm SVBFMUL : BfSingleMultiVector<"mul">;
+  // BFSCALE
+  def SVBFSCALE_SINGLE_X2 : SInst<"svscale[_single_{d}_x2]", "22x", "b", MergeNone, "aarch64_sve_fscale_single_x2", [IsStreaming], []>;
+  def SVBFSCALE_SINGLE_X4 : SInst<"svscale[_single_{d}_x4]", "44x", "b", MergeNone, "aarch64_sve_fscale_single_x4", [IsStreaming], []>;
+
+  def SVBFSCALE_X2 : SInst<"svscale[_{d}_x2]", "222.x", "b", MergeNone, "aarch64_sve_fscale_x2", [IsStreaming], []>;
+  def SVBFSCALE_X4 : SInst<"svscale[_{d}_x4]", "444.x", "b", MergeNone, "aarch64_sve_fscale_x4", [IsStreaming], []>;
 }
 
 let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2" in {

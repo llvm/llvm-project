@@ -47,6 +47,10 @@ public:
                                     const Expr *EscapeExpr,
                                     SourceLocation ExpiryLoc,
                                     Confidence Confidence) {}
+
+  // Suggests lifetime bound annotations for function paramters
+  virtual void suggestAnnotation(const ParmVarDecl *PVD,
+                                 const Expr *EscapeExpr) {}
 };
 
 /// The main entry point for the analysis.
