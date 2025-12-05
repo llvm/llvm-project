@@ -461,13 +461,15 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     return nullptr;
 
   Value *Offset = VarOffset.first;
-  auto *OffsetType = dyn_cast<IntegerType>(Offset->getType());
-  if (!OffsetType)
+  if (!isa<IntegerType>(Offset->getType()))
     return nullptr;
 
+  Offset = Builder.CreateSExtOrTrunc(Offset, Builder.getIntNTy(BW));
+  if (Offset != VarOffset.first)
+    NewInsts.push_back(cast<Instruction>(Offset));
+
   if (!OffsetQuot.isOne()) {
-    ConstantInt *ConstMul =
-        ConstantInt::get(Ctx, OffsetQuot.sext(OffsetType->getBitWidth()));
+    ConstantInt *ConstMul = ConstantInt::get(Ctx, OffsetQuot.sextOrTrunc(BW));
     Offset = Builder.CreateMul(Offset, ConstMul);
     if (Instruction *NewInst = dyn_cast<Instruction>(Offset))
       NewInsts.push_back(NewInst);
@@ -475,8 +477,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   if (ConstOffset.isZero())
     return Offset;
 
-  ConstantInt *ConstIndex =
-      ConstantInt::get(Ctx, IndexQuot.sext(OffsetType->getBitWidth()));
+  ConstantInt *ConstIndex = ConstantInt::get(Ctx, IndexQuot.sextOrTrunc(BW));
   Value *IndexAdd = Builder.CreateAdd(Offset, ConstIndex);
   if (Instruction *NewInst = dyn_cast<Instruction>(IndexAdd))
     NewInsts.push_back(NewInst);
