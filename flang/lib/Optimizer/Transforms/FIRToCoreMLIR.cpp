@@ -137,6 +137,13 @@ public:
     if (!getTypeConverter()->convertType(op.getMemref()))
       return mlir::failure();
 
+    // Only handle the simple case where only shape are provided.
+    // TODO: handle general case.
+    if (op.getShape().empty() || !op.getShift().empty() ||
+        !op.getSlice().empty() || !op.getSubcomponent().empty() ||
+        !op.getLenParams().empty())
+      return mlir::failure();
+
     mlir::Location loc = op.getLoc();
     auto metadata = mlir::memref::ExtractStridedMetadataOp::create(
         rewriter, loc, adaptor.getMemref());
