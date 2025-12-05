@@ -409,7 +409,7 @@ validateConnection(llvm::StringRef conn) {
 }
 
 static llvm::Error serveConnection(
-    const Socket::SocketProtocol &protocol, const std::string &name, Log &log,
+    const Socket::SocketProtocol &protocol, llvm::StringRef name, Log &log,
     const ReplMode default_repl_mode,
     const std::vector<std::string> &pre_init_commands, bool no_lldbinit,
     std::optional<std::chrono::seconds> connection_timeout_seconds) {

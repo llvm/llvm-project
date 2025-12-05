@@ -22,7 +22,6 @@ void Log::Emit(StringRef message) { Emit(message, "", 0); }
 
 void Log::Emit(StringRef message, StringRef file, size_t line) {
   std::lock_guard<Log::Mutex> lock(m_mutex);
-  std::lock_guard<std::mutex> lock(m_mutex);
   const llvm::sys::TimePoint<> time = std::chrono::system_clock::now();
   m_stream << formatv("[{0:%H:%M:%S.%L}]", time) << " ";
   if (!file.empty())
