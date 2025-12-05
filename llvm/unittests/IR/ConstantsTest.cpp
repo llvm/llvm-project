@@ -862,6 +862,7 @@ TEST(ConstantsTest, Float128Test) {
   uint64_t r[1] = {0x0000000000003c00}; //+1
   LLVMValueRef val7 = LLVMConstFPFromBits(TyHalf, r);
   EXPECT_TRUE(val7 != nullptr);
+  LLVMDisposeBuilder(Builder);
   LLVMContextDispose(C);
 }
 
