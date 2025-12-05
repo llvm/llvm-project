@@ -11,11 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-def WebAssemblyRefFunc_t : SDTypeProfile<1, 1, [SDTCisVT<0, funcref>, SDTCisPtrTy<1>]>;
-def WebAssemblyRefFunc :
-    SDNode<"WebAssemblyISD::REF_FUNC", WebAssemblyRefFunc_t,
-           []>;
-
 multiclass REF_I<WebAssemblyRegClass rc, ValueType vt, string ht> {
   defm REF_NULL_#rc : I<(outs rc:$dst), (ins),
                         (outs), (ins),
@@ -47,7 +42,7 @@ defm REF_TEST_FUNCREF : I<(outs I32:$res), (ins TypeIndex:$type, FUNCREF:$ref),
                         Requires<[HasGC]>;
 
 defm REF_FUNC : I<(outs FUNCREF:$res), (ins function32_op:$func),
-                    (outs), (ins function32_op:$func), [(set FUNCREF:$res, (WebAssemblyRefFunc tglobaladdr:$func))],
+                    (outs), (ins function32_op:$func), [],
                     "ref.func\t$func", "ref.func $func", 0xd2>,
                 Requires<[HasReferenceTypes]>;
 
