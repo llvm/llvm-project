@@ -16,6 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <flang/Optimizer/Analysis/AliasAnalysis.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Dialect/FIROps.h>
 #include <flang/Optimizer/Dialect/FIRType.h>
@@ -37,6 +38,7 @@
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/IR/Value.h>
 #include <mlir/IR/Visitors.h>
+#include <mlir/Interfaces/LoopLikeInterface.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
 
@@ -135,9 +137,97 @@ static bool mustParallelizeOp(Operation *op) {
       .wasInterrupted();
 }
 
+// Determines if a memory reference is thread-local in an OpenMP context.
+//
+// This is a best-effort analysis. We cannot definitively determine if code
+// is inside a parallel region when it's in a function called from that
+// region. However, we can identify common patterns of thread-local memory:
+//
+// 1. Memory allocated via fir.alloca inside the enclosing omp.parallel region
+// 2. Memory that comes from OpenMP clause block arguments that create
+//    thread-local storage (private, firstprivate, lastprivate, reduction,
+//    linear clauses)
+//
+// Returns true if the memory reference appears to be thread-local and thus
+// safe to parallelize (each thread should access its own copy).
+static bool isOpenMPThreadLocalMemory(Operation *op, Value mem) {
+  // Use AliasAnalysis to trace through declares, converts, reboxes, etc.
+  // to find the underlying source of the memory reference.
+  fir::AliasAnalysis aliasAnalysis;
+  fir::AliasAnalysis::Source source = aliasAnalysis.getSource(mem);
+
+  // Check if the source is a Value (not a global symbol).
+  mlir::Value sourceValue =
+      llvm::dyn_cast_if_present<mlir::Value>(source.origin.u);
+  if (!sourceValue)
+    return false;
+
+  // Case 1: Memory allocated by fir.alloca inside the enclosing parallel
+  // region is thread-private (each thread gets its own stack allocation).
+  if (source.kind == fir::AliasAnalysis::SourceKind::Allocate) {
+    if (auto alloca = sourceValue.getDefiningOp<fir::AllocaOp>()) {
+      if (auto parallelOp = alloca->getParentOfType<omp::ParallelOp>()) {
+        if (op->getParentOfType<omp::ParallelOp>() == parallelOp)
+          return true;
+      }
+    }
+  }
+
+  // Case 2: Memory from OpenMP clause block arguments that create thread-local
+  // storage. These clauses create private copies for each thread:
+  // - private: uninitialized thread-local copy
+  // - firstprivate: thread-local copy initialized from original
+  // - lastprivate: thread-local copy, value copied back after construct
+  // - reduction: thread-local copy for reduction operations
+  // - linear: thread-local copy with linear modification
+  //
+  // Check if the source value is a block argument of an OpenMP operation
+  // that implements BlockArgOpenMPOpInterface.
+  if (auto blockArg = llvm::dyn_cast<BlockArgument>(sourceValue)) {
+    Operation *parentOp = blockArg.getOwner()->getParentOp();
+    if (auto argIface =
+            llvm::dyn_cast<omp::BlockArgOpenMPOpInterface>(parentOp)) {
+      // Check if this block argument corresponds to a privatizing clause.
+      // Private, reduction, and in_reduction clauses create thread-local
+      // memory.
+      auto isInBlockArgs = [&](auto blockArgs) {
+        return llvm::is_contained(blockArgs, blockArg);
+      };
+
+      if (isInBlockArgs(argIface.getPrivateBlockArgs()))
+        return true;
+      if (isInBlockArgs(argIface.getReductionBlockArgs()))
+        return true;
+      if (isInBlockArgs(argIface.getInReductionBlockArgs()))
+        return true;
+      if (isInBlockArgs(argIface.getTaskReductionBlockArgs()))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 static bool isSafeToParallelize(Operation *op) {
-  return isa<hlfir::DeclareOp>(op) || isa<fir::DeclareOp>(op) ||
-         isMemoryEffectFree(op);
+  if (isa<hlfir::DeclareOp>(op) || isa<fir::DeclareOp>(op) ||
+      isMemoryEffectFree(op))
+    return true;
+
+  // Thread-local variables allocated in the OpenMP parallel region or coming
+  // from privatizing clauses are private to each thread and thus safe (and
+  // sometimes required) to parallelize. If the compiler wraps such load/stores
+  // in an omp.single block, only one thread updates its local copy, while
+  // all other threads read uninitialized data (see issue #143330).
+  Value mem;
+  if (auto store = dyn_cast<fir::StoreOp>(op))
+    mem = store.getMemref();
+  else if (auto load = dyn_cast<fir::LoadOp>(op))
+    mem = load.getMemref();
+
+  if (mem && isOpenMPThreadLocalMemory(op, mem))
+    return true;
+
+  return false;
 }
 
 /// Simple shallow copies suffice for our purposes in this pass, so we implement
@@ -335,6 +425,13 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
 
     for (auto [i, opOrSingle] : llvm::enumerate(regions)) {
       bool isLast = i + 1 == regions.size();
+      // Make sure shared runtime calls are synchronized: disable `nowait`
+      // insertion, and rely on the implicit barrier at the end of the
+      // omp.workshare block. This applies to any loop-like operation
+      // (fir.do_loop, fir.iterate_while, fir.do_concurrent.loop, etc.)
+      // because iterations could overlap if nowait is used.
+      if (isa<LoopLikeOpInterface>(block.getParentOp()))
+        isLast = false;
       if (std::holds_alternative<SingleRegion>(opOrSingle)) {
         OpBuilder singleBuilder(sourceRegion.getContext());
         Block *singleBlock = new Block();
