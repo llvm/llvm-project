@@ -16367,13 +16367,13 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     if (!SKEPAttr->isInvalidAttr()) {
       ExprResult LaunchIdExpr =
           SYCL().BuildSYCLKernelLaunchIdExpr(FD, SKEPAttr->getKernelName());
-      if (LaunchIdExpr.isInvalid()) {
-        // Do not mark 'FD' as invalid. Name lookup failure for
-        // 'sycl_kernel_launch' is treated as an error in the definition of
-        // 'FD'; treating it as an error of the declaration would affect
-        // overload resolution.
-      }
-
+      // Do not mark 'FD' as invalid if construction of `LaunchIDExpr` produces
+      // an invalid result. Name lookup failure for 'sycl_kernel_launch' is
+      // treated as an error in the definition of 'FD'; treating it as an error
+      // of the declaration would affect overload resolution which would
+      // potentially result in additional errors. If construction of
+      // 'LaunchIDExpr' failed, then 'SYCLKernelLaunchIdExpr' will be assigned
+      // a null pointer value below; that is expected.
       getCurFunction()->SYCLKernelLaunchIdExpr = LaunchIdExpr.get();
     }
   }
@@ -16588,7 +16588,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
       StmtResult SR;
       if (FD->isTemplateInstantiation()) {
         // The function body should already be a SYCLKernelCallStmt in this
-        // case, but might not be if errors previous occurred.
+        // case, but might not be if there were previous errors.
         SR = Body;
       } else if (!getCurFunction()->SYCLKernelLaunchIdExpr) {
         // If name lookup for a template named sycl_kernel_launch failed
