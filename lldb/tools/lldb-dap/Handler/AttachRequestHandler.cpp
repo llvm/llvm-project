@@ -87,8 +87,10 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
     // Use the unique target ID to get the target.
     target = dap.debugger.FindTargetByGloballyUniqueID(*target_id);
     if (!target.IsValid()) {
-      error.SetErrorStringWithFormat("invalid target_id %lu in attach config",
-                                     *target_id);
+      error.SetErrorString(
+          llvm::formatv("invalid target_id {0} in attach config", *target_id)
+              .str()
+              .c_str());
     }
   } else {
     target = dap.CreateTarget(error);

@@ -13,6 +13,7 @@ driver_executable("clang-scan-deps") {
     "//clang/lib/AST",
     "//clang/lib/Basic",
     "//clang/lib/CodeGen",
+    "//clang/lib/DependencyScanning",
     "//clang/lib/Driver",
     "//clang/lib/Frontend",
     "//clang/lib/FrontendTool",
@@ -20,7 +21,6 @@ driver_executable("clang-scan-deps") {
     "//clang/lib/Parse",
     "//clang/lib/Serialization",
     "//clang/lib/Tooling",
-    "//clang/lib/Tooling/DependencyScanning",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
   ]

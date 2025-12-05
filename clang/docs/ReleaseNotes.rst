@@ -86,6 +86,15 @@ Potentially Breaking Changes
   options-related code has been moved out of the Driver into a separate library.
 - The ``clangFrontend`` library no longer depends on ``clangDriver``, which may
   break downstream projects that relied on this transitive dependency.
+- Clang is now more precise with regards to the lifetime of temporary objects
+  such as when aggregates are passed by value to a function, resulting in
+  better sharing of stack slots and reduced stack usage. This change can lead
+  to use-after-scope related issues in code that unintentionally relied on the
+  previous behavior. If recompiling with ``-fsanitize=address`` shows a
+  use-after-scope warning, then this is likely the case, and the report printed
+  should be able to help users pinpoint where the use-after-scope is occurring.
+  Users can use ``-Xclang -sloppy-temporary-lifetimes`` to retain the old
+  behavior until they are able to find and resolve issues in their code.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -360,6 +369,12 @@ Attribute Changes in Clang
   attribute, but `malloc_span` applies not to functions returning pointers, but to functions returning
   span-like structures (i.e. those that contain a pointer field and a size integer field or two pointers).
 
+- Added new attribute ``modular_format`` to allow dynamically selecting at link
+  time which aspects of a statically linked libc's printf (et al)
+  implementation are required. This can reduce code size without requiring e.g.
+  multilibs for printf features. Requires cooperation with the libc
+  implementation.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Diagnostics messages now refer to ``structured binding`` instead of ``decomposition``,
@@ -453,6 +468,10 @@ Improvements to Clang's diagnostics
 
 - A new warning ``-Wshadow-header`` has been added to detect when a header file
   is found in multiple search directories (excluding system paths).
+
+- Clang now detects potential missing format and format_matches attributes on function,
+  Objective-C method and block declarations when calling format functions. It is part
+  of the format-nonliteral diagnostic (#GH60718)
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -652,6 +671,23 @@ RISC-V Support
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now supports C++17 Class Template Argument Deduction (CTAD) in CUDA/HIP
+  device code by treating deduction guides as if they were ``__host__ __device__``.
+
+- Clang avoids ambiguous CTAD in CUDA/HIP by not synthesizing duplicate implicit
+  deduction guides when ``__host__`` and ``__device__`` constructors differ only
+  in CUDA target attributes (same signature and constraints).
+
+- Clang diagnoses CUDA/HIP deduction guides that are annotated as host-only,
+  device-only, or ``__global__`` as errors. Explicit ``__host__ __device__``
+  deduction guides remain accepted for now but are deprecated and will be
+  rejected in a future version of Clang; deduction guides do not participate
+  in code generation and are treated as implicitly host+device.
+
+- Clang preserves distinct implicit deduction guides for constructors that differ
+  by constraints, so constraint-based CTAD works in CUDA/HIP device code as in
+  standard C++.
 
 CUDA Support
 ^^^^^^^^^^^^

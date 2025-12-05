@@ -377,6 +377,9 @@ void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
     O << ", !dbg ";
     DL.print(O);
   }
+
+  if (auto *Metadata = dyn_cast<VPIRMetadata>(this))
+    Metadata->print(O, SlotTracker);
 }
 #endif
 
@@ -1007,9 +1010,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
 
   switch (getOpcode()) {
   case Instruction::Select: {
-    // TODO: It may be possible to improve this by analyzing where the
-    // condition operand comes from.
-    CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+    llvm::CmpPredicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+    match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue()));
     auto *CondTy = Ctx.Types.inferScalarType(getOperand(0));
     auto *VecTy = Ctx.Types.inferScalarType(getOperand(1));
     if (!vputils::onlyFirstLaneUsed(this)) {
@@ -1599,6 +1601,25 @@ void VPIRMetadata::intersect(const VPIRMetadata &Other) {
   }
   Metadata = std::move(MetadataIntersection);
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
+  const Module *M = SlotTracker.getModule();
+  if (Metadata.empty() || !M)
+    return;
+
+  ArrayRef<StringRef> MDNames = SlotTracker.getMDNames();
+  O << " (";
+  interleaveComma(Metadata, O, [&](const auto &KindNodePair) {
+    auto [Kind, Node] = KindNodePair;
+    assert(Kind < MDNames.size() && !MDNames[Kind].empty() &&
+           "Unexpected unnamed metadata kind");
+    O << "!" << MDNames[Kind] << " ";
+    Node->printAsOperand(O, M);
+  });
+  O << ")";
+}
+#endif
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
@@ -3607,10 +3628,8 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
-  // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
-  // After migrating to getMemIntrinsicInstrCost, switch this to vp_load.
   InstructionCost Cost = Ctx.TTI.getMemIntrinsicInstrCost(
-      MemIntrinsicCostAttributes(Intrinsic::masked_load, Ty, Alignment, AS),
+      MemIntrinsicCostAttributes(Intrinsic::vp_load, Ty, Alignment, AS),
       Ctx.CostKind);
   if (!Reverse)
     return Cost;
@@ -3719,10 +3738,8 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
-  // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
-  // After migrating to getMemIntrinsicInstrCost, switch this to vp_store.
   InstructionCost Cost = Ctx.TTI.getMemIntrinsicInstrCost(
-      MemIntrinsicCostAttributes(Intrinsic::masked_store, Ty, Alignment, AS),
+      MemIntrinsicCostAttributes(Intrinsic::vp_store, Ty, Alignment, AS),
       Ctx.CostKind);
   if (!Reverse)
     return Cost;

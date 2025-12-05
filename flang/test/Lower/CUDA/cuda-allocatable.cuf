@@ -235,3 +235,21 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPcuda_component()
 ! CHECK: cuf.allocate
+
+subroutine module_allocate()
+  use globals
+  allocate(a_device(10))
+  allocate(a_managed(10))
+  allocate(a_pinned(10))
+  deallocate(a_device)
+  deallocate(a_managed)
+  deallocate(a_pinned)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmodule_allocate() 
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>, hasDoubleDescriptor} -> i32
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>, hasDoubleDescriptor} -> i32
+! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<pinned>} -> i32
+! CHECK: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>, hasDoubleDescriptor} -> i32
+! CHECK: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>, hasDoubleDescriptor} -> i32
+! CHECK: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<pinned>} -> i32
