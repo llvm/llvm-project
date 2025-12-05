@@ -23,6 +23,12 @@ define amdgpu_kernel void @dpp_test(ptr addrspace(1) %out, i32 %in1, i32 %in2) {
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -88,6 +94,12 @@ define amdgpu_kernel void @dpp_test_bc(ptr addrspace(1) %out, i32 %in1, i32 %in2
 ; GFX8-NOOPT-LABEL: dpp_test_bc:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
@@ -159,21 +171,26 @@ define weak_odr amdgpu_kernel void @dpp_test1(ptr %arg) local_unnamed_addr {
 ;
 ; GFX8-NOOPT-LABEL: dpp_test1:
 ; GFX8-NOOPT:       ; %bb.0: ; %bb
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v3, 0
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, v2
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v1, v3
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s0, 2
-; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v3, s0, v0
+; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v3, s0, v2
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, 0
+; GFX8-NOOPT-NEXT:    v_add_u32_e64 v3, s[4:5], v2, v3
 ; GFX8-NOOPT-NEXT:    s_mov_b32 m0, -1
-; GFX8-NOOPT-NEXT:    ds_read_b32 v0, v3
+; GFX8-NOOPT-NEXT:    ds_read_b32 v3, v3
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_barrier
-; GFX8-NOOPT-NEXT:    v_add_u32_e64 v1, s[0:1], v0, v0
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8-NOOPT-NEXT:    v_add_u32_e64 v3, s[4:5], v3, v3
 ; GFX8-NOOPT-NEXT:    s_nop 1
-; GFX8-NOOPT-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
-; GFX8-NOOPT-NEXT:    v_add_u32_e64 v2, s[0:1], v0, v1
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
-; GFX8-NOOPT-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v4, v0
+; GFX8-NOOPT-NEXT:    v_mov_b32_dpp v2, v3 quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
+; GFX8-NOOPT-NEXT:    v_add_u32_e64 v2, s[4:5], v2, v3
+; GFX8-NOOPT-NEXT:    v_lshlrev_b64 v[3:4], s0, v[0:1]
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s0, s2
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, s3
@@ -259,14 +276,19 @@ define amdgpu_kernel void @update_dppi64_test(ptr addrspace(1) %arg, i64 %in1, i
 ; GFX8-NOOPT-LABEL: update_dppi64_test:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
-; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
-; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
-; GFX8-NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
+; GFX8-NOOPT-NEXT:    v_ashrrev_i32_e64 v2, 31, v0
+; GFX8-NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
+; GFX8-NOOPT-NEXT:    v_lshlrev_b64 v[1:2], s2, v[0:1]
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, s4
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s4, s5
@@ -352,14 +374,19 @@ define amdgpu_kernel void @update_dppf64_test(ptr addrspace(1) %arg, double %in1
 ; GFX8-NOOPT-LABEL: update_dppf64_test:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
-; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
-; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
-; GFX8-NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
+; GFX8-NOOPT-NEXT:    v_ashrrev_i32_e64 v2, 31, v0
+; GFX8-NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
+; GFX8-NOOPT-NEXT:    v_lshlrev_b64 v[1:2], s2, v[0:1]
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, s4
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s4, s5
@@ -445,14 +472,19 @@ define amdgpu_kernel void @update_dppv2i32_test(ptr addrspace(1) %arg, <2 x i32>
 ; GFX8-NOOPT-LABEL: update_dppv2i32_test:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
-; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
-; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
-; GFX8-NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
+; GFX8-NOOPT-NEXT:    v_ashrrev_i32_e64 v2, 31, v0
+; GFX8-NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
+; GFX8-NOOPT-NEXT:    v_lshlrev_b64 v[1:2], s2, v[0:1]
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, s4
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s4, s5
@@ -538,14 +570,19 @@ define amdgpu_kernel void @update_dppv2f32_test(ptr addrspace(1) %arg, <2 x floa
 ; GFX8-NOOPT-LABEL: update_dppv2f32_test:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
-; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
-; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
-; GFX8-NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
+; GFX8-NOOPT-NEXT:    v_ashrrev_i32_e64 v2, 31, v0
+; GFX8-NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
+; GFX8-NOOPT-NEXT:    v_lshlrev_b64 v[1:2], s2, v[0:1]
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, s4
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s4, s5
@@ -631,14 +668,19 @@ define amdgpu_kernel void @update_dpp_p0_test(ptr addrspace(1) %arg, ptr %in1, p
 ; GFX8-NOOPT-LABEL: update_dpp_p0_test:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
-; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
-; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
-; GFX8-NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
+; GFX8-NOOPT-NEXT:    v_ashrrev_i32_e64 v2, 31, v0
+; GFX8-NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
+; GFX8-NOOPT-NEXT:    v_lshlrev_b64 v[1:2], s2, v[0:1]
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, s4
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s4, s5
@@ -721,6 +763,12 @@ define amdgpu_kernel void @update_dpp_p3_test(ptr addrspace(3) %arg, ptr addrspa
 ;
 ; GFX8-NOOPT-LABEL: update_dpp_p3_test:
 ; GFX8-NOOPT:       ; %bb.0:
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[4:5], 0x28
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dword s1, s[4:5], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s0, s[4:5], 0x28
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 2
@@ -799,6 +847,12 @@ define amdgpu_kernel void @update_dpp_p5_test(ptr addrspace(5) %arg, ptr addrspa
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s91, 0xe80000
 ; GFX8-NOOPT-NEXT:    s_add_u32 s88, s88, s11
 ; GFX8-NOOPT-NEXT:    s_addc_u32 s89, s89, 0
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[4:5], 0x28
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dword s1, s[4:5], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s0, s[4:5], 0x28
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 2
@@ -873,13 +927,16 @@ define amdgpu_kernel void @update_dppi64_imm_old_test(ptr addrspace(1) %arg, i64
 ;
 ; GFX8-NOOPT-LABEL: update_dppi64_imm_old_test:
 ; GFX8-NOOPT:       ; %bb.0:
-; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; GFX8-NOOPT-NEXT:    s_mov_b32 s0, 3
-; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s0, v0
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
-; GFX8-NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
+; GFX8-NOOPT-NEXT:    v_ashrrev_i32_e64 v2, 31, v0
+; GFX8-NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v1, v2
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_mov_b32 s0, 3
+; GFX8-NOOPT-NEXT:    v_lshlrev_b64 v[1:2], s0, v[0:1]
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s0, s2
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, s3
@@ -968,13 +1025,16 @@ define amdgpu_kernel void @update_dppf64_imm_old_test(ptr addrspace(1) %arg, dou
 ;
 ; GFX8-NOOPT-LABEL: update_dppf64_imm_old_test:
 ; GFX8-NOOPT:       ; %bb.0:
-; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; GFX8-NOOPT-NEXT:    s_mov_b32 s0, 3
-; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s0, v0
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
-; GFX8-NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
-; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
+; GFX8-NOOPT-NEXT:    v_ashrrev_i32_e64 v2, 31, v0
+; GFX8-NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v1, v2
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_mov_b32 s0, 3
+; GFX8-NOOPT-NEXT:    v_lshlrev_b64 v[1:2], s0, v[0:1]
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s0, s2
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, s3
@@ -1064,6 +1124,10 @@ define amdgpu_kernel void @update_dppi64_imm_src_test(ptr addrspace(1) %out, i64
 ; GFX8-NOOPT-LABEL: update_dppi64_imm_src_test:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x2c
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s8, s1
@@ -1152,6 +1216,10 @@ define amdgpu_kernel void @update_dppf64_imm_src_test(ptr addrspace(1) %out, dou
 ; GFX8-NOOPT-LABEL: update_dppf64_imm_src_test:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x2c
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s8, s1
@@ -1237,6 +1305,12 @@ define amdgpu_kernel void @dpp_test_f32(ptr addrspace(1) %out, float %in1, float
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1302,6 +1376,12 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb1(ptr addrspace(1) %out, float %
 ; GFX8-NOOPT-LABEL: dpp_test_f32_imm_comb1:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
@@ -1369,6 +1449,12 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb2(ptr addrspace(1) %out, float %
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1434,6 +1520,12 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb3(ptr addrspace(1) %out, float %
 ; GFX8-NOOPT-LABEL: dpp_test_f32_imm_comb3:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
@@ -1501,6 +1593,12 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb4(ptr addrspace(1) %out, float %
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1567,6 +1665,12 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb5(ptr addrspace(1) %out, float %
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1632,6 +1736,12 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb6(ptr addrspace(1) %out, float %
 ; GFX8-NOOPT-LABEL: dpp_test_f32_imm_comb6:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
@@ -1700,6 +1810,12 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb7(ptr addrspace(1) %out, float %
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1765,6 +1881,12 @@ define amdgpu_kernel void @dpp_test_f32_imm_comb8(ptr addrspace(1) %out, float %
 ; GFX8-NOOPT-LABEL: dpp_test_f32_imm_comb8:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
@@ -1832,6 +1954,12 @@ define amdgpu_kernel void @dpp_test_v2i16(ptr addrspace(1) %out, <2 x i16> %in1,
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1897,6 +2025,12 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb1(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT-LABEL: dpp_test_v2i16_imm_comb1:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
@@ -1964,6 +2098,12 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb2(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2029,6 +2169,12 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb3(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT-LABEL: dpp_test_v2i16_imm_comb3:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
@@ -2096,6 +2242,12 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb4(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2161,6 +2313,12 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb5(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT-LABEL: dpp_test_v2i16_imm_comb5:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
@@ -2228,6 +2386,12 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb6(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2293,6 +2457,12 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb7(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT-LABEL: dpp_test_v2i16_imm_comb7:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
@@ -2360,6 +2530,12 @@ define amdgpu_kernel void @dpp_test_v2i16_imm_comb8(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2425,6 +2601,12 @@ define amdgpu_kernel void @dpp_test_v2f16(ptr addrspace(1) %out, <2 x half> %in1
 ; GFX8-NOOPT-LABEL: dpp_test_v2f16:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
@@ -2492,6 +2674,12 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb1(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2557,6 +2745,12 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb2(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT-LABEL: dpp_test_v2f16_imm_comb2:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
@@ -2624,6 +2818,12 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb3(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2689,6 +2889,12 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb4(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT-LABEL: dpp_test_v2f16_imm_comb4:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
@@ -2756,6 +2962,12 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb5(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2821,6 +3033,12 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb6(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT-LABEL: dpp_test_v2f16_imm_comb6:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
@@ -2888,6 +3106,12 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb7(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30
 ; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2953,6 +3177,12 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb8(ptr addrspace(1) %out, <2 x 
 ; GFX8-NOOPT-LABEL: dpp_test_v2f16_imm_comb8:
 ; GFX8-NOOPT:       ; %bb.0:
 ; GFX8-NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x2c
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_load_dword s0, s[2:3], 0x30
+; GFX8-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NOOPT-NEXT:    s_load_dword s5, s[2:3], 0x2c
 ; GFX8-NOOPT-NEXT:    s_load_dword s4, s[2:3], 0x30

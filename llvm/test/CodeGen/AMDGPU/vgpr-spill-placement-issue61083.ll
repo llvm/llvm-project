@@ -46,7 +46,9 @@ define amdgpu_kernel void @__omp_offloading_16_dd2df_main_l9()  {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e64 v0, s4, v0
 ; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s[4:5], v0, s4
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], v0, s4
+; CHECK-NEXT:    s_mov_b64 s[6:7], -1
+; CHECK-NEXT:    s_xor_b64 s[4:5], s[4:5], s[6:7]
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_4
 ; CHECK-NEXT:  ; %bb.3: ; %bb201

@@ -25,15 +25,18 @@ define void @test() {
 ; CHECK-NEXT:    v_readfirstlane_b32 s6, v0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], -1
 ; CHECK-NEXT:    s_mov_b32 s7, 0
-; CHECK-NEXT:    s_cmp_eq_u32 s6, s7
+; CHECK-NEXT:    s_cmp_lg_u32 s6, s7
+; CHECK-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; CHECK-NEXT:    s_xor_b64 s[6:7], s[6:7], s[4:5]
+; CHECK-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; CHECK-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v1, s4, 0
 ; CHECK-NEXT:    v_writelane_b32 v1, s5, 1
-; CHECK-NEXT:    s_mov_b64 s[10:11], exec
-; CHECK-NEXT:    s_mov_b64 exec, -1
+; CHECK-NEXT:    s_or_saveexec_b64 s[10:11], -1
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v1 ; Reload Reuse
 ; CHECK-NEXT:    s_mov_b64 exec, s[10:11]
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
+; CHECK-NEXT:    s_cbranch_vccnz .LBB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %bb.4
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    s_or_saveexec_b64 s[10:11], -1
@@ -54,9 +57,8 @@ define void @test() {
 ; CHECK-NEXT:    s_mov_b64 exec, s[10:11]
 ; CHECK-NEXT:    v_readlane_b32 s4, v1, 0
 ; CHECK-NEXT:    v_readlane_b32 s5, v1, 1
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; CHECK-NEXT:    s_mov_b32 s4, 1
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s[4:5], v0, s4
+; CHECK-NEXT:    s_mov_b64 s[6:7], -1
+; CHECK-NEXT:    s_xor_b64 s[4:5], s[4:5], s[6:7]
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_1
 ; CHECK-NEXT:  ; %bb.6: ; %bb.5

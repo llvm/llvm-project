@@ -9,6 +9,106 @@ define amdgpu_kernel void @issue155902(i64 %arg, i64 %arg1, i64 %arg2, i64 %arg3
 ; GFX950-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
 ; GFX950-NEXT:    v_writelane_b32 v2, s33, 0
 ; GFX950-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x188
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x180
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x178
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x170
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x168
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x160
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x158
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x150
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x148
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x140
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x138
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x130
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x128
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x120
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x118
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x110
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x108
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x100
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xf8
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xf0
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xe8
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xe0
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xd8
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xd0
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xc8
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xc0
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xb8
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xb0
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xa8
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xa0
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x98
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x90
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x88
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x80
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x78
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x70
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x68
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x60
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x58
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x50
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x48
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x40
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x0
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x8
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x10
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x18
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x20
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x28
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x30
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x38
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x0
 ; GFX950-NEXT:    s_load_dwordx2 vcc, s[2:3], 0x8
 ; GFX950-NEXT:    s_load_dwordx2 s[98:99], s[2:3], 0x10
@@ -237,6 +337,106 @@ define amdgpu_kernel void @issue155902_fp(i64 %arg, i64 %arg1, i64 %arg2, i64 %a
 ; GFX950-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
 ; GFX950-NEXT:    v_writelane_b32 v2, s0, 0
 ; GFX950-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x188
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x180
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x178
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x170
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x168
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x160
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x158
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x150
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x148
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x140
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x138
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x130
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x128
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x120
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x118
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x110
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x108
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x100
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xf8
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xf0
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xe8
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xe0
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xd8
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xd0
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xc8
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xc0
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xb8
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xb0
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xa8
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xa0
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x98
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x90
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x88
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x80
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x78
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x70
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x68
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x60
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x58
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x50
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x48
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x40
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x8
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x10
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x18
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x20
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x28
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x30
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x38
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    v_writelane_b32 v2, s4, 1

@@ -864,6 +864,13 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(
   return (OldSize < 32);
 }
 
+bool AMDGPUTargetLowering::shouldExpandPowerOf2DivRem(EVT VT) const {
+  // At -O0 we disable DAG combines, so power-of-2 div/rem won't be
+  // converted to shifts. Request IR expansion for large types.
+  return getTargetMachine().getOptLevel() == CodeGenOptLevel::None &&
+         VT.getScalarSizeInBits() > 64;
+}
+
 bool AMDGPUTargetLowering::isLoadBitCastBeneficial(EVT LoadTy, EVT CastTy,
                                                    const SelectionDAG &DAG,
                                                    const MachineMemOperand &MMO) const {

@@ -10,10 +10,39 @@ declare ptr addrspace(5) @llvm.stacksave.p5()
 declare void @llvm.stackrestore.p5(ptr addrspace(5))
 
 define hidden void @stack_passed_argument([32 x i32], i32) {
-; GCN-LABEL: stack_passed_argument:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; WAVE32-OPT-LABEL: stack_passed_argument:
+; WAVE32-OPT:       ; %bb.0:
+; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; WAVE64-OPT-LABEL: stack_passed_argument:
+; WAVE64-OPT:       ; %bb.0:
+; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; WAVE32-O0-LABEL: stack_passed_argument:
+; WAVE32-O0:       ; %bb.0:
+; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4
+; WAVE32-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32
+; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0)
+; WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; WAVE64-O0-LABEL: stack_passed_argument:
+; WAVE64-O0:       ; %bb.0:
+; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4
+; WAVE64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32
+; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0)
+; WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; WAVE32-WWM-PREALLOC-LABEL: stack_passed_argument:
+; WAVE32-WWM-PREALLOC:       ; %bb.0:
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-WWM-PREALLOC-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4
+; WAVE32-WWM-PREALLOC-NEXT:    buffer_load_dword v0, off, s[0:3], s32
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0)
+; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
   ret void
 }
 
@@ -810,6 +839,8 @@ define amdgpu_kernel void @kernel_stacksave_sgpr(ptr addrspace(5) %stack) {
 ; WAVE32-O0:       ; %bb.0:
 ; WAVE32-O0-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
+; WAVE32-O0-NEXT:    s_load_dword s0, s[4:5], 0x0
+; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_mov_b32 s1, s0
 ; WAVE32-O0-NEXT:    ;;#ASMSTART
 ; WAVE32-O0-NEXT:    ; use s1
@@ -822,6 +853,8 @@ define amdgpu_kernel void @kernel_stacksave_sgpr(ptr addrspace(5) %stack) {
 ; WAVE64-O0:       ; %bb.0:
 ; WAVE64-O0-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
+; WAVE64-O0-NEXT:    s_load_dword s0, s[4:5], 0x0
+; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_mov_b32 s1, s0
 ; WAVE64-O0-NEXT:    ;;#ASMSTART
 ; WAVE64-O0-NEXT:    ; use s1
@@ -832,6 +865,8 @@ define amdgpu_kernel void @kernel_stacksave_sgpr(ptr addrspace(5) %stack) {
 ;
 ; WAVE32-WWM-PREALLOC-LABEL: kernel_stacksave_sgpr:
 ; WAVE32-WWM-PREALLOC:       ; %bb.0:
+; WAVE32-WWM-PREALLOC-NEXT:    s_load_dword s0, s[4:5], 0x0
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s1, s0
@@ -950,6 +985,9 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-O0-NEXT:    s_mov_b32 s15, s32
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v3, 17
 ; WAVE32-O0-NEXT:    buffer_store_dword v3, off, s[20:23], s15 offset:4
+; WAVE32-O0-NEXT:    ; implicit-def: $sgpr16
+; WAVE32-O0-NEXT:    v_mov_b32_e32 v3, s16
+; WAVE32-O0-NEXT:    buffer_store_dword v3, off, s[20:23], s15
 ; WAVE32-O0-NEXT:    s_mov_b32 s15, stack_passed_argument@abs32@hi
 ; WAVE32-O0-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
 ; WAVE32-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_sgpr17
@@ -1060,6 +1098,9 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE64-O0-NEXT:    s_mov_b32 s15, s32
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v3, 17
 ; WAVE64-O0-NEXT:    buffer_store_dword v3, off, s[24:27], s15 offset:4
+; WAVE64-O0-NEXT:    ; implicit-def: $sgpr16
+; WAVE64-O0-NEXT:    v_mov_b32_e32 v3, s16
+; WAVE64-O0-NEXT:    buffer_store_dword v3, off, s[24:27], s15
 ; WAVE64-O0-NEXT:    s_mov_b32 s15, stack_passed_argument@abs32@hi
 ; WAVE64-O0-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
 ; WAVE64-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_sgpr17
@@ -1171,6 +1212,9 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s15, s32
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v3, 17
 ; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v3, off, s[20:23], s15 offset:4
+; WAVE32-WWM-PREALLOC-NEXT:    ; implicit-def: $sgpr16
+; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v3, s16
+; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v3, off, s[20:23], s15
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s15, stack_passed_argument@abs32@hi
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
 ; WAVE32-WWM-PREALLOC-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_sgpr17
@@ -1356,6 +1400,9 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE32-O0-NEXT:    s_mov_b32 s16, s32
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, 17
 ; WAVE32-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s16 offset:4
+; WAVE32-O0-NEXT:    ; implicit-def: $sgpr17
+; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s17
+; WAVE32-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s16
 ; WAVE32-O0-NEXT:    s_mov_b32 s18, stack_passed_argument@abs32@hi
 ; WAVE32-O0-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
 ; WAVE32-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_sgpr17
@@ -1467,6 +1514,9 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE64-O0-NEXT:    s_mov_b32 s16, s32
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, 17
 ; WAVE64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s16 offset:4
+; WAVE64-O0-NEXT:    ; implicit-def: $sgpr17
+; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s17
+; WAVE64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s16
 ; WAVE64-O0-NEXT:    s_mov_b32 s18, stack_passed_argument@abs32@hi
 ; WAVE64-O0-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
 ; WAVE64-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_sgpr17
@@ -1578,6 +1628,9 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s16, s32
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, 17
 ; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v0, off, s[0:3], s16 offset:4
+; WAVE32-WWM-PREALLOC-NEXT:    ; implicit-def: $sgpr17
+; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s17
+; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v0, off, s[0:3], s16
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s18, stack_passed_argument@abs32@hi
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
 ; WAVE32-WWM-PREALLOC-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_sgpr17
@@ -1674,5 +1727,6 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GCN: {{.*}}
 ; WAVE32: {{.*}}
 ; WAVE64: {{.*}}

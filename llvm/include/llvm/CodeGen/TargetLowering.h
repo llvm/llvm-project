@@ -623,6 +623,11 @@ public:
     return BypassSlowDivWidths;
   }
 
+  /// Return true if the target wants ExpandIRInsts to expand div/rem
+  /// by power-of-2 constants, rather than leaving them for DAG combines.
+  /// Default is false (current behavior - skip power-of-2 cases).
+  virtual bool shouldExpandPowerOf2DivRem(EVT VT) const { return false; }
+
   /// Return true only if vscale must be a power of two.
   virtual bool isVScaleKnownToBeAPowerOfTwo() const { return false; }
 
