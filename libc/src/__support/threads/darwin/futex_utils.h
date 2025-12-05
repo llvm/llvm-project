@@ -13,6 +13,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/time/abs_timeout.h"
 #include "src/__support/time/clock_conversion.h"
+#include "src/__support/time/units.h"
 
 #include <os/os_sync_wait_on_address.h>
 
@@ -36,7 +37,8 @@ struct Futex : public cpp::Atomic<FutexWordType> {
       long ret = 0;
       if (timeout) {
         // Assuming, OS_CLOCK_MACH_ABSOLUTE_TIME is equivalent to CLOCK_REALTIME
-        uint64_t tnsec = timeout->get_timespec().tv_sec * 1000000000 +
+        using namespace time_units;
+        uint64_t tnsec = timeout->get_timespec().tv_sec * 1_s_ns +
                          timeout->get_timespec().tv_nsec;
         ret = os_sync_wait_on_address_with_timeout(
             reinterpret_cast<void *>(this), static_cast<uint64_t>(val),

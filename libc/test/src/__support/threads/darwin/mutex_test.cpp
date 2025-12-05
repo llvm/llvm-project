@@ -42,4 +42,5 @@ TEST(LlvmLibcSupportThreadsRawMutexTest, Timeout) {
   ASSERT_TRUE(mutex.unlock());
 }
 
-// TODO(bojle): add other tests a la linux
+// TODO(bojle): merge threads test for darwin and linux into one after
+// adding support for shared locks in darwin
