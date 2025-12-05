@@ -26,7 +26,7 @@ define <2 x double> @splice_v2f64_idx2(<2 x double> %a, <2 x double> %b) #0 {
 
 ; CHECK: The splice index exceeds the range [-VL, VL-1] where VL is the known minimum number of elements in the vector
 define <2 x double> @splice_v2f64_idx3(<2 x double> %a, <2 x double> %b) #1 {
-  %res = call <2 x double> @llvm.vector.splice.v2f64(<2 x double> %a, <2 x double> %b, i32 4)
+  %res = call <2 x double> @llvm.vector.splice.v2f64(<2 x double> %a, <2 x double> %b, i32 3)
   ret <2 x double> %res
 }
 
