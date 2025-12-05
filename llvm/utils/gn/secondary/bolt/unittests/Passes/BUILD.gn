@@ -15,7 +15,7 @@ unittest("PassTests") {
     "//llvm/lib/Object",
     "//llvm/lib/Target:TargetsToBuild",
   ]
-  sources = [ "InsertNegateRAState.cpp" ]
+  sources = [ "PointerAuthCFIFixup.cpp" ]
 
   defines = []
   include_dirs = []
