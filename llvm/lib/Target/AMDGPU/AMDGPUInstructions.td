@@ -695,6 +695,8 @@ defm atomic_load_fmin : binary_atomic_op_fp_all_as<atomic_load_fmin>;
 defm atomic_load_fmax : binary_atomic_op_fp_all_as<atomic_load_fmax>;
 defm atomic_load_uinc_wrap : binary_atomic_op_all_as<atomic_load_uinc_wrap>;
 defm atomic_load_udec_wrap : binary_atomic_op_all_as<atomic_load_udec_wrap>;
+defm atomic_load_usub_cond : binary_atomic_op_all_as<atomic_load_usub_cond>;
+defm atomic_load_usub_sat : binary_atomic_op_all_as<atomic_load_usub_sat>;
 defm AMDGPUatomic_cmp_swap : binary_atomic_op_all_as<AMDGPUatomic_cmp_swap>;
 
 def load_align8_local : PatFrag<(ops node:$ptr), (load_local node:$ptr)>,
@@ -804,12 +806,6 @@ class BitConvert <ValueType dt, ValueType st, RegisterClass rc> : AMDGPUPat <
 class DwordAddrPat<ValueType vt, RegisterClass rc> : AMDGPUPat <
   (vt (AMDGPUdwordaddr (vt rc:$addr))),
   (vt rc:$addr)
->;
-
-// rotr pattern
-class ROTRPattern <Instruction BIT_ALIGN> : AMDGPUPat <
-  (rotr i32:$src0, i32:$src1),
-  (BIT_ALIGN $src0, $src0, $src1)
 >;
 
 // Special conversion patterns

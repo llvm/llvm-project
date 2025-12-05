@@ -2596,6 +2596,10 @@ def HasAtomicFMinFMaxF64FlatInsts :
   Predicate<"Subtarget->hasAtomicFMinFMaxF64FlatInsts()">,
   AssemblerPredicate<(any_of FeatureAtomicFMinFMaxF64FlatInsts)>;
 
+def HasAtomicCondSubClampFlatInsts :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts)>;
+
 def HasLdsAtomicAddF64 :
   Predicate<"Subtarget->hasLdsAtomicAddF64()">,
   AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX1250Insts)>;
@@ -2925,6 +2929,10 @@ def HasFmaLegacy32 : Predicate<"Subtarget->hasGFX10_3Insts()">,
 
 def HasAtomicDsPkAdd16Insts : Predicate<"Subtarget->hasAtomicDsPkAdd16Insts()">,
   AssemblerPredicate<(any_of FeatureAtomicDsPkAdd16Insts)>;
+
+def HasAtomicDsCondSubClampInsts :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
 def HasAtomicFlatPkAdd16Insts : Predicate<"Subtarget->hasAtomicFlatPkAdd16Insts()">,
   AssemblerPredicate<(any_of FeatureAtomicFlatPkAdd16Insts)>;
