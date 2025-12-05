@@ -3,7 +3,7 @@
 ! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir -flang-deprecated-no-hlfir -fwrapv -o - %s | FileCheck %s --check-prefix=NO-NSW
 
 ! Simple tests for structured ordered loops with loop-control.
-! Tests the structure of the loop, storage to index variable and return and 
+! Tests the structure of the loop, storage to index variable and return and
 ! storage of the final value of the index variable.
 
 ! NO-NSW-NOT: overflow<nsw>

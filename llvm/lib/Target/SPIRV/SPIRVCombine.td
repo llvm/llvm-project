@@ -15,8 +15,15 @@ def vector_length_sub_to_distance_lowering : GICombineRule <
   (apply [{ Helper.applySPIRVDistance(*${root}); }])
 >;
 
+def vector_select_to_faceforward_lowering : GICombineRule <
+  (defs root:$root),
+  (match (wip_match_opcode G_SELECT):$root,
+          [{ return Helper.matchSelectToFaceForward(*${root}); }]),
+  (apply [{ Helper.applySPIRVFaceForward(*${root}); }])
+>;
+
 def SPIRVPreLegalizerCombiner
     : GICombiner<"SPIRVPreLegalizerCombinerImpl",
-                       [vector_length_sub_to_distance_lowering]> {
+                       [vector_length_sub_to_distance_lowering, vector_select_to_faceforward_lowering]> {
     let CombineAllMethodName = "tryCombineAllImpl";
 }

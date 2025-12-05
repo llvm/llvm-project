@@ -1,4 +1,4 @@
-# NVVM Dialect
+# 'nvvm' Dialect
 
 The NVVM dialect is MLIR's LLVM-IR-based, NVIDIA-specific backend dialect. It
 models NVVM intrinsics and public ISA functionality and introduces NVIDIA
@@ -7,6 +7,8 @@ shared, and cluster memory), enabling faithful lowering of GPU kernels to the
 NVPTX toolchain. While a NVVM op usually maps to a single LLVM IR intrinsic,
 the NVVM dialect uses type polymorphism and other attributes so that a single
 NVVM op can map to different LLVM intrinsics.
+
+[TOC]
 
 ## Scope and Capabilities
 
@@ -56,23 +58,45 @@ scopes and lifetimes:
 
 - **generic**: Can point to any memory space; requires runtime resolution of
   actual address space. Use when pointer origin is unknown at compile time.
-  Performance varies based on the underlying memory space.
+  Performance varies based on the underlying memory space. A pointer to this
+  memory space is represented by `LLVM_PointerGeneric` in the NVVM Ops.
 - **global**: Accessible by all threads across all blocks; persists across
   kernel launches. Highest latency but largest capacity (device memory). Best
-  for large data and inter-kernel communication.
+  for large data and inter-kernel communication. A pointer to this memory space
+  is represented by `LLVM_PointerGlobal` in the NVVM Ops.
 - **shared**: Shared within a thread block (CTA); very fast on-chip memory for
   cooperation between threads in the same block. Limited capacity. Ideal for
   block-level collaboration, caching, and reducing global memory traffic.
+  This memory is usually referred as `shared_cta` in the NVVMOps and as
+  `shared::cta` in the PTX ISA. A pointer to this memory space is represented
+  by the `LLVM_PointerShared` type in the NVVM Ops.
 - **constant**: Read-only memory cached per SM. Size typically limited to 64KB.
-  Best for read-only data and uniform values accessed by all threads.
+  Best for read-only data and uniform values accessed by all threads. A pointer
+  to this memory space is represented by `LLVM_PointerConst` type in NVVM Ops.
 - **local**: Private to each thread. Use for per-thread private data and
-  automatic variables that don't fit in registers.
+  automatic variables that don't fit in registers. A pointer to this memory is
+  represented by `LLVM_PointerLocal` type in NVVM Ops.
 - **tensor**: Special memory space for tensor core operations. Used by
   `tcgen05` instructions on SM 100+ for tensor input/output operations.
+  A pointer to this memory space is represented by the `LLVM_PointerTensor`
+  type in the NVVM Ops.
 - **shared_cluster**: Distributed shared memory across thread blocks within a
   cluster (SM 90+). Enables collaboration beyond single-block scope with fast
-  access across cluster threads.
+  access across cluster threads. This memory is usually referred as
+  `shared_cluster` in the NVVMOps and as `shared::cluster` in the PTX ISA.
+  A pointer to this memory space is represented by the `LLVM_PointerSharedCluster`
+  type in the NVVM Ops.
 
+## MBarrier objects
+
+An ``mbarrier`` is a barrier created in shared memory that supports
+synchronizing any subset of threads within a CTA. An *mbarrier object*
+is an opaque object in shared memory with `.b64` type and an alignment of
+8-bytes. Unlike ``nvvm.barrier`` Op which can access only a limited number
+of barriers per CTA, the *mbarrier objects* are user-defined and are only
+limited by the total shared memory size available. The list of operations
+supported on an *mbarrier object* is exposed through the ``nvvm.mbarrier.*``
+family of NVVM Ops.
 
 ## Non-Goals
 
@@ -83,5 +107,11 @@ dialects (e.g., `nvgpu`, `gpu`, or project-specific dialects). The design
 intent is a thin, predictable, low-level surface with near-mechanical lowering
 to NVVM/LLVM IR.
 
-[TOC]
+
+## Operations
+
+All operations in the NVIDIA's instruction set have a custom form in MLIR. The mnemonic
+of an operation is that used in LLVM IR prefixed with "`nvvm.`".
+
+[include "Dialects/NVVMOps.md"]
 

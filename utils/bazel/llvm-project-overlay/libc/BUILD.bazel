@@ -171,11 +171,6 @@ libc_support_library(
 libc_support_library(
     name = "llvm_libc_types_float128",
     hdrs = ["include/llvm-libc-types/float128.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "@platforms//os:windows": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     deps = [":llvm_libc_macros_float_macros"],
 )
 
@@ -1757,8 +1752,8 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_time_linux_clock_conversion",
-    hdrs = ["src/__support/time/linux/clock_conversion.h"],
+    name = "__support_time_clock_conversion",
+    hdrs = ["src/__support/time/clock_conversion.h"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -1794,8 +1789,8 @@ libc_support_library(
     }),
     deps = [
         ":__support_libc_assert",
+        ":__support_time_clock_conversion",
         ":__support_time_linux_abs_timeout",
-        ":__support_time_linux_clock_conversion",
         ":hdr_time_macros",
     ],
 )
@@ -1804,11 +1799,9 @@ libc_support_library(
     name = "__support_wctype_utils",
     hdrs = ["src/__support/wctype_utils.h"],
     deps = [
-        ":__support_cpp_optional",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":types_wchar_t",
-        ":types_wint_t",
     ],
 )
 
@@ -3072,6 +3065,24 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_expm1",
+    hdrs = ["src/__support/math/expm1.h"],
+    deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_fputil_triple_double",
+        ":__support_integer_literals",
+        ":__support_macros_optimization",
+        ":__support_math_common_constants",
+        ":__support_math_exp_constants",
+    ],
+)
+
+libc_support_library(
     name = "__support_range_reduction_double",
     hdrs = [
         "src/__support/math/range_reduction_double_common.h",
@@ -3799,15 +3810,7 @@ libc_math_function(
 libc_math_function(
     name = "expm1",
     additional_deps = [
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_fputil_triple_double",
-        ":__support_integer_literals",
-        ":__support_macros_optimization",
-        ":__support_math_common_constants",
+        ":__support_math_expm1",
     ],
 )
 
@@ -5449,7 +5452,10 @@ libc_support_library(
 
 libc_support_library(
     name = "string_utils",
-    hdrs = ["src/string/string_utils.h"],
+    hdrs = [
+        "src/string/string_length.h",
+        "src/string/string_utils.h",
+    ],
     deps = [
         ":__support_common",
         ":__support_cpp_bitset",
@@ -7477,7 +7483,6 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_macros_config",
-        ":__support_wctype_utils",
         ":hdr_wchar_macros",
         ":types_wint_t",
     ],
@@ -7709,7 +7714,6 @@ libc_function(
         ":__support_common",
         ":__support_macros_config",
         ":__support_macros_null_check",
-        ":__support_wctype_utils",
         ":hdr_stdio_macros",
         ":types_wint_t",
     ],

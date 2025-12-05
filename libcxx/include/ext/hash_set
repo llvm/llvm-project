@@ -356,10 +356,7 @@ hash_set<_Value, _Hash, _Pred, _Alloc>::hash_set(
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-hash_set<_Value, _Hash, _Pred, _Alloc>::hash_set(const hash_set& __u) : __table_(__u.__table_) {
-  __table_.__rehash_unique(__u.bucket_count());
-  insert(__u.begin(), __u.end());
-}
+hash_set<_Value, _Hash, _Pred, _Alloc>::hash_set(const hash_set& __u) : __table_(__u.__table_) {}
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
