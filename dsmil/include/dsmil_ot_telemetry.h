@@ -27,6 +27,18 @@ extern "C" {
  */
 
 /**
+ * Telemetry instrumentation levels
+ * Lattice: off < min < normal < debug < trace
+ */
+typedef enum {
+    DSMIL_TELEMETRY_LEVEL_OFF = 0,    /**< No telemetry */
+    DSMIL_TELEMETRY_LEVEL_MIN = 1,    /**< Minimal telemetry (safety-critical only) */
+    DSMIL_TELEMETRY_LEVEL_NORMAL = 2, /**< Normal telemetry (entry probes) */
+    DSMIL_TELEMETRY_LEVEL_DEBUG = 3,   /**< Debug telemetry (entry + exit + timing) */
+    DSMIL_TELEMETRY_LEVEL_TRACE = 4   /**< Trace telemetry (all + sampling) */
+} dsmil_telemetry_level_t;
+
+/**
  * OT telemetry event types
  */
 typedef enum {
@@ -43,7 +55,16 @@ typedef enum {
     DSMIL_TELEMETRY_SS7_MSG_TX = 21,      /**< SS7 message transmitted */
     DSMIL_TELEMETRY_SIGTRAN_MSG_RX = 22,  /**< SIGTRAN message received */
     DSMIL_TELEMETRY_SIGTRAN_MSG_TX = 23,  /**< SIGTRAN message transmitted */
-    DSMIL_TELEMETRY_SIG_ANOMALY = 24      /**< Signaling anomaly detected */
+    DSMIL_TELEMETRY_SIG_ANOMALY = 24,     /**< Signaling anomaly detected */
+
+    // Generic annotation event types (30-36)
+    DSMIL_TELEMETRY_NET_IO = 30,          /**< Network I/O operation */
+    DSMIL_TELEMETRY_CRYPTO = 31,          /**< Cryptographic operation */
+    DSMIL_TELEMETRY_PROCESS = 32,         /**< Process/system operation */
+    DSMIL_TELEMETRY_FILE = 33,            /**< File I/O operation */
+    DSMIL_TELEMETRY_UNTRUSTED = 34,       /**< Untrusted data handling */
+    DSMIL_TELEMETRY_ERROR = 35,           /**< Error handler invocation */
+    DSMIL_TELEMETRY_PANIC = 36            /**< Panic/fatal error */
 } dsmil_telemetry_event_type_t;
 
 /**
@@ -84,6 +105,14 @@ typedef struct {
     uint32_t    sigtran_rctx;                 /**< SIGTRAN Routing Context (M3UA/SUA), 0 if not set */
     uint8_t     ss7_msg_class;                /**< MTP3/TCAP/CAP message class (if mapped) */
     uint8_t     ss7_msg_type;                 /**< Message type (approximate mapping) */
+
+    // Generic annotation fields (for event types 30-36)
+    const char *category;                     /**< Event category: "net", "crypto", "process", "file", "untrusted", "error" */
+    const char *op;                           /**< Operation name (e.g., "connect", "encrypt", "open") */
+    int32_t     status_code;                  /**< Status/return code (0 = success, negative = error) */
+    const char *resource;                     /**< Resource identifier (e.g., filename, socket, key name) */
+    const char *error_msg;                    /**< Error message (if status_code != 0) */
+    uint64_t    elapsed_ns;                   /**< Elapsed time in nanoseconds (debug/trace levels) */
 } dsmil_telemetry_event_t;
 
 /**
@@ -180,6 +209,31 @@ void dsmil_ot_telemetry_shutdown(void);
  * OFF in tests if desired).
  */
 int dsmil_ot_telemetry_is_enabled(void);
+
+/**
+ * Get current telemetry level
+ *
+ * @return Current telemetry level (combines compile-time and runtime settings)
+ *
+ * Combines compile-time level (from module flag) with runtime override
+ * (from DSMIL_TELEMETRY_LEVEL environment variable). Enforces lattice:
+ * off < min < normal < debug < trace. Mission profile overrides may
+ * force minimum levels unless CLI demanded stricter.
+ */
+dsmil_telemetry_level_t dsmil_telemetry_get_level(void);
+
+/**
+ * Check if telemetry level allows event category
+ *
+ * @param event_type Event type
+ * @param category Event category (e.g., "net", "crypto", "process")
+ * @return 1 if allowed, 0 if filtered
+ *
+ * Centralized logic for level-based gating. Events are filtered based on
+ * current telemetry level and event category.
+ */
+int dsmil_telemetry_level_allows(dsmil_telemetry_event_type_t event_type,
+                                  const char *category);
 
 /** @} */
 

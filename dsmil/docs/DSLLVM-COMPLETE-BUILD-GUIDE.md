@@ -119,6 +119,62 @@ export DSMIL_OT_TELEMETRY=0  # Disable
 
 ---
 
+### Telemetry Level Flag (v1.9)
+
+**Flag**: `-fdsmil-telemetry-level=<level>`
+
+**Description**: Controls telemetry instrumentation verbosity level.
+
+**Levels**:
+- `off` - No telemetry instrumentation
+- `min` - Minimal telemetry (safety-critical only: OT events, errors, panics)
+- `normal` - Normal telemetry (entry probes for all annotated functions) - **default**
+- `debug` - Debug telemetry (entry + exit + elapsed time)
+- `trace` - Trace telemetry (all + probabilistic sampling)
+
+**Usage**:
+```bash
+# Minimal telemetry (production)
+dsmil-clang -fdsmil-ot-telemetry \
+             -fdsmil-telemetry-level=min \
+             source.c -o source
+
+# Normal telemetry (default)
+dsmil-clang -fdsmil-ot-telemetry \
+             -fdsmil-telemetry-level=normal \
+             source.c -o source
+
+# Debug telemetry (development)
+dsmil-clang -fdsmil-ot-telemetry \
+             -fdsmil-telemetry-level=debug \
+             source.c -o source
+
+# Trace telemetry (detailed analysis)
+dsmil-clang -fdsmil-ot-telemetry \
+             -fdsmil-telemetry-level=trace \
+             source.c -o source
+```
+
+**Effects**:
+- Controls which events are instrumented
+- Affects entry/exit/timing instrumentation
+- Level gating at runtime
+
+**Runtime Override**:
+```bash
+# Override level at runtime
+export DSMIL_TELEMETRY_LEVEL=debug
+./my_program
+
+# Mission profile affects default level
+export DSMIL_MISSION_PROFILE=ics_prod  # Forces min level minimum
+./my_program
+```
+
+**Level Lattice**: `off < min < normal < debug < trace`
+
+---
+
 ### Telecom Flags Flag
 
 **Flag**: `-fdsmil-telecom-flags`
@@ -184,15 +240,66 @@ dsmil-clang++ -fsanitize=fuzzer \
 
 **Flag**: `-mllvm -dsmil-ot-telemetry`
 
-**Description**: Enable OT telemetry instrumentation pass.
+**Description**: Enable OT telemetry instrumentation pass. Instruments OT-critical functions, generic annotations (NET_IO, CRYPTO, PROCESS, FILE, UNTRUSTED, ERROR_HANDLER), and safety signals.
+
+**Additional Flags**:
+- `-mllvm -dsmil-telemetry-level=<level>` - Set telemetry level (off, min, normal, debug, trace)
+- `-mllvm -dsmil-telemetry-manifest-path=<path>` - Custom manifest path
+- `-mllvm -dsmil-mission-profile=<profile>` - Mission profile name
 
 **Usage**:
 ```bash
 dsmil-clang -mllvm -dsmil-ot-telemetry source.c
 ```
 
+**Features**:
+- Entry/exit instrumentation (based on level)
+- Timing measurements (debug/trace levels)
+- Generic annotation support
+- Error handler detection with panic detection
+- Libc symbol heuristics
+
 **Related Flags**:
 - `-mllvm -dsmil-telemetry-manifest-path=<path>` - Custom manifest path
+
+---
+
+### Telemetry Metrics Pass (v1.9)
+
+**Flag**: `-mllvm -dsmil-metrics`
+
+**Description**: Collects telemetry instrumentation metrics and generates JSON manifest with statistics.
+
+**Additional Flags**:
+- `-mllvm -dsmil-metrics-output-dir=<dir>` - Output directory for metrics JSON files
+- `-mllvm -dsmil-mission-profile=<profile>` - Mission profile name
+
+**Usage**:
+```bash
+dsmil-clang -mllvm -dsmil-metrics source.c
+```
+
+**Output**:
+- Metrics manifest: `<module>.dsmil.metrics.json`
+- Contains: function counts, instrumentation coverage, category distribution, OT tier distribution, telecom statistics
+
+**Example Output**:
+```json
+{
+  "module_id": "network_daemon",
+  "metrics": {
+    "total_functions": 150,
+    "instrumented_functions": 45,
+    "instrumentation_coverage": 30.0,
+    "net_io_count": 15,
+    "crypto_count": 8,
+    "authority_tiers": {
+      "tier_0": 2,
+      "tier_1": 8
+    }
+  }
+}
+```
 
 ---
 
@@ -636,6 +743,20 @@ void dsmil_ot_telemetry_shutdown(void);
 int dsmil_ot_telemetry_is_enabled(void);
 ```
 
+#### Telemetry Level Management (v1.9)
+
+```c
+dsmil_telemetry_level_t dsmil_telemetry_get_level(void);
+int dsmil_telemetry_level_allows(dsmil_telemetry_event_type_t event_type, const char *category);
+```
+
+**Telemetry Levels**:
+- `DSMIL_TELEMETRY_LEVEL_OFF` (0) - No telemetry
+- `DSMIL_TELEMETRY_LEVEL_MIN` (1) - Minimal (safety-critical only)
+- `DSMIL_TELEMETRY_LEVEL_NORMAL` (2) - Normal (entry probes) - default
+- `DSMIL_TELEMETRY_LEVEL_DEBUG` (3) - Debug (entry + exit + timing)
+- `DSMIL_TELEMETRY_LEVEL_TRACE` (4) - Trace (all + sampling)
+
 #### Event Logging
 
 ```c
@@ -651,6 +772,45 @@ void dsmil_telemetry_safety_signal_update(const dsmil_telemetry_event_t *ev);
 - `DSMIL_TELEMETRY_SES_REJECT` (5)
 - `DSMIL_TELEMETRY_INVARIANT_HIT` (6)
 - `DSMIL_TELEMETRY_INVARIANT_FAIL` (7)
+- `DSMIL_TELEMETRY_SS7_MSG_RX` (20)
+- `DSMIL_TELEMETRY_SS7_MSG_TX` (21)
+- `DSMIL_TELEMETRY_SIGTRAN_MSG_RX` (22)
+- `DSMIL_TELEMETRY_SIGTRAN_MSG_TX` (23)
+- `DSMIL_TELEMETRY_SIG_ANOMALY` (24)
+- `DSMIL_TELEMETRY_NET_IO` (30) - Network I/O
+- `DSMIL_TELEMETRY_CRYPTO` (31) - Cryptographic operation
+- `DSMIL_TELEMETRY_PROCESS` (32) - Process/system operation
+- `DSMIL_TELEMETRY_FILE` (33) - File I/O
+- `DSMIL_TELEMETRY_UNTRUSTED` (34) - Untrusted data
+- `DSMIL_TELEMETRY_ERROR` (35) - Error handler
+- `DSMIL_TELEMETRY_PANIC` (36) - Panic/fatal error
+
+**Event Structure** (v1.9 extended):
+```c
+typedef struct {
+    dsmil_telemetry_event_type_t event_type;
+    const char *module_id;
+    const char *func_id;
+    const char *file;
+    uint32_t line;
+    uint8_t layer;
+    uint8_t device;
+    const char *stage;
+    const char *mission_profile;
+    uint8_t authority_tier;
+    uint64_t build_id;
+    uint64_t provenance_id;
+    // ... safety signal fields ...
+    // ... telecom fields ...
+    // New fields (v1.9):
+    const char *category;      // Event category
+    const char *op;            // Operation name
+    int32_t status_code;       // Status/return code
+    const char *resource;       // Resource identifier
+    const char *error_msg;     // Error message
+    uint64_t elapsed_ns;       // Elapsed time (debug/trace)
+} dsmil_telemetry_event_t;
+```
 
 ---
 
@@ -937,6 +1097,7 @@ CC = dsmil-clang
 CXX = dsmil-clang++
 CFLAGS = -fdsmil-mission-profile=ics_ops \
          -fdsmil-ot-telemetry \
+         -fdsmil-telemetry-level=normal \
          -O2
 CXXFLAGS = $(CFLAGS)
 
@@ -1741,6 +1902,14 @@ void dsmil_fuzz_clear_events(void);
 - `DSMIL_SES_GATE` - SES gate function
 - `DSMIL_SAFETY_SIGNAL(name)` - Safety signal variable
 
+### Generic Telemetry Annotations (v1.9)
+- `DSMIL_NET_IO` - Network I/O operation
+- `DSMIL_CRYPTO` - Cryptographic operation
+- `DSMIL_PROCESS` - Process/system operation
+- `DSMIL_FILE` - File I/O operation
+- `DSMIL_UNTRUSTED` - Untrusted data handling
+- `DSMIL_ERROR_HANDLER` - Error handler function
+
 ### Telecom
 - `DSMIL_TELECOM_STACK(name)` - Telecom stack
 - `DSMIL_SS7_ROLE(role)` - SS7 role
@@ -1793,7 +1962,8 @@ dsmil/runtime/
 
 ```
 dsmil/lib/Passes/
-├── DsmilTelemetryPass.cpp                # OT telemetry pass
+├── DsmilTelemetryPass.cpp                # OT telemetry pass (v1.9: expanded)
+├── DsmilMetricsPass.cpp                  # Telemetry metrics pass (v1.9: NEW)
 ├── DsmilTelecomPass.cpp                  # Telecom pass
 ├── DsmilFuzzCoveragePass.cpp            # Coverage pass
 ├── DsmilFuzzMetricsPass.cpp             # Metrics pass
@@ -1804,6 +1974,8 @@ dsmil/lib/Passes/
 
 ```
 dsmil/tools/
+├── dsmil-telemetry-summary/              # Telemetry summary tool (v1.9: NEW)
+│   └── dsmil-telemetry-summary.cpp      # Aggregates metrics from all modules
 ├── dsmil-gen-fuzz-harness/
 │   └── dsmil-gen-fuzz-harness.cpp       # Harness generator
 └── ...
@@ -1842,6 +2014,41 @@ dsmil-clang -fdsmil-mission-profile=ics_ops source.c -o source
 dsmil-clang -fdsmil-ot-telemetry \
              -fdsmil-mission-profile=ics_ops \
              source.c -o source
+```
+
+### With Telemetry Level Control
+
+```bash
+# Production: minimal telemetry
+dsmil-clang -fdsmil-ot-telemetry \
+             -fdsmil-telemetry-level=min \
+             -fdsmil-mission-profile=ics_prod \
+             source.c -o source
+
+# Development: debug telemetry with timing
+dsmil-clang -fdsmil-ot-telemetry \
+             -fdsmil-telemetry-level=debug \
+             source.c -o source
+
+# Analysis: trace telemetry with sampling
+dsmil-clang -fdsmil-ot-telemetry \
+             -fdsmil-telemetry-level=trace \
+             source.c -o source
+```
+
+### With Metrics Collection
+
+```bash
+# Generate telemetry manifest and metrics
+dsmil-clang -fdsmil-ot-telemetry \
+             -mllvm -dsmil-metrics \
+             -mllvm -dsmil-metrics-output-dir=./metrics \
+             source.c -o source
+
+# Aggregate metrics from all modules
+dsmil-telemetry-summary \
+    --input-glob "*.dsmil.metrics.json" \
+    --output dsmil.global.metrics.json
 ```
 
 ### With Telecom Flagging

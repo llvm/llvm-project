@@ -97,6 +97,26 @@ target_include_directories(test_attributes PRIVATE
     ${DSMIL_ROOT_DIR}/include
 )
 
+add_executable(test_telemetry_expansion_runtime
+    runtime/test_telemetry_expansion_runtime.c
+)
+target_link_libraries(test_telemetry_expansion_runtime
+    dsmil_ot_telemetry
+)
+target_include_directories(test_telemetry_expansion_runtime PRIVATE
+    ${DSMIL_ROOT_DIR}/include
+)
+
+add_executable(test_telemetry_expansion
+    integration/test_telemetry_expansion.c
+)
+target_link_libraries(test_telemetry_expansion
+    dsmil_ot_telemetry
+)
+target_include_directories(test_telemetry_expansion PRIVATE
+    ${DSMIL_ROOT_DIR}/include
+)
+
 # Pass tests (compile-only, use LIT for execution)
 add_library(test_ot_telemetry_pass OBJECT
     passes/test_ot_telemetry_pass.c
@@ -119,6 +139,13 @@ target_include_directories(test_fuzz_coverage_pass PRIVATE
     ${DSMIL_ROOT_DIR}/include
 )
 
+add_library(test_telemetry_expansion_pass OBJECT
+    passes/test_telemetry_expansion_pass.c
+)
+target_include_directories(test_telemetry_expansion_pass PRIVATE
+    ${DSMIL_ROOT_DIR}/include
+)
+
 # Test targets
 add_custom_target(check-dsmil-runtime
     COMMAND ${CMAKE_BINARY_DIR}/test_ot_telemetry_runtime
@@ -126,12 +153,16 @@ add_custom_target(check-dsmil-runtime
     COMMAND ${CMAKE_BINARY_DIR}/test_fuzz_telemetry_advanced_runtime
     COMMAND ${CMAKE_BINARY_DIR}/test_telecom_macros
     COMMAND ${CMAKE_BINARY_DIR}/test_attributes
+    COMMAND ${CMAKE_BINARY_DIR}/test_telemetry_expansion_runtime
+    COMMAND ${CMAKE_BINARY_DIR}/test_telemetry_expansion
     DEPENDS
         test_ot_telemetry_runtime
         test_fuzz_telemetry_runtime
         test_fuzz_telemetry_advanced_runtime
         test_telecom_macros
         test_attributes
+        test_telemetry_expansion_runtime
+        test_telemetry_expansion
     COMMENT "Running DSLLVM runtime tests"
 )
 

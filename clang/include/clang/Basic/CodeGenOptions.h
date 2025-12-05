@@ -298,6 +298,9 @@ public:
   /// file, for example with -save-temps.
   std::string MainFileName;
 
+  /// DSMIL telemetry instrumentation level: "off", "min", "normal", "debug", "trace"
+  std::string DSMILTelemetryLevel = "normal";
+
   /// The name for the split debug info file used for the DW_AT_[GNU_]dwo_name
   /// attribute in the skeleton CU.
   std::string SplitDwarfFile;
