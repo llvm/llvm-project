@@ -27,8 +27,8 @@ define void @weakcorssing_delta_ovfl(ptr %A) {
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - consistent output [0]!
 ; CHECK-ALL-NEXT:    Runtime Assumptions:
-; CHECK-ALL-NEXT:    Equal predicate: {9223372036854775808,+,-3}<nsw><%loop.header> == (sext i64 {-9223372036854775808,+,-3}<nw><%loop.header> to i128)
-; CHECK-ALL-NEXT:    Equal predicate: (-1 + (sext i64 {-9223372036854775808,+,-3}<nw><%loop.header> to i128))<nsw> == {9223372036854775807,+,-3}<nsw><%loop.header>
+; CHECK-ALL-NEXT:    Equal predicate: (sext i64 {-9223372036854775808,+,-3}<nw><%loop.header> to i128) == {9223372036854775808,+,-3}<nsw><%loop.header>
+; CHECK-ALL-NEXT:    Equal predicate: {9223372036854775807,+,-3}<nsw><%loop.header> == (-1 + (sext i64 {-9223372036854775808,+,-3}<nw><%loop.header> to i128))<nsw>
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
@@ -38,8 +38,8 @@ define void @weakcorssing_delta_ovfl(ptr %A) {
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
 ; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - consistent output [*]!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:    Runtime Assumptions:
-; CHECK-WEAK-CROSSING-SIV-NEXT:    Equal predicate: {9223372036854775808,+,-3}<nsw><%loop.header> == (sext i64 {-9223372036854775808,+,-3}<nw><%loop.header> to i128)
-; CHECK-WEAK-CROSSING-SIV-NEXT:    Equal predicate: (-1 + (sext i64 {-9223372036854775808,+,-3}<nw><%loop.header> to i128))<nsw> == {9223372036854775807,+,-3}<nsw><%loop.header>
+; CHECK-WEAK-CROSSING-SIV-NEXT:    Equal predicate: (sext i64 {-9223372036854775808,+,-3}<nw><%loop.header> to i128) == {9223372036854775808,+,-3}<nsw><%loop.header>
+; CHECK-WEAK-CROSSING-SIV-NEXT:    Equal predicate: {9223372036854775807,+,-3}<nsw><%loop.header> == (-1 + (sext i64 {-9223372036854775808,+,-3}<nw><%loop.header> to i128))<nsw>
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - none!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
@@ -95,29 +95,29 @@ define void @weakcorssing_prod_ovfl(ptr %A) {
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - consistent output [0]!
 ; CHECK-ALL-NEXT:    Runtime Assumptions:
-; CHECK-ALL-NEXT:    Equal predicate: {9223372036854775808,+,-3}<nsw><%loop> == (sext i64 {-9223372036854775808,+,-3}<nw><%loop> to i128)
-; CHECK-ALL-NEXT:    Equal predicate: (-1 + (sext i64 {-9223372036854775808,+,-3}<nw><%loop> to i128))<nsw> == {9223372036854775807,+,-3}<nsw><%loop>
+; CHECK-ALL-NEXT:    Equal predicate: (sext i64 {-9223372036854775808,+,-3}<nw><%loop> to i128) == {9223372036854775808,+,-3}<nsw><%loop>
+; CHECK-ALL-NEXT:    Equal predicate: {9223372036854775807,+,-3}<nsw><%loop> == (-1 + (sext i64 {-9223372036854775808,+,-3}<nw><%loop> to i128))<nsw>
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - consistent output [0]!
 ; CHECK-ALL-NEXT:    Runtime Assumptions:
-; CHECK-ALL-NEXT:    Equal predicate: {2,+,3}<nuw><nsw><%loop> == (sext i64 {2,+,3}<nuw><%loop> to i128)
-; CHECK-ALL-NEXT:    Equal predicate: (-1 + (sext i64 {2,+,3}<nuw><%loop> to i128))<nsw> == {1,+,3}<nuw><nsw><%loop>
+; CHECK-ALL-NEXT:    Equal predicate: (sext i64 {2,+,3}<nuw><%loop> to i128) == {2,+,3}<nuw><nsw><%loop>
+; CHECK-ALL-NEXT:    Equal predicate: {1,+,3}<nuw><nsw><%loop> == (-1 + (sext i64 {2,+,3}<nuw><%loop> to i128))<nsw>
 ;
 ; CHECK-WEAK-CROSSING-SIV-LABEL: 'weakcorssing_prod_ovfl'
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
 ; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - consistent output [*]!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:    Runtime Assumptions:
-; CHECK-WEAK-CROSSING-SIV-NEXT:    Equal predicate: {9223372036854775808,+,-3}<nsw><%loop> == (sext i64 {-9223372036854775808,+,-3}<nw><%loop> to i128)
-; CHECK-WEAK-CROSSING-SIV-NEXT:    Equal predicate: (-1 + (sext i64 {-9223372036854775808,+,-3}<nw><%loop> to i128))<nsw> == {9223372036854775807,+,-3}<nsw><%loop>
+; CHECK-WEAK-CROSSING-SIV-NEXT:    Equal predicate: (sext i64 {-9223372036854775808,+,-3}<nw><%loop> to i128) == {9223372036854775808,+,-3}<nsw><%loop>
+; CHECK-WEAK-CROSSING-SIV-NEXT:    Equal predicate: {9223372036854775807,+,-3}<nsw><%loop> == (-1 + (sext i64 {-9223372036854775808,+,-3}<nw><%loop> to i128))<nsw>
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - none!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - consistent output [*]!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:    Runtime Assumptions:
-; CHECK-WEAK-CROSSING-SIV-NEXT:    Equal predicate: {2,+,3}<nuw><nsw><%loop> == (sext i64 {2,+,3}<nuw><%loop> to i128)
-; CHECK-WEAK-CROSSING-SIV-NEXT:    Equal predicate: (-1 + (sext i64 {2,+,3}<nuw><%loop> to i128))<nsw> == {1,+,3}<nuw><nsw><%loop>
+; CHECK-WEAK-CROSSING-SIV-NEXT:    Equal predicate: (sext i64 {2,+,3}<nuw><%loop> to i128) == {2,+,3}<nuw><nsw><%loop>
+; CHECK-WEAK-CROSSING-SIV-NEXT:    Equal predicate: {1,+,3}<nuw><nsw><%loop> == (-1 + (sext i64 {2,+,3}<nuw><%loop> to i128))<nsw>
 ;
 entry:
   br label %loop

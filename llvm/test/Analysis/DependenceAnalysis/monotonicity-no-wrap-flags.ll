@@ -78,8 +78,8 @@ define void @nested_loop_nsw0(ptr %a, i64 %n, i64 %m) {
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    da analyze - output [* *]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: {{\{\{}}1,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j> == (sext i64 {{\{\{}}1,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><%loop.j> to i128)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i64 {{\{\{}}1,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><%loop.j> to i128))<nsw> == {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
+; CHECK-NEXT:    Equal predicate: (sext i64 {{\{\{}}1,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><%loop.j> to i128) == {{\{\{}}1,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
+; CHECK-NEXT:    Equal predicate: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j> == (-1 + (sext i64 {{\{\{}}1,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><%loop.j> to i128))<nsw>
 ;
 entry:
   %guard.i = icmp sgt i64 %n, 0
@@ -269,8 +269,8 @@ define void @nested_loop_step(ptr %a, i64 %n, i64 %m, i64 %step) {
 ; CHECK-NEXT:    da analyze - consistent output [0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%loop.i.header> slt) %step
-; CHECK-NEXT:    Equal predicate: {(sext i64 %step to i128),+,(sext i64 %step to i128)}<nw><%loop.j> == (sext i64 {%step,+,%step}<nw><%loop.j> to i128)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i64 {%step,+,%step}<nw><%loop.j> to i128))<nsw> == (sext i64 {(-1 + %step),+,%step}<nw><%loop.j> to i128)
+; CHECK-NEXT:    Equal predicate: (sext i64 {%step,+,%step}<nw><%loop.j> to i128) == {(sext i64 %step to i128),+,(sext i64 %step to i128)}<nw><%loop.j>
+; CHECK-NEXT:    Equal predicate: (sext i64 {(-1 + %step),+,%step}<nw><%loop.j> to i128) == (-1 + (sext i64 {%step,+,%step}<nw><%loop.j> to i128))<nsw>
 ; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%loop.i.header> slt) %step
 ;
 entry:
@@ -480,8 +480,8 @@ define void @conditional_store1(ptr %a, i64 %n, i64 %m) {
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    da analyze - output [* *]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: {{\{\{}}1,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j.header> == (sext i64 {{\{\{}}1,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><%loop.j.header> to i128)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i64 {{\{\{}}1,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><%loop.j.header> to i128))<nsw> == {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j.header>
+; CHECK-NEXT:    Equal predicate: (sext i64 {{\{\{}}1,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><%loop.j.header> to i128) == {{\{\{}}1,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j.header>
+; CHECK-NEXT:    Equal predicate: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j.header> == (-1 + (sext i64 {{\{\{}}1,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><%loop.j.header> to i128))<nsw>
 ;
 entry:
   %guard.i = icmp sgt i64 %n, 0

@@ -36,8 +36,8 @@ define void @p2(i64 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; LIN-NEXT:    Runtime Assumptions:
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.cond4.preheader> slt) 100
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body6> slt) 100
-; LIN-NEXT:    Equal predicate: {80000,+,80000}<nuw><nsw><%for.cond1.preheader> == (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128))<nsw> == (127 + (sext i64 {79872,+,80000}<nw><%for.cond1.preheader> to i128))<nuw><nsw>
+; LIN-NEXT:    Equal predicate: (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128) == {80000,+,80000}<nuw><nsw><%for.cond1.preheader>
+; LIN-NEXT:    Equal predicate: (127 + (sext i64 {79872,+,80000}<nw><%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128))<nsw>
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.cond4.preheader> slt) 100
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body6> slt) 100
 ; LIN-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: %0 = load i64, ptr %arrayidx17, align 8
@@ -45,13 +45,13 @@ define void @p2(i64 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; LIN-NEXT:    Runtime Assumptions:
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.cond4.preheader> slt) 100
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body6> slt) 100
-; LIN-NEXT:    Equal predicate: {80000,+,80000}<nuw><nsw><%for.cond1.preheader> == (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128))<nsw> == (127 + (sext i64 {79872,+,80000}<nw><%for.cond1.preheader> to i128))<nuw><nsw>
+; LIN-NEXT:    Equal predicate: (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128) == {80000,+,80000}<nuw><nsw><%for.cond1.preheader>
+; LIN-NEXT:    Equal predicate: (127 + (sext i64 {79872,+,80000}<nw><%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {80000,+,80000}<nuw><%for.cond1.preheader> to i128))<nsw>
 ; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><%for.cond4.preheader> slt) 100
 ; LIN-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body12> slt) 100
-; LIN-NEXT:    Equal predicate: (80000 * (sext i64 {3,+,1}<nuw><%for.cond1.preheader> to i128))<nsw> == (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128)
-; LIN-NEXT:    Equal predicate: (80000 + (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128))<nsw> == (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128))<nsw> == (127 + (sext i64 {319872,+,80000}<%for.cond1.preheader> to i128))<nuw><nsw>
+; LIN-NEXT:    Equal predicate: (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128) == (80000 * (sext i64 {3,+,1}<nuw><%for.cond1.preheader> to i128))<nsw>
+; LIN-NEXT:    Equal predicate: (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128) == (80000 + (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128))<nsw>
+; LIN-NEXT:    Equal predicate: (127 + (sext i64 {319872,+,80000}<%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128))<nsw>
 ; LIN-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8
 ; LIN-NEXT:    da analyze - confused!
 ; LIN-NEXT:  Src: %0 = load i64, ptr %arrayidx17, align 8 --> Dst: %0 = load i64, ptr %arrayidx17, align 8
@@ -59,9 +59,9 @@ define void @p2(i64 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; LIN-NEXT:    Runtime Assumptions:
 ; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><%for.cond4.preheader> slt) 100
 ; LIN-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body12> slt) 100
-; LIN-NEXT:    Equal predicate: (80000 * (sext i64 {3,+,1}<nuw><%for.cond1.preheader> to i128))<nsw> == (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128)
-; LIN-NEXT:    Equal predicate: (80000 + (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128))<nsw> == (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128))<nsw> == (127 + (sext i64 {319872,+,80000}<%for.cond1.preheader> to i128))<nuw><nsw>
+; LIN-NEXT:    Equal predicate: (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128) == (80000 * (sext i64 {3,+,1}<nuw><%for.cond1.preheader> to i128))<nsw>
+; LIN-NEXT:    Equal predicate: (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128) == (80000 + (sext i64 {240000,+,80000}<%for.cond1.preheader> to i128))<nsw>
+; LIN-NEXT:    Equal predicate: (127 + (sext i64 {319872,+,80000}<%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {320000,+,80000}<%for.cond1.preheader> to i128))<nsw>
 ; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><%for.cond4.preheader> slt) 100
 ; LIN-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body12> slt) 100
 ; LIN-NEXT:  Src: %0 = load i64, ptr %arrayidx17, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8

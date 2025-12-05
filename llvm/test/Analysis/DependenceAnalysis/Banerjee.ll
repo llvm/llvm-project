@@ -139,17 +139,17 @@ define void @banerjee1(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; DELIN-NEXT:    da analyze - consistent output [0 0]!
 ; DELIN-NEXT:    Runtime Assumptions:
 ; DELIN-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body3> slt) 10
-; DELIN-NEXT:    Equal predicate: {80,+,80}<nuw><nsw><%for.cond1.preheader> == (sext i64 {80,+,80}<%for.cond1.preheader> to i128)
-; DELIN-NEXT:    Equal predicate: (80 + (sext i64 {80,+,80}<%for.cond1.preheader> to i128))<nsw> == (sext i64 {160,+,80}<%for.cond1.preheader> to i128)
-; DELIN-NEXT:    Equal predicate: (-1 + (sext i64 {160,+,80}<%for.cond1.preheader> to i128))<nsw> == (15 + (sext i64 {144,+,80}<%for.cond1.preheader> to i128))<nuw><nsw>
+; DELIN-NEXT:    Equal predicate: (sext i64 {80,+,80}<%for.cond1.preheader> to i128) == {80,+,80}<nuw><nsw><%for.cond1.preheader>
+; DELIN-NEXT:    Equal predicate: (sext i64 {160,+,80}<%for.cond1.preheader> to i128) == (80 + (sext i64 {80,+,80}<%for.cond1.preheader> to i128))<nsw>
+; DELIN-NEXT:    Equal predicate: (15 + (sext i64 {144,+,80}<%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {160,+,80}<%for.cond1.preheader> to i128))<nsw>
 ; DELIN-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body3> slt) 10
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: %2 = load i64, ptr %arrayidx6, align 8
 ; DELIN-NEXT:    da analyze - consistent flow [0 1]!
 ; DELIN-NEXT:    Runtime Assumptions:
 ; DELIN-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body3> slt) 10
-; DELIN-NEXT:    Equal predicate: {80,+,80}<nuw><nsw><%for.cond1.preheader> == (sext i64 {80,+,80}<%for.cond1.preheader> to i128)
-; DELIN-NEXT:    Equal predicate: (80 + (sext i64 {80,+,80}<%for.cond1.preheader> to i128))<nsw> == (sext i64 {160,+,80}<%for.cond1.preheader> to i128)
-; DELIN-NEXT:    Equal predicate: (-1 + (sext i64 {160,+,80}<%for.cond1.preheader> to i128))<nsw> == (15 + (sext i64 {144,+,80}<%for.cond1.preheader> to i128))<nuw><nsw>
+; DELIN-NEXT:    Equal predicate: (sext i64 {80,+,80}<%for.cond1.preheader> to i128) == {80,+,80}<nuw><nsw><%for.cond1.preheader>
+; DELIN-NEXT:    Equal predicate: (sext i64 {160,+,80}<%for.cond1.preheader> to i128) == (80 + (sext i64 {80,+,80}<%for.cond1.preheader> to i128))<nsw>
+; DELIN-NEXT:    Equal predicate: (15 + (sext i64 {144,+,80}<%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {160,+,80}<%for.cond1.preheader> to i128))<nsw>
 ; DELIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body3> slt) 10
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 %2, ptr %B.addr.12, align 8
 ; DELIN-NEXT:    da analyze - confused!
@@ -157,9 +157,9 @@ define void @banerjee1(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; DELIN-NEXT:    da analyze - consistent input [0 0]!
 ; DELIN-NEXT:    Runtime Assumptions:
 ; DELIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body3> slt) 10
-; DELIN-NEXT:    Equal predicate: {80,+,80}<nuw><nsw><%for.cond1.preheader> == (sext i64 {80,+,80}<%for.cond1.preheader> to i128)
-; DELIN-NEXT:    Equal predicate: (80 + (sext i64 {80,+,80}<%for.cond1.preheader> to i128))<nsw> == (sext i64 {160,+,80}<%for.cond1.preheader> to i128)
-; DELIN-NEXT:    Equal predicate: (-1 + (sext i64 {160,+,80}<%for.cond1.preheader> to i128))<nsw> == (15 + (sext i64 {144,+,80}<%for.cond1.preheader> to i128))<nuw><nsw>
+; DELIN-NEXT:    Equal predicate: (sext i64 {80,+,80}<%for.cond1.preheader> to i128) == {80,+,80}<nuw><nsw><%for.cond1.preheader>
+; DELIN-NEXT:    Equal predicate: (sext i64 {160,+,80}<%for.cond1.preheader> to i128) == (80 + (sext i64 {80,+,80}<%for.cond1.preheader> to i128))<nsw>
+; DELIN-NEXT:    Equal predicate: (15 + (sext i64 {144,+,80}<%for.cond1.preheader> to i128))<nuw><nsw> == (-1 + (sext i64 {160,+,80}<%for.cond1.preheader> to i128))<nsw>
 ; DELIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body3> slt) 10
 ; DELIN-NEXT:  Src: %2 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %2, ptr %B.addr.12, align 8
 ; DELIN-NEXT:    da analyze - confused!

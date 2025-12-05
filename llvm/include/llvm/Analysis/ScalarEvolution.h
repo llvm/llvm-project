@@ -544,6 +544,14 @@ public:
                                 const SCEV *LHS, const SCEV *RHS,
                                 const Instruction *CtxI = nullptr);
 
+  /// Get the predicate that, if true at runtime, proves that the binary
+  /// operation \p BinOp between \p LHS and \p RHS does not have
+  /// signed/unsigned overflow (depending on \p Signed). Returns the
+  /// predicate, or nullptr if no-overflow is already provable at compile time.
+  LLVM_ABI const SCEVPredicate *
+  getNoOverflowPredicate(Instruction::BinaryOps BinOp, bool Signed,
+                         const SCEV *LHS, const SCEV *RHS);
+
   /// Parse NSW/NUW flags from add/sub/mul IR binary operation \p Op into
   /// SCEV no-wrap flags, and deduce flag[s] that aren't known yet.
   /// Does not mutate the original instruction. Returns std::nullopt if it could

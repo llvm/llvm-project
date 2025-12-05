@@ -10,10 +10,10 @@ define void @test(i64 %conv, ptr %a) {
 ; CHECK-NEXT:    da analyze - consistent input [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%loop> slt) %conv
-; CHECK-NEXT:    Equal predicate: (4 * (sext i64 %conv to i128))<nsw> == (sext i64 (4 * %conv) to i128)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i64 (4 * %conv) to i128)}<%loop> == (sext i64 {0,+,(4 * %conv)}<%loop> to i128)
-; CHECK-NEXT:    Equal predicate: ((sext i64 (4 * %conv) to i128) + (sext i64 {0,+,(4 * %conv)}<%loop> to i128)) == (sext i64 {(4 * %conv),+,(4 * %conv)}<%loop> to i128)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i64 {(4 * %conv),+,(4 * %conv)}<%loop> to i128))<nsw> == (sext i64 {(-1 + (4 * %conv)),+,(4 * %conv)}<%loop> to i128)
+; CHECK-NEXT:    Equal predicate: (sext i64 (4 * %conv) to i128) == (4 * (sext i64 %conv to i128))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i64 {0,+,(4 * %conv)}<%loop> to i128) == {0,+,(sext i64 (4 * %conv) to i128)}<%loop>
+; CHECK-NEXT:    Equal predicate: (sext i64 {(4 * %conv),+,(4 * %conv)}<%loop> to i128) == ((sext i64 (4 * %conv) to i128) + (sext i64 {0,+,(4 * %conv)}<%loop> to i128))
+; CHECK-NEXT:    Equal predicate: (sext i64 {(-1 + (4 * %conv)),+,(4 * %conv)}<%loop> to i128) == (-1 + (sext i64 {(4 * %conv),+,(4 * %conv)}<%loop> to i128))<nsw>
 ; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%loop> slt) %conv
 ;
 entry:

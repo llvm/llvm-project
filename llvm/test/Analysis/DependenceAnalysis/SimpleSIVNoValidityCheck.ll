@@ -24,28 +24,28 @@ define void @t1(i32 signext %n, i32 signext %m, ptr %a) {
 ; LIN-NEXT:    da analyze - consistent input [0 0]!
 ; LIN-NEXT:    Runtime Assumptions:
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body4> slt) (zext i32 %m to i64)
-; LIN-NEXT:    Equal predicate: {(4 * (zext i32 %m to i128))<nuw><nsw>,+,(4 * (zext i32 %m to i128))<nuw><nsw>}<%for.body> == (sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) + (4 * (zext i32 %m to i128))<nuw><nsw>) == (sext i64 {(8 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {(8 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128))<nsw> == (sext i64 {(-1 + (8 * (zext i32 %m to i64))<nuw><nsw>)<nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128)
+; LIN-NEXT:    Equal predicate: (sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) == {(4 * (zext i32 %m to i128))<nuw><nsw>,+,(4 * (zext i32 %m to i128))<nuw><nsw>}<%for.body>
+; LIN-NEXT:    Equal predicate: (sext i64 {(8 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) == ((sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) + (4 * (zext i32 %m to i128))<nuw><nsw>)
+; LIN-NEXT:    Equal predicate: (sext i64 {(-1 + (8 * (zext i32 %m to i64))<nuw><nsw>)<nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) == (-1 + (sext i64 {(8 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128))<nsw>
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body4> slt) (zext i32 %m to i64)
 ; LIN-NEXT:  Src: %6 = load i32, ptr %arrayidx7, align 4 --> Dst: store i32 %6, ptr %arrayidx11, align 4
 ; LIN-NEXT:    da analyze - consistent anti [1 -2]!
 ; LIN-NEXT:    Runtime Assumptions:
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body4> slt) (zext i32 %m to i64)
-; LIN-NEXT:    Equal predicate: {(4 * (zext i32 %m to i128))<nuw><nsw>,+,(4 * (zext i32 %m to i128))<nuw><nsw>}<%for.body> == (sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) + (4 * (zext i32 %m to i128))<nuw><nsw>) == (sext i64 {(8 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {(8 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128))<nsw> == (sext i64 {(-1 + (8 * (zext i32 %m to i64))<nuw><nsw>)<nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128)
+; LIN-NEXT:    Equal predicate: (sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) == {(4 * (zext i32 %m to i128))<nuw><nsw>,+,(4 * (zext i32 %m to i128))<nuw><nsw>}<%for.body>
+; LIN-NEXT:    Equal predicate: (sext i64 {(8 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) == ((sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) + (4 * (zext i32 %m to i128))<nuw><nsw>)
+; LIN-NEXT:    Equal predicate: (sext i64 {(-1 + (8 * (zext i32 %m to i64))<nuw><nsw>)<nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) == (-1 + (sext i64 {(8 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128))<nsw>
 ; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><nsw><%for.body4> slt) (zext i32 %m to i64)
-; LIN-NEXT:    Equal predicate: {0,+,(4 * (zext i32 %m to i128))<nuw><nsw>}<%for.body> == (sext i64 {0,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 {0,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) + (4 * (zext i32 %m to i128))<nuw><nsw>) == (sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128))<nsw> == (sext i64 {(-1 + (4 * (zext i32 %m to i64))<nuw><nsw>)<nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128)
+; LIN-NEXT:    Equal predicate: (sext i64 {0,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) == {0,+,(4 * (zext i32 %m to i128))<nuw><nsw>}<%for.body>
+; LIN-NEXT:    Equal predicate: (sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) == ((sext i64 {0,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) + (4 * (zext i32 %m to i128))<nuw><nsw>)
+; LIN-NEXT:    Equal predicate: (sext i64 {(-1 + (4 * (zext i32 %m to i64))<nuw><nsw>)<nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) == (-1 + (sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128))<nsw>
 ; LIN-NEXT:  Src: store i32 %6, ptr %arrayidx11, align 4 --> Dst: store i32 %6, ptr %arrayidx11, align 4
 ; LIN-NEXT:    da analyze - consistent output [0 0]!
 ; LIN-NEXT:    Runtime Assumptions:
 ; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><nsw><%for.body4> slt) (zext i32 %m to i64)
-; LIN-NEXT:    Equal predicate: {0,+,(4 * (zext i32 %m to i128))<nuw><nsw>}<%for.body> == (sext i64 {0,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 {0,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) + (4 * (zext i32 %m to i128))<nuw><nsw>) == (sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128))<nsw> == (sext i64 {(-1 + (4 * (zext i32 %m to i64))<nuw><nsw>)<nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128)
+; LIN-NEXT:    Equal predicate: (sext i64 {0,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) == {0,+,(4 * (zext i32 %m to i128))<nuw><nsw>}<%for.body>
+; LIN-NEXT:    Equal predicate: (sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) == ((sext i64 {0,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) + (4 * (zext i32 %m to i128))<nuw><nsw>)
+; LIN-NEXT:    Equal predicate: (sext i64 {(-1 + (4 * (zext i32 %m to i64))<nuw><nsw>)<nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128) == (-1 + (sext i64 {(4 * (zext i32 %m to i64))<nuw><nsw>,+,(4 * (zext i32 %m to i64))<nuw><nsw>}<%for.body> to i128))<nsw>
 ; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><nsw><%for.body4> slt) (zext i32 %m to i64)
 ;
 entry:
@@ -112,13 +112,13 @@ define void @t2(i32 signext %n, i32 signext %m, ptr %a) {
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body4> slt) (zext i32 %n to i64)
 ; LIN-NEXT:    Compare predicate: {0,+,1}<%for.body12> slt) (zext i32 %n to i64)
 ; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><nsw><%for.body17> slt) (zext i32 %m to i64)
-; LIN-NEXT:    Equal predicate: ((zext i32 %n to i128) * (zext i32 %n to i128)) == (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64)) to i128)
-; LIN-NEXT:    Equal predicate: ((zext i32 %n to i128) * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64)) to i128)) == (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64)) to i128)
-; LIN-NEXT:    Equal predicate: ((zext i32 %m to i128) * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64)) to i128)) == (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128)
-; LIN-NEXT:    Equal predicate: (4 * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128))<nsw> == (sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128)
-; LIN-NEXT:    Equal predicate: {(sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128),+,(sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128)}<%for.body> == (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128) + (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)) == (sext i64 {(8 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {(8 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128))<nsw> == (sext i64 {(-1 + (8 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)
+; LIN-NEXT:    Equal predicate: (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64)) to i128) == ((zext i32 %n to i128) * (zext i32 %n to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64)) to i128) == ((zext i32 %n to i128) * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64)) to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128) == ((zext i32 %m to i128) * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64)) to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128) == (4 * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128))<nsw>
+; LIN-NEXT:    Equal predicate: (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128) == {(sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128),+,(sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128)}<%for.body>
+; LIN-NEXT:    Equal predicate: (sext i64 {(8 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128) == ((sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128) + (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 {(-1 + (8 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128) == (-1 + (sext i64 {(8 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128))<nsw>
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body4> slt) (zext i32 %n to i64)
 ; LIN-NEXT:    Compare predicate: {0,+,1}<%for.body12> slt) (zext i32 %n to i64)
 ; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><nsw><%for.body17> slt) (zext i32 %m to i64)
@@ -128,32 +128,32 @@ define void @t2(i32 signext %n, i32 signext %m, ptr %a) {
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body4> slt) (zext i32 %n to i64)
 ; LIN-NEXT:    Compare predicate: {0,+,1}<%for.body12> slt) (zext i32 %n to i64)
 ; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><nsw><%for.body17> slt) (zext i32 %m to i64)
-; LIN-NEXT:    Equal predicate: ((zext i32 %n to i128) * (zext i32 %n to i128)) == (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64)) to i128)
-; LIN-NEXT:    Equal predicate: ((zext i32 %n to i128) * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64)) to i128)) == (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64)) to i128)
-; LIN-NEXT:    Equal predicate: ((zext i32 %m to i128) * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64)) to i128)) == (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128)
-; LIN-NEXT:    Equal predicate: (4 * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128))<nsw> == (sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128)
-; LIN-NEXT:    Equal predicate: {(sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128),+,(sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128)}<%for.body> == (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128) + (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)) == (sext i64 {(8 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {(8 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128))<nsw> == (sext i64 {(-1 + (8 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)
+; LIN-NEXT:    Equal predicate: (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64)) to i128) == ((zext i32 %n to i128) * (zext i32 %n to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64)) to i128) == ((zext i32 %n to i128) * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64)) to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128) == ((zext i32 %m to i128) * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64)) to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128) == (4 * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128))<nsw>
+; LIN-NEXT:    Equal predicate: (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128) == {(sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128),+,(sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128)}<%for.body>
+; LIN-NEXT:    Equal predicate: (sext i64 {(8 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128) == ((sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128) + (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 {(-1 + (8 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128) == (-1 + (sext i64 {(8 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128))<nsw>
 ; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><nsw><%for.body4> slt) (zext i32 %n to i64)
 ; LIN-NEXT:    Compare predicate: {3,+,1}<%for.body12> slt) (zext i32 %n to i64)
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body17> slt) (zext i32 %m to i64)
-; LIN-NEXT:    Equal predicate: {0,+,(sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128)}<%for.body> == (sext i64 {0,+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128) + (sext i64 {0,+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)) == (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128))<nsw> == (sext i64 {(-1 + (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)
+; LIN-NEXT:    Equal predicate: (sext i64 {0,+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128) == {0,+,(sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128)}<%for.body>
+; LIN-NEXT:    Equal predicate: (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128) == ((sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128) + (sext i64 {0,+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 {(-1 + (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128) == (-1 + (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128))<nsw>
 ; LIN-NEXT:  Src: store i32 %21, ptr %arrayidx38, align 4 --> Dst: store i32 %21, ptr %arrayidx38, align 4
 ; LIN-NEXT:    da analyze - consistent output [0 0 0 0 0]!
 ; LIN-NEXT:    Runtime Assumptions:
 ; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><nsw><%for.body4> slt) (zext i32 %n to i64)
 ; LIN-NEXT:    Compare predicate: {3,+,1}<%for.body12> slt) (zext i32 %n to i64)
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body17> slt) (zext i32 %m to i64)
-; LIN-NEXT:    Equal predicate: ((zext i32 %n to i128) * (zext i32 %n to i128)) == (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64)) to i128)
-; LIN-NEXT:    Equal predicate: ((zext i32 %n to i128) * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64)) to i128)) == (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64)) to i128)
-; LIN-NEXT:    Equal predicate: ((zext i32 %m to i128) * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64)) to i128)) == (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128)
-; LIN-NEXT:    Equal predicate: (4 * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128))<nsw> == (sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128)
-; LIN-NEXT:    Equal predicate: {0,+,(sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128)}<%for.body> == (sext i64 {0,+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128) + (sext i64 {0,+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)) == (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128))<nsw> == (sext i64 {(-1 + (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128)
+; LIN-NEXT:    Equal predicate: (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64)) to i128) == ((zext i32 %n to i128) * (zext i32 %n to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64)) to i128) == ((zext i32 %n to i128) * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64)) to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128) == ((zext i32 %m to i128) * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64)) to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128) == (4 * (sext i64 ((zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128))<nsw>
+; LIN-NEXT:    Equal predicate: (sext i64 {0,+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128) == {0,+,(sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128)}<%for.body>
+; LIN-NEXT:    Equal predicate: (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128) == ((sext i64 (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)) to i128) + (sext i64 {0,+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 {(-1 + (4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128) == (-1 + (sext i64 {(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64)),+,(4 * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %n to i64) * (zext i32 %m to i64))}<%for.body> to i128))<nsw>
 ; LIN-NEXT:    Compare predicate: {2,+,1}<nuw><nsw><%for.body4> slt) (zext i32 %n to i64)
 ; LIN-NEXT:    Compare predicate: {3,+,1}<%for.body12> slt) (zext i32 %n to i64)
 ; LIN-NEXT:    Compare predicate: {0,+,1}<nuw><nsw><%for.body17> slt) (zext i32 %m to i64)
@@ -286,10 +286,10 @@ define void @t3(i64 %n, i64 %m, i64 %lb, ptr %a) {
 ; LIN-NEXT:    Runtime Assumptions:
 ; LIN-NEXT:    Compare predicate: {(-2 + %lb),+,1}<%for.body4> sge) 0
 ; LIN-NEXT:    Compare predicate: {(-2 + %lb),+,1}<%for.body4> slt) %m
-; LIN-NEXT:    Equal predicate: (4 * (sext i64 %m to i128))<nsw> == (sext i64 (4 * %m) to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 (4 * %m) to i128) * (sext i64 {1,+,1}<nuw><%for.body> to i128)) == (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 (4 * %m) to i128) + (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128)) == (sext i64 {(8 * %m),+,(4 * %m)}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {(8 * %m),+,(4 * %m)}<%for.body> to i128))<nsw> == (sext i64 {(-1 + (8 * %m)),+,(4 * %m)}<%for.body> to i128)
+; LIN-NEXT:    Equal predicate: (sext i64 (4 * %m) to i128) == (4 * (sext i64 %m to i128))<nsw>
+; LIN-NEXT:    Equal predicate: (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128) == ((sext i64 (4 * %m) to i128) * (sext i64 {1,+,1}<nuw><%for.body> to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 {(8 * %m),+,(4 * %m)}<%for.body> to i128) == ((sext i64 (4 * %m) to i128) + (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 {(-1 + (8 * %m)),+,(4 * %m)}<%for.body> to i128) == (-1 + (sext i64 {(8 * %m),+,(4 * %m)}<%for.body> to i128))<nsw>
 ; LIN-NEXT:    Compare predicate: {(-2 + %lb),+,1}<%for.body4> sge) 0
 ; LIN-NEXT:    Compare predicate: {(-2 + %lb),+,1}<%for.body4> slt) %m
 ; LIN-NEXT:  Src: %2 = load i32, ptr %arrayidx6, align 4 --> Dst: store i32 %2, ptr %arrayidx8, align 4
@@ -297,24 +297,24 @@ define void @t3(i64 %n, i64 %m, i64 %lb, ptr %a) {
 ; LIN-NEXT:    Runtime Assumptions:
 ; LIN-NEXT:    Compare predicate: {(-2 + %lb),+,1}<%for.body4> sge) 0
 ; LIN-NEXT:    Compare predicate: {(-2 + %lb),+,1}<%for.body4> slt) %m
-; LIN-NEXT:    Equal predicate: (4 * (sext i64 %m to i128))<nsw> == (sext i64 (4 * %m) to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 (4 * %m) to i128) * (sext i64 {1,+,1}<nuw><%for.body> to i128)) == (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 (4 * %m) to i128) + (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128)) == (sext i64 {(8 * %m),+,(4 * %m)}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {(8 * %m),+,(4 * %m)}<%for.body> to i128))<nsw> == (sext i64 {(-1 + (8 * %m)),+,(4 * %m)}<%for.body> to i128)
+; LIN-NEXT:    Equal predicate: (sext i64 (4 * %m) to i128) == (4 * (sext i64 %m to i128))<nsw>
+; LIN-NEXT:    Equal predicate: (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128) == ((sext i64 (4 * %m) to i128) * (sext i64 {1,+,1}<nuw><%for.body> to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 {(8 * %m),+,(4 * %m)}<%for.body> to i128) == ((sext i64 (4 * %m) to i128) + (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 {(-1 + (8 * %m)),+,(4 * %m)}<%for.body> to i128) == (-1 + (sext i64 {(8 * %m),+,(4 * %m)}<%for.body> to i128))<nsw>
 ; LIN-NEXT:    Compare predicate: {%lb,+,1}<%for.body4> sge) 0
 ; LIN-NEXT:    Compare predicate: {%lb,+,1}<%for.body4> slt) %m
-; LIN-NEXT:    Equal predicate: ((sext i64 (4 * %m) to i128) * (sext i64 {0,+,1}<nuw><%for.body> to i128)) == (sext i64 {0,+,(4 * %m)}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 (4 * %m) to i128) + (sext i64 {0,+,(4 * %m)}<%for.body> to i128)) == (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128))<nsw> == (sext i64 {(-1 + (4 * %m)),+,(4 * %m)}<%for.body> to i128)
+; LIN-NEXT:    Equal predicate: (sext i64 {0,+,(4 * %m)}<%for.body> to i128) == ((sext i64 (4 * %m) to i128) * (sext i64 {0,+,1}<nuw><%for.body> to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128) == ((sext i64 (4 * %m) to i128) + (sext i64 {0,+,(4 * %m)}<%for.body> to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 {(-1 + (4 * %m)),+,(4 * %m)}<%for.body> to i128) == (-1 + (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128))<nsw>
 ; LIN-NEXT:  Src: store i32 %2, ptr %arrayidx8, align 4 --> Dst: store i32 %2, ptr %arrayidx8, align 4
 ; LIN-NEXT:    da analyze - consistent output [0 0]!
 ; LIN-NEXT:    Runtime Assumptions:
 ; LIN-NEXT:    Compare predicate: {%lb,+,1}<%for.body4> sge) 0
 ; LIN-NEXT:    Compare predicate: {%lb,+,1}<%for.body4> slt) %m
-; LIN-NEXT:    Equal predicate: (4 * (sext i64 %m to i128))<nsw> == (sext i64 (4 * %m) to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 (4 * %m) to i128) * (sext i64 {0,+,1}<nuw><%for.body> to i128)) == (sext i64 {0,+,(4 * %m)}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: ((sext i64 (4 * %m) to i128) + (sext i64 {0,+,(4 * %m)}<%for.body> to i128)) == (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128)
-; LIN-NEXT:    Equal predicate: (-1 + (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128))<nsw> == (sext i64 {(-1 + (4 * %m)),+,(4 * %m)}<%for.body> to i128)
+; LIN-NEXT:    Equal predicate: (sext i64 (4 * %m) to i128) == (4 * (sext i64 %m to i128))<nsw>
+; LIN-NEXT:    Equal predicate: (sext i64 {0,+,(4 * %m)}<%for.body> to i128) == ((sext i64 (4 * %m) to i128) * (sext i64 {0,+,1}<nuw><%for.body> to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128) == ((sext i64 (4 * %m) to i128) + (sext i64 {0,+,(4 * %m)}<%for.body> to i128))
+; LIN-NEXT:    Equal predicate: (sext i64 {(-1 + (4 * %m)),+,(4 * %m)}<%for.body> to i128) == (-1 + (sext i64 {(4 * %m),+,(4 * %m)}<%for.body> to i128))<nsw>
 ; LIN-NEXT:    Compare predicate: {%lb,+,1}<%for.body4> sge) 0
 ; LIN-NEXT:    Compare predicate: {%lb,+,1}<%for.body4> slt) %m
 ;

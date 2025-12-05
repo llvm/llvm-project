@@ -27,9 +27,9 @@ define void @gcdmiv_coef_ovfl(ptr %A, i64 %m) {
 ; CHECK-ALL-NEXT:    da analyze - consistent output [0]!
 ; CHECK-ALL-NEXT:    Runtime Assumptions:
 ; CHECK-ALL-NEXT:    Compare predicate: 4 slt) %m
-; CHECK-ALL-NEXT:    Equal predicate: {0,+,(3 * (sext i64 %m to i128))<nsw>}<%loop> == (sext i64 {0,+,(3 * %m)}<%loop> to i128)
-; CHECK-ALL-NEXT:    Equal predicate: ((sext i64 {0,+,(3 * %m)}<%loop> to i128) + (sext i64 %m to i128)) == (sext i64 {%m,+,(3 * %m)}<%loop> to i128)
-; CHECK-ALL-NEXT:    Equal predicate: (-1 + (sext i64 {%m,+,(3 * %m)}<%loop> to i128))<nsw> == (sext i64 {(-1 + %m),+,(3 * %m)}<%loop> to i128)
+; CHECK-ALL-NEXT:    Equal predicate: (sext i64 {0,+,(3 * %m)}<%loop> to i128) == {0,+,(3 * (sext i64 %m to i128))<nsw>}<%loop>
+; CHECK-ALL-NEXT:    Equal predicate: (sext i64 {%m,+,(3 * %m)}<%loop> to i128) == ((sext i64 {0,+,(3 * %m)}<%loop> to i128) + (sext i64 %m to i128))
+; CHECK-ALL-NEXT:    Equal predicate: (sext i64 {(-1 + %m),+,(3 * %m)}<%loop> to i128) == (-1 + (sext i64 {%m,+,(3 * %m)}<%loop> to i128))<nsw>
 ; CHECK-ALL-NEXT:    Compare predicate: 4 slt) %m
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
@@ -41,9 +41,9 @@ define void @gcdmiv_coef_ovfl(ptr %A, i64 %m) {
 ; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
 ; CHECK-GCD-MIV-NEXT:    Runtime Assumptions:
 ; CHECK-GCD-MIV-NEXT:    Compare predicate: 4 slt) %m
-; CHECK-GCD-MIV-NEXT:    Equal predicate: {0,+,(3 * (sext i64 %m to i128))<nsw>}<%loop> == (sext i64 {0,+,(3 * %m)}<%loop> to i128)
-; CHECK-GCD-MIV-NEXT:    Equal predicate: ((sext i64 {0,+,(3 * %m)}<%loop> to i128) + (sext i64 %m to i128)) == (sext i64 {%m,+,(3 * %m)}<%loop> to i128)
-; CHECK-GCD-MIV-NEXT:    Equal predicate: (-1 + (sext i64 {%m,+,(3 * %m)}<%loop> to i128))<nsw> == (sext i64 {(-1 + %m),+,(3 * %m)}<%loop> to i128)
+; CHECK-GCD-MIV-NEXT:    Equal predicate: (sext i64 {0,+,(3 * %m)}<%loop> to i128) == {0,+,(3 * (sext i64 %m to i128))<nsw>}<%loop>
+; CHECK-GCD-MIV-NEXT:    Equal predicate: (sext i64 {%m,+,(3 * %m)}<%loop> to i128) == ((sext i64 {0,+,(3 * %m)}<%loop> to i128) + (sext i64 %m to i128))
+; CHECK-GCD-MIV-NEXT:    Equal predicate: (sext i64 {(-1 + %m),+,(3 * %m)}<%loop> to i128) == (-1 + (sext i64 {%m,+,(3 * %m)}<%loop> to i128))<nsw>
 ; CHECK-GCD-MIV-NEXT:    Compare predicate: 4 slt) %m
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - none!
@@ -93,8 +93,8 @@ define void @gcdmiv_delta_ovfl(ptr %A) {
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - consistent output [0]!
 ; CHECK-ALL-NEXT:    Runtime Assumptions:
-; CHECK-ALL-NEXT:    Equal predicate: {9223372036854775808,+,-6}<nsw><%loop.header> == (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128)
-; CHECK-ALL-NEXT:    Equal predicate: (-1 + (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128))<nsw> == {9223372036854775807,+,-6}<nsw><%loop.header>
+; CHECK-ALL-NEXT:    Equal predicate: (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128) == {9223372036854775808,+,-6}<nsw><%loop.header>
+; CHECK-ALL-NEXT:    Equal predicate: {9223372036854775807,+,-6}<nsw><%loop.header> == (-1 + (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128))<nsw>
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
@@ -104,13 +104,13 @@ define void @gcdmiv_delta_ovfl(ptr %A) {
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
 ; CHECK-GCD-MIV-NEXT:    Runtime Assumptions:
-; CHECK-GCD-MIV-NEXT:    Equal predicate: {9223372036854775808,+,-6}<nsw><%loop.header> == (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128)
-; CHECK-GCD-MIV-NEXT:    Equal predicate: (-1 + (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128))<nsw> == {9223372036854775807,+,-6}<nsw><%loop.header>
+; CHECK-GCD-MIV-NEXT:    Equal predicate: (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128) == {9223372036854775808,+,-6}<nsw><%loop.header>
+; CHECK-GCD-MIV-NEXT:    Equal predicate: {9223372036854775807,+,-6}<nsw><%loop.header> == (-1 + (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128))<nsw>
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*|<]!
 ; CHECK-GCD-MIV-NEXT:    Runtime Assumptions:
-; CHECK-GCD-MIV-NEXT:    Equal predicate: {9223372036854775808,+,-6}<nsw><%loop.header> == (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128)
-; CHECK-GCD-MIV-NEXT:    Equal predicate: (-1 + (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128))<nsw> == {9223372036854775807,+,-6}<nsw><%loop.header>
+; CHECK-GCD-MIV-NEXT:    Equal predicate: (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128) == {9223372036854775808,+,-6}<nsw><%loop.header>
+; CHECK-GCD-MIV-NEXT:    Equal predicate: {9223372036854775807,+,-6}<nsw><%loop.header> == (-1 + (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128))<nsw>
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
 ;

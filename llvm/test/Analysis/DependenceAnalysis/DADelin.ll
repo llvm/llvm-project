@@ -15,27 +15,27 @@ define void @t1(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - consistent input [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - consistent anti [0 0 0|<]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - consistent output [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
@@ -99,29 +99,29 @@ define void @t2(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - consistent input [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - consistent anti [0 0 -1]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body8> slt) %o
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - consistent output [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body8> slt) %o
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body8> slt) %o
 ;
 entry:
@@ -188,29 +188,29 @@ define void @t3(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - consistent input [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - consistent anti [0 0 1]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: {-1,+,1}<nsw><%for.body8> sge) 0
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - consistent output [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: {-1,+,1}<nsw><%for.body8> sge) 0
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: {-1,+,1}<nsw><%for.body8> sge) 0
 ;
 entry:
@@ -277,29 +277,29 @@ define void @t4(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - consistent input [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - consistent anti [0 -1 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.cond5.preheader> slt) %m
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - consistent output [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.cond5.preheader> slt) %m
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.cond5.preheader> slt) %m
 ;
 entry:
@@ -365,19 +365,19 @@ define void @t5(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - consistent input [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - consistent anti [0 1 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: {-1,+,1}<%for.cond5.preheader> sge) 0
 ; CHECK-NEXT:    Compare predicate: {-1,+,1}<%for.cond5.preheader> slt) %m
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
@@ -385,11 +385,11 @@ define void @t5(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: {-1,+,1}<%for.cond5.preheader> sge) 0
 ; CHECK-NEXT:    Compare predicate: {-1,+,1}<%for.cond5.preheader> slt) %m
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: {-1,+,1}<%for.cond5.preheader> sge) 0
 ; CHECK-NEXT:    Compare predicate: {-1,+,1}<%for.cond5.preheader> slt) %m
 ;
@@ -456,30 +456,30 @@ define void @t6(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - consistent input [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - consistent anti [-1 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: {(sext i32 (4 * %m * %o) to i64),+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(8 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(8 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (8 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {(sext i32 (4 * %m * %o) to i64),+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(8 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (8 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(8 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - consistent output [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {(sext i32 (4 * %m * %o) to i64),+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(8 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(8 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (8 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {(sext i32 (4 * %m * %o) to i64),+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(8 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (8 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(8 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
@@ -545,30 +545,30 @@ define void @t7(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - consistent input [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - consistent anti [1 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: {(-1 * (sext i32 (4 * %m * %o) to i64))<nsw>,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {(-4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {(-4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (3 + (sext i32 {-4,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nuw><nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {(-1 * (sext i32 (4 * %m * %o) to i64))<nsw>,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {(-4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (3 + (sext i32 {-4,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nuw><nsw> == (-1 + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - consistent output [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {(-1 * (sext i32 (4 * %m * %o) to i64))<nsw>,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {(-4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {(-4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (3 + (sext i32 {-4,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nuw><nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {(-1 * (sext i32 (4 * %m * %o) to i64))<nsw>,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {(-4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (3 + (sext i32 {-4,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nuw><nsw> == (-1 + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
@@ -634,27 +634,27 @@ define void @t8(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - consistent input [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - consistent anti [0 0 1]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - consistent output [0 0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: ((sext i32 %m to i64) * (sext i32 %o to i64)) == (sext i32 (%m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 (%m * %o) to i64))<nsw> == (sext i32 (4 * %m * %o) to i64)
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader> == (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64)) == (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw> == (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (%m * %o) to i64) == ((sext i32 %m to i64) * (sext i32 %o to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %m * %o) to i64) == (4 * (sext i32 (%m * %o) to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == {0,+,(sext i32 (4 * %m * %o) to i64)}<%for.cond1.preheader>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == ((sext i32 (4 * %m * %o) to i64) + (sext i32 {0,+,(4 * %m * %o)}<%for.cond1.preheader> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %m * %o)),+,(4 * %m * %o)}<%for.cond1.preheader> to i64) == (-1 + (sext i32 {(4 * %m * %o),+,(4 * %m * %o)}<%for.cond1.preheader> to i64))<nsw>
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
@@ -718,7 +718,7 @@ define double @test_sizes(i16 %h, i16 %N, ptr nocapture %array) {
 ; CHECK-NEXT:    da analyze - anti [* *|<]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: {1,+,1}<nuw><nsw><%for.body> slt) (sext i16 %h to i32)
-; CHECK-NEXT:    Equal predicate: (2 * (sext i16 %h to i64))<nsw> == (sext i32 (2 * (sext i16 %h to i32))<nsw> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (2 * (sext i16 %h to i32))<nsw> to i64) == (2 * (sext i16 %h to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: {(sext i16 {2,+,(1 + %h)}<%for.body> to i32),+,1}<nsw><%for.body5> sge) 0
 ; CHECK-NEXT:    Compare predicate: {(sext i16 {2,+,(1 + %h)}<%for.body> to i32),+,1}<nsw><%for.body5> slt) (sext i16 %h to i32)
 ; CHECK-NEXT:  Src: store i16 %add6, ptr %arrayidx8, align 4 --> Dst: store i16 %add6, ptr %arrayidx8, align 4
@@ -726,7 +726,7 @@ define double @test_sizes(i16 %h, i16 %N, ptr nocapture %array) {
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: {(sext i16 {2,+,(1 + %h)}<%for.body> to i32),+,1}<nsw><%for.body5> sge) 0
 ; CHECK-NEXT:    Compare predicate: {(sext i16 {2,+,(1 + %h)}<%for.body> to i32),+,1}<nsw><%for.body5> slt) (sext i16 %h to i32)
-; CHECK-NEXT:    Equal predicate: (2 * (sext i16 %h to i64))<nsw> == (sext i32 (2 * (sext i16 %h to i32))<nsw> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (2 * (sext i16 %h to i32))<nsw> to i64) == (2 * (sext i16 %h to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: {(sext i16 {2,+,(1 + %h)}<%for.body> to i32),+,1}<nsw><%for.body5> sge) 0
 ; CHECK-NEXT:    Compare predicate: {(sext i16 {2,+,(1 + %h)}<%for.body> to i32),+,1}<nsw><%for.body5> slt) (sext i16 %h to i32)
 ;
@@ -780,28 +780,28 @@ define void @nonnegative(ptr nocapture %A, i32 %N) {
 ; CHECK-NEXT:    da analyze - consistent output [0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><%for.inner> slt) %N
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 %N to i64))<nsw> == (sext i32 (4 * %N) to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %N) to i64) * (sext i32 {0,+,1}<nuw><%for.outer> to i64)) == (sext i32 {0,+,(4 * %N)}<%for.outer> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %N) to i64) + (sext i32 {0,+,(4 * %N)}<%for.outer> to i64)) == (sext i32 {(4 * %N),+,(4 * %N)}<%for.outer> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %N),+,(4 * %N)}<%for.outer> to i64))<nsw> == (sext i32 {(-1 + (4 * %N)),+,(4 * %N)}<%for.outer> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %N) to i64) == (4 * (sext i32 %N to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %N)}<%for.outer> to i64) == ((sext i32 (4 * %N) to i64) * (sext i32 {0,+,1}<nuw><%for.outer> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %N),+,(4 * %N)}<%for.outer> to i64) == ((sext i32 (4 * %N) to i64) + (sext i32 {0,+,(4 * %N)}<%for.outer> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %N)),+,(4 * %N)}<%for.outer> to i64) == (-1 + (sext i32 {(4 * %N),+,(4 * %N)}<%for.outer> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><%for.inner> slt) %N
 ; CHECK-NEXT:  Src: store i32 1, ptr %arrayidx, align 4 --> Dst: store i32 2, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - consistent output [0 0|<]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><%for.inner> slt) %N
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 %N to i64))<nsw> == (sext i32 (4 * %N) to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %N) to i64) * (sext i32 {0,+,1}<nuw><%for.outer> to i64)) == (sext i32 {0,+,(4 * %N)}<%for.outer> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %N) to i64) + (sext i32 {0,+,(4 * %N)}<%for.outer> to i64)) == (sext i32 {(4 * %N),+,(4 * %N)}<%for.outer> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %N),+,(4 * %N)}<%for.outer> to i64))<nsw> == (sext i32 {(-1 + (4 * %N)),+,(4 * %N)}<%for.outer> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %N) to i64) == (4 * (sext i32 %N to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %N)}<%for.outer> to i64) == ((sext i32 (4 * %N) to i64) * (sext i32 {0,+,1}<nuw><%for.outer> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %N),+,(4 * %N)}<%for.outer> to i64) == ((sext i32 (4 * %N) to i64) + (sext i32 {0,+,(4 * %N)}<%for.outer> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %N)),+,(4 * %N)}<%for.outer> to i64) == (-1 + (sext i32 {(4 * %N),+,(4 * %N)}<%for.outer> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><%for.inner> slt) %N
 ; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 4 --> Dst: store i32 2, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - consistent output [0 0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><%for.inner> slt) %N
-; CHECK-NEXT:    Equal predicate: (4 * (sext i32 %N to i64))<nsw> == (sext i32 (4 * %N) to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %N) to i64) * (sext i32 {0,+,1}<nuw><%for.outer> to i64)) == (sext i32 {0,+,(4 * %N)}<%for.outer> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 (4 * %N) to i64) + (sext i32 {0,+,(4 * %N)}<%for.outer> to i64)) == (sext i32 {(4 * %N),+,(4 * %N)}<%for.outer> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(4 * %N),+,(4 * %N)}<%for.outer> to i64))<nsw> == (sext i32 {(-1 + (4 * %N)),+,(4 * %N)}<%for.outer> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 (4 * %N) to i64) == (4 * (sext i32 %N to i64))<nsw>
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,(4 * %N)}<%for.outer> to i64) == ((sext i32 (4 * %N) to i64) * (sext i32 {0,+,1}<nuw><%for.outer> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(4 * %N),+,(4 * %N)}<%for.outer> to i64) == ((sext i32 (4 * %N) to i64) + (sext i32 {0,+,(4 * %N)}<%for.outer> to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (4 * %N)),+,(4 * %N)}<%for.outer> to i64) == (-1 + (sext i32 {(4 * %N),+,(4 * %N)}<%for.outer> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: {0,+,1}<nuw><%for.inner> slt) %N
 ;
 entry:
@@ -849,28 +849,28 @@ define void @coeff_may_negative(ptr %a, i32 %k) {
 ; CHECK-NEXT:    da analyze - consistent output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: 0 slt) %k
-; CHECK-NEXT:    Equal predicate: ((sext i32 {0,+,1}<nuw><%loop> to i64) * (sext i32 %k to i64)) == (sext i32 {0,+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 {0,+,%k}<%loop> to i64) + (sext i32 %k to i64)) == (sext i32 {%k,+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {%k,+,%k}<%loop> to i64))<nsw> == (sext i32 {(-1 + %k),+,%k}<%loop> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,%k}<%loop> to i64) == ((sext i32 {0,+,1}<nuw><%loop> to i64) * (sext i32 %k to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {%k,+,%k}<%loop> to i64) == ((sext i32 {0,+,%k}<%loop> to i64) + (sext i32 %k to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + %k),+,%k}<%loop> to i64) == (-1 + (sext i32 {%k,+,%k}<%loop> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: 0 slt) %k
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - consistent output [-1]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: 0 slt) %k
-; CHECK-NEXT:    Equal predicate: ((sext i32 {0,+,1}<nuw><%loop> to i64) * (sext i32 %k to i64)) == (sext i32 {0,+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 {0,+,%k}<%loop> to i64) + (sext i32 %k to i64)) == (sext i32 {%k,+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {%k,+,%k}<%loop> to i64))<nsw> == (sext i32 {(-1 + %k),+,%k}<%loop> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,%k}<%loop> to i64) == ((sext i32 {0,+,1}<nuw><%loop> to i64) * (sext i32 %k to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {%k,+,%k}<%loop> to i64) == ((sext i32 {0,+,%k}<%loop> to i64) + (sext i32 %k to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + %k),+,%k}<%loop> to i64) == (-1 + (sext i32 {%k,+,%k}<%loop> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: 0 slt) %k
-; CHECK-NEXT:    Equal predicate: ((sext i32 {1,+,1}<nw><%loop> to i64) * (sext i32 %k to i64)) == (sext i32 {%k,+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 {%k,+,%k}<%loop> to i64) + (sext i32 %k to i64)) == (sext i32 {(2 * %k),+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(2 * %k),+,%k}<%loop> to i64))<nsw> == (sext i32 {(-1 + (2 * %k)),+,%k}<%loop> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 {%k,+,%k}<%loop> to i64) == ((sext i32 {1,+,1}<%loop> to i64) * (sext i32 %k to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(2 * %k),+,%k}<%loop> to i64) == ((sext i32 {%k,+,%k}<%loop> to i64) + (sext i32 %k to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (2 * %k)),+,%k}<%loop> to i64) == (-1 + (sext i32 {(2 * %k),+,%k}<%loop> to i64))<nsw>
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.1, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - consistent output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: 0 slt) %k
-; CHECK-NEXT:    Equal predicate: ((sext i32 {1,+,1}<nw><%loop> to i64) * (sext i32 %k to i64)) == (sext i32 {%k,+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 {%k,+,%k}<%loop> to i64) + (sext i32 %k to i64)) == (sext i32 {(2 * %k),+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(2 * %k),+,%k}<%loop> to i64))<nsw> == (sext i32 {(-1 + (2 * %k)),+,%k}<%loop> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 {%k,+,%k}<%loop> to i64) == ((sext i32 {1,+,1}<%loop> to i64) * (sext i32 %k to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(2 * %k),+,%k}<%loop> to i64) == ((sext i32 {%k,+,%k}<%loop> to i64) + (sext i32 %k to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (2 * %k)),+,%k}<%loop> to i64) == (-1 + (sext i32 {(2 * %k),+,%k}<%loop> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: 0 slt) %k
 ;
 entry:
@@ -909,28 +909,28 @@ define void @coeff_positive(ptr %a, i32 %k) {
 ; CHECK-NEXT:    da analyze - consistent output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: 0 slt) %k
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 %k to i64)}<%loop> == (sext i32 {0,+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 {0,+,%k}<%loop> to i64) + (sext i32 %k to i64)) == (sext i32 {%k,+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {%k,+,%k}<%loop> to i64))<nsw> == (sext i32 {(-1 + %k),+,%k}<%loop> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,%k}<%loop> to i64) == {0,+,(sext i32 %k to i64)}<%loop>
+; CHECK-NEXT:    Equal predicate: (sext i32 {%k,+,%k}<%loop> to i64) == ((sext i32 {0,+,%k}<%loop> to i64) + (sext i32 %k to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + %k),+,%k}<%loop> to i64) == (-1 + (sext i32 {%k,+,%k}<%loop> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: 0 slt) %k
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - consistent output [-1]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: 0 slt) %k
-; CHECK-NEXT:    Equal predicate: {0,+,(sext i32 %k to i64)}<%loop> == (sext i32 {0,+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 {0,+,%k}<%loop> to i64) + (sext i32 %k to i64)) == (sext i32 {%k,+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {%k,+,%k}<%loop> to i64))<nsw> == (sext i32 {(-1 + %k),+,%k}<%loop> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 {0,+,%k}<%loop> to i64) == {0,+,(sext i32 %k to i64)}<%loop>
+; CHECK-NEXT:    Equal predicate: (sext i32 {%k,+,%k}<%loop> to i64) == ((sext i32 {0,+,%k}<%loop> to i64) + (sext i32 %k to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + %k),+,%k}<%loop> to i64) == (-1 + (sext i32 {%k,+,%k}<%loop> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: 0 slt) %k
-; CHECK-NEXT:    Equal predicate: {(sext i32 %k to i64),+,(sext i32 %k to i64)}<%loop> == (sext i32 {%k,+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 {%k,+,%k}<%loop> to i64) + (sext i32 %k to i64)) == (sext i32 {(2 * %k),+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(2 * %k),+,%k}<%loop> to i64))<nsw> == (sext i32 {(-1 + (2 * %k)),+,%k}<%loop> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 {%k,+,%k}<%loop> to i64) == {(sext i32 %k to i64),+,(sext i32 %k to i64)}<%loop>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(2 * %k),+,%k}<%loop> to i64) == ((sext i32 {%k,+,%k}<%loop> to i64) + (sext i32 %k to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (2 * %k)),+,%k}<%loop> to i64) == (-1 + (sext i32 {(2 * %k),+,%k}<%loop> to i64))<nsw>
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.1, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - consistent output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: 0 slt) %k
-; CHECK-NEXT:    Equal predicate: {(sext i32 %k to i64),+,(sext i32 %k to i64)}<%loop> == (sext i32 {%k,+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: ((sext i32 {%k,+,%k}<%loop> to i64) + (sext i32 %k to i64)) == (sext i32 {(2 * %k),+,%k}<%loop> to i64)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i32 {(2 * %k),+,%k}<%loop> to i64))<nsw> == (sext i32 {(-1 + (2 * %k)),+,%k}<%loop> to i64)
+; CHECK-NEXT:    Equal predicate: (sext i32 {%k,+,%k}<%loop> to i64) == {(sext i32 %k to i64),+,(sext i32 %k to i64)}<%loop>
+; CHECK-NEXT:    Equal predicate: (sext i32 {(2 * %k),+,%k}<%loop> to i64) == ((sext i32 {%k,+,%k}<%loop> to i64) + (sext i32 %k to i64))
+; CHECK-NEXT:    Equal predicate: (sext i32 {(-1 + (2 * %k)),+,%k}<%loop> to i64) == (-1 + (sext i32 {(2 * %k),+,%k}<%loop> to i64))<nsw>
 ; CHECK-NEXT:    Compare predicate: 0 slt) %k
 ;
 entry:

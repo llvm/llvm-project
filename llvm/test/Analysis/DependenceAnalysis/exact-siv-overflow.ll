@@ -28,8 +28,8 @@ define void @exactsiv_const_ovfl(ptr %A) {
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
 ; CHECK-NEXT:    da analyze - consistent output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
-; CHECK-NEXT:    Equal predicate: {9223372036854775808,+,-6}<nsw><%loop.header> == (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128)
-; CHECK-NEXT:    Equal predicate: (-1 + (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128))<nsw> == {9223372036854775807,+,-6}<nsw><%loop.header>
+; CHECK-NEXT:    Equal predicate: (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128) == {9223372036854775808,+,-6}<nsw><%loop.header>
+; CHECK-NEXT:    Equal predicate: {9223372036854775807,+,-6}<nsw><%loop.header> == (-1 + (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128))<nsw>
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
@@ -39,13 +39,13 @@ define void @exactsiv_const_ovfl(ptr %A) {
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
 ; CHECK-EXACT-SIV-NEXT:    da analyze - consistent output [*]!
 ; CHECK-EXACT-SIV-NEXT:    Runtime Assumptions:
-; CHECK-EXACT-SIV-NEXT:    Equal predicate: {9223372036854775808,+,-6}<nsw><%loop.header> == (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128)
-; CHECK-EXACT-SIV-NEXT:    Equal predicate: (-1 + (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128))<nsw> == {9223372036854775807,+,-6}<nsw><%loop.header>
+; CHECK-EXACT-SIV-NEXT:    Equal predicate: (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128) == {9223372036854775808,+,-6}<nsw><%loop.header>
+; CHECK-EXACT-SIV-NEXT:    Equal predicate: {9223372036854775807,+,-6}<nsw><%loop.header> == (-1 + (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128))<nsw>
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-EXACT-SIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-EXACT-SIV-NEXT:    Runtime Assumptions:
-; CHECK-EXACT-SIV-NEXT:    Equal predicate: {9223372036854775808,+,-6}<nsw><%loop.header> == (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128)
-; CHECK-EXACT-SIV-NEXT:    Equal predicate: (-1 + (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128))<nsw> == {9223372036854775807,+,-6}<nsw><%loop.header>
+; CHECK-EXACT-SIV-NEXT:    Equal predicate: (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128) == {9223372036854775808,+,-6}<nsw><%loop.header>
+; CHECK-EXACT-SIV-NEXT:    Equal predicate: {9223372036854775807,+,-6}<nsw><%loop.header> == (-1 + (sext i64 {-9223372036854775808,+,-6}<nw><%loop.header> to i128))<nsw>
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-EXACT-SIV-NEXT:    da analyze - consistent output [*]!
 ;
