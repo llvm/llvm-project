@@ -3,7 +3,6 @@
 
 int main(int argc, char **argv) {
   int len = 16;
-  double *data = (double *)malloc(len * sizeof(double));
   
   // Valid strided array sections with TO
   #pragma omp target update to(data[0:8:2]) // OK - even indices

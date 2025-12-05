@@ -1,12 +1,8 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
-extern void *malloc(__SIZE_TYPE__);
-extern void free(void *);
-
 int main(int argc, char **argv) {
   int len = 11;
-  double *data = (double *)malloc(len * sizeof(double));
   
   // Valid partial strided sections with FROM
   #pragma omp target update from(data[0:2:3]) // OK - partial coverage
