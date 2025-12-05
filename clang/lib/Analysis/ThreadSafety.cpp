@@ -2821,7 +2821,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
           const auto *DD = AD.getDestructorDecl(AC.getASTContext());
-          // Function parameters as they are constructed in callee's context and
+          // Function parameters as they are constructed in caller's context and
           // the CFG does not contain the ctors. Ignore them as their
           // capabilities cannot be analysed because of this missing
           // information.
