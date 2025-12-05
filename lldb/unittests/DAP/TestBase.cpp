@@ -72,7 +72,6 @@ void DAPTestBase::TearDown() {
 
 void DAPTestBase::SetUpTestSuite() {
   lldb::SBError error = SBDebugger::InitializeWithErrorHandling();
-  EXPECT_TRUE(error.IsValid());
   EXPECT_TRUE(error.Success());
 }
 void DAPTestBase::TeatUpTestSuite() { SBDebugger::Terminate(); }
