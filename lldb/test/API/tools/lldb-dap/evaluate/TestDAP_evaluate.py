@@ -376,20 +376,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluate("my_map", "size=2", want_varref=True)
         self.continue_to_breakpoint(breakpoint_6)
-        if self.isResultExpandedDescription():
-            self.assertEvaluate(
-                "my_map",
-                r"\(std::map<int, int>\) \$\d+ = size=3 {\n  \[0\] = \(first = 1, second = 2\)\n  \[1\] = \(first = 2, second = 3\)\n  \[2\] = \(first = 3, second = 4\)\n}",
-                want_varref=True,
-            )
-        elif self.isResultShortDescription():
-            self.assertEvaluate(
-                "my_map",
-                r"size=3 {\n  \[0\] = \(first = 1, second = 2\)\n  \[1\] = \(first = 2, second = 3\)\n  \[2\] = \(first = 3, second = 4\)\n}",
-                want_varref=True,
-            )
-        else:
-            self.assertEvaluate("my_map", "size=3", want_varref=True)
+        self.assertEvaluate("my_map", "size=3", want_varref=True)
 
         if self.isResultExpandedDescription():
             self.assertEvaluate(

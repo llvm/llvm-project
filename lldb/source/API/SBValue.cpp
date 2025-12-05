@@ -1260,6 +1260,11 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
   return result;
 }
 
+bool SBValue::GetDescription(SBStream &description) {
+  LLDB_INSTRUMENT_VA(this, description);
+  return GetDescription(description, eDescriptionLevelFull);
+}
+
 bool SBValue::GetDescription(SBStream &description,
                              lldb::DescriptionLevel description_level) {
   LLDB_INSTRUMENT_VA(this, description, description_level);

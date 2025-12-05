@@ -12,7 +12,6 @@
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBType.h"
-#include "lldb/lldb-enumerations.h"
 
 class ValueImpl;
 class ValueLocker;
@@ -319,9 +318,10 @@ public:
 
   lldb::SBValue Persist();
 
-  bool GetDescription(
-      lldb::SBStream &description,
-      lldb::DescriptionLevel description_level = eDescriptionLevelFull);
+  bool GetDescription(lldb::SBStream &description);
+
+  bool GetDescription(lldb::SBStream &description,
+                      lldb::DescriptionLevel description_level);
 
   bool GetExpressionPath(lldb::SBStream &description);
 
