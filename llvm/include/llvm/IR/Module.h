@@ -710,6 +710,17 @@ public:
     return make_range(begin(), end());
   }
 
+  /// Get an iterator range over all function definitions (excluding
+  /// declarations).
+  auto getFunctionDefs() {
+    return make_filter_range(functions(),
+                             [](Function &F) { return !F.isDeclaration(); });
+  }
+  auto getFunctionDefs() const {
+    return make_filter_range(
+        functions(), [](const Function &F) { return !F.isDeclaration(); });
+  }
+
 /// @}
 /// @name Alias Iteration
 /// @{
