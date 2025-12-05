@@ -1464,9 +1464,8 @@ void Parser::HandlePragmaExport() {
   if (!zOSHandlePragmaHelper(tok::annot_pragma_export)) {
     // Parsing pragma failed, and has been diagnosed.  Slurp up the
     // tokens until eof (really end of line) to prevent follow-on errors.
-    while (Tok.isNot(tok::eof))
-      PP.Lex(Tok);
-    PP.Lex(Tok);
+    SkipUntil(tok::eof, StopBeforeMatch);
+    ConsumeToken();
   }
 }
 

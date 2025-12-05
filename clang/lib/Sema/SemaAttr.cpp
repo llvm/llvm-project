@@ -1327,18 +1327,19 @@ void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
     FD->addAttr(NoBuiltinAttr::CreateImplicit(Context, V.data(), V.size()));
 }
 
-NamedDecl *Sema::lookupExternCName(IdentifierInfo *IdentId,
-                                   SourceLocation NameLoc, Scope *curScope) {
+NamedDecl *Sema::lookupExternCFunctionOrVariable(IdentifierInfo *IdentId,
+                                                 SourceLocation NameLoc,
+                                                 Scope *curScope) {
   LookupResult Result(*this, IdentId, NameLoc, LookupOrdinaryName);
   LookupName(Result, curScope);
   if (!getLangOpts().CPlusPlus)
     return Result.getAsSingle<NamedDecl>();
   for (LookupResult::iterator I = Result.begin(); I != Result.end(); ++I) {
     NamedDecl *D = (*I)->getUnderlyingDecl();
-    if (auto *FD = dyn_cast<FunctionDecl>(D->getCanonicalDecl()))
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
       if (FD->isExternC())
         return D;
-    if (isa<VarDecl>(D->getCanonicalDecl()))
+    if (isa<VarDecl>(D))
       return D;
   }
   return nullptr;
@@ -1350,7 +1351,8 @@ void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc,
   Label.NameLoc = NameLoc;
   Label.Used = false;
 
-  NamedDecl *PrevDecl = lookupExternCName(IdentId, NameLoc, curScope);
+  NamedDecl *PrevDecl =
+      lookupExternCFunctionOrVariable(IdentId, NameLoc, curScope);
   if (!PrevDecl) {
     PendingExportedNames[IdentId] = Label;
     return;

@@ -2309,8 +2309,9 @@ public:
   ActOnPragmaMSFunction(SourceLocation Loc,
                         const llvm::SmallVectorImpl<StringRef> &NoBuiltins);
 
-  NamedDecl *lookupExternCName(IdentifierInfo *IdentId, SourceLocation NameLoc,
-                               Scope *curScope);
+  NamedDecl *lookupExternCFunctionOrVariable(IdentifierInfo *IdentId,
+                                             SourceLocation NameLoc,
+                                             Scope *curScope);
 
   /// A label from a C++ #pragma export, for a symbol that we
   /// haven't seen the declaration for yet.
