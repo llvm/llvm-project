@@ -1201,6 +1201,11 @@ bool PseudoInstruction::DoesBranch() {
   return false;
 }
 
+bool PseudoInstruction::IsBarrier() {
+  // This is NOT a valid question for a pseudo instruction.
+  return false;
+}
+
 bool PseudoInstruction::HasDelaySlot() {
   // This is NOT a valid question for a pseudo instruction.
   return false;
