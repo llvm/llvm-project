@@ -772,18 +772,90 @@ bool llvm::validateDelinearizationResult(
             SE.getNoopOrSignExtend(B, WiderType)};
   };
 
-  auto AddOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
-    std::tie(A, B) = UnifyTypes(A, B);
-    if (!SE.willNotOverflow(Instruction::Add, /*IsSigned=*/true, A, B))
-      return nullptr;
-    return SE.getAddExpr(A, B);
+  // Get a type with twice the bit width of T.
+  auto GetWiderType = [&](Type *T) -> Type * {
+    unsigned BitWidth = SE.getTypeSizeInBits(T);
+    return IntegerType::get(T->getContext(), BitWidth * 2);
   };
 
-  auto MulOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
+  // Check if the result of A + B (signed) does not overflow. If it can be
+  // proven at compile-time, return the result. If it might overflow and Assume
+  // is provided, add a runtime equality predicate and return the result.
+  // Otherwise return nullptr.
+  auto AddNoOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
     std::tie(A, B) = UnifyTypes(A, B);
-    if (!SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/true, A, B))
+    if (SE.willNotOverflow(Instruction::Add, /*IsSigned=*/true, A, B))
+      return SE.getAddExpr(A, B);
+    if (!Assume)
       return nullptr;
-    return SE.getMulExpr(A, B);
+
+    // Compute the addition in a wider type to detect overflow.
+    // If (sext A) + (sext B) == sext(A + B), then A + B does not overflow.
+    Type *OrigTy = A->getType();
+    Type *WiderTy = GetWiderType(OrigTy);
+    const SCEV *AWide = SE.getSignExtendExpr(A, WiderTy);
+    const SCEV *BWide = SE.getSignExtendExpr(B, WiderTy);
+    const SCEV *SumWide = SE.getAddExpr(AWide, BWide);
+    const SCEV *Sum = SE.getAddExpr(A, B);
+    const SCEV *SumExtended = SE.getSignExtendExpr(Sum, WiderTy);
+    // Add predicate: (sext A) + (sext B) == sext(A + B).
+    if (SumWide != SumExtended &&
+        !SE.isKnownPredicate(ICmpInst::ICMP_EQ, SumWide, SumExtended))
+      Assume->push_back(SE.getEqualPredicate(SumWide, SumExtended));
+    return Sum;
+  };
+
+  // Check if the result of A * B (signed) does not overflow. If it can be
+  // proven at compile-time, return the result. If it might overflow and Assume
+  // is provided, add a runtime equality predicate and return the result.
+  // Otherwise return nullptr.
+  auto MulNoOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
+    std::tie(A, B) = UnifyTypes(A, B);
+    if (SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/true, A, B))
+      return SE.getMulExpr(A, B);
+    if (!Assume)
+      return nullptr;
+
+    // Compute the multiplication in a wider type to detect overflow.
+    // If (sext A) * (sext B) == sext(A * B), then A * B does not overflow.
+    Type *OrigTy = A->getType();
+    Type *WiderTy = GetWiderType(OrigTy);
+    const SCEV *AWide = SE.getSignExtendExpr(A, WiderTy);
+    const SCEV *BWide = SE.getSignExtendExpr(B, WiderTy);
+    const SCEV *ProdWide = SE.getMulExpr(AWide, BWide);
+    const SCEV *Prod = SE.getMulExpr(A, B);
+    const SCEV *ProdExtended = SE.getSignExtendExpr(Prod, WiderTy);
+    // Add predicate: (sext A) * (sext B) == sext(A * B).
+    if (ProdWide != ProdExtended &&
+        !SE.isKnownPredicate(ICmpInst::ICMP_EQ, ProdWide, ProdExtended))
+      Assume->push_back(SE.getEqualPredicate(ProdWide, ProdExtended));
+    return Prod;
+  };
+
+  // Check if the result of A - B (signed) does not overflow. If it can be
+  // proven at compile-time or if Assume is provided (adding a runtime
+  // predicate), return true. Otherwise return false.
+  auto SubNoOverflow = [&](const SCEV *A, const SCEV *B) -> bool {
+    std::tie(A, B) = UnifyTypes(A, B);
+    if (SE.willNotOverflow(Instruction::Sub, /*IsSigned=*/true, A, B))
+      return true;
+    if (!Assume)
+      return false;
+
+    // Compute the subtraction in a wider type to detect overflow.
+    // If (sext A) - (sext B) == sext(A - B), then A - B does not overflow.
+    Type *OrigTy = A->getType();
+    Type *WiderTy = GetWiderType(OrigTy);
+    const SCEV *AWide = SE.getSignExtendExpr(A, WiderTy);
+    const SCEV *BWide = SE.getSignExtendExpr(B, WiderTy);
+    const SCEV *DiffWide = SE.getMinusSCEV(AWide, BWide);
+    const SCEV *Diff = SE.getMinusSCEV(A, B);
+    const SCEV *DiffExtended = SE.getSignExtendExpr(Diff, WiderTy);
+    // Add predicate: (sext A) - (sext B) == sext(A - B).
+    if (DiffWide != DiffExtended &&
+        !SE.isKnownPredicate(ICmpInst::ICMP_EQ, DiffWide, DiffExtended))
+      Assume->push_back(SE.getEqualPredicate(DiffWide, DiffExtended));
+    return true;
   };
 
   // Range check: 0 <= I_k < S_k for k = 2..n.
@@ -839,21 +911,20 @@ bool llvm::validateDelinearizationResult(
   // NOTE: I_1 can be negative, so Min is not just 0.
   const SCEV *Prod = SE.getOne(Sizes[0]->getType());
   for (const SCEV *Size : Sizes) {
-    Prod = MulOverflow(Prod, Size);
+    Prod = MulNoOverflow(Prod, Size);
     if (!Prod)
       return false;
   }
-  const SCEV *Min = MulOverflow(Prod, Subscripts[0]);
+  const SCEV *Min = MulNoOverflow(Prod, Subscripts[0]);
   if (!Min)
     return false;
 
   // We have already checked that Min and Prod don't overflow, so it's enough
   // to check whether Min + Prod - 1 doesn't overflow.
-  const SCEV *MaxPlusOne = AddOverflow(Min, Prod);
+  const SCEV *MaxPlusOne = AddNoOverflow(Min, Prod);
   if (!MaxPlusOne)
     return false;
-  if (!SE.willNotOverflow(Instruction::Sub, /*IsSigned=*/true, MaxPlusOne,
-                          SE.getOne(MaxPlusOne->getType())))
+  if (!SubNoOverflow(MaxPlusOne, SE.getOne(MaxPlusOne->getType())))
     return false;
 
   return true;
