@@ -10760,7 +10760,12 @@ bool ConstantComparesGatherer::matchInstruction(Instruction *I, bool isEQ,
     Span = Span.inverse();
 
   // If there are a ton of values, we don't want to make a ginormous switch.
-  if (Span.isSizeLargerThan(8) || Span.isEmptySet()) {
+  // In the InstCombine case, we know this will be convered to bitmask so
+  // there is no added cost of having more values. Limit to the max register
+  // size since that's the largest BitMap we can handle anyways
+  if (Span.isSizeLargerThan(InstCombine ? DL.getLargestLegalIntTypeSizeInBits()
+                                        : 8) ||
+      Span.isEmptySet()) {
     return false;
   }
 

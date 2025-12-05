@@ -82,11 +82,12 @@ define i1 @and_icmp_ugt(i32 signext noundef %type) {
 ; CHECK-LABEL: define i1 @and_icmp_ugt(
 ; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TYPE]], 22
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[TYPE]], 11
-; CHECK-NEXT:    [[AND_COND:%.*]] = and i1 [[CMP]], [[CMP1]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[TYPE]], 15
-; CHECK-NEXT:    [[AND_COND1:%.*]] = and i1 [[CMP2]], [[AND_COND]]
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[TYPE]] to i23
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i23 -4157441, [[SWITCH_CAST]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i23 [[SWITCH_DOWNSHIFT]] to i1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[TYPE]], 23
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
+; CHECK-NEXT:    [[AND_COND1:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[AND_COND1]]
 ;
 entry:
