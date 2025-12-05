@@ -15,7 +15,7 @@
 //   c. NDD (EVEX) -> non-NDD (legacy)
 //   d. NF_ND (EVEX) -> NF (EVEX)
 //   e. NonNF (EVEX) -> NF (EVEX)
-//   f. SETZUCCm (EVEX) -> SETCCm
+//   f. SETZUCCm (EVEX) -> SETCCm (legacy)
 //
 // Compression a, b and c can always reduce code size, with some exceptions
 // such as promoted 16-bit CRC32 which is as long as the legacy version.
