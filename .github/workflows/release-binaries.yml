@@ -257,14 +257,14 @@ jobs:
       attestations: write # For artifact attestations
 
     steps:
-    - name: Checkout Release Scripts
-      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-      with:
-        sparse-checkout: |
-          .github/workflows/upload-release-artifact
-          llvm/utils/release/github-upload-release.py
-          llvm/utils/git/requirements.txt
-        sparse-checkout-cone-mode: false
+      - name: Checkout Release Scripts
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          sparse-checkout: |
+            .github/workflows/upload-release-artifact
+            llvm/utils/release/github-upload-release.py
+            llvm/utils/git/requirements.txt
+          sparse-checkout-cone-mode: false
 
       - name: Upload Artifacts
         uses: ./.github/workflows/upload-release-artifact
