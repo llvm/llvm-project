@@ -681,3 +681,30 @@ void bad_prevents_redeclaration4() {
 }
 
 
+// FIXME: the same test but for `auto [str, val]` (when std::pair will be one of default type in DefaultSafeDestructorTypes)
+void bad_safe_string_default() {
+    std::pair<std::string, int> p;
+    const auto& [str, val] = p; DUMMY_TOKEN
+    if (str.empty()) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (const auto& [str, val] = p; str.empty()) {
+        do_some();
+    }
+    do_some(); // Additional statement after if
+}
+
+// FIXME: the same test but for `auto [str, val]`
+void bad_safe_string_default2() {
+    struct P {std::string first; int second;};
+    P p{{}, 0};
+    const auto& [str, val] = p; DUMMY_TOKEN
+    if (str.empty()) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (const auto& [str, val] = p; str.empty()) {
+        do_some();
+    }
+    do_some(); // Additional statement after if
+}
+
