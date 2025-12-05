@@ -690,7 +690,7 @@ struct CallObjectDelete final : EHScopeStack::Cleanup {
                    QualType elementType)
       : ptr(ptr), operatorDelete(operatorDelete), elementType(elementType) {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     cgf.emitDeleteCall(operatorDelete, ptr, elementType);
   }
 };
