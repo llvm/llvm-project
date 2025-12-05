@@ -45,6 +45,7 @@
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <memory>
 
@@ -1259,8 +1260,9 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
   return result;
 }
 
-bool SBValue::GetDescription(SBStream &description, bool short_mode) {
-  LLDB_INSTRUMENT_VA(this, description);
+bool SBValue::GetDescription(SBStream &description,
+                             lldb::DescriptionLevel description_level) {
+  LLDB_INSTRUMENT_VA(this, description, description_level);
 
   Stream &strm = description.ref();
 
@@ -1268,12 +1270,17 @@ bool SBValue::GetDescription(SBStream &description, bool short_mode) {
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
     DumpValueObjectOptions options;
-    options.SetUseDynamicType(m_opaque_sp->GetUseDynamic());
-    options.SetUseSyntheticValue(m_opaque_sp->GetUseSynthetic());
-    if (short_mode) {
+    if (description_level != eDescriptionLevelInitial) {
+      options.SetUseDynamicType(m_opaque_sp->GetUseDynamic());
+      options.SetUseSyntheticValue(m_opaque_sp->GetUseSynthetic());
+    }
+    if (description_level == eDescriptionLevelBrief) {
       options.SetAllowOnelinerMode(true);
       options.SetHideRootName(true);
       options.SetHideRootType(true);
+    } else if (description_level == eDescriptionLevelVerbose) {
+      options.SetShowTypes(true);
+      options.SetShowLocation(true);
     }
     if (llvm::Error error = value_sp->Dump(strm, options)) {
       strm << "error: " << toString(std::move(error));

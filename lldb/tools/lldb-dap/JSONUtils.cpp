@@ -674,7 +674,10 @@ std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
   // Try the SBValue::GetDescription(), which may call into language runtime
   // specific formatters (see ValueObjectPrinter).
   lldb::SBStream stream;
-  val.GetDescription(stream, context == protocol::eEvaluateContextClipboard);
+  if (context == protocol::eEvaluateContextRepl)
+    val.GetDescription(stream, lldb::eDescriptionLevelFull);
+  else
+    val.GetDescription(stream, lldb::eDescriptionLevelBrief);
   llvm::StringRef description = stream.GetData();
   return description.trim().str();
 }

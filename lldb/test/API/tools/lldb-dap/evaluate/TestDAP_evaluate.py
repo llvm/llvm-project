@@ -333,17 +333,91 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
 
         # Now we check that values are updated after stepping
         self.continue_to_breakpoint(breakpoint_4)
-        self.assertEvaluate("my_vec", "size=2", want_varref=True)
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "my_vec",
+                r"\(std::vector<int>\) \$\d+ = size=2 {\n  \[0\] = 1\n  \[1\] = 2\n}",
+                want_varref=True,
+            )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "my_vec", r"size=2 {\n  \[0\] = 1\n  \[1\] = 2\n}", want_varref=True
+            )
+        else:
+            self.assertEvaluate("my_vec", "size=2", want_varref=True)
         self.continue_to_breakpoint(breakpoint_5)
-        self.assertEvaluate("my_vec", "size=3", want_varref=True)
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "my_vec",
+                r"\(std::vector<int>\) \$\d+ = size=3 {\n  \[0\] = 1\n  \[1\] = 2\n  \[2\] = 3\n}",
+                want_varref=True,
+            )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "my_vec",
+                r"size=3 {\n  \[0\] = 1\n  \[1\] = 2\n  \[2\] = 3\n}",
+                want_varref=True,
+            )
+        else:
+            self.assertEvaluate("my_vec", "size=3", want_varref=True)
 
-        self.assertEvaluate("my_map", "size=2", want_varref=True)
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "my_map",
+                r"\(std::map<int, int>\) \$\d+ = size=2 {\n  \[0\] = \(first = 1, second = 2\)\n  \[1\] = \(first = 2, second = 3\)\n}",
+                want_varref=True,
+            )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "my_map",
+                r"size=2 {\n  \[0\] = \(first = 1, second = 2\)\n  \[1\] = \(first = 2, second = 3\)\n}",
+                want_varref=True,
+            )
+        else:
+            self.assertEvaluate("my_map", "size=2", want_varref=True)
         self.continue_to_breakpoint(breakpoint_6)
-        self.assertEvaluate("my_map", "size=3", want_varref=True)
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "my_map",
+                r"\(std::map<int, int>\) \$\d+ = size=3 {\n  \[0\] = \(first = 1, second = 2\)\n  \[1\] = \(first = 2, second = 3\)\n  \[2\] = \(first = 3, second = 4\)\n}",
+                want_varref=True,
+            )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "my_map",
+                r"size=3 {\n  \[0\] = \(first = 1, second = 2\)\n  \[1\] = \(first = 2, second = 3\)\n  \[2\] = \(first = 3, second = 4\)\n}",
+                want_varref=True,
+            )
+        else:
+            self.assertEvaluate("my_map", "size=3", want_varref=True)
 
-        self.assertEvaluate("my_bool_vec", "size=1", want_varref=True)
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "my_bool_vec",
+                r"\(std::vector<bool>\) \$\d+ = size=1 {\n  \[0\] = true\n}",
+                want_varref=True,
+            )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "my_bool_vec", r"size=1 {\n  \[0\] = true\n}", want_varref=True
+            )
+        else:
+            self.assertEvaluate("my_bool_vec", "size=1", want_varref=True)
         self.continue_to_breakpoint(breakpoint_7)
-        self.assertEvaluate("my_bool_vec", "size=2", want_varref=True)
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "my_bool_vec",
+                r"\(std::vector<bool>\) \$\d+ = size=2 {\n  \[0\] = true\n  \[1\] = false\n}",
+                want_varref=True,
+            )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "my_bool_vec",
+                r"size=2 {\n  \[0\] = true\n  \[1\] = false\n}",
+                want_varref=True,
+            )
+        else:
+            self.assertEvaluate("my_bool_vec", "size=2", want_varref=True)
 
         self.continue_to_breakpoint(breakpoint_8)
         # Test memory read, especially with 'empty' repeat commands.
@@ -386,7 +460,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    def test_variable_evaluate_expressions(self):
+    def test_clipboard_evaluate_expressions(self):
         # Tests expression evaluations that are triggered when value copied in editor
         self.run_test_evaluate_expressions(
             "clipboard", enableAutoVariableSummaries=False
