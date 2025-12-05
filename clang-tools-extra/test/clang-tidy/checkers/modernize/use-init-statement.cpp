@@ -250,8 +250,6 @@ void good_include() {
     }
 }
 
-// TODO: all same tests for structured binding
-
 void good_stolen_reference1() {
     const int* pi = nullptr;
     int i1 = 0;
