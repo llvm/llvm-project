@@ -6568,17 +6568,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.getOperand(0).setReg(OriginalExec);
     return BB;
   }
-  case AMDGPU::S_CBRANCH_SCC0:
-  case AMDGPU::S_CBRANCH_SCC1: {
-    MachineBasicBlock *TBB = nullptr;
-    MachineBasicBlock *FBB = nullptr;
-    SmallVector<MachineOperand, 1> Cond;
-    TII->analyzeBranch(*BB, TBB, FBB, Cond);
-    if (TBB && !TBB->isLiveIn(AMDGPU::SCC) && FBB &&
-        !FBB->isLiveIn(AMDGPU::SCC))
-      MI.addRegisterKilled(AMDGPU::SCC, TRI);
-    return BB;
-  }
   default:
     if (TII->isImage(MI) || TII->isMUBUF(MI)) {
       if (!MI.mayStore())

@@ -10766,6 +10766,13 @@ bool SIInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   return false;
 }
 
+static bool SCCIsDeadOnExit(MachineBasicBlock *MBB) {
+  for (MachineBasicBlock *S : MBB->successors())
+    if (S->isLiveIn(AMDGPU::SCC))
+      return false;
+  return true;
+}
+
 // Invert all uses of SCC following SCCDef because SCCDef may be deleted and
 // (incoming SCC) = !(SCC defined by SCCDef).
 // Return true if all uses can be re-written, false otherwise.
@@ -10786,13 +10793,12 @@ bool SIInstrInfo::invertSCCUse(MachineInstr *SCCDef) const {
       else
         return false;
     }
-    if (MI.definesRegister(AMDGPU::SCC, &RI) ||
-        MI.killsRegister(AMDGPU::SCC, &RI)) {
+    if (MI.definesRegister(AMDGPU::SCC, &RI)) {
       SCCIsDead = true;
       break;
     }
   }
-  if (MBB->succ_empty())
+  if (!SCCIsDead && SCCIsDeadOnExit(MBB))
     SCCIsDead = true;
 
   // SCC may have more uses.  Can't invert all of them.
