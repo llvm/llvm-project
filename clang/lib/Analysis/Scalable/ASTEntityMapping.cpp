@@ -28,8 +28,7 @@ std::optional<EntityName> getLocalEntityNameForDecl(const Decl* D) {
   if (isa<FunctionDecl>(D) && cast<FunctionDecl>(D)->getBuiltinID())
     return std::nullopt;
 
-  if (!isa<FunctionDecl>(D) && !isa<ParmVarDecl>(D) && !isa<VarDecl>(D) &&
-      !isa<FieldDecl>(D) && !isa<RecordDecl>(D))
+  if (!isa<FunctionDecl, ParmVarDecl, VarDecl, FieldDecl, RecordDecl>(D))
     return std::nullopt;
 
   llvm::SmallString<16> Suffix;
