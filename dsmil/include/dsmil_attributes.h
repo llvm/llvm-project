@@ -1296,6 +1296,113 @@
 /** @} */
 
 /**
+ * @defgroup DSMIL_OT_TELEMETRY OT/Safety Telemetry Attributes (v1.8)
+ * @{
+ */
+
+/**
+ * @brief Mark function as OT-critical (interacts with OT/ICS control paths or SES)
+ *
+ * Functions marked with DSMIL_OT_CRITICAL interact with Operational Technology
+ * (OT) or Industrial Control Systems (ICS) control paths, or the Safety
+ * Envelope Supervisor (SES). These functions are automatically instrumented
+ * with telemetry for safety visibility.
+ *
+ * Example:
+ * @code
+ * DSMIL_OT_CRITICAL
+ * DSMIL_LAYER(3)
+ * DSMIL_DEVICE(12)
+ * void pump_control_update(double setpoint) {
+ *     // OT-critical control function
+ *     // Automatically instrumented with entry/exit telemetry
+ *     update_pump_setpoint(setpoint);
+ * }
+ * @endcode
+ *
+ * @note Requires -fdsmil-ot-telemetry flag for instrumentation
+ * @note Telemetry events logged to Layer 5/8/9 for safety monitoring
+ */
+#define DSMIL_OT_CRITICAL \
+    __attribute__((annotate("dsmil.ot_critical")))
+
+/**
+ * @brief Mark function authority tier for OT operations
+ * @param level Authority tier (0-3)
+ *
+ * Authority tiers define the safety impact level:
+ * - 0: Safety kernel / Safety Instrumented System (SIS) - highest authority
+ * - 1: High-impact control - direct control of critical processes
+ * - 2: Optimization/scheduling - operational optimization
+ * - 3: Analytics/advisory only - read-only analysis, no control
+ *
+ * Example:
+ * @code
+ * DSMIL_OT_TIER(1)
+ * DSMIL_OT_CRITICAL
+ * void critical_valve_control(int valve_id, double position) {
+ *     // High-impact control (tier 1)
+ *     set_valve_position(valve_id, position);
+ * }
+ * @endcode
+ *
+ * @note Default tier inferred from layer if not specified
+ * @note Lower layers typically have lower tier numbers
+ */
+#define DSMIL_OT_TIER(level) \
+    __attribute__((annotate("dsmil.ot_tier=" #level)))
+
+/**
+ * @brief Mark function as SES (Safety Envelope Supervisor) gate
+ *
+ * Functions marked with DSMIL_SES_GATE send intents to the Safety Envelope
+ * Supervisor. All SES interactions are logged for safety compliance.
+ *
+ * Example:
+ * @code
+ * DSMIL_SES_GATE
+ * DSMIL_OT_CRITICAL
+ * DSMIL_OT_TIER(1)
+ * int request_pump_start(int pump_id) {
+ *     // Sends intent to SES for approval
+ *     return ses_send_intent("pump_start", pump_id);
+ * }
+ * @endcode
+ *
+ * @note SES gate functions emit DSMIL_TELEMETRY_SES_INTENT events
+ * @note SES accept/reject decisions logged separately
+ */
+#define DSMIL_SES_GATE \
+    __attribute__((annotate("dsmil.ses_gate")))
+
+/**
+ * @brief Mark variable as safety-relevant signal
+ * @param name Signal name identifier
+ *
+ * Variables marked with DSMIL_SAFETY_SIGNAL represent safety-relevant setpoints
+ * or signals such as pressure, flow, current, speed, temperature, etc.
+ * Updates to these variables are automatically logged for safety monitoring.
+ *
+ * Example:
+ * @code
+ * DSMIL_SAFETY_SIGNAL("line7_pressure_setpoint")
+ * static double pressure_setpoint = 100.0;  // PSI
+ *
+ * void update_pressure(double new_value) {
+ *     pressure_setpoint = new_value;  // Automatically logged
+ * }
+ * @endcode
+ *
+ * @note Works on global and static variables
+ * @note Store operations are instrumented with telemetry
+ * @note Signal name used for telemetry event identification
+ */
+#define DSMIL_SAFETY_SIGNAL(name) \
+    __attribute__((annotate("dsmil.safety_signal=" #name)))
+
+/** @} */
+
+/**
  * @defgroup DSMIL_MEMORY Memory and Performance Attributes
  * @{
  */
