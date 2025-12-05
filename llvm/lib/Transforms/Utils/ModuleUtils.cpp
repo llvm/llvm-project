@@ -22,7 +22,6 @@
 #include "llvm/Support/Hash.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation/KCFI.h"
 
 using namespace llvm;
 
