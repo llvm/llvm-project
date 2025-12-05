@@ -54,25 +54,32 @@ LogicalResult handleMultidimensionalVectors(
     std::function<Value(Type, ValueRange)> createOperand,
     ConversionPatternRewriter &rewriter);
 
-LogicalResult vectorOneToOneRewrite(
-    Operation *op, StringRef targetOp, ValueRange operands,
-    ArrayRef<NamedAttribute> targetAttrs,
-    const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
-    IntegerOverflowFlags overflowFlags = IntegerOverflowFlags::none);
+LogicalResult vectorOneToOneRewrite(Operation *op, StringRef targetOp,
+                                    ValueRange operands,
+                                    ArrayRef<NamedAttribute> targetAttrs,
+                                    Attribute propertiesAttr,
+                                    const LLVMTypeConverter &typeConverter,
+                                    ConversionPatternRewriter &rewriter);
+
+/// Return "true" if the given type is an unsupported floating point type. In
+/// case of a vector type, return "true" if the element type is an unsupported
+/// floating point type.
+bool isUnsupportedFloatingPointType(const TypeConverter &typeConverter,
+                                    Type type);
 } // namespace detail
 } // namespace LLVM
 
 // Default attribute conversion class, which passes all source attributes
-// through to the target op, unmodified.
+// through to the target op, unmodified. The attribute to set properties of the
+// target operation will be nullptr (i.e. any properties that exist in will have
+// default values).
 template <typename SourceOp, typename TargetOp>
 class AttrConvertPassThrough {
 public:
   AttrConvertPassThrough(SourceOp srcOp) : srcAttrs(srcOp->getAttrs()) {}
 
   ArrayRef<NamedAttribute> getAttrs() const { return srcAttrs; }
-  LLVM::IntegerOverflowFlags getOverflowFlags() const {
-    return LLVM::IntegerOverflowFlags::none;
-  }
+  Attribute getPropAttr() const { return {}; }
 
 private:
   ArrayRef<NamedAttribute> srcAttrs;
@@ -80,10 +87,13 @@ private:
 
 /// Basic lowering implementation to rewrite Ops with just one result to the
 /// LLVM Dialect. This supports higher-dimensional vector types.
-/// The AttrConvert template template parameter should be a template class
-/// with SourceOp and TargetOp type parameters, a constructor that takes
-/// a SourceOp instance, and a getAttrs() method that returns
-/// ArrayRef<NamedAttribute>.
+/// The AttrConvert template template parameter should:
+//  - be a template class with SourceOp and TargetOp type parameters
+//  - have a constructor that takes a SourceOp instance
+//  - a getAttrs() method that returns ArrayRef<NamedAttribute> containing
+//    attributes that the target operation will have
+//  - a getPropAttr() method that returns either a NULL attribute or a
+//    DictionaryAttribute with properties that exist for the target operation
 template <typename SourceOp, typename TargetOp,
           template <typename, typename> typename AttrConvert =
               AttrConvertPassThrough,
@@ -93,16 +103,6 @@ public:
   using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
   using Super = VectorConvertToLLVMPattern<SourceOp, TargetOp>;
 
-  /// Return the given type if it's a floating point type. If the given type is
-  /// a vector type, return its element type if it's a floating point type.
-  static FloatType getFloatingPointType(Type type) {
-    if (auto floatType = dyn_cast<FloatType>(type))
-      return floatType;
-    if (auto vecType = dyn_cast<VectorType>(type))
-      return dyn_cast<FloatType>(vecType.getElementType());
-    return nullptr;
-  }
-
   LogicalResult
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -110,26 +110,18 @@ public:
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
 
-    // The pattern should not apply if a floating-point operand is converted to
-    // a non-floating-point type. This indicates that the floating point type
-    // is not supported by the LLVM lowering. (Such types are converted to
-    // integers.)
-    auto checkType = [&](Value v) -> LogicalResult {
-      FloatType floatType = getFloatingPointType(v.getType());
-      if (!floatType)
-        return success();
-      Type convertedType = this->getTypeConverter()->convertType(floatType);
-      if (!isa_and_nonnull<FloatType>(convertedType))
-        return rewriter.notifyMatchFailure(op,
-                                           "unsupported floating point type");
-      return success();
-    };
+    // Bail on unsupported floating point types. (These are type-converted to
+    // integer types.)
     if (FailOnUnsupportedFP) {
       for (Value operand : op->getOperands())
-        if (failed(checkType(operand)))
-          return failure();
-      if (failed(checkType(op->getResult(0))))
-        return failure();
+        if (LLVM::detail::isUnsupportedFloatingPointType(
+                *this->getTypeConverter(), operand.getType()))
+          return rewriter.notifyMatchFailure(op,
+                                             "unsupported floating point type");
+      if (LLVM::detail::isUnsupportedFloatingPointType(
+              *this->getTypeConverter(), op->getResult(0).getType()))
+        return rewriter.notifyMatchFailure(op,
+                                           "unsupported floating point type");
     }
 
     // Determine attributes for the target op
@@ -137,8 +129,8 @@ public:
 
     return LLVM::detail::vectorOneToOneRewrite(
         op, TargetOp::getOperationName(), adaptor.getOperands(),
-        attrConvert.getAttrs(), *this->getTypeConverter(), rewriter,
-        attrConvert.getOverflowFlags());
+        attrConvert.getAttrs(), attrConvert.getPropAttr(),
+        *this->getTypeConverter(), rewriter);
   }
 };
 } // namespace mlir

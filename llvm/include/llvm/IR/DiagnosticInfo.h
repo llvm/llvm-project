@@ -28,7 +28,6 @@
 #include "llvm/Support/TypeSize.h"
 #include <cstdint>
 #include <functional>
-#include <iterator>
 #include <optional>
 #include <string>
 #include <utility>

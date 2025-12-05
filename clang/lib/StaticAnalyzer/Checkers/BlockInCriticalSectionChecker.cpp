@@ -115,7 +115,23 @@ class RAIIMutexDescriptor {
       return false;
     const IdentifierInfo *II =
         cast<CXXRecordDecl>(C->getDecl()->getParent())->getIdentifier();
-    return II == Guard;
+    if (II != Guard)
+      return false;
+
+    // For unique_lock, check if it's constructed with a ctor that takes the tag
+    // type defer_lock_t. In this case, the lock is not acquired.
+    if constexpr (std::is_same_v<T, CXXConstructorCall>) {
+      if (GuardName == "unique_lock" && C->getNumArgs() >= 2) {
+        const Expr *SecondArg = C->getArgExpr(1);
+        QualType ArgType = SecondArg->getType().getNonReferenceType();
+        if (const auto *RD = ArgType->getAsRecordDecl();
+            RD && RD->getName() == "defer_lock_t" && RD->isInStdNamespace()) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
 public:

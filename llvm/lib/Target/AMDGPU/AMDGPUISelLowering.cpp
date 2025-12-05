@@ -17,6 +17,7 @@
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUMachineFunction.h"
 #include "AMDGPUMemoryUtils.h"
+#include "AMDGPUSelectionDAGInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
@@ -59,8 +60,9 @@ unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
 }
 
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
-                                           const AMDGPUSubtarget &STI)
-    : TargetLowering(TM), Subtarget(&STI) {
+                                           const TargetSubtargetInfo &STI,
+                                           const AMDGPUSubtarget &AMDGPUSTI)
+    : TargetLowering(TM, STI), Subtarget(&AMDGPUSTI) {
   // Always lower memset, memcpy, and memmove intrinsics to load/store
   // instructions, rather then generating calls to memset, mempcy or memmove.
   MaxStoresPerMemset = MaxStoresPerMemsetOptSize = ~0U;
@@ -1216,7 +1218,7 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
   const SmallVectorImpl<ISD::InputArg> &Ins) const {
   const MachineFunction &MF = State.getMachineFunction();
   const Function &Fn = MF.getFunction();
-  LLVMContext &Ctx = Fn.getParent()->getContext();
+  LLVMContext &Ctx = Fn.getContext();
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(MF);
   const unsigned ExplicitOffset = ST.getExplicitKernelArgOffset();
   CallingConv::ID CC = Fn.getCallingConv();
@@ -1410,7 +1412,12 @@ SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
       InVals.push_back(DAG.getPOISON(Arg.VT));
   }
 
-  return DAG.getEntryNode();
+  // FIXME: Hack because R600 doesn't handle callseq pseudos yet.
+  if (getTargetMachine().getTargetTriple().getArch() == Triple::r600)
+    return CLI.Chain;
+
+  SDValue Chain = DAG.getCALLSEQ_START(CLI.Chain, 0, 0, CLI.DL);
+  return DAG.getCALLSEQ_END(Chain, 0, 0, /*InGlue=*/SDValue(), CLI.DL);
 }
 
 SDValue AMDGPUTargetLowering::LowerCall(CallLoweringInfo &CLI,
@@ -1886,14 +1893,14 @@ SDValue AMDGPUTargetLowering::SplitVectorLoad(const SDValue Op,
   Align BaseAlign = Load->getAlign();
   Align HiAlign = commonAlignment(BaseAlign, Size);
 
-  SDValue LoLoad = DAG.getExtLoad(Load->getExtensionType(), SL, LoVT,
-                                  Load->getChain(), BasePtr, SrcValue, LoMemVT,
-                                  BaseAlign, Load->getMemOperand()->getFlags());
+  SDValue LoLoad = DAG.getExtLoad(
+      Load->getExtensionType(), SL, LoVT, Load->getChain(), BasePtr, SrcValue,
+      LoMemVT, BaseAlign, Load->getMemOperand()->getFlags(), Load->getAAInfo());
   SDValue HiPtr = DAG.getObjectPtrOffset(SL, BasePtr, TypeSize::getFixed(Size));
-  SDValue HiLoad =
-      DAG.getExtLoad(Load->getExtensionType(), SL, HiVT, Load->getChain(),
-                     HiPtr, SrcValue.getWithOffset(LoMemVT.getStoreSize()),
-                     HiMemVT, HiAlign, Load->getMemOperand()->getFlags());
+  SDValue HiLoad = DAG.getExtLoad(
+      Load->getExtensionType(), SL, HiVT, Load->getChain(), HiPtr,
+      SrcValue.getWithOffset(LoMemVT.getStoreSize()), HiMemVT, HiAlign,
+      Load->getMemOperand()->getFlags(), Load->getAAInfo());
 
   SDValue Join;
   if (LoVT == HiVT) {
@@ -1981,10 +1988,10 @@ SDValue AMDGPUTargetLowering::SplitVectorStore(SDValue Op,
 
   SDValue LoStore =
       DAG.getTruncStore(Chain, SL, Lo, BasePtr, SrcValue, LoMemVT, BaseAlign,
-                        Store->getMemOperand()->getFlags());
-  SDValue HiStore =
-      DAG.getTruncStore(Chain, SL, Hi, HiPtr, SrcValue.getWithOffset(Size),
-                        HiMemVT, HiAlign, Store->getMemOperand()->getFlags());
+                        Store->getMemOperand()->getFlags(), Store->getAAInfo());
+  SDValue HiStore = DAG.getTruncStore(
+      Chain, SL, Hi, HiPtr, SrcValue.getWithOffset(Size), HiMemVT, HiAlign,
+      Store->getMemOperand()->getFlags(), Store->getAAInfo());
 
   return DAG.getNode(ISD::TokenFactor, SL, MVT::Other, LoStore, HiStore);
 }
@@ -2765,7 +2772,6 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
   EVT VT = Op.getValueType();
   SDNodeFlags Flags = Op->getFlags();
   SDLoc DL(Op);
-
   const bool IsLog10 = Op.getOpcode() == ISD::FLOG10;
   assert(IsLog10 || Op.getOpcode() == ISD::FLOG);
 
@@ -2804,7 +2810,9 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
 
     SDValue C = DAG.getConstantFP(IsLog10 ? c_log10 : c_log, DL, VT);
     SDValue CC = DAG.getConstantFP(IsLog10 ? cc_log10 : cc_log, DL, VT);
-
+    // This adds correction terms for which contraction may lead to an increase
+    // in the error of the approximation, so disable it.
+    Flags.setAllowContract(false);
     R = DAG.getNode(ISD::FMUL, DL, VT, Y, C, Flags);
     SDValue NegR = DAG.getNode(ISD::FNEG, DL, VT, R, Flags);
     SDValue FMA0 = DAG.getNode(ISD::FMA, DL, VT, Y, C, NegR, Flags);
@@ -2827,7 +2835,9 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
     SDValue YHInt = DAG.getNode(ISD::AND, DL, MVT::i32, YAsInt, MaskConst);
     SDValue YH = DAG.getNode(ISD::BITCAST, DL, MVT::f32, YHInt);
     SDValue YT = DAG.getNode(ISD::FSUB, DL, VT, Y, YH, Flags);
-
+    // This adds correction terms for which contraction may lead to an increase
+    // in the error of the approximation, so disable it.
+    Flags.setAllowContract(false);
     SDValue YTCT = DAG.getNode(ISD::FMUL, DL, VT, YT, CT, Flags);
     SDValue Mad0 = getMad(DAG, DL, VT, YH, CT, YTCT, Flags);
     SDValue Mad1 = getMad(DAG, DL, VT, YT, CH, Mad0, Flags);
@@ -3053,8 +3063,11 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
 
   if (VT.getScalarType() == MVT::f16) {
     // v_exp_f16 (fmul x, log2e)
-    if (allowApproxFunc(DAG, Flags)) // TODO: Does this really require fast?
-      return lowerFEXPUnsafe(X, SL, DAG, Flags);
+
+    if (allowApproxFunc(DAG, Flags)) { // TODO: Does this really require fast?
+      return IsExp10 ? lowerFEXP10Unsafe(X, SL, DAG, Flags)
+                     : lowerFEXPUnsafe(X, SL, DAG, Flags);
+    }
 
     if (VT.isVector())
       return SDValue();
@@ -3064,7 +3077,8 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
 
     // Nothing in half is a denormal when promoted to f32.
     SDValue Ext = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, X, Flags);
-    SDValue Lowered = lowerFEXPUnsafe(Ext, SL, DAG, Flags);
+    SDValue Lowered = IsExp10 ? lowerFEXP10Unsafe(Ext, SL, DAG, Flags)
+                              : lowerFEXPUnsafe(Ext, SL, DAG, Flags);
     return DAG.getNode(ISD::FP_ROUND, SL, VT, Lowered,
                        DAG.getTargetConstant(0, SL, MVT::i32), Flags);
   }
@@ -5648,169 +5662,6 @@ uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
     const MachineFunction &MF, const ImplicitParameter Param) const {
   const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
   return getImplicitParameterOffset(MFI->getExplicitKernArgSize(), Param);
-}
-
-#define NODE_NAME_CASE(node) case AMDGPUISD::node: return #node;
-
-const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch ((AMDGPUISD::NodeType)Opcode) {
-  case AMDGPUISD::FIRST_NUMBER: break;
-  // AMDIL DAG nodes
-  NODE_NAME_CASE(BRANCH_COND);
-
-  // AMDGPU DAG nodes
-  NODE_NAME_CASE(IF)
-  NODE_NAME_CASE(ELSE)
-  NODE_NAME_CASE(LOOP)
-  NODE_NAME_CASE(CALL)
-  NODE_NAME_CASE(TC_RETURN)
-  NODE_NAME_CASE(TC_RETURN_GFX)
-  NODE_NAME_CASE(TC_RETURN_GFX_WholeWave)
-  NODE_NAME_CASE(TC_RETURN_CHAIN)
-  NODE_NAME_CASE(TC_RETURN_CHAIN_DVGPR)
-  NODE_NAME_CASE(TRAP)
-  NODE_NAME_CASE(RET_GLUE)
-  NODE_NAME_CASE(WAVE_ADDRESS)
-  NODE_NAME_CASE(RETURN_TO_EPILOG)
-  NODE_NAME_CASE(ENDPGM)
-  NODE_NAME_CASE(ENDPGM_TRAP)
-  NODE_NAME_CASE(SIMULATED_TRAP)
-  NODE_NAME_CASE(DWORDADDR)
-  NODE_NAME_CASE(FRACT)
-  NODE_NAME_CASE(SETCC)
-  NODE_NAME_CASE(DENORM_MODE)
-  NODE_NAME_CASE(FMA_W_CHAIN)
-  NODE_NAME_CASE(FMUL_W_CHAIN)
-  NODE_NAME_CASE(CLAMP)
-  NODE_NAME_CASE(COS_HW)
-  NODE_NAME_CASE(SIN_HW)
-  NODE_NAME_CASE(FMAX_LEGACY)
-  NODE_NAME_CASE(FMIN_LEGACY)
-  NODE_NAME_CASE(FMAX3)
-  NODE_NAME_CASE(SMAX3)
-  NODE_NAME_CASE(UMAX3)
-  NODE_NAME_CASE(FMIN3)
-  NODE_NAME_CASE(SMIN3)
-  NODE_NAME_CASE(UMIN3)
-  NODE_NAME_CASE(FMED3)
-  NODE_NAME_CASE(SMED3)
-  NODE_NAME_CASE(UMED3)
-  NODE_NAME_CASE(FMAXIMUM3)
-  NODE_NAME_CASE(FMINIMUM3)
-  NODE_NAME_CASE(FDOT2)
-  NODE_NAME_CASE(URECIP)
-  NODE_NAME_CASE(DIV_SCALE)
-  NODE_NAME_CASE(DIV_FMAS)
-  NODE_NAME_CASE(DIV_FIXUP)
-  NODE_NAME_CASE(FMAD_FTZ)
-  NODE_NAME_CASE(RCP)
-  NODE_NAME_CASE(RSQ)
-  NODE_NAME_CASE(RCP_LEGACY)
-  NODE_NAME_CASE(RCP_IFLAG)
-  NODE_NAME_CASE(LOG)
-  NODE_NAME_CASE(EXP)
-  NODE_NAME_CASE(FMUL_LEGACY)
-  NODE_NAME_CASE(RSQ_CLAMP)
-  NODE_NAME_CASE(FP_CLASS)
-  NODE_NAME_CASE(DOT4)
-  NODE_NAME_CASE(CARRY)
-  NODE_NAME_CASE(BORROW)
-  NODE_NAME_CASE(BFE_U32)
-  NODE_NAME_CASE(BFE_I32)
-  NODE_NAME_CASE(BFI)
-  NODE_NAME_CASE(BFM)
-  NODE_NAME_CASE(FFBH_U32)
-  NODE_NAME_CASE(FFBH_I32)
-  NODE_NAME_CASE(FFBL_B32)
-  NODE_NAME_CASE(MUL_U24)
-  NODE_NAME_CASE(MUL_I24)
-  NODE_NAME_CASE(MULHI_U24)
-  NODE_NAME_CASE(MULHI_I24)
-  NODE_NAME_CASE(MAD_U24)
-  NODE_NAME_CASE(MAD_I24)
-  NODE_NAME_CASE(MAD_I64_I32)
-  NODE_NAME_CASE(MAD_U64_U32)
-  NODE_NAME_CASE(PERM)
-  NODE_NAME_CASE(TEXTURE_FETCH)
-  NODE_NAME_CASE(R600_EXPORT)
-  NODE_NAME_CASE(CONST_ADDRESS)
-  NODE_NAME_CASE(REGISTER_LOAD)
-  NODE_NAME_CASE(REGISTER_STORE)
-  NODE_NAME_CASE(CVT_F32_UBYTE0)
-  NODE_NAME_CASE(CVT_F32_UBYTE1)
-  NODE_NAME_CASE(CVT_F32_UBYTE2)
-  NODE_NAME_CASE(CVT_F32_UBYTE3)
-  NODE_NAME_CASE(CVT_PKRTZ_F16_F32)
-  NODE_NAME_CASE(CVT_PKNORM_I16_F32)
-  NODE_NAME_CASE(CVT_PKNORM_U16_F32)
-  NODE_NAME_CASE(CVT_PK_I16_I32)
-  NODE_NAME_CASE(CVT_PK_U16_U32)
-  NODE_NAME_CASE(FP_TO_FP16)
-  NODE_NAME_CASE(BUILD_VERTICAL_VECTOR)
-  NODE_NAME_CASE(CONST_DATA_PTR)
-  NODE_NAME_CASE(PC_ADD_REL_OFFSET)
-  NODE_NAME_CASE(PC_ADD_REL_OFFSET64)
-  NODE_NAME_CASE(LDS)
-  NODE_NAME_CASE(DUMMY_CHAIN)
-  NODE_NAME_CASE(LOAD_D16_HI)
-  NODE_NAME_CASE(LOAD_D16_LO)
-  NODE_NAME_CASE(LOAD_D16_HI_I8)
-  NODE_NAME_CASE(LOAD_D16_HI_U8)
-  NODE_NAME_CASE(LOAD_D16_LO_I8)
-  NODE_NAME_CASE(LOAD_D16_LO_U8)
-  NODE_NAME_CASE(STORE_MSKOR)
-  NODE_NAME_CASE(TBUFFER_STORE_FORMAT)
-  NODE_NAME_CASE(TBUFFER_STORE_FORMAT_D16)
-  NODE_NAME_CASE(TBUFFER_LOAD_FORMAT)
-  NODE_NAME_CASE(TBUFFER_LOAD_FORMAT_D16)
-  NODE_NAME_CASE(DS_ORDERED_COUNT)
-  NODE_NAME_CASE(ATOMIC_CMP_SWAP)
-  NODE_NAME_CASE(BUFFER_LOAD)
-  NODE_NAME_CASE(BUFFER_LOAD_UBYTE)
-  NODE_NAME_CASE(BUFFER_LOAD_USHORT)
-  NODE_NAME_CASE(BUFFER_LOAD_BYTE)
-  NODE_NAME_CASE(BUFFER_LOAD_SHORT)
-  NODE_NAME_CASE(BUFFER_LOAD_TFE)
-  NODE_NAME_CASE(BUFFER_LOAD_UBYTE_TFE)
-  NODE_NAME_CASE(BUFFER_LOAD_USHORT_TFE)
-  NODE_NAME_CASE(BUFFER_LOAD_BYTE_TFE)
-  NODE_NAME_CASE(BUFFER_LOAD_SHORT_TFE)
-  NODE_NAME_CASE(BUFFER_LOAD_FORMAT)
-  NODE_NAME_CASE(BUFFER_LOAD_FORMAT_TFE)
-  NODE_NAME_CASE(BUFFER_LOAD_FORMAT_D16)
-  NODE_NAME_CASE(SBUFFER_LOAD)
-  NODE_NAME_CASE(SBUFFER_LOAD_BYTE)
-  NODE_NAME_CASE(SBUFFER_LOAD_UBYTE)
-  NODE_NAME_CASE(SBUFFER_LOAD_SHORT)
-  NODE_NAME_CASE(SBUFFER_LOAD_USHORT)
-  NODE_NAME_CASE(SBUFFER_PREFETCH_DATA)
-  NODE_NAME_CASE(BUFFER_STORE)
-  NODE_NAME_CASE(BUFFER_STORE_BYTE)
-  NODE_NAME_CASE(BUFFER_STORE_SHORT)
-  NODE_NAME_CASE(BUFFER_STORE_FORMAT)
-  NODE_NAME_CASE(BUFFER_STORE_FORMAT_D16)
-  NODE_NAME_CASE(BUFFER_ATOMIC_SWAP)
-  NODE_NAME_CASE(BUFFER_ATOMIC_ADD)
-  NODE_NAME_CASE(BUFFER_ATOMIC_SUB)
-  NODE_NAME_CASE(BUFFER_ATOMIC_SMIN)
-  NODE_NAME_CASE(BUFFER_ATOMIC_UMIN)
-  NODE_NAME_CASE(BUFFER_ATOMIC_SMAX)
-  NODE_NAME_CASE(BUFFER_ATOMIC_UMAX)
-  NODE_NAME_CASE(BUFFER_ATOMIC_AND)
-  NODE_NAME_CASE(BUFFER_ATOMIC_OR)
-  NODE_NAME_CASE(BUFFER_ATOMIC_XOR)
-  NODE_NAME_CASE(BUFFER_ATOMIC_INC)
-  NODE_NAME_CASE(BUFFER_ATOMIC_DEC)
-  NODE_NAME_CASE(BUFFER_ATOMIC_CMPSWAP)
-  NODE_NAME_CASE(BUFFER_ATOMIC_CSUB)
-  NODE_NAME_CASE(BUFFER_ATOMIC_FADD)
-  NODE_NAME_CASE(BUFFER_ATOMIC_FMIN)
-  NODE_NAME_CASE(BUFFER_ATOMIC_FMAX)
-  NODE_NAME_CASE(BUFFER_ATOMIC_COND_SUB_U32)
-  NODE_NAME_CASE(WHOLE_WAVE_SETUP)
-  NODE_NAME_CASE(WHOLE_WAVE_RETURN)
-  }
-  return nullptr;
 }
 
 SDValue AMDGPUTargetLowering::getSqrtEstimate(SDValue Operand,

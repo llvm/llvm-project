@@ -13,16 +13,19 @@ Two-step type conversions via ``void*`` are discouraged for several reasons.
 - These conversions bypass valuable compiler support, erasing warnings related
   to pointer alignment. It may violate strict aliasing rule and leading to
   undefined behavior.
-- In scenarios involving multiple inheritance, ambiguity and unexpected outcomes
-  can arise due to the loss of type information, posing runtime issues.
+- In scenarios involving multiple inheritance, ambiguity and unexpected
+  outcomes can arise due to the loss of type information, posing runtime
+  issues.
 
-In summary, avoiding two-step type conversions through ``void*`` ensures clearer code,
-maintains essential compiler warnings, and prevents ambiguity and potential runtime
-errors, particularly in complex inheritance scenarios. If such a cast is wanted,
-it shall be done via ``reinterpret_cast``, to express the intent more clearly.
+In summary, avoiding two-step type conversions through ``void*`` ensures
+clearer code, maintains essential compiler warnings, and prevents ambiguity
+and potential runtime errors, particularly in complex inheritance scenarios.
+If such a cast is wanted, it shall be done via ``reinterpret_cast``,
+to express the intent more clearly.
 
 Note: it is expected that, after applying the suggested fix and using
-``reinterpret_cast``, the check :doc:`cppcoreguidelines-pro-type-reinterpret-cast
+``reinterpret_cast``, the check
+:doc:`cppcoreguidelines-pro-type-reinterpret-cast
 <../cppcoreguidelines/pro-type-reinterpret-cast>` will emit a warning.
 This is intentional: ``reinterpret_cast`` is a dangerous operation that can
 easily break the strict aliasing rules when dereferencing the casted pointer,

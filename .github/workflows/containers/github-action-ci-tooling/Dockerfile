@@ -108,6 +108,7 @@ RUN apt-get update && \
     abi-compliance-checker \
     abi-dumper \
     autoconf \
+    parallel \
     pkg-config && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

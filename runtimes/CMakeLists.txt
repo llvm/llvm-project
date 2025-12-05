@@ -35,7 +35,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
-set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;libclc;openmp;offload")
+set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;libclc;openmp;offload")
 set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc;flang-rt;libsycl;orc-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
@@ -77,11 +77,6 @@ if (NOT LLVM_FOUND)
   set(LLVM_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
 endif()
 
-# Setting these variables will allow the sub-build to put their outputs into
-# the library and bin directories of the top-level build.
-set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})
-set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_TOOLS_BINARY_DIR})
-
 # This variable makes sure that e.g. llvm-lit is found.
 set(LLVM_MAIN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../llvm)
 set(LLVM_CMAKE_DIR ${LLVM_MAIN_SRC_DIR}/cmake/modules)
@@ -95,8 +90,19 @@ include(CheckCXXCompilerFlag)
 # Determine whether we are in the runtimes/runtimes-bins directory of a
 # bootstrap build.
 set(LLVM_TREE_AVAILABLE OFF)
-if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSION)
+if (LLVM_LIBRARY_DIR AND LLVM_TOOLS_BINARY_DIR AND PACKAGE_VERSION)
   set(LLVM_TREE_AVAILABLE ON)
+endif()
+
+if(LLVM_TREE_AVAILABLE)
+  # Setting these variables will allow the sub-build to put their outputs into
+  # the library and bin directories of the top-level build.
+  set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})
+  set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_TOOLS_BINARY_DIR})
+else()
+  # Use own build directory for artifact output.
+  set(LLVM_LIBRARY_OUTPUT_INTDIR "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX}")
+  set(LLVM_RUNTIME_OUTPUT_INTDIR "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin")
 endif()
 
 # CMake omits default compiler include paths, but in runtimes build, we use
@@ -255,6 +261,20 @@ endif()
 
 # This can be used to detect whether we're in the runtimes build.
 set(LLVM_RUNTIMES_BUILD ON)
+
+# Make GTest available to all runtimes
+# The runtime must call make_gtest_target() for it to become available. This is
+# to avoid build failures when gtest is not actually needed. In particular,
+# mingw-incomplete-sysroot is missing C++ header files that GTest needs to
+# compile.
+function(build_gtest)
+  if(TARGET default_gtest)
+    # Already available
+    return()
+  endif()
+
+  add_subdirectory("${LLVM_THIRD_PARTY_DIR}/unittest" "${CMAKE_BINARY_DIR}/third-party/runtimes_gtest")
+endfunction()
 
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)

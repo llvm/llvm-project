@@ -186,8 +186,8 @@ functions are checked:
 * wscanf()
 * wscanf_s()
 
-This check is an alias of check :doc:`bugprone-unused-return-value <../bugprone/unused-return-value>`
-with a fixed set of functions.
+This check is an alias of check :doc:`bugprone-unused-return-value
+<../bugprone/unused-return-value>` with a fixed set of functions.
 
 Suppressing issues by casting to ``void`` is enabled by default and can be
 disabled by setting `AllowCastToVoid` option to `false`.
