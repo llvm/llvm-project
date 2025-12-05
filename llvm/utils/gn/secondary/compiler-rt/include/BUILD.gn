@@ -22,6 +22,7 @@ copy("include") {
     "sanitizer/scudo_interface.h",
     "sanitizer/tsan_interface.h",
     "sanitizer/tsan_interface_atomic.h",
+    "sanitizer/tysan_interface.h",
     "sanitizer/ubsan_interface.h",
   ]
   outputs = [ "$clang_resource_dir/include/{{source_target_relative}}" ]
