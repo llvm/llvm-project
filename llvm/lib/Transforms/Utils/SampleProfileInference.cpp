@@ -1174,8 +1174,6 @@ std::pair<int64_t, int64_t> assignJumpCosts(const ProfiParams &Params,
     else
       CostInc = Params.CostJumpUnknownInc;
     CostDec = 0;
-  } else {
-    assert(Jump.Weight > 0 && "found zero-weight jump with a positive weight");
   }
   return std::make_pair(CostInc, CostDec);
 }
