@@ -1130,6 +1130,7 @@ const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPDefaultClause>
     ompDefaultClause;
 const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPFromClause>
     ompFromClause;
+const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPToClause> ompToClause;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXDeductionGuideDecl>
     cxxDeductionGuideDecl;
 

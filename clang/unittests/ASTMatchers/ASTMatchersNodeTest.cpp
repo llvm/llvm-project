@@ -2742,13 +2742,26 @@ void x() {
   EXPECT_TRUE(notMatchesWithOpenMP(Source2, Matcher));
 }
 
-TEST(ASTMatchersTestOpenMP, OMPTargetUpdateDirective) {
+TEST(ASTMatchersTestOpenMP, OMPTargetUpdateDirective_From) {
   auto Matcher = stmt(ompTargetUpdateDirective());
 
   StringRef Source0 = R"(
     void foo() {
       int arr[8];
       #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+}
+
+TEST(ASTMatchersTestOpenMP, OMPTargetUpdateDirective_To) {
+  auto Matcher = stmt(ompTargetUpdateDirective());
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update to(arr[0:8:2])
       ;
     }
   )";
@@ -2787,6 +2800,60 @@ TEST(ASTMatchersTestOpenMP, OMPFromClause) {
   ASSERT_TRUE(FromClause);
 
   for (const auto *VarExpr : FromClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // base (arr)
+    const Expr *Base = ArraySection->getBase();
+    ASSERT_TRUE(Base);
+
+    // lower bound (0)
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+
+    // length (8)
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+
+    // stride (2)
+    const Expr *Stride = ArraySection->getStride();
+    ASSERT_TRUE(Stride);
+  }
+}
+
+TEST(ASTMatchersTestOpenMP, OMPToClause) {
+  auto Matcher = ompTargetUpdateDirective(hasAnyClause(ompToClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update to(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPToClause *ToClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((ToClause = dyn_cast<OMPToClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(ToClause);
+
+  for (const auto *VarExpr : ToClause->varlist()) {
     const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
     if (!ArraySection)
       continue;

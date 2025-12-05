@@ -8863,6 +8863,18 @@ AST_MATCHER_P(OMPExecutableDirective, isAllowedToContainClauseKind,
 extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPFromClause>
     ompFromClause;
 
+/// Matches OpenMP ``to`` clause.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update to(a)
+/// \endcode
+///
+/// ``ompToClause()`` matches ``to(a)``.
+extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPToClause>
+    ompToClause;
+
 //----------------------------------------------------------------------------//
 // End OpenMP handling.
 //----------------------------------------------------------------------------//
