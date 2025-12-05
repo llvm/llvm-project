@@ -1263,7 +1263,6 @@ protected:
     }
 
     OptionsWithRaw args(command);
-    llvm::StringRef expr = args.GetRawPart();
 
     if (args.HasArgs()) {
       if (!ParseOptionsAndNotify(args.GetArgs(), result, m_all_options,
