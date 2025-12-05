@@ -5436,7 +5436,6 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
     const GlobalValue *GV = cast<GlobalAddressSDNode>(Callee)->getGlobal();
 
     if (Subtarget.isAIXABI()) {
-      // TODO: convert ifunc to indirect call
       return getAIXFuncEntryPointSymbolSDNode(GV);
     }
     return DAG.getTargetGlobalAddress(GV, dl, Callee.getValueType(), 0,
