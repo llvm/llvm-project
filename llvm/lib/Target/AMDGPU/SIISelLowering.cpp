@@ -14042,6 +14042,12 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     assert(OtherOp.getValueSizeInBits() == 32);
   }
 
+  // Check that we haven't just recreated the same FSHR node.
+  if (N->getOpcode() == ISD::FSHR &&
+      (N->getOperand(0) == Op || N->getOperand(0) == OtherOp) &&
+      (N->getOperand(1) == Op || N->getOperand(1) == OtherOp))
+    return SDValue();
+
   if (hasNon16BitAccesses(PermMask, Op, OtherOp)) {
 
     assert(Op.getValueType().isByteSized() &&
