@@ -681,6 +681,8 @@ enum CommandArgumentType {
   eArgTypeCPUFeatures,
   eArgTypeManagedPlugin,
   eArgTypeProtocol,
+  eArgTypeExceptionStage,
+  eArgTypeNameMatchStyle,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -1445,6 +1447,22 @@ enum DILMode {
   /// Allowed: everything supported by DIL.
   /// \see lldb/docs/dil-expr-lang.ebnf
   eDILModeFull
+};
+
+enum ExceptionStage {
+  eExceptionStageCreate = (1 << 0),
+  eExceptionStageThrow = (1 << 1),
+  eExceptionStageReThrow = (1 << 2),
+  eExceptionStageCatch = (1 << 3)
+};
+
+enum NameMatchStyle {
+  eNameMatchStyleAuto = eFunctionNameTypeAuto,
+  eNameMatchStyleFull = eFunctionNameTypeFull,
+  eNameMatchStyleBase = eFunctionNameTypeBase,
+  eNameMatchStyleMethod = eFunctionNameTypeMethod,
+  eNameMatchStyleSelector = eFunctionNameTypeSelector,
+  eNameMatchStyleRegex = eFunctionNameTypeSelector << 1
 };
 
 } // namespace lldb
