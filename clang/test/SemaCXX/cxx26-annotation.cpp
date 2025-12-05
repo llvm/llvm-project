@@ -5,8 +5,9 @@ struct F {
 };
 // Nominal cases
 // Type
+constexpr F f{true};
 struct [[=1]] f1 {};
-struct [[=1, =F{true}]] f2 {};
+struct [[=1, =F{true}, =f]] f2 {};
 struct [[=1]] [[=2]] f3 {};
 // Declaration
 const [[=1]] F f4{};
@@ -43,13 +44,22 @@ void hh() {
 
 // Handle copying lvalue
 struct U {
-  bool V;
-  constexpr U(bool v) : V(v) {}
+  constexpr U() = default;
   U(const U&) = delete; // #del-U
 };
-constexpr U u(true);
-struct [[ =u ]] h2{}; // expected-error {{call to deleted constructor of 'U'}}
+constexpr U u;
+struct [[ =u ]] deletedCopy{}; // expected-error {{annotation requires an eligible copy constructor}}
                       // expected-note@#del-U {{'U' has been explicitly marked deleted here}}
+
+struct [[ =U{} ]] deletedCopy2{}; // expected-error {{annotation requires an eligible copy constructor}}
+                      // expected-note@#del-U {{'U' has been explicitly marked deleted here}}
+
+template <class T>
+[[=T{}]] void deletedCopy3();
+
+void f_deletedCopy3() {
+  deletedCopy3<U>();
+}
 
 // Non structural
 struct [[="notstructural"]] h3{}; // expected-error {{C++26 annotation attribute requires a value of structural type}}

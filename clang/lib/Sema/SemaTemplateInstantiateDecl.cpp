@@ -34,6 +34,7 @@
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace clang;
@@ -157,9 +158,24 @@ static void instantiateCxx26AnnotationAttr(
   if (Result.isInvalid())
     return;
 
-  Expr *concreteExpr = Result.get();
+  CE = Result.get();
+  if (CE->getType()->isRecordType()) {
+    InitializedEntity Entity = InitializedEntity::InitializeTemporary(
+        CE->getType().getUnqualifiedType());
+    InitializationKind Kind =
+        InitializationKind::CreateCopy(CE->getExprLoc(), SourceLocation());
+    InitializationSequence Seq(S, Entity, Kind, CE);
+
+    ExprResult CopyResult = Seq.Perform(S, Entity, Kind, CE);
+    if (CopyResult.isInvalid()) {
+      return;
+    }
+
+    CE = CopyResult.get();
+  }
+
   Expr::EvalResult V;
-  if (!concreteExpr->EvaluateAsRValue(V, S.getASTContext(), true))
+  if (!CE->EvaluateAsRValue(V, S.getASTContext(), true))
     llvm_unreachable("failed to evaluate annotation expression");
 
   auto *Annot =
