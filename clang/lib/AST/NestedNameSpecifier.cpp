@@ -111,7 +111,8 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
     break;
   case Kind::Type: {
     PrintingPolicy InnerPolicy(Policy);
-    InnerPolicy.SuppressTagKeyword = true;
+    InnerPolicy.SuppressTagKeyword = llvm::to_underlying(
+        PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames);
     QualType(getAsType(), 0).print(OS, InnerPolicy);
     break;
   }

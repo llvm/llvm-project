@@ -58,11 +58,24 @@ public:
 struct PrintingPolicy {
   enum class SuppressInlineNamespaceMode : uint8_t { None, Redundant, All };
 
+  /// Dictates when type printing should skip printing the tag keyword.
+  enum class SuppressTagKeywordMode : uint8_t {
+    /// Never suppress tag keyword.
+    None,
+
+    /// Suppress keyword when printing the inner type of elaborated types,
+    /// (as the tag keyword is part of the elaborated type):
+    InElaboratedNames
+  };
+
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
-        SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
-        SuppressScope(false), SuppressUnwrittenScope(false),
+        SuppressTagKeyword(llvm::to_underlying(
+            LO.CPlusPlus ? SuppressTagKeywordMode::InElaboratedNames
+                         : SuppressTagKeywordMode::None)),
+        IncludeTagDefinition(false), SuppressScope(false),
+        SuppressUnwrittenScope(false),
         SuppressInlineNamespace(
             llvm::to_underlying(SuppressInlineNamespaceMode::Redundant)),
         SuppressInitializers(false), ConstantArraySizeAsWritten(false),
@@ -88,7 +101,8 @@ struct PrintingPolicy {
   /// construct). This should not be used if a real LangOptions object is
   /// available.
   void adjustForCPlusPlus() {
-    SuppressTagKeyword = true;
+    SuppressTagKeyword =
+        llvm::to_underlying(SuppressTagKeywordMode::InElaboratedNames);
     Bool = true;
     UseVoidForZeroParams = false;
   }
@@ -115,13 +129,10 @@ struct PrintingPolicy {
 
   /// Whether type printing should skip printing the tag keyword.
   ///
-  /// This is used when printing the inner type of elaborated types,
-  /// (as the tag keyword is part of the elaborated type):
-  ///
   /// \code
   /// struct Geometry::Point;
   /// \endcode
-  LLVM_PREFERRED_TYPE(bool)
+  LLVM_PREFERRED_TYPE(SuppressTagKeywordMode)
   unsigned SuppressTagKeyword : 1;
 
   /// When true, include the body of a tag definition.

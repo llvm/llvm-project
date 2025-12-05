@@ -356,40 +356,44 @@ TEST(DeclPrinter, TestCXXRecordDecl11) {
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl12) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches("struct S { int x; };"
-                                      "namespace NS { class C {};}"
-                                      "void foo() {using namespace NS; C c;}",
-                                      "foo",
-                                      "void foo() {\nusing namespace NS;\n"
-                                      "C c;\n}\n",
-                                      [](PrintingPolicy &Policy) {
-                                        Policy.SuppressTagKeyword = false;
-                                        Policy.SuppressScope = true;
-                                        Policy.TerseOutput = false;
-                                      }));
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "struct S { int x; };"
+      "namespace NS { class C {};}"
+      "void foo() {using namespace NS; C c;}",
+      "foo",
+      "void foo() {\nusing namespace NS;\n"
+      "C c;\n}\n",
+      [](PrintingPolicy &Policy) {
+        Policy.SuppressTagKeyword =
+            llvm::to_underlying(PrintingPolicy::SuppressTagKeywordMode::None);
+        Policy.SuppressScope = true;
+        Policy.TerseOutput = false;
+      }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl13) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches("struct S { int x; };"
-                                      "S s1;"
-                                      "S foo() {return s1;}",
-                                      "foo", "S foo() {\nreturn s1;\n}\n",
-                                      [](PrintingPolicy &Policy) {
-                                        Policy.SuppressTagKeyword = false;
-                                        Policy.SuppressScope = true;
-                                        Policy.TerseOutput = false;
-                                      }));
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "struct S { int x; };"
+      "S s1;"
+      "S foo() {return s1;}",
+      "foo", "S foo() {\nreturn s1;\n}\n", [](PrintingPolicy &Policy) {
+        Policy.SuppressTagKeyword =
+            llvm::to_underlying(PrintingPolicy::SuppressTagKeywordMode::None);
+        Policy.SuppressScope = true;
+        Policy.TerseOutput = false;
+      }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl14) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches("struct S { int x; };"
-                                      "S foo(S s1) {return s1;}",
-                                      "foo", "S foo(S s1) {\nreturn s1;\n}\n",
-                                      [](PrintingPolicy &Policy) {
-                                        Policy.SuppressTagKeyword = false;
-                                        Policy.SuppressScope = true;
-                                        Policy.TerseOutput = false;
-                                      }));
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "struct S { int x; };"
+      "S foo(S s1) {return s1;}",
+      "foo", "S foo(S s1) {\nreturn s1;\n}\n", [](PrintingPolicy &Policy) {
+        Policy.SuppressTagKeyword =
+            llvm::to_underlying(PrintingPolicy::SuppressTagKeywordMode::None);
+        Policy.SuppressScope = true;
+        Policy.TerseOutput = false;
+      }));
 }
 TEST(DeclPrinter, TestCXXRecordDecl15) {
   ASSERT_TRUE(PrintedDeclCXX98Matches(
@@ -400,7 +404,8 @@ TEST(DeclPrinter, TestCXXRecordDecl15) {
       "S foo(S s1, NS::C c1) {\nusing namespace NS;\n"
       "C c;\nreturn s1;\n}\n",
       [](PrintingPolicy &Policy) {
-        Policy.SuppressTagKeyword = false;
+        Policy.SuppressTagKeyword =
+            llvm::to_underlying(PrintingPolicy::SuppressTagKeywordMode::None);
         Policy.SuppressScope = true;
         Policy.TerseOutput = false;
       }));
@@ -1385,8 +1390,10 @@ TEST(DeclPrinter, TestCXXRecordDecl17) {
       "template<typename T> struct Z {};"
       "struct X {};"
       "Z<X> A;",
-      "A", "Z<X> A",
-      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
+      "A", "Z<X> A", [](PrintingPolicy &Policy) {
+        Policy.SuppressTagKeyword =
+            llvm::to_underlying(PrintingPolicy::SuppressTagKeywordMode::None);
+      }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl18) {
@@ -1397,8 +1404,10 @@ TEST(DeclPrinter, TestCXXRecordDecl18) {
       "template <typename T1, int>"
       "struct Y{};"
       "Y<Z<X>, 2> B;",
-      "B", "Y<Z<X>, 2> B",
-      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
+      "B", "Y<Z<X>, 2> B", [](PrintingPolicy &Policy) {
+        Policy.SuppressTagKeyword =
+            llvm::to_underlying(PrintingPolicy::SuppressTagKeywordMode::None);
+      }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl19) {
@@ -1409,8 +1418,10 @@ TEST(DeclPrinter, TestCXXRecordDecl19) {
       "template <typename T1, int>"
       "struct Y{};"
       "Y<Z<X>, 2> B;",
-      "B", "Y<Z<X>, 2> B",
-      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; }));
+      "B", "Y<Z<X>, 2> B", [](PrintingPolicy &Policy) {
+        Policy.SuppressTagKeyword = llvm::to_underlying(
+            PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames);
+      }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl20) {
@@ -1430,7 +1441,10 @@ TEST(DeclPrinter, TestCXXRecordDecl20) {
       "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100);",
       "nestedInstance",
       "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)",
-      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
+      [](PrintingPolicy &Policy) {
+        Policy.SuppressTagKeyword =
+            llvm::to_underlying(PrintingPolicy::SuppressTagKeywordMode::None);
+      }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl21) {
@@ -1450,7 +1464,10 @@ TEST(DeclPrinter, TestCXXRecordDecl21) {
       "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100);",
       "nestedInstance",
       "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)",
-      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; }));
+      [](PrintingPolicy &Policy) {
+        Policy.SuppressTagKeyword = llvm::to_underlying(
+            PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames);
+      }));
 }
 
 TEST(DeclPrinter, TestFunctionParamUglified) {
