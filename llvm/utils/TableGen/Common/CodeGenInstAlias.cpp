@@ -44,11 +44,7 @@ static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
                                                   const StringInit *ArgName,
                                                   const Record *Op,
                                                   const CodeGenTarget &T) {
-  if (Op->isSubClassOf("RegisterClass") ||
-      Op->isSubClassOf("RegisterOperand")) {
-    const Record *OpRC =
-        Op->isSubClassOf("RegisterClass") ? Op : Op->getValueAsDef("RegClass");
-
+  if (const Record *OpRC = T.getAsRegClassLike(Op)) {
     if (const auto *ArgDef = dyn_cast<DefInit>(Arg)) {
       const Record *ArgRec = ArgDef->getDef();
 
@@ -112,11 +108,9 @@ static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
       return ResultOperand::createRecord(ArgName->getAsUnquotedString(),
                                          ArgDef->getDef());
     }
-
-    return createStringError("argument must be a subclass of Operand");
   }
-
-  llvm_unreachable("Unknown operand kind");
+  return createStringError("argument must be a subclass of 'Operand' but got " +
+                           Op->getName() + " instead");
 }
 
 static Expected<ResultOperand> matchComplexOperand(const Init *Arg,
