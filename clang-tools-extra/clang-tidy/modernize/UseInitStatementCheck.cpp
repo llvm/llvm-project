@@ -122,7 +122,6 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
         hasParent(binaryOperator()));
     const auto IsStealingViaReference = unless(ReferencesWhitelistForStealing);
     const auto StealingAsThis = hasParent(memberExpr().bind("stealing_as_this"));
-    // TODO: must be forbidded for temporary materialization
     const auto HasStealing = hasDescendant(
         declRefExpr(to(varDecl(equalsBoundNode("singleVar"), unless(hasType(referenceType())))), anyOf(IsStealingViaPointer, IsStealingViaReference),
          optionally(anyOf(StealingAsThis, hasParent(implicitCastExpr(hasCastKind(CK_NoOp), StealingAsThis)))))

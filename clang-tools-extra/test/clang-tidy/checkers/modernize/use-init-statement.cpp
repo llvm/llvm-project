@@ -246,8 +246,6 @@ void good_include() {
 
 // TODO: all same tests for pointers
 // TODO: all same tests for structured binding
-// TODO: go test for stealing from materialized reference
-// TODO: bad test for stealing from non materialized reference
 
 void good_stolen_reference1() {
     const int* pi = nullptr;
@@ -271,7 +269,7 @@ void good_stolen_reference1() {
 template<typename T> const T* get_pointer(const T& ref) { return &ref; }
 
 // TODO: allow stealing when no code after if??
-// TODO: also materialization must be allowed
+// TODO: BTW also materialization must be allowed after if
 // TODO: pointers also might be stolen via `auto**`
 void good_stolen_reference2() {
     const int* pi = nullptr;
@@ -287,6 +285,27 @@ void good_stolen_reference2() {
         case 0:
             do_some();
             pi = get_pointer(i2);
+            break;
+    }
+    do_some(*pi);
+}
+
+int get_temporary() { return 0; }
+
+void good_stolen_temporary_materialized_reference() {
+    const int* pi = nullptr;
+    const int& ref1 = get_temporary();
+    if (ref1 == 0) {
+        do_some();
+        pi = &ref1;
+    }
+    do_some(*pi);
+
+    const int& ref2 = get_temporary();
+    switch (ref2) {
+        case 0:
+            do_some();
+            pi = &ref2;
             break;
     }
     do_some(*pi);
@@ -594,7 +613,6 @@ void bad_reference_to_unique_lock_using() {
     ++counter;
 }
 
-// TODO: all string operations also safe to steal by default
 void bad_safe_string_default() {
     std::string str; DUMMY_TOKEN
     if (str.empty()) {
@@ -607,6 +625,7 @@ void bad_safe_string_default() {
 }
 
 // TODO: make a test with real stealing from string
+// TODO: also string might be stolen by string_view
 
 void bad_condition_with_declaration() {
     int i1 = 0; DUMMY_TOKEN
@@ -723,6 +742,32 @@ void bad_prevents_redeclaration4() {
 //             break;
 //         }
 //     }
+}
+
+void bad_stolen_reference1() {
+    const int* pi = nullptr;
+    int val = 0;
+    const int& ref1 = val; DUMMY_TOKEN
+    if (ref1 == 0) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'ref1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (const int& ref1 = val; ref1 == 0) {
+        do_some();
+        pi = &ref1;
+    }
+    do_some(*pi);
+
+    const int& ref2 = val; DUMMY_TOKEN
+    switch (ref2) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'ref2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (const int& ref2 = val; ref2) {
+        case 0:
+            do_some();
+            pi = &ref2;
+            break;
+    }
+    do_some(*pi);
 }
 
 #define OPEN_PAREN_I1 (i1
