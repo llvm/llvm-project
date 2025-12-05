@@ -299,14 +299,16 @@ TEST(ASTEntityMappingTest, RecordRedeclaration) {
 
 TEST(ASTEntityMappingTest, ParmVarDeclRedeclaration) {
   auto AST = tooling::buildASTFromCode(R"(
+    void foo(int);
     void foo(int x);
+    void foo(int y);
     void foo(int x) {}
   )");
   auto &Ctx = AST->getASTContext();
 
   auto Matcher = functionDecl(hasName("foo")).bind("decl");
   auto Matches = match(Matcher, Ctx);
-  ASSERT_EQ(Matches.size(), 2u);
+  ASSERT_GE(Matches.size(), 2u);
 
   const auto *FirstFuncDecl = Matches[0].getNodeAs<FunctionDecl>("decl");
   ASSERT_NE(FirstFuncDecl, nullptr);
