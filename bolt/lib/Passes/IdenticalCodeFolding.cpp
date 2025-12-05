@@ -377,7 +377,8 @@ namespace bolt {
 void IdenticalCodeFolding::initVTableReferences(const BinaryContext &BC) {
   for (const auto &[Address, Data] : BC.getBinaryData()) {
     // Filter out all symbols that are not vtables.
-    if (!Data->getName().starts_with("_ZTV"))
+    if (!Data->getName().starts_with("_ZTV") && // vtable
+        !Data->getName().starts_with("_ZTCN"))  // construction vtable
       continue;
     for (uint64_t I = Address, End = I + Data->getSize(); I < End; I += 8)
       setAddressUsedInVTable(I);
@@ -437,8 +438,9 @@ void IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
   NamedRegionTimer MarkFunctionsUnsafeToFoldTimer(
       "markFunctionsUnsafeToFold", "markFunctionsUnsafeToFold", "ICF breakdown",
       "ICF breakdown", opts::TimeICF);
-  if (!BC.isX86())
-    BC.outs() << "BOLT-WARNING: safe ICF is only supported for x86\n";
+  if (!BC.isX86() && !BC.isAArch64())
+    BC.outs()
+        << "BOLT-WARNING: safe ICF is only supported for x86 and AArch64\n";
   analyzeDataRelocations(BC);
   analyzeFunctions(BC);
 }
