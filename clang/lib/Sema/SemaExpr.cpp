@@ -9415,6 +9415,12 @@ AssignConvertType Sema::CheckAssignmentConstraints(QualType LHSType,
         Kind = CK_IntegralToBoolean;
         return AssignConvertType::Compatible;
       }
+      // In OpenCL, allow compatible vector types (e.g. half to _Float16)
+      if (Context.getLangOpts().OpenCL &&
+          Context.areCompatibleVectorTypes(LHSType, RHSType)) {
+        Kind = CK_BitCast;
+        return AssignConvertType::Compatible;
+      }
       return AssignConvertType::Incompatible;
     }
     if (RHSType->isArithmeticType()) {
