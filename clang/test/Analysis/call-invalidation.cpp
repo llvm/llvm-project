@@ -280,3 +280,21 @@ int testNestedStdNamespacesAndRecords() {
   int y = obj.uninit; // expected-warning {{Assigned value is uninitialized}}
   return x + y;
 }
+
+struct SpecialVector {
+  SpecialVector(const void *); // Takes a const pointer!
+  int size() const {
+    return Size; // no-warning: We should not warn "uninitialized Size" because the ctor might have initialized it.
+  }
+  int Size;
+};
+
+void selfPtrPassedAsConstPointerToOpaqueCtorCall() {
+  // We construct a "SpecialVector" that takes the address of itself
+  // (or to a subobject somewhere itself) by a const-pointer.
+  // Despite the var region "buf" is mentioned via a const argument, the opaque
+  // ctor cal should still take presecedent and invalidate the underlying object.
+  SpecialVector buf(&buf);
+  buf.size();
+}
+
