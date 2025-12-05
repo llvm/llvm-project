@@ -6490,8 +6490,7 @@ static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
           (Ctor->isDeleted() || Ctor->getAccess() == AS_private)) {
         S.Diag(CE->getBeginLoc(),
                diag::err_annotation_argument_copy_precondition);
-        S.Diag(Ctor->getBeginLoc(), diag::note_availability_specified_here)
-            << Ctor << /* deleted */ 1;
+        S.NoteDeletedFunction(const_cast<CXXConstructorDecl *>(Ctor));
         return;
       }
     }
