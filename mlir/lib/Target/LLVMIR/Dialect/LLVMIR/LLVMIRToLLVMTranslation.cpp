@@ -80,8 +80,9 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
 
 /// Returns the list of LLVM IR metadata kinds that are convertible to MLIR LLVM
 /// dialect attributes.
-static ArrayRef<unsigned> getSupportedMetadataImpl(llvm::LLVMContext &context) {
-  static const SmallVector<unsigned> convertibleMetadata = {
+static SmallVector<unsigned>
+getSupportedMetadataImpl(llvm::LLVMContext &llvmContext) {
+  SmallVector<unsigned> convertibleMetadata = {
       llvm::LLVMContext::MD_prof,
       llvm::LLVMContext::MD_tbaa,
       llvm::LLVMContext::MD_access_group,
@@ -91,10 +92,10 @@ static ArrayRef<unsigned> getSupportedMetadataImpl(llvm::LLVMContext &context) {
       llvm::LLVMContext::MD_dereferenceable,
       llvm::LLVMContext::MD_dereferenceable_or_null,
       llvm::LLVMContext::MD_mmra,
-      context.getMDKindID(vecTypeHintMDName),
-      context.getMDKindID(workGroupSizeHintMDName),
-      context.getMDKindID(reqdWorkGroupSizeMDName),
-      context.getMDKindID(intelReqdSubGroupSizeMDName)};
+      llvmContext.getMDKindID(vecTypeHintMDName),
+      llvmContext.getMDKindID(workGroupSizeHintMDName),
+      llvmContext.getMDKindID(reqdWorkGroupSizeMDName),
+      llvmContext.getMDKindID(intelReqdSubGroupSizeMDName)};
   return convertibleMetadata;
 }
 
@@ -113,7 +114,7 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     return failure();
 
   // Handle function entry count metadata.
-  if (name->getString() == "function_entry_count") {
+  if (name->getString() == llvm::MDProfLabels::FunctionEntryCount) {
 
     // TODO support function entry count metadata with GUID fields.
     if (node->getNumOperands() != 2)
@@ -131,15 +132,28 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
            << "expected function_entry_count to be attached to a function";
   }
 
-  if (name->getString() != "branch_weights")
+  if (name->getString() != llvm::MDProfLabels::BranchWeights)
     return failure();
+  // The branch_weights metadata must have at least 2 operands.
+  if (node->getNumOperands() < 2)
+    return failure();
+
+  ArrayRef<llvm::MDOperand> branchWeightOperands =
+      node->operands().drop_front();
+  if (auto *mdString = dyn_cast<llvm::MDString>(node->getOperand(1))) {
+    if (mdString->getString() != llvm::MDProfLabels::ExpectedBranchWeights)
+      return failure();
+    // The MLIR WeightedBranchOpInterface does not support the
+    // ExpectedBranchWeights field, so it is dropped.
+    branchWeightOperands = branchWeightOperands.drop_front();
+  }
 
   // Handle branch weights metadata.
   SmallVector<int32_t> branchWeights;
-  branchWeights.reserve(node->getNumOperands() - 1);
-  for (unsigned i = 1, e = node->getNumOperands(); i != e; ++i) {
+  branchWeights.reserve(branchWeightOperands.size());
+  for (const llvm::MDOperand &operand : branchWeightOperands) {
     llvm::ConstantInt *branchWeight =
-        llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(i));
+        llvm::mdconst::dyn_extract<llvm::ConstantInt>(operand);
     if (!branchWeight)
       return failure();
     branchWeights.push_back(branchWeight->getZExtValue());
@@ -492,9 +506,9 @@ public:
 
   /// Returns the list of LLVM IR metadata kinds that are convertible to MLIR
   /// LLVM dialect attributes.
-  ArrayRef<unsigned>
-  getSupportedMetadata(llvm::LLVMContext &context) const final {
-    return getSupportedMetadataImpl(context);
+  SmallVector<unsigned>
+  getSupportedMetadata(llvm::LLVMContext &llvmContext) const final {
+    return getSupportedMetadataImpl(llvmContext);
   }
 };
 } // namespace

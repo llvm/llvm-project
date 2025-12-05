@@ -22,7 +22,6 @@
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
 #include "llvm/Analysis/RegionPrinter.h"
-#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 

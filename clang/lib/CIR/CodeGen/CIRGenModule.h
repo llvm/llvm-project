@@ -453,6 +453,20 @@ public:
                                     bool performInit);
 
   void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
+  void emitGlobalOpenACCRoutineDecl(const clang::OpenACCRoutineDecl *cd);
+  void emitGlobalOpenACCDeclareDecl(const clang::OpenACCDeclareDecl *cd);
+  template <typename BeforeOpTy, typename DataClauseTy>
+  void emitGlobalOpenACCDeclareDataOperands(const Expr *varOperand,
+                                            DataClauseTy dataClause,
+                                            OpenACCModifierKind modifiers,
+                                            bool structured, bool implicit,
+                                            bool requiresDtor);
+  // Each of the acc.routine operations must have a unique name, so we just use
+  // an integer counter.  This is how Flang does it, so it seems reasonable.
+  unsigned routineCounter = 0;
+  void emitOpenACCRoutineDecl(const clang::FunctionDecl *funcDecl,
+                              cir::FuncOp func, SourceLocation pragmaLoc,
+                              ArrayRef<const OpenACCClause *> clauses);
 
   // C++ related functions.
   void emitDeclContext(const DeclContext *dc);
@@ -460,6 +474,12 @@ public:
   /// Return the result of value-initializing the given type, i.e. a null
   /// expression of the given type.
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
+
+  mlir::TypedAttr emitNullConstantAttr(QualType t);
+
+  /// Return a null constant appropriate for zero-initializing a base class with
+  /// the given type. This is usually, but not always, an LLVM null constant.
+  mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
 
@@ -496,6 +516,10 @@ public:
   cir::FuncOp createCIRBuiltinFunction(mlir::Location loc, llvm::StringRef name,
                                        cir::FuncType ty,
                                        const clang::FunctionDecl *fd);
+
+  /// Mark the function as a special member (e.g. constructor, destructor)
+  void setCXXSpecialMemberAttr(cir::FuncOp funcOp,
+                               const clang::FunctionDecl *funcDecl);
 
   cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
                                     mlir::ArrayAttr = {}, bool isLocal = false,
