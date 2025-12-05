@@ -422,28 +422,30 @@ cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
   return nullptr;
 }
 
-void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
-                                   cir::FuncOp fn, cir::FuncType funcType,
-                                   FunctionArgList args, SourceLocation loc,
-                                   SourceLocation startLoc) {
-  assert(!curFn &&
-         "CIRGenFunction can only be used for one function at a time");
+/// An argument came in as a promoted argument; demote it back to its
+/// declared type.
+static mlir::Value emitArgumentDemotion(CIRGenFunction &cgf, const VarDecl *var,
+                                        mlir::Value value) {
+  mlir::Type ty = cgf.convertType(var->getType());
 
-  curFn = fn;
+  // This can happen with promotions that actually don't change the
+  // underlying type, like the enum promotions.
+  if (value.getType() == ty)
+    return value;
 
-  const Decl *d = gd.getDecl();
+  assert((mlir::isa<cir::IntType>(ty) || cir::isAnyFloatingPointType(ty)) &&
+         "unexpected promotion type");
 
-  didCallStackSave = false;
-  curCodeDecl = d;
-  const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
-  curFuncDecl = d->getNonClosureContext();
+  if (mlir::isa<cir::IntType>(ty))
+    return cgf.getBuilder().CIRBaseBuilderTy::createIntCast(value, ty);
 
-  prologueCleanupDepth = ehStack.stable_begin();
+  return cgf.getBuilder().CIRBaseBuilderTy::createCast(cir::CastKind::floating,
+                                                       value, ty);
+}
 
-  mlir::Block *entryBB = &fn.getBlocks().front();
-  builder.setInsertionPointToStart(entryBB);
-
-  // TODO(cir): this should live in `emitFunctionProlog
+void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
+                                        mlir::Block *entryBB,
+                                        const FunctionDecl *fd) {
   // Declare all the function arguments in the symbol table.
   for (const auto nameValue : llvm::zip(args, entryBB->getArguments())) {
     const VarDecl *paramVar = std::get<0>(nameValue);
@@ -466,7 +468,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
                       cast<ParmVarDecl>(paramVar)->isKNRPromoted();
     assert(!cir::MissingFeatures::constructABIArgDirectExtend());
     if (isPromoted)
-      cgm.errorNYI(fd->getSourceRange(), "Function argument demotion");
+      paramVal = emitArgumentDemotion(*this, paramVar, paramVal);
 
     // Location of the store to the param storage tracked as beginning of
     // the function body.
@@ -474,6 +476,30 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal, addrVal);
   }
   assert(builder.getInsertionBlock() && "Should be valid");
+}
+
+void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
+                                   cir::FuncOp fn, cir::FuncType funcType,
+                                   FunctionArgList args, SourceLocation loc,
+                                   SourceLocation startLoc) {
+  assert(!curFn &&
+         "CIRGenFunction can only be used for one function at a time");
+
+  curFn = fn;
+
+  const Decl *d = gd.getDecl();
+
+  didCallStackSave = false;
+  curCodeDecl = d;
+  const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
+  curFuncDecl = d->getNonClosureContext();
+
+  prologueCleanupDepth = ehStack.stable_begin();
+
+  mlir::Block *entryBB = &fn.getBlocks().front();
+  builder.setInsertionPointToStart(entryBB);
+
+  emitFunctionProlog(args, entryBB, fd);
 
   // When the current function is not void, create an address to store the
   // result value.
