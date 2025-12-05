@@ -9,9 +9,11 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Casting.h"
@@ -204,4 +206,63 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   // A declare attribute is needed for symbol references.
   bool hasDeclare = definingOp->hasAttr(mlir::acc::getDeclareAttrName());
   return hasDeclare;
+}
+
+llvm::SmallVector<mlir::Value>
+mlir::acc::getDominatingDataClauses(mlir::Operation *computeConstructOp,
+                                    mlir::DominanceInfo &domInfo,
+                                    mlir::PostDominanceInfo &postDomInfo) {
+  llvm::SmallSetVector<mlir::Value, 8> dominatingDataClauses;
+
+  llvm::TypeSwitch<mlir::Operation *>(computeConstructOp)
+      .Case<mlir::acc::ParallelOp, mlir::acc::KernelsOp, mlir::acc::SerialOp>(
+          [&](auto op) {
+            for (auto dataClause : op.getDataClauseOperands()) {
+              dominatingDataClauses.insert(dataClause);
+            }
+          })
+      .Default([](mlir::Operation *) {});
+
+  // Collect the data clauses from enclosing data constructs.
+  mlir::Operation *currParentOp = computeConstructOp->getParentOp();
+  while (currParentOp) {
+    if (mlir::isa<mlir::acc::DataOp>(currParentOp)) {
+      for (auto dataClause : mlir::dyn_cast<mlir::acc::DataOp>(currParentOp)
+                                 .getDataClauseOperands()) {
+        dominatingDataClauses.insert(dataClause);
+      }
+    }
+    currParentOp = currParentOp->getParentOp();
+  }
+
+  // Find the enclosing function/subroutine
+  auto funcOp =
+      computeConstructOp->getParentOfType<mlir::FunctionOpInterface>();
+  if (!funcOp)
+    return dominatingDataClauses.takeVector();
+
+  // Walk the function to find `acc.declare_enter`/`acc.declare_exit` pairs that
+  // dominate and post-dominate the compute construct and add their data
+  // clauses to the list.
+  funcOp->walk([&](mlir::acc::DeclareEnterOp declareEnterOp) {
+    if (domInfo.dominates(declareEnterOp.getOperation(), computeConstructOp)) {
+      // Collect all `acc.declare_exit` ops for this token.
+      llvm::SmallVector<mlir::acc::DeclareExitOp> exits;
+      for (auto *user : declareEnterOp.getToken().getUsers())
+        if (auto declareExit = mlir::dyn_cast<mlir::acc::DeclareExitOp>(user))
+          exits.push_back(declareExit);
+
+      // Only add clauses if every `acc.declare_exit` op post-dominates the
+      // compute construct.
+      if (!exits.empty() &&
+          llvm::all_of(exits, [&](mlir::acc::DeclareExitOp exitOp) {
+            return postDomInfo.postDominates(exitOp, computeConstructOp);
+          })) {
+        for (auto dataClause : declareEnterOp.getDataClauseOperands())
+          dominatingDataClauses.insert(dataClause);
+      }
+    }
+  });
+
+  return dominatingDataClauses.takeVector();
 }

@@ -237,11 +237,6 @@ public:
   void runOnOperation() override;
 
 private:
-  /// Collects all data clauses that dominate the compute construct.
-  /// Needed to determine if a variable is already covered by an existing data
-  /// clause.
-  SmallVector<Value> getDominatingDataClauses(Operation *computeConstructOp);
-
   /// Looks through the `dominatingDataClauses` to find the original data clause
   /// op for an alias. Returns nullptr if no original data clause op is found.
   template <typename OpT>
@@ -298,62 +293,6 @@ static bool isCandidateForImplicitData(Value val, Region &accRegion) {
     return false;
 
   return true;
-}
-
-SmallVector<Value>
-ACCImplicitData::getDominatingDataClauses(Operation *computeConstructOp) {
-  llvm::SmallSetVector<Value, 8> dominatingDataClauses;
-
-  llvm::TypeSwitch<Operation *>(computeConstructOp)
-      .Case<acc::ParallelOp, acc::KernelsOp, acc::SerialOp>([&](auto op) {
-        for (auto dataClause : op.getDataClauseOperands()) {
-          dominatingDataClauses.insert(dataClause);
-        }
-      })
-      .Default([](Operation *) {});
-
-  // Collect the data clauses from enclosing data constructs.
-  Operation *currParentOp = computeConstructOp->getParentOp();
-  while (currParentOp) {
-    if (isa<acc::DataOp>(currParentOp)) {
-      for (auto dataClause :
-           dyn_cast<acc::DataOp>(currParentOp).getDataClauseOperands()) {
-        dominatingDataClauses.insert(dataClause);
-      }
-    }
-    currParentOp = currParentOp->getParentOp();
-  }
-
-  // Find the enclosing function/subroutine
-  auto funcOp = computeConstructOp->getParentOfType<FunctionOpInterface>();
-  if (!funcOp)
-    return dominatingDataClauses.takeVector();
-
-  // Walk the function to find `acc.declare_enter`/`acc.declare_exit` pairs that
-  // dominate and post-dominate the compute construct and add their data
-  // clauses to the list.
-  auto &domInfo = this->getAnalysis<DominanceInfo>();
-  auto &postDomInfo = this->getAnalysis<PostDominanceInfo>();
-  funcOp->walk([&](acc::DeclareEnterOp declareEnterOp) {
-    if (domInfo.dominates(declareEnterOp.getOperation(), computeConstructOp)) {
-      // Collect all `acc.declare_exit` ops for this token.
-      SmallVector<acc::DeclareExitOp> exits;
-      for (auto *user : declareEnterOp.getToken().getUsers())
-        if (auto declareExit = dyn_cast<acc::DeclareExitOp>(user))
-          exits.push_back(declareExit);
-
-      // Only add clauses if every `acc.declare_exit` op post-dominates the
-      // compute construct.
-      if (!exits.empty() && llvm::all_of(exits, [&](acc::DeclareExitOp exitOp) {
-            return postDomInfo.postDominates(exitOp, computeConstructOp);
-          })) {
-        for (auto dataClause : declareEnterOp.getDataClauseOperands())
-          dominatingDataClauses.insert(dataClause);
-      }
-    }
-  });
-
-  return dominatingDataClauses.takeVector();
 }
 
 template <typename OpT>
@@ -775,7 +714,10 @@ void ACCImplicitData::generateImplicitDataOps(
     LLVM_DEBUG(llvm::dbgs() << "== Generating clauses for ==\n"
                             << computeConstructOp << "\n");
   }
-  auto dominatingDataClauses = getDominatingDataClauses(computeConstructOp);
+  auto &domInfo = this->getAnalysis<DominanceInfo>();
+  auto &postDomInfo = this->getAnalysis<PostDominanceInfo>();
+  auto dominatingDataClauses =
+      acc::getDominatingDataClauses(computeConstructOp, domInfo, postDomInfo);
   for (auto var : candidateVars) {
     auto newDataClauseOp = generateDataClauseOpForCandidate(
         var, module, builder, computeConstructOp, dominatingDataClauses,
