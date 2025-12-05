@@ -162,4 +162,4 @@ jobs:
         if: >-
           always() &&
           steps.download-artifact.outputs.artifact-ids != ''
-        run: cat comments
+        run: cat comments*
