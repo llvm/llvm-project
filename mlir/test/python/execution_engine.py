@@ -71,6 +71,7 @@ def testInvalidModule():
     func.func @foo() { return }
     """
         )
+        # CHECK: error: cannot be converted to LLVM IR: missing `LLVMTranslationDialectInterface` registration for dialect for op: func.func
         # CHECK: Got RuntimeError:  Failure while creating the ExecutionEngine.
         try:
             execution_engine = ExecutionEngine(module)
