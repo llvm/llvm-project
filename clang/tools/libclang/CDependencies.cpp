@@ -806,10 +806,20 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
   std::string FileCacheName = llvm::sys::path::filename(FileCachePath).str();
   auto LookupOutput = [&FileCacheName](const ModuleDeps &MD,
                                        ModuleOutputKind MOK) -> std::string {
-    if (MOK != ModuleOutputKind::ModuleFile)
+    if (MOK == ModuleOutputKind::DependencyTargets)
+      return "reproducerdependencytargets";
+    std::string CommonPrefix = FileCacheName + "/explicitly-built-modules/" +
+                               MD.ID.ModuleName + "-" + MD.ID.ContextHash;
+    switch (MOK) {
+    case ModuleOutputKind::ModuleFile:
+      return CommonPrefix + ".pcm";
+    case ModuleOutputKind::DependencyFile:
+      return CommonPrefix + ".d";
+    case ModuleOutputKind::DiagnosticSerializationFile:
+      return CommonPrefix + ".dia";
+    default:
       return "";
-    return FileCacheName + "/explicitly-built-modules/" +
-           MD.ID.ModuleName + "-" + MD.ID.ContextHash + ".pcm";
+    }
   };
 
   llvm::DenseSet<ModuleID> AlreadySeen;
@@ -849,13 +859,15 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
     bool DidAddVFSOverlay = false;
     OS << ReproExecutable;
     for (const llvm::opt::Arg *Arg : ParsedArgs) {
-      if (Arg->getOption().matches(options::OPT_ivfsoverlay)) {
+      const llvm::opt::Option &Opt = Arg->getOption();
+      if (Opt.matches(options::OPT_ivfsoverlay)) {
         if (!DidAddVFSOverlay) {
           OS << " -ivfsoverlay \"" << FileCacheName << "/vfs/vfs.yaml\"";
           DidAddVFSOverlay = true;
         }
       }
-      bool IsOutputArg = Arg->getOption().matches(options::OPT_o);
+      bool IsOutputArg = Opt.matches(options::OPT_o) ||
+                         Opt.matches(options::OPT_dependency_file);
       llvm::opt::ArgStringList OutArgs;
       Arg->render(ParsedArgs, OutArgs);
       bool IsArgValue = false;

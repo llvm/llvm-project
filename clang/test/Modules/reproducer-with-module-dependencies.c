@@ -20,7 +20,8 @@
 // RUN:   -- clang-executable -c %t/reproducer.c -o %t/reproducer.o \
 // RUN:      -fmodules -fmodules-cache-path=%t \
 // RUN:      -DMACRO="\$foo" \
-// RUN:      -ivfsoverlay %t/existing.yaml -I /virtual
+// RUN:      -ivfsoverlay %t/existing.yaml -I /virtual \
+// RUN:      -MMD -MT dependencies -MF %t/deps.d
 // RUN: FileCheck %t/script-expectations.txt --input-file %t/repro-content/reproducer.sh
 
 //--- include/modular-header.h
@@ -67,9 +68,11 @@ void test(void) {
 
 //--- script-expectations.txt
 CHECK: CLANG:-clang-executable
+CHECK: "-dependency-file" "reproducer.cache/explicitly-built-modules/Test-{{.*}}.d"
 CHECK: "-o" "reproducer.cache/reproducer.o"
 CHECK: -fmodule-file=Test=reproducer.cache/explicitly-built-modules/Test-{{.*}}.pcm
 Verify the reproducer VFS overlay is added before the existing overlay provided on a command line.
 CHECK: -ivfsoverlay "reproducer.cache/vfs/vfs.yaml"
 CHECK: "-ivfsoverlay" "{{.*}}/existing.yaml"
 CHECK: MACRO=\$foo
+CHECK: "-dependency-file" "reproducer.cache/deps.d"
