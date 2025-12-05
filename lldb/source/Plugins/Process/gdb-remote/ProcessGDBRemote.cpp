@@ -439,8 +439,16 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   if (!arch_to_use.IsValid())
     arch_to_use = target_arch;
 
-  if (GetGDBServerRegisterInfo(arch_to_use))
+  llvm::Error register_info_err = GetGDBServerRegisterInfo(arch_to_use);
+  if (!register_info_err) {
+    // We got the registers from target XML.
     return;
+  }
+
+  Log *log = GetLog(GDBRLog::Process);
+  LLDB_LOG_ERROR(log, std::move(register_info_err),
+                 "Failed to read register information from target XML: {0}");
+  LLDB_LOG(log, "Now trying to use qRegisterInfo instead.");
 
   char packet[128];
   std::vector<DynamicRegisterInfo::Register> registers;
@@ -5135,14 +5143,19 @@ void ProcessGDBRemote::AddRemoteRegisters(
 
 // query the target of gdb-remote for extended target information returns
 // true on success (got register definitions), false on failure (did not).
-bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
-  // Make sure LLDB has an XML parser it can use first
-  if (!XMLDocument::XMLEnabled())
-    return false;
-
-  // check that we have extended feature read support
+llvm::Error ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
+  // If the remote does not offer XML, does not matter if we would have been
+  // able to parse it.
   if (!m_gdb_comm.GetQXferFeaturesReadSupported())
-    return false;
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "the debug server does not support \"qXfer:features:read\"");
+
+  if (!XMLDocument::XMLEnabled())
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "the debug server supports \"qXfer:features:read\", but LLDB does not "
+        "have XML parsing enabled (check LLLDB_ENABLE_LIBXML2)");
 
   // These hold register type information for the whole of target.xml.
   // target.xml may include further documents that
@@ -5159,7 +5172,11 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
       !registers.empty())
     AddRemoteRegisters(registers, arch_to_use);
 
-  return m_register_info_sp->GetNumRegisters() > 0;
+  return m_register_info_sp->GetNumRegisters() > 0
+             ? llvm::ErrorSuccess()
+             : llvm::createStringError(
+                   llvm::inconvertibleErrorCode(),
+                   "the debug server did not describe any registers");
 }
 
 llvm::Expected<LoadedModuleInfoList> ProcessGDBRemote::GetLoadedModuleList() {
