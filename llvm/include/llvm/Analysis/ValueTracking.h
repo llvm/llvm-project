@@ -19,6 +19,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -1076,6 +1077,10 @@ struct ConstantComparesGatherer {
   ConstantComparesGatherer(const ConstantComparesGatherer &) = delete;
   ConstantComparesGatherer &
   operator=(const ConstantComparesGatherer &) = delete;
+
+  static Value *createBitMapSeq(ConstantInt *BitMap, Value *Index,
+                                IRBuilder<> &Builder,
+                                IntegerType *BitMapElementTy);
 
 private:
   bool setValueOnce(Value *NewVal);
