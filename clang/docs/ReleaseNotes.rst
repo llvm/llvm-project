@@ -460,6 +460,10 @@ Improvements to Clang's diagnostics
 - A new warning ``-Wshadow-header`` has been added to detect when a header file
   is found in multiple search directories (excluding system paths).
 
+- Clang now detects potential missing format and format_matches attributes on function,
+  Objective-C method and block declarations when calling format functions. It is part
+  of the format-nonliteral diagnostic (#GH60718)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
