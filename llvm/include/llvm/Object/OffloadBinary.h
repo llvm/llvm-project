@@ -119,13 +119,11 @@ public:
   LLVM_ABI
   static Expected<const Header *> extractHeader(MemoryBufferRef Buf);
 
-  /// Attempt to parse the offloading binary stored in \p Data.
+  /// Attempt to parse the offloading binary stored in \p Buf.
+  /// \p Index is used to create specific Entry/Image, when
+  /// offload binary contains multiple images
   LLVM_ABI static Expected<std::unique_ptr<OffloadBinary>>
-      createV1(MemoryBufferRef);
-
-  /// Attempt to parse the offloading binary stored in \p Data.
-  LLVM_ABI static Expected<std::unique_ptr<OffloadBinary>>
-      createV2(MemoryBufferRef);
+      create(MemoryBufferRef Buf, const uint64_t Index = 0);
 
   /// Serialize the contents of \p OffloadingData to a binary buffer to be read
   /// later.
@@ -185,21 +183,25 @@ public:
   using TargetID = std::pair<StringRef, StringRef>;
 
   OffloadFile(std::unique_ptr<OffloadBinary> Binary,
-              std::unique_ptr<MemoryBuffer> Buffer)
-      : OwningBinary<OffloadBinary>(std::move(Binary), std::move(Buffer)) {}
+              std::shared_ptr<MemoryBuffer> SharedBuffer)
+      : OwningBinary<OffloadBinary>(std::move(Binary), nullptr),
+        SharedBuffer(std::move(SharedBuffer)) {}
+
+  /// Create a new OffloadFile with a new Binary but reuse SharedBuffer from
+  /// another OffloadFile.
+  OffloadFile(std::unique_ptr<OffloadBinary> Binary,
+              const OffloadFile &Other)
+      : OwningBinary<OffloadBinary>(std::move(Binary), nullptr),
+        SharedBuffer(Other.SharedBuffer) {}
 
   /// Make a deep copy of this offloading file.
-  OffloadFile copy() const {
-    std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBufferCopy(
-        getBinary()->getMemoryBufferRef().getBuffer(),
-        getBinary()->getMemoryBufferRef().getBufferIdentifier());
-
+  OffloadFile copy(uint64_t Index = 0) const {
     // This parsing should never fail because it has already been parsed.
-    auto NewBinaryOrErr = OffloadBinary::createV1(*Buffer);
+    auto NewBinaryOrErr = OffloadBinary::create(MemoryBufferRef(*SharedBuffer), Index);
     assert(NewBinaryOrErr && "Failed to parse a copy of the binary?");
     if (!NewBinaryOrErr)
       llvm::consumeError(NewBinaryOrErr.takeError());
-    return OffloadFile(std::move(*NewBinaryOrErr), std::move(Buffer));
+    return OffloadFile(std::move(*NewBinaryOrErr), SharedBuffer);
   }
 
   /// We use the Triple and Architecture pair to group linker inputs together.
@@ -207,6 +209,10 @@ public:
   operator TargetID() const {
     return std::make_pair(getBinary()->getTriple(), getBinary()->getArch());
   }
+
+private:
+  /// Shared buffer for binaries with multiple entries
+  std::shared_ptr<MemoryBuffer> SharedBuffer;
 };
 
 /// Extracts embedded device offloading code from a memory \p Buffer to a list
