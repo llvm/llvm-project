@@ -3855,7 +3855,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
 
   const bool PrintCpuHelp = (MCPU == "help" || is_contained(MAttrs, "help"));
 
-  bool ShouldDump =
+  const bool ShouldDump =
       ArchiveHeaders || Disassemble || DwarfDumpType != DIDT_Null ||
       DynamicRelocations || FileHeaders || PrivateHeaders || RawClangAST ||
       Relocations || SectionHeaders || SectionContents || SymbolTable ||

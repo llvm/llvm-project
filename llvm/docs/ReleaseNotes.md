@@ -200,7 +200,7 @@ Changes to the LLVM tools
   emitted on stdout, to account for spaces or other special characters in path.
   (`#97305 <https://github.com/llvm/llvm-project/pull/97305>`_).
 
-* `llvm-objdump` now supports using `--mcpu=help` with the `--triple` option
+* `llvm-objdump` now supports using `--mcpu=help` and `--mattr=help` with the `--triple` option
   without requiring an input file or the `-d` (disassemble) flag.
 
 Changes to LLDB
