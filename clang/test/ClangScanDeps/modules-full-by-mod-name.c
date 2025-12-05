@@ -28,7 +28,7 @@ module transitive { header "transitive.h" }
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-names=root > %t/result.json
 // RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
 
-//--- cdb.cc1.template
+//--- cdb.cc1.json.template
 [{
   "file": "",
   "directory": "DIR",
