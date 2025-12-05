@@ -45,14 +45,6 @@
 using namespace cir;
 using namespace llvm;
 
-// Actual lowering
-  mlir::Type resTy = typeConverter->convertType(op.getType());
-  rewriter.replaceOpWithNewOp<mlir::LLVM::SqrtOp>(op, resTy,
-                                                    adaptor.getSrc());
-  return mlir::success();
-
-}
-
 namespace cir {
 namespace direct {
 
@@ -191,6 +183,14 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
   rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
       op, adaptor.getDst(), adaptor.getSrc(), length, op.getIsVolatile());
+  return mlir::success();
+}
+
+mlir::LogicalResult SqrtOpLowering::matchAndRewrite(
+    cir::SqrtOp op, OpAdaptor adaptor, 
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::SqrtOp>(op, resTy, adaptor.getSrc());
   return mlir::success();
 }
 
