@@ -1681,7 +1681,13 @@ void MatchFinder::addMatcher(const DeclarationMatcher &NodeMatch,
 
 void MatchFinder::addMatcher(const TypeMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.Type.emplace_back(NodeMatch, Action);
+  std::optional<TraversalKind> TK;
+  if (Action)
+    TK = Action->getCheckTraversalKind();
+  if (TK)
+    Matchers.Type.emplace_back(traverse(*TK, NodeMatch), Action);
+  else
+    Matchers.Type.emplace_back(NodeMatch, Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
@@ -1699,37 +1705,74 @@ void MatchFinder::addMatcher(const StatementMatcher &NodeMatch,
 
 void MatchFinder::addMatcher(const NestedNameSpecifierMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.NestedNameSpecifier.emplace_back(NodeMatch, Action);
+  std::optional<TraversalKind> TK;
+  if (Action)
+    TK = Action->getCheckTraversalKind();
+  if (TK)
+    Matchers.NestedNameSpecifier.emplace_back(traverse(*TK, NodeMatch), Action);
+  else
+    Matchers.NestedNameSpecifier.emplace_back(NodeMatch, Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
 void MatchFinder::addMatcher(const NestedNameSpecifierLocMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.NestedNameSpecifierLoc.emplace_back(NodeMatch, Action);
+  std::optional<TraversalKind> TK;
+  if (Action)
+    TK = Action->getCheckTraversalKind();
+  if (TK)
+    Matchers.NestedNameSpecifierLoc.emplace_back(traverse(*TK, NodeMatch),
+                                                 Action);
+  else
+    Matchers.NestedNameSpecifierLoc.emplace_back(NodeMatch, Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
 void MatchFinder::addMatcher(const TypeLocMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.TypeLoc.emplace_back(NodeMatch, Action);
+  std::optional<TraversalKind> TK;
+  if (Action)
+    TK = Action->getCheckTraversalKind();
+  if (TK)
+    Matchers.TypeLoc.emplace_back(traverse(*TK, NodeMatch), Action);
+  else
+    Matchers.TypeLoc.emplace_back(NodeMatch, Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
 void MatchFinder::addMatcher(const CXXCtorInitializerMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.CtorInit.emplace_back(NodeMatch, Action);
+  std::optional<TraversalKind> TK;
+  if (Action)
+    TK = Action->getCheckTraversalKind();
+  if (TK)
+    Matchers.CtorInit.emplace_back(traverse(*TK, NodeMatch), Action);
+  else
+    Matchers.CtorInit.emplace_back(NodeMatch, Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
 void MatchFinder::addMatcher(const TemplateArgumentLocMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.TemplateArgumentLoc.emplace_back(NodeMatch, Action);
+  std::optional<TraversalKind> TK;
+  if (Action)
+    TK = Action->getCheckTraversalKind();
+  if (TK)
+    Matchers.TemplateArgumentLoc.emplace_back(traverse(*TK, NodeMatch), Action);
+  else
+    Matchers.TemplateArgumentLoc.emplace_back(NodeMatch, Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
 void MatchFinder::addMatcher(const AttrMatcher &AttrMatch,
                              MatchCallback *Action) {
-  Matchers.Attr.emplace_back(AttrMatch, Action);
+  std::optional<TraversalKind> TK;
+  if (Action)
+    TK = Action->getCheckTraversalKind();
+  if (TK)
+    Matchers.Attr.emplace_back(traverse(*TK, AttrMatch), Action);
+  else
+    Matchers.Attr.emplace_back(AttrMatch, Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
