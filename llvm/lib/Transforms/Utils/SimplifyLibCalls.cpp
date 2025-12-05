@@ -481,6 +481,7 @@ static Value* memChrToCharCompare(CallInst *CI, Value *NBytes,
 }
 
 Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
   Value *SrcStr = CI->getArgOperand(0);
   Value *CharVal = CI->getArgOperand(1);
   annotateNonNullNoUndefBasedOnAccess(CI, 0);
@@ -523,7 +524,7 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
   // Otherwise, the character is a constant, see if the first argument is
   // a string literal.  If so, we can constant fold.
   StringRef Str;
-  if (!getConstantStringInfo(SrcStr, Str)) {
+  if (!getConstantStringInfo(SrcStr, Str, CharWidth)) {
     if (CharC->isZero()) // strchr(p, 0) -> p + strlen(p)
       if (Value *StrLen = emitStrLen(SrcStr, B, DL, TLI))
         return B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, StrLen, "strchr");
@@ -543,13 +544,14 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrRChr(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
   Value *SrcStr = CI->getArgOperand(0);
   Value *CharVal = CI->getArgOperand(1);
   ConstantInt *CharC = dyn_cast<ConstantInt>(CharVal);
   annotateNonNullNoUndefBasedOnAccess(CI, 0);
 
   StringRef Str;
-  if (!getConstantStringInfo(SrcStr, Str)) {
+  if (!getConstantStringInfo(SrcStr, Str, CharWidth)) {
     // strrchr(s, 0) -> strchr(s, 0)
     if (CharC && CharC->isZero())
       return copyFlags(*CI, emitStrChr(SrcStr, '\0', B, TLI));
@@ -567,13 +569,15 @@ Value *LibCallSimplifier::optimizeStrRChr(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   Value *Str1P = CI->getArgOperand(0), *Str2P = CI->getArgOperand(1);
   if (Str1P == Str2P) // strcmp(x,x)  -> 0
     return ConstantInt::get(CI->getType(), 0);
 
   StringRef Str1, Str2;
-  bool HasStr1 = getConstantStringInfo(Str1P, Str1);
-  bool HasStr2 = getConstantStringInfo(Str2P, Str2);
+  bool HasStr1 = getConstantStringInfo(Str1P, Str1, CharWidth);
+  bool HasStr2 = getConstantStringInfo(Str2P, Str2, CharWidth);
 
   // strcmp(x, y)  -> cnst  (if both x and y are constant strings)
   if (HasStr1 && HasStr2)
@@ -627,6 +631,7 @@ static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
                                     IRBuilderBase &B, const DataLayout &DL);
 
 Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
   Value *Str1P = CI->getArgOperand(0);
   Value *Str2P = CI->getArgOperand(1);
   Value *Size = CI->getArgOperand(2);
@@ -649,8 +654,8 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
     return copyFlags(*CI, emitMemCmp(Str1P, Str2P, Size, B, DL, TLI));
 
   StringRef Str1, Str2;
-  bool HasStr1 = getConstantStringInfo(Str1P, Str1);
-  bool HasStr2 = getConstantStringInfo(Str2P, Str2);
+  bool HasStr1 = getConstantStringInfo(Str1P, Str1, CharWidth);
+  bool HasStr2 = getConstantStringInfo(Str2P, Str2, CharWidth);
 
   // strncmp(x, y)  -> cnst  (if both x and y are constant strings)
   if (HasStr1 && HasStr2) {
@@ -761,6 +766,8 @@ Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilderBase &B) {
 // Optimize a call to size_t strlcpy(char*, const char*, size_t).
 
 Value *LibCallSimplifier::optimizeStrLCpy(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   Value *Size = CI->getArgOperand(2);
   if (isKnownNonZero(Size, DL))
     // Like snprintf, the function stores into the destination only when
@@ -791,7 +798,7 @@ Value *LibCallSimplifier::optimizeStrLCpy(CallInst *CI, IRBuilderBase &B) {
   // when it's not nul-terminated (as it's required to be) to avoid
   // reading past its end.
   StringRef Str;
-  if (!getConstantStringInfo(Src, Str, /*TrimAtNul=*/false))
+  if (!getConstantStringInfo(Src, Str, CharWidth, /*TrimAtNul=*/false))
     return nullptr;
 
   uint64_t SrcLen = Str.find('\0');
@@ -839,6 +846,7 @@ Value *LibCallSimplifier::optimizeStrLCpy(CallInst *CI, IRBuilderBase &B) {
 // otherwise.
 Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
                                              IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
   Value *Size = CI->getArgOperand(2);
@@ -905,7 +913,7 @@ Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
 
     // st{p,r}ncpy(D, "a", N) -> memcpy(D, "a\0\0\0", N) for N <= 128.
     StringRef Str;
-    if (!getConstantStringInfo(Src, Str))
+    if (!getConstantStringInfo(Src, Str, CharWidth))
       return nullptr;
     std::string SrcStr = Str.str();
     // Create a bigger, nul-padded array with the same length, SrcLen,
@@ -1077,9 +1085,11 @@ Value *LibCallSimplifier::optimizeWcslen(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrPBrk(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   StringRef S1, S2;
-  bool HasS1 = getConstantStringInfo(CI->getArgOperand(0), S1);
-  bool HasS2 = getConstantStringInfo(CI->getArgOperand(1), S2);
+  bool HasS1 = getConstantStringInfo(CI->getArgOperand(0), S1, CharWidth);
+  bool HasS2 = getConstantStringInfo(CI->getArgOperand(1), S2, CharWidth);
 
   // strpbrk(s, "") -> nullptr
   // strpbrk("", s) -> nullptr
@@ -1116,9 +1126,11 @@ Value *LibCallSimplifier::optimizeStrTo(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrSpn(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   StringRef S1, S2;
-  bool HasS1 = getConstantStringInfo(CI->getArgOperand(0), S1);
-  bool HasS2 = getConstantStringInfo(CI->getArgOperand(1), S2);
+  bool HasS1 = getConstantStringInfo(CI->getArgOperand(0), S1, CharWidth);
+  bool HasS2 = getConstantStringInfo(CI->getArgOperand(1), S2, CharWidth);
 
   // strspn(s, "") -> 0
   // strspn("", s) -> 0
@@ -1137,9 +1149,11 @@ Value *LibCallSimplifier::optimizeStrSpn(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrCSpn(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   StringRef S1, S2;
-  bool HasS1 = getConstantStringInfo(CI->getArgOperand(0), S1);
-  bool HasS2 = getConstantStringInfo(CI->getArgOperand(1), S2);
+  bool HasS1 = getConstantStringInfo(CI->getArgOperand(0), S1, CharWidth);
+  bool HasS2 = getConstantStringInfo(CI->getArgOperand(1), S2, CharWidth);
 
   // strcspn("", s) -> 0
   if (HasS1 && S1.empty())
@@ -1161,6 +1175,8 @@ Value *LibCallSimplifier::optimizeStrCSpn(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   // fold strstr(x, x) -> x.
   if (CI->getArgOperand(0) == CI->getArgOperand(1))
     return CI->getArgOperand(0);
@@ -1186,8 +1202,10 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
 
   // See if either input string is a constant string.
   StringRef SearchStr, ToFindStr;
-  bool HasStr1 = getConstantStringInfo(CI->getArgOperand(0), SearchStr);
-  bool HasStr2 = getConstantStringInfo(CI->getArgOperand(1), ToFindStr);
+  bool HasStr1 =
+      getConstantStringInfo(CI->getArgOperand(0), SearchStr, CharWidth);
+  bool HasStr2 =
+      getConstantStringInfo(CI->getArgOperand(1), ToFindStr, CharWidth);
 
   // fold strstr(x, "") -> x.
   if (HasStr2 && ToFindStr.empty())
@@ -1215,6 +1233,8 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   Value *SrcStr = CI->getArgOperand(0);
   Value *Size = CI->getArgOperand(2);
   annotateNonNullAndDereferenceable(CI, 0, Size, DL);
@@ -1239,7 +1259,7 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
   }
 
   StringRef Str;
-  if (!getConstantStringInfo(SrcStr, Str, /*TrimAtNul=*/false))
+  if (!getConstantStringInfo(SrcStr, Str, CharWidth, /*TrimAtNul=*/false))
     return nullptr;
 
   if (Str.size() == 0)
@@ -1303,6 +1323,7 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
   Value *SrcStr = CI->getArgOperand(0);
   Value *Size = CI->getArgOperand(2);
 
@@ -1334,7 +1355,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
   }
 
   StringRef Str;
-  if (!getConstantStringInfo(SrcStr, Str, /*TrimAtNul=*/false))
+  if (!getConstantStringInfo(SrcStr, Str, CharWidth, /*TrimAtNul=*/false))
     return nullptr;
 
   if (CharC) {
@@ -1500,12 +1521,14 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
 static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
                                     Value *Size, bool StrNCmp,
                                     IRBuilderBase &B, const DataLayout &DL) {
+  unsigned CharWidth = DL.getByteWidth();
+
   if (LHS == RHS) // memcmp(s,s,x) -> 0
     return Constant::getNullValue(CI->getType());
 
   StringRef LStr, RStr;
-  if (!getConstantStringInfo(LHS, LStr, /*TrimAtNul=*/false) ||
-      !getConstantStringInfo(RHS, RStr, /*TrimAtNul=*/false))
+  if (!getConstantStringInfo(LHS, LStr, CharWidth, /*TrimAtNul=*/false) ||
+      !getConstantStringInfo(RHS, RStr, CharWidth, /*TrimAtNul=*/false))
     return nullptr;
 
   // If the contents of both constant arrays are known, fold a call to
@@ -1641,6 +1664,7 @@ Value *LibCallSimplifier::optimizeMemCpy(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeMemCCpy(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
   ConstantInt *StopChar = dyn_cast<ConstantInt>(CI->getArgOperand(2));
@@ -1652,7 +1676,7 @@ Value *LibCallSimplifier::optimizeMemCCpy(CallInst *CI, IRBuilderBase &B) {
   if (N) {
     if (N->isNullValue())
       return Constant::getNullValue(CI->getType());
-    if (!getConstantStringInfo(Src, SrcStr, /*TrimAtNul=*/false) ||
+    if (!getConstantStringInfo(Src, SrcStr, CharWidth, /*TrimAtNul=*/false) ||
         // TODO: Handle zeroinitializer.
         !StopChar)
       return nullptr;
@@ -3256,8 +3280,10 @@ Value *LibCallSimplifier::optimizeToAscii(CallInst *CI, IRBuilderBase &B) {
 
 // Fold calls to atoi, atol, and atoll.
 Value *LibCallSimplifier::optimizeAtoi(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   StringRef Str;
-  if (!getConstantStringInfo(CI->getArgOperand(0), Str))
+  if (!getConstantStringInfo(CI->getArgOperand(0), Str, CharWidth))
     return nullptr;
 
   return convertStrToInt(CI, Str, nullptr, 10, /*AsSigned=*/true, B);
@@ -3266,6 +3292,8 @@ Value *LibCallSimplifier::optimizeAtoi(CallInst *CI, IRBuilderBase &B) {
 // Fold calls to strtol, strtoll, strtoul, and strtoull.
 Value *LibCallSimplifier::optimizeStrToInt(CallInst *CI, IRBuilderBase &B,
                                            bool AsSigned) {
+  unsigned CharWidth = DL.getByteWidth();
+
   Value *EndPtr = CI->getArgOperand(1);
   if (isa<ConstantPointerNull>(EndPtr)) {
     // With a null EndPtr, this function won't capture the main argument.
@@ -3277,7 +3305,7 @@ Value *LibCallSimplifier::optimizeStrToInt(CallInst *CI, IRBuilderBase &B,
     return nullptr;
 
   StringRef Str;
-  if (!getConstantStringInfo(CI->getArgOperand(0), Str))
+  if (!getConstantStringInfo(CI->getArgOperand(0), Str, CharWidth))
     return nullptr;
 
   if (ConstantInt *CInt = dyn_cast<ConstantInt>(CI->getArgOperand(2))) {
@@ -3334,9 +3362,11 @@ static bool isReportingError(Function *Callee, CallInst *CI, int StreamArg) {
 }
 
 Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   // Check for a fixed format string.
   StringRef FormatStr;
-  if (!getConstantStringInfo(CI->getArgOperand(0), FormatStr))
+  if (!getConstantStringInfo(CI->getArgOperand(0), FormatStr, CharWidth))
     return nullptr;
 
   // Empty format string -> noop.
@@ -3362,7 +3392,7 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
   // Try to remove call or emit putchar/puts.
   if (FormatStr == "%s" && CI->arg_size() > 1) {
     StringRef OperandStr;
-    if (!getConstantStringInfo(CI->getOperand(1), OperandStr))
+    if (!getConstantStringInfo(CI->getOperand(1), OperandStr, CharWidth))
       return nullptr;
     // printf("%s", "") --> NOP
     if (OperandStr.empty())
@@ -3451,9 +3481,11 @@ Value *LibCallSimplifier::optimizePrintF(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
                                                 IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   // Check for a fixed format string.
   StringRef FormatStr;
-  if (!getConstantStringInfo(CI->getArgOperand(1), FormatStr))
+  if (!getConstantStringInfo(CI->getArgOperand(1), FormatStr, CharWidth))
     return nullptr;
 
   // If we just have a format string (nothing else crazy) transform it.
@@ -3619,6 +3651,8 @@ Value *LibCallSimplifier::emitSnPrintfMemCpy(CallInst *CI, Value *StrArg,
 
 Value *LibCallSimplifier::optimizeSnPrintFString(CallInst *CI,
                                                  IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   // Check for size
   ConstantInt *Size = dyn_cast<ConstantInt>(CI->getArgOperand(1));
   if (!Size)
@@ -3636,7 +3670,7 @@ Value *LibCallSimplifier::optimizeSnPrintFString(CallInst *CI,
 
   // Check for a fixed format string.
   StringRef FormatStr;
-  if (!getConstantStringInfo(FmtArg, FormatStr))
+  if (!getConstantStringInfo(FmtArg, FormatStr, CharWidth))
     return nullptr;
 
   // If we just have a format string (nothing else crazy) transform it.
@@ -3681,7 +3715,7 @@ Value *LibCallSimplifier::optimizeSnPrintFString(CallInst *CI,
   Value *StrArg = CI->getArgOperand(3);
   // snprintf(dest, size, "%s", str) to llvm.memcpy(dest, str, len+1, 1)
   StringRef Str;
-  if (!getConstantStringInfo(StrArg, Str))
+  if (!getConstantStringInfo(StrArg, Str, CharWidth))
     return nullptr;
 
   return emitSnPrintfMemCpy(CI, StrArg, Str, N, B);
@@ -3699,11 +3733,13 @@ Value *LibCallSimplifier::optimizeSnPrintF(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeFPrintFString(CallInst *CI,
                                                 IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   optimizeErrorReporting(CI, B, 0);
 
   // All the optimizations depend on the format string.
   StringRef FormatStr;
-  if (!getConstantStringInfo(CI->getArgOperand(1), FormatStr))
+  if (!getConstantStringInfo(CI->getArgOperand(1), FormatStr, CharWidth))
     return nullptr;
 
   // Do not do any of the following transformations if the fprintf return
@@ -3842,6 +3878,8 @@ Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizePuts(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   annotateNonNullNoUndefBasedOnAccess(CI, 0);
   if (!CI->use_empty())
     return nullptr;
@@ -3849,7 +3887,8 @@ Value *LibCallSimplifier::optimizePuts(CallInst *CI, IRBuilderBase &B) {
   // Check for a constant string.
   // puts("") -> putchar('\n')
   StringRef Str;
-  if (getConstantStringInfo(CI->getArgOperand(0), Str) && Str.empty()) {
+  if (getConstantStringInfo(CI->getArgOperand(0), Str, CharWidth) &&
+      Str.empty()) {
     // putchar takes an argument of the same type as puts returns, i.e.,
     // int, which need not be 32 bits wide.
     Type *IntTy = CI->getType();
@@ -3995,8 +4034,10 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
 
 /// Constant folding nan/nanf/nanl.
 static Value *optimizeNaN(CallInst *CI) {
+  unsigned CharWidth = CI->getDataLayout().getByteWidth();
+
   StringRef CharSeq;
-  if (!getConstantStringInfo(CI->getArgOperand(0), CharSeq))
+  if (!getConstantStringInfo(CI->getArgOperand(0), CharSeq, CharWidth))
     return nullptr;
 
   APInt Fill;
