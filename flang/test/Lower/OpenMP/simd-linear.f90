@@ -1,4 +1,4 @@
-! This test checks lowering of OpenMP DO Directive (Worksharing)
+! This test checks lowering of OpenMP SIMD Directive
 ! with linear clause
 
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - 2>&1 | FileCheck %s
@@ -9,15 +9,14 @@
 subroutine simple_linear
     implicit none
     integer :: x, y, i
-    !CHECK: omp.wsloop linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>) {{.*}}
-    !$omp do linear(x)
+    !CHECK: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>) {{.*}}
+    !$omp simd linear(x)
     !CHECK: %[[LOAD:.*]] = fir.load %[[X]]#0 : !fir.ref<i32>
     !CHECK: %[[const:.*]] = arith.constant 2 : i32
     !CHECK: %[[RESULT:.*]] = arith.addi %[[LOAD]], %[[const]] : i32
     do i = 1, 10
         y = x + 2
     end do
-    !$omp end do
     !CHECK: } {linear_var_types = [i32]}
 end subroutine
 
@@ -28,15 +27,14 @@ subroutine linear_step
     implicit none
     integer :: x, y, i
     !CHECK: %[[const:.*]] = arith.constant 4 : i32
-    !CHECK: omp.wsloop linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>) {{.*}}
-    !$omp do linear(x:4)
+    !CHECK: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>) {{.*}}
+    !$omp simd linear(x:4)
     !CHECK: %[[LOAD:.*]] = fir.load %[[X]]#0 : !fir.ref<i32>
     !CHECK: %[[const:.*]] = arith.constant 2 : i32
-    !CHECK: %[[RESULT:.*]] = arith.addi %[[LOAD]], %[[const]] : i32
+    !CHECK: %[[RESULT:.*]] = arith.addi %[[LOAD]], %[[const]] : i32   
     do i = 1, 10
         y = x + 2
     end do
-    !$omp end do
     !CHECK: } {linear_var_types = [i32]}
 end subroutine
 
@@ -50,11 +48,10 @@ subroutine linear_expr
     !CHECK: %[[LOAD_A:.*]] = fir.load %[[A]]#0 : !fir.ref<i32>
     !CHECK: %[[const:.*]] = arith.constant 4 : i32
     !CHECK: %[[LINEAR_EXPR:.*]] = arith.addi %[[LOAD_A]], %[[const]] : i32
-    !CHECK: omp.wsloop linear(%[[X]]#0 = %[[LINEAR_EXPR]] : !fir.ref<i32>) {{.*}}
-    !$omp do linear(x:a+4)
+    !CHECK: omp.simd linear(%[[X]]#0 = %[[LINEAR_EXPR]] : !fir.ref<i32>) {{.*}}
+    !$omp simd linear(x:a+4)
     do i = 1, 10
         y = x + 2
     end do
-    !$omp end do
     !CHECK: } {linear_var_types = [i32]}
 end subroutine
