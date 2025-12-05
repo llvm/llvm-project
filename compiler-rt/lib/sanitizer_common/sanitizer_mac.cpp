@@ -281,12 +281,13 @@ int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
                       (size_t)newlen);
 }
 
-bool internal_spawn(const char *argv[], const char *envp[],
-                                pid_t *pid, fd_t fd_stdin, fd_t fd_stdout) {
-  // NOTE: Caller ensures that fd_stdin and fd_stdout are not 0, 1, or 2, since this can
-  // break communication.
+bool internal_spawn(const char* argv[], const char* envp[], pid_t* pid,
+                    fd_t fd_stdin, fd_t fd_stdout) {
+  // NOTE: Caller ensures that fd_stdin and fd_stdout are not 0, 1, or 2, since
+  // this can break communication.
   //
-  // NOTE: Caller is responsible for closing fd_stdin after the process has died.
+  // NOTE: Caller is responsible for closing fd_stdin after the process has
+  // died.
 
   int res;
   auto fd_closer = at_scope_exit([&] {
@@ -298,7 +299,8 @@ bool internal_spawn(const char *argv[], const char *envp[],
   // File descriptor actions
   posix_spawn_file_actions_t acts;
   res = posix_spawn_file_actions_init(&acts);
-  if (res != 0) return false;
+  if (res != 0)
+    return false;
 
   auto acts_cleanup = at_scope_exit([&] {
     posix_spawn_file_actions_destroy(&acts);
@@ -308,12 +310,14 @@ bool internal_spawn(const char *argv[], const char *envp[],
         posix_spawn_file_actions_adddup2(&acts, fd_stdout, STDOUT_FILENO) ||
         posix_spawn_file_actions_addclose(&acts, fd_stdin) ||
         posix_spawn_file_actions_addclose(&acts, fd_stdout);
-  if (res != 0) return false;
+  if (res != 0)
+    return false;
 
   // Spawn attributes
   posix_spawnattr_t attrs;
   res = posix_spawnattr_init(&attrs);
-  if (res != 0) return false;
+  if (res != 0)
+    return false;
 
   auto attrs_cleanup  = at_scope_exit([&] {
     posix_spawnattr_destroy(&attrs);
@@ -322,13 +326,15 @@ bool internal_spawn(const char *argv[], const char *envp[],
   // In the spawned process, close all file descriptors that are not explicitly
   // described by the file actions object. This is Darwin-specific extension.
   res = posix_spawnattr_setflags(&attrs, POSIX_SPAWN_CLOEXEC_DEFAULT);
-  if (res != 0) return false;
+  if (res != 0)
+    return false;
 
   // posix_spawn
   char **argv_casted = const_cast<char **>(argv);
   char **envp_casted = const_cast<char **>(envp);
   res = posix_spawn(pid, argv[0], &acts, &attrs, argv_casted, envp_casted);
-  if (res != 0) return false;
+  if (res != 0)
+    return false;
 
   return true;
 }

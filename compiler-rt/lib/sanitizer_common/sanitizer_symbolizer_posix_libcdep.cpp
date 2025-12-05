@@ -167,7 +167,8 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
 
   if (use_posix_spawn_) {
 #  if SANITIZER_APPLE
-    bool success = internal_spawn(argv, const_cast<const char **>(GetEnvP()), &pid, outfd[0], infd[1]);
+    bool success = internal_spawn(argv, const_cast<const char**>(GetEnvP()),
+                                  &pid, outfd[0], infd[1]);
     if (!success) {
       Report("WARNING: failed to spawn external symbolizer (errno: %d)\n",
              errno);

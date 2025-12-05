@@ -476,7 +476,7 @@ const char *LLVMSymbolizer::FormatAndSendCommand(const char *command_prefix,
   return symbolizer_process_->SendCommand(buffer_);
 }
 
-SymbolizerProcess::SymbolizerProcess(const char *path, bool use_posix_spawn)
+SymbolizerProcess::SymbolizerProcess(const char* path, bool use_posix_spawn)
     : path_(path),
       input_fd_(kInvalidFd),
       output_fd_(kInvalidFd),
