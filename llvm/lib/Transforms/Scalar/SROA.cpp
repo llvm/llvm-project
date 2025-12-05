@@ -648,7 +648,8 @@ public:
   /// Access the dead users for this alloca.
   ArrayRef<Instruction *> getDeadUsers() const { return DeadUsers; }
 
-  /// Access the PFP users for this alloca.
+  /// Access the users for this alloca that are llvm.protected.field.ptr
+  /// intrinsics.
   ArrayRef<IntrinsicInst *> getPFPUsers() const { return PFPUsers; }
 
   /// Access Uses that should be dropped if the alloca is promotable.
@@ -1043,6 +1044,10 @@ class AllocaSlices::SliceBuilder : public PtrUseVisitor<SliceBuilder> {
   /// Set to de-duplicate dead instructions found in the use walk.
   SmallPtrSet<Instruction *, 4> VisitedDeadInsts;
 
+  // When this access is via an llvm.protected.field.ptr intrinsic, contains
+  // the second argument to the intrinsic, the discriminator.
+  Value *ProtectedFieldDisc = nullptr;
+
 public:
   SliceBuilder(const DataLayout &DL, AllocaInst &AI, AllocaSlices &AS)
       : PtrUseVisitor<SliceBuilder>(DL),
@@ -1289,8 +1294,26 @@ private:
       return;
     }
 
-    if (II.getIntrinsicID() == Intrinsic::protected_field_ptr)
+    if (II.getIntrinsicID() == Intrinsic::protected_field_ptr) {
+      // We only handle loads and stores as users of llvm.protected.field.ptr.
+      // Other uses may add items to the worklist, which will cause
+      // ProtectedFieldDisc to be tracked incorrectly.
       AS.PFPUsers.push_back(&II);
+      ProtectedFieldDisc = II.getArgOperand(1);
+      for (Use &U : II.uses()) {
+        this->U = &U;
+        if (auto *LI = dyn_cast<LoadInst>(U.getUser()))
+          visitLoadInst(*LI);
+        else if (auto *SI = dyn_cast<StoreInst>(U.getUser()))
+          visitStoreInst(*SI);
+        else
+          PI.setAborted(&II);
+        if (PI.isAborted())
+          break;
+      }
+      ProtectedFieldDisc = nullptr;
+      return;
+    }
 
     Base::visitIntrinsicInst(II);
   }
@@ -5896,29 +5919,27 @@ SROA::runOnAlloca(AllocaInst &AI) {
   }
 
   for (auto &P : AS.partitions()) {
+    // For now, we can't split if a field is accessed both via protected field
+    // and not, because that would mean that we would need to introduce sign and
+    // auth operations to convert between the protected and non-protected uses,
+    // and this pass doesn't know how to do that. Also, this case is unlikely to
+    // occur in normal code.
     std::optional<Value *> ProtectedFieldDisc;
-    // For now, we can't split if a field is accessed both via protected
-    // field and not.
-    for (Slice &S : P) {
+    auto SliceHasMismatch = [&](Slice &S) {
       if (auto *II = dyn_cast<IntrinsicInst>(S.getUse()->getUser()))
         if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
             II->getIntrinsicID() == Intrinsic::lifetime_end)
-          continue;
+          return false;
       if (!ProtectedFieldDisc)
         ProtectedFieldDisc = S.ProtectedFieldDisc;
-      if (*ProtectedFieldDisc != S.ProtectedFieldDisc)
+      return *ProtectedFieldDisc != S.ProtectedFieldDisc;
+    };
+    for (Slice &S : P)
+      if (SliceHasMismatch(S))
         return {Changed, CFGChanged};
-    }
-    for (Slice *S : P.splitSliceTails()) {
-      if (auto *II = dyn_cast<IntrinsicInst>(S->getUse()->getUser()))
-        if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-            II->getIntrinsicID() == Intrinsic::lifetime_end)
-          continue;
-      if (!ProtectedFieldDisc)
-        ProtectedFieldDisc = S->ProtectedFieldDisc;
-      if (*ProtectedFieldDisc != S->ProtectedFieldDisc)
+    for (Slice *S : P.splitSliceTails())
+      if (SliceHasMismatch(*S))
         return {Changed, CFGChanged};
-    }
   }
 
   // Delete all the dead users of this alloca before splitting and rewriting it.
