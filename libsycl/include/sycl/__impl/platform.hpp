@@ -17,7 +17,7 @@
 
 #include <sycl/__impl/backend.hpp>
 #include <sycl/__impl/detail/config.hpp>
-#include <sycl/__impl/detail/obj_base.hpp>
+#include <sycl/__impl/detail/obj_utils.hpp>
 #include <sycl/__impl/info/platform.hpp>
 
 #include <memory>
@@ -30,8 +30,7 @@ class platform_impl;
 } // namespace detail
 
 // 4.6.2. Platform class
-class _LIBSYCL_EXPORT platform
-    : public detail::ObjBase<detail::platform_impl *, platform> {
+class _LIBSYCL_EXPORT platform {
 public:
   /// Constructs a platform object that is a copy of the platform which contains
   /// the device returned by default_selector_v.
@@ -108,9 +107,10 @@ public:
   static std::vector<platform> get_platforms();
 
 private:
-  platform(detail::platform_impl *Impl) : ObjBase(Impl) {}
+  platform(detail::platform_impl &Impl) : impl(&Impl) {}
+  detail::platform_impl *impl;
 
-  friend detail::ObjBase<detail::platform_impl *, platform>;
+  friend sycl::detail::ImplUtils;
 }; // class platform
 
 _LIBSYCL_END_NAMESPACE_SYCL

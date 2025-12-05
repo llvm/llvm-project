@@ -19,18 +19,18 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
-const char *stringifyErrorCode(int32_t error);
+const char *stringifyErrorCode(ol_errc_t error);
 
-inline std::string formatCodeString(int32_t code) {
-  return std::to_string(code) + " (" + std::string(stringifyErrorCode(code)) +
-         ")";
+inline std::string formatCodeString(ol_result_t Result) {
+  return std::to_string(Result->Code) + " (" +
+         std::string(stringifyErrorCode(Result->Code)) + ")" + Result->Details;
 }
 
 template <sycl::errc errc = sycl::errc::runtime>
 void checkAndThrow(ol_result_t Result) {
   if (Result != OL_SUCCESS) {
     throw sycl::exception(sycl::make_error_code(errc),
-                          detail::formatCodeString(Result->Code));
+                          detail::formatCodeString(Result));
   }
 }
 

@@ -27,26 +27,31 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
+using PlatformImplUPtr = std::unique_ptr<platform_impl>;
+
 class platform_impl {
+  struct private_tag {
+    explicit private_tag() = default;
+  };
+
 public:
   /// Constructs platform_impl from a platform handle.
   ///
   /// \param Platform is a raw offload library handle representing platform.
   /// \param PlatformIndex is a platform index in a backend (needed for a proper
   /// indexing in device selector).
-  //
-  // Platforms can only be created under `GlobalHandler`'s ownership via
-  // `platform_impl::getOrMakePlatformImpl` method.
-  explicit platform_impl(ol_platform_handle_t Platform, size_t PlatformIndex);
+  /// All platform impls are created during first getPlatforms() call.
+  explicit platform_impl(ol_platform_handle_t Platform, size_t PlatformIndex,
+                         private_tag);
 
   ~platform_impl() = default;
 
   /// Returns the backend associated with this platform.
   backend getBackend() const noexcept { return MBackend; }
 
-  /// Returns range-view to all SYCL platforms from all backends that are
+  /// Returns all SYCL platforms from all backends that are
   /// available in the system.
-  static range_view<platform_impl> getPlatforms();
+  static const std::vector<PlatformImplUPtr> &getPlatforms();
 
   /// Returns raw underlying offload platform handle.
   ///

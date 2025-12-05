@@ -35,6 +35,7 @@ int main(int argc, char **argv) {
 
     if (Platforms.size() == 0) {
       std::cout << "No platforms found." << std::endl;
+      return EXIT_SUCCESS;
     }
 
     for (const auto &Platform : Platforms) {
@@ -58,8 +59,6 @@ int main(int argc, char **argv) {
 
         std::cout << "    Devices  : " << "unknown" << std::endl;
       }
-    } else {
-      return EXIT_SUCCESS;
     }
   } catch (sycl::exception &e) {
     std::cerr << "SYCL Exception encountered: " << e.what() << std::endl

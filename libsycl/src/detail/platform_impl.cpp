@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <sycl/__impl/detail/config.hpp>
-#include <sycl/__impl/detail/obj_base.hpp>
+#include <sycl/__impl/detail/obj_utils.hpp>
 
 #include <detail/global_objects.hpp>
 #include <detail/platform_impl.hpp>
@@ -19,8 +19,8 @@ namespace detail {
 platform_impl &platform_impl::getPlatformImpl(ol_platform_handle_t Platform) {
   auto &PlatformCache = getPlatformCache();
   for (auto &PlatImpl : PlatformCache) {
-    if (PlatImpl.getHandleRef() == Platform)
-      return PlatImpl;
+    if (PlatImpl->getHandleRef() == Platform)
+      return *PlatImpl;
   }
 
   throw sycl::exception(
@@ -29,25 +29,24 @@ platform_impl &platform_impl::getPlatformImpl(ol_platform_handle_t Platform) {
       "the list of platforms discovered by liboffload");
 }
 
-range_view<platform_impl> platform_impl::getPlatforms() {
+const std::vector<PlatformImplUPtr> &platform_impl::getPlatforms() {
   [[maybe_unused]] static auto InitPlatformsOnce = []() {
     discoverOffloadDevices();
     auto &PlatformCache = getPlatformCache();
     for (const auto &Topo : getOffloadTopologies()) {
       size_t PlatformIndex = 0;
       for (const auto &OffloadPlatform : Topo.platforms()) {
-        PlatformCache.emplace_back(
-            platform_impl(OffloadPlatform, PlatformIndex++));
+        PlatformCache.emplace_back(std::make_unique<platform_impl>(
+            OffloadPlatform, PlatformIndex++, private_tag{}));
       }
     }
     return true;
   }();
-  auto &PlatformCache = getPlatformCache();
-  return {PlatformCache.data(), PlatformCache.size()};
+  return getPlatformCache();
 }
 
 platform_impl::platform_impl(ol_platform_handle_t Platform,
-                             size_t PlatformIndex)
+                             size_t PlatformIndex, private_tag)
     : MOffloadPlatform(Platform), MOffloadPlatformIndex(PlatformIndex) {
   ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
   call_and_throw(olGetPlatformInfo, MOffloadPlatform, OL_PLATFORM_INFO_BACKEND,

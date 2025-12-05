@@ -50,8 +50,6 @@ const std::error_category &exception::category() const noexcept {
 
 const char *exception::what() const noexcept { return MMessage->c_str(); }
 
-bool exception::has_context() const noexcept { /*return (MContext != nullptr);*/
-  return false;
-}
+bool exception::has_context() const noexcept { return false; }
 
 _LIBSYCL_END_NAMESPACE_SYCL
