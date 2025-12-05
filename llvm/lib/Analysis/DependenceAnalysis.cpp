@@ -1296,7 +1296,8 @@ bool DependenceInfo::testZIV(const SCEV *Src, const SCEV *Dst,
 bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
                                    const SCEV *DstConst, const Loop *CurSrcLoop,
                                    const Loop *CurDstLoop, unsigned Level,
-                                   FullDependence &Result) const {
+                                   FullDependence &Result,
+                                   bool UnderRuntimeAssumptions) {
   if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
     return false;
 
@@ -1368,7 +1369,29 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
       Result.DV[Level].Direction &= Dependence::DVEntry::EQ;
     ++StrongSIVsuccesses;
   } else if (Delta->isZero()) {
-    // since 0/X == 0
+    // Check if coefficient could be zero. If so, 0/0 is undefined and we
+    // cannot conclude that only same-iteration dependencies exist.
+    // When coeff=0, all iterations access the same location.
+    if (SE->isKnownNonZero(Coeff)) {
+      LLVM_DEBUG(
+          dbgs() << "\t    Coefficient proven non-zero by SCEV analysis\n");
+    } else {
+      // Cannot prove at compile time, would need runtime assumption.
+      if (UnderRuntimeAssumptions) {
+        const SCEVPredicate *Pred = SE->getComparePredicate(
+            ICmpInst::ICMP_NE, Coeff, SE->getZero(Coeff->getType()));
+        Result.Assumptions = Result.Assumptions.getUnionWith(Pred, *SE);
+        LLVM_DEBUG(dbgs() << "\t    Added runtime assumption: " << *Coeff
+                          << " != 0\n");
+      } else {
+        // Cannot add runtime assumptions, this test cannot handle this case.
+        // Let more complex tests try.
+        LLVM_DEBUG(dbgs() << "\t    Would need runtime assumption " << *Coeff
+                          << " != 0, but not allowed. Failing this test.\n");
+        return false;
+      }
+    }
+    // Since 0/X == 0 (where X is known non-zero or assumed non-zero).
     Result.DV[Level].Distance = Delta;
     Result.DV[Level].Direction &= Dependence::DVEntry::EQ;
     ++StrongSIVsuccesses;
@@ -2331,7 +2354,8 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
 //
 // Return true if dependence disproved.
 bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
-                             FullDependence &Result) const {
+                             FullDependence &Result,
+                             bool UnderRuntimeAssumptions) {
   LLVM_DEBUG(dbgs() << "    src = " << *Src << "\n");
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
@@ -2349,8 +2373,9 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
     Level = mapSrcLoop(CurSrcLoop);
     bool disproven;
     if (SrcCoeff == DstCoeff)
-      disproven = strongSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
-                                CurDstLoop, Level, Result);
+      disproven =
+          strongSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop, CurDstLoop,
+                        Level, Result, UnderRuntimeAssumptions);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
       disproven = weakCrossingSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
                                       CurDstLoop, Level, Result);
@@ -2470,7 +2495,7 @@ bool DependenceInfo::testMIV(const SCEV *Src, const SCEV *Dst,
 /// returns std::nullopt. For example, given (10 * X * Y)<nsw>, it returns 10.
 /// Notably, if it doesn't have nsw, the multiplication may overflow, and if
 /// so, it may not a multiple of 10.
-static std::optional<APInt> getConstanCoefficient(const SCEV *Expr) {
+static std::optional<APInt> getConstantCoefficient(const SCEV *Expr) {
   if (const auto *Constant = dyn_cast<SCEVConstant>(Expr))
     return Constant->getAPInt();
   if (const auto *Product = dyn_cast<SCEVMulExpr>(Expr))
@@ -2502,7 +2527,7 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
   if (AddRec->getLoop() == CurLoop) {
     CurLoopCoeff = Step;
   } else {
-    std::optional<APInt> ConstCoeff = getConstanCoefficient(Step);
+    std::optional<APInt> ConstCoeff = getConstantCoefficient(Step);
 
     // If the coefficient is the product of a constant and other stuff, we can
     // use the constant in the GCD computation.
@@ -2555,7 +2580,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstanCoefficient(Coeff);
+    std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
     if (!ConstCoeff)
       return false;
     RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
@@ -2573,7 +2598,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstanCoefficient(Coeff);
+    std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
     if (!ConstCoeff)
       return false;
     RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
@@ -2631,7 +2656,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     Delta = SE->getMinusSCEV(SrcCoeff, DstCoeff);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstanCoefficient(Delta);
+    std::optional<APInt> ConstCoeff = getConstantCoefficient(Delta);
     if (!ConstCoeff)
       // The difference of the two coefficients might not be a product
       // or constant, in which case we give up on this direction.
@@ -3240,7 +3265,7 @@ bool DependenceInfo::tryDelinearizeFixedSize(
     return false;
 
   // Check that the two size arrays are non-empty and equal in length and
-  // value.
+  // value.  SCEV expressions are uniqued, so we can compare pointers.
   if (SrcSizes.size() != DstSizes.size() ||
       !std::equal(SrcSizes.begin(), SrcSizes.end(), DstSizes.begin())) {
     SrcSubscripts.clear();
@@ -3463,11 +3488,10 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                                         SCEVUnionPredicate(Assume, *SE));
   }
 
-  if (!Assume.empty() && !UnderRuntimeAssumptions) {
-    // Runtime assumptions needed but not allowed.
+  // Runtime assumptions needed but not allowed.
+  if (!Assume.empty() && !UnderRuntimeAssumptions)
     return std::make_unique<Dependence>(Src, Dst,
                                         SCEVUnionPredicate(Assume, *SE));
-  }
 
   unsigned Pairs = 1;
   SmallVector<Subscript, 2> Pair(Pairs);
@@ -3567,7 +3591,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     case Subscript::SIV: {
       LLVM_DEBUG(dbgs() << ", SIV\n");
       unsigned Level;
-      if (testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result))
+      if (testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result,
+                  UnderRuntimeAssumptions))
         return nullptr;
       break;
     }
@@ -3648,6 +3673,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   } else {
     // On the other hand, if all directions are equal and there's no
     // loop-independent dependence possible, then no dependence exists.
+    // However, if there are runtime assumptions, we must return the result.
     bool AllEqual = true;
     for (unsigned II = 1; II <= CommonLevels; ++II) {
       if (Result.getDirection(II) != Dependence::DVEntry::EQ) {
@@ -3655,7 +3681,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
         break;
       }
     }
-    if (AllEqual)
+    if (AllEqual && Result.Assumptions.getPredicates().empty())
       return nullptr;
   }
 

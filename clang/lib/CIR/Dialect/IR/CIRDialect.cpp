@@ -221,6 +221,41 @@ void parseVisibilityAttr(OpAsmParser &parser, cir::VisibilityAttr &visibility) {
 }
 
 //===----------------------------------------------------------------------===//
+// InlineKindAttr (FIXME: remove once FuncOp uses assembly format)
+//===----------------------------------------------------------------------===//
+
+ParseResult parseInlineKindAttr(OpAsmParser &parser,
+                                cir::InlineKindAttr &inlineKindAttr) {
+  // Static list of possible inline kind keywords
+  static constexpr llvm::StringRef keywords[] = {"no_inline", "always_inline",
+                                                 "inline_hint"};
+
+  // Parse the inline kind keyword (optional)
+  llvm::StringRef keyword;
+  if (parser.parseOptionalKeyword(&keyword, keywords).failed()) {
+    // Not an inline kind keyword, leave inlineKindAttr empty
+    return success();
+  }
+
+  // Parse the enum value from the keyword
+  auto inlineKindResult = ::cir::symbolizeEnum<::cir::InlineKind>(keyword);
+  if (!inlineKindResult) {
+    return parser.emitError(parser.getCurrentLocation(), "expected one of [")
+           << llvm::join(llvm::ArrayRef(keywords), ", ")
+           << "] for inlineKind, got: " << keyword;
+  }
+
+  inlineKindAttr =
+      ::cir::InlineKindAttr::get(parser.getContext(), *inlineKindResult);
+  return success();
+}
+
+void printInlineKindAttr(OpAsmPrinter &p, cir::InlineKindAttr inlineKindAttr) {
+  if (inlineKindAttr) {
+    p << " " << stringifyInlineKind(inlineKindAttr.getValue());
+  }
+}
+//===----------------------------------------------------------------------===//
 // CIR Custom Parsers/Printers
 //===----------------------------------------------------------------------===//
 
@@ -1753,6 +1788,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   mlir::StringAttr builtinNameAttr = getBuiltinAttrName(state.name);
   mlir::StringAttr coroutineNameAttr = getCoroutineAttrName(state.name);
+  mlir::StringAttr inlineKindNameAttr = getInlineKindAttrName(state.name);
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
@@ -1765,6 +1801,14 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   if (::mlir::succeeded(
           parser.parseOptionalKeyword(coroutineNameAttr.strref())))
     state.addAttribute(coroutineNameAttr, parser.getBuilder().getUnitAttr());
+
+  // Parse optional inline kind attribute
+  cir::InlineKindAttr inlineKindAttr;
+  if (failed(parseInlineKindAttr(parser, inlineKindAttr)))
+    return failure();
+  if (inlineKindAttr)
+    state.addAttribute(inlineKindNameAttr, inlineKindAttr);
+
   if (::mlir::succeeded(parser.parseOptionalKeyword(lambdaNameAttr.strref())))
     state.addAttribute(lambdaNameAttr, parser.getBuilder().getUnitAttr());
   if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
@@ -1890,36 +1934,6 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       }).failed())
     return failure();
 
-  // Parse optional inline kind: inline(never|always|hint)
-  if (parser.parseOptionalKeyword("inline").succeeded()) {
-    if (parser.parseLParen().failed())
-      return failure();
-
-    llvm::StringRef inlineKindStr;
-    const std::array<llvm::StringRef, cir::getMaxEnumValForInlineKind()>
-        allowedInlineKindStrs{
-            cir::stringifyInlineKind(cir::InlineKind::NoInline),
-            cir::stringifyInlineKind(cir::InlineKind::AlwaysInline),
-            cir::stringifyInlineKind(cir::InlineKind::InlineHint),
-        };
-    if (parser.parseOptionalKeyword(&inlineKindStr, allowedInlineKindStrs)
-            .failed())
-      return parser.emitError(parser.getCurrentLocation(),
-                              "expected 'never', 'always', or 'hint'");
-
-    std::optional<InlineKind> inlineKind =
-        cir::symbolizeInlineKind(inlineKindStr);
-    if (!inlineKind)
-      return parser.emitError(parser.getCurrentLocation(),
-                              "invalid inline kind");
-
-    state.addAttribute(getInlineKindAttrName(state.name),
-                       cir::InlineAttr::get(builder.getContext(), *inlineKind));
-
-    if (parser.parseRParen().failed())
-      return failure();
-  }
-
   // Parse the rest of the attributes.
   NamedAttrList parsedAttrs;
   if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
@@ -2028,6 +2042,8 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getCoroutine())
     p << " coroutine";
 
+  printInlineKindAttr(p, getInlineKindAttr());
+
   if (getLambda())
     p << " lambda";
 
@@ -2081,10 +2097,6 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << " global_dtor";
     if (globalDtorPriority.value() != 65535)
       p << "(" << globalDtorPriority.value() << ")";
-  }
-
-  if (cir::InlineAttr inlineAttr = getInlineKindAttr()) {
-    p << " inline(" << cir::stringifyInlineKind(inlineAttr.getValue()) << ")";
   }
 
   function_interface_impl::printFunctionAttributes(

@@ -5172,6 +5172,14 @@ def HLSLVkConstantId : InheritableAttr {
   let Documentation = [VkConstantIdDocs];
 }
 
+def HLSLVkLocation : HLSLAnnotationAttr {
+  let Spellings = [CXX11<"vk", "location">];
+  let Args = [IntArgument<"Location">];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkLocationDocs];
+}
+
 def RandomizeLayout : InheritableAttr {
   let Spellings = [GCC<"randomize_layout">];
   let Subjects = SubjectList<[Record]>;
@@ -5322,4 +5330,12 @@ def NonString : InheritableAttr {
   let Spellings = [GCC<"nonstring">];
   let Subjects = SubjectList<[Var, Field]>;
   let Documentation = [NonStringDocs];
+}
+
+def ModularFormat : InheritableAttr {
+  let Spellings = [Clang<"modular_format">];
+  let Args = [IdentifierArgument<"ModularImplFn">, StringArgument<"ImplName">,
+              VariadicStringArgument<"Aspects">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [ModularFormatDocs];
 }

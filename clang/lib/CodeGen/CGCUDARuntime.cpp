@@ -62,8 +62,8 @@ static llvm::Value *emitGetParamBuf(CodeGenFunction &CGF,
 RValue CGCUDARuntime::EmitCUDADeviceKernelCallExpr(
     CodeGenFunction &CGF, const CUDAKernelCallExpr *E,
     ReturnValueSlot ReturnValue, llvm::CallBase **CallOrInvoke) {
-  ASTContext &Ctx = CGM.getContext();
-  assert(Ctx.getcudaLaunchDeviceDecl() == E->getConfig()->getDirectCallee());
+  assert(CGM.getContext().getcudaLaunchDeviceDecl() ==
+         E->getConfig()->getDirectCallee());
 
   llvm::BasicBlock *ConfigOKBlock = CGF.createBasicBlock("dkcall.configok");
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("dkcall.end");

@@ -1768,9 +1768,10 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The ListToGlobalCopy function.
-  Function *emitListToGlobalCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
-                                         Type *ReductionsBufferTy,
-                                         AttributeList FuncAttrs);
+  Expected<Function *>
+  emitListToGlobalCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
+                               Type *ReductionsBufferTy,
+                               AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that copies all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1785,9 +1786,10 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The GlobalToList function.
-  Function *emitGlobalToListCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
-                                         Type *ReductionsBufferTy,
-                                         AttributeList FuncAttrs);
+  Expected<Function *>
+  emitGlobalToListCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
+                               Type *ReductionsBufferTy,
+                               AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that reduces all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1806,10 +1808,11 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The ListToGlobalReduce function.
-  Function *
+  Expected<Function *>
   emitListToGlobalReduceFunction(ArrayRef<ReductionInfo> ReductionInfos,
                                  Function *ReduceFn, Type *ReductionsBufferTy,
-                                 AttributeList FuncAttrs);
+                                 AttributeList FuncAttrs,
+                                 ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that reduces all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1828,10 +1831,11 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The GlobalToListReduce function.
-  Function *
+  Expected<Function *>
   emitGlobalToListReduceFunction(ArrayRef<ReductionInfo> ReductionInfos,
                                  Function *ReduceFn, Type *ReductionsBufferTy,
-                                 AttributeList FuncAttrs);
+                                 AttributeList FuncAttrs,
+                                 ArrayRef<bool> IsByRef);
 
   /// Get the function name of a reduction function.
   std::string getReductionFuncName(StringRef Name) const;
