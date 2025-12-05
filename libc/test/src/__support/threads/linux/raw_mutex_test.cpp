@@ -10,7 +10,7 @@
 #include "include/llvm-libc-macros/linux/time-macros.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/OSUtil/syscall.h"
-#include "src/__support/threads/linux/raw_mutex.h"
+#include "src/__support/threads/raw_mutex.h"
 #include "src/__support/threads/sleep.h"
 #include "src/__support/time/clock_gettime.h"
 #include "src/stdlib/exit.h"
