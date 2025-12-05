@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdsmil_fuzz_telemetry.a CMakeFiles/dsmil_fuzz_telemetry.dir/workspace/dsmil/runtime/dsmil_fuzz_telemetry.c.o
+/usr/bin/ranlib libdsmil_fuzz_telemetry.a

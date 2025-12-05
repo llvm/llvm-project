@@ -1,6 +1,48 @@
 # Test build configuration for DSLLVM
 
 cmake_minimum_required(VERSION 3.15)
+project(DsmilTests C)
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
+get_filename_component(DSMIL_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+
+# Runtime libraries
+add_library(dsmil_ot_telemetry STATIC
+    ${DSMIL_ROOT_DIR}/runtime/dsmil_ot_telemetry.c
+)
+target_include_directories(dsmil_ot_telemetry PUBLIC
+    ${DSMIL_ROOT_DIR}/include
+)
+target_compile_definitions(dsmil_ot_telemetry PUBLIC
+    _POSIX_C_SOURCE=200809L
+    _GNU_SOURCE
+)
+
+add_library(dsmil_fuzz_telemetry STATIC
+    ${DSMIL_ROOT_DIR}/runtime/dsmil_fuzz_telemetry.c
+)
+target_include_directories(dsmil_fuzz_telemetry PUBLIC
+    ${DSMIL_ROOT_DIR}/include
+)
+target_compile_definitions(dsmil_fuzz_telemetry PUBLIC
+    _POSIX_C_SOURCE=200809L
+    _GNU_SOURCE
+)
+target_link_libraries(dsmil_fuzz_telemetry PUBLIC pthread)
+
+add_library(dsmil_fuzz_telemetry_advanced STATIC
+    ${DSMIL_ROOT_DIR}/runtime/dsmil_fuzz_telemetry_advanced.c
+)
+target_include_directories(dsmil_fuzz_telemetry_advanced PUBLIC
+    ${DSMIL_ROOT_DIR}/include
+)
+target_compile_definitions(dsmil_fuzz_telemetry_advanced PUBLIC
+    _POSIX_C_SOURCE=200809L
+    _GNU_SOURCE
+)
+target_link_libraries(dsmil_fuzz_telemetry_advanced PUBLIC pthread)
 
 # Runtime tests
 add_executable(test_ot_telemetry_runtime
@@ -10,7 +52,7 @@ target_link_libraries(test_ot_telemetry_runtime
     dsmil_ot_telemetry
 )
 target_include_directories(test_ot_telemetry_runtime PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
+    ${DSMIL_ROOT_DIR}/include
 )
 
 add_executable(test_fuzz_telemetry_runtime
@@ -20,7 +62,7 @@ target_link_libraries(test_fuzz_telemetry_runtime
     dsmil_fuzz_telemetry
 )
 target_include_directories(test_fuzz_telemetry_runtime PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
+    ${DSMIL_ROOT_DIR}/include
 )
 
 add_executable(test_fuzz_telemetry_advanced_runtime
@@ -30,7 +72,7 @@ target_link_libraries(test_fuzz_telemetry_advanced_runtime
     dsmil_fuzz_telemetry_advanced
 )
 target_include_directories(test_fuzz_telemetry_advanced_runtime PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
+    ${DSMIL_ROOT_DIR}/include
 )
 
 # Integration tests
@@ -41,7 +83,7 @@ target_link_libraries(test_telecom_macros
     dsmil_ot_telemetry
 )
 target_include_directories(test_telecom_macros PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
+    ${DSMIL_ROOT_DIR}/include
 )
 
 add_executable(test_attributes
@@ -52,7 +94,7 @@ target_link_libraries(test_attributes
     dsmil_fuzz_telemetry
 )
 target_include_directories(test_attributes PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
+    ${DSMIL_ROOT_DIR}/include
 )
 
 # Pass tests (compile-only, use LIT for execution)
@@ -60,21 +102,21 @@ add_library(test_ot_telemetry_pass OBJECT
     passes/test_ot_telemetry_pass.c
 )
 target_include_directories(test_ot_telemetry_pass PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
+    ${DSMIL_ROOT_DIR}/include
 )
 
 add_library(test_telecom_pass OBJECT
     passes/test_telecom_pass.c
 )
 target_include_directories(test_telecom_pass PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
+    ${DSMIL_ROOT_DIR}/include
 )
 
 add_library(test_fuzz_coverage_pass OBJECT
     passes/test_fuzz_coverage_pass.c
 )
 target_include_directories(test_fuzz_coverage_pass PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
+    ${DSMIL_ROOT_DIR}/include
 )
 
 # Test targets

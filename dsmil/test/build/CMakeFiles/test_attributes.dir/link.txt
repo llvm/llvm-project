@@ -1,0 +1,1 @@
+/usr/bin/cc -g CMakeFiles/test_attributes.dir/integration/test_attributes.c.o -o test_attributes  libdsmil_ot_telemetry.a libdsmil_fuzz_telemetry.a -lpthread 

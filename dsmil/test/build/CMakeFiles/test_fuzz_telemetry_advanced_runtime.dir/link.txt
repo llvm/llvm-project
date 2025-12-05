@@ -1,0 +1,1 @@
+/usr/bin/cc -g CMakeFiles/test_fuzz_telemetry_advanced_runtime.dir/runtime/test_fuzz_telemetry_advanced.c.o -o test_fuzz_telemetry_advanced_runtime  libdsmil_fuzz_telemetry_advanced.a -lpthread 

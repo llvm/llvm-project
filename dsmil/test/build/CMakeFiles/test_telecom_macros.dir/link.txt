@@ -1,0 +1,1 @@
+/usr/bin/cc -g CMakeFiles/test_telecom_macros.dir/integration/test_telecom_macros.c.o -o test_telecom_macros  libdsmil_ot_telemetry.a 
