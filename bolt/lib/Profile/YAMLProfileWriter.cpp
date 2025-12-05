@@ -14,6 +14,7 @@
 #include "bolt/Profile/ProfileReaderBase.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -25,10 +26,14 @@
 namespace opts {
 using namespace llvm;
 extern cl::opt<bool> ProfileUseDFS;
-cl::opt<bool> ProfileWritePseudoProbes(
+cl::opt<ProbesWriteMode> ProfileWritePseudoProbes(
     "profile-write-pseudo-probes",
-    cl::desc("Use pseudo probes in profile generation"), cl::Hidden,
-    cl::cat(BoltOptCategory));
+    cl::desc("Write pseudo probes into YAML profile"),
+    cl::init(ProbesWriteMode::PWM_None),
+    cl::values(clEnumValN(ProbesWriteMode::PWM_Default, "", "default"),
+               clEnumValN(ProbesWriteMode::PWM_Compact, "compact",
+                          "compressed encoding")),
+    cl::ValueOptional, cl::cat(BoltOutputCategory));
 } // namespace opts
 
 namespace llvm {
@@ -149,6 +154,37 @@ void YAMLProfileWriter::BlockProbeCtx::finalize(
     }
   };
 
+  auto compressVec = [](auto Vec, std::string &Out, bool Probes) {
+    if (Vec.size() == 1) {
+      if (Probes ? Vec.front() == 1 : Vec.front() == 0)
+        return;
+    }
+    // Invariant: current run is [StartGroup, EndGroup]
+    auto StartGroup = Vec.begin();
+    auto EndGroup = Vec.begin();
+    ListSeparator LS(",");
+    while (StartGroup != Vec.end()) {
+      ++EndGroup;
+      const size_t Distance = EndGroup - StartGroup;
+      const uint64_t Delta = *EndGroup - *StartGroup;
+      const bool AtEnd = EndGroup == Vec.end();
+      // Happy case: advance the group
+      if (!AtEnd && Delta == Distance)
+        continue;
+      // Otherwise print the current group
+      Out += LS;
+      APInt Int(64, *StartGroup);
+      Out += toString(Int, 36, false);
+
+      Int = APInt(64, Distance - 1, false);
+      if (Distance > 1)
+        Out += '^' + toString(Int, 36, false);
+      if (AtEnd)
+        break;
+      StartGroup = EndGroup;
+    }
+  };
+
   // Check identical block probes and merge them
   std::unordered_map<std::vector<uint64_t>, std::vector<uint32_t>, ProbeHasher>
       ProbesToNodes;
@@ -156,10 +192,19 @@ void YAMLProfileWriter::BlockProbeCtx::finalize(
     llvm::sort(Probes);
     ProbesToNodes[Probes].emplace_back(NodeId);
   }
+  ListSeparator LS(" ");
+  std::string &Probe = YamlBB.PseudoProbesStr;
   for (auto &[Probes, Nodes] : ProbesToNodes) {
     llvm::sort(Nodes);
-    YamlBB.PseudoProbes.emplace_back(
-        yaml::bolt::PseudoProbeInfo{Probes, Nodes});
+    if (opts::ProfileWritePseudoProbes == opts::ProbesWriteMode::PWM_Default) {
+      YamlBB.PseudoProbes.emplace_back(
+          yaml::bolt::PseudoProbeInfo{Probes, Nodes});
+    } else {
+      Probe += LS;
+      compressVec(Probes, Probe, true);
+      Probe += "_";
+      compressVec(Nodes, Probe, false);
+    }
   }
   for (yaml::bolt::CallSiteInfo &CSI : YamlBB.CallSites) {
     auto It = CallProbes.find(CSI.Offset);
@@ -183,18 +228,17 @@ void YAMLProfileWriter::BlockProbeCtx::finalize(
   }
 }
 
-std::tuple<std::vector<yaml::bolt::InlineTreeNode>,
-           YAMLProfileWriter::InlineTreeMapTy>
-YAMLProfileWriter::convertBFInlineTree(const MCPseudoProbeDecoder &Decoder,
-                                       const InlineTreeDesc &InlineTree,
-                                       const BinaryFunction &BF) {
+YAMLProfileWriter::InlineTreeMapTy YAMLProfileWriter::convertBFInlineTree(
+    const MCPseudoProbeDecoder &Decoder, const InlineTreeDesc &InlineTree,
+    const BinaryFunction &BF, yaml::bolt::BinaryFunctionProfile &YamlBF) {
   DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
   std::vector<yaml::bolt::InlineTreeNode> YamlInlineTree;
+  std::string InlineTreeStr;
   uint64_t Addr = BF.getAddress();
   uint64_t Size = BF.getSize();
   auto Probes = Decoder.getAddress2ProbesMap().find(Addr, Addr + Size);
   if (Probes.empty())
-    return {YamlInlineTree, InlineTreeNodeId};
+    return InlineTreeNodeId;
   const MCDecodedPseudoProbe &Probe = *Probes.begin();
   const MCDecodedPseudoProbeInlineTree *Root = Probe.getInlineTreeNode();
   while (Root->hasInlineSite())
@@ -215,7 +259,30 @@ YAMLProfileWriter::convertBFInlineTree(const MCPseudoProbeDecoder &Decoder,
         Node.ParentId - PrevParent, Node.InlineSite, GUIDIdx, 0, 0});
     PrevParent = Node.ParentId;
   }
-  return {YamlInlineTree, InlineTreeNodeId};
+  if (opts::ProfileWritePseudoProbes == opts::ProbesWriteMode::PWM_Default) {
+    YamlBF.InlineTree = YamlInlineTree;
+    return InlineTreeNodeId;
+  }
+  assert(opts::ProfileWritePseudoProbes == opts::ProbesWriteMode::PWM_Compact);
+  // Write compact form
+  std::string &Out = YamlBF.InlineTreeStr;
+  raw_string_ostream OS(Out);
+  ListSeparator LS(" ");
+  for (const yaml::bolt::InlineTreeNode &Node : YamlInlineTree) {
+    Out += LS;
+    APInt Int(32, Node.GUIDIndex);
+    if (Node.GUIDIndex != UINT32_MAX)
+      Out += toString(Int, 36, false);
+    Out += '_';
+    Int = APInt(32, Node.ParentIndexDelta);
+    if (Node.ParentIndexDelta)
+      Out += toString(Int, 36, false);
+    Out += '_';
+    Int = APInt(32, Node.CallSiteProbe);
+    if (Node.CallSiteProbe)
+      Out += toString(Int, 36, false);
+  }
+  return InlineTreeNodeId;
 }
 
 yaml::bolt::BinaryFunctionProfile
@@ -241,8 +308,8 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   YamlBF.ExternEntryCount = BF.getExternEntryCount();
   DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
   if (PseudoProbeDecoder)
-    std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
-        convertBFInlineTree(*PseudoProbeDecoder, InlineTree, BF);
+    InlineTreeNodeId =
+        convertBFInlineTree(*PseudoProbeDecoder, InlineTree, BF, YamlBF);
 
   BinaryFunction::BasicBlockOrderType Order;
   llvm::copy(UseDFS ? BF.dfs() : BF.getLayout().blocks(),
@@ -418,7 +485,7 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
   // Add probe inline tree nodes.
   InlineTreeDesc InlineTree;
   if (const MCPseudoProbeDecoder *Decoder =
-          opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr)
+      opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr)
     std::tie(BP.PseudoProbeDesc, InlineTree) = convertPseudoProbeDesc(*Decoder);
 
   // Add all function objects.

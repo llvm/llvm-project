@@ -19,6 +19,7 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Timer.h"
 
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "bolt-prof"
@@ -369,7 +370,22 @@ bool YAMLProfileReader::parseFunctionProfile(
 // Probe inline tree: move InlineTreeIndex into InlineTreeNodes.
 void YAMLProfileReader::decodeYamlInlineTree(
     yaml::bolt::BinaryFunctionProfile &YamlBF) {
-  const yaml::bolt::ProfilePseudoProbeDesc &YamlPD = YamlBP.PseudoProbeDesc;
+  if (YamlBF.InlineTree.empty() && YamlBF.InlineTreeStr.empty())
+    return;
+  // Decompress inline tree
+  SmallVector<StringRef, 3> Fields;
+  if (!YamlBF.InlineTreeStr.empty()) {
+    for (StringRef NodeStr : llvm::split(YamlBF.InlineTreeStr, ' ')) {
+      yaml::bolt::InlineTreeNode &Node = YamlBF.InlineTree.emplace_back();
+      NodeStr.split(Fields, '_');
+      if (Fields[0].empty())
+        Node.GUIDIndex = UINT32_MAX;
+      else
+        Fields[0].getAsInteger(36, Node.GUIDIndex);
+      Fields[1].getAsInteger(36, Node.ParentIndex);
+      Fields[2].getAsInteger(36, Node.CallSiteProbe);
+    }
+  }
   uint32_t ParentId = 0;
   uint32_t PrevGUIDIdx = 0;
   for (yaml::bolt::InlineTreeNode &InlineTreeNode : YamlBF.InlineTree) {
@@ -390,6 +406,33 @@ void YAMLProfileReader::decodeYamlInlineTree(
     for (const yaml::bolt::PseudoProbeInfo &PI : YamlBB.PseudoProbes)
       for (const uint64_t Node : PI.InlineTreeNodes)
         YamlGUIDs.emplace(YamlBF.InlineTree[Node].GUID);
+  // Decompress probe descriptors
+  auto decompressList = [](StringRef List, auto Vec) {
+    for (StringRef BlockStr : llvm::split(List, ',')) {
+      StringRef ValStr, RepStr;
+      uint64_t Val = 0, Rep = 0;
+      std::tie(ValStr, RepStr) = BlockStr.split('^');
+      ValStr.getAsInteger(36, Val);
+      RepStr.getAsInteger(36, Rep);
+      llvm::copy(llvm::seq(Val, Val + Rep), std::back_inserter(Vec));
+    }
+  };
+  auto decompressField = [&](StringRef Field, auto Vec, uint32_t Default) {
+    if (Field.empty())
+      Vec.emplace_back(Default);
+    else
+      decompressList(Field, Vec);
+  };
+  for (yaml::bolt::BinaryBasicBlockProfile &BB : YamlBF.Blocks) {
+    if (BB.PseudoProbesStr.empty())
+      continue;
+    for (StringRef ProbeStr : llvm::split(BB.PseudoProbesStr, ' ')) {
+      yaml::bolt::PseudoProbeInfo &PI = BB.PseudoProbes.emplace_back();
+      ProbeStr.split(Fields, '_');
+      decompressField(Fields[0], PI.BlockProbes, 1);
+      decompressField(Fields[1], PI.InlineTreeNodes, 0);
+    }
+  }
 }
 
 Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
