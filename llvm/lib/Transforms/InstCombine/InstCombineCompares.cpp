@@ -3132,7 +3132,7 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
 
   Value *Op0, *Op1;
   Instruction *Ext0, *Ext1;
-  const CmpInst::Predicate Pred = Cmp.getPredicate();
+  const CmpPredicate Pred = Cmp.getCmpPredicate();
   if (match(Add,
             m_Add(m_CombineAnd(m_Instruction(Ext0), m_ZExtOrSExt(m_Value(Op0))),
                   m_CombineAnd(m_Instruction(Ext1),
@@ -3169,7 +3169,8 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
   // the constants. Equality comparisons are handled elsewhere. SGE/SLE/UGE/ULE
   // are canonicalized to SGT/SLT/UGT/ULT.
   if ((Add->hasNoSignedWrap() &&
-       (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLT)) ||
+       (Pred.getPreferredSignedPredicate() == ICmpInst::ICMP_SGT ||
+        Pred.getPreferredSignedPredicate() == ICmpInst::ICMP_SLT)) ||
       (Add->hasNoUnsignedWrap() &&
        (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULT))) {
     bool Overflow;
@@ -3178,9 +3179,13 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
     // If there is overflow, the result must be true or false.
     // TODO: Can we assert there is no overflow because InstSimplify always
     // handles those cases?
-    if (!Overflow)
+    if (!Overflow) {
+      const CmpInst::Predicate EquivPredicate =
+          Add->hasNoSignedWrap() ? Pred.getPreferredSignedPredicate()
+                                 : Cmp.getPredicate();
       // icmp Pred (add nsw X, C2), C --> icmp Pred X, (C - C2)
-      return new ICmpInst(Pred, X, ConstantInt::get(Ty, NewC));
+      return new ICmpInst(EquivPredicate, X, ConstantInt::get(Ty, NewC));
+    }
   }
 
   if (ICmpInst::isUnsigned(Pred) && Add->hasNoSignedWrap() &&
