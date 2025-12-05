@@ -918,6 +918,7 @@ void PEIImpl::calculateFrameObjectOffsets(MachineFunction &MF) {
       if (!MFI.isCalleeSavedObjectIndex(FI) ||
           MFI.getStackID(FI) != TargetStackID::Default)
         continue;
+      // TODO: should we be using MFI.isDeadObjectIndex(FI) here?
       AdjustStackOffset(MFI, FI, StackGrowsDown, Offset, MaxAlign);
     }
   } else {
@@ -928,7 +929,6 @@ void PEIImpl::calculateFrameObjectOffsets(MachineFunction &MF) {
           MFI.getStackID(FI) != TargetStackID::Default)
         continue;
 
-      // TODO: should this just be if (MFI.isDeadObjectIndex(FI))
       if (MFI.isDeadObjectIndex(FI))
         continue;
 
