@@ -29,14 +29,6 @@ add_object_library(
     libc.src.__support.OSUtil.osutil
 )
 
-add_header_library(
-  clock_conversion
-  HDRS
-    clock_conversion.h
-  DEPENDS
-    .clock_gettime
-    libc.src.__support.time.units
-)
 
 add_header_library(
   abs_timeout
@@ -53,7 +45,7 @@ add_header_library(
   HDRS
     monotonicity.h
   DEPENDS
-    .clock_conversion
     .abs_timeout
     libc.hdr.time_macros
+    libc.src.__support.time.clock_conversion
 )
