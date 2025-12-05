@@ -38,7 +38,7 @@ class LintArgs:
     clang_tidy_binary: str = "clang-tidy"
 
     def __init__(self, args: argparse.Namespace) -> None:
-        if not args is None:
+        if args is not None:
             self.start_rev = args.start_rev
             self.end_rev = args.end_rev
             self.repo = args.repo
