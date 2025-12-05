@@ -151,6 +151,7 @@ static std::string getExecutablePath(const char *Argv0, void *MainAddr) {
   return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
 }
 
+// TODO: Rename this, since it only gets custom CSS/JS
 static llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   using DirIt = llvm::sys::fs::directory_iterator;
   std::error_code FileErr;
@@ -221,8 +222,8 @@ static llvm::Error getMustacheHtmlFiles(const char *Argv0,
     llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
                  << " falling back to default\n";
   if (IsDir) {
-    getMustacheHtmlFiles(UserAssetPath, CDCtx);
-    return llvm::Error::success();
+    if (auto Err = getAssetFiles(CDCtx))
+      return Err;
   }
   void *MainAddr = (void *)(intptr_t)getExecutablePath;
   std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
