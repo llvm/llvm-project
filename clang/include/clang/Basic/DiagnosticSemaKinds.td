@@ -7021,8 +7021,9 @@ def warn_counted_by_attr_elt_type_unknown_size :
   InGroup<BoundsSafetyCountedByEltTyUnknownSize>;
 
 // __builtin_counted_by_ref diagnostics:
-def err_builtin_counted_by_ref_must_be_flex_array_member : Error<
-  "'__builtin_counted_by_ref' argument must reference a flexible array member">;
+def err_builtin_counted_by_ref_invalid_arg
+    : Error<"'__builtin_counted_by_ref' argument must reference a member with "
+            "the 'counted_by' attribute">;
 def err_builtin_counted_by_ref_has_side_effects : Error<
   "'__builtin_counted_by_ref' argument cannot have side-effects">;
 
