@@ -6173,7 +6173,7 @@ static constexpr int getFEnvRoundingMode(llvm::RoundingMode rm) {
 }
 
 APFloat exp(const APFloat &X, RoundingMode rounding_mode) {
-  if (&X.getSemantics() == &semIEEEsingle) {
+  if (&X.getSemantics() == &APFloat::IEEEsingle()) {
     float result = LIBC_NAMESPACE::shared::expf(
         X.convertToFloat(), getFEnvRoundingMode(rounding_mode));
     return APFloat(result);
