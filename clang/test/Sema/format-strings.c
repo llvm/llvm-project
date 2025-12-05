@@ -558,11 +558,9 @@ void pr7981(wint_t c, wchar_t c2) {
 #endif
 }
 
-// -Wformat-security says NULL is not a string literal
 void rdar8269537(void) {
-  // This is likely to crash in most cases, but -Wformat-nonliteral technically
-  // doesn't warn in this case.
-  printf(0); // no-warning
+  printf(0);
+  // expected-warning@-1{{null passed to a callee that requires a non-null argument}}
 }
 
 // Handle functions with multiple format attributes.
