@@ -19118,8 +19118,23 @@ bool Sema::DefineUsedVTables() {
         }
       }
 
-      if (IsExplicitInstantiationDeclaration)
+      if (IsExplicitInstantiationDeclaration) {
         DefineVTable = false;
+
+        // Ensure the instance of a virtual member function which is declared
+        // with `__attribute__((exclude_from_explicit_instantiation))` is
+        // accessible from the VTable.
+        for (Decl *decl : Class->decls()) {
+          auto *Method = dyn_cast<CXXMethodDecl>(decl);
+          if (!Method || !Method->isVirtual())
+            continue;
+
+          if (Method->hasAttr<ExcludeFromExplicitInstantiationAttr>()) {
+            MarkFunctionReferenced(Loc, Method);
+            DefinedAnything = true;
+          }
+        }
+      }
     }
 
     // The exception specifications for all virtual members may be needed even
