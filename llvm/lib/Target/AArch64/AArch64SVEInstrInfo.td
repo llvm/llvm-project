@@ -3075,6 +3075,15 @@ let Predicates = [HasSVE_or_SME] in {
               (RegImmInst ZPR:$val, (PTrue 31), GPR64:$base, (i64 0))>;
   }
 
+  defm : unpred_store<nontemporalstore, nxv16i8, STNT1B_ZRR, STNT1B_ZRI, PTRUE_B ,am_sve_regreg_lsl0>;
+  defm : unpred_store<nontemporalstore, nxv8i16, STNT1H_ZRR, STNT1H_ZRI, PTRUE_H ,am_sve_regreg_lsl1>;
+  defm : unpred_store<nontemporalstore, nxv4i32, STNT1W_ZRR, STNT1W_ZRI, PTRUE_S ,am_sve_regreg_lsl2>;
+  defm : unpred_store<nontemporalstore, nxv2i64, STNT1D_ZRR, STNT1D_ZRI, PTRUE_D ,am_sve_regreg_lsl3>;
+  defm : unpred_store<nontemporalstore, nxv8f16, STNT1H_ZRR, STNT1H_ZRI, PTRUE_H ,am_sve_regreg_lsl1>;
+  defm : unpred_store<nontemporalstore, nxv8bf16, STNT1H_ZRR, STNT1H_ZRI, PTRUE_H ,am_sve_regreg_lsl1>;
+  defm : unpred_store<nontemporalstore, nxv4f32, STNT1W_ZRR, STNT1W_ZRI, PTRUE_S ,am_sve_regreg_lsl2>;
+  defm : unpred_store<nontemporalstore, nxv2f64, STNT1D_ZRR, STNT1D_ZRI, PTRUE_D ,am_sve_regreg_lsl3>;
+
   defm : unpred_store<         store, nxv16i8,    ST1B,   ST1B_IMM, PTRUE_B, am_sve_regreg_lsl0>;
   defm : unpred_store< truncstorevi8, nxv8i16,  ST1B_H, ST1B_H_IMM, PTRUE_H, am_sve_regreg_lsl0>;
   defm : unpred_store< truncstorevi8, nxv4i32,  ST1B_S, ST1B_S_IMM, PTRUE_S, am_sve_regreg_lsl0>;
@@ -3110,6 +3119,15 @@ let Predicates = [HasSVE_or_SME] in {
     def : Pat<(Ty (Load GPR64:$base)),
               (RegImmInst (PTrue 31), GPR64:$base, (i64 0))>;
   }
+
+  defm : unpred_load<nontemporalload, nxv16i8, LDNT1B_ZRR, LDNT1B_ZRI, PTRUE_B ,am_sve_regreg_lsl0>;
+  defm : unpred_load<nontemporalload, nxv8i16, LDNT1H_ZRR, LDNT1H_ZRI, PTRUE_H ,am_sve_regreg_lsl1>;
+  defm : unpred_load<nontemporalload, nxv4i32, LDNT1W_ZRR, LDNT1W_ZRI, PTRUE_S ,am_sve_regreg_lsl2>;
+  defm : unpred_load<nontemporalload, nxv2i64, LDNT1D_ZRR, LDNT1D_ZRI, PTRUE_D ,am_sve_regreg_lsl3>;
+  defm : unpred_load<nontemporalload, nxv8f16, LDNT1H_ZRR, LDNT1H_ZRI, PTRUE_H ,am_sve_regreg_lsl1>;
+  defm : unpred_load<nontemporalload, nxv8bf16, LDNT1H_ZRR, LDNT1H_ZRI, PTRUE_H ,am_sve_regreg_lsl1>;
+  defm : unpred_load<nontemporalload, nxv4f32, LDNT1W_ZRR, LDNT1W_ZRI, PTRUE_S ,am_sve_regreg_lsl2>;
+  defm : unpred_load<nontemporalload, nxv2f64, LDNT1D_ZRR, LDNT1D_ZRI, PTRUE_D ,am_sve_regreg_lsl3>;
 
   defm : unpred_load<        load, nxv16i8,    LD1B,    LD1B_IMM, PTRUE_B, am_sve_regreg_lsl0>;
   defm : unpred_load< zextloadvi8, nxv8i16,  LD1B_H,  LD1B_H_IMM, PTRUE_H, am_sve_regreg_lsl0>;
@@ -3164,18 +3182,19 @@ let Predicates = [HasSVE_or_SME] in {
   }
 
   // Allow using LDR/STR to avoid the predicate dependence.
+  // Not applied if the nontemporal flag is set.
   let Predicates = [HasSVE_or_SME, IsLE, AllowMisalignedMemAccesses] in
     foreach Ty = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in {
       let AddedComplexity = 2 in {
-        def : Pat<(Ty (load (am_sve_indexed_s9 GPR64sp:$base, simm9:$offset))),
+        def : Pat<(Ty (temporal_load (am_sve_indexed_s9 GPR64sp:$base, simm9:$offset))),
                   (LDR_ZXI GPR64sp:$base, simm9:$offset)>;
-        def : Pat<(store Ty:$val, (am_sve_indexed_s9 GPR64sp:$base, simm9:$offset)),
+        def : Pat<(temporal_store Ty:$val, (am_sve_indexed_s9 GPR64sp:$base, simm9:$offset)),
                   (STR_ZXI ZPR:$val, GPR64sp:$base, simm9:$offset)>;
       }
 
-      def : Pat<(Ty (load GPR64sp:$base)),
+      def : Pat<(Ty (temporal_load GPR64sp:$base)),
                 (LDR_ZXI GPR64sp:$base, (i64 0))>;
-      def : Pat<(store Ty:$val, GPR64sp:$base),
+      def : Pat<(temporal_store Ty:$val, GPR64sp:$base),
                 (STR_ZXI ZPR:$val, GPR64sp:$base, (i64 0))>;
     }
 
