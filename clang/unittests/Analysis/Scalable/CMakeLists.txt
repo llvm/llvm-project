@@ -1,7 +1,7 @@
 add_distinct_clang_unittest(ClangScalableAnalysisFrameworkTests
+  ASTEntityMappingTest.cpp
   BuildNamespaceTest.cpp
   EntityNameTest.cpp
-  ASTEntityMappingTest.cpp
 
   CLANG_LIBS
   clangAnalysisScalable
