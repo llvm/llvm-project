@@ -75,3 +75,24 @@ define <16 x i16> @srem_v16i16_by_7(<16 x i16> %x) {
   %rem = srem <16 x i16> %x, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
   ret <16 x i16> %rem
 }
+
+define <8 x i16> @sdiv_exact_v8i16_by_255(<8 x i16> %x) {
+; CHECK-LABEL: sdiv_exact_v8i16_by_255:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvni v1.8h, #1, lsl #8
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %div = sdiv exact <8 x i16> %x, splat (i16 255)
+  ret <8 x i16> %div
+}
+
+define <16 x i16> @sdiv_exact_v16i16_by_255(<16 x i16> %x) {
+; CHECK-LABEL: sdiv_exact_v16i16_by_255:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvni v2.8h, #1, lsl #8
+; CHECK-NEXT:    mul v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    mul v1.8h, v1.8h, v2.8h
+; CHECK-NEXT:    ret
+  %div = sdiv exact <16 x i16> %x, splat (i16 255)
+  ret <16 x i16> %div
+}
