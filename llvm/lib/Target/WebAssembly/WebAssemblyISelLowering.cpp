@@ -411,10 +411,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
 
-  // Allow converting function ptrs in address space 0 to Wasm funcref (address
-  // space 20)
-  setOperationAction(ISD::ADDRSPACECAST, MVT::funcref, Custom);
-
   setMaxAtomicSizeInBitsSupported(64);
 
   // Always convert switches to br_tables unless there is only one case, which
@@ -1760,8 +1756,6 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerMUL_LOHI(Op, DAG);
   case ISD::UADDO:
     return LowerUADDO(Op, DAG);
-  case ISD::ADDRSPACECAST:
-    return LowerADDRSPACECAST(Op, DAG);
   }
 }
 
@@ -1903,58 +1897,6 @@ SDValue WebAssemblyTargetLowering::LowerUADDO(SDValue Op,
   SDValue CarryI32 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, CarryI64);
   SDValue Ops[] = {Result, CarryI32};
   return DAG.getMergeValues(Ops, DL);
-}
-
-SDValue WebAssemblyTargetLowering::LowerADDRSPACECAST(SDValue Op,
-                                                      SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-
-  AddrSpaceCastSDNode *ACN = cast<AddrSpaceCastSDNode>(Op.getNode());
-
-  if (ACN->getSrcAddressSpace() !=
-          WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_DEFAULT ||
-      ACN->getDestAddressSpace() !=
-          WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
-    return SDValue();
-
-  if (ACN->getValueType(0) != MVT::funcref) {
-    reportFatalInternalError("Cannot addrspacecast to funcref addrspace with "
-                             "results other than MVT::funcref");
-  }
-
-  SDValue Src = ACN->getOperand(0);
-
-  // Lower addrspacecasts of direct/constant function ptrs to ref.func
-  if (auto *GA = dyn_cast<GlobalAddressSDNode>(
-          Src->getOpcode() == WebAssemblyISD::Wrapper ? Src->getOperand(0)
-                                                      : Src)) {
-    auto *GV = GA->getGlobal();
-
-    if (const Function *F = dyn_cast<Function>(GV)) {
-      SDValue FnAddress = DAG.getTargetGlobalAddress(F, DL, MVT::i32);
-
-      SDValue RefFuncNode =
-          DAG.getNode(WebAssemblyISD::REF_FUNC, DL, MVT::funcref, FnAddress);
-      return RefFuncNode;
-    }
-  }
-
-  // Lower everything else to a table.get from the indirect function table
-  const MachineFunction &MF = DAG.getMachineFunction();
-
-  MVT PtrVT = getPointerTy(MF.getDataLayout());
-
-  MCSymbolWasm *Table =
-      WebAssembly::getOrCreateFunctionTableSymbol(MF.getContext(), Subtarget);
-  SDValue TableSym = DAG.getMCSymbol(Table, PtrVT);
-
-  SDValue TableSlot = Op.getOperand(0);
-
-  SDValue Result(DAG.getMachineNode(WebAssembly::TABLE_GET_FUNCREF, DL,
-                                    MVT::funcref, TableSym, TableSlot),
-                 0);
-
-  return Result;
 }
 
 SDValue WebAssemblyTargetLowering::Replace128Op(SDNode *N,
