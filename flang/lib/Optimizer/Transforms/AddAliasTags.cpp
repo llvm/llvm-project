@@ -687,9 +687,16 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   }
 
   mlir::LLVM::TBAATagAttr tag;
-  // TBAA for dummy arguments
-  if (enableDummyArgs &&
-      source.kind == fir::AliasAnalysis::SourceKind::Argument) {
+  // Cray pointer/pointee is a special case. These might alias with any data.
+  if (source.isCrayPointerOrPointee()) {
+    LLVM_DEBUG(llvm::dbgs().indent(2)
+               << "Found reference to Cray pointer/pointee at " << *op << "\n");
+    mlir::LLVM::TBAATypeDescriptorAttr anyDataDesc =
+        state.getFuncTreeWithScope(func, scopeOp).anyDataTypeDesc;
+    tag = mlir::LLVM::TBAATagAttr::get(anyDataDesc, anyDataDesc, /*offset=*/0);
+    // TBAA for dummy arguments
+  } else if (enableDummyArgs &&
+             source.kind == fir::AliasAnalysis::SourceKind::Argument) {
     LLVM_DEBUG(llvm::dbgs().indent(2)
                << "Found reference to dummy argument at " << *op << "\n");
     std::string name = getFuncArgName(llvm::cast<mlir::Value>(source.origin.u));
