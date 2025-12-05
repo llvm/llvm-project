@@ -10,9 +10,7 @@
 #define __CLC_OPENCL_UTILS_H__
 
 #include <clc/internal/clc.h>
-#include <clc/opencl/types.h>
 
-// INTEL_FEATURE_PISA
 static _CLC_INLINE int __opencl_get_clang_memory_scope(memory_scope scope) {
   switch (scope) {
   case __OPENCL_MEMORY_SCOPE_WORK_ITEM:
@@ -30,6 +28,5 @@ static _CLC_INLINE int __opencl_get_clang_memory_scope(memory_scope scope) {
     return __MEMORY_SCOPE_SYSTEM;
   }
 }
-// end INTEL_FEATURE_PISA
 
 #endif // __CLC_OPENCL_UTILS_H__

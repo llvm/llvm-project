@@ -10,7 +10,6 @@
 #define __CLC_OPENCL_ATOMIC_ATOMIC_FLAG_CLEAR_H__
 
 #include <clc/opencl/opencl-base.h>
-#include <clc/opencl/types.h>
 
 #if defined(__opencl_c_atomic_order_seq_cst) &&                                \
     defined(__opencl_c_atomic_scope_device)

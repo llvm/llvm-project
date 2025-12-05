@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/float/definitions.h>
-#include <clc/opencl/as_type.h>
 #include <clc/opencl/math/copysign.h>
 #include <clc/opencl/math/fabs.h>
 #include <clc/opencl/math/nextafter.h>
