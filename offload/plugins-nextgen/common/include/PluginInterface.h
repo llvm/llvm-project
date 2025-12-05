@@ -1291,7 +1291,15 @@ struct GenericPluginTy {
   virtual GenericGlobalHandlerTy *createGlobalHandler() = 0;
 
   /// Get the reference to the device with a certain device id.
-  GenericDeviceTy &getDevice(int32_t DeviceId) const {
+  const GenericDeviceTy &getDevice(int32_t DeviceId) const {
+    assert(isValidDeviceId(DeviceId) && "Invalid device id");
+    assert(Devices[DeviceId] && "Device is uninitialized");
+
+    return *Devices[DeviceId];
+  }
+
+  /// Get the reference to the device with a certain device id.
+  GenericDeviceTy &getDevice(int32_t DeviceId) {
     assert(isValidDeviceId(DeviceId) && "Invalid device id");
     assert(Devices[DeviceId] && "Device is uninitialized");
 
@@ -1558,12 +1566,15 @@ public:
   /// object and return immediately.
   int32_t async_barrier(omp_interop_val_t *Interop);
 
-  struct DevicesRangeTy {
+  /// Helper Range class to iterate over devices in the plugin
+  /// Used by getDeviceRange
+  class DevicesRangeTy {
     using iterator = llvm::SmallVector<GenericDeviceTy *>::iterator;
 
     iterator BeginIt;
     iterator EndIt;
 
+  public:
     DevicesRangeTy(iterator BeginIt, iterator EndIt)
         : BeginIt(BeginIt), EndIt(EndIt) {}
 
@@ -1571,6 +1582,9 @@ public:
     auto &end() { return EndIt; }
   };
 
+  /// Returns a Range over all the devices in the plugin that can be
+  /// used in a for loop:
+  /// for (&Device : GenericPluginRef.getDevicesRange()) {
   DevicesRangeTy getDevicesRange() {
     return DevicesRangeTy(Devices.begin(), Devices.end());
   }

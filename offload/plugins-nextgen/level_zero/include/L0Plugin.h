@@ -68,7 +68,10 @@ public:
 
   static const L0OptionsTy &getOptions() { return Options; }
 
-  L0DeviceTy &getDeviceFromId(int32_t DeviceId) const {
+  const L0DeviceTy &getDeviceFromId(int32_t DeviceId) const {
+    return static_cast<const L0DeviceTy &>(getDevice(DeviceId));
+  }
+  L0DeviceTy &getDeviceFromId(int32_t DeviceId) {
     return static_cast<L0DeviceTy &>(getDevice(DeviceId));
   }
 
