@@ -798,10 +798,10 @@ void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
           AffineMap::inferFromExprList(indexingExprs, builder.getContext())));
   result.addAttribute(
       getIteratorTypesAttrName(result.name),
-      builder.getArrayAttr(llvm::to_vector(llvm::map_range(
-          iteratorTypes, [&](IteratorType t) -> mlir::Attribute {
+      builder.getArrayAttr(
+          llvm::map_to_vector(iteratorTypes, [&](IteratorType t) {
             return IteratorTypeAttr::get(builder.getContext(), t);
-          }))));
+          })));
 }
 
 void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,

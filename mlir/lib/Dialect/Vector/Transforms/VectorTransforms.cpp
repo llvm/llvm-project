@@ -105,10 +105,10 @@ struct MultiReduceToContract
     rewriter.replaceOpWithNewOp<mlir::vector::ContractionOp>(
         reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), reduceOp.getAcc(),
         rewriter.getAffineMapArrayAttr({srcMap, srcMap, dstMap}),
-        rewriter.getArrayAttr(llvm::to_vector(llvm::map_range(
-            iteratorTypes, [&](IteratorType t) -> mlir::Attribute {
+        rewriter.getArrayAttr(
+            llvm::map_to_vector(iteratorTypes, [&](IteratorType t) {
               return IteratorTypeAttr::get(rewriter.getContext(), t);
-            }))));
+            })));
     return success();
   }
 };

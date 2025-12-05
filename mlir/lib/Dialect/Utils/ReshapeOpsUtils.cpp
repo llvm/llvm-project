@@ -422,11 +422,10 @@ static unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
 
 ArrayAttr mlir::getReassociationIndicesAttribute(
     Builder &b, ArrayRef<ReassociationIndices> reassociation) {
-  SmallVector<Attribute, 4> reassociationAttr =
-      llvm::to_vector<4>(llvm::map_range(
-          reassociation, [&](const ReassociationIndices &indices) -> Attribute {
-            return cast<Attribute>(b.getI64ArrayAttr(indices));
-          }));
+  auto reassociationAttr = llvm::map_to_vector(
+      reassociation, [&](const ReassociationIndices &indices) {
+        return b.getI64ArrayAttr(indices);
+      });
   return b.getArrayAttr(reassociationAttr);
 }
 

@@ -193,12 +193,10 @@ static void buildMatmulOp(OpBuilder &b, OperationState &state,
                           RegionBuilderFn regionBuilder,
                           ArrayRef<AffineMap> indexingMaps) {
   // Initialize indexingMaps attribute, for MatmulOp.
-  SmallVector<Attribute, 3> indexingMapsAttrVal;
-  indexingMapsAttrVal =
-      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
-        return AffineMapAttr::get(map);
-      });
-  state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+  state.addAttribute("indexing_maps", b.getArrayAttr(llvm::map_to_vector(
+                                          indexingMaps, [](AffineMap map) {
+                                            return AffineMapAttr::get(map);
+                                          })));
   return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
                            attributes, regionBuilder);
 }
@@ -210,12 +208,10 @@ static void buildBatchMatmulOp(OpBuilder &b, OperationState &state,
                                RegionBuilderFn regionBuilder,
                                ArrayRef<AffineMap> indexingMaps) {
   // Initialize indexingMaps attribute, for BatchMatmulOp.
-  SmallVector<Attribute, 4> indexingMapsAttrVal;
-  indexingMapsAttrVal =
-      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
-        return AffineMapAttr::get(map);
-      });
-  state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+  state.addAttribute("indexing_maps", b.getArrayAttr(llvm::map_to_vector(
+                                          indexingMaps, [](AffineMap map) {
+                                            return AffineMapAttr::get(map);
+                                          })));
   return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
                            attributes, regionBuilder);
 }
@@ -227,12 +223,10 @@ static void buildBatchReduceMatmulOp(OpBuilder &b, OperationState &state,
                                      RegionBuilderFn regionBuilder,
                                      ArrayRef<AffineMap> indexingMaps) {
   // Initialize indexingMaps attribute, for BatchReduceMatmulOp.
-  SmallVector<Attribute, 4> indexingMapsAttrVal;
-  indexingMapsAttrVal =
-      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
-        return AffineMapAttr::get(map);
-      });
-  state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+  state.addAttribute("indexing_maps", b.getArrayAttr(llvm::map_to_vector(
+                                          indexingMaps, [](AffineMap map) {
+                                            return AffineMapAttr::get(map);
+                                          })));
   return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
                            attributes, regionBuilder);
 }
@@ -1121,7 +1115,7 @@ void GenericOp::build(
         builder.getAffineMapArrayAttr(indexingMaps),
         builder.getArrayAttr(llvm::to_vector(llvm::map_range(
             iteratorTypes,
-            [&](utils::IteratorType iter) -> mlir::Attribute {
+            [&](utils::IteratorType iter) {
               return IteratorTypeAttr::get(builder.getContext(), iter);
             }))),
         doc.empty() ? StringAttr() : builder.getStringAttr(doc),
@@ -3914,7 +3908,7 @@ ParseResult MatmulOp::parse(OpAsmParser &parser, OperationState &result) {
   if (*indexingMapsAttr == nullptr) {
     auto indexingMapAttrs = llvm::map_to_vector(
         MatmulOp::getDefaultIndexingMaps(parser.getContext()),
-        [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+        [](AffineMap map) { return AffineMapAttr::get(map); });
     indexingMapsAttr = parser.getBuilder().getArrayAttr(indexingMapAttrs);
   }
 

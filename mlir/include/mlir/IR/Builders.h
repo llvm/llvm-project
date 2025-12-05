@@ -112,6 +112,15 @@ public:
   StringAttr getStringAttr(const Twine &bytes);
   ArrayAttr getArrayAttr(ArrayRef<Attribute> value);
 
+  // Convenience method for containers of specific attribute types. E.g., this
+  // overload will match SmallVector<IntegerAttr>.
+  template <typename ContainerTy>
+  ArrayAttr getArrayAttr(const ContainerTy &value) {
+    auto ref = ArrayRef(value);
+    return getArrayAttr(ArrayRef<Attribute>(
+        static_cast<const Attribute *>(ref.data()), ref.size()));
+  }
+
   // Returns a 0-valued attribute of the given `type`. This function only
   // supports boolean, integer, and 16-/32-/64-bit float types, and vector or
   // ranked tensor of them. Returns null attribute otherwise.

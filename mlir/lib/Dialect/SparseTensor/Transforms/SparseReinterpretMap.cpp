@@ -325,10 +325,9 @@ translateMap(linalg::GenericOp op, PatternRewriter &rewriter) {
     }
   };
 
-  SmallVector<Attribute> iterAttr =
-      llvm::map_to_vector(itTps, [ctx](auto itTp) -> Attribute {
-        return linalg::IteratorTypeAttr::get(ctx, itTp);
-      });
+  auto iterAttr = llvm::map_to_vector(itTps, [ctx](auto itTp) {
+    return linalg::IteratorTypeAttr::get(ctx, itTp);
+  });
 
   return std::make_pair(rewriter.getAffineMapArrayAttr(idxMapArray),
                         rewriter.getArrayAttr(iterAttr));
