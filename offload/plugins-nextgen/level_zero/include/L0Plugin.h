@@ -83,7 +83,6 @@ public:
     if (!Queue)
       return;
     Queue->reset();
-    Queue->InUse = false;
     if (!getTLS().releaseAsyncQueue(Queue))
       AsyncQueuePool.release(Queue);
   }

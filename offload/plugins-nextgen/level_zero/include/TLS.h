@@ -13,6 +13,8 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_TLS_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_TLS_H
 
+#include <bitset>
+
 #include "AsyncQueue.h"
 #include "L0Memory.h"
 #include "L0Trace.h"
@@ -27,8 +29,8 @@ namespace plugin {
 class L0ThreadTLSTy {
   /// Async info tracking
   static constexpr int32_t PerThreadQueues = 10;
+  std::bitset<PerThreadQueues> InUseQueues{0};
   AsyncQueueTy AsyncQueues[PerThreadQueues];
-  int32_t UsedQueues = 0;
 
 public:
   L0ThreadTLSTy() = default;
@@ -40,17 +42,16 @@ public:
 
   AsyncQueueTy *getAsyncQueue() {
     AsyncQueueTy *Ret = nullptr;
-    if (UsedQueues < PerThreadQueues) {
+    if (!InUseQueues.all()) {
       // there's a free queue in this thread, find it
-      for (int32_t Queue = 0; Queue < PerThreadQueues; Queue++) {
-        if (!AsyncQueues[Queue].InUse) {
-          UsedQueues++;
+      for (size_t Queue = 0; Queue < PerThreadQueues; Queue++) {
+        if (!InUseQueues.test(Queue)) {
+          InUseQueues.set(Queue);
           Ret = &AsyncQueues[Queue];
           break;
         }
       }
       assert(Ret && "A queue should have been found!");
-      Ret->InUse = true;
     }
     return Ret;
   }
@@ -58,8 +59,8 @@ public:
   bool releaseAsyncQueue(AsyncQueueTy *Queue) {
     if (Queue >= &AsyncQueues[0] && Queue < &AsyncQueues[PerThreadQueues]) {
       // it's a local queue
-      Queue->InUse = false;
-      UsedQueues--;
+      size_t QueueId = Queue - &AsyncQueues[0];
+      InUseQueues.reset(QueueId);
       return true;
     }
     return false;

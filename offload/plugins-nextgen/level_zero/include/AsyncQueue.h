@@ -33,7 +33,6 @@ struct AsyncQueueTy {
   /// Kernel event not signaled
   ze_event_handle_t KernelEvent = nullptr;
   /// Is this queue being used currently
-  bool InUse = false;
   /// Clear data
   void reset() {
     WaitEvents.clear();
