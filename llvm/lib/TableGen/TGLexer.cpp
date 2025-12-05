@@ -138,18 +138,14 @@ bool TGLexer::processEOF() {
 }
 
 int TGLexer::getNextChar() {
+  if (CurPtr == CurBuf.end())
+    return EOF;
   char CurChar = *CurPtr++;
   switch (CurChar) {
   default:
     return (unsigned char)CurChar;
 
   case 0: {
-    // A NUL character in the stream is either the end of the current buffer or
-    // a spurious NUL in the file. Disambiguate that here.
-    if (CurPtr - 1 == CurBuf.end()) {
-      --CurPtr; // Arrange for another call to return EOF again.
-      return EOF;
-    }
     PrintError(getLoc(),
                "NUL character is invalid in source; treated as space");
     return ' ';
@@ -160,7 +156,8 @@ int TGLexer::getNextChar() {
     // Handle the newline character by ignoring it and incrementing the line
     // count. However, be careful about 'dos style' files with \n\r in them.
     // Only treat a \n\r or \r\n as a single line.
-    if ((*CurPtr == '\n' || (*CurPtr == '\r')) && *CurPtr != CurChar)
+    if (CurPtr != CurBuf.end() && (*CurPtr == '\n' || (*CurPtr == '\r')) &&
+        *CurPtr != CurChar)
       ++CurPtr; // Eat the two char newline sequence.
     return '\n';
   }

@@ -165,7 +165,7 @@ MemoryBuffer::getFileOrSTDIN(const Twine &Filename, bool IsText,
   StringRef NameRef = Filename.toStringRef(NameBuf);
 
   if (NameRef == "-")
-    return getSTDIN();
+    return getSTDIN(RequiresNullTerminator);
   return getFile(Filename, IsText, RequiresNullTerminator,
                  /*IsVolatile=*/false, Alignment);
 }
@@ -567,12 +567,33 @@ ErrorOr<std::unique_ptr<MemoryBuffer>> MemoryBuffer::getOpenFileSlice(
                                        IsVolatile, Alignment);
 }
 
-ErrorOr<std::unique_ptr<MemoryBuffer>> MemoryBuffer::getSTDIN() {
+ErrorOr<std::unique_ptr<MemoryBuffer>>
+MemoryBuffer::getSTDIN(bool RequiresNullTerminator) {
   // Read in all of the data from stdin, we cannot mmap stdin.
-  //
-  // FIXME: That isn't necessarily true, we should try to mmap stdin and
-  // fallback if it fails.
   sys::ChangeStdinMode(sys::fs::OF_Text);
+  std::error_code EC;
+  sys::fs::file_type Type;
+  sys::fs::file_status Status;
+  EC = sys::fs::status(sys::fs::getStdinHandle(), Status);
+  if (EC)
+    return EC;
+
+  Type = Status.type();
+  // If the FD is regular file or block file,
+  // we try to create a mmap buffer first.
+  // If failed, rollback to read and copy.
+  if ((Type == sys::fs::file_type::regular_file ||
+       Type == sys::fs::file_type::block_file) &&
+      shouldUseMmap(sys::fs::getStdinHandle(), Status.getSize(),
+                    Status.getSize(), 0, RequiresNullTerminator,
+                    sys::Process::getPageSizeEstimate(), false)) {
+    std::unique_ptr<MemoryBuffer> Result(
+        new (NamedBufferAlloc("<stdin>")) MemoryBufferMMapFile<MemoryBuffer>(
+            RequiresNullTerminator, sys::fs::getStdinHandle(), Status.getSize(),
+            0, EC));
+    if (!EC && (!RequiresNullTerminator || *Result->getBufferEnd() == '\0'))
+      return std::move(Result);
+  }
 
   return getMemoryBufferForStream(sys::fs::getStdinHandle(), "<stdin>");
 }
