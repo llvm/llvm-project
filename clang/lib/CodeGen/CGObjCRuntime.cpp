@@ -437,16 +437,30 @@ bool CGObjCRuntime::canClassObjectBeUnrealized(
       return false;
   }
 
-  // TODO: Heuristic 3: previously realized
-  // Walk through previous instructions can be inefficient, since
-  // `canClassObjectBeUnrealized` is called everytime we emit a class method.
-  // Besides, a realized subclass means parent class is realized. Therefore,
-  // a code like below also requires some special handling.
+  // Heuristic 3: previously realized classes
+  // If we've already emitted a class method call for this class (or a subclass)
+  // earlier, then the class must be realized.
   //
-  // ```
-  // +[Child foo];
-  // +[Parent foo];
-  // ```
+  // TODO: Iter over all dominating blocks instead of just looking at the
+  // current block. While we can construct a DT using CFG.CurFn, it is expensive
+  // to do so repeatly when CGF is still emitting blocks.
+  if (auto *CurBB = CGF.Builder.GetInsertBlock()) {
+    auto It = CGF.ObjCRealizedClasses.find(CurBB);
+    if (It != CGF.ObjCRealizedClasses.end()) {
+      // Check if CalleeClassDecl is the same as or a superclass of any
+      // realized class in the cache. A realized subclass implies the parent
+      // is realized.
+      for (const auto *RealizedClass : It->second) {
+        if (CalleeClassDecl == RealizedClass)
+          return false;
+        if (CalleeClassDecl->isSuperClassOf(RealizedClass)) {
+          // Also cache this class to reduce future `isSuperClassOf` calls
+          It->second.insert(CalleeClassDecl);
+          return false;
+        }
+      }
+    }
+  }
 
   // Otherwise, assume it can be unrealized.
   return true;

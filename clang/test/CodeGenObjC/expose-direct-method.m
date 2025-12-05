@@ -266,12 +266,11 @@ int useSRet(Root *r) {
     // TODO: we should know that this instance is non nil.
     // CHECK: call void @"-[Root getAggregate]_thunk"
     [r getAggregate].a +
-    // TODO: The compiler is not smart enough to know the class object must be realized yet.
     // CHECK-NOT: call i64 @"+[Root classGetComplex]"(ptr noundef
     // CHECK: call i64 @"+[Root classGetComplex]_thunk"(ptr noundef
     [Root classGetComplex].a +
-    // CHECK-NOT: call void @"+[Root classGetAggregate]"(ptr {{.*}}sret
-    // CHECK: call void @"+[Root classGetAggregate]_thunk"(ptr {{.*}}sret
+    // CHECK-NOT: call void @"+[Root classGetAggregate]_thunk"(ptr {{.*}}sret
+    // CHECK: call void @"+[Root classGetAggregate]"(ptr {{.*}}sret
     [Root classGetAggregate].a
   );
 }
@@ -291,4 +290,4 @@ int useSRet(Root *r) {
 // CHECK:   ret void
 
 // CHECK: define {{.*}} @"+[Root classGetComplex]_thunk"
-// CHECK: define {{.*}} @"+[Root classGetAggregate]_thunk"
+// CHECK-NOT: define {{.*}} @"+[Root classGetAggregate]_thunk"

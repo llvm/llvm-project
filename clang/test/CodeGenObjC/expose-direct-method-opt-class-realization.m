@@ -128,3 +128,40 @@ int testClassWithoutLoad(void) {
 }
 
 @end
+
+// ============================================================================
+// HEURISTIC 3: Previously realized classes in the same basic block skip thunk.
+// If we've already called a class method (which realizes the class),
+// subsequent calls to the same class or its superclasses can skip the thunk.
+// ============================================================================
+
+// CHECK-LABEL: define{{.*}} i32 @testPreviouslyRealizedParentClass
+int testPreviouslyRealizedParentClass(int flag) {
+  if (flag) {
+    // First call to ClassWithoutLoad - needs thunk (class might not be realized)
+    // CHECK: call i32 @"+[ClassWithoutLoad classDirectMethod]_thunk"(ptr noundef
+    int a = [ClassWithoutLoad classDirectMethod];
+
+    // Second call to same class - should skip thunk (class was just realized)
+    // CHECK: call i32 @"+[ClassWithoutLoad classDirectMethod]"(ptr noundef
+    // CHECK-NOT: call i32 @"+[ClassWithoutLoad classDirectMethod]_thunk"
+    int b = [ClassWithoutLoad classDirectMethod];
+
+    // Call to Root (parent of ClassWithoutLoad) - should skip thunk
+    // because realizing ClassWithoutLoad also realizes its superclass Root.
+    // CHECK: call i32 @"+[Root rootDirectMethod]"(ptr noundef
+    // CHECK-NOT: call i32 @"+[Root rootDirectMethod]_thunk"
+    int c = [Root rootDirectMethod];
+    return a + b + c;
+
+  }
+  // New block, we are not sure if prev block is executed, so we have to conservatively realize again.
+  // CHECK: call i32 @"+[ClassWithoutLoad classDirectMethod]_thunk"
+  // CHECK-NOT: call i32 @"+[ClassWithoutLoad classDirectMethod]"(ptr noundef
+  int b = [ClassWithoutLoad classDirectMethod];
+  // CHECK: call i32 @"+[Root rootDirectMethod]"(ptr noundef
+  // CHECK-NOT: call i32 @"+[Root rootDirectMethod]_thunk"
+  int c = [Root rootDirectMethod];
+
+  return b + c;
+}
