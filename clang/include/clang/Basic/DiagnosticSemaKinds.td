@@ -2769,6 +2769,14 @@ def err_deduction_guide_name_not_class_template : Error<
   "cannot specify deduction guide for "
   "%select{<error>|function template|variable template|alias template|"
   "template template parameter|concept|dependent template name}0 %1">;
+def err_deduction_guide_target_attr : Error<
+  "in CUDA/HIP, deduction guides may only be annotated with "
+  "'__host__ __device__'; '__host__'-only, '__device__'-only, or "
+  "'__global__' deduction guides are not allowed">;
+def warn_deduction_guide_target_attr_deprecated : Warning<
+  "use of CUDA/HIP target attributes on deduction guides is deprecated; "
+  "they will be rejected in a future version of Clang">,
+  InGroup<DeprecatedAttributes>;
 def err_deduction_guide_wrong_scope : Error<
   "deduction guide must be declared in the same scope as template %q0">;
 def err_deduction_guide_defines_function : Error<
