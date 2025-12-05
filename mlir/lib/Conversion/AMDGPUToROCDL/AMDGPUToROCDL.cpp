@@ -2645,7 +2645,7 @@ struct AMDGPUMakeDmaDescriptorLowering
       return op->emitOpError(
           "make_dma_descriptor is only supported on gfx1250");
 
-    if (op.getRank() != 2)
+    if (op.getRank() > 2)
       return op->emitOpError("unimplemented");
 
     Location loc = op.getLoc();
