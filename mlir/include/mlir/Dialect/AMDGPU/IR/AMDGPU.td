@@ -146,12 +146,8 @@ def AMDGPU_ExtPackedFp8Op :
   }];
 }
 
-def IsValidBlockSize: AttrConstraint<
-    CPred<"::llvm::is_contained({16, 32}, ::llvm::cast<::mlir::IntegerAttr>($_self).getInt())">,
-    "whose value is 16 or 32">;
-
-def AMDGPU_ScaledExtPacked816Op
-    : AMDGPU_Op<"scaled_ext_packed816", [Pure, AllShapesMatch<["source", "res"]>]>,
+def AMDGPU_ScaledExtPackedMatrixOp
+    : AMDGPU_Op<"scaled_ext_packed_matrix", [Pure, AllShapesMatch<["source", "res"]>]>,
       Arguments<(
           ins AnyTypeOf<[FixedVectorOfShapeAndType<[8], F4E2M1FN>,
                          FixedVectorOfShapeAndType<[8], F8E4M3FN>,
@@ -159,8 +155,8 @@ def AMDGPU_ScaledExtPacked816Op
                          FixedVectorOfShapeAndType<[16], F6E2M3FN>,
                          FixedVectorOfShapeAndType<[16], F6E3M2FN>]>:$source,
           FixedVectorOfShapeAndType<[4], F8E8M0FNU>:$scale,
-          ConfinedAttr<I32Attr, [IsValidBlockSize]>:$blockSize,
-          ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>:$firstScaleLane,
+          ConfinedAttr<I32Attr, [IntIsOneOf<[16, 32]>]>:$blockSize,
+          ConfinedAttr<I32Attr, [IntIsOneOf<[0, 16]>]>:$firstScaleLane,
           ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<3>]>:$firstScaleByte)>,
       Results<(
           outs AnyTypeOf<[FixedVectorOfShapeAndType<[8], F32>,
@@ -170,9 +166,12 @@ def AMDGPU_ScaledExtPacked816Op
                           FixedVectorOfShapeAndType<[16], F16>,
                           FixedVectorOfShapeAndType<[16], BF16>]>:$res)> {
 
-  let summary = "Extend a vector of packed floating point values";
+  let summary = "Extend a wave-wide matrix of packed floating point values";
 
   let description = [{
+    Extend matrix of microfloats (8 or 16 elements per lane) using a set of scales
+    that may be stored on other lanes.
+
     The scales applied to the input microfloats are stored in bytes which
     come from the `scales` input provided in a *half* of the wave identified
     by `firstScaleLane`. The bytes used is selected by `firstScaleByte` and depends
@@ -192,14 +191,14 @@ def AMDGPU_ScaledExtPacked816Op
     ```mlir
     // Input: 8-element vector of F8E4M3FN, converting to F32
     // Lanes 0-15 read from byte 0, lanes 16-31 read from byte 1
-    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+    %result = amdgpu.scaled_ext_packed_matrix %source scale(%scales)
       blockSize(32) firstScaleLane(0) firstScaleByte(0)
       : vector<8xf8E4M3FN>, vector<4xf8E8M0FNU> -> vector<8xf32>
 
     // Input: 16-element vector of F6E2M3FN, converting to F16
     // Lanes 0-15 read from byte 2, lanes 16-31 read from byte 3
-    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
-      blockSize(32) firstScaleLane(1) firstScaleByte(2)
+    %result = amdgpu.scaled_ext_packed_matrix %source scale(%scales)
+      blockSize(32) firstScaleLane(16) firstScaleByte(2)
       : vector<16xf6E2M3FN>, vector<4xf8E8M0FNU> -> vector<16xf16>
     ```
 
@@ -211,19 +210,19 @@ def AMDGPU_ScaledExtPacked816Op
     ```mlir
     // Input: 8-element vector of F8E5M2, converting to BF16
     // Lanes 0-15 read from byte 0, lanes 16-31 read from byte 2 (0+2)
-    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+    %result = amdgpu.scaled_ext_packed_matrix %source scale(%scales)
       blockSize(16) firstScaleLane(0) firstScaleByte(0)
       : vector<8xf8E5M2>, vector<4xf8E8M0FNU> -> vector<8xbf16>
 
     // Input: 16-element vector of F6E3M2FN, converting to F32
     // Lanes 0-15 read from byte 1, lanes 16-31 read from byte 3 (1+2)
-    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
-      blockSize(16) firstScaleLane(1) firstScaleByte(1)
+    %result = amdgpu.scaled_ext_packed_matrix %source scale(%scales)
+      blockSize(16) firstScaleLane(16) firstScaleByte(1)
       : vector<16xf6E3M2FN>, vector<4xf8E8M0FNU> -> vector<16xf32>
     ```
 
     Note: the layout for the scales generally mirrors how the WMMA
-    instructions use for matix scales. These selection operands allows
+    instructions use for matrix scales. These selection operands allows
     one to choose portions of the matrix to convert.
 
     When `source` is either F8E4M3FN or F8E5M2 and `blockSize` is 32,
@@ -233,7 +232,7 @@ def AMDGPU_ScaledExtPacked816Op
     When `source` is either F8E4M3FN or F8E5M2 and `blockSize` is 16,
     following combinations are allowed:
     * `firstScaleLane(0), firstScaleByte(0)`
-    * `firstScaleLane(1), firstScaleByte(2)`
+    * `firstScaleLane(16), firstScaleByte(2)`
     all other combinations are reserved.
 
     Available on gfx1250+.
@@ -1229,15 +1228,13 @@ def AMDGPU_ScaledMFMAOp :
 
 def AMDGPU_MakeDmaBaseOp :
     AMDGPU_Op<"make_dma_base", [Pure, AttrSizedOperandSegments]>,
-    Arguments<(ins
-                   Arg<AnyMemRef, "buffer to read from">:$src,
-                   Variadic<Index>:$src_indices,
-                   Arg<AnyMemRef, "buffer to write to">:$dst,
-                   Variadic<Index>:$dst_indices)>,
+    Arguments<(ins Arg<AnyMemRef>:$global,
+                   Variadic<Index>:$global_indices,
+                   Arg<AnyMemRef>:$lds,
+                   Variadic<Index>:$lds_indices)>,
     Results<(outs AMDGPU_TDMBaseType: $base)> {
 
   // TODO:
-  // * Add verifiers such that one of the memrefs is from LDS and the other global.
   // * Add verifiers to make sure that the number of indices do not exceed the number of dimensions.
 
   let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
@@ -1251,7 +1248,7 @@ def AMDGPU_MakeDmaBaseOp :
     For example:
 
     ```mlir
-      %base = amdgpu.make_dma_base %src[%idx0], %dst[%idx1] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+      %base = amdgpu.make_dma_base %global[%idx0, %idx1], %lds[%idx2, %idx3] : memref<64x64xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
       %descriptor = amdgpu.make_dma_descriptor %base globalSize [2, 2] globalStride [2, 1] sharedSize [2, 2] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
       amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
     ```
@@ -1259,27 +1256,31 @@ def AMDGPU_MakeDmaBaseOp :
     to
 
     ```mlir
-       // pseudocode
-       %base_0 = llvm.mlir.undef : !llvm.struct<(ptr, ptr)>
-       %base_1 = llvm.insertvalue %global_addr, %base_0[0] : !llvm.struct<(ptr, ptr)>
-       %base_2 = llvm.insertvalue %lds_addr, %base_1[1] : !llvm.struct(ptr, ptr)>
-       // type(%base_2) = !llvm.struct<(ptr, ptr) roughly corresponds to amdgpu.tdm_base<i32>
+      // pseudo-code
+      %global_base = llvm.extractvalue %global_memref[1]
+      %global_address = llvm.get_element_ptr ...
 
-       // The base will be used when contructing dgroup0
-       // when lowering amdgpu.make_dma_descriptor
-       %dgroup0_0 = llvm.mlir.undef : !llvm.struct<(....)>
-       %dgroup0_1 = llvm.insertvalue %base2, %dgroup0_0 : ....
+      %lds_base = llvm.extractvalue %lds_memref[1]
+      %lds_address = llvm.get_element_ptr ...
 
-       // When lowering amdgpu.tensor_load_to_lds
-       rocdl.tensor.load.to.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+      // Definition of %base
+      %undef = llvm.mlir.undef : vector<4xi32>
+      %v0 = llvm.insertelement %15, %undef[0] : vector<4xi32>
+      %v1 = llvm.insertelement %lds_address, %v0[1] : vector<4xi32>
+      %v2 = llvm.insertelement %global_address_low, %v1[2] : vector<4xi32>
+      %base = llvm.insertelement %global_address_high, %v2[3] : vector<4xi32>
+
+      rocdl.tensor.load.to.lds %base, %dgroup1, %dgroup2, %dgroup3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
     ```
 
     These tensor DMA operations were introduced in gfx1250.
   }];
 
   let assemblyFormat = [{
-    $src `[` $src_indices `]` `,` $dst `[` $dst_indices `]` attr-dict `:` type($src) `,` type($dst) `->` type(results)
+    $global `[` $global_indices `]` `,` $lds `[` $lds_indices `]` attr-dict `:` type($global) `,` type($lds) `->` type(results)
   }];
+
+  let hasVerifier = 1;
 }
 
 def AMDGPU_MakeDmaDescriptorOp :
@@ -1323,12 +1324,12 @@ def AMDGPU_MakeDmaDescriptorOp :
 
      ```mlir
       // Example of moving a two-dimensional tensor to LDS.
-      %base = amdgpu.make_dma_base %src[0, 0], %dst[0, 0] : memref<64x64xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+      %base = amdgpu.make_dma_base %global[0, 0], %lds[0, 0] : memref<64x64xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
       %descriptor = amdgpu.make_dma_descriptor %base globalSize [64, 64] globalStride [64, 1] sharedSize [64, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
       amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
 
       // Example of moving a two dimension tensor to LDS where padding is applied after every integer.
-      %base = amdgpu.make_dma_base %src[0, 0], %dst[0, 0] : memref<32x32xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+      %base = amdgpu.make_dma_base %global[0, 0], %lds[0, 0] : memref<32x32xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
       %descriptor = amdgpu.make_dma_descriptor %base globalSize [32, 32] globalStride [32, 1] sharedSize [64, 64] padding(%pad pad_every %pad_every) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
       amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
      ```
