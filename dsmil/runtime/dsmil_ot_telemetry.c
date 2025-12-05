@@ -61,6 +61,11 @@ static size_t format_event_json(const dsmil_telemetry_event_t *ev, char *buf, si
         case DSMIL_TELEMETRY_SES_REJECT:    event_type_str = "ses_reject"; break;
         case DSMIL_TELEMETRY_INVARIANT_HIT: event_type_str = "invariant_hit"; break;
         case DSMIL_TELEMETRY_INVARIANT_FAIL: event_type_str = "invariant_fail"; break;
+        case DSMIL_TELEMETRY_SS7_MSG_RX: event_type_str = "ss7_msg_rx"; break;
+        case DSMIL_TELEMETRY_SS7_MSG_TX: event_type_str = "ss7_msg_tx"; break;
+        case DSMIL_TELEMETRY_SIGTRAN_MSG_RX: event_type_str = "sigtran_msg_rx"; break;
+        case DSMIL_TELEMETRY_SIGTRAN_MSG_TX: event_type_str = "sigtran_msg_tx"; break;
+        case DSMIL_TELEMETRY_SIG_ANOMALY: event_type_str = "sig_anomaly"; break;
     }
 
     // Get timestamp

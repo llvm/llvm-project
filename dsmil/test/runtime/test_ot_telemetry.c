@@ -20,6 +20,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <time.h>
+#include <sys/stat.h>
 
 // Test utilities
 static int test_passed = 0;
@@ -36,29 +38,68 @@ static int test_failed = 0;
         } \
     } while (0)
 
-// Capture stderr output
+// Capture stderr output - simple file-based approach
 static char captured_stderr[8192];
 static size_t captured_len = 0;
-static int stderr_fd = -1;
-static int stderr_backup = -1;
+static char stderr_file_path[256];
+static int stderr_backup_fd = -1;
+static int stderr_file_fd = -1;
 
 static void capture_stderr_start(void) {
     fflush(stderr);
-    stderr_backup = dup(STDERR_FILENO);
-    stderr_fd = open("/tmp/dsmil_test_stderr", O_RDWR | O_CREAT | O_TRUNC, 0644);
-    dup2(stderr_fd, STDERR_FILENO);
+    stderr_backup_fd = dup(STDERR_FILENO);
+    
+    // Create unique temp file
+    snprintf(stderr_file_path, sizeof(stderr_file_path), "/tmp/dsmil_stderr_%d_%lu", getpid(), (unsigned long)time(NULL));
+    stderr_file_fd = open(stderr_file_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (stderr_file_fd < 0) {
+        dup2(stderr_backup_fd, STDERR_FILENO);
+        return;
+    }
+    
+    // Redirect stderr to file
+    dup2(stderr_file_fd, STDERR_FILENO);
+    
+    // Make unbuffered
+    setvbuf(stderr, NULL, _IONBF, 0);
+    
     captured_len = 0;
     memset(captured_stderr, 0, sizeof(captured_stderr));
 }
 
 static void capture_stderr_stop(void) {
+    // Flush and sync
     fflush(stderr);
-    lseek(stderr_fd, 0, SEEK_SET);
-    captured_len = read(stderr_fd, captured_stderr, sizeof(captured_stderr) - 1);
-    close(stderr_fd);
-    dup2(stderr_backup, STDERR_FILENO);
-    close(stderr_backup);
-    unlink("/tmp/dsmil_test_stderr");
+    fsync(STDERR_FILENO);
+    
+    // Restore stderr immediately
+    if (stderr_backup_fd >= 0) {
+        dup2(stderr_backup_fd, STDERR_FILENO);
+        close(stderr_backup_fd);
+        stderr_backup_fd = -1;
+    }
+    
+    // Close write fd
+    if (stderr_file_fd >= 0) {
+        close(stderr_file_fd);
+        stderr_file_fd = -1;
+    }
+    
+    // Reset buffering
+    setvbuf(stderr, NULL, _IOLBF, 0);
+    
+    // Now read the file
+    FILE *f = fopen(stderr_file_path, "r");
+    if (f) {
+        captured_len = fread(captured_stderr, 1, sizeof(captured_stderr) - 1, f);
+        if (captured_len > 0) {
+            captured_stderr[captured_len] = '\0';
+        }
+        fclose(f);
+    }
+    
+    // Clean up
+    unlink(stderr_file_path);
 }
 
 // Test 1: Basic initialization
@@ -117,6 +158,9 @@ static void test_env_enable(void) {
 static void test_event_logging(void) {
     printf("\n=== Test 4: Basic Event Logging ===\n");
     
+    // Ensure telemetry is enabled (reset from previous tests)
+    unsetenv("DSMIL_OT_TELEMETRY");
+    dsmil_ot_telemetry_shutdown();  // Reset state
     dsmil_ot_telemetry_init();
     
     capture_stderr_start();
@@ -141,6 +185,7 @@ static void test_event_logging(void) {
     };
     
     dsmil_telemetry_event(&ev);
+    fflush(stderr);  // Ensure runtime's write is flushed
     
     capture_stderr_stop();
     
@@ -157,6 +202,9 @@ static void test_event_logging(void) {
 static void test_all_event_types(void) {
     printf("\n=== Test 5: All Event Types ===\n");
     
+    // Ensure telemetry is enabled
+    unsetenv("DSMIL_OT_TELEMETRY");
+    dsmil_ot_telemetry_shutdown();
     dsmil_ot_telemetry_init();
     
     dsmil_telemetry_event_type_t types[] = {
@@ -203,7 +251,13 @@ static void test_all_event_types(void) {
         };
         
         dsmil_telemetry_event(&ev);
+        fflush(stderr);
         capture_stderr_stop();
+        
+        // Debug first failure
+        if (i == 0 && captured_len > 0 && strstr(captured_stderr, expected_strings[i]) == NULL) {
+            printf("DEBUG Test 5[%zu]: Captured: %.200s\n", i, captured_stderr);
+        }
         
         TEST_ASSERT(strstr(captured_stderr, expected_strings[i]) != NULL,
                    expected_strings[i]);
@@ -217,6 +271,9 @@ static void test_all_event_types(void) {
 static void test_safety_signal_update(void) {
     printf("\n=== Test 6: Safety Signal Update ===\n");
     
+    // Ensure telemetry is enabled
+    unsetenv("DSMIL_OT_TELEMETRY");
+    dsmil_ot_telemetry_shutdown();
     dsmil_ot_telemetry_init();
     
     capture_stderr_start();
@@ -294,6 +351,9 @@ static void test_safety_signal_no_name(void) {
 static void test_event_null_strings(void) {
     printf("\n=== Test 9: Event with NULL Strings ===\n");
     
+    // Ensure telemetry is enabled
+    unsetenv("DSMIL_OT_TELEMETRY");
+    dsmil_ot_telemetry_shutdown();
     dsmil_ot_telemetry_init();
     
     capture_stderr_start();
@@ -323,6 +383,9 @@ static void test_event_null_strings(void) {
 static void test_multiple_events(void) {
     printf("\n=== Test 10: Multiple Events ===\n");
     
+    // Ensure telemetry is enabled
+    unsetenv("DSMIL_OT_TELEMETRY");
+    dsmil_ot_telemetry_shutdown();
     dsmil_ot_telemetry_init();
     
     capture_stderr_start();
@@ -339,7 +402,7 @@ static void test_multiple_events(void) {
         };
         dsmil_telemetry_event(&ev);
     }
-    
+    fflush(stderr);
     capture_stderr_stop();
     
     // Count occurrences of "ot_path_entry"
@@ -406,6 +469,9 @@ static void test_shutdown_reinit(void) {
 static void test_complete_event(void) {
     printf("\n=== Test 13: Complete Event ===\n");
     
+    // Ensure telemetry is enabled
+    unsetenv("DSMIL_OT_TELEMETRY");
+    dsmil_ot_telemetry_shutdown();
     dsmil_ot_telemetry_init();
     
     capture_stderr_start();
@@ -442,7 +508,7 @@ static void test_complete_event(void) {
     };
     
     dsmil_telemetry_event(&ev);
-    
+    fflush(stderr);
     capture_stderr_stop();
     
     TEST_ASSERT(captured_len > 0, "Complete event logged");
