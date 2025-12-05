@@ -2998,9 +2998,8 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   if (!StrideExpr)
     return;
 
-  if (auto *Unknown = dyn_cast<SCEVUnknown>(StrideExpr))
-    if (isa<UndefValue>(Unknown->getValue()))
-      return;
+  if (match(StrideExpr, m_scev_UndefOrPoison()))
+    return;
 
   LLVM_DEBUG(dbgs() << "LAA: Found a strided access that is a candidate for "
                        "versioning:");

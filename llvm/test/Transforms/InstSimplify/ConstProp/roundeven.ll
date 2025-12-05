@@ -9,8 +9,7 @@ declare double @llvm.roundeven.f64(double)
 define float @constant_fold_roundeven_f32_01() #0 {
 ; CHECK-LABEL: define float @constant_fold_roundeven_f32_01(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[X:%.*]] = call float @roundevenf(float 1.250000e+00) #[[ATTR0]]
-; CHECK-NEXT:    ret float [[X]]
+; CHECK-NEXT:    ret float 1.000000e+00
 ;
   %x = call float @roundevenf(float 1.25) #0
   ret float %x
@@ -29,8 +28,7 @@ define float @constant_fold_roundeven_f32_02() #0 {
 define float @constant_fold_roundeven_f32_03() #0 {
 ; CHECK-LABEL: define float @constant_fold_roundeven_f32_03(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[X:%.*]] = call float @roundevenf(float 1.500000e+00) #[[ATTR0]]
-; CHECK-NEXT:    ret float [[X]]
+; CHECK-NEXT:    ret float 2.000000e+00
 ;
   %x = call float @roundevenf(float 1.5) #0
   ret float %x
@@ -50,8 +48,7 @@ define float @constant_fold_roundeven_f32_04() #0 {
 define float @constant_fold_roundeven_f32_05() #0 {
 ; CHECK-LABEL: define float @constant_fold_roundeven_f32_05(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[X:%.*]] = call float @roundevenf(float 2.500000e+00) #[[ATTR0]]
-; CHECK-NEXT:    ret float [[X]]
+; CHECK-NEXT:    ret float 2.000000e+00
 ;
   %x = call float @roundevenf(float 2.5) #0
   ret float %x
@@ -70,8 +67,7 @@ define float @constant_fold_roundeven_f32_06() #0 {
 define float @constant_fold_roundeven_f32_07() #0 {
 ; CHECK-LABEL: define float @constant_fold_roundeven_f32_07(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[X:%.*]] = call float @roundevenf(float 2.750000e+00) #[[ATTR0]]
-; CHECK-NEXT:    ret float [[X]]
+; CHECK-NEXT:    ret float 3.000000e+00
 ;
   %x = call float @roundevenf(float 2.75) #0
   ret float %x
@@ -89,8 +85,7 @@ define float @constant_fold_roundeven_f32_08() #0 {
 define double @constant_fold_roundeven_f64_01() #0 {
 ; CHECK-LABEL: define double @constant_fold_roundeven_f64_01(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[X:%.*]] = call double @roundeven(double 1.300000e+00) #[[ATTR0]]
-; CHECK-NEXT:    ret double [[X]]
+; CHECK-NEXT:    ret double 1.000000e+00
 ;
   %x = call double @roundeven(double 1.3) #0
   ret double %x
@@ -108,8 +103,7 @@ define double @constant_fold_roundeven_f64_02() #0 {
 define double @constant_fold_roundeven_f64_03() #0 {
 ; CHECK-LABEL: define double @constant_fold_roundeven_f64_03(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[X:%.*]] = call double @roundeven(double 1.500000e+00) #[[ATTR0]]
-; CHECK-NEXT:    ret double [[X]]
+; CHECK-NEXT:    ret double 2.000000e+00
 ;
   %x = call double @roundeven(double 1.5) #0
   ret double %x
@@ -127,8 +121,7 @@ define double @constant_fold_roundeven_f64_04() #0 {
 define double @constant_fold_roundeven_f64_05() #0 {
 ; CHECK-LABEL: define double @constant_fold_roundeven_f64_05(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[X:%.*]] = call double @roundeven(double 2.500000e+00) #[[ATTR0]]
-; CHECK-NEXT:    ret double [[X]]
+; CHECK-NEXT:    ret double 2.000000e+00
 ;
   %x = call double @roundeven(double 2.5) #0
   ret double %x
@@ -146,8 +139,7 @@ define double @constant_fold_roundeven_f64_06() #0 {
 define double @constant_fold_roundeven_f64_07() #0 {
 ; CHECK-LABEL: define double @constant_fold_roundeven_f64_07(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[X:%.*]] = call double @roundeven(double 2.700000e+00) #[[ATTR0]]
-; CHECK-NEXT:    ret double [[X]]
+; CHECK-NEXT:    ret double 3.000000e+00
 ;
   %x = call double @roundeven(double 2.7) #0
   ret double %x
