@@ -99,17 +99,6 @@ llvm.func @sections_private(%x : !llvm.ptr) {
   llvm.return
 }
 
-// -----
-
-llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-warning@below {{ignored clause: linear in omp.simd operation}}
-  omp.simd linear(%x = %step : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
 
 // -----
 

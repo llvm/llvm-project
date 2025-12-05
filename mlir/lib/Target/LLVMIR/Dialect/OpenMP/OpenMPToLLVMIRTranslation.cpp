@@ -32,6 +32,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/MDBuilder.h"
@@ -145,28 +146,68 @@ class LinearClauseProcessor {
 private:
   SmallVector<llvm::Value *> linearPreconditionVars;
   SmallVector<llvm::Value *> linearLoopBodyTemps;
-  SmallVector<llvm::AllocaInst *> linearOrigVars;
   SmallVector<llvm::Value *> linearOrigVal;
   SmallVector<llvm::Value *> linearSteps;
+  SmallVector<llvm::Type *> linearVarTypes;
   llvm::BasicBlock *linearFinalizationBB;
   llvm::BasicBlock *linearExitBB;
   llvm::BasicBlock *linearLastIterExitBB;
 
 public:
+  void registerType(llvm::Type *ty) { linearVarTypes.push_back(ty); }
+
+  // Register type for the linear variables
+  void registerType(LLVM::ModuleTranslation &moduleTranslation,
+                    mlir::Attribute ty) {
+    registerType(moduleTranslation.convertType(
+        mlir::cast<mlir::TypeAttr>(ty).getValue()));
+  }
+
+  LogicalResult registerTypes(LLVM::ModuleTranslation &moduleTranslation,
+                              ValueRange linearVars,
+                              std::optional<ArrayAttr> linearVarTypesAttr,
+                              Operation *op) {
+    if (linearVarTypesAttr) {
+      for (Attribute linearVarType : *linearVarTypesAttr)
+        registerType(moduleTranslation, linearVarType);
+      return success();
+    }
+
+    for (Value linearVar : linearVars) {
+      llvm::Value *llvmVar = moduleTranslation.lookupValue(linearVar);
+      if (!llvmVar) {
+        op->emitError("missing translation for linear variable");
+        return failure();
+      }
+
+      if (auto *alloca = dyn_cast<llvm::AllocaInst>(llvmVar)) {
+        registerType(alloca->getAllocatedType());
+        continue;
+      }
+
+      if (auto *global = dyn_cast<llvm::GlobalValue>(llvmVar)) {
+        registerType(global->getValueType());
+        continue;
+      }
+
+      op->emitError(
+          "linear_var_types attribute required to deduce linear variable type");
+      return failure();
+    }
+
+    return success();
+  }
+
   // Allocate space for linear variabes
   void createLinearVar(llvm::IRBuilderBase &builder,
                        LLVM::ModuleTranslation &moduleTranslation,
-                       mlir::Value &linearVar) {
-    if (llvm::AllocaInst *linearVarAlloca = dyn_cast<llvm::AllocaInst>(
-            moduleTranslation.lookupValue(linearVar))) {
-      linearPreconditionVars.push_back(builder.CreateAlloca(
-          linearVarAlloca->getAllocatedType(), nullptr, ".linear_var"));
-      llvm::Value *linearLoopBodyTemp = builder.CreateAlloca(
-          linearVarAlloca->getAllocatedType(), nullptr, ".linear_result");
-      linearOrigVal.push_back(moduleTranslation.lookupValue(linearVar));
-      linearLoopBodyTemps.push_back(linearLoopBodyTemp);
-      linearOrigVars.push_back(linearVarAlloca);
-    }
+                       mlir::Value &linearVar, int idx) {
+    linearPreconditionVars.push_back(
+        builder.CreateAlloca(linearVarTypes[idx], nullptr, ".linear_var"));
+    llvm::Value *linearLoopBodyTemp =
+        builder.CreateAlloca(linearVarTypes[idx], nullptr, ".linear_result");
+    linearOrigVal.push_back(moduleTranslation.lookupValue(linearVar));
+    linearLoopBodyTemps.push_back(linearLoopBodyTemp);
   }
 
   // Initialize linear step
@@ -176,20 +217,15 @@ public:
   }
 
   // Emit IR for initialization of linear variables
-  llvm::OpenMPIRBuilder::InsertPointOrErrorTy
-  initLinearVar(llvm::IRBuilderBase &builder,
-                LLVM::ModuleTranslation &moduleTranslation,
-                llvm::BasicBlock *loopPreHeader) {
+  void initLinearVar(llvm::IRBuilderBase &builder,
+                     LLVM::ModuleTranslation &moduleTranslation,
+                     llvm::BasicBlock *loopPreHeader) {
     builder.SetInsertPoint(loopPreHeader->getTerminator());
-    for (size_t index = 0; index < linearOrigVars.size(); index++) {
-      llvm::LoadInst *linearVarLoad = builder.CreateLoad(
-          linearOrigVars[index]->getAllocatedType(), linearOrigVars[index]);
+    for (size_t index = 0; index < linearOrigVal.size(); index++) {
+      llvm::LoadInst *linearVarLoad =
+          builder.CreateLoad(linearVarTypes[index], linearOrigVal[index]);
       builder.CreateStore(linearVarLoad, linearPreconditionVars[index]);
     }
-    llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
-        moduleTranslation.getOpenMPBuilder()->createBarrier(
-            builder.saveIP(), llvm::omp::OMPD_barrier);
-    return afterBarrierIP;
   }
 
   // Emit IR for updating Linear variables
@@ -198,20 +234,24 @@ public:
     builder.SetInsertPoint(loopBody->getTerminator());
     for (size_t index = 0; index < linearPreconditionVars.size(); index++) {
       // Emit increments for linear vars
-      llvm::LoadInst *linearVarStart =
-          builder.CreateLoad(linearOrigVars[index]->getAllocatedType(),
-
-                             linearPreconditionVars[index]);
-      auto *mulInst = builder.CreateMul(loopInductionVar, linearSteps[index]);
-      auto *addInst = builder.CreateAdd(linearVarStart, mulInst);
-      builder.CreateStore(addInst, linearLoopBodyTemps[index]);
+      llvm::LoadInst *linearVarStart = builder.CreateLoad(
+          linearVarTypes[index], linearPreconditionVars[index]);
+      auto mulInst = builder.CreateMul(loopInductionVar, linearSteps[index]);
+      if (linearVarTypes[index]->isIntegerTy()) {
+        auto addInst = builder.CreateAdd(linearVarStart, mulInst);
+        builder.CreateStore(addInst, linearLoopBodyTemps[index]);
+      } else if (linearVarTypes[index]->isFloatingPointTy()) {
+        auto cvt = builder.CreateSIToFP(mulInst, linearVarTypes[index]);
+        auto addInst = builder.CreateFAdd(linearVarStart, cvt);
+        builder.CreateStore(addInst, linearLoopBodyTemps[index]);
+      }
     }
   }
 
   // Linear variable finalization is conditional on the last logical iteration.
   // Create BB splits to manage the same.
-  void outlineLinearFinalizationBB(llvm::IRBuilderBase &builder,
-                                   llvm::BasicBlock *loopExit) {
+  void splitLinearFiniBB(llvm::IRBuilderBase &builder,
+                         llvm::BasicBlock *loopExit) {
     linearFinalizationBB = loopExit->splitBasicBlock(
         loopExit->getTerminator(), "omp_loop.linear_finalization");
     linearExitBB = linearFinalizationBB->splitBasicBlock(
@@ -235,11 +275,10 @@ public:
                               llvm::Type::getInt32Ty(builder.getContext()), 0));
     // Store the linear variable values to original variables.
     builder.SetInsertPoint(linearLastIterExitBB->getTerminator());
-    for (size_t index = 0; index < linearOrigVars.size(); index++) {
+    for (size_t index = 0; index < linearOrigVal.size(); index++) {
       llvm::LoadInst *linearVarTemp =
-          builder.CreateLoad(linearOrigVars[index]->getAllocatedType(),
-                             linearLoopBodyTemps[index]);
-      builder.CreateStore(linearVarTemp, linearOrigVars[index]);
+          builder.CreateLoad(linearVarTypes[index], linearLoopBodyTemps[index]);
+      builder.CreateStore(linearVarTemp, linearOrigVal[index]);
     }
 
     // Create conditional branch such that the linear variable
@@ -263,7 +302,8 @@ public:
       users.push_back(user);
     for (auto *user : users) {
       if (auto *userInst = dyn_cast<llvm::Instruction>(user)) {
-        if (userInst->getParent()->getName().str() == BBName)
+        if (userInst->getParent()->getName().str().find(BBName) !=
+            std::string::npos)
           user->replaceUsesOfWith(linearOrigVal[varIndex],
                                   linearLoopBodyTemps[varIndex]);
       }
@@ -341,6 +381,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   auto checkLinear = [&todo](auto op, LogicalResult &result) {
     if (!op.getLinearVars().empty() || !op.getLinearStepVars().empty())
       result = todo("linear");
+  };
+  auto checkIsDevicePtr = [&todo](auto op, LogicalResult &result) {
+    if (!op.getIsDevicePtrVars().empty())
+      result = todo("is_device_ptr");
   };
   auto checkNowait = [&todo](auto op, LogicalResult &result) {
     if (op.getNowait())
@@ -431,16 +475,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkReduction(op, result);
       })
-      .Case([&](omp::SimdOp op) {
-        // Allow ignoring unimplemented SIMD clauses rather than emitting errors
-        // and stopping the compilation process.
-        if (!op.getLinearVars().empty() || !op.getLinearStepVars().empty())
-          op.emitWarning() << "ignored clause: linear in omp.simd operation";
-
-        if (!op.getNontemporalVars().empty())
-          op.emitWarning()
-              << "ignored clause: nontemporal in omp.simd operation";
-      })
+      .Case([&](omp::SimdOp op) { checkReduction(op, result); })
       .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
             omp::AtomicCaptureOp>([&](auto op) { checkHint(op, result); })
       .Case<omp::TargetEnterDataOp, omp::TargetExitDataOp, omp::TargetUpdateOp>(
@@ -2708,10 +2743,16 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // Initialize linear variables and linear step
   LinearClauseProcessor linearClauseProcessor;
-  if (wsloopOp.getLinearVars().size()) {
-    for (mlir::Value linearVar : wsloopOp.getLinearVars())
+
+  if (!wsloopOp.getLinearVars().empty()) {
+    if (failed(linearClauseProcessor.registerTypes(
+            moduleTranslation, wsloopOp.getLinearVars(),
+            wsloopOp.getLinearVarTypes(), &opInst)))
+      return failure();
+
+    for (auto [idx, linearVar] : llvm::enumerate(wsloopOp.getLinearVars()))
       linearClauseProcessor.createLinearVar(builder, moduleTranslation,
-                                            linearVar);
+                                            linearVar, idx);
     for (mlir::Value linearStep : wsloopOp.getLinearStepVars())
       linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
   }
@@ -2725,17 +2766,18 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
 
   // Emit Initialization and Update IR for linear variables
-  if (wsloopOp.getLinearVars().size()) {
+  if (!wsloopOp.getLinearVars().empty()) {
+    linearClauseProcessor.initLinearVar(builder, moduleTranslation,
+                                        loopInfo->getPreheader());
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
-        linearClauseProcessor.initLinearVar(builder, moduleTranslation,
-                                            loopInfo->getPreheader());
+        moduleTranslation.getOpenMPBuilder()->createBarrier(
+            builder.saveIP(), llvm::omp::OMPD_barrier);
     if (failed(handleError(afterBarrierIP, *loopOp)))
       return failure();
     builder.restoreIP(*afterBarrierIP);
     linearClauseProcessor.updateLinearVar(builder, loopInfo->getBody(),
                                           loopInfo->getIndVar());
-    linearClauseProcessor.outlineLinearFinalizationBB(builder,
-                                                      loopInfo->getExit());
+    linearClauseProcessor.splitLinearFiniBB(builder, loopInfo->getExit());
   }
 
   builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
@@ -3023,6 +3065,21 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocInsertPoints(builder, moduleTranslation);
 
+  // Initialize linear variables and linear step
+  LinearClauseProcessor linearClauseProcessor;
+
+  if (!simdOp.getLinearVars().empty()) {
+    if (failed(linearClauseProcessor.registerTypes(
+            moduleTranslation, simdOp.getLinearVars(),
+            simdOp.getLinearVarTypes(), &opInst)))
+      return failure();
+    for (auto [idx, linearVar] : llvm::enumerate(simdOp.getLinearVars()))
+      linearClauseProcessor.createLinearVar(builder, moduleTranslation,
+                                            linearVar, idx);
+    for (mlir::Value linearStep : simdOp.getLinearStepVars())
+      linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
+  }
+
   llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
       simdOp, builder, moduleTranslation, privateVarsInfo, allocaIP);
   if (handleError(afterAllocas, opInst).failed())
@@ -3091,13 +3148,26 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   if (failed(handleError(regionBlock, opInst)))
     return failure();
 
-  builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
   llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
+  // Emit Initialization for linear variables
+  if (simdOp.getLinearVars().size()) {
+    linearClauseProcessor.initLinearVar(builder, moduleTranslation,
+                                        loopInfo->getPreheader());
+
+    linearClauseProcessor.updateLinearVar(builder, loopInfo->getBody(),
+                                          loopInfo->getIndVar());
+  }
+  builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
+
   ompBuilder->applySimd(loopInfo, alignedVars,
                         simdOp.getIfExpr()
                             ? moduleTranslation.lookupValue(simdOp.getIfExpr())
                             : nullptr,
                         order, simdlen, safelen);
+
+  for (size_t index = 0; index < simdOp.getLinearVars().size(); index++)
+    linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
+                                         index);
 
   // We now need to reduce the per-simd-lane reduction variable into the
   // original variable. This works a bit differently to other reductions (e.g.
