@@ -191,7 +191,6 @@ if "%force-msvc%" == "" (
 set common_lldb_flags=^
   -DLLDB_RELOCATABLE_PYTHON=1 ^
   -DLLDB_EMBED_PYTHON_HOME=OFF ^
-  -DLLDB_ENABLE_PYTHON_LIMITED_API=OFF ^
   -DLLDB_ENABLE_LIBXML2=OFF
 
 set cmake_profile_flags=""
