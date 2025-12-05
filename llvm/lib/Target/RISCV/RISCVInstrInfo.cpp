@@ -3076,6 +3076,18 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "Invalid immediate";
         return false;
       }
+    } else if (OpType == RISCVOp::OPERAND_AVL) {
+      if (MO.isImm()) {
+        int64_t Imm = MO.getImm();
+        // VLMAX is represented as -1.
+        if (!isUInt<5>(Imm) && Imm != -1) {
+          ErrInfo = "Invalid immediate";
+          return false;
+        }
+      } else if (!MO.isReg()) {
+        ErrInfo = "Expected a register or immediate operand.";
+        return false;
+      }
     }
   }
 
