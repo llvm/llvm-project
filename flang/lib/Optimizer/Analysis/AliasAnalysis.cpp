@@ -60,6 +60,10 @@ getAttrsFromVariable(fir::FortranVariableOpInterface var) {
     attrs.set(fir::AliasAnalysis::Attribute::Pointer);
   if (var.isIntentIn())
     attrs.set(fir::AliasAnalysis::Attribute::IntentIn);
+  if (var.isCrayPointer())
+    attrs.set(fir::AliasAnalysis::Attribute::CrayPointer);
+  if (var.isCrayPointee())
+    attrs.set(fir::AliasAnalysis::Attribute::CrayPointee);
 
   return attrs;
 }
@@ -136,6 +140,18 @@ bool AliasAnalysis::Source::isTarget() const {
 
 bool AliasAnalysis::Source::isPointer() const {
   return attributes.test(Attribute::Pointer);
+}
+
+bool AliasAnalysis::Source::isCrayPointee() const {
+  return attributes.test(Attribute::CrayPointee);
+}
+
+bool AliasAnalysis::Source::isCrayPointer() const {
+  return attributes.test(Attribute::CrayPointer);
+}
+
+bool AliasAnalysis::Source::isCrayPointerOrPointee() const {
+  return isCrayPointer() || isCrayPointee();
 }
 
 bool AliasAnalysis::Source::isDummyArgument() const {
@@ -221,6 +237,12 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   if (lhsSrc.kind >= SourceKind::Indirect ||
       rhsSrc.kind >= SourceKind::Indirect) {
     LLVM_DEBUG(llvm::dbgs() << "  aliasing because of indirect access\n");
+    return AliasResult::MayAlias;
+  }
+
+  // Cray pointers/pointees can alias with anything via LOC.
+  if (lhsSrc.isCrayPointerOrPointee() || rhsSrc.isCrayPointerOrPointee()) {
+    LLVM_DEBUG(llvm::dbgs() << "  aliasing because of Cray pointer/pointee\n");
     return AliasResult::MayAlias;
   }
 
