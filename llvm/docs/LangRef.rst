@@ -24430,7 +24430,7 @@ Examples:
 .. _int_loop_dependence_war_mask:
 
 '``llvm.loop.dependence.war.mask.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -24469,11 +24469,12 @@ Semantics:
 The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
 is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
 or ``%ptrB + VF * %elementSize`` wrap.
+
 The element of the result mask is active when loading from %ptrA then storing to
 %ptrB is safe and doesn't result in a write-after-read hazard, meaning that:
 
 * (ptrB - ptrA) <= 0 (guarantees that all lanes are loaded before any stores), or
-* (ptrB - ptrA) >= elementSize * lane (guarantees that this lane is loaded
+* (ptrB - ptrA) > elementSize * lane (guarantees that this lane is loaded
   before the store to the same address)
 
 Examples:
@@ -24486,10 +24487,46 @@ Examples:
       [...]
       call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask)
 
+      ; For the above example, consider the following cases:
+      ;
+      ; 1. ptrA >= ptrB
+      ;
+      ;   load =      <0,1,2,3>     ; uint32_t load = array[i+2];
+      ;  store =  <0,1,2,3>         ; array[i] = store;
+      ;
+      ; This results in an all-true mask, as the load always occurs before the
+      ; store, so it does not depend on any values to be stored.
+      ;
+      ; 2. ptrB - ptrA = elementSize:
+      ;
+      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
+      ;  store =    <0,1,2,3>       ; array[i+1] = store;
+      ;
+      ; This results in a mask with only the first lane active. This is because
+      ; we can only read one lane before we would read values that have yet to
+      ; be written.
+      ;
+      ; 3. ptrB - ptrA = elementSize * 2
+      ;
+      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
+      ;  store =      <0,1,2,3>     ; array[i+2] = store;
+      ;
+      ; This is the same as the previous example, but the store is two lanes
+      ; ahead of the load. So this results in a mask with the first two lanes
+      ; active.
+      ;
+      ; 4. ptrB - ptrA = elementSize * 4
+      ;
+      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
+      ;  store =          <0,1,2,3> ; array[i+4] = store;
+      ;
+      ; Finally, in this example, the store is a full vector ahead of the load.
+      ; In this case, the result is an all-true mask.
+
 .. _int_loop_dependence_raw_mask:
 
 '``llvm.loop.dependence.raw.mask.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -24533,10 +24570,11 @@ Semantics:
 The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
 is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
 or ``%ptrB + VF * %elementSize`` wrap.
+
 The element of the result mask is active when storing to %ptrA then loading from
 %ptrB is safe and doesn't result in aliasing, meaning that:
 
-* abs(ptrB - ptrA) >= elementSize * lane (guarantees that the store of this lane
+* abs(ptrB - ptrA) > elementSize * lane (guarantees that the store of this lane
   occurs before loading from this address), or
 * ptrA == ptrB (doesn't introduce any new hazards that weren't in the scalar
   code)
@@ -24550,6 +24588,32 @@ Examples:
       call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask)
       [...]
       %vecB = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+
+      ; For the above example, consider the following cases:
+      ;
+      ; 1. ptrA == ptrB
+      ;
+      ;  store = <0,1,2,3>       ; array[i] = store;
+      ;   load = <0,1,2,3>       ; uint32_t load = array[i];
+      ;
+      ; This results in a all-true mask. There is no conflict.
+      ;
+      ; 2. ptrB - ptrA = 2 * elementSize
+      ;
+      ;  store =  <0,1,2,3>      ; array[i] = store;
+      ;   load =      <0,1,2,3>  ; uint32_t load = array[i+2];
+      ;
+      ; This results in a mask with the first two lanes active. In this case,
+      ; only two lanes can be written without overwriting values yet to be read.
+      ;
+      ; 3. ptrB - ptrA = -2 * elementSize
+      ;
+      ;  store =      <0,1,2,3>  ; array[i+2] = store;
+      ;   load =  <0,1,2,3>      ; uint32_t load = array[i];
+      ;
+      ; This also results in a mask with the first two lanes active. This could
+      ; result in a hazard if the store is scheduled after the load, so we only
+      ; consider the first two lanes to be readable.
 
 .. _int_experimental_vp_splice:
 
