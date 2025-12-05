@@ -8,6 +8,7 @@
 
 #include "DAPLog.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
 #include <mutex>
@@ -21,9 +22,8 @@ Log::Log(StringRef filename, std::error_code &EC) : m_stream(filename, EC) {}
 
 void Log::WriteMessage(StringRef message) {
   std::lock_guard<std::mutex> lock(m_mutex);
-  std::chrono::duration<double> now{
-      std::chrono::system_clock::now().time_since_epoch()};
-  m_stream << formatv("{0:f9} ", now.count()).str() << message << "\n";
+  const llvm::sys::TimePoint<> time = std::chrono::system_clock::now();
+  m_stream << formatv("[{0:%H:%M:%S.%L}] ", time) << message << '\n';
   m_stream.flush();
 }
 

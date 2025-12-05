@@ -45,7 +45,7 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
     }
   }
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     auto exitOp = mlir::acc::DeclareExitOp::create(
         cgf.getBuilder(), enterOp.getLoc(), enterOp, {});
 
@@ -354,6 +354,13 @@ public:
       routineOp.addGang(builder.getContext(), lastDeviceTypeValues,
                         curValue.getZExtValue());
     }
+  }
+
+  void VisitDeviceTypeClause(const OpenACCDeviceTypeClause &clause) {
+    lastDeviceTypeValues.clear();
+
+    for (const DeviceTypeArgument &arg : clause.getArchitectures())
+      lastDeviceTypeValues.push_back(decodeDeviceType(arg.getIdentifierInfo()));
   }
 };
 } // namespace
