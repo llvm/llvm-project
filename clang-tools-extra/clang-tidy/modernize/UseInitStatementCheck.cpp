@@ -118,8 +118,12 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
         // `a=0`, `a+=0`, etc
         hasParent(binaryOperator()));
     const auto IsStealingViaReference = unless(ReferencesWhitelistForStealing);
+    const auto NonreferenceBoundVar = varDecl(equalsBoundNode("singleVar"), unless(hasType(referenceType())));
+    const auto NonreferenceBoundBind = bindingDecl(equalsBoundNode("bindingDecl"), hasParent(decompositionDecl(
+      unless(hasType(referenceType()))
+    )));
     const auto HasStealing = hasDescendant(
-        declRefExpr(to(varDecl(equalsBoundNode("singleVar"), unless(hasType(referenceType())))), anyOf(IsStealingViaPointer, IsStealingViaReference),
+        declRefExpr(to(anyOf(NonreferenceBoundVar, NonreferenceBoundBind)), anyOf(IsStealingViaPointer, IsStealingViaReference),
          Condition).bind(Name));
     return HasStealing;
   };

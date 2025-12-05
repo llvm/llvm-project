@@ -17,6 +17,12 @@ namespace std {
         ~string() {}
         bool empty() const { return true; }
     };
+    class string_view {
+    public:
+        string_view() {}
+        string_view(const string&) {}
+        bool empty() const { return true; }
+    };
     template<typename T, typename U>
     struct pair {
         T first;
@@ -35,6 +41,17 @@ struct TupleLike {
     int a, b, c;
     TupleLike() : a(0), b(0), c(0) {}
 };
+
+template<typename T> const T* get_pointer(const T& ref) { return &ref; }
+
+struct UserDefined {
+    int a = 0;
+    const UserDefined* get_pointer_to_this() const {
+        return this;
+    }
+};
+
+int get_temporary() { return 0; }
 
 void good() {
     int arr[2] = {1, 2};
@@ -353,31 +370,200 @@ void bad_unused_in_condition() {
     }
 }
 
-// FIXME: the same test but for `auto [str, val]` (when std::pair will be one of default type in DefaultSafeDestructorTypes)
-void bad_safe_string_default() {
-    std::pair<std::string, int> p;
-    const auto& [str, val] = p; DUMMY_TOKEN
-    if (str.empty()) {
-// CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before if statement could be moved into if init statement [modernize-use-init-statement]
-// CHECK-FIXES: DUMMY_TOKEN
-// CHECK-FIXES-NEXT: if (const auto& [str, val] = p; str.empty()) {
+void good_stolen_reference1() {
+    const int* pi = nullptr;
+    int arr[2] = {0, 1};
+    auto [i1, k1] = arr;
+    if (i1 == 0) {
         do_some();
+        pi = &i1;
     }
-    do_some(); // Additional statement after if
+    do_some(*pi);
+
+    int arr2[2] = {0, 1};
+    auto [i2, k2] = arr2;
+    switch (i2) {
+        case 0:
+            do_some();
+            pi = &i2;
+            break;
+    }
+    do_some(*pi);
 }
 
-// FIXME: the same test but for `auto [str, val]`
-void bad_safe_string_default2() {
-    struct P {std::string first; int second;};
-    P p{{}, 0};
-    const auto& [str, val] = p; DUMMY_TOKEN
-    if (str.empty()) {
+void good_stolen_reference1_multiple() {
+    const int* pi = nullptr;
+    int arr[3] = {0, 0, 0};
+    auto [i1, k1, j1] = arr;
+    if (i1 == 0 && k1 == 0 && j1 == 0) {
+        do_some();
+        pi = &i1;
+    }
+    do_some(*pi);
+
+    int arr2[3] = {0, 0, 0};
+    auto [i2, k2, j2] = arr2;
+    switch (i2 + k2 + j2) {
+        case 0:
+            do_some();
+            pi = &i2;
+            break;
+    }
+    do_some(*pi);
+}
+
+void good_stolen_reference2() {
+    const int* pi = nullptr;
+    int arr[2] = {0, 1};
+    auto [i1, k1] = arr;
+    if (i1 == 0) {
+        do_some();
+        pi = get_pointer(i1);
+    }
+    do_some(*pi);
+
+    int arr2[2] = {0, 1};
+    auto [i2, k2] = arr2;
+    switch (i2) {
+        case 0:
+            do_some();
+            pi = get_pointer(i2);
+            break;
+    }
+    do_some(*pi);
+}
+
+void good_stolen_reference_as_this() {
+    const UserDefined* pa = nullptr;
+    struct Pair { UserDefined first; int second; };
+    Pair p1{UserDefined{}, 0};
+    auto [a, unused1] = p1;
+    if (a.a == 0) {
+        do_some();
+        pa = a.get_pointer_to_this();
+    }
+    do_some(pa->a);
+
+    Pair p2{UserDefined{}, 0};
+    auto [b, unused2] = p2;
+    switch (b.a) {
+        case 0:
+            do_some();
+            pa = b.get_pointer_to_this();
+            break;
+    }
+    do_some(pa->a);
+}
+
+void good_stolen_reference1_string() {
+    const std::string* ps = nullptr;
+    std::pair<std::string, int> p1;
+    auto [s1, unused1] = p1;
+    if (s1.empty()) {
+        do_some();
+        ps = &s1;
+    }
+    ps->empty();
+}
+
+void good_stolen_reference2_string() {
+    std::string_view sv;
+    std::pair<std::string, int> p1;
+    auto [s1, unused1] = p1;
+    if (s1.empty()) {
+        do_some();
+        sv = s1;
+    }
+    sv.empty();
+}
+
+void bad_stolen_reference1_no_use_after() {
+    {
+        const int* pi = nullptr;
+        int arr[2] = {0, 1};
+        auto [i1, k1] = arr; DUMMY_TOKEN
+        if (i1 == 0) {
+// CHECK-MESSAGES: [[@LINE-2]]:9: warning: structured binding declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (auto [i1, k1] = arr; i1 == 0) {
+            do_some();
+            pi = &i1;
+        }
+    }
+
+    {
+        const int* pi = nullptr;
+        int arr2[2] = {0, 1};
+        auto [i2, k2] = arr2; DUMMY_TOKEN
+        switch (i2) {
+// CHECK-MESSAGES: [[@LINE-2]]:9: warning: structured binding declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (auto [i2, k2] = arr2; i2) {
+            case 0:
+                do_some();
+                pi = &i2;
+                break;
+        }
+    }
+}
+
+void bad_stolen_reference_as_this_no_use_after() {
+    {
+        const UserDefined* pa = nullptr;
+        struct Pair { UserDefined first; int second; };
+        Pair p1{UserDefined{}, 0};
+        auto [a, unused1] = p1; DUMMY_TOKEN
+        if (a.a == 0) {
+// CHECK-MESSAGES: [[@LINE-2]]:9: warning: structured binding declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (auto [a, unused1] = p1; a.a == 0) {
+            do_some();
+            pa = a.get_pointer_to_this();
+        }
+    }
+
+    {
+        const UserDefined* pa = nullptr;
+        struct Pair { UserDefined first; int second; };
+        Pair p2{UserDefined{}, 0};
+        auto [b, unused2] = p2; DUMMY_TOKEN
+        switch (b.a) {
+// CHECK-MESSAGES: [[@LINE-2]]:9: warning: structured binding declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (auto [b, unused2] = p2; b.a) {
+            case 0:
+                do_some();
+                pa = b.get_pointer_to_this();
+                break;
+        }
+    }
+}
+
+void bad_stolen_reference2() {
+    const int* pi = nullptr;
+    int arr[2] = {0, 1};
+    const auto& [i1, k1] = arr; DUMMY_TOKEN
+    if (i1 == 0) {
 // CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before if statement could be moved into if init statement [modernize-use-init-statement]
 // CHECK-FIXES: DUMMY_TOKEN
-// CHECK-FIXES-NEXT: if (const auto& [str, val] = p; str.empty()) {
+// CHECK-FIXES-NEXT: if (const auto& [i1, k1] = arr; i1 == 0) {
         do_some();
+        pi = &i1;
     }
-    do_some(); // Additional statement after if
+    do_some(*pi);
+
+    int arr2[2] = {0, 1};
+    const auto& [i2, k2] = arr2; DUMMY_TOKEN
+    switch (i2) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (const auto& [i2, k2] = arr2; i2) {
+        case 0:
+            do_some();
+            pi = &i2;
+            break;
+    }
+    do_some(*pi);
 }
 
 void bad_prevents_redeclaration1() {
