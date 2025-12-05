@@ -20,7 +20,7 @@
 // This file defines a framework that can be used by vendors to encode the version of an operating system that various
 // features of libc++ has been shipped in. This is primarily intended to allow safely deploying an executable built with
 // a new version of the library on a platform containing an older version of the built library.
-// Detailed documentation for this can be found at https://libcxx.llvm.org/VendorDocumentation.html#availability-markups
+// Detailed documentation for this can be found at https://libcxx.llvm.org/VendorDocumentation.html#availability-markup
 
 // Availability markup is disabled when building the library, or when a non-Clang
 // compiler is used because only Clang supports the necessary attributes.

@@ -596,8 +596,8 @@ libc++'s ABI guarantees
 
 Libc++ provides several ABI guarantees, which are documented :ref:`here <ABIGuarantees>`.
 
-Availability Markups
-====================
+Availability Markup
+===================
 
 Libc++ is shipped by various vendors. In particular, it is used as a system library on macOS, iOS and other Apple
 platforms. In order for users to be able to compile a binary that is intended to be deployed to an older version of a
@@ -614,7 +614,6 @@ normally not complain (because the required declarations are in the headers), bu
 the symbols when actually trying to launch the program on macOS 10.13. To turn this into a compile-time issue instead,
 declarations are annotated with when they were introduced, and the compiler can produce a diagnostic if the program
 references something that isn't available on the deployment target.
-
 
 This mechanism is general in nature, and any vendor can add their markup to the library (see below). Whenever a new
 feature is added that requires support in the shared library, two macros are added below to allow marking the feature as
