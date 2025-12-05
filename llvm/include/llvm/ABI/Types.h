@@ -247,52 +247,72 @@ struct FieldInfo {
 
 enum class StructPacking { Default, Packed, ExplicitPacking };
 
+enum RecordFlags : unsigned {
+  None = 0,
+  CanPassInRegisters = 1 << 0,
+  IsUnion = 1 << 1,
+  IsTransparent = 1 << 2,
+  IsCXXRecord = 1 << 3,
+  IsPolymorphic = 1 << 4,
+  HasFlexibleArrayMember = 1 << 5,
+};
+
+inline RecordFlags operator|(RecordFlags LHS, RecordFlags RHS) {
+  return static_cast<RecordFlags>(static_cast<unsigned>(LHS) |
+                                  static_cast<unsigned>(RHS));
+}
+
+inline RecordFlags operator&(RecordFlags LHS, RecordFlags RHS) {
+  return static_cast<RecordFlags>(static_cast<unsigned>(LHS) &
+                                  static_cast<unsigned>(RHS));
+}
+
+inline RecordFlags &operator|=(RecordFlags &LHS, RecordFlags RHS) {
+  LHS = LHS | RHS;
+  return LHS;
+}
 class RecordType : public Type {
 private:
   ArrayRef<FieldInfo> Fields;
   ArrayRef<FieldInfo> BaseClasses;
   ArrayRef<FieldInfo> VirtualBaseClasses;
   StructPacking Packing;
-  struct {
-    LLVM_PREFERRED_TYPE(bool) unsigned CanPassInRegisters : 1;
-    LLVM_PREFERRED_TYPE(bool) unsigned IsUnion : 1;
-    LLVM_PREFERRED_TYPE(bool) unsigned IsTransparent : 1;
-    LLVM_PREFERRED_TYPE(bool) unsigned IsCXXRecord : 1;
-    LLVM_PREFERRED_TYPE(bool) unsigned IsPolymorphic : 1;
-    LLVM_PREFERRED_TYPE(bool) unsigned HasFlexibleArrayMember : 1;
-  } Flags = {};
+  RecordFlags Flags;
 
 public:
   RecordType(ArrayRef<FieldInfo> StructFields, ArrayRef<FieldInfo> Bases,
              ArrayRef<FieldInfo> VBases, TypeSize Size, Align Align,
-             StructPacking Pack = StructPacking::Default, bool Union = false,
-             bool CXXRecord = false, bool Polymorphic = false,
-             bool FlexibleArray = false, bool CanPassInRegs = false,
-             bool Transparent = false)
+             StructPacking Pack = StructPacking::Default,
+             RecordFlags RecFlags = RecordFlags::None)
       : Type(TypeKind::Record, Size, Align), Fields(StructFields),
-        BaseClasses(Bases), VirtualBaseClasses(VBases), Packing(Pack) {
-
-    Flags.CanPassInRegisters = CanPassInRegs;
-    Flags.IsUnion = Union;
-    Flags.IsTransparent = Transparent;
-    Flags.IsCXXRecord = CXXRecord;
-    Flags.IsPolymorphic = Polymorphic;
-    Flags.HasFlexibleArrayMember = FlexibleArray;
-  }
+        BaseClasses(Bases), VirtualBaseClasses(VBases), Packing(Pack),
+        Flags(RecFlags) {}
   uint32_t getNumFields() const { return Fields.size(); }
   StructPacking getPacking() const { return Packing; }
 
-  bool isUnion() const { return Flags.IsUnion; }
-  bool isCXXRecord() const { return Flags.IsCXXRecord; }
-  bool isPolymorphic() const { return Flags.IsPolymorphic; }
-  bool canPassInRegisters() const { return Flags.CanPassInRegisters; }
-  bool hasFlexibleArrayMember() const { return Flags.HasFlexibleArrayMember; }
-
+  bool isUnion() const {
+    return static_cast<unsigned>(Flags & RecordFlags::IsUnion) != 0;
+  }
+  bool isCXXRecord() const {
+    return static_cast<unsigned>(Flags & RecordFlags::IsCXXRecord) != 0;
+  }
+  bool isPolymorphic() const {
+    return static_cast<unsigned>(Flags & RecordFlags::IsPolymorphic) != 0;
+  }
+  bool canPassInRegisters() const {
+    return static_cast<unsigned>(Flags & RecordFlags::CanPassInRegisters) != 0;
+  }
+  bool hasFlexibleArrayMember() const {
+    return static_cast<unsigned>(Flags & RecordFlags::HasFlexibleArrayMember) !=
+           0;
+  }
   uint32_t getNumBaseClasses() const { return BaseClasses.size(); }
   uint32_t getNumVirtualBaseClasses() const {
     return VirtualBaseClasses.size();
   }
-  bool isTransparentUnion() const { return Flags.IsTransparent; }
+  bool isTransparentUnion() const {
+    return static_cast<unsigned>(Flags & RecordFlags::IsTransparent) != 0;
+  }
   ArrayRef<FieldInfo> getFields() const { return Fields; }
   ArrayRef<FieldInfo> getBaseClasses() const { return BaseClasses; }
   ArrayRef<FieldInfo> getVirtualBaseClasses() const {
@@ -350,13 +370,12 @@ public:
         VectorType(ElementType, NumElements, Align);
   }
 
-  const RecordType *
-  getRecordType(ArrayRef<FieldInfo> Fields, TypeSize Size, Align Align,
-                StructPacking Pack = StructPacking::Default,
-                ArrayRef<FieldInfo> BaseClasses = {},
-                ArrayRef<FieldInfo> VirtualBaseClasses = {},
-                bool CXXRecord = false, bool Polymorphic = false,
-                bool FlexibleArray = false, bool CanPassInRegister = false) {
+  const RecordType *getRecordType(ArrayRef<FieldInfo> Fields, TypeSize Size,
+                                  Align Align,
+                                  StructPacking Pack = StructPacking::Default,
+                                  ArrayRef<FieldInfo> BaseClasses = {},
+                                  ArrayRef<FieldInfo> VirtualBaseClasses = {},
+                                  RecordFlags RecFlags = RecordFlags::None) {
     FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
     std::copy(Fields.begin(), Fields.end(), FieldArray);
 
@@ -378,16 +397,13 @@ public:
     ArrayRef<FieldInfo> VBasesRef(VBaseArray, VirtualBaseClasses.size());
 
     return new (Allocator.Allocate<RecordType>())
-        RecordType(FieldsRef, BasesRef, VBasesRef, Size, Align, Pack, false,
-                   CXXRecord, Polymorphic, FlexibleArray, CanPassInRegister);
+        RecordType(FieldsRef, BasesRef, VBasesRef, Size, Align, Pack, RecFlags);
   }
 
   const RecordType *getUnionType(ArrayRef<FieldInfo> Fields, TypeSize Size,
                                  Align Align,
                                  StructPacking Pack = StructPacking::Default,
-                                 bool IsTransparent = false,
-                                 bool CanPassInRegs = false,
-                                 bool CXXRecord = false) {
+                                 RecordFlags RecFlags = RecordFlags::None) {
     FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
 
     for (size_t I = 0, E = Fields.size(); I != E; ++I) {
@@ -399,9 +415,9 @@ public:
 
     ArrayRef<FieldInfo> FieldsRef(FieldArray, Fields.size());
 
-    return new (Allocator.Allocate<RecordType>()) RecordType(
-        FieldsRef, ArrayRef<FieldInfo>(), ArrayRef<FieldInfo>(), Size, Align,
-        Pack, true, CXXRecord, false, false, CanPassInRegs, IsTransparent);
+    return new (Allocator.Allocate<RecordType>())
+        RecordType(FieldsRef, ArrayRef<FieldInfo>(), ArrayRef<FieldInfo>(),
+                   Size, Align, Pack, RecFlags | RecordFlags::IsUnion);
   }
 
   const ComplexType *getComplexType(const Type *ElementType, Align Align) {
