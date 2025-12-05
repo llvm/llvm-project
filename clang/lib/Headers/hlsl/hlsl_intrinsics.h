@@ -667,7 +667,9 @@ smoothstep(__detail::HLSL_FIXED_VECTOR<float, N> Min,
 }
 
 inline bool CheckAccessFullyMapped(uint Status) {
-  return static_cast<bool>(Status);
+  // The bool cast should only apply to the LSB.
+  uint TruncStatus = Status % 2;
+  return static_cast<bool>(TruncStatus);
 }
 
 //===----------------------------------------------------------------------===//
