@@ -198,6 +198,20 @@ TEST_P(MCPlusBuilderTester, AArch64_BTI) {
   ASSERT_TRUE(BC->MIB->isImplicitBTIC(*II));
 }
 
+TEST_P(MCPlusBuilderTester, AArch64_insertBTI_empty) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+  MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
+#ifndef NDEBUG
+  ASSERT_DEATH(BC->MIB->insertBTI(*BB, CallInst),
+               "insertBTI should only be called on non-empty BasicBlocks");
+#else
+  BC->MIB->insertBTI(*BB, CallInst);
+  ASSERT(BB->size() == 0);
+#endif
+}
 TEST_P(MCPlusBuilderTester, AArch64_insertBTI_0) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();

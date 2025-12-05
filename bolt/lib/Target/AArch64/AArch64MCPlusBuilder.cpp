@@ -2838,6 +2838,10 @@ public:
 
   void insertBTI(BinaryBasicBlock &BB, MCInst &Call) const override {
     auto II = BB.getFirstNonPseudo();
+    assert(II != BB.end() &&
+           "insertBTI should only be called on non-empty BasicBlocks");
+    // Make sure there is no crash in non-assertion builds when calling on empty
+    // BBs.
     if (II != BB.end()) {
       if (isBTIVariantCoveringCall(Call, *II))
         return;
