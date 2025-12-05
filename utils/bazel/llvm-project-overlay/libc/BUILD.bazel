@@ -1222,6 +1222,10 @@ libc_support_library(
     name = "__support_fputil_fenv_impl",
     hdrs = ["src/__support/FPUtil/FEnvImpl.h"],
     textual_hdrs = [
+        "src/__support/FPUtil/x86_64/fenv_mxcsr_utils.h",
+        "src/__support/FPUtil/x86_64/fenv_x86_common.h",
+        "src/__support/FPUtil/x86_64/fenv_x87_only.h",
+        "src/__support/FPUtil/x86_64/fenv_x87_utils.h",
         "src/__support/FPUtil/x86_64/FEnvImpl.h",
         "src/__support/FPUtil/aarch64/FEnvImpl.h",
         "src/__support/FPUtil/aarch64/fenv_darwin_impl.h",
