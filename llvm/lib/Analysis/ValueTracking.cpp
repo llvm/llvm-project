@@ -10588,16 +10588,17 @@ ConstantInt *llvm::getConstantInt(Value *V, const DataLayout &DL) {
 
 /// Construct and compute the result for the comparison instruction Cond
 ConstantComparesGatherer::ConstantComparesGatherer(Instruction *Cond,
-                                                   const DataLayout &DL)
+                                                   const DataLayout &DL,
+                                                   const bool InstCombine)
     : DL(DL) {
-  gather(Cond);
+  gather(Cond, InstCombine);
   if (CompValue || !MultipleMatches)
     return;
   Extra = nullptr;
   Vals.clear();
   UsedICmps = 0;
   IgnoreFirstMatch = true;
-  gather(Cond);
+  gather(Cond, InstCombine);
 }
 
 /// Try to set the current value used for the comparison, it succeeds only if
@@ -10622,9 +10623,13 @@ bool ConstantComparesGatherer::setValueOnce(Value *NewVal) {
 /// against is placed in CompValue.
 /// If CompValue is already set, the function is expected to fail if a match
 /// is found but the value compared to is different.
-bool ConstantComparesGatherer::matchInstruction(Instruction *I, bool isEQ) {
-  if (match(I, m_Not(m_Instruction(I))))
+bool ConstantComparesGatherer::matchInstruction(Instruction *I, bool isEQ,
+                                                const bool InstCombine) {
+  if (match(I, m_Not(m_Instruction(I)))) {
     isEQ = !isEQ;
+    if (InstCombine && !I->hasOneUse())
+      return false;
+  }
 
   Value *Val;
   if (match(I, m_NUWTrunc(m_Value(Val)))) {
@@ -10744,6 +10749,8 @@ bool ConstantComparesGatherer::matchInstruction(Instruction *I, bool isEQ) {
   if (match(I->getOperand(0), m_Add(m_Value(RHSVal), m_APInt(RHSC)))) {
     Span = Span.subtract(*RHSC);
     CandidateVal = RHSVal;
+    if (InstCombine && !CandidateVal->hasOneUse())
+      return false;
   }
 
   // If this is an and/!= check, then we are looking to build the set of
@@ -10776,7 +10783,9 @@ bool ConstantComparesGatherer::matchInstruction(Instruction *I, bool isEQ) {
 /// the value being compared, and stick the list constants into the Vals
 /// vector.
 /// One "Extra" case is allowed to differ from the other.
-void ConstantComparesGatherer::gather(Value *V) {
+void ConstantComparesGatherer::gather(Value *V, const bool InstCombine) {
+  if (InstCombine && !V->hasOneUse())
+    return;
   Value *Op0, *Op1;
   if (match(V, m_LogicalOr(m_Value(Op0), m_Value(Op1))))
     IsEq = true;
@@ -10790,6 +10799,10 @@ void ConstantComparesGatherer::gather(Value *V) {
 
   while (!DFT.empty()) {
     V = DFT.pop_back_val();
+    if (InstCombine && !V->hasOneUse()) {
+      CompValue = nullptr;
+      return;
+    }
 
     if (Instruction *I = dyn_cast<Instruction>(V)) {
       // If it is a || (or && depending on isEQ), process the operands.
@@ -10804,7 +10817,7 @@ void ConstantComparesGatherer::gather(Value *V) {
       }
 
       // Try to match the current instruction
-      if (matchInstruction(I, IsEq))
+      if (matchInstruction(I, IsEq, InstCombine))
         // Match succeed, continue the loop
         continue;
     }

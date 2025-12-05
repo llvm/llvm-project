@@ -1072,7 +1072,8 @@ struct ConstantComparesGatherer {
   bool MultipleMatches = false;
 
   /// Construct and compute the result for the comparison instruction Cond
-  ConstantComparesGatherer(Instruction *Cond, const DataLayout &DL);
+  ConstantComparesGatherer(Instruction *Cond, const DataLayout &DL,
+                           const bool InstCombine = false);
 
   ConstantComparesGatherer(const ConstantComparesGatherer &) = delete;
   ConstantComparesGatherer &
@@ -1084,8 +1085,8 @@ struct ConstantComparesGatherer {
 
 private:
   bool setValueOnce(Value *NewVal);
-  bool matchInstruction(Instruction *I, bool isEQ);
-  void gather(Value *V);
+  bool matchInstruction(Instruction *I, bool isEQ, const bool InstCombine);
+  void gather(Value *V, const bool InstCombine);
 };
 
 } // end namespace llvm
