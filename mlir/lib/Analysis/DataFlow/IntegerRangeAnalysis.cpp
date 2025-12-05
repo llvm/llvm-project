@@ -180,15 +180,15 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     return;
   }
 
-  /// Given a lower bound, upper bound, or step from aLoopLikeInterface return
+  /// Given a lower bound, upper bound, or step from a LoopLikeInterface return
   /// the lower/upper bound for that result if possible.
-  auto getLoopBoundFromFold = [&](std::optional<OpFoldResult> loopBound,
-                                  Type boundType, Block *block, bool getUpper) {
+  auto getLoopBoundFromFold = [&](OpFoldResult loopBound, Type boundType,
+                                  Block *block, bool getUpper) {
     unsigned int width = ConstantIntRanges::getStorageBitwidth(boundType);
-    if (auto attr = dyn_cast<Attribute>(*loopBound)) {
-      if (auto bound = dyn_cast_or_null<IntegerAttr>(attr))
+    if (auto attr = dyn_cast<Attribute>(loopBound)) {
+      if (auto bound = dyn_cast<IntegerAttr>(attr))
         return bound.getValue();
-    } else if (auto value = llvm::dyn_cast_if_present<Value>(*loopBound)) {
+    } else if (auto value = llvm::dyn_cast<Value>(loopBound)) {
       const IntegerValueRangeLattice *lattice =
           getLatticeElementFor(getProgramPointBefore(block), value);
       if (lattice != nullptr && !lattice->getValue().isUninitialized())
