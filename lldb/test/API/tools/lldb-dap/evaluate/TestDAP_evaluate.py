@@ -430,6 +430,25 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             self.assertEvaluate("", ".* 14 .*\n", want_memref=False)
             self.assertEvaluate("", ".* 19 .*\n", want_memref=False)
 
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "my_longs",
+                r"\(long\[3\]\) \$\d+ = \(\[0\] = 5, \[1\] = 6, \[2\] = 7\)",
+                want_varref=True,
+            )
+        elif self.isResultShortDescription():
+            self.assertEvaluate(
+                "my_longs",
+                r"\(\[0\] = 5, \[1\] = 6, \[2\] = 7\)",
+                want_varref=True,
+            )
+        else:
+            self.assertEvaluate(
+                "my_longs",
+                "{5, 6, 7}" if enableAutoVariableSummaries else r"long\[3\] @ 0x",
+                want_varref=True,
+            )
+
         self.continue_to_exit()
 
     @skipIfWindows
