@@ -6334,9 +6334,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (NeedsGlobalCtor || NeedsGlobalDtor)
     EmitCXXGlobalVarDeclInitFunc(D, GV, NeedsGlobalCtor);
 
-  if (D->hasAttr<ForceMemtagAttr>()) {
+  if (D->hasAttr<ForceMemtagAttr>())
     GV->setMetadata("force_memtag", llvm::MDNode::get(GV->getContext(), {}));
-  }
   SanitizerMD->reportGlobal(GV, *D, NeedsGlobalCtor);
 
   // Emit global variable debug information.

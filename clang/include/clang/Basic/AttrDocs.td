@@ -3671,9 +3671,11 @@ def ForceMemtagDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
 Use the ``force_memtag`` attribute on a global variable declaration that also
-has the attribute section and the memory tag sanitizer is active to force the
-global variable to be MTE tagged. Global variables under sections are not
+has the attribute section. If the memory tag sanitizer is active, will force
+the global variable to be MTE tagged. Global variables under sections are not
 tagged by default, so you need to explicitly opt-in using this attribute.
+Please note that, unfortunately, in some non-trivial cases where memory layout
+is assumed, forcing enabling the memtag will cause SIGSEGV/MTE[AS]ERR.
   }];
 }
 
