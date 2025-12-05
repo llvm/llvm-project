@@ -1765,6 +1765,17 @@ public:
     return true;
   }
 
+  /// Return true if it's safe to move a machine instruction.
+  /// This allows the backend to prevent certain special instruction
+  /// sequences from being broken by instruction motion in optimization
+  /// passes.
+  /// By default, this returns true for every instruction.
+  virtual bool isSafeToMove(const MachineInstr &MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const {
+    return true;
+  }
+
   /// Test if the given instruction should be considered a scheduling boundary.
   /// This primarily includes labels and terminators.
   virtual bool isSchedulingBoundary(const MachineInstr &MI,

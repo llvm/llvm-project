@@ -14,6 +14,14 @@ Operating System Thread Plugins
     :skip: ScriptedThread
     :no-inheritance-diagram:
 
+Scripted Frame Provider Plugins
+-------------------------------
+
+.. automodapi:: lldb.plugins.scripted_frame_provider
+    :no-heading:
+    :skip: ABCMeta
+    :no-inheritance-diagram:
+
 Scripted Process Plugins
 -------------------------------
 

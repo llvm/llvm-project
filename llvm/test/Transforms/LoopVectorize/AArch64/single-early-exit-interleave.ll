@@ -79,20 +79,20 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK:       vector.early.exit:
 ; CHECK-NEXT:    [[TMP39:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP40:%.*]] = mul nuw i64 [[TMP39]], 16
-; CHECK-NEXT:    [[TMP41:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> [[TMP59]], i1 true)
+; CHECK-NEXT:    [[TMP41:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> [[TMP59]], i1 false)
 ; CHECK-NEXT:    [[TMP42:%.*]] = mul i64 [[TMP40]], 3
 ; CHECK-NEXT:    [[TMP43:%.*]] = add i64 [[TMP42]], [[TMP41]]
-; CHECK-NEXT:    [[TMP44:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> [[TMP31]], i1 true)
+; CHECK-NEXT:    [[TMP44:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> [[TMP31]], i1 false)
 ; CHECK-NEXT:    [[TMP45:%.*]] = mul i64 [[TMP40]], 2
 ; CHECK-NEXT:    [[TMP46:%.*]] = add i64 [[TMP45]], [[TMP44]]
 ; CHECK-NEXT:    [[TMP47:%.*]] = icmp ne i64 [[TMP44]], [[TMP40]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = select i1 [[TMP47]], i64 [[TMP46]], i64 [[TMP43]]
-; CHECK-NEXT:    [[TMP49:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> [[TMP30]], i1 true)
+; CHECK-NEXT:    [[TMP49:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> [[TMP30]], i1 false)
 ; CHECK-NEXT:    [[TMP50:%.*]] = mul i64 [[TMP40]], 1
 ; CHECK-NEXT:    [[TMP51:%.*]] = add i64 [[TMP50]], [[TMP49]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = icmp ne i64 [[TMP49]], [[TMP40]]
 ; CHECK-NEXT:    [[TMP53:%.*]] = select i1 [[TMP52]], i64 [[TMP51]], i64 [[TMP48]]
-; CHECK-NEXT:    [[TMP61:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> [[TMP32]], i1 true)
+; CHECK-NEXT:    [[TMP61:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> [[TMP32]], i1 false)
 ; CHECK-NEXT:    [[TMP55:%.*]] = mul i64 [[TMP40]], 0
 ; CHECK-NEXT:    [[TMP56:%.*]] = add i64 [[TMP55]], [[TMP61]]
 ; CHECK-NEXT:    [[TMP57:%.*]] = icmp ne i64 [[TMP61]], [[TMP40]]

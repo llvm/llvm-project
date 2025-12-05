@@ -15,4 +15,5 @@ add_flang_library(FIROpenACCTransforms
   MLIRIR
   MLIRPass
   MLIROpenACCDialect
+  MLIROpenACCUtils
 )

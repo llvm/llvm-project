@@ -169,8 +169,8 @@ private:
   bool parseEnum();
   bool parseStructLike();
   bool parseRequires(bool SeenEqual);
-  void parseRequiresClause(FormatToken *RequiresToken);
-  void parseRequiresExpression(FormatToken *RequiresToken);
+  void parseRequiresClause();
+  void parseRequiresExpression();
   void parseConstraintExpression();
   void parseCppExportBlock();
   void parseNamespaceOrExportBlock(unsigned AddLevels);
@@ -205,6 +205,8 @@ private:
   unsigned parseVerilogHierarchyHeader();
   void parseVerilogTable();
   void parseVerilogCaseLabel();
+  // For import, export, and extern.
+  void parseVerilogExtern();
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
   parseMacroCall();
 
