@@ -326,15 +326,12 @@ def P2_64 : MyReg<"p2_64">;
 def P3_64 : MyReg<"p3_64">;
 
 
-
-def XRegs : RegisterClass<"MyTarget", [i64], 64, (add X0, X1, X2, X3, X4, X5, X6)>;
 def XRegs_Odd : RegisterClass<"MyTarget", [i64], 64, (add X1, X3, X5)>;
 def XRegs_Even : RegisterClass<"MyTarget", [i64], 64, (add X0, X2, X4, X6)>;
 
 def XRegs_EvenIfRequired : RegClassByHwMode<[DefaultMode, EvenMode, OddMode],
-                                           [XRegs, XRegs_Even, XRegs_Odd]>;
+                                            [XRegs, XRegs_Even, XRegs_Odd]>;
 
-def YRegs : RegisterClass<"MyTarget", [i64], 64, (add Y0, Y1, Y2, Y3, Y4, Y5, Y6)>;
 def YRegs_Even : RegisterClass<"MyTarget", [i64], 64, (add Y0, Y2, Y4, Y6)>;
 
 def YRegs_EvenIfRequired : RegClassByHwMode<[DefaultMode, EvenMode],

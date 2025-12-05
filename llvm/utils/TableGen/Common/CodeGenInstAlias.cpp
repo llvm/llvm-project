@@ -40,11 +40,9 @@ unsigned CodeGenInstAlias::ResultOperand::getMINumOperands() const {
 
 using ResultOperand = CodeGenInstAlias::ResultOperand;
 
-static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
-                                                  const StringInit *ArgName,
-                                                  const Record *Op,
-                                                  const CodeGenTarget &T,
-                                                  ArrayRef<SMLoc> Loc) {
+static Expected<ResultOperand>
+matchSimpleOperand(const Init *Arg, const StringInit *ArgName, const Record *Op,
+                   const CodeGenTarget &T, ArrayRef<SMLoc> Loc) {
   if (const Record *OpRC = T.getAsRegClassLike(Op)) {
     if (const auto *ArgDef = dyn_cast<DefInit>(Arg)) {
       const Record *ArgRec = ArgDef->getDef();
