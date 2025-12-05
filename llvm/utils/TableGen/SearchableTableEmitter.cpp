@@ -55,6 +55,7 @@ struct GenericEnum {
   const Record *Class = nullptr;
   std::string PreprocessorGuard;
   MapVector<const Record *, Entry> Entries;
+  bool Scoped = false;
 
   const Entry *getEntry(const Record *Def) const {
     auto II = Entries.find(Def);
@@ -146,6 +147,12 @@ private:
       if (!Entry)
         PrintFatalError(Loc,
                         Twine("Entry for field '") + Field.Name + "' is null");
+      if (Field.Enum->Scoped) {
+        std::string QualifiedName = Field.Enum->Name;
+        QualifiedName += "::";
+        QualifiedName += Entry->Name;
+        return QualifiedName;
+      }
       return Entry->Name.str();
     }
     PrintFatalError(Loc, Twine("invalid field type for field '") + Field.Name +
@@ -193,7 +200,12 @@ private:
     }
     if (isa<BitRecTy>(Field.RecType))
       return "bool";
-    if (Field.Enum || Field.IsIntrinsic || Field.IsInstruction)
+    if (Field.Enum) {
+      if (Field.Enum->Scoped)
+        return Field.Enum->Name;
+      return "unsigned";
+    }
+    if (Field.IsIntrinsic || Field.IsInstruction)
       return "unsigned";
     PrintFatalError(Index.Loc,
                     Twine("In table '") + Table.Name + "' lookup method '" +
@@ -336,7 +348,7 @@ void SearchableTableEmitter::emitGenericEnum(const GenericEnum &Enum,
                                              raw_ostream &OS) {
   emitIfdef((Twine("GET_") + Enum.PreprocessorGuard + "_DECL").str(), OS);
 
-  OS << "enum " << Enum.Name << " {\n";
+  OS << "enum " << (Enum.Scoped ? "class " : "") << Enum.Name << " {\n";
   for (const auto &[Name, Value] :
        make_second_range(Enum.Entries.getArrayRef()))
     OS << "  " << Name << " = " << Value << ",\n";
@@ -438,7 +450,12 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
 
     if (IsContiguous && !Index.EarlyOut) {
       OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
-      OS << "  size_t Idx = " << Field.Name << " - " << FirstRepr << ";\n";
+      std::string NumericField =
+          Field.Enum ? "(unsigned)" + Field.Name : Field.Name;
+      std::string NumericFirstRepr =
+          Field.Enum ? "(unsigned)" + FirstRepr : FirstRepr;
+      OS << "  size_t Idx = " << NumericField << " - " << NumericFirstRepr
+         << ";\n";
       OS << "  return ";
       if (IsPrimary)
         OS << "&Table[Idx]";
@@ -756,6 +773,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
     auto Enum = std::make_unique<GenericEnum>();
     Enum->Name = EnumRec->getName().str();
     Enum->PreprocessorGuard = EnumRec->getName().str();
+    Enum->Scoped = EnumRec->getValueAsBit("Scoped");
 
     StringRef FilterClass = EnumRec->getValueAsString("FilterClass");
     Enum->Class = Records.getClass(FilterClass);
