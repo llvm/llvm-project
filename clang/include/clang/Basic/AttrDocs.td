@@ -721,6 +721,12 @@ functions, an ODR-use is not required; the offload kernel entry point will be
 emitted if the function is defined. In any case, a call to the function is
 required for the synthesized call to ``sycl_kernel_launch()`` to occur.
 
+A function declared with the ``sycl_kernel_entry_point`` attribute may include
+an exception specification. If a non-throwing exception specification is
+present, an exception propagating from the implicit call to the
+``sycl_kernel_launch`` template will result in a call to ``std::terminate()``.
+Otherwise, such an exception will propagate normally.
+
 Functions declared with the ``sycl_kernel_entry_point`` attribute are not
 limited to the simple example shown above. They may have additional template
 parameters, declare additional function parameters, and have complex control
