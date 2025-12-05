@@ -11678,13 +11678,7 @@ void OMPClauseReader::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
   C->setThreadsetKind(TKind);
 }
 
-void OMPClauseReader::VisitOMPTransparentClause(OMPTransparentClause *C) {
-  C->setLParenLoc(Record.readSourceLocation());
-  SourceLocation TransparentKindLoc = Record.readSourceLocation();
-  C->setTransparentKindLoc(TransparentKindLoc);
-  OpenMPTransparentKind TKind = Record.readEnum<OpenMPTransparentKind>();
-  C->setTransparentKind(TKind);
-}
+void OMPClauseReader::VisitOMPTransparentClause(OMPTransparentClause *C) {}
 
 void OMPClauseReader::VisitOMPProcBindClause(OMPProcBindClause *C) {
   C->setProcBindKind(static_cast<llvm::omp::ProcBindKind>(Record.readInt()));

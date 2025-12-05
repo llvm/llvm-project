@@ -17396,68 +17396,38 @@ OMPClause *SemaOpenMP::ActOnOpenMPThreadsetClause(OpenMPThreadsetKind Kind,
       OMPThreadsetClause(Kind, KindLoc, StartLoc, LParenLoc, EndLoc);
 }
 
-/// Tries to find omp_impex_t type.
-static bool findOMPImpexT(Sema &S, SourceLocation Loc, DSAStackTy *Stack) {
-  if (!Stack->getOMPImpexT().isNull())
-    return true;
-  // Set the omp_impex_t type.
+/// Retrieves the `omp_impex_t` type from the current scope and adds the `const`
+/// qualifier.
+///
+/// @param S The Sema object used for symbol resolution.
+/// @param Loc The source location for diagnostic messages.
+/// @returns A `QualType` representing the `omp_impex_t` type with the `const`
+/// qualifier, or an invalid `QualType` if the type cannot be found.
+static QualType getOMPImpexT(Sema &S, SourceLocation Loc) {
   IdentifierInfo *II = &S.PP.getIdentifierTable().get("omp_impex_t");
   ParsedType PT = S.getTypeName(*II, Loc, S.getCurScope());
   if (!PT.getAsOpaquePtr() || PT.get().isNull()) {
     S.Diag(Loc, diag::err_omp_implied_type_not_found) << "omp_impex_t";
-    return false;
+    return QualType();
   }
   QualType ImpexTy = PT.get();
   ImpexTy.addConst();
-  Stack->setOMPImpexT(ImpexTy);
-
-  bool ErrorFound = false;
-  for (int I = 0; I < OMPImpexDeclAttr::OMPUserDefinedImpex; ++I) {
-    auto ImpexT = static_cast<OMPImpexDeclAttr::ImpexTypeTy>(I);
-    StringRef Impex = OMPImpexDeclAttr::ConvertImpexTypeTyToStr(ImpexT);
-    DeclarationName ImpexName = &S.getASTContext().Idents.get(Impex);
-    auto *VD = dyn_cast_or_null<ValueDecl>(
-        S.LookupSingleName(S.TUScope, ImpexName, Loc, Sema::LookupAnyName));
-    if (!VD) {
-      ErrorFound = true;
-      break;
-    }
-    QualType ImpexType =
-        VD->getType().getNonLValueExprType(S.getASTContext());
-    ExprResult Res = S.BuildDeclRefExpr(VD, ImpexType, VK_LValue, Loc);
-    if (!Res.isUsable()) {
-      ErrorFound = true;
-      break;
-    }
-    Res = S.PerformImplicitConversion(Res.get(), ImpexTy,
-                                      AssignmentAction::Initializing,
-                                      /*AllowExplicit=*/true);
-    if (!Res.isUsable()) {
-      ErrorFound = true;
-      break;
-    }
-    Stack->setImpex(ImpexT, Res.get());
-  }
-  if (ErrorFound) {
-    S.Diag(Loc, diag::err_omp_implied_type_not_found)
-        << "omp_impex_t";
-    return false;
-  }
-
-  return true;
+  return ImpexTy;
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPTransparentClause(Expr *ImpexTypeArg,
                                                     SourceLocation StartLoc,
                                                     SourceLocation LParenLoc,
                                                     SourceLocation EndLoc) {
-  if (!findOMPImpexT(SemaRef, ImpexTypeArg->getExprLoc(), DSAStack))
+  QualType ImpexTy = getOMPImpexT(SemaRef, ImpexTypeArg->getExprLoc());
+  if (ImpexTy.isNull())
     return nullptr;
+
   ExprResult TR = SemaRef.DefaultLvalueConversion(ImpexTypeArg);
   if (TR.isInvalid())
     return nullptr;
 
-  TR = SemaRef.PerformImplicitConversion(TR.get(), DSAStack->getOMPImpexT(),
+  TR = SemaRef.PerformImplicitConversion(TR.get(), ImpexTy,
                                          AssignmentAction::Initializing,
                                          /*AllowExplicit=*/true);
   if (TR.isInvalid())
