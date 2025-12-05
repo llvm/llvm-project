@@ -380,7 +380,8 @@ void IdenticalCodeFolding::initVTableReferences(const BinaryContext &BC) {
     if (!Data->getName().starts_with("_ZTV") && // vtable
         !Data->getName().starts_with("_ZTCN"))  // construction vtable
       continue;
-    for (uint64_t I = Address, End = I + Data->getSize(); I < End; I += 8)
+    for (uint64_t I = Address, End = I + Data->getSize(); I < End;
+         I += VTableAddressGranularity)
       setAddressUsedInVTable(I);
   }
 }
