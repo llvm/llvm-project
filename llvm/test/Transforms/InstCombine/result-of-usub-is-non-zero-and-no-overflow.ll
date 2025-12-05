@@ -143,7 +143,7 @@ define i1 @t2(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t2(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } undef, i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } poison, i8 [[ADJUSTED]], 0
 ; CHECK-NEXT:    [[AGG:%.*]] = insertvalue { i8, i1 } [[TMP3]], i1 [[UNDERFLOW]], 1
 ; CHECK-NEXT:    call void @useagg({ i8, i1 } [[AGG]])
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
@@ -170,7 +170,7 @@ define i1 @t2_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t2_logical(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } undef, i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } poison, i8 [[ADJUSTED]], 0
 ; CHECK-NEXT:    [[AGG:%.*]] = insertvalue { i8, i1 } [[TMP3]], i1 [[UNDERFLOW]], 1
 ; CHECK-NEXT:    call void @useagg({ i8, i1 } [[AGG]])
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
@@ -323,7 +323,7 @@ define i1 @t6_commutability(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t6_commutability(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } undef, i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } poison, i8 [[ADJUSTED]], 0
 ; CHECK-NEXT:    [[AGG:%.*]] = insertvalue { i8, i1 } [[TMP3]], i1 [[UNDERFLOW]], 1
 ; CHECK-NEXT:    call void @useagg({ i8, i1 } [[AGG]])
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
@@ -350,7 +350,7 @@ define i1 @t6_commutability_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t6_commutability_logical(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } undef, i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } poison, i8 [[ADJUSTED]], 0
 ; CHECK-NEXT:    [[AGG:%.*]] = insertvalue { i8, i1 } [[TMP3]], i1 [[UNDERFLOW]], 1
 ; CHECK-NEXT:    call void @useagg({ i8, i1 } [[AGG]])
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
@@ -461,7 +461,7 @@ define i1 @t8(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t8(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } undef, i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } poison, i8 [[ADJUSTED]], 0
 ; CHECK-NEXT:    [[AGG:%.*]] = insertvalue { i8, i1 } [[TMP3]], i1 [[UNDERFLOW]], 1
 ; CHECK-NEXT:    call void @useagg({ i8, i1 } [[AGG]])
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
@@ -484,7 +484,7 @@ define i1 @t8_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t8_logical(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } undef, i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } poison, i8 [[ADJUSTED]], 0
 ; CHECK-NEXT:    [[AGG:%.*]] = insertvalue { i8, i1 } [[TMP3]], i1 [[UNDERFLOW]], 1
 ; CHECK-NEXT:    call void @useagg({ i8, i1 } [[AGG]])
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])

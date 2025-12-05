@@ -871,7 +871,7 @@ InstCombinerImpl::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
     Value *Sub = Builder.CreateSub(WO->getLHS(), WO->getRHS());
     Value *Overflow = Builder.CreateICmpULT(WO->getLHS(), WO->getRHS());
 
-    Value *ResultStruct = UndefValue::get(WO->getType());
+    Value *ResultStruct = PoisonValue::get(WO->getType());
     ResultStruct = Builder.CreateInsertValue(ResultStruct, Sub, 0);
     ResultStruct = Builder.CreateInsertValue(ResultStruct, Overflow, 1);
 

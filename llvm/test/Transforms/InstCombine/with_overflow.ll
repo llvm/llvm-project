@@ -508,7 +508,7 @@ define { i32, i1 } @usub_no_canonicalize_constant_arg0(i32 %x) nounwind {
 ; CHECK-LABEL: @usub_no_canonicalize_constant_arg0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 42, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 42, [[X]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i32, i1 } undef, i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[A:%.*]] = insertvalue { i32, i1 } [[TMP3]], i1 [[TMP2]], 1
 ; CHECK-NEXT:    ret { i32, i1 } [[A]]
 ;
