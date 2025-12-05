@@ -306,6 +306,36 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
 }
 
 //===----------------------------------------------------------------------===//
+// CIR_DataMemberType
+//===----------------------------------------------------------------------===//
+
+def CIR_DataMemberType : CIR_Type<"DataMember", "data_member",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]
+> {
+  let summary = "CIR type that represents a pointer-to-data-member in C++";
+  let description = [{
+    `cir.data_member` models a pointer-to-data-member in C++. Values of this
+    type are essentially offsets of the pointed-to member within one of its
+    containing record.
+  }];
+
+  let parameters = (ins "mlir::Type":$member_ty,
+                        "cir::RecordType":$class_ty);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$member_ty, "cir::RecordType":$class_ty
+    ), [{
+      return $_get(member_ty.getContext(), member_ty, class_ty);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` $member_ty `in` $class_ty `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CIR_VPtrType
 //===----------------------------------------------------------------------===//
 
@@ -693,7 +723,7 @@ def CIRRecordType : Type<
 def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_RecordType,
-  CIR_ComplexType, CIR_VPtrType
+  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType
 ]>;
 
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPES_TD
