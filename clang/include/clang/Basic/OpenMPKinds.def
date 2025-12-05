@@ -109,6 +109,7 @@
 #endif
 #ifndef OPENMP_TRANSPARENT_KIND
 #define OPENMP_TRANSPARENT_KIND(Name)
+#endif
 #ifndef OPENMP_NEED_DEVICE_PTR_KIND
 #define OPENMP_NEED_DEVICE_PTR_KIND(Name)
 #endif
@@ -284,6 +285,7 @@ OPENMP_TRANSPARENT_KIND(omp_not_impex)
 OPENMP_TRANSPARENT_KIND(omp_import)
 OPENMP_TRANSPARENT_KIND(omp_export)
 OPENMP_TRANSPARENT_KIND(omp_impex)
+
 // OpenMP 6.1 modifiers for 'adjust_args' clause.
 OPENMP_NEED_DEVICE_PTR_KIND(fb_nullify)
 OPENMP_NEED_DEVICE_PTR_KIND(fb_preserve)
