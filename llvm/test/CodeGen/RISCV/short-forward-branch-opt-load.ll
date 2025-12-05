@@ -10,7 +10,7 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=riscv64 -mattr=+short-forward-branch-iload | \
 ; RUN:   FileCheck %s --check-prefixes=RV64I-SFBILOAD
 
-define i32 @test_i8_s(ptr %base, i1 %x, i32 %b) {
+define i32 @test_i8_s(ptr %base, i1 %x, i32 %b) nounwind {
 ; RV32I-LABEL: test_i8_s:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    andi a1, a1, 1
@@ -78,7 +78,7 @@ entry:
   ret i32 %res
 }
 
-define i32 @test_i8_z(ptr %base, i1 %x, i32 %b) {
+define i32 @test_i8_z(ptr %base, i1 %x, i32 %b) nounwind {
 ; RV32I-LABEL: test_i8_z:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    andi a1, a1, 1
@@ -146,7 +146,7 @@ entry:
   ret i32 %res
 }
 
-define i32 @test_i16_s(ptr %base, i1 %x, i32 %b) {
+define i32 @test_i16_s(ptr %base, i1 %x, i32 %b) nounwind {
 ; RV32I-LABEL: test_i16_s:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    andi a1, a1, 1
@@ -214,7 +214,7 @@ entry:
   ret i32 %res
 }
 
-define i32 @test_i16_z(ptr %base, i1 %x, i32 %b) {
+define i32 @test_i16_z(ptr %base, i1 %x, i32 %b) nounwind {
 ; RV32I-LABEL: test_i16_z:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    andi a1, a1, 1
@@ -282,7 +282,7 @@ entry:
   ret i32 %res
 }
 
-define i32 @test_i32(ptr %base, i1 %x, i32 %b) {
+define i32 @test_i32(ptr %base, i1 %x, i32 %b) nounwind {
 ; RV32I-LABEL: test_i32:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    andi a1, a1, 1
@@ -349,7 +349,7 @@ entry:
   ret i32 %res
 }
 
-define i32 @test_i8_s_store(ptr %base, i1 %x, i32 %b, ptr %base1, i32 %c) {
+define i32 @test_i8_s_store(ptr %base, i1 %x, i32 %b, ptr %base1, i32 %c) nounwind {
 ; RV32I-LABEL: test_i8_s_store:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lb a0, 4(a0)
@@ -424,7 +424,7 @@ entry:
   ret i32 %res
 }
 
-define i32 @test_i8_z_store(ptr %base, i1 %x, i32 %b, ptr %base1, i32 %c) {
+define i32 @test_i8_z_store(ptr %base, i1 %x, i32 %b, ptr %base1, i32 %c) nounwind {
 ; RV32I-LABEL: test_i8_z_store:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lbu a0, 4(a0)
@@ -499,7 +499,7 @@ entry:
   ret i32 %res
 }
 
-define i32 @test_i16_s_store(ptr %base, i1 %x, i32 %b, ptr %base1, i32 %c) {
+define i32 @test_i16_s_store(ptr %base, i1 %x, i32 %b, ptr %base1, i32 %c) nounwind {
 ; RV32I-LABEL: test_i16_s_store:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lh a0, 8(a0)
@@ -574,7 +574,7 @@ entry:
   ret i32 %res
 }
 
-define i32 @test_i16_z_store(ptr %base, i1 %x, i32 %b, ptr %base1, i32 %c) {
+define i32 @test_i16_z_store(ptr %base, i1 %x, i32 %b, ptr %base1, i32 %c) nounwind {
 ; RV32I-LABEL: test_i16_z_store:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lhu a0, 8(a0)
@@ -649,7 +649,7 @@ entry:
   ret i32 %res
 }
 
-define i32 @test_i32_store(ptr %base, i1 %x, i32 %b, ptr %base1, i32 %c) {
+define i32 @test_i32_store(ptr %base, i1 %x, i32 %b, ptr %base1, i32 %c) nounwind {
 ; RV32I-LABEL: test_i32_store:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lw a0, 16(a0)
@@ -723,7 +723,7 @@ entry:
   ret i32 %res
 }
 
-define i64 @test_i8_s_1(ptr %base, i1 %x, i64 %b) {
+define i64 @test_i8_s_1(ptr %base, i1 %x, i64 %b) nounwind {
 ; RV32I-LABEL: test_i8_s_1:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    andi a1, a1, 1
@@ -805,7 +805,7 @@ entry:
   ret i64 %res
 }
 
-define i64 @test_i8_z_1(ptr %base, i1 %x, i64 %b) {
+define i64 @test_i8_z_1(ptr %base, i1 %x, i64 %b) nounwind {
 ; RV32I-LABEL: test_i8_z_1:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    andi a1, a1, 1
@@ -885,7 +885,7 @@ entry:
   ret i64 %res
 }
 
-define i64 @test_i16_s_1(ptr %base, i1 %x, i64 %b) {
+define i64 @test_i16_s_1(ptr %base, i1 %x, i64 %b) nounwind {
 ; RV32I-LABEL: test_i16_s_1:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    andi a1, a1, 1
@@ -967,7 +967,7 @@ entry:
   ret i64 %res
 }
 
-define i64 @test_i16_z_1(ptr %base, i1 %x, i64 %b) {
+define i64 @test_i16_z_1(ptr %base, i1 %x, i64 %b) nounwind {
 ; RV32I-LABEL: test_i16_z_1:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    andi a1, a1, 1
@@ -1047,7 +1047,7 @@ entry:
   ret i64 %res
 }
 
-define i64 @test_i32_z_1(ptr %base, i1 %x, i64 %b) {
+define i64 @test_i32_z_1(ptr %base, i1 %x, i64 %b) nounwind {
 ; RV32I-LABEL: test_i32_z_1:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    andi a1, a1, 1
@@ -1127,7 +1127,7 @@ entry:
   ret i64 %res
 }
 
-define i64 @test_i64_1(ptr %base, i1 %x, i64 %b) {
+define i64 @test_i64_1(ptr %base, i1 %x, i64 %b) nounwind {
 ; RV32I-LABEL: test_i64_1:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    andi a1, a1, 1
@@ -1208,7 +1208,7 @@ entry:
   ret i64 %res
 }
 
-define i64 @test_i8_s_store_64(ptr %base, i1 %x, i64 %b, ptr %base1, i64 %c) {
+define i64 @test_i8_s_store_64(ptr %base, i1 %x, i64 %b, ptr %base1, i64 %c) nounwind {
 ; RV32I-LABEL: test_i8_s_store_64:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lb a0, 4(a0)
@@ -1301,7 +1301,7 @@ entry:
   ret i64 %res
 }
 
-define i64 @test_i8_z_store_64(ptr %base, i1 %x, i64 %b, ptr %base1, i64 %c) {
+define i64 @test_i8_z_store_64(ptr %base, i1 %x, i64 %b, ptr %base1, i64 %c) nounwind {
 ; RV32I-LABEL: test_i8_z_store_64:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lbu a0, 4(a0)
@@ -1391,7 +1391,7 @@ entry:
   ret i64 %res
 }
 
-define i64 @test_i16_s_store_64(ptr %base, i1 %x, i64 %b, ptr %base1, i64 %c) {
+define i64 @test_i16_s_store_64(ptr %base, i1 %x, i64 %b, ptr %base1, i64 %c) nounwind {
 ; RV32I-LABEL: test_i16_s_store_64:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lh a0, 8(a0)
@@ -1484,7 +1484,7 @@ entry:
   ret i64 %res
 }
 
-define i64 @test_i16_z_store_64(ptr %base, i1 %x, i64 %b, ptr %base1, i64 %c) {
+define i64 @test_i16_z_store_64(ptr %base, i1 %x, i64 %b, ptr %base1, i64 %c) nounwind {
 ; RV32I-LABEL: test_i16_z_store_64:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lhu a0, 8(a0)
@@ -1574,7 +1574,7 @@ entry:
   ret i64 %res
 }
 
-define i64 @test_i32_z_store_64(ptr %base, i1 %x, i64 %b, ptr %base1, i64 %c) {
+define i64 @test_i32_z_store_64(ptr %base, i1 %x, i64 %b, ptr %base1, i64 %c) nounwind {
 ; RV32I-LABEL: test_i32_z_store_64:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lw a0, 16(a0)
@@ -1664,7 +1664,7 @@ entry:
   ret i64 %res
 }
 
-define i64 @test_i64_store_64(ptr %base, i1 %x, i64 %b, ptr %base1, i64 %c) {
+define i64 @test_i64_store_64(ptr %base, i1 %x, i64 %b, ptr %base1, i64 %c) nounwind {
 ; RV32I-LABEL: test_i64_store_64:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    mv a7, a1

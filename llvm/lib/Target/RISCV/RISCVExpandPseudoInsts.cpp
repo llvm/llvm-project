@@ -294,8 +294,7 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
     } else {
       BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
           .add(MI.getOperand(5))
-          .add(MI.getOperand(6))
-          .cloneMemRefs(MI);
+          .add(MI.getOperand(6));
     }
   }
 

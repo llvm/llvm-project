@@ -967,6 +967,7 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
   for (unsigned i = 1, e = DefDesc.getNumOperands(); i != e; ++i)
     NewMI.add(LoadMI.getOperand(i));
 
+  NewMI.cloneMemRefs(LoadMI);
   return NewMI;
 }
 

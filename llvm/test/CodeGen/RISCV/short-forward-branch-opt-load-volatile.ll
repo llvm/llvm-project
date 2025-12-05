@@ -10,7 +10,7 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=riscv64 -mattr=+short-forward-branch-iload | \
 ; RUN:   FileCheck %s --check-prefixes=RV64I-SFBILOAD
 
-define i32 @test_i8_s_volatile(ptr %base, i1 %x, i32 %b, ptr %base1) {
+define i32 @test_i8_s_volatile(ptr %base, i1 %x, i32 %b, ptr %base1) nounwind {
 ; RV32I-LABEL: test_i8_s_volatile:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lb a4, 4(a0)
@@ -90,7 +90,7 @@ entry:
   ret i32 %res1
 }
 
-define i32 @test_i8_z_volatile(ptr %base, i1 %x, i32 %b, ptr %base1) {
+define i32 @test_i8_z_volatile(ptr %base, i1 %x, i32 %b, ptr %base1) nounwind {
 ; RV32I-LABEL: test_i8_z_volatile:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lbu a4, 4(a0)
@@ -170,7 +170,7 @@ entry:
   ret i32 %res1
 }
 
-define i32 @test_i16_s_volatile(ptr %base, i1 %x, i32 %b, ptr %base1) {
+define i32 @test_i16_s_volatile(ptr %base, i1 %x, i32 %b, ptr %base1) nounwind {
 ; RV32I-LABEL: test_i16_s_volatile:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lh a4, 8(a0)
@@ -250,7 +250,7 @@ entry:
   ret i32 %res1
 }
 
-define i32 @test_i16_z_volatile(ptr %base, i1 %x, i32 %b, ptr %base1) {
+define i32 @test_i16_z_volatile(ptr %base, i1 %x, i32 %b, ptr %base1) nounwind {
 ; RV32I-LABEL: test_i16_z_volatile:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lhu a4, 8(a0)
@@ -330,7 +330,7 @@ entry:
   ret i32 %res1
 }
 
-define i32 @test_i32_volatile(ptr %base, i1 %x, i32 %b, ptr %base1) {
+define i32 @test_i32_volatile(ptr %base, i1 %x, i32 %b, ptr %base1) nounwind {
 ; RV32I-LABEL: test_i32_volatile:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lw a4, 16(a0)
@@ -410,7 +410,7 @@ entry:
 }
 
 
-define i64 @test_i8_s_1_volatile(ptr %base, i1 %x, i64 %b, ptr %base1) {
+define i64 @test_i8_s_1_volatile(ptr %base, i1 %x, i64 %b, ptr %base1) nounwind {
 ; RV32I-LABEL: test_i8_s_1_volatile:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lb a6, 4(a0)
@@ -514,7 +514,7 @@ entry:
   ret i64 %res1
 }
 
-define i64 @test_i8_z_1_volatile(ptr %base, i1 %x, i64 %b, ptr %base1) {
+define i64 @test_i8_z_1_volatile(ptr %base, i1 %x, i64 %b, ptr %base1) nounwind {
 ; RV32I-LABEL: test_i8_z_1_volatile:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lbu a6, 4(a0)
@@ -614,7 +614,7 @@ entry:
   ret i64 %res1
 }
 
-define i64 @test_i16_s_1_volatile(ptr %base, i1 %x, i64 %b, ptr %base1) {
+define i64 @test_i16_s_1_volatile(ptr %base, i1 %x, i64 %b, ptr %base1) nounwind {
 ; RV32I-LABEL: test_i16_s_1_volatile:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lh a6, 8(a0)
@@ -718,7 +718,7 @@ entry:
   ret i64 %res1
 }
 
-define i64 @test_i16_z_1_volatile(ptr %base, i1 %x, i64 %b, ptr %base1) {
+define i64 @test_i16_z_1_volatile(ptr %base, i1 %x, i64 %b, ptr %base1) nounwind {
 ; RV32I-LABEL: test_i16_z_1_volatile:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lhu a6, 8(a0)
@@ -818,7 +818,7 @@ entry:
   ret i64 %res1
 }
 
-define i64 @test_i32_z_1_volatile(ptr %base, i1 %x, i64 %b, ptr %base1) {
+define i64 @test_i32_z_1_volatile(ptr %base, i1 %x, i64 %b, ptr %base1) nounwind {
 ; RV32I-LABEL: test_i32_z_1_volatile:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lw a6, 16(a0)
@@ -918,7 +918,7 @@ entry:
   ret i64 %res1
 }
 
-define i64 @test_i64_1_volatile(ptr %base, i1 %x, i64 %b, ptr %base1) {
+define i64 @test_i64_1_volatile(ptr %base, i1 %x, i64 %b, ptr %base1) nounwind {
 ; RV32I-LABEL: test_i64_1_volatile:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lw a7, 32(a0)
