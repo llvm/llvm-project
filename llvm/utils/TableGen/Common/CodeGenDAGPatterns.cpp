@@ -1830,10 +1830,6 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
     return UpdateNodeType(ResNo, getValueTypeByHwMode(R, T.getHwModes()), TP);
   }
 
-  // PointerLikeRegClass has a type that is determined at runtime.
-  if (Operand->isSubClassOf("PointerLikeRegClass"))
-    return UpdateNodeType(ResNo, MVT::iPTR, TP);
-
   // Both RegisterClass and RegisterOperand operands derive their types from a
   // register class def.
   const Record *RC = nullptr;
@@ -2412,12 +2408,6 @@ static TypeSetByHwMode getImplicitType(const Record *R, unsigned ResNo,
     const Record *T = CDP.getComplexPattern(R).getValueType();
     const CodeGenHwModes &CGH = CDP.getTargetInfo().getHwModes();
     return TypeSetByHwMode(getValueTypeByHwMode(T, CGH));
-  }
-  if (R->isSubClassOf("PointerLikeRegClass")) {
-    assert(ResNo == 0 && "Regclass can only have one result!");
-    TypeSetByHwMode VTS(MVT::iPTR);
-    TP.getInfer().expandOverloads(VTS);
-    return VTS;
   }
 
   if (R->getName() == "node" || R->getName() == "srcvalue" ||
@@ -3661,8 +3651,7 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
 
     if (Val->getDef()->isSubClassOf("RegisterClassLike") ||
         Val->getDef()->isSubClassOf("ValueType") ||
-        Val->getDef()->isSubClassOf("RegisterOperand") ||
-        Val->getDef()->isSubClassOf("PointerLikeRegClass")) {
+        Val->getDef()->isSubClassOf("RegisterOperand")) {
       if (Dest->getName().empty())
         I.error("set destination must have a name!");
       if (!InstResults.insert_or_assign(Dest->getName(), Dest).second)
