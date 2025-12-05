@@ -1395,6 +1395,17 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::Int16);
     else if (BitWidth == 8)
       Reqs.addCapability(SPIRV::Capability::Int8);
+    else {
+      if (!ST.canUseExtension(
+              SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers))
+        reportFatalUsageError(
+            "OpTypeInt type with a width other than 8, 16, 32 or 64 bits "
+            "requires the following SPIR-V extension: "
+            "SPV_ALTERA_arbitrary_precision_integers");
+      Reqs.addExtension(
+              SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers);
+      Reqs.addCapability(SPIRV::Capability::ArbitraryPrecisionIntegersALTERA);
+    }
     break;
   }
   case SPIRV::OpDot: {
