@@ -3712,6 +3712,8 @@ def err_conflicting_codeseg_attribute : Error<
 def warn_duplicate_codeseg_attribute : Warning<
   "duplicate code segment specifiers">, InGroup<Section>;
 
+def err_expansion_stmt_invalid_init : Error<
+  "cannot expand expression of type %0">;
 def err_expansion_stmt_vla : Error<
   "cannot expand variable length array type %0">;
 def err_expansion_stmt_incomplete : Error<
