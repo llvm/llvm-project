@@ -495,6 +495,18 @@ define void @test_extract_vector_32(ptr %ret_ptr, ptr %a_ptr) {
   ret void
 }
 
+define void @test_extract_vector_32_elem1(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_extract_vector_32_elem1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 4(a1)
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %extracted = extractelement <2 x i32> %a, i32 1
+  store i32 %extracted, ptr %ret_ptr
+  ret void
+}
+
 ; Test basic add/sub operations for v2i32 (RV64 only)
 define void @test_padd_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-LABEL: test_padd_w:
@@ -790,6 +802,42 @@ define void @test_psslai_w(ptr %ret_ptr, ptr %a_ptr) {
 ; CHECK-NEXT:    ret
   %a = load <2 x i32>, ptr %a_ptr
   %res = call <2 x i32> @llvm.sshl.sat.v2i32(<2 x i32> %a, <2 x i32> splat(i32 2))
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test logical shift left(scalar shamt)
+define void @test_psll_ws(ptr %ret_ptr, ptr %a_ptr, i32 %shamt) {
+; CHECK-LABEL: test_psll_ws:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    psll.ws a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %insert = insertelement <2 x i32> poison, i32 %shamt, i32 0
+  %b = shufflevector <2 x i32> %insert, <2 x i32> poison, <2 x i32> zeroinitializer
+  %res = shl <2 x i32> %a, %b
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test logical shift left(vector shamt)
+define void @test_psll_ws_vec_shamt(ptr %ret_ptr, ptr %a_ptr, ptr %shamt_ptr) {
+; CHECK-LABEL: test_psll_ws_vec_shamt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    sllw a3, a1, a2
+; CHECK-NEXT:    srli a2, a2, 32
+; CHECK-NEXT:    srli a1, a1, 32
+; CHECK-NEXT:    sllw a1, a1, a2
+; CHECK-NEXT:    pack a1, a3, a1
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %shamt_ptr
+  %res = shl <2 x i32> %a, %b
   store <2 x i32> %res, ptr %ret_ptr
   ret void
 }

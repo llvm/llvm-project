@@ -1435,8 +1435,12 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
 
   if (Ptr.isIntegralPointer()) {
-    S.Stk.push<Pointer>(Ptr.asIntPointer().atOffset(S.getASTContext(), Off));
-    return true;
+    if (std::optional<IntPointer> IntPtr =
+            Ptr.asIntPointer().atOffset(S.getASTContext(), Off)) {
+      S.Stk.push<Pointer>(std::move(*IntPtr));
+      return true;
+    }
+    return false;
   }
 
   if (!Ptr.isBlockPointer()) {
