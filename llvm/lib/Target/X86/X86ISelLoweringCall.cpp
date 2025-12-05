@@ -2080,9 +2080,10 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool Is64Bit        = Subtarget.is64Bit();
   bool IsWin64        = Subtarget.isCallingConvWin64(CallConv);
   bool IsSibcall      = false;
-  bool IsGuaranteeTCO = MF.getTarget().Options.GuaranteedTailCallOpt ||
-      CallConv == CallingConv::Tail || CallConv == CallingConv::SwiftTail;
-  bool IsCalleePopSRet = !IsGuaranteeTCO && hasCalleePopSRet(Outs, Subtarget);
+  bool ShouldGuaranteeTCO = shouldGuaranteeTCO(
+      CallConv, MF.getTarget().Options.GuaranteedTailCallOpt);
+  bool IsCalleePopSRet =
+      !ShouldGuaranteeTCO && hasCalleePopSRet(Outs, Subtarget);
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
   bool HasNCSR = (CB && isa<CallInst>(CB) &&
                   CB->hasFnAttr("no_caller_saved_registers"));
@@ -2129,7 +2130,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
-  if (Subtarget.isPICStyleGOT() && !IsGuaranteeTCO && !IsMustTail) {
+  if (Subtarget.isPICStyleGOT() && !ShouldGuaranteeTCO && !IsMustTail) {
     // If we are using a GOT, disable tail calls to external symbols with
     // default visibility. Tail calling such a symbol requires using a GOT
     // relocation, which forces early binding of the symbol. This breaks code
@@ -2151,7 +2152,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       // Sibcalls are automatically detected tailcalls which do not require
       // ABI changes.
-      IsSibcall = IsSibcall && !IsGuaranteeTCO;
+      IsSibcall = IsSibcall && !ShouldGuaranteeTCO;
     }
 
     if (isTailCall)
@@ -2171,14 +2172,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // This is a sibcall. The memory operands are available in caller's
     // own caller's stack.
     NumBytes = 0;
-  else if (IsGuaranteeTCO && canGuaranteeTCO(CallConv))
+  else if (ShouldGuaranteeTCO && canGuaranteeTCO(CallConv))
     NumBytes = GetAlignedArgumentStackSize(NumBytes, DAG);
 
   // A sibcall is ABI-compatible and does not need to adjust the stack pointer.
   int FPDiff = 0;
-  if (isTailCall && !IsSibcall &&
-      shouldGuaranteeTCO(CallConv,
-                         MF.getTarget().Options.GuaranteedTailCallOpt)) {
+  if (isTailCall && ShouldGuaranteeTCO && !IsSibcall) {
     // Lower arguments at fp - stackoffset + fpdiff.
     unsigned NumBytesCallerPushed = X86Info->getBytesToPopOnReturn();
 
@@ -2475,7 +2474,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // For tail calls lower the arguments to the 'real' stack slots.  Sibcalls
   // don't need this because the eligibility check rejects calls that require
   // shuffling arguments passed in memory.
-  if (!IsSibcall && isTailCall) {
+  if (isTailCall && !IsSibcall) {
     // Force all the incoming stack arguments to be loaded from the stack
     // before any new outgoing arguments or the return address are stored to the
     // stack, because the outgoing stack slots may alias the incoming argument
@@ -2971,8 +2970,8 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   bool CCMatch = CallerCC == CalleeCC;
   bool IsCalleeWin64 = Subtarget.isCallingConvWin64(CalleeCC);
   bool IsCallerWin64 = Subtarget.isCallingConvWin64(CallerCC);
-  bool IsGuaranteeTCO = DAG.getTarget().Options.GuaranteedTailCallOpt ||
-      CalleeCC == CallingConv::Tail || CalleeCC == CallingConv::SwiftTail;
+  bool ShouldGuaranteeTCO = shouldGuaranteeTCO(
+      CalleeCC, MF.getTarget().Options.GuaranteedTailCallOpt);
 
   // Win64 functions have extra shadow space for argument homing. Don't do the
   // sibcall if the caller and callee have mismatched expectations for this
@@ -2980,7 +2979,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   if (IsCalleeWin64 != IsCallerWin64)
     return false;
 
-  if (IsGuaranteeTCO) {
+  if (ShouldGuaranteeTCO) {
     if (canGuaranteeTCO(CalleeCC) && CCMatch)
       return true;
     return false;
