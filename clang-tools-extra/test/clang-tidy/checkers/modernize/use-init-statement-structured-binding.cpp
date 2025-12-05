@@ -601,17 +601,19 @@ void bad_prevents_redeclaration2() {
         do_some(a1);
     }
 
-//     int arr2[2] = {1, 2};
-//     auto [a2, b2] = arr2; DUMMY_TOKEN
-//     switch (a2) {
-// // FIXME: warning and fixit must be provided
-//         case 0: {
-//             int arr_inner[2] = {1, 2};
-//             auto [a2, b2] = arr_inner;
-//             do_some(a2);
-//             break;
-//         }
-//     }
+    int arr2[2] = {1, 2};
+    auto [a2, b2] = arr2;
+    switch (a2) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        case 0: {
+            int arr_inner[2] = {1, 2};
+            auto [a2, b2] = arr_inner;
+            do_some(a2);
+            break;
+        }
+    }
 }
 
 void bad_prevents_redeclaration3() {
@@ -628,21 +630,23 @@ void bad_prevents_redeclaration3() {
         do_some(a1);
     }
 
-//     int arr2[2] = {1, 2};
-//     auto [a2, b2] = arr2; DUMMY_TOKEN
-//     switch (a2) {
-// // // FIXME: warning and fixit must be provided
-//         case 0: {
-//             do_some();
-//             break;
-//         }
-//         case 1: {
-//             int arr_inner[2] = {1, 2};
-//             auto [a2, b2] = arr_inner;
-//             do_some(a2);
-//             break;
-//         }
-//     }
+    int arr2[2] = {1, 2};
+    auto [a2, b2] = arr2;
+    switch (a2) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        case 0: {
+            do_some();
+            break;
+        }
+        case 1: {
+            int arr_inner[2] = {1, 2};
+            auto [a2, b2] = arr_inner;
+            do_some(a2);
+            break;
+        }
+    }
 }
 
 void bad_prevents_redeclaration4() {
@@ -661,23 +665,25 @@ void bad_prevents_redeclaration4() {
         do_some(a1+2);
     }
 
-//     int arr2[2] = {1, 2};
-//     auto [a2, b2] = arr2; DUMMY_TOKEN
-//     switch (a2) {
-// // // FIXME: warning and fixit must be provided
-//         case 0: {
-//             int arr_inner1[2] = {1, 2};
-//             auto [a2, b2] = arr_inner1;
-//             do_some(a2+1);
-//             break;
-//         }
-//         case 1: {
-//             int arr_inner2[2] = {1, 2};
-//             auto [a2, b2] = arr_inner2;
-//             do_some(a2+2);
-//             break;
-//         }
-//     }
+    int arr2[2] = {1, 2};
+    auto [a2, b2] = arr2;
+    switch (a2) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        case 0: {
+            int arr_inner1[2] = {1, 2};
+            auto [a2, b2] = arr_inner1;
+            do_some(a2+1);
+            break;
+        }
+        case 1: {
+            int arr_inner2[2] = {1, 2};
+            auto [a2, b2] = arr_inner2;
+            do_some(a2+2);
+            break;
+        }
+    }
 }
 
 

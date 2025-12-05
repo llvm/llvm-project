@@ -775,15 +775,17 @@ void bad_prevents_redeclaration2() {
         do_some(i1);
     }
 
-//     int i2 = 0; DUMMY_TOKEN
-//     switch (i2) {
-// // // FIXME: warning and fixit must be provided
-//         case 0: {
-//             int i2 = 0;
-//             do_some(i2);
-//             break;
-//         }
-//     }
+    int i2 = 0; DUMMY_TOKEN
+    switch (i2) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        case 0: {
+            int i2 = 0;
+            do_some(i2);
+            break;
+        }
+    }
 }
 
 void bad_prevents_redeclaration3() {
@@ -798,19 +800,21 @@ void bad_prevents_redeclaration3() {
         do_some(i1);
     }
 
-//     int i2 = 0; DUMMY_TOKEN
-//     switch (i2) {
-// // // FIXME: warning and fixit must be provided
-//         case 0: {
-//             do_some();
-//             break;
-//         }
-//         case 1: {
-//             int i2 = 0;
-//             do_some(i2);
-//             break;
-//         }
-//     }
+    int i2 = 0; DUMMY_TOKEN
+    switch (i2) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        case 0: {
+            do_some();
+            break;
+        }
+        case 1: {
+            int i2 = 0;
+            do_some(i2);
+            break;
+        }
+    }
 }
 
 void bad_prevents_redeclaration4() {
@@ -826,20 +830,22 @@ void bad_prevents_redeclaration4() {
         do_some(i1+2);
     }
 
-//     int i2 = 0; DUMMY_TOKEN
-//     switch (i2) {
-// // // FIXME: warning and fixit must be provided
-//         case 0: {
-//             int i2 = 0;
-//             do_some(i2+1);
-//             break;
-//         }
-//         case 1: {
-//             int i2 = 0;
-//             do_some(i2+2);
-//             break;
-//         }
-//     }
+    int i2 = 0; DUMMY_TOKEN
+    switch (i2) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        case 0: {
+            int i2 = 0;
+            do_some(i2+1);
+            break;
+        }
+        case 1: {
+            int i2 = 0;
+            do_some(i2+2);
+            break;
+        }
+    }
 }
 
 void bad_stolen_reference1_no_use_after() {
