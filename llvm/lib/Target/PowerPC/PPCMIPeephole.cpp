@@ -841,7 +841,6 @@ bool PPCMIPeephole::simplifyCode() {
         // Splat fed by a shift. Usually when we align value to splat into
         // vector element zero.
         if (DefOpcode == PPC::XXSLDWI) {
-          Register ShiftRes = DefMI->getOperand(0).getReg();
           Register ShiftOp1 = DefMI->getOperand(1).getReg();
           Register ShiftOp2 = DefMI->getOperand(2).getReg();
 
