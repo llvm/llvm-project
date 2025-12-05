@@ -175,11 +175,10 @@ define i32 @test7(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB1:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[SUB1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[C1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 1
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB3]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[R1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 0
+; CHECK-NEXT:    [[R1:%.*]] = sub nuw i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[R1]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0
@@ -205,11 +204,10 @@ define i32 @test8(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[BB3:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[SUB1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[C1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 1
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB3]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[R1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 0
+; CHECK-NEXT:    [[R1:%.*]] = sub nuw i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[R1]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0
@@ -296,11 +294,10 @@ define i32 @test10(i32 %a, i32 %b, i1 %cond2) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND]], [[COND2:%.*]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[BB3:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[SUB1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[C1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 1
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB3]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[R1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 0
+; CHECK-NEXT:    [[R1:%.*]] = sub nuw i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[R1]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0
@@ -328,11 +325,10 @@ define i32 @test10_logical(i32 %a, i32 %b, i1 %cond2) {
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[COND]], i1 [[COND2:%.*]], i1 false
 ; CHECK-NEXT:    br i1 [[AND]], label [[BB3:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[SUB1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[C1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 1
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB3]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[R1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 0
+; CHECK-NEXT:    [[R1:%.*]] = sub nuw i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[R1]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0
@@ -360,11 +356,10 @@ define i32 @test11(i32 %a, i32 %b, i1 %cond2) {
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[COND]], [[COND2:%.*]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[BB1:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[SUB1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[C1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 1
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB3]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[R1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 0
+; CHECK-NEXT:    [[R1:%.*]] = sub nuw i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[R1]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0
@@ -392,11 +387,10 @@ define i32 @test11_logical(i32 %a, i32 %b, i1 %cond2) {
 ; CHECK-NEXT:    [[OR:%.*]] = select i1 [[COND]], i1 true, i1 [[COND2:%.*]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[BB1:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[SUB1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[C1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 1
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB3]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[R1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 0
+; CHECK-NEXT:    [[R1:%.*]] = sub nuw i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[R1]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0
@@ -424,11 +418,10 @@ define i32 @test12(i32 %a, i32 %b, i1 %cond2) {
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[COND]], [[COND2:%.*]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[BB3:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[SUB1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[C1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 1
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB3]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[R1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 0
+; CHECK-NEXT:    [[R1:%.*]] = sub nuw i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[R1]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0
@@ -456,11 +449,10 @@ define i32 @test12_logical(i32 %a, i32 %b, i1 %cond2) {
 ; CHECK-NEXT:    [[OR:%.*]] = select i1 [[COND]], i1 true, i1 [[COND2:%.*]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[BB3:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[SUB1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[C1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 1
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB3]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[R1:%.*]] = extractvalue { i32, i1 } [[SUB1]], 0
+; CHECK-NEXT:    [[R1:%.*]] = sub nuw i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[R1]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0

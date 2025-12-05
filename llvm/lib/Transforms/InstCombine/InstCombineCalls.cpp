@@ -864,6 +864,19 @@ InstCombinerImpl::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
   if (OptimizeOverflowCheck(WO->getBinaryOp(), WO->isSigned(), WO->getLHS(),
                             WO->getRHS(), *WO, OperationResult, OverflowResult))
     return createOverflowTuple(WO, OperationResult, OverflowResult);
+    
+  // Transform: usub.with.overflow(X, Y) -> {X - Y, X u< Y} 
+  if (WO->getBinaryOp() == Instruction::Sub && !WO->isSigned()) {
+    IRBuilder<> Builder(WO);
+    Value *Sub = Builder.CreateSub(WO->getLHS(), WO->getRHS());
+    Value *Overflow = Builder.CreateICmpULT(WO->getLHS(), WO->getRHS());
+    
+    Value *ResultStruct = UndefValue::get(WO->getType());
+    ResultStruct = Builder.CreateInsertValue(ResultStruct, Sub, 0);
+    ResultStruct = Builder.CreateInsertValue(ResultStruct, Overflow, 1);
+  
+    return replaceInstUsesWith(*WO, ResultStruct);
+  }
 
   // See whether we can optimize the overflow check with assumption information.
   for (User *U : WO->users()) {

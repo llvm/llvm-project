@@ -130,10 +130,9 @@ define i1 @sub_ne0(i8 %x, i8 %y, i1 %b) {
 
 define i1 @sub_eq1(i8 %x, i8 %y, i1 %b) {
 ; CHECK-LABEL: @sub_eq1(
-; CHECK-NEXT:    [[SS:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[SS]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OV:%.*]] = icmp ult i8 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[OV]])
-; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SS]], 0
 ; CHECK-NEXT:    [[EQ1:%.*]] = icmp eq i8 [[SUB]], 1
 ; CHECK-NEXT:    ret i1 [[EQ1]]
 ;
@@ -149,10 +148,9 @@ define i1 @sub_eq1(i8 %x, i8 %y, i1 %b) {
 
 define i1 @sub_sgt0(i8 %x, i8 %y, i1 %b) {
 ; CHECK-LABEL: @sub_sgt0(
-; CHECK-NEXT:    [[SS:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[SS]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OV:%.*]] = icmp ult i8 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[OV]])
-; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SS]], 0
 ; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt i8 [[SUB]], 0
 ; CHECK-NEXT:    ret i1 [[SGT0]]
 ;
