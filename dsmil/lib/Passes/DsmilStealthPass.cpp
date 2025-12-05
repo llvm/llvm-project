@@ -20,6 +20,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -196,10 +198,10 @@ private:
           StringRef Name = Callee->getName();
 
           // Skip if not a telemetry call
-          if (!Name.startswith("dsmil_counter") &&
-              !Name.startswith("dsmil_event") &&
-              !Name.startswith("dsmil_perf") &&
-              !Name.startswith("dsmil_trace"))
+          if (!Name.starts_with("dsmil_counter") &&
+              !Name.starts_with("dsmil_event") &&
+              !Name.starts_with("dsmil_perf") &&
+              !Name.starts_with("dsmil_trace"))
             continue;
 
           TelemetryClass Class = classifyTelemetryCall(CI);
@@ -332,8 +334,9 @@ private:
       DelayBuilder.CreateCall(DelayFunc, {RequiredDelay});
       DelayBuilder.CreateBr(ContBB);
 
-      // Continue block: original return
-      ContBB->getInstList().push_back(RI);
+      // Continue block: emit return
+      IRBuilder<> ContBuilder(ContBB);
+      ContBuilder.CreateRetVoid();
     }
 
     ConstantRateFunctionsAdded++;
@@ -380,7 +383,7 @@ private:
     FunctionCallee NetworkWrapperFunc = M->getOrInsertFunction(
         "dsmil_network_stealth_wrapper",
         Type::getVoidTy(Ctx),
-        Type::getInt8PtrTy(Ctx), // data
+        PointerType::get(Type::getInt8Ty(Ctx), 0), // data
         Type::getInt64Ty(Ctx)    // length
     );
 
@@ -424,11 +427,10 @@ private:
         DataPtr = CI->getArgOperand(1);  // buf/data pointer
         DataLen = CI->getArgOperand(2);  // len/count
 
-        // Cast data pointer to i8* if needed
-        if (!DataPtr->getType()->isPointerTy() ||
-            !cast<PointerType>(DataPtr->getType())->isOpaqueOrPointeeTypeMatches(
-                Type::getInt8Ty(Ctx))) {
-          DataPtr = Builder.CreateBitCast(DataPtr, Type::getInt8PtrTy(Ctx));
+        // Cast data pointer to i8* for wrapper
+        auto *I8PtrTy = PointerType::get(Type::getInt8Ty(Ctx), 0);
+        if (DataPtr->getType() != I8PtrTy) {
+          DataPtr = Builder.CreateBitCast(DataPtr, I8PtrTy);
         }
 
         // Ensure length is i64

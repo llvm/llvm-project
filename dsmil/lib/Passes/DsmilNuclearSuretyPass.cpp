@@ -34,7 +34,10 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/raw_ostream.h"
 #include <unordered_map>
 #include <unordered_set>
@@ -181,10 +184,10 @@ bool DsmilNuclearSuretyPass::verifyNC3Isolation(Module &M) {
                         NC3Functions.find(Callee) == NC3Functions.end()) {
 
                         // Allow certain safe library functions
-                        if (!CalleeName.startswith("dsmil_") &&
-                            !CalleeName.equals("memcpy") &&
-                            !CalleeName.equals("memset") &&
-                            !CalleeName.equals("strlen")) {
+                        if (!CalleeName.starts_with("dsmil_") &&
+                            CalleeName != "memcpy" &&
+                            CalleeName != "memset" &&
+                            CalleeName != "strlen") {
 
                             errs() << "NC3 WARNING: " << NC3Func->getName()
                                    << " calls external function " << CalleeName << "\n";
@@ -236,13 +239,14 @@ void DsmilNuclearSuretyPass::insert2PIWrapper(Function *F,
     // int dsmil_two_person_verify(const char *func_name,
     //                              const uint8_t *sig1, const uint8_t *sig2,
     //                              const char *key1, const char *key2)
+    auto *I8Ptr = PointerType::get(Type::getInt8Ty(Ctx), 0);
     FunctionType *VerifyFT = FunctionType::get(
         Type::getInt32Ty(Ctx),
-        {Type::getInt8PtrTy(Ctx),   // func_name
-         Type::getInt8PtrTy(Ctx),   // sig1
-         Type::getInt8PtrTy(Ctx),   // sig2
-         Type::getInt8PtrTy(Ctx),   // key1
-         Type::getInt8PtrTy(Ctx)},  // key2
+        {I8Ptr,   // func_name
+         I8Ptr,   // sig1
+         I8Ptr,   // sig2
+         I8Ptr,   // key1
+         I8Ptr},  // key2
         false
     );
 
@@ -258,11 +262,10 @@ void DsmilNuclearSuretyPass::insert2PIWrapper(Function *F,
     errs() << "    2PI wrapper inserted (production: add verification IR)\n";
 
     // Create audit log call
-    FunctionCallee AuditFunc = M->getOrInsertFunction(
-        "dsmil_nc3_audit_log",
-        Type::getVoidTy(Ctx),
-        Type::getInt8PtrTy(Ctx)  // message
-    );
+    FunctionCallee AuditFunc =
+        M->getOrInsertFunction("dsmil_nc3_audit_log",
+                               Type::getVoidTy(Ctx),
+                               I8Ptr);
 
     // Insert audit logging
     // (Simplified - production would insert actual IR)
@@ -278,7 +281,7 @@ bool DsmilNuclearSuretyPass::isIsolated(Function *F) {
                     return false;  // Indirect call - not isolated
 
                 if (NC3Functions.find(Callee) == NC3Functions.end() &&
-                    !Callee->getName().startswith("dsmil_")) {
+                    !Callee->getName().starts_with("dsmil_")) {
                     return false;  // Calls non-NC3 function
                 }
             }

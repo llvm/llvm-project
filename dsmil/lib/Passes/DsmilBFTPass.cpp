@@ -32,7 +32,9 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/Pass.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/raw_ostream.h"
 #include <unordered_map>
 #include <string>
@@ -217,7 +219,7 @@ void DsmilBFTPass::insertBFTCall(Function *F, BFTUpdateType Type) {
             BFTFunc = M->getOrInsertFunction(
                 "dsmil_bft_send_status",
                 Type::getInt32Ty(Ctx),
-                Type::getInt8PtrTy(Ctx)
+                PointerType::get(Type::getInt8Ty(Ctx), 0)
             );
             break;
 
@@ -226,7 +228,7 @@ void DsmilBFTPass::insertBFTCall(Function *F, BFTUpdateType Type) {
             BFTFunc = M->getOrInsertFunction(
                 "dsmil_bft_send_friendly",
                 Type::getInt32Ty(Ctx),
-                Type::getInt8PtrTy(Ctx)
+                PointerType::get(Type::getInt8Ty(Ctx), 0)
             );
             break;
 

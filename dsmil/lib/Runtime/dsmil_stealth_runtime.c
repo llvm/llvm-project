@@ -8,7 +8,6 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#define _POSIX_C_SOURCE 200809L
 #include <stdint.h>
 #include <time.h>
 #include <errno.h>

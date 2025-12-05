@@ -12,14 +12,21 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/SHA256.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/CFG.h"
+#include "dsmil_threat_signature.h"
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 
 #define DEBUG_TYPE "dsmil-threat-signature"
 
@@ -73,7 +80,7 @@ private:
     }
 
     // Compute SHA-256 hash
-    auto Hash = SHA256::hash(arrayRefFromStringRef(CFGData));
+    auto Hash = SHA256::hash(arrayRefFromStringRef(StringRef(CFGData)));
     CFGHash.assign(Hash.begin(), Hash.end());
   }
 
@@ -163,7 +170,7 @@ private:
     std::error_code EC;
     raw_fd_ostream OS(OutputPath, EC);
     if (!EC) {
-      OS << formatv("{0:2}", Value(std::move(Signature)));
+      OS << formatv("{0:2}", json::Value(std::move(Signature)));
       OS.close();
       errs() << "[DSMIL Threat Signature] Generated: " << OutputPath << "\n";
     }

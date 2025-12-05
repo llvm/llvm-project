@@ -30,9 +30,12 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/Pass.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/ADT/SmallVector.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
@@ -78,6 +81,15 @@ std::string classificationToString(ClassificationLevel Level) {
     }
 }
 
+struct PairHash {
+    template <class T1, class T2>
+    std::size_t operator()(const std::pair<T1, T2> &p) const {
+        auto h1 = std::hash<T1>{}(p.first);
+        auto h2 = std::hash<T2>{}(p.second);
+        return h1 ^ (h2 << 1);
+    }
+};
+
 // Cross-domain transition record
 struct CrossDomainTransition {
     Function *Caller;
@@ -106,15 +118,6 @@ private:
     unsigned NumCrossDomainCalls = 0;
     unsigned NumUnsafeCalls = 0;
     unsigned NumGuardsInserted = 0;
-
-    struct PairHash {
-        template <class T1, class T2>
-        std::size_t operator()(const std::pair<T1, T2> &p) const {
-            auto h1 = std::hash<T1>{}(p.first);
-            auto h2 = std::hash<T2>{}(p.second);
-            return h1 ^ (h2 << 1);
-        }
-    };
 
 public:
     PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
@@ -322,15 +325,16 @@ bool DsmilCrossDomainPass::insertCrossDomainGuards(Module &M) {
     bool Modified = false;
 
     // Get or create guard runtime function
-    FunctionType *GuardFT = FunctionType::get(
-        Type::getInt32Ty(M.getContext()),
-        {Type::getInt8PtrTy(M.getContext()),  // data
-         Type::getInt64Ty(M.getContext()),    // length
-         Type::getInt8PtrTy(M.getContext()),  // from_level
-         Type::getInt8PtrTy(M.getContext()),  // to_level
-         Type::getInt8PtrTy(M.getContext())}, // policy
-        false
-    );
+    auto *I8Ptr = PointerType::get(Type::getInt8Ty(M.getContext()), 0);
+    SmallVector<Type *, 5> ParamTys{
+        I8Ptr,                          // data
+        Type::getInt64Ty(M.getContext()), // length
+        I8Ptr,                          // from_level
+        I8Ptr,                          // to_level
+        I8Ptr                           // policy
+    };
+    FunctionType *GuardFT =
+        FunctionType::get(Type::getInt32Ty(M.getContext()), ParamTys, false);
 
     FunctionCallee GuardFunc = M.getOrInsertFunction(
         "dsmil_cross_domain_guard", GuardFT);

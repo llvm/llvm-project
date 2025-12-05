@@ -10,7 +10,6 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#define _POSIX_C_SOURCE 200809L
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -74,7 +73,6 @@ int dsmil_blue_red_init(int is_red_build) {
         const char *scenarios = getenv("DSMIL_RED_SCENARIOS");
         if (scenarios) {
             strncpy(g_active_scenarios, scenarios, sizeof(g_active_scenarios) - 1);
-            g_active_scenarios[sizeof(g_active_scenarios) - 1] = '\0';
             fprintf(g_red_log_file, "Active scenarios: %s\n", g_active_scenarios);
             fflush(g_red_log_file);
         }

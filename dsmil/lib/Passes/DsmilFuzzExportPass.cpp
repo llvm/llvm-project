@@ -22,6 +22,8 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -133,12 +135,7 @@ private:
     } else if (Ty->isDoubleTy()) {
       return "double";
     } else if (Ty->isPointerTy()) {
-      Type *ElementTy = Ty->getPointerElementType();
-      if (ElementTy->isIntegerTy(8)) {
-        return "bytes";  // uint8_t* = byte buffer
-      } else {
-        return typeToString(ElementTy) + "*";
-      }
+      return "pointer";
     } else if (Ty->isStructTy()) {
       return "struct";
     } else if (Ty->isArrayTy()) {

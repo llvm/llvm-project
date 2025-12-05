@@ -33,7 +33,10 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/raw_ostream.h"
 #include <unordered_map>
 #include <unordered_set>
@@ -220,13 +223,10 @@ void DsmilRadioBridgePass::insertFraming(Function *F, RadioProtocol Proto) {
 
     // Insert call to framing function
     // (Simplified - production would analyze function and insert at send points)
+    auto *I8Ptr = PointerType::get(Type::getInt8Ty(Ctx), 0);
     FunctionCallee FramingFunc = M->getOrInsertFunction(
-        framing_func,
-        Type::getInt32Ty(Ctx),
-        Type::getInt8PtrTy(Ctx),  // data
-        Type::getInt64Ty(Ctx),    // length
-        Type::getInt8PtrTy(Ctx)   // output
-    );
+        framing_func, Type::getInt32Ty(Ctx), I8Ptr, Type::getInt64Ty(Ctx),
+        I8Ptr);
 
     // In production: insert actual IR transformations
     (void)FramingFunc;
@@ -244,21 +244,18 @@ bool DsmilRadioBridgePass::generateBridgeAdapters(Module &M) {
     return Modified;
 }
 
-void DsmilRadioBridgePass::createBridgeAdapter(Module *M, Function *BridgeFunc) {
+void DsmilRadioBridgePass::createBridgeAdapter(Module &M, Function *BridgeFunc) {
     // Bridge function should dispatch to appropriate protocol handler
     // based on runtime selection or availability
 
     // Get context
-    LLVMContext &Ctx = M->getContext();
+    LLVMContext &Ctx = M.getContext();
 
     // Create unified bridge runtime function
-    FunctionCallee UnifiedBridge = M->getOrInsertFunction(
-        "dsmil_radio_bridge_send",
-        Type::getInt32Ty(Ctx),
-        Type::getInt8PtrTy(Ctx),  // protocol name
-        Type::getInt8PtrTy(Ctx),  // data
-        Type::getInt64Ty(Ctx)     // length
-    );
+    auto *I8Ptr = PointerType::get(Type::getInt8Ty(Ctx), 0);
+    FunctionCallee UnifiedBridge = M.getOrInsertFunction(
+        "dsmil_radio_bridge_send", Type::getInt32Ty(Ctx), I8Ptr, I8Ptr,
+        Type::getInt64Ty(Ctx));
 
     // In production: insert dispatching logic
     (void)UnifiedBridge;

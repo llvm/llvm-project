@@ -13,6 +13,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/JSON.h"
@@ -353,9 +355,9 @@ private:
 
 public:
   DsmilMissionPolicyPass()
-    : ActiveProfile(MissionProfile),
-      ConfigPath(MissionProfileConfig),
-      EnforcementMode(MissionPolicyMode) {}
+    : ActiveProfile(::MissionProfile.getValue()),
+      ConfigPath(::MissionProfileConfig.getValue()),
+      EnforcementMode(::MissionPolicyMode.getValue()) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
     // If no mission profile specified, skip enforcement

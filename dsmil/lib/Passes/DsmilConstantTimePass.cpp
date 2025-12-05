@@ -21,6 +21,8 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -349,8 +351,9 @@ private:
 
           // Shifting BY a secret amount is timing-dependent
           if (isSecretValue(BO->getOperand(1))) {
-            std::string Msg = "Variable-time instruction: shift by secret amount " +
-                              "(shift timing may depend on shift count)";
+            std::string Msg =
+                std::string("Variable-time instruction: shift by secret amount ") +
+                "(shift timing may depend on shift count)";
             Violations.emplace_back(ViolationType::VariableTimeInstruction,
                                     F.getName(), BO, Msg);
           }

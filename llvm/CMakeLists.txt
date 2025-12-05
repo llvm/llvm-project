@@ -862,6 +862,7 @@ option(LLVM_INCLUDE_EXAMPLES "Generate build targets for the LLVM examples" ON)
 option(LLVM_BUILD_TESTS
   "Build LLVM unit tests. If OFF, just generate build targets." OFF)
 option(LLVM_INCLUDE_TESTS "Generate build targets for the LLVM unit tests." ON)
+option(LLVM_ENABLE_DSMIL "Build DSMIL pass plugin and runtime from ../dsmil" OFF)
 
 option(LLVM_INSTALL_GTEST
   "Install the llvm gtest library.  This should be on if you want to do
@@ -1333,6 +1334,10 @@ add_subdirectory(utils/TableGen)
 add_subdirectory(include)
 
 add_subdirectory(lib)
+
+if(LLVM_ENABLE_DSMIL)
+  add_subdirectory(${LLVM_MAIN_SRC_DIR}/../dsmil ${CMAKE_BINARY_DIR}/dsmil)
+endif()
 
 if( LLVM_INCLUDE_UTILS )
   add_subdirectory(utils/FileCheck)

@@ -22,6 +22,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include <map>
 #include <set>
 #include <string>
@@ -204,12 +206,9 @@ private:
     IRBuilder<> Builder(&Entry, Entry.getFirstInsertionPt());
 
     // Create call to dsmil_red_log(hook_name, function_name)
+    auto *I8Ptr = PointerType::get(Type::getInt8Ty(Ctx), 0);
     FunctionCallee RedLogFunc = M->getOrInsertFunction(
-        "dsmil_red_log",
-        Type::getVoidTy(Ctx),
-        Type::getInt8PtrTy(Ctx),  // hook_name
-        Type::getInt8PtrTy(Ctx)   // function_name
-    );
+        "dsmil_red_log", Type::getVoidTy(Ctx), I8Ptr, I8Ptr);
 
     Value *HookNameStr = Builder.CreateGlobalStringPtr(HookName);
     Value *FuncNameStr = Builder.CreateGlobalStringPtr(F.getName());
@@ -274,11 +273,9 @@ private:
     IRBuilder<> Builder(&Entry, Entry.getFirstInsertionPt());
 
     // Create call to dsmil_red_scenario(vuln_type)
+    auto *I8Ptr = PointerType::get(Type::getInt8Ty(Ctx), 0);
     FunctionCallee ScenarioFunc = M->getOrInsertFunction(
-        "dsmil_red_scenario",
-        Type::getInt1Ty(Ctx),  // Returns bool
-        Type::getInt8PtrTy(Ctx)  // scenario_name
-    );
+        "dsmil_red_scenario", Type::getInt1Ty(Ctx), I8Ptr);
 
     Value *VulnTypeStr = Builder.CreateGlobalStringPtr(VulnType);
     Value *ShouldInject = Builder.CreateCall(ScenarioFunc, {VulnTypeStr});
@@ -385,7 +382,7 @@ private:
     std::error_code EC;
     raw_fd_ostream OS(OutputPath, EC);
     if (!EC) {
-      OS << formatv("{0:2}", Value(std::move(Report)));
+      OS << formatv("{0:2}", json::Value(std::move(Report)));
       OS.close();
     }
   }
