@@ -1446,10 +1446,22 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_orr:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_orr_u)
         .setMatchingIROpcode(Instruction::Or);
+  case Intrinsic::aarch64_sve_sqrshl:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sqrshl_u);
+  case Intrinsic::aarch64_sve_sqshl:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sqshl_u);
   case Intrinsic::aarch64_sve_sqsub:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sqsub_u);
+  case Intrinsic::aarch64_sve_srshl:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_srshl_u);
+  case Intrinsic::aarch64_sve_uqrshl:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_uqrshl_u);
+  case Intrinsic::aarch64_sve_uqshl:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_uqshl_u);
   case Intrinsic::aarch64_sve_uqsub:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_uqsub_u);
+  case Intrinsic::aarch64_sve_urshl:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_urshl_u);
 
   case Intrinsic::aarch64_sve_add_u:
     return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
