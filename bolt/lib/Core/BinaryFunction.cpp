@@ -1910,45 +1910,8 @@ bool BinaryFunction::scanExternalRefs() {
   return Success;
 }
 
-bool BinaryFunction::validateExternalBranch(uint64_t TargetAddress) {
-  if (!isSimple())
-    return true;
-
-  BinaryFunction *TargetFunction =
-      BC.getBinaryFunctionContainingAddress(TargetAddress);
-
-  bool IsValid = true;
-
-  if (TargetFunction) {
-    const uint64_t TargetOffset = TargetAddress - TargetFunction->getAddress();
-    // Skip empty functions and out-of-bounds offsets,
-    // as they may not be disassembled.
-    if (!TargetOffset || (TargetOffset > TargetFunction->getSize()))
-      return true;
-
-    if (TargetFunction->CurrentState == State::Disassembled &&
-        (!TargetFunction->getInstructionAtOffset(TargetOffset) ||
-         getSizeOfDataInCodeAt(TargetOffset)))
-      IsValid = false;
-  } else {
-    if (!BC.getSectionForAddress(TargetAddress))
-      IsValid = false;
-  }
-
-  if (!IsValid) {
-    setIgnored();
-    BC.errs() << "BOLT-WARNING: corrupted control flow detected in function "
-              << *this
-              << ", an external branch/call targets an invalid instruction "
-              << "at address 0x" << Twine::utohexstr(TargetAddress) << "\n";
-    return false;
-  }
-
-  return true;
-}
-
 bool BinaryFunction::validateInternalBranches() {
-  if (!isSimple())
+  if (!isSimple() || TrapsOnEntry)
     return true;
 
   for (const auto &KV : Labels) {

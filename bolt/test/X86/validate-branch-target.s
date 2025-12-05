@@ -13,35 +13,21 @@
 
 .globl	internal_corrupt
 .type	internal_corrupt,@function
-.align	16
 internal_corrupt:
-	leaq	.Lopts_1(%rip),%rax
-	addq	$25,%rax
-	.byte	0xf3,0xc3
-.L8xchar_1:
-	addq	$12,%rax
-.Ldone_1:
-	.byte	0xf3,0xc3
-.align	64
-.Lopts_1:
-.byte	114,1,52,40,56,120,44,105,110,116,41,0  # data '114' will be disassembled as 'jb', check for internal branch: jb + 0x1
-.align	64
+	jb  data_in_code + 1  # targeting the data in code, and jump into the middle of 'xorb' instruction
+data_in_code:
+	.byte 0x34, 0x01 # data in code, will be disassembled as 'xorb 0x1, %al'
 .size	internal_corrupt,.-internal_corrupt
 
 
 .globl	external_corrupt
 .type	external_corrupt,@function
-.align	16
 external_corrupt:
-	leaq	.Lopts_2(%rip),%rax
-	addq	$25,%rax
-	.byte	0xf3,0xc3
-.L8xchar_2:
-	addq	$12,%rax
-.Ldone_2:
-	.byte	0xf3,0xc3
-.align	64
-.Lopts_2:
-.byte	114,99,52,40,56,120,44,99,104,97,114,41,0  # data '114' will be disassembled as 'jb', check for external branch: jb + 0x63
-.align	64
+	jb  external_func + 1  # targeting the middle of normal instruction externally
 .size	external_corrupt,.-external_corrupt
+
+.globl	external_func
+.type	external_func,@function
+external_func:
+	addq  $1, %rax  # normal instruction
+.size	external_func,.-external_func

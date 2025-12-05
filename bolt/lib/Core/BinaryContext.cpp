@@ -1431,15 +1431,27 @@ void BinaryContext::processInterproceduralReferences() {
             << TargetFunction->getPrintName() << '\n';
       }
 
+      const uint64_t TargetOffset = Address - TargetFunction->getAddress();
+      if (TargetOffset && (TargetOffset <= TargetFunction->getSize())) {
+        if (TargetFunction->CurrentState ==
+                BinaryFunction::State::Disassembled &&
+            (!TargetFunction->getInstructionAtOffset(TargetOffset) ||
+             TargetFunction->getSizeOfDataInCodeAt(TargetOffset))) {
+          this->errs()
+              << "BOLT-WARNING: corrupted control flow detected in function "
+              << Function
+              << ", an external branch/call targets an invalid instruction "
+              << "at address 0x" << Twine::utohexstr(Address) << "\n";
+          Function.setIgnored();
+        }
+      }
+
       // Create an extra entry point if needed. Can also render the target
       // function ignored if the reference is invalid.
       handleExternalBranchTarget(Address, *TargetFunction);
 
       continue;
     }
-
-    if (!Function.validateExternalBranch(Address))
-      continue;
 
     // Check if address falls in function padding space - this could be
     // unmarked data in code. In this case adjust the padding space size.

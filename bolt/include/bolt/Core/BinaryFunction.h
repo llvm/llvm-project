@@ -2320,11 +2320,6 @@ public:
   /// zero-value bytes.
   bool isZeroPaddingAt(uint64_t Offset) const;
 
-  /// Validate if the target of an external direct branch/call is a valid
-  /// executable instruction.
-  /// Return true if the target is valid, false otherwise.
-  bool validateExternalBranch(uint64_t TargetAddress);
-
   /// Validate if the target of any internal direct branch/call is a valid
   /// executable instruction.
   /// Return true if all the targets are valid, false otherwise.

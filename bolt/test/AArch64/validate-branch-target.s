@@ -14,11 +14,8 @@
 .globl  internal_corrupt
 .type   internal_corrupt,@function
 internal_corrupt:
-    ret
-    nop
-.Lfake_branch_1:
-    .inst 0x14000001  // Opcode 0x14=b, check for internal branch: b + 0x4
-.Lgarbage_1:
+    b constant_island_0  // targeting the data in code
+constant_island_0:
     .word 0xffffffff
 .size   internal_corrupt,.-internal_corrupt
 
@@ -26,8 +23,14 @@ internal_corrupt:
 .globl  external_corrupt
 .type   external_corrupt,@function
 external_corrupt:
-    ret
-    nop
-.Lfake_branch_2:
-    .inst   0x14000004  // Opcode 0x14=b, check for external branch: b + 0xf
+    b   constant_island_1  // targeting the data in code externally
 .size   external_corrupt,.-external_corrupt
+
+.globl  external_func
+.type   external_func,@function
+external_func:
+    add x0, x0, x1
+constant_island_1:
+    .word 0xffffffff // data in code
+    ret
+.size   external_func,.-external_func
