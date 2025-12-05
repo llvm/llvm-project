@@ -211,6 +211,7 @@ subroutine s7()
   type(procTypeNotPure) :: procVarNotPure
   type(procTypePure) :: procVarPure
   integer :: ivar
+  real :: rvar
 
   procVarPure%pureProcComponent => pureFunc
 
@@ -237,6 +238,14 @@ subroutine s7()
   do concurrent (i = 1:10)
 !ERROR: Impure procedure 'ipf' may not be referenced in DO CONCURRENT
     ivar = generic()
+  end do
+
+  ! This should generate an error
+  do concurrent (i = 1:10)
+!ERROR: Impure procedure 'irand' may not be referenced in DO CONCURRENT
+    ivar = irand()
+!ERROR: Impure procedure 'rand' may not be referenced in DO CONCURRENT
+    rvar = rand()
   end do
 
   contains

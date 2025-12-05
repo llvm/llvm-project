@@ -657,7 +657,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"irand",
         {{"i", TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
             Optionality::optional}},
-        TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar},
+        TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
+        IntrinsicClass::impureFunction},
     {"ishft", {{"i", SameIntOrUnsigned}, {"shift", AnyInt}}, SameIntOrUnsigned},
     {"ishftc",
         {{"i", SameIntOrUnsigned}, {"shift", AnyInt},
@@ -879,7 +880,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"rand",
         {{"i", TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
             Optionality::optional}},
-        TypePattern{RealType, KindCode::exactKind, 4}, Rank::scalar},
+        TypePattern{RealType, KindCode::exactKind, 4}, Rank::scalar,
+        IntrinsicClass::impureFunction},
     {"range",
         {{"x", AnyNumeric, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In,
@@ -2834,7 +2836,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             name, characteristics::Procedure{std::move(dummyArgs), attrs}},
         std::move(rearranged)};
   } else {
-    attrs.set(characteristics::Procedure::Attr::Pure);
+    if (intrinsicClass != IntrinsicClass::impureFunction /* RAND and IRAND */)
+      attrs.set(characteristics::Procedure::Attr::Pure);
     characteristics::TypeAndShape typeAndShape{resultType.value(), resultRank};
     characteristics::FunctionResult funcResult{std::move(typeAndShape)};
     characteristics::Procedure chars{
