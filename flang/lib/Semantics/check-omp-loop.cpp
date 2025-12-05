@@ -303,7 +303,7 @@ void OmpStructureChecker::CheckNestedConstruct(
       parser::CharBlock beginSource{beginSpec.DirName().source};
       context_
           .Say(endSpec->DirName().source,
-              "END %s directive is not allowed when the construct does not contain all loops that shares a loop-terminating statement"_err_en_US,
+              "END %s directive is not allowed when the construct does not contain all loops that share a loop-terminating statement"_err_en_US,
               parser::ToUpperCaseLetters(beginSource.ToString()))
           .Attach(beginSource, "The construct starts here"_en_US);
     }
