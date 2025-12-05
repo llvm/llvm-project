@@ -94,7 +94,7 @@ bool L0DeviceTy::isDeviceIPorNewer(uint32_t Version) const {
 
 /// Get default compute group ordinal. Returns Ordinal-NumQueues pair
 std::pair<uint32_t, uint32_t> L0DeviceTy::findComputeOrdinal() {
-  std::pair<uint32_t, uint32_t> Ordinal{UINT32_MAX, 0};
+  std::pair<uint32_t, uint32_t> Ordinal{MaxOrdinal, 0};
   uint32_t Count = 0;
   const auto zeDevice = getZeDevice();
   CALL_ZE_RET(Ordinal, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
@@ -113,7 +113,7 @@ std::pair<uint32_t, uint32_t> L0DeviceTy::findComputeOrdinal() {
       break;
     }
   }
-  if (Ordinal.first == UINT32_MAX)
+  if (Ordinal.first == MaxOrdinal)
     DP("Error: no command queues are found\n");
 
   return Ordinal;
@@ -121,7 +121,7 @@ std::pair<uint32_t, uint32_t> L0DeviceTy::findComputeOrdinal() {
 
 /// Get copy command queue group ordinal. Returns Ordinal-NumQueues pair
 std::pair<uint32_t, uint32_t> L0DeviceTy::findCopyOrdinal(bool LinkCopy) {
-  std::pair<uint32_t, uint32_t> Ordinal{UINT32_MAX, 0};
+  std::pair<uint32_t, uint32_t> Ordinal{MaxOrdinal, 0};
   uint32_t Count = 0;
   const auto zeDevice = getZeDevice();
   CALL_ZE_RET(Ordinal, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
@@ -284,11 +284,13 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
     const auto &WaitEvents = AsyncQueue->WaitEvents;
     if (Plugin.getOptions().CommandMode == CommandModeTy::AsyncOrdered) {
       // Only need to wait for the last event
-      CALL_ZE_RET_ERROR(zeEventHostSynchronize, WaitEvents.back(), UINT64_MAX);
+      CALL_ZE_RET_ERROR(zeEventHostSynchronize, WaitEvents.back(),
+                        std::numeric_limits<uint64_t>::max());
       // Synchronize on kernel event to support printf()
       auto KE = AsyncQueue->KernelEvent;
       if (KE && KE != WaitEvents.back()) {
-        CALL_ZE_RET_ERROR(zeEventHostSynchronize, KE, UINT64_MAX);
+        CALL_ZE_RET_ERROR(zeEventHostSynchronize, KE,
+                          std::numeric_limits<uint64_t>::max());
       }
       for (auto &Event : WaitEvents) {
         if (auto Err = releaseEvent(Event))
@@ -303,7 +305,8 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
       bool WaitDone = false;
       for (auto Itr = WaitEvents.rbegin(); Itr != WaitEvents.rend(); Itr++) {
         if (!WaitDone) {
-          CALL_ZE_RET_ERROR(zeEventHostSynchronize, *Itr, UINT64_MAX);
+          CALL_ZE_RET_ERROR(zeEventHostSynchronize, *Itr,
+                            std::numeric_limits<uint64_t>::max());
           if (*Itr == AsyncQueue->KernelEvent)
             WaitDone = true;
         }
@@ -718,7 +721,8 @@ Error L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
     CmdList = *CmdListOrErr;
     CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
                       nullptr, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, CmdList, UINT64_MAX);
+    CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, CmdList,
+                      std::numeric_limits<uint64_t>::max());
   } else {
     if (UseCopyEngine) {
       auto CmdListOrErr = getCopyCmdList();
@@ -745,7 +749,8 @@ Error L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
     CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
     CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, getMutex(),
                           CmdQueue, 1, &CmdList, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, UINT64_MAX);
+    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue,
+                      std::numeric_limits<uint64_t>::max());
     CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
   }
   return Plugin::success();
@@ -799,7 +804,8 @@ Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
     ze_event_handle_t Event = *EventOrErr;
     CALL_ZE_RET_ERROR(zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
                       PatternSize, Size, Event, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, UINT64_MAX);
+    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event,
+                      std::numeric_limits<uint64_t>::max());
   } else {
     auto CmdListOrErr = getCopyCmdList();
     if (!CmdListOrErr)
@@ -814,7 +820,8 @@ Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
     CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
     CALL_ZE_RET_ERROR(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
                       nullptr);
-    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, UINT64_MAX);
+    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue,
+                      std::numeric_limits<uint64_t>::max());
     CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
   }
   return Plugin::success();
@@ -883,7 +890,7 @@ Expected<ze_command_list_handle_t>
 L0DeviceTy::createCmdList(ze_context_handle_t Context,
                           ze_device_handle_t Device, uint32_t Ordinal,
                           const std::string_view DeviceIdStr) {
-  return (Ordinal == UINT32_MAX)
+  return (Ordinal == MaxOrdinal)
              ? nullptr
              : createCmdList(Context, Device, Ordinal, 0, DeviceIdStr);
 }
@@ -929,7 +936,7 @@ Expected<ze_command_queue_handle_t> L0DeviceTy::createCmdQueue(
     ze_context_handle_t Context, ze_device_handle_t Device, uint32_t Ordinal,
     uint32_t Index, const std::string_view DeviceIdStr, bool InOrder) {
   ze_command_queue_flags_t Flags = InOrder ? ZE_COMMAND_QUEUE_FLAG_IN_ORDER : 0;
-  return (Ordinal == UINT32_MAX) ? nullptr
+  return (Ordinal == MaxOrdinal) ? nullptr
                                  : createCmdQueue(Context, Device, Ordinal,
                                                   Index, Flags, DeviceIdStr);
 }
@@ -966,7 +973,7 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
 /// Create an immediate command list for copying
 Expected<ze_command_list_handle_t> L0DeviceTy::createImmCopyCmdList() {
   uint32_t Ordinal = getMainCopyEngine();
-  if (Ordinal == UINT32_MAX)
+  if (Ordinal == MaxOrdinal)
     Ordinal = getComputeEngine();
   return createImmCmdList(Ordinal, /*Index*/ 0);
 }

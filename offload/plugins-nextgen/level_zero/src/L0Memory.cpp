@@ -34,9 +34,10 @@ static const char *AllocKindToStr(int32_t Kind) {
 void *MemAllocatorTy::MemPoolTy::BlockTy::alloc() {
   if (isFull())
     return nullptr;
-  if (FreeSlot != UINT32_MAX) {
+
+  if (FreeSlot != MaxSlots) {
     const uint32_t Slot = FreeSlot;
-    FreeSlot = UINT32_MAX;
+    FreeSlot = MaxSlot;
     UsedSlots[Slot] = true;
     NumUsedSlots++;
     return reinterpret_cast<void *>(Base + Slot * ChunkSize);
@@ -508,7 +509,9 @@ Expected<void *> MemAllocatorTy::allocFromPool(size_t Size, size_t Align,
       (AllocOpt == AllocOptionTy::ALLOC_OPT_REDUCTION_COUNTER);
   const bool UseDedicatedPool = UseScratchPool || UseZeroInitPool;
 
-  if ((Pools[Kind] && MemAdvice == UINT32_MAX) || UseDedicatedPool) {
+  if ((Pools[Kind] &&
+       MemAdvice == std::numeric_limits<decltype(MemAdvice)>::max()) ||
+      UseDedicatedPool) {
     // Pool is enabled for the allocation kind, and we do not use any memory
     // advice. We should avoid using pool if there is any meaningful memory
     // advice not to affect sibling allocation in the same block.

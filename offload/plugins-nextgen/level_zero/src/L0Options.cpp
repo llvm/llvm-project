@@ -47,8 +47,9 @@ void L0OptionsTy::processEnvironmentVars() {
       int32_t MemType = -1;
       int32_t Offset = 0;
       int32_t Valid = 1;
-      const std::array<int32_t, 3> DefaultValue{1, 4, 256};
-      const int32_t AllMemType = INT32_MAX;
+      constexpr std::array<int32_t, 3> DefaultValue{1, 4, 256};
+      constexpr int32_t AllMemType =
+          std::numeric_limits<decltype(AllMemType)>::max();
       std::array<int32_t, 3> AllInfo{1, 4, 256};
       std::array<std::array<int32_t, 3>, 3> PoolInfo;
       PoolInfo.fill({-1, 0, 0});

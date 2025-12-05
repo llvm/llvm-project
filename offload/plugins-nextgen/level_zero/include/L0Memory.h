@@ -123,10 +123,13 @@ class MemAllocatorTy {
       size_t ChunkSize = 0;
       /// Total number of slots
       uint32_t NumSlots = 0;
+      /// Maximum slot value
+      static constexpr uint32_t MaxSlot =
+          std::numeric_limits<decltype(NumSlots)>::max();
       /// Number of slots in use
       uint32_t NumUsedSlots = 0;
       /// Cached available slot returned by the last dealloc() call
-      uint32_t FreeSlot = std::numeric_limits<uint32_t>::max();
+      uint32_t FreeSlot = MaxSlot;
       /// Marker for the currently used slots
       std::vector<bool> UsedSlots;
 
@@ -363,7 +366,8 @@ class MemAllocatorTy {
   }
 
 public:
-  MemAllocatorTy() : MaxAllocSize(std::numeric_limits<uint64_t>::max()) {}
+  MemAllocatorTy()
+      : MaxAllocSize(std::numeric_limits<decltype(MaxAllocSize)>::max()) {}
 
   MemAllocatorTy(const MemAllocatorTy &) = delete;
   MemAllocatorTy(MemAllocatorTy &&) = delete;

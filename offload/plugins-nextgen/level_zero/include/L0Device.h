@@ -206,9 +206,11 @@ class L0DeviceTy final : public GenericDeviceTy {
   std::string zeId;
 
   /// Command queue group ordinals for each device
-  std::pair<uint32_t, uint32_t> ComputeOrdinal{UINT32_MAX, 0};
+  static constexpr uint32_t MaxOrdinal =
+      std::numeric_limits<decltype(MaxOrdinal)>::max();
+  std::pair<uint32_t, uint32_t> ComputeOrdinal{MaxOrdinal, 0};
   /// Command queue group ordinals for copying
-  std::pair<uint32_t, uint32_t> CopyOrdinal{UINT32_MAX, 0};
+  std::pair<uint32_t, uint32_t> CopyOrdinal{MaxOrdinal, 0};
 
   /// Command queue index for each device
   uint32_t ComputeIndex = 0;
@@ -399,7 +401,7 @@ public:
   uint32_t getComputeEngine() const { return ComputeOrdinal.first; }
   uint32_t getNumComputeQueues() const { return ComputeOrdinal.second; }
 
-  bool hasMainCopyEngine() const { return CopyOrdinal.first != UINT32_MAX; }
+  bool hasMainCopyEngine() const { return CopyOrdinal.first != MaxOrdinal; }
   uint32_t getMainCopyEngine() const { return CopyOrdinal.first; }
 
   bool deviceRequiresImmCmdList() const {
@@ -502,11 +504,11 @@ public:
   // Allocation related routines
 
   /// Data alloc
-  Expected<void *>
-  dataAlloc(size_t Size, size_t Align, int32_t Kind, intptr_t Offset,
-            bool UserAlloc, bool DevMalloc = false,
-            uint32_t MemAdvice = UINT32_MAX,
-            AllocOptionTy AllocOpt = AllocOptionTy::ALLOC_OPT_NONE);
+  Expected<void *> dataAlloc(
+      size_t Size, size_t Align, int32_t Kind, intptr_t Offset, bool UserAlloc,
+      bool DevMalloc = false,
+      uint32_t MemAdvice = std::numeric_limits<decltype(MemAdvice)>::max(),
+      AllocOptionTy AllocOpt = AllocOptionTy::ALLOC_OPT_NONE);
 
   /// Data delete
   Error dataDelete(void *Ptr);

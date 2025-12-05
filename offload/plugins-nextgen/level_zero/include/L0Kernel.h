@@ -63,7 +63,8 @@ struct KernelPropertiesTy {
   int32_t ThreadLimit = -1;
 
   /// Cached parameters used in the previous launch
-  ze_kernel_indirect_access_flags_t IndirectAccessFlags = UINT32_MAX;
+  ze_kernel_indirect_access_flags_t IndirectAccessFlags =
+      std::numeric_limits<decltype(IndirectAccessFlags)>::max();
   uint32_t GroupSizes[3] = {0, 0, 0};
   ze_group_count_t GroupCounts{0, 0, 0};
 
