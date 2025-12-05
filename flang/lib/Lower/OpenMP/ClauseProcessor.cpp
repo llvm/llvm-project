@@ -44,6 +44,15 @@ mlir::omp::ReductionModifier translateReductionModifier(ReductionModifier mod) {
   return mlir::omp::ReductionModifier::defaultmod;
 }
 
+/// Check for unsupported map operand types.
+static void checkMapType(mlir::Location location, mlir::Type type) {
+  if (auto refType = mlir::dyn_cast<fir::ReferenceType>(type))
+    type = refType.getElementType();
+  if (auto boxType = mlir::dyn_cast_or_null<fir::BoxType>(type))
+    if (!mlir::isa<fir::PointerType>(boxType.getElementType()))
+      TODO(location, "OMPD_target_data MapOperand BoxType");
+}
+
 static mlir::omp::ScheduleModifier
 translateScheduleModifier(const omp::clause::Schedule::OrderingModifier &m) {
   switch (m) {
@@ -200,6 +209,18 @@ getIfClauseOperand(lower::AbstractConverter &converter,
       converter.genExprValue(std::get<omp::SomeExpr>(clause.t), stmtCtx));
   return firOpBuilder.createConvert(clauseLocation, firOpBuilder.getI1Type(),
                                     ifVal);
+}
+
+static void addUseDeviceClause(
+    lower::AbstractConverter &converter, const omp::ObjectList &objects,
+    llvm::SmallVectorImpl<mlir::Value> &operands,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) {
+  genObjectList(objects, converter, operands);
+  for (mlir::Value &operand : operands)
+    checkMapType(operand.getLoc(), operand.getType());
+
+  for (const omp::Object &object : objects)
+    useDeviceSyms.push_back(object.sym());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1204,26 +1225,14 @@ bool ClauseProcessor::processInReduction(
 }
 
 bool ClauseProcessor::processIsDevicePtr(
-    lower::StatementContext &stmtCtx, mlir::omp::IsDevicePtrClauseOps &result,
+    mlir::omp::IsDevicePtrClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const {
-  std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
-  bool clauseFound = findRepeatableClause<omp::clause::IsDevicePtr>(
-      [&](const omp::clause::IsDevicePtr &clause,
-          const parser::CharBlock &source) {
-        mlir::Location location = converter.genLocation(source);
-        // Force a map so the descriptor is materialized on the device with the
-        // device address inside.
-        mlir::omp::ClauseMapFlags mapTypeBits =
-            mlir::omp::ClauseMapFlags::is_device_ptr |
-            mlir::omp::ClauseMapFlags::to;
-        processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
-                          parentMemberIndices, result.isDevicePtrVars,
-                          isDeviceSyms);
+  return findRepeatableClause<omp::clause::IsDevicePtr>(
+      [&](const omp::clause::IsDevicePtr &devPtrClause,
+          const parser::CharBlock &) {
+        addUseDeviceClause(converter, devPtrClause.v, result.isDevicePtrVars,
+                           isDeviceSyms);
       });
-
-  insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
-                               result.isDevicePtrVars, isDeviceSyms);
-  return clauseFound;
 }
 
 bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
