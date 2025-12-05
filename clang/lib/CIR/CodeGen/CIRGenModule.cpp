@@ -1955,7 +1955,7 @@ void CIRGenModule::setGVPropertiesAux(mlir::Operation *op,
   assert(!cir::MissingFeatures::opGlobalPartition());
 }
 
-cir::TLS_Model CIRGenModule::GetDefaultCIRTLSModel() const {
+cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
   switch (getCodeGenOpts().getDefaultTLSModel()) {
   case CodeGenOptions::GeneralDynamicTLSModel:
     return cir::TLS_Model::GeneralDynamic;
@@ -1969,17 +1969,16 @@ cir::TLS_Model CIRGenModule::GetDefaultCIRTLSModel() const {
   llvm_unreachable("Invalid TLS model!");
 }
 
-void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) const {
+void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) {
   assert(d.getTLSKind() && "setting TLS mode on non-TLS var!");
 
-  auto tlm = GetDefaultCIRTLSModel();
+  cir::TLS_Model tlm = getDefaultCIRTLSModel();
 
   // Override the TLS model if it is explicitly specified.
   if (d.getAttr<TLSModelAttr>())
-    llvm_unreachable("NYI");
+    errorNYI(d.getSourceRange(), "TLS model attribute");
 
-  auto global = dyn_cast<cir::GlobalOp>(op);
-  assert(global && "NYI for other operations");
+  auto global = cast<cir::GlobalOp>(op);
   global.setTlsModel(tlm);
 }
 

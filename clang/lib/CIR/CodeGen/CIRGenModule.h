@@ -449,10 +449,10 @@ public:
 
   /// Set TLS mode for the given operation based on the given variable
   /// declaration.
-  void setTLSMode(mlir::Operation *op, const VarDecl &d) const;
+  void setTLSMode(mlir::Operation *op, const VarDecl &d);
 
   /// Get TLS mode from CodeGenOptions.
-  cir::TLS_Model GetDefaultCIRTLSModel() const;
+  cir::TLS_Model getDefaultCIRTLSModel() const;
 
   /// Set function attributes for a function declaration.
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
