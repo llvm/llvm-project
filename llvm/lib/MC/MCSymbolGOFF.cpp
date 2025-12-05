@@ -27,6 +27,7 @@ bool MCSymbolGOFF::setSymbolAttribute(MCSymbolAttr Attribute) {
   case MCSA_IndirectSymbol:
   case MCSA_Internal:
   case MCSA_LazyReference:
+  case MCSA_Local:
   case MCSA_NoDeadStrip:
   case MCSA_SymbolResolver:
   case MCSA_AltEntry:
@@ -53,9 +54,6 @@ bool MCSymbolGOFF::setSymbolAttribute(MCSymbolAttr Attribute) {
     break;
   case MCSA_Global:
     setExternal(true);
-    break;
-  case MCSA_Local:
-    setExternal(false);
     break;
   case MCSA_Weak:
   case MCSA_WeakReference:

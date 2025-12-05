@@ -22,6 +22,7 @@ using namespace llvm;
 MCAsmInfoGOFF::MCAsmInfoGOFF() {
   Data64bitsDirective = "\t.quad\t";
   HasDotTypeDotSizeDirective = false;
+  WeakRefDirective = "WXTRN";
   PrivateGlobalPrefix = "L#";
   PrivateLabelPrefix = "L#";
   ZeroDirective = "\t.space\t";

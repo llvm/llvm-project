@@ -2968,9 +2968,6 @@ bool AsmPrinter::doFinalization(Module &M) {
     for (auto &GO : M.global_objects()) {
       if (GO.isDeclaration()) {
         MCSymbol *Sym = TM.getSymbol(&GO);
-        OutStreamer->emitSymbolAttribute(Sym, GO.hasExternalWeakLinkage()
-                                                  ? MCSA_WeakReference
-                                                  : MCSA_Global);
         OutStreamer->emitSymbolAttribute(Sym, isa<Function>(GO)
                                                   ? MCSA_ELF_TypeFunction
                                                   : MCSA_ELF_TypeObject);

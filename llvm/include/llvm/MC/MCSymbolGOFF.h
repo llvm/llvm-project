@@ -63,9 +63,10 @@ public:
   GOFF::ESDLinkageType getLinkage() const { return Linkage; }
 
   GOFF::ESDBindingScope getBindingScope() const {
-    return isExternal() ? (isExported() ? GOFF::ESD_BSC_ImportExport
-                                        : GOFF::ESD_BSC_Library)
-                        : GOFF::ESD_BSC_Section;
+    return (isExternal() || !isDefined()) ? isExported()
+                                                ? GOFF::ESD_BSC_ImportExport
+                                                : GOFF::ESD_BSC_Library
+                                          : GOFF::ESD_BSC_Section;
   }
 
   GOFF::ESDBindingStrength getBindingStrength() const {
