@@ -1561,6 +1561,9 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   case Intrinsic::fshl:
   case Intrinsic::fshr: {
+    if (ICA.getArgs().empty())
+      break;
+
     // Funnel-shifts are ROTL/ROTR when the first and second operand are equal.
     // When Zbb/Zbkb is enabled we can use a single ROL(W)/ROR(I)(W)
     // instruction.
