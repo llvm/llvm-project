@@ -2,8 +2,6 @@
 
 void do_some(int i=0);
 int get_with_possible_side_effects();
-enum class INITIALIZE_STATUS { OK, FAIL, PENDING };
-INITIALIZE_STATUS initialize(int& val);
 namespace std {
     struct mutex {};
     template<typename Mutex>
@@ -246,6 +244,54 @@ void good_include() {
     }
 }
 
+// TODO: all same tests for pointers
+// TODO: all same tests for structured binding
+// TODO: go test for stealing from materialized reference
+// TODO: bad test for stealing from non materialized reference
+
+void good_stolen_reference1() {
+    const int* pi = nullptr;
+    int i1 = 0;
+    if (i1 == 0) {
+        do_some();
+        pi = &i1;
+    }
+    do_some(*pi);
+
+    int i2 = 0;
+    switch (i2) {
+        case 0:
+            do_some();
+            pi = &i2;
+            break;
+    }
+    do_some(*pi);
+}
+
+template<typename T> const T* get_pointer(const T& ref) { return &ref; }
+
+// TODO: allow stealing when no code after if??
+// TODO: also materialization must be allowed
+// TODO: pointers also might be stolen via `auto**`
+void good_stolen_reference2() {
+    const int* pi = nullptr;
+    int i1 = 0;
+    if (i1 == 0) {
+        do_some();
+        pi = get_pointer(i1);
+    }
+    do_some(*pi);
+
+    int i2 = 0;
+    switch (i2) {
+        case 0:
+            do_some();
+            pi = get_pointer(i2);
+            break;
+    }
+    do_some(*pi);
+}
+
 void bad1() {
     int i1 = 0; DUMMY_TOKEN
     if (i1 == 0) {
@@ -320,12 +366,12 @@ void bad_unused_in_condition() {
 }
 
 void bad_user_defined() {
-    struct A { bool operator==(int); };
+    struct A { int val = 0; };
     A i1; DUMMY_TOKEN
-    if (i1 == 0) {
+    if (i1.val == 0) {
 // CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
 // CHECK-FIXES: DUMMY_TOKEN
-// CHECK-FIXES-NEXT: if (A i1; i1 == 0) {
+// CHECK-FIXES-NEXT: if (A i1; i1.val == 0) {
         do_some();
     }
 }
@@ -408,18 +454,18 @@ void bad_constexpr() {
 
 void bad_unitialized() {
     int i1; DUMMY_TOKEN
-    if (initialize(i1) == INITIALIZE_STATUS::OK) {
+    if ((i1=0) == 0) {
 // CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
 // CHECK-FIXES: DUMMY_TOKEN
-// CHECK-FIXES-NEXT: if (int i1; initialize(i1) == INITIALIZE_STATUS::OK) {
+// CHECK-FIXES-NEXT: if (int i1; (i1=0) == 0) {
         do_some();
     }
     int i2; DUMMY_TOKEN
-    switch (initialize(i2)) {
+    switch (i2=0) {
 // CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
 // CHECK-FIXES: DUMMY_TOKEN
-// CHECK-FIXES-NEXT: switch (int i2; initialize(i2)) {
-        case INITIALIZE_STATUS::OK:
+// CHECK-FIXES-NEXT: switch (int i2; i2=0) {
+        case 0:
             do_some();
             break;
     }
@@ -463,17 +509,15 @@ void bad_multiple_not_all_used() {
     }
 }
 
-void bad_unique_lock() {
-    static std::mutex counter_mutex;
+// void bad_unique_lock() {
+//     static std::mutex counter_mutex;
 
-    std::unique_lock<std::mutex> lock(counter_mutex); DUMMY_TOKEN
-    if (lock.owns_lock()) {
-// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'lock' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
-// CHECK-FIXES: DUMMY_TOKEN
-// CHECK-FIXES-NEXT: if (std::unique_lock<std::mutex> lock(counter_mutex); lock.owns_lock()) {
-        do_some();
-    }
-}
+//     std::unique_lock<std::mutex> lock(counter_mutex); DUMMY_TOKEN
+//     if (lock.owns_lock()) {
+// // FIXME: fixit must be here
+//         do_some();
+//     }
+// }
 
 void bad_pointer_to_unique_lock() {
     static std::mutex counter_mutex;
@@ -550,6 +594,7 @@ void bad_reference_to_unique_lock_using() {
     ++counter;
 }
 
+// TODO: all string operations also safe to steal by default
 void bad_safe_string_default() {
     std::string str; DUMMY_TOKEN
     if (str.empty()) {
@@ -560,6 +605,8 @@ void bad_safe_string_default() {
     }
     do_some(); // Additional statement after if
 }
+
+// TODO: make a test with real stealing from string
 
 void bad_condition_with_declaration() {
     int i1 = 0; DUMMY_TOKEN

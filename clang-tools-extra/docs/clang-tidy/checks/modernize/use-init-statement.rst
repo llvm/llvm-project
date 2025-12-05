@@ -72,6 +72,8 @@ Options
 
 .. option:: SafeDestructorTypes
 
+    // TODO: it  must be just `safe` types, not only destructor in Requirements
+
     A comma-separated list of type name patterns (glob patterns) that are
     considered safe to move into init statements even if they have destructors.
     By default, the check never transforms variables with destructors when they

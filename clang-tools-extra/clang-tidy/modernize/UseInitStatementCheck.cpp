@@ -61,6 +61,7 @@ AST_MATCHER(VarDecl, isUsed) {
   return Node.isUsed();
 }
 
+// got from implementation of memberHasSameNameAsBoundNode mather
 AST_MATCHER_P(VarDecl, hasSameNameAsBoundNode,
               std::string, BindingID) {
   auto VarName = Node.getNameAsString();
@@ -106,11 +107,32 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
                                           const auto &RefToBoundMatcher) {
     const auto HasConflict = hasDescendant(
         varDecl(anyOf(hasSameNameAsBoundNode("singleVar"), hasSameNameAsBoundNode("bindingDecl"))).bind("conflict"));
+    const auto IsStealingViaPointer =
+        hasParent(unaryOperator(hasOperatorName("&")));
+    const auto PassesByValue =
+        hasParent(implicitCastExpr(hasCastKind(CK_LValueToRValue)));
+    const auto ReferencesWhitelistForStealing = anyOf(
+        // pass by value always safe
+        PassesByValue,
+        // `++i` and 'i++' are also safe
+        hasParent(unaryOperator(unless(hasOperatorName("&")))),
+        // `a.a` passed by value
+        hasParent(memberExpr(PassesByValue)),
+        // `a=0`, `a+=0`, etc
+        hasParent(binaryOperator()));
+    const auto IsStealingViaReference = unless(ReferencesWhitelistForStealing);
+    const auto StealingAsThis = hasParent(memberExpr().bind("stealing_as_this"));
+    // TODO: must be forbidded for temporary materialization
+    const auto HasStealing = hasDescendant(
+        declRefExpr(to(varDecl(equalsBoundNode("singleVar"), unless(hasType(referenceType())))), anyOf(IsStealingViaPointer, IsStealingViaReference),
+         optionally(anyOf(StealingAsThis, hasParent(implicitCastExpr(hasCastKind(CK_NoOp), StealingAsThis)))))
+            .bind("stealing"));
 
     const auto StmtMatcherWithCondition =
         StmtMatcher(unless(hasInitStatement(anything())),
                     hasCondition(expr().bind("condition")),
                     optionally(HasConflict),
+                    optionally(HasStealing),
                     optionally(hasConditionVariableStatement(
                         declStmt().bind("condDeclStmt"))))
             .bind(StmtName);
@@ -249,6 +271,7 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Dtor = Result.Nodes.getNodeAs<CXXDestructorDecl>("dtorDecl");
   const auto *LTE = Result.Nodes.getNodeAs<MaterializeTemporaryExpr>("lte");
   const auto *Conflict = Result.Nodes.getNodeAs<VarDecl>("conflict");
+  const auto *Stealing = Result.Nodes.getNodeAs<DeclRefExpr>("stealing");
   const auto *PrevDecl = Result.Nodes.getNodeAs<DeclStmt>("prevDecl");
   const auto *Condition = Result.Nodes.getNodeAs<Expr>("condition");
   const auto *CondDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("condDeclStmt");
@@ -266,11 +289,19 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   if (IgnoreConditionVariableStatements && CondDeclStmt)
     return;
 
-  if (Dtor && !IsLast && !isSingleVarWithSafeDestructor(Result))
+  const bool IsSafe = isSingleVarWithSafeDestructor(Result);
+  if (Dtor && !IsLast && !IsSafe)
     return;
 
   if (LTE)
     return;
+
+  if (Stealing ) {
+    const bool IsSafeStealing = !!Result.Nodes.getNodeAs<MemberExpr>("stealing_as_this")
+                                && IsSafe;
+    if (!IsSafeStealing)
+      return;
+  }
 
   // Don't emit warnings for statements inside macro expansions
   if (Statement->getBeginLoc().isMacroID())
