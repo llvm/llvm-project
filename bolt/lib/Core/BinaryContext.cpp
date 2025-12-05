@@ -1438,8 +1438,6 @@ void BinaryContext::processInterproceduralReferences() {
       continue;
     }
 
-    // Check if address falls in function padding space - this could be
-    // unmarked data in code. In this case adjust the padding space size.
     ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
     assert(Section && "cannot get section for referenced address");
 
@@ -1451,7 +1449,7 @@ void BinaryContext::processInterproceduralReferences() {
     if (SectionName == ".plt" || SectionName == ".plt.got")
       continue;
 
-    // Check if it is aarch64 veneer written at Address
+    // Check if it is aarch64 veneer written at Address.
     if (isAArch64() && handleAArch64Veneer(Address))
       continue;
 
@@ -1463,6 +1461,8 @@ void BinaryContext::processInterproceduralReferences() {
       exit(1);
     }
 
+    // Check if the address falls into the function padding space - this could
+    // be an unmarked data in code. In this case, adjust the padding space size.
     TargetFunction = getBinaryFunctionContainingAddress(Address,
                                                         /*CheckPastEnd=*/false,
                                                         /*UseMaxSize=*/true);
