@@ -9,6 +9,7 @@
 #include "clang/Analysis/Scalable/ASTEntityMapping.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
@@ -107,13 +108,16 @@ TEST(ASTEntityMappingTest, ImplicitDecl) {
   ASSERT_NE(RD, nullptr);
 
   // Find the implicitly-declared copy constructor
+  const CXXConstructorDecl * ImplCtor = nullptr;
   for (const auto *Ctor : RD->ctors()) {
     if (Ctor->isCopyConstructor() && Ctor->isImplicit()) {
-      auto EntityName = getLocalEntityNameForDecl(Ctor);
-      EXPECT_FALSE(EntityName.has_value());
-      return;
+      ImplCtor = Ctor;
+      break;
     }
   }
+
+  auto EntityName = getLocalEntityNameForDecl(ImplCtor);
+  EXPECT_FALSE(EntityName.has_value());
 }
 
 TEST(ASTEntityMappingTest, BuiltinFunction) {
