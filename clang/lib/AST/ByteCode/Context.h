@@ -17,9 +17,9 @@
 #define LLVM_CLANG_AST_INTERP_CONTEXT_H
 
 #include "InterpStack.h"
+#include "clang/AST/ASTContext.h"
 
 namespace clang {
-class ASTContext;
 class LangOptions;
 class FunctionDecl;
 class VarDecl;
@@ -30,7 +30,7 @@ namespace interp {
 class Function;
 class Program;
 class State;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 struct ParamOffset {
   unsigned Offset;
@@ -47,7 +47,9 @@ public:
   ~Context();
 
   /// Checks if a function is a potential constant expression.
-  bool isPotentialConstantExpr(State &Parent, const FunctionDecl *FnDecl);
+  bool isPotentialConstantExpr(State &Parent, const FunctionDecl *FD);
+  void isPotentialConstantExprUnevaluated(State &Parent, const Expr *E,
+                                          const FunctionDecl *FD);
 
   /// Evaluates a toplevel expression as an rvalue.
   bool evaluateAsRValue(State &Parent, const Expr *E, APValue &Result);
@@ -57,12 +59,21 @@ public:
                 ConstantExprKind Kind);
 
   /// Evaluates a toplevel initializer.
-  bool evaluateAsInitializer(State &Parent, const VarDecl *VD, APValue &Result);
+  bool evaluateAsInitializer(State &Parent, const VarDecl *VD, const Expr *Init,
+                             APValue &Result);
 
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, APValue &Result);
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, std::string &Result);
+
+  /// Evaluate \param E and if it can be evaluated to a null-terminated string,
+  /// copy the result into \param Result.
+  bool evaluateString(State &Parent, const Expr *E, std::string &Result);
+
+  /// Evalute \param E and if it can be evaluated to a string literal,
+  /// run strlen() on it.
+  bool evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result);
 
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }
@@ -76,15 +87,36 @@ public:
   uint32_t getBitWidth(QualType T) const { return Ctx.getIntWidth(T); }
 
   /// Classifies a type.
-  std::optional<PrimType> classify(QualType T) const;
+  OptPrimType classify(QualType T) const;
 
   /// Classifies an expression.
-  std::optional<PrimType> classify(const Expr *E) const {
+  OptPrimType classify(const Expr *E) const {
     assert(E);
     if (E->isGLValue())
       return PT_Ptr;
 
     return classify(E->getType());
+  }
+
+  bool canClassify(QualType T) const {
+    if (const auto *BT = dyn_cast<BuiltinType>(T)) {
+      if (BT->isInteger() || BT->isFloatingPoint())
+        return true;
+      if (BT->getKind() == BuiltinType::Bool)
+        return true;
+    }
+    if (T->isPointerOrReferenceType())
+      return true;
+
+    if (T->isArrayType() || T->isRecordType() || T->isAnyComplexType() ||
+        T->isVectorType())
+      return false;
+    return classify(T) != std::nullopt;
+  }
+  bool canClassify(const Expr *E) const {
+    if (E->isGLValue())
+      return true;
+    return canClassify(E->getType());
   }
 
   const CXXMethodDecl *

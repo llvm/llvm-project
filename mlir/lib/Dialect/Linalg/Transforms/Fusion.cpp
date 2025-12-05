@@ -10,10 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -23,16 +20,8 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/RegionUtils.h"
-#include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-
-#include <optional>
-#include <set>
 
 #define DEBUG_TYPE "linalg-fusion"
 
@@ -288,7 +277,7 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
   // mismatches. Insert a `tensor.cast` op to propagate the transformation
   // invariant that types are compatible.
   if (consumerType != def.getType())
-    def = b.create<tensor::CastOp>(fusedProducer.getLoc(), consumerType, def);
+    def = tensor::CastOp::create(b, fusedProducer.getLoc(), consumerType, def);
   consumerOpOperand.set(def);
   return FusionInfo{cast<LinalgOp>(producerOpResult.getOwner()), fusedProducer};
 }

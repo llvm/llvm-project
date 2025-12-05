@@ -235,6 +235,17 @@ llvm.func @fold_gep_canon(%x : !llvm.ptr) -> !llvm.ptr {
 
 // -----
 
+// CHECK-LABEL: fold_shufflevector
+// CHECK-SAME: %[[ARG1:[[:alnum:]]+]]: vector<1xf32>, %[[ARG2:[[:alnum:]]+]]: vector<1xf32>
+llvm.func @fold_shufflevector(%v1 : vector<1xf32>, %v2 : vector<1xf32>) -> vector<1xf32> {
+  // CHECK-NOT: llvm.shufflevector
+  %c = llvm.shufflevector %v1, %v2 [0] : vector<1xf32>
+  // CHECK: llvm.return %[[ARG1]]
+  llvm.return %c : vector<1xf32>
+}
+
+// -----
+
 // Check that LLVM constants participate in cross-dialect constant folding. The
 // resulting constant is created in the arith dialect because the last folded
 // operation belongs to it.

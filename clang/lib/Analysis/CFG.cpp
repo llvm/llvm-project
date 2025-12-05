@@ -898,8 +898,7 @@ private:
       return;
     }
 
-    B->appendStmt(const_cast<ObjCMessageExpr *>(ME),
-                  cfg->getBumpVectorContext());
+    B->appendStmt(ME, cfg->getBumpVectorContext());
   }
 
   void appendTemporaryDtor(CFGBlock *B, CXXBindTemporaryExpr *E) {
@@ -1667,6 +1666,12 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
   assert(Succ == &cfg->getExit());
   Block = nullptr;  // the EXIT block is empty.  Create all other blocks lazily.
 
+  // Add parameters to the initial scope to handle their dtos and lifetime ends.
+  LocalScope *paramScope = nullptr;
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D))
+    for (ParmVarDecl *PD : FD->parameters())
+      paramScope = addLocalScopeForVarDecl(PD, paramScope);
+
   if (BuildOpts.AddImplicitDtors)
     if (const CXXDestructorDecl *DD = dyn_cast_or_null<CXXDestructorDecl>(D))
       addImplicitDtorsForDestructor(DD);
@@ -1754,10 +1759,9 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
 
   // Add successors to the Indirect Goto Dispatch block (if we have one).
   if (CFGBlock *B = cfg->getIndirectGotoBlock())
-    for (LabelSetTy::iterator I = AddressTakenLabels.begin(),
-                              E = AddressTakenLabels.end(); I != E; ++I ) {
+    for (LabelDecl *LD : AddressTakenLabels) {
       // Lookup the target block.
-      LabelMapTy::iterator LI = LabelMap.find(*I);
+      LabelMapTy::iterator LI = LabelMap.find(LD);
 
       // If there is no target block that contains label, then we are looking
       // at an incomplete AST.  Handle this by not registering a successor.
@@ -2246,6 +2250,11 @@ LocalScope* CFGBuilder::addLocalScopeForVarDecl(VarDecl *VD,
 
   // Check if variable is local.
   if (!VD->hasLocalStorage())
+    return Scope;
+
+  // Reference parameters are aliases to objects that live elsewhere, so they
+  // don't require automatic destruction or lifetime tracking.
+  if (isa<ParmVarDecl>(VD) && VD->getType()->isReferenceType())
     return Scope;
 
   if (!BuildOpts.AddLifetime && !BuildOpts.AddScopes &&
@@ -2835,7 +2844,8 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     if (!FD->isVariadic())
       findConstructionContextsForArguments(C);
 
-    if (FD->isNoReturn() || C->isBuiltinAssumeFalse(*Context))
+    if (FD->isNoReturn() || FD->isAnalyzerNoReturn() ||
+        C->isBuiltinAssumeFalse(*Context))
       NoReturn = true;
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;
@@ -4517,10 +4527,13 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
   //
   // Note: We add a successor to a switch that is considered covered yet has no
   //       case statements if the enumeration has no enumerators.
+  //       We also consider this successor reachable if
+  //       BuildOpts.SwitchReqDefaultCoveredEnum is true.
   bool SwitchAlwaysHasSuccessor = false;
   SwitchAlwaysHasSuccessor |= switchExclusivelyCovered;
-  SwitchAlwaysHasSuccessor |= Terminator->isAllEnumCasesCovered() &&
-                              Terminator->getSwitchCaseList();
+  SwitchAlwaysHasSuccessor |=
+      !BuildOpts.AssumeReachableDefaultInSwitchStatements &&
+      Terminator->isAllEnumCasesCovered() && Terminator->getSwitchCaseList();
   addSuccessor(SwitchTerminatedBlock, DefaultCaseBlock,
                !SwitchAlwaysHasSuccessor);
 
@@ -5614,8 +5627,15 @@ public:
   bool handleDecl(const Decl *D, raw_ostream &OS) {
     DeclMapTy::iterator I = DeclMap.find(D);
 
-    if (I == DeclMap.end())
+    if (I == DeclMap.end()) {
+      // ParmVarDecls are not declared in the CFG itself, so they do not appear
+      // in DeclMap.
+      if (auto *PVD = dyn_cast_or_null<ParmVarDecl>(D)) {
+        OS << "[Parm: " << PVD->getNameAsString() << "]";
+        return true;
+      }
       return false;
+    }
 
     if (currentBlock >= 0 && I->second.first == (unsigned) currentBlock
                           && I->second.second == currStmt) {

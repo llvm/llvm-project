@@ -41,7 +41,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
         omp.terminator loc(#loc9)
       } loc(#loc9)
       omp.terminator loc(#loc9)
-    } loc(#loc9)
+    } loc(#loc15)
     llvm.return loc(#loc9)
   } loc(#loc14)
   llvm.mlir.global internal @_QFEarray() {addr_space = 0 : i32} : !llvm.array<16384 x i32> {
@@ -59,7 +59,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 #di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_Fortran95, file = #di_file, producer = "flang", isOptimized = true, emissionKind = LineTablesOnly>
 #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_program, types = #di_null_type>
 #di_subprogram = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #di_compile_unit, scope = #di_file, name = "main", file = #di_file, subprogramFlags = "Definition|Optimized|MainSubprogram", type = #di_subroutine_type>
+#di_subprogram1 = #llvm.di_subprogram<compileUnit = #di_compile_unit, name = "target", file = #di_file, subprogramFlags = "Definition", type = #di_subroutine_type>
 #loc14 = loc(fused<#di_subprogram>[#loc3])
+#loc15 = loc(fused<#di_subprogram1>[#loc9])
 
 
 // CHECK: call void @__kmpc_distribute_static{{.*}}!dbg

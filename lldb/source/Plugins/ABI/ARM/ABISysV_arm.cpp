@@ -1550,7 +1550,6 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
 
   bool is_signed;
   bool is_complex;
-  uint32_t float_count;
   bool is_vfp_candidate = false;
   uint8_t vfp_count = 0;
   uint8_t vfp_byte_size = 0;
@@ -1634,8 +1633,9 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
       if (!GetReturnValuePassedInMemory(thread, reg_ctx, *byte_size, value))
         return return_valobj_sp;
     }
-  } else if (compiler_type.IsFloatingPointType(float_count, is_complex)) {
-    if (float_count == 1 && !is_complex) {
+  } else if (compiler_type.IsFloatingPointType(is_complex)) {
+    // Vector types are handled above.
+    if (!is_complex) {
       switch (*bit_width) {
       default:
         return return_valobj_sp;
@@ -1681,7 +1681,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
         break;
       }
       }
-    } else if (is_complex && float_count == 2) {
+    } else if (is_complex) {
       if (IsArmHardFloat(thread)) {
         is_vfp_candidate = true;
         vfp_byte_size = *byte_size / 2;
@@ -1709,8 +1709,9 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
             vfp_count = (*base_byte_size == 8 ? homogeneous_count
                                               : homogeneous_count * 2);
           }
-        } else if (base_type.IsFloatingPointType(float_count, is_complex)) {
-          if (float_count == 1 && !is_complex) {
+        } else if (base_type.IsFloatingPointType(is_complex)) {
+          // Vector types are handled above.
+          if (!is_complex) {
             is_vfp_candidate = true;
             if (base_byte_size)
               vfp_byte_size = *base_byte_size;
@@ -1727,10 +1728,10 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
             base_type = compiler_type.GetFieldAtIndex(index, name, nullptr,
                                                       nullptr, nullptr);
 
-            if (base_type.IsFloatingPointType(float_count, is_complex)) {
+            if (base_type.IsFloatingPointType(is_complex)) {
               std::optional<uint64_t> base_byte_size =
                   llvm::expectedToOptional(base_type.GetByteSize(&thread));
-              if (float_count == 2 && is_complex) {
+              if (is_complex) {
                 if (index != 0 && base_byte_size &&
                     vfp_byte_size != *base_byte_size)
                   break;
@@ -1841,7 +1842,6 @@ Status ABISysV_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  uint32_t count;
   bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
@@ -1884,7 +1884,7 @@ Status ABISysV_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
+  } else if (compiler_type.IsFloatingPointType(is_complex)) {
     if (is_complex)
       error = Status::FromErrorString(
           "We don't support returning complex values at present");
@@ -1921,6 +1921,13 @@ UnwindPlanSP ABISysV_arm::CreateFunctionEntryUnwindPlan() {
 
 UnwindPlanSP ABISysV_arm::CreateDefaultUnwindPlan() {
   // TODO: Handle thumb
+  // If we had a Target argument, could at least check
+  // target.GetArchitecture().GetTriple().isArmMClass()
+  // which is always thumb.
+  // To handle thumb properly, we'd need to fetch the current
+  // CPSR state at unwind time to tell if the processor is
+  // in thumb mode in this stack frame.  There's no way to
+  // express something like that in an UnwindPlan today.
   uint32_t fp_reg_num = dwarf_r11;
   uint32_t pc_reg_num = dwarf_pc;
 

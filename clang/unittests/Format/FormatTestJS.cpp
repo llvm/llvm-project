@@ -2883,7 +2883,7 @@ TEST_F(FormatTestJS, DontBreakFieldsAsGoToLabels) {
 
 TEST_F(FormatTestJS, BreakAfterOpenBracket) {
   auto Style = getGoogleStyle(FormatStyle::LK_JavaScript);
-  EXPECT_EQ(Style.AlignAfterOpenBracket, FormatStyle::BAS_AlwaysBreak);
+  EXPECT_EQ(Style.BreakAfterOpenBracketFunction, true);
   verifyFormat("ctrl.onCopy(/** @type {!WizEvent}*/ (\n"
                "    {event, targetElement: {el: () => selectedElement}}));",
                Style);

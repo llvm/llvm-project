@@ -1033,10 +1033,10 @@ class ConstantPtrAuth final : public Constant {
   friend struct ConstantPtrAuthKeyType;
   friend class Constant;
 
-  constexpr static IntrusiveOperandsAllocMarker AllocMarker{4};
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{5};
 
   ConstantPtrAuth(Constant *Ptr, ConstantInt *Key, ConstantInt *Disc,
-                  Constant *AddrDisc);
+                  Constant *AddrDisc, Constant *DeactivationSymbol);
 
   void *operator new(size_t s) { return User::operator new(s, AllocMarker); }
 
@@ -1046,7 +1046,8 @@ class ConstantPtrAuth final : public Constant {
 public:
   /// Return a pointer signed with the specified parameters.
   LLVM_ABI static ConstantPtrAuth *get(Constant *Ptr, ConstantInt *Key,
-                                       ConstantInt *Disc, Constant *AddrDisc);
+                                       ConstantInt *Disc, Constant *AddrDisc,
+                                       Constant *DeactivationSymbol);
 
   /// Produce a new ptrauth expression signing the given value using
   /// the same schema as is stored in one.
@@ -1078,6 +1079,10 @@ public:
     return !getAddrDiscriminator()->isNullValue();
   }
 
+  Constant *getDeactivationSymbol() const {
+    return cast<Constant>(Op<4>().get());
+  }
+
   /// A constant value for the address discriminator which has special
   /// significance to ctors/dtors lowering. Regular address discrimination can't
   /// be applied for them since uses of llvm.global_{c|d}tors are disallowed
@@ -1106,7 +1111,7 @@ public:
 
 template <>
 struct OperandTraits<ConstantPtrAuth>
-    : public FixedNumOperandTraits<ConstantPtrAuth, 4> {};
+    : public FixedNumOperandTraits<ConstantPtrAuth, 5> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ConstantPtrAuth, Constant)
 
@@ -1158,6 +1163,8 @@ public:
   LLVM_ABI static Constant *getXor(Constant *C1, Constant *C2);
   LLVM_ABI static Constant *getTrunc(Constant *C, Type *Ty,
                                      bool OnlyIfReduced = false);
+  LLVM_ABI static Constant *getPtrToAddr(Constant *C, Type *Ty,
+                                         bool OnlyIfReduced = false);
   LLVM_ABI static Constant *getPtrToInt(Constant *C, Type *Ty,
                                         bool OnlyIfReduced = false);
   LLVM_ABI static Constant *getIntToPtr(Constant *C, Type *Ty,

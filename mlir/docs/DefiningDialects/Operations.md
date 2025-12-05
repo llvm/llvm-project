@@ -89,7 +89,7 @@ their semantics via a special [TableGen backend][TableGenBackend]:
     help of the following constructs.
 *   The `Dialect` class: Operations belonging to one logical group are placed in
     the same dialect. The `Dialect` class contains dialect-level information.
-*   The `OpTrait` class hierarchy: They are used to specify special properties
+*   The `Trait` class hierarchy: They are used to specify special properties
     and constraints of the operation, including whether the operation has side
     effect or whether its output has the same shape as the input.
 *   The `ins`/`outs` marker: These are two special markers builtin to the
@@ -306,6 +306,8 @@ Right now, the following primitive constraints are supported:
 *   `IntPositive`: Specifying an integer attribute whose value is positive
 *   `IntNonNegative`: Specifying an integer attribute whose value is
     non-negative
+*   `IntPowerOf2`: Specifying an integer attribute whose value is a power of
+    two > 0
 *   `ArrayMinCount<N>`: Specifying an array attribute to have at least `N`
     elements
 *   `ArrayMaxCount<N>`: Specifying an array attribute to have at most `N`
@@ -434,7 +436,7 @@ various traits in the `mlir::OpTrait` namespace.
 Both operation traits, [interfaces](../Interfaces.md/#utilizing-the-ods-framework),
 and constraints involving multiple operands/attributes/results are provided as
 the third template parameter to the `Op` class. They should be deriving from
-the `OpTrait` class. See [Constraints](#constraints) for more information.
+the `Trait` class. See [Constraints](#constraints) for more information.
 
 ### Builder methods
 
@@ -1353,7 +1355,7 @@ results. These constraints should be specified as the `Op` class template
 parameter as described in
 [Operation traits and constraints](#operation-traits-and-constraints).
 
-Multi-entity constraints are modeled as `PredOpTrait` (a subclass of `OpTrait`)
+Multi-entity constraints are modeled as `PredOpTrait` (a subclass of `Trait`)
 in [`OpBase.td`][OpBase].A bunch of constraint primitives are provided to help
 specification. See [`OpBase.td`][OpBase] for the complete list.
 
@@ -1364,7 +1366,7 @@ commutative or not, whether is a terminator, etc. These constraints should be
 specified as the `Op` class template parameter as described in
 [Operation traits and constraints](#operation-traits-and-constraints).
 
-Traits are modeled as `NativeOpTrait` (a subclass of `OpTrait`) in
+Traits are modeled as `NativeTrait` (a subclass of `Trait`) in
 [`OpBase.td`][OpBase]. They are backed and will be translated into the
 corresponding C++ `mlir::OpTrait` classes.
 
@@ -1646,6 +1648,15 @@ inline constexpr MyBitEnum operator&(MyBitEnum a, MyBitEnum b) {
 }
 inline constexpr MyBitEnum operator^(MyBitEnum a, MyBitEnum b) {
   return static_cast<MyBitEnum>(static_cast<uint32_t>(a) ^ static_cast<uint32_t>(b));
+}
+inline constexpr MyBitEnum &operator|=(MyBitEnum &a, MyBitEnum b) {
+  return a = a | b;
+}
+inline constexpr MyBitEnum &operator&=(MyBitEnum &a, MyBitEnum b) {
+  return a = a & b;
+}
+inline constexpr MyBitEnum &operator^=(MyBitEnum &a, MyBitEnum b) {
+  return a = a ^ b;
 }
 inline constexpr MyBitEnum operator~(MyBitEnum bits) {
   // Ensure only bits that can be present in the enum are set

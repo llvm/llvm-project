@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/Ptr/IR/PtrTypes.h"
 #include "mlir/Dialect/Ptr/IR/PtrAttrs.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::ptr;

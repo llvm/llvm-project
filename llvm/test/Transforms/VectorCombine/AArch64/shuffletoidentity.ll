@@ -205,8 +205,8 @@ define <8 x i8> @abs_different(<8 x i8> %a) {
 define <4 x i32> @poison_intrinsic(<2 x i16> %l256) {
 ; CHECK-LABEL: @poison_intrinsic(
 ; CHECK-NEXT:    [[L266:%.*]] = call <2 x i16> @llvm.abs.v2i16(<2 x i16> [[L256:%.*]], i1 false)
-; CHECK-NEXT:    [[L267:%.*]] = zext <2 x i16> [[L266]] to <2 x i32>
-; CHECK-NEXT:    [[L271:%.*]] = shufflevector <2 x i32> [[L267]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[L267:%.*]] = shufflevector <2 x i16> [[L266]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[L271:%.*]] = zext <4 x i16> [[L267]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[L271]]
 ;
   %l266 = call <2 x i16> @llvm.abs.v2i16(<2 x i16> %l256, i1 false)
@@ -534,9 +534,9 @@ define <4 x i64> @single_zext(<4 x i32> %x) {
 
 define <4 x i64> @not_zext(<4 x i32> %x) {
 ; CHECK-LABEL: @not_zext(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[X:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i64> [[ZEXT]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    ret <4 x i64> [[REVSHUF]]
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[REVSHUF:%.*]] to <4 x i64>
+; CHECK-NEXT:    ret <4 x i64> [[ZEXT]]
 ;
   %zext = zext <4 x i32> %x to <4 x i64>
   %revshuf = shufflevector <4 x i64> %zext, <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -716,10 +716,9 @@ define <4 x i64> @zext_chain(<4 x i16> %x) {
 
 define <4 x i32> @add_chain(<4 x i32> %x) {
 ; CHECK-LABEL: @add_chain(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[SHUF]], [[SHUF]]
-; CHECK-NEXT:    [[ADD2:%.*]] = add <4 x i32> [[ADD]], [[ADD]]
-; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[ADD2]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[SHUF:%.*]], [[SHUF]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[SHUF]], [[SHUF]]
+; CHECK-NEXT:    [[REVSHUF:%.*]] = add <4 x i32> [[ADD]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[REVSHUF]]
 ;
   %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -731,10 +730,9 @@ define <4 x i32> @add_chain(<4 x i32> %x) {
 
 define <4 x i64> @zext_add_chain(<4 x i32> %x) {
 ; CHECK-LABEL: @zext_add_chain(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[SHUF]] to <4 x i64>
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i64> [[ZEXT]], [[ZEXT]]
-; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i64> [[ADD]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[SHUF:%.*]] to <4 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i32> [[SHUF]] to <4 x i64>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = add <4 x i64> [[ZEXT]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i64> [[REVSHUF]]
 ;
   %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -924,10 +922,9 @@ define <4 x i8> @singleop(<4 x i8> %a, <4 x i8> %b) {
 
 define <4 x i64> @cast_mismatched_types(<4 x i32> %x) {
 ; CHECK-LABEL: @cast_mismatched_types(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[SHUF]] to <2 x i64>
-; CHECK-NEXT:    [[EXTSHUF:%.*]] = shufflevector <2 x i64> [[ZEXT]], <2 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    ret <4 x i64> [[EXTSHUF]]
+; CHECK-SAME: <4 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[X]] to <4 x i64>
+; CHECK-NEXT:    ret <4 x i64> [[ZEXT]]
 ;
   %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
   %zext = zext <2 x i32> %shuf to <2 x i64>
@@ -997,10 +994,8 @@ define <4 x i64> @bitcast_smax_v8i32_v4i32(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-NEXT:    [[A_BC0:%.*]] = bitcast <4 x i64> [[A:%.*]] to <8 x i32>
 ; CHECK-NEXT:    [[B_BC0:%.*]] = bitcast <4 x i64> [[B:%.*]] to <8 x i32>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <8 x i32> [[A_BC0]], [[B_BC0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[B]], <4 x i64> [[B]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[B_BC1:%.*]] = bitcast <4 x i64> [[TMP2]] to <8 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i64> [[A]], <4 x i64> [[A]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[A_BC1:%.*]] = bitcast <4 x i64> [[TMP4]] to <8 x i32>
+; CHECK-NEXT:    [[B_BC1:%.*]] = bitcast <4 x i64> [[B]] to <8 x i32>
+; CHECK-NEXT:    [[A_BC1:%.*]] = bitcast <4 x i64> [[A]] to <8 x i32>
 ; CHECK-NEXT:    [[CONCAT:%.*]] = select <8 x i1> [[CMP]], <8 x i32> [[B_BC1]], <8 x i32> [[A_BC1]]
 ; CHECK-NEXT:    [[RES:%.*]] = bitcast <8 x i32> [[CONCAT]] to <4 x i64>
 ; CHECK-NEXT:    ret <4 x i64> [[RES]]

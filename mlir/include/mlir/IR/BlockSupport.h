@@ -206,12 +206,12 @@ namespace ilist_detail {
 // operations to have trailing Regions without a circular include
 // dependence.
 template <>
-struct SpecificNodeAccess<
-    typename compute_node_options<::mlir::Operation>::type> : NodeAccess {
+struct SpecificNodeAccess<compute_node_options<::mlir::Operation>::type>
+    : NodeAccess {
 protected:
-  using OptionsT = typename compute_node_options<mlir::Operation>::type;
-  using pointer = typename OptionsT::pointer;
-  using const_pointer = typename OptionsT::const_pointer;
+  using OptionsT = compute_node_options<mlir::Operation>::type;
+  using pointer = OptionsT::pointer;
+  using const_pointer = OptionsT::const_pointer;
   using node_type = ilist_node_impl<OptionsT>;
 
   static node_type *getNodePtr(pointer N);

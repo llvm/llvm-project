@@ -215,9 +215,8 @@ end subroutine
 ! CHECK: ^[[BODY]]:
 ! CHECK:   %{{.*}} = fir.do_loop %[[J_INDEX:[^ ]*]] =
 ! CHECK-SAME: %{{.*}} to %{{.*}} step %[[ST:[^ ]*]]
-! CHECK-SAME: iter_args(%[[J_IV:.*]] = %{{.*}}) -> (index, i32) {
+! CHECK-SAME: iter_args(%[[J_IV:.*]] = %{{.*}}) -> (i32) {
 ! CHECK:     fir.store %[[J_IV]] to %[[LOOP_VAR_J_REF]] : !fir.ref<i32>
-! CHECK:     %[[J_INDEX_NEXT:.*]] = arith.addi %[[J_INDEX]], %[[ST]] overflow<nsw> : index
 ! CHECK:     %[[LOOP_VAR_J:.*]] = fir.load %[[LOOP_VAR_J_REF]] : !fir.ref<i32>
 ! CHECK:     %[[LOOP_VAR_J_NEXT:.*]] = arith.addi %[[LOOP_VAR_J]], %{{[^ ]*}} overflow<nsw> : i32
 ! CHECK:   }
@@ -232,3 +231,23 @@ end subroutine
 ! CHECK:   cf.br ^[[HEADER]]
 ! CHECK: ^[[EXIT]]:
 ! CHECK:   return
+
+subroutine unstructured_do_concurrent
+  logical :: success
+  do concurrent (i=1:10) local(success)
+    success = .false.
+    error stop "fail"
+  enddo
+end
+! CHECK-LABEL: func.func @_QPunstructured_do_concurrent
+! CHECK:         %[[ITER_VAR:.*]] = fir.alloca i32
+
+! CHECK:       ^[[HEADER]]:
+! CHECK:         %{{.*}} = fir.load %[[ITER_VAR]] : !fir.ref<i32>
+! CHECK:         cf.cond_br %{{.*}}, ^[[BODY:.*]], ^[[EXIT:.*]]
+
+! CHECK:       ^[[BODY]]:
+! CHECK-NEXT:    %{{.*}} = fir.alloca !fir.logical<4> {bindc_name = "success", {{.*}}}
+
+! CHECK:       ^[[EXIT]]:
+! CHECK-NEXT:    return

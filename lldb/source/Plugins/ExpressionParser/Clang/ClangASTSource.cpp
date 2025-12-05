@@ -8,7 +8,6 @@
 
 #include "ClangASTSource.h"
 
-#include "ClangDeclVendor.h"
 #include "ClangModulesDeclVendor.h"
 
 #include "lldb/Core/Module.h"
@@ -223,7 +222,7 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
           continue;
 
         TagDecl *candidate_tag_decl =
-            const_cast<TagDecl *>(tag_type->getDecl());
+            tag_type->getDecl()->getDefinitionOrSelf();
 
         if (TypeSystemClang::GetCompleteDecl(
                 &candidate_tag_decl->getASTContext(), candidate_tag_decl))
@@ -250,7 +249,7 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
       if (!tag_type)
         continue;
 
-      TagDecl *candidate_tag_decl = const_cast<TagDecl *>(tag_type->getDecl());
+      TagDecl *candidate_tag_decl = tag_type->getDecl()->getDefinitionOrSelf();
 
       if (TypeSystemClang::GetCompleteDecl(&candidate_tag_decl->getASTContext(),
                                            candidate_tag_decl))
@@ -799,7 +798,7 @@ void ClangASTSource::FindDeclInModules(NameSearchContext &context,
 
   bool append = false;
   uint32_t max_matches = 1;
-  std::vector<clang::NamedDecl *> decls;
+  std::vector<CompilerDecl> decls;
 
   if (!modules_decl_vendor->FindDecls(name, append, max_matches, decls))
     return;
@@ -807,7 +806,8 @@ void ClangASTSource::FindDeclInModules(NameSearchContext &context,
   LLDB_LOG(log, "  CAS::FEVD Matching entity found for \"{0}\" in the modules",
            name);
 
-  clang::NamedDecl *const decl_from_modules = decls[0];
+  auto *const decl_from_modules =
+      llvm::cast<NamedDecl>(ClangUtil::GetDecl(decls[0]));
 
   if (llvm::isa<clang::TypeDecl>(decl_from_modules) ||
       llvm::isa<clang::ObjCContainerDecl>(decl_from_modules) ||
@@ -849,16 +849,16 @@ void ClangASTSource::FindDeclInObjCRuntime(NameSearchContext &context,
 
   bool append = false;
   uint32_t max_matches = 1;
-  std::vector<clang::NamedDecl *> decls;
+  std::vector<CompilerDecl> decls;
 
-  auto *clang_decl_vendor = llvm::cast<ClangDeclVendor>(decl_vendor);
+  auto *clang_decl_vendor = llvm::cast<DeclVendor>(decl_vendor);
   if (!clang_decl_vendor->FindDecls(name, append, max_matches, decls))
     return;
 
   LLDB_LOG(log, "  CAS::FEVD Matching type found for \"{0}\" in the runtime",
            name);
 
-  clang::Decl *copied_decl = CopyDecl(decls[0]);
+  clang::Decl *copied_decl = CopyDecl(ClangUtil::GetDecl(decls[0]));
   clang::NamedDecl *copied_named_decl =
       copied_decl ? dyn_cast<clang::NamedDecl>(copied_decl) : nullptr;
 
@@ -1081,14 +1081,14 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
       ConstString interface_name(interface_decl->getNameAsString().c_str());
       bool append = false;
       uint32_t max_matches = 1;
-      std::vector<clang::NamedDecl *> decls;
+      std::vector<CompilerDecl> decls;
 
       if (!modules_decl_vendor->FindDecls(interface_name, append, max_matches,
                                           decls))
         break;
 
       ObjCInterfaceDecl *interface_decl_from_modules =
-          dyn_cast<ObjCInterfaceDecl>(decls[0]);
+          dyn_cast<ObjCInterfaceDecl>(ClangUtil::GetDecl(decls[0]));
 
       if (!interface_decl_from_modules)
         break;
@@ -1121,15 +1121,15 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     ConstString interface_name(interface_decl->getNameAsString().c_str());
     bool append = false;
     uint32_t max_matches = 1;
-    std::vector<clang::NamedDecl *> decls;
+    std::vector<CompilerDecl> decls;
 
-    auto *clang_decl_vendor = llvm::cast<ClangDeclVendor>(decl_vendor);
+    auto *clang_decl_vendor = llvm::cast<DeclVendor>(decl_vendor);
     if (!clang_decl_vendor->FindDecls(interface_name, append, max_matches,
                                       decls))
       break;
 
     ObjCInterfaceDecl *runtime_interface_decl =
-        dyn_cast<ObjCInterfaceDecl>(decls[0]);
+        dyn_cast<ObjCInterfaceDecl>(ClangUtil::GetDecl(decls[0]));
 
     if (!runtime_interface_decl)
       break;
@@ -1254,13 +1254,13 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
 
     bool append = false;
     uint32_t max_matches = 1;
-    std::vector<clang::NamedDecl *> decls;
+    std::vector<CompilerDecl> decls;
 
     if (!modules_decl_vendor->FindDecls(class_name, append, max_matches, decls))
       break;
 
     DeclFromUser<const ObjCInterfaceDecl> interface_decl_from_modules(
-        dyn_cast<ObjCInterfaceDecl>(decls[0]));
+        dyn_cast<ObjCInterfaceDecl>(ClangUtil::GetDecl(decls[0])));
 
     if (!interface_decl_from_modules.IsValid())
       break;
@@ -1297,14 +1297,14 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
 
     bool append = false;
     uint32_t max_matches = 1;
-    std::vector<clang::NamedDecl *> decls;
+    std::vector<CompilerDecl> decls;
 
-    auto *clang_decl_vendor = llvm::cast<ClangDeclVendor>(decl_vendor);
+    auto *clang_decl_vendor = llvm::cast<DeclVendor>(decl_vendor);
     if (!clang_decl_vendor->FindDecls(class_name, append, max_matches, decls))
       break;
 
     DeclFromUser<const ObjCInterfaceDecl> interface_decl_from_runtime(
-        dyn_cast<ObjCInterfaceDecl>(decls[0]));
+        dyn_cast<ObjCInterfaceDecl>(ClangUtil::GetDecl(decls[0])));
 
     if (!interface_decl_from_runtime.IsValid())
       break;

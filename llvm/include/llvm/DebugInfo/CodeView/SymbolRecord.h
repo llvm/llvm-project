@@ -240,8 +240,7 @@ private:
     if (Annotations.empty())
       return -1;
 
-    uint8_t FirstByte = Annotations.front();
-    Annotations = Annotations.drop_front();
+    uint8_t FirstByte = Annotations.consume_front();
 
     if ((FirstByte & 0x80) == 0x00)
       return FirstByte;
@@ -249,8 +248,7 @@ private:
     if (Annotations.empty())
       return -1;
 
-    uint8_t SecondByte = Annotations.front();
-    Annotations = Annotations.drop_front();
+    uint8_t SecondByte = Annotations.consume_front();
 
     if ((FirstByte & 0xC0) == 0x80)
       return ((FirstByte & 0x3F) << 8) | SecondByte;
@@ -258,14 +256,12 @@ private:
     if (Annotations.empty())
       return -1;
 
-    uint8_t ThirdByte = Annotations.front();
-    Annotations = Annotations.drop_front();
+    uint8_t ThirdByte = Annotations.consume_front();
 
     if (Annotations.empty())
       return -1;
 
-    uint8_t FourthByte = Annotations.front();
-    Annotations = Annotations.drop_front();
+    uint8_t FourthByte = Annotations.consume_front();
 
     if ((FirstByte & 0xE0) == 0xC0)
       return ((FirstByte & 0x1F) << 24) | (SecondByte << 16) |

@@ -335,6 +335,7 @@ TEST(DocumentSymbols, BasicSymbols) {
         Foo(int a) {}
         void $decl[[f]]();
         friend void f1();
+        friend void f2() {}
         friend class Friend;
         Foo& operator=(const Foo&);
         ~Foo();
@@ -346,7 +347,7 @@ TEST(DocumentSymbols, BasicSymbols) {
       };
 
       void f1();
-      inline void f2() {}
+      void f2();
       static const int KInt = 2;
       const char* kStr = "123";
 
@@ -385,6 +386,8 @@ TEST(DocumentSymbols, BasicSymbols) {
                      AllOf(withName("Foo"), withKind(SymbolKind::Constructor),
                            withDetail("(int)"), children()),
                      AllOf(withName("f"), withKind(SymbolKind::Method),
+                           withDetail("void ()"), children()),
+                     AllOf(withName("f2"), withKind(SymbolKind::Function),
                            withDetail("void ()"), children()),
                      AllOf(withName("operator="), withKind(SymbolKind::Method),
                            withDetail("Foo &(const Foo &)"), children()),

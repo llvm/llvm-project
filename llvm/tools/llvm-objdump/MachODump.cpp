@@ -13,6 +13,7 @@
 #include "MachODump.h"
 
 #include "ObjdumpOptID.h"
+#include "SourcePrinter.h"
 #include "llvm-objdump.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -127,7 +128,8 @@ void objdump::parseMachOOptions(const llvm::opt::InputArgList &InputArgs) {
 
 static const Target *GetTarget(const MachOObjectFile *MachOObj,
                                const char **McpuDefault,
-                               const Target **ThumbTarget) {
+                               const Target **ThumbTarget,
+                               Triple &ThumbTriple) {
   // Figure out the target triple.
   Triple TT(TripleName);
   if (TripleName.empty()) {
@@ -138,19 +140,19 @@ static const Target *GetTarget(const MachOObjectFile *MachOObj,
   if (TT.getArch() == Triple::arm) {
     // We've inferred a 32-bit ARM target from the object file. All MachO CPUs
     // that support ARM are also capable of Thumb mode.
-    Triple ThumbTriple = TT;
     std::string ThumbName = (Twine("thumb") + TT.getArchName().substr(3)).str();
+    ThumbTriple = TT;
     ThumbTriple.setArchName(ThumbName);
     ThumbTripleName = ThumbTriple.str();
   }
 
   // Get the target specific parser.
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
   if (TheTarget && ThumbTripleName.empty())
     return TheTarget;
 
-  *ThumbTarget = TargetRegistry::lookupTarget(ThumbTripleName, Error);
+  *ThumbTarget = TargetRegistry::lookupTarget(ThumbTriple, Error);
   if (*ThumbTarget)
     return TheTarget;
 
@@ -1749,7 +1751,7 @@ static void DumpLiteralPointerSection(MachOObjectFile *O,
 
     StringRef BytesStr = unwrapOrError(Sect->getContents(), O->getFileName());
 
-    const char *Contents = reinterpret_cast<const char *>(BytesStr.data());
+    const char *Contents = BytesStr.data();
 
     switch (section_type) {
     case MachO::S_CSTRING_LITERALS:
@@ -1965,7 +1967,7 @@ static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
 
         StringRef BytesStr =
             unwrapOrError(Section.getContents(), O->getFileName());
-        const char *sect = reinterpret_cast<const char *>(BytesStr.data());
+        const char *sect = BytesStr.data();
         uint32_t sect_size = BytesStr.size();
         uint64_t sect_addr = Section.getAddress();
 
@@ -2049,7 +2051,7 @@ static void DumpInfoPlistSectionContents(StringRef Filename,
         outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
       StringRef BytesStr =
           unwrapOrError(Section.getContents(), O->getFileName());
-      const char *sect = reinterpret_cast<const char *>(BytesStr.data());
+      const char *sect = BytesStr.data();
       outs() << format("%.*s", BytesStr.size(), sect) << "\n";
       return;
     }
@@ -3237,7 +3239,7 @@ static const char *GuessCstringPointer(uint64_t ReferenceValue,
           uint64_t object_offset = Sec.offset + sect_offset;
           StringRef MachOContents = info->O->getData();
           uint64_t object_size = MachOContents.size();
-          const char *object_addr = (const char *)MachOContents.data();
+          const char *object_addr = MachOContents.data();
           if (object_offset < object_size) {
             const char *name = object_addr + object_offset;
             return name;
@@ -3258,7 +3260,7 @@ static const char *GuessCstringPointer(uint64_t ReferenceValue,
           uint64_t object_offset = Sec.offset + sect_offset;
           StringRef MachOContents = info->O->getData();
           uint64_t object_size = MachOContents.size();
-          const char *object_addr = (const char *)MachOContents.data();
+          const char *object_addr = MachOContents.data();
           if (object_offset < object_size) {
             const char *name = object_addr + object_offset;
             return name;
@@ -3447,7 +3449,7 @@ static uint64_t GuessPointerPointer(uint64_t ReferenceValue,
           uint64_t object_offset = Sec.offset + sect_offset;
           StringRef MachOContents = info->O->getData();
           uint64_t object_size = MachOContents.size();
-          const char *object_addr = (const char *)MachOContents.data();
+          const char *object_addr = MachOContents.data();
           if (object_offset < object_size) {
             uint64_t pointer_value;
             memcpy(&pointer_value, object_addr + object_offset,
@@ -4350,7 +4352,7 @@ walk_pointer_list_64(const char *listname, const SectionRef S,
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
 
   StringRef BytesStr = unwrapOrError(S.getContents(), O->getFileName());
-  const char *Contents = reinterpret_cast<const char *>(BytesStr.data());
+  const char *Contents = BytesStr.data();
 
   for (uint32_t i = 0; i < S.getSize(); i += sizeof(uint64_t)) {
     uint32_t left = S.getSize() - i;
@@ -4399,7 +4401,7 @@ walk_pointer_list_32(const char *listname, const SectionRef S,
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
 
   StringRef BytesStr = unwrapOrError(S.getContents(), O->getFileName());
-  const char *Contents = reinterpret_cast<const char *>(BytesStr.data());
+  const char *Contents = BytesStr.data();
 
   for (uint32_t i = 0; i < S.getSize(); i += sizeof(uint32_t)) {
     uint32_t left = S.getSize() - i;
@@ -7238,7 +7240,9 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                              StringRef DisSegName, StringRef DisSectName) {
   const char *McpuDefault = nullptr;
   const Target *ThumbTarget = nullptr;
-  const Target *TheTarget = GetTarget(MachOOF, &McpuDefault, &ThumbTarget);
+  Triple ThumbTriple;
+  const Target *TheTarget =
+      GetTarget(MachOOF, &McpuDefault, &ThumbTarget, ThumbTriple);
   if (!TheTarget) {
     // GetTarget prints out stuff.
     return;
@@ -7285,34 +7289,36 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     FeaturesStr = Features.getString();
   }
 
+  Triple TheTriple(TripleName);
+
   MCTargetOptions MCOptions;
   // Set up disassembler.
   std::unique_ptr<const MCRegisterInfo> MRI(
-      TheTarget->createMCRegInfo(TripleName));
+      TheTarget->createMCRegInfo(TheTriple));
   CHECK_TARGET_INFO_CREATION(MRI);
   std::unique_ptr<const MCAsmInfo> AsmInfo(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   CHECK_TARGET_INFO_CREATION(AsmInfo);
   std::unique_ptr<const MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MachOMCPU, FeaturesStr));
+      TheTarget->createMCSubtargetInfo(TheTriple, MachOMCPU, FeaturesStr));
   CHECK_TARGET_INFO_CREATION(STI);
-  MCContext Ctx(Triple(TripleName), AsmInfo.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, AsmInfo.get(), MRI.get(), STI.get());
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, Ctx));
   CHECK_TARGET_INFO_CREATION(DisAsm);
   std::unique_ptr<MCSymbolizer> Symbolizer;
   struct DisassembleInfo SymbolizerInfo(nullptr, nullptr, nullptr, false);
   std::unique_ptr<MCRelocationInfo> RelInfo(
-      TheTarget->createMCRelocationInfo(TripleName, Ctx));
+      TheTarget->createMCRelocationInfo(TheTriple, Ctx));
   if (RelInfo) {
     Symbolizer.reset(TheTarget->createMCSymbolizer(
-        TripleName, SymbolizerGetOpInfo, SymbolizerSymbolLookUp,
-        &SymbolizerInfo, &Ctx, std::move(RelInfo)));
+        TheTriple, SymbolizerGetOpInfo, SymbolizerSymbolLookUp, &SymbolizerInfo,
+        &Ctx, std::move(RelInfo)));
     DisAsm->setSymbolizer(std::move(Symbolizer));
   }
   int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
   std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
-      Triple(TripleName), AsmPrinterVariant, *AsmInfo, *InstrInfo, *MRI));
+      TheTriple, AsmPrinterVariant, *AsmInfo, *InstrInfo, *MRI));
   CHECK_TARGET_INFO_CREATION(IP);
   // Set the display preference for hex vs. decimal immediates.
   IP->setPrintImmHex(PrintImmHex);
@@ -7341,32 +7347,31 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   struct DisassembleInfo ThumbSymbolizerInfo(nullptr, nullptr, nullptr, false);
   std::unique_ptr<MCRelocationInfo> ThumbRelInfo;
   if (ThumbTarget) {
-    ThumbMRI.reset(ThumbTarget->createMCRegInfo(ThumbTripleName));
+    ThumbMRI.reset(ThumbTarget->createMCRegInfo(ThumbTriple));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbMRI);
     ThumbAsmInfo.reset(
-        ThumbTarget->createMCAsmInfo(*ThumbMRI, ThumbTripleName, MCOptions));
+        ThumbTarget->createMCAsmInfo(*ThumbMRI, ThumbTriple, MCOptions));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbAsmInfo);
-    ThumbSTI.reset(
-        ThumbTarget->createMCSubtargetInfo(ThumbTripleName, MachOMCPU,
-                                           FeaturesStr));
+    ThumbSTI.reset(ThumbTarget->createMCSubtargetInfo(ThumbTriple, MachOMCPU,
+                                                      FeaturesStr));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbSTI);
-    ThumbCtx.reset(new MCContext(Triple(ThumbTripleName), ThumbAsmInfo.get(),
+    ThumbCtx.reset(new MCContext(ThumbTriple, ThumbAsmInfo.get(),
                                  ThumbMRI.get(), ThumbSTI.get()));
     ThumbDisAsm.reset(ThumbTarget->createMCDisassembler(*ThumbSTI, *ThumbCtx));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbDisAsm);
     MCContext *PtrThumbCtx = ThumbCtx.get();
     ThumbRelInfo.reset(
-        ThumbTarget->createMCRelocationInfo(ThumbTripleName, *PtrThumbCtx));
+        ThumbTarget->createMCRelocationInfo(ThumbTriple, *PtrThumbCtx));
     if (ThumbRelInfo) {
       ThumbSymbolizer.reset(ThumbTarget->createMCSymbolizer(
-          ThumbTripleName, SymbolizerGetOpInfo, SymbolizerSymbolLookUp,
+          ThumbTriple, SymbolizerGetOpInfo, SymbolizerSymbolLookUp,
           &ThumbSymbolizerInfo, PtrThumbCtx, std::move(ThumbRelInfo)));
       ThumbDisAsm->setSymbolizer(std::move(ThumbSymbolizer));
     }
     int ThumbAsmPrinterVariant = ThumbAsmInfo->getAssemblerDialect();
     ThumbIP.reset(ThumbTarget->createMCInstPrinter(
-        Triple(ThumbTripleName), ThumbAsmPrinterVariant, *ThumbAsmInfo,
-        *ThumbInstrInfo, *ThumbMRI));
+        ThumbTriple, ThumbAsmPrinterVariant, *ThumbAsmInfo, *ThumbInstrInfo,
+        *ThumbMRI));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbIP);
     // Set the display preference for hex vs. decimal immediates.
     ThumbIP->setPrintImmHex(PrintImmHex);
@@ -7411,16 +7416,26 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<DIContext> diContext;
   std::unique_ptr<Binary> DSYMBinary;
   std::unique_ptr<MemoryBuffer> DSYMBuf;
-  if (UseDbg) {
-    // If separate DSym file path was specified, parse it as a macho file,
-    // get the sections and supply it to the section name parsing machinery.
-    if (const ObjectFile *DbgObj =
-            getMachODSymObject(MachOOF, Filename, DSYMBinary, DSYMBuf)) {
+  const ObjectFile *DbgObj = MachOOF;
+  if (UseDbg || PrintSource || PrintLines) {
+    // Look for debug info in external dSYM file or embedded in the object.
+    // getMachODSymObject returns MachOOF by default if no external dSYM found.
+    const ObjectFile *DSym =
+        getMachODSymObject(MachOOF, Filename, DSYMBinary, DSYMBuf);
+    if (!DSym)
+      return;
+    DbgObj = DSym;
+    if (UseDbg || PrintLines) {
       // Setup the DIContext
       diContext = DWARFContext::create(*DbgObj);
-    } else {
-      return;
     }
+  }
+
+  std::optional<SourcePrinter> SP;
+  std::optional<LiveElementPrinter> LEP;
+  if (PrintSource || PrintLines) {
+    SP.emplace(DbgObj, TheTarget->getName());
+    LEP.emplace(*MRI, *STI);
   }
 
   if (FilterSections.empty())
@@ -7601,6 +7616,12 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
           outs() << SymName << ":\n";
 
         uint64_t PC = SectAddress + Index;
+
+        if (PrintSource || PrintLines) {
+          formatted_raw_ostream FOS(outs());
+          SP->printSourceLine(FOS, {PC, SectIdx}, Filename, *LEP);
+        }
+
         if (LeadingAddr) {
           if (FullLeadingAddr) {
             if (MachOOF->is64Bit())
@@ -7691,6 +7712,11 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         MCInst Inst;
 
         uint64_t PC = SectAddress + Index;
+
+        if (PrintSource || PrintLines) {
+          formatted_raw_ostream FOS(outs());
+          SP->printSourceLine(FOS, {PC, SectIdx}, Filename, *LEP);
+        }
 
         if (DumpAndSkipDataInCode(PC, Bytes.data() + Index, Dices, InstSize))
           continue;
@@ -9063,7 +9089,7 @@ static void PrintDyldLoadCommand(MachO::dylinker_command dyld,
   if (dyld.name >= dyld.cmdsize)
     outs() << "         name ?(bad offset " << dyld.name << ")\n";
   else {
-    const char *P = (const char *)(Ptr) + dyld.name;
+    const char *P = Ptr + dyld.name;
     outs() << "         name " << P << " (offset " << dyld.name << ")\n";
   }
 }
@@ -9094,7 +9120,7 @@ static void PrintRpathLoadCommand(MachO::rpath_command rpath, const char *Ptr) {
   if (rpath.path >= rpath.cmdsize)
     outs() << "         path ?(bad offset " << rpath.path << ")\n";
   else {
-    const char *P = (const char *)(Ptr) + rpath.path;
+    const char *P = Ptr + rpath.path;
     outs() << "         path " << P << " (offset " << rpath.path << ")\n";
   }
 }
@@ -10041,7 +10067,7 @@ static void PrintDylibCommand(MachO::dylib_command dl, const char *Ptr) {
   else
     outs() << "\n";
   if (dl.dylib.name < dl.cmdsize) {
-    const char *P = (const char *)(Ptr) + dl.dylib.name;
+    const char *P = Ptr + dl.dylib.name;
     outs() << "         name " << P << " (offset " << dl.dylib.name << ")\n";
   } else {
     outs() << "         name ?(bad offset " << dl.dylib.name << ")\n";

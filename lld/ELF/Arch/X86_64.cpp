@@ -44,7 +44,7 @@ public:
                          unsigned size) const override;
   RelExpr adjustGotPcExpr(RelType type, int64_t addend,
                           const uint8_t *loc) const override;
-  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
   bool adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                         uint8_t stOther) const override;
   bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
@@ -320,6 +320,8 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
 bool X86_64::relaxOnce(int pass) const {
   uint64_t minVA = UINT64_MAX, maxVA = 0;
   for (OutputSection *osec : ctx.outputSections) {
+    if (!(osec->flags & SHF_ALLOC))
+      continue;
     minVA = std::min(minVA, osec->addr);
     maxVA = std::max(maxVA, osec->addr + osec->size);
   }
@@ -1144,12 +1146,8 @@ bool X86_64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   return false;
 }
 
-void X86_64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
-  uint64_t secAddr = sec.getOutputSection()->addr;
-  if (auto *s = dyn_cast<InputSection>(&sec))
-    secAddr += s->outSecOff;
-  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
-    secAddr += ehIn->getParent()->outSecOff;
+void X86_64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
   for (const Relocation &rel : sec.relocs()) {
     if (rel.expr == R_NONE) // See deleteFallThruJmpInsn
       continue;

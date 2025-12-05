@@ -12,8 +12,57 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+FUNCTION_PASS("x86-lower-amx-intrinsics", X86LowerAMXIntrinsicsPass(this))
+FUNCTION_PASS("x86-lower-amx-type", X86LowerAMXTypePass(this))
+FUNCTION_PASS("x86-partial-reduction", X86PartialReductionPass(this))
+#undef FUNCTION_PASS
+
+#ifndef DUMMY_FUNCTION_PASS
+#define DUMMY_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+DUMMY_FUNCTION_PASS("x86-winehstate", WinEHStatePass())
+#undef DUMMY_FUNCTION_PASS
+
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("x86-avoid-trailing-call", X86AvoidTrailingCallPass())
+MACHINE_FUNCTION_PASS("x86-dyn-alloca-expander", X86DynAllocaExpanderPass())
+MACHINE_FUNCTION_PASS("x86-fp-stackifier", X86FPStackifierPass())
 MACHINE_FUNCTION_PASS("x86-isel", X86ISelDAGToDAGPass(*this))
 #undef MACHINE_FUNCTION_PASS
+
+#ifndef DUMMY_MACHINE_FUNCTION_PASS
+#define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME)
+#endif
+DUMMY_MACHINE_FUNCTION_PASS("x86-avoid-SFB", X86AvoidSFBPass())
+DUMMY_MACHINE_FUNCTION_PASS("x86-cf-opt", X86CallFrameOptimization())
+DUMMY_MACHINE_FUNCTION_PASS("x86-cmov-conversion", X86CmovConverterPass())
+DUMMY_MACHINE_FUNCTION_PASS("x86-compress-evex", CompressEVEXPass())
+DUMMY_MACHINE_FUNCTION_PASS("x86-domain-reassignment", X86DomainReassignment())
+DUMMY_MACHINE_FUNCTION_PASS("x86-execution-domain-fix", X86ExecutionDomainFix())
+DUMMY_MACHINE_FUNCTION_PASS("fastpretileconfig", X86FastPreTileConfig())
+DUMMY_MACHINE_FUNCTION_PASS("fasttileconfig", X86FastTileConfig())
+DUMMY_MACHINE_FUNCTION_PASS("x86-fixup-LEAs", FixupLEAPass())
+DUMMY_MACHINE_FUNCTION_PASS("x86-fixup-bw-inst", FixupBWInstPass())
+DUMMY_MACHINE_FUNCTION_PASS("x86-fixup-inst-tuning", X86FixupInstTuningPass())
+DUMMY_MACHINE_FUNCTION_PASS("x86-fixup-setcc", X86FixupSetCCPass())
+DUMMY_MACHINE_FUNCTION_PASS("x86-fixup-vector-constants", X86FixupVectorConstantsPass())
+DUMMY_MACHINE_FUNCTION_PASS("x86-flags-copy-lowering", X86FlagsCopyLoweringPass())
+DUMMY_MACHINE_FUNCTION_PASS("x86-lower-tile-copy", X86LowerTileCopy())
+DUMMY_MACHINE_FUNCTION_PASS("x86-lvi-load", X86LoadValueInjectionLoadHardeningPass())
+DUMMY_MACHINE_FUNCTION_PASS("x86-lvi-ret", X86LoadValueInjectionRetHardeningPass())
+DUMMY_MACHINE_FUNCTION_PASS("x86-optimize-LEAs", X86OptimizeLEAPass())
+DUMMY_MACHINE_FUNCTION_PASS("x86-pseudo", X86ExpandPseudo())
+DUMMY_MACHINE_FUNCTION_PASS("x86-return-thunks", X86ReturnThunks())
+DUMMY_MACHINE_FUNCTION_PASS("x86-seses", X86SpeculativeExecutionSideEffectSuppression())
+DUMMY_MACHINE_FUNCTION_PASS("x86-slh", X86SpeculativeLoadHardeningPass())
+DUMMY_MACHINE_FUNCTION_PASS("x86-suppress-apx-for-relocation", X86SuppressAPXForRelocationPass())
+DUMMY_MACHINE_FUNCTION_PASS("tile-pre-config", X86PreTileConfig())
+DUMMY_MACHINE_FUNCTION_PASS("tileconfig", X86TileConfig())
+DUMMY_MACHINE_FUNCTION_PASS("x86-wineh-unwindv2", X86WinEHUnwindV2())
+DUMMY_MACHINE_FUNCTION_PASS("x86argumentstackrebase", X86ArgumentStackSlotPass())
+#undef DUMMY_MACHINE_FUNCTION_PASS

@@ -72,7 +72,7 @@ define internal void @bar() {
 ; CHECK-NEXT:    [[OFFSET:%.*]] = ashr exact i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr addrspace(1) [[BEGIN]], i64 [[OFFSET]]
 ; CHECK-NEXT:    [[START:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[TMP3]], i64 -1
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt ptr addrspace(1) [[START]], [[BEGIN]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp uge ptr addrspace(1) [[START]], [[BEGIN]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[WHILE_ENTRY:%.*]], label [[WHILE_END:%.*]]
 ; CHECK:       while.entry:
 ; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ [[START]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[WHILE_ENTRY]] ]

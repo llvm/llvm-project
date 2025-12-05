@@ -49,12 +49,9 @@ static M68kRelType getType(unsigned Kind, M68k::Specifier &Modifier,
                            bool &IsPCRel) {
   switch (Kind) {
   case FK_Data_4:
-  case FK_PCRel_4:
     return RT_32;
-  case FK_PCRel_2:
   case FK_Data_2:
     return RT_16;
-  case FK_PCRel_1:
   case FK_Data_1:
     return RT_8;
   }
@@ -73,8 +70,8 @@ unsigned M68kELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case M68k::S_TLSLD:
   case M68k::S_TLSLDM:
   case M68k::S_TPOFF:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

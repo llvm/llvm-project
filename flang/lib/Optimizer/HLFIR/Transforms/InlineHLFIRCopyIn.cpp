@@ -82,7 +82,7 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
       hlfir::getFortranElementOrSequenceType(inputVariable.getType());
   fir::BoxType resultBoxType = fir::BoxType::get(sequenceType);
   mlir::Value isContiguous =
-      builder.create<fir::IsContiguousBoxOp>(loc, inputVariable);
+      fir::IsContiguousBoxOp::create(builder, loc, inputVariable);
   mlir::Operation::result_range results =
       builder
           .genIfOp(loc, {resultBoxType, builder.getI1Type()}, isContiguous,
@@ -90,12 +90,13 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
           .genThen([&]() {
             mlir::Value result = inputVariable;
             if (fir::isPointerType(inputVariable.getType())) {
-              result = builder.create<fir::ReboxOp>(
-                  loc, resultBoxType, inputVariable, mlir::Value{},
-                  mlir::Value{});
+              result = fir::ReboxOp::create(builder, loc, resultBoxType,
+                                            inputVariable, mlir::Value{},
+                                            mlir::Value{});
             }
-            builder.create<fir::ResultOp>(
-                loc, mlir::ValueRange{result, builder.createBool(loc, false)});
+            fir::ResultOp::create(
+                builder, loc,
+                mlir::ValueRange{result, builder.createBool(loc, false)});
           })
           .genElse([&] {
             mlir::Value shape = hlfir::genShape(loc, builder, inputVariable);
@@ -106,9 +107,11 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
             mlir::Value alloc = builder.createHeapTemporary(
                 loc, sequenceType, tmpName, extents, lenParams);
 
-            auto declareOp = builder.create<hlfir::DeclareOp>(
-                loc, alloc, tmpName, shape, lenParams,
-                /*dummy_scope=*/nullptr);
+            auto declareOp = hlfir::DeclareOp::create(builder, loc, alloc,
+                                                      tmpName, shape, lenParams,
+                                                      /*dummy_scope=*/nullptr,
+                                                      /*storage=*/nullptr,
+                                                      /*storage_offset=*/0);
             hlfir::Entity temp{declareOp.getBase()};
             hlfir::LoopNest loopNest =
                 hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
@@ -120,7 +123,7 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
             elem = hlfir::loadTrivialScalar(loc, builder, elem);
             hlfir::Entity tempElem = hlfir::getElementAt(
                 loc, builder, temp, loopNest.oneBasedIndices);
-            builder.create<hlfir::AssignOp>(loc, elem, tempElem);
+            hlfir::AssignOp::create(builder, loc, elem, tempElem);
             builder.setInsertionPointAfter(loopNest.outerOp);
 
             mlir::Value result;
@@ -132,12 +135,13 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
               fir::ReferenceType refTy =
                   fir::ReferenceType::get(temp.getElementOrSequenceType());
               mlir::Value refVal = builder.createConvert(loc, refTy, temp);
-              result = builder.create<fir::EmboxOp>(loc, resultBoxType, refVal,
-                                                    shape);
+              result = fir::EmboxOp::create(builder, loc, resultBoxType, refVal,
+                                            shape);
             }
 
-            builder.create<fir::ResultOp>(
-                loc, mlir::ValueRange{result, builder.createBool(loc, true)});
+            fir::ResultOp::create(
+                builder, loc,
+                mlir::ValueRange{result, builder.createBool(loc, true)});
           })
           .getResults();
 
@@ -145,8 +149,8 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
   mlir::OpResult needsCleanup = results[1];
 
   // Prepare the corresponding copyOut to free the temporary if it is required
-  auto alloca = builder.create<fir::AllocaOp>(loc, resultBox.getType());
-  auto store = builder.create<fir::StoreOp>(loc, resultBox, alloca);
+  auto alloca = fir::AllocaOp::create(builder, loc, resultBox.getType());
+  auto store = fir::StoreOp::create(builder, loc, resultBox, alloca);
   rewriter.startOpModification(copyOut);
   copyOut->setOperand(0, store.getMemref());
   copyOut->setOperand(1, needsCleanup);

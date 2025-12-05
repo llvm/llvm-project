@@ -89,8 +89,8 @@ struct StoreToLoadForwardingCandidate {
   /// Return true if the dependence from the store to the load has an
   /// absolute distance of one.
   /// E.g. A[i+1] = A[i] (or A[i-1] = A[i] for descending loop)
-  bool isDependenceDistanceOfOne(PredicatedScalarEvolution &PSE,
-                                 Loop *L) const {
+  bool isDependenceDistanceOfOne(PredicatedScalarEvolution &PSE, Loop *L,
+                                 const DominatorTree &DT) const {
     Value *LoadPtr = Load->getPointerOperand();
     Value *StorePtr = Store->getPointerOperand();
     Type *LoadType = getLoadStoreType(Load);
@@ -102,8 +102,10 @@ struct StoreToLoadForwardingCandidate {
                DL.getTypeSizeInBits(getLoadStoreType(Store)) &&
            "Should be a known dependence");
 
-    int64_t StrideLoad = getPtrStride(PSE, LoadType, LoadPtr, L).value_or(0);
-    int64_t StrideStore = getPtrStride(PSE, LoadType, StorePtr, L).value_or(0);
+    int64_t StrideLoad =
+        getPtrStride(PSE, LoadType, LoadPtr, L, DT).value_or(0);
+    int64_t StrideStore =
+        getPtrStride(PSE, LoadType, StorePtr, L, DT).value_or(0);
     if (!StrideLoad || !StrideStore || StrideLoad != StrideStore)
       return false;
 
@@ -117,7 +119,7 @@ struct StoreToLoadForwardingCandidate {
     if (std::abs(StrideLoad) != 1)
       return false;
 
-    unsigned TypeByteSize = DL.getTypeAllocSize(const_cast<Type *>(LoadType));
+    unsigned TypeByteSize = DL.getTypeAllocSize(LoadType);
 
     auto *LoadPtrSCEV = cast<SCEVAddRecExpr>(PSE.getSCEV(LoadPtr));
     auto *StorePtrSCEV = cast<SCEVAddRecExpr>(PSE.getSCEV(StorePtr));
@@ -287,8 +289,8 @@ public:
         // so deciding which one forwards is easy.  The later one forwards as
         // long as they both have a dependence distance of one to the load.
         if (Cand.Store->getParent() == OtherCand->Store->getParent() &&
-            Cand.isDependenceDistanceOfOne(PSE, L) &&
-            OtherCand->isDependenceDistanceOfOne(PSE, L)) {
+            Cand.isDependenceDistanceOfOne(PSE, L, *DT) &&
+            OtherCand->isDependenceDistanceOfOne(PSE, L, *DT)) {
           // They are in the same block, the later one will forward to the load.
           if (getInstrIndex(OtherCand->Store) < getInstrIndex(Cand.Store))
             OtherCand = &Cand;
@@ -538,7 +540,7 @@ public:
 
       // Check whether the SCEV difference is the same as the induction step,
       // thus we load the value in the next iteration.
-      if (!Cand.isDependenceDistanceOfOne(PSE, L))
+      if (!Cand.isDependenceDistanceOfOne(PSE, L, *DT))
         continue;
 
       assert(isa<SCEVAddRecExpr>(PSE.getSCEV(Cand.Load->getPointerOperand())) &&

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++2a -Wno-unused-value %s -verify
+// RUN: %clang_cc1 -std=c++2a -Wno-unused-value %s -verify -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++2b -Wno-unused-value %s -verify
+// RUN: %clang_cc1 -std=c++2b -Wno-unused-value %s -verify -fexperimental-new-constant-interpreter
 
 consteval int id(int i) { return i; }
 constexpr char id(char c) { return c; }
@@ -575,4 +577,71 @@ int f() {
   //expected-error@-1 {{call to immediate function 'GH119046::tfn<GH119046::S>' is not a constant expression}}
   //expected-note@-2 {{read of non-const variable 'a' is not allowed in a constant expression}}
 }
+}
+
+#if __cplusplus >= 202302L
+namespace GH135281 {
+  struct B {
+    const void* p;
+    consteval B() : p{this} {}
+  };
+  B b;
+  B b2{};
+  B &&b3{};
+  void f() {
+    static B b4;
+    B b5; // expected-error {{call to consteval function 'GH135281::B::B' is not a constant expression}} \
+          // expected-note {{pointer to temporary is not a constant expression}} \
+          // expected-note {{temporary created here}}
+  }
+  template<typename T> T temp_var_uninit;
+  template<typename T> T temp_var_brace_init{};
+  B* b6 = &temp_var_uninit<B>;
+  B* b7 = &temp_var_brace_init<B>;
+  B* b8 = &temp_var_brace_init<B&&>;
+  template<typename T> void f2() {
+    static T b9;
+    T b10; // expected-error {{call to consteval function 'GH135281::B::B' is not a constant expression}} \
+           // expected-note {{pointer to temporary is not a constant expression}} \
+           // expected-note {{temporary created here}}
+    static B b11;
+    B b12; // expected-error 2 {{call to consteval function 'GH135281::B::B' is not a constant expression}} \
+           // expected-note 2 {{pointer to temporary is not a constant expression}} \
+           // expected-note 2 {{temporary created here}}
+  }
+  void (*ff)() = f2<B>; // expected-note {{instantiation of function template specialization}}
+}
+#endif
+
+namespace GH145776 {
+
+void runtime_only() {}
+consteval void comptime_only() {}
+
+void fn() {
+  []() {
+    runtime_only();
+    []() {
+      &comptime_only;
+    }();
+  }();
+}
+
+}
+
+
+namespace GH109096 {
+consteval void undefined();
+template <typename T>
+struct scope_exit {
+    T t;
+    constexpr ~scope_exit() { t(); }
+    // expected-error@-1 {{call to immediate function 'GH109096::(anonymous class)::operator()' is not a constant expression}} \
+    // expected-note@-1 {{implicit use of 'this' pointer is only allowed within the evaluation}}
+};
+
+scope_exit guard( // expected-note {{in instantiation of member function}}
+    []() { undefined(); }
+);
+
 }

@@ -12,6 +12,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
 #include "Plugins/SymbolFile/DWARF/ManualDWARFIndexSet.h"
 #include "Plugins/SymbolFile/DWARF/NameToDIE.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/DenseSet.h"
 
 namespace lldb_private::plugin {
@@ -30,37 +31,48 @@ public:
 
   void Preload() override { Index(); }
 
-  void
-  GetGlobalVariables(ConstString basename,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void
-  GetGlobalVariables(const RegularExpression &regex,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void
-  GetGlobalVariables(DWARFUnit &unit,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetObjCMethods(ConstString class_name,
-                      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetGlobalVariables(
+      ConstString basename,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void GetGlobalVariables(
+      const RegularExpression &regex,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void GetGlobalVariables(
+      DWARFUnit &unit,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void GetObjCMethods(
+      ConstString class_name,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void GetCompleteObjCClass(
       ConstString class_name, bool must_be_implementation,
-      llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetTypes(ConstString name,
-                llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetTypes(const DWARFDeclContext &context,
-                llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetNamespaces(ConstString name,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetFunctions(const Module::LookupInfo &lookup_info,
-                    SymbolFileDWARF &dwarf,
-                    const CompilerDeclContext &parent_decl_ctx,
-                    llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetFunctions(const RegularExpression &regex,
-                    llvm::function_ref<bool(DWARFDIE die)> callback) override;
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void
+  GetTypes(ConstString name,
+           llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void
+  GetTypes(const DWARFDeclContext &context,
+           llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void GetNamespaces(
+      ConstString name,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void GetFunctions(
+      const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
+      const CompilerDeclContext &parent_decl_ctx,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void GetFunctions(
+      const RegularExpression &regex,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
 
   void Dump(Stream &s) override;
 
 private:
+  /// Reads the DWARF debug info to build the index once.
+  ///
+  /// Should be called before attempting to retrieve symbols.
   void Index();
+
+  /// Call `ManualDWARFIndex::Index()` instead.
+  void IndexImpl();
 
   /// Decode a serialized version of this object from data.
   ///
@@ -164,7 +176,7 @@ private:
   llvm::DenseSet<uint64_t> m_type_sigs_to_avoid;
 
   IndexSet<NameToDIE> m_set;
-  bool m_indexed = false;
+  std::once_flag m_indexed_flag;
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin

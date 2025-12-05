@@ -13,11 +13,13 @@
 #include <__compare/three_way_comparable.h>
 #include <__concepts/convertible_to.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/product_iterator.h>
 #include <__memory/addressof.h>
 #include <__type_traits/conditional.h>
+#include <__utility/forward.h>
 #include <__utility/move.h>
-#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -56,6 +58,8 @@ private:
 
   template <class, class, class, bool>
   friend struct __key_value_iterator;
+
+  friend struct __product_iterator_traits<__key_value_iterator>;
 
 public:
   using iterator_concept = random_access_iterator_tag;
@@ -178,6 +182,29 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 friend difference_type
   operator-(const __key_value_iterator& __x, const __key_value_iterator& __y) {
     return difference_type(__x.__key_iter_ - __y.__key_iter_);
+  }
+};
+
+template <class _Owner, class _KeyContainer, class _MappedContainer, bool _Const>
+struct __product_iterator_traits<__key_value_iterator<_Owner, _KeyContainer, _MappedContainer, _Const>> {
+  static constexpr size_t __size = 2;
+
+  template <size_t _Nth, class _Iter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static decltype(auto) __get_iterator_element(_Iter&& __it)
+    requires(_Nth <= 1)
+  {
+    if constexpr (_Nth == 0) {
+      return std::forward<_Iter>(__it).__key_iter_;
+    } else {
+      return std::forward<_Iter>(__it).__mapped_iter_;
+    }
+  }
+
+  template <class _KeyIter, class _MappedIter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static auto
+  __make_product_iterator(_KeyIter&& __key_iter, _MappedIter&& __mapped_iter) {
+    return __key_value_iterator<_Owner, _KeyContainer, _MappedContainer, _Const>(
+        std::forward<_KeyIter>(__key_iter), std::forward<_MappedIter>(__mapped_iter));
   }
 };
 

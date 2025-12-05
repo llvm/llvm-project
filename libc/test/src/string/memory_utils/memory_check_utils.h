@@ -9,13 +9,13 @@
 #ifndef LIBC_TEST_SRC_STRING_MEMORY_UTILS_MEMORY_CHECK_UTILS_H
 #define LIBC_TEST_SRC_STRING_MEMORY_UTILS_MEMORY_CHECK_UTILS_H
 
+#include "hdr/stdint_proxy.h" // uintxx_t
 #include "src/__support/CPP/span.h"
 #include "src/__support/libc_assert.h" // LIBC_ASSERT
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/sanitizer.h"
 #include "src/string/memory_utils/utils.h"
 #include <stddef.h> // size_t
-#include <stdint.h> // uintxx_t
 #include <stdlib.h> // malloc/free
 
 namespace LIBC_NAMESPACE_DECL {

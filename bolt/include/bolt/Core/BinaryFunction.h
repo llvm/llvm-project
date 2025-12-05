@@ -35,6 +35,7 @@
 #include "bolt/Core/JumpTable.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Utils/NameResolver.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -147,6 +148,11 @@ public:
     PF_MEMEVENT = 4, /// Profile has mem events.
   };
 
+  void setContainedNegateRAState() { HadNegateRAState = true; }
+  bool containedNegateRAState() const { return HadNegateRAState; }
+  void setInitialRAState(bool State) { InitialRAState = State; }
+  bool getInitialRAState() { return InitialRAState; }
+
   /// Struct for tracking exception handling ranges.
   struct CallSite {
     const MCSymbol *Start;
@@ -191,9 +197,6 @@ public:
 
     mutable MCSymbol *FunctionConstantIslandLabel{nullptr};
     mutable MCSymbol *FunctionColdConstantIslandLabel{nullptr};
-
-    // Returns constant island alignment
-    uint16_t getAlignment() const { return sizeof(uint64_t); }
   };
 
   static constexpr uint64_t COUNT_NO_PROFILE =
@@ -219,6 +222,12 @@ public:
 private:
   /// Current state of the function.
   State CurrentState{State::Empty};
+
+  /// Indicates if the Function contained .cfi-negate-ra-state. These are not
+  /// read from the binary. This boolean is used when deciding to run the
+  /// .cfi-negate-ra-state rewriting passes on a function or not.
+  bool HadNegateRAState{false};
+  bool InitialRAState{false};
 
   /// A list of symbols associated with the function entry point.
   ///
@@ -271,6 +280,14 @@ private:
   /// data objects. Typically these are jump table destinations and computed
   /// goto labels.
   std::set<uint64_t> ExternallyReferencedOffsets;
+
+  /// Relocations from data sections targeting internals of this function, i.e.
+  /// some code not at an entry point. These include, but are not limited to,
+  /// jump table relocations and computed goto tables.
+  ///
+  /// Since relocations can be removed/deallocated, we store relocation offsets
+  /// instead of pointers.
+  DenseSet<uint64_t> InternalRefDataRelocations;
 
   /// Offsets of indirect branches with unknown destinations.
   std::set<uint64_t> UnknownIndirectBranchOffsets;
@@ -423,8 +440,9 @@ private:
   /// Original LSDA type encoding
   unsigned LSDATypeEncoding{dwarf::DW_EH_PE_omit};
 
-  /// Containing compilation unit for the function.
-  DWARFUnit *DwarfUnit{nullptr};
+  /// All compilation units this function belongs to.
+  /// Maps DWARF unit offset to the unit pointer.
+  DenseMap<uint64_t, DWARFUnit *> DwarfUnitMap;
 
   /// Last computed hash value. Note that the value could be recomputed using
   /// different parameters by every pass.
@@ -610,13 +628,11 @@ private:
   }
 
   /// Return a label at a given \p Address in the function. If the label does
-  /// not exist - create it. Assert if the \p Address does not belong to
-  /// the function. If \p CreatePastEnd is true, then return the function
-  /// end label when the \p Address points immediately past the last byte
-  /// of the function.
+  /// not exist - create it.
+  ///
   /// NOTE: the function always returns a local (temp) symbol, even if there's
   ///       a global symbol that corresponds to an entry at this address.
-  MCSymbol *getOrCreateLocalLabel(uint64_t Address, bool CreatePastEnd = false);
+  MCSymbol *getOrCreateLocalLabel(uint64_t Address);
 
   /// Register an data entry at a given \p Offset into the function.
   void markDataAtOffset(uint64_t Offset) {
@@ -630,6 +646,20 @@ private:
     if (!Islands)
       Islands = std::make_unique<IslandInfo>();
     Islands->CodeOffsets.emplace(Offset);
+  }
+
+  /// Register a relocation from data section referencing code at a non-zero
+  /// offset in this function.
+  void registerInternalRefDataRelocation(uint64_t FuncOffset,
+                                         uint64_t RelOffset) {
+    assert(FuncOffset != 0 && "Relocation should reference function internals");
+    registerReferencedOffset(FuncOffset);
+    InternalRefDataRelocations.insert(RelOffset);
+    const MCSymbol *ReferencedSymbol =
+        getOrCreateLocalLabel(getAddress() + FuncOffset);
+
+    // Track the symbol mapping since it's used in relocation handling.
+    BC.setSymbolToFunctionMap(ReferencedSymbol, this);
   }
 
   /// Register an internal offset in a function referenced from outside.
@@ -1196,11 +1226,6 @@ public:
     return getSecondaryEntryPointSymbol(BB.getLabel());
   }
 
-  /// Remove a label from the secondary entry point map.
-  void removeSymbolFromSecondaryEntryPointMap(const MCSymbol *Label) {
-    SecondaryEntryPoints.erase(Label);
-  }
-
   /// Return true if the basic block is an entry point into the function
   /// (either primary or secondary).
   bool isEntryPoint(const BinaryBasicBlock &BB) const {
@@ -1296,6 +1321,12 @@ public:
   void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t RelType,
                      uint64_t Addend, uint64_t Value);
 
+  /// Return locations (offsets) of data section relocations targeting internals
+  /// of this functions.
+  const DenseSet<uint64_t> &getInternalRefDataRelocations() const {
+    return InternalRefDataRelocations;
+  }
+
   /// Return the name of the section this function originated from.
   std::optional<StringRef> getOriginSectionName() const {
     if (!OriginSection)
@@ -1331,7 +1362,7 @@ public:
     ColdCodeSectionName = Name.str();
   }
 
-  /// Return true iif the function will halt execution on entry.
+  /// Return true if the function will halt execution on entry.
   bool trapsOnEntry() const { return TrapsOnEntry; }
 
   /// Make the function always trap on entry. Other than the trap instruction,
@@ -1646,6 +1677,51 @@ public:
 
   void setHasInferredProfile(bool Inferred) { HasInferredProfile = Inferred; }
 
+  /// Find corrected offset the same way addCFIInstruction does it to skip NOPs.
+  std::optional<uint64_t> getCorrectedCFIOffset(uint64_t Offset) {
+    assert(!Instructions.empty());
+    auto I = Instructions.lower_bound(Offset);
+    if (Offset == getSize()) {
+      assert(I == Instructions.end() && "unexpected iterator value");
+      // Sometimes compiler issues restore_state after all instructions
+      // in the function (even after nop).
+      --I;
+      Offset = I->first;
+    }
+    assert(I->first == Offset && "CFI pointing to unknown instruction");
+    if (I == Instructions.begin())
+      return {};
+
+    --I;
+    while (I != Instructions.begin() && BC.MIB->isNoop(I->second)) {
+      Offset = I->first;
+      --I;
+    }
+    return Offset;
+  }
+
+  void setInstModifiesRAState(uint8_t CFIOpcode, uint64_t Offset) {
+    std::optional<uint64_t> CorrectedOffset = getCorrectedCFIOffset(Offset);
+    if (CorrectedOffset) {
+      auto I = Instructions.lower_bound(*CorrectedOffset);
+      I--;
+
+      switch (CFIOpcode) {
+      case dwarf::DW_CFA_AARCH64_negate_ra_state:
+        BC.MIB->setNegateRAState(I->second);
+        break;
+      case dwarf::DW_CFA_remember_state:
+        BC.MIB->setRememberState(I->second);
+        break;
+      case dwarf::DW_CFA_restore_state:
+        BC.MIB->setRestoreState(I->second);
+        break;
+      default:
+        assert(0 && "CFI Opcode not covered by function");
+      }
+    }
+  }
+
   void addCFIInstruction(uint64_t Offset, MCCFIInstruction &&Inst) {
     assert(!Instructions.empty());
 
@@ -1663,7 +1739,11 @@ public:
       Offset = I->first;
     }
     assert(I->first == Offset && "CFI pointing to unknown instruction");
-    if (I == Instructions.begin()) {
+    // When dealing with RememberState, we place this CFI in FrameInstructions.
+    // We want to ensure RememberState and RestoreState CFIs are in the same
+    // list in order to properly populate the StateStack.
+    if (I == Instructions.begin() &&
+        Inst.getOperation() != MCCFIInstruction::OpRememberState) {
       CIEFrameInstructions.emplace_back(std::forward<MCCFIInstruction>(Inst));
       return;
     }
@@ -2088,8 +2168,9 @@ public:
   }
 
   /// Detects whether \p Address is inside a data region in this function
-  /// (constant islands).
-  bool isInConstantIsland(uint64_t Address) const {
+  /// (constant islands), and optionally return the island size starting
+  /// from the given \p Address.
+  bool isInConstantIsland(uint64_t Address, uint64_t *Size = nullptr) const {
     if (!Islands)
       return false;
 
@@ -2107,15 +2188,18 @@ public:
     DataIter = std::prev(DataIter);
 
     auto CodeIter = Islands->CodeOffsets.upper_bound(Offset);
-    if (CodeIter == Islands->CodeOffsets.begin())
+    if (CodeIter == Islands->CodeOffsets.begin() ||
+        *std::prev(CodeIter) <= *DataIter) {
+      if (Size)
+        *Size = (CodeIter == Islands->CodeOffsets.end() ? getMaxSize()
+                                                        : *CodeIter) -
+                Offset;
       return true;
-
-    return *std::prev(CodeIter) <= *DataIter;
+    }
+    return false;
   }
 
-  uint16_t getConstantIslandAlignment() const {
-    return Islands ? Islands->getAlignment() : 1;
-  }
+  uint16_t getConstantIslandAlignment() const;
 
   /// If there is a constant island in the range [StartOffset, EndOffset),
   /// return its address.
@@ -2165,6 +2249,11 @@ public:
 
   bool hasConstantIsland() const {
     return Islands && !Islands->DataOffsets.empty();
+  }
+
+  /// Return true if the whole function is a constant island.
+  bool isDataObject() const {
+    return Islands && Islands->CodeOffsets.size() == 0;
   }
 
   bool isStartOfConstantIsland(uint64_t Offset) const {
@@ -2410,15 +2499,21 @@ public:
   void
   computeBlockHashes(HashFunction HashFunction = HashFunction::Default) const;
 
-  void setDWARFUnit(DWARFUnit *Unit) { DwarfUnit = Unit; }
+  void addDWARFUnit(DWARFUnit *Unit) { DwarfUnitMap[Unit->getOffset()] = Unit; }
 
-  /// Return DWARF compile unit for this function.
-  DWARFUnit *getDWARFUnit() const { return DwarfUnit; }
+  void removeDWARFUnit(DWARFUnit *Unit) {
+    DwarfUnitMap.erase(Unit->getOffset());
+  }
 
-  /// Return line info table for this function.
-  const DWARFDebugLine::LineTable *getDWARFLineTable() const {
-    return getDWARFUnit() ? BC.DwCtx->getLineTableForUnit(getDWARFUnit())
-                          : nullptr;
+  /// Return DWARF compile units for this function.
+  /// Returns a reference to the map of DWARF unit offsets to units.
+  const DenseMap<uint64_t, DWARFUnit *> &getDWARFUnits() const {
+    return DwarfUnitMap;
+  }
+
+  const DWARFDebugLine::LineTable *
+  getDWARFLineTableForUnit(DWARFUnit *Unit) const {
+    return BC.DwCtx->getLineTableForUnit(Unit);
   }
 
   /// Finalize profile for the function.

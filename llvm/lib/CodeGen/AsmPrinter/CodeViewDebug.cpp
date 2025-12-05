@@ -569,40 +569,30 @@ void CodeViewDebug::emitCodeViewMagicVersion() {
   OS.emitInt32(COFF::DEBUG_SECTION_MAGIC);
 }
 
-static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
-  switch (DWLang) {
-  case dwarf::DW_LANG_C:
-  case dwarf::DW_LANG_C89:
-  case dwarf::DW_LANG_C99:
-  case dwarf::DW_LANG_C11:
+static SourceLanguage
+MapDWARFLanguageToCVLang(dwarf::SourceLanguageName DWLName) {
+  switch (DWLName) {
+  case dwarf::DW_LNAME_C:
     return SourceLanguage::C;
-  case dwarf::DW_LANG_C_plus_plus:
-  case dwarf::DW_LANG_C_plus_plus_03:
-  case dwarf::DW_LANG_C_plus_plus_11:
-  case dwarf::DW_LANG_C_plus_plus_14:
+  case dwarf::DW_LNAME_C_plus_plus:
     return SourceLanguage::Cpp;
-  case dwarf::DW_LANG_Fortran77:
-  case dwarf::DW_LANG_Fortran90:
-  case dwarf::DW_LANG_Fortran95:
-  case dwarf::DW_LANG_Fortran03:
-  case dwarf::DW_LANG_Fortran08:
+  case dwarf::DW_LNAME_Fortran:
     return SourceLanguage::Fortran;
-  case dwarf::DW_LANG_Pascal83:
+  case dwarf::DW_LNAME_Pascal:
     return SourceLanguage::Pascal;
-  case dwarf::DW_LANG_Cobol74:
-  case dwarf::DW_LANG_Cobol85:
+  case dwarf::DW_LNAME_Cobol:
     return SourceLanguage::Cobol;
-  case dwarf::DW_LANG_Java:
+  case dwarf::DW_LNAME_Java:
     return SourceLanguage::Java;
-  case dwarf::DW_LANG_D:
+  case dwarf::DW_LNAME_D:
     return SourceLanguage::D;
-  case dwarf::DW_LANG_Swift:
+  case dwarf::DW_LNAME_Swift:
     return SourceLanguage::Swift;
-  case dwarf::DW_LANG_Rust:
+  case dwarf::DW_LNAME_Rust:
     return SourceLanguage::Rust;
-  case dwarf::DW_LANG_ObjC:
+  case dwarf::DW_LNAME_ObjC:
     return SourceLanguage::ObjC;
-  case dwarf::DW_LANG_ObjC_plus_plus:
+  case dwarf::DW_LNAME_ObjC_plus_plus:
     return SourceLanguage::ObjCpp;
   default:
     // There's no CodeView representation for this language, and CV doesn't
@@ -610,6 +600,14 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
     // as it's very low level.
     return SourceLanguage::Masm;
   }
+}
+
+static SourceLanguage MapDWARFLanguageToCVLang(dwarf::SourceLanguage DWLang) {
+  auto MaybeLName = dwarf::toDW_LNAME(DWLang);
+  if (!MaybeLName)
+    return MapDWARFLanguageToCVLang(static_cast<dwarf::SourceLanguageName>(0));
+
+  return MapDWARFLanguageToCVLang(MaybeLName->first);
 }
 
 void CodeViewDebug::beginModule(Module *M) {
@@ -630,13 +628,23 @@ void CodeViewDebug::beginModule(Module *M) {
     // When emitting only compiler information, we may have only NoDebug CUs,
     // which would be skipped by debug_compile_units_begin.
     NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+    if (CUs->operands().empty()) {
+      Asm = nullptr;
+      return;
+    }
     Node = *CUs->operands().begin();
   }
-  const auto *CU = cast<DICompileUnit>(Node);
 
-  CurrentSourceLanguage = MapDWLangToCVLang(CU->getSourceLanguage());
+  TheCU = cast<DICompileUnit>(Node);
+  DISourceLanguageName Lang = TheCU->getSourceLanguage();
+  CurrentSourceLanguage =
+      Lang.hasVersionedName()
+          ? MapDWARFLanguageToCVLang(
+                static_cast<dwarf::SourceLanguageName>(Lang.getName()))
+          : MapDWARFLanguageToCVLang(
+                static_cast<dwarf::SourceLanguage>(Lang.getName()));
   if (!M->getCodeViewFlag() ||
-      CU->getEmissionKind() == DICompileUnit::NoDebug) {
+      TheCU->getEmissionKind() == DICompileUnit::NoDebug) {
     Asm = nullptr;
     return;
   }
@@ -897,11 +905,10 @@ void CodeViewDebug::emitCompilerInformation() {
   OS.AddComment("CPUType");
   OS.emitInt16(static_cast<uint64_t>(TheCPU));
 
-  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
-  const MDNode *Node = *CUs->operands().begin();
-  const auto *CU = cast<DICompileUnit>(Node);
+  StringRef CompilerVersion = "0";
+  if (TheCU)
+    CompilerVersion = TheCU->getProducer();
 
-  StringRef CompilerVersion = CU->getProducer();
   Version FrontVer = parseVersion(CompilerVersion);
   OS.AddComment("Frontend version");
   for (int N : FrontVer.Part) {
@@ -1051,10 +1058,10 @@ void CodeViewDebug::switchToDebugSectionForSymbol(const MCSymbol *GVSym) {
   // comdat key. A section may be comdat because of -ffunction-sections or
   // because it is comdat in the IR.
   MCSectionCOFF *GVSec =
-      GVSym ? dyn_cast<MCSectionCOFF>(&GVSym->getSection()) : nullptr;
+      GVSym ? static_cast<MCSectionCOFF *>(&GVSym->getSection()) : nullptr;
   const MCSymbol *KeySym = GVSec ? GVSec->getCOMDATSymbol() : nullptr;
 
-  MCSectionCOFF *DebugSec = cast<MCSectionCOFF>(
+  auto *DebugSec = static_cast<MCSectionCOFF *>(
       CompilerInfoAsm->getObjFileLowering().getCOFFDebugSymbolsSection());
   DebugSec = OS.getContext().getAssociativeCOFFSection(DebugSec, KeySym);
 
@@ -1318,8 +1325,10 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
         TFI->getFrameIndexReference(*Asm->MF, VI.getStackSlot(), FrameReg);
     uint16_t CVReg = TRI->getCodeViewRegNum(FrameReg);
 
-    assert(!FrameOffset.getScalable() &&
-           "Frame offsets with a scalable component are not supported");
+    if (FrameOffset.getScalable()) {
+      // No encoding currently exists for scalable offsets; bail out.
+      continue;
+    }
 
     // Calculate the label ranges.
     LocalVarDef DefRange =
@@ -1409,6 +1418,11 @@ void CodeViewDebug::calculateRanges(
     if (Location->FragmentInfo)
       if (Location->FragmentInfo->OffsetInBits % 8)
         continue;
+
+    if (TRI->isIgnoredCVReg(Location->Register)) {
+      // No encoding currently exists for this register; bail out.
+      continue;
+    }
 
     LocalVarDef DR;
     DR.CVRegister = TRI->getCodeViewRegNum(Location->Register);
@@ -2085,8 +2099,8 @@ TypeIndex CodeViewDebug::lowerTypeFunction(const DISubroutineType *Ty) {
   ArrayRef<TypeIndex> ArgTypeIndices = {};
   if (!ReturnAndArgTypeIndices.empty()) {
     auto ReturnAndArgTypesRef = ArrayRef(ReturnAndArgTypeIndices);
-    ReturnTypeIndex = ReturnAndArgTypesRef.front();
-    ArgTypeIndices = ReturnAndArgTypesRef.drop_front();
+    ReturnTypeIndex = ReturnAndArgTypesRef.consume_front();
+    ArgTypeIndices = ReturnAndArgTypesRef;
   }
 
   ArgListRecord ArgListRec(TypeRecordKind::ArgList, ArgTypeIndices);
@@ -3566,15 +3580,35 @@ void CodeViewDebug::collectDebugInfoForJumpTables(const MachineFunction *MF,
           break;
         }
 
-        CurFn->JumpTables.push_back(
-            {EntrySize, Base, BaseOffset, Branch,
-             MF->getJTISymbol(JumpTableIndex, MMI->getContext()),
-             JTI.getJumpTables()[JumpTableIndex].MBBs.size()});
+        const MachineJumpTableEntry &JTE = JTI.getJumpTables()[JumpTableIndex];
+        JumpTableInfo CVJTI{EntrySize,
+                            Base,
+                            BaseOffset,
+                            Branch,
+                            MF->getJTISymbol(JumpTableIndex, MMI->getContext()),
+                            JTE.MBBs.size(),
+                            {}};
+        for (const auto &MBB : JTE.MBBs)
+          CVJTI.Cases.push_back(MBB->getSymbol());
+        CurFn->JumpTables.push_back(std::move(CVJTI));
       });
 }
 
 void CodeViewDebug::emitDebugInfoForJumpTables(const FunctionInfo &FI) {
-  for (auto JumpTable : FI.JumpTables) {
+  // Emit S_LABEL32 records for each jump target
+  for (const auto &JumpTable : FI.JumpTables) {
+    for (const auto &CaseSym : JumpTable.Cases) {
+      MCSymbol *LabelEnd = beginSymbolRecord(SymbolKind::S_LABEL32);
+      OS.AddComment("Offset and segment");
+      OS.emitCOFFSecRel32(CaseSym, 0);
+      OS.AddComment("Flags");
+      OS.emitInt8(0);
+      emitNullTerminatedSymbolName(OS, CaseSym->getName());
+      endSymbolRecord(LabelEnd);
+    }
+  }
+
+  for (const auto &JumpTable : FI.JumpTables) {
     MCSymbol *JumpTableEnd = beginSymbolRecord(SymbolKind::S_ARMSWITCHTABLE);
     if (JumpTable.Base) {
       OS.AddComment("Base offset");

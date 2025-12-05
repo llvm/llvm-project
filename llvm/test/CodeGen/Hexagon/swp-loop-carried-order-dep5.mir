@@ -23,20 +23,18 @@
 # Note that if there is already a dependency between two instructions, we don't
 # add loop-carried on between them since non-loop-carried one imposes stronger
 # constraint than loop-carried one.
-#
-# FIXME: Currently the following dependencies are missed.
-#  Loop carried edges from SU(5)
-#    Order
-#      SU(2)
-#  Loop carried edges from SU(6)
-#    Order
-#      SU(5)
-#  Loop carried edges from SU(8)
-#    Order
-#      SU(3)
-#      SU(5)
 
 # CHECK:      ===== Loop Carried Edges Begin =====
+# CHECK-NEXT:   Loop carried edges from SU(5)
+# CHECK-NEXT:     Order
+# CHECK-NEXT:       SU(2)
+# CHECK-NEXT:   Loop carried edges from SU(6)
+# CHECK-NEXT:     Order
+# CHECK-NEXT:       SU(5)
+# CHECK-NEXT:   Loop carried edges from SU(8)
+# CHECK-NEXT:     Order
+# CHECK-NEXT:       SU(3)
+# CHECK-NEXT:       SU(5)
 # CHECK-NEXT: ===== Loop Carried Edges End =====
 
 --- |

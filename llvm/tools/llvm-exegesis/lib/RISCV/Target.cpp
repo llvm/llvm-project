@@ -651,8 +651,10 @@ static std::vector<MCInst> loadFP64RegBits32(const MCSubtargetInfo &STI,
   }
 
   std::vector<MCInst> Instrs = loadIntReg(STI, ScratchIntReg, Bits);
-  Instrs.push_back(
-      MCInstBuilder(RISCV::FCVT_D_W).addReg(Reg).addReg(ScratchIntReg));
+  Instrs.push_back(MCInstBuilder(RISCV::FCVT_D_W)
+                       .addReg(Reg)
+                       .addReg(ScratchIntReg)
+                       .addImm(RISCVFPRndMode::RNE));
   return Instrs;
 }
 
@@ -816,6 +818,15 @@ void ExegesisRISCVTarget::fillMemoryOperands(InstructionTemplate &IT,
   const Operand &MemOp = *MemOpIt;
 
   assert(MemOp.isReg() && "Memory operand expected to be register");
+
+  unsigned Opcode = I.getOpcode();
+  if (Opcode == RISCV::C_LDSP || Opcode == RISCV::C_LWSP ||
+      Opcode == RISCV::C_SDSP || Opcode == RISCV::C_SWSP) {
+    IT.getValueFor(I.Operands[0]) = MCOperand::createReg(RISCV::X2);
+    // Force base register to SP (X2)
+    IT.getValueFor(MemOp) = MCOperand::createReg(RISCV::X2);
+    return;
+  }
 
   IT.getValueFor(MemOp) = MCOperand::createReg(Reg);
 }

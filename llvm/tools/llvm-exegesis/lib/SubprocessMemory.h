@@ -32,8 +32,8 @@ namespace exegesis {
 
 class SubprocessMemory {
 public:
-  static constexpr const size_t AuxiliaryMemoryOffset = 1;
-  static constexpr const size_t AuxiliaryMemorySize = 4096;
+  static constexpr size_t AuxiliaryMemoryOffset = 1;
+  static constexpr size_t AuxiliaryMemorySize = 4096;
 
   // Gets the thread ID for the calling thread.
   static long getCurrentTID();

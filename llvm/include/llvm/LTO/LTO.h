@@ -15,6 +15,7 @@
 #ifndef LLVM_LTO_LTO_H
 #define LLVM_LTO_LTO_H
 
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
 
@@ -91,7 +92,7 @@ LLVM_ABI std::string getThinLTOOutputFile(StringRef Path, StringRef OldPrefix,
                                           StringRef NewPrefix);
 
 /// Setup optimization remarks.
-LLVM_ABI Expected<std::unique_ptr<ToolOutputFile>> setupLLVMOptimizationRemarks(
+LLVM_ABI Expected<LLVMRemarkFileHandle> setupLLVMOptimizationRemarks(
     LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
     std::optional<uint64_t> RemarksHotnessThreshold = 0, int Count = -1);
@@ -103,12 +104,6 @@ setupStatsFile(StringRef StatsFilename);
 /// Produces a container ordering for optimal multi-threaded processing. Returns
 /// ordered indices to elements in the input array.
 LLVM_ABI std::vector<int> generateModulesOrdering(ArrayRef<BitcodeModule *> R);
-
-/// Updates MemProf attributes (and metadata) based on whether the index
-/// has recorded that we are linking with allocation libraries containing
-/// the necessary APIs for downstream transformations.
-LLVM_ABI void updateMemProfAttributes(Module &Mod,
-                                      const ModuleSummaryIndex &Index);
 
 class LTO;
 struct SymbolResolution;
@@ -322,6 +317,8 @@ LLVM_ABI ThinBackend createInProcessThinBackend(
 /// distributor.
 /// RemoteCompiler specifies the path to a Clang executable to be invoked for
 /// the backend jobs.
+/// RemoteCompilerPrependArgs specifies a list of prepend arguments to be
+/// applied to the backend compilations.
 /// RemoteCompilerArgs specifies a list of arguments to be applied to the
 /// backend compilations.
 /// SaveTemps is a debugging tool that prevents temporary files created by this
@@ -331,6 +328,7 @@ LLVM_ABI ThinBackend createOutOfProcessThinBackend(
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
     StringRef LinkerOutputFile, StringRef Distributor,
     ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+    ArrayRef<StringRef> RemoteCompilerPrependArgs,
     ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps);
 
 /// This ThinBackend writes individual module indexes to files, instead of
@@ -464,6 +462,19 @@ private:
     ModuleMapType ModuleMap;
     // The bitcode modules to compile, if specified by the LTO Config.
     std::optional<ModuleMapType> ModulesToCompile;
+
+    void setPrevailingModuleForGUID(GlobalValue::GUID GUID, StringRef Module) {
+      PrevailingModuleForGUID[GUID] = Module;
+    }
+    bool isPrevailingModuleForGUID(GlobalValue::GUID GUID,
+                                   StringRef Module) const {
+      auto It = PrevailingModuleForGUID.find(GUID);
+      return It != PrevailingModuleForGUID.end() && It->second == Module;
+    }
+
+  private:
+    // Make this private so all accesses must go through above accessor methods
+    // to avoid inadvertently creating new entries on lookups.
     DenseMap<GlobalValue::GUID, StringRef> PrevailingModuleForGUID;
   } ThinLTO;
 
@@ -542,21 +553,23 @@ private:
                             ArrayRef<SymbolResolution> Res, unsigned Partition,
                             bool InSummary);
 
-  // These functions take a range of symbol resolutions [ResI, ResE) and consume
-  // the resolutions used by a single input module by incrementing ResI. After
-  // these functions return, [ResI, ResE) will refer to the resolution range for
-  // the remaining modules in the InputFile.
-  Error addModule(InputFile &Input, unsigned ModI,
-                  const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  // These functions take a range of symbol resolutions and consume the
+  // resolutions used by a single input module. Functions return ranges refering
+  // to the resolutions for the remaining modules in the InputFile.
+  Expected<ArrayRef<SymbolResolution>>
+  addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
+            unsigned ModI, ArrayRef<SymbolResolution> Res);
 
-  Expected<RegularLTOState::AddedModule>
-  addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  Expected<std::pair<RegularLTOState::AddedModule, ArrayRef<SymbolResolution>>>
+  addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
+                BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
+                ArrayRef<SymbolResolution> Res);
   Error linkRegularLTO(RegularLTOState::AddedModule Mod,
                        bool LivenessFromIndex);
 
-  Error addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                   const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  Expected<ArrayRef<SymbolResolution>>
+  addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
+             ArrayRef<SymbolResolution> Res);
 
   Error runRegularLTO(AddStreamFn AddStream);
   Error runThinLTO(AddStreamFn AddStream, FileCache Cache,
@@ -577,7 +590,7 @@ private:
   DenseSet<GlobalValue::GUID> DynamicExportSymbols;
 
   // Diagnostic optimization remarks file
-  std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
+  LLVMRemarkFileHandle DiagnosticOutputFile;
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

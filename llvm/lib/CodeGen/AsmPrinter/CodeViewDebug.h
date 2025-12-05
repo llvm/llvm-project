@@ -98,6 +98,8 @@ private:
   /// The codeview CPU type used by the translation unit.
   codeview::CPUType TheCPU;
 
+  const DICompileUnit *TheCU = nullptr;
+
   /// The AsmPrinter used for emitting compiler metadata. When only compiler
   /// info is being emitted, DebugHandlerBase::Asm may be null.
   AsmPrinter *CompilerInfoAsm = nullptr;
@@ -146,6 +148,7 @@ private:
     const MCSymbol *Branch;
     const MCSymbol *Table;
     size_t TableSize;
+    std::vector<const MCSymbol *> Cases;
   };
 
   // For each function, store a vector of labels to its instructions, as well as

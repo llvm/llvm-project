@@ -189,7 +189,12 @@ AttributeCommonInfo::Kind
 AttributeCommonInfo::getParsedKind(const IdentifierInfo *Name,
                                    const IdentifierInfo *ScopeName,
                                    Syntax SyntaxUsed) {
-  return ::getAttrKind(normalizeName(Name, ScopeName, SyntaxUsed), SyntaxUsed);
+  AttributeCommonInfo::Kind Kind =
+      ::getAttrKind(normalizeName(Name, ScopeName, SyntaxUsed), SyntaxUsed);
+  if (SyntaxUsed == AS_HLSLAnnotation &&
+      Kind == AttributeCommonInfo::Kind::UnknownAttribute)
+    return AttributeCommonInfo::Kind::AT_HLSLUnparsedSemantic;
+  return Kind;
 }
 
 AttributeCommonInfo::AttrArgsInfo
@@ -260,8 +265,7 @@ static constexpr const char *AttrScopeSpellingList[] = {
 std::optional<StringRef>
 AttributeCommonInfo::tryGetCorrectedScopeName(StringRef ScopeName) const {
   if (ScopeName.size() > 0 &&
-      llvm::none_of(AttrScopeSpellingList,
-                    [&](const char *S) { return S == ScopeName; })) {
+      !llvm::is_contained(AttrScopeSpellingList, ScopeName)) {
     SimpleTypoCorrection STC(ScopeName);
     for (const auto &Scope : AttrScopeSpellingList)
       STC.add(Scope);
@@ -275,8 +279,7 @@ AttributeCommonInfo::tryGetCorrectedScopeName(StringRef ScopeName) const {
 std::optional<StringRef> AttributeCommonInfo::tryGetCorrectedAttrName(
     StringRef ScopeName, StringRef AttrName, const TargetInfo &Target,
     const LangOptions &LangOpts) const {
-  if (llvm::none_of(AttrSpellingList,
-                    [&](const char *A) { return A == AttrName; })) {
+  if (!llvm::is_contained(AttrSpellingList, AttrName)) {
     SimpleTypoCorrection STC(AttrName);
     for (const auto &Attr : AttrSpellingList)
       STC.add(Attr);

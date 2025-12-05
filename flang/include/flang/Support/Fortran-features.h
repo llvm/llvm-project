@@ -55,7 +55,8 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
     IgnoreIrrelevantAttributes, Unsigned, AmbiguousStructureConstructor,
     ContiguousOkForSeqAssociation, ForwardRefExplicitTypeDummy,
-    InaccessibleDeferredOverride, CudaWarpMatchFunction)
+    InaccessibleDeferredOverride, CudaWarpMatchFunction, DoConcurrentOffload,
+    TransferBOZ, Coarray)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -75,9 +76,10 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     IndexVarRedefinition, IncompatibleImplicitInterfaces,
     VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
     MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation,
-    CompatibleDeclarationsFromDistinctModules,
+    CompatibleDeclarationsFromDistinctModules, ConstantIsContiguous,
     NullActualForDefaultIntentAllocatable, UseAssociationIntoSameNameSubprogram,
-    HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile)
+    HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile,
+    RealConstantWidening, VolatileOrAsynchronousTemporary)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
@@ -156,14 +158,13 @@ public:
 private:
   // Map from Cli syntax of language features and usage warnings to their enum
   // values.
-  std::unordered_map<std::string, std::variant<LanguageFeature, UsageWarning>>
-      cliOptions_;
+  std::unordered_map<std::string, LanguageFeatureOrWarning> cliOptions_;
   // These two arrays map the enum values to their cannonical Cli spellings.
   // Since each of the CanonicalSpelling is a string in the domain of the map
   // above we just use a view of the string instead of another copy.
-  std::array<std::string_view, LanguageFeature_enumSize>
+  std::array<std::string, LanguageFeature_enumSize>
       languageFeatureCliCanonicalSpelling_;
-  std::array<std::string_view, UsageWarning_enumSize>
+  std::array<std::string, UsageWarning_enumSize>
       usageWarningCliCanonicalSpelling_;
   LanguageFeatures disable_;
   LanguageFeatures warnLanguage_;

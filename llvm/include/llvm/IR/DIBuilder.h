@@ -146,9 +146,9 @@ namespace llvm {
     /// \param SDK           The SDK name. On Darwin, this is the last component
     ///                      of the sysroot.
     LLVM_ABI DICompileUnit *
-    createCompileUnit(unsigned Lang, DIFile *File, StringRef Producer,
-                      bool isOptimized, StringRef Flags, unsigned RV,
-                      StringRef SplitName = StringRef(),
+    createCompileUnit(DISourceLanguageName Lang, DIFile *File,
+                      StringRef Producer, bool isOptimized, StringRef Flags,
+                      unsigned RV, StringRef SplitName = StringRef(),
                       DICompileUnit::DebugEmissionKind Kind =
                           DICompileUnit::DebugEmissionKind::FullDebug,
                       uint64_t DWOId = 0, bool SplitDebugInlining = true,
@@ -209,10 +209,15 @@ namespace llvm {
     /// \param NumExtraInhabitants The number of extra inhabitants of the type.
     /// An extra inhabitant is a bit pattern that does not represent a valid
     /// value for instances of a given type. This is used by the Swift language.
+    /// \param DataSizeInBits Optionally describes the number of bits used by
+    /// the value of the object when this is less than the storage size of
+    /// SizeInBits. Default value of zero indicates the object value and storage
+    /// sizes are equal.
     LLVM_ABI DIBasicType *
     createBasicType(StringRef Name, uint64_t SizeInBits, unsigned Encoding,
                     DINode::DIFlags Flags = DINode::FlagZero,
-                    uint32_t NumExtraInhabitants = 0);
+                    uint32_t NumExtraInhabitants = 0,
+                    uint32_t DataSizeInBits = 0);
 
     /// Create debugging information entry for a binary fixed-point type.
     /// \param Name        Type name.
@@ -378,6 +383,22 @@ namespace llvm {
     /// \param Flags        Flags to encode member attribute, e.g. private
     /// \param Ty           Parent type.
     /// \param Annotations  Member annotations.
+    LLVM_ABI DIDerivedType *createMemberType(
+        DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
+        Metadata *SizeInBits, uint32_t AlignInBits, Metadata *OffsetInBits,
+        DINode::DIFlags Flags, DIType *Ty, DINodeArray Annotations = nullptr);
+
+    /// Create debugging information entry for a member.
+    /// \param Scope        Member scope.
+    /// \param Name         Member name.
+    /// \param File         File where this member is defined.
+    /// \param LineNo       Line number.
+    /// \param SizeInBits   Member size.
+    /// \param AlignInBits  Member alignment.
+    /// \param OffsetInBits Member offset.
+    /// \param Flags        Flags to encode member attribute, e.g. private
+    /// \param Ty           Parent type.
+    /// \param Annotations  Member annotations.
     LLVM_ABI DIDerivedType *
     createMemberType(DIScope *Scope, StringRef Name, DIFile *File,
                      unsigned LineNo, uint64_t SizeInBits, uint32_t AlignInBits,
@@ -418,6 +439,23 @@ namespace llvm {
                                                     DINodeArray Elements,
                                                     Constant *Discriminant,
                                                     DIType *Ty);
+
+    /// Create debugging information entry for a bit field member.
+    /// \param Scope               Member scope.
+    /// \param Name                Member name.
+    /// \param File                File where this member is defined.
+    /// \param LineNo              Line number.
+    /// \param SizeInBits          Member size.
+    /// \param OffsetInBits        Member offset.
+    /// \param StorageOffsetInBits Member storage offset.
+    /// \param Flags               Flags to encode member attribute.
+    /// \param Ty                  Parent type.
+    /// \param Annotations         Member annotations.
+    LLVM_ABI DIDerivedType *createBitFieldMemberType(
+        DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
+        Metadata *SizeInBits, Metadata *OffsetInBits,
+        uint64_t StorageOffsetInBits, DINode::DIFlags Flags, DIType *Ty,
+        DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for a bit field member.
     /// \param Scope               Member scope.
@@ -509,6 +547,29 @@ namespace llvm {
         DINode::DIFlags Flags, DIType *DerivedFrom, DINodeArray Elements,
         unsigned RunTimeLang = 0, DIType *VTableHolder = nullptr,
         MDNode *TemplateParms = nullptr, StringRef UniqueIdentifier = "");
+
+    /// Create debugging information entry for a struct.
+    /// \param Scope        Scope in which this struct is defined.
+    /// \param Name         Struct name.
+    /// \param File         File where this member is defined.
+    /// \param LineNumber   Line number.
+    /// \param SizeInBits   Member size.
+    /// \param AlignInBits  Member alignment.
+    /// \param Flags        Flags to encode member attribute, e.g. private
+    /// \param Elements     Struct elements.
+    /// \param RunTimeLang  Optional parameter, Objective-C runtime version.
+    /// \param UniqueIdentifier A unique identifier for the struct.
+    /// \param Specification The type that this type completes. This is used by
+    /// Swift to represent generic types.
+    /// \param NumExtraInhabitants The number of extra inhabitants of the type.
+    /// An extra inhabitant is a bit pattern that does not represent a valid
+    /// value for instances of a given type. This is used by the Swift language.
+    LLVM_ABI DICompositeType *createStructType(
+        DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
+        Metadata *SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
+        DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang = 0,
+        DIType *VTableHolder = nullptr, StringRef UniqueIdentifier = "",
+        DIType *Specification = nullptr, uint32_t NumExtraInhabitants = 0);
 
     /// Create debugging information entry for a struct.
     /// \param Scope        Scope in which this struct is defined.
@@ -673,7 +734,8 @@ namespace llvm {
     /// \param Subscripts   Subscripts.
     LLVM_ABI DICompositeType *createVectorType(uint64_t Size,
                                                uint32_t AlignInBits, DIType *Ty,
-                                               DINodeArray Subscripts);
+                                               DINodeArray Subscripts,
+                                               Metadata *BitStride = nullptr);
 
     /// Create debugging information entry for an
     /// enumeration.
@@ -845,7 +907,10 @@ namespace llvm {
     /// \c Scope must be a \a DILocalScope, and thus its scope chain eventually
     /// leads to a \a DISubprogram.
     LLVM_ABI DILabel *createLabel(DIScope *Scope, StringRef Name, DIFile *File,
-                                  unsigned LineNo, bool AlwaysPreserve = false);
+                                  unsigned LineNo, unsigned Column,
+                                  bool IsArtificial,
+                                  std::optional<unsigned> CoroSuspendIdx,
+                                  bool AlwaysPreserve = false);
 
     /// Create a new descriptor for a parameter variable.
     ///
@@ -894,6 +959,8 @@ namespace llvm {
     /// \param Annotations   Attribute Annotations.
     /// \param TargetFuncName The name of the target function if this is
     ///                       a trampoline.
+    /// \param UseKeyInstructions Instruct DWARF emission to interpret Key
+    /// Instructions metadata on instructions to determine is_stmt placement.
     LLVM_ABI DISubprogram *createFunction(
         DIScope *Scope, StringRef Name, StringRef LinkageName, DIFile *File,
         unsigned LineNo, DISubroutineType *Ty, unsigned ScopeLine,
@@ -901,7 +968,8 @@ namespace llvm {
         DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
         DITemplateParameterArray TParams = nullptr,
         DISubprogram *Decl = nullptr, DITypeArray ThrownTypes = nullptr,
-        DINodeArray Annotations = nullptr, StringRef TargetFuncName = "");
+        DINodeArray Annotations = nullptr, StringRef TargetFuncName = "",
+        bool UseKeyInstructions = false);
 
     /// Identical to createFunction,
     /// except that the resulting DbgNode is meant to be RAUWed.
@@ -932,15 +1000,15 @@ namespace llvm {
     /// \param SPFlags       Additional flags specific to subprograms.
     /// \param TParams       Function template parameters.
     /// \param ThrownTypes   Exception types this function may throw.
-    LLVM_ABI DISubprogram *
-    createMethod(DIScope *Scope, StringRef Name, StringRef LinkageName,
-                 DIFile *File, unsigned LineNo, DISubroutineType *Ty,
-                 unsigned VTableIndex = 0, int ThisAdjustment = 0,
-                 DIType *VTableHolder = nullptr,
-                 DINode::DIFlags Flags = DINode::FlagZero,
-                 DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
-                 DITemplateParameterArray TParams = nullptr,
-                 DITypeArray ThrownTypes = nullptr);
+    /// \param UseKeyInstructions Enable Key Instructions debug info.
+    LLVM_ABI DISubprogram *createMethod(
+        DIScope *Scope, StringRef Name, StringRef LinkageName, DIFile *File,
+        unsigned LineNo, DISubroutineType *Ty, unsigned VTableIndex = 0,
+        int ThisAdjustment = 0, DIType *VTableHolder = nullptr,
+        DINode::DIFlags Flags = DINode::FlagZero,
+        DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
+        DITemplateParameterArray TParams = nullptr,
+        DITypeArray ThrownTypes = nullptr, bool UseKeyInstructions = false);
 
     /// Create common block entry for a Fortran common block.
     /// \param Scope       Scope of this common block.
@@ -1087,6 +1155,18 @@ namespace llvm {
                                       DILocalVariable *VarInfo,
                                       DIExpression *Expr, const DILocation *DL,
                                       InsertPosition InsertPt);
+
+    /// Insert a new llvm.dbg.declare_value intrinsic call.
+    /// \param Storage      llvm::Value of the variable
+    /// \param VarInfo      Variable's debug info descriptor.
+    /// \param Expr         A complex location expression.
+    /// \param DL           Debug info location.
+    /// \param InsertPt     Location for the new intrinsic.
+    LLVM_ABI DbgInstPtr insertDeclareValue(llvm::Value *Storage,
+                                           DILocalVariable *VarInfo,
+                                           DIExpression *Expr,
+                                           const DILocation *DL,
+                                           InsertPosition InsertPt);
 
     /// Insert a new llvm.dbg.label intrinsic call.
     /// \param LabelInfo    Label's debug info descriptor.

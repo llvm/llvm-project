@@ -131,6 +131,9 @@ struct FindHostArray
     return (*this)(x.base());
   }
   Result operator()(const Symbol &symbol) const {
+    if (symbol.IsFuncResult()) {
+      return nullptr;
+    }
     if (const auto *details{
             symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
       if (details->IsArray() &&
@@ -685,18 +688,67 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
       std::get<std::list<parser::CUFReduction>>(directive.t)) {
     CheckReduce(context_, reduce);
   }
-  inCUFKernelDoConstruct_ = true;
+  ++deviceConstructDepth_;
+}
+
+static bool IsOpenACCComputeConstruct(const parser::OpenACCBlockConstruct &x) {
+  const auto &beginBlockDirective =
+      std::get<Fortran::parser::AccBeginBlockDirective>(x.t);
+  const auto &blockDirective =
+      std::get<Fortran::parser::AccBlockDirective>(beginBlockDirective.t);
+  if (blockDirective.v == llvm::acc::ACCD_parallel ||
+      blockDirective.v == llvm::acc::ACCD_serial ||
+      blockDirective.v == llvm::acc::ACCD_kernels) {
+    return true;
+  }
+  return false;
 }
 
 void CUDAChecker::Leave(const parser::CUFKernelDoConstruct &) {
-  inCUFKernelDoConstruct_ = false;
+  --deviceConstructDepth_;
+}
+void CUDAChecker::Enter(const parser::OpenACCBlockConstruct &x) {
+  if (IsOpenACCComputeConstruct(x)) {
+    ++deviceConstructDepth_;
+  }
+}
+void CUDAChecker::Leave(const parser::OpenACCBlockConstruct &x) {
+  if (IsOpenACCComputeConstruct(x)) {
+    --deviceConstructDepth_;
+  }
+}
+void CUDAChecker::Enter(const parser::OpenACCCombinedConstruct &) {
+  ++deviceConstructDepth_;
+}
+void CUDAChecker::Leave(const parser::OpenACCCombinedConstruct &) {
+  --deviceConstructDepth_;
+}
+void CUDAChecker::Enter(const parser::OpenACCLoopConstruct &) {
+  ++deviceConstructDepth_;
+}
+void CUDAChecker::Leave(const parser::OpenACCLoopConstruct &) {
+  --deviceConstructDepth_;
+}
+void CUDAChecker::Enter(const parser::DoConstruct &x) {
+  if (x.IsDoConcurrent() &&
+      context_.foldingContext().languageFeatures().IsEnabled(
+          common::LanguageFeature::DoConcurrentOffload)) {
+    ++deviceConstructDepth_;
+  }
+}
+void CUDAChecker::Leave(const parser::DoConstruct &x) {
+  if (x.IsDoConcurrent() &&
+      context_.foldingContext().languageFeatures().IsEnabled(
+          common::LanguageFeature::DoConcurrentOffload)) {
+    --deviceConstructDepth_;
+  }
 }
 
 void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   auto lhsLoc{std::get<parser::Variable>(x.t).GetSource()};
   const auto &scope{context_.FindScope(lhsLoc)};
   const Scope &progUnit{GetProgramUnitContaining(scope)};
-  if (IsCUDADeviceContext(&progUnit) || inCUFKernelDoConstruct_) {
+  if (IsCUDADeviceContext(&progUnit) || deviceConstructDepth_ > 0) {
     return; // Data transfer with assignment is only perform on host.
   }
 
@@ -712,7 +764,45 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   // legal.
   if (nbLhs == 0 && nbRhs > 1) {
     context_.Say(lhsLoc,
-        "More than one reference to a CUDA object on the right hand side of the assigment"_err_en_US);
+        "More than one reference to a CUDA object on the right hand side of the assignment"_err_en_US);
+  }
+
+  if (evaluate::HasCUDADeviceAttrs(assign->lhs) &&
+      evaluate::HasCUDAImplicitTransfer(assign->rhs)) {
+    if (GetNbOfCUDAManagedOrUnifiedSymbols(assign->lhs) == 1 &&
+        GetNbOfCUDAManagedOrUnifiedSymbols(assign->rhs) == 1 && nbRhs == 1) {
+      return; // This is a special case handled on the host.
+    }
+    context_.Say(lhsLoc, "Unsupported CUDA data transfer"_err_en_US);
+  }
+}
+
+void CUDAChecker::Enter(const parser::PrintStmt &x) {
+  CHECK(context_.location());
+  const Scope &scope{context_.FindScope(*context_.location())};
+  const Scope &progUnit{GetProgramUnitContaining(scope)};
+  if (IsCUDADeviceContext(&progUnit) || deviceConstructDepth_ > 0) {
+    return;
+  }
+
+  auto &outputItemList{std::get<std::list<Fortran::parser::OutputItem>>(x.t)};
+  for (const auto &item : outputItemList) {
+    if (const auto *x{std::get_if<parser::Expr>(&item.u)}) {
+      if (const auto *expr{GetExpr(context_, *x)}) {
+        for (const Symbol &sym : CollectCudaSymbols(*expr)) {
+          if (const auto *details = sym.GetUltimate()
+                  .detailsIf<semantics::ObjectEntityDetails>()) {
+            if (details->cudaDataAttr() &&
+                (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
+                    *details->cudaDataAttr() ==
+                        common::CUDADataAttr::Constant)) {
+              context_.Say(parser::FindSourceLocation(*x),
+                  "device data not allowed in I/O statements"_err_en_US);
+            }
+          }
+        }
+      }
+    }
   }
 }
 

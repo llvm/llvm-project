@@ -1,4 +1,4 @@
-//===--- UnusedAliasDeclsCheck.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,11 +35,12 @@ void UnusedAliasDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (const auto *NestedName =
-          Result.Nodes.getNodeAs<NestedNameSpecifier>("nns")) {
-    if (const auto *AliasDecl = NestedName->getAsNamespaceAlias()) {
+          Result.Nodes.getNodeAs<NestedNameSpecifier>("nns");
+      NestedName &&
+      NestedName->getKind() == NestedNameSpecifier::Kind::Namespace)
+    if (const auto *AliasDecl = dyn_cast<NamespaceAliasDecl>(
+            NestedName->getAsNamespaceAndPrefix().Namespace))
       FoundDecls[AliasDecl] = CharSourceRange();
-    }
-  }
 }
 
 void UnusedAliasDeclsCheck::onEndOfTranslationUnit() {

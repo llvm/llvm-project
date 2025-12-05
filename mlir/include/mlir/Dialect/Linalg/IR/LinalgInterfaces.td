@@ -474,7 +474,7 @@ def LinalgStructuredInterface
         int64_t resultIndex =
             opOperand->getOperandNumber() - $_op.getNumDpsInputs();
         assert(resultIndex >= 0 &&
-               resultIndex < this->getOperation()->getNumResults());
+               resultIndex < $_op.getNumDpsInits());
         Operation *yieldOp = getBlock()->getTerminator();
         return &yieldOp->getOpOperand(resultIndex);
       }]
@@ -720,7 +720,7 @@ def LinalgStructuredInterface
         Returns a null function if this named op does not define a region
         builder.
       }],
-      /*retTy=*/"std::function<void(ImplicitLocOpBuilder &, Block &, ArrayRef<NamedAttribute>)>",
+      /*retTy=*/"std::function<void(ImplicitLocOpBuilder &, Block &, ArrayRef<NamedAttribute>, function_ref<InFlightDiagnostic()>)>",
       /*methodName=*/"getRegionBuilder",
       (ins),
       [{ return ConcreteOp::getRegionBuilder(); }]

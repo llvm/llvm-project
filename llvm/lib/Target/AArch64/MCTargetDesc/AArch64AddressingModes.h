@@ -871,6 +871,36 @@ inline static bool isAnyMOVWMovAlias(uint64_t Value, int RegWidth) {
   return isAnyMOVZMovAlias(Value, RegWidth);
 }
 
+static inline bool isSVECpyDupImm(int SizeInBits, int64_t Val, int32_t &Imm,
+                                  int32_t &Shift) {
+  switch (SizeInBits) {
+  case 8:
+    // All immediates are supported.
+    Shift = 0;
+    Imm = Val & 0xFF;
+    return true;
+  case 16:
+  case 32:
+  case 64:
+    // Support 8bit signed immediates.
+    if (Val >= -128 && Val <= 127) {
+      Shift = 0;
+      Imm = Val & 0xFF;
+      return true;
+    }
+    // Support 16bit signed immediates that are a multiple of 256.
+    if (Val >= -32768 && Val <= 32512 && Val % 256 == 0) {
+      Shift = 8;
+      Imm = (Val >> 8) & 0xFF;
+      return true;
+    }
+    break;
+  default:
+    break;
+  }
+  return false;
+}
+
 } // end namespace AArch64_AM
 
 } // end namespace llvm

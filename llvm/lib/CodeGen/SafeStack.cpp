@@ -69,14 +69,11 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::safestack;
 
 #define DEBUG_TYPE "safe-stack"
-
-namespace llvm {
 
 STATISTIC(NumFunctions, "Total number of functions");
 STATISTIC(NumUnsafeStackFunctions, "Number of functions with unsafe stack");
@@ -88,8 +85,6 @@ STATISTIC(NumUnsafeStaticAllocas, "Number of unsafe static allocas");
 STATISTIC(NumUnsafeDynamicAllocas, "Number of unsafe dynamic allocas");
 STATISTIC(NumUnsafeByValArguments, "Number of unsafe byval arguments");
 STATISTIC(NumUnsafeStackRestorePoints, "Number of setjmps and landingpads");
-
-} // namespace llvm
 
 /// Use __safestack_pointer_address even if the platform has a faster way of
 /// access safe stack pointer.
@@ -200,8 +195,6 @@ public:
   bool run();
 };
 
-constexpr Align SafeStack::StackAlignment;
-
 uint64_t SafeStack::getStaticAllocaAllocationSize(const AllocaInst* AI) {
   uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
   if (AI->isArrayAllocation()) {
@@ -262,7 +255,7 @@ bool SafeStack::IsMemIntrinsicSafe(const MemIntrinsic *MI, const Use &U,
       return true;
   }
 
-  const auto *Len = dyn_cast<ConstantInt>(MI->getLength());
+  auto Len = MI->getLengthInBytes();
   // Non-constant size => unsafe. FIXME: try SCEV getRange.
   if (!Len) return false;
   return IsAccessSafe(U, Len->getZExtValue(), AllocaPtr, AllocaSize);
@@ -475,8 +468,16 @@ void SafeStack::checkStackGuard(IRBuilder<> &IRB, Function &F, Instruction &RI,
       SplitBlockAndInsertIfThen(Cmp, &RI, /* Unreachable */ true, Weights, DTU);
   IRBuilder<> IRBFail(CheckTerm);
   // FIXME: respect -fsanitize-trap / -ftrap-function here?
+  const char *StackChkFailName =
+      TL.getLibcallName(RTLIB::STACKPROTECTOR_CHECK_FAIL);
+  if (!StackChkFailName) {
+    F.getContext().emitError(
+        "no libcall available for stackprotector check fail");
+    return;
+  }
+
   FunctionCallee StackChkFail =
-      F.getParent()->getOrInsertFunction("__stack_chk_fail", IRB.getVoidTy());
+      F.getParent()->getOrInsertFunction(StackChkFailName, IRB.getVoidTy());
   IRBFail.CreateCall(StackChkFail, {});
 }
 
@@ -605,6 +606,13 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
     while (!AI->use_empty()) {
       Use &U = *AI->use_begin();
       Instruction *User = cast<Instruction>(U.getUser());
+
+      // Drop lifetime markers now that this is no longer an alloca.
+      // SafeStack has already performed its own stack coloring.
+      if (User->isLifetimeStartOrEnd()) {
+        User->eraseFromParent();
+        continue;
+      }
 
       Instruction *InsertBefore;
       if (auto *PHI = dyn_cast<PHINode>(User))
@@ -791,8 +799,16 @@ bool SafeStack::run() {
     IRB.SetCurrentDebugLocation(
         DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
   if (SafeStackUsePointerAddress) {
+    const char *SafestackPointerAddressName =
+        TL.getLibcallName(RTLIB::SAFESTACK_POINTER_ADDRESS);
+    if (!SafestackPointerAddressName) {
+      F.getContext().emitError(
+          "no libcall available for safestack pointer address");
+      return false;
+    }
+
     FunctionCallee Fn = F.getParent()->getOrInsertFunction(
-        "__safestack_pointer_address", IRB.getPtrTy(0));
+        SafestackPointerAddressName, IRB.getPtrTy(0));
     UnsafeStackPtr = IRB.CreateCall(Fn);
   } else {
     UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB);

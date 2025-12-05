@@ -717,7 +717,7 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(SMLoc loc, ShapedType type) {
   if (parseElementAttrHexValues(p, *hexStorage, data))
     return nullptr;
 
-  ArrayRef<char> rawData(data.data(), data.size());
+  ArrayRef<char> rawData(data);
   bool detectedSplat = false;
   if (!DenseElementsAttr::isValidRawBuffer(type, rawData, detectedSplat)) {
     p.emitError(loc) << "elements hex data size is invalid for provided type: "

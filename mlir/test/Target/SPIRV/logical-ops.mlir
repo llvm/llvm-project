@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -split-input-file -test-spirv-roundtrip %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Logical OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage], []> {
   spirv.func @iequal_scalar(%arg0: i32, %arg1: i32)  "None" {
     // CHECK: {{.*}} = spirv.IEqual {{.*}}, {{.*}} : i32
     %0 = spirv.IEqual %arg0, %arg1 : i32
@@ -84,13 +89,15 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %15 = spirv.IsNan %arg0 : f32
     // CHECK: spirv.IsInf
     %16 = spirv.IsInf %arg1 : f32
+    // CHECK: spirv.IsFinite
+    %17 = spirv.IsFinite %arg0 : f32
     spirv.Return
   }
 }
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.4, [Shader, Linkage], []> {
   spirv.SpecConstant @condition_scalar = true
   spirv.func @select() -> () "None" {
     %0 = spirv.Constant 4.0 : f32
@@ -113,7 +120,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 
 // Test select works with bf16 scalar and vectors.
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.4, [Shader, Linkage, BFloat16TypeKHR], [SPV_KHR_bfloat16]> {
   spirv.SpecConstant @condition_scalar = true
   spirv.func @select_bf16() -> () "None" {
     %0 = spirv.Constant 4.0 : bf16

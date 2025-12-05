@@ -296,3 +296,10 @@
 // RUN:   | FileCheck -check-prefix=LINK_WASIP2_USE_WASMLD %s
 // LINK_WASIP2_USE_WASMLD: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_WASIP2_USE_WASMLD: wasm-ld{{.*}}" "-m" "wasm32" {{.*}} "[[temp]]" {{.*}}
+
+// Basic `wasm32-linux-muslwali` compile-link test.
+
+// RUN: %clang -### --target=wasm32-linux-muslwali --sysroot=/foo %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINK_WALI_BASIC %s
+// LINK_WALI_BASIC: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
+// LINK_WALI_BASIC: wasm-ld{{.*}}" "-L/foo/lib/wasm32-linux-muslwali" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"

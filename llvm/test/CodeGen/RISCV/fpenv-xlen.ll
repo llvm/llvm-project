@@ -35,3 +35,37 @@ entry:
   call void @llvm.reset.fpenv()
   ret void
 }
+
+define iXLen @func_get_fpmode() {
+; CHECK-LABEL: func_get_fpmode:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    frcsr a0
+; CHECK-NEXT:    ret
+entry:
+  %fpenv = call iXLen @llvm.get.fpmode.iXLen()
+  ret iXLen %fpenv
+}
+
+define void @func_set_fpmode(iXLen %fpmode) {
+; CHECK-LABEL: func_set_fpmode:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li    a1, -32
+; CHECK-NEXT:    csrc  fcsr, a1
+; CHECK-NEXT:    andi  a0, a0, -32
+; CHECK-NEXT:    csrs  fcsr, a0
+; CHECK-NEXT:    ret
+entry:
+  call void @llvm.set.fpmode.iXLen(iXLen %fpmode)
+  ret void
+}
+
+define void @func_reset_fpmode() {
+; CHECK-LABEL: func_reset_fpmode:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li   a0, -32
+; CHECK-NEXT:    csrc fcsr, a0
+; CHECK-NEXT:    ret
+entry:
+  call void @llvm.reset.fpmode()
+  ret void
+}

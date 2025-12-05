@@ -4,11 +4,7 @@
 define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 1, 0
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, i32 [[ADD]], i32 3
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i32> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp samesign ult i32 0, 0
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ICMP]], i32 0, i32 0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 false, i32 0, i32 0
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[SELECT]] to i64
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr ptr addrspace(1), ptr addrspace(1) null, i64 [[ZEXT]]
 ; CHECK-NEXT:    store ptr addrspace(1) null, ptr addrspace(1) [[GETELEMENTPTR]], align 8
@@ -16,8 +12,6 @@ define void @test() {
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 null(<2 x double> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, i32 [[CALL]], i32 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x i1> @llvm.vector.insert.v8i1.v4i1(<8 x i1> [[TMP4]], <4 x i1> [[TMP1]], i64 4)
 ; CHECK-NEXT:    ret void
 ;
 bb:

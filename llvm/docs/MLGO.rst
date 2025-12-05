@@ -15,11 +15,13 @@ Currently the following heuristics feature such integration:
 
 This document is an outline of the tooling and APIs facilitating MLGO.
 
-Note that tools for orchestrating ML training are not part of LLVM, as they are
-dependency-heavy - both on the ML infrastructure choice, as well as choices of
-distributed computing. For the training scenario, LLVM only contains facilities
-enabling it, such as corpus extraction, training data extraction, and evaluation
-of models during training.
+.. note::
+    
+  The tools for orchestrating ML training are not part of LLVM, as they are
+  dependency-heavy - both on the ML infrastructure choice, as well as choices of
+  distributed computing. For the training scenario, LLVM only contains facilities
+  enabling it, such as corpus extraction, training data extraction, and evaluation
+  of models during training.
 
 
 .. contents::
@@ -27,7 +29,7 @@ of models during training.
 Corpus Tooling
 ==============
 
-Within the LLVM monorepo, there is the ``mlgo-utils`` python packages that
+Within the LLVM monorepo, there is the ``mlgo-utils`` Python package that
 lives at ``llvm/utils/mlgo-utils``. This package primarily contains tooling
 for working with corpora, or collections of LLVM bitcode. We use these corpora
 to train and evaluate ML models. Corpora consist of a description in JSON
@@ -80,7 +82,7 @@ Options
 
 .. option:: --cmd_filter
 
-  Allows filtering of modules by command line. If set, only modules that much
+  Allows filtering of modules by command line. If set, only modules that match
   the filter will be extracted into the corpus. Regular expressions are
   supported in some instances.
 
@@ -329,8 +331,10 @@ We currently feature 4 implementations:
   the neural network, together with its weights (essentially, loops performing
   matrix multiplications)
 
-NOTE: we are actively working on replacing this with an EmitC implementation
-requiring no out of tree build-time dependencies.
+.. note::
+    
+  we are actively working on replacing this with an EmitC implementation
+  requiring no out of tree build-time dependencies.
 
 - ``InteractiveModelRunner``. This is intended for training scenarios where the
   training algorithm drives compilation. This model runner has no special
@@ -430,8 +434,27 @@ The latter is also used in tests.
 There is no C++ implementation of a log reader. We do not have a scenario
 motivating one.
 
-IR2Vec Embeddings
-=================
+Embeddings
+==========
+
+LLVM provides embedding frameworks to generate vector representations of code
+at different abstraction levels. These embeddings capture syntactic, semantic,
+and structural properties of the code and can be used as features for machine
+learning models in various compiler optimization tasks.
+
+Two embedding frameworks are available:
+
+- **IR2Vec**: Generates embeddings for LLVM IR
+- **MIR2Vec**: Generates embeddings for Machine IR
+
+Both frameworks follow a similar architecture with vocabulary-based embedding
+generation, where a vocabulary maps code entities to n-dimensional floating
+point vectors. These embeddings can be computed at multiple granularity levels
+(instruction, basic block, and function) and used for ML-guided compiler
+optimizations.
+
+IR2Vec
+------
 
 IR2Vec is a program embedding approach designed specifically for LLVM IR. It
 is implemented as a function analysis pass in LLVM. The IR2Vec embeddings
@@ -448,12 +471,28 @@ downstream tasks, including ML-guided compiler optimizations.
 
 The core components are:
   - **Vocabulary**: A mapping from IR entities (opcodes, types, etc.) to their
-    vector representations. This is managed by ``IR2VecVocabAnalysis``.
+    vector representations. This is managed by ``IR2VecVocabAnalysis``. The 
+    vocabulary (.json file) contains three sections -- Opcodes, Types, and 
+    Arguments, each containing the representations of the corresponding 
+    entities.
+
+    .. note::
+      
+      It is mandatory to have these three sections present in the vocabulary file 
+      for it to be valid; order in which they appear does not matter.
+
   - **Embedder**: A class (``ir2vec::Embedder``) that uses the vocabulary to
     compute embeddings for instructions, basic blocks, and functions.
 
 Using IR2Vec
-------------
+^^^^^^^^^^^^
+
+.. note::
+
+   This section describes how to use IR2Vec within LLVM passes. A standalone 
+   tool :doc:`CommandGuide/llvm-ir2vec` is available for generating the
+   embeddings and triplets from LLVM IR files, which can be useful for
+   training vocabularies and generating embeddings outside of compiler passes.
 
 For generating embeddings, first the vocabulary should be obtained. Then, the 
 embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
@@ -479,21 +518,16 @@ embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
 
       // Assuming F is an llvm::Function&
       // For example, using IR2VecKind::Symbolic:
-      Expected<std::unique_ptr<ir2vec::Embedder>> EmbOrErr =
+      std::unique_ptr<ir2vec::Embedder> Emb =
           ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary);
 
-      if (auto Err = EmbOrErr.takeError()) {
-        // Handle error in embedder creation
-        return;
-      }
-      std::unique_ptr<ir2vec::Embedder> Emb = std::move(*EmbOrErr);
 
 3. **Compute and Access Embeddings**:
    Call ``getFunctionVector()`` to get the embedding for the function. 
 
    .. code-block:: c++
 
-    const ir2vec::Embedding &FuncVector = Emb->getFunctionVector();
+    ir2vec::Embedding FuncVector = Emb->getFunctionVector();
 
    Currently, ``Embedder`` can generate embeddings at three levels: Instructions,
    Basic Blocks, and Functions. Appropriate getters are provided to access the
@@ -511,20 +545,143 @@ embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
    between different code snippets, or perform other analyses as needed.
 
 Further Details
----------------
+^^^^^^^^^^^^^^^
 
 For more detailed information about the IR2Vec algorithm, its parameters, and
 advanced usage, please refer to the original paper:
 `IR2Vec: LLVM IR Based Scalable Program Embeddings <https://doi.org/10.1145/3418463>`_.
+
+For information about using IR2Vec tool for generating embeddings and
+triplets from LLVM IR, see :doc:`CommandGuide/llvm-ir2vec`.
+
 The LLVM source code for ``IR2Vec`` can also be explored to understand the 
 implementation details.
+
+MIR2Vec
+-------
+
+MIR2Vec is an extension of IR2Vec designed specifically for LLVM Machine IR 
+(MIR). It generates embeddings for machine-level instructions, basic blocks, 
+and functions. MIR2Vec operates on the target-specific machine representation,
+capturing machine instruction semantics including opcodes, operands, and 
+register information at the machine level.
+
+MIR2Vec extends the vocabulary to include:
+
+- **Machine Opcodes**: Target-specific instruction opcodes derived from the
+  TargetInstrInfo, grouped by instruction semantics.
+
+- **Common Operands**: All common operand types (excluding register operands),
+  defined by the ``MachineOperand::MachineOperandType`` enum.
+
+- **Physical Register Classes**: Register classes defined by the target,
+  specialized for physical registers.
+
+- **Virtual Register Classes**: Register classes defined by the target,
+  specialized for virtual registers.
+
+The core components are:
+
+- **Vocabulary**: A mapping from machine IR entities (opcodes, operands, register
+  classes) to their vector representations. This is managed by 
+  ``MIR2VecVocabLegacyAnalysis`` for the legacy pass manager, with a 
+  ``MIR2VecVocabProvider`` that can be used standalone or wrapped by pass 
+  managers. The vocabulary (.json file) contains sections for opcodes, common 
+  operands, physical register classes, and virtual register classes.
+
+  .. note::
+    
+    The vocabulary file should contain these sections for it to be valid.
+
+- **Embedder**: A class (``mir2vec::MIREmbedder``) that uses the vocabulary to
+  compute embeddings for machine instructions, machine basic blocks, and 
+  machine functions. Currently, ``SymbolicMIREmbedder`` is the available 
+  implementation.
+
+Using MIR2Vec
+^^^^^^^^^^^^^
+
+.. note::
+
+   This section describes how to use MIR2Vec within LLVM passes. `llvm-ir2vec`
+   tool ` :doc:`CommandGuide/llvm-ir2vec` can be used for generating MIR2Vec
+   embeddings from Machine IR files (.mir), which can be useful for generating
+   embeddings outside of compiler passes.
+
+To generate MIR2Vec embeddings in a compiler pass, first obtain the vocabulary,
+then create an embedder instance to compute and access embeddings.
+
+1. **Get the Vocabulary**:
+   In a MachineFunctionPass, get the vocabulary from the analysis:
+
+   .. code-block:: c++
+
+      auto &VocabAnalysis = getAnalysis<MIR2VecVocabLegacyAnalysis>();
+      auto VocabOrErr = VocabAnalysis.getMIR2VecVocabulary(*MF.getFunction().getParent());
+      if (!VocabOrErr) {
+        // Handle error: vocabulary is not available or invalid
+        return;
+      }
+      const mir2vec::MIRVocabulary &Vocabulary = *VocabOrErr;
+
+   Note that ``MIR2VecVocabLegacyAnalysis`` is an immutable pass.
+
+2. **Create Embedder instance**:
+   With the vocabulary, create an embedder for a specific machine function:
+
+   .. code-block:: c++
+
+      // Assuming MF is a MachineFunction&
+      // For example, using MIR2VecKind::Symbolic:
+      std::unique_ptr<mir2vec::MIREmbedder> Emb =
+          mir2vec::MIREmbedder::create(MIR2VecKind::Symbolic, MF, Vocabulary);
+
+
+3. **Compute and Access Embeddings**:
+   Call ``getMFunctionVector()`` to get the embedding for the machine function.
+
+   .. code-block:: c++
+
+    mir2vec::Embedding FuncVector = Emb->getMFunctionVector();
+
+   Currently, ``MIREmbedder`` can generate embeddings at three levels: Machine
+   Instructions, Machine Basic Blocks, and Machine Functions. Appropriate 
+   getters are provided to access the embeddings at these levels.
+
+   .. note::
+
+    The validity of the ``MIREmbedder`` instance (and the embeddings it 
+    generates) is tied to the machine function it is associated with. If the 
+    machine function is modified, the embeddings may become stale and should 
+    be recomputed accordingly.
+
+4. **Working with Embeddings:**
+   Embeddings are represented as ``std::vector<double>``. These vectors can be
+   used as features for machine learning models, compute similarity scores
+   between different code snippets, or perform other analyses as needed.
+
+Further Details
+^^^^^^^^^^^^^^^
+
+For more detailed information about the MIR2Vec algorithm, its parameters, and
+advanced usage, please refer to the original paper:
+`RL4ReAl: Reinforcement Learning for Register Allocation <https://doi.org/10.1145/3578360.3580273>`_.
+
+For information about using MIR2Vec tool for generating embeddings from
+Machine IR, see :doc:`CommandGuide/llvm-ir2vec`.
+
+The LLVM source code for ``MIR2Vec`` can be explored to understand the 
+implementation details. See ``llvm/include/llvm/CodeGen/MIR2Vec.h`` and 
+``llvm/lib/CodeGen/MIR2Vec.cpp``.
 
 Building with ML support
 ========================
 
-**NOTE** For up to date information on custom builds, see the ``ml-*``
-`build bots <http://lab.llvm.org>`_. They are set up using 
-`like this <https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh>`_.
+.. note::
+  
+  For up to date information on custom builds, see the ``ml-*``
+  `build bots <http://lab.llvm.org>`_. They are set up using 
+  `like this <https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh>`_.
 
 Embed pre-trained models (aka "release" mode)
 ---------------------------------------------
@@ -533,7 +690,7 @@ This supports the ``ReleaseModeModelRunner`` model runners.
 
 You need a tensorflow pip package for the AOT (ahead-of-time) Saved Model compiler
 and a thin wrapper for the native function generated by it. We currently support
-TF 2.15. We recommend using a python virtual env (in which case, remember to
+TF 2.15. We recommend using a Python virtual env (in which case, remember to
 pass ``-DPython3_ROOT_DIR`` to ``cmake``).
 
 Once you install the pip package, find where it was installed:
@@ -558,9 +715,11 @@ You can also specify a URL for the path, and it is also possible to pre-compile
 the header and object and then just point to the precompiled artifacts. See for
 example ``LLVM_OVERRIDE_MODEL_HEADER_INLINERSIZEMODEL``.
 
-**Note** that we are transitioning away from the AOT compiler shipping with the
-tensorflow package, and to a EmitC, in-tree solution, so these details will
-change soon.
+.. note::
+
+  We are transitioning away from the AOT compiler shipping with the
+  tensorflow package, and to a EmitC, in-tree solution, so these details will
+  change soon.
 
 Using TFLite (aka "development" mode)
 -------------------------------------
@@ -583,4 +742,3 @@ optimizations that are currently MLGO-enabled, it may be used as follows:
 where the ``name`` is a path fragment. We will expect to find 2 files,
 ``<name>.in`` (readable, data incoming from the managing process) and
 ``<name>.out`` (writable, the model runner sends data to the managing process)
-

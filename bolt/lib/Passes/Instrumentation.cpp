@@ -305,9 +305,12 @@ void Instrumentation::instrumentIndirectTarget(BinaryBasicBlock &BB,
                  : IndCallHandlerExitBBFunction->getSymbol(),
       IndCallSiteID, &*BC.Ctx);
 
-  Iter = BB.eraseInstruction(Iter);
-  Iter = insertInstructions(CounterInstrs, BB, Iter);
-  --Iter;
+  if (!BC.isAArch64()) {
+    Iter = BB.eraseInstruction(Iter);
+    Iter = insertInstructions(CounterInstrs, BB, Iter);
+    --Iter;
+  } else
+    Iter = insertInstructions(CounterInstrs, BB, Iter);
 }
 
 bool Instrumentation::instrumentOneTarget(
@@ -666,8 +669,7 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
       auto IsLEA = [&BC](const MCInst &Inst) { return BC.MIB->isLEA64r(Inst); };
       const auto LEA = std::find_if(
           std::next(llvm::find_if(reverse(BB), IsLEA)), BB.rend(), IsLEA);
-      LEA->getOperand(4).setExpr(
-          MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *BC.Ctx));
+      LEA->getOperand(4).setExpr(MCSymbolRefExpr::create(Target, *BC.Ctx));
     } else {
       BC.errs() << "BOLT-WARNING: ___GLOBAL_init_65535 not found\n";
     }
@@ -754,6 +756,8 @@ void Instrumentation::createAuxiliaryFunctions(BinaryContext &BC) {
       createSimpleFunction("__bolt_fini_trampoline",
                            BC.MIB->createReturnInstructionList(BC.Ctx.get()));
     }
+    if (BC.isAArch64())
+      BC.MIB->createInstrCounterIncrFunc(BC);
   }
 }
 

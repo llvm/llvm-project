@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/PPCMCExpr.h"
+#include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPC.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCSubtarget.h"
@@ -136,8 +136,7 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
       RefKind = PPC::S_PCREL_OPT;
   }
 
-  const MCExpr *Expr = MCSymbolRefExpr::create(
-      Symbol, MCSymbolRefExpr::VariantKind(RefKind), Ctx);
+  const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, RefKind, Ctx);
   // If -msecure-plt -fPIC, add 32768 to symbol.
   if (Subtarget->isSecurePlt() && TM.isPositionIndependent() &&
       M->getPICLevel() == PICLevel::BigPIC &&

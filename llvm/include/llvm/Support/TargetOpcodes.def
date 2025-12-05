@@ -114,6 +114,12 @@ HANDLE_TARGET_OPCODE(REG_SEQUENCE)
 /// used to copy between subregisters of virtual registers.
 HANDLE_TARGET_OPCODE(COPY)
 
+/// COPY_LANEMASK - Target-independent partial register copy. The laneMask
+/// operand indicates which parts of the source register are copied to the
+/// destination. Other parts of the destination are undefined. It does not
+/// support copy between virtual registers having subregister indices.
+HANDLE_TARGET_OPCODE(COPY_LANEMASK)
+
 /// BUNDLE - This instruction represents an instruction bundle. Instructions
 /// which immediately follow a BUNDLE instruction which are marked with
 /// 'InsideBundle' flag are inside the bundle.
@@ -233,6 +239,9 @@ HANDLE_TARGET_OPCODE(MEMBARRIER)
 // using.
 HANDLE_TARGET_OPCODE(JUMP_TABLE_DEBUG_INFO)
 
+// Issue a no-op relocation against a given symbol at the current location.
+HANDLE_TARGET_OPCODE(RELOC_NONE)
+
 HANDLE_TARGET_OPCODE(CONVERGENCECTRL_ENTRY)
 HANDLE_TARGET_OPCODE(CONVERGENCECTRL_ANCHOR)
 HANDLE_TARGET_OPCODE(CONVERGENCECTRL_LOOP)
@@ -295,6 +304,17 @@ HANDLE_TARGET_OPCODE(G_ABDS)
 /// Generic absolute difference unsigned instruction.
 HANDLE_TARGET_OPCODE(G_ABDU)
 
+/// Generic vector average with truncate unsigned instruction.
+HANDLE_TARGET_OPCODE(G_UAVGFLOOR)
+
+/// Generic vector average with round unsigned instruction.
+HANDLE_TARGET_OPCODE(G_UAVGCEIL)
+
+/// Generic vector average with truncate signed instruction.
+HANDLE_TARGET_OPCODE(G_SAVGFLOOR)
+
+/// Generic vector average with round signed instruction.
+HANDLE_TARGET_OPCODE(G_SAVGCEIL)
 
 HANDLE_TARGET_OPCODE(G_IMPLICIT_DEF)
 
@@ -475,6 +495,15 @@ HANDLE_TARGET_OPCODE(G_ANYEXT)
 /// elements of the vector.
 HANDLE_TARGET_OPCODE(G_TRUNC)
 
+/// Generic instruction to truncate a signed operand to a signed result with saturation.
+HANDLE_TARGET_OPCODE(G_TRUNC_SSAT_S)
+
+/// Generic instruction to truncate a signed operand to an unsigned result with saturation.
+HANDLE_TARGET_OPCODE(G_TRUNC_SSAT_U)
+
+/// Generic instruction to truncate a unsigned operand to an unsigned result with saturation.
+HANDLE_TARGET_OPCODE(G_TRUNC_USAT_U)
+
 /// Generic integer constant.
 HANDLE_TARGET_OPCODE(G_CONSTANT)
 
@@ -641,6 +670,9 @@ HANDLE_TARGET_OPCODE(G_FDIV)
 /// Generic FP remainder.
 HANDLE_TARGET_OPCODE(G_FREM)
 
+/// Generic FP modf
+HANDLE_TARGET_OPCODE(G_FMODF)
+
 /// Generic FP exponentiation.
 HANDLE_TARGET_OPCODE(G_FPOW)
 
@@ -734,6 +766,9 @@ HANDLE_TARGET_OPCODE(G_RESET_FPENV)
 HANDLE_TARGET_OPCODE(G_GET_FPMODE)
 HANDLE_TARGET_OPCODE(G_SET_FPMODE)
 HANDLE_TARGET_OPCODE(G_RESET_FPMODE)
+
+HANDLE_TARGET_OPCODE(G_GET_ROUNDING)
+HANDLE_TARGET_OPCODE(G_SET_ROUNDING)
 
 /// Generic pointer offset
 HANDLE_TARGET_OPCODE(G_PTR_ADD)

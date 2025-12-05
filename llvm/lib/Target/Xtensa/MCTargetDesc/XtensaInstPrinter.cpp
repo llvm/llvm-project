@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "XtensaInstPrinter.h"
-#include "MCTargetDesc/XtensaMCExpr.h"
+#include "MCTargetDesc/XtensaMCAsmInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"

@@ -132,89 +132,91 @@ void Sema::checkContainerDeclVerbatimLine(const BlockCommandComment *Comment) {
   const CommandInfo *Info = Traits.getCommandInfo(Comment->getCommandID());
   if (!Info->IsRecordLikeDeclarationCommand)
     return;
-  unsigned DiagSelect;
+  std::optional<unsigned> DiagSelect;
   switch (Comment->getCommandID()) {
     case CommandTraits::KCI_class:
-      DiagSelect =
-          (!isClassOrStructOrTagTypedefDecl() && !isClassTemplateDecl()) ? 1
-                                                                         : 0;
+      if (!isClassOrStructOrTagTypedefDecl() && !isClassTemplateDecl())
+        DiagSelect = diag::DeclContainerKind::Class;
+
       // Allow @class command on @interface declarations.
       // FIXME. Currently, \class and @class are indistinguishable. So,
       // \class is also allowed on an @interface declaration
       if (DiagSelect && Comment->getCommandMarker() && isObjCInterfaceDecl())
-        DiagSelect = 0;
+        DiagSelect = std::nullopt;
       break;
     case CommandTraits::KCI_interface:
-      DiagSelect = !isObjCInterfaceDecl() ? 2 : 0;
+      if (!isObjCInterfaceDecl())
+        DiagSelect = diag::DeclContainerKind::Interface;
       break;
     case CommandTraits::KCI_protocol:
-      DiagSelect = !isObjCProtocolDecl() ? 3 : 0;
+      if (!isObjCProtocolDecl())
+        DiagSelect = diag::DeclContainerKind::Protocol;
       break;
     case CommandTraits::KCI_struct:
-      DiagSelect = !isClassOrStructOrTagTypedefDecl() ? 4 : 0;
+      if (!isClassOrStructOrTagTypedefDecl())
+        DiagSelect = diag::DeclContainerKind::Struct;
       break;
     case CommandTraits::KCI_union:
-      DiagSelect = !isUnionDecl() ? 5 : 0;
+      if (!isUnionDecl())
+        DiagSelect = diag::DeclContainerKind::Union;
       break;
     default:
-      DiagSelect = 0;
+      DiagSelect = std::nullopt;
       break;
   }
   if (DiagSelect)
     Diag(Comment->getLocation(), diag::warn_doc_api_container_decl_mismatch)
-    << Comment->getCommandMarker()
-    << (DiagSelect-1) << (DiagSelect-1)
-    << Comment->getSourceRange();
+        << Comment->getCommandMarker() << (*DiagSelect) << (*DiagSelect)
+        << Comment->getSourceRange();
 }
 
 void Sema::checkContainerDecl(const BlockCommandComment *Comment) {
   const CommandInfo *Info = Traits.getCommandInfo(Comment->getCommandID());
   if (!Info->IsRecordLikeDetailCommand || isRecordLikeDecl())
     return;
-  unsigned DiagSelect;
+  std::optional<unsigned> DiagSelect;
   switch (Comment->getCommandID()) {
     case CommandTraits::KCI_classdesign:
-      DiagSelect = 1;
+      DiagSelect = diag::DocCommandKind::ClassDesign;
       break;
     case CommandTraits::KCI_coclass:
-      DiagSelect = 2;
+      DiagSelect = diag::DocCommandKind::CoClass;
       break;
     case CommandTraits::KCI_dependency:
-      DiagSelect = 3;
+      DiagSelect = diag::DocCommandKind::Dependency;
       break;
     case CommandTraits::KCI_helper:
-      DiagSelect = 4;
+      DiagSelect = diag::DocCommandKind::Helper;
       break;
     case CommandTraits::KCI_helperclass:
-      DiagSelect = 5;
+      DiagSelect = diag::DocCommandKind::HelperClass;
       break;
     case CommandTraits::KCI_helps:
-      DiagSelect = 6;
+      DiagSelect = diag::DocCommandKind::Helps;
       break;
     case CommandTraits::KCI_instancesize:
-      DiagSelect = 7;
+      DiagSelect = diag::DocCommandKind::InstanceSize;
       break;
     case CommandTraits::KCI_ownership:
-      DiagSelect = 8;
+      DiagSelect = diag::DocCommandKind::Ownership;
       break;
     case CommandTraits::KCI_performance:
-      DiagSelect = 9;
+      DiagSelect = diag::DocCommandKind::Performance;
       break;
     case CommandTraits::KCI_security:
-      DiagSelect = 10;
+      DiagSelect = diag::DocCommandKind::Security;
       break;
     case CommandTraits::KCI_superclass:
-      DiagSelect = 11;
+      DiagSelect = diag::DocCommandKind::Superclass;
       break;
     default:
-      DiagSelect = 0;
+      DiagSelect = std::nullopt;
       break;
   }
   if (DiagSelect)
     Diag(Comment->getLocation(), diag::warn_doc_container_decl_mismatch)
-    << Comment->getCommandMarker()
-    << (DiagSelect-1)
-    << Comment->getSourceRange();
+        << Comment->getCommandMarker() << (*DiagSelect)
+        << Comment->getSourceRange();
 }
 
 /// Turn a string into the corresponding PassDirection or -1 if it's not
@@ -223,7 +225,7 @@ static ParamCommandPassDirection getParamPassDirection(StringRef Arg) {
   return llvm::StringSwitch<ParamCommandPassDirection>(Arg)
       .Case("[in]", ParamCommandPassDirection::In)
       .Case("[out]", ParamCommandPassDirection::Out)
-      .Cases("[in,out]", "[out,in]", ParamCommandPassDirection::InOut)
+      .Cases({"[in,out]", "[out,in]"}, ParamCommandPassDirection::InOut)
       .Default(static_cast<ParamCommandPassDirection>(-1));
 }
 
@@ -361,12 +363,13 @@ void Sema::actOnTParamCommandFinish(TParamCommandComment *Command,
 InlineCommandComment *
 Sema::actOnInlineCommand(SourceLocation CommandLocBegin,
                          SourceLocation CommandLocEnd, unsigned CommandID,
+                         CommandMarkerKind CommandMarker,
                          ArrayRef<Comment::Argument> Args) {
   StringRef CommandName = Traits.getCommandInfo(CommandID)->Name;
 
-  return new (Allocator)
-      InlineCommandComment(CommandLocBegin, CommandLocEnd, CommandID,
-                           getInlineCommandRenderKind(CommandName), Args);
+  return new (Allocator) InlineCommandComment(
+      CommandLocBegin, CommandLocEnd, CommandID,
+      getInlineCommandRenderKind(CommandName), CommandMarker, Args);
 }
 
 InlineContentComment *Sema::actOnUnknownCommand(SourceLocation LocBegin,
@@ -903,17 +906,9 @@ bool Sema::isClassOrStructOrTagTypedefDecl() {
   if (isClassOrStructDeclImpl(ThisDeclInfo->CurrentDecl))
     return true;
 
-  if (auto *ThisTypedefDecl = dyn_cast<TypedefDecl>(ThisDeclInfo->CurrentDecl)) {
-    auto UnderlyingType = ThisTypedefDecl->getUnderlyingType();
-    if (auto ThisElaboratedType = dyn_cast<ElaboratedType>(UnderlyingType)) {
-      auto DesugaredType = ThisElaboratedType->desugar();
-      if (auto *DesugaredTypePtr = DesugaredType.getTypePtrOrNull()) {
-        if (auto *ThisRecordType = dyn_cast<RecordType>(DesugaredTypePtr)) {
-          return isClassOrStructDeclImpl(ThisRecordType->getAsRecordDecl());
-        }
-      }
-    }
-  }
+  if (auto *ThisTypedefDecl = dyn_cast<TypedefDecl>(ThisDeclInfo->CurrentDecl))
+    if (auto *D = ThisTypedefDecl->getUnderlyingType()->getAsRecordDecl())
+      return isClassOrStructDeclImpl(D);
 
   return false;
 }
@@ -1066,8 +1061,8 @@ InlineCommandRenderKind Sema::getInlineCommandRenderKind(StringRef Name) const {
 
   return llvm::StringSwitch<InlineCommandRenderKind>(Name)
       .Case("b", InlineCommandRenderKind::Bold)
-      .Cases("c", "p", InlineCommandRenderKind::Monospaced)
-      .Cases("a", "e", "em", InlineCommandRenderKind::Emphasized)
+      .Cases({"c", "p"}, InlineCommandRenderKind::Monospaced)
+      .Cases({"a", "e", "em"}, InlineCommandRenderKind::Emphasized)
       .Case("anchor", InlineCommandRenderKind::Anchor)
       .Default(InlineCommandRenderKind::Normal);
 }

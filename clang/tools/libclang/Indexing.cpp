@@ -15,6 +15,7 @@
 #include "CXString.h"
 #include "CXTranslationUnit.h"
 #include "clang/AST/ASTConsumer.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -304,7 +305,8 @@ public:
       : DataConsumer(dataConsumer) {}
 
   void Initialize(ASTContext &Context) override {
-    DataConsumer.setASTContext(Context);
+    // TODO: accept Context as IntrusiveRefCntPtr?
+    DataConsumer.setASTContext(&Context);
     DataConsumer.startedTranslationUnit();
   }
 
@@ -355,7 +357,7 @@ public:
         DataConsumer->importedPCH(*File);
     }
 
-    DataConsumer->setASTContext(CI.getASTContext());
+    DataConsumer->setASTContext(CI.getASTContextPtr());
     Preprocessor &PP = CI.getPreprocessor();
     PP.addPPCallbacks(std::make_unique<IndexPPCallbacks>(PP, *DataConsumer));
     DataConsumer->setPreprocessor(CI.getPreprocessorPtr());
@@ -389,9 +391,7 @@ public:
     if (SM.isInSystemHeader(Loc))
       return true; // always skip bodies from system headers.
 
-    FileID FID;
-    unsigned Offset;
-    std::tie(FID, Offset) = SM.getDecomposedLoc(Loc);
+    auto [FID, Offset] = SM.getDecomposedLoc(Loc);
     // Don't skip bodies from main files; this may be revisited.
     if (SM.getMainFileID() == FID)
       return false;
@@ -708,7 +708,7 @@ static CXErrorCode clang_indexTranslationUnit_Impl(
   else
     DataConsumer.enteredMainFile(std::nullopt);
 
-  DataConsumer.setASTContext(Unit->getASTContext());
+  DataConsumer.setASTContext(Unit->getASTContextPtr());
   DataConsumer.startedTranslationUnit();
 
   indexPreprocessingRecord(*Unit, DataConsumer);

@@ -21,12 +21,13 @@
 #include "NVPTXGenInstrInfo.inc"
 
 namespace llvm {
+class NVPTXSubtarget;
 
 class NVPTXInstrInfo : public NVPTXGenInstrInfo {
   const NVPTXRegisterInfo RegInfo;
   virtual void anchor();
 public:
-  explicit NVPTXInstrInfo();
+  explicit NVPTXInstrInfo(const NVPTXSubtarget &STI);
 
   const NVPTXRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
@@ -66,9 +67,6 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
-  bool isSchedulingBoundary(const MachineInstr &MI,
-                            const MachineBasicBlock *MBB,
-                            const MachineFunction &MF) const override;
 };
 
 } // namespace llvm

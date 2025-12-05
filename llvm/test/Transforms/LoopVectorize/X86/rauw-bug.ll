@@ -21,10 +21,10 @@ while.cond63.preheader.while.end76_crit_edge:
   ret void
 
 while.body:
-  %d2_fx.015 = phi double [ %sub52, %while.body ], [ undef, %entry ]
-  %d2_fy.014 = phi double [ %sub58, %while.body ], [ undef, %entry ]
-  %d3_fy.013 = phi double [ %div56, %while.body ], [ undef, %entry ]
-  %d3_fx.012 = phi double [ %div50, %while.body ], [ undef, %entry ]
+  %d2_fx.015 = phi double [ %sub52, %while.body ], [ 0.0e+00, %entry ]
+  %d2_fy.014 = phi double [ %sub58, %while.body ], [ 0.0e+00, %entry ]
+  %d3_fy.013 = phi double [ %div56, %while.body ], [ 0.0e+00, %entry ]
+  %d3_fx.012 = phi double [ %div50, %while.body ], [ 0.0e+00, %entry ]
   %div50 = fmul double %d3_fx.012, 1.250000e-01
   %sub52 = fsub double 0.000000e+00, %div50
   %div56 = fmul double %d3_fy.013, 1.250000e-01

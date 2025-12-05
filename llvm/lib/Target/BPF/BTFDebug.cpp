@@ -14,6 +14,7 @@
 #include "BPF.h"
 #include "BPFCORE.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -23,6 +24,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -93,7 +95,24 @@ void BTFTypeDerived::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
 
-  BTFType.NameOff = BDebug.addString(Name);
+  switch (Kind) {
+  case BTF::BTF_KIND_PTR:
+  case BTF::BTF_KIND_CONST:
+  case BTF::BTF_KIND_VOLATILE:
+  case BTF::BTF_KIND_RESTRICT:
+    // Debug info might contain names for these types, but given that we want
+    // to keep BTF minimal and naming reference types doesn't bring any value
+    // (what matters is the completeness of the base type), we don't emit them.
+    //
+    // Furthermore, the Linux kernel refuses to load BPF programs that contain
+    // BTF with these types named:
+    // https://elixir.bootlin.com/linux/v6.17.1/source/kernel/bpf/btf.c#L2586
+    BTFType.NameOff = 0;
+    break;
+  default:
+    BTFType.NameOff = BDebug.addString(Name);
+    break;
+  }
 
   if (NeedsFixup || !DTy)
     return;
@@ -235,7 +254,7 @@ void BTFTypeEnum64::completeType(BTFDebug &BDebug) {
     BTFEnum.NameOff = BDebug.addString(Enum->getName());
     uint64_t Value;
     if (Enum->isUnsigned())
-      Value = static_cast<uint64_t>(Enum->getValue().getZExtValue());
+      Value = Enum->getValue().getZExtValue();
     else
       Value = static_cast<uint64_t>(Enum->getValue().getSExtValue());
     BTFEnum.Val_Lo32 = Value;
@@ -301,21 +320,59 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
 
   BTFType.NameOff = BDebug.addString(STy->getName());
 
+  if (STy->getTag() == dwarf::DW_TAG_variant_part) {
+    // Variant parts might have a discriminator, which has its own memory
+    // location, and variants, which share the memory location afterwards. LLVM
+    // DI doesn't consider discriminator as an element and instead keeps
+    // it as a separate reference.
+    // To keep BTF simple, let's represent the structure as an union with
+    // discriminator as the first element.
+    // The offsets inside variant types are already handled correctly in the
+    // DI.
+    const auto *DTy = STy->getDiscriminator();
+    if (DTy) {
+      struct BTF::BTFMember Discriminator;
+
+      Discriminator.NameOff = BDebug.addString(DTy->getName());
+      Discriminator.Offset = DTy->getOffsetInBits();
+      const auto *BaseTy = DTy->getBaseType();
+      Discriminator.Type = BDebug.getTypeId(BaseTy);
+
+      Members.push_back(Discriminator);
+    }
+  }
+
   // Add struct/union members.
   const DINodeArray Elements = STy->getElements();
   for (const auto *Element : Elements) {
     struct BTF::BTFMember BTFMember;
-    const auto *DDTy = cast<DIDerivedType>(Element);
 
-    BTFMember.NameOff = BDebug.addString(DDTy->getName());
-    if (HasBitField) {
-      uint8_t BitFieldSize = DDTy->isBitField() ? DDTy->getSizeInBits() : 0;
-      BTFMember.Offset = BitFieldSize << 24 | DDTy->getOffsetInBits();
-    } else {
-      BTFMember.Offset = DDTy->getOffsetInBits();
+    switch (Element->getTag()) {
+    case dwarf::DW_TAG_member: {
+      const auto *DDTy = cast<DIDerivedType>(Element);
+
+      BTFMember.NameOff = BDebug.addString(DDTy->getName());
+      if (HasBitField) {
+        uint8_t BitFieldSize = DDTy->isBitField() ? DDTy->getSizeInBits() : 0;
+        BTFMember.Offset = BitFieldSize << 24 | DDTy->getOffsetInBits();
+      } else {
+        BTFMember.Offset = DDTy->getOffsetInBits();
+      }
+      const auto *BaseTy = tryRemoveAtomicType(DDTy->getBaseType());
+      BTFMember.Type = BDebug.getTypeId(BaseTy);
+      break;
     }
-    const auto *BaseTy = tryRemoveAtomicType(DDTy->getBaseType());
-    BTFMember.Type = BDebug.getTypeId(BaseTy);
+    case dwarf::DW_TAG_variant_part: {
+      const auto *DCTy = dyn_cast<DICompositeType>(Element);
+
+      BTFMember.NameOff = BDebug.addString(DCTy->getName());
+      BTFMember.Offset = DCTy->getOffsetInBits();
+      BTFMember.Type = BDebug.getTypeId(DCTy);
+      break;
+    }
+    default:
+      llvm_unreachable("Unexpected DI tag of a struct/union element");
+    }
     Members.push_back(BTFMember);
   }
 }
@@ -672,16 +729,28 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
                                uint32_t &TypeId) {
   const DINodeArray Elements = CTy->getElements();
   uint32_t VLen = Elements.size();
+  // Variant parts might have a discriminator. LLVM DI doesn't consider it as
+  // an element and instead keeps it as a separate reference. But we represent
+  // it as an element in BTF.
+  if (CTy->getTag() == dwarf::DW_TAG_variant_part) {
+    const auto *DTy = CTy->getDiscriminator();
+    if (DTy) {
+      visitTypeEntry(DTy);
+      VLen++;
+    }
+  }
   if (VLen > BTF::MAX_VLEN)
     return;
 
   // Check whether we have any bitfield members or not
   bool HasBitField = false;
   for (const auto *Element : Elements) {
-    auto E = cast<DIDerivedType>(Element);
-    if (E->isBitField()) {
-      HasBitField = true;
-      break;
+    if (Element->getTag() == dwarf::DW_TAG_member) {
+      auto E = cast<DIDerivedType>(Element);
+      if (E->isBitField()) {
+        HasBitField = true;
+        break;
+      }
     }
   }
 
@@ -696,9 +765,22 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
   // Visit all struct members.
   int FieldNo = 0;
   for (const auto *Element : Elements) {
-    const auto Elem = cast<DIDerivedType>(Element);
-    visitTypeEntry(Elem);
-    processDeclAnnotations(Elem->getAnnotations(), TypeId, FieldNo);
+    switch (Element->getTag()) {
+    case dwarf::DW_TAG_member: {
+      const auto Elem = cast<DIDerivedType>(Element);
+      visitTypeEntry(Elem);
+      processDeclAnnotations(Elem->getAnnotations(), TypeId, FieldNo);
+      break;
+    }
+    case dwarf::DW_TAG_variant_part: {
+      const auto Elem = cast<DICompositeType>(Element);
+      visitTypeEntry(Elem);
+      processDeclAnnotations(Elem->getAnnotations(), TypeId, FieldNo);
+      break;
+    }
+    default:
+      llvm_unreachable("Unexpected DI tag of a struct/union element");
+    }
     FieldNo++;
   }
 }
@@ -781,16 +863,25 @@ void BTFDebug::visitFwdDeclType(const DICompositeType *CTy, bool IsUnion,
 void BTFDebug::visitCompositeType(const DICompositeType *CTy,
                                   uint32_t &TypeId) {
   auto Tag = CTy->getTag();
-  if (Tag == dwarf::DW_TAG_structure_type || Tag == dwarf::DW_TAG_union_type) {
+  switch (Tag) {
+  case dwarf::DW_TAG_structure_type:
+  case dwarf::DW_TAG_union_type:
+  case dwarf::DW_TAG_variant_part:
     // Handle forward declaration differently as it does not have members.
     if (CTy->isForwardDecl())
       visitFwdDeclType(CTy, Tag == dwarf::DW_TAG_union_type, TypeId);
     else
       visitStructType(CTy, Tag == dwarf::DW_TAG_structure_type, TypeId);
-  } else if (Tag == dwarf::DW_TAG_array_type)
+    break;
+  case dwarf::DW_TAG_array_type:
     visitArrayType(CTy, TypeId);
-  else if (Tag == dwarf::DW_TAG_enumeration_type)
+    break;
+  case dwarf::DW_TAG_enumeration_type:
     visitEnumType(CTy, TypeId);
+    break;
+  default:
+    llvm_unreachable("Unexpected DI tag of a composite type");
+  }
 }
 
 bool BTFDebug::IsForwardDeclCandidate(const DIType *Base) {
@@ -957,47 +1048,47 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
     return;
   }
 
-  // MapDef type may be a struct type or a non-pointer derived type
-  const DIType *OrigTy = Ty;
-  while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
-    auto Tag = DTy->getTag();
-    if (Tag != dwarf::DW_TAG_typedef && Tag != dwarf::DW_TAG_const_type &&
-        Tag != dwarf::DW_TAG_volatile_type &&
-        Tag != dwarf::DW_TAG_restrict_type)
-      break;
-    Ty = DTy->getBaseType();
-  }
-
-  const auto *CTy = dyn_cast<DICompositeType>(Ty);
-  if (!CTy)
-    return;
-
-  auto Tag = CTy->getTag();
-  if (Tag != dwarf::DW_TAG_structure_type || CTy->isForwardDecl())
-    return;
-
-  // Visit all struct members to ensure their types are visited.
-  const DINodeArray Elements = CTy->getElements();
-  for (const auto *Element : Elements) {
-    const auto *MemberType = cast<DIDerivedType>(Element);
-    const DIType *MemberBaseType = MemberType->getBaseType();
-
-    // If the member is a composite type, that may indicate the currently
-    // visited composite type is a wrapper, and the member represents the
-    // actual map definition.
-    // In that case, visit the member with `visitMapDefType` instead of
-    // `visitTypeEntry`, treating it specifically as a map definition rather
-    // than as a regular composite type.
-    const auto *MemberCTy = dyn_cast<DICompositeType>(MemberBaseType);
-    if (MemberCTy) {
-      visitMapDefType(MemberBaseType, TypeId);
-    } else {
-      visitTypeEntry(MemberBaseType);
+  uint32_t TmpId;
+  switch (Ty->getTag()) {
+  case dwarf::DW_TAG_typedef:
+  case dwarf::DW_TAG_const_type:
+  case dwarf::DW_TAG_volatile_type:
+  case dwarf::DW_TAG_restrict_type:
+  case dwarf::DW_TAG_pointer_type:
+    visitMapDefType(dyn_cast<DIDerivedType>(Ty)->getBaseType(), TmpId);
+    break;
+  case dwarf::DW_TAG_array_type:
+    // Visit nested map array and jump to the element type
+    visitMapDefType(dyn_cast<DICompositeType>(Ty)->getBaseType(), TmpId);
+    break;
+  case dwarf::DW_TAG_structure_type: {
+    // Visit all struct members to ensure their types are visited.
+    const auto *CTy = cast<DICompositeType>(Ty);
+    const DINodeArray Elements = CTy->getElements();
+    for (const auto *Element : Elements) {
+      const auto *MemberType = cast<DIDerivedType>(Element);
+      const DIType *MemberBaseType = MemberType->getBaseType();
+      // If the member is a composite type, that may indicate the currently
+      // visited composite type is a wrapper, and the member represents the
+      // actual map definition.
+      // In that case, visit the member with `visitMapDefType` instead of
+      // `visitTypeEntry`, treating it specifically as a map definition rather
+      // than as a regular composite type.
+      const auto *MemberCTy = dyn_cast<DICompositeType>(MemberBaseType);
+      if (MemberCTy) {
+        visitMapDefType(MemberBaseType, TmpId);
+      } else {
+        visitTypeEntry(MemberBaseType);
+      }
     }
+    break;
+  }
+  default:
+    break;
   }
 
   // Visit this type, struct or a const/typedef/volatile/restrict type
-  visitTypeEntry(OrigTy, TypeId, false, false);
+  visitTypeEntry(Ty, TypeId, false, false);
 }
 
 /// Read file contents from the actual file or from the source
@@ -1255,10 +1346,8 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   FuncInfo.Label = FuncLabel;
   FuncInfo.TypeId = FuncTypeId;
   if (FuncLabel->isInSection()) {
-    MCSection &Section = FuncLabel->getSection();
-    const MCSectionELF *SectionELF = dyn_cast<MCSectionELF>(&Section);
-    assert(SectionELF && "Null section for Function Label");
-    SecNameOff = addString(SectionELF->getName());
+    auto &Sec = static_cast<const MCSectionELF &>(FuncLabel->getSection());
+    SecNameOff = addString(Sec.getName());
   } else {
     SecNameOff = addString(".text");
   }

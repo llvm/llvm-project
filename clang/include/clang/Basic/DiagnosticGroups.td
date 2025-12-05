@@ -532,6 +532,16 @@ def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingInitializerList,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
+
+def LifetimeSafetyPermissive : DiagGroup<"experimental-lifetime-safety-permissive">;
+def LifetimeSafetyStrict : DiagGroup<"experimental-lifetime-safety-strict">;
+def LifetimeSafety : DiagGroup<"experimental-lifetime-safety",
+                               [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
+  code Documentation = [{
+    Experimental warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
+  }];
+}
+
 def DistributedObjectModifiers : DiagGroup<"distributed-object-modifiers">;
 def DllexportExplicitInstantiationDecl : DiagGroup<"dllexport-explicit-instantiation-decl">;
 def ExcessInitializers : DiagGroup<"excess-initializers">;
@@ -621,10 +631,12 @@ def MissingFieldInitializers : DiagGroup<"missing-field-initializers",
 def ModuleLock : DiagGroup<"module-lock">;
 def ModuleBuild : DiagGroup<"module-build">;
 def ModuleImport : DiagGroup<"module-import">;
+def ModuleValidation : DiagGroup<"module-validation">;
 def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def ModuleIncludeDirectiveTranslation : DiagGroup<"module-include-translation">;
 def ModuleMap : DiagGroup<"module-map">;
+def ModulesDriver : DiagGroup<"modules-driver">;
 def RoundTripCC1Args : DiagGroup<"round-trip-cc1-args">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;
@@ -641,6 +653,7 @@ def NonNull : DiagGroup<"nonnull">;
 def NonPODVarargs : DiagGroup<"non-pod-varargs">;
 def ClassVarargs : DiagGroup<"class-varargs", [NonPODVarargs]>;
 def : DiagGroup<"nonportable-cfstrings">;
+def NonPortableSYCL : DiagGroup<"nonportable-sycl">;
 def NonVirtualDtor : DiagGroup<"non-virtual-dtor">;
 def GNUNullPointerArithmetic : DiagGroup<"gnu-null-pointer-arithmetic">;
 def NullPointerArithmetic
@@ -776,6 +789,8 @@ def ShadowFieldInConstructor : DiagGroup<"shadow-field-in-constructor",
                                          [ShadowFieldInConstructorModified]>;
 def ShadowIvar : DiagGroup<"shadow-ivar">;
 def ShadowUncapturedLocal : DiagGroup<"shadow-uncaptured-local">;
+
+def ShadowHeader : DiagGroup<"shadow-header">;
 
 // -Wshadow-all is a catch-all for all shadowing. -Wshadow is just the
 // shadowing that we think is unsafe.
@@ -949,9 +964,11 @@ def UninitializedMaybe : DiagGroup<"conditional-uninitialized">;
 def UninitializedSometimes : DiagGroup<"sometimes-uninitialized">;
 def UninitializedStaticSelfInit : DiagGroup<"static-self-init">;
 def UninitializedConstReference : DiagGroup<"uninitialized-const-reference">;
+def UninitializedConstPointer : DiagGroup<"uninitialized-const-pointer">;
 def Uninitialized  : DiagGroup<"uninitialized", [UninitializedSometimes,
                                                  UninitializedStaticSelfInit,
-                                                 UninitializedConstReference]>;
+                                                 UninitializedConstReference,
+                                                 UninitializedConstPointer]>;
 def IgnoredPragmaIntrinsic : DiagGroup<"ignored-pragma-intrinsic">;
 // #pragma optimize is often used to avoid to work around MSVC codegen bugs or
 // to disable inlining. It's not completely clear what alternative to suggest
@@ -1046,6 +1063,7 @@ def SuperSubClassMismatch : DiagGroup<"super-class-method-mismatch">;
 def OverridingMethodMismatch : DiagGroup<"overriding-method-mismatch">;
 def VariadicMacros : DiagGroup<"variadic-macros">;
 def VectorConversion : DiagGroup<"vector-conversion">;      // clang specific
+def MatrixConversion : DiagGroup<"matrix-conversion">;      // clang specific
 def VexingParse : DiagGroup<"vexing-parse">;
 def VLAUseStaticAssert : DiagGroup<"vla-extension-static-assert">;
 def VLACxxExtension : DiagGroup<"vla-cxx-extension", [VLAUseStaticAssert]>;
@@ -1288,6 +1306,7 @@ def ThreadSafetyBeta : DiagGroup<"thread-safety-beta">;
 // Warnings and notes related to the function effects system which underlies
 // the nonblocking and nonallocating attributes.
 def FunctionEffects : DiagGroup<"function-effects">;
+def FunctionEffectRedeclarations : DiagGroup<"function-effect-redeclarations">;
 def PerfConstraintImpliesNoexcept : DiagGroup<"perf-constraint-implies-noexcept">;
 
 // Uniqueness Analysis warnings
@@ -1298,7 +1317,7 @@ def Consumed       : DiagGroup<"consumed">;
 // DefaultIgnore in addition to putting it here.
 def All : DiagGroup<"all", [Most, Parentheses, Switch, SwitchBool,
                             MisleadingIndentation, PackedNonPod,
-                            VLACxxExtension, PerfConstraintImpliesNoexcept]>;
+                            VLACxxExtension]>;
 
 // Warnings that should be in clang-cl /w4.
 def : DiagGroup<"CL4", [All, Extra]>;
@@ -1319,6 +1338,8 @@ def : DiagGroup<"int-conversions",
                 [IntConversion]>; // -Wint-conversions = -Wint-conversion
 def : DiagGroup<"vector-conversions",
                 [VectorConversion]>; // -Wvector-conversions = -Wvector-conversion
+def : DiagGroup<"matrix-conversions",
+                [MatrixConversion]>; // -Wmatrix-conversions = -Wmatrix-conversion
 def : DiagGroup<"unused-local-typedefs", [UnusedLocalTypedef]>;
                 // -Wunused-local-typedefs = -Wunused-local-typedef
 
@@ -1385,7 +1406,7 @@ def C23 : DiagGroup<"c23-extensions", [VariadicMacroArgumentsOmitted]>;
 def : DiagGroup<"c2x-extensions", [C23]>;
 
 // A warning group for warnings about using C2y features as extensions.
-def C2y : DiagGroup<"c2y-extensions">;
+def C2y : DiagGroup<"c2y-extensions", [StaticInInline]>;
 
 // Previously supported warning group which is no longer pertinent as binary
 // literals are a C++14 and C23 extension now instead of a GNU extension.
@@ -1420,6 +1441,7 @@ def MicrosoftDrectveSection : DiagGroup<"microsoft-drectve-section">;
 def MicrosoftInclude : DiagGroup<"microsoft-include">;
 def MicrosoftCppMacro : DiagGroup<"microsoft-cpp-macro">;
 def MicrosoftFixedEnum : DiagGroup<"microsoft-fixed-enum">;
+def MicrosoftEmptyEnum : DiagGroup<"microsoft-empty-enum">;
 def MicrosoftSealed : DiagGroup<"microsoft-sealed">;
 def MicrosoftAbstract : DiagGroup<"microsoft-abstract">;
 def MicrosoftUnqualifiedFriend : DiagGroup<"microsoft-unqualified-friend">;
@@ -1450,7 +1472,6 @@ def MicrosoftAnonTag : DiagGroup<"microsoft-anon-tag">;
 def MicrosoftCommentPaste : DiagGroup<"microsoft-comment-paste">;
 def MicrosoftEndOfFile : DiagGroup<"microsoft-end-of-file">;
 def MicrosoftInaccessibleBase : DiagGroup<"microsoft-inaccessible-base">;
-def MicrosoftStaticAssert : DiagGroup<"microsoft-static-assert">;
 def MicrosoftInitFromPredefined : DiagGroup<"microsoft-init-from-predefined">;
 def MicrosoftStringLiteralFromPredefined : DiagGroup<
     "microsoft-string-literal-from-predefined">;
@@ -1472,9 +1493,10 @@ def Microsoft : DiagGroup<"microsoft",
      MicrosoftRedeclareStatic, MicrosoftEnumForwardReference, MicrosoftGoto,
      MicrosoftFlexibleArray, MicrosoftExtraQualification, MicrosoftCast,
      MicrosoftConstInit, MicrosoftVoidPseudoDtor, MicrosoftAnonTag,
-     MicrosoftCommentPaste, MicrosoftEndOfFile, MicrosoftStaticAssert,
+     MicrosoftCommentPaste, MicrosoftEndOfFile,
      MicrosoftInitFromPredefined, MicrosoftStringLiteralFromPredefined,
-     MicrosoftInconsistentDllImport, MicrosoftInlineOnNonFunction]>;
+     MicrosoftInconsistentDllImport, MicrosoftInlineOnNonFunction,
+     MicrosoftEmptyEnum]>;
 
 def ClangClPch : DiagGroup<"clang-cl-pch">;
 
@@ -1530,9 +1552,11 @@ def OpenMPPre51Compat : DiagGroup<"pre-openmp-51-compat">;
 def OpenMP51Ext : DiagGroup<"openmp-51-extensions">;
 def OpenMPExtensions : DiagGroup<"openmp-extensions">;
 def OpenMPTargetException : DiagGroup<"openmp-target-exception">;
+def OpenMPFuture : DiagGroup<"openmp-future">;
 def OpenMP : DiagGroup<"openmp", [
     SourceUsesOpenMP, OpenMPClauses, OpenMPLoopForm, OpenMPTarget,
-    OpenMPMapping, OpenMP51Ext, OpenMPExtensions, OpenMPTargetException
+    OpenMPMapping, OpenMP51Ext, OpenMPExtensions, OpenMPTargetException,
+    OpenMPFuture
   ]>;
 
 // OpenACC warnings.
@@ -1734,7 +1758,8 @@ def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 // Warnings and fixes to support the "safe buffers" programming model.
 def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">;
 def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call">;
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall]>;
+def UnsafeBufferUsageInUniquePtrArrayAccess : DiagGroup<"unsafe-buffer-usage-in-unique-ptr-array-access">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess]>;
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;

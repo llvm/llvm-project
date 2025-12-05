@@ -1,6 +1,6 @@
-// RUN: mlir-opt -verify-diagnostics -allow-unregistered-dialect %s | FileCheck %s
-// check parser
-// RUN: mlir-opt -verify-diagnostics -allow-unregistered-dialect %s | mlir-opt -verify-diagnostics --allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -allow-unregistered-dialect | FileCheck %s
+// Check parser
+// RUN: mlir-opt %s -allow-unregistered-dialect | mlir-opt -allow-unregistered-dialect | FileCheck %s
 
 // CHECK-LABEL: func @array_types(
 func.func @array_types(
