@@ -319,7 +319,7 @@ _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX14 char __hex_to_upper(c
 to_chars_result to_chars(char*, char*, bool, int = 10) = delete;
 
 template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value) {
   using _Type = __make_32_64_or_128_bit_t<_Tp>;
   static_assert(!is_same<_Type, void>::value, "unsupported integral type used in to_chars");
@@ -327,7 +327,7 @@ to_chars(char* __first, char* __last, _Tp __value) {
 }
 
 template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value, int __base) {
   _LIBCPP_ASSERT_UNCATEGORIZED(2 <= __base && __base <= 36, "base not in [2, 36]");
 

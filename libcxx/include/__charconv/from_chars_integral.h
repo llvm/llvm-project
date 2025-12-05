@@ -220,13 +220,13 @@ __from_chars_integral(const char* __first, const char* __last, _Tp& __value, int
 }
 
 template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
 from_chars(const char* __first, const char* __last, _Tp& __value) {
   return std::__from_chars_atoi(__first, __last, __value);
 }
 
 template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
 from_chars(const char* __first, const char* __last, _Tp& __value, int __base) {
   _LIBCPP_ASSERT_UNCATEGORIZED(2 <= __base && __base <= 36, "base not in [2, 36]");
   return std::__from_chars_integral(__first, __last, __value, __base);
