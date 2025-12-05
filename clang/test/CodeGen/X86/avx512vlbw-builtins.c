@@ -475,6 +475,7 @@ __mmask8 test_mm_cmplt_epu16_mask(__m128i __a, __m128i __b) {
   // CHECK: icmp ult <8 x i16> %{{.*}}, %{{.*}}
   return (__mmask8)_mm_cmplt_epu16_mask(__a, __b);
 }
+TEST_CONSTEXPR(_mm_cmplt_epu16_mask(((__m128i)(__v8hu){12351, 47995, 11802, 16970, 16956, 13965, 33529, 18928}), ((__m128i)(__v8hu){48792, 59915, 50576, 62643, 3758, 16415, 7966, 39475})) == (__mmask8)0xAF);
 
 __mmask8 test_mm_mask_cmplt_epu16_mask(__mmask8 __u, __m128i __a, __m128i __b) {
   // CHECK-LABEL: test_mm_mask_cmplt_epu16_mask
@@ -3195,11 +3196,21 @@ __mmask16 test_mm_movepi8_mask(__m128i __A) {
   return _mm_movepi8_mask(__A); 
 }
 
+TEST_CONSTEXPR(_mm_movepi8_mask(
+    ((__m128i)(__v16qi){0, 1, char(129), 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15})) == (__mmask16)0x0004); 
+
 __mmask32 test_mm256_movepi8_mask(__m256i __A) {
   // CHECK-LABEL: test_mm256_movepi8_mask
   // CHECK: [[CMP:%.*]] = icmp slt <32 x i8> %{{.*}}, zeroinitializer
   return _mm256_movepi8_mask(__A); 
 }
+
+TEST_CONSTEXPR(_mm256_movepi8_mask(
+    ((__m256i)(__v32qi){0, 1, char(255), 3, 4, 5, 6, 7,
+                        8, 9, 10, 11, 12, 13, 14, 15,
+                        16, 17, 18, 19, 20, 21, 22, 23,
+                        24, 25, 26, 27, 28, 29, 30, char(128)})
+) == (__mmask32)0x80000004);
 
 __m128i test_mm_movm_epi8(__mmask16 __A) {
   // CHECK-LABEL: test_mm_movm_epi8
@@ -3625,12 +3636,16 @@ __mmask8 test_mm_movepi16_mask(__m128i __A) {
   // CHECK: [[CMP:%.*]] = icmp slt <8 x i16> %{{.*}}, zeroinitializer
   return _mm_movepi16_mask(__A); 
 }
+TEST_CONSTEXPR(_mm_movepi16_mask(((__m128i)(__v8hi){0, 1, -1, 3, 4, 5, 6, 7})) == (__mmask8)0x04);
 
 __mmask16 test_mm256_movepi16_mask(__m256i __A) {
   // CHECK-LABEL: test_mm256_movepi16_mask
   // CHECK: [[CMP:%.*]] = icmp slt <16 x i16> %{{.*}}, zeroinitializer
   return _mm256_movepi16_mask(__A); 
 }
+
+TEST_CONSTEXPR(_mm256_movepi16_mask(
+    ((__m256i)(__v16hi){0, 1, short(32769), 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, short(65535)})) == (__mmask16)0x8004);
 
 __m128i test_mm_mask_shufflehi_epi16(__m128i __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_shufflehi_epi16

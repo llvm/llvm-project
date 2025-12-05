@@ -208,7 +208,7 @@ public:
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
     return (hasConditionalCompressedMoveFusion() && hasStdExtZca()) ||
-           hasShortForwardBranchOpt();
+           hasShortForwardBranchIALU();
   }
 
   bool hasShlAdd(int64_t ShAmt) const {
@@ -237,6 +237,13 @@ public:
 
     return 0;
   }
+
+  Align getZilsdAlign() const {
+    return Align(enableUnalignedScalarMem() ? 1
+                 : allowZilsd4ByteAlign()   ? 4
+                                            : 8);
+  }
+
   unsigned getELen() const {
     assert(hasVInstructions() && "Expected V extension");
     return hasVInstructionsI64() ? 64 : 32;

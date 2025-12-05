@@ -519,7 +519,6 @@ void FunctionCognitiveComplexityCheck::registerMatchers(MatchFinder *Finder) {
 
 void FunctionCognitiveComplexityCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   FunctionASTVisitor Visitor(IgnoreMacros);
   SourceLocation Loc;
 

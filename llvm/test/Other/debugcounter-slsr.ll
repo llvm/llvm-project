@@ -1,4 +1,3 @@
-; REQUIRES: asserts
 ; RUN: opt -passes=slsr -S -debug-counter=slsr-counter=1  < %s | FileCheck %s
 
 ; Test that, with debug counters on, we will skip the first slsr opportunity.
