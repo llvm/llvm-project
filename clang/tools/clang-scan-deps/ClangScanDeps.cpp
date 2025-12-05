@@ -46,8 +46,7 @@
 
 using namespace clang;
 using namespace tooling;
-using namespace clang::dependencies;
-using namespace clang::tooling::dependencies;
+using namespace dependencies;
 
 namespace {
 

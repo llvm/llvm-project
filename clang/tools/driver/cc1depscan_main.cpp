@@ -368,7 +368,7 @@ scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
                        std::optional<llvm::cas::CASID> &RootID);
 
 static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
-    tooling::dependencies::DependencyScanningTool &Tool,
+    tooling::DependencyScanningTool &Tool,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS, const char *Exec,
     ArrayRef<const char *> InputArgs, StringRef WorkingDirectory,
     SmallVectorImpl<const char *> &OutputArgs, llvm::cas::ObjectStore &DB,
@@ -911,7 +911,7 @@ int ScanServer::listen() {
 
   auto ServiceLoop = [this, &CAS, &Service, &NumRunning, &Start,
                       &SecondsSinceLastClose, &SharedOS](unsigned I) {
-    std::optional<tooling::dependencies::DependencyScanningTool> Tool;
+    std::optional<tooling::DependencyScanningTool> Tool;
     SmallString<256> Message;
     while (true) {
       if (ShutDown.load())
@@ -1080,7 +1080,7 @@ int ScanServer::listen() {
 #endif // LLVM_ON_UNIX
 
 static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
-    tooling::dependencies::DependencyScanningTool &Tool,
+    tooling::DependencyScanningTool &Tool,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS, const char *Exec,
     ArrayRef<const char *> InputArgs, StringRef WorkingDirectory,
     SmallVectorImpl<const char *> &OutputArgs, llvm::cas::ObjectStore &DB,
@@ -1122,8 +1122,7 @@ scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
       llvm::vfs::createPhysicalFileSystem();
   UnderlyingFS =
       llvm::cas::createCASProvidingFileSystem(DB, std::move(UnderlyingFS));
-  tooling::dependencies::DependencyScanningTool Tool(Service,
-                                                     std::move(UnderlyingFS));
+  tooling::DependencyScanningTool Tool(Service, std::move(UnderlyingFS));
 
   std::unique_ptr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(InputArgs);

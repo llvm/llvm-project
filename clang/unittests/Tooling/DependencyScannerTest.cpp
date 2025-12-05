@@ -33,8 +33,7 @@
 using namespace clang;
 using namespace clang::cas;
 using namespace tooling;
-using namespace clang::dependencies;
-using namespace tooling::dependencies;
+using namespace dependencies;
 
 namespace {
 

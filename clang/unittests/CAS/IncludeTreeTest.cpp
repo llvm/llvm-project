@@ -12,7 +12,7 @@
 using namespace clang;
 using namespace clang::cas;
 using namespace clang::dependencies;
-using namespace clang::tooling::dependencies;
+using namespace clang::tooling;
 
 TEST(IncludeTree, IncludeTreeScan) {
   StringRef PathSep = llvm::sys::path::get_separator();
