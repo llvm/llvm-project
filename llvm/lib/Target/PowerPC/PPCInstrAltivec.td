@@ -889,6 +889,7 @@ def : Pat<(v16i8 (rotl v16i8:$vA, v16i8:$vB)),
           (v16i8 (VRLB v16i8:$vA, v16i8:$vB))>;
 def : Pat<(v8i16 (rotl v8i16:$vA, v8i16:$vB)),
           (v8i16 (VRLH v8i16:$vA, v8i16:$vB))>;
+let Predicates = [IsNotISAFuture] in
 def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VRLW v4i32:$vA, v4i32:$vB))>;
 

@@ -1520,7 +1520,9 @@ inline bool operator!=(DIDerivedType::PtrAuthData Lhs,
 /// is also a DIType.
 class DISubrangeType : public DIType {
 public:
-  typedef PointerUnion<ConstantInt *, DIVariable *, DIExpression *> BoundType;
+  typedef PointerUnion<ConstantInt *, DIVariable *, DIExpression *,
+                       DIDerivedType *>
+      BoundType;
 
 private:
   friend class LLVMContextImpl;
@@ -2552,6 +2554,39 @@ public:
   }
   void replaceRetainedNodes(DINodeArray N) {
     replaceOperandWith(7, N.get());
+  }
+
+  /// For the given retained node of DISubprogram, applies one of the
+  /// given functions depending on the type of the node.
+  template <typename T, typename FuncLVT, typename FuncLabelT,
+            typename FuncImportedEntityT, typename FuncUnknownT>
+  static T
+  visitRetainedNode(const Metadata *N, FuncLVT &&FuncLV, FuncLabelT &&FuncLabel,
+                    FuncImportedEntityT &&FuncIE, FuncUnknownT &&FuncUnknown) {
+    if (const auto *LV = dyn_cast<DILocalVariable>(N))
+      return FuncLV(LV);
+    if (const auto *L = dyn_cast<DILabel>(N))
+      return FuncLabel(L);
+    if (const auto *IE = dyn_cast<DIImportedEntity>(N))
+      return FuncIE(IE);
+    return FuncUnknown(N);
+  }
+
+  /// Returns the scope of subprogram's retainedNodes.
+  static const DILocalScope *getRetainedNodeScope(const MDNode *N);
+  // For use in Verifier.
+  static const DIScope *getRawRetainedNodeScope(const MDNode *N);
+
+  /// For each retained node, applies one of the given functions depending
+  /// on the type of a node.
+  template <typename FuncLVT, typename FuncLabelT, typename FuncImportedEntityT>
+  void forEachRetainedNode(FuncLVT &&FuncLV, FuncLabelT &&FuncLabel,
+                           FuncImportedEntityT &&FuncIE) const {
+    for (MDNode *N : getRetainedNodes())
+      visitRetainedNode<void>(N, FuncLV, FuncLabel, FuncIE,
+                              [](const Metadata *N) {
+                                llvm_unreachable("Unexpected retained node!");
+                              });
   }
 
   /// Check if this subprogram describes the given function.

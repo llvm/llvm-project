@@ -5,16 +5,18 @@
 ; Also test that __heap_base is still aligned with the --stack-first option.
 
 RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/stack-first.s -o %t.o
-RUN: wasm-ld -z stack-size=512 --stack-first --export=__data_end --export=__heap_base --export=someByte -o %t.wasm %t.o
+
+; Check that the default is `--stack-first`
+RUN: wasm-ld -z stack-size=512 --export=__data_end --export=__heap_base --export=someByte -o %t.wasm %t.o
 RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; Check `--no-stack-first`
-RUN: wasm-ld -z stack-size=512 --stack-first --no-stack-first --export=__data_end --export=__heap_base --export=someByte -o %t.wasm %t.o
+RUN: wasm-ld -z stack-size=512 --no-stack-first --export=__data_end --export=__heap_base --export=someByte -o %t.wasm %t.o
 RUN: obj2yaml %t.wasm | FileCheck %s --check-prefix=NOT-FIRST
 
-; Check that the default is no-stack-first
-RUN: wasm-ld -z stack-size=512 --export=__data_end --export=__heap_base --export=someByte -o %t.wasm %t.o
-RUN: obj2yaml %t.wasm | FileCheck %s --check-prefix=NOT-FIRST
+; Check `--stack-first`
+RUN: wasm-ld -z stack-size=512 --no-stack-first --stack-first --export=__data_end --export=__heap_base --export=someByte -o %t.wasm %t.o
+RUN: obj2yaml %t.wasm | FileCheck %s
 
 
 CHECK:        - Type:            GLOBAL

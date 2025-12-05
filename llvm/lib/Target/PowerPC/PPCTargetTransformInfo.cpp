@@ -24,6 +24,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppctti"
 
+static cl::opt<bool> Pwr9EVL("ppc-pwr9-evl",
+                             cl::desc("Allow vp.load and vp.store for pwr9"),
+                             cl::init(false), cl::Hidden);
+
 static cl::opt<bool> VecMaskCost("ppc-vec-mask-cost",
 cl::desc("add masking cost for i1 vectors"), cl::init(true), cl::Hidden);
 
@@ -439,7 +443,11 @@ bool PPCTTIImpl::enableAggressiveInterleaving(bool LoopHasReductions) const {
 PPCTTIImpl::TTI::MemCmpExpansionOptions
 PPCTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
-  Options.LoadSizes = {8, 4, 2, 1};
+  if (getST()->hasAltivec())
+    Options.LoadSizes = {16, 8, 4, 2, 1};
+  else
+    Options.LoadSizes = {8, 4, 2, 1};
+
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   return Options;
 }
@@ -1030,4 +1038,43 @@ bool PPCTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
 
 bool PPCTTIImpl::supportsTailCallFor(const CallBase *CB) const {
   return TLI->supportsTailCallFor(CB);
+}
+
+// Target hook used by CodeGen to decide whether to expand vector predication
+// intrinsics into scalar operations or to use special ISD nodes to represent
+// them. The Target will not see the intrinsics.
+TargetTransformInfo::VPLegalization
+PPCTTIImpl::getVPLegalizationStrategy(const VPIntrinsic &PI) const {
+  using VPLegalization = TargetTransformInfo::VPLegalization;
+  unsigned Directive = ST->getCPUDirective();
+  VPLegalization DefaultLegalization = BaseT::getVPLegalizationStrategy(PI);
+  if (Directive != PPC::DIR_PWR10 && Directive != PPC::DIR_PWR_FUTURE &&
+      (!Pwr9EVL || Directive != PPC::DIR_PWR9))
+    return DefaultLegalization;
+
+  if (!ST->isPPC64())
+    return DefaultLegalization;
+
+  unsigned IID = PI.getIntrinsicID();
+  if (IID != Intrinsic::vp_load && IID != Intrinsic::vp_store)
+    return DefaultLegalization;
+
+  bool IsLoad = IID == Intrinsic::vp_load;
+  Type *VecTy = IsLoad ? PI.getType() : PI.getOperand(0)->getType();
+  EVT VT = TLI->getValueType(DL, VecTy, true);
+  if (VT != MVT::v2i64 && VT != MVT::v4i32 && VT != MVT::v8i16 &&
+      VT != MVT::v16i8)
+    return DefaultLegalization;
+
+  auto IsAllTrueMask = [](Value *MaskVal) {
+    if (Value *SplattedVal = getSplatValue(MaskVal))
+      if (auto *ConstValue = dyn_cast<Constant>(SplattedVal))
+        return ConstValue->isAllOnesValue();
+    return false;
+  };
+  unsigned MaskIx = IsLoad ? 1 : 2;
+  if (!IsAllTrueMask(PI.getOperand(MaskIx)))
+    return DefaultLegalization;
+
+  return VPLegalization(VPLegalization::Legal, VPLegalization::Legal);
 }

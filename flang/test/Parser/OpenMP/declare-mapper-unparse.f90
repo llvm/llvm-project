@@ -29,7 +29,7 @@ program main
 
 !PARSE-TREE:      OpenMPDeclareMapperConstruct
 !PARSE-TREE:        OmpMapperSpecifier
-!PARSE-TREE:         string = 'ty.omp.default.mapper'
+!PARSE-TREE:         string = 'ty_omp_default_mapper'
 !PARSE-TREE:         TypeSpec -> DerivedTypeSpec
 !PARSE-TREE:           Name = 'ty'
 !PARSE-TREE:         Name = 'mapped'

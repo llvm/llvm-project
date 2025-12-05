@@ -354,9 +354,6 @@ public:
   /// Newly created segments.
   std::vector<SegmentInfo> NewSegments;
 
-  /// Symbols that are expected to be undefined in MCContext during emission.
-  std::unordered_set<MCSymbol *> UndefinedSymbols;
-
   /// [name] -> [BinaryData*] map used for global symbol resolution.
   using SymbolMapType = StringMap<BinaryData *>;
   SymbolMapType GlobalSymbols;
@@ -500,7 +497,7 @@ public:
   ///
   /// As we fold identical functions, multiple symbols can point
   /// to the same BinaryFunction.
-  std::unordered_map<const MCSymbol *, BinaryFunction *> SymbolToFunctionMap;
+  DenseMap<const MCSymbol *, BinaryFunction *> SymbolToFunctionMap;
 
   /// A mutex that is used to control parallel accesses to SymbolToFunctionMap
   mutable llvm::sys::RWMutex SymbolToFunctionMapMutex;
@@ -810,6 +807,15 @@ public:
   /// the execution of the binary is completed.
   std::optional<uint64_t> FiniFunctionAddress;
 
+  /// DT_INIT.
+  std::optional<uint64_t> InitAddress;
+
+  /// DT_INIT_ARRAY. Only used when DT_INIT is not set.
+  std::optional<uint64_t> InitArrayAddress;
+
+  /// DT_INIT_ARRAYSZ. Only used when DT_INIT is not set.
+  std::optional<uint64_t> InitArraySize;
+
   /// DT_FINI.
   std::optional<uint64_t> FiniAddress;
 
@@ -1107,7 +1113,7 @@ public:
     return FragmentClasses.isEquivalent(LHS, RHS);
   }
 
-  /// Add interprocedural reference for \p Function to \p Address
+  /// Add interprocedural branch reference from \p Function to \p Address.
   void addInterproceduralReference(BinaryFunction *Function, uint64_t Address) {
     InterproceduralReferences.push_back({Function, Address});
   }
@@ -1122,7 +1128,8 @@ public:
   /// argument is false.
   bool handleAArch64Veneer(uint64_t Address, bool MatchOnly = false);
 
-  /// Resolve inter-procedural dependencies from
+  /// Resolve inter-procedural branch dependencies discovered during
+  /// disassembly.
   void processInterproceduralReferences();
 
   /// Skip functions with all parent and child fragments transitively.

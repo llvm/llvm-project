@@ -29,6 +29,9 @@ DUMMY_FUNCTION_PASS("x86-winehstate", WinEHStatePass())
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("x86-avoid-trailing-call", X86AvoidTrailingCallPass())
+MACHINE_FUNCTION_PASS("x86-dyn-alloca-expander", X86DynAllocaExpanderPass())
+MACHINE_FUNCTION_PASS("x86-fp-stackifier", X86FPStackifierPass())
 MACHINE_FUNCTION_PASS("x86-isel", X86ISelDAGToDAGPass(*this))
 #undef MACHINE_FUNCTION_PASS
 
@@ -36,13 +39,10 @@ MACHINE_FUNCTION_PASS("x86-isel", X86ISelDAGToDAGPass(*this))
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME)
 #endif
 DUMMY_MACHINE_FUNCTION_PASS("x86-avoid-SFB", X86AvoidSFBPass())
-DUMMY_MACHINE_FUNCTION_PASS("x86-avoid-trailing-call", X86AvoidTrailingCallPass())
 DUMMY_MACHINE_FUNCTION_PASS("x86-cf-opt", X86CallFrameOptimization())
 DUMMY_MACHINE_FUNCTION_PASS("x86-cmov-conversion", X86CmovConverterPass())
-DUMMY_MACHINE_FUNCTION_PASS("x86-codege", FPS())
 DUMMY_MACHINE_FUNCTION_PASS("x86-compress-evex", CompressEVEXPass())
 DUMMY_MACHINE_FUNCTION_PASS("x86-domain-reassignment", X86DomainReassignment())
-DUMMY_MACHINE_FUNCTION_PASS("x86-dyn-alloca-expander", X86DynAllocaExpander())
 DUMMY_MACHINE_FUNCTION_PASS("x86-execution-domain-fix", X86ExecutionDomainFix())
 DUMMY_MACHINE_FUNCTION_PASS("fastpretileconfig", X86FastPreTileConfig())
 DUMMY_MACHINE_FUNCTION_PASS("fasttileconfig", X86FastTileConfig())

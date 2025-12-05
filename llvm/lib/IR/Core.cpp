@@ -1573,6 +1573,14 @@ LLVMValueRef LLVMConstRealOfStringAndSize(LLVMTypeRef RealTy, const char Str[],
   return wrap(ConstantFP::get(unwrap(RealTy), StringRef(Str, SLen)));
 }
 
+LLVMValueRef LLVMConstFPFromBits(LLVMTypeRef Ty, const uint64_t N[]) {
+  Type *T = unwrap(Ty);
+  unsigned SB = T->getScalarSizeInBits();
+  APInt AI(SB, ArrayRef<uint64_t>(N, divideCeil(SB, 64)));
+  APFloat Quad(T->getFltSemantics(), AI);
+  return wrap(ConstantFP::get(T, Quad));
+}
+
 unsigned long long LLVMConstIntGetZExtValue(LLVMValueRef ConstantVal) {
   return unwrap<ConstantInt>(ConstantVal)->getZExtValue();
 }
@@ -1699,7 +1707,9 @@ LLVMValueRef LLVMConstantPtrAuth(LLVMValueRef Ptr, LLVMValueRef Key,
                                  LLVMValueRef Disc, LLVMValueRef AddrDisc) {
   return wrap(ConstantPtrAuth::get(
       unwrap<Constant>(Ptr), unwrap<ConstantInt>(Key),
-      unwrap<ConstantInt>(Disc), unwrap<Constant>(AddrDisc)));
+      unwrap<ConstantInt>(Disc), unwrap<Constant>(AddrDisc),
+      ConstantPointerNull::get(
+          cast<PointerType>(unwrap<Constant>(AddrDisc)->getType()))));
 }
 
 /*-- Opcode mapping */
@@ -3036,6 +3046,37 @@ LLVMDbgRecordRef LLVMGetPreviousDbgRecord(LLVMDbgRecordRef Rec) {
   return wrap(&*--I);
 }
 
+LLVMMetadataRef LLVMDbgRecordGetDebugLoc(LLVMDbgRecordRef Rec) {
+  return wrap(unwrap<DbgRecord>(Rec)->getDebugLoc().getAsMDNode());
+}
+
+LLVMDbgRecordKind LLVMDbgRecordGetKind(LLVMDbgRecordRef Rec) {
+  DbgRecord *Record = unwrap<DbgRecord>(Rec);
+  if (isa<DbgLabelRecord>(Record))
+    return LLVMDbgRecordLabel;
+  DbgVariableRecord *VariableRecord = dyn_cast<DbgVariableRecord>(Record);
+  assert(VariableRecord && "unexpected record");
+  if (VariableRecord->isDbgDeclare())
+    return LLVMDbgRecordDeclare;
+  if (VariableRecord->isDbgValue())
+    return LLVMDbgRecordValue;
+  assert(VariableRecord->isDbgAssign() && "unexpected record");
+  return LLVMDbgRecordAssign;
+}
+
+LLVMValueRef LLVMDbgVariableRecordGetValue(LLVMDbgRecordRef Rec,
+                                           unsigned OpIdx) {
+  return wrap(unwrap<DbgVariableRecord>(Rec)->getValue(OpIdx));
+}
+
+LLVMMetadataRef LLVMDbgVariableRecordGetVariable(LLVMDbgRecordRef Rec) {
+  return wrap(unwrap<DbgVariableRecord>(Rec)->getRawVariable());
+}
+
+LLVMMetadataRef LLVMDbgVariableRecordGetExpression(LLVMDbgRecordRef Rec) {
+  return wrap(unwrap<DbgVariableRecord>(Rec)->getRawExpression());
+}
+
 unsigned LLVMGetNumArgOperands(LLVMValueRef Instr) {
   if (FuncletPadInst *FPI = dyn_cast<FuncletPadInst>(unwrap(Instr))) {
     return FPI->arg_size();
@@ -3214,6 +3255,19 @@ void LLVMSetCondition(LLVMValueRef Branch, LLVMValueRef Cond) {
 
 LLVMBasicBlockRef LLVMGetSwitchDefaultDest(LLVMValueRef Switch) {
   return wrap(unwrap<SwitchInst>(Switch)->getDefaultDest());
+}
+
+LLVMValueRef LLVMGetSwitchCaseValue(LLVMValueRef Switch, unsigned i) {
+  assert(i > 0 && i <= unwrap<SwitchInst>(Switch)->getNumCases());
+  auto It = unwrap<SwitchInst>(Switch)->case_begin() + (i - 1);
+  return wrap(It->getCaseValue());
+}
+
+void LLVMSetSwitchCaseValue(LLVMValueRef Switch, unsigned i,
+                            LLVMValueRef CaseValue) {
+  assert(i > 0 && i <= unwrap<SwitchInst>(Switch)->getNumCases());
+  auto It = unwrap<SwitchInst>(Switch)->case_begin() + (i - 1);
+  It->setValue(unwrap<ConstantInt>(CaseValue));
 }
 
 /*--.. Operations on alloca instructions (only) ............................--*/

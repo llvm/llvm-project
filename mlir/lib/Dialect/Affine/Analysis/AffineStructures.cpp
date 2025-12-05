@@ -342,8 +342,7 @@ void FlatAffineValueConstraints::getIneqAsAffineValueMap(
 
   if (inequality[pos] > 0)
     // Lower bound.
-    std::transform(bound.begin(), bound.end(), bound.begin(),
-                   std::negate<int64_t>());
+    llvm::transform(bound, bound.begin(), std::negate<int64_t>());
   else
     // Upper bound (which is exclusive).
     bound.back() += 1;

@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-apple-ios-8.0.0 | FileCheck -check-prefix CHECK -check-prefix CHECK-DARWIN %s
-; RUN: llc < %s -mtriple=aarch64-unknown-windiws-msvc | FileCheck -check-prefix CHECK -check-prefix CHECK-WIN %s
+; RUN: llc < %s -mtriple=aarch64-unknown-windows-msvc | FileCheck -check-prefix CHECK -check-prefix CHECK-WIN %s
 
 declare void @standard_cc_func()
 declare preserve_mostcc void @preserve_mostcc_func()

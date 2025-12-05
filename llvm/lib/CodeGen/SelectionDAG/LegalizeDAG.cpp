@@ -2130,7 +2130,7 @@ SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
   if (const char *LibcallName = TLI.getLibcallName(LC))
     Callee = DAG.getExternalSymbol(LibcallName, CodePtrTy);
   else {
-    Callee = DAG.getUNDEF(CodePtrTy);
+    Callee = DAG.getPOISON(CodePtrTy);
     DAG.getContext()->emitError(Twine("no libcall available for ") +
                                 Node->getOperationName(&DAG));
   }
@@ -2381,8 +2381,19 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   Entry.IsZExt = !isSigned;
   Args.push_back(Entry);
 
-  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
-                                         TLI.getPointerTy(DAG.getDataLayout()));
+  RTLIB::LibcallImpl LibcallImpl = TLI.getLibcallImpl(LC);
+  if (LibcallImpl == RTLIB::Unsupported) {
+    DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                Node->getOperationName(&DAG));
+    SDValue Poison = DAG.getPOISON(RetVT);
+    Results.push_back(Poison);
+    Results.push_back(Poison);
+    return;
+  }
+
+  SDValue Callee =
+      DAG.getExternalSymbol(TLI.getLibcallImplName(LibcallImpl).data(),
+                            TLI.getPointerTy(DAG.getDataLayout()));
 
   SDLoc dl(Node);
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -3867,7 +3878,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     RTLIB::Libcall LC = RTLIB::getLDEXP(VT);
     // Use the LibCall instead, it is very likely faster
     // FIXME: Use separate LibCall action.
-    if (TLI.getLibcallName(LC))
+    if (TLI.getLibcallImpl(LC) != RTLIB::Unsupported)
       break;
 
     if (SDValue Expanded = expandLdexp(Node)) {
@@ -3882,7 +3893,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     RTLIB::Libcall LC = RTLIB::getFREXP(Node->getValueType(0));
     // Use the LibCall instead, it is very likely faster
     // FIXME: Use separate LibCall action.
-    if (TLI.getLibcallName(LC))
+    if (TLI.getLibcallImpl(LC) != RTLIB::Unsupported)
       break;
 
     if (SDValue Expanded = expandFrexp(Node)) {
@@ -4684,7 +4695,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     RTLIB::Libcall LC = RTLIB::getOUTLINE_ATOMIC(Opc, Order, VT);
     EVT RetVT = Node->getValueType(0);
     SmallVector<SDValue, 4> Ops;
-    if (TLI.getLibcallName(LC)) {
+    if (TLI.getLibcallImpl(LC) != RTLIB::Unsupported) {
       // If outline atomic available, prepare its arguments and expand.
       Ops.append(Node->op_begin() + 2, Node->op_end());
       Ops.push_back(Node->getOperand(1));
@@ -4842,9 +4853,15 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     RTLIB::Libcall LC = Node->getOpcode() == ISD::FSINCOS
                             ? RTLIB::getSINCOS(VT)
                             : RTLIB::getSINCOSPI(VT);
-    bool Expanded = DAG.expandMultipleResultFPLibCall(LC, Node, Results);
-    if (!Expanded)
-      llvm_unreachable("Expected scalar FSINCOS[PI] to expand to libcall!");
+    bool Expanded = TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results);
+    if (!Expanded) {
+      DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                  Node->getOperationName(&DAG));
+      SDValue Poison = DAG.getPOISON(VT);
+      Results.push_back(Poison);
+      Results.push_back(Poison);
+    }
+
     break;
   }
   case ISD::FLOG:
@@ -4934,7 +4951,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     EVT VT = Node->getValueType(0);
     RTLIB::Libcall LC = Node->getOpcode() == ISD::FMODF ? RTLIB::getMODF(VT)
                                                         : RTLIB::getFREXP(VT);
-    bool Expanded = DAG.expandMultipleResultFPLibCall(LC, Node, Results,
+    bool Expanded = TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results,
                                                       /*CallRetResNo=*/0);
     if (!Expanded)
       llvm_unreachable("Expected scalar FFREXP/FMODF to expand to libcall!");
@@ -4944,7 +4961,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   case ISD::STRICT_FPOWI: {
     RTLIB::Libcall LC = RTLIB::getPOWI(Node->getSimpleValueType(0));
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
-    if (!TLI.getLibcallName(LC)) {
+    if (TLI.getLibcallImpl(LC) == RTLIB::Unsupported) {
       // Some targets don't have a powi libcall; use pow instead.
       if (Node->isStrictFPOpcode()) {
         SDValue Exponent =
@@ -4975,7 +4992,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
       // If the exponent does not match with sizeof(int) a libcall to
       // RTLIB::POWI would use the wrong type for the argument.
       DAG.getContext()->emitError("POWI exponent does not match sizeof(int)");
-      Results.push_back(DAG.getUNDEF(Node->getValueType(0)));
+      Results.push_back(DAG.getPOISON(Node->getValueType(0)));
       break;
     }
     ExpandFPLibCall(Node, LC, Results);

@@ -29,8 +29,13 @@ TEST(ConstantsTest, UseCounts) {
 
   EXPECT_TRUE(Zero->use_empty());
   EXPECT_EQ(Zero->getNumUses(), 0u);
+  EXPECT_TRUE(Zero->hasNUses(0));
   EXPECT_FALSE(Zero->hasOneUse());
   EXPECT_FALSE(Zero->hasOneUser());
+  EXPECT_FALSE(Zero->hasNUses(1));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(1));
+  EXPECT_FALSE(Zero->hasNUses(2));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(2));
 
   std::unique_ptr<Module> M(new Module("MyModule", Context));
 
@@ -45,35 +50,14 @@ TEST(ConstantsTest, UseCounts) {
   // Still looks like use_empty with uses.
   EXPECT_TRUE(Zero->use_empty());
   EXPECT_EQ(Zero->getNumUses(), 0u);
+  EXPECT_TRUE(Zero->hasNUses(0));
   EXPECT_FALSE(Zero->hasOneUse());
   EXPECT_FALSE(Zero->hasOneUser());
+  EXPECT_FALSE(Zero->hasNUses(1));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(1));
+  EXPECT_FALSE(Zero->hasNUses(2));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(2));
 }
-
-#ifdef GTEST_HAS_DEATH_TEST
-#ifndef NDEBUG
-
-TEST(ConstantsTest, hasNUsesInvalid) {
-  LLVMContext Context;
-  Type *Int32Ty = Type::getInt32Ty(Context);
-  Constant *Zero = ConstantInt::get(Int32Ty, 0);
-  std::unique_ptr<Module> M(new Module("MyModule", Context));
-
-  // Introduce some uses
-  new GlobalVariable(*M, Int32Ty, /*isConstant=*/false,
-                     GlobalValue::ExternalLinkage, /*Initializer=*/Zero,
-                     "gv_user0");
-  new GlobalVariable(*M, Int32Ty, /*isConstant=*/false,
-                     GlobalValue::ExternalLinkage, /*Initializer=*/Zero,
-                     "gv_user1");
-
-  for (int I = 0; I != 3; ++I) {
-    EXPECT_DEATH(Zero->hasNUses(I), "hasUseList\\(\\)");
-    EXPECT_DEATH(Zero->hasNUsesOrMore(I), "hasUseList\\(\\)");
-  }
-}
-
-#endif
-#endif
 
 TEST(ConstantsTest, Integer_i1) {
   LLVMContext Context;
@@ -849,6 +833,37 @@ TEST(ConstantsTest, BlockAddressCAPITest) {
   // Verify that they round-tripped properly
   EXPECT_EQ(Func, OutFunc);
   EXPECT_EQ(&BB, OutBB);
+}
+
+TEST(ConstantsTest, Float128Test) {
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMTypeRef Ty128 = LLVMFP128TypeInContext(C);
+  LLVMTypeRef TyPPC128 = LLVMPPCFP128TypeInContext(C);
+  LLVMTypeRef TyFloat = LLVMFloatTypeInContext(C);
+  LLVMTypeRef TyDouble = LLVMDoubleTypeInContext(C);
+  LLVMTypeRef TyHalf = LLVMHalfTypeInContext(C);
+  LLVMBuilderRef Builder = LLVMCreateBuilder();
+  uint64_t n[2] = {0x4000000000000000, 0x0}; //+2
+  uint64_t m[2] = {0xC000000000000000, 0x0}; //-2
+  LLVMValueRef val1 = LLVMConstFPFromBits(Ty128, n);
+  EXPECT_TRUE(val1 != nullptr);
+  LLVMValueRef val2 = LLVMConstFPFromBits(Ty128, m);
+  EXPECT_TRUE(val2 != nullptr);
+  LLVMValueRef val3 = LLVMBuildFAdd(Builder, val1, val2, "test");
+  EXPECT_TRUE(val3 != nullptr);
+  LLVMValueRef val4 = LLVMConstFPFromBits(TyPPC128, n);
+  EXPECT_TRUE(val4 != nullptr);
+  uint64_t p[1] = {0x0000000040000000}; //+2
+  LLVMValueRef val5 = LLVMConstFPFromBits(TyFloat, p);
+  EXPECT_EQ(APFloat(2.0f), unwrap<ConstantFP>(val5)->getValue());
+  uint64_t q[1] = {0x4000000000000000}; //+2
+  LLVMValueRef val6 = LLVMConstFPFromBits(TyDouble, q);
+  EXPECT_EQ(APFloat(2.0), unwrap<ConstantFP>(val6)->getValue());
+  uint64_t r[1] = {0x0000000000003c00}; //+1
+  LLVMValueRef val7 = LLVMConstFPFromBits(TyHalf, r);
+  EXPECT_TRUE(val7 != nullptr);
+  LLVMDisposeBuilder(Builder);
+  LLVMContextDispose(C);
 }
 
 } // end anonymous namespace
