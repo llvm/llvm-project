@@ -1,0 +1,7 @@
+# X.509 PKI Path Fuzzing Configuration
+targets:
+  x509_pki:
+    type: x509_path
+    max_chain_len: 8
+    fuzz_name_constraints: true
+    fuzz_idn: true

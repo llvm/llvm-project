@@ -1,0 +1,9 @@
+# TLS Dialect Fuzzing Configuration
+targets:
+  tls_dialect:
+    type: tls_handshake
+    role: client
+    max_record_size: 16384
+    use_0rtt: true
+    use_tickets: true
+    use_psk: true

@@ -1,0 +1,7 @@
+# TLS State Machine Fuzzing Configuration
+targets:
+  tls_state:
+    type: tls_state_machine
+    fuzz_tickets: true
+    fuzz_psk_binding: true
+    fuzz_0rtt: true

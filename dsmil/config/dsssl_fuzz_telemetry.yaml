@@ -1,0 +1,99 @@
+# DSSSL Fuzzing & Telemetry Configuration
+# This file configures crypto budgets, fuzzing targets, and telemetry settings
+
+# Crypto operation budgets for constant-time enforcement
+crypto_budgets:
+  ecdsa_sign:
+    max_branches: 5000
+    max_loads: 20000
+    max_stores: 10000
+    max_delta_cycles: 2000
+  
+  ecdsa_verify:
+    max_branches: 6000
+    max_loads: 25000
+    max_stores: 12000
+    max_delta_cycles: 2500
+  
+  eddsa_sign:
+    max_branches: 3000
+    max_loads: 15000
+    max_stores: 8000
+    max_delta_cycles: 1500
+  
+  rsa_pss_sign:
+    max_branches: 10000
+    max_loads: 50000
+    max_stores: 25000
+    max_delta_cycles: 5000
+  
+  kem_encapsulate:
+    max_branches: 8000
+    max_loads: 40000
+    max_stores: 20000
+    max_delta_cycles: 4000
+  
+  aead_encrypt:
+    max_branches: 2000
+    max_loads: 10000
+    max_stores: 5000
+    max_delta_cycles: 1000
+
+# Fuzzing targets configuration
+targets:
+  # TLS handshake dialect fuzzing
+  tls_dialect:
+    type: tls_handshake
+    role: client
+    max_record_size: 16384
+    use_0rtt: true
+    use_tickets: true
+    use_psk: true
+  
+  # X.509 PKI path validation fuzzing
+  x509_pki:
+    type: x509_path
+    max_chain_len: 8
+    fuzz_name_constraints: true
+    fuzz_idn: true
+  
+  # TLS state machine fuzzing (tickets, PSKs, 0-RTT)
+  tls_state:
+    type: tls_state_machine
+    fuzz_tickets: true
+    fuzz_psk_binding: true
+    fuzz_0rtt: true
+
+# API misuse detection policies
+api_misuse_policies:
+  AEAD_init:
+    check_nonce_length: true
+    check_nonce_reuse: true
+    abort_on_violation: false
+  
+  cert_verify:
+    check_host_verification: true
+    check_null_callbacks: true
+    abort_on_violation: true
+  
+  RNG_init:
+    check_cryptographic_seed: true
+    abort_on_violation: true
+
+# Telemetry settings
+telemetry:
+  ring_buffer_size: 65536
+  flush_on_exit: true
+  output_file: "dsssl_telemetry.bin"
+  enable_timing: false  # Set to true to enable cycle counting
+
+# State machine budgets
+state_machine_budgets:
+  tls_handshake:
+    max_transitions: 50
+  
+  ticket_lifecycle:
+    max_transitions: 20
+  
+  pki_path_building:
+    max_transitions: 30
