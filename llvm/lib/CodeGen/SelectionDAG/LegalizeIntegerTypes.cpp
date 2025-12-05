@@ -132,8 +132,10 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
                          Res = PromoteIntRes_VECTOR_REVERSE(N); break;
   case ISD::VECTOR_SHUFFLE:
                          Res = PromoteIntRes_VECTOR_SHUFFLE(N); break;
-  case ISD::VECTOR_SPLICE:
-                         Res = PromoteIntRes_VECTOR_SPLICE(N); break;
+  case ISD::VECTOR_SPLICE_DOWN:
+  case ISD::VECTOR_SPLICE_UP:
+    Res = PromoteIntRes_VECTOR_SPLICE(N);
+    break;
   case ISD::VECTOR_INTERLEAVE:
   case ISD::VECTOR_DEINTERLEAVE:
     Res = PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(N);
@@ -6001,7 +6003,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SPLICE(SDNode *N) {
   SDValue V1 = GetPromotedInteger(N->getOperand(1));
   EVT OutVT = V0.getValueType();
 
-  return DAG.getNode(ISD::VECTOR_SPLICE, dl, OutVT, V0, V1, N->getOperand(2));
+  return DAG.getNode(N->getOpcode(), dl, OutVT, V0, V1, N->getOperand(2));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N) {

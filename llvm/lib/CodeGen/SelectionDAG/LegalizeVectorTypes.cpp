@@ -1258,7 +1258,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_SHUFFLE:
     SplitVecRes_VECTOR_SHUFFLE(cast<ShuffleVectorSDNode>(N), Lo, Hi);
     break;
-  case ISD::VECTOR_SPLICE:
+  case ISD::VECTOR_SPLICE_DOWN:
+  case ISD::VECTOR_SPLICE_UP:
     SplitVecRes_VECTOR_SPLICE(N, Lo, Hi);
     break;
   case ISD::VECTOR_DEINTERLEAVE:

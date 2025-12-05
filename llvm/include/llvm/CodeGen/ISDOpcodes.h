@@ -641,17 +641,16 @@ enum NodeType {
   /// in terms of the element size of VEC1/VEC2, not in terms of bytes.
   VECTOR_SHUFFLE,
 
-  /// VECTOR_SPLICE(VEC1, VEC2, IMM) - Returns a subvector of the same type as
-  /// VEC1/VEC2 from CONCAT_VECTORS(VEC1, VEC2), based on the IMM in two ways.
-  /// Let the result type be T, if IMM is positive it represents the starting
-  /// element number (an index) from which a subvector of type T is extracted
-  /// from CONCAT_VECTORS(VEC1, VEC2). If IMM is negative it represents a count
-  /// specifying the number of trailing elements to extract from VEC1, where the
-  /// elements of T are selected using the following algorithm:
-  ///   RESULT[i] = CONCAT_VECTORS(VEC1,VEC2)[VEC1.ElementCount - ABS(IMM) + i]
-  /// If IMM is not in the range [-VL, VL-1] the result vector is undefined. IMM
-  /// is a constant integer.
-  VECTOR_SPLICE,
+  /// VECTOR_SPLICE_DOWN(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1, VEC2)
+  /// down by OFFSET elements and returns the lower half. If OFFSET is greater
+  /// than the runtime number of elements in the result type the result is
+  /// poison.
+  VECTOR_SPLICE_DOWN,
+  /// VECTOR_SPLICE_UP(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1, VEC2)
+  /// up by OFFSET elements and returns the upper half. If OFFSET is greater
+  /// than the runtime number of elements in the result type the result is
+  /// poison.
+  VECTOR_SPLICE_UP,
 
   /// SCALAR_TO_VECTOR(VAL) - This represents the operation of loading a
   /// scalar value into element 0 of the resultant vector type.  The top

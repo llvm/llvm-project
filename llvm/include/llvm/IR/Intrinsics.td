@@ -2808,13 +2808,15 @@ def int_vector_reverse : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                                [IntrNoMem,
                                                 IntrSpeculatable]>;
 
-def int_vector_splice : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                              [LLVMMatchType<0>,
-                                               LLVMMatchType<0>,
-                                               llvm_i32_ty],
-                                              [IntrNoMem,
-                                               IntrSpeculatable,
-                                               ImmArg<ArgIndex<2>>]>;
+def int_vector_splice_down
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
+                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+
+def int_vector_splice_up
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
+                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
 
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty],

@@ -1543,7 +1543,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MULHS, VT, Custom);
       setOperationAction(ISD::MULHU, VT, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
-      setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
+      setOperationAction(ISD::VECTOR_SPLICE_DOWN, VT, Custom);
+      setOperationAction(ISD::VECTOR_SPLICE_UP, VT, Custom);
       setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SETCC, VT, Custom);
       setOperationAction(ISD::SDIV, VT, Custom);
@@ -1731,7 +1732,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_FMAXIMUM, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMINIMUM, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMUL, VT, Custom);
-      setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
+      setOperationAction(ISD::VECTOR_SPLICE_DOWN, VT, Custom);
+      setOperationAction(ISD::VECTOR_SPLICE_UP, VT, Custom);
       setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
 
@@ -1785,7 +1787,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
       setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
+      setOperationAction(ISD::VECTOR_SPLICE_DOWN, VT, Custom);
+      setOperationAction(ISD::VECTOR_SPLICE_UP, VT, Custom);
     }
 
     if (Subtarget->hasSVEB16B16() &&
@@ -1911,10 +1914,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
     }
 
-    setOperationPromotedToType(ISD::VECTOR_SPLICE, MVT::nxv2i1, MVT::nxv2i64);
-    setOperationPromotedToType(ISD::VECTOR_SPLICE, MVT::nxv4i1, MVT::nxv4i32);
-    setOperationPromotedToType(ISD::VECTOR_SPLICE, MVT::nxv8i1, MVT::nxv8i16);
-    setOperationPromotedToType(ISD::VECTOR_SPLICE, MVT::nxv16i1, MVT::nxv16i8);
+    setOperationPromotedToType({ISD::VECTOR_SPLICE_DOWN, ISD::VECTOR_SPLICE_UP},
+                               MVT::nxv2i1, MVT::nxv2i64);
+    setOperationPromotedToType({ISD::VECTOR_SPLICE_DOWN, ISD::VECTOR_SPLICE_UP},
+                               MVT::nxv4i1, MVT::nxv4i32);
+    setOperationPromotedToType({ISD::VECTOR_SPLICE_DOWN, ISD::VECTOR_SPLICE_UP},
+                               MVT::nxv8i1, MVT::nxv8i16);
+    setOperationPromotedToType({ISD::VECTOR_SPLICE_DOWN, ISD::VECTOR_SPLICE_UP},
+                               MVT::nxv16i1, MVT::nxv16i8);
 
     setOperationAction(ISD::VSCALE, MVT::i32, Custom);
 
@@ -2421,7 +2428,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::VECREDUCE_UMIN, VT, Default);
   setOperationAction(ISD::VECREDUCE_XOR, VT, Default);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Default);
-  setOperationAction(ISD::VECTOR_SPLICE, VT, Default);
+  setOperationAction(ISD::VECTOR_SPLICE_DOWN, VT, Default);
+  setOperationAction(ISD::VECTOR_SPLICE_UP, VT, Default);
   setOperationAction(ISD::VSELECT, VT, Default);
   setOperationAction(ISD::XOR, VT, Default);
   setOperationAction(ISD::ZERO_EXTEND, VT, Default);
@@ -8080,7 +8088,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTLZ_MERGE_PASSTHRU);
   case ISD::CTTZ:
     return LowerCTTZ(Op, DAG);
-  case ISD::VECTOR_SPLICE:
+  case ISD::VECTOR_SPLICE_DOWN:
+  case ISD::VECTOR_SPLICE_UP:
     return LowerVECTOR_SPLICE(Op, DAG);
   case ISD::VECTOR_DEINTERLEAVE:
     return LowerVECTOR_DEINTERLEAVE(Op, DAG);
@@ -12280,8 +12289,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_SPLICE(SDValue Op,
   // there are enough elements in the vector, hence we check the index <= min
   // number of elements.
   std::optional<unsigned> PredPattern;
-  if (Ty.isScalableVector() && IdxVal < 0 &&
-      (PredPattern = getSVEPredPatternFromNumElements(std::abs(IdxVal))) !=
+  if (Ty.isScalableVector() && Op.getOpcode() == ISD::VECTOR_SPLICE_UP &&
+      (PredPattern = getSVEPredPatternFromNumElements(IdxVal)) !=
           std::nullopt) {
     SDLoc DL(Op);
 
@@ -12297,7 +12306,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_SPLICE(SDValue Op,
 
   // We can select to an EXT instruction when indexing the first 256 bytes.
   unsigned BlockSize = AArch64::SVEBitsPerBlock / Ty.getVectorMinNumElements();
-  if (IdxVal >= 0 && (IdxVal * BlockSize / 8) < 256)
+  if (Op.getOpcode() == ISD::VECTOR_SPLICE_DOWN &&
+      (IdxVal * BlockSize / 8) < 256)
     return Op;
 
   return SDValue();
@@ -16398,7 +16408,8 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
 
     assert(InVT.isScalableVector() && "Unexpected vector type!");
     // Move requested subvector to the start of the vector and try again.
-    SDValue Splice = DAG.getNode(ISD::VECTOR_SPLICE, DL, InVT, Vec, Vec, Idx);
+    SDValue Splice =
+        DAG.getNode(ISD::VECTOR_SPLICE_DOWN, DL, InVT, Vec, Vec, Idx);
     return convertFromScalableVector(DAG, VT, Splice);
   }
 

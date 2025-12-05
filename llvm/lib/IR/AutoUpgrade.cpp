@@ -1299,7 +1299,6 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
               .StartsWith("extract.last.active.", Intrinsic::not_intrinsic)
               .StartsWith("extract.", Intrinsic::vector_extract)
               .StartsWith("insert.", Intrinsic::vector_insert)
-              .StartsWith("splice.", Intrinsic::vector_splice)
               .StartsWith("reverse.", Intrinsic::vector_reverse)
               .StartsWith("interleave2.", Intrinsic::vector_interleave2)
               .StartsWith("deinterleave2.", Intrinsic::vector_deinterleave2)
@@ -1664,6 +1663,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       NewFn = Intrinsic::getOrInsertDeclaration(
           F->getParent(), Intrinsic::var_annotation,
           {{F->arg_begin()->getType(), F->getArg(1)->getType()}});
+      return true;
+    }
+    if (Name.consume_front("vector.splice")) {
+      if (Name.starts_with(".down") || Name.starts_with(".up"))
+        break;
       return true;
     }
     break;
@@ -4673,6 +4677,18 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
   CI->getParent()->insertDbgRecordBefore(DR, CI->getIterator());
 }
 
+static Value *upgradeVectorSplice(CallBase *CI, IRBuilder<> &Builder) {
+  auto *Offset = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+  if (!Offset)
+    reportFatalUsageError("Invalid llvm.vector.splice offset argument");
+  int64_t OffsetVal = Offset->getSExtValue();
+  return Builder.CreateIntrinsic(OffsetVal >= 0 ? Intrinsic::vector_splice_down
+                                                : Intrinsic::vector_splice_up,
+                                 CI->getType(),
+                                 {CI->getArgOperand(0), CI->getArgOperand(1),
+                                  Builder.getInt32(std::abs(OffsetVal))});
+}
+
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
 /// provided to seamlessly integrate with existing context.
 void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
@@ -4700,6 +4716,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     bool IsARM = Name.consume_front("arm.");
     bool IsAMDGCN = Name.consume_front("amdgcn.");
     bool IsDbg = Name.consume_front("dbg.");
+    bool IsOldSplice = Name.consume_front("vector.splice") &&
+                       !(Name.starts_with(".down") || Name.starts_with(".up"));
     Value *Rep = nullptr;
 
     if (!IsX86 && Name == "stackprotectorcheck") {
@@ -4716,6 +4734,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = upgradeAMDGCNIntrinsicCall(Name, CI, F, Builder);
     } else if (IsDbg) {
       upgradeDbgIntrinsicToDbgRecord(Name, CI);
+    } else if (IsOldSplice) {
+      Rep = upgradeVectorSplice(CI, Builder);
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }

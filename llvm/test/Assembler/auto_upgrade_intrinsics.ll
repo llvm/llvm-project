@@ -216,6 +216,17 @@ define void @test.prefetch.unnamed(ptr %ptr) {
   ret void
 }
 
+define void @test.vector.splice(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @test.vector.splice
+; CHECK: @llvm.vector.splice.up.v4i32(<4 x i32> %a, <4 x i32> %b, i32 3)
+  call <4 x i32> @llvm.vector.splice(<4 x i32> %a, <4 x i32> %b, i32 3)
+; CHECK: @llvm.vector.splice.down.v4i32(<4 x i32> %a, <4 x i32> %b, i32 2)
+  call <4 x i32> @llvm.vector.splice(<4 x i32> %a, <4 x i32> %b, i32 -2)
+; CHECK: @llvm.vector.splice.up.v4i32(<4 x i32> %a, <4 x i32> %b, i32 1)
+  call <4 x i32> @llvm.vector.splice.v4i32(<4 x i32> %a, <4 x i32> %b, i32 1)
+  ret void
+}
+
 ; This is part of @test.objectsize(), since llvm.objectsize declaration gets
 ; emitted at the end.
 ; CHECK: declare i32 @llvm.objectsize.i32.p0
