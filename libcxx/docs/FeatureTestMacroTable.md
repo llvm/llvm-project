@@ -307,7 +307,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_ranges_reserve_hint`                        | *unimplemented* |
 | `__cpp_lib_ratio`                                      | `202306L`       |
 | `__cpp_lib_raw_memory_algorithms`                      | `202411L`       |
-| `__cpp_lib_rcu`                                        | *unimplemented* |
+| `__cpp_lib_rcu`                                        | `202306L`       |
 | `__cpp_lib_reference_wrapper`                          | `202403L`       |
 | `__cpp_lib_saturation_arithmetic`                      | `202603L`       |
 | `__cpp_lib_senders`                                    | *unimplemented* |
