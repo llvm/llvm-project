@@ -49,8 +49,8 @@ template <class T> void D<T>::to_be_imported_iff_no_explicit_instantiation() noe
 template <class T>
 struct E {
   // For the MSVC ABI: this constructor causes implicit instantiation of
-  // the VTable, which should trigger instantiating all virtual member
-  // functions regardless `exclude_from_explicit_instantiation` but currently not.
+  // the VTable, which triggers instantiating all virtual member
+  // functions regardless `exclude_from_explicit_instantiation`.
   // For the Itanium ABI: Emitting the VTable is suppressed by implicit
   // instantiation declaration so virtual member functions won't be instantiated.
   EXCLUDE_FROM_EXPLICIT_INSTANTIATION explicit E(int);
@@ -79,6 +79,8 @@ template <class T> void E<T>::to_be_instantiated() noexcept {}
 
 // MSC: $"?not_to_be_imported@?$C@H@@QEAAXXZ" = comdat any
 // MSC: $"?to_be_imported_iff_no_explicit_instantiation@?$D@H@@QEAAXXZ" = comdat any
+// MSC: $"?to_be_instantiated@?$E@H@@UEAAXXZ" = comdat any
+// MSC: $"?to_be_instantiated@?$E@I@@UEAAXXZ" = comdat any
 // GNU: $_ZN1CIiE18not_to_be_importedEv = comdat any
 // GNU: $_ZN1DIiE44to_be_imported_iff_no_explicit_instantiationEv = comdat any
 // GNU: @_ZTV1EIiE = external dllimport unnamed_addr
@@ -159,9 +161,9 @@ void use() {
 // GNU: define linkonce_odr dso_local void @_ZN1EIjEC2Ei
 
 // MSC: declare dllimport void @"?to_be_imported@?$E@H@@UEAAXXZ"
-// MSC: declare dso_local void @"?to_be_instantiated@?$E@H@@UEAAXXZ"
+// MSC: define linkonce_odr dso_local void @"?to_be_instantiated@?$E@H@@UEAAXXZ"
 // MSC: declare dllimport void @"?to_be_imported_explicitly@?$E@H@@UEAAXXZ"
 
 // MSC: declare dso_local void @"?to_be_imported@?$E@I@@UEAAXXZ"
-// MSC: declare dso_local void @"?to_be_instantiated@?$E@I@@UEAAXXZ"
+// MSC: define linkonce_odr dso_local void @"?to_be_instantiated@?$E@I@@UEAAXXZ"
 // MSC: declare dllimport void @"?to_be_imported_explicitly@?$E@I@@UEAAXXZ"
