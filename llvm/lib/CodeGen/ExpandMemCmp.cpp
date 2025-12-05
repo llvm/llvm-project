@@ -25,6 +25,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -488,6 +489,8 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(unsigned BlockIndex,
   // continue to next LoadCmpBlock or EndBlock.
   BasicBlock *BB = Builder.GetInsertBlock();
   BranchInst *CmpBr = BranchInst::Create(ResBlock.BB, NextBB, Cmp);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CmpBr, DEBUG_TYPE,
+                                              CI->getFunction());
   Builder.Insert(CmpBr);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, ResBlock.BB},
@@ -552,6 +555,8 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned BlockIndex) {
   // to next LoadCmpBlock or EndBlock.
   BasicBlock *BB = Builder.GetInsertBlock();
   BranchInst *CmpBr = BranchInst::Create(NextBB, ResBlock.BB, Cmp);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CmpBr, DEBUG_TYPE,
+                                              CI->getFunction());
   Builder.Insert(CmpBr);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, NextBB},
@@ -592,6 +597,8 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
   Value *Res =
       Builder.CreateSelect(Cmp, Constant::getAllOnesValue(Builder.getInt32Ty()),
                            ConstantInt::get(Builder.getInt32Ty(), 1));
+  setExplicitlyUnknownBranchWeightsIfProfiled(*cast<Instruction>(Res),
+                                              DEBUG_TYPE, CI->getFunction());
 
   PhiRes->addIncoming(Res, ResBlock.BB);
   BranchInst *NewBr = BranchInst::Create(EndBlock);

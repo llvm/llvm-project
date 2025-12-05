@@ -8,12 +8,15 @@
 
 #include "BitcodeReader.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 namespace clang {
 namespace doc {
+
+static llvm::ExitOnError ExitOnErr("clang-doc error: ");
 
 using Record = llvm::SmallVector<uint64_t, 1024>;
 
@@ -716,8 +719,8 @@ llvm::Error addReference(FriendInfo *Friend, Reference &&R, FieldId F) {
 
 template <typename T, typename ChildInfoType>
 static void addChild(T I, ChildInfoType &&R) {
-  llvm::errs() << "invalid child type for info";
-  exit(1);
+  ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                    "invalid child type for info"));
 }
 
 // Namespace children:
@@ -766,8 +769,9 @@ template <> void addChild(BaseRecordInfo *I, FunctionInfo &&R) {
 // parameters) or TemplateSpecializationInfo (for the specialization's
 // parameters).
 template <typename T> static void addTemplateParam(T I, TemplateParamInfo &&P) {
-  llvm::errs() << "invalid container for template parameter";
-  exit(1);
+  ExitOnErr(
+      llvm::createStringError(llvm::inconvertibleErrorCode(),
+                              "invalid container for template parameter"));
 }
 template <> void addTemplateParam(TemplateInfo *I, TemplateParamInfo &&P) {
   I->Params.emplace_back(std::move(P));
@@ -779,8 +783,8 @@ void addTemplateParam(TemplateSpecializationInfo *I, TemplateParamInfo &&P) {
 
 // Template info. These apply to either records or functions.
 template <typename T> static void addTemplate(T I, TemplateInfo &&P) {
-  llvm::errs() << "invalid container for template info";
-  exit(1);
+  ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                    "invalid container for template info"));
 }
 template <> void addTemplate(RecordInfo *I, TemplateInfo &&P) {
   I->Template.emplace(std::move(P));
@@ -798,8 +802,9 @@ template <> void addTemplate(FriendInfo *I, TemplateInfo &&P) {
 // Template specializations go only into template records.
 template <typename T>
 static void addTemplateSpecialization(T I, TemplateSpecializationInfo &&TSI) {
-  llvm::errs() << "invalid container for template specialization info";
-  exit(1);
+  ExitOnErr(llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "invalid container for template specialization info"));
 }
 template <>
 void addTemplateSpecialization(TemplateInfo *I,
@@ -808,8 +813,8 @@ void addTemplateSpecialization(TemplateInfo *I,
 }
 
 template <typename T> static void addConstraint(T I, ConstraintInfo &&C) {
-  llvm::errs() << "invalid container for constraint info";
-  exit(1);
+  ExitOnErr(llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                    "invalid container for constraint info"));
 }
 template <> void addConstraint(TemplateInfo *I, ConstraintInfo &&C) {
   I->Constraints.emplace_back(std::move(C));
