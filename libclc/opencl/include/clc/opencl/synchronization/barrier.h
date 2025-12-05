@@ -10,7 +10,6 @@
 #define __CLC_OPENCL_SYNCHRONIZATION_BARRIER_H__
 
 #include <clc/opencl/opencl-base.h>
-#include <clc/opencl/synchronization/cl_mem_fence_flags.h>
 
 _CLC_DECL _CLC_OVERLOAD void barrier(cl_mem_fence_flags flags);
 
