@@ -1,0 +1,21 @@
+# JSON Parser Fuzzing Configuration
+target:
+  name: "json_parser"
+  type: "parser"
+  input_format: "text"
+  max_input_size: 1048576
+  
+  enable_structure_aware: true
+  enable_grammar_fuzzing: true
+  grammar_file: "json_grammar.bnf"
+  
+  enable_dictionary: true
+  dictionary:
+    - "{"
+    - "}"
+    - "["
+    - "]"
+    - "\""
+    - "null"
+    - "true"
+    - "false"

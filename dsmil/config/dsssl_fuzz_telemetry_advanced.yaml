@@ -1,0 +1,275 @@
+# Advanced DSSSL Fuzzing & Telemetry Configuration
+# Enhanced for next-generation fuzzing techniques and high-performance systems
+
+# Crypto operation budgets (enhanced with performance metrics)
+crypto_budgets:
+  ecdsa_sign:
+    max_branches: 5000
+    max_loads: 20000
+    max_stores: 10000
+    max_delta_cycles: 2000
+    max_cache_misses: 1000
+    max_branch_mispredicts: 50
+  
+  ecdsa_verify:
+    max_branches: 6000
+    max_loads: 25000
+    max_stores: 12000
+    max_delta_cycles: 2500
+    max_cache_misses: 1200
+    max_branch_mispredicts: 60
+  
+  eddsa_sign:
+    max_branches: 3000
+    max_loads: 15000
+    max_stores: 8000
+    max_delta_cycles: 1500
+    max_cache_misses: 800
+    max_branch_mispredicts: 30
+  
+  kem_encapsulate:
+    max_branches: 8000
+    max_loads: 40000
+    max_stores: 20000
+    max_delta_cycles: 4000
+    max_cache_misses: 2000
+    max_branch_mispredicts: 100
+
+# Advanced fuzzing targets with next-gen techniques
+targets:
+  # TLS with grammar-based and ML-guided fuzzing
+  tls_advanced:
+    type: tls_handshake
+    role: client
+    max_record_size: 16384
+    use_0rtt: true
+    use_tickets: true
+    use_psk: true
+    
+    # Advanced fuzzing techniques
+    enable_grammar_fuzzing: true
+    grammar_file: "tls_grammar.bnf"
+    enable_structure_aware: true
+    enable_ml_guided: true
+    ml_model_path: "models/tls_mutation_model.onnx"
+    ml_online: false
+    
+    # Dictionary-based fuzzing
+    enable_dictionary: true
+    dictionary:
+      - "TLS 1.3"
+      - "TLS 1.2"
+      - "GREASE"
+      - "key_share"
+      - "supported_versions"
+      - "signature_algorithms"
+      - "application_layer_protocol_negotiation"
+    
+    # Performance optimizations
+    enable_perf_counters: true
+    enable_parallel: true
+    num_threads: 8
+    enable_batch_processing: true
+    batch_size: 10000
+    
+    # Distributed fuzzing
+    enable_distributed: true
+    worker_id: 0
+    num_workers: 16
+    corpus_sync_path: "/shared/corpus"
+  
+  # X.509 with structure-aware fuzzing
+  x509_advanced:
+    type: x509_path
+    max_chain_len: 8
+    fuzz_name_constraints: true
+    fuzz_idn: true
+    enable_structure_aware: true
+    enable_grammar_fuzzing: true
+    grammar_file: "asn1_grammar.bnf"
+  
+  # ML training data collection
+  ml_training:
+    type: ml_training
+    enable_perf_counters: true
+    enable_ml: true
+    ml_model_path: "models/coverage_predictor.onnx"
+    export_format: "json"
+    export_interval: 100000
+
+# Advanced API misuse policies
+api_misuse_policies:
+  AEAD_init:
+    check_nonce_length: true
+    check_nonce_reuse: true
+    check_iv_patterns: true
+    abort_on_violation: false
+    log_to_telemetry: true
+  
+  cert_verify:
+    check_host_verification: true
+    check_null_callbacks: true
+    check_expired_certs: true
+    abort_on_violation: true
+  
+  RNG_init:
+    check_cryptographic_seed: true
+    check_entropy_sources: true
+    abort_on_violation: true
+
+# Enhanced telemetry settings
+telemetry:
+  ring_buffer_size: 1048576  # 1MB ring buffer for high-throughput
+  flush_on_exit: true
+  output_file: "dsssl_telemetry.bin"
+  enable_timing: true
+  enable_perf_counters: true
+  enable_ml_integration: true
+  
+  # Compression
+  compress_output: true
+  compression_level: 6
+  
+  # Export formats
+  export_formats:
+    - "json"
+    - "protobuf"
+    - "parquet"
+  
+  # ML export settings
+  ml_export:
+    enabled: true
+    format: "json"
+    interval: 100000
+    include_coverage: true
+    include_performance: true
+    include_mutations: true
+
+# State machine budgets (enhanced)
+state_machine_budgets:
+  tls_handshake:
+    max_transitions: 50
+    max_depth: 10
+  
+  ticket_lifecycle:
+    max_transitions: 20
+    max_depth: 5
+  
+  pki_path_building:
+    max_transitions: 30
+    max_depth: 8
+
+# Mutation strategies configuration
+mutation_strategies:
+  bit_flip:
+    enabled: true
+    probability: 0.3
+  
+  byte_insert:
+    enabled: true
+    probability: 0.2
+  
+  byte_delete:
+    enabled: true
+    probability: 0.2
+  
+  crossover:
+    enabled: true
+    probability: 0.1
+  
+  dictionary_insert:
+    enabled: true
+    probability: 0.1
+  
+  ml_guided:
+    enabled: true
+    probability: 0.1
+    model_path: "models/mutation_model.onnx"
+
+# Coverage feedback configuration
+coverage_feedback:
+  # Interestingness scoring
+  interestingness_threshold: 0.7
+  use_ml_scoring: true
+  ml_model_path: "models/interestingness_model.onnx"
+  
+  # Coverage map settings
+  coverage_map_size: 1048576  # 1M entries
+  edge_map_size: 524288
+  state_map_size: 65536
+  
+  # Feedback frequency
+  feedback_interval: 1000
+  export_coverage_map: true
+
+# Performance optimization settings
+performance:
+  # Parallel processing
+  enable_parallel: true
+  num_threads: 8
+  thread_affinity: true
+  
+  # Batch processing
+  enable_batch: true
+  batch_size: 10000
+  batch_timeout_ms: 100
+  
+  # Memory management
+  preallocate_buffers: true
+  buffer_size: 1048576
+  max_memory_mb: 4096
+  
+  # CPU optimizations
+  enable_simd: true
+  enable_avx512: true
+  enable_amx: false  # Intel AMX if available
+
+# Distributed fuzzing configuration
+distributed:
+  enabled: true
+  coordinator_url: "http://coordinator:8080"
+  worker_id: 0
+  num_workers: 16
+  
+  # Corpus synchronization
+  sync_interval: 60  # seconds
+  sync_path: "/shared/corpus"
+  use_shared_memory: true
+  
+  # Load balancing
+  load_balancing: "round_robin"
+  work_stealing: true
+
+# ML/AI integration
+ml_integration:
+  enabled: true
+  
+  # Models
+  models:
+    mutation_guide:
+      path: "models/mutation_guide.onnx"
+      type: "mutation"
+      version: "1.0"
+    
+    interestingness:
+      path: "models/interestingness.onnx"
+      type: "scoring"
+      version: "1.0"
+    
+    coverage_predictor:
+      path: "models/coverage_predictor.onnx"
+      type: "prediction"
+      version: "1.0"
+  
+  # Inference settings
+  inference:
+    batch_size: 32
+    use_gpu: false
+    gpu_device: 0
+    precision: "fp32"
+  
+  # Online learning (if supported)
+  online_learning:
+    enabled: false
+    update_interval: 1000000
+    learning_rate: 0.001

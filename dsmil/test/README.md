@@ -1,374 +1,171 @@
-# DSMIL Test Suite
+# DSLLVM Test Suite
 
-This directory contains comprehensive tests for DSLLVM functionality.
+Comprehensive test suite for DSLLVM covering all implemented features.
 
-## Test Categories
+## Test Structure
 
-### Layer Policy Tests (`dsmil/layer_policies/`)
-
-Test enforcement of DSMIL layer boundary policies.
-
-**Test Cases**:
-- ✅ Same-layer calls (should pass)
-- ✅ Downward calls (higher → lower layer, should pass)
-- ❌ Upward calls without gateway (should fail)
-- ✅ Upward calls with gateway (should pass)
-- ❌ Clearance violations (should fail)
-- ✅ Clearance with gateway (should pass)
-- ❌ ROE escalation without gateway (should fail)
-
-**Example Test**:
-```c
-// RUN: dsmil-clang -fpass-pipeline=dsmil-default %s -o /dev/null 2>&1 | FileCheck %s
-
-#include <dsmil_attributes.h>
-
-DSMIL_LAYER(1)
-void kernel_operation(void) { }
-
-DSMIL_LAYER(7)
-void user_function(void) {
-    // CHECK: error: layer boundary violation
-    // CHECK: caller 'user_function' (layer 7) calls 'kernel_operation' (layer 1) without dsmil_gateway
-    kernel_operation();
-}
 ```
-
-**Run Tests**:
-```bash
-ninja -C build check-dsmil-layer
+test/
+├── runtime/              # Unit tests for runtime libraries
+│   ├── test_ot_telemetry.c
+│   ├── test_fuzz_telemetry.c
+│   └── test_fuzz_telemetry_advanced.c
+├── passes/               # LLVM pass integration tests
+│   ├── test_ot_telemetry_pass.c
+│   ├── test_telecom_pass.c
+│   └── test_fuzz_coverage_pass.c
+├── integration/          # Integration tests
+│   ├── test_telecom_macros.c
+│   ├── test_attributes.c
+│   └── test_end_to_end.c
+└── CMakeLists.txt        # Build configuration
 ```
-
----
-
-### Stage Policy Tests (`dsmil/stage_policies/`)
-
-Test MLOps stage policy enforcement.
-
-**Test Cases**:
-- ✅ Production with `serve` stage (should pass)
-- ❌ Production with `debug` stage (should fail)
-- ❌ Production with `experimental` stage (should fail)
-- ✅ Production with `quantized` stage (should pass)
-- ❌ Layer ≥3 with `pretrain` stage (should fail)
-- ✅ Development with any stage (should pass)
-
-**Example Test**:
-```c
-// RUN: env DSMIL_POLICY=production dsmil-clang -fpass-pipeline=dsmil-default %s -o /dev/null 2>&1 | FileCheck %s
-
-#include <dsmil_attributes.h>
-
-// CHECK: error: stage policy violation
-// CHECK: production binaries cannot link dsmil_stage("debug") code
-DSMIL_STAGE("debug")
-void debug_diagnostics(void) { }
-
-DSMIL_STAGE("serve")
-int main(void) {
-    debug_diagnostics();
-    return 0;
-}
-```
-
-**Run Tests**:
-```bash
-ninja -C build check-dsmil-stage
-```
-
----
-
-### Provenance Tests (`dsmil/provenance/`)
-
-Test CNSA 2.0 provenance generation and verification.
-
-**Test Cases**:
-
-**Generation**:
-- ✅ Basic provenance record creation
-- ✅ SHA-384 hash computation
-- ✅ ML-DSA-87 signature generation
-- ✅ ELF section embedding
-- ✅ Encrypted provenance with ML-KEM-1024
-- ✅ Certificate chain embedding
-
-**Verification**:
-- ✅ Valid signature verification
-- ❌ Invalid signature (should fail)
-- ❌ Tampered binary (hash mismatch, should fail)
-- ❌ Expired certificate (should fail)
-- ❌ Revoked key (should fail)
-- ✅ Encrypted provenance decryption
-
-**Example Test**:
-```bash
-#!/bin/bash
-# RUN: %s %t
-
-# Generate test keys
-dsmil-keygen --type psk --test --output $TMPDIR/test_psk.pem
-
-# Compile with provenance
-export DSMIL_PSK_PATH=$TMPDIR/test_psk.pem
-dsmil-clang -fpass-pipeline=dsmil-default -o %t/binary test_input.c
-
-# Verify provenance
-dsmil-verify %t/binary
-# CHECK: ✓ Provenance present
-# CHECK: ✓ Signature valid
-
-# Tamper with binary
-echo "tampered" >> %t/binary
-
-# Verification should fail
-dsmil-verify %t/binary
-# CHECK: ✗ Binary hash mismatch
-```
-
-**Run Tests**:
-```bash
-ninja -C build check-dsmil-provenance
-```
-
----
-
-### Sandbox Tests (`dsmil/sandbox/`)
-
-Test sandbox wrapper injection and enforcement.
-
-**Test Cases**:
-
-**Wrapper Generation**:
-- ✅ `main` renamed to `main_real`
-- ✅ New `main` injected with sandbox setup
-- ✅ Profile loaded correctly
-- ✅ Capabilities dropped
-- ✅ Seccomp filter installed
-
-**Runtime**:
-- ✅ Allowed syscalls succeed
-- ❌ Disallowed syscalls blocked by seccomp
-- ❌ Privilege escalation attempts fail
-- ✅ Resource limits enforced
-
-**Example Test**:
-```c
-// RUN: dsmil-clang -fpass-pipeline=dsmil-default %s -o %t/binary -ldsmil_sandbox_runtime
-// RUN: %t/binary
-// RUN: dmesg | grep dsmil | FileCheck %s
-
-#include <dsmil_attributes.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <stdio.h>
-
-DSMIL_SANDBOX("l7_llm_worker")
-int main(void) {
-    // CHECK: DSMIL: Sandbox 'l7_llm_worker' applied
-
-    // Allowed operation
-    printf("Hello from sandbox\n");
-
-    // Disallowed operation (should be blocked by seccomp)
-    // This will cause SIGSYS and program termination
-    // CHECK: DSMIL: Seccomp violation: socket (syscall 41)
-    socket(AF_INET, SOCK_STREAM, 0);
-
-    return 0;
-}
-```
-
-**Run Tests**:
-```bash
-ninja -C build check-dsmil-sandbox
-```
-
----
-
-## Test Infrastructure
-
-### LIT Configuration
-
-Tests use LLVM's LIT (LLVM Integrated Tester) framework.
-
-**Configuration**: `test/dsmil/lit.cfg.py`
-
-**Test Formats**:
-- `.c` / `.cpp`: C/C++ source files with embedded RUN/CHECK directives
-- `.ll`: LLVM IR files
-- `.sh`: Shell scripts for integration tests
-
-### FileCheck
-
-Tests use LLVM's FileCheck for output verification:
-
-```c
-// RUN: dsmil-clang %s -o /dev/null 2>&1 | FileCheck %s
-// CHECK: error: layer boundary violation
-// CHECK-NEXT: note: caller 'foo' is at layer 7
-```
-
-**FileCheck Directives**:
-- `CHECK`: Match pattern
-- `CHECK-NEXT`: Match on next line
-- `CHECK-NOT`: Pattern must not appear
-- `CHECK-DAG`: Match in any order
-
----
 
 ## Running Tests
 
-### All DSMIL Tests
+### Build Tests
 
 ```bash
-ninja -C build check-dsmil
+cd build
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+make test_ot_telemetry_runtime
+make test_fuzz_telemetry_runtime
+make test_fuzz_telemetry_advanced_runtime
+make test_telecom_macros
+make test_attributes
+make test_end_to_end
 ```
 
-### Specific Test Categories
+### Run All Runtime Tests
 
 ```bash
-ninja -C build check-dsmil-layer      # Layer policy tests
-ninja -C build check-dsmil-stage      # Stage policy tests
-ninja -C build check-dsmil-provenance # Provenance tests
-ninja -C build check-dsmil-sandbox    # Sandbox tests
+make check-dsmil-runtime
 ```
 
-### Individual Tests
+### Run Individual Tests
 
 ```bash
-# Run specific test
-llvm-lit test/dsmil/layer_policies/upward-call-no-gateway.c -v
-
-# Run with filter
-llvm-lit test/dsmil -v --filter="layer"
+./test_ot_telemetry_runtime
+./test_fuzz_telemetry_runtime
+./test_fuzz_telemetry_advanced_runtime
+./test_telecom_macros
+./test_attributes
+./test_end_to_end
 ```
 
-### Debug Failed Tests
+### Run LLVM Pass Tests (LIT)
 
 ```bash
-# Show full output
-llvm-lit test/dsmil/layer_policies/upward-call-no-gateway.c -v -a
-
-# Keep temporary files
-llvm-lit test/dsmil -v --no-execute
+llvm-lit test/passes/ -v
 ```
-
----
 
 ## Test Coverage
 
-### Current Coverage Goals
+### Runtime Tests
 
-- **Pass Tests**: 100% line coverage for all DSMIL passes
-- **Runtime Tests**: 100% line coverage for runtime libraries
-- **Integration Tests**: End-to-end scenarios for all pipelines
-- **Security Tests**: Negative tests for all security features
+- **OT Telemetry Runtime** (`test_ot_telemetry.c`):
+  - ✅ Initialization and shutdown
+  - ✅ Environment variable handling
+  - ✅ All event types
+  - ✅ Safety signal updates
+  - ✅ Null event handling
+  - ✅ Ring buffer operations
+  - ✅ Complete event logging
 
-### Measuring Coverage
+- **Fuzzing Telemetry Runtime** (`test_fuzz_telemetry.c`):
+  - ✅ Initialization and shutdown
+  - ✅ Context management
+  - ✅ Coverage tracking
+  - ✅ State machine transitions
+  - ✅ Metrics collection
+  - ✅ API misuse detection
+  - ✅ Event export
+  - ✅ Budget checking
+  - ✅ Ring buffer overflow handling
+
+- **Advanced Fuzzing Telemetry Runtime** (`test_fuzz_telemetry_advanced.c`):
+  - ✅ Advanced initialization
+  - ✅ Coverage map operations
+  - ✅ ML integration stubs
+  - ✅ Performance counters
+  - ✅ Statistics collection
+  - ✅ Advanced event export
+
+### Pass Tests
+
+- **OT Telemetry Pass** (`test_ot_telemetry_pass.c`):
+  - ✅ OT-critical function instrumentation
+  - ✅ SES gate instrumentation
+  - ✅ Safety signal instrumentation
+  - ✅ Manifest generation
+
+- **Telecom Pass** (`test_telecom_pass.c`):
+  - ✅ SS7 annotation discovery
+  - ✅ SIGTRAN annotation discovery
+  - ✅ Environment classification
+  - ✅ Manifest generation
+
+- **Fuzzing Coverage Pass** (`test_fuzz_coverage_pass.c`):
+  - ✅ Coverage site instrumentation
+  - ✅ State machine instrumentation
+  - ✅ Critical operation tracking
+  - ✅ API misuse detection
+
+### Integration Tests
+
+- **Telecom Macros** (`test_telecom_macros.c`):
+  - ✅ SS7 RX/TX macros
+  - ✅ SIGTRAN RX/TX macros
+  - ✅ Signal anomaly macro
+  - ✅ SS7 full macro
+
+- **Attributes** (`test_attributes.c`):
+  - ✅ All OT attributes compile
+  - ✅ All telecom attributes compile
+  - ✅ All fuzzing attributes compile
+  - ✅ All security attributes compile
+
+- **End-to-End** (`test_end_to_end.c`):
+  - ✅ Complete OT workflow
+  - ✅ Complete telecom workflow
+  - ✅ Complete fuzzing workflow
+  - ✅ Combined workflows
+
+## Coverage Goals
+
+- **Runtime Libraries**: 100% line coverage
+- **LLVM Passes**: 100% line coverage
+- **Integration**: All workflows tested
+
+## Measuring Coverage
 
 ```bash
 # Build with coverage
-cmake -G Ninja -S llvm -B build \
-  -DLLVM_ENABLE_DSMIL=ON \
-  -DLLVM_BUILD_INSTRUMENTED_COVERAGE=ON
+cmake -DCMAKE_BUILD_TYPE=Coverage \
+      -DCMAKE_C_FLAGS="--coverage" \
+      -DCMAKE_CXX_FLAGS="--coverage" \
+      ..
+
+make
 
 # Run tests
-ninja -C build check-dsmil
+make check-dsmil-runtime
 
 # Generate report
-llvm-cov show build/bin/dsmil-clang \
-  -instr-profile=build/profiles/default.profdata \
-  -output-dir=coverage-report
+make coverage
+# or
+lcov --capture --directory . --output-file coverage.info
+genhtml coverage.info --output-directory coverage
 ```
 
----
+## Adding New Tests
 
-## Writing Tests
+1. **Runtime Tests**: Add to `test/runtime/`
+2. **Pass Tests**: Add to `test/passes/` (use LIT format)
+3. **Integration Tests**: Add to `test/integration/`
 
-### Test File Template
-
-```c
-// RUN: dsmil-clang -fpass-pipeline=dsmil-default %s -o /dev/null 2>&1 | FileCheck %s
-// REQUIRES: dsmil
-
-#include <dsmil_attributes.h>
-
-// Test description: Verify that ...
-
-DSMIL_LAYER(7)
-void test_function(void) {
-    // Test code
-}
-
-// CHECK: expected output
-// CHECK-NOT: unexpected output
-
-int main(void) {
-    test_function();
-    return 0;
-}
-```
-
-### Best Practices
-
-1. **One Test, One Feature**: Each test should focus on a single feature or edge case
-2. **Clear Naming**: Use descriptive test file names (e.g., `upward-call-with-gateway.c`)
-3. **Comment Test Intent**: Add `// Test description:` at the top
-4. **Check All Output**: Verify both positive and negative cases
-5. **Use FileCheck Patterns**: Make checks robust with regex where needed
-
----
-
-## Implementation Status
-
-### Layer Policy Tests
-- [ ] Same-layer calls
-- [ ] Downward calls
-- [ ] Upward calls without gateway
-- [ ] Upward calls with gateway
-- [ ] Clearance violations
-- [ ] ROE escalation
-
-### Stage Policy Tests
-- [ ] Production enforcement
-- [ ] Development flexibility
-- [ ] Layer-stage interactions
-
-### Provenance Tests
-- [ ] Generation
-- [ ] Signing
-- [ ] Verification
-- [ ] Encrypted provenance
-- [ ] Tampering detection
-
-### Sandbox Tests
-- [ ] Wrapper injection
-- [ ] Capability enforcement
-- [ ] Seccomp enforcement
-- [ ] Resource limits
-
----
-
-## Contributing
-
-When adding tests:
-
-1. Follow the test file template
-2. Add both positive and negative test cases
-3. Use meaningful CHECK patterns
-4. Test edge cases and error paths
-5. Update CMakeLists.txt to include new tests
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for details.
-
----
-
-## Continuous Integration
-
-Tests run automatically on:
-
-- **Pre-commit**: Fast smoke tests (~2 min)
-- **Pull Request**: Full test suite (~15 min)
-- **Nightly**: Extended tests + fuzzing + sanitizers (~2 hours)
-
-**CI Configuration**: `.github/workflows/dsmil-tests.yml`
+Follow existing test patterns and ensure:
+- Clear test names
+- Comprehensive coverage
+- Error case handling
+- Edge case testing
