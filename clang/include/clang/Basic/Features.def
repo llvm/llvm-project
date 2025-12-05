@@ -66,6 +66,10 @@ FEATURE(array_bounds_sanitizer,
         LangOpts.Sanitize.has(SanitizerKind::ArrayBounds))
 FEATURE(enum_sanitizer,
         LangOpts.Sanitize.has(SanitizerKind::Enum))
+FEATURE(fixed_point_divide_by_zero_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::FixedPointDivideByZero))
+FEATURE(fixed_point_sanitizer,
+        LangOpts.Sanitize.hasOneOf(SanitizerKind::FixedPoint))
 FEATURE(float_cast_overflow_sanitizer,
         LangOpts.Sanitize.has(SanitizerKind::FloatCastOverflow))
 FEATURE(integer_divide_by_zero_sanitizer,
