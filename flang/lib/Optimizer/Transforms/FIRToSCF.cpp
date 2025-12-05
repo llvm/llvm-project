@@ -126,6 +126,7 @@ struct IterWhileConversion : public mlir::OpRewritePattern<fir::IterWhileOp> {
 
     mlir::Value okInit = iterWhileOp.getIterateIn();
     mlir::ValueRange iterArgs = iterWhileOp.getInitArgs();
+    bool hasFinalValue = iterWhileOp.getFinalValue().has_value();
 
     mlir::SmallVector<mlir::Value> initVals;
     initVals.push_back(lowerBound);
@@ -164,17 +165,22 @@ struct IterWhileConversion : public mlir::OpRewritePattern<fir::IterWhileOp> {
 
     auto *afterBody = scfWhileOp.getAfterBody();
     auto resultOp = mlir::cast<fir::ResultOp>(afterBody->getTerminator());
-    mlir::SmallVector<mlir::Value> results(resultOp->getOperands());
-    mlir::Value ivInAfter = scfWhileOp.getAfterArguments()[0];
+    mlir::SmallVector<mlir::Value> results;
+    mlir::Value iv = scfWhileOp.getAfterArguments()[0];
 
     rewriter.setInsertionPointToStart(afterBody);
-    results[0] = mlir::arith::AddIOp::create(rewriter, loc, ivInAfter, step);
+    results.push_back(mlir::arith::AddIOp::create(rewriter, loc, iv, step));
+    llvm::append_range(results, hasFinalValue
+                                    ? resultOp->getOperands().drop_front()
+                                    : resultOp->getOperands());
 
     rewriter.setInsertionPointToEnd(afterBody);
     rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(resultOp, results);
 
     scfWhileOp->setAttrs(iterWhileOp->getAttrs());
-    rewriter.replaceOp(iterWhileOp, scfWhileOp);
+    rewriter.replaceOp(iterWhileOp,
+                       hasFinalValue ? scfWhileOp->getResults()
+                                     : scfWhileOp->getResults().drop_front());
     return mlir::success();
   }
 };
