@@ -1058,8 +1058,8 @@ multiclass VPatBinaryFPVL_VV_VF<SDPatternOperator vop, string instruction_name,
 }
 
 multiclass VPatBinaryFPVL_VV_VF_RM<SDPatternOperator vop, string instruction_name,
-                                bit isSEWAware = 0> {
-  foreach vti = AllFloatVectors in {
+                                bit isSEWAware = 0, bit isBF16 = 0> {
+  foreach vti = !if(isBF16, AllBF16Vectors, AllFloatVectors) in {
     let Predicates = GetVTypePredicates<vti>.Predicates in {
       def : VPatBinaryVL_V_RM<vop, instruction_name, "VV",
                              vti.Vector, vti.Vector, vti.Vector, vti.Mask,
@@ -1093,8 +1093,8 @@ multiclass VPatBinaryFPVL_R_VF<SDPatternOperator vop, string instruction_name,
 }
 
 multiclass VPatBinaryFPVL_R_VF_RM<SDPatternOperator vop, string instruction_name,
-                                  bit isSEWAware = 0> {
-  foreach fvti = AllFloatVectors in {
+                                  bit isSEWAware = 0, bit isBF16 = 0> {
+  foreach fvti = !if(isBF16, AllBF16Vectors, AllFloatVectors) in {
     let Predicates = GetVTypePredicates<fvti>.Predicates in
     def : Pat<(fvti.Vector (vop (SplatFPOp fvti.ScalarRegClass:$rs2),
                                 fvti.RegClass:$rs1,
