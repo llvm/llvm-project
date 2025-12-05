@@ -355,6 +355,13 @@ public:
                         curValue.getZExtValue());
     }
   }
+
+  void VisitDeviceTypeClause(const OpenACCDeviceTypeClause &clause) {
+    lastDeviceTypeValues.clear();
+
+    for (const DeviceTypeArgument &arg : clause.getArchitectures())
+      lastDeviceTypeValues.push_back(decodeDeviceType(arg.getIdentifierInfo()));
+  }
 };
 } // namespace
 

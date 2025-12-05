@@ -419,9 +419,9 @@ std::optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
 // the remainder loop after peeling. The load must also be used (transitively)
 // by an exit condition. Returns the number of iterations to peel off (at the
 // moment either 0 or 1).
-static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
-                                                      DominatorTree &DT,
-                                                      AssumptionCache *AC) {
+static unsigned peelToTurnInvariantLoadsDereferenceable(Loop &L,
+                                                        DominatorTree &DT,
+                                                        AssumptionCache *AC) {
   // Skip loops with a single exiting block, because there should be no benefit
   // for the heuristic below.
   if (L.getExitingBlock())
@@ -816,7 +816,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   DesiredPeelCount = std::max(DesiredPeelCount, CountToEliminateCmps);
 
   if (DesiredPeelCount == 0)
-    DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT, AC);
+    DesiredPeelCount = peelToTurnInvariantLoadsDereferenceable(*L, DT, AC);
 
   if (DesiredPeelCount > 0) {
     DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
