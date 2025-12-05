@@ -858,7 +858,8 @@ define i32 @ctest_nobranch(i32 noundef %a, i32 noundef %b) {
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testl %edi, %edi
 ; NDD-NEXT:    ctestlel {dfv=} %esi, %esi
-; NDD-NEXT:    setzug %al
+; NDD-NEXT:    setg %al
+; NDD-NEXT:    movzbl %al, %eax
 ; NDD-NEXT:    retq
 entry:
   %cmp = icmp sgt i32 %a, 0
@@ -883,7 +884,8 @@ define i32 @ctest_continous_nobranch(i32 noundef %a, i32 noundef %b, i32 noundef
 ; NDD-NEXT:    testl %edi, %edi
 ; NDD-NEXT:    ctestlel {dfv=sf} %esi, %esi
 ; NDD-NEXT:    ctestsl {dfv=zf} %edx, %edx
-; NDD-NEXT:    setzug %al
+; NDD-NEXT:    setg %al
+; NDD-NEXT:    movzbl %al, %eax
 ; NDD-NEXT:    retq
 entry:
   %cmp = icmp sgt i32 %a, 0
