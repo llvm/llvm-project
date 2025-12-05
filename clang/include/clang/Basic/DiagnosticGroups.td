@@ -541,6 +541,8 @@ def LifetimeSafety : DiagGroup<"experimental-lifetime-safety",
     Experimental warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
   }];
 }
+def LifetimeSafetySuggestions
+    : DiagGroup<"experimental-lifetime-safety-suggestions">;
 
 def DistributedObjectModifiers : DiagGroup<"distributed-object-modifiers">;
 def DllexportExplicitInstantiationDecl : DiagGroup<"dllexport-explicit-instantiation-decl">;
