@@ -22,7 +22,7 @@ static llvm::StringRef last_line(llvm::StringRef str) {
   return str.substr(index + 1);
 }
 
-#define TIMESTAMP_PATTERN "[0-9]+\\.[0-9]+ "
+#define TIMESTAMP_PATTERN "\\[[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}\\] "
 
 TEST(DAPLog, Emit) {
   Log::Mutex mux;
