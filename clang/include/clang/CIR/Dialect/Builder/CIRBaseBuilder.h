@@ -311,10 +311,9 @@ public:
   mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global,
                               bool threadLocal = false) {
     assert(!cir::MissingFeatures::addressSpace());
-    auto getGlobalOp = cir::GetGlobalOp::create(
+    return cir::GetGlobalOp::create(
         *this, loc, getPointerTo(global.getSymType()), global.getSymNameAttr(),
         threadLocal);
-    return getGlobalOp.getAddr();
   }
 
   mlir::Value createGetGlobal(cir::GlobalOp global, bool threadLocal = false) {
