@@ -1926,8 +1926,7 @@ OMPTransparentClause *OMPTransparentClause::Create(const ASTContext &C,
                                                    SourceLocation LParenLoc,
                                                    SourceLocation EndLoc,
                                                    Expr *Transparent) {
-  return new (C) OMPTransparentClause(Transparent, StartLoc,
-                                                    LParenLoc, EndLoc);
+  return new (C) OMPTransparentClause(Transparent, StartLoc, LParenLoc, EndLoc);
 }
 
 //===----------------------------------------------------------------------===//

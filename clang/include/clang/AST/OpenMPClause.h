@@ -1544,7 +1544,8 @@ public:
       : OMPClause(llvm::omp::OMPC_transparent, SourceLocation(),
                   SourceLocation()) {}
 
-  static OMPTransparentClause *Create(const ASTContext &C, SourceLocation StartLoc,
+  static OMPTransparentClause *Create(const ASTContext &C,
+                                      SourceLocation StartLoc,
                                       SourceLocation LParenLoc,
                                       SourceLocation EndLoc, Expr *Transparent);
   /// Returns the location of '('.
