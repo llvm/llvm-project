@@ -183,30 +183,31 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const DDGEdge &E) {
 //===--------------------------------------------------------------------===//
 using BasicBlockListType = SmallVector<BasicBlock *, 8>;
 
-DataDependenceGraph::DataDependenceGraph(Function &F, DependenceInfo &D)
-    : DependenceGraphInfo(F.getName().str(), D) {
+DataDependenceGraph::DataDependenceGraph(Function &F,
+                                         std::unique_ptr<DependenceInfo> D)
+    : DependenceGraphInfo(F.getName().str(), std::move(D)) {
   // Put the basic blocks in program order for correct dependence
   // directions.
   BasicBlockListType BBList;
   for (const auto &SCC : make_range(scc_begin(&F), scc_end(&F)))
     append_range(BBList, SCC);
   std::reverse(BBList.begin(), BBList.end());
-  DDGBuilder(*this, D, BBList).populate();
+  DDGBuilder(*this, *DI, BBList).populate();
 }
 
 DataDependenceGraph::DataDependenceGraph(Loop &L, LoopInfo &LI,
-                                         DependenceInfo &D)
+                                         std::unique_ptr<DependenceInfo> D)
     : DependenceGraphInfo(Twine(L.getHeader()->getParent()->getName() + "." +
                                 L.getHeader()->getName())
                               .str(),
-                          D) {
+                          std::move(D)) {
   // Put the basic blocks in program order for correct dependence
   // directions.
   LoopBlocksDFS DFS(&L);
   DFS.perform(&LI);
   BasicBlockListType BBList;
   append_range(BBList, make_range(DFS.beginRPO(), DFS.endRPO()));
-  DDGBuilder(*this, D, BBList).populate();
+  DDGBuilder(*this, *DI, BBList).populate();
 }
 
 DataDependenceGraph::~DataDependenceGraph() {
@@ -308,8 +309,8 @@ bool DDGBuilder::shouldCreatePiBlocks() const { return CreatePiBlocks; }
 DDGAnalysis::Result DDGAnalysis::run(Loop &L, LoopAnalysisManager &AM,
                                      LoopStandardAnalysisResults &AR) {
   Function *F = L.getHeader()->getParent();
-  DependenceInfo DI(F, &AR.AA, &AR.SE, &AR.LI);
-  return std::make_unique<DataDependenceGraph>(L, AR.LI, DI);
+  auto DI = std::make_unique<DependenceInfo>(F, &AR.AA, &AR.SE, &AR.LI);
+  return std::make_unique<DataDependenceGraph>(L, AR.LI, std::move(DI));
 }
 AnalysisKey DDGAnalysis::Key;
 

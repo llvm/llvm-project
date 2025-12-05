@@ -68,10 +68,10 @@ for.end19:
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            Dependence
+; CHECK-NEXT: Name:            InterchangeNotProfitable
 ; CHECK-NEXT: Function:        test01
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          All loops have dependencies in all directions.
+; CHECK-NEXT:   - String:          Interchanging loops is not considered to improve cache locality nor vectorization.
 ; CHECK-NEXT: ...
 
 ; DELIN: --- !Analysis
@@ -142,12 +142,12 @@ define void @test02(i32 %k, i32 %N) {
 ; CHECK-NEXT:   - String:          Computed dependence info, invoking the transform.
 ; CHECK-NEXT: ...
 
-; CHECK: --- !Missed
+; CHECK: --- !Passed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            Dependence
+; CHECK-NEXT: Name:            Interchanged
 ; CHECK-NEXT: Function:        test02
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          All loops have dependencies in all directions.
+; CHECK-NEXT:   - String:          Loop interchanged with enclosing loop.
 ; CHECK-NEXT: ...
 
 ; DELIN: --- !Analysis
@@ -287,10 +287,10 @@ for.end17:
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            Dependence
+; CHECK-NEXT: Name:            NotTightlyNested
 ; CHECK-NEXT: Function:        test04
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          All loops have dependencies in all directions.
+; CHECK-NEXT:   - String:          Cannot interchange loops because they are not tightly nested.
 ; CHECK-NEXT: ...
 
 ; DELIN: --- !Missed

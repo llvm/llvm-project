@@ -32,13 +32,13 @@ define void @p2(i64 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ;
 ; LIN-LABEL: 'p2'
 ; LIN-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: store i64 %i.011, ptr %arrayidx8, align 8
-; LIN-NEXT:    da analyze - output [* * *]!
+; LIN-NEXT:    da analyze - none!
 ; LIN-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: %0 = load i64, ptr %arrayidx17, align 8
-; LIN-NEXT:    da analyze - flow [* *|<]!
+; LIN-NEXT:    da analyze - flow [-3 -2] / assuming 1 loop level(s) fused: [-3 -2 -1]!
 ; LIN-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8
 ; LIN-NEXT:    da analyze - confused!
 ; LIN-NEXT:  Src: %0 = load i64, ptr %arrayidx17, align 8 --> Dst: %0 = load i64, ptr %arrayidx17, align 8
-; LIN-NEXT:    da analyze - input [* * *]!
+; LIN-NEXT:    da analyze - none!
 ; LIN-NEXT:  Src: %0 = load i64, ptr %arrayidx17, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8
 ; LIN-NEXT:    da analyze - confused!
 ; LIN-NEXT:  Src: store i64 %0, ptr %B.addr.24, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8

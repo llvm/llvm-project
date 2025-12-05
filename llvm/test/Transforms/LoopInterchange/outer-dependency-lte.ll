@@ -19,10 +19,10 @@
 
 ; CHECK:      --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            Dependence
+; CHECK-NEXT: Name:            InterchangeNotProfitable
 ; CHECK-NEXT: Function:        f
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          All loops have dependencies in all directions.
+; CHECK-NEXT:   - String:          Interchanging loops is not considered to improve cache locality nor vectorization.
 ; CHECK-NEXT: ...
 
 

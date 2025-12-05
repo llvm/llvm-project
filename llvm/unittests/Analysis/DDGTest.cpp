@@ -22,10 +22,11 @@
 using namespace llvm;
 
 /// Build the DDG analysis for a loop and run the given test \p Test.
-static void runTest(Module &M, StringRef FuncName,
-                    function_ref<void(Function &F, LoopInfo &LI,
-                                      DependenceInfo &DI, ScalarEvolution &SE)>
-                        Test) {
+static void runTest(
+    Module &M, StringRef FuncName,
+    function_ref<void(Function &F, LoopInfo &LI,
+                      std::unique_ptr<DependenceInfo> DI, ScalarEvolution &SE)>
+        Test) {
   auto *F = M.getFunction(FuncName);
   ASSERT_NE(F, nullptr) << "Could not find " << FuncName;
 
@@ -36,8 +37,8 @@ static void runTest(Module &M, StringRef FuncName,
   LoopInfo LI(DT);
   ScalarEvolution SE(*F, TLI, AC, DT, LI);
   AAResults AA(TLI);
-  DependenceInfo DI(F, &AA, &SE, &LI);
-  Test(*F, LI, DI, SE);
+  auto DI = std::make_unique<DependenceInfo>(F, &AA, &SE, &LI);
+  Test(*F, LI, std::move(DI), SE);
 }
 
 static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
@@ -89,11 +90,12 @@ TEST(DDGTest, getDependencies) {
 
   runTest(
       *M, "foo",
-      [&](Function &F, LoopInfo &LI, DependenceInfo &DI, ScalarEvolution &SE) {
+      [&](Function &F, LoopInfo &LI, std::unique_ptr<DependenceInfo> DI,
+          ScalarEvolution &SE) {
         Loop *L = *LI.begin();
         assert(L && "expected the loop to be identified.");
 
-        DataDependenceGraph DDG(*L, LI, DI);
+        DataDependenceGraph DDG(*L, LI, std::move(DI));
 
         // Collect all the nodes that have an outgoing memory edge
         // while collecting all memory edges as well. There should
@@ -205,11 +207,12 @@ TEST(DDGTest, avoidDuplicateEdgesToFromPiBlocks) {
 
   runTest(
       *M, "foo",
-      [&](Function &F, LoopInfo &LI, DependenceInfo &DI, ScalarEvolution &SE) {
+      [&](Function &F, LoopInfo &LI, std::unique_ptr<DependenceInfo> DI,
+          ScalarEvolution &SE) {
         Loop *L = *LI.begin();
         assert(L && "expected the loop to be identified.");
 
-        DataDependenceGraph DDG(*L, LI, DI);
+        DataDependenceGraph DDG(*L, LI, std::move(DI));
 
         const DDGNode *LoadASubI = nullptr;
         for (DDGNode *N : DDG) {
