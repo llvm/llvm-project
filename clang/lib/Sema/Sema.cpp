@@ -620,6 +620,7 @@ Sema::~Sema() {
   // Detach from the PP callback handler which outlives Sema since it's owned
   // by the preprocessor.
   SemaPPCallbackHandler->reset();
+  FreeScopes();
 }
 
 void Sema::runWithSufficientStackSpace(SourceLocation Loc,
@@ -2958,4 +2959,35 @@ Attr *Sema::CreateAnnotationAttr(const ParsedAttr &AL) {
   }
 
   return CreateAnnotationAttr(AL, Str, Args);
+}
+
+void Sema::EnterScope(unsigned ScopeFlags) {
+  if (!ScopeCache.empty()) {
+    Scope *N = ScopeCache.pop_back_val().release();
+    N->Init(getCurScope(), ScopeFlags);
+    CurScope = N;
+  } else {
+    CurScope = new Scope(getCurScope(), ScopeFlags, Diags);
+  }
+}
+
+void Sema::ExitScope() {
+  assert(getCurScope() && "Scope imbalance!");
+  ActOnPopScope(getCurScope());
+  Scope *OldScope = getCurScope();
+  CurScope = OldScope->getParent();
+  if (ScopeCache.size() == MaxScopeCacheSize)
+    delete OldScope;
+  else
+    ScopeCache.emplace_back(OldScope);
+}
+
+void Sema::FreeScopes() {
+  // Take care not to delete 'CurScope' twice.
+  auto IsCurScope = [&](auto& S) { return S.get() == CurScope; };
+  if (llvm::find_if(ScopeCache, IsCurScope) == ScopeCache.end())
+    delete CurScope;
+
+  ScopeCache.clear();
+  CurScope = nullptr;
 }

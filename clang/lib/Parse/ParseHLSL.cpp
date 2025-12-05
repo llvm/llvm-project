@@ -65,7 +65,7 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd,
 
   MaybeParseHLSLAnnotations(Attrs, nullptr);
 
-  ParseScope BufferScope(this, Scope::DeclScope);
+  ParseScope BufferScope(Actions, Scope::DeclScope);
   BalancedDelimiterTracker T(*this, tok::l_brace);
   if (T.consumeOpen()) {
     Diag(Tok, diag::err_expected) << tok::l_brace;

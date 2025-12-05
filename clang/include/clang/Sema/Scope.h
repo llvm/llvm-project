@@ -29,11 +29,11 @@ class raw_ostream;
 } // namespace llvm
 
 namespace clang {
-
 class Decl;
 class DeclContext;
 class UsingDirectiveDecl;
 class VarDecl;
+class Sema;
 
 /// Scope - A scope is a transient data structure that is used while parsing the
 /// program.  It assists with resolving identifiers to the appropriate
@@ -667,6 +667,45 @@ public:
   void dump() const;
 };
 
+/// ParseScope - Introduces a new scope for parsing. The kind of
+/// scope is determined by ScopeFlags. Objects of this type should
+/// be created on the stack to coincide with the position where the
+/// parser enters the new scope, and this object's constructor will
+/// create that new scope. Similarly, once the object is destroyed
+/// the parser will exit the scope.
+class ParseScope {
+  Sema *S;
+  ParseScope(const ParseScope &) = delete;
+  void operator=(const ParseScope &) = delete;
+
+public:
+  // ParseScope - Construct a new object to manage a scope in the
+  // parser Self where the new Scope is created with the flags
+  // ScopeFlags, but only when we aren't about to enter a compound statement.
+  ParseScope(Sema &S, unsigned ScopeFlags, bool EnteredScope = true,
+             bool BeforeCompoundStmt = false);
+
+  // Exit - Exit the scope associated with this object now, rather
+  // than waiting until the object is destroyed.
+  void Exit();
+
+  ~ParseScope() { Exit(); }
+};
+
+/// Introduces zero or more scopes for parsing. The scopes will all be exited
+/// when the object is destroyed.
+class MultiParseScope {
+  Sema &S;
+  unsigned NumScopes = 0;
+
+  MultiParseScope(const MultiParseScope &) = delete;
+
+public:
+  MultiParseScope(Sema &S) : S(S) {}
+  void Enter(unsigned ScopeFlags);
+  void Exit();
+  ~MultiParseScope() { Exit(); }
+};
 } // namespace clang
 
 #endif // LLVM_CLANG_SEMA_SCOPE_H

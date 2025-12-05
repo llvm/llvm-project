@@ -677,9 +677,9 @@ void Parser::ParseGNUAttributeArgs(
   if (normalizeAttrName(AttrName->getName()) == "enable_if" &&
       D && D->isFunctionDeclarator()) {
     const DeclaratorChunk::FunctionTypeInfo& FTI = D->getFunctionTypeInfo();
-    PrototypeScope.emplace(this, Scope::FunctionPrototypeScope |
-                                     Scope::FunctionDeclarationScope |
-                                     Scope::DeclScope);
+    PrototypeScope.emplace(Actions, Scope::FunctionPrototypeScope |
+                                        Scope::FunctionDeclarationScope |
+                                        Scope::DeclScope);
     for (unsigned i = 0; i != FTI.NumParams; ++i) {
       ParmVarDecl *Param = cast<ParmVarDecl>(FTI.Params[i].Param);
       Actions.ActOnReenterCXXMethodParameter(getCurScope(), Param);
@@ -2454,7 +2454,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
       if (ThisDecl && P.getLangOpts().CPlusPlus) {
         Scope *S = nullptr;
         if (D.getCXXScopeSpec().isSet()) {
-          P.EnterScope(0);
+          P.Actions.EnterScope(0);
           S = P.getCurScope();
         }
         if (ThisDecl && !ThisDecl->isInvalidDecl()) {
@@ -2472,7 +2472,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
         if (Entered)
           P.Actions.ActOnCXXExitDeclInitializer(S, ThisDecl);
         if (S)
-          P.ExitScope();
+          P.Actions.ExitScope();
       }
       ThisDecl = nullptr;
     }
@@ -4826,7 +4826,7 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
   if (T.consumeOpen())
     return;
 
-  ParseScope StructScope(this, Scope::ClassScope|Scope::DeclScope);
+  ParseScope StructScope(Actions, Scope::ClassScope|Scope::DeclScope);
   Actions.ActOnTagStartDefinition(getCurScope(), TagDecl);
 
   // `LateAttrParseExperimentalExtOnly=true` requests that only attributes
@@ -5338,7 +5338,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl,
                            SkipBodyInfo *SkipBody) {
   // Enter the scope of the enum body and start the definition.
-  ParseScope EnumScope(this, Scope::DeclScope | Scope::EnumScope);
+  ParseScope EnumScope(Actions, Scope::DeclScope | Scope::EnumScope);
   Actions.ActOnTagStartDefinition(getCurScope(), EnumDecl);
 
   BalancedDelimiterTracker T(*this, tok::l_brace);
@@ -5681,8 +5681,8 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
   // Parse a top-level-stmt.
   Parser::StmtVector Stmts;
   ParsedStmtContext SubStmtCtx = ParsedStmtContext();
-  ParseScope FnScope(this, Scope::FnScope | Scope::DeclScope |
-                               Scope::CompoundStmtScope);
+  ParseScope FnScope(Actions, Scope::FnScope | Scope::DeclScope |
+                                  Scope::CompoundStmtScope);
   TopLevelStmtDecl *TLSD = Actions.ActOnStartTopLevelStmtDecl(getCurScope());
   StmtResult R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
   Actions.ActOnFinishTopLevelStmtDecl(TLSD, R.get());
@@ -6804,9 +6804,9 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       // Enter function-declaration scope, limiting any declarators to the
       // function prototype scope, including parameter declarators.
       ParseScope PrototypeScope(
-          this, Scope::FunctionPrototypeScope | Scope::DeclScope |
-                    (IsFunctionDeclaration ? Scope::FunctionDeclarationScope
-                                           : Scope::NoScope));
+          Actions, Scope::FunctionPrototypeScope | Scope::DeclScope |
+                       (IsFunctionDeclaration ? Scope::FunctionDeclarationScope
+                                              : Scope::NoScope));
 
       // The paren may be part of a C++ direct initializer, eg. "int x(1);".
       // In such a case, check if we actually have a function declarator; if it
@@ -7085,7 +7085,7 @@ void Parser::ParseParenDeclarator(Declarator &D) {
 
   // Enter function-declaration scope, limiting any declarators to the
   // function prototype scope, including parameter declarators.
-  ParseScope PrototypeScope(this,
+  ParseScope PrototypeScope(Actions,
                             Scope::FunctionPrototypeScope | Scope::DeclScope |
                                 (D.isFunctionDeclaratorAFunctionDeclaration()
                                      ? Scope::FunctionDeclarationScope
@@ -8126,7 +8126,7 @@ TypeResult Parser::ParseTypeFromString(StringRef TypeStr, StringRef Context,
   ConsumeAnyToken();
 
   // Enter a new scope.
-  ParseScope LocalScope(this, 0);
+  ParseScope LocalScope(Actions, 0);
 
   // Parse the type.
   TypeResult Result = ParseTypeName(nullptr);

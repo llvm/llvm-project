@@ -2256,7 +2256,7 @@ static void CheckPoppedLabel(LabelDecl *L, Sema &S,
                                        << L);
 }
 
-void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
+void Sema::ActOnPopScope(Scope *S) {
   S->applyNRVO();
 
   if (S->decl_empty()) return;

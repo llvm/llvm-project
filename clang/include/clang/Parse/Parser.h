@@ -210,10 +210,6 @@ public:
   const Token &getCurToken() const { return Tok; }
   Scope *getCurScope() const { return Actions.getCurScope(); }
 
-  void incrementMSManglingNumber() const {
-    return Actions.incrementMSManglingNumber();
-  }
-
   // Type forwarding.  All of these are statically 'void*', but they may all be
   // different actual classes based on the actions in place.
   typedef OpaquePtr<DeclGroupRef> DeclGroupPtrTy;
@@ -385,78 +381,6 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
-  // Scope manipulation
-
-  /// ParseScope - Introduces a new scope for parsing. The kind of
-  /// scope is determined by ScopeFlags. Objects of this type should
-  /// be created on the stack to coincide with the position where the
-  /// parser enters the new scope, and this object's constructor will
-  /// create that new scope. Similarly, once the object is destroyed
-  /// the parser will exit the scope.
-  class ParseScope {
-    Parser *Self;
-    ParseScope(const ParseScope &) = delete;
-    void operator=(const ParseScope &) = delete;
-
-  public:
-    // ParseScope - Construct a new object to manage a scope in the
-    // parser Self where the new Scope is created with the flags
-    // ScopeFlags, but only when we aren't about to enter a compound statement.
-    ParseScope(Parser *Self, unsigned ScopeFlags, bool EnteredScope = true,
-               bool BeforeCompoundStmt = false)
-        : Self(Self) {
-      if (EnteredScope && !BeforeCompoundStmt)
-        Self->EnterScope(ScopeFlags);
-      else {
-        if (BeforeCompoundStmt)
-          Self->incrementMSManglingNumber();
-
-        this->Self = nullptr;
-      }
-    }
-
-    // Exit - Exit the scope associated with this object now, rather
-    // than waiting until the object is destroyed.
-    void Exit() {
-      if (Self) {
-        Self->ExitScope();
-        Self = nullptr;
-      }
-    }
-
-    ~ParseScope() { Exit(); }
-  };
-
-  /// Introduces zero or more scopes for parsing. The scopes will all be exited
-  /// when the object is destroyed.
-  class MultiParseScope {
-    Parser &Self;
-    unsigned NumScopes = 0;
-
-    MultiParseScope(const MultiParseScope &) = delete;
-
-  public:
-    MultiParseScope(Parser &Self) : Self(Self) {}
-    void Enter(unsigned ScopeFlags) {
-      Self.EnterScope(ScopeFlags);
-      ++NumScopes;
-    }
-    void Exit() {
-      while (NumScopes) {
-        Self.ExitScope();
-        --NumScopes;
-      }
-    }
-    ~MultiParseScope() { Exit(); }
-  };
-
-  /// EnterScope - Start a new scope.
-  void EnterScope(unsigned ScopeFlags);
-
-  /// ExitScope - Pop a scope off the scope stack.
-  void ExitScope();
-
-  //===--------------------------------------------------------------------===//
   // Diagnostic Emission and Error recovery.
 
   DiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID);
@@ -545,11 +469,6 @@ private:
   DiagnosticsEngine &Diags;
 
   StackExhaustionHandler StackHandler;
-
-  /// ScopeCache - Cache scopes to reduce malloc traffic.
-  static constexpr int ScopeCacheSize = 16;
-  unsigned NumCachedScopes;
-  Scope *ScopeCache[ScopeCacheSize];
 
   /// Identifiers used for SEH handling in Borland. These are only
   /// allowed in particular circumstances
@@ -2532,7 +2451,7 @@ private:
       assert(SS.isSet() && "C++ scope was not set!");
 
       CreatedScope = true;
-      P.EnterScope(0); // Not a decl scope.
+      P.Actions.EnterScope(0); // Not a decl scope.
 
       if (!P.Actions.ActOnCXXEnterDeclaratorScope(P.getCurScope(), SS))
         EnteredScope = true;
@@ -2544,7 +2463,7 @@ private:
         P.Actions.ActOnCXXExitDeclaratorScope(P.getCurScope(), SS);
       }
       if (CreatedScope)
-        P.ExitScope();
+        P.Actions.ExitScope();
     }
   };
 

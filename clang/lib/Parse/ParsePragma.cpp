@@ -934,8 +934,8 @@ StmtResult Parser::HandlePragmaCaptured()
 
   SourceLocation Loc = Tok.getLocation();
 
-  ParseScope CapturedRegionScope(this, Scope::FnScope | Scope::DeclScope |
-                                           Scope::CompoundStmtScope);
+  ParseScope CapturedRegionScope(Actions, Scope::FnScope | Scope::DeclScope |
+                                              Scope::CompoundStmtScope);
   Actions.ActOnCapturedRegionStart(Loc, getCurScope(), CR_Default,
                                    /*NumParams=*/1);
 

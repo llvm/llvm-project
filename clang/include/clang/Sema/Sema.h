@@ -1200,6 +1200,15 @@ public:
   /// Scope actions.
   void ActOnTranslationUnitScope(Scope *S);
 
+  /// EnterScope - Start a new scope.
+  void EnterScope(unsigned ScopeFlags);
+
+  /// ExitScope - Pop a scope off the scope stack.
+  void ExitScope();
+
+  /// Delete the scope stack and all cached scopes.
+  void FreeScopes();
+
   /// Determine whether \param D is function like (function or function
   /// template) for parsing.
   bool isDeclaratorFunctionLike(Declarator &D);
@@ -1575,9 +1584,11 @@ private:
   sema::SemaPPCallbacks *SemaPPCallbackHandler;
 
   /// The parser's current scope.
-  ///
-  /// The parser maintains this state here.
   Scope *CurScope;
+
+  /// ScopeCache - Cache scopes to reduce malloc traffic.
+  static constexpr unsigned MaxScopeCacheSize = 16;
+  SmallVector<std::unique_ptr<Scope>, MaxScopeCacheSize> ScopeCache;
 
   mutable IdentifierInfo *Ident_super;
 
@@ -4218,7 +4229,7 @@ public:
   TopLevelStmtDecl *ActOnStartTopLevelStmtDecl(Scope *S);
   void ActOnFinishTopLevelStmtDecl(TopLevelStmtDecl *D, Stmt *Statement);
 
-  void ActOnPopScope(SourceLocation Loc, Scope *S);
+  void ActOnPopScope(Scope *S);
 
   /// ParsedFreeStandingDeclSpec - This method is invoked when a declspec with
   /// no declarator (e.g. "struct foo;") is parsed.
@@ -11067,6 +11078,37 @@ public:
       BuildForRangeKind Kind,
       ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
 
+  /// Set the type of a for-range declaration whose for-range or expansion
+  /// initialiser is dependent.
+  void ActOnDependentForRangeInitializer(VarDecl *LoopVar,
+                                         BuildForRangeKind BFRK);
+
+  /// Holds the 'begin' and 'end' variables of a range-based for loop or
+  /// expansion statement; begin-expr and end-expr are also provided; the
+  /// latter are used in some diagnostics.
+  struct ForRangeBeginEndInfo {
+    VarDecl *BeginVar = nullptr;
+    VarDecl *EndVar = nullptr;
+    Expr *BeginExpr = nullptr;
+    Expr *EndExpr = nullptr;
+    bool isValid() const { return BeginVar != nullptr && EndVar != nullptr; }
+  };
+
+  /// Determine begin-expr and end-expr and build variable declarations for
+  /// them as per [stmt.ranged].
+  ForRangeBeginEndInfo BuildCXXForRangeBeginEndVars(
+      Scope *S, VarDecl *RangeVar, SourceLocation ColonLoc,
+      SourceLocation CoawaitLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps,
+      BuildForRangeKind Kind, bool Constexpr,
+      StmtResult *RebuildResult = nullptr,
+      llvm::function_ref<StmtResult()> RebuildWithDereference = {});
+
+  /// Build the range variable of a range-based for loop or iterating
+  /// expansion statement and return its DeclStmt.
+  StmtResult BuildCXXForRangeRangeVar(Scope *S, Expr *Range, QualType Type,
+                                      bool Constexpr = false);
+
   /// FinishCXXForRangeStmt - Attach the body to a C++0x for-range statement.
   /// This is a separate step from ActOnCXXForRangeStmt because analysis of the
   /// body cannot be performed until after the type of the range variable is
@@ -11207,6 +11249,9 @@ public:
   RecordDecl *CreateCapturedStmtRecordDecl(CapturedDecl *&CD,
                                            SourceLocation Loc,
                                            unsigned NumParams);
+
+  void ApplyForRangeOrExpansionStatementLifetimeExtension(
+      VarDecl *RangeVar, ArrayRef<MaterializeTemporaryExpr *> Temporaries);
 
 private:
   /// Check whether the given statement can have musttail applied to it,

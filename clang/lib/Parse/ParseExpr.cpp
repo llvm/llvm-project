@@ -3275,8 +3275,9 @@ ExprResult Parser::ParseBlockLiteralExpression() {
   // argument decls, decls within the compound expression, etc.  This also
   // allows determining whether a variable reference inside the block is
   // within or outside of the block.
-  ParseScope BlockScope(this, Scope::BlockScope | Scope::FnScope |
-                                  Scope::CompoundStmtScope | Scope::DeclScope);
+  ParseScope BlockScope(Actions, Scope::BlockScope | Scope::FnScope |
+                                     Scope::CompoundStmtScope |
+                                     Scope::DeclScope);
 
   // Inform sema that we are starting a block.
   Actions.ActOnBlockStart(CaretLoc, getCurScope());

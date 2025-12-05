@@ -50,7 +50,7 @@ Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
   assert(Tok.isOneOf(tok::kw_export, tok::kw_template) &&
          "Token does not start a template declaration.");
 
-  MultiParseScope TemplateParamScopes(*this);
+  MultiParseScope TemplateParamScopes(Actions);
 
   // Tell the action that names should be checked in the context of
   // the declaration to come.
@@ -700,7 +700,7 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
   SourceLocation LAngleLoc, RAngleLoc;
   ExprResult OptionalRequiresClauseConstraintER;
   {
-    MultiParseScope TemplateParmScope(*this);
+    MultiParseScope TemplateParmScope(Actions);
     if (ParseTemplateParameters(TemplateParmScope, Depth + 1, TemplateParams,
                                 LAngleLoc, RAngleLoc)) {
       return nullptr;
@@ -1456,7 +1456,7 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
   Sema::ContextRAII GlobalSavedContext(
       Actions, Actions.Context.getTranslationUnitDecl());
 
-  MultiParseScope Scopes(*this);
+  MultiParseScope Scopes(Actions);
 
   // Get the list of DeclContexts to reenter.
   SmallVector<DeclContext*, 4> DeclContextsToReenter;
@@ -1493,8 +1493,8 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
 
   // Parse the method body. Function body parsing code is similar enough
   // to be re-used for method bodies as well.
-  ParseScope FnScope(this, Scope::FnScope | Scope::DeclScope |
-                               Scope::CompoundStmtScope);
+  ParseScope FnScope(Actions, Scope::FnScope | Scope::DeclScope |
+                                  Scope::CompoundStmtScope);
 
   // Recreate the containing function DeclContext.
   Sema::ContextRAII FunctionSavedContext(Actions, FunD->getLexicalParent());

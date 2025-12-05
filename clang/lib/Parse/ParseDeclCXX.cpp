@@ -199,7 +199,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
                         : diag::ext_inline_namespace);
 
   // Enter a scope for the namespace.
-  ParseScope NamespaceScope(this, Scope::DeclScope);
+  ParseScope NamespaceScope(Actions, Scope::DeclScope);
 
   UsingDirectiveDecl *ImplicitUsingDirectiveDecl = nullptr;
   Decl *NamespcDecl = Actions.ActOnStartNamespaceDef(
@@ -246,7 +246,7 @@ void Parser::ParseInnerNamespace(const InnerNamespaceInfoList &InnerNSs,
   // Handle a nested namespace definition.
   // FIXME: Preserve the source information through to the AST rather than
   // desugaring it here.
-  ParseScope NamespaceScope(this, Scope::DeclScope);
+  ParseScope NamespaceScope(Actions, Scope::DeclScope);
   UsingDirectiveDecl *ImplicitUsingDirectiveDecl = nullptr;
   Decl *NamespcDecl = Actions.ActOnStartNamespaceDef(
       getCurScope(), InnerNSs[index].InlineLoc, InnerNSs[index].NamespaceLoc,
@@ -316,7 +316,7 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
   assert(isTokenStringLiteral() && "Not a string literal!");
   ExprResult Lang = ParseUnevaluatedStringLiteralExpression();
 
-  ParseScope LinkageScope(this, Scope::DeclScope);
+  ParseScope LinkageScope(Actions, Scope::DeclScope);
   Decl *LinkageSpec =
       Lang.isInvalid()
           ? nullptr
@@ -409,7 +409,7 @@ Decl *Parser::ParseExportDeclaration() {
     return nullptr;
   }
 
-  ParseScope ExportScope(this, Scope::DeclScope);
+  ParseScope ExportScope(Actions, Scope::DeclScope);
   Decl *ExportDecl = Actions.ActOnStartExportDecl(
       getCurScope(), ExportLoc,
       Tok.is(tok::l_brace) ? Tok.getLocation() : SourceLocation());
@@ -3385,7 +3385,7 @@ void Parser::SkipCXXMemberSpecification(SourceLocation RecordLoc,
   // within a template argument).
   if (Tok.is(tok::colon)) {
     // Enter the scope of the class so that we can correctly parse its bases.
-    ParseScope ClassScope(this, Scope::ClassScope | Scope::DeclScope);
+    ParseScope ClassScope(Actions, Scope::ClassScope | Scope::DeclScope);
     ParsingClassDefinition ParsingDef(*this, TagDecl, /*NonNestedClass*/ true,
                                       TagType == DeclSpec::TST_interface);
     auto OldContext =
@@ -3573,7 +3573,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   }
 
   // Enter a scope for the class.
-  ParseScope ClassScope(this, Scope::ClassScope | Scope::DeclScope);
+  ParseScope ClassScope(Actions, Scope::ClassScope | Scope::DeclScope);
 
   // Note that we are parsing a new (potentially-nested) class definition.
   ParsingClassDefinition ParsingDef(*this, TagDecl, NonNestedClass,
@@ -3678,8 +3678,8 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   }
 
   if (Tok.is(tok::colon)) {
-    ParseScope InheritanceScope(this, getCurScope()->getFlags() |
-                                          Scope::ClassInheritanceScope);
+    ParseScope InheritanceScope(Actions, getCurScope()->getFlags() |
+                                             Scope::ClassInheritanceScope);
 
     ParseBaseClause(TagDecl);
     if (!Tok.is(tok::l_brace)) {
@@ -4192,9 +4192,9 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
     DeclScopeObj.EnterDeclaratorScope();
 
   ExprResult TrailingRequiresClause;
-  ParseScope ParamScope(this, Scope::DeclScope |
-                                  Scope::FunctionDeclarationScope |
-                                  Scope::FunctionPrototypeScope);
+  ParseScope ParamScope(Actions, Scope::DeclScope |
+                                     Scope::FunctionDeclarationScope |
+                                     Scope::FunctionPrototypeScope);
 
   Actions.ActOnStartTrailingRequiresClause(getCurScope(), D);
 

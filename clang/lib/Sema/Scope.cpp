@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/Sema.h"
 #include "clang/AST/Decl.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -267,4 +268,36 @@ void Scope::dumpImpl(raw_ostream &OS) const {
     OS << "NRVO candidate : (clang::VarDecl*)" << *NRVO << '\n';
   else
     OS << "NRVO is not allowed\n";
+}
+
+ParseScope::ParseScope(Sema &S, unsigned ScopeFlags, bool EnteredScope,
+                       bool BeforeCompoundStmt)
+    : S(&S) {
+  if (EnteredScope && !BeforeCompoundStmt)
+    S.EnterScope(ScopeFlags);
+  else {
+    if (BeforeCompoundStmt)
+      S.incrementMSManglingNumber();
+
+    this->S = nullptr;
+  }
+}
+
+void ParseScope::Exit() {
+  if (S) {
+    S->ExitScope();
+    S = nullptr;
+  }
+}
+
+void MultiParseScope::Enter(unsigned ScopeFlags) {
+  S.EnterScope(ScopeFlags);
+  ++NumScopes;
+}
+
+void MultiParseScope::Exit() {
+  while (NumScopes) {
+    S.ExitScope();
+    --NumScopes;
+  }
 }

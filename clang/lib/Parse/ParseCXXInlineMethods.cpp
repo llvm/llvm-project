@@ -328,7 +328,8 @@ struct Parser::ReenterTemplateScopeRAII {
   TemplateParameterDepthRAII CurTemplateDepthTracker;
 
   ReenterTemplateScopeRAII(Parser &P, Decl *MaybeTemplated, bool Enter = true)
-      : P(P), Scopes(P), CurTemplateDepthTracker(P.TemplateParameterDepth) {
+      : P(P), Scopes(P.Actions),
+        CurTemplateDepthTracker(P.TemplateParameterDepth) {
     if (Enter) {
       CurTemplateDepthTracker.addDepth(
           P.ReenterTemplateScopes(Scopes, MaybeTemplated));
@@ -510,7 +511,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     // };
     // Setup the CurScope to match the function DeclContext - we have such
     // assumption in IsInFnTryBlockHandler().
-    ParseScope FnScope(this, Scope::FnScope);
+    ParseScope FnScope(Actions, Scope::FnScope);
     Sema::ContextRAII FnContext(Actions, FunctionToPush,
                                 /*NewThisContext=*/false);
     Sema::FunctionScopeRAII PopFnContext(Actions);
@@ -597,8 +598,8 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
   // Parse the method body. Function body parsing code is similar enough
   // to be re-used for method bodies as well.
-  ParseScope FnScope(this, Scope::FnScope | Scope::DeclScope |
-                               Scope::CompoundStmtScope);
+  ParseScope FnScope(Actions, Scope::FnScope | Scope::DeclScope |
+                                  Scope::CompoundStmtScope);
   Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
 
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);

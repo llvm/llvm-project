@@ -645,8 +645,8 @@ StmtResult Parser::ParseSEHExceptBlock(SourceLocation ExceptLoc) {
   if (ExpectAndConsume(tok::l_paren))
     return StmtError();
 
-  ParseScope ExpectScope(this, Scope::DeclScope | Scope::ControlScope |
-                                   Scope::SEHExceptScope);
+  ParseScope ExpectScope(Actions, Scope::DeclScope | Scope::ControlScope |
+                                      Scope::SEHExceptScope);
 
   if (getLangOpts().Borland) {
     Ident__exception_info->setIsPoisoned(false);
@@ -692,7 +692,7 @@ StmtResult Parser::ParseSEHFinallyBlock(SourceLocation FinallyLoc) {
   if (Tok.isNot(tok::l_brace))
     return StmtError(Diag(Tok, diag::err_expected) << tok::l_brace);
 
-  ParseScope FinallyScope(this, 0);
+  ParseScope FinallyScope(Actions, 0);
   Actions.ActOnStartSEHFinallyBlock();
 
   StmtResult Block(ParseCompoundStatement());
@@ -1003,7 +1003,7 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
 
   // Enter a scope to hold everything within the compound stmt.  Compound
   // statements can always hold declarations.
-  ParseScope CompoundScope(this, ScopeFlags);
+  ParseScope CompoundScope(Actions, ScopeFlags);
 
   // Parse the statements in the body.
   StmtResult R;
@@ -1494,7 +1494,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   // while, for, and switch statements are local to the if, while, for, or
   // switch statement (including the controlled statement).
   //
-  ParseScope IfScope(this, Scope::DeclScope | Scope::ControlScope, C99orCXX);
+  ParseScope IfScope(Actions, Scope::DeclScope | Scope::ControlScope, C99orCXX);
 
   // Parse the condition.
   StmtResult InitStmt;
@@ -1534,7 +1534,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   //    would have to notify ParseStatement not to create a new scope. It's
   //    simpler to let it create a new scope.
   //
-  ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, IsBracedThen);
+  ParseScope InnerScope(Actions, Scope::DeclScope, C99orCXX, IsBracedThen);
 
   MisleadingIndentationChecker MIChecker(*this, MSK_if, IfLoc);
 
@@ -1585,7 +1585,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     // The substatement in a selection-statement (each substatement, in the else
     // form of the if statement) implicitly defines a local scope.
     //
-    ParseScope InnerScope(this, Scope::DeclScope, C99orCXX,
+    ParseScope InnerScope(Actions, Scope::DeclScope, C99orCXX,
                           Tok.is(tok::l_brace));
 
     MisleadingIndentationChecker MIChecker(*this, MSK_else, ElseLoc);
@@ -1691,7 +1691,7 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
   unsigned ScopeFlags = Scope::SwitchScope;
   if (C99orCXX)
     ScopeFlags |= Scope::DeclScope | Scope::ControlScope;
-  ParseScope SwitchScope(this, ScopeFlags);
+  ParseScope SwitchScope(Actions, ScopeFlags);
 
   // Parse the condition.
   StmtResult InitStmt;
@@ -1731,7 +1731,8 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
   //
   getCurScope()->AddFlags(Scope::BreakScope);
   getCurScope()->setPrecedingLabel(PrecedingLabel);
-  ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
+  ParseScope InnerScope(Actions, Scope::DeclScope, C99orCXX,
+                        Tok.is(tok::l_brace));
 
   // We have incremented the mangling number for the SwitchScope and the
   // InnerScope, which is one too many.
@@ -1780,7 +1781,7 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc,
                  Scope::DeclScope  | Scope::ControlScope;
   else
     ScopeFlags = Scope::BreakScope | Scope::ContinueScope;
-  ParseScope WhileScope(this, ScopeFlags);
+  ParseScope WhileScope(Actions, ScopeFlags);
 
   // Parse the condition.
   Sema::ConditionResult Cond;
@@ -1807,7 +1808,8 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc,
   // See comments in ParseIfStatement for why we create a scope for the
   // condition and a new scope for substatement in C++.
   //
-  ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
+  ParseScope InnerScope(Actions, Scope::DeclScope, C99orCXX,
+                        Tok.is(tok::l_brace));
 
   MisleadingIndentationChecker MIChecker(*this, MSK_while, WhileLoc);
 
@@ -1838,7 +1840,7 @@ StmtResult Parser::ParseDoStatement(LabelDecl *PrecedingLabel) {
   else
     ScopeFlags = Scope::BreakScope | Scope::ContinueScope;
 
-  ParseScope DoScope(this, ScopeFlags);
+  ParseScope DoScope(Actions, ScopeFlags);
 
   // OpenACC Restricts a do-while-loop inside of certain construct/clause
   // combinations, so diagnose that here in OpenACC mode.
@@ -1855,7 +1857,8 @@ StmtResult Parser::ParseDoStatement(LabelDecl *PrecedingLabel) {
   // which is entered and exited each time through the loop.
   //
   bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
-  ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
+  ParseScope InnerScope(Actions, Scope::DeclScope, C99orCXX,
+                        Tok.is(tok::l_brace));
 
   // Read the body statement.
   StmtResult Body(ParseStatement());
@@ -2013,7 +2016,7 @@ Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   if (CXXExpansionStmtDecl)
     ScopeFlags |= Scope::TemplateParamScope;
 
-  ParseScope ForScope(this, ScopeFlags);
+  ParseScope ForScope(Actions, ScopeFlags);
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
@@ -2333,7 +2336,7 @@ Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   // See comments in ParseIfStatement for why we create a scope for
   // for-init-statement/condition and a new scope for substatement in C++.
   //
-  ParseScope InnerScope(this, Scope::DeclScope, C99orCXXorObjC,
+  ParseScope InnerScope(Actions, Scope::DeclScope, C99orCXXorObjC,
                         Tok.is(tok::l_brace));
 
   // The body of the for loop has the same local mangling number as the
@@ -2698,8 +2701,8 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
   // The name in a catch exception-declaration is local to the handler and
   // shall not be redeclared in the outermost block of the handler.
   ParseScope CatchScope(
-      this, Scope::DeclScope | Scope::ControlScope | Scope::CatchScope |
-                (FnCatch ? Scope::FnTryCatchScope : Scope::NoScope));
+      Actions, Scope::DeclScope | Scope::ControlScope | Scope::CatchScope |
+                   (FnCatch ? Scope::FnTryCatchScope : Scope::NoScope));
 
   // exception-declaration is equivalent to '...' or a parameter-declaration
   // without default arguments.

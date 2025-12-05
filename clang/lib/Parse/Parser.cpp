@@ -64,7 +64,6 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   Tok.startToken();
   Tok.setKind(tok::eof);
   Actions.CurScope = nullptr;
-  NumCachedScopes = 0;
   CurParsedObjCImpl = nullptr;
 
   // Add #pragma handlers. These are removed and destroyed in the
@@ -416,33 +415,6 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
 //===----------------------------------------------------------------------===//
 // Scope manipulation
 //===----------------------------------------------------------------------===//
-
-void Parser::EnterScope(unsigned ScopeFlags) {
-  if (NumCachedScopes) {
-    Scope *N = ScopeCache[--NumCachedScopes];
-    N->Init(getCurScope(), ScopeFlags);
-    Actions.CurScope = N;
-  } else {
-    Actions.CurScope = new Scope(getCurScope(), ScopeFlags, Diags);
-  }
-}
-
-void Parser::ExitScope() {
-  assert(getCurScope() && "Scope imbalance!");
-
-  // Inform the actions module that this scope is going away if there are any
-  // decls in it.
-  Actions.ActOnPopScope(Tok.getLocation(), getCurScope());
-
-  Scope *OldScope = getCurScope();
-  Actions.CurScope = OldScope->getParent();
-
-  if (NumCachedScopes == ScopeCacheSize)
-    delete OldScope;
-  else
-    ScopeCache[NumCachedScopes++] = OldScope;
-}
-
 Parser::ParseScopeFlags::ParseScopeFlags(Parser *Self, unsigned ScopeFlags,
                                  bool ManageFlags)
   : CurScope(ManageFlags ? Self->getCurScope() : nullptr) {
@@ -463,13 +435,7 @@ Parser::ParseScopeFlags::~ParseScopeFlags() {
 //===----------------------------------------------------------------------===//
 
 Parser::~Parser() {
-  // If we still have scopes active, delete the scope tree.
-  delete getCurScope();
-  Actions.CurScope = nullptr;
-
-  // Free the scope cache.
-  for (unsigned i = 0, e = NumCachedScopes; i != e; ++i)
-    delete ScopeCache[i];
+  Actions.FreeScopes();
 
   resetPragmaHandlers();
 
@@ -483,7 +449,7 @@ Parser::~Parser() {
 void Parser::Initialize() {
   // Create the translation unit scope.  Install it as the current scope.
   assert(getCurScope() == nullptr && "A scope is already active?");
-  EnterScope(Scope::DeclScope);
+  Actions.EnterScope(Scope::DeclScope);
   Actions.ActOnTranslationUnitScope(getCurScope());
 
   // Initialization for Objective-C context sensitive keywords recognition.
@@ -1270,8 +1236,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
       LateParsedAttrs->empty() && Actions.canDelayFunctionBody(D)) {
     MultiTemplateParamsArg TemplateParameterLists(*TemplateInfo.TemplateParams);
 
-    ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
-                                   Scope::CompoundStmtScope);
+    ParseScope BodyScope(Actions, Scope::FnScope | Scope::DeclScope |
+                                      Scope::CompoundStmtScope);
     Scope *ParentScope = getCurScope()->getParent();
 
     D.setFunctionDefinitionKind(FunctionDefinitionKind::Definition);
@@ -1299,8 +1265,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   if (CurParsedObjCImpl && !TemplateInfo.TemplateParams &&
       (Tok.is(tok::l_brace) || Tok.is(tok::kw_try) || Tok.is(tok::colon)) &&
       Actions.CurContext->isTranslationUnit()) {
-    ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
-                                   Scope::CompoundStmtScope);
+    ParseScope BodyScope(Actions, Scope::FnScope | Scope::DeclScope |
+                                      Scope::CompoundStmtScope);
     Scope *ParentScope = getCurScope()->getParent();
 
     D.setFunctionDefinitionKind(FunctionDefinitionKind::Definition);
@@ -1318,8 +1284,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   }
 
   // Enter a scope for the function body.
-  ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
-                                 Scope::CompoundStmtScope);
+  ParseScope BodyScope(Actions, Scope::FnScope | Scope::DeclScope |
+                                    Scope::CompoundStmtScope);
 
   // Parse function body eagerly if it is either '= delete;' or '= default;' as
   // ActOnStartOfFunctionDef needs to know whether the function is deleted.
@@ -1471,8 +1437,9 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
 
   // Enter function-declaration scope, limiting any declarators to the
   // function prototype scope, including parameter declarators.
-  ParseScope PrototypeScope(this, Scope::FunctionPrototypeScope |
-                            Scope::FunctionDeclarationScope | Scope::DeclScope);
+  ParseScope PrototypeScope(Actions, Scope::FunctionPrototypeScope |
+                                         Scope::FunctionDeclarationScope |
+                                         Scope::DeclScope);
 
   // Read all the argument declarations.
   while (isDeclarationSpecifier(ImplicitTypenameContext::No)) {
