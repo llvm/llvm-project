@@ -112,3 +112,27 @@ llvm.func @mbarrier_arr_drop_expect_tx_cluster(%barrier: !llvm.ptr<7>, %tx_count
   llvm.return
 }
 
+// -----
+
+llvm.func @mbarrier_test_wait(%barrier: !llvm.ptr<3>, %phase: i32) {
+  // expected-error @below {{mbarrier scope must be either CTA or Cluster}}
+  %1 = nvvm.mbarrier.test.wait %barrier, %phase {scope = #nvvm.mem_scope<gpu>} : !llvm.ptr<3>, i32 -> i1
+  llvm.return
+}
+
+// -----
+
+llvm.func @mbarrier_try_wait(%barrier: !llvm.ptr<3>, %phase: i32) {
+  // expected-error @below {{mbarrier scope must be either CTA or Cluster}}
+  %1 = nvvm.mbarrier.try_wait %barrier, %phase {scope = #nvvm.mem_scope<sys>} : !llvm.ptr<3>, i32 -> i1
+  llvm.return
+}
+
+// -----
+
+llvm.func @mbarrier_try_wait_with_timelimit(%barrier: !llvm.ptr<3>, %phase: i32, %ticks: i32) {
+  // expected-error @below {{mbarrier scope must be either CTA or Cluster}}
+  %1 = nvvm.mbarrier.try_wait %barrier, %phase, %ticks {scope = #nvvm.mem_scope<gpu>} : !llvm.ptr<3>, i32, i32 -> i1
+  llvm.return
+}
+

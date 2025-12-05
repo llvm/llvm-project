@@ -150,7 +150,7 @@ let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1 in {
 
 // SetZUCC and promoted SetCC instructions.
 let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1,
-  hasSideEffects = 0, Predicates = [In64BitMode], Predicates = [HasNDD] in {
+  hasSideEffects = 0, Predicates = [In64BitMode] in {
   def SETZUCCr : I<0x40, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),
                 "setzu${cond}\t$dst", []>,
                 XD, ZU, NoCD8, Sched<[WriteSETCC]>;
@@ -166,6 +166,10 @@ let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1,
                   XD, PL, Sched<[WriteSETCCStore]>;
   }
 }
+
+let Predicates = [HasZU] in
+  def : Pat<(i32 (zext (X86setcc timm:$cond, EFLAGS))),
+            (INSERT_SUBREG (i32 (IMPLICIT_DEF)), (SETZUCCr ccode:$cond), sub_8bit)>;
 
 // SALC is an undocumented instruction. Information for this instruction can be found
 // here http://www.rcollins.org/secrets/opcodes/SALC.html

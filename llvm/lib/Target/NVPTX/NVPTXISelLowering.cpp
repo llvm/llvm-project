@@ -4077,9 +4077,10 @@ void NVPTXTargetLowering::LowerAsmOperandForConstraint(
 // because we need the information that is only available in the "Value" type
 // of destination
 // pointer. In particular, the address space information.
-bool NVPTXTargetLowering::getTgtMemIntrinsic(
-    IntrinsicInfo &Info, const CallInst &I,
-    MachineFunction &MF, unsigned Intrinsic) const {
+bool NVPTXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
+                                             const CallBase &I,
+                                             MachineFunction &MF,
+                                             unsigned Intrinsic) const {
   switch (Intrinsic) {
   default:
     return false;

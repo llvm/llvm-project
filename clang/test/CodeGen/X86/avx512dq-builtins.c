@@ -364,6 +364,10 @@ __mmask8 test_kshiftli_mask8(__m512i A, __m512i B, __m512i C, __m512i D) {
   // CHECK: [[RES:%.*]] = shufflevector <8 x i1> zeroinitializer, <8 x i1> [[VAL]], <8 x i32> <i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13>
   return _mm512_mask_cmpneq_epu64_mask(_kshiftli_mask8(_mm512_cmpneq_epu64_mask(A, B), 2), C, D);
 }
+TEST_CONSTEXPR(_kshiftli_mask8(0x01, 1) == 0x02);
+TEST_CONSTEXPR(_kshiftli_mask8(0x01, 7) == 0x80);
+TEST_CONSTEXPR(_kshiftli_mask8(0x01, 8) == 0x00);
+TEST_CONSTEXPR(_kshiftli_mask8(0x0F, 2) == 0x3C);
 
 __mmask8 test_kshiftri_mask8(__m512i A, __m512i B, __m512i C, __m512i D) {
   // CHECK-LABEL: test_kshiftri_mask8
@@ -371,6 +375,10 @@ __mmask8 test_kshiftri_mask8(__m512i A, __m512i B, __m512i C, __m512i D) {
   // CHECK: [[RES:%.*]] = shufflevector <8 x i1> [[VAL]], <8 x i1> zeroinitializer, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9>
   return _mm512_mask_cmpneq_epu64_mask(_kshiftri_mask8(_mm512_cmpneq_epu64_mask(A, B), 2), C, D);
 }
+TEST_CONSTEXPR(_kshiftri_mask8(0x80, 1) == 0x40);
+TEST_CONSTEXPR(_kshiftri_mask8(0x80, 7) == 0x01);
+TEST_CONSTEXPR(_kshiftri_mask8(0x80, 8) == 0x00);
+TEST_CONSTEXPR(_kshiftri_mask8(0xF0, 2) == 0x3C);
 
 unsigned int test_cvtmask8_u32(__m512i A, __m512i B) {
   // CHECK-LABEL: test_cvtmask8_u32
