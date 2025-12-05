@@ -1636,6 +1636,14 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (sc) {
       Module *module = sc->module_sp.get();
       if (module) {
+        // Add a space before module name if frame has a valid PC
+        // (so "PC module" but ": module" for PC-less frames)
+        if (exe_ctx) {
+          StackFrame *frame = exe_ctx->GetFramePtr();
+          if (frame && frame->GetFrameCodeAddress().IsValid()) {
+            s.PutChar(' ');
+          }
+        }
         if (DumpFile(s, module->GetFileSpec(), (FileKind)entry.number))
           return true;
       }
@@ -1684,10 +1692,11 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       StackFrame *frame = exe_ctx->GetFramePtr();
       if (frame) {
         const Address &pc_addr = frame->GetFrameCodeAddress();
-        if (pc_addr.IsValid() || frame->IsSynthetic()) {
+        if (pc_addr.IsValid()) {
           if (DumpAddressAndContent(s, sc, exe_ctx, pc_addr, false))
             return true;
-        }
+        } else if (frame->IsSynthetic())
+          return true;
       }
     }
     return false;
@@ -1808,70 +1817,91 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return initial_function;
 
   case Entry::Type::FunctionName: {
-    if (!sc)
-      return false;
+    if (sc) {
+      Language *language_plugin = nullptr;
+      bool language_plugin_handled = false;
+      StreamString ss;
 
-    Language *language_plugin = nullptr;
-    bool language_plugin_handled = false;
-    StreamString ss;
+      if (sc->function)
+        language_plugin = Language::FindPlugin(sc->function->GetLanguage());
+      else if (sc->symbol)
+        language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
 
-    if (sc->function)
-      language_plugin = Language::FindPlugin(sc->function->GetLanguage());
-    else if (sc->symbol)
-      language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+      if (language_plugin)
+        language_plugin_handled = language_plugin->GetFunctionDisplayName(
+            *sc, exe_ctx, Language::FunctionNameRepresentation::eName, ss);
 
-    if (language_plugin)
-      language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          *sc, exe_ctx, Language::FunctionNameRepresentation::eName, ss);
+      if (language_plugin_handled) {
+        s << ss.GetString();
+        return true;
+      }
 
-    if (language_plugin_handled) {
-      s << ss.GetString();
-      return true;
+      const char *name = sc->GetPossiblyInlinedFunctionName()
+                             .GetName(Mangled::NamePreference::ePreferDemangled)
+                             .AsCString();
+      if (name) {
+        s.PutCString(name);
+        return true;
+      }
     }
 
-    const char *name = sc->GetPossiblyInlinedFunctionName()
-                           .GetName(Mangled::NamePreference::ePreferDemangled)
-                           .AsCString();
-    if (!name)
-      return false;
-
-    s.PutCString(name);
-
-    return true;
+    // Fallback to frame methods if available
+    if (exe_ctx) {
+      StackFrame *frame = exe_ctx->GetFramePtr();
+      if (frame) {
+        const char *name = frame->GetFunctionName();
+        if (name) {
+          s.PutCString(name);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   case Entry::Type::FunctionNameNoArgs: {
-    if (!sc)
-      return false;
+    if (sc) {
+      Language *language_plugin = nullptr;
+      bool language_plugin_handled = false;
+      StreamString ss;
+      if (sc->function)
+        language_plugin = Language::FindPlugin(sc->function->GetLanguage());
+      else if (sc->symbol)
+        language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
 
-    Language *language_plugin = nullptr;
-    bool language_plugin_handled = false;
-    StreamString ss;
-    if (sc->function)
-      language_plugin = Language::FindPlugin(sc->function->GetLanguage());
-    else if (sc->symbol)
-      language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+      if (language_plugin)
+        language_plugin_handled = language_plugin->GetFunctionDisplayName(
+            *sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithNoArgs,
+            ss);
 
-    if (language_plugin)
-      language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          *sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithNoArgs,
-          ss);
+      if (language_plugin_handled) {
+        s << ss.GetString();
+        return true;
+      }
 
-    if (language_plugin_handled) {
-      s << ss.GetString();
-      return true;
+      const char *name =
+          sc->GetPossiblyInlinedFunctionName()
+              .GetName(
+                  Mangled::NamePreference::ePreferDemangledWithoutArguments)
+              .AsCString();
+      if (name) {
+        s.PutCString(name);
+        return true;
+      }
     }
 
-    const char *name =
-        sc->GetPossiblyInlinedFunctionName()
-            .GetName(Mangled::NamePreference::ePreferDemangledWithoutArguments)
-            .AsCString();
-    if (!name)
-      return false;
-
-    s.PutCString(name);
-
-    return true;
+    // Fallback to frame methods if available
+    if (exe_ctx) {
+      StackFrame *frame = exe_ctx->GetFramePtr();
+      if (frame) {
+        const char *name = frame->GetFunctionName();
+        if (name) {
+          s.PutCString(name);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   case Entry::Type::FunctionPrefix:
@@ -1898,13 +1928,26 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   }
 
   case Entry::Type::FunctionNameWithArgs: {
-    if (!sc)
-      return false;
+    if (sc) {
+      if (FormatFunctionNameForLanguage(s, exe_ctx, sc))
+        return true;
 
-    if (FormatFunctionNameForLanguage(s, exe_ctx, sc))
-      return true;
+      if (HandleFunctionNameWithArgs(s, exe_ctx, *sc))
+        return true;
+    }
 
-    return HandleFunctionNameWithArgs(s, exe_ctx, *sc);
+    // Fallback to frame methods if available
+    if (exe_ctx) {
+      StackFrame *frame = exe_ctx->GetFramePtr();
+      if (frame) {
+        const char *name = frame->GetDisplayFunctionName();
+        if (name) {
+          s.PutCString(name);
+          return true;
+        }
+      }
+    }
+    return false;
   }
   case Entry::Type::FunctionMangledName: {
     if (!sc)
@@ -1951,6 +1994,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
                                           frame->GetFrameCodeAddress(), false,
                                           false, false))
           return true;
+        else if (frame->IsSynthetic())
+          return true;
       }
     }
     return false;
@@ -1975,11 +2020,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
   case Entry::Type::LineEntryFile:
     if (sc && sc->line_entry.IsValid()) {
-      Module *module = sc->module_sp.get();
-      if (module) {
-        if (DumpFile(s, sc->line_entry.GetFile(), (FileKind)entry.number))
-          return true;
-      }
+      if (DumpFile(s, sc->line_entry.GetFile(), (FileKind)entry.number))
+        return true;
     }
     return false;
 

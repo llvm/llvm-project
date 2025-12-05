@@ -11,10 +11,15 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -98,9 +103,8 @@ ScriptedFrame::Create(ThreadSP thread_sp,
 
   std::optional<SymbolContext> maybe_sym_ctx =
       scripted_frame_interface->GetSymbolContext();
-  if (maybe_sym_ctx) {
+  if (maybe_sym_ctx)
     sc = *maybe_sym_ctx;
-  }
 
   StructuredData::DictionarySP reg_info =
       scripted_frame_interface->GetRegisterInfo();
@@ -162,7 +166,7 @@ const char *ScriptedFrame::GetFunctionName() {
   CheckInterpreterAndScriptObject();
   std::optional<std::string> function_name = GetInterface()->GetFunctionName();
   if (!function_name)
-    return nullptr;
+    return StackFrame::GetFunctionName();
   return ConstString(function_name->c_str()).AsCString();
 }
 
@@ -171,7 +175,7 @@ const char *ScriptedFrame::GetDisplayFunctionName() {
   std::optional<std::string> function_name =
       GetInterface()->GetDisplayFunctionName();
   if (!function_name)
-    return nullptr;
+    return StackFrame::GetDisplayFunctionName();
   return ConstString(function_name->c_str()).AsCString();
 }
 

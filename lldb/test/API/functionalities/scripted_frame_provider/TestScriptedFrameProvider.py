@@ -426,3 +426,128 @@ class ScriptedFrameProviderTestCase(TestBase):
             # These calls should not trigger circular dependency
             pc = frame.GetPC()
             self.assertNotEqual(pc, 0, f"Frame {i} should have valid PC")
+
+    def test_python_source_frames(self):
+        """Test that frames can point to Python source files and display properly."""
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        # Get original frame count
+        original_frame_count = thread.GetNumFrames()
+        self.assertGreaterEqual(
+            original_frame_count, 2, "Should have at least 2 real frames"
+        )
+
+        # Import the provider
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        # Register the PythonSourceFrameProvider
+        error = lldb.SBError()
+        provider_id = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.PythonSourceFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register provider: {error}")
+        self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
+
+        # Verify we have 3 more frames (Python frames)
+        new_frame_count = thread.GetNumFrames()
+        self.assertEqual(
+            new_frame_count,
+            original_frame_count + 3,
+            "Should have original frames + 3 Python frames",
+        )
+
+        # Verify first three frames are Python source frames
+        frame0 = thread.GetFrameAtIndex(0)
+        self.assertIsNotNone(frame0)
+        self.assertEqual(
+            frame0.GetFunctionName(),
+            "compute_fibonacci",
+            "First frame should be compute_fibonacci",
+        )
+        self.assertTrue(frame0.IsSynthetic(), "Frame should be marked as synthetic")
+        # PC-less frames should show invalid address
+        self.assertEqual(
+            frame0.GetPC(),
+            lldb.LLDB_INVALID_ADDRESS,
+            "PC-less frame should have LLDB_INVALID_ADDRESS",
+        )
+
+        frame1 = thread.GetFrameAtIndex(1)
+        self.assertIsNotNone(frame1)
+        self.assertEqual(
+            frame1.GetFunctionName(),
+            "process_data",
+            "Second frame should be process_data",
+        )
+        self.assertTrue(frame1.IsSynthetic(), "Frame should be marked as synthetic")
+
+        frame2 = thread.GetFrameAtIndex(2)
+        self.assertIsNotNone(frame2)
+        self.assertEqual(
+            frame2.GetFunctionName(), "main", "Third frame should be main"
+        )
+        self.assertTrue(frame2.IsSynthetic(), "Frame should be marked as synthetic")
+
+        # Verify line entry information is present
+        line_entry0 = frame0.GetLineEntry()
+        self.assertTrue(
+            line_entry0.IsValid(), "Frame 0 should have a valid line entry"
+        )
+        self.assertEqual(
+            line_entry0.GetLine(), 7, "Frame 0 should point to line 7"
+        )
+        file_spec0 = line_entry0.GetFileSpec()
+        self.assertTrue(file_spec0.IsValid(), "Frame 0 should have valid file spec")
+        self.assertEqual(
+            file_spec0.GetFilename(),
+            "python_helper.py",
+            "Frame 0 should point to python_helper.py",
+        )
+
+        line_entry1 = frame1.GetLineEntry()
+        self.assertTrue(
+            line_entry1.IsValid(), "Frame 1 should have a valid line entry"
+        )
+        self.assertEqual(
+            line_entry1.GetLine(), 16, "Frame 1 should point to line 16"
+        )
+
+        line_entry2 = frame2.GetLineEntry()
+        self.assertTrue(
+            line_entry2.IsValid(), "Frame 2 should have a valid line entry"
+        )
+        self.assertEqual(
+            line_entry2.GetLine(), 27, "Frame 2 should point to line 27"
+        )
+
+        # Verify the frames display properly in backtrace
+        # This tests that PC-less frames don't show 0xffffffffffffffff
+        self.runCmd("bt")
+        output = self.res.GetOutput()
+
+        # Should show function names
+        self.assertIn("compute_fibonacci", output)
+        self.assertIn("process_data", output)
+        self.assertIn("main", output)
+
+        # Should show Python file
+        self.assertIn("python_helper.py", output)
+
+        # Should show line numbers
+        self.assertIn(":7", output)  # compute_fibonacci line
+        self.assertIn(":16", output)  # process_data line
+        self.assertIn(":27", output)  # main line
+
+        # Should NOT show invalid address (0xffffffffffffffff)
+        self.assertNotIn("0xffffffffffffffff", output.lower())
+
+        # Verify frame 3 is the original real frame 0
+        frame3 = thread.GetFrameAtIndex(3)
+        self.assertIsNotNone(frame3)
+        self.assertIn("thread_func", frame3.GetFunctionName())
