@@ -558,6 +558,11 @@ Changes in existing checks
   adding parentheses when the inner expression are implicitly converted
   multiple times.
 
+- Improved :doc:`readability-inconsistent-declaration-parameter-name
+  <clang-tidy/checks/readability/inconsistent-declaration-parameter-name>` check
+  by not enforcing parameter name consistency between a variadic parameter pack
+  in the primary template and specific parameters in its specializations.
+
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
