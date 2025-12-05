@@ -1055,7 +1055,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   const APInt *BaseOffset;
   const bool ExtractBase =
       match(GEP->getPointerOperand(),
-            m_PtrAdd(m_Value(NewBase), m_APInt(BaseOffset)));
+            m_PtrAdd(*DL, m_Value(NewBase), m_APInt(BaseOffset)));
 
   const int64_t BaseByteOffset = ExtractBase ? BaseOffset->getSExtValue() : 0;
 
