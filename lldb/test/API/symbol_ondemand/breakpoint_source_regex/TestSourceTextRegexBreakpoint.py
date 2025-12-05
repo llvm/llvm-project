@@ -20,9 +20,7 @@ class TestSourceTextRegexBreakpoint(TestBase):
 
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
-        self.runCmd("source list -f main.cpp -l 1")
-
-        lldbutil.run_break_set_by_source_regexp(self, "Set break point at this line.")
+        lldbutil.run_break_set_by_source_regexp(self, "Set break point at this line.", extra_options="-f main.cpp")
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
