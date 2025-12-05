@@ -126,6 +126,22 @@ ninja -C build
 ninja -C build install
 ```
 
+### Using DSMIL wrappers and toolchain
+
+- Wrappers: `dsmil-clang`, `dsmil-clang++`, and `dsmil-opt` are installed alongside the toolchain. They automatically load the DSMIL pass plugin, add DSMIL headers, and link the DSMIL runtime (`libdsmilrt.a`).
+- Toolchain file: A CMake preset is installed at `/usr/local/share/dsmil/dsmil-toolchain.cmake` (or `${CMAKE_INSTALL_PREFIX}/share/dsmil/` if you used a custom prefix). Use it so CMake picks up DSMIL by default:
+
+```bash
+cmake -G Ninja -S <src> -B <build> \
+  -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/dsmil/dsmil-toolchain.cmake
+```
+
+Set a custom prefix if you installed elsewhere:
+
+```bash
+cmake ... -DDSMIL_PREFIX=/opt/dsllvm ...
+```
+
 ### Using DSLLVM
 
 ```bash

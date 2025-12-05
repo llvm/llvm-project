@@ -32,3 +32,8 @@ install(
   PROGRAMS ${DSMIL_WRAPPER_OUTPUTS}
   DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+install(
+  FILES cmake/dsmil-toolchain.cmake
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/dsmil
+)
