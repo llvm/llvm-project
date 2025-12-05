@@ -408,6 +408,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                 // unused-argument diagnostics.
   SanitizerMask DiagnosedKinds; // All Kinds we have diagnosed up to now.
                                 // Used to deduplicate diagnostics.
+  SanitizerMask IgnoreForUbsanFeature; // Accumulated set of values passed to
+                                       // `-fsanitize-ignore-for-ubsan-feature`.
   SanitizerMask Kinds;
   const SanitizerMask Supported = setGroupBits(TC.getSupportedSanitizers());
 
@@ -612,6 +614,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       Arg->claim();
       SanitizerMask Remove = parseArgValues(D, Arg, DiagnoseErrors);
       AllRemove |= expandSanitizerGroups(Remove);
+    } else if (Arg->getOption().matches(
+                   options::OPT_fsanitize_ignore_for_ubsan_feature_EQ)) {
+      Arg->claim();
+      SanitizerMask Suppress = parseArgValues(D, Arg, DiagnoseErrors);
+      IgnoreForUbsanFeature |= expandSanitizerGroups(Suppress);
     }
   }
 
@@ -735,6 +742,22 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // -fsanitize=address. Perhaps it should print an error, or perhaps
   // -f(-no)sanitize=leak should change whether leak detection is enabled by
   // default in ASan?
+
+  // Error if a non-UBSan sanitizer is passed to
+  // `-fsanitize-ignore-for-ubsan-feature=`.
+  //
+  // `shift` is a `SANITIZER_GROUP()`, and so is expanded into its constituents
+  // by `expandSanitizerGroups()` above, though the physical bit is not included
+  // in `SanitizerKind::Undefined`.
+  const SanitizerMask not_ubsan_mask =
+      IgnoreForUbsanFeature &
+      ~(SanitizerKind::Undefined | SanitizerKind::ShiftGroup);
+  if (not_ubsan_mask && DiagnoseErrors) {
+    SanitizerSet not_ubsan;
+    not_ubsan.set(not_ubsan_mask);
+    D.Diag(clang::diag::err_drv_not_a_ubsan_sanitizer) << toString(not_ubsan);
+  }
+  IgnoreForUbsanFeature &= SanitizerKind::Undefined;
 
   // Parse -f(no-)?sanitize-recover flags.
   SanitizerMask RecoverableKinds = parseSanitizeArgs(
@@ -1212,6 +1235,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   MergeHandlers.Mask |= MergeKinds;
 
   AnnotateDebugInfo.Mask |= AnnotateDebugInfoKinds;
+  SuppressUBSanFeature.Mask |= IgnoreForUbsanFeature;
 
   // Zero out SkipHotCutoffs for unused sanitizers
   SkipHotCutoffs.clear(~Sanitizers.Mask);
@@ -1391,6 +1415,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (Sanitizers.empty())
     return;
   CmdArgs.push_back(Args.MakeArgString("-fsanitize=" + toString(Sanitizers)));
+
+  if (!SuppressUBSanFeature.empty())
+    CmdArgs.push_back(
+        Args.MakeArgString("-fsanitize-ignore-for-ubsan-feature=" +
+                           toString(SuppressUBSanFeature)));
 
   if (!RecoverableSanitizers.empty())
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-recover=" +
