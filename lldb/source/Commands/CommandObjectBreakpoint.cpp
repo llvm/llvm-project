@@ -1255,8 +1255,6 @@ protected:
                  CommandReturnObject &result) override {
     const bool internal = false;
     ExecutionContext exe_ctx = GetCommandInterpreter().GetExecutionContext();
-    Target &target =
-        m_dummy_options.m_use_dummy ? GetDummyTarget() : GetTarget();
     m_all_options.NotifyOptionParsingStarting(&exe_ctx);
 
     if (command.empty()) {
@@ -1278,6 +1276,9 @@ protected:
       return;
     }
     printf("Pattern: '%s'\n", pattern.str().c_str());
+
+    Target &target =
+        m_dummy_options.m_use_dummy ? GetDummyTarget() : GetTarget();
 
     BreakpointSP bp_sp;
     const size_t num_files = m_options.m_files.GetSize();

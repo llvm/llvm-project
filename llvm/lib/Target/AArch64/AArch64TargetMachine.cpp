@@ -260,6 +260,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PostSelectOptimizePass(PR);
   initializeAArch64PromoteConstantPass(PR);
   initializeAArch64RedundantCopyEliminationPass(PR);
+  initializeAArch64RedundantCondBranchPass(PR);
   initializeAArch64StorePairSuppressPass(PR);
   initializeFalkorHWPFFixPass(PR);
   initializeFalkorMarkStridedAccessesLegacyPass(PR);
@@ -862,6 +863,8 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() >= CodeGenOptLevel::Aggressive &&
       EnableAArch64CopyPropagation)
     addPass(createMachineCopyPropagationPass(true));
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAArch64RedundantCondBranchPass());
 
   addPass(createAArch64A53Fix835769());
 
