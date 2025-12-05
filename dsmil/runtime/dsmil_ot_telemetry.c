@@ -287,6 +287,7 @@ void dsmil_ot_telemetry_shutdown(void) {
     // Flush any pending events
     fflush(stderr);
     atomic_store(&telemetry_enabled, 0);
+    atomic_store(&telemetry_level_initialized, 0);  // Reset for reinit
 }
 
 int dsmil_ot_telemetry_is_enabled(void) {

@@ -15,8 +15,8 @@
 // RUN: dsmil-clang -fdsmil-ot-telemetry -fdsmil-telemetry-level=trace -mllvm -dsmil-ot-telemetry %s -c -o %t.o 2>&1 | FileCheck %s --check-prefix=TRACE
 // REQUIRES: dsmil
 
-#include "dsmil/include/dsmil_attributes.h"
-#include "dsmil/include/dsmil_ot_telemetry.h"
+#include "dsmil_attributes.h"
+#include "dsmil_ot_telemetry.h"
 
 // Test 1: Network I/O annotation
 DSMIL_NET_IO
