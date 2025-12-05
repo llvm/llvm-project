@@ -252,19 +252,14 @@ static Value *concatenate(IRBuilder<> &Builder, ArrayRef<Value *> Fragments,
       Res = Builder.CreateInsertElement(Res, Fragment, I * VS.NumPacked,
                                         Name + ".upto" + Twine(I));
     } else {
-      unsigned remainedSize = NumPacked;
-      while (remainedSize <= VS.NumPacked / 2) {
-        // If last pack of remained bits not aligned to target pack size.
-        remainedSize = remainedSize * 2;
-        SmallVector<int> SmallExtendMask;
-        SmallExtendMask.resize(remainedSize, -1);
-        for (unsigned I = 0; I < remainedSize; ++I)
-          SmallExtendMask[I] = I;
-        Fragment =
-            Builder.CreateShuffleVector(Fragment, Fragment, SmallExtendMask);
+      if (NumPacked <= VS.NumPacked / 2) {
+        // If last pack of remained bits not match current ExtendMask size.
+        ExtendMask.truncate(NumPacked);
+        ExtendMask.resize(NumElements, -1);
       }
 
-      Fragment = Builder.CreateShuffleVector(Fragment, Fragment, ExtendMask);
+      Fragment = Builder.CreateShuffleVector(
+          Fragment, PoisonValue::get(Fragment->getType()), ExtendMask);
       if (I == 0) {
         Res = Fragment;
       } else {
