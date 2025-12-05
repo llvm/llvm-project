@@ -185,6 +185,15 @@ bool isCtorOfSafePtr(const clang::FunctionDecl *F) {
          isCtorOfRetainPtrOrOSPtr(F);
 }
 
+bool isStdOrWTFMove(const clang::FunctionDecl *F) {
+  auto FnName = safeGetName(F);
+  auto *Namespace = F->getParent();
+  if (!Namespace)
+    return false;
+  auto NsName = safeGetName(Namespace);
+  return (NsName == "WTF" || NsName == "std") && FnName == "move";
+}
+
 template <typename Predicate>
 static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
   QualType type = T;
