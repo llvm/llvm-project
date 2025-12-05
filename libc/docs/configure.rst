@@ -64,3 +64,5 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_THREAD_MODE``: The implementation used for Mutex, acceptable values are LIBC_THREAD_MODE_PLATFORM, LIBC_THREAD_MODE_SINGLE, and LIBC_THREAD_MODE_EXTERNAL.
 * **"time" options**
     - ``LIBC_CONF_TIME_64BIT``: Force the size of time_t to 64 bits, even on platforms where compatibility considerations would otherwise make it 32-bit.
+* **"wctype" options**
+    - ``LIBC_CONF_WCTYPE_MODE``: The implementation used for wctype, acceptable values are LIBC_WCTYPE_MODE_ASCII and LIBC_WCTYPE_MODE_UTF8.

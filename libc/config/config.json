@@ -130,5 +130,11 @@
       "value": true,
       "doc": "Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior."
     }
+  },
+  "wctype": {
+    "LIBC_CONF_WCTYPE_MODE": {
+      "value": "LIBC_WCTYPE_MODE_ASCII",
+      "doc": "The implementation used for wctype, acceptable values are LIBC_WCTYPE_MODE_ASCII and LIBC_WCTYPE_MODE_UTF8."
+    }
   }
 }
