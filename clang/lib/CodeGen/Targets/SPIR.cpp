@@ -55,6 +55,20 @@ public:
   llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const override;
   llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *Ty,
                           const CGHLSLOffsetInfo &OffsetInfo) const override;
+
+  llvm::Type *getHLSLPadding(CodeGenModule &CGM,
+                             CharUnits NumBytes) const override {
+    unsigned Size = NumBytes.getQuantity();
+    return llvm::TargetExtType::get(CGM.getLLVMContext(), "spirv.Padding", {},
+                                    {Size});
+  }
+
+  bool isHLSLPadding(llvm::Type *Ty) const override {
+    if (auto *TET = dyn_cast<llvm::TargetExtType>(Ty))
+      return TET->getName() == "spirv.Padding";
+    return false;
+  }
+
   llvm::Type *getSPIRVImageTypeFromHLSLResource(
       const HLSLAttributedResourceType::Attributes &attributes,
       QualType SampledType, CodeGenModule &CGM) const;
@@ -63,8 +77,6 @@ public:
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
                                  llvm::PointerType *T,
                                  QualType QT) const override;
-  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                           CodeGen::CodeGenModule &M) const override;
 };
 class SPIRVTargetCodeGenInfo : public CommonSPIRTargetCodeGenInfo {
 public:
@@ -278,22 +290,6 @@ CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::ConstantPointerNull::get(NPT), PT);
 }
 
-void CommonSPIRTargetCodeGenInfo::setTargetAttributes(
-    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-  if (M.getLangOpts().OpenCL || GV->isDeclaration())
-    return;
-
-  const FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
-  if (!FD)
-    return;
-
-  llvm::Function *F = dyn_cast<llvm::Function>(GV);
-  assert(F && "Expected GlobalValue to be a Function");
-
-  if (FD->hasAttr<DeviceKernelAttr>())
-    F->setCallingConv(getDeviceKernelCallingConv());
-}
-
 LangAS
 SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
                                                  const VarDecl *D) const {
@@ -327,9 +323,6 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
 
   llvm::Function *F = dyn_cast<llvm::Function>(GV);
   assert(F && "Expected GlobalValue to be a Function");
-
-  if (FD->hasAttr<DeviceKernelAttr>())
-    F->setCallingConv(getDeviceKernelCallingConv());
 
   if (!M.getLangOpts().HIP ||
       M.getTarget().getTriple().getVendor() != llvm::Triple::AMD)
@@ -563,10 +556,9 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
     if (ContainedTy.isNull() || !ContainedTy->isStructureType())
       return nullptr;
 
-    llvm::Type *BufferLayoutTy =
-        HLSLBufferLayoutBuilder(CGM, "spirv.Layout")
-            .createLayoutType(ContainedTy->castAsCanonical<RecordType>(),
-                              OffsetInfo);
+    llvm::StructType *BufferLayoutTy =
+        HLSLBufferLayoutBuilder(CGM).layOutStruct(
+            ContainedTy->getAsCanonical<RecordType>(), OffsetInfo);
     uint32_t StorageClass = /* Uniform storage class */ 2;
     return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer", {BufferLayoutTy},
                                     {StorageClass, false});

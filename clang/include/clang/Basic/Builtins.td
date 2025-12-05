@@ -2290,6 +2290,18 @@ def ScopedAtomicMaxFetch : AtomicBuiltin {
   let Prototype = "void(...)";
 }
 
+def ScopedAtomicUIncWrap : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_uinc_wrap"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicUDecWrap : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_udec_wrap"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 // OpenCL 2.0 atomic builtins.
 def OpenCLAtomicInit : AtomicBuiltin {
   let Spellings = ["__opencl_atomic_init"];
@@ -4946,28 +4958,34 @@ def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLResourceLoadWithStatus : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_load_with_status"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
 def HLSLResourceUninitializedHandle : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_uninitializedhandle"];
   let Attributes = [NoThrow];
-  let Prototype = "void(...)";
+  let Prototype = "__hlsl_resource_t(__hlsl_resource_t)";
 }
 
 def HLSLResourceHandleFromBinding : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_handlefrombinding"];
   let Attributes = [NoThrow];
-  let Prototype = "void(...)";
+  let Prototype = "__hlsl_resource_t(__hlsl_resource_t, uint32_t, uint32_t, int32_t, uint32_t, char const*)";
 }
 
 def HLSLResourceHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_handlefromimplicitbinding"];
   let Attributes = [NoThrow];
-  let Prototype = "void(...)";
+  let Prototype = "__hlsl_resource_t(__hlsl_resource_t, uint32_t, uint32_t, int32_t, uint32_t, char const*)";
 }
 
 def HLSLResourceCounterHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_counterhandlefromimplicitbinding"];
-  let Attributes = [NoThrow, CustomTypeChecking];
-  let Prototype = "void(...)";
+  let Attributes = [NoThrow];
+  let Prototype = "__hlsl_resource_t(__hlsl_resource_t, uint32_t, uint32_t)";
 }
 
 def HLSLResourceNonUniformIndex : LangBuiltin<"HLSL_LANG"> {
@@ -4979,13 +4997,13 @@ def HLSLResourceNonUniformIndex : LangBuiltin<"HLSL_LANG"> {
 def HLSLResourceGetDimensionsX : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_getdimensions_x"];
   let Attributes = [NoThrow];
-  let Prototype = "void(...)";
+  let Prototype = "void(__hlsl_resource_t, uint32_t&)";
 }
 
 def HLSLResourceGetStride : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_getstride"];
   let Attributes = [NoThrow];
-  let Prototype = "void(...)";
+  let Prototype = "void(__hlsl_resource_t, uint32_t&)";
 }
 
 def HLSLAll : LangBuiltin<"HLSL_LANG"> {
@@ -5213,7 +5231,7 @@ def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
 def HLSLBufferUpdateCounter : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_buffer_update_counter"];
   let Attributes = [NoThrow];
-  let Prototype = "uint32_t(...)";
+  let Prototype = "uint32_t(__hlsl_resource_t, int)";
 }
 
 def HLSLSplitDouble: LangBuiltin<"HLSL_LANG"> {
@@ -5249,6 +5267,18 @@ def HLSLGetSpirvSpecConstant : LangBuiltin<"HLSL_LANG">, HLSLScalarTemplate {
 
 def HLSLF16ToF32 : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_f16tof32"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLDdxCoarse : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_ddx_coarse"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLDdyCoarse : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_ddy_coarse"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }

@@ -35,6 +35,7 @@ static_library("Target") {
   sources = [
     "ABI.cpp",
     "AssertFrameRecognizer.cpp",
+    "BorrowedStackFrame.cpp",
     "CoreFileMemoryRanges.cpp",
     "DynamicRegisterInfo.cpp",
     "ExecutionContext.cpp",

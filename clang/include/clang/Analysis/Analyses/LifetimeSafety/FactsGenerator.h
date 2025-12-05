@@ -50,7 +50,7 @@ public:
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
 
 private:
-  void handleDestructor(const CFGAutomaticObjDtor &DtorOpt);
+  void handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds);
 
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
 
@@ -91,9 +91,14 @@ private:
 
   void markUseAsWrite(const DeclRefExpr *DRE);
 
+  llvm::SmallVector<Fact *> issuePlaceholderLoans();
   FactManager &FactMgr;
   AnalysisDeclContext &AC;
   llvm::SmallVector<Fact *> CurrentBlockFacts;
+  // Collect origins that escape the function in this block (OriginEscapesFact),
+  // appended at the end of CurrentBlockFacts to ensure they appear after
+  // ExpireFact entries.
+  llvm::SmallVector<Fact *> EscapesInCurrentBlock;
   // To distinguish between reads and writes for use-after-free checks, this map
   // stores the `UseFact` for each `DeclRefExpr`. We initially identify all
   // `DeclRefExpr`s as "read" uses. When an assignment is processed, the use

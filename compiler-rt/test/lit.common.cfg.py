@@ -875,7 +875,7 @@ for postfix in ["2", "1", ""]:
         config.substitutions.append(
             (
                 "%ld_flags_rpath_so" + postfix,
-                "-install_name @rpath/`basename %dynamiclib{}`".format(postfix),
+                "-install_name @rpath/%base_dynamiclib{}".format(postfix),
             )
         )
     elif config.target_os in ("FreeBSD", "NetBSD", "OpenBSD"):
@@ -907,6 +907,9 @@ for postfix in ["2", "1", ""]:
     # Must be defined after the substitutions that use %dynamiclib.
     config.substitutions.append(
         ("%dynamiclib" + postfix, "%t.dir/%xdynamiclib_filename" + postfix)
+    )
+    config.substitutions.append(
+        ("%base_dynamiclib" + postfix, "%xdynamiclib_filename" + postfix)
     )
     config.substitutions.append(
         (
@@ -968,7 +971,9 @@ def target_page_size():
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
         )
-        out, err = proc.communicate(b'import os; print(os.sysconf("SC_PAGESIZE"))')
+        out, err = proc.communicate(
+            b'import os; print(os.sysconf("SC_PAGESIZE") if hasattr(os, "sysconf") else "")'
+        )
         return int(out)
     except:
         return 4096

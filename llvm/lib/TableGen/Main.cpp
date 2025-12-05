@@ -127,8 +127,7 @@ static int WriteOutput(const TGParser &Parser, const char *argv0,
   return 0;
 }
 
-int llvm::TableGenMain(const char *argv0,
-                       std::function<MultiFileTableGenMainFn> MainFn) {
+int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   RecordKeeper Records;
   TGTimer &Timer = Records.getTimer();
 
@@ -209,8 +208,7 @@ int llvm::TableGenMain(const char *argv0,
   return 0;
 }
 
-int llvm::TableGenMain(const char *argv0,
-                       std::function<TableGenMainFn> MainFn) {
+int llvm::TableGenMain(const char *argv0, TableGenMainFn MainFn) {
   return TableGenMain(argv0, [&MainFn](TableGenOutputFiles &OutFiles,
                                        const RecordKeeper &Records) {
     std::string S;

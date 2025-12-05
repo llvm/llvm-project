@@ -24,6 +24,13 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
             else:
                 return SBFrame()
 
+        def get_child_frame(self):
+            child_idx = self.idx - 1
+            if child_idx >= 0:
+                return self.thread.frame[child_idx]
+            else:
+                return SBFrame()
+
         def get_arguments(self):
             return self.GetVariables(True,False,False,False)
 
@@ -92,6 +99,7 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
         register = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame.''')
         reg = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame''')
         parent = property(get_parent_frame, None, doc='''A read only property that returns the parent (caller) frame of the current frame.''')
+        child = property(get_child_frame, None, doc='''A read only property that returns the child (callee) frame of the current frame.''')
     %}
 #endif
 }

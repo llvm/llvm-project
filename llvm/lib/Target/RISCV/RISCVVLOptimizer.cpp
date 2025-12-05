@@ -85,7 +85,7 @@ private:
   DemandedVL getMinimumVLForUser(const MachineOperand &UserOp) const;
   /// Returns true if the users of \p MI have compatible EEWs and SEWs.
   bool checkUsers(const MachineInstr &MI) const;
-  bool tryReduceVL(MachineInstr &MI) const;
+  bool tryReduceVL(MachineInstr &MI, MachineOperand VL) const;
   bool isCandidate(const MachineInstr &MI) const;
   void transfer(const MachineInstr &MI);
 
@@ -1607,7 +1607,8 @@ bool RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
   return true;
 }
 
-bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
+bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
+                                   MachineOperand CommonVL) const {
   LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI);
 
   unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
@@ -1620,50 +1621,47 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
     return false;
   }
 
-  auto *CommonVL = &DemandedVLs.at(&MI).VL;
-
-  assert((CommonVL->isImm() || CommonVL->getReg().isVirtual()) &&
+  assert((CommonVL.isImm() || CommonVL.getReg().isVirtual()) &&
          "Expected VL to be an Imm or virtual Reg");
 
   // If the VL is defined by a vleff that doesn't dominate MI, try using the
   // vleff's AVL. It will be greater than or equal to the output VL.
-  if (CommonVL->isReg()) {
-    const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
+  if (CommonVL.isReg()) {
+    const MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
     if (RISCVInstrInfo::isFaultOnlyFirstLoad(*VLMI) &&
         !MDT->dominates(VLMI, &MI))
-      CommonVL = &VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
+      CommonVL = VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
   }
 
-  if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
+  if (!RISCV::isVLKnownLE(CommonVL, VLOp)) {
     LLVM_DEBUG(dbgs() << "  Abort due to CommonVL not <= VLOp.\n");
     return false;
   }
 
-  if (CommonVL->isIdenticalTo(VLOp)) {
+  if (CommonVL.isIdenticalTo(VLOp)) {
     LLVM_DEBUG(
         dbgs() << "  Abort due to CommonVL == VLOp, no point in reducing.\n");
     return false;
   }
 
-  if (CommonVL->isImm()) {
+  if (CommonVL.isImm()) {
     LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
-                      << CommonVL->getImm() << " for " << MI << "\n");
-    VLOp.ChangeToImmediate(CommonVL->getImm());
+                      << CommonVL.getImm() << " for " << MI << "\n");
+    VLOp.ChangeToImmediate(CommonVL.getImm());
     return true;
   }
-  const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
+  const MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
   if (!MDT->dominates(VLMI, &MI)) {
     LLVM_DEBUG(dbgs() << "  Abort due to VL not dominating.\n");
     return false;
   }
-  LLVM_DEBUG(
-      dbgs() << "  Reduce VL from " << VLOp << " to "
-             << printReg(CommonVL->getReg(), MRI->getTargetRegisterInfo())
-             << " for " << MI << "\n");
+  LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
+                    << printReg(CommonVL.getReg(), MRI->getTargetRegisterInfo())
+                    << " for " << MI << "\n");
 
   // All our checks passed. We can reduce VL.
-  VLOp.ChangeToRegister(CommonVL->getReg(), false);
-  MRI->constrainRegClass(CommonVL->getReg(), &RISCV::GPRNoX0RegClass);
+  VLOp.ChangeToRegister(CommonVL.getReg(), false);
+  MRI->constrainRegClass(CommonVL.getReg(), &RISCV::GPRNoX0RegClass);
   return true;
 }
 
@@ -1718,18 +1716,13 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   // Then go through and see if we can reduce the VL of any instructions to
   // only what's demanded.
   bool MadeChange = false;
-  for (MachineBasicBlock &MBB : MF) {
-    // Avoid unreachable blocks as they have degenerate dominance
-    if (!MDT->isReachableFromEntry(&MBB))
+  for (auto &[MI, VL] : DemandedVLs) {
+    assert(MDT->isReachableFromEntry(MI->getParent()));
+    if (!isCandidate(*MI))
       continue;
-
-    for (auto &MI : reverse(MBB)) {
-      if (!isCandidate(MI))
-        continue;
-      if (!tryReduceVL(MI))
-        continue;
-      MadeChange = true;
-    }
+    if (!tryReduceVL(*const_cast<MachineInstr *>(MI), VL.VL))
+      continue;
+    MadeChange = true;
   }
 
   DemandedVLs.clear();

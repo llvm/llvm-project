@@ -708,6 +708,11 @@ private:
         IsCpp && !IsCpp11AttributeSpecifier && !IsCSharpAttributeSpecifier &&
         Contexts.back().CanBeExpression && Left->isNot(TT_LambdaLSquare) &&
         CurrentToken->isNoneOf(tok::l_brace, tok::r_square) &&
+        // Do not consider '[' after a comma inside a braced initializer the
+        // start of an ObjC method expression. In braced initializer lists,
+        // commas are list separators and should not trigger ObjC parsing.
+        (!Parent || !Parent->is(tok::comma) ||
+         Contexts.back().ContextKind != tok::l_brace) &&
         (!Parent ||
          Parent->isOneOf(tok::colon, tok::l_square, tok::l_paren,
                          tok::kw_return, tok::kw_throw) ||
@@ -3129,8 +3134,11 @@ private:
 
     // It is very unlikely that we are going to find a pointer or reference type
     // definition on the RHS of an assignment.
-    if (IsExpression && !Contexts.back().CaretFound)
+    if (IsExpression && !Contexts.back().CaretFound &&
+        Line.getFirstNonComment()->isNot(
+            TT_RequiresClauseInARequiresExpression)) {
       return TT_BinaryOperator;
+    }
 
     // Opeartors at class scope are likely pointer or reference members.
     if (!Scopes.empty() && Scopes.back() == ST_Class)
@@ -5030,8 +5038,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return true;
     // Space between import <iostream>.
     // or import .....;
-    if (Left.is(Keywords.kw_import) && Right.isOneOf(tok::less, tok::ellipsis))
+    if (Left.is(Keywords.kw_import) &&
+        Right.isOneOf(tok::less, tok::ellipsis) &&
+        (!BeforeLeft || BeforeLeft->is(tok::kw_export))) {
       return true;
+    }
     // Space between `module :` and `import :`.
     if (Left.isOneOf(Keywords.kw_module, Keywords.kw_import) &&
         Right.is(TT_ModulePartitionColon)) {

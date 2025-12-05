@@ -31,9 +31,6 @@ entry:
   ret void
 }
 
-declare <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64>, ptr nocapture, i64)
-declare <vscale x 4 x half> @llvm.riscv.vfmv.s.f.nxv4f16.i64(<vscale x 4 x half>, half, i64)
-
 define void @bar(half %y, ptr %i32p) {
 ; CHECK-NO-FELEN64-LABEL: bar:
 ; CHECK-NO-FELEN64:       # %bb.0: # %entry
@@ -61,4 +58,3 @@ entry:
   ret void
 }
 
-declare <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32>, ptr nocapture, i64)
