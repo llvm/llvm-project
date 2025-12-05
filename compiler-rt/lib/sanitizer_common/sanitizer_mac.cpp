@@ -285,10 +285,13 @@ bool internal_spawn(const char *argv[], const char *envp[],
                                 pid_t *pid, fd_t fd_stdin, fd_t fd_stdout) {
   // NOTE: Caller ensures that fd_stdin and fd_stdout are not 0, 1, or 2, since this can
   // break communication.
+  //
+  // NOTE: Caller is responsible for closing fd_stdin after the process has died.
 
   int res;
   auto fd_closer = at_scope_exit([&] {
-    internal_close(fd_stdin);
+    // NOTE: We intentionally do not close fd_stdin since this can
+    // cause us to receive a fatal SIGPIPE if the process dies.
     internal_close(fd_stdout);
   });
 

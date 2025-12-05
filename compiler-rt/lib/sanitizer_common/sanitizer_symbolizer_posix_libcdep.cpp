@@ -191,6 +191,9 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
   input_fd_ = infd[0];
   output_fd_ = outfd[1];
 
+  // We intentionally hold on to the read-end so that we don't get a SIGPIPE
+  child_stdin_fd_ = outfd[0];
+
   CHECK_GT(pid, 0);
 
   // Check that symbolizer subprocess started successfully.
