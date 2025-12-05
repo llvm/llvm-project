@@ -1,8 +1,8 @@
 # Test archive member recognition by name (ELF format).
 
-# Generate object files from YAML.
-RUN: yaml2obj -o %t-1.o %S/Inputs/elf-ppc64le-1.yaml
-RUN: yaml2obj -o %t-2.o %S/Inputs/elf-ppc64le-2.yaml
+# Generate object files from YAML using parameterization.
+RUN: yaml2obj -DSYMBOL=foo1 -o %t-1.o %S/Inputs/elf-ppc64le.yaml
+RUN: yaml2obj -DSYMBOL=foo2 -o %t-2.o %S/Inputs/elf-ppc64le.yaml
 
 # Create archive with differently named members.
 RUN: rm -f %t.a

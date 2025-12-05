@@ -1,0 +1,24 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_PPC64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         '2000804E000000000000000000000000'
+Symbols:
+  - Name:            [[SYMBOL]].c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            [[SYMBOL]]
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x10
