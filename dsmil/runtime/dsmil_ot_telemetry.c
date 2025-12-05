@@ -175,7 +175,9 @@ void dsmil_telemetry_safety_signal_update(const dsmil_telemetry_event_t *ev) {
 }
 
 int dsmil_ot_telemetry_init(void) {
-    // Initialize telemetry enabled state
+    // Force re-evaluation of the environment on every init so tests that toggle
+    // DSMIL_OT_TELEMETRY between runs get a fresh read.
+    atomic_store(&telemetry_enabled, -1);
     check_telemetry_enabled();
     return 0;
 }
