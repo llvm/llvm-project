@@ -478,6 +478,12 @@ its enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_ENABLE_BINDINGS**:BOOL
   If disabled, do not try to build the OCaml bindings.
 
+**LLVM_ENABLE_CURL**:
+  Used to decide if LLVM tools, should support downloading information
+  (particularly debug info from ``llvm-debuginfod``) over HTTP. Allowed
+  values are ``OFF`` (default), ``ON``, and ``FORCE_ON`` (error if libcurl
+  is not found).
+
 **LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING**:STRING
   Enhances Debugify's ability to detect line number errors by storing extra
   information inside Instructions, removing false positives from Debugify's
