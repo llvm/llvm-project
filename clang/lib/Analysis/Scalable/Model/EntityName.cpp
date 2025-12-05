@@ -15,21 +15,15 @@ EntityName::EntityName(llvm::StringRef USR, llvm::StringRef Suffix,
   : USR(USR.str()), Suffix(Suffix), Namespace(std::move(Namespace)) {}
 
 bool EntityName::operator==(const EntityName& Other) const {
-  return USR == Other.USR &&
-         Suffix == Other.Suffix &&
-         Namespace == Other.Namespace;
+  return asTuple() == Other.asTuple();
 }
 
 bool EntityName::operator!=(const EntityName& Other) const {
   return !(*this == Other);
 }
 
-bool EntityName::operator<(const EntityName& Other) const {
-  if (USR != Other.USR)
-    return USR < Other.USR;
-  if (Suffix != Other.Suffix)
-    return Suffix.str() < Other.Suffix.str();
-  return Namespace < Other.Namespace;
+bool EntityName::operator<(const EntityName &Other) const {
+  return asTuple() < Other.asTuple();
 }
 
 EntityName EntityName::makeQualified(NestedBuildNamespace Namespace) const {

@@ -26,6 +26,8 @@ class EntityName {
   llvm::SmallString<16> Suffix;
   NestedBuildNamespace Namespace;
 
+  auto asTuple() const { return std::tie(USR, Suffix, Namespace); }
+
 public:
   EntityName(llvm::StringRef USR, llvm::StringRef Suffix,
              NestedBuildNamespace Namespace);

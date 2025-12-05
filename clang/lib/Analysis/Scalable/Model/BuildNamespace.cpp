@@ -8,6 +8,7 @@
 
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <tuple>
 
 namespace clang::ssaf {
 
@@ -32,7 +33,7 @@ BuildNamespace BuildNamespace::makeTU(llvm::StringRef CompilationId) {
 }
 
 bool BuildNamespace::operator==(const BuildNamespace& Other) const {
-  return Kind == Other.Kind && Name == Other.Name;
+  return asTuple() == Other.asTuple();
 }
 
 bool BuildNamespace::operator!=(const BuildNamespace& Other) const {
@@ -40,9 +41,7 @@ bool BuildNamespace::operator!=(const BuildNamespace& Other) const {
 }
 
 bool BuildNamespace::operator<(const BuildNamespace& Other) const {
-  if (Kind != Other.Kind)
-    return Kind < Other.Kind;
-  return Name < Other.Name;
+  return asTuple() < Other.asTuple();
 }
 
 NestedBuildNamespace NestedBuildNamespace::makeTU(llvm::StringRef CompilationId) {

@@ -30,6 +30,9 @@ std::optional<BuildNamespaceKind> parseBuildNamespaceKind(llvm::StringRef Str);
 class BuildNamespace {
   BuildNamespaceKind Kind;
   std::string Name;
+
+  auto asTuple() const { return std::tie(Kind, Name); }
+
 public:
   BuildNamespace(BuildNamespaceKind Kind, llvm::StringRef Name)
     : Kind(Kind), Name(Name.str()) {}
