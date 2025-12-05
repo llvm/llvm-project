@@ -10640,6 +10640,40 @@ bool ConstantComparesGatherer::matchInstruction(Instruction *I, bool isEQ,
     Vals.push_back(ConstantInt::get(cast<IntegerType>(Val->getType()), isEQ));
     return true;
   }
+
+  // Expand an already existing BitMap sequence
+  // Match: (or (%BitMapSeq(X)), (icmp eq X, Imm))
+  ConstantInt *BitMap, *Bound;
+  if (match(I, m_Select(m_OneUse(m_SpecificICmp(ICmpInst::ICMP_ULT,
+                                                m_ZExtOrSelf(m_Value(Val)),
+                                                m_ConstantInt(Bound))),
+                        m_Trunc(m_OneUse(
+                            m_Shr(m_ConstantInt(BitMap),
+                                  m_ZExtOrTruncOrSelf(m_Deferred(Val))))),
+                        m_Zero()))) {
+
+    // If Or-tree, then cannot have leading Not
+    // If And-tree, must have leading Not
+    if (!isEQ)
+      return false;
+
+    // If we already have a value for the switch, it has to match!
+    if (!setValueOnce(Val))
+      return false;
+
+    APInt BitMapAP = BitMap->getValue();
+    APInt BoundAP = Bound->getValue();
+    unsigned BitMapWidth = BitMapAP.getBitWidth();
+    if (BoundAP != BitMapWidth)
+      return false;
+    for (unsigned I = 0; I < BitMapWidth; ++I)
+      if ((BitMapAP.lshr(I) & APInt(BitMapWidth, 1)).isOne())
+        Vals.push_back(ConstantInt::get(cast<IntegerType>(Val->getType()), I));
+    ++UsedICmps;
+    ExpansionCase = true;
+    return true;
+  }
+
   // If this is an icmp against a constant, handle this as one of the cases.
   ICmpInst *ICI;
   ConstantInt *C;

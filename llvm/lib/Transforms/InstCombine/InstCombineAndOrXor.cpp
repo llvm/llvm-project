@@ -2419,8 +2419,10 @@ static Value *combineAndOrOfImmCmpToBitExtract(Instruction &Or,
   Value *Index = ConstantCompare.CompValue;
 
   // TODO: Handle ConstantCompare.Extra case
+  // If expanding an existing case, only adding one extra case is still good
   if (!Index || !isGuaranteedNotToBeUndefOrPoison(Index) ||
-      ConstantCompare.UsedICmps < 3 || ConstantCompare.Extra)
+      (ConstantCompare.UsedICmps + ConstantCompare.ExpansionCase) < 3 ||
+      ConstantCompare.Extra)
     return nullptr;
 
   unsigned MaxRegWidth = DL.getLargestLegalIntTypeSizeInBits();

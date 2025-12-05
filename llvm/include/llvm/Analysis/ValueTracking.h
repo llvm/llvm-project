@@ -1067,6 +1067,9 @@ struct ConstantComparesGatherer {
   /// If the elements in Vals matches the comparisons
   bool IsEq = false;
 
+  // At least on match was of an existing bit extract sequence
+  bool ExpansionCase = false;
+
   // Used to check if the first matched CompValue shall be the Extra check.
   bool IgnoreFirstMatch = false;
   bool MultipleMatches = false;
