@@ -31,22 +31,28 @@ static bool hasOrigin(const VarDecl *VD) {
 /// This function should be called whenever a DeclRefExpr represents a borrow.
 /// \param DRE The declaration reference expression that initiates the borrow.
 /// \return The new Loan on success, nullptr otherwise.
-static const Loan *createLoan(FactManager &FactMgr, const DeclRefExpr *DRE) {
+static const PathLoan *createLoan(FactManager &FactMgr,
+                                  const DeclRefExpr *DRE) {
   if (const auto *VD = dyn_cast<ValueDecl>(DRE->getDecl())) {
     AccessPath Path(VD);
     // The loan is created at the location of the DeclRefExpr.
-    return &FactMgr.getLoanMgr().addLoan(Path, DRE);
+    return FactMgr.getLoanMgr().createLoan<PathLoan>(Path, DRE);
   }
   return nullptr;
 }
 
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
+  const CFG &Cfg = *AC.getCFG();
+  llvm::SmallVector<Fact *> PlaceholderLoanFacts = issuePlaceholderLoans();
   // Iterate through the CFG blocks in reverse post-order to ensure that
   // initializations and destructions are processed in the correct sequence.
   for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
     CurrentBlockFacts.clear();
     EscapesInCurrentBlock.clear();
+    if (Block == &Cfg.getEntry())
+      CurrentBlockFacts.append(PlaceholderLoanFacts.begin(),
+                               PlaceholderLoanFacts.end());
     for (unsigned I = 0; I < Block->size(); ++I) {
       const CFGElement &Element = Block->Elements[I];
       if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>())
@@ -85,7 +91,7 @@ void FactsGenerator::VisitDeclRefExpr(const DeclRefExpr *DRE) {
     if (const Loan *L = createLoan(FactMgr, DRE)) {
       OriginID ExprOID = FactMgr.getOriginMgr().getOrCreate(*DRE);
       CurrentBlockFacts.push_back(
-          FactMgr.createFact<IssueFact>(L->ID, ExprOID));
+          FactMgr.createFact<IssueFact>(L->getID(), ExprOID));
     }
   }
 }
@@ -223,13 +229,14 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   if (!LifetimeEndsVD)
     return;
   // Iterate through all loans to see if any expire.
-  for (const auto &Loan : FactMgr.getLoanMgr().getLoans()) {
-    const AccessPath &LoanPath = Loan.Path;
-    // Check if the loan is for a stack variable and if that variable
-    // is the one being destructed.
-    if (LoanPath.D == LifetimeEndsVD)
-      CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-          Loan.ID, LifetimeEnds.getTriggerStmt()->getEndLoc()));
+  for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
+    if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
+      // Check if the loan is for a stack variable and if that variable
+      // is the one being destructed.
+      if (BL->getAccessPath().D == LifetimeEndsVD)
+        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+            BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc()));
+    }
   }
 }
 
@@ -340,6 +347,26 @@ void FactsGenerator::markUseAsWrite(const DeclRefExpr *DRE) {
     return;
   assert(UseFacts.contains(DRE));
   UseFacts[DRE]->markAsWritten();
+}
+
+// Creates an IssueFact for a new placeholder loan for each pointer or reference
+// parameter at the function's entry.
+llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
+  const auto *FD = dyn_cast<FunctionDecl>(AC.getDecl());
+  if (!FD)
+    return {};
+
+  llvm::SmallVector<Fact *> PlaceholderLoanFacts;
+  for (const ParmVarDecl *PVD : FD->parameters()) {
+    if (hasOrigin(PVD)) {
+      const PlaceholderLoan *L =
+          FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(PVD);
+      OriginID OID = FactMgr.getOriginMgr().getOrCreate(*PVD);
+      PlaceholderLoanFacts.push_back(
+          FactMgr.createFact<IssueFact>(L->getID(), OID));
+    }
+  }
+  return PlaceholderLoanFacts;
 }
 
 } // namespace clang::lifetimes::internal
