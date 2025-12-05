@@ -177,9 +177,8 @@ define i32 @test7(i64 %res) nounwind {
 ;
 ; NDD-LABEL: test7:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    shrq $32, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xef,0x20]
-; NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NDD-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
   %lnot = icmp ult i64 %res, 4294967296
@@ -199,9 +198,8 @@ define i32 @test8(i64 %res) nounwind {
 ; NDD-LABEL: test8:
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    shrq $32, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xef,0x20]
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    cmpl $3, %edi # encoding: [0x83,0xff,0x03]
-; NDD-NEXT:    setb %al # encoding: [0x0f,0x92,0xc0]
+; NDD-NEXT:    setzub %al # encoding: [0x62,0xf4,0x7f,0x18,0x42,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
   %lnot = icmp ult i64 %res, 12884901888
   %lnot.ext = zext i1 %lnot to i32
@@ -218,9 +216,8 @@ define i32 @test9(i64 %res) nounwind {
 ;
 ; NDD-LABEL: test9:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    shrq $33, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xef,0x21]
-; NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NDD-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
   %lnot = icmp ult i64 %res, 8589934592
   %lnot.ext = zext i1 %lnot to i32
@@ -237,9 +234,8 @@ define i32 @test10(i64 %res) nounwind {
 ;
 ; NDD-LABEL: test10:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    shrq $32, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xef,0x20]
-; NDD-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; NDD-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
   %lnot = icmp uge i64 %res, 4294967296
   %lnot.ext = zext i1 %lnot to i32
@@ -258,9 +254,8 @@ define i32 @test11(i64 %l) nounwind {
 ; NDD-LABEL: test11:
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    shrq $47, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xef,0x2f]
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    cmpl $1, %edi # encoding: [0x83,0xff,0x01]
-; NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NDD-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
   %shr.mask = and i64 %l, -140737488355328
   %cmp = icmp eq i64 %shr.mask, 140737488355328
@@ -433,10 +428,9 @@ define void @test20(i32 %bf.load, i8 %x1, ptr %b_addr) {
 ;
 ; NDD-LABEL: test20:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    testl $16777215, %edi # encoding: [0xf7,0xc7,0xff,0xff,0xff,0x00]
 ; NDD-NEXT:    # imm = 0xFFFFFF
-; NDD-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; NDD-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-NEXT:    movzbl %sil, %ecx # encoding: [0x40,0x0f,0xb6,0xce]
 ; NDD-NEXT:    addl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xc8]
 ; NDD-NEXT:    setne (%rdx) # encoding: [0x0f,0x95,0x02]
@@ -481,9 +475,10 @@ define i32 @highmask_i64_mask64(i64 %val) {
 ;
 ; NDD-LABEL: highmask_i64_mask64:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-NEXT:    shrq $41, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xef,0x29]
-; NDD-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; NDD-NEXT:    movabsq $-2199023255552, %rax # encoding: [0x48,0xb8,0x00,0x00,0x00,0x00,0x00,0xfe,0xff,0xff]
+; NDD-NEXT:    # imm = 0xFFFFFE0000000000
+; NDD-NEXT:    testq %rax, %rdi # encoding: [0x48,0x85,0xc7]
+; NDD-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, -2199023255552
   %cmp = icmp ne i64 %and, 0
@@ -525,9 +520,9 @@ define i32 @highmask_i64_mask32(i64 %val) {
 ;
 ; NDD-LABEL: highmask_i64_mask32:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-NEXT:    shrq $20, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xef,0x14]
-; NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NDD-NEXT:    testq $-1048576, %rdi # encoding: [0x48,0xf7,0xc7,0x00,0x00,0xf0,0xff]
+; NDD-NEXT:    # imm = 0xFFF00000
+; NDD-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, -1048576
   %cmp = icmp eq i64 %and, 0
@@ -561,12 +556,18 @@ define i64 @highmask_i64_mask32_extra_use(i64 %val) nounwind {
 }
 
 define i32 @highmask_i64_mask8(i64 %val) {
-; CHECK-LABEL: highmask_i64_mask8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    testq $-16, %rdi # encoding: [0x48,0xf7,0xc7,0xf0,0xff,0xff,0xff]
-; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
-; CHECK-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-LABEL: highmask_i64_mask8:
+; NO-NDD:       # %bb.0:
+; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NO-NDD-NEXT:    testq $-16, %rdi # encoding: [0x48,0xf7,0xc7,0xf0,0xff,0xff,0xff]
+; NO-NDD-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: highmask_i64_mask8:
+; NDD:       # %bb.0:
+; NDD-NEXT:    testq $-16, %rdi # encoding: [0x48,0xf7,0xc7,0xf0,0xff,0xff,0xff]
+; NDD-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, -16
   %cmp = icmp ne i64 %and, 0
   %ret = zext i1 %cmp to i32
@@ -583,9 +584,10 @@ define i32 @lowmask_i64_mask64(i64 %val) {
 ;
 ; NDD-LABEL: lowmask_i64_mask64:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-NEXT:    shlq $16, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xe7,0x10]
-; NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NDD-NEXT:    movabsq $281474976710655, %rax # encoding: [0x48,0xb8,0xff,0xff,0xff,0xff,0xff,0xff,0x00,0x00]
+; NDD-NEXT:    # imm = 0xFFFFFFFFFFFF
+; NDD-NEXT:    testq %rax, %rdi # encoding: [0x48,0x85,0xc7]
+; NDD-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, 281474976710655
   %cmp = icmp eq i64 %and, 0
@@ -627,9 +629,9 @@ define i32 @lowmask_i64_mask32(i64 %val) {
 ;
 ; NDD-LABEL: lowmask_i64_mask32:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-NEXT:    shlq $44, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xe7,0x2c]
-; NDD-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; NDD-NEXT:    testl $1048575, %edi # encoding: [0xf7,0xc7,0xff,0xff,0x0f,0x00]
+; NDD-NEXT:    # imm = 0xFFFFF
+; NDD-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, 1048575
   %cmp = icmp ne i64 %and, 0
@@ -663,12 +665,18 @@ define i64 @lowmask_i64_mask32_extra_use(i64 %val) nounwind {
 }
 
 define i32 @lowmask_i64_mask8(i64 %val) {
-; CHECK-LABEL: lowmask_i64_mask8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    testb $31, %dil # encoding: [0x40,0xf6,0xc7,0x1f]
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-LABEL: lowmask_i64_mask8:
+; NO-NDD:       # %bb.0:
+; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NO-NDD-NEXT:    testb $31, %dil # encoding: [0x40,0xf6,0xc7,0x1f]
+; NO-NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: lowmask_i64_mask8:
+; NDD:       # %bb.0:
+; NDD-NEXT:    testb $31, %dil # encoding: [0x40,0xf6,0xc7,0x1f]
+; NDD-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, 31
   %cmp = icmp eq i64 %and, 0
   %ret = zext i1 %cmp to i32
@@ -676,13 +684,20 @@ define i32 @lowmask_i64_mask8(i64 %val) {
 }
 
 define i32 @highmask_i32_mask32(i32 %val) {
-; CHECK-LABEL: highmask_i32_mask32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    testl $-1048576, %edi # encoding: [0xf7,0xc7,0x00,0x00,0xf0,0xff]
-; CHECK-NEXT:    # imm = 0xFFF00000
-; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
-; CHECK-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-LABEL: highmask_i32_mask32:
+; NO-NDD:       # %bb.0:
+; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NO-NDD-NEXT:    testl $-1048576, %edi # encoding: [0xf7,0xc7,0x00,0x00,0xf0,0xff]
+; NO-NDD-NEXT:    # imm = 0xFFF00000
+; NO-NDD-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: highmask_i32_mask32:
+; NDD:       # %bb.0:
+; NDD-NEXT:    testl $-1048576, %edi # encoding: [0xf7,0xc7,0x00,0x00,0xf0,0xff]
+; NDD-NEXT:    # imm = 0xFFF00000
+; NDD-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %val, -1048576
   %cmp = icmp ne i32 %and, 0
   %ret = zext i1 %cmp to i32
@@ -690,12 +705,18 @@ define i32 @highmask_i32_mask32(i32 %val) {
 }
 
 define i32 @highmask_i32_mask8(i32 %val) {
-; CHECK-LABEL: highmask_i32_mask8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    testl $-16, %edi # encoding: [0xf7,0xc7,0xf0,0xff,0xff,0xff]
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-LABEL: highmask_i32_mask8:
+; NO-NDD:       # %bb.0:
+; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NO-NDD-NEXT:    testl $-16, %edi # encoding: [0xf7,0xc7,0xf0,0xff,0xff,0xff]
+; NO-NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: highmask_i32_mask8:
+; NDD:       # %bb.0:
+; NDD-NEXT:    testl $-16, %edi # encoding: [0xf7,0xc7,0xf0,0xff,0xff,0xff]
+; NDD-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %val, -16
   %cmp = icmp eq i32 %and, 0
   %ret = zext i1 %cmp to i32
@@ -703,13 +724,20 @@ define i32 @highmask_i32_mask8(i32 %val) {
 }
 
 define i32 @lowmask_i32_mask32(i32 %val) {
-; CHECK-LABEL: lowmask_i32_mask32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    testl $1048575, %edi # encoding: [0xf7,0xc7,0xff,0xff,0x0f,0x00]
-; CHECK-NEXT:    # imm = 0xFFFFF
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; CHECK-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-LABEL: lowmask_i32_mask32:
+; NO-NDD:       # %bb.0:
+; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NO-NDD-NEXT:    testl $1048575, %edi # encoding: [0xf7,0xc7,0xff,0xff,0x0f,0x00]
+; NO-NDD-NEXT:    # imm = 0xFFFFF
+; NO-NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: lowmask_i32_mask32:
+; NDD:       # %bb.0:
+; NDD-NEXT:    testl $1048575, %edi # encoding: [0xf7,0xc7,0xff,0xff,0x0f,0x00]
+; NDD-NEXT:    # imm = 0xFFFFF
+; NDD-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %val, 1048575
   %cmp = icmp eq i32 %and, 0
   %ret = zext i1 %cmp to i32
@@ -717,12 +745,18 @@ define i32 @lowmask_i32_mask32(i32 %val) {
 }
 
 define i32 @lowmask_i32_mask8(i32 %val) {
-; CHECK-LABEL: lowmask_i32_mask8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    testb $31, %dil # encoding: [0x40,0xf6,0xc7,0x1f]
-; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
-; CHECK-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-LABEL: lowmask_i32_mask8:
+; NO-NDD:       # %bb.0:
+; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NO-NDD-NEXT:    testb $31, %dil # encoding: [0x40,0xf6,0xc7,0x1f]
+; NO-NDD-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: lowmask_i32_mask8:
+; NDD:       # %bb.0:
+; NDD-NEXT:    testb $31, %dil # encoding: [0x40,0xf6,0xc7,0x1f]
+; NDD-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %val, 31
   %cmp = icmp ne i32 %and, 0
   %ret = zext i1 %cmp to i32

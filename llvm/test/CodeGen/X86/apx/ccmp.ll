@@ -1215,8 +1215,7 @@ define i32 @ccmp_nobranch(i32 noundef %a, i32 noundef %b) {
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
 ; NDD-NEXT:    ccmplel {dfv=} $2, %esi # encoding: [0x62,0xf4,0x04,0x0e,0x83,0xfe,0x02]
-; NDD-NEXT:    setge %al # encoding: [0x0f,0x9d,0xc0]
-; NDD-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; NDD-NEXT:    setzuge %al # encoding: [0x62,0xf4,0x7f,0x18,0x4d,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
   %cmp = icmp sgt i32 %a, 0
@@ -1241,8 +1240,7 @@ define i32 @ccmp_continous_nobranch(i32 noundef %a, i32 noundef %b, i32 noundef 
 ; NDD-NEXT:    cmpl $2, %edi # encoding: [0x83,0xff,0x02]
 ; NDD-NEXT:    ccmpll {dfv=sf} $2, %esi # encoding: [0x62,0xf4,0x24,0x0c,0x83,0xfe,0x02]
 ; NDD-NEXT:    ccmpll {dfv=sf} $4, %edx # encoding: [0x62,0xf4,0x24,0x0c,0x83,0xfa,0x04]
-; NDD-NEXT:    setge %al # encoding: [0x0f,0x9d,0xc0]
-; NDD-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; NDD-NEXT:    setzuge %al # encoding: [0x62,0xf4,0x7f,0x18,0x4d,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
   %cmp = icmp sgt i32 %a, 1
