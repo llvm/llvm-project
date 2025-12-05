@@ -107,9 +107,10 @@ define amdgpu_kernel void @global_load_lds_dword_2_arrays(ptr addrspace(1) nocap
 ; GFX9-NEXT:    s_lshl_b32 s1, s3, 2
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    ds_read_b32 v0, v0
 ; GFX9-NEXT:    ; wave barrier
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_read_b32 v1, v1 offset:256
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
