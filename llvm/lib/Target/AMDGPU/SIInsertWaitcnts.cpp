@@ -222,10 +222,6 @@ static bool isNormalMode(InstCounterType MaxCounter) {
 }
 #endif // NDEBUG
 
-static bool isExpertMode(InstCounterType MaxCounter) {
-  return MaxCounter == NUM_EXPERT_INST_CNTS;
-}
-
 VmemType getVmemType(const MachineInstr &Inst) {
   assert(updateVMCntOnly(Inst));
   if (!SIInstrInfo::isImage(Inst))
@@ -406,8 +402,14 @@ public:
 };
 
 class WaitcntGeneratorGFX12Plus : public WaitcntGenerator {
+protected:
+  bool IsExpertMode;
+
 public:
-  using WaitcntGenerator::WaitcntGenerator;
+  WaitcntGeneratorGFX12Plus() = default;
+  WaitcntGeneratorGFX12Plus(const MachineFunction &MF,
+                            InstCounterType MaxCounter, bool IsExpertMode)
+      : WaitcntGenerator(MF, MaxCounter), IsExpertMode(IsExpertMode) {}
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -449,6 +451,7 @@ public:
   const MachineRegisterInfo *MRI = nullptr;
   InstCounterType SmemAccessCounter;
   InstCounterType MaxCounter;
+  bool IsExpertMode = false;
   const unsigned *WaitEventMaskForInst;
 
 private:
@@ -1644,7 +1647,7 @@ WaitcntGeneratorPreGFX12::getAllZeroWaitcnt(bool IncludeVSCnt) const {
 
 AMDGPU::Waitcnt
 WaitcntGeneratorGFX12Plus::getAllZeroWaitcnt(bool IncludeVSCnt) const {
-  unsigned ExpertVal = isExpertMode(MaxCounter) ? 0 : ~0u;
+  unsigned ExpertVal = IsExpertMode ? 0 : ~0u;
   return AMDGPU::Waitcnt(0, 0, 0, IncludeVSCnt ? 0 : ~0u, 0, 0, 0,
                          ~0u /* XCNT */, ExpertVal, ExpertVal);
 }
@@ -1990,7 +1993,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
   }
 
   if (Wait.hasWaitDepctr()) {
-    assert(isExpertMode(MaxCounter));
+    assert(IsExpertMode);
     unsigned Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Wait.VmVsrc, *ST);
     Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, Wait.VaVdst);
 
@@ -2302,7 +2305,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   if (ForceEmitWaitcnt[X_CNT])
     Wait.XCnt = 0;
   // Only force emit VA_VDST and VM_VSRC if expert mode is enabled.
-  if (isExpertMode(MaxCounter)) {
+  if (IsExpertMode) {
     if (ForceEmitWaitcnt[VA_VDST])
       Wait.VaVdst = 0;
     if (ForceEmitWaitcnt[VM_VSRC])
@@ -2475,7 +2478,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   bool IsVMEMAccess = false;
   bool IsSMEMAccess = false;
 
-  if (isExpertMode(MaxCounter)) {
+  if (IsExpertMode) {
     if (const auto ET = getExpertSchedulingEventType(Inst))
       ScoreBrackets->updateByEvent(*ET, Inst);
   }
@@ -2724,8 +2727,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     // Track pre-existing waitcnts that were added in earlier iterations or by
     // the memory legalizer.
-    if (isWaitInstr(Inst) || (isExpertMode(MaxCounter) &&
-                              Inst.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR)) {
+    if (isWaitInstr(Inst) ||
+        (IsExpertMode && Inst.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR)) {
       if (!OldWaitcntInstr)
         OldWaitcntInstr = &Inst;
       ++Iter;
@@ -2974,15 +2977,13 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST->getCPU());
 
   if (ST->hasExtendedWaitCounts()) {
-    if (ST->hasExpertSchedulingMode() &&
-        (MF.getFunction()
-             .getFnAttribute("amdgpu-expert-scheduling-mode")
-             .getValueAsBool() ||
-         ExpertSchedulingModeFlag))
-      MaxCounter = NUM_EXPERT_INST_CNTS;
-    else
-      MaxCounter = NUM_EXTENDED_INST_CNTS;
-    WCGGFX12Plus = WaitcntGeneratorGFX12Plus(MF, MaxCounter);
+    IsExpertMode = ST->hasExpertSchedulingMode() &&
+                   (MF.getFunction()
+                        .getFnAttribute("amdgpu-expert-scheduling-mode")
+                        .getValueAsBool() ||
+                    ExpertSchedulingModeFlag);
+    MaxCounter = IsExpertMode ? NUM_EXPERT_INST_CNTS : NUM_EXTENDED_INST_CNTS;
+    WCGGFX12Plus = WaitcntGeneratorGFX12Plus(MF, MaxCounter, IsExpertMode);
     WCG = &WCGGFX12Plus;
   } else {
     MaxCounter = NUM_NORMAL_INST_CNTS;
@@ -3051,7 +3052,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
                 TII->get(instrsForExtendedCounterTypes[CT]))
             .addImm(0);
       }
-      if (isExpertMode(MaxCounter)) {
+      if (IsExpertMode) {
         unsigned Enc = AMDGPU::DepCtr::encodeFieldVaVdst(0, *ST);
         Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Enc, 0);
         BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT_DEPCTR))
@@ -3066,7 +3067,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
     Modified = true;
-  } else if (isExpertMode(MaxCounter)) {
+  } else if (IsExpertMode) {
     for (MachineBasicBlock::iterator E = EntryBB.end();
          I != E && (I->isPHI() || I->isMetaInstruction()); ++I)
       ;
