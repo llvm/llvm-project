@@ -862,7 +862,7 @@ option(LLVM_INCLUDE_EXAMPLES "Generate build targets for the LLVM examples" ON)
 option(LLVM_BUILD_TESTS
   "Build LLVM unit tests. If OFF, just generate build targets." OFF)
 option(LLVM_INCLUDE_TESTS "Generate build targets for the LLVM unit tests." ON)
-option(LLVM_ENABLE_DSMIL "Build DSMIL pass plugin and runtime from ../dsmil" OFF)
+option(LLVM_ENABLE_DSMIL "Build DSMIL pass plugin and runtime from ../dsmil" ON)
 
 option(LLVM_INSTALL_GTEST
   "Install the llvm gtest library.  This should be on if you want to do

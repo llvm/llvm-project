@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Wrapper to invoke clang with DSMIL plugin and runtime paths preloaded.
+exec "@CMAKE_INSTALL_FULL_BINDIR@/clang" \
+  -fpass-plugin="@CMAKE_INSTALL_FULL_LIBDIR@/DsmilPasses.so" \
+  -I"@CMAKE_INSTALL_FULL_INCLUDEDIR@/dsmil" \
+  -L"@CMAKE_INSTALL_FULL_LIBDIR@" -ldsmilrt \
+  "$@"

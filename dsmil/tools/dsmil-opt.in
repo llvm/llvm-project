@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Wrapper to invoke opt with DSMIL plugin preloaded.
+exec "@CMAKE_INSTALL_FULL_BINDIR@/opt" \
+  -load-pass-plugin "@CMAKE_INSTALL_FULL_LIBDIR@/DsmilPasses.so" \
+  "$@"
