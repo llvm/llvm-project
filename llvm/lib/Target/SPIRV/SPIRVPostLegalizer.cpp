@@ -1,6 +1,4 @@
-//===-- SPIRVPostLegalizer.cpp - ammend info after legalization -*- C++ -*-===//
-//
-// which may appear after the legalizer pass
+//===-- SPIRVPostLegalizer.cpp - amend info after legalization -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The pass partially apply pre-legalization logic to new instructions inserted
-// as a result of legalization:
+// The pass partially applies pre-legalization logic to new instructions
+// inserted as a result of legalization:
 // - assigns SPIR-V types to registers for new instructions.
+// - inserts ASSIGN_TYPE pseudo-instructions required for type folding.
 //
 //===----------------------------------------------------------------------===//
 
@@ -36,9 +35,9 @@ public:
 
 namespace llvm {
 //  Defined in SPIRVPreLegalizer.cpp.
-extern void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
-                              SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
-                              MachineRegisterInfo &MRI);
+extern void updateRegType(Register Reg, Type *Ty, SPIRVType *SpirvTy,
+                          SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
+                          MachineRegisterInfo &MRI);
 extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
                          MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR,
                          SPIRVType *KnownResType);
@@ -314,6 +313,54 @@ static void registerSpirvTypeForNewInstructions(MachineFunction &MF,
   }
 }
 
+static bool hasAssignType(Register Reg, MachineRegisterInfo &MRI) {
+  for (MachineInstr &UseInstr : MRI.use_nodbg_instructions(Reg)) {
+    if (UseInstr.getOpcode() == SPIRV::ASSIGN_TYPE) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static void generateAssignType(MachineInstr &MI, Register ResultRegister,
+                               SPIRVType *ResultType, SPIRVGlobalRegistry *GR,
+                               MachineRegisterInfo &MRI) {
+  LLVM_DEBUG(dbgs() << "  Adding ASSIGN_TYPE for ResultRegister: "
+                    << printReg(ResultRegister, MRI.getTargetRegisterInfo())
+                    << " with type: " << *ResultType);
+  MachineIRBuilder MIB(MI);
+  updateRegType(ResultRegister, nullptr, ResultType, GR, MIB, MRI);
+
+  // Tablegen definition assumes SPIRV::ASSIGN_TYPE pseudo-instruction is
+  // present after each auto-folded instruction to take a type reference
+  // from.
+  Register NewReg =
+      MRI.createGenericVirtualRegister(MRI.getType(ResultRegister));
+  const auto *RegClass = GR->getRegClass(ResultType);
+  MRI.setRegClass(NewReg, RegClass);
+  MRI.setRegClass(ResultRegister, RegClass);
+
+  GR->assignSPIRVTypeToVReg(ResultType, ResultRegister, MIB.getMF());
+  // This is to make it convenient for Legalizer to get the SPIRVType
+  // when processing the actual MI (i.e. not pseudo one).
+  GR->assignSPIRVTypeToVReg(ResultType, NewReg, MIB.getMF());
+  // Copy MIFlags from Def to ASSIGN_TYPE instruction. It's required to
+  // keep the flags after instruction selection.
+  const uint32_t Flags = MI.getFlags();
+  MIB.buildInstr(SPIRV::ASSIGN_TYPE)
+      .addDef(ResultRegister)
+      .addUse(NewReg)
+      .addUse(GR->getSPIRVTypeID(ResultType))
+      .setMIFlags(Flags);
+  for (unsigned I = 0, E = MI.getNumDefs(); I != E; ++I) {
+    MachineOperand &MO = MI.getOperand(I);
+    if (MO.getReg() == ResultRegister) {
+      MO.setReg(NewReg);
+      break;
+    }
+  }
+}
+
 static void ensureAssignTypeForTypeFolding(MachineFunction &MF,
                                            SPIRVGlobalRegistry *GR) {
   LLVM_DEBUG(dbgs() << "Entering ensureAssignTypeForTypeFolding for function "
@@ -323,35 +370,18 @@ static void ensureAssignTypeForTypeFolding(MachineFunction &MF,
     for (MachineInstr &MI : MBB) {
       if (!isTypeFoldingSupported(MI.getOpcode()))
         continue;
-      if (MI.getNumOperands() == 1 || !MI.getOperand(1).isReg())
-        continue;
 
       LLVM_DEBUG(dbgs() << "Processing instruction: " << MI);
 
-      // Check uses of MI to see if it already has an use in SPIRV::ASSIGN_TYPE
-      bool HasAssignType = false;
       Register ResultRegister = MI.defs().begin()->getReg();
-      // All uses of Result register
-      for (MachineInstr &UseInstr :
-           MRI.use_nodbg_instructions(ResultRegister)) {
-        if (UseInstr.getOpcode() == SPIRV::ASSIGN_TYPE) {
-          HasAssignType = true;
-          LLVM_DEBUG(dbgs() << "  Instruction already has an ASSIGN_TYPE use: "
-                            << UseInstr);
-          break;
-        }
+      if (hasAssignType(ResultRegister, MRI)) {
+        LLVM_DEBUG(dbgs() << "  Instruction already has ASSIGN_TYPE\n");
+        continue;
       }
 
-      if (!HasAssignType) {
-        Register ResultRegister = MI.defs().begin()->getReg();
-        SPIRVType *ResultType = GR->getSPIRVTypeForVReg(ResultRegister);
-        LLVM_DEBUG(
-            dbgs() << "  Adding ASSIGN_TYPE for ResultRegister: "
-                   << printReg(ResultRegister, MRI.getTargetRegisterInfo())
-                   << " with type: " << *ResultType);
-        MachineIRBuilder MIB(MI);
-        insertAssignInstr(ResultRegister, nullptr, ResultType, GR, MIB, MRI);
-      }
+      SPIRVType *ResultType = GR->getSPIRVTypeForVReg(ResultRegister);
+      assert(ResultType);
+      generateAssignType(MI, ResultRegister, ResultType, GR, MRI);
     }
   }
 }
