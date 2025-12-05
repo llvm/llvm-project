@@ -816,7 +816,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   DesiredPeelCount = std::max(DesiredPeelCount, CountToEliminateCmps);
 
   if (DesiredPeelCount == 0)
-    DesiredPeelCount = peelToTurnInvariantLoadsDerefenceable(*L, DT, AC);
+    DesiredPeelCount = peelToTurnInvariantLoadsDereferenceable(*L, DT, AC);
 
   if (DesiredPeelCount > 0) {
     DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
