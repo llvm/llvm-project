@@ -592,9 +592,6 @@ def : SchedAlias<WriteBrReg, V1Write_1c_1B>;
 // Branch and link, register
 def : InstRW<[V1Write_1c_1B_1S], (instrs BL, BLR)>;
 
-// Compare and branch
-def : InstRW<[V1Write_1c_1B], (instregex "^[CT]BN?Z[XW]$")>;
-
 
 // Arithmetic and Logical Instructions
 // -----------------------------------------------------------------------------
