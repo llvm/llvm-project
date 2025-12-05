@@ -577,8 +577,8 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
 
   // strcmp(x, y)  -> cnst  (if both x and y are constant strings)
   if (HasStr1 && HasStr2)
-    return ConstantInt::get(CI->getType(),
-                            std::clamp(Str1.compare(Str2), -1, 1));
+    return ConstantInt::getSigned(CI->getType(),
+                                  std::clamp(Str1.compare(Str2), -1, 1));
 
   if (HasStr1 && Str1.empty()) // strcmp("", x) -> -*x
     return B.CreateNeg(B.CreateZExt(
@@ -657,8 +657,8 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
     // Avoid truncating the 64-bit Length to 32 bits in ILP32.
     StringRef SubStr1 = substr(Str1, Length);
     StringRef SubStr2 = substr(Str2, Length);
-    return ConstantInt::get(CI->getType(),
-                            std::clamp(SubStr1.compare(SubStr2), -1, 1));
+    return ConstantInt::getSigned(CI->getType(),
+                                  std::clamp(SubStr1.compare(SubStr2), -1, 1));
   }
 
   if (HasStr1 && Str1.empty()) // strncmp("", x, n) -> -*x
@@ -1534,7 +1534,7 @@ static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
   int IRes = UChar(LStr[Pos]) < UChar(RStr[Pos]) ? -1 : 1;
   Value *MaxSize = ConstantInt::get(Size->getType(), Pos);
   Value *Cmp = B.CreateICmp(ICmpInst::ICMP_ULE, Size, MaxSize);
-  Value *Res = ConstantInt::get(CI->getType(), IRes);
+  Value *Res = ConstantInt::getSigned(CI->getType(), IRes);
   return B.CreateSelect(Cmp, Zero, Res);
 }
 
@@ -3159,7 +3159,7 @@ Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
 
   B.CreateAlignedStore(
-      ConstantInt::get(B.getIntNTy(IntBW), QuotInt.getExtValue()),
+      ConstantInt::getSigned(B.getIntNTy(IntBW), QuotInt.getExtValue()),
       CI->getArgOperand(2), CI->getParamAlign(2));
   return ConstantFP::get(CI->getType(), Rem);
 }
