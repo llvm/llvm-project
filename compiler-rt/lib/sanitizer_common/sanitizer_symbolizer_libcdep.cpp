@@ -539,8 +539,10 @@ bool SymbolizerProcess::Restart() {
     CloseFile(input_fd_);
   if (output_fd_ != kInvalidFd)
     CloseFile(output_fd_);
-  if (child_stdin_fd_ != kInvalidFd)
-    CloseFile(output_fd_);
+  if (child_stdin_fd_ != kInvalidFd) {
+    CloseFile(child_stdin_fd_);
+    child_stdin_fd_ = kInvalidFd;  // Don't free in destructor
+  }
   return StartSymbolizerSubprocess();
 }
 
