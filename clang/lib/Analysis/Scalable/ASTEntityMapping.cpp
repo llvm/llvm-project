@@ -76,7 +76,7 @@ std::optional<EntityName> getLocalEntityNameForFunctionReturn(const FunctionDecl
   if (USRBuf.empty())
     return std::nullopt;
 
-  return EntityName(USRBuf.str(), "0", {});
+  return EntityName(USRBuf.str(), /*Suffix=*/"0", /*Namespace=*/{});
 }
 
 } // namespace clang::ssaf
