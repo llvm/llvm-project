@@ -744,8 +744,6 @@ LogicalResult MakeDmaDescriptorOp::verify() {
 
   ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
   size_t rank = globalStaticSizes.size();
-  if (rank < 2)
-    return emitOpError("tensor and tile must be at least of rank 2.");
   if (rank > 5)
     return emitOpError("tensor and tile must be at most of rank 5.");
   if (rank != globalStaticStrides.size())

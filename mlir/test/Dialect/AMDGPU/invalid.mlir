@@ -416,13 +416,3 @@ func.func @make_dma_descriptor_invalid_shared_and_global_rank(%base: !amdgpu.tdm
   func.return
 }
 
-// -----
-
-
-// CHECK-LABEL: func @make_dma_descriptor_invalid_rank_less_than_two
-// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
-func.func @make_dma_descriptor_invalid_rank_less_than_two(%base: !amdgpu.tdm_base<i32>) {
-  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op tensor and tile must be at least of rank 2.}}
-  amdgpu.make_dma_descriptor %base globalSize [4] globalStride [1, 1] sharedSize [1, 2] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
-  func.return
-}
