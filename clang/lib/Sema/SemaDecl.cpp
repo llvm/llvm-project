@@ -7644,7 +7644,8 @@ void Sema::ProcessPragmaExport(DeclaratorDecl *NewD) {
     if (getLangOpts().CPlusPlus && !FD->isExternC())
       return;
   }
-  assert((isa<FunctionDecl>(NewD)||isa<VarDecl>(NewD)) && "NewD is not a function or variable");
+  assert((isa<FunctionDecl>(NewD) || isa<VarDecl>(NewD)) &&
+         "NewD is not a function or variable");
 
   IdentifierInfo *IdentName = NewD->getIdentifier();
   if (IdentName == nullptr)
