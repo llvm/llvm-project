@@ -1532,6 +1532,15 @@ let Predicates = [HasStdExtP] in {
   def: Pat<(XLenVecI16VT (sshlsat GPR:$rs1, (XLenVecI16VT (splat_vector uimm4:$shamt)))),
            (PSSLAI_H GPR:$rs1, uimm4:$shamt)>;
 
+  // 8-bit logical shift left
+  def: Pat<(XLenVecI8VT (shl GPR:$rs1,
+                             (XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))))),
+           (PSLL_BS GPR:$rs1, GPR:$rs2)>;
+  // 16-bit logical shift left
+  def: Pat<(XLenVecI16VT (shl GPR:$rs1,
+                              (XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))))),
+           (PSLL_HS GPR:$rs1, GPR:$rs2)>;
+
   // 8-bit PLI SD node pattern
   def: Pat<(XLenVecI8VT (splat_vector simm8_unsigned:$imm8)), (PLI_B simm8_unsigned:$imm8)>;
   // 16-bit PLI SD node pattern
@@ -1577,6 +1586,10 @@ let Predicates = [HasStdExtP, IsRV64] in {
   // 32-bit averaging-sub patterns
   def: Pat<(v2i32 (riscv_pasub GPR:$rs1, GPR:$rs2)), (PASUB_W GPR:$rs1, GPR:$rs2)>;
   def: Pat<(v2i32 (riscv_pasubu GPR:$rs1, GPR:$rs2)), (PASUBU_W GPR:$rs1, GPR:$rs2)>;
+
+  // 32-bit logical shift left
+  def: Pat<(v2i32 (shl GPR:$rs1, (v2i32 (splat_vector (XLenVT GPR:$rs2))))),
+           (PSLL_WS GPR:$rs1, GPR:$rs2)>;
 
   // splat pattern
   def: Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (XLenVT X0), GPR:$rs2)>;
