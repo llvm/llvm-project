@@ -44,11 +44,48 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <algorithm>
 #include <optional>
 using namespace clang;
 using namespace CodeGen;
 
 /***/
+
+namespace {
+/// Creates a table of `FieldDecl` pointers for each `llvm::StructTy` element
+/// no, by working backwards from the `CGRecordLayout`.
+class LLVMToClangFieldLookup {
+public:
+  LLVMToClangFieldLookup(const llvm::StructType *LLVMType,
+                         const RecordDecl *RDecl, const CGRecordLayout &RLayout)
+      : Table(LLVMType->getNumElements(), nullptr) {
+    for (const auto *FDecl : RDecl->fields()) {
+      if (!isa<FieldDecl>(FDecl))
+        continue;
+      if (!RLayout.containsFieldDecl(FDecl))
+        continue;
+
+      unsigned FieldIndex = RLayout.getLLVMFieldNo(FDecl);
+      assert(FieldIndex < Table.size() &&
+             "Field index should not exceed num elements");
+
+      if (!Table[FieldIndex]) {
+        // If several LLVM fields correspond to the same Clang FieldDecl,
+        // arbitrarily pick the first.
+        Table[FieldIndex] = FDecl;
+      }
+    }
+  }
+
+  const FieldDecl *getFieldDeclForFieldNo(unsigned FieldNo) {
+    assert(FieldNo < Table.size());
+    return Table[FieldNo];
+  }
+
+private:
+  SmallVector<const FieldDecl *, 16> Table;
+};
+} // namespace
 
 unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   switch (CC) {
@@ -1398,7 +1435,8 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
 
 void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
                                          llvm::TypeSize DstSize,
-                                         bool DstIsVolatile) {
+                                         bool DstIsVolatile,
+                                         std::optional<QualType> QTy) {
   if (!DstSize)
     return;
 
@@ -1426,6 +1464,22 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
       addInstToCurrentSourceAtom(I, Src);
     } else if (llvm::StructType *STy =
                    dyn_cast<llvm::StructType>(Src->getType())) {
+      // For TBAA metadata, get the record layout
+      std::optional<LLVMToClangFieldLookup> FieldLookupForTBAA;
+      if (QTy && CGM.shouldUseTBAA()) {
+        if (const RecordDecl *RDecl = (*QTy)->getAsRecordDecl()) {
+          const CGRecordLayout &RLayout =
+              CGM.getTypes().getCGRecordLayout(RDecl);
+
+          if (RLayout.getLLVMType()->isLayoutIdentical(STy)) {
+            // There are cases where the returned LLVM struct type does not
+            // match the LLVM type corresponding to the record's layout, so we
+            // can't use it to work out the correct TBAA metadata.
+            FieldLookupForTBAA.emplace(STy, RDecl, RLayout);
+          }
+        }
+      }
+
       // Prefer scalar stores to first-class aggregate stores.
       Dst = Dst.withElementType(SrcTy);
       for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
@@ -1433,6 +1487,21 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
         llvm::Value *Elt = Builder.CreateExtractValue(Src, i);
         auto *I = Builder.CreateStore(Elt, EltPtr, DstIsVolatile);
         addInstToCurrentSourceAtom(I, Elt);
+
+        if (FieldLookupForTBAA) {
+          // Try to find the field declaration corresponding to this struct
+          // element no.
+          const FieldDecl *FDecl =
+              FieldLookupForTBAA->getFieldDeclForFieldNo(i);
+
+          if (FDecl && FDecl->getType()->isScalarType()) {
+            // FIXME Decide on a way to add TBAA MD for store to an aggregate
+            // type. Currently, TBAA MD requires that the access type is a
+            // scalar.
+            CGM.DecorateInstructionWithTBAA(
+                I, CGM.getTBAAInfoForField(TBAAAccessInfo(), *QTy, FDecl));
+          }
+        }
       }
     } else {
       auto *I =
@@ -6235,9 +6304,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           CreateCoercedStore(
               CI, StorePtr,
               llvm::TypeSize::getFixed(DestSize - RetAI.getDirectOffset()),
-              DestIsVolatile);
+              DestIsVolatile, RetTy);
         }
-
         return convertTempToRValue(DestPtr, RetTy, SourceLocation());
       }
 

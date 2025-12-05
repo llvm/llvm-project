@@ -909,6 +909,11 @@ public:
     return getTBAAAccessInfo(AccessType);
   }
 
+  /// getTBAAInfoForSubobject - Get TBAA information for an access to a field in
+  /// a record.
+  TBAAAccessInfo getTBAAInfoForField(TBAAAccessInfo BaseTBAAInfo,
+                                     QualType BaseType, const FieldDecl *Field);
+
   bool isPaddedAtomicType(QualType type);
   bool isPaddedAtomicType(const AtomicType *type);
 

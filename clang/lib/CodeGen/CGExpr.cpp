@@ -5390,38 +5390,8 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
   // and unions.
   QualType FieldType = field->getType();
   const RecordDecl *rec = field->getParent();
-  AlignmentSource BaseAlignSource = BaseInfo.getAlignmentSource();
-  LValueBaseInfo FieldBaseInfo(getFieldAlignmentSource(BaseAlignSource));
-  TBAAAccessInfo FieldTBAAInfo;
-  if (base.getTBAAInfo().isMayAlias() ||
-          rec->hasAttr<MayAliasAttr>() || FieldType->isVectorType()) {
-    FieldTBAAInfo = TBAAAccessInfo::getMayAliasInfo();
-  } else if (rec->isUnion()) {
-    // TODO: Support TBAA for unions.
-    FieldTBAAInfo = TBAAAccessInfo::getMayAliasInfo();
-  } else {
-    // If no base type been assigned for the base access, then try to generate
-    // one for this base lvalue.
-    FieldTBAAInfo = base.getTBAAInfo();
-    if (!FieldTBAAInfo.BaseType) {
-        FieldTBAAInfo.BaseType = CGM.getTBAABaseTypeInfo(base.getType());
-        assert(!FieldTBAAInfo.Offset &&
-               "Nonzero offset for an access with no base type!");
-    }
-
-    // Adjust offset to be relative to the base type.
-    const ASTRecordLayout &Layout =
-        getContext().getASTRecordLayout(field->getParent());
-    unsigned CharWidth = getContext().getCharWidth();
-    if (FieldTBAAInfo.BaseType)
-      FieldTBAAInfo.Offset +=
-          Layout.getFieldOffset(field->getFieldIndex()) / CharWidth;
-
-    // Update the final access type and size.
-    FieldTBAAInfo.AccessType = CGM.getTBAATypeInfo(FieldType);
-    FieldTBAAInfo.Size =
-        getContext().getTypeSizeInChars(FieldType).getQuantity();
-  }
+  TBAAAccessInfo FieldTBAAInfo =
+      CGM.getTBAAInfoForField(base.getTBAAInfo(), base.getType(), field);
 
   Address addr = base.getAddress();
   if (hasBPFPreserveStaticOffset(rec))
@@ -5471,6 +5441,9 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
       // Remember the original struct field index
       addr = emitPreserveStructAccess(*this, base, addr, field);
   }
+
+  AlignmentSource BaseAlignSource = base.getBaseInfo().getAlignmentSource();
+  LValueBaseInfo FieldBaseInfo(getFieldAlignmentSource(BaseAlignSource));
 
   // If this is a reference field, load the reference right now.
   if (FieldType->isReferenceType()) {

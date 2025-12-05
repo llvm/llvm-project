@@ -5038,7 +5038,8 @@ public:
   /// Create a store to \arg DstPtr from \arg Src, truncating the stored value
   /// to at most \arg DstSize bytes.
   void CreateCoercedStore(llvm::Value *Src, Address Dst, llvm::TypeSize DstSize,
-                          bool DstIsVolatile);
+                          bool DstIsVolatile,
+                          std::optional<QualType> QTy = std::nullopt);
 
   /// EmitExtendGCLifetime - Given a pointer to an Objective-C object,
   /// make sure it survives garbage collection until this point.
