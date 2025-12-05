@@ -208,3 +208,118 @@ __mmask8 test_kmov_b(__mmask8 A) {
  // OGCG: bitcast <8 x i1> {{.*}} to i8
  return __builtin_ia32_kmovb(A);
 }
+
+unsigned char test_kortestc_mask8_u8(__mmask8 __A, __mmask8 __B) {
+  // CIR-LABEL: _kortestc_mask8_u8
+  // CIR: %[[ALL_ONES:.*]] = cir.const #cir.int<255> : !u8i
+  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[OR:.*]] = cir.binop(or, %[[LHS]], %[[RHS]]) : !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[OR_INT:.*]] = cir.cast bitcast %[[OR]] : !cir.vector<8 x !cir.int<u, 1>> -> !u8i
+  // CIR: %[[CMP:.*]] = cir.cmp(eq, %[[OR_INT]], %[[ALL_ONES]]) : !u8i, !cir.bool
+  // CIR: cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
+  // CIR: cir.cast integral {{.*}} : !s32i -> !u8i
+
+  // LLVM-LABEL: _kortestc_mask8_u8
+  // LLVM: %[[LHS:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // LLVM: %[[RHS:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // LLVM: %[[OR:.*]] = or <8 x i1> %[[LHS]], %[[RHS]]
+  // LLVM: %[[CAST:.*]] = bitcast <8 x i1> %[[OR]] to i8
+  // LLVM: %[[CMP:.*]] = icmp eq i8 %[[CAST]], -1
+  // LLVM: %[[ZEXT:.*]] = zext i1 %[[CMP]] to i32
+  // LLVM: trunc i32 %[[ZEXT]] to i8
+
+  // OGCG-LABEL: _kortestc_mask8_u8
+  // OGCG: %[[LHS:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %[[RHS:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %[[OR:.*]] = or <8 x i1> %[[LHS]], %[[RHS]]
+  // OGCG: %[[CAST:.*]] = bitcast <8 x i1> %[[OR]] to i8
+  // OGCG: %[[CMP:.*]] = icmp eq i8 %[[CAST]], -1
+  // OGCG: %[[ZEXT:.*]] = zext i1 %[[CMP]] to i32
+  // OGCG: trunc i32 %[[ZEXT]] to i8
+  return _kortestc_mask8_u8(__A,__B);
+}
+
+unsigned char test_ktestc_mask8_u8(__mmask8 A, __mmask8 B) {
+  // CIR-LABEL: _ktestc_mask8_u8
+  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.ktestc.b"
+  // CIR: cir.cast integral %[[RES]] : {{.*}} -> !u8i
+
+  // LLVM-LABEL: _ktestc_mask8_u8
+  // LLVM: %[[LHS:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // LLVM: %[[RHS:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // LLVM: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestc.b(<8 x i1> %[[LHS]], <8 x i1> %[[RHS]])
+  // LLVM: trunc i32 %[[RES]] to i8
+
+  // OGCG-LABEL: _ktestc_mask8_u8
+  // OGCG: %[[LHS:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %[[RHS:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestc.b
+  // OGCG: trunc i32 %[[RES]] to i8
+  return _ktestc_mask8_u8(A, B);
+}
+
+unsigned char test_ktestz_mask8_u8(__mmask8 A, __mmask8 B) {
+  // CIR-LABEL: _ktestz_mask8_u8
+  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.ktestz.b"
+  // CIR: cir.cast integral %[[RES]] : {{.*}} -> !u8i
+
+  // LLVM-LABEL: _ktestz_mask8_u8
+  // LLVM: %[[LHS:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // LLVM: %[[RHS:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // LLVM: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestz.b(<8 x i1> %[[LHS]], <8 x i1> %[[RHS]])
+  // LLVM: trunc i32 %[[RES]] to i8
+
+  // OGCG-LABEL: _ktestz_mask8_u8
+  // OGCG: %[[LHS:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %[[RHS:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestz.b
+  // OGCG: trunc i32 %[[RES]] to i8
+  return _ktestz_mask8_u8(A, B);
+}
+
+unsigned char test_ktestc_mask16_u8(__mmask16 A, __mmask16 B) {
+  // CIR-LABEL: _ktestc_mask16_u8
+  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.ktestc.w"
+  // CIR: cir.cast integral %[[RES]] : {{.*}} -> !u8i
+
+  // LLVM-LABEL: _ktestc_mask16_u8
+  // LLVM: %[[LHS:.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: %[[RHS:.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestc.w(<16 x i1> %[[LHS]], <16 x i1> %[[RHS]])
+  // LLVM: trunc i32 %[[RES]] to i8
+
+  // OGCG-LABEL: _ktestc_mask16_u8
+  // OGCG: %[[LHS:.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: %[[RHS:.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestc.w
+  // OGCG: trunc i32 %[[RES]] to i8
+  return _ktestc_mask16_u8(A, B);
+}
+
+unsigned char test_ktestz_mask16_u8(__mmask16 A, __mmask16 B) {
+  // CIR-LABEL: _ktestz_mask16_u8
+  // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.ktestz.w"
+  // CIR: cir.cast integral %[[RES]] : {{.*}} -> !u8i
+
+  // LLVM-LABEL: _ktestz_mask16_u8
+  // LLVM: %[[LHS:.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: %[[RHS:.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestz.w(<16 x i1> %[[LHS]], <16 x i1> %[[RHS]])
+  // LLVM: trunc i32 %[[RES]] to i8
+
+  // OGCG-LABEL: _ktestz_mask16_u8
+  // OGCG: %[[LHS:.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: %[[RHS:.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestz.w
+  // OGCG: trunc i32 %[[RES]] to i8
+  return _ktestz_mask16_u8(A, B);
+}
