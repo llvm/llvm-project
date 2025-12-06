@@ -195,19 +195,6 @@ LLDBMemoryReader::resolvePointerAsSymbol(swift::remote::RemoteAddress address) {
       return {};
   }
 
-  if (auto section_sp = addr.GetSection()) {
-    if (auto *obj_file = section_sp->GetObjectFile()) {
-      auto obj_file_format_type =
-          obj_file->GetArchitecture().GetTriple().getObjectFormat();
-      if (auto swift_obj_file_format =
-              GetSwiftObjectFileFormat(obj_file_format_type)) {
-        if (!swift_obj_file_format->sectionContainsReflectionData(
-                section_sp->GetName().GetStringRef()))
-          return {};
-      }
-    }
-  }
-
   if (auto *symbol = addr.CalculateSymbolContextSymbol()) {
     auto mangledName = symbol->GetMangled().GetMangledName().GetStringRef();
     // MemoryReader requires this to be a Swift symbol. LLDB can also be
