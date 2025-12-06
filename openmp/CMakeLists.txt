@@ -124,9 +124,8 @@ endif ()
 set(OPENMP_TEST_Fortran_COMPILER "${OPENMP_TEST_Fortran_COMPILER_default}" CACHE STRING
   "Fortran compiler to use for testing OpenMP runtime libraries.")
 
-if (CMAKE_Fortran_COMPILER AND NOT LLVM_RUNTIMES_BUILD)
-  message(WARNING "Building omp_lib.mod requires using LLVM_ENABLE_RUNTIMES=flang-rt\\\;openmp")
-endif ()
+set(LIBOMP_FORTRAN_MODULES FALSE CACHE BOOL
+  "Create Fortran module files? (requires fortran compiler)")
 
 # Set up testing infrastructure.
 include(OpenMPTesting)
@@ -172,6 +171,8 @@ if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx" OR
    "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx")
   add_subdirectory(device)
 else()
+  add_subdirectory(module)
+
   # Build host runtime library, after LIBOMPTARGET variables are set since they
   # are needed to enable time profiling support in the OpenMP runtime.
   add_subdirectory(runtime)
