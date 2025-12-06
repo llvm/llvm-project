@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++26 -triple x86_64-linux-gnu -emit-llvm -fexperimental-pointer-field-protection -o - %s | FileCheck --check-prefix=RELOC %s
-// RUN: %clang_cc1 -std=c++26 -triple x86_64-linux-gnu -emit-llvm -fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged -o - %s | FileCheck --check-prefix=RELOC %s
-// RUN: %clang_cc1 -std=c++26 -triple aarch64-linux-gnu -emit-llvm -fexperimental-pointer-field-protection -o - %s | FileCheck --check-prefix=RELOC %s
-// RUN: %clang_cc1 -std=c++26 -triple aarch64-linux-gnu -emit-llvm -fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged -o - %s | FileCheck --check-prefix=NONRELOC %s
+// RUN: %clang_cc1 -std=c++26 -triple x86_64-linux-gnu -emit-llvm -fexperimental-pointer-field-protection-abi -o - %s | FileCheck --check-prefix=RELOC %s
+// RUN: %clang_cc1 -std=c++26 -triple x86_64-linux-gnu -emit-llvm -fexperimental-pointer-field-protection-abi -fexperimental-pointer-field-protection-tagged -o - %s | FileCheck --check-prefix=RELOC %s
+// RUN: %clang_cc1 -std=c++26 -triple aarch64-linux-gnu -emit-llvm -fexperimental-pointer-field-protection-abi -o - %s | FileCheck --check-prefix=RELOC %s
+// RUN: %clang_cc1 -std=c++26 -triple aarch64-linux-gnu -emit-llvm -fexperimental-pointer-field-protection-abi -fexperimental-pointer-field-protection-tagged -o - %s | FileCheck --check-prefix=NONRELOC %s
 
 typedef __SIZE_TYPE__ size_t;
 
@@ -23,10 +23,10 @@ void test1(S* source, S* dest) {
   // NONRELOC:        %0 = load ptr, ptr %dest.addr, align 8
   // NONRELOC-NEXT:   %1 = load ptr, ptr %source.addr, align 8
   // NONRELOC-NEXT:   call void @llvm.memmove.p0.p0.i64(ptr align 8 %0, ptr align 8 %1, i64 16, i1 false)
-  // NONRELOC-NEXT:   br i1 false, label %loop.end, label %loop
+  // NONRELOC-NEXT:   br i1 false, label %pfp.relocate.loop.end, label %pfp.relocate.loop
 
-  // NONRELOC:      loop:
-  // NONRELOC-NEXT:   %2 = phi i64 [ 0, %entry ], [ %19, %loop ]
+  // NONRELOC:      pfp.relocate.loop:
+  // NONRELOC-NEXT:   %2 = phi i64 [ 0, %entry ], [ %19, %pfp.relocate.loop ]
   // NONRELOC-NEXT:   %3 = getelementptr inbounds i8, ptr %0, i64 %2
   // NONRELOC-NEXT:   %4 = getelementptr inbounds i8, ptr %1, i64 %2
   // NONRELOC-NEXT:   %5 = getelementptr inbounds i8, ptr %3, i64 0
@@ -47,9 +47,9 @@ void test1(S* source, S* dest) {
   // NONRELOC-NEXT:   store ptr %18, ptr %14, align 8
   // NONRELOC-NEXT:   %19 = add i64 %2, 16
   // NONRELOC-NEXT:   %20 = icmp eq i64 %19, 16
-  // NONRELOC-NEXT:   br i1 %20, label %loop.end, label %loop
+  // NONRELOC-NEXT:   br i1 %20, label %pfp.relocate.loop.end, label %pfp.relocate.loop
 
-  // NONRELOC:      loop.end:
+  // NONRELOC:      pfp.relocate.loop.end:
   // NONRELOC-NEXT:   ret void
   __builtin_trivially_relocate(dest, source, 1);
 }
@@ -69,10 +69,10 @@ void testN(S* source, S* dest, size_t count) {
   // NONRELOC-NEXT:   %3 = mul i64 %2, 16
   // NONRELOC-NEXT:   call void @llvm.memmove.p0.p0.i64(ptr align 8 %0, ptr align 8 %1, i64 %3, i1 false)
   // NONRELOC-NEXT:   %4 = icmp eq i64 %3, 0
-  // NONRELOC-NEXT:   br i1 %4, label %loop.end, label %loop
+  // NONRELOC-NEXT:   br i1 %4, label %pfp.relocate.loop.end, label %pfp.relocate.loop
 
-  // NONRELOC:      loop:
-  // NONRELOC-NEXT:   %5 = phi i64 [ 0, %entry ], [ %22, %loop ]
+  // NONRELOC:      pfp.relocate.loop:
+  // NONRELOC-NEXT:   %5 = phi i64 [ 0, %entry ], [ %22, %pfp.relocate.loop ]
   // NONRELOC-NEXT:   %6 = getelementptr inbounds i8, ptr %0, i64 %5
   // NONRELOC-NEXT:   %7 = getelementptr inbounds i8, ptr %1, i64 %5
   // NONRELOC-NEXT:   %8 = getelementptr inbounds i8, ptr %6, i64 0
@@ -93,9 +93,9 @@ void testN(S* source, S* dest, size_t count) {
   // NONRELOC-NEXT:   store ptr %21, ptr %17, align 8
   // NONRELOC-NEXT:   %22 = add i64 %5, 16
   // NONRELOC-NEXT:   %23 = icmp eq i64 %22, %3
-  // NONRELOC-NEXT:   br i1 %23, label %loop.end, label %loop
+  // NONRELOC-NEXT:   br i1 %23, label %pfp.relocate.loop.end, label %pfp.relocate.loop
 
-  // NONRELOC:      loop.end:
+  // NONRELOC:      pfp.relocate.loop.end:
   // NONRELOC-NEXT:   ret void
   __builtin_trivially_relocate(dest, source, count);
 };

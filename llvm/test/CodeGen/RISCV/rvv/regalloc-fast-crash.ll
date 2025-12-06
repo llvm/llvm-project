@@ -4,8 +4,6 @@
 
 ; This test previously crashed with an error "ran out of registers during register allocation"
 
-declare void @llvm.riscv.vsseg2.mask.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, <vscale x 16 x i1>, i32, i32)
-
 define void @test_vsseg2_mask_nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %val, ptr %base, <vscale x 16 x i1> %mask, i32 %vl) {
 ; CHECK-LABEL: test_vsseg2_mask_nxv16i16:
 ; CHECK:       # %bb.0: # %entry

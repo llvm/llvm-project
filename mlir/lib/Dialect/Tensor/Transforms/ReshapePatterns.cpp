@@ -37,8 +37,7 @@ struct FoldExpandOfRankReducingExtract
     // supported. Moreover, only simple cases where the resulting ExtractSliceOp
     // has no rank-reduction anymore are supported at the moment.
     RankedTensorType nonReducingExtractType = ExtractSliceOp::inferResultType(
-        srcType, extractSliceOp.getStaticOffsets(),
-        extractSliceOp.getStaticSizes(), extractSliceOp.getStaticStrides());
+        srcType, extractSliceOp.getStaticSizes());
     if (nonReducingExtractType != resultType)
       return failure();
 

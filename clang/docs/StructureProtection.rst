@@ -21,16 +21,27 @@ Usage
 
 To use structure protection, build your program using one or more of these flags:
 
-- ``-fexperimental-pointer-field-protection``: Enable pointer
+- ``-fexperimental-allow-pointer-field-protection-attr``: Makes the
+  ``[[clang::pointer_field_protection]]`` attribute described below
+  available for use in code. Without this flag, use of the attribute will
+  cause an error. This flag acts as a guard against use of the feature
+  before it is stabilized. When the feature is stabilized, the intent
+  is that this flag will become a no-op and the attribute will always
+  be available.
+
+- ``-fexperimental-pointer-field-protection-abi``: Enable pointer
   field protection on all types that are not considered standard-layout
-  according to the C++ rules for standard layout. Specifying this flag
-  also defines the predefined macro ``__POINTER_FIELD_PROTECTION__``.
+  according to the C++ rules for standard layout. Because this
+  flag changes the C++ ABI, we refer to this as the pointer
+  field protection ABI. Specifying this flag also defines the
+  predefined macro ``__POINTER_FIELD_PROTECTION_ABI__``. Implies
+  ``-fexperimental-allow-pointer-field-protection-attr``.
 
 - ``-fexperimental-pointer-field-protection-tagged``: On architectures
-  that support it (currently only AArch64), for types that are not considered
-  trivially copyable, use the address of the object to compute the pointer
-  encoding. Specifying this flag also defines the predefined macro
-  ``__POINTER_FIELD_PROTECTION_TAGGED__``.
+  that support it (currently only AArch64), for types that are not
+  considered trivially copyable, use the address of the object to compute
+  the pointer encoding. Specifying this flag also defines the predefined
+  macro ``__POINTER_FIELD_PROTECTION_TAGGED__``.
 
 It is also possible to specify the attribute
 ``[[clang::pointer_field_protection]]`` on a struct type to opt the
@@ -65,6 +76,6 @@ where ``${triple}`` is your target triple, such as
 
 The resulting toolchain may then be used to build programs
 with pointer field protection by passing ``-stdlib=libc++
--fexperimental-pointer-field-protection`` at compile time
+-fexperimental-pointer-field-protection-abi`` at compile time
 and ``-Wl,-Bstatic -lc++ -lc++abi -Wl,-Bdynamic -lm -fuse-ld=lld
 -static-libstdc++`` at link time.

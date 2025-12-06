@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-linux -fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,AARCH64
-// RUN: %clang_cc1 -triple x86_64-linux  -fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,X86_64
+// RUN: %clang_cc1 -triple aarch64-linux -fexperimental-pointer-field-protection-abi -fexperimental-pointer-field-protection-tagged -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,AARCH64
+// RUN: %clang_cc1 -triple x86_64-linux  -fexperimental-pointer-field-protection-abi -fexperimental-pointer-field-protection-tagged -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,X86_64
 
 struct S {
   int* ptr;

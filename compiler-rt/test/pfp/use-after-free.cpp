@@ -35,7 +35,7 @@ Struct2 *new_object2() {
 }
 
 int main() {
-#if defined(__POINTER_FIELD_PROTECTION__)
+#if defined(__POINTER_FIELD_PROTECTION_ABI__)
   crash_if_crash_tests_unsupported();
 #endif
 
@@ -45,7 +45,7 @@ int main() {
   Struct2 *obj2 = new_object2();
   std::cout << "Struct2: " << *(obj2->ptr) << "\n";
   // Uses a wrong lock. The Program should crash with
-  // "-fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged".
+  // "-fexperimental-pointer-field-protection-abi -fexperimental-pointer-field-protection-tagged".
   std::cout << "Struct1: " << *(obj1->ptr) << "\n";
   delete obj2;
   return 0;
