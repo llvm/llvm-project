@@ -136,11 +136,9 @@ getRepresentation(const std::vector<llvm::StringRef> &Config,
 template <typename T>
 static bool isAnyOperatorEnabled(const std::vector<llvm::StringRef> &Config,
                                  const T &Operators) {
-  for (const auto &[traditional, alternative] : Operators) {
-    if (!getRepresentation(Config, traditional, alternative).empty())
-      return true;
-  }
-  return false;
+  return llvm::any_of(Operators, [&](const auto &Op) {
+    return !getRepresentation(Config, Op.first, Op.second).empty();
+  });
 }
 
 OperatorsRepresentationCheck::OperatorsRepresentationCheck(
