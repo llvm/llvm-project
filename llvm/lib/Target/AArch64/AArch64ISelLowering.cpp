@@ -15698,7 +15698,7 @@ static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG,
       return R;
 
     // See if a fneg of the constant can be materialized with a MOVI, etc
-    auto TryWithFNeg = [&](APInt DefBits, MVT FVT) {
+    auto TryWithFNeg = [&](APInt DefBits, MVT FVT) -> SDValue {
       // FNegate each sub-element of the constant
       assert(VT.getSizeInBits() % FVT.getScalarSizeInBits() == 0);
       APInt Neg = APInt::getHighBitsSet(FVT.getSizeInBits(), 1)
@@ -15709,10 +15709,59 @@ static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG,
         NegBits |= Neg << (FVT.getScalarSizeInBits() * i);
       NegBits = DefBits ^ NegBits;
 
-      // Try to create the new constants with MOVI, and if so generate a fneg
-      // for it.
+      SDLoc DL(Op);
+
+      // For f32 element type, try to emit a combined MOVI/MVNI+FNEG pseudo
+      // that is rematerializable as a single unit.
+      if (FVT == MVT::f32 && VT.getSizeInBits() == 128) {
+        // Try MOVI with MSL encoding for the negated constant
+        if (NegBits.getHiBits(64) == NegBits.getLoBits(64)) {
+          uint64_t Value = NegBits.zextOrTrunc(64).getZExtValue();
+          uint64_t Shift;
+          bool IsMOVI = false;
+          bool IsMVNI = false;
+
+          // Try MOVI msl encoding
+          if (AArch64_AM::isAdvSIMDModImmType7(Value)) {
+            Value = AArch64_AM::encodeAdvSIMDModImmType7(Value);
+            Shift = 264;
+            IsMOVI = true;
+          } else if (AArch64_AM::isAdvSIMDModImmType8(Value)) {
+            Value = AArch64_AM::encodeAdvSIMDModImmType8(Value);
+            Shift = 272;
+            IsMOVI = true;
+          }
+
+          // Try MVNI msl encoding
+          if (!IsMOVI) {
+            uint64_t NotValue = ~NegBits.zextOrTrunc(64).getZExtValue();
+            if (AArch64_AM::isAdvSIMDModImmType7(NotValue)) {
+              Value = AArch64_AM::encodeAdvSIMDModImmType7(NotValue);
+              Shift = 264;
+              IsMVNI = true;
+            } else if (AArch64_AM::isAdvSIMDModImmType8(NotValue)) {
+              Value = AArch64_AM::encodeAdvSIMDModImmType8(NotValue);
+              Shift = 272;
+              IsMVNI = true;
+            }
+          }
+
+          if (IsMOVI || IsMVNI) {
+            unsigned Opc =
+                IsMOVI ? AArch64ISD::MOVImsl_FNEG : AArch64ISD::MVNImsl_FNEG;
+            // The result type is v4f32 for 128-bit vectors
+            SDValue Result =
+                DAG.getNode(Opc, DL, MVT::v4f32,
+                            DAG.getConstant(Value, DL, MVT::i32),
+                            DAG.getConstant(Shift, DL, MVT::i32));
+            return DAG.getNode(AArch64ISD::NVCAST, DL, VT, Result);
+          }
+        }
+      }
+
+      // Fallback: Try to create the new constants with MOVI, and if so generate
+      // a fneg for it.
       if (SDValue NewOp = TryMOVIWithBits(NegBits)) {
-        SDLoc DL(Op);
         MVT VFVT = NumElts == 1 ? FVT : MVT::getVectorVT(FVT, NumElts);
         return DAG.getNode(
             AArch64ISD::NVCAST, DL, VT,

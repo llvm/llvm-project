@@ -929,6 +929,11 @@ def AArch64mvni_msl : SDNode<"AArch64ISD::MVNImsl", SDT_AArch64MOVIshift>;
 def AArch64movi : SDNode<"AArch64ISD::MOVI", SDT_AArch64MOVIedit>;
 def AArch64fmov : SDNode<"AArch64ISD::FMOV", SDT_AArch64MOVIedit>;
 
+// Combined MOVI/MVNI + FNEG nodes for rematerialization.
+// These produce a floating-point vector result directly.
+def AArch64movi_msl_fneg : SDNode<"AArch64ISD::MOVImsl_FNEG", SDT_AArch64MOVIshift>;
+def AArch64mvni_msl_fneg : SDNode<"AArch64ISD::MVNImsl_FNEG", SDT_AArch64MOVIshift>;
+
 def AArch64rev16 : SDNode<"AArch64ISD::REV16", SDT_AArch64Rev>;
 def AArch64rev32 : SDNode<"AArch64ISD::REV32", SDT_AArch64Rev>;
 def AArch64rev64 : SDNode<"AArch64ISD::REV64", SDT_AArch64Rev>;
@@ -8576,6 +8581,35 @@ def MVNIv2s_msl   : SIMDModifiedImmMoveMSL<0, 1, {1,1,0,?}, V64, "mvni", ".2s",
 def MVNIv4s_msl   : SIMDModifiedImmMoveMSL<1, 1, {1,1,0,?}, V128, "mvni", ".4s",
                       [(set (v4i32 V128:$Rd),
                             (AArch64mvni_msl imm0_255:$imm8, (i32 imm:$shift)))]>;
+}
+
+// Pseudo instructions for MOVI/MVNI + FNEG sequences.
+// These are rematerializable and expanded post-regalloc.
+let isReMaterializable = 1, isAsCheapAsAMove = 1, isCodeGenOnly = 1 in {
+def MOVIv2s_msl_FNEG : Pseudo<(outs V64:$Rd),
+                              (ins imm0_255:$imm8, i32imm:$shift),
+                              [(set (v2f32 V64:$Rd),
+                                    (AArch64movi_msl_fneg imm0_255:$imm8,
+                                                         (i32 imm:$shift)))]>,
+                       Sched<[WriteVd]>;
+def MOVIv4s_msl_FNEG : Pseudo<(outs V128:$Rd),
+                              (ins imm0_255:$imm8, i32imm:$shift),
+                              [(set (v4f32 V128:$Rd),
+                                    (AArch64movi_msl_fneg imm0_255:$imm8,
+                                                         (i32 imm:$shift)))]>,
+                       Sched<[WriteVq]>;
+def MVNIv2s_msl_FNEG : Pseudo<(outs V64:$Rd),
+                              (ins imm0_255:$imm8, i32imm:$shift),
+                              [(set (v2f32 V64:$Rd),
+                                    (AArch64mvni_msl_fneg imm0_255:$imm8,
+                                                         (i32 imm:$shift)))]>,
+                       Sched<[WriteVd]>;
+def MVNIv4s_msl_FNEG : Pseudo<(outs V128:$Rd),
+                              (ins imm0_255:$imm8, i32imm:$shift),
+                              [(set (v4f32 V128:$Rd),
+                                    (AArch64mvni_msl_fneg imm0_255:$imm8,
+                                                         (i32 imm:$shift)))]>,
+                       Sched<[WriteVq]>;
 }
 
 // SABA patterns for add(x, abs(y)) -> saba(x, y, 0)

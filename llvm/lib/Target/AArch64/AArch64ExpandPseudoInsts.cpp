@@ -1569,6 +1569,40 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return expandMOVImm(MBB, MBBI, 32);
   case AArch64::MOVi64imm:
     return expandMOVImm(MBB, MBBI, 64);
+
+  case AArch64::MOVIv2s_msl_FNEG:
+  case AArch64::MOVIv4s_msl_FNEG:
+  case AArch64::MVNIv2s_msl_FNEG:
+  case AArch64::MVNIv4s_msl_FNEG: {
+    // Expand MOVI/MVNI + FNEG pseudo into the actual instruction sequence.
+    Register DstReg = MI.getOperand(0).getReg();
+    uint64_t Imm8 = MI.getOperand(1).getImm();
+    uint64_t Shift = MI.getOperand(2).getImm();
+
+    bool Is128Bit = (Opcode == AArch64::MOVIv4s_msl_FNEG ||
+                     Opcode == AArch64::MVNIv4s_msl_FNEG);
+    bool IsMOVI = (Opcode == AArch64::MOVIv2s_msl_FNEG ||
+                   Opcode == AArch64::MOVIv4s_msl_FNEG);
+
+    unsigned MoviOpc = Is128Bit ? (IsMOVI ? AArch64::MOVIv4s_msl
+                                          : AArch64::MVNIv4s_msl)
+                                : (IsMOVI ? AArch64::MOVIv2s_msl
+                                          : AArch64::MVNIv2s_msl);
+    unsigned FnegOpc = Is128Bit ? AArch64::FNEGv4f32 : AArch64::FNEGv2f32;
+
+    // Emit MOVI/MVNI into the destination register
+    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MoviOpc), DstReg)
+        .addImm(Imm8)
+        .addImm(Shift);
+
+    // Emit FNEG in-place
+    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(FnegOpc), DstReg)
+        .addReg(DstReg);
+
+    MI.eraseFromParent();
+    return true;
+  }
+
   case AArch64::RET_ReallyLR: {
     // Hiding the LR use with RET_ReallyLR may lead to extra kills in the
     // function and missing live-ins. We are fine in practice because callee
