@@ -1,8 +1,10 @@
 #include "clang/CIR/Analysis/FallThroughWarning.h"
-#include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
+#include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/IR/Block.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Support/LLVM.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
@@ -10,6 +12,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -290,9 +293,9 @@ void FallThroughWarningPass::checkFallThroughForFuncBody(
   }
 }
 
-mlir::DenseSet<mlir::Block *>
+mlir::SetVector<mlir::Block *>
 FallThroughWarningPass::getLiveSet(cir::FuncOp cfg) {
-  mlir::DenseSet<mlir::Block *> liveSet;
+  mlir::SetVector<mlir::Block *> liveSet;
   if (cfg.getBody().empty())
     return liveSet;
 
@@ -301,27 +304,77 @@ FallThroughWarningPass::getLiveSet(cir::FuncOp cfg) {
   int blockCount = 0;
   auto result = solver.initializeAndRun(cfg);
   if (result.failed()) {
-    llvm::errs() << "Failure to perform deadcode analysis for ClangIR analyzer, returning empty live set\n";
+    llvm::errs() << "Failure to perform deadcode analysis for ClangIR "
+                    "analyzer, returning empty live set\n";
   } else {
     cfg->walk([&](mlir::Block *op) {
       blockCount++;
-      if (solver.lookupState<mlir::dataflow::Executable>(solver.getProgramPointBefore(op)))  {
+      if (solver.lookupState<mlir::dataflow::Executable>(
+              solver.getProgramPointBefore(op))) {
         liveSet.insert(op);
       }
     });
   }
-
   LLVM_DEBUG({
-    llvm::dbgs() << "=== DCA result for cir analysis fallthrough for " << cfg.getName() << " ===\n";
+    llvm::dbgs() << "=== DCA result for cir analysis fallthrough for "
+                 << cfg.getName() << " ===\n";
     llvm::dbgs() << "Live set size: " << liveSet.size() << "\n";
     llvm::dbgs() << "Block traversal count: " << blockCount << "\n";
     llvm::dbgs() << "Dead blocks: " << (blockCount - liveSet.size()) << "\n";
-    llvm::dbgs() << "If this is unexpected, please file an issue via GitHub with mlir tag" << "\n";
+    llvm::dbgs() << "If this is unexpected, please file an issue via GitHub "
+                    "with mlir tag"
+                 << "\n";
   });
 
   return liveSet;
 }
 
+//===----------------------------------------------------------------------===//
+// Switch/Case Analysis Helpers
+//===----------------------------------------------------------------------===//
+
+/// Check if a switch operation returns on all code paths. Right now this only
+/// works with case default Returns true if:
+/// - Switch is in simple form AND
+/// - Has a default case that returns
+///
+/// \param switchOp The switch operation to analyze
+/// \return true if all paths through the switch return a value
+static bool switchDefaultsWithCoveredEnums(cir::SwitchOp switchOp) {
+  llvm::SmallVector<cir::CaseOp> cases;
+  if (!switchOp.isSimpleForm(cases))
+    return false;
+
+  // Check if there's a default case
+  bool hasDefault = false;
+
+  // TODO: Cover the enum case once switchOp comes out with input as enum
+  for (auto caseOp : cases) {
+    if (caseOp.getKind() == cir::CaseOpKind::Default) {
+      hasDefault = true;
+      break;
+    }
+  }
+
+  return hasDefault;
+}
+static bool
+ignoreDefaultsWithCoveredEnums(mlir::Block *block,
+                               mlir::DenseSet<mlir::Block *> &shouldNotVisit) {
+  mlir::Operation *potentialSwitchOp = block->getParentOp();
+  if (shouldNotVisit.contains(block))
+    return true;
+  if (cir::SwitchOp switchOp =
+          llvm::dyn_cast_or_null<cir::SwitchOp>(potentialSwitchOp)) {
+    if (switchDefaultsWithCoveredEnums(switchOp)) {
+      switchOp->walk(
+          [&shouldNotVisit](mlir::Block *op) { shouldNotVisit.insert(op); });
+    }
+    return true;
+  }
+
+  return false;
+}
 ControlFlowKind FallThroughWarningPass::checkFallThrough(cir::FuncOp cfg) {
 
   assert(cfg && "there can't be a null func op");
@@ -331,25 +384,30 @@ ControlFlowKind FallThroughWarningPass::checkFallThrough(cir::FuncOp cfg) {
     return UnknownFallThrough;
   }
 
-  mlir::DenseSet<mlir::Block *> liveSet = this->getLiveSet(cfg);
-
-  unsigned count = liveSet.size();
+  mlir::SetVector<mlir::Block *> liveSet = this->getLiveSet(cfg);
 
   bool hasLiveReturn = false;
   bool hasFakeEdge = false;
   bool hasPlainEdge = false;
   bool hasAbnormalEdge = false;
 
-  auto &exitBlock = cfg.getBody().back();
+  // This corresponds to OG's IgnoreDefaultsWithCoveredEnums
+  mlir::DenseSet<mlir::Block *> shouldNotVisit;
+
   // INFO: in OG clang CFG, they have an empty exit block, so when they query
   // pred of exit OG, they get all exit blocks
   //
   // I guess in CIR, we can pretend exit blocks are all blocks that have no
   // successor?
   for (mlir::Block *pred : liveSet) {
-    // We consider no predecessors as 'exit blocks'
+    if (ignoreDefaultsWithCoveredEnums(pred, shouldNotVisit))
+      continue;
+
+    // We consider no successor as 'exit blocks'
     if (!pred->hasNoSuccessors())
       continue;
+
+    // Walk all ReturnOp operations to find returns in nested regions
 
     if (!pred->mightHaveTerminator())
       continue;
@@ -382,13 +440,7 @@ ControlFlowKind FallThroughWarningPass::checkFallThrough(cir::FuncOp cfg) {
       continue;
     }
 
-    // TODO: Maybe one day throw will be terminator?
-    //
-    // TODO: We need to add a microsoft inline assembly enum
-
-    // TODO: We don't concer with try op either since it's not terminator
-
-    hasPlainEdge = true;
+    hasPlainEdge = true;   
   }
 
   if (!hasPlainEdge) {
@@ -399,8 +451,8 @@ ControlFlowKind FallThroughWarningPass::checkFallThrough(cir::FuncOp cfg) {
   if (hasAbnormalEdge || hasFakeEdge || hasLiveReturn)
     return MaybeFallThrough;
   // This says AlwaysFallThrough for calls to functions that are not marked
-  // noreturn, that don't return.  If people would like this warning to be more
-  // accurate, such functions should be marked as noreturn.
+  // noreturn, that don't return.  If people would like this warning to be
+  // more accurate, such functions should be marked as noreturn.
   //
   // llvm_unreachable("");
   return AlwaysFallThrough;

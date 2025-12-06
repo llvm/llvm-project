@@ -65,7 +65,7 @@ public:
   void checkFallThroughForFuncBody(Sema &s, cir::FuncOp cfg, QualType blockType,
                                    const CheckFallThroughDiagnostics &cd);
   ControlFlowKind checkFallThrough(cir::FuncOp cfg);
-  mlir::DenseSet<mlir::Block *> getLiveSet(cir::FuncOp cfg);
+  mlir::SetVector<mlir::Block *> getLiveSet(cir::FuncOp cfg);
 };
 
 } // namespace clang
