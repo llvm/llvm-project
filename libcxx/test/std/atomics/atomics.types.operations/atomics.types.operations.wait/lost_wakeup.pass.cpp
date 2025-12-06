@@ -17,6 +17,7 @@
 #include <functional>
 #include <thread>
 #include <vector>
+#include <iostream>
 
 #include "make_test_thread.h"
 
@@ -25,6 +26,7 @@ constexpr int num_iterations = 10'000;
 
 int main(int, char**) {
   for (int run = 0; run < 20; ++run) {
+    std::cerr << "run " << run << std::endl;
     std::atomic<int> waiter_ready(0);
     std::atomic<int> state(0);
 
@@ -38,8 +40,11 @@ int main(int, char**) {
 
     auto notify = [&] {
       for (int i = 0; i < num_iterations; ++i) {
+        if (i % 1000 == 0)
+          std::cerr << "run " << run << "  notify iteration " << i << std::endl;
+
         while (waiter_ready.load() < num_waiters) {
-          std::this_thread::yield();
+        //  std::this_thread::yield();
         }
         waiter_ready.store(0);
         state.fetch_add(1);
