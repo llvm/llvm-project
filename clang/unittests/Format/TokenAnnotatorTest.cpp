@@ -2248,6 +2248,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[3], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_LambdaDefinitionLParen);
   EXPECT_TOKEN(Tokens[10], tok::l_square, TT_ArraySubscriptLSquare);
+
+  Tokens = annotate("foo = bar * [] { return 2; }();");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[4], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_LambdaLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
