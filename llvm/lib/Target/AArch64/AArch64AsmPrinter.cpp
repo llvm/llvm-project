@@ -2484,9 +2484,14 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
   OutStreamer->emitLabel(Place);
   OutStreamer->pushSection();
 
+  const MCSymbolELF *Group =
+      static_cast<MCSectionELF *>(OutStreamer->getCurrentSectionOnly())
+          ->getGroup();
   OutStreamer->switchSection(OutStreamer->getContext().getELFSection(
-      ".text.startup", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_EXECINSTR,
-      0, "", true, PAuthIFuncNextUniqueID++, nullptr));
+      ".text.startup", ELF::SHT_PROGBITS,
+      ELF::SHF_ALLOC | ELF::SHF_EXECINSTR | (Group ? ELF::SHF_GROUP : 0), 0,
+      Group, true, Group ? MCSection::NonUniqueID : PAuthIFuncNextUniqueID++,
+      nullptr));
 
   MCSymbol *IRelativeSym =
       OutStreamer->getContext().createLinkerPrivateSymbol("pauth_ifunc");
