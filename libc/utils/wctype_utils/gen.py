@@ -10,15 +10,16 @@
 
 from conversion.gen_conversion_data import extract_maps_from_unicode_file
 from conversion.hex_writer import write_hex_conversions
-from data.fetch import fetch_unicode_data_files
 from sys import argv
 from sys import exit
 
 
-def write_wctype_conversion_data(llvm_project_root_path: str) -> None:
+def write_wctype_conversion_data(
+    llvm_project_root_path: str, unicode_data_folder_path: str
+) -> None:
     """Generates and writes wctype conversion data files"""
     lower_to_upper, upper_to_lower = extract_maps_from_unicode_file(
-        f"{llvm_project_root_path}/libc/utils/wctype_utils/data/UnicodeData.txt"
+        f"{unicode_data_folder_path}/UnicodeData.txt"
     )
     write_hex_conversions(
         file_path=f"{llvm_project_root_path}/libc/src/__support/wctype/lower_to_upper.inc",
@@ -31,23 +32,20 @@ def write_wctype_conversion_data(llvm_project_root_path: str) -> None:
 
 
 def main() -> None:
-    if len(argv) < 2:
+    if len(argv) != 3:
         print("Codegen: wctype data generator script")
-        print(f"Usage:\n\t{argv[0]} <path-to-llvm-project-root> [--fetch-only]")
-        print("Options:")
         print(
-            "\t--fetch-only\tFetches necessary unicode data files only with no generation."
+            f"Usage:\n\t{argv[0]} <path-to-llvm-project-root> <path-to-unicode-data-folder>"
+        )
+        print(
+            "INFO: You can download Unicode data files from https://www.unicode.org/Public/UCD/latest/ucd/"
         )
         exit(1)
 
-    if len(argv) == 3 and argv[2] == "--fetch-only":
-        fetch_unicode_data_files(llvm_project_root_path=argv[1])
-        print("Fetched necessary unicode data files.")
-    else:
-        write_wctype_conversion_data(llvm_project_root_path=argv[1])
-        print(
-            f"wctype conversion data is written to {argv[1]}/libc/src/__support/wctype/"
-        )
+    write_wctype_conversion_data(
+        llvm_project_root_path=argv[1], unicode_data_folder_path=argv[2]
+    )
+    print(f"wctype conversion data is written to {argv[1]}/libc/src/__support/wctype/")
 
 
 if __name__ == "__main__":
