@@ -3104,7 +3104,7 @@ static bool useVPTERNLOG(const X86Subtarget &Subtarget, MVT VT) {
 }
 
 bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                           const CallInst &I,
+                                           const CallBase &I,
                                            MachineFunction &MF,
                                            unsigned Intrinsic) const {
   Info.flags = MachineMemOperand::MONone;
@@ -7571,7 +7571,8 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 
   // REVERSE - attempt to match the loads in reverse and then shuffle back.
   // TODO: Do this for any permute or mismatching element counts.
-  if (Depth == 0 && !ZeroMask && TLI.isTypeLegal(VT) && VT.isVector() &&
+  if (Depth == 0 && ZeroMask.isZero() && UndefMask.isZero() &&
+      TLI.isTypeLegal(VT) && VT.isVector() &&
       NumElems == VT.getVectorNumElements()) {
     SmallVector<SDValue, 16> ReverseElts(Elts.rbegin(), Elts.rend());
     if (SDValue RevLd = EltsFromConsecutiveLoads(
@@ -18462,16 +18463,20 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
   SmallVector<int> Mask(OrigMask);
 
   // Canonicalize the shuffle with any horizontal ops inputs.
+  // Don't attempt this if the shuffle can still be widened as we may lose
+  // whole lane shuffle patterns.
   // NOTE: This may update Ops and Mask.
-  if (SDValue HOp = canonicalizeShuffleMaskWithHorizOp(
-          Ops, Mask, VT.getSizeInBits(), DL, DAG, Subtarget))
-    return DAG.getBitcast(VT, HOp);
+  if (!canWidenShuffleElements(Mask)) {
+    if (SDValue HOp = canonicalizeShuffleMaskWithHorizOp(
+            Ops, Mask, VT.getSizeInBits(), DL, DAG, Subtarget))
+      return DAG.getBitcast(VT, HOp);
 
-  V1 = DAG.getBitcast(VT, Ops[0]);
-  V2 = DAG.getBitcast(VT, Ops[1]);
-  assert(NumElements == (int)Mask.size() &&
-         "canonicalizeShuffleMaskWithHorizOp "
-         "shouldn't alter the shuffle mask size");
+    V1 = DAG.getBitcast(VT, Ops[0]);
+    V2 = DAG.getBitcast(VT, Ops[1]);
+    assert(NumElements == (int)Mask.size() &&
+           "canonicalizeShuffleMaskWithHorizOp "
+           "shouldn't alter the shuffle mask size");
+  }
 
   // Canonicalize zeros/ones/fp splat constants to ensure no undefs.
   // These will be materialized uniformly anyway, so make splat matching easier.
@@ -53523,18 +53528,48 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
   if (Mst->isCompressingStore())
     return SDValue();
 
-  EVT VT = Mst->getValue().getValueType();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-
-  if (Mst->isTruncatingStore())
-    return SDValue();
-
   if (SDValue ScalarStore = reduceMaskedStoreToScalarStore(Mst, DAG, Subtarget))
     return ScalarStore;
 
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDLoc DL(N);
+
+  SDValue Mask = Mst->getMask();
+  SDValue Value = Mst->getValue();
+  EVT MemVT = Mst->getMemoryVT();
+  EVT VT = Value.getValueType();
+
+  // See if the truncating store can be a saturating truncated store.
+  if (Mst->isTruncatingStore()) {
+    if (VT.isVector() && MemVT.isVector() && VT.getScalarType().isInteger() &&
+        MemVT.getScalarType().isInteger() &&
+        VT.getVectorNumElements() == MemVT.getVectorNumElements() &&
+        Subtarget.hasBWI() && Subtarget.hasVLX()) {
+
+      SDValue SatSrc;
+      unsigned Opc;
+      if (SDValue SVal = detectSSatPattern(Value, MemVT)) {
+        SatSrc = SVal;
+        Opc = X86ISD::VMTRUNCSTORES;
+      } else if (SDValue UVal = detectUSatPattern(Value, MemVT, DAG, DL)) {
+        SatSrc = UVal;
+        Opc = X86ISD::VMTRUNCSTOREUS;
+      } else {
+        return SDValue();
+      }
+
+      SDVTList VTs = DAG.getVTList(MVT::Other);
+      SDValue Ops[] = {Mst->getChain(), SatSrc, Mst->getBasePtr(), Mask};
+      MachineMemOperand *MMO = Mst->getMemOperand();
+      return DAG.getMemIntrinsicNode(Opc, DL, VTs, Ops, MemVT, MMO);
+    }
+
+    // Otherwise don't combine if this store already truncates.
+    return SDValue();
+  }
+
   // If the mask value has been legalized to a non-boolean vector, try to
   // simplify ops leading up to it. We only demand the MSB of each lane.
-  SDValue Mask = Mst->getMask();
   if (Mask.getScalarValueSizeInBits() != 1) {
     APInt DemandedBits(APInt::getSignMask(VT.getScalarSizeInBits()));
     if (TLI.SimplifyDemandedBits(Mask, DemandedBits, DCI)) {
@@ -53550,14 +53585,12 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
                                 Mst->getAddressingMode());
   }
 
-  SDValue Value = Mst->getValue();
   if (Value.getOpcode() == ISD::TRUNCATE && Value.getNode()->hasOneUse() &&
-      TLI.isTruncStoreLegal(Value.getOperand(0).getValueType(),
-                            Mst->getMemoryVT())) {
-    return DAG.getMaskedStore(Mst->getChain(), SDLoc(N), Value.getOperand(0),
-                              Mst->getBasePtr(), Mst->getOffset(), Mask,
-                              Mst->getMemoryVT(), Mst->getMemOperand(),
-                              Mst->getAddressingMode(), true);
+      TLI.isTruncStoreLegal(Value.getOperand(0).getValueType(), MemVT)) {
+    return DAG.getMaskedStore(Mst->getChain(), DL, Value.getOperand(0),
+                              Mst->getBasePtr(), Mst->getOffset(), Mask, MemVT,
+                              Mst->getMemOperand(), Mst->getAddressingMode(),
+                              true);
   }
 
   return SDValue();
@@ -59427,6 +59460,31 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         }
       }
       break;
+    case ISD::SETCC:
+      if (!IsSplat && EltSizeInBits == 1 &&
+          llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op0.getOperand(0).getValueType() ==
+                       Op.getOperand(0).getValueType() &&
+                   Op0.getOperand(2) == Op.getOperand(2);
+          })) {
+        EVT SrcVT = Op0.getOperand(0).getValueType();
+        EVT NewSrcVT = EVT::getVectorVT(Ctx, SrcVT.getScalarType(),
+                                        NumOps * SrcVT.getVectorNumElements());
+        unsigned SrcSizeInBits = SrcVT.getScalarSizeInBits();
+        if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(NewSrcVT) &&
+            (NewSrcVT.is256BitVector() ||
+             (NewSrcVT.is512BitVector() && Subtarget.useAVX512Regs() &&
+              (SrcSizeInBits >= 32 || Subtarget.useBWIRegs())))) {
+          SDValue LHS = CombineSubOperand(NewSrcVT.getSimpleVT(), Ops, 0);
+          SDValue RHS = CombineSubOperand(NewSrcVT.getSimpleVT(), Ops, 1);
+          if (LHS || RHS)
+            return DAG.getNode(Opcode, DL, VT,
+                               LHS ? LHS : ConcatSubOperand(NewSrcVT, Ops, 0),
+                               RHS ? RHS : ConcatSubOperand(NewSrcVT, Ops, 1),
+                               Op0.getOperand(2));
+        }
+      }
+      break;
     case ISD::CTPOP:
     case ISD::CTTZ:
     case ISD::CTLZ:
@@ -59791,13 +59849,16 @@ static SDValue combineCONCAT_VECTORS(SDNode *N, SelectionDAG &DAG,
       }
     }
 
-    // Attempt to merge logic ops if the type is legal.
-    if (TLI.isTypeLegal(VT) && all_of(Ops, [](SDValue Op) {
-          return ISD::isBitwiseLogicOp(Op.getOpcode());
-        }))
+    // Attempt to merge comparison/logic ops if the type is legal.
+    if (TLI.isTypeLegal(VT) &&
+        (all_of(Ops, [](SDValue Op) { return Op.getOpcode() == ISD::SETCC; }) ||
+         all_of(Ops, [](SDValue Op) {
+           return ISD::isBitwiseLogicOp(Op.getOpcode());
+         }))) {
       if (SDValue R = combineConcatVectorOps(SDLoc(N), VT.getSimpleVT(), Ops,
                                              DAG, Subtarget))
         return R;
+    }
 
     // Don't do anything else for i1 vectors.
     return SDValue();
