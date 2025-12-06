@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -target-abi lp64f -mattr=+zfa,+zfhmin < %s \
 ; RUN:     | FileCheck %s --check-prefix=ZFHMIN
 
-declare half @llvm.minimum.f16(half, half)
-
 define half @fminm_h(half %a, half %b) nounwind {
 ; CHECK-LABEL: fminm_h:
 ; CHECK:       # %bb.0:
@@ -26,8 +24,6 @@ define half @fminm_h(half %a, half %b) nounwind {
   %1 = call half @llvm.minimum.f16(half %a, half %b)
   ret half %1
 }
-
-declare half @llvm.maximum.f16(half, half)
 
 define half @fmaxm_h(half %a, half %b) nounwind {
 ; CHECK-LABEL: fmaxm_h:
@@ -62,9 +58,6 @@ define half @fround_h_1(half %a) nounwind {
   ret half %call
 }
 
-declare half @llvm.round.f16(half) nounwind readnone
-
-
 define half @fround_h_2(half %a) nounwind {
 ; CHECK-LABEL: fround_h_2:
 ; CHECK:       # %bb.0:
@@ -80,9 +73,6 @@ define half @fround_h_2(half %a) nounwind {
   %call = tail call half @llvm.floor.f16(half %a) nounwind readnone
   ret half %call
 }
-
-declare half @llvm.floor.f16(half) nounwind readnone
-
 
 define half @fround_h_3(half %a) nounwind {
 ; CHECK-LABEL: fround_h_3:
@@ -100,9 +90,6 @@ define half @fround_h_3(half %a) nounwind {
   ret half %call
 }
 
-declare half @llvm.ceil.f16(half) nounwind readnone
-
-
 define half @fround_h_4(half %a) nounwind {
 ; CHECK-LABEL: fround_h_4:
 ; CHECK:       # %bb.0:
@@ -118,9 +105,6 @@ define half @fround_h_4(half %a) nounwind {
   %call = tail call half @llvm.trunc.f16(half %a) nounwind readnone
   ret half %call
 }
-
-declare half @llvm.trunc.f16(half) nounwind readnone
-
 
 define half @fround_h_5(half %a) nounwind {
 ; CHECK-LABEL: fround_h_5:
@@ -138,8 +122,6 @@ define half @fround_h_5(half %a) nounwind {
   ret half %call
 }
 
-declare half @llvm.nearbyint.f16(half) nounwind readnone
-
 define half @fround_h_6(half %a) nounwind {
 ; CHECK-LABEL: fround_h_6:
 ; CHECK:       # %bb.0:
@@ -156,9 +138,6 @@ define half @fround_h_6(half %a) nounwind {
   ret half %call
 }
 
-declare half @llvm.roundeven.f16(half) nounwind readnone
-
-
 define half @froundnx_h(half %a) nounwind {
 ; CHECK-LABEL: froundnx_h:
 ; CHECK:       # %bb.0:
@@ -174,10 +153,6 @@ define half @froundnx_h(half %a) nounwind {
   %call = tail call half @llvm.rint.f16(half %a) nounwind readnone
   ret half %call
 }
-
-declare half @llvm.rint.f16(half) nounwind readnone
-
-declare i1 @llvm.experimental.constrained.fcmp.f16(half, half, metadata, metadata)
 
 define i32 @fcmp_olt_q(half %a, half %b) nounwind strictfp {
 ; CHECK-LABEL: fcmp_olt_q:

@@ -8,23 +8,17 @@ target triple = "aarch64-unknown-linux-gnu"
 @ds2 = external global i8
 @ds3 = external global i8
 @ds4 = external global i8
-@ds5 = external global i8
-@ds6 = external global i8
 
 ;.
 ; NOPAUTH: @ds1 = external global i8
 ; NOPAUTH: @ds2 = external global i8
 ; NOPAUTH: @ds3 = external global i8
-; NOPAUTH: @ds4 = external global i8
-; NOPAUTH: @ds5 = external global i8
-; NOPAUTH: @ds6 = hidden alias i8, inttoptr (i64 3573751839 to ptr)
+; NOPAUTH: @ds4 = hidden alias i8, inttoptr (i64 3573751839 to ptr)
 ;.
 ; PAUTH: @ds1 = external global i8
 ; PAUTH: @ds2 = external global i8
 ; PAUTH: @ds3 = external global i8
-; PAUTH: @ds4 = external global i8
-; PAUTH: @ds5 = external global i8
-; PAUTH: @ds6 = hidden alias i8, inttoptr (i64 3573751839 to ptr)
+; PAUTH: @ds4 = hidden alias i8, inttoptr (i64 3573751839 to ptr)
 ;.
 define ptr @load_hw(ptr %ptrptr) {
 ; NOPAUTH-LABEL: define ptr @load_hw(
@@ -70,54 +64,6 @@ define void @store_hw(ptr %ptrptr, ptr %ptr) {
   ret void
 }
 
-define ptr @load_sw(ptr %ptrptr) {
-; NOPAUTH-LABEL: define ptr @load_sw(
-; NOPAUTH-SAME: ptr [[PTRPTR:%.*]]) {
-; NOPAUTH-NEXT:    [[PTR:%.*]] = load ptr, ptr [[PTRPTR]], align 8
-; NOPAUTH-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
-; NOPAUTH-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 1
-; NOPAUTH-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 16)
-; NOPAUTH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; NOPAUTH-NEXT:    ret ptr [[TMP4]]
-;
-; PAUTH-LABEL: define ptr @load_sw(
-; PAUTH-SAME: ptr [[PTRPTR:%.*]]) #[[ATTR0]] {
-; PAUTH-NEXT:    [[PTR:%.*]] = load ptr, ptr [[PTRPTR]], align 8
-; PAUTH-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
-; PAUTH-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 1
-; PAUTH-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 16)
-; PAUTH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; PAUTH-NEXT:    ret ptr [[TMP4]]
-;
-  %protptrptr = call ptr @llvm.protected.field.ptr.p0(ptr %ptrptr, i64 1, i1 false) [ "deactivation-symbol"(ptr @ds3) ]
-  %ptr = load ptr, ptr %protptrptr
-  ret ptr %ptr
-}
-
-define void @store_sw(ptr %ptrptr, ptr %ptr) {
-; NOPAUTH-LABEL: define void @store_sw(
-; NOPAUTH-SAME: ptr [[PTRPTR:%.*]], ptr [[PTR:%.*]]) {
-; NOPAUTH-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
-; NOPAUTH-NEXT:    [[TMP2:%.*]] = call i64 @llvm.fshl.i64(i64 [[TMP1]], i64 [[TMP1]], i64 16)
-; NOPAUTH-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 2
-; NOPAUTH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; NOPAUTH-NEXT:    store ptr [[TMP4]], ptr [[PTRPTR]], align 8
-; NOPAUTH-NEXT:    ret void
-;
-; PAUTH-LABEL: define void @store_sw(
-; PAUTH-SAME: ptr [[PTRPTR:%.*]], ptr [[PTR:%.*]]) #[[ATTR0]] {
-; PAUTH-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
-; PAUTH-NEXT:    [[TMP2:%.*]] = call i64 @llvm.fshl.i64(i64 [[TMP1]], i64 [[TMP1]], i64 16)
-; PAUTH-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 2
-; PAUTH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; PAUTH-NEXT:    store ptr [[TMP4]], ptr [[PTRPTR]], align 8
-; PAUTH-NEXT:    ret void
-;
-  %protptrptr = call ptr @llvm.protected.field.ptr.p0(ptr %ptrptr, i64 2, i1 false) [ "deactivation-symbol"(ptr @ds4) ]
-  store ptr %ptr, ptr %protptrptr
-  ret void
-}
-
 define i1 @compare(ptr %ptrptr) {
 ; NOPAUTH-LABEL: define i1 @compare(
 ; NOPAUTH-SAME: ptr [[PTRPTR:%.*]]) {
@@ -133,7 +79,7 @@ define i1 @compare(ptr %ptrptr) {
 ; PAUTH-NEXT:    [[CMP:%.*]] = or i1 [[CMP1]], [[CMP2]]
 ; PAUTH-NEXT:    ret i1 [[CMP]]
 ;
-  %protptrptr = call ptr @llvm.protected.field.ptr.p0(ptr %ptrptr, i64 3, i1 true) [ "deactivation-symbol"(ptr @ds5) ]
+  %protptrptr = call ptr @llvm.protected.field.ptr.p0(ptr %ptrptr, i64 3, i1 true) [ "deactivation-symbol"(ptr @ds3) ]
   %cmp1 = icmp eq ptr %protptrptr, null
   %cmp2 = icmp eq ptr null, %protptrptr
   %cmp = or i1 %cmp1, %cmp2
@@ -149,7 +95,7 @@ define ptr @escape(ptr %ptrptr) {
 ; PAUTH-SAME: ptr [[PTRPTR:%.*]]) #[[ATTR0]] {
 ; PAUTH-NEXT:    ret ptr [[PTRPTR]]
 ;
-  %protptrptr = call ptr @llvm.protected.field.ptr.p0(ptr %ptrptr, i64 3, i1 true) [ "deactivation-symbol"(ptr @ds6) ]
+  %protptrptr = call ptr @llvm.protected.field.ptr.p0(ptr %ptrptr, i64 3, i1 true) [ "deactivation-symbol"(ptr @ds4) ]
   ret ptr %protptrptr
 }
 
@@ -157,11 +103,9 @@ declare ptr @llvm.protected.field.ptr.p0(ptr, i64, i1 immarg)
 ;.
 ; NOPAUTH: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; NOPAUTH: attributes #[[ATTR1:[0-9]+]] = { nounwind memory(none) }
-; NOPAUTH: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; PAUTH: attributes #[[ATTR0]] = { "target-features"="+pauth" }
 ; PAUTH: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) "target-features"="+pauth" }
 ; PAUTH: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; PAUTH: attributes #[[ATTR3:[0-9]+]] = { nounwind memory(none) }
-; PAUTH: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
