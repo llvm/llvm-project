@@ -88,11 +88,10 @@ public:
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
-  bool assignCalleeSavedSpillSlots(MachineFunction &MF,
-                                   const TargetRegisterInfo *TRI,
-                                   std::vector<CalleeSavedInfo> &CSI,
-                                   unsigned &MinCSFrameIndex,
-                                   unsigned &MaxCSFrameIndex) const override;
+  bool
+  assignCalleeSavedSpillSlots(MachineFunction &MF,
+                              const TargetRegisterInfo *TRI,
+                              std::vector<CalleeSavedInfo> &CSI) const override;
 
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
