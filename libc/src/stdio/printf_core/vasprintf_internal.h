@@ -18,9 +18,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
-LIBC_INLINE int resize_overflow_hook(cpp::string_view new_str,
+LIBC_INLINE int resize_overflow_hook(const char *new_str, size_t new_str_len,
                                      ResizingBuffer *wb) {
-  size_t new_size = new_str.size() + wb->buff_cur;
+  size_t new_size = new_str_len + wb->buff_cur;
   const bool isBuffOnStack = (wb->buff == wb->init_buff);
   char *new_buff = static_cast<char *>(
       isBuffOnStack ? malloc(new_size + 1)
@@ -33,7 +33,7 @@ LIBC_INLINE int resize_overflow_hook(cpp::string_view new_str,
   if (isBuffOnStack)
     inline_memcpy(new_buff, wb->buff, wb->buff_cur);
   wb->buff = new_buff;
-  inline_memcpy(wb->buff + wb->buff_cur, new_str.data(), new_str.size());
+  inline_memcpy(wb->buff + wb->buff_cur, new_str, new_str_len);
   wb->buff_cur = new_size;
   wb->buff_len = new_size;
   return printf_core::WRITE_OK;

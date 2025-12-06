@@ -8,13 +8,11 @@
 
 #include "src/stdio/printf_core/writer.h"
 
-#include "src/__support/CPP/string_view.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "test/UnitTest/Test.h"
 
 namespace {
 
-using LIBC_NAMESPACE::cpp::string_view;
 using LIBC_NAMESPACE::printf_core::DropOverflowBuffer;
 using LIBC_NAMESPACE::printf_core::FlushingBuffer;
 using LIBC_NAMESPACE::printf_core::WriteMode;
@@ -196,17 +194,17 @@ struct OutBuff {
   size_t cur_pos = 0;
 };
 
-int copy_to_out(string_view new_str, void *raw_out_buff) {
-  if (new_str.size() == 0) {
+int copy_to_out(const char *new_str, size_t new_str_len, void *raw_out_buff) {
+  if (new_str_len == 0) {
     return 0;
   }
 
   OutBuff *out_buff = reinterpret_cast<OutBuff *>(raw_out_buff);
 
-  LIBC_NAMESPACE::inline_memcpy(out_buff->out_str + out_buff->cur_pos,
-                                new_str.data(), new_str.size());
+  LIBC_NAMESPACE::inline_memcpy(out_buff->out_str + out_buff->cur_pos, new_str,
+                                new_str_len);
 
-  out_buff->cur_pos += new_str.size();
+  out_buff->cur_pos += new_str_len;
   return 0;
 }
 

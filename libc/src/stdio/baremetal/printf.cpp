@@ -24,8 +24,9 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
-LIBC_INLINE int stdout_write_hook(cpp::string_view new_str, void *) {
-  write_to_stdout(new_str);
+LIBC_INLINE int stdout_write_hook(const char *new_str, size_t new_str_len,
+                                  void *) {
+  write_to_stdout({new_str, new_str_len});
   return printf_core::WRITE_OK;
 }
 

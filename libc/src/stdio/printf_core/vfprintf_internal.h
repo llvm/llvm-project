@@ -62,19 +62,20 @@ LIBC_INLINE FileIOResult fwrite_unlocked(const void *ptr, size_t size,
 
 namespace printf_core {
 
-LIBC_INLINE int file_write_hook(cpp::string_view new_str, void *fp) {
+LIBC_INLINE int file_write_hook(const char *new_str, size_t new_str_len,
+                                void *fp) {
   ::FILE *target_file = reinterpret_cast<::FILE *>(fp);
   // Write new_str to the target file. The logic preventing a zero-length write
   // is in the writer, so we don't check here.
-  auto write_result = internal::fwrite_unlocked(new_str.data(), sizeof(char),
-                                                new_str.size(), target_file);
+  auto write_result = internal::fwrite_unlocked(new_str, sizeof(char),
+                                                new_str_len, target_file);
   // Propagate actual system error in FileIOResult.
   if (write_result.has_error())
     return -write_result.error;
 
   // In case short write occured or error was not set on FileIOResult for some
   // reason.
-  if (write_result.value != new_str.size() ||
+  if (write_result.value != new_str_len ||
       internal::ferror_unlocked(target_file))
     return FILE_WRITE_ERROR;
 
