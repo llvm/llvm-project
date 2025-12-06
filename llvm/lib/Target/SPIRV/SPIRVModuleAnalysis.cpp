@@ -1436,7 +1436,11 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::Int16);
     else if (BitWidth == 8)
       Reqs.addCapability(SPIRV::Capability::Int8);
-    else if (BitWidth != 32) {
+    else if (BitWidth == 4 &&
+             ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_int4);
+      Reqs.addCapability(SPIRV::Capability::Int4TypeINTEL);
+    } else if (BitWidth != 32) {
       if (!ST.canUseExtension(
               SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers))
         reportFatalUsageError(

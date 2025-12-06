@@ -176,7 +176,17 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   std::set<SPIRV::Extension::Extension> &Vals) {
   SmallVector<StringRef, 10> Tokens;
   ArgValue.split(Tokens, ",", -1, false);
-  std::sort(Tokens.begin(), Tokens.end());
+  std::sort(Tokens.begin(), Tokens.end(), [](auto &&LHS, auto &&RHS) {
+    // We want to ensure that we handle "all" first, to ensure that any
+    // subsequent disablement actually behaves as expected i.e. given
+    // --spv-ext=all,-foo, we first enable all and then disable foo; this should
+    // be revisited and simplified.
+    if (LHS == "all")
+      return true;
+    if (RHS == "all")
+      return false;
+    return !(RHS < LHS);
+  });
 
   std::set<SPIRV::Extension::Extension> EnabledExtensions;
 

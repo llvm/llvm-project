@@ -151,6 +151,11 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeBool(MachineIRBuilder &MIRBuilder) {
 }
 
 unsigned SPIRVGlobalRegistry::adjustOpTypeIntWidth(unsigned Width) const {
+  const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(CurMF->getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers) ||
+      (Width == 4 && ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4)))
+    return Width;
   if (Width <= 8)
     return 8;
   else if (Width <= 16)
