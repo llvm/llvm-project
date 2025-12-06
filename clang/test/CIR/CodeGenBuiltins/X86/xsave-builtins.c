@@ -7,10 +7,17 @@
 
 void test_xsave(void *p, unsigned long long m) {
   // CIR-LABEL: test_xsave
+  // CIR: cir.const #cir.int<32> : !s64i
+  // CIR: cir.shift(right, {{.*}} : !u64i, {{.*}} : !s64i) -> !u64i
+  // CIR: cir.cast integral %{{.*}} : !u64i -> !s32i
+  // CIR: cir.cast integral %{{.*}} : !u64i -> !s32i
   // CIR: cir.call_llvm_intrinsic "x86.xsave"
 
   // LLVM-LABEL: test_xsave
-  // LLVM: call void @llvm.x86.xsave
+  // LLVM: lshr i64 {{.*}}, 32
+  // LLVM: trunc i64 {{.*}} to i32
+  // LLVM: trunc i64 {{.*}} to i32
+  // LLVM: call void @llvm.x86.xsave(ptr {{.*}}, i32 {{.*}}, i32 {{.*}})
 
   // OGCG-LABEL: test_xsave
   // OGCG: call void @llvm.x86.xsave

@@ -586,13 +586,11 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     // this mask split into two 32-bit registers: EDX (high 32 bits) and
     // EAX (low 32 bits).
     mlir::Type i32Ty = builder.getSInt32Ty();
-    mlir::Type i64Ty = builder.getSInt64Ty();
 
     // Mhi = (uint32_t)(ops[1] >> 32) - extract high 32 bits via right shift
-    cir::ConstantOp shift32 =
-        builder.getConstant(loc, cir::IntAttr::get(i64Ty, 32));
-    mlir::Value mhi =
-        builder.createShift(loc, ops[1], shift32.getResult(), /*isRight=*/true);
+    cir::ConstantOp shift32 = builder.getSInt64(32, loc);
+    mlir::Value mhi = builder.createShift(loc, ops[1], shift32.getResult(),
+                                          /*isShiftLeft=*/false);
     mhi = builder.createIntCast(mhi, i32Ty);
 
     // Mlo = (uint32_t)ops[1] - extract low 32 bits by truncation
