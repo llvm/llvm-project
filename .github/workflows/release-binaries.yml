@@ -269,6 +269,6 @@ jobs:
         uses: ./.github/workflows/upload-release-artifact
         with:
           artifact-id: ${{ needs.build-release-package.outputs.artifact-id }}
-          attestation-name: ${{ needs.prepare.outputs.release-binary-filename }}
+          attestation-name: ${{ runner.os }}-${{ runner.arch }}-release-binary-attestation
           digest: ${{ needs.build-release-package.outputs.digest }}
           upload: ${{ needs.prepare.outputs.upload }}
