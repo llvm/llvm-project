@@ -112,6 +112,11 @@ N: Andrew Morrow
 E: andrew.c.morrow@gmail.com
 D: Minor patches and Linux fixes.
 
+N: Justin Novosad
+E: junov@google.com
+E: justin.novosad@gmail.com
+D: Minor fixes, Swift interoperability.
+
 N: Michael Park
 E: mcypark@gmail.com
 D: Implementation of <variant>.
