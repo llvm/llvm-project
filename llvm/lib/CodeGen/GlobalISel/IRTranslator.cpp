@@ -3814,12 +3814,12 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
 
 bool IRTranslator::mayTranslateUserTypes(const User &U) const {
   const TargetMachine &TM = TLI->getTargetMachine();
-  if (TLI->getTargetMachine().Options.EnableGlobalISelExtendedLLT)
+  if (LLT::getUseExtended())
     return true;
 
-  // BF16 cannot currently be represented by default LLT, to avoid miscompiles
-  // we prevent any instructions using them in targets with disabled
-  // TargetOptions::EnableGlobalISelExtendedLLT.
+  // BF16 cannot currently be represented by default LLT. To avoid miscompiles
+  // we prevent any instructions using them by default in all targets that do
+  // not explicitly enable it via LLT::setUseExtended(true).
   // SPIRV target is exception.
   return TM.getTargetTriple().isSPIRV() ||
          (!U.getType()->getScalarType()->isBFloatTy() &&
@@ -4152,10 +4152,6 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     reportTranslationError(*MF, *TPC, *ORE, R);
     return false;
   }
-
-  // Enable globally extended LLT types.
-  if (TM.Options.EnableGlobalISelExtendedLLT)
-    LLT::setUseExtended(true);
 
   // Release the per-function state when we return, whether we succeeded or not.
   auto FinalizeOnReturn = make_scope_exit([this]() { finalizeFunction(); });
