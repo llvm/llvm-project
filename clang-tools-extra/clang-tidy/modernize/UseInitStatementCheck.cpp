@@ -15,10 +15,9 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include <algorithm>
+#include <algorithm> // for std::adjacent_find
 #include <cctype>
-#include <optional>
-#include <vector>
+#include <string>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::utils::lexer;
@@ -62,12 +61,12 @@ AST_MATCHER(VarDecl, isUsed) {
 }
 
 // got from implementation of memberHasSameNameAsBoundNode mather
-AST_MATCHER_P(VarDecl, hasSameNameAsBoundNode,
-              std::string, BindingID) {
+AST_MATCHER_P(VarDecl, hasSameNameAsBoundNode, std::string, BindingID) {
   auto VarName = Node.getNameAsString();
 
   return Builder->removeBindings(
-      [this, VarName](const clang::ast_matchers::internal::BoundNodesMap &Nodes) {
+      [this,
+       VarName](const clang::ast_matchers::internal::BoundNodesMap &Nodes) {
         const DynTypedNode &BN = Nodes.getNode(this->BindingID);
         if (const auto *ND = BN.get<NamedDecl>()) {
           if (!isa<BindingDecl, VarDecl>(ND))
@@ -88,14 +87,15 @@ UseInitStatementCheck::UseInitStatementCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       StrictMode(Options.get("StrictMode", true)),
-      IgnoreConditionVariableStatements(Options.get("IgnoreConditionVariableStatements", false)),
-      SafeTypes(
-          Options.get("SafeTypes", DefaultSafeTypes)),
+      IgnoreConditionVariableStatements(
+          Options.get("IgnoreConditionVariableStatements", false)),
+      SafeTypes(Options.get("SafeTypes", DefaultSafeTypes)),
       SafeDestructorTypesGlobList(SafeTypes) {}
 
 void UseInitStatementCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
-  Options.store(Opts, "IgnoreConditionVariableStatements", IgnoreConditionVariableStatements);
+  Options.store(Opts, "IgnoreConditionVariableStatements",
+                IgnoreConditionVariableStatements);
   Options.store(Opts, "SafeTypes", SafeTypes);
 }
 
@@ -103,7 +103,7 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
   // Helper to create a complete matcher to prevent generating stealing cases
   // Sample of stealing: `int* p; if (int v;cond) { p=&v; } use(p);`
   const auto MakeHasStealingMatcher = [](const auto &Condition,
-                                         const std::string &Name) {
+                                         StringRef Name) {
     const auto IsStealingViaPointer =
         hasParent(unaryOperator(hasOperatorName("&")));
     const auto PassesByValue =
@@ -118,41 +118,51 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
         // `a=0`, `a+=0`, etc
         hasParent(binaryOperator()));
     const auto IsStealingViaReference = unless(ReferencesWhitelistForStealing);
-    const auto NonreferenceBoundVar = varDecl(equalsBoundNode("singleVar"), unless(hasType(referenceType())));
-    const auto NonreferenceBoundBind = bindingDecl(equalsBoundNode("bindingDecl"), hasParent(decompositionDecl(
-      unless(hasType(referenceType()))
-    )));
+    const auto IsNonreferenceType = unless(hasType(referenceType()));
+    const auto NonreferenceBoundVar =
+        varDecl(equalsBoundNode("singleVar"), IsNonreferenceType);
+    const auto NonreferenceBoundBind =
+        bindingDecl(equalsBoundNode("bindingDecl"),
+                    hasParent(decompositionDecl(IsNonreferenceType)));
     const auto HasStealing = hasDescendant(
-        declRefExpr(to(anyOf(NonreferenceBoundVar, NonreferenceBoundBind)), anyOf(IsStealingViaPointer, IsStealingViaReference),
-         Condition).bind(Name));
+        declRefExpr(to(anyOf(NonreferenceBoundVar, NonreferenceBoundBind)),
+                    anyOf(IsStealingViaPointer, IsStealingViaReference),
+                    Condition)
+            .bind(Name));
     return HasStealing;
   };
 
   // Helper to create a complete matcher for if/switch statements
   const auto MakeCompoundStmtMatcher = [&](const auto &StmtMatcher,
-                                          const std::string &StmtName,
-                                          const auto &PrevStmtMatcher,
-                                          const auto &RefToBoundMatcher) {
-    const auto HasConflict = hasDescendant(
-        varDecl(anyOf(hasSameNameAsBoundNode("singleVar"), hasSameNameAsBoundNode("bindingDecl"))).bind("conflict"));
+                                           StringRef StmtName,
+                                           const auto &PrevStmtMatcher,
+                                           const auto &RefToBoundMatcher) {
+    const auto HasConflict =
+        hasDescendant(varDecl(anyOf(hasSameNameAsBoundNode("singleVar"),
+                                    hasSameNameAsBoundNode("bindingDecl")))
+                          .bind("conflict"));
 
-    const auto StealingAsThis = anyOf(
-        hasParent(memberExpr()),
-        hasParent(implicitCastExpr(hasCastKind(CK_NoOp), hasParent(memberExpr()) )));
+    const auto StealingAsThis =
+        anyOf(hasParent(memberExpr()),
+              hasParent(implicitCastExpr(hasCastKind(CK_NoOp),
+                                         hasParent(memberExpr()))));
+    const auto Stealing = unless(StealingAsThis);
 
     const auto StmtMatcherWithCondition =
         StmtMatcher(unless(hasInitStatement(anything())),
                     hasCondition(expr().bind("condition")),
                     optionally(HasConflict),
-                    optionally(MakeHasStealingMatcher(unless(StealingAsThis),"stealing")),
-                    optionally(MakeHasStealingMatcher(StealingAsThis,"stealing_as_this")),
+                    optionally(MakeHasStealingMatcher(Stealing, "stealing")),
+                    optionally(MakeHasStealingMatcher(StealingAsThis,
+                                                      "StealingAsThis")),
                     optionally(hasConditionVariableStatement(
                         declStmt().bind("condDeclStmt"))))
             .bind(StmtName);
 
     // Ensure the variable is not referenced elsewhere in the compound statement
-    const auto NoOtherVarRefs = unless(has(stmt(
-        unless(equalsBoundNode(StmtName)), hasDescendant(RefToBoundMatcher))));
+    const auto NoOtherVarRefs =
+        unless(has(stmt(unless(equalsBoundNode(StmtName.str())),
+                        hasDescendant(RefToBoundMatcher))));
 
     return compoundStmt(
                unless(isExpansionInSystemHeader()),
@@ -170,18 +180,19 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
   const auto ArrayOfClassWithDtor =
       hasType(arrayType(hasElementType(ClassWithDtorType)));
   const auto HasDtor = anyOf(hasType(ClassWithDtorType), ArrayOfClassWithDtor);
-  const auto CheckLTE = optionally(hasInitializer(
-      expr(hasDescendant(expr(materializeTemporaryExpr().bind("lte"))))));
+  const auto HasLTE = hasInitializer(
+      expr(hasDescendant(expr(materializeTemporaryExpr().bind("lte")))));
+
+  // Matchers for variable declarations
+  const auto SingleVarDeclWithDtor =
+      varDecl(HasDtor, optionally(HasLTE), isUsed()).bind("singleVar");
+  const auto SingleVarDecl =
+      varDecl(optionally(HasLTE), isUsed()).bind("singleVar");
+  const auto RefToBoundVarDecl =
+      declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
 
   // declStmt as previous statement
   {
-    // Matchers for variable declarations
-    const auto SingleVarDeclWithDtor =
-        varDecl(HasDtor, CheckLTE, isUsed()).bind("singleVar");
-    const auto SingleVarDecl = varDecl(CheckLTE, isUsed()).bind("singleVar");
-    const auto RefToBoundVarDecl =
-        declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
-
     // Matchers for declaration statements that precede if/switch
     const auto PrevDeclStmtWithDtor =
         declStmt(forEach(SingleVarDeclWithDtor)).bind("prevDecl");
@@ -201,13 +212,6 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
 
   // C++17 structured binding as previous statement
   {
-    // Matchers for variable declarations
-    const auto SingleVarDeclWithDtor =
-        varDecl(HasDtor, CheckLTE).bind("singleVar");
-    const auto SingleVarDecl = varDecl(CheckLTE).bind("singleVar");
-    const auto RefToBoundVarDecl =
-        declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
-
     const auto DecompositionDecl =
         decompositionDecl(forEach(bindingDecl().bind("bindingDecl")));
     const auto PrevDecomposeStmtWithDtor =
@@ -285,7 +289,8 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *LTE = Result.Nodes.getNodeAs<MaterializeTemporaryExpr>("lte");
   const auto *Conflict = Result.Nodes.getNodeAs<VarDecl>("conflict");
   const auto *Stealing = Result.Nodes.getNodeAs<DeclRefExpr>("stealing");
-  const auto *StealingAsThis = Result.Nodes.getNodeAs<DeclRefExpr>("stealing_as_this");
+  const auto *StealingAsThis =
+      Result.Nodes.getNodeAs<DeclRefExpr>("StealingAsThis");
   const auto *PrevDecl = Result.Nodes.getNodeAs<DeclStmt>("prevDecl");
   const auto *Condition = Result.Nodes.getNodeAs<Expr>("condition");
   const auto *CondDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("condDeclStmt");
@@ -309,8 +314,8 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     if (Stealing || (StealingAsThis && !IsSafe))
-        return;
-    
+      return;
+
     if (LTE)
       return;
   }
@@ -321,8 +326,10 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Don't emit warnings if there are preprocessor conditionals between
   // the variable declaration and the if/switch statement
-  if ( const SourceRange Range(PrevDecl->getSourceRange().getBegin(), Compound->getSourceRange().getEnd());
-       Range.isInvalid() || rangeContainsExpansionsOrDirectives(Range, *Result.SourceManager, getLangOpts()))
+  if (const SourceRange Range(PrevDecl->getSourceRange().getBegin(),
+                              Compound->getSourceRange().getEnd());
+      Range.isInvalid() || rangeContainsExpansionsOrDirectives(
+                               Range, *Result.SourceManager, getLangOpts()))
     return;
 
   auto Diag = diag(PrevDecl->getBeginLoc(),
