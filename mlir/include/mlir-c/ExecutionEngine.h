@@ -44,7 +44,7 @@ DEFINE_C_API_STRUCT(MlirExecutionEngine, void);
 /// TODO: figure out other options.
 MLIR_CAPI_EXPORTED MlirExecutionEngine mlirExecutionEngineCreate(
     MlirModule op, int optLevel, int numPaths,
-    const MlirStringRef *sharedLibPaths, bool enableObjectDump);
+    const MlirStringRef *sharedLibPaths, bool enableObjectDump, bool enablePIC);
 
 /// Initialize the ExecutionEngine. Global constructors specified by
 /// `llvm.mlir.global_ctors` will be run. One common scenario is that kernel
