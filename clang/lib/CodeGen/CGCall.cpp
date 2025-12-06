@@ -1317,7 +1317,8 @@ static std::vector<PFPField> findPFPCoercedFields(CodeGenFunction &CGF,
   // pattern to the struct in memory, so we must read the elements one by one
   // and use them to form the coerced structure.
   std::vector<PFPField> PFPFields;
-  CGF.getContext().findPFPFields(SrcFETy, CharUnits::Zero(), PFPFields, true);
+  CGF.getContext().findPFPFields(SrcFETy, CharUnits::Zero(), PFPFields,
+                                 /*IncludeVBases=*/true);
 
   // Because we don't know which union member is selected, we don't modify the
   // in-memory representation when passing a pointer that is part of a union
@@ -2678,6 +2679,19 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
       FuncAttrs.addAttribute("aarch64_pstate_sm_body");
+
+    if (auto *ModularFormat = TargetDecl->getAttr<ModularFormatAttr>()) {
+      FormatAttr *Format = TargetDecl->getAttr<FormatAttr>();
+      StringRef Type = Format->getType()->getName();
+      std::string FormatIdx = std::to_string(Format->getFormatIdx());
+      std::string FirstArg = std::to_string(Format->getFirstArg());
+      SmallVector<StringRef> Args = {
+          Type, FormatIdx, FirstArg,
+          ModularFormat->getModularImplFn()->getName(),
+          ModularFormat->getImplName()};
+      llvm::append_range(Args, ModularFormat->aspects());
+      FuncAttrs.addAttribute("modular-format", llvm::join(Args, ","));
+    }
   }
 
   // Attach "no-builtins" attributes to:

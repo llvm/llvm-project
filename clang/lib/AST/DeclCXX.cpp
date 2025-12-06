@@ -2312,7 +2312,7 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
     setHasUninitializedExplicitInitFields(false);
   }
 
-  if (getLangOpts().PointerFieldProtection && !isStandardLayout()) {
+  if (getLangOpts().PointerFieldProtectionABI && !isStandardLayout()) {
     data().IsPFPType = true;
   } else if (hasAttr<PointerFieldProtectionAttr>()) {
     data().IsPFPType = true;
