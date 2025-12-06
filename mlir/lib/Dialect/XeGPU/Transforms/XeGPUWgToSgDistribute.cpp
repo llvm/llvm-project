@@ -317,6 +317,9 @@ struct WgToSgLoadNdOpWithOffset : public OpConversionPattern<xegpu::LoadNdOp> {
     if (failed(genOffsetsList(rewriter, op, offsetsList)))
       return failure();
 
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropSgLayoutAndData();
     SmallVector<Value> newOps;
     for (auto [tdesc, offsets] :
          llvm::zip(adaptor.getTensorDesc(), offsetsList)) {
@@ -326,7 +329,7 @@ struct WgToSgLoadNdOpWithOffset : public OpConversionPattern<xegpu::LoadNdOp> {
       auto newOp = xegpu::LoadNdOp::create(
           rewriter, op.getLoc(), newResTy, tdesc, offsets,
           /*packed = */ nullptr, /*transpose = */ nullptr, op.getL1HintAttr(),
-          op.getL2HintAttr(), op.getL3HintAttr());
+          op.getL2HintAttr(), op.getL3HintAttr(), layout);
       newOps.push_back(newOp);
     }
     rewriter.replaceOpWithMultiple(op, {newOps});
@@ -347,11 +350,14 @@ struct WgToSgStoreNdOpWithOffset
     if (failed(genOffsetsList(rewriter, op, offsetsList)))
       return failure();
 
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropSgLayoutAndData();
     for (auto [v, tdesc, offsets] :
          llvm::zip(adaptor.getValue(), adaptor.getTensorDesc(), offsetsList)) {
       xegpu::StoreNdOp::create(rewriter, op.getLoc(), v, tdesc, offsets,
                                op.getL1HintAttr(), op.getL2HintAttr(),
-                               op.getL3HintAttr());
+                               op.getL3HintAttr(), layout);
     }
     rewriter.eraseOp(op);
 
@@ -371,11 +377,14 @@ struct WgToSgPrefetchNdOpWithOffset
     if (failed(genOffsetsList(rewriter, op, offsetsList)))
       return failure();
 
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropSgLayoutAndData();
     for (auto [tdesc, offsets] :
          llvm::zip(adaptor.getTensorDesc(), offsetsList)) {
       xegpu::PrefetchNdOp::create(rewriter, op.getLoc(), tdesc, offsets,
                                   op.getL1HintAttr(), op.getL2HintAttr(),
-                                  op.getL3HintAttr());
+                                  op.getL3HintAttr(), layout);
     }
     rewriter.eraseOp(op);
 
