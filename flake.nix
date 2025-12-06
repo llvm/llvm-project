@@ -108,6 +108,9 @@
           "-GNinja"
           "-DCMAKE_BUILD_TYPE=Debug"
           "-DLLVM_TARGETS_TO_BUILD=RISCV"
+          "-DLLVM_INCLUDE_UTILS=ON"
+          "-DLLVM_INCLUDE_TESTS=ON"
+          "-DLLVM_INCLUDE_TOOLS=ON"
         ];
 
       };

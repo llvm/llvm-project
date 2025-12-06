@@ -69,7 +69,7 @@ For details see [LLVM docs](https://llvm.org/docs/GettingStarted.html).
 TODO[khaser]: not implemented yet
 
 ### Running regression testing
-TODO[khaser]: not implemented yet
+Since llvm is built with tests and tools for it, run <build_dir>/bin/llvm-lit test/Transforms/SLPVectorizer to perform regression testing for SLPVectorizer test-suite
 
 ### Misc
 Original LLVM readme can be found in [./README-llvm.md](./README-llvm.md)
