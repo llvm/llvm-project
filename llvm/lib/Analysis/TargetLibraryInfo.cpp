@@ -905,26 +905,28 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   initializeLibCalls(TLI, T, StandardNames, VecLib);
 }
 
-static bool initializeIsErrnoThreadLocal(const Triple &T) {
-  // Assume errno has thread-local storage for non-baremetal environments.
-  // TODO: Could refine known OSes.
-  return T.isOSDarwin() || T.isOSFreeBSD() || T.isOSLinux() || T.isOSWindows();
-}
-
 static bool initializeIsErrnoFunctionCall(const Triple &T) {
+  // Cannot do any assumptions on errno as far as freestanding / baremetal
+  // environments are concerned.
+  bool IsDarwinOS = T.isOSDarwin();
+  if (T.getOSName() == "none" || T.getEnvironmentName() == "none" ||
+      (!IsDarwinOS && T.getEnvironment() == Triple::UnknownEnvironment))
+    return false;
+
   // Assume errno is implemented as a function call on the following
-  // environments.
-  // TODO: Could refine known environments.
-  return T.isAndroid() || T.isGNUEnvironment() || T.isMusl() ||
-         T.getEnvironment() == Triple::LLVM ||
-         T.getEnvironment() == Triple::Mlibc ||
-         T.getEnvironment() == Triple::MSVC;
+  // OSes / environments.
+  // TODO: Could refine them.
+  bool IsKnownOS = IsDarwinOS || T.isOSFreeBSD();
+  bool IsKnownEnvironment = T.isAndroid() || T.isGNUEnvironment() ||
+                            T.isMusl() || T.getEnvironment() == Triple::LLVM ||
+                            T.getEnvironment() == Triple::Mlibc ||
+                            T.getEnvironment() == Triple::MSVC;
+  return IsKnownOS || IsKnownEnvironment;
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T,
                                              VectorLibrary VecLib)
-    : IsErrnoFunctionCall(initializeIsErrnoFunctionCall(T)),
-      IsErrnoThreadLocal(initializeIsErrnoThreadLocal(T)) {
+    : IsErrnoFunctionCall(initializeIsErrnoFunctionCall(T)) {
   // Default to everything being available.
   memset(AvailableArray, -1, sizeof(AvailableArray));
 
@@ -936,8 +938,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
       ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
-      SizeOfInt(TLI.SizeOfInt), IsErrnoFunctionCall(TLI.IsErrnoFunctionCall),
-      IsErrnoThreadLocal(TLI.IsErrnoThreadLocal) {
+      SizeOfInt(TLI.SizeOfInt), IsErrnoFunctionCall(TLI.IsErrnoFunctionCall) {
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   VectorDescs = TLI.VectorDescs;
   ScalarDescs = TLI.ScalarDescs;
@@ -949,8 +950,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
       ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
-      SizeOfInt(TLI.SizeOfInt), IsErrnoFunctionCall(TLI.IsErrnoFunctionCall),
-      IsErrnoThreadLocal(TLI.IsErrnoThreadLocal) {
+      SizeOfInt(TLI.SizeOfInt), IsErrnoFunctionCall(TLI.IsErrnoFunctionCall) {
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   VectorDescs = TLI.VectorDescs;
@@ -965,7 +965,6 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoI
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
   IsErrnoFunctionCall = TLI.IsErrnoFunctionCall;
-  IsErrnoThreadLocal = TLI.IsErrnoThreadLocal;
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   return *this;
 }
@@ -978,7 +977,6 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
   IsErrnoFunctionCall = TLI.IsErrnoFunctionCall;
-  IsErrnoThreadLocal = TLI.IsErrnoThreadLocal;
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   return *this;
@@ -1490,15 +1488,6 @@ unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {
   // others) have larger-than-size_t index sizes on non-default address spaces,
   // making this the best default.
   return M.getDataLayout().getIndexSizeInBits(/*AddressSpace=*/0);
-}
-
-bool TargetLibraryInfoImpl::mayBeErrnoGlobal(const GlobalVariable *GV) const {
-  assert(GV && "Expecting existing GlobalVariable.");
-  if (IsErrnoFunctionCall)
-    return false;
-  if (!GV->isThreadLocal() && IsErrnoThreadLocal)
-    return false;
-  return true;
 }
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()

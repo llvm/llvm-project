@@ -705,24 +705,21 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
 
 TEST_F(TargetLibraryInfoTest, IsErrnoGlobal) {
   using TLII = TargetLibraryInfoImpl;
-  parseAssembly(R"(
-    @global = external global i32
-  )");
-  auto *GV = M->getNamedGlobal("global");
 
-  // Errno is not a global on the following environments.
-  EXPECT_FALSE(TLII(Triple("x86_64-unknown-linux-gnu")).mayBeErrnoGlobal(GV));
-  EXPECT_FALSE(TLII(Triple("x86_64-pc-windows-msvc")).mayBeErrnoGlobal(GV));
-
-  // Errno is thread-local on the following OSes.
-  EXPECT_FALSE(TLII(Triple("arm64-apple-macosx")).mayBeErrnoGlobal(GV));
-  EXPECT_FALSE(TLII(Triple("x86_64-unknown-freebsd")).mayBeErrnoGlobal(GV));
+  // Errno is defined as a function call on the following OSes / environments.
+  EXPECT_TRUE(TLII(Triple("arm64-apple-macosx")).isErrnoFunctionCall());
+  EXPECT_TRUE(TLII(Triple("arm--linux-androideabi")).isErrnoFunctionCall());
+  EXPECT_TRUE(
+      TLII(Triple("armv7-unknown-freebsd-gnueabihf")).isErrnoFunctionCall());
+  EXPECT_TRUE(TLII(Triple("riscv32-unknown-linux-musl")).isErrnoFunctionCall());
+  EXPECT_TRUE(TLII(Triple("x86_64-pc-windows-msvc")).isErrnoFunctionCall());
+  EXPECT_TRUE(TLII(Triple("x86_64-unknown-linux-gnu")).isErrnoFunctionCall());
 
   // Unknown.
-  EXPECT_TRUE(TLII(Triple("arm-none-eabi")).mayBeErrnoGlobal(GV));
-  EXPECT_TRUE(TLII(Triple("aarch64-unknown-unknown")).mayBeErrnoGlobal(GV));
-  GV->setThreadLocalMode(GlobalVariable::GeneralDynamicTLSModel);
-  EXPECT_TRUE(TLII(Triple("x86_64-pc-linux")).mayBeErrnoGlobal(GV));
+  EXPECT_FALSE(TLII(Triple("aarch64-unknown-unknown")).isErrnoFunctionCall());
+  EXPECT_FALSE(TLII(Triple("arm-none-eabi")).isErrnoFunctionCall());
+  EXPECT_FALSE(TLII(Triple("powerpc-none-none")).isErrnoFunctionCall());
+  EXPECT_FALSE(TLII(Triple("x86_64-pc-linux")).isErrnoFunctionCall());
 }
 
 namespace {

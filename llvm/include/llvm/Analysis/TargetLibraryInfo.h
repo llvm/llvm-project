@@ -90,7 +90,6 @@ class TargetLibraryInfoImpl {
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return;
   unsigned SizeOfInt;
   bool IsErrnoFunctionCall;
-  bool IsErrnoThreadLocal;
 
   enum AvailabilityState {
     StandardName = 3, // (memset to all ones)
@@ -259,7 +258,7 @@ public:
   LLVM_ABI static bool isCallingConvCCompatible(CallBase *CI);
   LLVM_ABI static bool isCallingConvCCompatible(Function *Callee);
 
-  LLVM_ABI bool mayBeErrnoGlobal(const GlobalVariable *GV) const;
+  bool isErrnoFunctionCall() const { return IsErrnoFunctionCall; }
 };
 
 /// Provides information about what library functions are available for
@@ -606,11 +605,9 @@ public:
     return this->isFunctionVectorizable(F);
   }
 
-  /// Returns whether the name of the global variable is associated to the
-  /// representation of the errno storage. Returns true if could not determined.
-  bool mayBeErrnoGlobal(const GlobalVariable *GV) const {
-    return Impl->mayBeErrnoGlobal(GV);
-  }
+  /// Returns whether `errno` is defined as a function call on known OSes /
+  /// environments.
+  bool isErrnoFunctionCall() const { return Impl->isErrnoFunctionCall(); }
 };
 
 /// Analysis pass providing the \c TargetLibraryInfo.

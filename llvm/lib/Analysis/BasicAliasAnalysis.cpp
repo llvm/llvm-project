@@ -1879,9 +1879,9 @@ AliasResult BasicAAResult::aliasErrno(const MemoryLocation &Loc,
     if (GV->hasLocalLinkage())
       return AliasResult::NoAlias;
 
-    // Neither can it alias globals where environments define it as a function
-    // call, nor can a non-thread-local global alias a thread-local errno.
-    if (!TLI.mayBeErrnoGlobal(GV))
+    // Neither can errno alias globals where environments define it as a
+    // function call.
+    if (TLI.isErrnoFunctionCall())
       return AliasResult::NoAlias;
   }
 
