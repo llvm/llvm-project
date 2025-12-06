@@ -102,6 +102,22 @@ void UseInitStatementCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "SafeTypes", SafeTypes);
 }
 
+static Matcher<Stmt> callByRef(Matcher<Decl> VarOrBindingNodeMatcher, StringRef Name) {
+  const auto argMatcher = declRefExpr(to(VarOrBindingNodeMatcher)).bind(Name);
+  const auto paramMatcher = parmVarDecl(hasType(referenceType()));
+  
+  return anyOf(
+    callExpr(forEachArgumentWithParam(argMatcher, paramMatcher)),
+    cxxConstructExpr(forEachArgumentWithParam(argMatcher, paramMatcher))
+  );
+}
+
+static Matcher<Stmt> stealingAsThisMatcher() {
+  return anyOf(hasParent(memberExpr()),
+               hasParent(implicitCastExpr(hasCastKind(CK_NoOp),
+                                         hasParent(memberExpr()))));
+}
+
 // Complete matcher to detect stealing cases, preventing
 // the checker from generating code that could result in dangling references,
 // such as: `int* p; if (int v;cond) { p=&v; } use(p);`
@@ -109,41 +125,38 @@ static Matcher<Stmt> hasStealingMatcher(Matcher<Stmt> Condition,
                                         StringRef Name) {
   const auto IsStealingViaPointer =
       hasParent(unaryOperator(hasOperatorName("&")));
-  const auto PassesByValue =
-      hasParent(implicitCastExpr(hasCastKind(CK_LValueToRValue)));
-  const auto ReferencesWhitelistForStealing = anyOf(
-      // pass by value always safe
-      PassesByValue,
-      // `++i` and 'i++' are also safe
-      hasParent(unaryOperator(unless(hasOperatorName("&")))),
-      // `a.a` passed by value
-      hasParent(memberExpr(PassesByValue)),
-      // `a=0`, `a+=0`, etc
-      hasParent(binaryOperator()));
-  const auto IsStealingViaReference = unless(ReferencesWhitelistForStealing);
   const auto IsNonreferenceType = unless(hasType(referenceType()));
   const auto NonreferenceBoundVar =
       varDecl(equalsBoundNode("singleVar"), IsNonreferenceType);
   const auto NonreferenceBoundBind =
       bindingDecl(equalsBoundNode("bindingDecl"),
                   hasParent(decompositionDecl(IsNonreferenceType)));
+  const auto VarOrBindingNode =
+      anyOf(NonreferenceBoundVar, NonreferenceBoundBind);
+  const auto HasStealingByPointer = hasDescendant(
+      declRefExpr(to(VarOrBindingNode), IsStealingViaPointer).bind(Name));
+  const auto HasStealingByReference = hasDescendant(callByRef(VarOrBindingNode, Name));
+  return anyOf(HasStealingByPointer, HasStealingByReference);
+}
+
+static Matcher<Stmt> hasStealingAsThisMatcher(Matcher<Stmt> Condition,
+                                              StringRef Name) {
+  const auto IsNonreferenceType = unless(hasType(referenceType()));
+  const auto NonreferenceBoundVar =
+      varDecl(equalsBoundNode("singleVar"), IsNonreferenceType);
+  const auto NonreferenceBoundBind =
+      bindingDecl(equalsBoundNode("bindingDecl"),
+                  hasParent(decompositionDecl(IsNonreferenceType)));
+  const auto VarOrBindingNode =
+      anyOf(NonreferenceBoundVar, NonreferenceBoundBind);
   return hasDescendant(
-      declRefExpr(to(anyOf(NonreferenceBoundVar, NonreferenceBoundBind)),
-                  anyOf(IsStealingViaPointer, IsStealingViaReference),
-                  Condition)
-          .bind(Name));
+      declRefExpr(to(VarOrBindingNode), stealingAsThisMatcher()).bind(Name));
 }
 
 static Matcher<Stmt> hasConflictMatcher() {
   return hasDescendant(varDecl(anyOf(hasSameNameAsBoundNode("singleVar"),
                                      hasSameNameAsBoundNode("bindingDecl")))
                            .bind("conflict"));
-}
-
-static Matcher<Stmt> stealingAsThisMatcher() {
-  return anyOf(hasParent(memberExpr()),
-               hasParent(implicitCastExpr(hasCastKind(CK_NoOp),
-                                         hasParent(memberExpr()))));
 }
 
 template <typename IfOrSwitchStmt>
@@ -157,7 +170,7 @@ static Matcher<Stmt> stmtMatcherWithCondition(
              hasCondition(expr().bind("condition")),
              optionally(hasConflictMatcher()),
              optionally(hasStealingMatcher(Stealing, "stealing")),
-             optionally(hasStealingMatcher(StealingAsThis, "StealingAsThis")),
+             optionally(hasStealingAsThisMatcher(StealingAsThis, "StealingAsThis")),
              optionally(
                  hasConditionVariableStatement(declStmt().bind("condDeclStmt"))))
       .bind(StmtName);

@@ -329,6 +329,80 @@ void good_stolen_reference2() {
     do_some(*pi);
 }
 
+struct ValueConverter {
+    const int* get_pointer(const int& ref) const {
+        return &ref;
+    }
+    static const int* get_pointer_stat(const int& ref) {
+        return &ref;
+    }
+};
+
+void good_stolen_reference2_member() {
+    const int* pi = nullptr;
+    ValueConverter cnv;
+    int i1 = 0;
+    if (i1 == 0) {
+        do_some();
+        pi = cnv.get_pointer(i1);
+    }
+    do_some(*pi);
+
+    int i2 = 0;
+    switch (i2) {
+        case 0:
+            do_some();
+            pi = cnv.get_pointer(i2);
+            break;
+    }
+    do_some(*pi);
+}
+
+void good_stolen_reference2_static_member() {
+    const int* pi = nullptr;
+    int i1 = 0;
+    if (i1 == 0) {
+        do_some();
+        pi = ValueConverter::get_pointer_stat(i1);
+    }
+    do_some(*pi);
+
+    int i2 = 0;
+    switch (i2) {
+        case 0:
+            do_some();
+            pi = ValueConverter::get_pointer_stat(i2);
+            break;
+    }
+    do_some(*pi);
+}
+
+struct PointerGetter {
+    const int* operator()(const int& ref) const {
+        return &ref;
+    }
+};
+
+void good_stolen_reference2_operator() {
+    const int* pi = nullptr;
+    PointerGetter getter;
+    int i1 = 0;
+    if (i1 == 0) {
+        do_some();
+        pi = getter(i1);
+    }
+    do_some(*pi);
+
+    int i2 = 0;
+    switch (i2) {
+        case 0:
+            do_some();
+            pi = getter(i2);
+            break;
+    }
+    do_some(*pi);
+}
+
 struct UserDefined {
     int a = 0;
     const UserDefined* get_pointer_to_this() const {
