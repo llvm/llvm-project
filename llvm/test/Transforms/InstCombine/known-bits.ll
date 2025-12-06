@@ -1068,12 +1068,12 @@ define i1 @extract_value_usub(i8 %x, i8 %zz) {
 ; CHECK-LABEL: @extract_value_usub(
 ; CHECK-NEXT:    [[Z:%.*]] = add nuw i8 [[ZZ:%.*]], 1
 ; CHECK-NEXT:    [[Y:%.*]] = add i8 [[X:%.*]], [[Z]]
-; CHECK-NEXT:    [[SUB:%.*]] = xor i8 [[ZZ]], -1
-; CHECK-NEXT:    [[UOV:%.*]] = icmp ult i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB_UOV:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SUB_UOV]], 0
+; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { i8, i1 } [[SUB_UOV]], 1
 ; CHECK-NEXT:    call void @use.i1(i1 [[UOV]])
 ; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ZZ]], -1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %z = add nuw i8 %zz, 1
   %y = add i8 %x, %z
@@ -1090,11 +1090,12 @@ define i1 @extract_value_usub(i8 %x, i8 %zz) {
 define i1 @extract_value_usub_fail(i8 %x, i8 %z) {
 ; CHECK-LABEL: @extract_value_usub_fail(
 ; CHECK-NEXT:    [[Y:%.*]] = add i8 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[Z]]
-; CHECK-NEXT:    [[UOV:%.*]] = icmp ult i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB_UOV:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SUB_UOV]], 0
+; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { i8, i1 } [[SUB_UOV]], 1
 ; CHECK-NEXT:    call void @use.i1(i1 [[UOV]])
 ; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[SUB]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y = add i8 %x, %z

@@ -54,9 +54,10 @@ entry:
 define i1 @usub(i32 %a, i32 %b, ptr %c) nounwind {
 ; RV32I-LABEL: usub:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    sub a1, a0, a1
-; RV32I-NEXT:    sltu a0, a0, a1
-; RV32I-NEXT:    sw a1, 0(a2)
+; RV32I-NEXT:    sltu a3, a1, a0
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    sw a0, 0(a2)
+; RV32I-NEXT:    mv a0, a3
 ; RV32I-NEXT:    ret
 entry:
   %x = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)

@@ -669,12 +669,12 @@ define <32 x double> @vp_rint_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroex
 ; RV32-NEXT:    vfabs.v v24, v8, v0.t
 ; RV32-NEXT:    lui a1, %hi(.LCPI26_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI26_0)(a1)
-; RV32-NEXT:    addi a1, a0, -16
-; RV32-NEXT:    sltu a0, a0, a1
-; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    sltiu a1, a0, 17
+; RV32-NEXT:    addi a0, a0, -16
+; RV32-NEXT:    neg a1, a1
 ; RV32-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; RV32-NEXT:    vmflt.vf v6, v24, fa5, v0.t
-; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    and a0, a1, a0
 ; RV32-NEXT:    vmv1r.v v0, v6
 ; RV32-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vfcvt.x.f.v v24, v8, v0.t
@@ -711,12 +711,12 @@ define <32 x double> @vp_rint_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroex
 ; RV64-NEXT:    li a1, 1075
 ; RV64-NEXT:    slli a1, a1, 52
 ; RV64-NEXT:    fmv.d.x fa5, a1
-; RV64-NEXT:    addi a1, a0, -16
-; RV64-NEXT:    sltu a0, a0, a1
-; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    sltiu a1, a0, 17
+; RV64-NEXT:    addi a0, a0, -16
+; RV64-NEXT:    neg a1, a1
 ; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; RV64-NEXT:    vmflt.vf v6, v24, fa5, v0.t
-; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    and a0, a1, a0
 ; RV64-NEXT:    vmv1r.v v0, v6
 ; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vfcvt.x.f.v v24, v8, v0.t
@@ -752,10 +752,10 @@ define <32 x double> @vp_rint_v32f64_unmasked(<32 x double> %va, i32 zeroext %ev
 ; RV32-NEXT:    vfabs.v v24, v8
 ; RV32-NEXT:    lui a2, %hi(.LCPI27_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI27_0)(a2)
-; RV32-NEXT:    addi a2, a0, -16
-; RV32-NEXT:    sltu a0, a0, a2
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    and a0, a0, a2
+; RV32-NEXT:    sltiu a2, a0, 17
+; RV32-NEXT:    addi a0, a0, -16
+; RV32-NEXT:    neg a2, a2
+; RV32-NEXT:    and a0, a2, a0
 ; RV32-NEXT:    vmflt.vf v0, v24, fa5
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vfabs.v v24, v16
@@ -786,11 +786,11 @@ define <32 x double> @vp_rint_v32f64_unmasked(<32 x double> %va, i32 zeroext %ev
 ; RV64-NEXT:    li a2, 1075
 ; RV64-NEXT:    slli a2, a2, 52
 ; RV64-NEXT:    fmv.d.x fa5, a2
-; RV64-NEXT:    addi a2, a0, -16
-; RV64-NEXT:    sltu a0, a0, a2
-; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    sltiu a2, a0, 17
+; RV64-NEXT:    addi a0, a0, -16
+; RV64-NEXT:    neg a2, a2
+; RV64-NEXT:    and a0, a2, a0
 ; RV64-NEXT:    vmflt.vf v0, v24, fa5
-; RV64-NEXT:    and a0, a0, a2
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV64-NEXT:    vfabs.v v24, v16
 ; RV64-NEXT:    vmflt.vf v7, v24, fa5

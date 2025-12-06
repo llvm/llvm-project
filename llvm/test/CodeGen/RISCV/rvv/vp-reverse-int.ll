@@ -700,17 +700,17 @@ define <vscale x 128 x i8> @test_vp_reverse_nxv128i8(<vscale x 128 x i8> %src, i
 ; CHECK-NEXT:    addi a3, sp, 64
 ; CHECK-NEXT:    li a4, -1
 ; CHECK-NEXT:    sub a5, a0, a2
-; CHECK-NEXT:    add a6, a0, a3
-; CHECK-NEXT:    sltu a0, a0, a5
-; CHECK-NEXT:    add a2, a3, a2
+; CHECK-NEXT:    sltu a6, a2, a0
+; CHECK-NEXT:    add a0, a0, a3
 ; CHECK-NEXT:    addi a6, a6, -1
+; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    and a5, a6, a5
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vsse8.v v8, (a6), a4
-; CHECK-NEXT:    sub a6, a6, a1
-; CHECK-NEXT:    and a0, a0, a5
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vsse8.v v16, (a6), a4
+; CHECK-NEXT:    vsse8.v v8, (a0), a4
+; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    vsetvli zero, a5, e8, m8, ta, ma
+; CHECK-NEXT:    vsse8.v v16, (a0), a4
 ; CHECK-NEXT:    vle8.v v16, (a2)
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a3)

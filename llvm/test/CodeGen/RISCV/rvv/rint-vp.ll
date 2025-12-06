@@ -263,13 +263,13 @@ define <vscale x 32 x bfloat> @vp_rint_nxv32bf16(<vscale x 32 x bfloat> %va, <vs
 ; CHECK-NEXT:    srli a2, a2, 2
 ; CHECK-NEXT:    fmv.w.x fa5, a3
 ; CHECK-NEXT:    sub a3, a0, a1
+; CHECK-NEXT:    sltu a4, a1, a0
 ; CHECK-NEXT:    vslidedown.vx v6, v0, a2
-; CHECK-NEXT:    sltu a2, a0, a3
+; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    vmv1r.v v5, v6
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a2, a2, a3
+; CHECK-NEXT:    and a3, a4, a3
 ; CHECK-NEXT:    vmv1r.v v0, v6
-; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v12, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v16, v24, v0.t
@@ -321,14 +321,14 @@ define <vscale x 32 x bfloat> @vp_rint_nxv32bf16_unmasked(<vscale x 32 x bfloat>
 ; CHECK-NEXT:    srli a2, a2, 2
 ; CHECK-NEXT:    fmv.w.x fa5, a3
 ; CHECK-NEXT:    sub a3, a0, a1
-; CHECK-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    sltu a4, a1, a0
+; CHECK-NEXT:    vsetvli a5, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v7, v16, a2
-; CHECK-NEXT:    sltu a2, a0, a3
+; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    vmv1r.v v6, v7
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a2, a2, a3
+; CHECK-NEXT:    and a3, a4, a3
 ; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v12, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v16, v24, v0.t
@@ -786,13 +786,13 @@ define <vscale x 32 x half> @vp_rint_nxv32f16(<vscale x 32 x half> %va, <vscale 
 ; ZVFHMIN-NEXT:    srli a2, a2, 2
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a3
 ; ZVFHMIN-NEXT:    sub a3, a0, a1
+; ZVFHMIN-NEXT:    sltu a4, a1, a0
 ; ZVFHMIN-NEXT:    vslidedown.vx v6, v0, a2
-; ZVFHMIN-NEXT:    sltu a2, a0, a3
+; ZVFHMIN-NEXT:    addi a4, a4, -1
 ; ZVFHMIN-NEXT:    vmv1r.v v5, v6
-; ZVFHMIN-NEXT:    addi a2, a2, -1
-; ZVFHMIN-NEXT:    and a2, a2, a3
+; ZVFHMIN-NEXT:    and a3, a4, a3
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v6
-; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v16, v24, v0.t
@@ -858,14 +858,14 @@ define <vscale x 32 x half> @vp_rint_nxv32f16_unmasked(<vscale x 32 x half> %va,
 ; ZVFHMIN-NEXT:    srli a2, a2, 2
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a3
 ; ZVFHMIN-NEXT:    sub a3, a0, a1
-; ZVFHMIN-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
+; ZVFHMIN-NEXT:    sltu a4, a1, a0
+; ZVFHMIN-NEXT:    vsetvli a5, zero, e8, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vslidedown.vx v7, v16, a2
-; ZVFHMIN-NEXT:    sltu a2, a0, a3
+; ZVFHMIN-NEXT:    addi a4, a4, -1
 ; ZVFHMIN-NEXT:    vmv1r.v v6, v7
-; ZVFHMIN-NEXT:    addi a2, a2, -1
-; ZVFHMIN-NEXT:    and a2, a2, a3
+; ZVFHMIN-NEXT:    and a3, a4, a3
 ; ZVFHMIN-NEXT:    vmv1r.v v0, v7
-; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v16, v24, v0.t
@@ -1751,7 +1751,7 @@ define <vscale x 16 x double> @vp_rint_nxv16f64(<vscale x 16 x double> %va, <vsc
 ; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI44_0)(a2)
 ; RV32ZVFH-NEXT:    sub a2, a0, a1
 ; RV32ZVFH-NEXT:    vslidedown.vx v6, v0, a3
-; RV32ZVFH-NEXT:    sltu a3, a0, a2
+; RV32ZVFH-NEXT:    sltu a3, a1, a0
 ; RV32ZVFH-NEXT:    addi a3, a3, -1
 ; RV32ZVFH-NEXT:    and a2, a3, a2
 ; RV32ZVFH-NEXT:    vmv1r.v v0, v6
@@ -1793,7 +1793,7 @@ define <vscale x 16 x double> @vp_rint_nxv16f64(<vscale x 16 x double> %va, <vsc
 ; RV64ZVFH-NEXT:    sub a3, a0, a1
 ; RV64ZVFH-NEXT:    slli a2, a2, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a2
-; RV64ZVFH-NEXT:    sltu a2, a0, a3
+; RV64ZVFH-NEXT:    sltu a2, a1, a0
 ; RV64ZVFH-NEXT:    addi a2, a2, -1
 ; RV64ZVFH-NEXT:    and a2, a2, a3
 ; RV64ZVFH-NEXT:    vmv1r.v v0, v6
@@ -1834,7 +1834,7 @@ define <vscale x 16 x double> @vp_rint_nxv16f64(<vscale x 16 x double> %va, <vsc
 ; RV32ZVFMIN-NEXT:    fld fa5, %lo(.LCPI44_0)(a2)
 ; RV32ZVFMIN-NEXT:    sub a2, a0, a1
 ; RV32ZVFMIN-NEXT:    vslidedown.vx v6, v0, a3
-; RV32ZVFMIN-NEXT:    sltu a3, a0, a2
+; RV32ZVFMIN-NEXT:    sltu a3, a1, a0
 ; RV32ZVFMIN-NEXT:    addi a3, a3, -1
 ; RV32ZVFMIN-NEXT:    and a2, a3, a2
 ; RV32ZVFMIN-NEXT:    vmv1r.v v0, v6
@@ -1876,7 +1876,7 @@ define <vscale x 16 x double> @vp_rint_nxv16f64(<vscale x 16 x double> %va, <vsc
 ; RV64ZVFHMIN-NEXT:    sub a3, a0, a1
 ; RV64ZVFHMIN-NEXT:    slli a2, a2, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a2
-; RV64ZVFHMIN-NEXT:    sltu a2, a0, a3
+; RV64ZVFHMIN-NEXT:    sltu a2, a1, a0
 ; RV64ZVFHMIN-NEXT:    addi a2, a2, -1
 ; RV64ZVFHMIN-NEXT:    and a2, a2, a3
 ; RV64ZVFHMIN-NEXT:    vmv1r.v v0, v6
@@ -1917,7 +1917,7 @@ define <vscale x 16 x double> @vp_rint_nxv16f64_unmasked(<vscale x 16 x double> 
 ; RV32ZVFH-NEXT:    lui a2, %hi(.LCPI45_0)
 ; RV32ZVFH-NEXT:    sub a3, a0, a1
 ; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI45_0)(a2)
-; RV32ZVFH-NEXT:    sltu a2, a0, a3
+; RV32ZVFH-NEXT:    sltu a2, a1, a0
 ; RV32ZVFH-NEXT:    addi a2, a2, -1
 ; RV32ZVFH-NEXT:    and a2, a2, a3
 ; RV32ZVFH-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
@@ -1947,7 +1947,7 @@ define <vscale x 16 x double> @vp_rint_nxv16f64_unmasked(<vscale x 16 x double> 
 ; RV64ZVFH-NEXT:    sub a3, a0, a1
 ; RV64ZVFH-NEXT:    slli a2, a2, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a2
-; RV64ZVFH-NEXT:    sltu a2, a0, a3
+; RV64ZVFH-NEXT:    sltu a2, a1, a0
 ; RV64ZVFH-NEXT:    addi a2, a2, -1
 ; RV64ZVFH-NEXT:    and a2, a2, a3
 ; RV64ZVFH-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
@@ -1976,7 +1976,7 @@ define <vscale x 16 x double> @vp_rint_nxv16f64_unmasked(<vscale x 16 x double> 
 ; RV32ZVFMIN-NEXT:    lui a2, %hi(.LCPI45_0)
 ; RV32ZVFMIN-NEXT:    sub a3, a0, a1
 ; RV32ZVFMIN-NEXT:    fld fa5, %lo(.LCPI45_0)(a2)
-; RV32ZVFMIN-NEXT:    sltu a2, a0, a3
+; RV32ZVFMIN-NEXT:    sltu a2, a1, a0
 ; RV32ZVFMIN-NEXT:    addi a2, a2, -1
 ; RV32ZVFMIN-NEXT:    and a2, a2, a3
 ; RV32ZVFMIN-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
@@ -2006,7 +2006,7 @@ define <vscale x 16 x double> @vp_rint_nxv16f64_unmasked(<vscale x 16 x double> 
 ; RV64ZVFHMIN-NEXT:    sub a3, a0, a1
 ; RV64ZVFHMIN-NEXT:    slli a2, a2, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a2
-; RV64ZVFHMIN-NEXT:    sltu a2, a0, a3
+; RV64ZVFHMIN-NEXT:    sltu a2, a1, a0
 ; RV64ZVFHMIN-NEXT:    addi a2, a2, -1
 ; RV64ZVFHMIN-NEXT:    and a2, a2, a3
 ; RV64ZVFHMIN-NEXT:    vsetvli zero, a2, e64, m8, ta, ma

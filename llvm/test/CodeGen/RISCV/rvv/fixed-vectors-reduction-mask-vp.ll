@@ -211,15 +211,15 @@ define zeroext i1 @vpreduce_and_v256i1(i1 zeroext %s, <256 x i1> %v, <256 x i1> 
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:  .LBB14_2:
 ; CHECK-NEXT:    vmv1r.v v0, v11
+; CHECK-NEXT:    sltiu a3, a1, 129
+; CHECK-NEXT:    addi a1, a1, -128
+; CHECK-NEXT:    neg a3, a3
+; CHECK-NEXT:    and a1, a3, a1
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmnot.m v9, v9
 ; CHECK-NEXT:    vcpop.m a2, v9, v0.t
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    and a0, a2, a0
-; CHECK-NEXT:    addi a2, a1, -128
-; CHECK-NEXT:    sltu a1, a1, a2
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    and a1, a1, a2
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vmv1r.v v0, v10

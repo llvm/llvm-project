@@ -91,7 +91,7 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v24, v0, a1
 ; CHECK-NEXT:    sub a1, a0, a2
-; CHECK-NEXT:    sltu a3, a0, a1
+; CHECK-NEXT:    sltu a3, a2, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a1, a3, a1
 ; CHECK-NEXT:    bltu a0, a2, .LBB6_2
@@ -120,7 +120,7 @@ define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscal
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v24, v0, a1
 ; CHECK-NEXT:    sub a1, a0, a2
-; CHECK-NEXT:    sltu a3, a0, a1
+; CHECK-NEXT:    sltu a3, a2, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a1, a3, a1
 ; CHECK-NEXT:    bltu a0, a2, .LBB7_2

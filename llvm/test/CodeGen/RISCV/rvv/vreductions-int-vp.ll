@@ -884,7 +884,7 @@ define signext i32 @vpreduce_umax_nxv32i32(i32 signext %s, <vscale x 32 x i32> %
 ; CHECK-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v24, v0, a2
 ; CHECK-NEXT:    sub a2, a1, a3
-; CHECK-NEXT:    sltu a4, a1, a2
+; CHECK-NEXT:    sltu a4, a3, a1
 ; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    and a2, a4, a2
 ; CHECK-NEXT:    bltu a1, a3, .LBB67_2

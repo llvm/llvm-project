@@ -141,16 +141,16 @@ define i1 @t1_strict_logical(i8 %base, i8 %offset) {
 
 define i1 @t2(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t2(
-; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } poison, i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[AGG:%.*]] = insertvalue { i8, i1 } [[TMP3]], i1 [[UNDERFLOW]], 1
+; CHECK-NEXT:    [[AGG:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[BASE:%.*]], i8 [[OFFSET:%.*]])
 ; CHECK-NEXT:    call void @useagg({ i8, i1 } [[AGG]])
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = extractvalue { i8, i1 } [[AGG]], 0
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[UNDERFLOW:%.*]] = extractvalue { i8, i1 } [[AGG]], 1
 ; CHECK-NEXT:    call void @use1(i1 [[UNDERFLOW]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = xor i1 [[UNDERFLOW]], true
 ; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %agg = call {i8, i1} @llvm.usub.with.overflow(i8 %base, i8 %offset)
@@ -168,16 +168,16 @@ define i1 @t2(i8 %base, i8 %offset) {
 
 define i1 @t2_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t2_logical(
-; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } poison, i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[AGG:%.*]] = insertvalue { i8, i1 } [[TMP3]], i1 [[UNDERFLOW]], 1
+; CHECK-NEXT:    [[AGG:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[BASE:%.*]], i8 [[OFFSET:%.*]])
 ; CHECK-NEXT:    call void @useagg({ i8, i1 } [[AGG]])
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = extractvalue { i8, i1 } [[AGG]], 0
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[UNDERFLOW:%.*]] = extractvalue { i8, i1 } [[AGG]], 1
 ; CHECK-NEXT:    call void @use1(i1 [[UNDERFLOW]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = xor i1 [[UNDERFLOW]], true
 ; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %agg = call {i8, i1} @llvm.usub.with.overflow(i8 %base, i8 %offset)
@@ -321,16 +321,16 @@ define i1 @t5_commutability2_logical(i8 %base, i8 %offset) {
 
 define i1 @t6_commutability(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t6_commutability(
-; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } poison, i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[AGG:%.*]] = insertvalue { i8, i1 } [[TMP3]], i1 [[UNDERFLOW]], 1
+; CHECK-NEXT:    [[AGG:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[BASE:%.*]], i8 [[OFFSET:%.*]])
 ; CHECK-NEXT:    call void @useagg({ i8, i1 } [[AGG]])
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = extractvalue { i8, i1 } [[AGG]], 0
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[UNDERFLOW:%.*]] = extractvalue { i8, i1 } [[AGG]], 1
 ; CHECK-NEXT:    call void @use1(i1 [[UNDERFLOW]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = xor i1 [[UNDERFLOW]], true
 ; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %agg = call {i8, i1} @llvm.usub.with.overflow(i8 %base, i8 %offset)
@@ -348,16 +348,16 @@ define i1 @t6_commutability(i8 %base, i8 %offset) {
 
 define i1 @t6_commutability_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t6_commutability_logical(
-; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } poison, i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[AGG:%.*]] = insertvalue { i8, i1 } [[TMP3]], i1 [[UNDERFLOW]], 1
+; CHECK-NEXT:    [[AGG:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[BASE:%.*]], i8 [[OFFSET:%.*]])
 ; CHECK-NEXT:    call void @useagg({ i8, i1 } [[AGG]])
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = extractvalue { i8, i1 } [[AGG]], 0
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[UNDERFLOW:%.*]] = extractvalue { i8, i1 } [[AGG]], 1
 ; CHECK-NEXT:    call void @use1(i1 [[UNDERFLOW]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = xor i1 [[UNDERFLOW]], true
 ; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %agg = call {i8, i1} @llvm.usub.with.overflow(i8 %base, i8 %offset)
@@ -459,14 +459,14 @@ define i1 @t7_nonstrict_logical(i8 %base, i8 %offset) {
 
 define i1 @t8(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t8(
-; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } poison, i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[AGG:%.*]] = insertvalue { i8, i1 } [[TMP3]], i1 [[UNDERFLOW]], 1
+; CHECK-NEXT:    [[AGG:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[BASE:%.*]], i8 [[OFFSET:%.*]])
 ; CHECK-NEXT:    call void @useagg({ i8, i1 } [[AGG]])
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = extractvalue { i8, i1 } [[AGG]], 0
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[UNDERFLOW:%.*]] = extractvalue { i8, i1 } [[AGG]], 1
 ; CHECK-NEXT:    call void @use1(i1 [[UNDERFLOW]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[NULL:%.*]] = icmp eq i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[NULL]], [[UNDERFLOW]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %agg = call {i8, i1} @llvm.usub.with.overflow(i8 %base, i8 %offset)
@@ -482,14 +482,14 @@ define i1 @t8(i8 %base, i8 %offset) {
 
 define i1 @t8_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t8_logical(
-; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8, i1 } poison, i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[AGG:%.*]] = insertvalue { i8, i1 } [[TMP3]], i1 [[UNDERFLOW]], 1
+; CHECK-NEXT:    [[AGG:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[BASE:%.*]], i8 [[OFFSET:%.*]])
 ; CHECK-NEXT:    call void @useagg({ i8, i1 } [[AGG]])
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = extractvalue { i8, i1 } [[AGG]], 0
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[UNDERFLOW:%.*]] = extractvalue { i8, i1 } [[AGG]], 1
 ; CHECK-NEXT:    call void @use1(i1 [[UNDERFLOW]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[NULL:%.*]] = icmp eq i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[NULL]], [[UNDERFLOW]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %agg = call {i8, i1} @llvm.usub.with.overflow(i8 %base, i8 %offset)

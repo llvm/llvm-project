@@ -1990,7 +1990,7 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64(<vscale x 16 x i64> %va, <vscale x
 ; RV32-NEXT:    addi a2, a2, 1365
 ; RV32-NEXT:    vsetvli a4, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.v.x v24, a2
-; RV32-NEXT:    sltu a2, a0, a3
+; RV32-NEXT:    sltu a2, a1, a0
 ; RV32-NEXT:    addi a2, a2, -1
 ; RV32-NEXT:    and a2, a2, a3
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
@@ -2117,10 +2117,15 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64(<vscale x 16 x i64> %va, <vscale x
 ; RV64-NEXT:    lui a3, 209715
 ; RV64-NEXT:    lui a4, 61681
 ; RV64-NEXT:    lui a5, 4112
+; RV64-NEXT:    sub a6, a0, a1
+; RV64-NEXT:    sltu a1, a1, a0
+; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    addi a2, a2, 1365
 ; RV64-NEXT:    addi a3, a3, 819
 ; RV64-NEXT:    addi a4, a4, -241
 ; RV64-NEXT:    addi a5, a5, 257
+; RV64-NEXT:    addi a1, a1, -1
+; RV64-NEXT:    and a1, a1, a6
 ; RV64-NEXT:    slli a6, a2, 32
 ; RV64-NEXT:    add a2, a2, a6
 ; RV64-NEXT:    slli a6, a3, 32
@@ -2129,11 +2134,6 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64(<vscale x 16 x i64> %va, <vscale x
 ; RV64-NEXT:    add a4, a4, a6
 ; RV64-NEXT:    slli a6, a5, 32
 ; RV64-NEXT:    add a5, a5, a6
-; RV64-NEXT:    li a6, 56
-; RV64-NEXT:    sub a1, a0, a1
-; RV64-NEXT:    sltu a0, a0, a1
-; RV64-NEXT:    addi a0, a0, -1
-; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    vand.vx v24, v24, a2, v0.t
 ; RV64-NEXT:    vsub.vv v8, v8, v24, v0.t
 ; RV64-NEXT:    vand.vx v24, v8, a3, v0.t
@@ -2144,9 +2144,9 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64(<vscale x 16 x i64> %va, <vscale x
 ; RV64-NEXT:    vadd.vv v8, v8, v24, v0.t
 ; RV64-NEXT:    vand.vx v8, v8, a4, v0.t
 ; RV64-NEXT:    vmul.vx v8, v8, a5, v0.t
-; RV64-NEXT:    vsrl.vx v8, v8, a6, v0.t
+; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vmv1r.v v0, v7
-; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV64-NEXT:    vsrl.vi v24, v16, 1, v0.t
 ; RV64-NEXT:    vand.vx v24, v24, a2, v0.t
 ; RV64-NEXT:    vsub.vv v16, v16, v24, v0.t
@@ -2158,7 +2158,7 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64(<vscale x 16 x i64> %va, <vscale x
 ; RV64-NEXT:    vadd.vv v16, v16, v24, v0.t
 ; RV64-NEXT:    vand.vx v16, v16, a4, v0.t
 ; RV64-NEXT:    vmul.vx v16, v16, a5, v0.t
-; RV64-NEXT:    vsrl.vx v16, v16, a6, v0.t
+; RV64-NEXT:    vsrl.vx v16, v16, a0, v0.t
 ; RV64-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctpop_nxv16i64:
@@ -2169,7 +2169,7 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64(<vscale x 16 x i64> %va, <vscale x
 ; CHECK-ZVBB-NEXT:    srli a2, a1, 3
 ; CHECK-ZVBB-NEXT:    sub a3, a0, a1
 ; CHECK-ZVBB-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-ZVBB-NEXT:    sltu a2, a0, a3
+; CHECK-ZVBB-NEXT:    sltu a2, a1, a0
 ; CHECK-ZVBB-NEXT:    addi a2, a2, -1
 ; CHECK-ZVBB-NEXT:    and a2, a2, a3
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
@@ -2200,10 +2200,10 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64_unmasked(<vscale x 16 x i64> %va, 
 ; RV32-NEXT:    lui a3, 209715
 ; RV32-NEXT:    sub a4, a0, a1
 ; RV32-NEXT:    addi a2, a2, 1365
-; RV32-NEXT:    addi a3, a3, 819
 ; RV32-NEXT:    vsetvli a5, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.v.x v0, a2
-; RV32-NEXT:    sltu a2, a0, a4
+; RV32-NEXT:    sltu a2, a1, a0
+; RV32-NEXT:    addi a3, a3, 819
 ; RV32-NEXT:    addi a2, a2, -1
 ; RV32-NEXT:    and a2, a2, a4
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
@@ -2308,10 +2308,15 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64_unmasked(<vscale x 16 x i64> %va, 
 ; RV64-NEXT:    lui a4, 209715
 ; RV64-NEXT:    lui a5, 61681
 ; RV64-NEXT:    lui a6, 4112
+; RV64-NEXT:    sub a7, a0, a2
+; RV64-NEXT:    sltu a0, a2, a0
+; RV64-NEXT:    li a2, 56
 ; RV64-NEXT:    addi a3, a3, 1365
 ; RV64-NEXT:    addi a4, a4, 819
 ; RV64-NEXT:    addi a5, a5, -241
 ; RV64-NEXT:    addi a6, a6, 257
+; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    and a0, a0, a7
 ; RV64-NEXT:    slli a7, a3, 32
 ; RV64-NEXT:    add a3, a3, a7
 ; RV64-NEXT:    slli a7, a4, 32
@@ -2320,11 +2325,6 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64_unmasked(<vscale x 16 x i64> %va, 
 ; RV64-NEXT:    add a5, a5, a7
 ; RV64-NEXT:    slli a7, a6, 32
 ; RV64-NEXT:    add a6, a6, a7
-; RV64-NEXT:    li a7, 56
-; RV64-NEXT:    sub a2, a0, a2
-; RV64-NEXT:    sltu a0, a0, a2
-; RV64-NEXT:    addi a0, a0, -1
-; RV64-NEXT:    and a0, a0, a2
 ; RV64-NEXT:    vand.vx v24, v24, a3
 ; RV64-NEXT:    vsub.vv v8, v8, v24
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
@@ -2346,26 +2346,26 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64_unmasked(<vscale x 16 x i64> %va, 
 ; RV64-NEXT:    vadd.vv v8, v8, v24
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV64-NEXT:    vsrl.vi v24, v16, 4
+; RV64-NEXT:    vadd.vv v16, v16, v24
 ; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV64-NEXT:    vand.vx v8, v8, a5
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV64-NEXT:    vadd.vv v16, v16, v24
+; RV64-NEXT:    vand.vx v16, v16, a5
 ; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV64-NEXT:    vmul.vx v8, v8, a6
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV64-NEXT:    vand.vx v16, v16, a5
-; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; RV64-NEXT:    vsrl.vx v8, v8, a7
-; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV64-NEXT:    vmul.vx v16, v16, a6
-; RV64-NEXT:    vsrl.vx v16, v16, a7
+; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; RV64-NEXT:    vsrl.vx v8, v8, a2
+; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; RV64-NEXT:    vsrl.vx v16, v16, a2
 ; RV64-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctpop_nxv16i64_unmasked:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    csrr a1, vlenb
 ; CHECK-ZVBB-NEXT:    sub a2, a0, a1
-; CHECK-ZVBB-NEXT:    sltu a3, a0, a2
+; CHECK-ZVBB-NEXT:    sltu a3, a1, a0
 ; CHECK-ZVBB-NEXT:    addi a3, a3, -1
 ; CHECK-ZVBB-NEXT:    and a2, a3, a2
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a2, e64, m8, ta, ma

@@ -1195,7 +1195,7 @@ define <vscale x 16 x i64> @vp_ctlz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 
 ; CHECK-NEXT:    srli a3, a1, 3
 ; CHECK-NEXT:    sub a5, a0, a1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a3
-; CHECK-NEXT:    sltu a3, a0, a5
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a5, a3, a5
 ; CHECK-NEXT:    li a3, 1086
@@ -1228,7 +1228,7 @@ define <vscale x 16 x i64> @vp_ctlz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 
 ; CHECK-ZVBB-NEXT:    srli a2, a1, 3
 ; CHECK-ZVBB-NEXT:    sub a3, a0, a1
 ; CHECK-ZVBB-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-ZVBB-NEXT:    sltu a2, a0, a3
+; CHECK-ZVBB-NEXT:    sltu a2, a1, a0
 ; CHECK-ZVBB-NEXT:    addi a2, a2, -1
 ; CHECK-ZVBB-NEXT:    and a2, a2, a3
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
@@ -1252,7 +1252,7 @@ define <vscale x 16 x i64> @vp_ctlz_nxv16i64_unmasked(<vscale x 16 x i64> %va, i
 ; CHECK-NEXT:    fsrmi a4, 1
 ; CHECK-NEXT:    li a2, 52
 ; CHECK-NEXT:    sub a3, a0, a1
-; CHECK-NEXT:    sltu a5, a0, a3
+; CHECK-NEXT:    sltu a5, a1, a0
 ; CHECK-NEXT:    addi a5, a5, -1
 ; CHECK-NEXT:    and a5, a5, a3
 ; CHECK-NEXT:    li a3, 1086
@@ -1280,7 +1280,7 @@ define <vscale x 16 x i64> @vp_ctlz_nxv16i64_unmasked(<vscale x 16 x i64> %va, i
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    csrr a1, vlenb
 ; CHECK-ZVBB-NEXT:    sub a2, a0, a1
-; CHECK-ZVBB-NEXT:    sltu a3, a0, a2
+; CHECK-ZVBB-NEXT:    sltu a3, a1, a0
 ; CHECK-ZVBB-NEXT:    addi a3, a3, -1
 ; CHECK-ZVBB-NEXT:    and a2, a3, a2
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
@@ -2402,7 +2402,7 @@ define <vscale x 16 x i64> @vp_ctlz_zero_undef_nxv16i64(<vscale x 16 x i64> %va,
 ; CHECK-NEXT:    srli a2, a1, 3
 ; CHECK-NEXT:    sub a4, a0, a1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    sltu a2, a0, a4
+; CHECK-NEXT:    sltu a2, a1, a0
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    and a4, a2, a4
 ; CHECK-NEXT:    li a2, 52
@@ -2433,7 +2433,7 @@ define <vscale x 16 x i64> @vp_ctlz_zero_undef_nxv16i64(<vscale x 16 x i64> %va,
 ; CHECK-ZVBB-NEXT:    srli a2, a1, 3
 ; CHECK-ZVBB-NEXT:    sub a3, a0, a1
 ; CHECK-ZVBB-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-ZVBB-NEXT:    sltu a2, a0, a3
+; CHECK-ZVBB-NEXT:    sltu a2, a1, a0
 ; CHECK-ZVBB-NEXT:    addi a2, a2, -1
 ; CHECK-ZVBB-NEXT:    and a2, a2, a3
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
@@ -2456,7 +2456,7 @@ define <vscale x 16 x i64> @vp_ctlz_zero_undef_nxv16i64_unmasked(<vscale x 16 x 
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    fsrmi a3, 1
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a4, a0, a2
+; CHECK-NEXT:    sltu a4, a1, a0
 ; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    and a4, a4, a2
 ; CHECK-NEXT:    li a2, 52
@@ -2482,7 +2482,7 @@ define <vscale x 16 x i64> @vp_ctlz_zero_undef_nxv16i64_unmasked(<vscale x 16 x 
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    csrr a1, vlenb
 ; CHECK-ZVBB-NEXT:    sub a2, a0, a1
-; CHECK-ZVBB-NEXT:    sltu a3, a0, a2
+; CHECK-ZVBB-NEXT:    sltu a3, a1, a0
 ; CHECK-ZVBB-NEXT:    addi a3, a3, -1
 ; CHECK-ZVBB-NEXT:    and a2, a3, a2
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a2, e64, m8, ta, ma

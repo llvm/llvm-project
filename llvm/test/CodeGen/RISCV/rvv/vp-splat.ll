@@ -727,7 +727,7 @@ define <vscale x 32 x i32> @vp_splat_nxv32i32(i32 %val, <vscale x 32 x i1> %m, i
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    sub a3, a1, a2
-; CHECK-NEXT:    sltu a4, a1, a3
+; CHECK-NEXT:    sltu a4, a2, a1
 ; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    and a3, a4, a3
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, ma

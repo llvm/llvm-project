@@ -147,7 +147,7 @@ define <vscale x 15 x i16> @vtrunc_nxv15i16_nxv15i64(<vscale x 15 x i64> %a, <vs
 ; CHECK-NEXT:    srli a2, a1, 3
 ; CHECK-NEXT:    sub a3, a0, a1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    sltu a2, a0, a3
+; CHECK-NEXT:    sltu a2, a1, a0
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    and a2, a2, a3
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, ma
@@ -201,7 +201,7 @@ define <vscale x 32 x i7> @vtrunc_nxv32i7_nxv32i32(<vscale x 32 x i32> %a, <vsca
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
@@ -233,7 +233,7 @@ define <vscale x 32 x i8> @vtrunc_nxv32i8_nxv32i32(<vscale x 32 x i32> %a, <vsca
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
@@ -280,11 +280,11 @@ define <vscale x 32 x i32> @vtrunc_nxv32i64_nxv32i32(<vscale x 32 x i64> %a, <vs
 ; CHECK-NEXT:    slli a3, a1, 1
 ; CHECK-NEXT:    add a6, a0, a4
 ; CHECK-NEXT:    sub a0, a2, a3
-; CHECK-NEXT:    sltu a4, a2, a0
+; CHECK-NEXT:    sltu a4, a3, a2
 ; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    and a0, a4, a0
 ; CHECK-NEXT:    sub a4, a0, a1
-; CHECK-NEXT:    sltu a7, a0, a4
+; CHECK-NEXT:    sltu a7, a1, a0
 ; CHECK-NEXT:    addi a7, a7, -1
 ; CHECK-NEXT:    and a4, a7, a4
 ; CHECK-NEXT:    srli a7, a1, 2
@@ -307,7 +307,7 @@ define <vscale x 32 x i32> @vtrunc_nxv32i64_nxv32i32(<vscale x 32 x i64> %a, <vs
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB17_4:
 ; CHECK-NEXT:    sub a0, a2, a1
-; CHECK-NEXT:    sltu a3, a2, a0
+; CHECK-NEXT:    sltu a3, a1, a2
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a0, a3, a0
 ; CHECK-NEXT:    vmv1r.v v0, v6

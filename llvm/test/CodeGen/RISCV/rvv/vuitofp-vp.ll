@@ -478,7 +478,7 @@ define <vscale x 32 x half> @vuitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, 
 ; ZVFH-NEXT:    slli a1, a1, 1
 ; ZVFH-NEXT:    vslidedown.vx v0, v0, a2
 ; ZVFH-NEXT:    sub a2, a0, a1
-; ZVFH-NEXT:    sltu a3, a0, a2
+; ZVFH-NEXT:    sltu a3, a1, a0
 ; ZVFH-NEXT:    addi a3, a3, -1
 ; ZVFH-NEXT:    and a2, a3, a2
 ; ZVFH-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
@@ -502,7 +502,7 @@ define <vscale x 32 x half> @vuitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, 
 ; ZVFHMIN-NEXT:    slli a1, a1, 1
 ; ZVFHMIN-NEXT:    vslidedown.vx v0, v0, a2
 ; ZVFHMIN-NEXT:    sub a2, a0, a1
-; ZVFHMIN-NEXT:    sltu a3, a0, a2
+; ZVFHMIN-NEXT:    sltu a3, a1, a0
 ; ZVFHMIN-NEXT:    addi a3, a3, -1
 ; ZVFHMIN-NEXT:    and a2, a3, a2
 ; ZVFHMIN-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
@@ -534,7 +534,7 @@ define <vscale x 32 x float> @vuitofp_nxv32f32_nxv32i32(<vscale x 32 x i32> %va,
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
@@ -557,7 +557,7 @@ define <vscale x 32 x float> @vuitofp_nxv32f32_nxv32i32_unmasked(<vscale x 32 x 
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    sltu a3, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma

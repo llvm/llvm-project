@@ -3,12 +3,13 @@
 define dso_local i64 @func(i64 noundef %x, i64 noundef %y) local_unnamed_addr {
 ; CHECK-LABEL: @func(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 [[X:%.*]], i64 [[Y:%.*]])
+; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i64, i1 } [[TMP2]], 0
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i64 [ 291, [[IF_THEN]] ], [ [[TMP1]], [[IF_END]] ]

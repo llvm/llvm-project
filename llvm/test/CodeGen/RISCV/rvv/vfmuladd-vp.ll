@@ -1096,14 +1096,14 @@ define <vscale x 16 x double> @vfma_vv_nxv16f64(<vscale x 16 x double> %va, <vsc
 ; CHECK-NEXT:    slli a5, a1, 3
 ; CHECK-NEXT:    sub a6, a4, a1
 ; CHECK-NEXT:    add a7, a2, a5
-; CHECK-NEXT:    add a5, a0, a5
 ; CHECK-NEXT:    vl8re64.v v8, (a7)
 ; CHECK-NEXT:    csrr a7, vlenb
 ; CHECK-NEXT:    slli a7, a7, 3
 ; CHECK-NEXT:    add a7, sp, a7
 ; CHECK-NEXT:    addi a7, a7, 16
 ; CHECK-NEXT:    vs8r.v v8, (a7) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    sltu a7, a4, a6
+; CHECK-NEXT:    sltu a7, a1, a4
+; CHECK-NEXT:    add a5, a0, a5
 ; CHECK-NEXT:    addi a7, a7, -1
 ; CHECK-NEXT:    vl8re64.v v8, (a5)
 ; CHECK-NEXT:    csrr a5, vlenb
@@ -1217,7 +1217,7 @@ define <vscale x 16 x double> @vfma_vv_nxv16f64_unmasked(<vscale x 16 x double> 
 ; CHECK-NEXT:    sub a5, a4, a1
 ; CHECK-NEXT:    add a3, a0, a3
 ; CHECK-NEXT:    vl8re64.v v24, (a3)
-; CHECK-NEXT:    sltu a3, a4, a5
+; CHECK-NEXT:    sltu a3, a1, a4
 ; CHECK-NEXT:    vl8re64.v v8, (a2)
 ; CHECK-NEXT:    addi a2, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
