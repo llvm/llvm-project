@@ -39,7 +39,7 @@ private:
 
   const bool StrictMode;
   const bool IgnoreConditionVariableStatements;
-  const llvm::StringRef SafeDestructorTypes;
+  const llvm::StringRef SafeTypes;
   const GlobList SafeDestructorTypesGlobList;
 };
 

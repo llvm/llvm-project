@@ -79,7 +79,7 @@ AST_MATCHER_P(VarDecl, hasSameNameAsBoundNode,
 }
 
 // FIXME: support other std:: types, like std::vector
-const auto DefaultSafeDestructorTypes =
+const auto DefaultSafeTypes =
     "-*,::std::*string,::std::*string_view,::boost::*string,::boost::*string_"
     "view,::boost::*string_ref";
 } // namespace
@@ -89,14 +89,14 @@ UseInitStatementCheck::UseInitStatementCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       StrictMode(Options.get("StrictMode", true)),
       IgnoreConditionVariableStatements(Options.get("IgnoreConditionVariableStatements", false)),
-      SafeDestructorTypes(
-          Options.get("SafeDestructorTypes", DefaultSafeDestructorTypes)),
-      SafeDestructorTypesGlobList(SafeDestructorTypes) {}
+      SafeTypes(
+          Options.get("SafeTypes", DefaultSafeTypes)),
+      SafeDestructorTypesGlobList(SafeTypes) {}
 
 void UseInitStatementCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
   Options.store(Opts, "IgnoreConditionVariableStatements", IgnoreConditionVariableStatements);
-  Options.store(Opts, "SafeDestructorTypes", SafeDestructorTypes);
+  Options.store(Opts, "SafeTypes", SafeTypes);
 }
 
 void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
@@ -251,7 +251,7 @@ static std::string extractDeclStmtText(const DeclStmt *PrevDecl,
 
 bool UseInitStatementCheck::isSingleVarWithSafeDestructor(
     const MatchFinder::MatchResult &Result) const {
-  if (SafeDestructorTypes.empty())
+  if (SafeTypes.empty())
     return false;
 
   const auto *SingleVar = Result.Nodes.getNodeAs<VarDecl>("singleVar");

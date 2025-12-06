@@ -70,17 +70,17 @@ Options
           // ...
       }
 
-.. option:: SafeDestructorTypes
+.. option:: SafeTypes
 
-    // TODO: it  must be just `safe` types, not only destructor in Requirements
+    A comma-separated list of type name patterns (glob patterns) for types that
+    are safe to move into init statements. Each type must meet:
 
-    A comma-separated list of type name patterns (glob patterns) that are
-    considered safe to move into init statements even if they have destructors.
-    By default, the check never transforms variables with destructors when they
-    are not the last statement in a compound statement, as moving them could
-    change the destruction order. However, some types like  ``std::string`` are
-    safe to move because their destructors are well-behaved and don't have side
-    effects that depend on destruction order.
+    * No side effects in destructor: The behaviour must not depend on
+      destruction order.
+
+    * No member function stores ``this``: No member function should store a
+      pointer or reference to the object in a location that could outlive the
+      object's lifetime.
 
     The default value is ``-*,::std::*string,::std::*string_view,
     ::boost::*string,::boost::*string_view,::boost::*string_ref``.
@@ -93,17 +93,17 @@ Limitations
 
 * The check may provide false-negative if you have template code;
 
-* The ``SafeDestructorTypes`` option does not include ``std::vector`` and
-  other standard containers by default, because while the container itself
-  has a safe destructor, it may contain elements with unsafe destructors.
+* The ``SafeTypes`` option does not include ``std::vector`` and other standard
+  containers by default, because while the container itself has a safe
+  destructor, it may contain elements with unsafe destructors.
 
   For example, ``std::vector<std::unique_lock<std::mutex>>`` has an unsafe
   destructor because the ``std::unique_lock`` elements perform mutex
   unlocking during destruction.
 
   For this reason, it is not recommended to manually add ``std::vector`` or
-  other container types to the ``SafeDestructorTypes`` list, as the safety
-  depends on the contained element types rather than the container itself.
+  other container types to the ``SafeTypes`` list, as the safety depends on the
+  contained element types rather than the container itself.
 
 Requirements
 ------------
