@@ -252,7 +252,7 @@ static Value *concatenate(IRBuilder<> &Builder, ArrayRef<Value *> Fragments,
       Res = Builder.CreateInsertElement(Res, Fragment, I * VS.NumPacked,
                                         Name + ".upto" + Twine(I));
     } else {
-      if (NumPacked <= VS.NumPacked) {
+      if (NumPacked < VS.NumPacked) {
         // If last pack of remained bits not match current ExtendMask size.
         ExtendMask.truncate(NumPacked);
         ExtendMask.resize(NumElements, -1);
