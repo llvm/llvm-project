@@ -5782,8 +5782,8 @@ struct FormatStyle {
                R.ObjCBreakBeforeNestedBlockParam &&
            ObjCPropertyAttributeOrder == R.ObjCPropertyAttributeOrder &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
-           ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
            ObjCSpaceBeforeMethodDeclColon == R.ObjCSpaceBeforeMethodDeclColon &&
+           ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
            OneLineFormatOffRegex == R.OneLineFormatOffRegex &&
            PackConstructorInitializers == R.PackConstructorInitializers &&
            PenaltyBreakAssignment == R.PenaltyBreakAssignment &&
