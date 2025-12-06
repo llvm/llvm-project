@@ -14,35 +14,29 @@
 
 #include "test_macros.h"
 
+#if TEST_STD_VER >= 14
 template <typename T>
 struct TransparentKey {
-  T t;
-
-  constexpr explicit operator T() const { return t; }
+  explicit operator T() const;
 };
 
 struct TransparentCompare {
   using is_transparent = void; // This makes the comparator transparent
 
   template <typename T>
-  constexpr bool operator()(const T& t, const TransparentKey<T>& transparent) const {
-    return t < transparent.t;
-  }
+  bool operator()(const T&, const TransparentKey<T>&) const;
 
   template <typename T>
-  constexpr bool operator()(const TransparentKey<T>& transparent, const T& t) const {
-    return transparent.t < t;
-  }
+  bool operator()(const TransparentKey<T>&, const T&) const;
 
   template <typename T>
-  constexpr bool operator()(const T& t1, const T& t2) const {
-    return t1 < t2;
-  }
+  bool operator()(const T&, const T&) const;
 };
+#endif
 
 void test() {
-  std::map<int, int, TransparentCompare> m;
-  const std::map<int, int, TransparentCompare> cm{};
+  std::map<int, int> m;
+  const std::map<int, int> cm;
 
   m.begin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cm.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -92,40 +86,43 @@ void test() {
   m.find(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cm.find(key); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #if TEST_STD_VER >= 14
+  std::map<int, int, TransparentCompare> tm;
+  const std::map<int, int, TransparentCompare> ctm{};
+
   TransparentKey<int> tkey;
 
-  m.find(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  cm.find(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  tm.find(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  ctm.find(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 
   m.count(key); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #if TEST_STD_VER >= 14
-  m.count(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  tm.count(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 
 #if TEST_STD_VER >= 20
-  m.contains(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  m.contains(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  m.contains(key);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  tm.contains(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 
   m.lower_bound(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cm.lower_bound(key); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #if TEST_STD_VER >= 14
-  m.lower_bound(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  cm.lower_bound(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  tm.lower_bound(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  ctm.lower_bound(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 
   m.upper_bound(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cm.upper_bound(key); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #if TEST_STD_VER >= 14
-  m.upper_bound(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  cm.upper_bound(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  tm.upper_bound(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  ctm.upper_bound(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 
   m.equal_range(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cm.equal_range(key); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #if TEST_STD_VER >= 14
-  m.equal_range(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  cm.equal_range(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  tm.equal_range(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  ctm.equal_range(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 }
