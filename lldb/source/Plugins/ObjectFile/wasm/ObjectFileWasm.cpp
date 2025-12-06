@@ -307,8 +307,7 @@ struct WasmFunction {
   uint32_t size = 0;
 };
 
-static llvm::Expected<uint32_t>
-ParseImports(DataExtractor &import_data) {
+static llvm::Expected<uint32_t> ParseImports(DataExtractor &import_data) {
   // Currently this function just returns the number of imported functions.
   // If we want to do anything with global names in the future, we'll also
   // need to know those.
@@ -447,7 +446,8 @@ static llvm::Expected<std::vector<WasmSegment>> ParseData(DataExtractor &data) {
 static llvm::Expected<std::vector<Symbol>>
 ParseNames(SectionSP code_section_sp, DataExtractor &name_data,
            const std::vector<WasmFunction> &functions,
-           std::vector<WasmSegment> &segments, uint32_t num_imported_functions) {
+           std::vector<WasmSegment> &segments,
+           uint32_t num_imported_functions) {
 
   llvm::DataExtractor data = name_data.GetAsLLVM();
   llvm::DataExtractor::Cursor c(0);
@@ -475,26 +475,24 @@ ParseNames(SectionSP code_section_sp, DataExtractor &name_data,
           continue;
 
         if (*idx < num_imported_functions) {
-          symbols.emplace_back(
-              symbols.size(), *name, lldb::eSymbolTypeCode,
-              /*external=*/true, /*is_debug=*/false,
-              /*is_trampoline=*/false,
-              /*is_artificial=*/false,
-              /*section_sp=*/lldb::SectionSP(),
-              /*value=*/0, /*size=*/0,
-              /*size_is_valid=*/false,
-              /*contains_linker_annotations=*/false,
-              /*flags=*/0);
+          symbols.emplace_back(symbols.size(), *name, lldb::eSymbolTypeCode,
+                               /*external=*/true, /*is_debug=*/false,
+                               /*is_trampoline=*/false,
+                               /*is_artificial=*/false,
+                               /*section_sp=*/lldb::SectionSP(),
+                               /*value=*/0, /*size=*/0,
+                               /*size_is_valid=*/false,
+                               /*contains_linker_annotations=*/false,
+                               /*flags=*/0);
         } else {
           const WasmFunction &func = functions[*idx - num_imported_functions];
-          symbols.emplace_back(
-              symbols.size(), *name, lldb::eSymbolTypeCode,
-              /*external=*/false, /*is_debug=*/false,
-              /*is_trampoline=*/false, /*is_artificial=*/false,
-              code_section_sp, func.section_offset, func.size,
-              /*size_is_valid=*/true,
-              /*contains_linker_annotations=*/false,
-              /*flags=*/0);
+          symbols.emplace_back(symbols.size(), *name, lldb::eSymbolTypeCode,
+                               /*external=*/false, /*is_debug=*/false,
+                               /*is_trampoline=*/false, /*is_artificial=*/false,
+                               code_section_sp, func.section_offset, func.size,
+                               /*size_is_valid=*/true,
+                               /*contains_linker_annotations=*/false,
+                               /*flags=*/0);
         }
       }
     } break;
