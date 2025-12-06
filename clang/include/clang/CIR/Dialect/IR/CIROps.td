@@ -5190,7 +5190,7 @@ def CIR_TryOp : CIR_Op<"try",[
 def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"cir::TryOp">]> {
   let summary = "Represents the catch clause formal parameter";
   let description = [{
-    The `cir.catch_param` used to retrieves the exception object inside
+    The `cir.catch_param` is used to retrieves the exception object inside
     the handler regions of `cir.try`.
 
     This operation is used only before the CFG flatterning pass.

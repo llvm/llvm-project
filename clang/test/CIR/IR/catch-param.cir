@@ -10,7 +10,7 @@ cir.func @catch_param_inside_catch() {
     cir.try {
       cir.yield
     } catch all {
-      cir.catch_param : !cir.ptr<!void>
+      %exception = cir.catch_param : !cir.ptr<!void>
       cir.yield
     }
   }
@@ -22,7 +22,7 @@ cir.func @catch_param_inside_catch() {
 // CHECK:     cir.try {
 // CHECK:       cir.yield
 // CHECK:     } catch all {
-// CHECK:       cir.catch_param : !cir.ptr<!void> 
+// CHECK:       %[[EXCEPTION:.*]] = cir.catch_param : !cir.ptr<!void> 
 // CHECK:       cir.yield
 // CHECK:     }
 // CHECK:   }
