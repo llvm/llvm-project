@@ -4536,9 +4536,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_trivially_relocate) {
       if (getContext().hasPFPFields(
               E->getArg(0)->getType()->getPointeeType())) {
+        // Call emitPFPTrivialRelocation for every object in the array we are
+        // relocating.
         BasicBlock *Entry = Builder.GetInsertBlock();
-        BasicBlock *Loop = createBasicBlock("loop");
-        BasicBlock *LoopEnd = createBasicBlock("loop.end");
+        BasicBlock *Loop = createBasicBlock("pfp.relocate.loop");
+        BasicBlock *LoopEnd = createBasicBlock("pfp.relocate.loop.end");
         Builder.CreateCondBr(
             Builder.CreateICmpEQ(SizeVal,
                                  ConstantInt::get(SizeVal->getType(), 0)),

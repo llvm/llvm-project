@@ -119,7 +119,6 @@ start:
   %0 = tail call i16 @llvm.fptosi.sat.i16.bf16(bfloat %a)
   ret i16 %0
 }
-declare i16 @llvm.fptosi.sat.i16.bf16(bfloat)
 
 define i16 @fcvt_ui_bf16(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_ui_bf16:
@@ -209,7 +208,6 @@ start:
   %0 = tail call i16 @llvm.fptoui.sat.i16.bf16(bfloat %a)
   ret i16 %0
 }
-declare i16 @llvm.fptoui.sat.i16.bf16(bfloat)
 
 define i32 @fcvt_w_bf16(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_w_bf16:
@@ -291,7 +289,6 @@ start:
   %0 = tail call i32 @llvm.fptosi.sat.i32.bf16(bfloat %a)
   ret i32 %0
 }
-declare i32 @llvm.fptosi.sat.i32.bf16(bfloat)
 
 define i32 @fcvt_wu_bf16(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_wu_bf16:
@@ -419,7 +416,6 @@ start:
   %0 = tail call i32 @llvm.fptoui.sat.i32.bf16(bfloat %a)
   ret i32 %0
 }
-declare i32 @llvm.fptoui.sat.i32.bf16(bfloat)
 
 define i64 @fcvt_l_bf16(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_l_bf16:
@@ -609,7 +605,6 @@ start:
   %0 = tail call i64 @llvm.fptosi.sat.i64.bf16(bfloat %a)
   ret i64 %0
 }
-declare i64 @llvm.fptosi.sat.i64.bf16(bfloat)
 
 define i64 @fcvt_lu_bf16(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_lu_bf16:
@@ -759,7 +754,6 @@ start:
   %0 = tail call i64 @llvm.fptoui.sat.i64.bf16(bfloat %a)
   ret i64 %0
 }
-declare i64 @llvm.fptoui.sat.i64.bf16(bfloat)
 
 define bfloat @fcvt_bf16_si(i16 %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_bf16_si:
@@ -1685,7 +1679,6 @@ start:
   %0 = tail call i8 @llvm.fptosi.sat.i8.bf16(bfloat %a)
   ret i8 %0
 }
-declare i8 @llvm.fptosi.sat.i8.bf16(bfloat)
 
 define zeroext i8 @fcvt_wu_s_i8(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_wu_s_i8:
@@ -1771,7 +1764,6 @@ start:
   %0 = tail call i8 @llvm.fptoui.sat.i8.bf16(bfloat %a)
   ret i8 %0
 }
-declare i8 @llvm.fptoui.sat.i8.bf16(bfloat)
 
 define zeroext i32 @fcvt_wu_bf16_sat_zext(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_wu_bf16_sat_zext:

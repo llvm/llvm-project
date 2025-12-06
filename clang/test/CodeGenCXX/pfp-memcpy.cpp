@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-linux -fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-linux -fexperimental-pointer-field-protection-abi -fexperimental-pointer-field-protection-tagged -emit-llvm -o - %s | FileCheck %s
 
 struct ClassWithTrivialCopy {
   ClassWithTrivialCopy();

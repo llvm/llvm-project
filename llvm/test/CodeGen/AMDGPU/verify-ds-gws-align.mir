@@ -11,10 +11,23 @@
 # GFX90A-ERR: DS_GWS_BARRIER killed %2.sub0:vreg_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
 # GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
 # GFX90A-ERR: DS_GWS_INIT killed %3:vgpr_32, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
-# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
+# GFX90A-ERR: *** Bad machine code: Illegal physical register for instruction ***
 # GFX90A-ERR: DS_GWS_INIT $vgpr1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
-# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
+# GFX90A-ERR: *** Bad machine code: Illegal physical register for instruction ***
 # GFX90A-ERR: DS_GWS_INIT $agpr1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers ***
+# GFX90A-ERR: DS_GWS_INIT %4:vreg_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+# GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
+# GFX90A-ERR: DS_GWS_INIT %4:vreg_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers ***
+# GFX90A-ERR: DS_GWS_INIT %5:areg_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+# GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
+# GFX90A-ERR: DS_GWS_INIT %5:areg_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers ***
+# GFX90A-ERR: DS_GWS_INIT %6:av_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+# GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
+# GFX90A-ERR: DS_GWS_INIT %6:av_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+
 ---
 name:            gws_odd_vgpr
 body:             |
@@ -33,6 +46,22 @@ body:             |
     DS_GWS_INIT $vgpr1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
     $agpr1 = IMPLICIT_DEF
     DS_GWS_INIT $agpr1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+
+    $vgpr3_vgpr4 = IMPLICIT_DEF
+    DS_GWS_INIT $vgpr1_vgpr2, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+
+    $agpr3_agpr4 = IMPLICIT_DEF
+    DS_GWS_INIT $agpr3_agpr4, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+
+    %4:vreg_64 = IMPLICIT_DEF
+    DS_GWS_INIT %4, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+
+    %5:areg_64 = IMPLICIT_DEF
+    DS_GWS_INIT %5, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+
+    %6:av_64 = IMPLICIT_DEF
+    DS_GWS_INIT %6, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+
     S_ENDPGM 0
 
 ...
