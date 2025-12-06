@@ -13,6 +13,7 @@ Checks: >
   cppcoreguidelines-missing-std-forward,
   cppcoreguidelines-rvalue-reference-param-not-moved,
   cppcoreguidelines-virtual-class-destructor,
+  google-readability-casting,
   misc-const-correctness,
   modernize-*,
   -modernize-avoid-c-arrays,
