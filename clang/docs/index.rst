@@ -123,7 +123,7 @@ Design Documents
    ControlFlowIntegrityDesign
    HardwareAssistedAddressSanitizerDesign.rst
    ConstantInterpreter
-
+   ClangIRCodeDuplication
 
 Indices and tables
 ==================

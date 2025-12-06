@@ -5333,20 +5333,11 @@ void AArch64TTIImpl::getUnrollingPreferences(
   }
 
   // Apply subtarget-specific unrolling preferences.
-  switch (ST->getProcFamily()) {
-  case AArch64Subtarget::AppleA14:
-  case AArch64Subtarget::AppleA15:
-  case AArch64Subtarget::AppleA16:
-  case AArch64Subtarget::AppleM4:
+  if (ST->isAppleMLike())
     getAppleRuntimeUnrollPreferences(L, SE, UP, *this);
-    break;
-  case AArch64Subtarget::Falkor:
-    if (EnableFalkorHWPFUnrollFix)
-      getFalkorUnrollingPreferences(L, SE, UP);
-    break;
-  default:
-    break;
-  }
+  else if (ST->getProcFamily() == AArch64Subtarget::Falkor &&
+           EnableFalkorHWPFUnrollFix)
+    getFalkorUnrollingPreferences(L, SE, UP);
 
   // If this is a small, multi-exit loop similar to something like std::find,
   // then there is typically a performance improvement achieved by unrolling.
