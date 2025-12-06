@@ -114,6 +114,11 @@ private:
 };
 }
 
+// The function returns a struct with default initializers.
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
+#endif
 /// The public entry point for a pass plugin.
 ///
 /// When a plugin is loaded by the driver, it will call this entry point to
@@ -130,5 +135,8 @@ private:
 /// ```
 extern "C" ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
 llvmGetPassPluginInfo();
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 #endif /* LLVM_PASSES_PASSPLUGIN_H */
