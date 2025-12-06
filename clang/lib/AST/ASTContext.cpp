@@ -12040,7 +12040,7 @@ bool ASTContext::mergeExtParameterInfo(
 void ASTContext::ResetObjCLayout(const ObjCInterfaceDecl *D) {
   if (auto It = ObjCLayouts.find(D); It != ObjCLayouts.end()) {
     It->second = nullptr;
-    for (auto *SubClass : ObjCSubClasses[D])
+    for (auto *SubClass : ObjCSubClasses.lookup(D))
       ResetObjCLayout(SubClass);
   }
 }
@@ -15149,10 +15149,9 @@ void ASTContext::findPFPFields(QualType Ty, CharUnits Offset,
   if (auto *AT = getAsConstantArrayType(Ty)) {
     if (auto *ElemDecl = AT->getElementType()->getAsCXXRecordDecl()) {
       const ASTRecordLayout &ElemRL = getASTRecordLayout(ElemDecl);
-      for (unsigned i = 0; i != AT->getSize(); ++i) {
+      for (unsigned i = 0; i != AT->getSize(); ++i)
         findPFPFields(AT->getElementType(), Offset + i * ElemRL.getSize(),
                       Fields, true);
-      }
     }
   }
   auto *Decl = Ty->getAsCXXRecordDecl();
@@ -15167,20 +15166,25 @@ void ASTContext::findPFPFields(QualType Ty, CharUnits Offset,
         Offset + toCharUnitsFromBits(RL.getFieldOffset(field->getFieldIndex()));
     if (isPFPField(field))
       Fields.push_back({fieldOffset, field, IsWithinUnion});
-    findPFPFields(field->getType(), fieldOffset, Fields, true, IsWithinUnion);
+    findPFPFields(field->getType(), fieldOffset, Fields, /*IncludeVBases=*/true,
+                  IsWithinUnion);
   }
+  // Pass false for IncludeVBases below because vbases are only included in
+  // layout for top-level types, i.e. not bases or vbases.
   for (auto &Base : Decl->bases()) {
     if (Base.isVirtual())
       continue;
     CharUnits BaseOffset =
         Offset + RL.getBaseClassOffset(Base.getType()->getAsCXXRecordDecl());
-    findPFPFields(Base.getType(), BaseOffset, Fields, false, IsWithinUnion);
+    findPFPFields(Base.getType(), BaseOffset, Fields, /*IncludeVBases=*/false,
+                  IsWithinUnion);
   }
   if (IncludeVBases) {
     for (auto &Base : Decl->vbases()) {
       CharUnits BaseOffset =
           Offset + RL.getVBaseClassOffset(Base.getType()->getAsCXXRecordDecl());
-      findPFPFields(Base.getType(), BaseOffset, Fields, false, IsWithinUnion);
+      findPFPFields(Base.getType(), BaseOffset, Fields, /*IncludeVBases=*/false,
+                    IsWithinUnion);
     }
   }
 }
@@ -15192,32 +15196,26 @@ bool ASTContext::hasPFPFields(QualType Ty) const {
 }
 
 bool ASTContext::isPFPField(const FieldDecl *FD) const {
-  auto *RD = dyn_cast<CXXRecordDecl>(FD->getParent());
-  if (!RD || !RD->isPFPType())
-    return false;
-  return FD->getType()->isPointerType() &&
-         !FD->hasAttr<NoFieldProtectionAttr>();
+  if (auto *RD = dyn_cast<CXXRecordDecl>(FD->getParent()))
+    return RD->isPFPType() && FD->getType()->isPointerType() &&
+           !FD->hasAttr<NoFieldProtectionAttr>();
+  return false;
 }
 
 void ASTContext::recordMemberDataPointerEvaluation(const ValueDecl *VD) {
-  if (!getLangOpts().PointerFieldProtection)
-    return;
   auto *FD = dyn_cast<FieldDecl>(VD);
   if (!FD)
     FD = cast<FieldDecl>(cast<IndirectFieldDecl>(VD)->chain().back());
-  if (!isPFPField(FD))
-    return;
-  PFPFieldsWithEvaluatedOffset.insert(FD);
+  if (isPFPField(FD))
+    PFPFieldsWithEvaluatedOffset.insert(FD);
 }
 
 void ASTContext::recordOffsetOfEvaluation(const OffsetOfExpr *E) {
-  if (!getLangOpts().PointerFieldProtection || E->getNumComponents() == 0)
+  if (E->getNumComponents() == 0)
     return;
   OffsetOfNode Comp = E->getComponent(E->getNumComponents() - 1);
   if (Comp.getKind() != OffsetOfNode::Field)
     return;
-  FieldDecl *FD = Comp.getField();
-  if (!isPFPField(FD))
-    return;
-  PFPFieldsWithEvaluatedOffset.insert(FD);
+  if (FieldDecl *FD = Comp.getField(); isPFPField(FD))
+    PFPFieldsWithEvaluatedOffset.insert(FD);
 }

@@ -350,7 +350,7 @@ DEFAULT_PARAMETERS = [
         default="none",
         help="Whether to build with pointer field protection.",
         actions=lambda pfp: [] if pfp == "none" else [
-            AddCompileFlag("-fexperimental-pointer-field-protection"),
+            AddCompileFlag("-fexperimental-pointer-field-protection-abi"),
             AddCompileFlag("-fexperimental-pointer-field-protection-tagged") if pfp == "tagged" else None,
             # Requires support for new relocations which are only implemented in lld for now.
             AddLinkFlag("-fuse-ld=lld"),

@@ -917,8 +917,8 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
       } else if (Emitter.isAbstract()) {
         return false;
       } else {
-        Disc = llvm::ConstantInt::get(
-            CGM.Int64Ty, (-(Layout.getFieldOffset(FieldNo) / 8)) & 0xffff);
+        Disc = llvm::ConstantInt::get(CGM.Int64Ty,
+                                      -(Layout.getFieldOffset(FieldNo) / 8));
         AddrDisc = Emitter.getCurrentAddrPrivate();
       }
       EltInit = llvm::ConstantPtrAuth::get(
@@ -1357,6 +1357,7 @@ public:
     case CK_ZeroToOCLOpaqueType:
     case CK_MatrixCast:
     case CK_HLSLVectorTruncation:
+    case CK_HLSLMatrixTruncation:
     case CK_HLSLArrayRValue:
     case CK_HLSLElementwiseCast:
     case CK_HLSLAggregateSplatCast:

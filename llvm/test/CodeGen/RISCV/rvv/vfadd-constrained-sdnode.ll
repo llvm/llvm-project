@@ -267,7 +267,6 @@ define <vscale x 32 x bfloat> @vfadd_vf_nxv32bf16(<vscale x 32 x bfloat> %va, bf
   ret <vscale x 32 x bfloat> %vc
 }
 
-declare <vscale x 1 x half> @llvm.experimental.constrained.fadd.nxv1f16(<vscale x 1 x half>, <vscale x 1 x half>, metadata, metadata)
 define <vscale x 1 x half> @vfadd_vv_nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x half> %vb) strictfp {
 ; ZVFH-LABEL: vfadd_vv_nxv1f16:
 ; ZVFH:       # %bb.0: # %entry
@@ -315,7 +314,6 @@ define <vscale x 1 x half> @vfadd_vf_nxv1f16(<vscale x 1 x half> %va, half %b) s
   ret <vscale x 1 x half> %vc
 }
 
-declare <vscale x 2 x half> @llvm.experimental.constrained.fadd.nxv2f16(<vscale x 2 x half>, <vscale x 2 x half>, metadata, metadata)
 define <vscale x 2 x half> @vfadd_vv_nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x half> %vb) strictfp {
 ; ZVFH-LABEL: vfadd_vv_nxv2f16:
 ; ZVFH:       # %bb.0: # %entry
@@ -363,7 +361,6 @@ define <vscale x 2 x half> @vfadd_vf_nxv2f16(<vscale x 2 x half> %va, half %b) s
   ret <vscale x 2 x half> %vc
 }
 
-declare <vscale x 4 x half> @llvm.experimental.constrained.fadd.nxv4f16(<vscale x 4 x half>, <vscale x 4 x half>, metadata, metadata)
 define <vscale x 4 x half> @vfadd_vv_nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x half> %vb) strictfp {
 ; ZVFH-LABEL: vfadd_vv_nxv4f16:
 ; ZVFH:       # %bb.0: # %entry
@@ -411,7 +408,6 @@ define <vscale x 4 x half> @vfadd_vf_nxv4f16(<vscale x 4 x half> %va, half %b) s
   ret <vscale x 4 x half> %vc
 }
 
-declare <vscale x 8 x half> @llvm.experimental.constrained.fadd.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, metadata, metadata)
 define <vscale x 8 x half> @vfadd_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) strictfp {
 ; ZVFH-LABEL: vfadd_vv_nxv8f16:
 ; ZVFH:       # %bb.0: # %entry
@@ -459,7 +455,6 @@ define <vscale x 8 x half> @vfadd_vf_nxv8f16(<vscale x 8 x half> %va, half %b) s
   ret <vscale x 8 x half> %vc
 }
 
-declare <vscale x 16 x half> @llvm.experimental.constrained.fadd.nxv16f16(<vscale x 16 x half>, <vscale x 16 x half>, metadata, metadata)
 define <vscale x 16 x half> @vfadd_vv_nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x half> %vb) strictfp {
 ; ZVFH-LABEL: vfadd_vv_nxv16f16:
 ; ZVFH:       # %bb.0: # %entry
@@ -507,7 +502,6 @@ define <vscale x 16 x half> @vfadd_vf_nxv16f16(<vscale x 16 x half> %va, half %b
   ret <vscale x 16 x half> %vc
 }
 
-declare <vscale x 32 x half> @llvm.experimental.constrained.fadd.nxv32f16(<vscale x 32 x half>, <vscale x 32 x half>, metadata, metadata)
 define <vscale x 32 x half> @vfadd_vv_nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %vb) strictfp {
 ; ZVFH-LABEL: vfadd_vv_nxv32f16:
 ; ZVFH:       # %bb.0: # %entry
@@ -600,7 +594,6 @@ define <vscale x 32 x half> @vfadd_vf_nxv32f16(<vscale x 32 x half> %va, half %b
   ret <vscale x 32 x half> %vc
 }
 
-declare <vscale x 1 x float> @llvm.experimental.constrained.fadd.nxv1f32(<vscale x 1 x float>, <vscale x 1 x float>, metadata, metadata)
 define <vscale x 1 x float> @vfadd_vv_nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x float> %vb) strictfp {
 ; CHECK-LABEL: vfadd_vv_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
@@ -624,7 +617,6 @@ define <vscale x 1 x float> @vfadd_vf_nxv1f32(<vscale x 1 x float> %va, float %b
   ret <vscale x 1 x float> %vc
 }
 
-declare <vscale x 2 x float> @llvm.experimental.constrained.fadd.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, metadata, metadata)
 define <vscale x 2 x float> @vfadd_vv_nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x float> %vb) strictfp {
 ; CHECK-LABEL: vfadd_vv_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
@@ -648,7 +640,6 @@ define <vscale x 2 x float> @vfadd_vf_nxv2f32(<vscale x 2 x float> %va, float %b
   ret <vscale x 2 x float> %vc
 }
 
-declare <vscale x 4 x float> @llvm.experimental.constrained.fadd.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, metadata, metadata)
 define <vscale x 4 x float> @vfadd_vv_nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x float> %vb) strictfp {
 ; CHECK-LABEL: vfadd_vv_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
@@ -672,7 +663,6 @@ define <vscale x 4 x float> @vfadd_vf_nxv4f32(<vscale x 4 x float> %va, float %b
   ret <vscale x 4 x float> %vc
 }
 
-declare <vscale x 8 x float> @llvm.experimental.constrained.fadd.nxv8f32(<vscale x 8 x float>, <vscale x 8 x float>, metadata, metadata)
 define <vscale x 8 x float> @vfadd_vv_nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) strictfp {
 ; CHECK-LABEL: vfadd_vv_nxv8f32:
 ; CHECK:       # %bb.0: # %entry
@@ -696,7 +686,6 @@ define <vscale x 8 x float> @vfadd_vf_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x float> %vc
 }
 
-declare <vscale x 16 x float> @llvm.experimental.constrained.fadd.nxv16f32(<vscale x 16 x float>, <vscale x 16 x float>, metadata, metadata)
 define <vscale x 16 x float> @vfadd_vv_nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %vb) strictfp {
 ; CHECK-LABEL: vfadd_vv_nxv16f32:
 ; CHECK:       # %bb.0: # %entry
@@ -720,7 +709,6 @@ define <vscale x 16 x float> @vfadd_vf_nxv16f32(<vscale x 16 x float> %va, float
   ret <vscale x 16 x float> %vc
 }
 
-declare <vscale x 1 x double> @llvm.experimental.constrained.fadd.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, metadata, metadata)
 define <vscale x 1 x double> @vfadd_vv_nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x double> %vb) strictfp {
 ; CHECK-LABEL: vfadd_vv_nxv1f64:
 ; CHECK:       # %bb.0: # %entry
@@ -744,7 +732,6 @@ define <vscale x 1 x double> @vfadd_vf_nxv1f64(<vscale x 1 x double> %va, double
   ret <vscale x 1 x double> %vc
 }
 
-declare <vscale x 2 x double> @llvm.experimental.constrained.fadd.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, metadata, metadata)
 define <vscale x 2 x double> @vfadd_vv_nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x double> %vb) strictfp {
 ; CHECK-LABEL: vfadd_vv_nxv2f64:
 ; CHECK:       # %bb.0: # %entry
@@ -768,7 +755,6 @@ define <vscale x 2 x double> @vfadd_vf_nxv2f64(<vscale x 2 x double> %va, double
   ret <vscale x 2 x double> %vc
 }
 
-declare <vscale x 4 x double> @llvm.experimental.constrained.fadd.nxv4f64(<vscale x 4 x double>, <vscale x 4 x double>, metadata, metadata)
 define <vscale x 4 x double> @vfadd_vv_nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x double> %vb) strictfp {
 ; CHECK-LABEL: vfadd_vv_nxv4f64:
 ; CHECK:       # %bb.0: # %entry
@@ -792,7 +778,6 @@ define <vscale x 4 x double> @vfadd_vf_nxv4f64(<vscale x 4 x double> %va, double
   ret <vscale x 4 x double> %vc
 }
 
-declare <vscale x 8 x double> @llvm.experimental.constrained.fadd.nxv8f64(<vscale x 8 x double>, <vscale x 8 x double>, metadata, metadata)
 define <vscale x 8 x double> @vfadd_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) strictfp {
 ; CHECK-LABEL: vfadd_vv_nxv8f64:
 ; CHECK:       # %bb.0: # %entry

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-linux -fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,AARCH64 %s
-// RUN: %clang_cc1 -triple x86_64-linux  -fexperimental-pointer-field-protection -fexperimental-pointer-field-protection-tagged -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,X86_64 %s
+// RUN: %clang_cc1 -triple aarch64-linux -fexperimental-allow-pointer-field-protection-attr -fexperimental-pointer-field-protection-abi -fexperimental-pointer-field-protection-tagged -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,AARCH64 %s
+// RUN: %clang_cc1 -triple x86_64-linux  -fexperimental-allow-pointer-field-protection-attr -fexperimental-pointer-field-protection-abi -fexperimental-pointer-field-protection-tagged -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,X86_64 %s
 
 // Non-standard layout. Pointer fields are signed and discriminated by type.
 struct Pointer {
