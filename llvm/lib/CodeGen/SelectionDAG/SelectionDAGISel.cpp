@@ -2482,7 +2482,7 @@ void SelectionDAGISel::Select_READ_REGISTER(SDNode *Op) {
   const MDString *RegStr = cast<MDString>(MD->getMD()->getOperand(0));
 
   EVT VT = Op->getValueType(0);
-  LLT Ty = VT.isSimple() ? TLI->getLLTForMVT(VT.getSimpleVT()) : LLT();
+  LLT Ty = VT.isSimple() ? getLLTForMVT(VT.getSimpleVT()) : LLT();
 
   const MachineFunction &MF = CurDAG->getMachineFunction();
   Register Reg = TLI->getRegisterByName(RegStr->getString().data(), Ty, MF);
@@ -2513,7 +2513,7 @@ void SelectionDAGISel::Select_WRITE_REGISTER(SDNode *Op) {
   const MDString *RegStr = cast<MDString>(MD->getMD()->getOperand(0));
 
   EVT VT = Op->getOperand(2).getValueType();
-  LLT Ty = VT.isSimple() ? TLI->getLLTForMVT(VT.getSimpleVT()) : LLT();
+  LLT Ty = VT.isSimple() ? getLLTForMVT(VT.getSimpleVT()) : LLT();
 
   const MachineFunction &MF = CurDAG->getMachineFunction();
   Register Reg = TLI->getRegisterByName(RegStr->getString().data(), Ty, MF);

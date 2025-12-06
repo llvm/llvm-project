@@ -952,7 +952,7 @@ void LoadStoreOpt::initializeStoreMergeTargetInfo(unsigned AddrSpace) {
   const auto &LI = *MF->getSubtarget().getLegalizerInfo();
   const auto &DL = MF->getFunction().getDataLayout();
   Type *IRPtrTy = PointerType::get(MF->getFunction().getContext(), AddrSpace);
-  LLT PtrTy = TLI->getLLTForType(*IRPtrTy, DL);
+  LLT PtrTy = getLLTForType(*IRPtrTy, DL);
   // We assume that we're not going to be generating any stores wider than
   // MaxStoreSizeToForm bits for now.
   for (unsigned Size = 2; Size <= MaxStoreSizeToForm; Size *= 2) {

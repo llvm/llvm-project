@@ -8,9 +8,19 @@
 
 #include "GlobalISelMatchTableExecutorEmitter.h"
 #include "GlobalISelMatchTable.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 using namespace llvm::gi;
+
+static cl::opt<bool>
+    AllowExtendedLLT("gisel-extended-llt",
+                     cl::desc("Generate extended llt names in match tables"),
+                     cl::init(false));
+
+GlobalISelMatchTableExecutorEmitter::GlobalISelMatchTableExecutorEmitter() {
+  LLT::setUseExtended(AllowExtendedLLT);
+}
 
 void GlobalISelMatchTableExecutorEmitter::emitSubtargetFeatureBitsetImpl(
     raw_ostream &OS, ArrayRef<RuleMatcher> Rules) {

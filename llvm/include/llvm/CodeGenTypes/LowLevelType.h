@@ -230,7 +230,7 @@ public:
     init(Info, EC, SizeInBits, AddressSpace, Sem);
   }
 
-  LLVM_ABI explicit LLT(MVT VT, bool AllowExtendedLLT = false);
+  LLVM_ABI explicit LLT(MVT VT);
   explicit constexpr LLT() : RawData(0), Info(static_cast<Kind>(0)) {}
 
   constexpr bool isToken() const {
@@ -602,6 +602,12 @@ public:
   constexpr uint64_t getUniqueRAWLLTData() const {
     return ((uint64_t)RawData) | ((uint64_t)Info) << 60;
   }
+
+  static bool getUseExtended() { return ExtendedLLT; }
+  static void setUseExtended(bool Enable) { ExtendedLLT = Enable; }
+
+private:
+  static bool ExtendedLLT;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const LLT &Ty) {

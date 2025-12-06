@@ -24,11 +24,6 @@ STATISTIC(NumPatternEmitted, "Number of patterns emitted");
 using namespace llvm;
 using namespace gi;
 
-static cl::opt<bool>
-    AllowExtendedLLT("gisel-extended-llt",
-                     cl::desc("Generate extended llt names in match tables"),
-                     cl::init(false));
-
 // FIXME: Use createStringError instead.
 static Error failUnsupported(const Twine &Reason) {
   return make_error<StringError>(Reason, inconvertibleErrorCode());
@@ -473,10 +468,10 @@ bool LLTCodeGen::operator<(const LLTCodeGen &Other) const {
 
 std::optional<LLTCodeGen> llvm::gi::MVTToLLT(MVT VT) {
   if (VT.isVector() && !VT.getVectorElementCount().isScalar())
-    return LLTCodeGen(LLT(VT, AllowExtendedLLT));
+    return LLTCodeGen(LLT(VT));
 
   if (VT.isInteger() || VT.isFloatingPoint())
-    return LLTCodeGen(LLT(VT, AllowExtendedLLT));
+    return LLTCodeGen(LLT(VT));
 
   return std::nullopt;
 }

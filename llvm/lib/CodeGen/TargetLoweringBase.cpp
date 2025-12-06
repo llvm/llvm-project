@@ -1051,14 +1051,6 @@ EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy,
   return ShiftVT;
 }
 
-LLT TargetLoweringBase::getLLTForType(Type &Ty, const DataLayout &DL) const {
-  return llvm::getLLTForType(Ty, DL, TM.Options.EnableGlobalISelExtendedLLT);
-}
-
-LLT TargetLoweringBase::getLLTForMVT(MVT Ty) const {
-  return llvm::getLLTForMVT(Ty, TM.Options.EnableGlobalISelExtendedLLT);
-}
-
 bool TargetLoweringBase::canOpTrap(unsigned Op, EVT VT) const {
   assert(isTypeLegal(VT));
   switch (Op) {

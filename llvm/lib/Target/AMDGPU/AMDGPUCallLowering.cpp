@@ -332,7 +332,7 @@ bool AMDGPUCallLowering::lowerReturnVal(MachineIRBuilder &B,
                                           extOpcodeToISDExtOpcode(ExtendOp));
       if (ExtVT != VT) {
         RetInfo.Ty = ExtVT.getTypeForEVT(Ctx);
-        LLT ExtTy = TLI.getLLTForType(*RetInfo.Ty, DL);
+        LLT ExtTy = getLLTForType(*RetInfo.Ty, DL);
         Reg = B.buildInstr(ExtendOp, {ExtTy}, {Reg}).getReg(0);
       }
     }
@@ -428,7 +428,7 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
     Register PtrReg = B.getMRI()->createGenericVirtualRegister(PtrTy);
     lowerParameterPtr(PtrReg, B, Offset + FieldOffsets[Idx]);
 
-    LLT ArgTy = TLI.getLLTForType(*SplitArg.Ty, DL);
+    LLT ArgTy = getLLTForType(*SplitArg.Ty, DL);
     if (SplitArg.Flags[0].isPointer()) {
       // Compensate for losing pointeriness in splitValueTypes.
       LLT PtrTy = LLT::pointer(SplitArg.Flags[0].getPointerAddrSpace(),

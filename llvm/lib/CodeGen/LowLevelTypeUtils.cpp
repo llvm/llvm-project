@@ -17,10 +17,10 @@
 #include "llvm/IR/DerivedTypes.h"
 using namespace llvm;
 
-LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL, bool AllowExtendedLLT) {
+LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
   if (auto *VTy = dyn_cast<VectorType>(&Ty)) {
     auto EC = VTy->getElementCount();
-    LLT ScalarTy = getLLTForType(*VTy->getElementType(), DL, AllowExtendedLLT);
+    LLT ScalarTy = getLLTForType(*VTy->getElementType(), DL);
     if (EC.isScalar())
       return ScalarTy;
     return LLT::vector(EC, ScalarTy);
@@ -38,7 +38,7 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL, bool AllowExtendedLLT) {
     assert(SizeInBits != 0 && "invalid zero-sized type");
 
     // Return simple scalar
-    if (!AllowExtendedLLT)
+    if (!LLT::getUseExtended())
       return LLT::scalar(SizeInBits);
 
     // Choose more precise LLT variant
@@ -109,9 +109,7 @@ EVT llvm::getApproximateEVTForLLT(LLT Ty, LLVMContext &Ctx) {
   return EVT::getIntegerVT(Ctx, Ty.getSizeInBits());
 }
 
-LLT llvm::getLLTForMVT(MVT VT, bool AllowExtendedLLT) {
-  return LLT(VT, AllowExtendedLLT);
-}
+LLT llvm::getLLTForMVT(MVT VT) { return LLT(VT); }
 
 const llvm::fltSemantics &llvm::getFltSemanticForLLT(LLT Ty) {
   assert((Ty.isAnyScalar() || Ty.isFloat()) &&

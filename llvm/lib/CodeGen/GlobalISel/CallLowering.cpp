@@ -159,7 +159,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
 
   if (const Function *F = dyn_cast<Function>(CalleeV)) {
     if (F->hasFnAttribute(Attribute::NonLazyBind)) {
-      LLT Ty = TLI->getLLTForType(*F->getType(), DL);
+      LLT Ty = getLLTForType(*F->getType(), DL);
       Register Reg = MIRBuilder.buildGlobalValue(Ty, F).getReg(0);
       Info.Callee = MachineOperand::CreateReg(Reg, false);
     } else {
@@ -786,11 +786,11 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
     const MVT ValVT = VA.getValVT();
     const MVT LocVT = VA.getLocVT();
 
-    const LLT LocTy = TLI->getLLTForMVT(LocVT);
-    const LLT ValTy = TLI->getLLTForMVT(ValVT);
+    const LLT LocTy = getLLTForMVT(LocVT);
+    const LLT ValTy = getLLTForMVT(ValVT);
     const LLT NewLLT = Handler.isIncomingArgumentHandler() ? LocTy : ValTy;
     const EVT OrigVT = EVT::getEVT(Args[i].Ty);
-    const LLT OrigTy = TLI->getLLTForType(*Args[i].Ty, DL);
+    const LLT OrigTy = getLLTForType(*Args[i].Ty, DL);
     const LLT PointerTy = LLT::pointer(
         AllocaAddressSpace, DL.getPointerSizeInBits(AllocaAddressSpace));
 
@@ -1009,7 +1009,7 @@ void CallLowering::insertSRetLoads(MachineIRBuilder &MIRBuilder, Type *RetTy,
   Align BaseAlign = DL.getPrefTypeAlign(RetTy);
   Type *RetPtrTy =
       PointerType::get(RetTy->getContext(), DL.getAllocaAddrSpace());
-  LLT OffsetLLTy = TLI->getLLTForType(*DL.getIndexType(RetPtrTy), DL);
+  LLT OffsetLLTy = getLLTForType(*DL.getIndexType(RetPtrTy), DL);
 
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
 
@@ -1040,8 +1040,7 @@ void CallLowering::insertSRetStores(MachineIRBuilder &MIRBuilder, Type *RetTy,
   unsigned NumValues = SplitVTs.size();
   Align BaseAlign = DL.getPrefTypeAlign(RetTy);
   unsigned AS = DL.getAllocaAddrSpace();
-  LLT OffsetLLTy =
-      TLI->getLLTForType(*DL.getIndexType(RetTy->getContext(), AS), DL);
+  LLT OffsetLLTy = getLLTForType(*DL.getIndexType(RetTy->getContext(), AS), DL);
 
   MachinePointerInfo PtrInfo(AS);
 
