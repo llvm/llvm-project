@@ -16,9 +16,8 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/Token.h"
-
-#include "../utils/LexerUtils.h"
 
 using namespace clang::ast_matchers;
 
