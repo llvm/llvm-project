@@ -3057,7 +3057,7 @@ bool IRTranslator::translateInvoke(const User &U,
 /// intrinsics such as amdgcn.kill.
 bool IRTranslator::translateCallBr(const User &U,
                                    MachineIRBuilder &MIRBuilder) {
-  if (containsBF16Type(U))
+  if (!mayTranslateUserTypes(U))
     return false; // see translateCall
 
   const CallBrInst &I = cast<CallBrInst>(U);

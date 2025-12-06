@@ -90,8 +90,8 @@ TEST_F(AArch64IRTranslatorTest, IRTranslateBfloat16) {
   M->setDataLayout(TM->createDataLayout());
 
   TM->setGlobalISel(true);
-  TM->setGlobalISelExtendedLLT(true);
   TM->setGlobalISelAbort(GlobalISelAbortMode::DisableWithDiag);
+  LLT::setUseExtended(true);
 
   legacy::PassManager PM;
   TargetPassConfig *TPC(TM->createPassConfig(PM));
@@ -124,7 +124,8 @@ TEST_F(AArch64IRTranslatorTest, IRTranslateBfloat16) {
   MMI->deleteMachineFunctionFor(*F);
 
   // Run again without extended LLT
-  TM->setGlobalISelExtendedLLT(false);
+  LLT::setUseExtended(false);
+
   PM.run(*M);
   MF = MMI->getMachineFunction(*F);
   ASSERT_TRUE(MF->getProperties().hasProperty(
