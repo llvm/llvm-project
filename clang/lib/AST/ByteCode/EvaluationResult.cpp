@@ -54,12 +54,11 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
   } else {
     // Primitive arrays.
     if (S.getContext().canClassify(ElemType)) {
-      if (BasePtr.allElementsInitialized()) {
+      if (BasePtr.allElementsInitialized())
         return true;
-      } else {
-        DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
-        return false;
-      }
+
+      DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
+      return false;
     }
 
     for (size_t I = 0; I != NumElems; ++I) {
