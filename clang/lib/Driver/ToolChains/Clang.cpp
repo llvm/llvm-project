@@ -6128,6 +6128,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << A->getAsString(Args) << A->getValue();
       else
         A->render(Args, CmdArgs);
+    } else if (Triple.isRISCV() && Triple.isOSBinFormatELF()) {
+      // Add RISC-V support for basic block sections
+      if (Val != "labels" && Val != "none" && !Val.starts_with("list="))
+        D.Diag(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+      else
+        A->render(Args, CmdArgs);
     } else if (Triple.isNVPTX()) {
       // Do not pass the option to the GPU compilation. We still want it enabled
       // for the host-side compilation, so seeing it here is not an error.

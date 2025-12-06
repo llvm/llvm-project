@@ -89,6 +89,15 @@ RISCVInstrInfo::RISCVInstrInfo(const RISCVSubtarget &STI)
 #define GET_INSTRINFO_HELPERS
 #include "RISCVGenInstrInfo.inc"
 
+void RISCVInstrInfo::insertNoop(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MI) const {
+  DebugLoc DL;
+  BuildMI(MBB, MI, DL, get(RISCV::ADDI))
+      .addReg(RISCV::X0)
+      .addReg(RISCV::X0)
+      .addImm(0);
+}
+
 MCInst RISCVInstrInfo::getNop() const {
   if (STI.hasStdExtZca())
     return MCInstBuilder(RISCV::C_NOP);
