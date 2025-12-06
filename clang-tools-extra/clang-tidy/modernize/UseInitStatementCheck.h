@@ -32,6 +32,9 @@ public:
   }
 
 private:
+  void registerVariableDeclMatchers(ast_matchers::MatchFinder *Finder);
+  void registerStructuredBindingMatchers(ast_matchers::MatchFinder *Finder);
+
   bool isSingleVarWithSafeDestructor(
       const ast_matchers::MatchFinder::MatchResult &Result) const;
   int getKindOfMatchedDeclStmt(

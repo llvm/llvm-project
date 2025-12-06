@@ -18,6 +18,7 @@
 #include <algorithm> // for std::adjacent_find
 #include <cctype>
 #include <string>
+#include <utility>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::utils::lexer;
@@ -112,45 +113,38 @@ static Matcher<Stmt> callByRef(Matcher<Decl> VarOrBindingNodeMatcher, StringRef 
   );
 }
 
-static Matcher<Stmt> stealingAsThisMatcher() {
-  return anyOf(hasParent(memberExpr()),
-               hasParent(implicitCastExpr(hasCastKind(CK_NoOp),
-                                         hasParent(memberExpr()))));
+static Matcher<Decl> bindToNonreferenceMatcher() {
+  const auto IsNonreferenceType = unless(hasType(referenceType()));
+  const auto BoundVar =
+      varDecl(equalsBoundNode("singleVar"), IsNonreferenceType);
+  const auto BoundBind =
+      bindingDecl(equalsBoundNode("bindingDecl"),
+                  hasParent(decompositionDecl(IsNonreferenceType)));
+  return anyOf(BoundVar, BoundBind);
 }
 
 // Complete matcher to detect stealing cases, preventing
 // the checker from generating code that could result in dangling references,
 // such as: `int* p; if (int v;cond) { p=&v; } use(p);`
-static Matcher<Stmt> hasStealingMatcher(Matcher<Stmt> Condition,
-                                        StringRef Name) {
+static Matcher<Stmt> hasStealingMatcher() {
   const auto IsStealingViaPointer =
       hasParent(unaryOperator(hasOperatorName("&")));
-  const auto IsNonreferenceType = unless(hasType(referenceType()));
-  const auto NonreferenceBoundVar =
-      varDecl(equalsBoundNode("singleVar"), IsNonreferenceType);
-  const auto NonreferenceBoundBind =
-      bindingDecl(equalsBoundNode("bindingDecl"),
-                  hasParent(decompositionDecl(IsNonreferenceType)));
-  const auto VarOrBindingNode =
-      anyOf(NonreferenceBoundVar, NonreferenceBoundBind);
+  const auto VarOrBindingNode = bindToNonreferenceMatcher();
   const auto HasStealingByPointer = hasDescendant(
-      declRefExpr(to(VarOrBindingNode), IsStealingViaPointer).bind(Name));
-  const auto HasStealingByReference = hasDescendant(callByRef(VarOrBindingNode, Name));
+      declRefExpr(to(VarOrBindingNode), IsStealingViaPointer).bind("stealing"));
+  const auto HasStealingByReference = hasDescendant(callByRef(VarOrBindingNode, "stealing"));
   return anyOf(HasStealingByPointer, HasStealingByReference);
 }
 
-static Matcher<Stmt> hasStealingAsThisMatcher(Matcher<Stmt> Condition,
-                                              StringRef Name) {
-  const auto IsNonreferenceType = unless(hasType(referenceType()));
-  const auto NonreferenceBoundVar =
-      varDecl(equalsBoundNode("singleVar"), IsNonreferenceType);
-  const auto NonreferenceBoundBind =
-      bindingDecl(equalsBoundNode("bindingDecl"),
-                  hasParent(decompositionDecl(IsNonreferenceType)));
-  const auto VarOrBindingNode =
-      anyOf(NonreferenceBoundVar, NonreferenceBoundBind);
+// Matcher to detect when a variable or binding is used as 'this' in a member
+// expression, such as: `A v; if (cond) { v.store_this_somewhere(); } use_last_stored_this();`
+static Matcher<Stmt> hasStealingAsThisMatcher() {
+  const auto VarOrBindingNode = bindToNonreferenceMatcher();
+  const auto StealingAsThis = anyOf(hasParent(memberExpr()),
+                                    hasParent(implicitCastExpr(hasCastKind(CK_NoOp),
+                                                              hasParent(memberExpr()))));
   return hasDescendant(
-      declRefExpr(to(VarOrBindingNode), stealingAsThisMatcher()).bind(Name));
+      declRefExpr(to(VarOrBindingNode), StealingAsThis).bind("stealingAsThis"));
 }
 
 static Matcher<Stmt> hasConflictMatcher() {
@@ -159,27 +153,18 @@ static Matcher<Stmt> hasConflictMatcher() {
                            .bind("conflict"));
 }
 
-template <typename IfOrSwitchStmt>
-static Matcher<Stmt> stmtMatcherWithCondition(
-    VariadicDynCastAllOfMatcher<Stmt, IfOrSwitchStmt> StmtMatcher,
-    StringRef StmtName) {
-  const auto StealingAsThis = stealingAsThisMatcher();
-  const auto Stealing = unless(StealingAsThis);
-  return StmtMatcher(
-             unless(hasInitStatement(anything())),
-             hasCondition(expr().bind("condition")),
-             optionally(hasConflictMatcher()),
-             optionally(hasStealingMatcher(Stealing, "stealing")),
-             optionally(hasStealingAsThisMatcher(StealingAsThis, "StealingAsThis")),
-             optionally(
-                 hasConditionVariableStatement(declStmt().bind("condDeclStmt"))))
-      .bind(StmtName);
-}
-
-static Matcher<Stmt> noOtherVarRefsMatcher(StringRef StmtName,
-                                            Matcher<Stmt> RefToBoundMatcher) {
-  return unless(has(stmt(unless(equalsBoundNode(StmtName.str())),
-                         hasDescendant(RefToBoundMatcher))));
+static Matcher<Stmt> compoundStmtMatcher(
+    Matcher<Stmt> StmtMatcher,
+    StringRef StmtName, Matcher<Stmt> PrevStmtMatcher,
+    Matcher<Stmt> RefToBoundMatcher) {
+  const auto NoOtherVarRefs = unless(has(stmt(unless(equalsBoundNode(StmtName.str())),
+                                               hasDescendant(RefToBoundMatcher))));
+  return compoundStmt(
+             unless(isExpansionInSystemHeader()),
+             unless(hasAncestor(functionDecl(isTemplate()))),
+             hasAdjacentStmts(PrevStmtMatcher, StmtMatcher),
+             NoOtherVarRefs)
+      .bind("compound");
 }
 
 // Complete matcher for if/switch statements that can be refactored to use
@@ -191,78 +176,94 @@ static Matcher<Stmt> compoundStmtMatcher(
     VariadicDynCastAllOfMatcher<Stmt, IfOrSwitchStmt> StmtMatcher,
     StringRef StmtName, Matcher<Stmt> PrevStmtMatcher,
     Matcher<Stmt> RefToBoundMatcher) {
-  return compoundStmt(
-             unless(isExpansionInSystemHeader()),
-             unless(hasAncestor(functionDecl(isTemplate()))),
-             hasAdjacentStmts(PrevStmtMatcher,
-                              stmtMatcherWithCondition(StmtMatcher, StmtName)),
-             noOtherVarRefsMatcher(StmtName, RefToBoundMatcher))
-      .bind("compound");
+  const auto StmtWithCondition = StmtMatcher(
+      unless(hasInitStatement(anything())),
+      hasCondition(expr().bind("condition")),
+      optionally(hasConflictMatcher()),
+      optionally(hasStealingMatcher()),
+      optionally(hasStealingAsThisMatcher()),
+      optionally(hasConditionVariableStatement(declStmt().bind("condDeclStmt"))))
+      .bind(StmtName);
+  return compoundStmtMatcher(StmtWithCondition, StmtName, PrevStmtMatcher, RefToBoundMatcher);
 }
 
-void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
-  // Matchers for classes with destructors
+static Matcher<VarDecl> hasDestructorMatcher() {
   const auto ClassWithDtorDecl =
       cxxRecordDecl(hasMethod(cxxDestructorDecl().bind("dtorDecl")));
   const auto ClassWithDtorType =
       hasCanonicalType(hasDeclaration(ClassWithDtorDecl));
   const auto ArrayOfClassWithDtor =
       hasType(arrayType(hasElementType(ClassWithDtorType)));
-  const auto HasDtor = anyOf(hasType(ClassWithDtorType), ArrayOfClassWithDtor);
-  const auto HasLTE = hasInitializer(
-      expr(hasDescendant(expr(materializeTemporaryExpr().bind("lte")))));
+  return anyOf(hasType(ClassWithDtorType), ArrayOfClassWithDtor);
+}
 
+static Matcher<VarDecl> hasLifetimeExtensionMatcher() {
+  return hasInitializer(
+      expr(hasDescendant(expr(materializeTemporaryExpr().bind("lte")))));
+}
+
+static std::pair<Matcher<Decl>, Matcher<Decl>> getSingleVarDeclMatchers() {
+  const auto HasDtor = hasDestructorMatcher();
+  const auto HasLTE = hasLifetimeExtensionMatcher();
+
+  return {
+      varDecl(HasDtor, optionally(HasLTE), isUsed()).bind("singleVar"),
+      varDecl(optionally(HasLTE), isUsed()).bind("singleVar")};
+}
+
+// Registers matchers for if/switch statements with regular variable declarations.
+void UseInitStatementCheck::registerVariableDeclMatchers(MatchFinder *Finder) {
   // Matchers for variable declarations
-  const auto SingleVarDeclWithDtor =
-      varDecl(HasDtor, optionally(HasLTE), isUsed()).bind("singleVar");
-  const auto SingleVarDecl =
-      varDecl(optionally(HasLTE), isUsed()).bind("singleVar");
+  const auto [SingleVarDeclWithDtor, SingleVarDecl] = getSingleVarDeclMatchers();
   const auto RefToBoundVarDecl =
       declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
 
-  // declStmt as previous statement
-  {
-    // Matchers for declaration statements that precede if/switch
-    const auto PrevDeclStmtWithDtor =
-        declStmt(forEach(SingleVarDeclWithDtor)).bind("prevDecl");
-    const auto PrevDeclStmt = declStmt(forEach(SingleVarDecl)).bind("prevDecl");
-    const auto PrevDeclStmtMatcher = anyOf(PrevDeclStmtWithDtor, PrevDeclStmt);
+  // Matchers for declaration statements that precede if/switch
+  const auto PrevDeclStmtWithDtor =
+      declStmt(forEach(SingleVarDeclWithDtor)).bind("prevDecl");
+  const auto PrevDeclStmt = declStmt(forEach(SingleVarDecl)).bind("prevDecl");
+  const auto PrevDeclStmtMatcher = anyOf(PrevDeclStmtWithDtor, PrevDeclStmt);
 
-    // Register matchers for if and switch statements
-    Finder->addMatcher(compoundStmtMatcher(ifStmt, "ifStmt",
-                                           PrevDeclStmtMatcher,
-                                           RefToBoundVarDecl),
-                       this);
-    Finder->addMatcher(compoundStmtMatcher(switchStmt, "switchStmt",
-                                           PrevDeclStmtMatcher,
-                                           RefToBoundVarDecl),
-                       this);
-  }
+  Finder->addMatcher(compoundStmtMatcher(ifStmt, "ifStmt",
+                                         PrevDeclStmtMatcher,
+                                         RefToBoundVarDecl),
+                     this);
+  Finder->addMatcher(compoundStmtMatcher(switchStmt, "switchStmt",
+                                         PrevDeclStmtMatcher,
+                                         RefToBoundVarDecl),
+                     this);
+}
 
-  // C++17 structured binding as previous statement
-  {
-    const auto DecompositionDecl =
-        decompositionDecl(forEach(bindingDecl().bind("bindingDecl")));
-    const auto PrevDecomposeStmtWithDtor =
-        declStmt(has(DecompositionDecl), has(SingleVarDeclWithDtor))
-            .bind("prevDecl");
-    const auto PrevDecomposeStmt =
-        declStmt(has(DecompositionDecl), has(SingleVarDecl)).bind("prevDecl");
-    const auto PrevDecomposeStmtMatcher =
-        anyOf(PrevDecomposeStmtWithDtor, PrevDecomposeStmt);
-    const auto RefToBoundBindDecl =
-        declRefExpr(to(bindingDecl(equalsBoundNode("bindingDecl"))));
+// Registers matchers for if/switch statements with structured bindings.
+void UseInitStatementCheck::registerStructuredBindingMatchers(MatchFinder *Finder) {
+  // Matchers for variable declarations
+  const auto [SingleVarDeclWithDtor, SingleVarDecl] = getSingleVarDeclMatchers();
 
-    // Register matchers for if and switch statements
-    Finder->addMatcher(compoundStmtMatcher(ifStmt, "ifStmt",
-                                           PrevDecomposeStmtMatcher,
-                                           RefToBoundBindDecl),
-                       this);
-    Finder->addMatcher(compoundStmtMatcher(switchStmt, "switchStmt",
-                                           PrevDecomposeStmtMatcher,
-                                           RefToBoundBindDecl),
-                       this);
-  }
+  const auto DecompositionDecl =
+      decompositionDecl(forEach(bindingDecl().bind("bindingDecl")));
+  const auto PrevDecomposeStmtWithDtor =
+      declStmt(has(DecompositionDecl), has(SingleVarDeclWithDtor))
+          .bind("prevDecl");
+  const auto PrevDecomposeStmt =
+      declStmt(has(DecompositionDecl), has(SingleVarDecl)).bind("prevDecl");
+  const auto PrevDecomposeStmtMatcher =
+      anyOf(PrevDecomposeStmtWithDtor, PrevDecomposeStmt);
+  const auto RefToBoundBindDecl =
+      declRefExpr(to(bindingDecl(equalsBoundNode("bindingDecl"))));
+
+  Finder->addMatcher(compoundStmtMatcher(ifStmt, "ifStmt",
+                                         PrevDecomposeStmtMatcher,
+                                         RefToBoundBindDecl),
+                     this);
+  Finder->addMatcher(compoundStmtMatcher(switchStmt, "switchStmt",
+                                         PrevDecomposeStmtMatcher,
+                                         RefToBoundBindDecl),
+                     this);
+}
+
+void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
+  registerVariableDeclMatchers(Finder);
+  registerStructuredBindingMatchers(Finder);
 }
 
 static bool isLastInCompound(const Stmt *S, const CompoundStmt *P) {
@@ -319,7 +320,7 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Conflict = Result.Nodes.getNodeAs<VarDecl>("conflict");
   const auto *Stealing = Result.Nodes.getNodeAs<DeclRefExpr>("stealing");
   const auto *StealingAsThis =
-      Result.Nodes.getNodeAs<DeclRefExpr>("StealingAsThis");
+      Result.Nodes.getNodeAs<DeclRefExpr>("stealingAsThis");
   const auto *PrevDecl = Result.Nodes.getNodeAs<DeclStmt>("prevDecl");
   const auto *Condition = Result.Nodes.getNodeAs<Expr>("condition");
   const auto *CondDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("condDeclStmt");
