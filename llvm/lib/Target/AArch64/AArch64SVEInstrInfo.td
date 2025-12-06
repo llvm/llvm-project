@@ -341,11 +341,11 @@ def AArch64urhadd : PatFrags<(ops node:$pg, node:$op1, node:$op2),
 
 def AArch64saba : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_saba node:$op1, node:$op2, node:$op3),
-                            (add node:$op1, (AArch64sabd_p (SVEAllActive), node:$op2, node:$op3))]>;
+                            (add node:$op1, (AArch64sabd_p (SVEAnyPredicate), node:$op2, node:$op3))]>;
 
 def AArch64uaba : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_uaba node:$op1, node:$op2, node:$op3),
-                            (add node:$op1, (AArch64uabd_p (SVEAllActive), node:$op2, node:$op3))]>;
+                            (add node:$op1, (AArch64uabd_p (SVEAnyPredicate), node:$op2, node:$op3))]>;
 
 def AArch64usra : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_usra node:$op1, node:$op2, node:$op3),
@@ -462,6 +462,7 @@ def AArch64fmlsidx : PatFrags<(ops node:$acc, node:$op1, node:$op2, node:$idx),
 def AArch64fnmla_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
                               [(int_aarch64_sve_fnmla_u node:$pg, node:$za, node:$zn, node:$zm),
                                (AArch64fma_p node:$pg, (AArch64fneg_mt node:$pg, node:$zn, (undef)), node:$zm, (AArch64fneg_mt node:$pg, node:$za, (undef))),
+                               (AArch64fma_p node:$pg, node:$zn, (AArch64fneg_mt node:$pg, node:$zm, (undef)), (AArch64fneg_mt node:$pg, node:$za, (undef))),
                                (AArch64fneg_mt_nsz node:$pg, (AArch64fma_p node:$pg, node:$zn, node:$zm, node:$za), (undef))]>;
 
 def AArch64fnmls_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
@@ -3885,12 +3886,12 @@ let Predicates = [HasSVE2_or_SME] in {
   defm SQRSHLR_ZPmZ : sve2_int_arith_pred<0b011100, "sqrshlr", null_frag,              "SQRSHLR_ZPZZ", DestructiveBinaryCommWithRev, "SQRSHL_ZPmZ", /*isReverseInstr*/ 1>;
   defm UQRSHLR_ZPmZ : sve2_int_arith_pred<0b011110, "uqrshlr", null_frag,              "UQRSHLR_ZPZZ", DestructiveBinaryCommWithRev, "UQRSHL_ZPmZ", /*isReverseInstr*/ 1>;
 
-  defm SRSHL_ZPZZ   : sve_int_bin_pred_all_active_bhsd<int_aarch64_sve_srshl>;
-  defm URSHL_ZPZZ   : sve_int_bin_pred_all_active_bhsd<int_aarch64_sve_urshl>;
-  defm SQSHL_ZPZZ   : sve_int_bin_pred_all_active_bhsd<int_aarch64_sve_sqshl>;
-  defm UQSHL_ZPZZ   : sve_int_bin_pred_all_active_bhsd<int_aarch64_sve_uqshl>;
-  defm SQRSHL_ZPZZ  : sve_int_bin_pred_all_active_bhsd<int_aarch64_sve_sqrshl>;
-  defm UQRSHL_ZPZZ  : sve_int_bin_pred_all_active_bhsd<int_aarch64_sve_uqrshl>;
+  defm SRSHL_ZPZZ   : sve_int_bin_pred_bhsd<int_aarch64_sve_srshl_u>;
+  defm URSHL_ZPZZ   : sve_int_bin_pred_bhsd<int_aarch64_sve_urshl_u>;
+  defm SQSHL_ZPZZ   : sve_int_bin_pred_bhsd<int_aarch64_sve_sqshl_u>;
+  defm UQSHL_ZPZZ   : sve_int_bin_pred_bhsd<int_aarch64_sve_uqshl_u>;
+  defm SQRSHL_ZPZZ  : sve_int_bin_pred_bhsd<int_aarch64_sve_sqrshl_u>;
+  defm UQRSHL_ZPZZ  : sve_int_bin_pred_bhsd<int_aarch64_sve_uqrshl_u>;
 } // End HasSVE2_or_SME
 
 let Predicates = [HasSVE2_or_SME, UseExperimentalZeroingPseudos] in {
@@ -3908,6 +3909,9 @@ let Predicates = [HasSVE2_or_SME] in {
   defm SRSHR_ZPmI  : sve_int_bin_pred_shift_imm_right<   0b1100, "srshr",  "SRSHR_ZPZI",  int_aarch64_sve_srshr>;
   defm URSHR_ZPmI  : sve_int_bin_pred_shift_imm_right<   0b1101, "urshr",  "URSHR_ZPZI",  AArch64urshri_p>;
   defm SQSHLU_ZPmI : sve_int_bin_pred_shift_imm_left<    0b1111, "sqshlu", "SQSHLU_ZPZI", int_aarch64_sve_sqshlu>;
+
+  defm SQSHL_ZPZI : sve_int_shift_pred_bhsd<int_aarch64_sve_sqshl_u, SVEShiftImmL8, SVEShiftImmL16, SVEShiftImmL32, SVEShiftImmL64>;
+  defm UQSHL_ZPZI : sve_int_shift_pred_bhsd<int_aarch64_sve_uqshl_u, SVEShiftImmL8, SVEShiftImmL16, SVEShiftImmL32, SVEShiftImmL64>;
 
   // SVE2 integer add/subtract long
   defm SADDLB_ZZZ : sve2_wide_int_arith_long<0b00000, "saddlb", int_aarch64_sve_saddlb>;

@@ -145,6 +145,11 @@ struct VPlanTransforms {
           GetIntOrFpInductionDescriptor,
       const TargetLibraryInfo &TLI);
 
+  /// Try to legalize reductions with multiple in-loop uses. Currently only
+  /// min/max reductions used by FindLastIV reductions are supported. Otherwise
+  /// return false.
+  static bool handleMultiUseReductions(VPlan &Plan);
+
   /// Try to have all users of fixed-order recurrences appear after the recipe
   /// defining their previous value, by either sinking users or hoisting recipes
   /// defining their previous value (and its operands). Then introduce
@@ -318,6 +323,13 @@ struct VPlanTransforms {
   /// they are guaranteed to execute on both paths (i.e., in replicate regions
   /// with complementary masks P and NOT P).
   static void hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
+                                   const Loop *L);
+
+  /// Sink predicated stores to the same address with complementary predicates
+  /// (P and NOT P) to an unconditional store with select recipes for the
+  /// stored values. This eliminates branching overhead when all paths
+  /// unconditionally store to the same location.
+  static void sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
                                    const Loop *L);
 
   // Materialize vector trip counts for constants early if it can simply be

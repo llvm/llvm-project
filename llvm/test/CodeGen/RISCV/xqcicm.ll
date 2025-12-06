@@ -6,7 +6,7 @@
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCICM
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCICM
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-opt,+conditional-cmv-fusion -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-ialu,+conditional-cmv-fusion -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 
 define i32 @select_example(i32 %cond, i32 %x, i32 %y) {

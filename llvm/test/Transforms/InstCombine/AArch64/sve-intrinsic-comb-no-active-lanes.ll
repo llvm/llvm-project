@@ -848,8 +848,7 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.sqrshl.nxv4i32(<vscale x 4 x i1>, <
 define <vscale x 4 x i32> @simplify_sqrshl_intrinsic(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @simplify_sqrshl_intrinsic
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[R:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqrshl.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqrshl.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %r
@@ -859,8 +858,7 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.sqshl.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @simplify_sqshl_intrinsic(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @simplify_sqshl_intrinsic
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[R:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqshl.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqshl.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %r
@@ -902,8 +900,7 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.srshl.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @simplify_srshl_intrinsic(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @simplify_srshl_intrinsic
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[R:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.srshl.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.srshl.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %r
@@ -1105,8 +1102,7 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.uqrshl.nxv4i32(<vscale x 4 x i1>, <
 define <vscale x 4 x i32> @simplify_uqrshl_intrinsic(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @simplify_uqrshl_intrinsic
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[R:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqrshl.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqrshl.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %r
@@ -1116,8 +1112,7 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.uqshl.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @simplify_uqshl_intrinsic(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @simplify_uqshl_intrinsic
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[R:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqshl.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqshl.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %r
@@ -1170,8 +1165,7 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.urshl.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @simplify_urshl_intrinsic(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @simplify_urshl_intrinsic
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[R:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.urshl.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.urshl.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %r
