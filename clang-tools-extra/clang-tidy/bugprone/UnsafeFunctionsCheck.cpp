@@ -266,8 +266,8 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
-  const Expr *SourceExpr;
-  const FunctionDecl *FuncDecl;
+  const Expr *SourceExpr = nullptr;
+  const FunctionDecl *FuncDecl = nullptr;
 
   if (const auto *DeclRef = Result.Nodes.getNodeAs<DeclRefExpr>(DeclRefId)) {
     SourceExpr = DeclRef;

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LexerUtils.h"
-#include "clang/AST/AST.h"
 #include "clang/Basic/SourceManager.h"
 #include <optional>
 #include <utility>

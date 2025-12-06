@@ -52,8 +52,9 @@ static bool containsMisleadingBidi(StringRef Buffer,
     }
     llvm::UTF32 CodePoint = 0;
     const llvm::ConversionResult Result = llvm::convertUTF8Sequence(
-        (const llvm::UTF8 **)&CurPtr, (const llvm::UTF8 *)Buffer.end(),
-        &CodePoint, llvm::strictConversion);
+        reinterpret_cast<const llvm::UTF8 **>(&CurPtr),
+        reinterpret_cast<const llvm::UTF8 *>(Buffer.end()), &CodePoint,
+        llvm::strictConversion);
 
     // If conversion fails, utf-8 is designed so that we can just try next char.
     if (Result != llvm::conversionOK) {
