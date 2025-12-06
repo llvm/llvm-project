@@ -975,6 +975,14 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I,
     return equal(Phi->blocks(), OtherPhi->blocks());
   }
 
+  if (const SwitchInst *SI = dyn_cast<SwitchInst>(this)) {
+    const SwitchInst *OtherSI = cast<SwitchInst>(I);
+    for (auto [Case, OtherCase] : zip(SI->cases(), OtherSI->cases()))
+      if (Case.getCaseValue() != OtherCase.getCaseValue())
+        return false;
+    return true;
+  }
+
   return this->hasSameSpecialState(I, /*IgnoreAlignment=*/false,
                                    IntersectAttrs);
 }

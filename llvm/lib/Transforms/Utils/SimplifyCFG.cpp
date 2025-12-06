@@ -1900,12 +1900,19 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     // so does not add any new instructions.
     SmallVector<BasicBlock *> Succs = to_vector(successors(BB));
     // Check if sizes and terminators of all successors match.
-    bool AllSame = none_of(Succs, [&Succs](BasicBlock *Succ) {
+    bool AllSame = all_of(drop_begin(Succs), [&Succs](BasicBlock *Succ) {
       Instruction *Term0 = Succs[0]->getTerminator();
       Instruction *Term = Succ->getTerminator();
-      return !Term->isSameOperationAs(Term0) ||
-             !equal(Term->operands(), Term0->operands()) ||
-             Succs[0]->size() != Succ->size();
+      if (!Term->isSameOperationAs(Term0) || Succs[0]->size() != Succ->size())
+        return false;
+      if (auto *SI = dyn_cast<SwitchInst>(Term)) {
+        // Switch case values also need to be equal.
+        auto *SI0 = cast<SwitchInst>(Term0);
+        for (auto [Case, Case0] : zip(SI->cases(), SI0->cases()))
+          if (Case.getCaseValue() != Case0.getCaseValue())
+            return false;
+      }
+      return equal(Term->operands(), Term0->operands());
     });
     if (!AllSame)
       return false;
