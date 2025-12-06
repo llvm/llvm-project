@@ -396,6 +396,7 @@ Fixed Point Support in Clang
 AST Matchers
 ------------
 - Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
+- Add missing support for ``TraveralKind`` in some ``addMatcher()`` overloads.
 
 clang-format
 ------------
