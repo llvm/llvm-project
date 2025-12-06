@@ -617,6 +617,7 @@ parseScheduleClause(OpAsmParser &parser, ClauseScheduleKindAttr &scheduleAttr,
     break;
   case ClauseScheduleKind::Auto:
   case ClauseScheduleKind::Runtime:
+  case ClauseScheduleKind::Distribute:
     chunkSize = std::nullopt;
   }
 
@@ -1817,6 +1818,9 @@ static ParseResult parseMapClause(OpAsmParser &parser,
     if (mapTypeMod == "ref_ptr_ptee")
       mapTypeBits |= ClauseMapFlags::ref_ptr_ptee;
 
+    if (mapTypeMod == "is_device_ptr")
+      mapTypeBits |= ClauseMapFlags::is_device_ptr;
+
     return success();
   };
 
@@ -1886,6 +1890,8 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
     mapTypeStrs.push_back("ref_ptee");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptr_ptee))
     mapTypeStrs.push_back("ref_ptr_ptee");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::is_device_ptr))
+    mapTypeStrs.push_back("is_device_ptr");
   if (mapFlags == ClauseMapFlags::none)
     mapTypeStrs.push_back("none");
 

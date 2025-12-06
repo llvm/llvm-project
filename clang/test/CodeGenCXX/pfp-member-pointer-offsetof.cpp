@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -fexperimental-pointer-field-protection -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -fexperimental-allow-pointer-field-protection-attr -fexperimental-pointer-field-protection-abi -o - %s | FileCheck %s
 
 // CHECK: @__pfp_ds__ZTS1S.ptr1 = hidden alias i8, inttoptr (i64 3573751839 to ptr)
 // CHECK: @__pfp_ds__ZTS1S.ptr2 = hidden alias i8, inttoptr (i64 3573751839 to ptr)

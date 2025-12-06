@@ -4957,6 +4957,11 @@ public:
                                             IdentifierInfo *Format,
                                             int FormatIdx,
                                             StringLiteral *FormatStr);
+  ModularFormatAttr *mergeModularFormatAttr(Decl *D,
+                                            const AttributeCommonInfo &CI,
+                                            IdentifierInfo *ModularImplFn,
+                                            StringRef ImplName,
+                                            MutableArrayRef<StringRef> Aspects);
 
   /// AddAlignedAttr - Adds an aligned attribute to a particular declaration.
   void AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
@@ -8720,10 +8725,6 @@ public:
   QualType CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
                                        ExprResult &RHS,
                                        SourceLocation QuestionLoc);
-
-  QualType CheckSizelessVectorConditionalTypes(ExprResult &Cond,
-                                               ExprResult &LHS, ExprResult &RHS,
-                                               SourceLocation QuestionLoc);
 
   //// Determines if a type is trivially relocatable
   /// according to the C++26 rules.

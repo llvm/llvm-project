@@ -74,6 +74,20 @@ class DummyScriptedThread(ScriptedThread):
         self.frames.append(DummyScriptedFrame(self, args, len(self.frames), "bar"))
         self.frames.append(DummyScriptedFrame(self, args, len(self.frames), "foo"))
 
+        cwd = os.path.dirname(os.path.abspath(__file__))
+
+        le = lldb.SBLineEntry()
+        le.SetFileSpec(lldb.SBFileSpec(os.path.join(cwd, "baz.cpp"), True))
+        le.SetLine(9)
+        le.SetColumn(10)
+
+        sym_ctx = lldb.SBSymbolContext()
+        sym_ctx.SetLineEntry(le)
+
+        self.frames.append(
+            DummyScriptedFrame(self, args, len(self.frames), "baz", sym_ctx)
+        )
+
     def get_thread_id(self) -> int:
         return 0x19
 
