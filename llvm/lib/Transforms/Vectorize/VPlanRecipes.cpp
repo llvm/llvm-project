@@ -2542,7 +2542,7 @@ void VPVectorPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
   O << Indent;
   printAsOperand(O, SlotTracker);
-  O << " = vector-pointer ";
+  O << " = vector-pointer";
   printFlags(O);
   printOperands(O, SlotTracker);
 }
