@@ -192,6 +192,19 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
         std::string::npos,
         ErrMsg.find("Option [lowercase] is not valid for SubCommand [bar]"));
   }
+
+  {
+    // Test case 7: Check valid use of a valid subcommand following more
+    // positional arguments.
+    const char *Args[] = {"bar", "input"};
+    InputArgList AL = T.ParseArgs(Args, MAI, MAC);
+    StringRef SC = AL.getSubCommand(
+        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+    EXPECT_EQ(SC, "bar"); // valid subcommand
+    EXPECT_NE(std::string::npos,
+              ErrMsg.find("Unregistered positionals passed"));
+    EXPECT_NE(std::string::npos, ErrMsg.find("input"));
+  }
 }
 
 TYPED_TEST(OptSubCommandTableTest, SubCommandHelp) {

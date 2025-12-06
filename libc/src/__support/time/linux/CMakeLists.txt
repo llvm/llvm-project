@@ -14,14 +14,21 @@ add_object_library(
     libc.src.__support.OSUtil.linux.vdso
 )
 
-add_header_library(
-  clock_conversion
+add_object_library(
+  clock_settime
   HDRS
-    clock_conversion.h
+    ../clock_settime.h
+  SRCS
+    clock_settime.cpp
   DEPENDS
-    .clock_gettime
-    libc.src.__support.time.units
+    libc.include.sys_syscall
+    libc.hdr.types.struct_timespec
+    libc.hdr.types.clockid_t
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.OSUtil.osutil
 )
+
 
 add_header_library(
   abs_timeout
@@ -38,7 +45,7 @@ add_header_library(
   HDRS
     monotonicity.h
   DEPENDS
-    .clock_conversion
     .abs_timeout
     libc.hdr.time_macros
+    libc.src.__support.time.clock_conversion
 )

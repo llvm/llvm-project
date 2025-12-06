@@ -15,6 +15,7 @@ tablegen(LLVM AMDGPUGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM AMDGPUGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM AMDGPUGenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM AMDGPUGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM AMDGPUGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM AMDGPUGenSearchableTables.inc -gen-searchable-tables)
 tablegen(LLVM AMDGPUGenSubtargetInfo.inc -gen-subtarget)
 
@@ -38,10 +39,6 @@ tablegen(LLVM R600GenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM R600GenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(AMDGPUCommonTableGen)
-
-set(LLVM_TARGET_DEFINITIONS InstCombineTables.td)
-tablegen(LLVM InstCombineTables.inc -gen-searchable-tables)
-add_public_tablegen_target(InstCombineTableGen)
 
 add_llvm_target(AMDGPUCodeGen
   AMDGPUAliasAnalysis.cpp
@@ -81,6 +78,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPULowerKernelAttributes.cpp
   AMDGPULowerModuleLDSPass.cpp
   AMDGPUPrepareAGPRAlloc.cpp
+  AMDGPULowerExecSync.cpp
   AMDGPUSwLowerLDS.cpp
   AMDGPUMachineFunction.cpp
   AMDGPUMachineModuleInfo.cpp

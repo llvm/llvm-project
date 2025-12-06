@@ -6,7 +6,7 @@
 define linkonce_odr hidden spir_func void @test() {
 entry:
 ; CHECK: %[[#MinusOne:]] = OpConstant %[[#]] 18446744073709551615
-; CHECK: %[[#Ptr:]] = OpConvertUToPtr %[[#]]  %[[#MinusOne]]
+; CHECK: %[[#Ptr:]] = OpSpecConstantOp %[[#]] ConvertUToPtr %[[#MinusOne]]
 ; CHECK: %[[#PtrCast:]] = OpPtrCastToGeneric %[[#]] %[[#]]
 ; CHECK: %[[#]] = OpFunctionCall %[[#]] %[[#]] %[[#PtrCast]] %[[#Ptr]]
 

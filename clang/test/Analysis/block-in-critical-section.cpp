@@ -16,9 +16,12 @@ struct lock_guard {
   lock_guard<T>(std::mutex) {}
   ~lock_guard<T>() {}
 };
+struct defer_lock_t {};
+constexpr defer_lock_t defer_lock{};
 template<typename T>
 struct unique_lock {
   unique_lock<T>(std::mutex) {}
+  unique_lock<T>(std::mutex, defer_lock_t) {} // defer_lock parameter
   ~unique_lock<T>() {}
 };
 template<typename T>
@@ -308,4 +311,10 @@ void testTrylockCurrentlyFalsePositive(pthread_mutex_t *m) {
                // expected-note@-1 {{Call to blocking function 'sleep' inside of critical section}}
                // FIXME: this is a false positive, the lock was not acquired
   }
+}
+
+void testBlockInCriticalSectionUniqueLockWithDeferLock() {
+  std::mutex g_mutex;
+  std::unique_lock<std::mutex> lock(g_mutex, std::defer_lock);
+  sleep(1); // no-warning
 }
