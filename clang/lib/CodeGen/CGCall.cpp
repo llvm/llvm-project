@@ -2559,6 +2559,19 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
       FuncAttrs.addAttribute("aarch64_pstate_sm_body");
+
+    if (auto *ModularFormat = TargetDecl->getAttr<ModularFormatAttr>()) {
+      FormatAttr *Format = TargetDecl->getAttr<FormatAttr>();
+      StringRef Type = Format->getType()->getName();
+      std::string FormatIdx = std::to_string(Format->getFormatIdx());
+      std::string FirstArg = std::to_string(Format->getFirstArg());
+      SmallVector<StringRef> Args = {
+          Type, FormatIdx, FirstArg,
+          ModularFormat->getModularImplFn()->getName(),
+          ModularFormat->getImplName()};
+      llvm::append_range(Args, ModularFormat->aspects());
+      FuncAttrs.addAttribute("modular-format", llvm::join(Args, ","));
+    }
   }
 
   // Attach "no-builtins" attributes to:
@@ -4947,7 +4960,27 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     return;
   }
 
-  args.add(EmitAnyExprToTemp(E), type);
+  AggValueSlot ArgSlot = AggValueSlot::ignored();
+  // For arguments with aggregate type, create an alloca to store
+  // the value.  If the argument's type has a destructor, that destructor
+  // will run at the end of the full-expression; emit matching lifetime
+  // markers.
+  //
+  // FIXME: For types which don't have a destructor, consider using a
+  // narrower lifetime bound.
+  if (hasAggregateEvaluationKind(E->getType())) {
+    RawAddress ArgSlotAlloca = Address::invalid();
+    ArgSlot = CreateAggTemp(E->getType(), "agg.tmp", &ArgSlotAlloca);
+
+    // Emit a lifetime start/end for this temporary at the end of the full
+    // expression.
+    if (!CGM.getCodeGenOpts().NoLifetimeMarkersForTemporaries &&
+        EmitLifetimeStart(ArgSlotAlloca.getPointer()))
+      pushFullExprCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker,
+                                           ArgSlotAlloca);
+  }
+
+  args.add(EmitAnyExpr(E, ArgSlot), type);
 }
 
 QualType CodeGenFunction::getVarArgType(const Expr *Arg) {

@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 
 #define DEBUG_TYPE "amdgpu-call-lowering"
@@ -415,7 +416,7 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
   const Function &F = MF.getFunction();
   const DataLayout &DL = F.getDataLayout();
   const SITargetLowering &TLI = *getTLI<SITargetLowering>();
-  MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
+  MachinePointerInfo PtrInfo = TLI.getKernargSegmentPtrInfo(MF);
 
   LLT PtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
 

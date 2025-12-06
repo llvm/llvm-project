@@ -17,14 +17,14 @@ func.func @copying(%arg0 : memref<9x4x5x7xf32>, %arg1 : memref<9x4x5x7xf32>) {
 // CHECK:           %[[UNREALIZED_CONVERSION_CAST_1:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<9x4x5x7xf32> to !emitc.array<9x4x5x7xf32>
 // CHECK:           %[[VAL_0:.*]] = "emitc.constant"() <{value = 0 : index}> : () -> index
 // CHECK:           %[[SUBSCRIPT_0:.*]] = emitc.subscript %[[UNREALIZED_CONVERSION_CAST_1]]{{\[}}%[[VAL_0]], %[[VAL_0]], %[[VAL_0]], %[[VAL_0]]] : (!emitc.array<9x4x5x7xf32>, index, index, index, index) -> !emitc.lvalue<f32>
-// CHECK:           %[[APPLY_0:.*]] = emitc.apply "&"(%[[SUBSCRIPT_0]]) : (!emitc.lvalue<f32>) -> !emitc.ptr<f32>
+// CHECK:           %[[ADDRESS_OF_0:.*]] = emitc.address_of %[[SUBSCRIPT_0]] : !emitc.lvalue<f32>
 // CHECK:           %[[VAL_1:.*]] = "emitc.constant"() <{value = 0 : index}> : () -> index
 // CHECK:           %[[SUBSCRIPT_1:.*]] = emitc.subscript %[[UNREALIZED_CONVERSION_CAST_0]]{{\[}}%[[VAL_1]], %[[VAL_1]], %[[VAL_1]], %[[VAL_1]]] : (!emitc.array<9x4x5x7xf32>, index, index, index, index) -> !emitc.lvalue<f32>
-// CHECK:           %[[APPLY_1:.*]] = emitc.apply "&"(%[[SUBSCRIPT_1]]) : (!emitc.lvalue<f32>) -> !emitc.ptr<f32>
+// CHECK:           %[[ADDRESS_OF_1:.*]] = emitc.address_of %[[SUBSCRIPT_1]] : !emitc.lvalue<f32>
 // CHECK:           %[[CALL_OPAQUE_0:.*]] = emitc.call_opaque "sizeof"() {args = [f32]} : () -> !emitc.size_t
 // CHECK:           %[[VAL_2:.*]] = "emitc.constant"() <{value = 1260 : index}> : () -> index
 // CHECK:           %[[MUL_0:.*]] = emitc.mul %[[CALL_OPAQUE_0]], %[[VAL_2]] : (!emitc.size_t, index) -> !emitc.size_t
-// CHECK:           emitc.call_opaque "memcpy"(%[[APPLY_1]], %[[APPLY_0]], %[[MUL_0]]) : (!emitc.ptr<f32>, !emitc.ptr<f32>, !emitc.size_t) -> ()
+// CHECK:           emitc.call_opaque "memcpy"(%[[ADDRESS_OF_1]], %[[ADDRESS_OF_0]], %[[MUL_0]]) : (!emitc.ptr<f32>, !emitc.ptr<f32>, !emitc.size_t) -> ()
 // CHECK:           return
 // CHECK:         }
 
