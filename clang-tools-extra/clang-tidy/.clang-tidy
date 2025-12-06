@@ -9,6 +9,7 @@ Checks: >
   -bugprone-narrowing-conversions,
   -bugprone-unchecked-optional-access,
   -bugprone-unused-return-value,
+  google-readability-casting,
   misc-const-correctness,
   modernize-*,
   -modernize-avoid-c-arrays,
