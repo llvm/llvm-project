@@ -100,8 +100,9 @@ void UseInitStatementCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
-  // Helper to create a complete matcher to prevent generating stealing cases
-  // Sample of stealing: `int* p; if (int v;cond) { p=&v; } use(p);`
+  // Helper to create a complete matcher to detect stealing cases, preventing
+  // the checker from generating code that could result in dangling references,
+  // such as: `int* p; if (int v;cond) { p=&v; } use(p);`
   const auto MakeHasStealingMatcher = [](const auto &Condition,
                                          StringRef Name) {
     const auto IsStealingViaPointer =
