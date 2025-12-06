@@ -122,7 +122,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        (__n >= 0 ? __n : -__n) < _ContainerMaxElements,
+        static_cast<size_t>(__n >= 0 ? __n : -__n) < _ContainerMaxElements,
         "__capacity_aware_iterator::operator[]: Attempting to index iterator past its container's possible range");
     return *(*this + __n);
   }
