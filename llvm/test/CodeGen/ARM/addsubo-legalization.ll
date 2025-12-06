@@ -49,24 +49,24 @@ define <2 x i1> @usubo(ptr %ptr, ptr %ptr2) {
 ; CHECK-LABEL: usubo:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
+; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
-; CHECK-NEXT:    vsub.i64 q8, q9, q8
-; CHECK-NEXT:    vmov lr, r12, d18
-; CHECK-NEXT:    vmov r4, r5, d19
-; CHECK-NEXT:    vmov r3, r2, d16
-; CHECK-NEXT:    vmov r6, r7, d17
-; CHECK-NEXT:    subs.w r3, lr, r3
-; CHECK-NEXT:    sbcs.w r2, r12, r2
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
+; CHECK-NEXT:    vmov r3, r2, d18
+; CHECK-NEXT:    vmov r6, r7, d19
+; CHECK-NEXT:    vmov lr, r12, d16
+; CHECK-NEXT:    vmov r4, r5, d17
+; CHECK-NEXT:    vsub.i64 q8, q8, q9
+; CHECK-NEXT:    subs.w r3, r3, lr
+; CHECK-NEXT:    sbcs.w r2, r2, r12
 ; CHECK-NEXT:    mov.w r2, #0
 ; CHECK-NEXT:    it lo
 ; CHECK-NEXT:    movlo r2, #1
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r2, #-1
-; CHECK-NEXT:    subs r3, r4, r6
-; CHECK-NEXT:    sbcs.w r3, r5, r7
+; CHECK-NEXT:    subs r3, r6, r4
+; CHECK-NEXT:    sbcs.w r3, r7, r5
 ; CHECK-NEXT:    it lo
 ; CHECK-NEXT:    movlo r1, #1
 ; CHECK-NEXT:    cmp r1, #0

@@ -75,23 +75,12 @@ define i32 @combine_uadd_not(i32 %a0, i32 %a1) {
 define <4 x i32> @combine_vec_uadd_not(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: combine_vec_uadd_not:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    psubd %xmm0, %xmm2
-; SSE-NEXT:    pmovsxbd {{.*#+}} xmm0 = [1,1,1,1]
-; SSE-NEXT:    pmaxud %xmm2, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE-NEXT:    blendvps %xmm0, %xmm2, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_uadd_not:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
-; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1,1,1,1]
-; AVX-NEXT:    vpmaxud %xmm2, %xmm0, %xmm2
-; AVX-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm2
-; AVX-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = xor <4 x i32> %a0, <i32 -1, i32 -1, i32 -1, i32 -1>
   %2 = call {<4 x i32>, <4 x i1>} @llvm.uadd.with.overflow.v4i32(<4 x i32> %1, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
