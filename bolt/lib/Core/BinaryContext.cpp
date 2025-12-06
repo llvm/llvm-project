@@ -531,20 +531,39 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
 }
 
 MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
-                                                    BinaryFunction &BF) {
-  if (BF.isInConstantIsland(Address)) {
-    BF.setIgnored();
-    this->outs() << "BOLT-WARNING: ignoring entry point at address 0x"
-                 << Twine::utohexstr(Address)
-                 << " in constant island of function " << BF << '\n';
+                                                    BinaryFunction &Source,
+                                                    BinaryFunction &Target) {
+  const uint64_t Offset = Address - Target.getAddress();
+  assert(Offset < Target.getSize() &&
+         "Address should be inside the referenced function");
+
+  bool IsValid = true;
+  if (Source.NeedBranchValidation) {
+    if (Target.CurrentState == BinaryFunction::State::Disassembled &&
+        !Target.getInstructionAtOffset(Offset)) {
+      this->outs()
+          << "BOLT-WARNING: corrupted control flow detected in function "
+          << Source
+          << ", an external branch/call targets an invalid instruction "
+          << "at address 0x" << Twine::utohexstr(Address) << '\n';
+      IsValid = false;
+    }
+    if (Target.isInConstantIsland(Address)) {
+      this->outs() << "BOLT-WARNING: ignoring entry point at address 0x"
+                   << Twine::utohexstr(Address)
+                   << " in constant island of function " << Target << '\n';
+      IsValid = false;
+    }
+  }
+
+  if (!IsValid) {
+    Source.NeedBranchValidation = false;
+    Source.setIgnored();
+    Target.setIgnored();
     return nullptr;
   }
 
-  const uint64_t Offset = Address - BF.getAddress();
-  assert(Offset < BF.getSize() &&
-         "Address should be inside the referenced function");
-
-  return Offset ? BF.addEntryPointAtOffset(Offset) : BF.getSymbol();
+  return Offset ? Target.addEntryPointAtOffset(Offset) : Target.getSymbol();
 }
 
 MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
@@ -1431,24 +1450,9 @@ void BinaryContext::processInterproceduralReferences() {
             << TargetFunction->getPrintName() << '\n';
       }
 
-      const uint64_t TargetOffset = Address - TargetFunction->getAddress();
-      if (TargetOffset && (TargetOffset <= TargetFunction->getSize())) {
-        if (TargetFunction->CurrentState ==
-                BinaryFunction::State::Disassembled &&
-            (!TargetFunction->getInstructionAtOffset(TargetOffset) ||
-             TargetFunction->getSizeOfDataInCodeAt(TargetOffset))) {
-          this->errs()
-              << "BOLT-WARNING: corrupted control flow detected in function "
-              << Function
-              << ", an external branch/call targets an invalid instruction "
-              << "at address 0x" << Twine::utohexstr(Address) << "\n";
-          Function.setIgnored();
-        }
-      }
-
       // Create an extra entry point if needed. Can also render the target
       // function ignored if the reference is invalid.
-      handleExternalBranchTarget(Address, *TargetFunction);
+      handleExternalBranchTarget(Address, Function, *TargetFunction);
 
       continue;
     }

@@ -385,6 +385,10 @@ private:
   /// True if the function should not have an associated symbol table entry.
   bool IsAnonymous{false};
 
+  /// Indicates whether branch validation has already been performed,
+  /// to avoid redundant processing.
+  bool NeedBranchValidation{true};
+
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 

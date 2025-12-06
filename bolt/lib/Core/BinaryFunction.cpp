@@ -1702,7 +1702,7 @@ bool BinaryFunction::scanExternalRefs() {
       // Get a reference symbol for the function when address is a valid code
       // reference.
       BranchTargetSymbol =
-          BC.handleExternalBranchTarget(TargetAddress, *TargetFunction);
+          BC.handleExternalBranchTarget(TargetAddress, *this, *TargetFunction);
       if (!BranchTargetSymbol)
         continue;
     }
@@ -1925,8 +1925,9 @@ bool BinaryFunction::validateInternalBranches() {
     if (!Offset || (Offset > getSize()))
       continue;
 
-    if (!getInstructionAtOffset(Offset) || getSizeOfDataInCodeAt(Offset)) {
-      BC.errs() << "BOLT-WARNING: corrupted control flow detected in function "
+    if (!getInstructionAtOffset(Offset) ||
+        isInConstantIsland(getAddress() + Offset)) {
+      BC.outs() << "BOLT-WARNING: corrupted control flow detected in function "
                 << *this << ", an internal branch/call targets an invalid "
                 << "instruction at address 0x"
                 << Twine::utohexstr(getAddress() + Offset) << "\n";
