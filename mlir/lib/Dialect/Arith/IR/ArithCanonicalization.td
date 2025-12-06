@@ -24,6 +24,18 @@ def SubIntAttrs : NativeCodeCall<"subIntegerAttrs($_builder, $0, $1, $2)">;
 // Multiply two integer attributes and create a new one with the result.
 def MulIntAttrs : NativeCodeCall<"mulIntegerAttrs($_builder, $0, $1, $2)">;
 
+// Select signed min value of two integer attributes and store to the result
+def SMinIntAttrs : NativeCodeCall<"sminIntegerAttrs($_builder, $0, $1, $2)">;
+
+// Select unsigned min value of two integer attributes and store to the result
+def UMinIntAttrs : NativeCodeCall<"uminIntegerAttrs($_builder, $0, $1, $2)">;
+
+// Select signed max value of two integer attributes and store to the result
+def SMaxIntAttrs : NativeCodeCall<"smaxIntegerAttrs($_builder, $0, $1, $2)">;
+
+// Select unsigned max value of two integer attributes and store to the result
+def UMaxIntAttrs : NativeCodeCall<"umaxIntegerAttrs($_builder, $0, $1, $2)">;
+
 // Merge overflow flags from 2 ops, selecting the most conservative combination.
 def MergeOverflow : NativeCodeCall<"mergeOverflowFlags($0, $1)">;
 
@@ -201,6 +213,62 @@ def MulUIExtendedToMulI :
     Pattern<(Arith_MulUIExtendedOp:$res $x, $y),
         [(Arith_MulIOp $x, $y, DefOverflow), (replaceWithValue $x)],
         [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
+
+//===----------------------------------------------------------------------===//
+// MaxSIOp
+//===----------------------------------------------------------------------===//
+
+// maxsi is commutative and will be canonicalized to have its constants appear
+// as the second operand.
+
+// maxsi(maxsi(x, c0), c1) -> maxsi(x, maxsi(c0, c1))
+def MaxSIMaxSIConstant :
+    Pat<(Arith_MaxSIOp:$res
+          (Arith_MaxSIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_MaxSIOp $x, (Arith_ConstantOp (SMaxIntAttrs $res, $c0, $c1)))>;
+
+//===----------------------------------------------------------------------===//
+// MaxUIOp
+//===----------------------------------------------------------------------===//
+
+// maxui is commutative and will be canonicalized to have its constants appear
+// as the second operand.
+
+// maxui(maxui(x, c0), c1) -> maxui(x, maxui(c0, c1))
+def MaxUIMaxUIConstant :
+    Pat<(Arith_MaxUIOp:$res
+          (Arith_MaxUIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_MaxUIOp $x, (Arith_ConstantOp (UMaxIntAttrs $res, $c0, $c1)))>;
+
+//===----------------------------------------------------------------------===//
+// MinSIOp
+//===----------------------------------------------------------------------===//
+
+// minsi is commutative and will be canonicalized to have its constants appear
+// as the second operand.
+
+// minsi(minsi(x, c0), c1) -> minsi(x, minsi(c0, c1))
+def MinSIMinSIConstant :
+    Pat<(Arith_MinSIOp:$res
+          (Arith_MinSIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_MinSIOp $x, (Arith_ConstantOp (SMinIntAttrs $res, $c0, $c1)))>;
+
+//===----------------------------------------------------------------------===//
+// MinUIOp
+//===----------------------------------------------------------------------===//
+
+// minui is commutative and will be canonicalized to have its constants appear
+// as the second operand.
+
+// minui(minui(x, c0), c1) -> minui(x, minui(c0, c1))
+def MinUIMinUIConstant :
+    Pat<(Arith_MinUIOp:$res
+          (Arith_MinUIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_MinUIOp $x, (Arith_ConstantOp (UMinIntAttrs $res, $c0, $c1)))>;
 
 //===----------------------------------------------------------------------===//
 // XOrIOp
