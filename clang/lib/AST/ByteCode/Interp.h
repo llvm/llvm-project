@@ -2646,10 +2646,6 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
-      << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
-      << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
-
   if (!CheckPointerToIntegralCast(S, OpPC, Ptr, T::bitWidth()))
     return Invalid(S, OpPC);
 

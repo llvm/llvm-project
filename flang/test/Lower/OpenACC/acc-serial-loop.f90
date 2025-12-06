@@ -392,10 +392,10 @@ subroutine acc_serial_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[ACC_FPRIVATE_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
-! CHECK:      acc.serial {{.*}} firstprivate(@firstprivatization_ref_10xf32 -> %[[ACC_FPRIVATE_B]] : !fir.ref<!fir.array<10xf32>>) {
-! CHECK:      %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
-! CHECK:        acc.loop {{.*}} private({{.*}}@privatization_ref_10xf32 -> %[[ACC_PRIVATE_A]] : !fir.ref<!fir.array<10xf32>>{{.*}})
+! CHECK:      %[[ACC_FPRIVATE_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) recipe(@firstprivatization_ref_10xf32) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
+! CHECK:      acc.serial {{.*}} firstprivate(%[[ACC_FPRIVATE_B]] : !fir.ref<!fir.array<10xf32>>) {
+! CHECK:      %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) recipe(@privatization_ref_10xf32) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
+! CHECK:        acc.loop {{.*}} private(%[[ACC_PRIVATE_A]]{{.*}} : !fir.ref<!fir.array<10xf32>>{{.*}})
 ! CHECK-NOT:          fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
@@ -661,7 +661,9 @@ subroutine acc_serial_loop
 ! CHECK:      %[[COPYINREDR:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "reduction_r"}
 ! CHECK:      %[[COPYINREDI:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<i32>) -> !fir.ref<i32> {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "reduction_i"}
 ! CHECK:      acc.serial {{.*}} dataOperands(%[[COPYINREDR]], %[[COPYINREDI]] : !fir.ref<f32>, !fir.ref<i32>) {
-! CHECK:        acc.loop {{.*}} reduction(@reduction_add_ref_f32 -> %{{.*}} : !fir.ref<f32>, @reduction_mul_ref_i32 -> %{{.*}} : !fir.ref<i32>)
+! CHECK:        %[[REDUCTION_R:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add_ref_f32) -> !fir.ref<f32> {name = "reduction_r"}
+! CHECK:        %[[REDUCTION_I:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_mul_ref_i32) -> !fir.ref<i32> {name = "reduction_i"}
+! CHECK:        acc.loop {{.*}} reduction(%[[REDUCTION_R]], %[[REDUCTION_I]] : !fir.ref<f32>, !fir.ref<i32>)
 ! CHECK-NOT:      fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
