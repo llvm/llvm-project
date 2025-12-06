@@ -700,22 +700,32 @@ public:
   }
 
   bool VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
-    // TODO: Lang check needed?
-    if (!Cfg.InlayHints.Designators &&
-        AST.getLangOpts().LangStd >= LangStandard::Kind::lang_cxx20)
+    if (!Cfg.InlayHints.Designators)
       return true;
 
     if (const auto *CXXRecord = E->getType()->getAsCXXRecordDecl()) {
       const auto &InitExprs = E->getInitExprs();
+      size_t InitInx = 0;
+
+      // Inherited members are first
+      for (const auto &Base : CXXRecord->bases()) {
+        std::ignore = Base;
+        // For a base record, just use its name
+        // Base of base requires its own initialization; ParenListInitExpr or
+        // InitListExpr will be invoked separately for them
+        InitInx++;
+      }
+
+      // Then the members defined in this record
       auto RecordFields = CXXRecord->fields().begin();
 
-      for (size_t I = 0; I < InitExprs.size();
-           ++I, RecordFields = std::next(RecordFields)) {
-        // TODO: is prepending "." sufficient?
-        addDesignatorHint(InitExprs[I]->getSourceRange(),
+      for (; InitInx < InitExprs.size();
+           ++InitInx, RecordFields = std::next(RecordFields)) {
+        addDesignatorHint(InitExprs[InitInx]->getSourceRange(),
                           "." + RecordFields->getName().str());
       }
     }
+
     return true;
   }
 

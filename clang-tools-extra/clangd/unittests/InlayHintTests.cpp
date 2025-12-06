@@ -1834,6 +1834,24 @@ TEST(DesignatorHints, BasicParenInit) {
                         ExpectedHint{".z=", "z"});
 }
 
+TEST(DesignatorHints, BasicParenInitDerived) {
+  assertDesignatorHints(R"cpp(
+    struct S1 {
+      int a;
+      int b;
+    };
+
+    struct S2 : S1 { 
+      int c;
+      int d; 
+    };
+    S2 s2 ({$a[[0]], $b[[0]]}, $c[[0]], $d[[0]]);
+  )cpp",
+                        // ExpectedHint{"S1:", "S1"},
+                        ExpectedHint{".a=", "a"}, ExpectedHint{".b=", "b"},
+                        ExpectedHint{".c=", "c"}, ExpectedHint{".d=", "d"});
+}
+
 TEST(InlayHints, RestrictRange) {
   Annotations Code(R"cpp(
     auto a = false;
