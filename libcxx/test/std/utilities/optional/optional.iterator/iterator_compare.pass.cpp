@@ -10,8 +10,8 @@
 
 // <optional>
 
-// template <class T> class optional::iterator;
-// template <class T> class optional::const_iterator;
+// template <class T> class optional::iterator::operator<=>;
+// template <class T> class optional::const_iterator::operator<=>;
 
 #include <cassert>
 #include <compare>

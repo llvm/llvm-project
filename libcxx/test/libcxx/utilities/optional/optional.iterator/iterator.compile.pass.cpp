@@ -10,6 +10,8 @@
 
 // <optional>
 
+// UNSUPPORTED: libcpp-has-abi-bounded-iterators-in-optional
+
 // template <class T> class optional::iterator;
 // template <class T> class optional::const_iterator;
 
