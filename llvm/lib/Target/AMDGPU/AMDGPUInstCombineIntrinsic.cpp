@@ -35,7 +35,7 @@ struct AMDGPUImageDMaskIntrinsic {
 };
 
 #define GET_AMDGPUImageDMaskIntrinsicTable_IMPL
-#include "InstCombineTables.inc"
+#include "AMDGPUGenSearchableTables.inc"
 
 } // end anonymous namespace
 
