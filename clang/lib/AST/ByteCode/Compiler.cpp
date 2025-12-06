@@ -1705,6 +1705,9 @@ bool Compiler<Emitter>::VisitFixedPointUnaryOperator(const UnaryOperator *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitImplicitValueInitExpr(
     const ImplicitValueInitExpr *E) {
+  if (DiscardResult)
+    return true;
+
   QualType QT = E->getType();
 
   if (OptPrimType T = classify(QT))

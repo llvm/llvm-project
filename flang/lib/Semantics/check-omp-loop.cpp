@@ -335,6 +335,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
     EnterDirectiveNest(SIMDNest);
   }
 
+  if (CurrentDirectiveIsNested() &&
+      llvm::omp::topTeamsSet.test(GetContext().directive) &&
+      GetContextParent().directive == llvm::omp::Directive::OMPD_target &&
+      !GetDirectiveNest(TargetBlockOnlyTeams)) {
+    context_.Say(GetContextParent().directiveSource,
+        "TARGET construct with nested TEAMS region contains statements or "
+        "directives outside of the TEAMS construct"_err_en_US);
+  }
+
   // Combined target loop constructs are target device constructs. Keep track of
   // whether any such construct has been visited to later check that REQUIRES
   // directives for target-related options don't appear after them.
@@ -471,9 +480,8 @@ void OmpStructureChecker::CheckDistLinear(
 
   // Collect symbols of all the variables from linear clauses
   for (auto &clause : clauses.v) {
-    if (auto *linearClause{std::get_if<parser::OmpClause::Linear>(&clause.u)}) {
-      auto &objects{std::get<parser::OmpObjectList>(linearClause->v.t)};
-      GetSymbolsInObjectList(objects, indexVars);
+    if (std::get_if<parser::OmpClause::Linear>(&clause.u)) {
+      GetSymbolsInObjectList(*parser::omp::GetOmpObjectList(clause), indexVars);
     }
   }
 
@@ -580,6 +588,42 @@ void OmpStructureChecker::CheckNestedFuse(
   }
 }
 
+void OmpStructureChecker::CheckScanModifier(
+    const parser::OmpClause::Reduction &x) {
+  using ReductionModifier = parser::OmpReductionModifier;
+
+  auto checkReductionSymbolInScan{[&](const parser::Name &name) {
+    if (auto *symbol{name.symbol}) {
+      if (!symbol->test(Symbol::Flag::OmpInclusiveScan) &&
+          !symbol->test(Symbol::Flag::OmpExclusiveScan)) {
+        context_.Say(name.source,
+            "List item %s must appear in EXCLUSIVE or INCLUSIVE clause of an enclosed SCAN directive"_err_en_US,
+            name.ToString());
+      }
+    }
+  }};
+
+  auto &modifiers{OmpGetModifiers(x.v)};
+  auto *maybeModifier{OmpGetUniqueModifier<ReductionModifier>(modifiers)};
+  if (maybeModifier && maybeModifier->v == ReductionModifier::Value::Inscan) {
+    for (const auto &ompObj : parser::omp::GetOmpObjectList(x)->v) {
+      common::visit(
+          common::visitors{
+              [&](const parser::Designator &desg) {
+                if (auto *name{parser::GetDesignatorNameIfDataRef(desg)}) {
+                  checkReductionSymbolInScan(*name);
+                }
+              },
+              [&](const parser::Name &name) {
+                checkReductionSymbolInScan(name);
+              },
+              [&](const parser::OmpObject::Invalid &invalid) {},
+          },
+          ompObj.u);
+    }
+  }
+}
+
 void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
   const parser::OmpClauseList &clauseList{x.BeginDir().Clauses()};
 
@@ -587,45 +631,9 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
   // constructs inside LOOP may add the relevant information. Scan reduction is
   // supported only in loop constructs, so same checks are not applicable to
   // other directives.
-  using ReductionModifier = parser::OmpReductionModifier;
   for (const auto &clause : clauseList.v) {
-    if (const auto *reductionClause{
-            std::get_if<parser::OmpClause::Reduction>(&clause.u)}) {
-      auto &modifiers{OmpGetModifiers(reductionClause->v)};
-      auto *maybeModifier{OmpGetUniqueModifier<ReductionModifier>(modifiers)};
-      if (maybeModifier &&
-          maybeModifier->v == ReductionModifier::Value::Inscan) {
-        const auto &objectList{
-            std::get<parser::OmpObjectList>(reductionClause->v.t)};
-        auto checkReductionSymbolInScan = [&](const parser::Name *name) {
-          if (auto &symbol = name->symbol) {
-            if (!symbol->test(Symbol::Flag::OmpInclusiveScan) &&
-                !symbol->test(Symbol::Flag::OmpExclusiveScan)) {
-              context_.Say(name->source,
-                  "List item %s must appear in EXCLUSIVE or "
-                  "INCLUSIVE clause of an "
-                  "enclosed SCAN directive"_err_en_US,
-                  name->ToString());
-            }
-          }
-        };
-        for (const auto &ompObj : objectList.v) {
-          common::visit(
-              common::visitors{
-                  [&](const parser::Designator &designator) {
-                    if (const auto *name{
-                            parser::GetDesignatorNameIfDataRef(designator)}) {
-                      checkReductionSymbolInScan(name);
-                    }
-                  },
-                  [&](const parser::Name &name) {
-                    checkReductionSymbolInScan(&name);
-                  },
-                  [&](const parser::OmpObject::Invalid &invalid) {},
-              },
-              ompObj.u);
-        }
-      }
+    if (auto *reduction{std::get_if<parser::OmpClause::Reduction>(&clause.u)}) {
+      CheckScanModifier(*reduction);
     }
   }
   if (llvm::omp::allSimdSet.test(GetContext().directive)) {
@@ -762,6 +770,20 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
           symbol->name());
     }
   }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Sizes &c) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_sizes);
+  for (const parser::Cosubscript &v : c.v)
+    RequiresPositiveParameter(llvm::omp::Clause::OMPC_sizes, v,
+        /*paramName=*/"parameter", /*allowZero=*/false);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_looprange);
+  auto &[first, count]{x.v.t};
+  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, count);
+  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, first);
 }
 
 void OmpStructureChecker::Enter(const parser::DoConstruct &x) {

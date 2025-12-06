@@ -453,6 +453,20 @@ public:
                                     bool performInit);
 
   void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
+  void emitGlobalOpenACCRoutineDecl(const clang::OpenACCRoutineDecl *cd);
+  void emitGlobalOpenACCDeclareDecl(const clang::OpenACCDeclareDecl *cd);
+  template <typename BeforeOpTy, typename DataClauseTy>
+  void emitGlobalOpenACCDeclareDataOperands(const Expr *varOperand,
+                                            DataClauseTy dataClause,
+                                            OpenACCModifierKind modifiers,
+                                            bool structured, bool implicit,
+                                            bool requiresDtor);
+  // Each of the acc.routine operations must have a unique name, so we just use
+  // an integer counter.  This is how Flang does it, so it seems reasonable.
+  unsigned routineCounter = 0;
+  void emitOpenACCRoutineDecl(const clang::FunctionDecl *funcDecl,
+                              cir::FuncOp func, SourceLocation pragmaLoc,
+                              ArrayRef<const OpenACCClause *> clauses);
 
   // C++ related functions.
   void emitDeclContext(const DeclContext *dc);
