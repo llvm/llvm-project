@@ -39,6 +39,7 @@ add_clang_library(clangTidyMiscModule STATIC
   ThrowByValueCatchByReferenceCheck.cpp
   UnconventionalAssignOperatorCheck.cpp
   UniqueptrResetReleaseCheck.cpp
+  UnnamedNamespaceInHeaderCheck.cpp
   UnusedAliasDeclsCheck.cpp
   UnusedParametersCheck.cpp
   UnusedUsingDeclsCheck.cpp

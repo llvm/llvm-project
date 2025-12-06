@@ -29,6 +29,7 @@
 #include "ThrowByValueCatchByReferenceCheck.h"
 #include "UnconventionalAssignOperatorCheck.h"
 #include "UniqueptrResetReleaseCheck.h"
+#include "UnnamedNamespaceInHeaderCheck.h"
 #include "UnusedAliasDeclsCheck.h"
 #include "UnusedParametersCheck.h"
 #include "UnusedUsingDeclsCheck.h"
@@ -41,6 +42,8 @@ namespace misc {
 class MiscModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<build::UnnamedNamespaceInHeaderCheck>(
+        "misc-anonymous-namespace-in-header");
     CheckFactories.registerCheck<ConfusableIdentifierCheck>(
         "misc-confusable-identifiers");
     CheckFactories.registerCheck<ConstCorrectnessCheck>(

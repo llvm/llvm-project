@@ -31,12 +31,12 @@
 #include "../bugprone/UnsafeFunctionsCheck.h"
 #include "../bugprone/UnusedReturnValueCheck.h"
 #include "../concurrency/ThreadCanceltypeAsynchronousCheck.h"
-#include "../google/UnnamedNamespaceInHeaderCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/NonCopyableObjectsCheck.h"
 #include "../misc/PredictableRandCheck.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
+#include "../misc/UnnamedNamespaceInHeaderCheck.h"
 #include "../modernize/AvoidSetjmpLongjmpCheck.h"
 #include "../modernize/AvoidVariadicFunctionsCheck.h"
 #include "../performance/MoveConstructorInitCheck.h"
@@ -253,7 +253,7 @@ public:
         "cert-dcl54-cpp");
     CheckFactories.registerCheck<bugprone::StdNamespaceModificationCheck>(
         "cert-dcl58-cpp");
-    CheckFactories.registerCheck<google::build::UnnamedNamespaceInHeaderCheck>(
+    CheckFactories.registerCheck<misc::build::UnnamedNamespaceInHeaderCheck>(
         "cert-dcl59-cpp");
     // ERR
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(

@@ -12,7 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::google::build {
+namespace clang::tidy::misc::build {
 
 UnnamedNamespaceInHeaderCheck::UnnamedNamespaceInHeaderCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -37,4 +37,4 @@ void UnnamedNamespaceInHeaderCheck::check(
     diag(Loc, "do not use unnamed namespaces in header files");
 }
 
-} // namespace clang::tidy::google::build
+} // namespace clang::tidy::misc::build
