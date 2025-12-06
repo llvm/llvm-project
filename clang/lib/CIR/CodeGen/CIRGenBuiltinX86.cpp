@@ -156,11 +156,11 @@ static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
                                          mlir::Value mask,
                                          mlir::Value inputVector,
                                          const std::string &id) {
-  auto ResultTy = cast<cir::VectorType>(mask.getType());
-  mlir::Value MaskValue = getMaskVecValue(
-      builder, loc, inputVector, cast<cir::VectorType>(ResultTy).getSize());
-  return emitIntrinsicCallOp(builder, loc, id, ResultTy,
-                             mlir::ValueRange{source, mask, MaskValue});
+  auto resultTy = cast<cir::VectorType>(mask.getType());
+  mlir::Value maskValue = getMaskVecValue(
+      builder, loc, inputVector, cast<cir::VectorType>(resultTy).getSize());
+  return emitIntrinsicCallOp(builder, loc, id, resultTy,
+                             mlir::ValueRange{source, mask, maskValue});
 }
 
 static mlir::Value emitX86MaskAddLogic(CIRGenBuilderTy &builder,
@@ -745,10 +745,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_expandqi128_mask:
   case X86::BI__builtin_ia32_expandqi256_mask:
   case X86::BI__builtin_ia32_expandqi512_mask:{
-  mlir::Location loc = getLoc(expr->getExprLoc());
-  return emitX86CompressExpand(builder, loc, ops[0], ops[1], ops[2],
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    return emitX86CompressExpand(builder, loc, ops[0], ops[1], ops[2],
                                "x86.avx512.mask.expand");
-}
+  }
   case X86::BI__builtin_ia32_compressdf128_mask:
   case X86::BI__builtin_ia32_compressdf256_mask:
   case X86::BI__builtin_ia32_compressdf512_mask:
@@ -767,10 +767,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_compressqi128_mask:
   case X86::BI__builtin_ia32_compressqi256_mask:
   case X86::BI__builtin_ia32_compressqi512_mask:{
-  mlir::Location loc = getLoc(expr->getExprLoc());
-  return emitX86CompressExpand(builder, loc, ops[0], ops[1], ops[2],
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    return emitX86CompressExpand(builder, loc, ops[0], ops[1], ops[2],
                                "x86.avx512.mask.compress");
-}
+  }
   case X86::BI__builtin_ia32_gather3div2df:
   case X86::BI__builtin_ia32_gather3div2di:
   case X86::BI__builtin_ia32_gather3div4df:
