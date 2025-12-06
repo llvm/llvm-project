@@ -551,18 +551,18 @@ struct CanProxyAdaptor<UnaryTransformType>
 
 template<>
 struct CanProxyAdaptor<TagType> : public CanProxyBase<TagType> {
-  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(TagDecl *, getOriginalDecl)
+  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(TagDecl *, getDecl)
 };
 
 template<>
 struct CanProxyAdaptor<RecordType> : public CanProxyBase<RecordType> {
-  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(RecordDecl *, getOriginalDecl)
+  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(RecordDecl *, getDecl)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, hasConstFields)
 };
 
 template<>
 struct CanProxyAdaptor<EnumType> : public CanProxyBase<EnumType> {
-  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(EnumDecl *, getOriginalDecl)
+  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(EnumDecl *, getDecl)
 };
 
 template<>

@@ -410,10 +410,10 @@ public:
 /// This is useful for adding attrs to bitcode modules that you want to link
 /// with but don't control, such as CUDA's libdevice.  When linking with such
 /// a bitcode library, you might want to set e.g. its functions'
-/// "unsafe-fp-math" attribute to match the attr of the functions you're
+/// "denormal-fp-math" attribute to match the attr of the functions you're
 /// codegen'ing.  Otherwise, LLVM will interpret the bitcode module's lack of
-/// unsafe-fp-math attrs as tantamount to unsafe-fp-math=false, and then LLVM
-/// will propagate unsafe-fp-math=false up to every transitive caller of a
+/// denormal-fp-math attrs as tantamount to denormal-fp-math=ieee, and then LLVM
+/// will propagate denormal-fp-math=ieee up to every transitive caller of a
 /// function in the bitcode library!
 ///
 /// With the exception of fast-math attrs, this will only make the attributes

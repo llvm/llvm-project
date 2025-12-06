@@ -325,9 +325,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.dup2
     libc.src.unistd.dup3
     libc.src.unistd.execve
-    # Disabled while SYS_faccessat2 is unavailable on the buildbot.
-    # libc.src.unistd.faccessat
+    libc.src.unistd.faccessat
     libc.src.unistd.fchdir
+    libc.src.unistd.fchown
     libc.src.unistd.fpathconf
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
@@ -945,6 +945,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # arpa/inet.h entrypoints
     libc.src.arpa.inet.htonl
     libc.src.arpa.inet.htons
+    libc.src.arpa.inet.inet_addr
+    libc.src.arpa.inet.inet_aton
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
 
@@ -1143,6 +1145,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.ctime_r
     libc.src.time.clock
     libc.src.time.clock_gettime
+    libc.src.time.clock_settime
     libc.src.time.difftime
     libc.src.time.gettimeofday
     libc.src.time.gmtime

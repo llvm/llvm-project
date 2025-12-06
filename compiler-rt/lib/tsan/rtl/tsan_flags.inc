@@ -81,7 +81,7 @@ TSAN_FLAG(bool, print_full_thread_history, false,
           "If set, prints thread creation stacks for the threads involved in "
           "the report and their ancestors up to the main thread.")
 
-#if SANITIZER_APPLE
+#if SANITIZER_APPLE && !SANITIZER_GO
 TSAN_FLAG(LockDuringWriteSetting, lock_during_write, kLockDuringAllWrites,
           "Determines whether to obtain a lock while writing logs or error "
           "reports. "

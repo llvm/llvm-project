@@ -896,16 +896,13 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 ; CHECK-SD-NEXT:    shl.16b v0, v0, #7
 ; CHECK-SD-NEXT:    adrp x8, lCPI20_0@PAGE
 ; CHECK-SD-NEXT:    ldr q1, [x8, lCPI20_0@PAGEOFF]
-; CHECK-SD-NEXT:    add x8, sp, #14
 ; CHECK-SD-NEXT:    cmlt.16b v0, v0, #0
 ; CHECK-SD-NEXT:    and.16b v0, v0, v1
 ; CHECK-SD-NEXT:    ext.16b v1, v0, v0, #8
 ; CHECK-SD-NEXT:    zip1.16b v0, v0, v1
 ; CHECK-SD-NEXT:    addv.8h h0, v0
-; CHECK-SD-NEXT:    str h0, [sp, #14]
-; CHECK-SD-NEXT:    ld1.b { v0 }[0], [x8]
-; CHECK-SD-NEXT:    orr x8, x8, #0x1
-; CHECK-SD-NEXT:    ld1.b { v0 }[4], [x8]
+; CHECK-SD-NEXT:    ushll.8h v0, v0, #0
+; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret

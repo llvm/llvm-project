@@ -25,7 +25,7 @@ target triple = "bpfeb"
 %struct.s = type { i64, i32, i32, i32, i8, i8 }
 
 ; Function Attrs: nounwind readnone
-define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !13 {
+define dso_local i32 @test(ptr %arg) local_unnamed_addr !dbg !13 {
 ; CHECK-ALU64-LABEL: test:
 ; CHECK-ALU64:       .Ltest$local:
 ; CHECK-ALU64-NEXT:    .type .Ltest$local,@function
@@ -122,17 +122,13 @@ entry:
 ; CHECK-NEXT:        .long   4
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr, i32, i32) #1
+declare ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr, i32, i32)
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.bpf.preserve.field.info.p0(ptr, i64) #1
+declare i32 @llvm.bpf.preserve.field.info.p0(ptr, i64)
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #2
-
-attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind readnone speculatable }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10, !11}
@@ -177,4 +173,3 @@ attributes #2 = { nounwind readnone speculatable }
 !36 = !DILocation(line: 14, column: 10, scope: !13)
 !37 = !DILocation(line: 13, column: 67, scope: !13)
 !38 = !DILocation(line: 12, column: 3, scope: !13)
-

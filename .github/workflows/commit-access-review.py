@@ -170,80 +170,6 @@ def get_num_commits(gh: github.Github, user: str, start_date: datetime.datetime)
     return count
 
 
-def is_new_committer_query_repo(
-    gh: github.Github, user: str, start_date: datetime.datetime
-) -> bool:
-    """
-    Determine if ``user`` is a new committer.  A new committer can keep their
-    commit access even if they don't meet the criteria.
-    """
-    variables = {
-        "user": user,
-    }
-
-    user_query = """
-        query ($user: String!) {
-          user(login: $user) {
-            id
-          }
-        }
-    """
-
-    res_header, res_data = gh._Github__requester.graphql_query(
-        query=user_query, variables=variables
-    )
-    data = res_data["data"]
-    variables["owner"] = "llvm"
-    variables["user_id"] = data["user"]["id"]
-    variables["start_date"] = start_date.strftime("%Y-%m-%dT%H:%M:%S")
-
-    query = """
-        query ($owner: String!, $user_id: ID!){
-          organization(login: $owner) {
-            repository(name: "llvm-project") {
-              ref(qualifiedName: "main") {
-                target {
-                  ... on Commit {
-                    history(author: {id: $user_id }, first: 5) {
-                      nodes {
-                        committedDate
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-     """
-
-    res_header, res_data = gh._Github__requester.graphql_query(
-        query=query, variables=variables
-    )
-    data = res_data["data"]
-    repo = data["organization"]["repository"]
-    commits = repo["ref"]["target"]["history"]["nodes"]
-    if len(commits) == 0:
-        return True
-    committed_date = commits[-1]["committedDate"]
-    if datetime.datetime.strptime(committed_date, "%Y-%m-%dT%H:%M:%SZ") < start_date:
-        return False
-    return True
-
-
-def is_new_committer(
-    gh: github.Github, user: str, start_date: datetime.datetime
-) -> bool:
-    """
-    Wrapper around is_new_commiter_query_repo to handle exceptions.
-    """
-    try:
-        return is_new_committer_query_repo(gh, user, start_date)
-    except:
-        pass
-    return True
-
-
 def get_review_count(
     gh: github.Github, user: str, start_date: datetime.datetime
 ) -> int:
@@ -382,13 +308,6 @@ def main():
         triage_list[user].set_authored(num_commits)
 
     print("After Commits:", len(triage_list), "triagers")
-
-    # Step 4 check for new committers
-    for user in list(triage_list.keys()):
-        print("Checking", user)
-        if is_new_committer(gh, user, one_year_ago):
-            print("Removing new committer: ", user)
-            del triage_list[user]
 
     print("Complete:", len(triage_list), "triagers")
 

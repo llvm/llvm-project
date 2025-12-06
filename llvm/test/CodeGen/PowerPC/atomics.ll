@@ -341,7 +341,7 @@ define i8 @add_i8_monotonic(ptr %mem, i8 %operand) {
 ; PPC32-NEXT:    and r8, r8, r6
 ; PPC32-NEXT:    or r8, r8, r9
 ; PPC32-NEXT:    stwcx. r8, 0, r5
-; PPC32-NEXT:    bne cr0, .LBB12_1
+; PPC32-NEXT:    bne- cr0, .LBB12_1
 ; PPC32-NEXT:  # %bb.2:
 ; PPC32-NEXT:    srw r3, r7, r3
 ; PPC32-NEXT:    clrlwi r3, r3, 24
@@ -362,7 +362,7 @@ define i8 @add_i8_monotonic(ptr %mem, i8 %operand) {
 ; PPC64-NEXT:    and r8, r8, r6
 ; PPC64-NEXT:    or r8, r8, r9
 ; PPC64-NEXT:    stwcx. r8, 0, r5
-; PPC64-NEXT:    bne cr0, .LBB12_1
+; PPC64-NEXT:    bne- cr0, .LBB12_1
 ; PPC64-NEXT:  # %bb.2:
 ; PPC64-NEXT:    srw r3, r7, r3
 ; PPC64-NEXT:    clrlwi r3, r3, 24
@@ -388,7 +388,7 @@ define i16 @xor_i16_seq_cst(ptr %mem, i16 %operand) {
 ; PPC32-NEXT:    and r8, r8, r6
 ; PPC32-NEXT:    or r8, r8, r9
 ; PPC32-NEXT:    stwcx. r8, 0, r3
-; PPC32-NEXT:    bne cr0, .LBB13_1
+; PPC32-NEXT:    bne- cr0, .LBB13_1
 ; PPC32-NEXT:  # %bb.2:
 ; PPC32-NEXT:    srw r3, r7, r5
 ; PPC32-NEXT:    clrlwi r3, r3, 16
@@ -412,7 +412,7 @@ define i16 @xor_i16_seq_cst(ptr %mem, i16 %operand) {
 ; PPC64-NEXT:    and r8, r8, r6
 ; PPC64-NEXT:    or r8, r8, r9
 ; PPC64-NEXT:    stwcx. r8, 0, r3
-; PPC64-NEXT:    bne cr0, .LBB13_1
+; PPC64-NEXT:    bne- cr0, .LBB13_1
 ; PPC64-NEXT:  # %bb.2:
 ; PPC64-NEXT:    srw r3, r7, r5
 ; PPC64-NEXT:    clrlwi r3, r3, 16
@@ -428,7 +428,7 @@ define i32 @xchg_i32_acq_rel(ptr %mem, i32 %operand) {
 ; CHECK-NEXT:  .LBB14_1:
 ; CHECK-NEXT:    lwarx r5, 0, r3
 ; CHECK-NEXT:    stwcx. r4, 0, r3
-; CHECK-NEXT:    bne cr0, .LBB14_1
+; CHECK-NEXT:    bne- cr0, .LBB14_1
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    mr r3, r5
 ; CHECK-NEXT:    lwsync
@@ -458,7 +458,7 @@ define i64 @and_i64_release(ptr %mem, i64 %operand) {
 ; PPC64-NEXT:    ldarx r5, 0, r3
 ; PPC64-NEXT:    and r6, r4, r5
 ; PPC64-NEXT:    stdcx. r6, 0, r3
-; PPC64-NEXT:    bne cr0, .LBB15_1
+; PPC64-NEXT:    bne- cr0, .LBB15_1
 ; PPC64-NEXT:  # %bb.2:
 ; PPC64-NEXT:    mr r3, r5
 ; PPC64-NEXT:    blr

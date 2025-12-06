@@ -18,7 +18,6 @@
 #include "llvm/Support/Compiler.h"
 
 #include <utility>
-#include <vector>
 
 namespace llvm::orc {
 

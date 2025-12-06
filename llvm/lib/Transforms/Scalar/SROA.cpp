@@ -118,9 +118,13 @@ STATISTIC(
 STATISTIC(NumDeleted, "Number of instructions deleted");
 STATISTIC(NumVectorized, "Number of vectorized aggregates");
 
+namespace llvm {
 /// Disable running mem2reg during SROA in order to test or debug SROA.
 static cl::opt<bool> SROASkipMem2Reg("sroa-skip-mem2reg", cl::init(false),
                                      cl::Hidden);
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
+
 namespace {
 
 class AllocaSliceRewriter;
@@ -340,6 +344,12 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
                              uint64_t SliceSizeInBits, Instruction *OldInst,
                              Instruction *Inst, Value *Dest, Value *Value,
                              const DataLayout &DL) {
+  // If we want allocas to be migrated using this helper then we need to ensure
+  // that the BaseFragments map code still works. A simple solution would be
+  // to choose to always clone alloca dbg_assigns (rather than sometimes
+  // "stealing" them).
+  assert(!isa<AllocaInst>(Inst) && "Unexpected alloca");
+
   auto DVRAssignMarkerRange = at::getDVRAssignmentMarkers(OldInst);
   // Nothing to do if OldInst has no linked dbg.assign intrinsics.
   if (DVRAssignMarkerRange.empty())
@@ -425,11 +435,22 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
       Inst->setMetadata(LLVMContext::MD_DIAssignID, NewID);
     }
 
-    ::Value *NewValue = Value ? Value : DbgAssign->getValue();
-    DbgVariableRecord *NewAssign = cast<DbgVariableRecord>(cast<DbgRecord *>(
-        DIB.insertDbgAssign(Inst, NewValue, DbgAssign->getVariable(), Expr,
-                            Dest, DIExpression::get(Expr->getContext(), {}),
-                            DbgAssign->getDebugLoc())));
+    DbgVariableRecord *NewAssign;
+    if (IsSplit) {
+      ::Value *NewValue = Value ? Value : DbgAssign->getValue();
+      NewAssign = cast<DbgVariableRecord>(cast<DbgRecord *>(
+          DIB.insertDbgAssign(Inst, NewValue, DbgAssign->getVariable(), Expr,
+                              Dest, DIExpression::get(Expr->getContext(), {}),
+                              DbgAssign->getDebugLoc())));
+    } else {
+      // The store is not split, simply steal the existing dbg_assign.
+      NewAssign = DbgAssign;
+      NewAssign->setAssignId(NewID); // FIXME: Can we avoid generating new IDs?
+      NewAssign->setAddress(Dest);
+      if (Value)
+        NewAssign->replaceVariableLocationOp(0u, Value);
+      assert(Expr == NewAssign->getExpression());
+    }
 
     // If we've updated the value but the original dbg.assign has an arglist
     // then kill it now - we can't use the requested new value.
@@ -460,9 +481,10 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     // noted as slightly offset (in code) from the store. In practice this
     // should have little effect on the debugging experience due to the fact
     // that all the split stores should get the same line number.
-    NewAssign->moveBefore(DbgAssign->getIterator());
-
-    NewAssign->setDebugLoc(DbgAssign->getDebugLoc());
+    if (NewAssign != DbgAssign) {
+      NewAssign->moveBefore(DbgAssign->getIterator());
+      NewAssign->setDebugLoc(DbgAssign->getDebugLoc());
+    }
     LLVM_DEBUG(dbgs() << "Created new assign: " << *NewAssign << "\n");
   };
 
@@ -547,12 +569,10 @@ public:
   }
 
   /// Support comparison with a single offset to allow binary searches.
-  friend LLVM_ATTRIBUTE_UNUSED bool operator<(const Slice &LHS,
-                                              uint64_t RHSOffset) {
+  [[maybe_unused]] friend bool operator<(const Slice &LHS, uint64_t RHSOffset) {
     return LHS.beginOffset() < RHSOffset;
   }
-  friend LLVM_ATTRIBUTE_UNUSED bool operator<(uint64_t LHSOffset,
-                                              const Slice &RHS) {
+  [[maybe_unused]] friend bool operator<(uint64_t LHSOffset, const Slice &RHS) {
     return LHSOffset < RHS.beginOffset();
   }
 
@@ -1777,7 +1797,8 @@ static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
   }
 
   Value *V = IRB.CreateSelect(SI.getCondition(), TL, FL,
-                              LI.getName() + ".sroa.speculated");
+                              LI.getName() + ".sroa.speculated",
+                              ProfcheckDisableMetadataFixes ? nullptr : &SI);
 
   LLVM_DEBUG(dbgs() << "          speculated to: " << *V << "\n");
   LI.replaceAllUsesWith(V);
@@ -2157,35 +2178,6 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
   return true;
 }
 
-/// Test whether a vector type is viable for promotion.
-///
-/// This implements the necessary checking for \c checkVectorTypesForPromotion
-/// (and thus isVectorPromotionViable) over all slices of the alloca for the
-/// given VectorType.
-static bool checkVectorTypeForPromotion(Partition &P, VectorType *VTy,
-                                        const DataLayout &DL, unsigned VScale) {
-  uint64_t ElementSize =
-      DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
-
-  // While the definition of LLVM vectors is bitpacked, we don't support sizes
-  // that aren't byte sized.
-  if (ElementSize % 8)
-    return false;
-  assert((DL.getTypeSizeInBits(VTy).getFixedValue() % 8) == 0 &&
-         "vector size not a multiple of element size?");
-  ElementSize /= 8;
-
-  for (const Slice &S : P)
-    if (!isVectorPromotionViableForSlice(P, S, VTy, ElementSize, DL, VScale))
-      return false;
-
-  for (const Slice *S : P.splitSliceTails())
-    if (!isVectorPromotionViableForSlice(P, *S, VTy, ElementSize, DL, VScale))
-      return false;
-
-  return true;
-}
-
 /// Test whether any vector type in \p CandidateTys is viable for promotion.
 ///
 /// This implements the necessary checking for \c isVectorPromotionViable over
@@ -2270,11 +2262,30 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
            std::numeric_limits<unsigned short>::max();
   });
 
-  for (VectorType *VTy : CandidateTys)
-    if (checkVectorTypeForPromotion(P, VTy, DL, VScale))
-      return VTy;
+  // Find a vector type viable for promotion by iterating over all slices.
+  auto *VTy = llvm::find_if(CandidateTys, [&](VectorType *VTy) -> bool {
+    uint64_t ElementSize =
+        DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
 
-  return nullptr;
+    // While the definition of LLVM vectors is bitpacked, we don't support sizes
+    // that aren't byte sized.
+    if (ElementSize % 8)
+      return false;
+    assert((DL.getTypeSizeInBits(VTy).getFixedValue() % 8) == 0 &&
+           "vector size not a multiple of element size?");
+    ElementSize /= 8;
+
+    for (const Slice &S : P)
+      if (!isVectorPromotionViableForSlice(P, S, VTy, ElementSize, DL, VScale))
+        return false;
+
+    for (const Slice *S : P.splitSliceTails())
+      if (!isVectorPromotionViableForSlice(P, *S, VTy, ElementSize, DL, VScale))
+        return false;
+
+    return true;
+  });
+  return VTy != CandidateTys.end() ? *VTy : nullptr;
 }
 
 static VectorType *createAndCheckVectorTypesForPromotion(
@@ -2662,7 +2673,9 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
   for (unsigned i = 0; i != cast<FixedVectorType>(VecTy)->getNumElements(); ++i)
     Mask2.push_back(IRB.getInt1(i >= BeginIndex && i < EndIndex));
 
-  V = IRB.CreateSelect(ConstantVector::get(Mask2), V, Old, Name + "blend");
+  // No profiling support for vector selects.
+  V = IRB.CreateSelectWithUnknownProfile(ConstantVector::get(Mask2), V, Old,
+                                         DEBUG_TYPE, Name + "blend");
 
   LLVM_DEBUG(dbgs() << "    blend: " << *V << "\n");
   return V;
@@ -2961,6 +2974,7 @@ public:
         isa<FixedVectorType>(NewAI.getAllocatedType())
             ? cast<FixedVectorType>(NewAI.getAllocatedType())->getElementType()
             : Type::getInt8Ty(NewAI.getContext());
+    unsigned AllocatedEltTySize = DL.getTypeSizeInBits(AllocatedEltTy);
 
     // Helper to check if a type is
     //  1. A fixed vector type
@@ -2991,9 +3005,16 @@ public:
         // Do not handle the case if
         //   1. The store does not meet the conditions in the helper function
         //   2. The store is volatile
+        //   3. The total store size is not a multiple of the allocated element
+        //   type size
         if (!IsTypeValidForTreeStructuredMerge(
                 SI->getValueOperand()->getType()) ||
             SI->isVolatile())
+          return std::nullopt;
+        auto *VecTy = cast<FixedVectorType>(SI->getValueOperand()->getType());
+        unsigned NumElts = VecTy->getNumElements();
+        unsigned EltSize = DL.getTypeSizeInBits(VecTy->getElementType());
+        if (NumElts * EltSize % AllocatedEltTySize != 0)
           return std::nullopt;
         StoreInfos.emplace_back(SI, S.beginOffset(), S.endOffset(),
                                 SI->getValueOperand());
@@ -3119,7 +3140,6 @@ private:
     assert(IsSplit || BeginOffset == NewBeginOffset);
     uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
 
-#ifndef NDEBUG
     StringRef OldName = OldPtr->getName();
     // Skip through the last '.sroa.' component of the name.
     size_t LastSROAPrefix = OldName.rfind(".sroa.");
@@ -3138,17 +3158,10 @@ private:
     }
     // Strip any SROA suffixes as well.
     OldName = OldName.substr(0, OldName.find(".sroa_"));
-#endif
 
     return getAdjustedPtr(IRB, DL, &NewAI,
                           APInt(DL.getIndexTypeSizeInBits(PointerTy), Offset),
-                          PointerTy,
-#ifndef NDEBUG
-                          Twine(OldName) + "."
-#else
-                          Twine()
-#endif
-    );
+                          PointerTy, Twine(OldName) + ".");
   }
 
   /// Compute suitable alignment to access this slice of the *new*
@@ -4352,10 +4365,13 @@ private:
     };
 
     Value *Cond, *True, *False;
+    Instruction *MDFrom = nullptr;
     if (auto *SI = dyn_cast<SelectInst>(Sel)) {
       Cond = SI->getCondition();
       True = SI->getTrueValue();
       False = SI->getFalseValue();
+      if (!ProfcheckDisableMetadataFixes)
+        MDFrom = SI;
     } else {
       Cond = Sel->getOperand(0);
       True = ConstantInt::get(Sel->getType(), 1);
@@ -4375,8 +4391,12 @@ private:
         IRB.CreateGEP(Ty, FalseOps[0], ArrayRef(FalseOps).drop_front(),
                       False->getName() + ".sroa.gep", NW);
 
-    Value *NSel =
-        IRB.CreateSelect(Cond, NTrue, NFalse, Sel->getName() + ".sroa.sel");
+    Value *NSel = MDFrom
+                      ? IRB.CreateSelect(Cond, NTrue, NFalse,
+                                         Sel->getName() + ".sroa.sel", MDFrom)
+                      : IRB.CreateSelectWithUnknownProfile(
+                            Cond, NTrue, NFalse, DEBUG_TYPE,
+                            Sel->getName() + ".sroa.sel");
     Visited.erase(&GEPI);
     GEPI.replaceAllUsesWith(NSel);
     GEPI.eraseFromParent();
@@ -5175,7 +5195,6 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // won't always succeed, in which case we fall back to a legal integer type
   // or an i8 array of an appropriate size.
   Type *SliceTy = nullptr;
-  VectorType *SliceVecTy = nullptr;
   const DataLayout &DL = AI.getDataLayout();
   unsigned VScale = AI.getFunction()->getVScaleValue();
 
@@ -5184,10 +5203,8 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // Do all uses operate on the same type?
   if (CommonUseTy.first) {
     TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy.first);
-    if (CommonUseSize.isFixed() && CommonUseSize.getFixedValue() >= P.size()) {
+    if (CommonUseSize.isFixed() && CommonUseSize.getFixedValue() >= P.size())
       SliceTy = CommonUseTy.first;
-      SliceVecTy = dyn_cast<VectorType>(SliceTy);
-    }
   }
   // If not, can we find an appropriate subtype in the original allocated type?
   if (!SliceTy)
@@ -5197,26 +5214,13 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
 
   // If still not, can we use the largest bitwidth integer type used?
   if (!SliceTy && CommonUseTy.second)
-    if (DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size()) {
+    if (DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size())
       SliceTy = CommonUseTy.second;
-      SliceVecTy = dyn_cast<VectorType>(SliceTy);
-    }
   if ((!SliceTy || (SliceTy->isArrayTy() &&
                     SliceTy->getArrayElementType()->isIntegerTy())) &&
       DL.isLegalInteger(P.size() * 8)) {
     SliceTy = Type::getIntNTy(*C, P.size() * 8);
   }
-
-  // If the common use types are not viable for promotion then attempt to find
-  // another type that is viable.
-  if (SliceVecTy && !checkVectorTypeForPromotion(P, SliceVecTy, DL, VScale))
-    if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
-                                                 P.beginOffset(), P.size())) {
-      VectorType *TypePartitionVecTy = dyn_cast<VectorType>(TypePartitionTy);
-      if (TypePartitionVecTy &&
-          checkVectorTypeForPromotion(P, TypePartitionVecTy, DL, VScale))
-        SliceTy = TypePartitionTy;
-    }
 
   if (!SliceTy)
     SliceTy = ArrayType::get(Type::getInt8Ty(*C), P.size());

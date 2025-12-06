@@ -26,13 +26,13 @@ define dso_local void @caller_to8_from0() {
 ; CHECK-LABEL: caller_to8_from0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    str x8, [sp]
 ; CHECK-NEXT:    bl callee_stack8
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 
@@ -45,7 +45,7 @@ define dso_local void @caller_to8_from0() {
 define dso_local void @caller_to8_from8([8 x i64], i64 %a) {
 ; CHECK-LABEL: caller_to8_from8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    str x8, [sp]
 ; CHECK-NEXT:    b callee_stack8
 
@@ -58,11 +58,11 @@ define dso_local void @caller_to16_from8([8 x i64], i64 %a) {
 ; CHECK-LABEL: caller_to16_from8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl callee_stack16
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 
@@ -76,7 +76,7 @@ define dso_local void @caller_to16_from8([8 x i64], i64 %a) {
 define dso_local void @caller_to8_from24([8 x i64], i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: caller_to8_from24:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    str x8, [sp]
 ; CHECK-NEXT:    b callee_stack8
 
@@ -106,7 +106,7 @@ define dso_local void @indirect_tail() {
 ; CHECK-LABEL: indirect_tail:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, func
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ldr x1, [x8, :lo12:func]
 ; CHECK-NEXT:    br x1
 

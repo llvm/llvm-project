@@ -222,17 +222,8 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
     MaxPrefetchIterationsAhead = 3;
-    switch (ARMProcFamily) {
-    case AppleA14:
-    case AppleA15:
-    case AppleA16:
-    case AppleA17:
-    case AppleM4:
+    if (isAppleMLike())
       MaxInterleaveFactor = 4;
-      break;
-    default:
-      break;
-    }
     break;
   case ExynosM3:
     MaxInterleaveFactor = 4;
@@ -273,7 +264,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     EpilogueVectorizationMinVF = 8;
     MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case NeoverseN2:
   case NeoverseN3:
     PrefFunctionAlignment = Align(16);

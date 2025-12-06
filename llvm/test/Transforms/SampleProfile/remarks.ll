@@ -202,10 +202,10 @@ entry:
   ret i32 %conv, !dbg !58
 }
 
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" "use-sample-profile" }
+attributes #0 = { nounwind uwtable "use-sample-profile" }
 attributes #1 = { nounwind argmemonly }
 attributes #2 = { nounwind readnone }
-attributes #3 = { nounwind alwaysinline "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #3 = { nounwind alwaysinline }
 attributes #4 = { nounwind }
 
 !llvm.dbg.cu = !{!0}

@@ -14,6 +14,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
@@ -202,9 +203,10 @@ static alias IgnoreCaseAlias("i", desc("Alias for --ignore-case."),
                              aliasopt(IgnoreCase), cl::NotHidden);
 static list<std::string> Name(
     "name",
-    desc("Find and print all debug info entries whose name (DW_AT_name "
-         "attribute) matches the exact text in <pattern>.  When used with the "
-         "the -regex option <pattern> is interpreted as a regular expression."),
+    desc("Find and print all debug info entries whose name "
+         "(DW_AT_name/DW_AT_linkage_name attribute) matches the exact text "
+         "in <pattern>.  When used with the the -regex option <pattern> is "
+         "interpreted as a regular expression."),
     value_desc("pattern"), cat(DwarfDumpCategory));
 static alias NameAlias("n", desc("Alias for --name"), aliasopt(Name),
                        cl::NotHidden);
@@ -241,6 +243,15 @@ static opt<bool>
                 cat(DwarfDumpCategory));
 static alias ShowParentsAlias("p", desc("Alias for --show-parents."),
                               aliasopt(ShowParents), cl::NotHidden);
+
+static list<std::string> FilterChildTag(
+    "filter-child-tag",
+    desc("When --show-children is specified, show only DIEs with the "
+         "specified DWARF tags."),
+    value_desc("list of DWARF tags"), cat(DwarfDumpCategory));
+static alias FilterChildTagAlias("t", desc("Alias for --filter-child-tag."),
+                                 aliasopt(FilterChildTag), cl::NotHidden);
+
 static opt<bool>
     ShowForm("show-form",
              desc("Show DWARF form types after the DWARF attribute types."),
@@ -329,6 +340,13 @@ static cl::extrahelp
 /// @}
 //===----------------------------------------------------------------------===//
 
+static llvm::SmallVector<unsigned>
+makeTagVector(const list<std::string> &TagStrings) {
+  return llvm::map_to_vector(TagStrings, [](const std::string &Tag) {
+    return llvm::dwarf::getTag(Tag);
+  });
+}
+
 static void error(Error Err) {
   if (!Err)
     return;
@@ -355,6 +373,7 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
   DumpOpts.ShowAddresses = !Diff;
   DumpOpts.ShowChildren = ShowChildren;
   DumpOpts.ShowParents = ShowParents;
+  DumpOpts.FilterChildTag = makeTagVector(FilterChildTag);
   DumpOpts.ShowForm = ShowForm;
   DumpOpts.SummarizeTypes = SummarizeTypes;
   DumpOpts.Verbose = Verbose;

@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -60,6 +61,11 @@ static cl::opt<bool>
                             cl::desc("Print matching stats for each allocation "
                                      "context in this module's profiles"),
                             cl::Hidden, cl::init(false));
+
+static cl::opt<bool>
+    PrintFunctionGuids("memprof-print-function-guids",
+                       cl::desc("Print function GUIDs computed for matching"),
+                       cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
     SalvageStaleProfile("memprof-salvage-stale-profile",
@@ -126,15 +132,19 @@ static uint64_t computeStackId(const memprof::Frame &Frame) {
   return computeStackId(Frame.Function, Frame.LineOffset, Frame.Column);
 }
 
+static AllocationType getAllocType(const AllocationInfo *AllocInfo) {
+  return getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
+                      AllocInfo->Info.getAllocCount(),
+                      AllocInfo->Info.getTotalLifetime());
+}
+
 static AllocationType addCallStack(CallStackTrie &AllocTrie,
                                    const AllocationInfo *AllocInfo,
                                    uint64_t FullStackId) {
   SmallVector<uint64_t> StackIds;
   for (const auto &StackFrame : AllocInfo->CallStack)
     StackIds.push_back(computeStackId(StackFrame));
-  auto AllocType = getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
-                                AllocInfo->Info.getAllocCount(),
-                                AllocInfo->Info.getTotalLifetime());
+  auto AllocType = getAllocType(AllocInfo);
   std::vector<ContextTotalSize> ContextSizeInfo;
   if (recordContextSizeInfoForAnalysis()) {
     auto TotalSize = AllocInfo->Info.getTotalSize();
@@ -192,6 +202,29 @@ static bool isAllocationWithHotColdVariant(const Function *Callee,
   default:
     return false;
   }
+}
+
+static void HandleUnsupportedAnnotationKinds(GlobalVariable &GVar,
+                                             AnnotationKind Kind) {
+  assert(Kind != llvm::memprof::AnnotationKind::AnnotationOK &&
+         "Should not handle AnnotationOK here");
+  SmallString<32> Reason;
+  switch (Kind) {
+  case llvm::memprof::AnnotationKind::ExplicitSection:
+    ++NumOfMemProfExplicitSectionGlobalVars;
+    Reason.append("explicit section name");
+    break;
+  case llvm::memprof::AnnotationKind::DeclForLinker:
+    Reason.append("linker declaration");
+    break;
+  case llvm::memprof::AnnotationKind::ReservedName:
+    Reason.append("name starts with `llvm.`");
+    break;
+  default:
+    llvm_unreachable("Unexpected annotation kind");
+  }
+  LLVM_DEBUG(dbgs() << "Skip annotation for " << GVar.getName() << " due to "
+                    << Reason << ".\n");
 }
 
 struct AllocMatchInfo {
@@ -381,22 +414,39 @@ handleAllocSite(Instruction &I, CallBase *CI,
                 const std::set<const AllocationInfo *> &AllocInfoSet,
                 std::map<std::pair<uint64_t, unsigned>, AllocMatchInfo>
                     &FullStackIdToAllocMatchInfo) {
+  // TODO: Remove this once the profile creation logic deduplicates contexts
+  // that are the same other than the IsInlineFrame bool. Until then, keep the
+  // largest.
+  DenseMap<uint64_t, const AllocationInfo *> UniqueFullContextIdAllocInfo;
+  for (auto *AllocInfo : AllocInfoSet) {
+    auto FullStackId = computeFullStackId(AllocInfo->CallStack);
+    auto [It, Inserted] =
+        UniqueFullContextIdAllocInfo.insert({FullStackId, AllocInfo});
+    // If inserted entry, done.
+    if (Inserted)
+      continue;
+    // Keep the larger one, or the noncold one if they are the same size.
+    auto CurSize = It->second->Info.getTotalSize();
+    auto NewSize = AllocInfo->Info.getTotalSize();
+    if ((CurSize > NewSize) ||
+        (CurSize == NewSize &&
+         getAllocType(AllocInfo) != AllocationType::NotCold))
+      continue;
+    It->second = AllocInfo;
+  }
   // We may match this instruction's location list to multiple MIB
   // contexts. Add them to a Trie specialized for trimming the contexts to
   // the minimal needed to disambiguate contexts with unique behavior.
   CallStackTrie AllocTrie(&ORE, MaxColdSize);
   uint64_t TotalSize = 0;
   uint64_t TotalColdSize = 0;
-  for (auto *AllocInfo : AllocInfoSet) {
+  for (auto &[FullStackId, AllocInfo] : UniqueFullContextIdAllocInfo) {
     // Check the full inlined call stack against this one.
     // If we found and thus matched all frames on the call, include
     // this MIB.
     if (stackFrameIncludesInlinedCallStack(AllocInfo->CallStack,
                                            InlinedCallStack)) {
       NumOfMemProfMatchedAllocContexts++;
-      uint64_t FullStackId = 0;
-      if (ClPrintMemProfMatchInfo || recordContextSizeInfoForAnalysis())
-        FullStackId = computeFullStackId(AllocInfo->CallStack);
       auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
       TotalSize += AllocInfo->Info.getTotalSize();
       if (AllocType == AllocationType::Cold)
@@ -409,6 +459,15 @@ handleAllocSite(Instruction &I, CallBase *CI,
                                                    InlinedCallStack.size())] = {
             AllocInfo->Info.getTotalSize(), AllocType};
       }
+      ORE.emit(
+          OptimizationRemark(DEBUG_TYPE, "MemProfUse", CI)
+          << ore::NV("AllocationCall", CI) << " in function "
+          << ore::NV("Caller", CI->getFunction())
+          << " matched alloc context with alloc type "
+          << ore::NV("Attribute", getAllocTypeAttributeString(AllocType))
+          << " total size " << ore::NV("Size", AllocInfo->Info.getTotalSize())
+          << " full context id " << ore::NV("Context", FullStackId)
+          << " frame count " << ore::NV("Frames", InlinedCallStack.size()));
     }
   }
   // If the threshold for the percent of cold bytes is less than 100%,
@@ -471,7 +530,8 @@ static void handleCallSite(
     Instruction &I, const Function *CalledFunction,
     ArrayRef<uint64_t> InlinedCallStack,
     const std::unordered_set<CallSiteEntry, CallSiteEntryHash> &CallSiteEntries,
-    Module &M, std::set<std::vector<uint64_t>> &MatchedCallSites) {
+    Module &M, std::set<std::vector<uint64_t>> &MatchedCallSites,
+    OptimizationRemarkEmitter &ORE) {
   auto &Ctx = M.getContext();
   for (const auto &CallSiteEntry : CallSiteEntries) {
     // If we found and thus matched all frames on the call, create and
@@ -494,6 +554,11 @@ static void handleCallSite(
         append_range(CallStack, InlinedCallStack);
         MatchedCallSites.insert(std::move(CallStack));
       }
+      ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemProfUse", &I)
+               << ore::NV("CallSite", &I) << " in function "
+               << ore::NV("Caller", I.getFunction())
+               << " matched callsite with frame count "
+               << ore::NV("Frames", InlinedCallStack.size()));
       break;
     }
   }
@@ -517,6 +582,9 @@ static void readMemprof(Module &M, Function &F,
   // linkage function.
   auto FuncName = F.getName();
   auto FuncGUID = Function::getGUIDAssumingExternalLinkage(FuncName);
+  if (PrintFunctionGuids)
+    errs() << "MemProf: Function GUID " << FuncGUID << " is " << FuncName
+           << "\n";
   std::optional<memprof::MemProfRecord> MemProfRec;
   auto Err = MemProfReader->getMemProfRecord(FuncGUID).moveInto(MemProfRec);
   if (Err) {
@@ -674,7 +742,7 @@ static void readMemprof(Module &M, Function &F,
         // instruction's leaf location in the callsites map and not the
         // allocation map.
         handleCallSite(I, CalledFunction, InlinedCallStack,
-                       CallSitesIter->second, M, MatchedCallSites);
+                       CallSitesIter->second, M, MatchedCallSites, ORE);
     }
   }
 }
@@ -775,29 +843,13 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   return PreservedAnalyses::none();
 }
 
-// Returns true iff the global variable has custom section either by
-// __attribute__((section("name")))
-// (https://clang.llvm.org/docs/AttributeReference.html#section-declspec-allocate)
-// or #pragma clang section directives
-// (https://clang.llvm.org/docs/LanguageExtensions.html#specifying-section-names-for-global-objects-pragma-clang-section).
-static bool hasExplicitSectionName(const GlobalVariable &GVar) {
-  if (GVar.hasSection())
-    return true;
-
-  auto Attrs = GVar.getAttributes();
-  if (Attrs.hasAttribute("bss-section") || Attrs.hasAttribute("data-section") ||
-      Attrs.hasAttribute("relro-section") ||
-      Attrs.hasAttribute("rodata-section"))
-    return true;
-  return false;
-}
-
 bool MemProfUsePass::annotateGlobalVariables(
     Module &M, const memprof::DataAccessProfData *DataAccessProf) {
   if (!AnnotateStaticDataSectionPrefix || M.globals().empty())
     return false;
 
   if (!DataAccessProf) {
+    M.addModuleFlag(Module::Warning, "EnableDataAccessProf", 0U);
     M.getContext().diagnose(DiagnosticInfoPGOProfile(
         MemoryProfileFileName.data(),
         StringRef("Data access profiles not found in memprof. Ignore "
@@ -805,6 +857,7 @@ bool MemProfUsePass::annotateGlobalVariables(
         DS_Warning));
     return false;
   }
+  M.addModuleFlag(Module::Warning, "EnableDataAccessProf", 1U);
 
   bool Changed = false;
   // Iterate all global variables in the module and annotate them based on
@@ -815,13 +868,9 @@ bool MemProfUsePass::annotateGlobalVariables(
   for (GlobalVariable &GVar : M.globals()) {
     assert(!GVar.getSectionPrefix().has_value() &&
            "GVar shouldn't have section prefix yet");
-    if (GVar.isDeclarationForLinker())
-      continue;
-
-    if (hasExplicitSectionName(GVar)) {
-      ++NumOfMemProfExplicitSectionGlobalVars;
-      LLVM_DEBUG(dbgs() << "Global variable " << GVar.getName()
-                        << " has explicit section name. Skip annotating.\n");
+    auto Kind = llvm::memprof::getAnnotationKind(GVar);
+    if (Kind != llvm::memprof::AnnotationKind::AnnotationOK) {
+      HandleUnsupportedAnnotationKinds(GVar, Kind);
       continue;
     }
 
@@ -831,7 +880,6 @@ bool MemProfUsePass::annotateGlobalVariables(
     // TODO: Track string content hash in the profiles and compute it inside the
     // compiler to categeorize the hotness string literals.
     if (Name.starts_with(".str")) {
-
       LLVM_DEBUG(dbgs() << "Skip annotating string literal " << Name << "\n");
       continue;
     }

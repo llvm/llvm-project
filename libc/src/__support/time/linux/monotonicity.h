@@ -12,8 +12,8 @@
 #include "hdr/time_macros.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/time/clock_conversion.h"
 #include "src/__support/time/linux/abs_timeout.h"
-#include "src/__support/time/linux/clock_conversion.h"
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 // This function is separated from abs_timeout.

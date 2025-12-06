@@ -1,0 +1,202 @@
+# RUN: llc -march=hexagon -mcpu=hexagonv68 -mattr=+hvxv68,+hvx-length128b \
+# RUN: -run-pass hexagon-qfp-optimizer -disable-qfp-opt-mul=false %s -o - | FileCheck %s --check-prefix=MUL-ENABLED
+# RUN: llc -march=hexagon -mcpu=hexagonv68 -mattr=+hvxv68,+hvx-length128b \
+# RUN: -run-pass hexagon-qfp-optimizer %s -o - | FileCheck %s --check-prefix=DEFAULT
+# MUL-ENABLED-LABEL: name: qfpAdd32
+# MUL-ENABLED: V6_vconv_sf_qf32
+# MUL-ENABLED-NEXT: V6_vadd_qf32_mix
+# MUL-ENABLED-NEXT: V6_vconv_sf_qf32
+# MUL-ENABLED-NEXT: V6_vS32Ub_ai
+# MUL-ENABLED-NEXT: V6_vadd_qf32
+# DEFAULT-LABEL: name: qfpAdd32
+# DEFAULT: V6_vconv_sf_qf32
+# DEFAULT-NEXT: V6_vadd_qf32_mix
+# DEFAULT-NEXT: V6_vconv_sf_qf32
+# DEFAULT-NEXT: V6_vS32Ub_ai
+# DEFAULT-NEXT: V6_vadd_qf32
+---
+name: qfpAdd32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    %0:intregs = COPY $r0
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r2
+    %3:intregs = COPY $r3
+    %4:hvxvr = V6_vL32Ub_ai %0:intregs, 0
+    %5:hvxvr = V6_vL32Ub_ai %1:intregs, 0
+    %6:hvxvr = V6_vadd_sf %4:hvxvr, %5:hvxvr
+    %7:hvxvr = V6_vconv_sf_qf32 %6:hvxvr
+    %8:hvxvr = V6_vadd_sf %5:hvxvr, %7:hvxvr
+    %9:hvxvr = V6_vconv_sf_qf32 %8:hvxvr
+    V6_vS32Ub_ai %2:intregs, 0, %9:hvxvr
+    %10:hvxvr = V6_vadd_sf %7:hvxvr, %9:hvxvr
+    %11:hvxvr = V6_vconv_sf_qf32 %10:hvxvr
+    V6_vS32Ub_ai %3:intregs, 0, %11:hvxvr
+...
+# MUL-ENABLED-LABEL: name: qfpAdd16
+# MUL-ENABLED: V6_vconv_hf_qf16
+# MUL-ENABLED-NEXT: V6_vadd_qf16_mix
+# MUL-ENABLED-NEXT: V6_vconv_hf_qf16
+# MUL-ENABLED-NEXT: V6_vS32Ub_ai
+# MUL-ENABLED-NEXT: V6_vadd_qf16
+# DEFAULT-LABEL: name: qfpAdd16
+# DEFAULT: V6_vconv_hf_qf16
+# DEFAULT-NEXT: V6_vadd_qf16_mix
+# DEFAULT-NEXT: V6_vconv_hf_qf16
+# DEFAULT-NEXT: V6_vS32Ub_ai
+# DEFAULT-NEXT: V6_vadd_qf16
+---
+name: qfpAdd16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    %0:intregs = COPY $r0
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r2
+    %3:intregs = COPY $r3
+    %4:hvxvr = V6_vL32Ub_ai %0:intregs, 0
+    %5:hvxvr = V6_vL32Ub_ai %1:intregs, 0
+    %6:hvxvr = V6_vadd_hf %4:hvxvr, %5:hvxvr
+    %7:hvxvr = V6_vconv_hf_qf16 %6:hvxvr
+    %8:hvxvr = V6_vadd_hf %5:hvxvr, %7:hvxvr
+    %9:hvxvr = V6_vconv_hf_qf16 %8:hvxvr
+    V6_vS32Ub_ai %2:intregs, 0, %9:hvxvr
+    %10:hvxvr = V6_vadd_hf %7:hvxvr, %9:hvxvr
+    %11:hvxvr = V6_vconv_hf_qf16 %10:hvxvr
+    V6_vS32Ub_ai %3:intregs, 0, %11:hvxvr
+...
+# MUL-ENABLED-LABEL: name: qfpSub32
+# MUL-ENABLED: V6_vconv_sf_qf32
+# MUL-ENABLED-NEXT: V6_vsub_qf32_mix
+# MUL-ENABLED-NEXT: V6_vconv_sf_qf32
+# MUL-ENABLED-NEXT: V6_vS32Ub_ai
+# MUL-ENABLED-NEXT: V6_vsub_qf32
+# DEFAULT-LABEL: name: qfpSub32
+# DEFAULT: V6_vconv_sf_qf32
+# DEFAULT-NEXT: V6_vsub_qf32_mix
+# DEFAULT-NEXT: V6_vconv_sf_qf32
+# DEFAULT-NEXT: V6_vS32Ub_ai
+# DEFAULT-NEXT: V6_vsub_qf32
+---
+name: qfpSub32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    %0:intregs = COPY $r0
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r2
+    %3:intregs = COPY $r3
+    %4:hvxvr = V6_vL32Ub_ai %0:intregs, 0
+    %5:hvxvr = V6_vL32Ub_ai %1:intregs, 0
+    %6:hvxvr = V6_vsub_sf %4:hvxvr, %5:hvxvr
+    %7:hvxvr = V6_vconv_sf_qf32 %6:hvxvr
+    %8:hvxvr = V6_vsub_sf %7:hvxvr, %5:hvxvr
+    %9:hvxvr = V6_vconv_sf_qf32 %8:hvxvr
+    V6_vS32Ub_ai %2:intregs, 0, %9:hvxvr
+    %10:hvxvr = V6_vsub_sf %7:hvxvr, %9:hvxvr
+    %11:hvxvr = V6_vconv_sf_qf32 %10:hvxvr
+    V6_vS32Ub_ai %3:intregs, 0, %11:hvxvr
+...
+# MUL-ENABLED-LABEL: name: qfpSub16
+# MUL-ENABLED: V6_vconv_hf_qf16
+# MUL-ENABLED-NEXT: V6_vsub_qf16_mix
+# MUL-ENABLED-NEXT: V6_vconv_hf_qf16
+# MUL-ENABLED-NEXT: V6_vS32Ub_ai
+# MUL-ENABLED-NEXT: V6_vsub_qf16
+# DEFAULT-LABEL: name: qfpSub16
+# DEFAULT: V6_vconv_hf_qf16
+# DEFAULT-NEXT: V6_vsub_qf16_mix
+# DEFAULT-NEXT: V6_vconv_hf_qf16
+# DEFAULT-NEXT: V6_vS32Ub_ai
+# DEFAULT-NEXT: V6_vsub_qf16
+---
+name: qfpSub16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    %0:intregs = COPY $r0
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r2
+    %3:intregs = COPY $r3
+    %4:hvxvr = V6_vL32Ub_ai %0:intregs, 0
+    %5:hvxvr = V6_vL32Ub_ai %1:intregs, 0
+    %6:hvxvr = V6_vsub_hf %4:hvxvr, %5:hvxvr
+    %7:hvxvr = V6_vconv_hf_qf16 %6:hvxvr
+    %8:hvxvr = V6_vsub_hf %7:hvxvr, %5:hvxvr
+    %9:hvxvr = V6_vconv_hf_qf16 %8:hvxvr
+    V6_vS32Ub_ai %2:intregs, 0, %9:hvxvr
+    %10:hvxvr = V6_vsub_hf %7:hvxvr, %9:hvxvr
+    %11:hvxvr = V6_vconv_hf_qf16 %10:hvxvr
+    V6_vS32Ub_ai %3:intregs, 0, %11:hvxvr
+...
+# MUL-ENABLED-LABEL: name: qfpMul32
+# MUL-ENABLED: V6_vmpy_qf32_sf
+# MUL-ENABLED-NEXT: V6_vconv_sf_qf32
+# MUL-ENABLED-NEXT: V6_vmpy_qf32_sf
+# MUL-ENABLED-NEXT: V6_vconv_sf_qf32
+# MUL-ENABLED-NEXT: V6_vmpy_qf32
+# MUL-ENABLED-NEXT: V6_vS32Ub_ai
+# DEFAULT-LABEL: name: qfpMul32
+# DEFAULT: V6_vmpy_qf32_sf
+# DEFAULT-NEXT: V6_vconv_sf_qf32
+# DEFAULT-NEXT: V6_vmpy_qf32_sf
+# DEFAULT-NEXT: V6_vconv_sf_qf32
+# DEFAULT-NEXT: V6_vmpy_qf32_sf
+# DEFAULT-NEXT: V6_vS32Ub_ai
+---
+name: qfpMul32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    %0:intregs = COPY $r0
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r2
+    %3:intregs = COPY $r3
+    %4:hvxvr = V6_vL32Ub_ai %0:intregs, 0
+    %5:hvxvr = V6_vL32Ub_ai %1:intregs, 0
+    %6:hvxvr = V6_vL32Ub_ai %2:intregs, 0
+    %7:hvxvr = V6_vmpy_qf32_sf %4:hvxvr, %5:hvxvr
+    %8:hvxvr = V6_vconv_sf_qf32 %7:hvxvr
+    %9:hvxvr = V6_vmpy_qf32_sf %5:hvxvr, %6:hvxvr
+    %10:hvxvr = V6_vconv_sf_qf32 %9:hvxvr
+    %11:hvxvr = V6_vmpy_qf32_sf %8:hvxvr, %10:hvxvr
+    V6_vS32Ub_ai %3:intregs, 0, %11:hvxvr
+...
+# MUL-ENABLED-LABEL: name: qfpMul16
+# MUL-ENABLED: V6_vconv_hf_qf16
+# MUL-ENABLED-NEXT: V6_vmpy_qf16_mix_hf
+# MUL-ENABLED-NEXT: V6_vconv_hf_qf16
+# MUL-ENABLED-NEXT: V6_vS32Ub_ai
+# MUL-ENABLED-NEXT: V6_vmpy_qf16
+# DEFAULT-LABEL: name: qfpMul16
+# DEFAULT: V6_vconv_hf_qf16
+# DEFAULT-NEXT: V6_vmpy_qf16_hf
+# DEFAULT-NEXT: V6_vconv_hf_qf16
+# DEFAULT-NEXT: V6_vS32Ub_ai
+# DEFAULT-NEXT: V6_vmpy_qf16_hf
+---
+name: qfpMul16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    %0:intregs = COPY $r0
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r2
+    %3:intregs = COPY $r3
+    %4:hvxvr = V6_vL32Ub_ai %0:intregs, 0
+    %5:hvxvr = V6_vL32Ub_ai %1:intregs, 0
+    %6:hvxvr = V6_vmpy_qf16_hf %4:hvxvr, %5:hvxvr
+    %7:hvxvr = V6_vconv_hf_qf16 %6:hvxvr
+    %8:hvxvr = V6_vmpy_qf16_hf %5:hvxvr, %7:hvxvr
+    %9:hvxvr = V6_vconv_hf_qf16 %8:hvxvr
+    V6_vS32Ub_ai %2:intregs, 0, %9:hvxvr
+    %10:hvxvr = V6_vmpy_qf16_hf %7:hvxvr, %9:hvxvr
+    %11:hvxvr = V6_vconv_hf_qf16 %10:hvxvr
+    V6_vS32Ub_ai %3:intregs, 0, %11:hvxvr

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -S -passes=polly-codegen -polly-annotate-metadata-vectorize < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -polly-annotate-metadata-vectorize < %s | FileCheck %s
 
 ; Basic verification of vectorize metadata getting added when "-polly-vectorize-metadata" is
 ; passed.

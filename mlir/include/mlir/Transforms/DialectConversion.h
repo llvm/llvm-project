@@ -903,6 +903,27 @@ public:
     replaceAllUsesWith(from, ValueRange{to});
   }
 
+  /// Replace the uses of `from` with `to` for which the `functor` returns
+  /// "true". The conversion driver will try to reconcile all type mismatches
+  /// that still exist at the end of the conversion with materializations.
+  /// This function supports both 1:1 and 1:N replacements.
+  ///
+  /// Note: The functor is also applied to builtin.unrealized_conversion_cast
+  /// ops that may have been inserted by the conversion driver. Some uses may
+  /// have been wrapped in unrealized_conversion_cast ops due to type changes.
+  ///
+  /// Note: This function is not supported in rollback mode. Calling it in
+  /// rollback mode will trigger an assertion. Furthermore, the
+  /// `allUsesReplaced` flag is not supported yet.
+  void replaceUsesWithIf(Value from, Value to,
+                         function_ref<bool(OpOperand &)> functor,
+                         bool *allUsesReplaced = nullptr) override {
+    replaceUsesWithIf(from, ValueRange{to}, functor, allUsesReplaced);
+  }
+  void replaceUsesWithIf(Value from, ValueRange to,
+                         function_ref<bool(OpOperand &)> functor,
+                         bool *allUsesReplaced = nullptr);
+
   /// Return the converted value of 'key' with a type defined by the type
   /// converter of the currently executing pattern. Return nullptr in the case
   /// of failure, the remapped value otherwise.
@@ -981,6 +1002,28 @@ public:
   /// Return a reference to the internal implementation.
   detail::ConversionPatternRewriterImpl &getImpl();
 
+  /// Attempt to legalize the given operation. This can be used within
+  /// conversion patterns to change the default pre-order legalization order.
+  /// Returns "success" if the operation was legalized, "failure" otherwise.
+  ///
+  /// Note: In a partial conversion, this function returns "success" even if
+  /// the operation could not be legalized, as long as it was not explicitly
+  /// marked as illegal in the conversion target.
+  LogicalResult legalize(Operation *op);
+
+  /// Attempt to legalize the given region. This can be used within
+  /// conversion patterns to change the default pre-order legalization order.
+  /// Returns "success" if the region was legalized, "failure" otherwise.
+  ///
+  /// If the current pattern runs with a type converter, the entry block
+  /// signature will be converted before legalizing the operations in the
+  /// region.
+  ///
+  /// Note: In a partial conversion, this function returns "success" even if
+  /// an operation could not be legalized, as long as it was not explicitly
+  /// marked as illegal in the conversion target.
+  LogicalResult legalize(Region *r);
+
 private:
   // Allow OperationConverter to construct new rewriters.
   friend struct OperationConverter;
@@ -989,7 +1032,8 @@ private:
   /// conversions. They apply some IR rewrites in a delayed fashion and could
   /// bring the IR into an inconsistent state when used standalone.
   explicit ConversionPatternRewriter(MLIRContext *ctx,
-                                     const ConversionConfig &config);
+                                     const ConversionConfig &config,
+                                     OperationConverter &converter);
 
   // Hide unsupported pattern rewriter API.
   using OpBuilder::setListener;

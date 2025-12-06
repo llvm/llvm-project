@@ -1531,7 +1531,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_BASIC_TYPE: {
-    if (Record.size() < 6 || Record.size() > 8)
+    if (Record.size() < 6 || Record.size() > 9)
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
@@ -1540,13 +1540,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                                 ? static_cast<DINode::DIFlags>(Record[6])
                                 : DINode::FlagZero;
     uint32_t NumExtraInhabitants = (Record.size() > 7) ? Record[7] : 0;
-
+    uint32_t DataSizeInBits = (Record.size() > 8) ? Record[8] : 0;
     Metadata *SizeInBits = getMetadataOrConstant(SizeIsMetadata, Record[3]);
-
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIBasicType,
                         (Context, Record[1], getMDString(Record[2]), SizeInBits,
-                         Record[4], Record[5], NumExtraInhabitants, Flags)),
+                         Record[4], Record[5], NumExtraInhabitants,
+                         DataSizeInBits, Flags)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1860,19 +1860,27 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPILE_UNIT: {
-    if (Record.size() < 14 || Record.size() > 22)
+    if (Record.size() < 14 || Record.size() > 23)
       return error("Invalid record");
 
     // Ignore Record[0], which indicates whether this compile unit is
     // distinct.  It's always distinct.
     IsDistinct = true;
 
+    const auto LangVersionMask = (uint64_t(1) << 63);
+    const bool HasVersionedLanguage = Record[1] & LangVersionMask;
+    const uint32_t LanguageVersion = Record.size() > 22 ? Record[22] : 0;
+
     auto *CU = DICompileUnit::getDistinct(
-        Context, DISourceLanguageName(Record[1]), getMDOrNull(Record[2]),
-        getMDString(Record[3]), Record[4], getMDString(Record[5]), Record[6],
-        getMDString(Record[7]), Record[8], getMDOrNull(Record[9]),
-        getMDOrNull(Record[10]), getMDOrNull(Record[12]),
-        getMDOrNull(Record[13]),
+        Context,
+        HasVersionedLanguage
+            ? DISourceLanguageName(Record[1] & ~LangVersionMask,
+                                   LanguageVersion)
+            : DISourceLanguageName(Record[1]),
+        getMDOrNull(Record[2]), getMDString(Record[3]), Record[4],
+        getMDString(Record[5]), Record[6], getMDString(Record[7]), Record[8],
+        getMDOrNull(Record[9]), getMDOrNull(Record[10]),
+        getMDOrNull(Record[12]), getMDOrNull(Record[13]),
         Record.size() <= 15 ? nullptr : getMDOrNull(Record[15]),
         Record.size() <= 14 ? 0 : Record[14],
         Record.size() <= 16 ? true : Record[16],
@@ -2315,8 +2323,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         GET_OR_DISTINCT(DIObjCProperty,
                         (Context, getMDString(Record[1]),
                          getMDOrNull(Record[2]), Record[3],
-                         getMDString(Record[4]), getMDString(Record[5]),
-                         Record[6], getDITypeRefOrNull(Record[7]))),
+                         /*GetterName=*/getMDString(Record[5]),
+                         /*SetterName=*/getMDString(Record[4]), Record[6],
+                         getDITypeRefOrNull(Record[7]))),
         NextMetadataNo);
     NextMetadataNo++;
     break;

@@ -43,6 +43,9 @@ constexpr static uint32_t MAX_TRIES = 1024;
 // The number of previously allocated slabs we will keep in memory.
 constexpr static uint32_t CACHED_SLABS = 8;
 
+// Configuration for whether or not we will return unused slabs to memory.
+constexpr static bool RECLAIM = true;
+
 static_assert(!(ARRAY_SIZE & (ARRAY_SIZE - 1)), "Must be a power of two");
 
 namespace impl {
@@ -399,7 +402,7 @@ private:
       // and obtain exclusive rights to deconstruct it. If the CAS failed either
       // another thread resurrected the counter and we quit, or a parallel read
       // helped us invalidating it. For the latter, claim that flag and return.
-      if (counter.fetch_sub(n, cpp::MemoryOrder::RELAXED) == n) {
+      if (counter.fetch_sub(n, cpp::MemoryOrder::RELAXED) == n && RECLAIM) {
         uint32_t expected = 0;
         if (counter.compare_exchange_strong(expected, INVALID,
                                             cpp::MemoryOrder::RELAXED,
@@ -417,8 +420,9 @@ private:
     // thread.
     uint64_t read() {
       auto val = counter.load(cpp::MemoryOrder::RELAXED);
-      if (val == 0 && counter.compare_exchange_strong(
-                          val, INVALID | HELPED, cpp::MemoryOrder::RELAXED))
+      if (val == 0 && RECLAIM &&
+          counter.compare_exchange_strong(val, INVALID | HELPED,
+                                          cpp::MemoryOrder::RELAXED))
         return 0;
       return (val & INVALID) ? 0 : val;
     }
@@ -463,7 +467,7 @@ private:
       return nullptr;
 
     cpp::atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
-    return ptr.load(cpp::MemoryOrder::RELAXED);
+    return RECLAIM ? ptr.load(cpp::MemoryOrder::RELAXED) : expected;
   }
 
   // Finalize the associated memory and signal that it is ready to use by
