@@ -248,8 +248,7 @@ jobs:
       - prepare
       - build-release-package
     if: >-
-      github.event_name != 'pull_request' &&
-      needs.prepare.outputs.upload == 'true'
+      github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     permissions:
       contents: write # For release uploads
@@ -272,4 +271,4 @@ jobs:
           artifact-id: ${{ needs.build-release-package.outputs.artifact-id }}
           attestation-name: ${{ needs.prepare.outputs.release-binary-filename }}
           digest: ${{ needs.build-release-package.outputs.digest }}
-          upload: true
+          upload: ${{ needs.prepare.outputs.upload }}
