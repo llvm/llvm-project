@@ -43,7 +43,7 @@ private:
   const bool StrictMode;
   const bool IgnoreConditionVariableStatements;
   const llvm::StringRef SafeTypes;
-  const GlobList SafeDestructorTypesGlobList;
+  const GlobList SafeTypesGlobList;
 };
 
 } // namespace clang::tidy::modernize

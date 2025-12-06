@@ -94,7 +94,7 @@ UseInitStatementCheck::UseInitStatementCheck(StringRef Name,
       IgnoreConditionVariableStatements(
           Options.get("IgnoreConditionVariableStatements", false)),
       SafeTypes(Options.get("SafeTypes", DefaultSafeTypes)),
-      SafeDestructorTypesGlobList(SafeTypes) {}
+      SafeTypesGlobList(SafeTypes) {}
 
 void UseInitStatementCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
@@ -306,7 +306,7 @@ bool UseInitStatementCheck::isSingleVarWithSafeDestructor(
       /*WithGlobalNsPrefix=*/true);
 
   // Check if the type name matches any of the safe types using GlobList
-  return SafeDestructorTypesGlobList.contains(TypeName);
+  return SafeTypesGlobList.contains(TypeName);
 }
 
 int UseInitStatementCheck::getKindOfMatchedDeclStmt(
