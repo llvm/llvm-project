@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // <bitset>
 
 // Check that functions are marked [[nodiscard]]
@@ -18,8 +16,8 @@
 #include "test_allocator.h"
 
 void test() {
-  std::bitset<10> bs;
-  const std::bitset<10> cbs;
+  std::bitset<11> bs;
+  const std::bitset<11> cbs;
 
   // std::bitset<>::reference operator~() const noexcept;
   ~bs[0]; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -34,7 +32,7 @@ void test() {
   struct CharTraits : public std::char_traits<char> {};
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  bs.to_string<char, CharTraits, test_allocator<char>>();
+  bs.to_string<char, CharTraits, test_allocator<char> >();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   bs.to_string<char, CharTraits>();
 #if !defined(TEST_HAS_NO_WIDE_CHARACTERS)
@@ -52,4 +50,12 @@ void test() {
   bs.none();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   bs << 1;    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   bs >> 1;    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  bs & bs; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  bs | bs; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  bs ^ bs; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  std::hash<std::bitset<11> > hash;
+
+  hash(bs); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
