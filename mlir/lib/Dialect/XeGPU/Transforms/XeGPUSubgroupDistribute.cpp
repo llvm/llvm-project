@@ -80,7 +80,8 @@ static constexpr unsigned highPatternBenefit = 2;
 /// | 2x32x16               | [1, 16]     | 2x32x1                   |
 static FailureOr<VectorType>
 getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
-                                VectorType originalType) {
+                                VectorType originalType,
+                                bool allowUnitDim = false) {
   if (!layout)
     return failure();
   assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
@@ -99,7 +100,10 @@ getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
   for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
     if (i < distributionStart)
       continue;
-
+    if (allowUnitDim && dim == 1) {
+      distributedShape[i] = dim;
+      continue;
+    }
     // Check if the dimension can be distributed evenly.
     if (dim % effectiveLaneLayout[i - distributionStart] != 0)
       return failure();
@@ -1504,50 +1508,58 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
         cast<vector::BroadcastOp>(yieldOperand->get().getDefiningOp());
     unsigned operandIdx = yieldOperand->getOperandNumber();
 
-    // Get the input layout - must be a slice layout
     VectorType sourceType = dyn_cast<VectorType>(broadcastOp.getSourceType());
+    VectorType destType =
+        dyn_cast<VectorType>(broadcastOp.getResult().getType());
     xegpu::DistributeLayoutAttr sourceLayout =
-        xegpu::getDistributeLayoutAttr(broadcastOp.getSource());
+        xegpu::getDistributeLayoutAttr(broadcastOp->getOpOperand(0));
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getDistributeLayoutAttr(broadcastOp.getResult());
     if (sourceType) {
-      if (!sourceLayout || !isa<xegpu::SliceAttr>(sourceLayout))
-        return rewriter.notifyMatchFailure(
-            warpOp,
-            "Broadcast input must be scalar or have a slice layout attribute.");
-      // also the sourceLayout must be a slice of the broadcast result layout
-      xegpu::DistributeLayoutAttr resultLayout =
-          xegpu::getDistributeLayoutAttr(broadcastOp.getResult());
       assert(resultLayout && "Broadcast result must have layout attribute.");
-      if (!sourceLayout.isSliceOf(resultLayout) &&
-          !sourceLayout.isEqualTo(resultLayout))
+      bool isSliceOf = sourceLayout.isSliceOf(resultLayout);
+      bool isEqualTo = sourceLayout.isEqualTo(resultLayout);
+
+      if (!isSliceOf && !isEqualTo) {
         return rewriter.notifyMatchFailure(
             warpOp, "Broadcast input layout must be either a slice of or equal "
                     "to result layout.");
+      }
     }
-    // Get the distributed source type based on layout
-    FailureOr<VectorType> sourceDistTypeOrFailure =
-        getDistVecTypeBasedOnLaneLayout(sourceLayout, sourceType);
-    if (failed(sourceDistTypeOrFailure))
+
+    FailureOr<VectorType> sourceDistType = getDistVecTypeBasedOnLaneLayout(
+        sourceLayout, sourceType, /*allowUnitDim=*/true);
+    FailureOr<VectorType> destDistType =
+        getDistVecTypeBasedOnLaneLayout(resultLayout, destType);
+    if ((sourceType != nullptr) && (failed(sourceDistType))) {
       return rewriter.notifyMatchFailure(
           warpOp, "Failed to distribute the source vector type.");
+    }
+    if (failed(destDistType))
+      return rewriter.notifyMatchFailure(
+          warpOp, "Failed to distribute the dest vector type.");
 
-    // Yield the source from the warp op - broadcast is a no-op
+    Type sourceElemOrDistType;
+    if (sourceType)
+      sourceElemOrDistType = sourceDistType.value();
+    else
+      sourceElemOrDistType = broadcastOp.getSourceType();
+
     SmallVector<size_t> newRetIndices;
     auto newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, {broadcastOp.getSource()},
-        {sourceDistTypeOrFailure.value()}, newRetIndices);
+        rewriter, warpOp, {broadcastOp.getSource()}, sourceElemOrDistType,
+        newRetIndices);
 
-    // Replace the broadcast result with the distributed source
     Value distributedSource = newWarpOp.getResult(newRetIndices[0]);
+
     Value newBroadcast = distributedSource;
-    // if sourceDistType is same as orignial warp result type, no need to
-    //  re-create broadcast op
-    if (distributedSource.getType() != warpOp.getResult(operandIdx).getType()) {
+
+    if (sourceElemOrDistType != destDistType.value()) {
       // generate broadcast op outside warp op to have correct type
       rewriter.setInsertionPointAfter(newWarpOp);
-      newBroadcast = vector::BroadcastOp::create(
-          rewriter, newWarpOp.getLoc(),
-          cast<VectorType>(warpOp.getResult(operandIdx).getType()),
-          distributedSource);
+      newBroadcast =
+          vector::BroadcastOp::create(rewriter, newWarpOp.getLoc(),
+                                      destDistType.value(), distributedSource);
     }
 
     rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx), newBroadcast);
