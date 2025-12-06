@@ -103,7 +103,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator& operator+=(difference_type __n) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        (__n >= 0 ? __n : -__n) <= _ContainerMaxElements,
+        static_cast<size_t>((__n >= 0 ? __n : -__n)) <= _ContainerMaxElements,
         "__capacity_aware_iterator::operator+=: Attempting to move iterator past its "
         "container's possible range");
 
@@ -113,7 +113,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator& operator-=(difference_type __n) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        (__n >= 0 ? __n : -__n) <= _ContainerMaxElements,
+        static_cast<size_t>((__n >= 0 ? __n : -__n)) <= _ContainerMaxElements,
         "__capacity_aware_iterator::operator-=: Attempting to move iterator past its container's possible range");
 
     __iter_ -= __n;
