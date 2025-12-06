@@ -221,12 +221,6 @@ jobs:
       run: |
         echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.9.13\x64\libs" >> $env:GITHUB_ENV
 
-    - name: Upload
-      if: runner.os == 'Windows'
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
-      with:
-        path: |
-          C:\hostedtoolcache\windows\Python\3.9.13\x64\
     - name: Setup crlf
       if: runner.os == 'Windows'
       run: |
