@@ -791,7 +791,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bitset<_Size>& bitset<_Size>
 }
 
 template <size_t _Size>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bitset<_Size>& bitset<_Size>::set() _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bitset<_Size>& bitset<_Size>::set() _NOEXCEPT {
   std::fill_n(__base::__make_iter(0), _Size, true);
   return *this;
 }
