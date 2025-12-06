@@ -3889,6 +3889,11 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
     // Update all declarations of the function to have the deduced return type.
     Context.adjustDeducedFunctionResultType(FD, Deduced);
 
+  if (!Deduced->isDependentType() && !Deduced->isRecordType() &&
+      !FD->isFunctionTemplateSpecialization())
+    diagnoseIgnoredQualifiers(
+        diag::warn_qual_return_type,
+        FD->getDeclaredReturnType().getLocalCVRQualifiers(), FD->getLocation());
   return false;
 }
 
