@@ -2857,9 +2857,20 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
         I, Builder.CreateIntrinsic(Intrinsic::usub_sat, {Ty}, {X, Op1}));
 
   // Op0 - umin(X, Op0) --> usub.sat(Op0, X)
-  if (match(Op1, m_OneUse(m_c_UMin(m_Value(X), m_Specific(Op0)))))
-    return replaceInstUsesWith(
-        I, Builder.CreateIntrinsic(Intrinsic::usub_sat, {Ty}, {Op0, X}));
+  if (match(Op1, m_OneUse(m_c_UMin(m_Value(X), m_Specific(Op0))))) {
+    Value *USub = Builder.CreateIntrinsic(Intrinsic::usub_sat, {Ty}, {Op0, X});
+    if (auto *USubCall = dyn_cast<CallInst>(USub)) {
+      // Preserve range information implied by the nsw flag.
+      const APInt *C;
+      if (I.hasNoSignedWrap() && match(X, m_NonNegative(C))) {
+        ConstantRange CR = ConstantRange::makeExactNoWrapRegion(
+            Instruction::Sub, *C, OverflowingBinaryOperator::NoSignedWrap);
+        USubCall->addParamAttr(
+            0, Attribute::get(I.getContext(), Attribute::Range, CR));
+      }
+    }
+    return replaceInstUsesWith(I, USub);
+  }
 
   // Op0 - umax(X, Op0) --> 0 - usub.sat(X, Op0)
   if (match(Op1, m_OneUse(m_c_UMax(m_Value(X), m_Specific(Op0))))) {

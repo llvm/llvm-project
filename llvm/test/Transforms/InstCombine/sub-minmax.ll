@@ -666,7 +666,7 @@ define i8 @umin_sub_op0_use(i8 %x, i8 %y) {
 define i8 @umin_nsw_sub_op1_rhs_nneg_constant(i8 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@umin_nsw_sub_op1_rhs_nneg_constant
 ; CHECK-SAME: (i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[Y]], i8 13)
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 range(i8 -115, -128) [[Y]], i8 13)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %u = call i8 @llvm.umin.i8(i8 %y, i8 13)
