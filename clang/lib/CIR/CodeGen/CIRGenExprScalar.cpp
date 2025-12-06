@@ -174,11 +174,22 @@ public:
 
   mlir::Value VisitAddrLabelExpr(const AddrLabelExpr *e) {
     auto func = cast<cir::FuncOp>(cgf.curFn);
-    auto blockInfoAttr = cir::BlockAddrInfoAttr::get(
+    cir::BlockAddrInfoAttr blockInfoAttr = cir::BlockAddrInfoAttr::get(
         &cgf.getMLIRContext(), func.getSymName(), e->getLabel()->getName());
-    return cir::BlockAddressOp::create(builder, cgf.getLoc(e->getSourceRange()),
-                                       cgf.convertType(e->getType()),
-                                       blockInfoAttr);
+    cir::BlockAddressOp blockAddressOp = cir::BlockAddressOp::create(
+        builder, cgf.getLoc(e->getSourceRange()), cgf.convertType(e->getType()),
+        blockInfoAttr);
+    cir::LabelOp resolvedLabel = cgf.cgm.lookupBlockAddressInfo(blockInfoAttr);
+    if (!resolvedLabel) {
+      cgf.cgm.mapUnresolvedBlockAddress(blockAddressOp);
+      // Still add the op to maintain insertion order it will be resolved in
+      // resolveBlockAddresses
+      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, nullptr);
+    } else {
+      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, resolvedLabel);
+    }
+    cgf.instantiateIndirectGotoBlock();
+    return blockAddressOp;
   }
 
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *e) {

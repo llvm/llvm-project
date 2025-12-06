@@ -11,10 +11,15 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -98,45 +103,20 @@ ScriptedFrame::Create(ThreadSP thread_sp,
 
   std::optional<SymbolContext> maybe_sym_ctx =
       scripted_frame_interface->GetSymbolContext();
-  if (maybe_sym_ctx) {
+  if (maybe_sym_ctx)
     sc = *maybe_sym_ctx;
-  }
-
-  StructuredData::DictionarySP reg_info =
-      scripted_frame_interface->GetRegisterInfo();
-
-  if (!reg_info)
-    return llvm::createStringError(
-        "failed to get scripted frame registers info");
-
-  std::shared_ptr<DynamicRegisterInfo> register_info_sp =
-      DynamicRegisterInfo::Create(*reg_info,
-                                  process_sp->GetTarget().GetArchitecture());
 
   lldb::RegisterContextSP reg_ctx_sp;
+  auto regs_or_err =
+      CreateRegisterContext(*scripted_frame_interface, *thread_sp, frame_id);
+  if (!regs_or_err)
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), regs_or_err.takeError(), "{0}");
+  else
+    reg_ctx_sp = *regs_or_err;
 
-  std::optional<std::string> reg_data =
-      scripted_frame_interface->GetRegisterContext();
-  if (reg_data) {
-    DataBufferSP data_sp(
-        std::make_shared<DataBufferHeap>(reg_data->c_str(), reg_data->size()));
-
-    if (!data_sp->GetByteSize())
-      return llvm::createStringError("failed to copy raw registers data");
-
-    std::shared_ptr<RegisterContextMemory> reg_ctx_memory =
-        std::make_shared<RegisterContextMemory>(
-            *thread_sp, frame_id, *register_info_sp, LLDB_INVALID_ADDRESS);
-    if (!reg_ctx_memory)
-      return llvm::createStringError("failed to create a register context");
-
-    reg_ctx_memory->SetAllRegisterData(data_sp);
-    reg_ctx_sp = reg_ctx_memory;
-  }
-
-  return std::make_shared<ScriptedFrame>(
-      thread_sp, scripted_frame_interface, frame_id, pc, sc, reg_ctx_sp,
-      register_info_sp, owned_script_object_sp);
+  return std::make_shared<ScriptedFrame>(thread_sp, scripted_frame_interface,
+                                         frame_id, pc, sc, reg_ctx_sp,
+                                         owned_script_object_sp);
 }
 
 ScriptedFrame::ScriptedFrame(ThreadSP thread_sp,
@@ -144,14 +124,13 @@ ScriptedFrame::ScriptedFrame(ThreadSP thread_sp,
                              lldb::user_id_t id, lldb::addr_t pc,
                              SymbolContext &sym_ctx,
                              lldb::RegisterContextSP reg_ctx_sp,
-                             std::shared_ptr<DynamicRegisterInfo> reg_info_sp,
                              StructuredData::GenericSP script_object_sp)
     : StackFrame(thread_sp, /*frame_idx=*/id,
                  /*concrete_frame_idx=*/id, /*reg_context_sp=*/reg_ctx_sp,
                  /*cfa=*/0, /*pc=*/pc,
                  /*behaves_like_zeroth_frame=*/!id, /*symbol_ctx=*/&sym_ctx),
       m_scripted_frame_interface_sp(interface_sp),
-      m_script_object_sp(script_object_sp), m_register_info_sp(reg_info_sp) {
+      m_script_object_sp(script_object_sp) {
   // FIXME: This should be part of the base class constructor.
   m_stack_frame_kind = StackFrame::Kind::Synthetic;
 }
@@ -162,7 +141,7 @@ const char *ScriptedFrame::GetFunctionName() {
   CheckInterpreterAndScriptObject();
   std::optional<std::string> function_name = GetInterface()->GetFunctionName();
   if (!function_name)
-    return nullptr;
+    return StackFrame::GetFunctionName();
   return ConstString(function_name->c_str()).AsCString();
 }
 
@@ -171,7 +150,7 @@ const char *ScriptedFrame::GetDisplayFunctionName() {
   std::optional<std::string> function_name =
       GetInterface()->GetDisplayFunctionName();
   if (!function_name)
-    return nullptr;
+    return StackFrame::GetDisplayFunctionName();
   return ConstString(function_name->c_str()).AsCString();
 }
 
@@ -190,35 +169,99 @@ lldb::ScriptedFrameInterfaceSP ScriptedFrame::GetInterface() const {
 std::shared_ptr<DynamicRegisterInfo> ScriptedFrame::GetDynamicRegisterInfo() {
   CheckInterpreterAndScriptObject();
 
-  if (!m_register_info_sp) {
-    StructuredData::DictionarySP reg_info = GetInterface()->GetRegisterInfo();
+  StructuredData::DictionarySP reg_info = GetInterface()->GetRegisterInfo();
 
+  Status error;
+  if (!reg_info)
+    return ScriptedInterface::ErrorWithMessage<
+        std::shared_ptr<DynamicRegisterInfo>>(
+        LLVM_PRETTY_FUNCTION, "failed to get scripted frame registers info",
+        error, LLDBLog::Thread);
+
+  ThreadSP thread_sp = m_thread_wp.lock();
+  if (!thread_sp || !thread_sp->IsValid())
+    return ScriptedInterface::ErrorWithMessage<
+        std::shared_ptr<DynamicRegisterInfo>>(
+        LLVM_PRETTY_FUNCTION,
+        "failed to get scripted frame registers info: invalid thread", error,
+        LLDBLog::Thread);
+
+  ProcessSP process_sp = thread_sp->GetProcess();
+  if (!process_sp || !process_sp->IsValid())
+    return ScriptedInterface::ErrorWithMessage<
+        std::shared_ptr<DynamicRegisterInfo>>(
+        LLVM_PRETTY_FUNCTION,
+        "failed to get scripted frame registers info: invalid process", error,
+        LLDBLog::Thread);
+
+  return DynamicRegisterInfo::Create(*reg_info,
+                                     process_sp->GetTarget().GetArchitecture());
+}
+
+llvm::Expected<lldb::RegisterContextSP>
+ScriptedFrame::CreateRegisterContext(ScriptedFrameInterface &interface,
+                                     Thread &thread, lldb::user_id_t frame_id) {
+  StructuredData::DictionarySP reg_info = interface.GetRegisterInfo();
+
+  if (!reg_info)
+    return llvm::createStringError(
+        "failed to get scripted frame registers info");
+
+  std::shared_ptr<DynamicRegisterInfo> register_info_sp =
+      DynamicRegisterInfo::Create(
+          *reg_info, thread.GetProcess()->GetTarget().GetArchitecture());
+
+  lldb::RegisterContextSP reg_ctx_sp;
+
+  std::optional<std::string> reg_data = interface.GetRegisterContext();
+  if (!reg_data)
+    return llvm::createStringError(
+        "failed to get scripted frame registers data");
+
+  DataBufferSP data_sp(
+      std::make_shared<DataBufferHeap>(reg_data->c_str(), reg_data->size()));
+
+  if (!data_sp->GetByteSize())
+    return llvm::createStringError("failed to copy raw registers data");
+
+  std::shared_ptr<RegisterContextMemory> reg_ctx_memory =
+      std::make_shared<RegisterContextMemory>(
+          thread, frame_id, *register_info_sp, LLDB_INVALID_ADDRESS);
+
+  reg_ctx_memory->SetAllRegisterData(data_sp);
+  reg_ctx_sp = reg_ctx_memory;
+
+  return reg_ctx_sp;
+}
+
+lldb::RegisterContextSP ScriptedFrame::GetRegisterContext() {
+  if (!m_reg_context_sp) {
     Status error;
-    if (!reg_info)
-      return ScriptedInterface::ErrorWithMessage<
-          std::shared_ptr<DynamicRegisterInfo>>(
-          LLVM_PRETTY_FUNCTION, "failed to get scripted frame registers info",
+    if (!m_scripted_frame_interface_sp)
+      return ScriptedInterface::ErrorWithMessage<RegisterContextSP>(
+          LLVM_PRETTY_FUNCTION,
+          "failed to get scripted frame registers context: invalid interface",
           error, LLDBLog::Thread);
 
-    ThreadSP thread_sp = m_thread_wp.lock();
-    if (!thread_sp || !thread_sp->IsValid())
-      return ScriptedInterface::ErrorWithMessage<
-          std::shared_ptr<DynamicRegisterInfo>>(
+    ThreadSP thread_sp = GetThread();
+    if (!thread_sp)
+      return ScriptedInterface::ErrorWithMessage<RegisterContextSP>(
           LLVM_PRETTY_FUNCTION,
-          "failed to get scripted frame registers info: invalid thread", error,
-          LLDBLog::Thread);
+          "failed to get scripted frame registers context: invalid thread",
+          error, LLDBLog::Thread);
 
-    ProcessSP process_sp = thread_sp->GetProcess();
-    if (!process_sp || !process_sp->IsValid())
-      return ScriptedInterface::ErrorWithMessage<
-          std::shared_ptr<DynamicRegisterInfo>>(
+    auto regs_or_err = CreateRegisterContext(*m_scripted_frame_interface_sp,
+                                             *thread_sp, GetFrameIndex());
+    if (!regs_or_err) {
+      error = Status::FromError(regs_or_err.takeError());
+      return ScriptedInterface::ErrorWithMessage<RegisterContextSP>(
           LLVM_PRETTY_FUNCTION,
-          "failed to get scripted frame registers info: invalid process", error,
+          "failed to get scripted frame registers context", error,
           LLDBLog::Thread);
+    }
 
-    m_register_info_sp = DynamicRegisterInfo::Create(
-        *reg_info, process_sp->GetTarget().GetArchitecture());
+    m_reg_context_sp = *regs_or_err;
   }
 
-  return m_register_info_sp;
+  return m_reg_context_sp;
 }
