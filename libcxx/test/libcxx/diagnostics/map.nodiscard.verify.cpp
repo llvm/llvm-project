@@ -24,7 +24,7 @@ struct TransparentCompare {
 
   bool operator()(const int&, const TransparentKey&) const;
 
-  bool operator()(const TransparentKey<T>&, const int&) const;
+  bool operator()(const TransparentKey&, const int&) const;
 
   bool operator()(const int&, const int&) const;
 };
