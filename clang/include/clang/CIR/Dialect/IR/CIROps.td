@@ -1493,6 +1493,55 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
 }
 
 //===----------------------------------------------------------------------===//
+// IndirectBrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_IndirectBrOp : CIR_Op<"indirect_br", [
+  DeclareOpInterfaceMethods<BranchOpInterface>,
+  SameVariadicOperandSize, Terminator, Pure
+]> {
+  let summary = "Indirect branch";
+  let description = [{
+    The `cir.indirectbr` operation represents an indirect branch to one of
+    several possible successor blocks. The target block is computed from
+    the value of the given address operand.
+
+    This operation is typically generated when handling constructs like
+    the GCC extension `&&label` combined with an indirect `goto *ptr;`.
+
+    The `poison` attribute is used to mark an `indirectbr` that was created
+    but is known to be invalid, for instance when a label address was
+    taken but no indirect branch was ever emitted.
+
+    Example:
+
+    ```mlir
+      %0 = cir.block_address <@A, "A"> : !cir.ptr<!void>
+      cir.indirectbr %0 poison : <!void>, [
+      ^bb1
+      ]
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VoidPtrType:$addr,
+    UnitAttr:$poison,
+    VariadicOfVariadic<AnyType, "operand_segments">:$succ_operands,
+    DenseI32ArrayAttr:$operand_segments
+    );
+
+  let successors = (successor VariadicSuccessor<AnySuccessor>:$successors);
+  let assemblyFormat = [{
+    $addr ( `poison` $poison^ )? `:` qualified(type($addr)) `,`
+    custom<IndirectBrOpSucessors>(ref(type($addr)),
+                                  $successors,
+                                  $succ_operands,
+                                  type($succ_operands))
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Common loop op definitions
 //===----------------------------------------------------------------------===//
 
@@ -5130,6 +5179,34 @@ def CIR_TryOp : CIR_Op<"try",[
       handlersBuilder($_builder, $_state.location, $_state);
     }]>
   ];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// CatchParamOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"cir::TryOp">]> {
+  let summary = "Represents the catch clause formal parameter";
+  let description = [{
+    The `cir.catch_param` is used to retrieves the exception object inside
+    the handler regions of `cir.try`.
+
+    This operation is used only before the CFG flatterning pass.
+
+    Example:
+
+    ```mlir
+    %exception = cir.catch_param : !cir.ptr<!void>
+    ```
+  }];
+
+  let results = (outs Optional<CIR_AnyType>:$param);
+  let assemblyFormat = [{
+    (`:` qualified(type($param))^)?
+    attr-dict
+  }];
 
   let hasLLVMLowering = false;
 }
