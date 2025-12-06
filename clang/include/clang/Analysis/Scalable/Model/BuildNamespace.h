@@ -5,6 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file defines BuildNamespace and NestedBuildNamespace classes that
+// represent build namespaces in the Scalable Static Analysis Framework.
+//
+// Build namespaces provide an abstraction for grouping program entities (such
+// as those in a shared library or compilation unit) to enable analysis of
+// software projects constructed from individual components.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_BUILDNAMESPACE_H
 #define LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_BUILDNAMESPACE_H
@@ -26,7 +35,16 @@ llvm::StringRef toString(BuildNamespaceKind BNK);
 
 std::optional<BuildNamespaceKind> parseBuildNamespaceKind(llvm::StringRef Str);
 
-/// Represents a single step in the build process.
+/// Represents a single namespace in the build process.
+///
+/// A BuildNamespace groups program entities, such as those belonging to a
+/// compilation unit or link unit (e.g., a shared library). Each namespace has a
+/// kind (CompilationUnit or LinkUnit) and a unique identifier name within that
+/// kind.
+///
+/// BuildNamespaces can be composed into NestedBuildNamespace to represent
+/// hierarchical namespace structures that model how software is constructed from
+/// its components.
 class BuildNamespace {
   BuildNamespaceKind Kind;
   std::string Name;
@@ -46,7 +64,15 @@ public:
   friend class SerializationFormat;
 };
 
-/// Represents a sequence of steps in the build process.
+/// Represents a hierarchical sequence of build namespaces.
+///
+/// A NestedBuildNamespace captures namespace qualification for program entities
+/// by maintaining an ordered sequence of BuildNamespace steps. This models how
+/// entities are organized through multiple steps of the build process, such as
+/// first being part of a compilation unit, then incorporated into a link unit.
+///
+/// For example, an entity might be qualified by a compilation unit namespace
+/// followed by a shared library namespace.
 class NestedBuildNamespace {
   friend class SerializationFormat;
 
