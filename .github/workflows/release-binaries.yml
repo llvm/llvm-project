@@ -86,9 +86,9 @@ jobs:
       shell: bash
       run: |
         ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
-   
+
     # The name of the Windows binaries uses the version from source, so we need
-    # to fetch it here. 
+    # to fetch it here.
     - id: version-from-source
       if: runner.os == 'Windows'
       uses: ./.github/workflows/get-llvm-version
