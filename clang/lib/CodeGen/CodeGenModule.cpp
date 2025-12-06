@@ -1416,7 +1416,7 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Warning, "arm-eabi-fp-denormal",
                               TagVal);
 
-    if (getLangOpts().getFPExceptionMode() !=
+    if (getLangOpts().getDefaultExceptionMode() !=
         LangOptions::FPExceptionModeKind::FPE_Ignore)
       getModule().addModuleFlag(llvm::Module::Warning, "arm-eabi-fp-exceptions",
                                 llvm::ARMBuildAttrs::Allowed);
