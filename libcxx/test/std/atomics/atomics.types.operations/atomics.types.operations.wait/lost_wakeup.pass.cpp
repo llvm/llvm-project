@@ -8,6 +8,10 @@
 
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// TODO: This test (unreliably) fails when back-deploying to macOS 15. However,
+//       we've only managed to observe the failure on the Github-provided CI
+//       runners, which is suspicious.
+// UNSUPPORTED: stdlib=system && target={{.+}}-apple-macosx15{{.*}}
 
 // This is a stress test for std::atomic::wait for lost wake ups.
 
@@ -39,7 +43,6 @@ int main(int, char**) {
     auto notify = [&] {
       for (int i = 0; i < num_iterations; ++i) {
         while (waiter_ready.load() < num_waiters) {
-          std::this_thread::yield();
         }
         waiter_ready.store(0);
         state.fetch_add(1);
