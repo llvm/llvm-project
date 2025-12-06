@@ -42,66 +42,66 @@ void test() {
   }
   { // <system_error>
     {
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       std::generic_category();
 
       const std::error_category& ec = std::generic_category();
 
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.name();
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.default_error_condition(94);
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.equivalent(94, ec.default_error_condition(82));
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.equivalent(std::error_code(49, ec), 94);
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.message(82);
     }
     {
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       std::system_category();
 
       const std::error_category& ec = std::system_category();
 
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.name();
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.default_error_condition(94);
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.equivalent(94, ec.default_error_condition(82));
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.equivalent(std::error_code(49, ec), 94);
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.message(82);
     }
     {
       std::error_code ec;
 
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.value();
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.category();
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.default_error_condition();
 
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.message();
 
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       std::make_error_code(std::errc::invalid_argument);
     }
     {
       std::error_condition ec;
 
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.value();
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.category();
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       ec.message();
 
-      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute' attribute}}
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       std::make_error_condition(std::errc::invalid_argument);
     }
   }
