@@ -19761,9 +19761,13 @@ APSInt NormalizeRotateAmount(const APSInt &Value, const APSInt &Amount) {
   if (BitWidth == 1) {
     // Rotating a 1-bit value is always a no-op
     NormAmt = APSInt(APInt(AmtBitWidth, 0), NormAmt.isUnsigned());
+  } else if (BitWidth == 2) {
+    // For 2-bit values: rotation amount is 0 or 1 based on
+    // whether the amount is even or odd. We can't use srem here because
+    // the divisor (2) would be misinterpreted as -2 in 2-bit signed arithmetic.
+    NormAmt =
+        APSInt(APInt(AmtBitWidth, NormAmt[0] ? 1 : 0), NormAmt.isUnsigned());
   } else {
-    // Divisor is always unsigned to avoid misinterpreting BitWidth as
-    // negative in small bit widths (e.g., BitWidth=2 would be -2 if signed).
     APInt Divisor;
     if (AmtBitWidth > BitWidth) {
       Divisor = llvm::APInt(AmtBitWidth, BitWidth);

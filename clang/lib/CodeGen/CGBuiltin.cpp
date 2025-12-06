@@ -2497,6 +2497,14 @@ RValue CodeGenFunction::emitRotate(const CallExpr *E, bool IsRotateRight) {
   if (BitWidth == 1) {
     // Rotating a 1-bit value is always a no-op
     ShiftAmt = ConstantInt::get(ShiftTy, 0);
+  } else if (BitWidth == 2) {
+    // For 2-bit values: rotation amount is 0 or 1 based on
+    // whether the amount is even or odd. We can't use srem here because
+    // the divisor (2) would be misinterpreted as -2 in 2-bit signed arithmetic.
+    llvm::Value *One = ConstantInt::get(ShiftTy, 1);
+    ShiftAmt = Builder.CreateAnd(ShiftAmt, One);
+    if (ShiftTy != Ty)
+      ShiftAmt = Builder.CreateIntCast(ShiftAmt, Ty, false);
   } else {
     unsigned ShiftAmtBitWidth = ShiftTy->getIntegerBitWidth();
     bool ShiftAmtIsSigned = E->getArg(1)->getType()->isSignedIntegerType();
