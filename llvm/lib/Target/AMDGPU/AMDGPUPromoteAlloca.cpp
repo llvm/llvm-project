@@ -461,15 +461,13 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     return nullptr;
 
   Value *Offset = VarOffset.first;
-  if (!isa<IntegerType>(Offset->getType()))
+  auto *OffsetType = dyn_cast<IntegerType>(Offset->getType());
+  if (!OffsetType)
     return nullptr;
 
-  Offset = Builder.CreateSExtOrTrunc(Offset, Builder.getIntNTy(BW));
-  if (Offset != VarOffset.first)
-    NewInsts.push_back(cast<Instruction>(Offset));
-
   if (!OffsetQuot.isOne()) {
-    ConstantInt *ConstMul = ConstantInt::get(Ctx, OffsetQuot.sextOrTrunc(BW));
+    ConstantInt *ConstMul =
+        ConstantInt::get(Ctx, OffsetQuot.sext(OffsetType->getBitWidth()));
     Offset = Builder.CreateMul(Offset, ConstMul);
     if (Instruction *NewInst = dyn_cast<Instruction>(Offset))
       NewInsts.push_back(NewInst);
@@ -477,7 +475,8 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   if (ConstOffset.isZero())
     return Offset;
 
-  ConstantInt *ConstIndex = ConstantInt::get(Ctx, IndexQuot.sextOrTrunc(BW));
+  ConstantInt *ConstIndex =
+      ConstantInt::get(Ctx, IndexQuot.sext(OffsetType->getBitWidth()));
   Value *IndexAdd = Builder.CreateAdd(Offset, ConstIndex);
   if (Instruction *NewInst = dyn_cast<Instruction>(IndexAdd))
     NewInsts.push_back(NewInst);
@@ -1031,14 +1030,16 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       if (Value *CurVal = Updater.FindValueForBlock(BB))
         return CurVal;
 
+      if (!Placeholders.empty() && Placeholders.back()->getParent() == BB)
+        return Placeholders.back();
+
       // If the current value in the basic block is not yet known, insert a
       // placeholder that we will replace later.
       IRBuilder<> Builder(I);
       auto *Placeholder = cast<Instruction>(Builder.CreateFreeze(
           PoisonValue::get(VectorTy), "promotealloca.placeholder"));
       Placeholders.push_back(Placeholder);
-      Updater.AddAvailableValue(BB, Placeholder);
-      return Placeholder;
+      return Placeholders.back();
     };
 
     Value *Result =
