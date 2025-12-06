@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // Check that functions are marked [[nodiscard]]
 
 #include <map>
