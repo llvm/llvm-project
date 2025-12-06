@@ -122,7 +122,7 @@ static std::string capitalize(llvm::StringRef str) {
 
 llvm::StringRef DAP::debug_adapter_path = "";
 
-DAP::DAP(Log *log, const ReplMode default_repl_mode,
+DAP::DAP(Log &log, const ReplMode default_repl_mode,
          std::vector<std::string> pre_init_commands, bool no_lldbinit,
          llvm::StringRef client_name, DAPTransport &transport, MainLoop &loop)
     : log(log), transport(transport), broadcaster("lldb-dap"),
@@ -133,8 +133,6 @@ DAP::DAP(Log *log, const ReplMode default_repl_mode,
   configuration.preInitCommands = std::move(pre_init_commands);
   RegisterRequests();
 }
-
-DAP::~DAP() = default;
 
 void DAP::PopulateExceptionBreakpoints() {
   if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
@@ -263,8 +261,7 @@ void DAP::SendJSON(const llvm::json::Value &json) {
   Message message;
   llvm::json::Path::Root root;
   if (!fromJSON(json, message, root)) {
-    DAP_LOG_ERROR(log, root.getError(), "({1}) encoding failed: {0}",
-                  m_client_name);
+    DAP_LOG_ERROR(log, root.getError(), "encoding failed: {0}");
     return;
   }
   Send(message);
@@ -285,15 +282,13 @@ Id DAP::Send(const Message &message) {
 
   if (const protocol::Event *event = std::get_if<protocol::Event>(&msg)) {
     if (llvm::Error err = transport.Send(*event))
-      DAP_LOG_ERROR(log, std::move(err), "({0}) sending event failed",
-                    m_client_name);
+      DAP_LOG_ERROR(log, std::move(err), "sending event failed: {0}");
     return event->seq;
   }
 
   if (const Request *req = std::get_if<Request>(&msg)) {
     if (llvm::Error err = transport.Send(*req))
-      DAP_LOG_ERROR(log, std::move(err), "({0}) sending request failed",
-                    m_client_name);
+      DAP_LOG_ERROR(log, std::move(err), "sending request failed: {0}");
     return req->seq;
   }
 
@@ -313,8 +308,7 @@ Id DAP::Send(const Message &message) {
                             })
                           : transport.Send(*resp);
     if (err)
-      DAP_LOG_ERROR(log, std::move(err), "({0}) sending response failed",
-                    m_client_name);
+      DAP_LOG_ERROR(log, std::move(err), "sending response failed: {0}");
     return resp->seq;
   }
 
@@ -857,8 +851,7 @@ bool DAP::HandleObject(const Message &M) {
 
     dispatcher.Set("error",
                    llvm::Twine("unhandled-command:" + req->command).str());
-    DAP_LOG(log, "({0}) error: unhandled command '{1}'", m_client_name,
-            req->command);
+    DAP_LOG(log, "error: unhandled command '{0}'", req->command);
     return false; // Fail
   }
 
@@ -1004,35 +997,33 @@ void DAP::Received(const protocol::Request &request) {
     // effort attempt to interrupt.
     std::lock_guard<std::mutex> guard(m_active_request_mutex);
     if (m_active_request && cancel_args->requestId == m_active_request->seq) {
-      DAP_LOG(log, "({0}) interrupting inflight request (command={1} seq={2})",
-              m_client_name, m_active_request->command, m_active_request->seq);
+      DAP_LOG(log, "interrupting inflight request (command={0} seq={1})",
+              m_active_request->command, m_active_request->seq);
       debugger.RequestInterrupt();
     }
   }
 
   std::lock_guard<std::mutex> guard(m_queue_mutex);
-  DAP_LOG(log, "({0}) queued (command={1} seq={2})", m_client_name,
-          request.command, request.seq);
+  DAP_LOG(log, "queued (command={0} seq={1})", request.command, request.seq);
   m_queue.push_back(request);
   m_queue_cv.notify_one();
 }
 
 void DAP::Received(const protocol::Response &response) {
   std::lock_guard<std::mutex> guard(m_queue_mutex);
-  DAP_LOG(log, "({0}) queued (command={1} seq={2})", m_client_name,
-          response.command, response.request_seq);
+  DAP_LOG(log, "queued (command={0} seq={1})", response.command,
+          response.request_seq);
   m_queue.push_back(response);
   m_queue_cv.notify_one();
 }
 
 void DAP::OnError(llvm::Error error) {
-  DAP_LOG_ERROR(log, std::move(error), "({1}) received error: {0}",
-                m_client_name);
+  DAP_LOG_ERROR(log, std::move(error), "transport error: {0}");
   TerminateLoop(/*failed=*/true);
 }
 
 void DAP::OnClosed() {
-  DAP_LOG(log, "({0}) received EOF", m_client_name);
+  DAP_LOG(log, "transport closed");
   TerminateLoop();
 }
 
@@ -1058,16 +1049,14 @@ void DAP::TransportHandler() {
   auto handle = transport.RegisterMessageHandler(m_loop, *this);
   if (!handle) {
     DAP_LOG_ERROR(log, handle.takeError(),
-                  "({1}) registering message handler failed: {0}",
-                  m_client_name);
+                  "registering message handler failed: {0}");
     std::lock_guard<std::mutex> guard(m_queue_mutex);
     m_error_occurred = true;
     return;
   }
 
   if (Status status = m_loop.Run(); status.Fail()) {
-    DAP_LOG_ERROR(log, status.takeError(), "({1}) MainLoop run failed: {0}",
-                  m_client_name);
+    DAP_LOG_ERROR(log, status.takeError(), "MainLoop run failed: {0}");
     std::lock_guard<std::mutex> guard(m_queue_mutex);
     m_error_occurred = true;
     return;

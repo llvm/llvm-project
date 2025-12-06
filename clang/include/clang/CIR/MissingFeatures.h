@@ -227,7 +227,6 @@ struct MissingFeatures {
   static bool countedBySize() { return false; }
   static bool cgFPOptionsRAII() { return false; }
   static bool checkBitfieldClipping() { return false; }
-  static bool cleanupDestroyNRVOVariable() { return false; }
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
   static bool cleanupAppendInsts() { return false; }

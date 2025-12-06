@@ -1248,6 +1248,65 @@ Block *cir::BrOp::getSuccessorForOperands(ArrayRef<Attribute>) {
 }
 
 //===----------------------------------------------------------------------===//
+// IndirectBrCondOp
+//===----------------------------------------------------------------------===//
+
+mlir::SuccessorOperands
+cir::IndirectBrOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return mlir::SuccessorOperands(getSuccOperandsMutable()[index]);
+}
+
+ParseResult parseIndirectBrOpSucessors(
+    OpAsmParser &parser, Type &flagType,
+    SmallVectorImpl<Block *> &succOperandBlocks,
+    SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &succOperands,
+    SmallVectorImpl<SmallVector<Type>> &succOperandsTypes) {
+  if (failed(parser.parseCommaSeparatedList(
+          OpAsmParser::Delimiter::Square,
+          [&]() {
+            Block *destination = nullptr;
+            SmallVector<OpAsmParser::UnresolvedOperand> operands;
+            SmallVector<Type> operandTypes;
+
+            if (parser.parseSuccessor(destination).failed())
+              return failure();
+
+            if (succeeded(parser.parseOptionalLParen())) {
+              if (failed(parser.parseOperandList(
+                      operands, OpAsmParser::Delimiter::None)) ||
+                  failed(parser.parseColonTypeList(operandTypes)) ||
+                  failed(parser.parseRParen()))
+                return failure();
+            }
+            succOperandBlocks.push_back(destination);
+            succOperands.emplace_back(operands);
+            succOperandsTypes.emplace_back(operandTypes);
+            return success();
+          },
+          "successor blocks")))
+    return failure();
+  return success();
+}
+
+void printIndirectBrOpSucessors(OpAsmPrinter &p, cir::IndirectBrOp op,
+                                Type flagType, SuccessorRange succs,
+                                OperandRangeRange succOperands,
+                                const TypeRangeRange &succOperandsTypes) {
+  p << "[";
+  llvm::interleave(
+      llvm::zip(succs, succOperands),
+      [&](auto i) {
+        p.printNewline();
+        p.printSuccessorAndUseList(std::get<0>(i), std::get<1>(i));
+      },
+      [&] { p << ','; });
+  if (!succOperands.empty())
+    p.printNewline();
+  p << "]";
+}
+
+//===----------------------------------------------------------------------===//
 // BrCondOp
 //===----------------------------------------------------------------------===//
 

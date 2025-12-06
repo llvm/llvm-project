@@ -203,6 +203,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitCoroutineBody(cast<CoroutineBodyStmt>(*s));
   case Stmt::CoreturnStmtClass:
   case Stmt::IndirectGotoStmtClass:
+    return emitIndirectGotoStmt(cast<IndirectGotoStmt>(*s));
   case Stmt::OMPParallelDirectiveClass:
   case Stmt::OMPTaskwaitDirectiveClass:
   case Stmt::OMPTaskyieldDirectiveClass:
@@ -563,6 +564,17 @@ mlir::LogicalResult CIRGenFunction::emitGotoStmt(const clang::GotoStmt &s) {
 }
 
 mlir::LogicalResult
+CIRGenFunction::emitIndirectGotoStmt(const IndirectGotoStmt &s) {
+  mlir::Value val = emitScalarExpr(s.getTarget());
+  assert(indirectGotoBlock &&
+         "If you jumping to a indirect branch should be alareadye emitted");
+  cir::BrOp::create(builder, getLoc(s.getSourceRange()), indirectGotoBlock,
+                    val);
+  builder.createBlock(builder.getBlock()->getParent());
+  return mlir::success();
+}
+
+mlir::LogicalResult
 CIRGenFunction::emitContinueStmt(const clang::ContinueStmt &s) {
   builder.createContinue(getLoc(s.getKwLoc()));
 
@@ -588,9 +600,14 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
   }
 
   builder.setInsertionPointToEnd(labelBlock);
-  cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName());
+  cir::LabelOp label =
+      cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName());
   builder.setInsertionPointToEnd(labelBlock);
-
+  auto func = cast<cir::FuncOp>(curFn);
+  cgm.mapBlockAddress(cir::BlockAddrInfoAttr::get(builder.getContext(),
+                                                  func.getSymNameAttr(),
+                                                  label.getLabelAttr()),
+                      label);
   //  FIXME: emit debug info for labels, incrementProfileCounter
   assert(!cir::MissingFeatures::ehstackBranches());
   assert(!cir::MissingFeatures::incrementProfileCounter());

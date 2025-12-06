@@ -110,7 +110,8 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
   auto new_thread_sp = std::make_shared<ManagedEventThread>(
       requesting_dap->broadcaster,
       std::thread(EventThread, debugger, requesting_dap->broadcaster,
-                  requesting_dap->m_client_name, requesting_dap->log));
+                  requesting_dap->m_client_name,
+                  std::ref(requesting_dap->log)));
   m_debugger_event_threads[debugger_id] = new_thread_sp;
   return new_thread_sp;
 }

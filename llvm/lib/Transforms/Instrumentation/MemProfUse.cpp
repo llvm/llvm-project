@@ -454,6 +454,15 @@ handleAllocSite(Instruction &I, CallBase *CI,
                                                    InlinedCallStack.size())] = {
             AllocInfo->Info.getTotalSize(), AllocType};
       }
+      ORE.emit(
+          OptimizationRemark(DEBUG_TYPE, "MemProfUse", CI)
+          << ore::NV("AllocationCall", CI) << " in function "
+          << ore::NV("Caller", CI->getFunction())
+          << " matched alloc context with alloc type "
+          << ore::NV("Attribute", getAllocTypeAttributeString(AllocType))
+          << " total size " << ore::NV("Size", AllocInfo->Info.getTotalSize())
+          << " full context id " << ore::NV("Context", FullStackId)
+          << " frame count " << ore::NV("Frames", InlinedCallStack.size()));
     }
   }
   // If the threshold for the percent of cold bytes is less than 100%,
@@ -516,7 +525,8 @@ static void handleCallSite(
     Instruction &I, const Function *CalledFunction,
     ArrayRef<uint64_t> InlinedCallStack,
     const std::unordered_set<CallSiteEntry, CallSiteEntryHash> &CallSiteEntries,
-    Module &M, std::set<std::vector<uint64_t>> &MatchedCallSites) {
+    Module &M, std::set<std::vector<uint64_t>> &MatchedCallSites,
+    OptimizationRemarkEmitter &ORE) {
   auto &Ctx = M.getContext();
   for (const auto &CallSiteEntry : CallSiteEntries) {
     // If we found and thus matched all frames on the call, create and
@@ -539,6 +549,11 @@ static void handleCallSite(
         append_range(CallStack, InlinedCallStack);
         MatchedCallSites.insert(std::move(CallStack));
       }
+      ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemProfUse", &I)
+               << ore::NV("CallSite", &I) << " in function "
+               << ore::NV("Caller", I.getFunction())
+               << " matched callsite with frame count "
+               << ore::NV("Frames", InlinedCallStack.size()));
       break;
     }
   }
@@ -719,7 +734,7 @@ static void readMemprof(Module &M, Function &F,
         // instruction's leaf location in the callsites map and not the
         // allocation map.
         handleCallSite(I, CalledFunction, InlinedCallStack,
-                       CallSitesIter->second, M, MatchedCallSites);
+                       CallSitesIter->second, M, MatchedCallSites, ORE);
     }
   }
 }
