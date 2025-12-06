@@ -946,7 +946,7 @@ static VPValue *optimizeLatchExitInductionUser(
     VPlan &Plan, VPTypeAnalysis &TypeInfo, VPBlockBase *PredVPBB, VPValue *Op,
     DenseMap<VPValue *, VPValue *> &EndValues, ScalarEvolution &SE) {
   VPValue *Incoming;
-  if (!match(Op, m_ExtractFinalLane(m_VPValue(Incoming))))
+  if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
     return nullptr;
 
   auto *WideIV = getOptimizableIVOf(Incoming, SE);
@@ -3764,7 +3764,7 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
     if (ExitIRI->getNumOperands() != 1) {
       // The first of two operands corresponds to the latch exit, via MiddleVPBB
       // predecessor. Extract its final lane.
-      ExitIRI->extractFinalLaneOfFirstOperand(MiddleBuilder);
+      ExitIRI->extractLastLaneOfLastPartOfFirstOperand(MiddleBuilder);
     }
 
     VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
@@ -5093,7 +5093,7 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
     // the VPIRInstruction modeling the phi.
     for (VPRecipeBase &R : make_early_inc_range(
              make_range(MiddleVPBB->getFirstNonPhi(), MiddleVPBB->end()))) {
-      if (!match(&R, m_ExtractFinalLane(m_Specific(FOR))))
+      if (!match(&R, m_ExtractLastLaneOfLastPart(m_Specific(FOR))))
         continue;
 
       // For VF vscale x 1, if vscale = 1, we are unable to extract the

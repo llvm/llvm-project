@@ -414,7 +414,7 @@ template <typename Op0_t>
 inline VPInstruction_match<
     VPInstruction::ExtractLastLane,
     VPInstruction_match<VPInstruction::ExtractLastPart, Op0_t>>
-m_ExtractFinalLane(const Op0_t &Op0) {
+m_ExtractLastLaneOfLastPart(const Op0_t &Op0) {
   return m_ExtractLastLane(m_ExtractLastPart(Op0));
 }
 

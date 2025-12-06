@@ -8982,12 +8982,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
 
       // Look through ExtractLastPart.
-      if (match(U, m_ExtractLastPart(m_VPValue()))) {
-        auto *ExtractPart = cast<VPInstruction>(U);
-        if (ExtractPart->getNumUsers() != 1)
-          continue;
-        U = *ExtractPart->user_begin();
-      }
+      if (match(U, m_ExtractLastPart(m_VPValue())))
+        U = cast<VPInstruction>(U)->getSingleUser();
 
       if (match(U, m_CombineOr(m_ExtractLane(m_VPValue(), m_VPValue()),
                                m_ExtractLastLane(m_VPValue()))))

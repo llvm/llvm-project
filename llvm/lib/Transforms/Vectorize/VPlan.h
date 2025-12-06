@@ -1464,10 +1464,10 @@ public:
     return true;
   }
 
-  /// Update the recipe's first operand to the final lane of the operand using
-  /// \p Builder. Must only be used for VPIRInstructions with at least one
-  /// operand wrapping a PHINode.
-  void extractFinalLaneOfFirstOperand(VPBuilder &Builder);
+  /// Update the recipe's first operand to the last lane of the last part of the
+  /// operand using \p Builder. Must only be used for VPIRInstructions with at
+  /// least one operand wrapping a PHINode.
+  void extractLastLaneOfLastPartOfFirstOperand(VPBuilder &Builder);
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -126,11 +126,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
       return VecTy->getElementType();
     return BaseTy;
   }
-  case VPInstruction::ExtractLastPart: {
-    // Element type of ExtractLastPart is equal to the element type of its
-    // operand.
+  case VPInstruction::ExtractLastPart:
     return inferScalarType(R->getOperand(0));
-  }
   case VPInstruction::LogicalAnd:
     assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
            inferScalarType(R->getOperand(1))->isIntegerTy(1) &&

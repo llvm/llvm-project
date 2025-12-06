@@ -371,7 +371,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
 
-    if (match(&R, m_ExtractFinalLane(m_VPValue(Op0))) ||
+    if (match(&R, m_ExtractLastLaneOfLastPart(m_VPValue(Op0))) ||
         match(&R, m_ExtractPenultimateElement(m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
       if (Plan.hasScalarVFOnly()) {

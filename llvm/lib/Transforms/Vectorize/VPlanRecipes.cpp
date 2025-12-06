@@ -1497,7 +1497,8 @@ InstructionCost VPIRInstruction::computeCost(ElementCount VF,
   return 0;
 }
 
-void VPIRInstruction::extractFinalLaneOfFirstOperand(VPBuilder &Builder) {
+void VPIRInstruction::extractLastLaneOfLastPartOfFirstOperand(
+    VPBuilder &Builder) {
   assert(isa<PHINode>(getInstruction()) &&
          "can only update exiting operands to phi nodes");
   assert(getNumOperands() > 0 && "must have at least one operand");
