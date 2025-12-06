@@ -15,22 +15,18 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 14
-template <typename T>
 struct TransparentKey {
-  explicit operator T() const;
+  explicit operator int() const;
 };
 
 struct TransparentCompare {
   using is_transparent = void; // This makes the comparator transparent
 
-  template <typename T>
-  bool operator()(const T&, const TransparentKey<T>&) const;
+  bool operator()(const int&, const TransparentKey&) const;
 
-  template <typename T>
-  bool operator()(const TransparentKey<T>&, const T&) const;
+  bool operator()(const TransparentKey<T>&, const int&) const;
 
-  template <typename T>
-  bool operator()(const T&, const T&) const;
+  bool operator()(const int&, const int&) const;
 };
 #endif
 
@@ -89,7 +85,7 @@ void test() {
   std::map<int, int, TransparentCompare> tm;
   const std::map<int, int, TransparentCompare> ctm{};
 
-  TransparentKey<int> tkey;
+  TransparentKey tkey;
 
   tm.find(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   ctm.find(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
