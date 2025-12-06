@@ -243,7 +243,7 @@ entry:
   ret i1 %or.cond1
 }
 
-; Cannot optimize since %type can be undef
+; Cannot optimize since %type can be un-def
 define i1 @or_icmp_undef(i64 signext %type) {
 ; CHECK-LABEL: define i1 @or_icmp_undef(
 ; CHECK-SAME: i64 signext [[TYPE:%.*]]) {
