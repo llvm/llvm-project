@@ -126,8 +126,7 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
                             lhs.isVolatileQualified());
       // Ensure that we destroy the objects if an exception is thrown later in
       // the constructor.
-      QualType::DestructionKind dtorKind = fieldType.isDestructedType();
-      assert(!cgf.needsEHCleanup(dtorKind) &&
+      assert(!cgf.needsEHCleanup(fieldType.isDestructedType()) &&
              "Arrays of non-record types shouldn't need EH cleanup");
       return;
     }
@@ -150,7 +149,7 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
   CallBaseDtor(const CXXRecordDecl *base, bool baseIsVirtual)
       : baseClass(base), baseIsVirtual(baseIsVirtual) {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     const CXXRecordDecl *derivedClass =
         cast<CXXMethodDecl>(cgf.curFuncDecl)->getParent();
 
@@ -925,7 +924,7 @@ mlir::Value loadThisForDtorDelete(CIRGenFunction &cgf,
 struct CallDtorDelete final : EHScopeStack::Cleanup {
   CallDtorDelete() {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(cgf.curFuncDecl);
     const CXXRecordDecl *classDecl = dtor->getParent();
     cgf.emitDeleteCall(dtor->getOperatorDelete(),
@@ -942,7 +941,7 @@ public:
   DestroyField(const FieldDecl *field, CIRGenFunction::Destroyer *destroyer)
       : field(field), destroyer(destroyer) {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     // Find the address of the field.
     Address thisValue = cgf.loadCXXThisAddress();
     CanQualType recordTy =
@@ -951,7 +950,7 @@ public:
     LValue lv = cgf.emitLValueForField(thisLV, field);
     assert(lv.isSimple());
 
-    assert(!cir::MissingFeatures::ehCleanupFlags());
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
     cgf.emitDestroy(lv.getAddress(), field->getType(), destroyer);
   }
 };
@@ -1048,7 +1047,7 @@ void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
       continue;
 
     CleanupKind cleanupKind = getCleanupKind(dtorKind);
-    assert(!cir::MissingFeatures::ehCleanupFlags());
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
     ehStack.pushCleanup<DestroyField>(cleanupKind, field,
                                       getDestroyer(dtorKind));
   }
