@@ -94,6 +94,8 @@ enum OpenMPOffloadingDeclareTargetFlags {
   OMP_DECLARE_TARGET_INDIRECT = 0x08,
   /// This is an entry corresponding to a requirement to be registered.
   OMP_REGISTER_REQUIRES = 0x10,
+  /// Mark the entry global as being an indirect vtable.
+  OMP_DECLARE_TARGET_INDIRECT_VTABLE = 0x20,
 };
 
 enum TargetAllocTy : int32_t {
@@ -270,6 +272,8 @@ extern "C" {
 void ompx_dump_mapping_tables(void);
 int omp_get_num_devices(void);
 int omp_get_device_num(void);
+int omp_get_device_from_uid(const char *DeviceUid);
+const char *omp_get_uid_from_device(int DeviceNum);
 int omp_get_initial_device(void);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);

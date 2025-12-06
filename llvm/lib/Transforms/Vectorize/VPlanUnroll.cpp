@@ -275,11 +275,10 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       remapOperands(&R, UF - 1);
       return;
     }
-    if (auto *II = dyn_cast<IntrinsicInst>(RepR->getUnderlyingValue())) {
-      if (II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl) {
-        addUniformForAllParts(RepR);
-        return;
-      }
+    if (match(RepR,
+              m_Intrinsic<Intrinsic::experimental_noalias_scope_decl>())) {
+      addUniformForAllParts(RepR);
+      return;
     }
   }
 
@@ -352,6 +351,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     VPValue *Op1;
     if (match(&R, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Op1))) ||
         match(&R, m_FirstActiveLane(m_VPValue(Op1))) ||
+        match(&R, m_LastActiveLane(m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeAnyOfResult>(
                       m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
@@ -364,17 +364,21 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
     VPValue *Op0;
-    if (match(&R, m_VPInstruction<VPInstruction::ExtractLane>(
-                      m_VPValue(Op0), m_VPValue(Op1)))) {
+    if (match(&R, m_ExtractLane(m_VPValue(Op0), m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));
       continue;
     }
     if (match(&R, m_ExtractLastElement(m_VPValue(Op0))) ||
-        match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
-                      m_VPValue(Op0)))) {
+        match(&R, m_ExtractPenultimateElement(m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
+      if (isa<VPFirstOrderRecurrencePHIRecipe>(Op0)) {
+        assert(match(&R, m_ExtractLastElement(m_VPValue())) &&
+               "can only extract last element of FOR");
+        continue;
+      }
+
       if (Plan.hasScalarVFOnly()) {
         auto *I = cast<VPInstruction>(&R);
         // Extracting from end with VF = 1 implies retrieving the last or
@@ -466,7 +470,7 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
 /// definitions for operands of \DefR.
 static VPValue *
 cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
-             VPRecipeWithIRFlags *DefR, VPLane Lane,
+             VPSingleDefRecipe *DefR, VPLane Lane,
              const DenseMap<VPValue *, SmallVector<VPValue *>> &Def2LaneDefs) {
   VPValue *Op;
   if (match(DefR, m_VPInstruction<VPInstruction::Unpack>(m_VPValue(Op)))) {
@@ -513,7 +517,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     NewOps.push_back(Ext);
   }
 
-  VPRecipeWithIRFlags *New;
+  VPSingleDefRecipe *New;
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(DefR)) {
     // TODO: have cloning of replicate recipes also provide the desired result
     // coupled with setting its operands to NewOps (deriving IsSingleScalar and
@@ -529,7 +533,6 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
       New->setOperand(Idx, Op);
     }
   }
-  New->transferFlags(*DefR);
   New->insertBefore(DefR);
   return New;
 }
@@ -563,7 +566,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
            cast<VPInstruction>(&R)->getOpcode() != VPInstruction::Unpack))
         continue;
 
-      auto *DefR = cast<VPRecipeWithIRFlags>(&R);
+      auto *DefR = cast<VPSingleDefRecipe>(&R);
       VPBuilder Builder(DefR);
       if (DefR->getNumUsers() == 0) {
         // Create single-scalar version of DefR for all lanes.
