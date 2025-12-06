@@ -2494,11 +2494,11 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (Instruction *X = foldComplexAndOrPatterns(I, Builder))
     return X;
 
-  // (A|B)&(A|C) -> A|(B&C) etc
-  if (Value *V = foldUsingDistributiveLaws(I))
+  if (Value *V = combineAndOrOfImmCmpToBitExtract(I, Builder, DL))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = combineAndOrOfImmCmpToBitExtract(I, Builder, DL))
+  // (A|B)&(A|C) -> A|(B&C) etc
+  if (Value *V = foldUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *R = foldBinOpShiftWithShift(I))

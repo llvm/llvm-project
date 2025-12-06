@@ -290,13 +290,12 @@ define i1 @and_icmp_expand(i64 signext noundef %type) {
 ; CHECK-LABEL: define i1 @and_icmp_expand(
 ; CHECK-SAME: i64 noundef signext [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TYPE_T:%.*]] = trunc i64 [[TYPE]] to i7
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i7 27, [[TYPE_T]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[TYPE]], 7
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i7 [[SHR]] to i1
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i64 [[TYPE]] to i36
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i36 -34359738341, [[SWITCH_CAST]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i36 [[SWITCH_DOWNSHIFT]] to i1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[TYPE]], 36
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP]], i1 [[TRUNC]], i1 false
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[TYPE]], 35
-; CHECK-NEXT:    [[AND_COND:%.*]] = xor i1 [[AND]], [[CMP1]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = xor i1 [[AND]], true
 ; CHECK-NEXT:    ret i1 [[AND_COND]]
 ;
 entry:
