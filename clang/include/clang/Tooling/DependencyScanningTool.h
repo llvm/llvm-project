@@ -47,7 +47,7 @@ public:
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, dependency file contents otherwise.
   llvm::Expected<std::string>
-  getDependencyFile(const std::vector<std::string> &CommandLine, StringRef CWD);
+  getDependencyFile(ArrayRef<std::string> CommandLine, StringRef CWD);
 
   /// Collect the module dependency in P1689 format for C++20 named modules.
   ///
@@ -92,7 +92,7 @@ public:
   /// occurred, \c TranslationUnitDeps otherwise.
   llvm::Expected<dependencies::TranslationUnitDeps>
   getTranslationUnitDependencies(
-      const std::vector<std::string> &CommandLine, StringRef CWD,
+      ArrayRef<std::string> CommandLine, StringRef CWD,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       dependencies::LookupModuleOutputCallback LookupModuleOutput,
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
@@ -104,8 +104,8 @@ public:
   /// CompilerInstanceWithContext. We are keeping it here so that it is easier
   /// to coordinate with Swift and C-API changes.
   llvm::Expected<dependencies::TranslationUnitDeps> getModuleDependencies(
-      StringRef ModuleName, const std::vector<std::string> &CommandLine,
-      StringRef CWD, const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
+      StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
+      const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
   /// The following three methods provide a new interface to perform
@@ -119,8 +119,9 @@ public:
   /// @param CWD The current working directory used during the scan.
   /// @param CommandLine The commandline used for the scan.
   /// @return Error if the initializaiton fails.
-  llvm::Error initializeCompilerInstanceWithContext(
-      StringRef CWD, const std::vector<std::string> &CommandLine);
+  llvm::Error
+  initializeCompilerInstanceWithContext(StringRef CWD,
+                                        ArrayRef<std::string> CommandLine);
 
   /// @brief Computes the dependeny for the module named ModuleName.
   /// @param ModuleName The name of the module for which this method computes

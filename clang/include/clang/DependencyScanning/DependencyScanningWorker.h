@@ -100,7 +100,7 @@ public:
   /// \returns false if clang errors occurred (with diagnostics reported to
   /// \c DiagConsumer), true otherwise.
   bool computeDependencies(
-      StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
+      StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
       DependencyConsumer &DepConsumer, DependencyActionController &Controller,
       DiagnosticConsumer &DiagConsumer,
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
@@ -111,7 +111,7 @@ public:
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, success otherwise.
   llvm::Error computeDependencies(
-      StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
+      StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
       DependencyConsumer &Consumer, DependencyActionController &Controller,
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
 
@@ -125,7 +125,7 @@ public:
   /// @param CommandLine The commandline used for the scan.
   /// @return Error if the initializaiton fails.
   llvm::Error initializeCompilerInstanceWithContextOrError(
-      StringRef CWD, const std::vector<std::string> &CommandLine);
+      StringRef CWD, ArrayRef<std::string> CommandLine);
 
   /// @brief Performaces dependency scanning for the module whose name is
   ///        specified.
@@ -147,9 +147,9 @@ public:
   /// three methods return a flag to indicate if the call is successful.
   /// The initialization function asks the client for a DiagnosticsConsumer
   /// that it direct the diagnostics to.
-  bool initializeCompilerInstanceWithContext(
-      StringRef CWD, const std::vector<std::string> &CommandLine,
-      DiagnosticConsumer *DC = nullptr);
+  bool initializeCompilerInstanceWithContext(StringRef CWD,
+                                             ArrayRef<std::string> CommandLine,
+                                             DiagnosticConsumer *DC = nullptr);
   bool
   computeDependenciesByNameWithContext(StringRef ModuleName,
                                        DependencyConsumer &Consumer,
@@ -172,7 +172,7 @@ private:
   /// Actually carries out the scan. If \c OverlayFS is provided, it must be
   /// based on top of DepFS.
   bool scanDependencies(
-      StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
+      StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
       DependencyConsumer &Consumer, DependencyActionController &Controller,
       DiagnosticConsumer &DC,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
