@@ -225,6 +225,7 @@ public:
 protected:
   friend class SBBlock;
   friend class SBExecutionContext;
+  friend class SBFrameList;
   friend class SBInstruction;
   friend class SBThread;
   friend class SBValue;

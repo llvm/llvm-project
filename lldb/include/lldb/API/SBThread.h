@@ -182,6 +182,8 @@ public:
 
   lldb::SBFrame GetFrameAtIndex(uint32_t idx);
 
+  lldb::SBFrameList GetFrames();
+
   lldb::SBFrame GetSelectedFrame();
 
   lldb::SBFrame SetSelectedFrame(uint32_t frame_idx);
@@ -240,6 +242,7 @@ private:
   friend class SBSaveCoreOptions;
   friend class SBExecutionContext;
   friend class SBFrame;
+  friend class SBFrameList;
   friend class SBProcess;
   friend class SBDebugger;
   friend class SBValue;
@@ -249,6 +252,7 @@ private:
   friend class SBThreadPlan;
   friend class SBTrace;
 
+  friend class lldb_private::ScriptInterpreter;
   friend class lldb_private::python::SWIGBridge;
 
   SBThread(const lldb::ThreadSP &lldb_object_sp);

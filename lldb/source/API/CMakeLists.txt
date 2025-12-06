@@ -79,6 +79,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBFileSpecList.cpp
   SBFormat.cpp
   SBFrame.cpp
+  SBFrameList.cpp
   SBFunction.cpp
   SBHostOS.cpp
   SBInstruction.cpp
