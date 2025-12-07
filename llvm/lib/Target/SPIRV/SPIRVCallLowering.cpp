@@ -374,7 +374,15 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         buildOpDecorate(VRegs[i][0], MIRBuilder,
                         SPIRV::Decoration::FuncParamAttr, {Attr});
       }
-      if (Arg.hasAttribute(Attribute::ByVal)) {
+      // TODO: the AMDGPU BE only supports ByRef argument passing, thus for
+      //       AMDGCN flavoured SPIRV we CodeGen for ByRef, but lower it to
+      //       ByVal, handling the impedance mismatch during reverse
+      //       translation from SPIRV to LLVM IR; the vendor check should be
+      //       removed once / if SPIRV adds ByRef support.
+      if (Arg.hasAttribute(Attribute::ByVal) ||
+          (Arg.hasAttribute(Attribute::ByRef) &&
+           F.getParent()->getTargetTriple().getVendor() ==
+               Triple::VendorType::AMD)) {
         auto Attr =
             static_cast<unsigned>(SPIRV::FunctionParameterAttribute::ByVal);
         buildOpDecorate(VRegs[i][0], MIRBuilder,
