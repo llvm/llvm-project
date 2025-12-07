@@ -14,10 +14,12 @@
 // <atomic>
 
 #include <atomic>
+#include <chrono>
 #include <functional>
 #include <thread>
 #include <vector>
 #include <iostream>
+#include <iomanip>
 
 #include "make_test_thread.h"
 
@@ -25,6 +27,7 @@ constexpr int num_waiters    = 8;
 constexpr int num_iterations = 10'000;
 
 int main(int, char**) {
+  auto start = std::chrono::high_resolution_clock::now();
   for (int run = 0; run < 20; ++run) {
     std::cerr << "run " << run << std::endl;
     std::atomic<int> waiter_ready(0);
@@ -41,7 +44,9 @@ int main(int, char**) {
     auto notify = [&] {
       for (int i = 0; i < num_iterations; ++i) {
         if (i % 1000 == 0)
-          std::cerr << "run " << run << "  notify iteration " << i << std::endl;
+          std::cerr << std::fixed << std::setprecision(2) << std::left
+                    << std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start) << " run "
+                    << run << "  notify iteration " << i << std::endl;
 
         while (waiter_ready.load() < num_waiters) {
           std::this_thread::yield();
@@ -59,5 +64,5 @@ int main(int, char**) {
     threads.push_back(support::make_test_jthread(notify));
   }
 
-  return 0;
+  return 1;
 }
