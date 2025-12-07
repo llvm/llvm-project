@@ -228,7 +228,8 @@ void AffineDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Affine/IR/AffineOps.cpp.inc"
                 >();
-  addInterfaces<AffineInlinerInterface>();
+  // Affine dialect does not let affine ops be inlined into other regions.
+  // addInterfaces<AffineInlinerInterface>();
   declarePromisedInterfaces<ValueBoundsOpInterface, AffineApplyOp, AffineMaxOp,
                             AffineMinOp>();
 }
