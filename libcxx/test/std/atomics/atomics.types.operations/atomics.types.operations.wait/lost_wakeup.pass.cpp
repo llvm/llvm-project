@@ -8,6 +8,7 @@
 
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: !stdlib=system 
 
 // This is a stress test for std::atomic::wait for lost wake ups.
 
