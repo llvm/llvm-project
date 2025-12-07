@@ -30,7 +30,7 @@ public:
   void onEndOfTranslationUnit() override { InterfaceMap.clear(); }
 
 private:
-  bool isInterface(const CXXBaseSpecifier& Base);
+  bool isInterface(const CXXBaseSpecifier &Base);
 
   // Contains the identity of each named CXXRecord as an interface.  This is
   // used to memoize lookup speeds and improve performance from O(N^2) to O(N),
