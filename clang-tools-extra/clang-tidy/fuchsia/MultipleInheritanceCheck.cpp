@@ -37,9 +37,7 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
   const bool CurrentClassIsInterface = [&] {
     // To be an interface, all base classes must be interfaces as well.
     for (const CXXBaseSpecifier &I : Node->bases()) {
-      if (I.isVirtual())
-        continue;
-      if (!isInterface(I.getType()->getAsCXXRecordDecl()))
+      if (!I.isVirtual() && !isInterface(I.getType()->getAsCXXRecordDecl()))
         return false;
     }
 
@@ -66,9 +64,7 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
   // Check to see if the class inherits from multiple concrete classes.
   unsigned NumConcrete = 0;
   for (const CXXBaseSpecifier &I : D.bases()) {
-    if (I.isVirtual())
-      continue;
-    if (!isInterface(I.getType()->getAsCXXRecordDecl()))
+    if (!I.isVirtual() && !isInterface(I.getType()->getAsCXXRecordDecl()))
       ++NumConcrete;
   }
 
