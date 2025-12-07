@@ -24,7 +24,7 @@ AST_MATCHER(CXXRecordDecl, hasBases) {
 bool MultipleInheritanceCheck::isInterface(const CXXBaseSpecifier &Base) {
   const CXXRecordDecl *const Node = Base.getType()->getAsCXXRecordDecl();
   if (!Node)
-    return false;
+    return true;
 
   assert(Node->isCompleteDefinition());
 
