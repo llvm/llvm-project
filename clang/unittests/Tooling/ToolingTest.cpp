@@ -1113,8 +1113,13 @@ TEST(ClangToolTest, ProgressReportMultipleFiles) {
   Tool.run(newFrontendActionFactory<SyntaxOnlyAction>().get());
   std::string Output = testing::internal::GetCapturedStderr();
 
-  std::string Expected = "[1/2] Processing file " + File1 + ".\n" +
-                         "[2/2] Processing file " + File2 + ".\n";
+  SmallString<32> NativeFile1(File1);
+  llvm::sys::path::native(NativeFile1);
+  SmallString<32> NativeFile2(File2);
+  llvm::sys::path::native(NativeFile2);
+  std::string Expected = "[1/2] Processing file " + std::string(NativeFile1) +
+                         ".\n" + "[2/2] Processing file " +
+                         std::string(NativeFile2) + ".\n";
   EXPECT_EQ(Output, Expected);
 }
 
@@ -1157,8 +1162,11 @@ TEST(ClangToolTest, ProgressReportMultipleCommands) {
   Tool.run(newFrontendActionFactory<SyntaxOnlyAction>().get());
   std::string Output = testing::internal::GetCapturedStderr();
 
-  std::string Expected = "[1/1] (1/2) Processing file " + File + ".\n" +
-                         "[1/1] (2/2) Processing file " + File + ".\n";
+  SmallString<32> NativeFile(File);
+  llvm::sys::path::native(NativeFile);
+  std::string Expected =
+      "[1/1] (1/2) Processing file " + std::string(NativeFile) + ".\n" +
+      "[1/1] (2/2) Processing file " + std::string(NativeFile) + ".\n";
   EXPECT_EQ(Output, Expected);
 }
 
@@ -1215,10 +1223,17 @@ TEST(ClangToolTest, ProgressReportMixed) {
   Tool.run(newFrontendActionFactory<SyntaxOnlyAction>().get());
   std::string Output = testing::internal::GetCapturedStderr();
 
-  std::string Expected = "[1/3] Processing file " + File1 + ".\n" +
-                         "[2/3] (1/2) Processing file " + File2 + ".\n" +
-                         "[2/3] (2/2) Processing file " + File2 + ".\n" +
-                         "[3/3] Processing file " + File3 + ".\n";
+  SmallString<32> NativeFile1(File1);
+  llvm::sys::path::native(NativeFile1);
+  SmallString<32> NativeFile2(File2);
+  llvm::sys::path::native(NativeFile2);
+  SmallString<32> NativeFile3(File3);
+  llvm::sys::path::native(NativeFile3);
+  std::string Expected =
+      "[1/3] Processing file " + std::string(NativeFile1) + ".\n" +
+      "[2/3] (1/2) Processing file " + std::string(NativeFile2) + ".\n" +
+      "[2/3] (2/2) Processing file " + std::string(NativeFile2) + ".\n" +
+      "[3/3] Processing file " + std::string(NativeFile3) + ".\n";
   EXPECT_EQ(Output, Expected);
 }
 
