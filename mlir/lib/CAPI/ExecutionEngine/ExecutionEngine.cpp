@@ -43,9 +43,8 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
     consumeError(tmBuilderOrError.takeError());
     return MlirExecutionEngine{nullptr};
   }
-  if (enablePIC) {
+  if (enablePIC)
     tmBuilderOrError->setRelocationModel(llvm::Reloc::PIC_);
-  }
   auto tmOrError = tmBuilderOrError->createTargetMachine();
   if (!tmOrError) {
     llvm::errs() << "Failed to create a TargetMachine for the host because: \n";
