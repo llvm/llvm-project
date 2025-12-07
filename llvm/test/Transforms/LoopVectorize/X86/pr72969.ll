@@ -57,11 +57,10 @@ define void @test(ptr %p) {
 ; VEC:       vector.body:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 1, i16 2, i16 3, i16 4>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VEC-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 0
 ; VEC-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 1
 ; VEC-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 3
-; VEC-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP15]], 1
+; VEC-NEXT:    [[TMP19:%.*]] = shl i64 [[INDEX]], 1
 ; VEC-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP16]], 1
 ; VEC-NEXT:    [[TMP21:%.*]] = shl i64 [[TMP17]], 1
 ; VEC-NEXT:    [[TMP22:%.*]] = shl i64 [[TMP18]], 1

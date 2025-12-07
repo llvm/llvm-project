@@ -90,7 +90,6 @@ define float @PR27826(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x float> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP121:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x float> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP122:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 32
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 32
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 64
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 96
@@ -106,7 +105,7 @@ define float @PR27826(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[OFFSET_IDX]], 416
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[OFFSET_IDX]], 448
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[OFFSET_IDX]], 480
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP6]]
@@ -154,7 +153,7 @@ define float @PR27826(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 
 ; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <4 x float> [[TMP63]], float [[TMP60]], i32 1
 ; CHECK-NEXT:    [[TMP65:%.*]] = insertelement <4 x float> [[TMP64]], float [[TMP61]], i32 2
 ; CHECK-NEXT:    [[TMP66:%.*]] = insertelement <4 x float> [[TMP65]], float [[TMP62]], i32 3
-; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP6]]
@@ -236,11 +235,10 @@ define float @PR27826(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 
 ; CHECK-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT13:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI11:%.*]] = phi <4 x float> [ [[TMP125]], [[VEC_EPILOG_PH]] ], [ [[TMP155:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX12:%.*]] = mul i64 [[INDEX10]], 32
-; CHECK-NEXT:    [[TMP126:%.*]] = add i64 [[OFFSET_IDX12]], 0
 ; CHECK-NEXT:    [[TMP127:%.*]] = add i64 [[OFFSET_IDX12]], 32
 ; CHECK-NEXT:    [[TMP128:%.*]] = add i64 [[OFFSET_IDX12]], 64
 ; CHECK-NEXT:    [[TMP129:%.*]] = add i64 [[OFFSET_IDX12]], 96
-; CHECK-NEXT:    [[TMP130:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP126]]
+; CHECK-NEXT:    [[TMP130:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[OFFSET_IDX12]]
 ; CHECK-NEXT:    [[TMP131:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP127]]
 ; CHECK-NEXT:    [[TMP132:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP128]]
 ; CHECK-NEXT:    [[TMP133:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP129]]
@@ -252,7 +250,7 @@ define float @PR27826(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 
 ; CHECK-NEXT:    [[TMP139:%.*]] = insertelement <4 x float> [[TMP138]], float [[TMP135]], i32 1
 ; CHECK-NEXT:    [[TMP140:%.*]] = insertelement <4 x float> [[TMP139]], float [[TMP136]], i32 2
 ; CHECK-NEXT:    [[TMP141:%.*]] = insertelement <4 x float> [[TMP140]], float [[TMP137]], i32 3
-; CHECK-NEXT:    [[TMP142:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP126]]
+; CHECK-NEXT:    [[TMP142:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[OFFSET_IDX12]]
 ; CHECK-NEXT:    [[TMP143:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP127]]
 ; CHECK-NEXT:    [[TMP144:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP128]]
 ; CHECK-NEXT:    [[TMP145:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP129]]
@@ -472,11 +470,10 @@ define i1 @any_of_cost(ptr %start, ptr %end) #0 {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP26:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <2 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP27:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 40
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 40
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 80
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], 120
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP6]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP9]]

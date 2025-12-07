@@ -239,7 +239,7 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE12:.*]] ]
+; CHECK-NEXT:    [[TMP29:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE12:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE12]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw <4 x i32> [[VEC_IND]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = srem <4 x i32> [[TMP0]], [[BROADCAST_SPLAT]]
@@ -288,7 +288,6 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[TMP25]], i32 0
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP27]]
-; CHECK-NEXT:    [[TMP29:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    store i32 [[TMP29]], ptr [[TMP28]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
@@ -297,7 +296,7 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK:       [[PRED_STORE_IF7]]:
 ; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i64> [[TMP25]], i32 1
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP31]]
-; CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP29]], 1
 ; CHECK-NEXT:    store i32 [[TMP33]], ptr [[TMP32]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
 ; CHECK:       [[PRED_STORE_CONTINUE8]]:
@@ -306,7 +305,7 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK:       [[PRED_STORE_IF9]]:
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <4 x i64> [[TMP25]], i32 2
 ; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP35]]
-; CHECK-NEXT:    [[TMP37:%.*]] = add i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP37:%.*]] = add i32 [[TMP29]], 2
 ; CHECK-NEXT:    store i32 [[TMP37]], ptr [[TMP36]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
 ; CHECK:       [[PRED_STORE_CONTINUE10]]:
@@ -315,11 +314,11 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK:       [[PRED_STORE_IF11]]:
 ; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <4 x i64> [[TMP25]], i32 3
 ; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP39]]
-; CHECK-NEXT:    [[TMP41:%.*]] = add i32 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP41:%.*]] = add i32 [[TMP29]], 3
 ; CHECK-NEXT:    store i32 [[TMP41]], ptr [[TMP40]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
 ; CHECK:       [[PRED_STORE_CONTINUE12]]:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP29]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP42:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP42]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]

@@ -28,23 +28,23 @@ define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y
 ; CHECK:       [[PRED_SDIV_IF]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
 ; CHECK:       [[PRED_SDIV_CONTINUE]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP0]], i32 1
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_SDIV_IF4:.*]], label %[[PRED_SDIV_CONTINUE5:.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_SDIV_IF4:.*]], label %[[PRED_SDIV_CONTINUE5:.*]]
 ; CHECK:       [[PRED_SDIV_IF4]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE5]]
 ; CHECK:       [[PRED_SDIV_CONTINUE5]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_SDIV_IF6:.*]], label %[[PRED_SDIV_CONTINUE7:.*]]
 ; CHECK:       [[PRED_SDIV_IF6]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE7]]
 ; CHECK:       [[PRED_SDIV_CONTINUE7]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_SDIV_IF8:.*]], label %[[PRED_SDIV_CONTINUE9:.*]]
 ; CHECK:       [[PRED_SDIV_IF8]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE9]]
 ; CHECK:       [[PRED_SDIV_CONTINUE9]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_SDIV_IF10:.*]], label %[[PRED_SDIV_CONTINUE11:.*]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_SDIV_IF10:.*]], label %[[PRED_SDIV_CONTINUE11:.*]]
 ; CHECK:       [[PRED_SDIV_IF10]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE11]]
 ; CHECK:       [[PRED_SDIV_CONTINUE11]]:

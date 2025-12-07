@@ -106,18 +106,13 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; FORCED-TF-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FORCED-TF:       vector.body:
 ; FORCED-TF-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE11:%.*]] ]
-; FORCED-TF-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; FORCED-TF-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
 ; FORCED-TF-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 2
 ; FORCED-TF-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 3
-; FORCED-TF-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[TMP0]]
+; FORCED-TF-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[INDEX]]
 ; FORCED-TF-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP1]]
 ; FORCED-TF-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP2]]
 ; FORCED-TF-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP3]]
-; FORCED-TF-NEXT:    [[TMP4:%.*]] = insertelement <4 x ptr> poison, ptr [[NEXT_GEP]], i32 0
-; FORCED-TF-NEXT:    [[TMP5:%.*]] = insertelement <4 x ptr> [[TMP4]], ptr [[NEXT_GEP1]], i32 1
-; FORCED-TF-NEXT:    [[TMP6:%.*]] = insertelement <4 x ptr> [[TMP5]], ptr [[NEXT_GEP2]], i32 2
-; FORCED-TF-NEXT:    [[TMP7:%.*]] = insertelement <4 x ptr> [[TMP6]], ptr [[NEXT_GEP3]], i32 3
 ; FORCED-TF-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i32> poison, i32 [[INDEX]], i64 0
 ; FORCED-TF-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT4]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; FORCED-TF-NEXT:    [[VEC_IV:%.*]] = add <4 x i32> [[BROADCAST_SPLAT5]], <i32 0, i32 1, i32 2, i32 3>
@@ -185,18 +180,13 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE11:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 3
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[TMP0]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x ptr> poison, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x ptr> [[TMP4]], ptr [[NEXT_GEP1]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x ptr> [[TMP5]], ptr [[NEXT_GEP2]], i32 2
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x ptr> [[TMP6]], ptr [[NEXT_GEP3]], i32 3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i32> poison, i32 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT4]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <4 x i32> [[BROADCAST_SPLAT5]], <i32 0, i32 1, i32 2, i32 3>

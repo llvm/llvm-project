@@ -131,9 +131,8 @@ define void @preserve_flags_narrowing_extends_and_truncs(ptr noalias %A, ptr noa
 ; CHECK-NEXT:    [[TMP33:%.*]] = zext <4 x i8> [[TMP31]] to <4 x i64>
 ; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 0
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <4 x i64> [[TMP32]], i32 0
-; CHECK-NEXT:    store i64 [[TMP35]], ptr [[TMP34]], align 4
+; CHECK-NEXT:    store i64 [[TMP35]], ptr [[C]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]
@@ -185,11 +184,10 @@ define void @preserve_flags_narrowing_extends_and_truncs(ptr noalias %A, ptr noa
 ; CHECK-NEXT:    store i64 [[TMP49]], ptr [[TMP48]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE28]]
 ; CHECK:       [[PRED_STORE_CONTINUE28]]:
-; CHECK-NEXT:    [[TMP50:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 0
 ; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 1
 ; CHECK-NEXT:    [[TMP52:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 3
-; CHECK-NEXT:    [[TMP54:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP50]], i32 0
+; CHECK-NEXT:    [[TMP54:%.*]] = insertelement <4 x ptr> poison, ptr [[B]], i32 0
 ; CHECK-NEXT:    [[TMP55:%.*]] = insertelement <4 x ptr> [[TMP54]], ptr [[TMP51]], i32 1
 ; CHECK-NEXT:    [[TMP56:%.*]] = insertelement <4 x ptr> [[TMP55]], ptr [[TMP52]], i32 2
 ; CHECK-NEXT:    [[TMP57:%.*]] = insertelement <4 x ptr> [[TMP56]], ptr [[TMP53]], i32 3
@@ -203,7 +201,7 @@ define void @preserve_flags_narrowing_extends_and_truncs(ptr noalias %A, ptr noa
 ; CHECK-NEXT:    [[TMP65:%.*]] = insertelement <4 x ptr> [[TMP64]], ptr [[TMP61]], i32 3
 ; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF29:.*]], label %[[PRED_LOAD_CONTINUE30:.*]]
 ; CHECK:       [[PRED_LOAD_IF29]]:
-; CHECK-NEXT:    [[TMP66:%.*]] = load i8, ptr [[TMP50]], align 1
+; CHECK-NEXT:    [[TMP66:%.*]] = load i8, ptr [[B]], align 1
 ; CHECK-NEXT:    [[TMP67:%.*]] = insertelement <4 x i8> poison, i8 [[TMP66]], i32 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE30]]
 ; CHECK:       [[PRED_LOAD_CONTINUE30]]:
@@ -272,7 +270,7 @@ define void @preserve_flags_narrowing_extends_and_truncs(ptr noalias %A, ptr noa
 ; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF45:.*]], label %[[PRED_STORE_CONTINUE46:.*]]
 ; CHECK:       [[PRED_STORE_IF45]]:
 ; CHECK-NEXT:    [[TMP102:%.*]] = extractelement <4 x i8> [[TMP100]], i32 0
-; CHECK-NEXT:    store i8 [[TMP102]], ptr [[TMP50]], align 1
+; CHECK-NEXT:    store i8 [[TMP102]], ptr [[B]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE46]]
 ; CHECK:       [[PRED_STORE_CONTINUE46]]:
 ; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF47:.*]], label %[[PRED_STORE_CONTINUE48:.*]]

@@ -178,6 +178,10 @@ struct VPlanTransforms {
   /// replicate regions, thereby dissolving the latter.
   static void replicateByVF(VPlan &Plan, ElementCount VF);
 
+  /// Replace replicate regions by explicitly replicating the regions' contents
+  /// \p VF times, each copy processing a single lane.
+  static void unrollReplicateRegions(VPlan &Plan, ElementCount VF);
+
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
   /// resulting plan to \p BestVF and \p BestUF.
   static void optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
@@ -188,6 +192,8 @@ struct VPlanTransforms {
   /// optimizations, dead recipe removal, replicate region optimizations and
   /// block merging.
   LLVM_ABI_FOR_TEST static void optimize(VPlan &Plan);
+
+  static bool mergeBlocksIntoPredecessors(VPlan &Plan);
 
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
   /// region block and remove the mask operand. Optimize the created regions by

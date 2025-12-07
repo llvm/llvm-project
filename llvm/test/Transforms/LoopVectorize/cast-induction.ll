@@ -119,9 +119,8 @@ define void @cast_induction_tail_folding(ptr %A) {
 
 ; IC2-LABEL: @cast_induction_tail_folding(
 ; IC2:      [[INDEX:%.+]] = phi i32 [ 0, %vector.ph ]
-; IC2-NEXT: [[INDEX0:%.+]] = add i32 [[INDEX]], 0
 ; IC2-NEXT: [[INDEX1:%.+]] = add i32 [[INDEX]], 1
-; IC2-NEXT: = icmp ule i32 [[INDEX0]], 2
+; IC2-NEXT: = icmp ule i32 [[INDEX]], 2
 ; IC2-NEXT: = icmp ule i32 [[INDEX1]], 2
 ;
 entry:

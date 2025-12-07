@@ -1068,9 +1068,8 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification(ptr %dst) {
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VEC-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; VEC-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 1
-; VEC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP0]]
+; VEC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[INDEX]]
 ; VEC-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP1]], align 2
 ; VEC-NEXT:    [[TMP5:%.*]] = add i32 [[STEP_2]], [[TMP6]]
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
@@ -1138,9 +1137,8 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 2>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[INDEX]], 2
-; VEC-NEXT:    [[TMP0:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; VEC-NEXT:    [[TMP1:%.*]] = add i32 [[OFFSET_IDX]], 2
-; VEC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP0]]
+; VEC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[OFFSET_IDX]]
 ; VEC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP1]]
 ; VEC-NEXT:    store i16 0, ptr [[TMP2]], align 2
 ; VEC-NEXT:    store i16 0, ptr [[TMP3]], align 2

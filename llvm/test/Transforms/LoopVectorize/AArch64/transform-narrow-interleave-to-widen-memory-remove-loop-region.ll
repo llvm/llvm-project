@@ -34,12 +34,9 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF4:       [[VECTOR_BODY]]:
 ; VF4-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF4:       [[PRED_STORE_IF]]:
-; VF4-NEXT:    [[TMP3:%.*]] = shl nsw i64 0, 1
-; VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP3]]
-; VF4-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
-; VF4-NEXT:    store i64 [[TMP5]], ptr [[TMP4]], align 8
-; VF4-NEXT:    [[TMP6:%.*]] = or disjoint i64 [[TMP3]], 1
-; VF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP6]]
+; VF4-NEXT:    [[TMP0:%.*]] = load i64, ptr [[DATA]], align 8
+; VF4-NEXT:    store i64 [[TMP0]], ptr [[DATA]], align 8
+; VF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 1
 ; VF4-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP7]], align 8
 ; VF4-NEXT:    store i64 [[TMP8]], ptr [[TMP7]], align 8
 ; VF4-NEXT:    br label %[[PRED_STORE_CONTINUE]]

@@ -17,17 +17,16 @@ define void @VF1-VPlanExe(ptr %dst) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP0]], 14
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[INDEX]], 14
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule i64 [[TMP1]], 14
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule i64 [[TMP2]], 14
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ule i64 [[TMP3]], 14
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:

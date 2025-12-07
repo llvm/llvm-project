@@ -278,11 +278,8 @@ define void @scalarized_predicated_struct_return(ptr %a) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP3]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { i64, i64 } [[TMP4]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = udiv i64 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP8]]
-; CHECK-NEXT:    store i64 [[TMP7]], ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = udiv i64 [[TMP5]], [[TMP3]]
+; CHECK-NEXT:    store i64 [[TMP6]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
@@ -291,8 +288,7 @@ define void @scalarized_predicated_struct_return(ptr %a) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP11]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { i64, i64 } [[TMP12]], 0
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = udiv i64 [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = udiv i64 [[TMP13]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP16]]
 ; CHECK-NEXT:    store i64 [[TMP15]], ptr [[TMP17]], align 8

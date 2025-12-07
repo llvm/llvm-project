@@ -3781,9 +3781,9 @@ protected:
 };
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
-/// producing their scalar values.
-class LLVM_ABI_FOR_TEST VPScalarIVStepsRecipe : public VPRecipeWithIRFlags,
-                                                public VPUnrollPartAccessor<3> {
+/// producing their scalar values. Before unrolling the recipe has 3 operands:
+/// IV, step and VF. Unrolling adds an extra operand StartIndex.
+class LLVM_ABI_FOR_TEST VPScalarIVStepsRecipe : public VPRecipeWithIRFlags {
   Instruction::BinaryOps InductionOpcode;
 
 public:
@@ -3807,15 +3807,15 @@ public:
   ~VPScalarIVStepsRecipe() override = default;
 
   VPScalarIVStepsRecipe *clone() override {
-    return new VPScalarIVStepsRecipe(
+    auto *NewR = new VPScalarIVStepsRecipe(
         getOperand(0), getOperand(1), getOperand(2), InductionOpcode,
         hasFastMathFlags() ? getFastMathFlags() : FastMathFlags(),
         getDebugLoc());
+    // Add start index operand, if present.
+    for (VPValue *Op : drop_begin(operands(), 3))
+      NewR->addOperand(Op);
+    return NewR;
   }
-
-  /// Return true if this VPScalarIVStepsRecipe corresponds to part 0. Note that
-  /// this is only accurate after the VPlan has been unrolled.
-  bool isPart0() const { return getUnrollPart(*this) == 0; }
 
   VP_CLASSOF_IMPL(VPDef::VPScalarIVStepsSC)
 

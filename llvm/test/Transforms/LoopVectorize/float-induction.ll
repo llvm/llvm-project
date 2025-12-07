@@ -1322,8 +1322,7 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC4_INTERL1-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; VEC4_INTERL1-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VEC4_INTERL1:       pred.store.if:
-; VEC4_INTERL1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; VEC4_INTERL1-NEXT:    store float [[DOTCAST2]], ptr [[TMP3]], align 4
+; VEC4_INTERL1-NEXT:    store float [[DOTCAST2]], ptr [[TMP0]], align 4
 ; VEC4_INTERL1-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VEC4_INTERL1:       pred.store.continue:
 ; VEC4_INTERL1-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP1]], i64 1
@@ -1402,8 +1401,7 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC4_INTERL2-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP3]], i64 0
 ; VEC4_INTERL2-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VEC4_INTERL2:       pred.store.if:
-; VEC4_INTERL2-NEXT:    [[TMP35:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; VEC4_INTERL2-NEXT:    store float [[DOTCAST2]], ptr [[TMP35]], align 4
+; VEC4_INTERL2-NEXT:    store float [[DOTCAST2]], ptr [[TMP1]], align 4
 ; VEC4_INTERL2-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VEC4_INTERL2:       pred.store.continue:
 ; VEC4_INTERL2-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP3]], i64 1
@@ -1573,8 +1571,7 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VEC2_INTERL1_PRED_STORE:       pred.store.if:
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; VEC2_INTERL1_PRED_STORE-NEXT:    store float [[DOTCAST2]], ptr [[TMP3]], align 4
+; VEC2_INTERL1_PRED_STORE-NEXT:    store float [[DOTCAST2]], ptr [[TMP0]], align 4
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VEC2_INTERL1_PRED_STORE:       pred.store.continue:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1

@@ -77,9 +77,9 @@ define void @predicated_sincos(float %x, ptr noalias %in, ptr noalias writeonly 
 ; CHECK-LABEL: define void @predicated_sincos(
 ; CHECK-SAME: float [[X:%.*]], ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) {
 ; CHECK:  [[ENTRY:.*:]]
-; CHECK:  [[VECTOR_BODY:.*]]:
-; CHECK:  [[VECTOR_BODY1:.*:]]
-; CHECK:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[IF_THEN1:.*]] ]
+; CHECK:  [[VECTOR_BODY1:.*]]:
+; CHECK:  [[VECTOR_BODY:.*:]]
+; CHECK:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_BODY1]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_END:.*]] ]
 ; CHECK:    [[TMP4:%.*]] = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP4]], 0
 ; CHECK:    [[TMP6:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP4]], 1
@@ -93,16 +93,16 @@ define void @predicated_sincos(float %x, ptr noalias %in, ptr noalias writeonly 
 ; CHECK:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:  [[PRED_STORE_CONTINUE]]:
 ; CHECK:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP3]], i32 1
-; CHECK:    br i1 [[TMP12]], label %[[PRED_STORE_IF1:.*]], label %[[IF_THEN1]]
+; CHECK:    br i1 [[TMP12]], label %[[PRED_STORE_IF1:.*]], label %[[FOR_END]]
 ; CHECK:  [[PRED_STORE_IF1]]:
 ; CHECK:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP5]], i32 1
 ; CHECK:    store float [[TMP15]], ptr [[TMP14:%.*]], align 4
 ; CHECK:    [[TMP17:%.*]] = extractelement <2 x float> [[TMP6]], i32 1
 ; CHECK:    store float [[TMP17]], ptr [[TMP16:%.*]], align 4
-; CHECK:    br label %[[IF_THEN1]]
-; CHECK:  [[IF_THEN1]]:
-; CHECK:  [[IF_MERGE:.*:]]
-; CHECK:  [[FOR_END:.*:]]
+; CHECK:    br label %[[FOR_END]]
+; CHECK:  [[FOR_END]]:
+; CHECK:  [[MIDDLE_BLOCK:.*:]]
+; CHECK:  [[FOR_END1:.*:]]
 ;
 entry:
   br label %for.body
