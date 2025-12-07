@@ -5623,6 +5623,51 @@ cc_library(
     ],
 )
 
+# Trimmed LLVMIRTransforms without NVVMDialect dependency
+# Excludes OptimizeForNVVM.cpp and guards NVVM code in InlinerInterfaceImpl.cpp
+cc_library(
+    name = "TrimmedLLVMIRTransforms",
+    srcs = glob(
+        [
+            "lib/Dialect/LLVMIR/Transforms/*.cpp",
+        ],
+        exclude = [
+            "lib/Dialect/LLVMIR/Transforms/DIExpressionLegalization.cpp",
+            "lib/Dialect/LLVMIR/Transforms/DIExpressionRewriter.cpp",
+            "lib/Dialect/LLVMIR/Transforms/LegalizeForExport.cpp",
+            "lib/Dialect/LLVMIR/Transforms/OptimizeForNVVM.cpp",
+        ],
+    ),
+    hdrs = glob(
+        [
+            "include/mlir/Dialect/LLVMIR/Transforms/*.h",
+        ],
+        exclude = [
+            "include/mlir/Dialect/LLVMIR/Transforms/DIExpressionLegalization.h",
+            "include/mlir/Dialect/LLVMIR/Transforms/DIExpressionRewriter.h",
+            "include/mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h",
+            "include/mlir/Dialect/LLVMIR/Transforms/OptimizeForNVVM.h",
+        ],
+    ),
+    includes = ["include"],
+    local_defines = ["MLIR_LLVMIR_TRANSFORMS_NO_NVVM"],
+    deps = [
+        ":Analysis",
+        ":DataLayoutInterfaces",
+        ":FuncDialect",
+        ":IR",
+        ":InliningUtils",
+        ":LLVMDialect",
+        ":LLVMIRTransformsLegalizeForExport",
+        ":LLVMPassIncGen",
+        ":Pass",
+        ":TransformUtils",
+        ":ViewLikeInterface",
+        "//llvm:BinaryFormat",
+        "//llvm:Support",
+    ],
+)
+
 cc_library(
     name = "LLVMIRTransformsLegalizeForExport",
     srcs = ["lib/Dialect/LLVMIR/Transforms/LegalizeForExport.cpp"],

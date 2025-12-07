@@ -14,7 +14,9 @@
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Analysis/SliceWalk.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#ifndef MLIR_LLVMIR_TRANSFORMS_NO_NVVM
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#endif
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
@@ -832,8 +834,10 @@ void mlir::LLVM::registerInlinerInterface(DialectRegistry &registry) {
   });
 }
 
+#ifndef MLIR_LLVMIR_TRANSFORMS_NO_NVVM
 void mlir::NVVM::registerInlinerInterface(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, NVVM::NVVMDialect *dialect) {
     dialect->addInterfaces<LLVMInlinerInterface>();
   });
 }
+#endif // MLIR_LLVMIR_TRANSFORMS_NO_NVVM
