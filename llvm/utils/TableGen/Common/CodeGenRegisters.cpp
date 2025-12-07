@@ -1318,6 +1318,7 @@ CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
 
 CodeGenRegisterClass *CodeGenRegBank::getRegClass(const Record *Def,
                                                   ArrayRef<SMLoc> Loc) const {
+  assert(Def->isSubClassOf("RegisterClassLike"));
   if (CodeGenRegisterClass *RC = Def2RC.lookup(Def))
     return RC;
 

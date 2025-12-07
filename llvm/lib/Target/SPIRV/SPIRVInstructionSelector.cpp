@@ -1193,7 +1193,9 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_ATOMICRMW_FSUB:
     // Translate G_ATOMICRMW_FSUB to OpAtomicFAddEXT with negative value operand
     return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicFAddEXT,
-                           SPIRV::OpFNegate);
+                           ResType->getOpcode() == SPIRV::OpTypeVector
+                               ? SPIRV::OpFNegateV
+                               : SPIRV::OpFNegate);
   case TargetOpcode::G_ATOMICRMW_FMIN:
     return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicFMinEXT);
   case TargetOpcode::G_ATOMICRMW_FMAX:

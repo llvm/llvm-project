@@ -8974,14 +8974,19 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     }
 
     // Update all users outside the vector region. Also replace redundant
-    // ExtractLastElement.
+    // extracts.
     for (auto *U : to_vector(OrigExitingVPV->users())) {
       auto *Parent = cast<VPRecipeBase>(U)->getParent();
       if (FinalReductionResult == U || Parent->getParent())
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
-      if (match(U, m_CombineOr(m_ExtractLastElement(m_VPValue()),
-                               m_ExtractLane(m_VPValue(), m_VPValue()))))
+
+      // Look through ExtractLastPart.
+      if (match(U, m_ExtractLastPart(m_VPValue())))
+        U = cast<VPInstruction>(U)->getSingleUser();
+
+      if (match(U, m_CombineOr(m_ExtractLane(m_VPValue(), m_VPValue()),
+                               m_ExtractLastLane(m_VPValue()))))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
     }
 
