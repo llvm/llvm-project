@@ -17,13 +17,13 @@ Examples
 .. code-block:: c++
 
   // Variable declaration before if - will be detected
-  auto It = Map.find(Key);
-  if (It != Map.end()) {
-      // It is only used in condition, not in body
+  auto Pos = Str.find(Substr);
+  if (Pos != std::string::npos) {
+      // `Pos` is only used in condition, not in body
   }
 
   // Transforms to:
-  if (auto It = Map.find(Key); It != Map.end()) {
+  if (auto Pos = Str.find(Substr); Pos != std::string::npos) {
   }
 
   // Variable declaration before switch - will be detected  
@@ -70,40 +70,15 @@ Options
           // ...
       }
 
-.. option:: SafeTypes
-
-    A comma-separated list of type name patterns (glob patterns) for types that
-    are safe to move into init statements. Each type must meet:
-
-    * No side effects in destructor: The behaviour must not depend on
-      destruction order.
-
-    * No member function stores ``this``: No member function should store a
-      pointer or reference to the object in a location that could outlive the
-      object's lifetime.
-
-    The default value is ``-*,::std::*string,::std::*string_view,
-    ::boost::*string,::boost::*string_view,::boost::*string_ref``.
-
-    The glob pattern supports the ``*`` wildcard character to match zero or
-    more characters. Patterns can be excluded by prefixing them with ``-``.
-
 Limitations
 -----------
 
-* The check may provide false-negative if you have template code;
+* The check supports exclusively builtin types for non-reference, non-pointer
+  variable declarations;
 
-* The ``SafeTypes`` option does not include ``std::vector`` and other standard
-  containers by default, because while the container itself has a safe
-  destructor, it may contain elements with unsafe destructors.
+* The check doesn't provide change for lifetime-extended references;
 
-  For example, ``std::vector<std::unique_lock<std::mutex>>`` has an unsafe
-  destructor because the ``std::unique_lock`` elements perform mutex
-  unlocking during destruction.
-
-  For this reason, it is not recommended to manually add ``std::vector`` or
-  other container types to the ``SafeTypes`` list, as the safety depends on the
-  contained element types rather than the container itself.
+* The check may provide false-negative if you have template code.
 
 Requirements
 ------------

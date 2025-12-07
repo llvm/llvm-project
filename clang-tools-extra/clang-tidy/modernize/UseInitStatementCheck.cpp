@@ -202,17 +202,11 @@ static Matcher<VarDecl> hasDestructorMatcher() {
   return anyOf(hasType(ClassWithDtorType), ArrayOfClassWithDtor);
 }
 
-static Matcher<VarDecl> hasLifetimeExtensionMatcher() {
-  return hasInitializer(
-      expr(hasDescendant(expr(materializeTemporaryExpr().bind("lte")))));
-}
-
 static std::pair<Matcher<Decl>, Matcher<Decl>> getSingleVarDeclMatchers() {
   const auto HasDtor = hasDestructorMatcher();
-  const auto HasLTE = hasLifetimeExtensionMatcher();
 
-  return {varDecl(HasDtor, optionally(HasLTE), isUsed()).bind("singleVar"),
-          varDecl(optionally(HasLTE), isUsed()).bind("singleVar")};
+  return {varDecl(HasDtor, isUsed()).bind("singleVar"),
+          varDecl(isUsed()).bind("singleVar")};
 }
 
 // Registers matchers for if/switch statements with regular variable
@@ -225,9 +219,14 @@ void UseInitStatementCheck::registerVariableDeclMatchers(MatchFinder *Finder) {
       declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
 
   // Matchers for declaration statements that precede if/switch
+  const auto ForBuiltinTypes = unless(has(varDecl(hasType(qualType(unless(anyOf(hasCanonicalType(builtinType()), hasCanonicalType(pointerType()), hasCanonicalType(referenceType())))))
+  )));
+  const auto ExcludeLTE = unless(has(varDecl(
+      hasInitializer(expr(hasDescendant(expr(materializeTemporaryExpr()))))
+  )));
   const auto PrevDeclStmtWithDtor =
-      declStmt(forEach(SingleVarDeclWithDtor)).bind("prevDecl");
-  const auto PrevDeclStmt = declStmt(forEach(SingleVarDecl)).bind("prevDecl");
+      declStmt(forEach(SingleVarDeclWithDtor), ForBuiltinTypes, ExcludeLTE).bind("prevDecl");
+  const auto PrevDeclStmt = declStmt(forEach(SingleVarDecl), ForBuiltinTypes, ExcludeLTE).bind("prevDecl");
   const auto PrevDeclStmtMatcher = anyOf(PrevDeclStmtWithDtor, PrevDeclStmt);
 
   Finder->addMatcher(compoundStmtMatcher(ifStmt, "ifStmt", PrevDeclStmtMatcher,
@@ -246,13 +245,20 @@ void UseInitStatementCheck::registerStructuredBindingMatchers(
   const auto [SingleVarDeclWithDtor, SingleVarDecl] =
       getSingleVarDeclMatchers();
 
+  const auto ForBuiltinTypes2 = unless(has(varDecl(hasType(qualType(unless(hasCanonicalType(referenceType()))))
+  )));
+  const auto ForBuiltinTypes = unless(has(bindingDecl(hasType(qualType(unless(anyOf(hasCanonicalType(builtinType()), hasCanonicalType(pointerType()), hasCanonicalType(referenceType()) )))))
+  ));
+  const auto ExcludeLTE = unless(has(varDecl(
+      hasInitializer(expr(hasDescendant(expr(materializeTemporaryExpr()))))
+  )));
   const auto DecompositionDecl =
-      decompositionDecl(forEach(bindingDecl().bind("bindingDecl")));
+      decompositionDecl(forEach(bindingDecl().bind("bindingDecl")), anyOf(ForBuiltinTypes, hasParent(declStmt(ForBuiltinTypes2)))) ;
   const auto PrevDecomposeStmtWithDtor =
-      declStmt(has(DecompositionDecl), has(SingleVarDeclWithDtor))
+      declStmt(has(DecompositionDecl), has(SingleVarDeclWithDtor), ExcludeLTE)
           .bind("prevDecl");
   const auto PrevDecomposeStmt =
-      declStmt(has(DecompositionDecl), has(SingleVarDecl)).bind("prevDecl");
+      declStmt(has(DecompositionDecl), has(SingleVarDecl), ExcludeLTE).bind("prevDecl");
   const auto PrevDecomposeStmtMatcher =
       anyOf(PrevDecomposeStmtWithDtor, PrevDecomposeStmt);
   const auto RefToBoundBindDecl =
