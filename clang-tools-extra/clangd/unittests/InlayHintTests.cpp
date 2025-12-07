@@ -1852,6 +1852,32 @@ TEST(DesignatorHints, BasicParenInitDerived) {
                         ExpectedHint{".c=", "c"}, ExpectedHint{".d=", "d"});
 }
 
+TEST(DesignatorHints, BasicParenInitTemplate) {
+  assertDesignatorHints(R"cpp(
+    template <typename T>
+    struct S1 {
+      int a;
+      int b;
+      T* ptr;
+    };
+
+    struct S2 : S1<S2> {
+      int c;
+      int d;
+      S1<int> mem;
+    };
+
+    int main() {
+      S2 sa ({$a1[[0]], $b1[[0]]}, $c[[0]], $d[[0]], $mem[[S1<int>($a2[[1]], $b2[[2]], $ptr[[nullptr]])]]);
+    }
+  )cpp",
+                        ExpectedHint{".a=", "a1"}, ExpectedHint{".b=", "b1"},
+                        ExpectedHint{".c=", "c"}, ExpectedHint{".d=", "d"},
+                        ExpectedHint{".mem=", "mem"}, ExpectedHint{".a=", "a2"},
+                        ExpectedHint{".b=", "b2"},
+                        ExpectedHint{".ptr=", "ptr"});
+}
+
 TEST(InlayHints, RestrictRange) {
   Annotations Code(R"cpp(
     auto a = false;

@@ -704,15 +704,12 @@ public:
       return true;
 
     if (const auto *CXXRecord = E->getType()->getAsCXXRecordDecl()) {
-      const auto &InitExprs = E->getInitExprs();
+      const auto &InitExprs = E->getUserSpecifiedInitExprs();
       size_t InitInx = 0;
 
-      // Inherited members are first
-      for (const auto &Base : CXXRecord->bases()) {
-        std::ignore = Base;
-        // For a base record, just use its name
-        // Base of base requires its own initialization; ParenListInitExpr or
-        // InitListExpr will be invoked separately for them
+      // Inherited members are first, skip them for now.
+      // FIXME: '.base=' or 'base:' hint?
+      for (const auto &_ : CXXRecord->bases()) {
         InitInx++;
       }
 
