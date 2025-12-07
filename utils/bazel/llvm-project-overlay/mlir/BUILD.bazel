@@ -4257,6 +4257,43 @@ cc_library(
     ],
 )
 
+# Trimmed AffineTransforms without SuperVectorize (avoids VectorDialect dependency)
+cc_library(
+    name = "TrimmedAffineTransforms",
+    srcs = glob(
+        ["lib/Dialect/Affine/Transforms/*.cpp"],
+        exclude = ["lib/Dialect/Affine/Transforms/SuperVectorize.cpp"],
+    ),
+    hdrs = [
+        "include/mlir/Dialect/Affine/Passes.h",
+        "include/mlir/Dialect/Affine/Transforms/Transforms.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":AffineAnalysis",
+        ":AffineDialect",
+        ":AffinePassIncGen",
+        ":AffineUtils",
+        ":Analysis",
+        ":ArithDialect",
+        ":ArithUtils",
+        ":FuncDialect",
+        ":FunctionInterfaces",
+        ":IR",
+        ":MemRefDialect",
+        ":Pass",
+        ":SCFDialect",
+        ":SCFUtils",
+        ":SideEffectInterfaces",
+        ":Support",
+        ":TensorDialect",
+        ":TransformUtils",
+        ":Transforms",
+        ":ValueBoundsOpInterface",
+        "//llvm:Support",
+    ],
+)
+
 gentbl_cc_library(
     name = "ConversionPassIncGen",
     tbl_outs = {
