@@ -2360,3 +2360,19 @@ SystemZInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 
   return std::nullopt;
 }
+
+std::pair<unsigned, unsigned>
+SystemZInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
+  return std::make_pair(TF, 0u);
+}
+
+ArrayRef<std::pair<unsigned, const char *>>
+SystemZInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
+  using namespace SystemZII;
+
+  static const std::pair<unsigned, const char *> TargetFlags[] = {
+      {MO_ADA_DATA_SYMBOL_ADDR, "systemz-ada-datasymboladdr"},
+      {MO_ADA_INDIRECT_FUNC_DESC, "systemz-ada-indirectfuncdesc"},
+      {MO_ADA_DIRECT_FUNC_DESC, "systemz-ada-directfuncdesc"}};
+  return ArrayRef(TargetFlags);
+}
