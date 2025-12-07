@@ -30,7 +30,6 @@ public:
   void onEndOfTranslationUnit() override { InterfaceMap.clear(); }
 
 private:
-  bool isCurrentClassInterface(const CXXRecordDecl *Node) const;
   bool isInterface(const CXXRecordDecl *Node);
 
   // Contains the identity of each named CXXRecord as an interface.  This is

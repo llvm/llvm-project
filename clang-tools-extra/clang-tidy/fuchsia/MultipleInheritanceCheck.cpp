@@ -23,18 +23,6 @@ AST_MATCHER(CXXRecordDecl, hasBases) {
 }
 } // namespace
 
-bool MultipleInheritanceCheck::isCurrentClassInterface(
-    const CXXRecordDecl *Node) const {
-  // Interfaces should have no fields.
-  if (!Node->field_empty())
-    return false;
-
-  // Interfaces should have exclusively pure methods.
-  return llvm::none_of(Node->methods(), [](const CXXMethodDecl *M) {
-    return M->isUserProvided() && !M->isPureVirtual() && !M->isStatic();
-  });
-}
-
 bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
   // Short circuit the lookup if we have analyzed this record before.
   const auto CachedValue = InterfaceMap.find(Node);
@@ -53,7 +41,15 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
       if (!isInterface(Base))
         return false;
     }
-    return isCurrentClassInterface(Node);
+
+    // Interfaces should have no fields.
+    if (!Node->field_empty())
+      return false;
+
+    // Interfaces should have exclusively pure methods.
+    return llvm::none_of(Node->methods(), [](const CXXMethodDecl *M) {
+      return M->isUserProvided() && !M->isPureVirtual() && !M->isStatic();
+    });
   }();
   InterfaceMap.try_emplace(Node, CurrentClassIsInterface);
   return CurrentClassIsInterface;
