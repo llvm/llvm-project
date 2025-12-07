@@ -4992,9 +4992,9 @@ void VPlanTransforms::updateScalarResumePhis(
     if (IsFOR) {
       auto *ExtractPart = MiddleBuilder.createNaryOp(
           VPInstruction::ExtractLastPart, ResumeFromVectorLoop);
-      ResumeFromVectorLoop =
-          MiddleBuilder.createNaryOp(VPInstruction::ExtractLastLane,
-                                     ExtractPart, DebugLoc::getUnknown(), "vector.recur.extract");
+      ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
+          VPInstruction::ExtractLastLane, ExtractPart, DebugLoc::getUnknown(),
+          "vector.recur.extract");
     }
     ResumePhiR->setName(IsFOR ? "scalar.recur.init" : "bc.merge.rdx");
     ResumePhiR->setOperand(0, ResumeFromVectorLoop);
