@@ -145,6 +145,14 @@ llvm::convertExceptionBehaviorToBundle(fp::ExceptionBehavior UseExcept) {
 
 Intrinsic::ID llvm::getConstrainedIntrinsicID(const Instruction &Instr) {
   Intrinsic::ID IID = Intrinsic::not_intrinsic;
+
+  if (auto *CB = dyn_cast<CallBase>(&Instr)) {
+    // If the instruction is a call, do not convert it if it has
+    // floating-point operand bundles.
+    if (CB->hasFloatingPointOperandBundle())
+      return IID;
+  }
+
   switch (Instr.getOpcode()) {
   case Instruction::FCmp:
     // Unlike other instructions FCmp can be mapped to one of two intrinsic

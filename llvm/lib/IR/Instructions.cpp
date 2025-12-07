@@ -636,6 +636,18 @@ bool CallBase::hasClobberingOperandBundles() const {
          getIntrinsicID() != Intrinsic::assume;
 }
 
+bool CallBase::hasFloatingPointOperandBundle() const {
+  for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i) {
+    OperandBundleUse U = getOperandBundleAt(i);
+    switch (U.getTagID()) {
+    case LLVMContext::OB_fp_round:
+    case LLVMContext::OB_fp_except:
+      return true;
+    }
+  }
+  return false;
+}
+
 RoundingMode CallBase::getRoundingMode() const {
   // Try reading rounding mode from operand bundle.
   if (auto RoundingBundle = getOperandBundle(LLVMContext::OB_fp_round)) {
