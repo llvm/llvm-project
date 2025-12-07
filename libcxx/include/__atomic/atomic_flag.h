@@ -76,6 +76,8 @@ struct atomic_flag {
 
 template <>
 struct __atomic_waitable_traits<atomic_flag> {
+  using __value_type _LIBCPP_NODEBUG = _LIBCPP_ATOMIC_FLAG_TYPE;
+
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATOMIC_FLAG_TYPE __atomic_load(const atomic_flag& __a, memory_order __order) {
     return std::__cxx_atomic_load(&__a.__a_, __order);
   }

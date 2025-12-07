@@ -39,6 +39,9 @@
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE /* nothing */
+
 #  define _LIBCPP_INTRODUCED_IN_LLVM_21 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_21_ATTRIBUTE /* nothing */
 
@@ -66,6 +69,11 @@
 #elif defined(__APPLE__)
 
 // clang-format off
+
+// LLVM 22
+// TODO: Fill this in
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22 0
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 21
 // TODO: Fill this in
@@ -196,6 +204,13 @@
       "It looks like you're trying to enable vendor availability markup, but you haven't defined the corresponding macros yet!"
 
 #endif
+
+// This controls the availability of new implementation of std::atomic's
+// wait, notify_one and notify_all. The new implementation uses
+// the native atomic wait/notify operations on platforms that support them
+// based on the size of the atomic type, instead of the type itself.
+#define _LIBCPP_AVAILABILITY_HAS_NEW_SYNC _LIBCPP_INTRODUCED_IN_LLVM_22
+#define _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE
 
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
