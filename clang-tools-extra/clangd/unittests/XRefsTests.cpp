@@ -2740,6 +2740,35 @@ TEST(FindReferences, ForwardingInAST) {
                           rangeIs(Main.range("Caller"))));
 }
 
+TEST(FindReferences, ForwardingInASTTwice) {
+  Annotations Main(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(forward<Args>(args)...);
+    }
+    template <class T, class... Args> T *make_unique2(Args &&...args) {
+      return make_unique<T>(forward<Args>(args)...);
+    }
+    }
+
+    struct Test {
+      $Constructor[[T^est]](){}
+    };
+
+    int main() {
+      auto a = std::$Caller[[make_unique2]]<Test>();
+    }
+  )cpp");
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+
+  EXPECT_THAT(findReferences(AST, Main.point(), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor")),
+                          rangeIs(Main.range("Caller"))));
+}
+
 TEST(FindReferences, ForwardingInIndex) {
   Annotations Header(R"cpp(
     namespace std {

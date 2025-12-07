@@ -1061,5 +1061,27 @@ bool isLikelyForwardingFunction(FunctionTemplateDecl *FT) {
   return false;
 }
 
+bool ForwardingToConstructorVisitor::VisitCallExpr(CallExpr *E) {
+  if (auto *FD = E->getDirectCallee()) {
+    if (auto *PT = FD->getPrimaryTemplate();
+        PT && isLikelyForwardingFunction(PT)) {
+      ForwardingToConstructorVisitor Visitor{};
+      Visitor.TraverseStmt(FD->getBody());
+      std::move(Visitor.Constructors.begin(), Visitor.Constructors.end(),
+                std::back_inserter(Constructors));
+    }
+  }
+  return true;
+}
+
+bool ForwardingToConstructorVisitor::VisitCXXNewExpr(CXXNewExpr *E) {
+  if (auto *CE = E->getConstructExpr()) {
+    if (auto *Callee = CE->getConstructor()) {
+      Constructors.push_back(Callee);
+    }
+  }
+  return true;
+}
+
 } // namespace clangd
 } // namespace clang

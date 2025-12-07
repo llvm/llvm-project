@@ -263,14 +263,9 @@ class ForwardingToConstructorVisitor
 public:
   ForwardingToConstructorVisitor() {}
 
-  bool VisitCXXNewExpr(CXXNewExpr *E) {
-    if (auto *CE = E->getConstructExpr()) {
-      if (auto *Callee = CE->getConstructor()) {
-        Constructors.push_back(Callee);
-      }
-    }
-    return true;
-  }
+  bool VisitCallExpr(CallExpr *E);
+
+  bool VisitCXXNewExpr(CXXNewExpr *E);
 
   // Output of this visitor
   std::vector<CXXConstructorDecl *> Constructors{};
