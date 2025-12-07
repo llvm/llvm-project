@@ -13031,6 +13031,24 @@ cc_library(
     ],
 )
 
+# Trimmed ArithUtils without ComplexDialect dependency
+# Complex conversion functions are guarded by MLIR_ARITH_UTILS_NO_COMPLEX
+cc_library(
+    name = "TrimmedArithUtils",
+    srcs = glob([
+        "lib/Dialect/Arith/Utils/*.cpp",
+    ]),
+    hdrs = ["include/mlir/Dialect/Arith/Utils/Utils.h"],
+    includes = ["include"],
+    local_defines = ["MLIR_ARITH_UTILS_NO_COMPLEX"],
+    deps = [
+        ":ArithDialect",
+        ":DialectUtils",
+        ":IR",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "MathOpsTdFiles",
     srcs = [

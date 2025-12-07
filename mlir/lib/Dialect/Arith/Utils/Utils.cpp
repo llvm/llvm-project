@@ -12,7 +12,9 @@
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#ifndef MLIR_ARITH_UTILS_NO_COMPLEX
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#endif
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include <numeric>
@@ -183,6 +185,7 @@ static Value convertScalarToFpDtype(ImplicitLocOpBuilder &b, Value operand,
   return {};
 }
 
+#ifndef MLIR_ARITH_UTILS_NO_COMPLEX
 static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
                                          ComplexType targetType,
                                          bool isUnsigned) {
@@ -234,6 +237,7 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
 
   return {};
 }
+#endif // MLIR_ARITH_UTILS_NO_COMPLEX
 
 Value mlir::convertScalarToDtype(OpBuilder &b, Location loc, Value operand,
                                  Type toType, bool isUnsignedCast) {
@@ -245,10 +249,13 @@ Value mlir::convertScalarToDtype(OpBuilder &b, Location loc, Value operand,
     result = convertScalarToIntDtype(ib, operand, intTy, isUnsignedCast);
   } else if (auto floatTy = dyn_cast<FloatType>(toType)) {
     result = convertScalarToFpDtype(ib, operand, floatTy, isUnsignedCast);
-  } else if (auto complexTy = dyn_cast<ComplexType>(toType)) {
+  }
+#ifndef MLIR_ARITH_UTILS_NO_COMPLEX
+  else if (auto complexTy = dyn_cast<ComplexType>(toType)) {
     result =
         convertScalarToComplexDtype(ib, operand, complexTy, isUnsignedCast);
   }
+#endif
 
   if (result)
     return result;
