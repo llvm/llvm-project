@@ -226,7 +226,7 @@ def use_support_substitutions(config):
         except OSError:
             res = -1
         if res == 0 and out:
-            sdk_path = lit.util.to_string(out)
+            sdk_path = out.decode("utf-8")
             llvm_config.lit_config.note("using SDKROOT: %r" % sdk_path)
             host_flags += ["-isysroot", sdk_path]
     elif sys.platform != "win32":
@@ -277,6 +277,9 @@ def use_support_substitutions(config):
         required=True,
         use_installed=True,
     )
+    if llvm_config.clang_has_bounds_safety():
+        llvm_config.lit_config.note("clang has -fbounds-safety support")
+        config.available_features.add("clang-bounds-safety")
 
     if sys.platform == "win32":
         _use_msvc_substitutions(config)

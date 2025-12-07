@@ -17,8 +17,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+d,+zfhmin,+zvfhmin,+zfbfmin,+zvfbfmin,+zve32f,+zvl128b -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64,RV64ZVE32F,RV64ZVE32F-ZVFHMIN
 
-declare <1 x i8> @llvm.masked.gather.v1i8.v1p0(<1 x ptr>, i32, <1 x i1>, <1 x i8>)
-
 define <1 x i8> @mgather_v1i8(<1 x ptr> %ptrs, <1 x i1> %m, <1 x i8> %passthru) {
 ; RV32V-LABEL: mgather_v1i8:
 ; RV32V:       # %bb.0:
@@ -54,8 +52,6 @@ define <1 x i8> @mgather_v1i8(<1 x ptr> %ptrs, <1 x i1> %m, <1 x i8> %passthru) 
   %v = call <1 x i8> @llvm.masked.gather.v1i8.v1p0(<1 x ptr> %ptrs, i32 1, <1 x i1> %m, <1 x i8> %passthru)
   ret <1 x i8> %v
 }
-
-declare <2 x i8> @llvm.masked.gather.v2i8.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i8>)
 
 define <2 x i8> @mgather_v2i8(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i8> %passthru) {
 ; RV32V-LABEL: mgather_v2i8:
@@ -449,8 +445,6 @@ define <2 x i64> @mgather_v2i8_zextload_v2i64(<2 x ptr> %ptrs, <2 x i1> %m, <2 x
   ret <2 x i64> %ev
 }
 
-declare <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i8>)
-
 define <4 x i8> @mgather_v4i8(<4 x ptr> %ptrs, <4 x i1> %m, <4 x i8> %passthru) {
 ; RV32-LABEL: mgather_v4i8:
 ; RV32:       # %bb.0:
@@ -572,8 +566,6 @@ define <4 x i8> @mgather_falsemask_v4i8(<4 x ptr> %ptrs, <4 x i8> %passthru) {
   %v = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> %ptrs, i32 1, <4 x i1> zeroinitializer, <4 x i8> %passthru)
   ret <4 x i8> %v
 }
-
-declare <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x i8>)
 
 define <8 x i8> @mgather_v8i8(<8 x ptr> %ptrs, <8 x i1> %m, <8 x i8> %passthru) {
 ; RV32-LABEL: mgather_v8i8:
@@ -810,8 +802,6 @@ define <8 x i8> @mgather_baseidx_v8i8(ptr %base, <8 x i8> %idxs, <8 x i1> %m, <8
   ret <8 x i8> %v
 }
 
-declare <1 x i16> @llvm.masked.gather.v1i16.v1p0(<1 x ptr>, i32, <1 x i1>, <1 x i16>)
-
 define <1 x i16> @mgather_v1i16(<1 x ptr> %ptrs, <1 x i1> %m, <1 x i16> %passthru) {
 ; RV32V-LABEL: mgather_v1i16:
 ; RV32V:       # %bb.0:
@@ -847,8 +837,6 @@ define <1 x i16> @mgather_v1i16(<1 x ptr> %ptrs, <1 x i1> %m, <1 x i16> %passthr
   %v = call <1 x i16> @llvm.masked.gather.v1i16.v1p0(<1 x ptr> %ptrs, i32 2, <1 x i1> %m, <1 x i16> %passthru)
   ret <1 x i16> %v
 }
-
-declare <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i16>)
 
 define <2 x i16> @mgather_v2i16(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %passthru) {
 ; RV32V-LABEL: mgather_v2i16:
@@ -1138,8 +1126,6 @@ define <2 x i64> @mgather_v2i16_zextload_v2i64(<2 x ptr> %ptrs, <2 x i1> %m, <2 
   ret <2 x i64> %ev
 }
 
-declare <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i16>)
-
 define <4 x i16> @mgather_v4i16(<4 x ptr> %ptrs, <4 x i1> %m, <4 x i16> %passthru) {
 ; RV32-LABEL: mgather_v4i16:
 ; RV32:       # %bb.0:
@@ -1261,8 +1247,6 @@ define <4 x i16> @mgather_falsemask_v4i16(<4 x ptr> %ptrs, <4 x i16> %passthru) 
   %v = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> %ptrs, i32 2, <4 x i1> zeroinitializer, <4 x i16> %passthru)
   ret <4 x i16> %v
 }
-
-declare <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x i16>)
 
 define <8 x i16> @mgather_v8i16(<8 x ptr> %ptrs, <8 x i1> %m, <8 x i16> %passthru) {
 ; RV32-LABEL: mgather_v8i16:
@@ -1938,8 +1922,6 @@ define <8 x i16> @mgather_baseidx_v8i16(ptr %base, <8 x i16> %idxs, <8 x i1> %m,
   ret <8 x i16> %v
 }
 
-declare <1 x i32> @llvm.masked.gather.v1i32.v1p0(<1 x ptr>, i32, <1 x i1>, <1 x i32>)
-
 define <1 x i32> @mgather_v1i32(<1 x ptr> %ptrs, <1 x i1> %m, <1 x i32> %passthru) {
 ; RV32V-LABEL: mgather_v1i32:
 ; RV32V:       # %bb.0:
@@ -1975,8 +1957,6 @@ define <1 x i32> @mgather_v1i32(<1 x ptr> %ptrs, <1 x i1> %m, <1 x i32> %passthr
   %v = call <1 x i32> @llvm.masked.gather.v1i32.v1p0(<1 x ptr> %ptrs, i32 4, <1 x i1> %m, <1 x i32> %passthru)
   ret <1 x i32> %v
 }
-
-declare <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i32>)
 
 define <2 x i32> @mgather_v2i32(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i32> %passthru) {
 ; RV32V-LABEL: mgather_v2i32:
@@ -2154,8 +2134,6 @@ define <2 x i64> @mgather_v2i32_zextload_v2i64(<2 x ptr> %ptrs, <2 x i1> %m, <2 
   ret <2 x i64> %ev
 }
 
-declare <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i32>)
-
 define <4 x i32> @mgather_v4i32(<4 x ptr> %ptrs, <4 x i1> %m, <4 x i32> %passthru) {
 ; RV32-LABEL: mgather_v4i32:
 ; RV32:       # %bb.0:
@@ -2276,8 +2254,6 @@ define <4 x i32> @mgather_falsemask_v4i32(<4 x ptr> %ptrs, <4 x i32> %passthru) 
   %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 4, <4 x i1> zeroinitializer, <4 x i32> %passthru)
   ret <4 x i32> %v
 }
-
-declare <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x i32>)
 
 define <8 x i32> @mgather_v8i32(<8 x ptr> %ptrs, <8 x i1> %m, <8 x i32> %passthru) {
 ; RV32-LABEL: mgather_v8i32:
@@ -3391,8 +3367,6 @@ define <8 x i32> @mgather_baseidx_v8i32(ptr %base, <8 x i32> %idxs, <8 x i1> %m,
   ret <8 x i32> %v
 }
 
-declare <1 x i64> @llvm.masked.gather.v1i64.v1p0(<1 x ptr>, i32, <1 x i1>, <1 x i64>)
-
 define <1 x i64> @mgather_v1i64(<1 x ptr> %ptrs, <1 x i1> %m, <1 x i64> %passthru) {
 ; RV32V-LABEL: mgather_v1i64:
 ; RV32V:       # %bb.0:
@@ -3434,8 +3408,6 @@ define <1 x i64> @mgather_v1i64(<1 x ptr> %ptrs, <1 x i1> %m, <1 x i64> %passthr
   %v = call <1 x i64> @llvm.masked.gather.v1i64.v1p0(<1 x ptr> %ptrs, i32 8, <1 x i1> %m, <1 x i64> %passthru)
   ret <1 x i64> %v
 }
-
-declare <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i64>)
 
 define <2 x i64> @mgather_v2i64(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %passthru) {
 ; RV32V-LABEL: mgather_v2i64:
@@ -3507,8 +3479,6 @@ define <2 x i64> @mgather_v2i64(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %passthr
   %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> %ptrs, i32 8, <2 x i1> %m, <2 x i64> %passthru)
   ret <2 x i64> %v
 }
-
-declare <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i64>)
 
 define <4 x i64> @mgather_v4i64(<4 x ptr> %ptrs, <4 x i1> %m, <4 x i64> %passthru) {
 ; RV32V-LABEL: mgather_v4i64:
@@ -3747,8 +3717,6 @@ define <4 x i64> @mgather_falsemask_v4i64(<4 x ptr> %ptrs, <4 x i64> %passthru) 
   %v = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> %ptrs, i32 8, <4 x i1> zeroinitializer, <4 x i64> %passthru)
   ret <4 x i64> %v
 }
-
-declare <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x i64>)
 
 define <8 x i64> @mgather_v8i64(<8 x ptr> %ptrs, <8 x i1> %m, <8 x i64> %passthru) {
 ; RV32V-LABEL: mgather_v8i64:
@@ -6827,8 +6795,6 @@ define <8 x i64> @mgather_baseidx_v8i64(ptr %base, <8 x i64> %idxs, <8 x i1> %m,
   ret <8 x i64> %v
 }
 
-declare <1 x bfloat> @llvm.masked.gather.v1bf16.v1p0(<1 x ptr>, i32, <1 x i1>, <1 x bfloat>)
-
 define <1 x bfloat> @mgather_v1bf16(<1 x ptr> %ptrs, <1 x i1> %m, <1 x bfloat> %passthru) {
 ; RV32V-LABEL: mgather_v1bf16:
 ; RV32V:       # %bb.0:
@@ -6864,8 +6830,6 @@ define <1 x bfloat> @mgather_v1bf16(<1 x ptr> %ptrs, <1 x i1> %m, <1 x bfloat> %
   %v = call <1 x bfloat> @llvm.masked.gather.v1bf16.v1p0(<1 x ptr> %ptrs, i32 2, <1 x i1> %m, <1 x bfloat> %passthru)
   ret <1 x bfloat> %v
 }
-
-declare <2 x bfloat> @llvm.masked.gather.v2bf16.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x bfloat>)
 
 define <2 x bfloat> @mgather_v2bf16(<2 x ptr> %ptrs, <2 x i1> %m, <2 x bfloat> %passthru) {
 ; RV32V-LABEL: mgather_v2bf16:
@@ -6916,8 +6880,6 @@ define <2 x bfloat> @mgather_v2bf16(<2 x ptr> %ptrs, <2 x i1> %m, <2 x bfloat> %
   %v = call <2 x bfloat> @llvm.masked.gather.v2bf16.v2p0(<2 x ptr> %ptrs, i32 2, <2 x i1> %m, <2 x bfloat> %passthru)
   ret <2 x bfloat> %v
 }
-
-declare <4 x bfloat> @llvm.masked.gather.v4bf16.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x bfloat>)
 
 define <4 x bfloat> @mgather_v4bf16(<4 x ptr> %ptrs, <4 x i1> %m, <4 x bfloat> %passthru) {
 ; RV32-LABEL: mgather_v4bf16:
@@ -7040,8 +7002,6 @@ define <4 x bfloat> @mgather_falsemask_v4bf16(<4 x ptr> %ptrs, <4 x bfloat> %pas
   %v = call <4 x bfloat> @llvm.masked.gather.v4bf16.v4p0(<4 x ptr> %ptrs, i32 2, <4 x i1> zeroinitializer, <4 x bfloat> %passthru)
   ret <4 x bfloat> %v
 }
-
-declare <8 x bfloat> @llvm.masked.gather.v8bf16.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x bfloat>)
 
 define <8 x bfloat> @mgather_v8bf16(<8 x ptr> %ptrs, <8 x i1> %m, <8 x bfloat> %passthru) {
 ; RV32-LABEL: mgather_v8bf16:
@@ -7717,8 +7677,6 @@ define <8 x bfloat> @mgather_baseidx_v8bf16(ptr %base, <8 x i16> %idxs, <8 x i1>
   ret <8 x bfloat> %v
 }
 
-declare <1 x half> @llvm.masked.gather.v1f16.v1p0(<1 x ptr>, i32, <1 x i1>, <1 x half>)
-
 define <1 x half> @mgather_v1f16(<1 x ptr> %ptrs, <1 x i1> %m, <1 x half> %passthru) {
 ; RV32V-LABEL: mgather_v1f16:
 ; RV32V:       # %bb.0:
@@ -7754,8 +7712,6 @@ define <1 x half> @mgather_v1f16(<1 x ptr> %ptrs, <1 x i1> %m, <1 x half> %passt
   %v = call <1 x half> @llvm.masked.gather.v1f16.v1p0(<1 x ptr> %ptrs, i32 2, <1 x i1> %m, <1 x half> %passthru)
   ret <1 x half> %v
 }
-
-declare <2 x half> @llvm.masked.gather.v2f16.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x half>)
 
 define <2 x half> @mgather_v2f16(<2 x ptr> %ptrs, <2 x i1> %m, <2 x half> %passthru) {
 ; RV32V-LABEL: mgather_v2f16:
@@ -7831,8 +7787,6 @@ define <2 x half> @mgather_v2f16(<2 x ptr> %ptrs, <2 x i1> %m, <2 x half> %passt
   %v = call <2 x half> @llvm.masked.gather.v2f16.v2p0(<2 x ptr> %ptrs, i32 2, <2 x i1> %m, <2 x half> %passthru)
   ret <2 x half> %v
 }
-
-declare <4 x half> @llvm.masked.gather.v4f16.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x half>)
 
 define <4 x half> @mgather_v4f16(<4 x ptr> %ptrs, <4 x i1> %m, <4 x half> %passthru) {
 ; RV32-LABEL: mgather_v4f16:
@@ -8021,8 +7975,6 @@ define <4 x half> @mgather_falsemask_v4f16(<4 x ptr> %ptrs, <4 x half> %passthru
   %v = call <4 x half> @llvm.masked.gather.v4f16.v4p0(<4 x ptr> %ptrs, i32 2, <4 x i1> zeroinitializer, <4 x half> %passthru)
   ret <4 x half> %v
 }
-
-declare <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x half>)
 
 define <8 x half> @mgather_v8f16(<8 x ptr> %ptrs, <8 x i1> %m, <8 x half> %passthru) {
 ; RV32-LABEL: mgather_v8f16:
@@ -9256,8 +9208,6 @@ define <8 x half> @mgather_baseidx_v8f16(ptr %base, <8 x i16> %idxs, <8 x i1> %m
   ret <8 x half> %v
 }
 
-declare <1 x float> @llvm.masked.gather.v1f32.v1p0(<1 x ptr>, i32, <1 x i1>, <1 x float>)
-
 define <1 x float> @mgather_v1f32(<1 x ptr> %ptrs, <1 x i1> %m, <1 x float> %passthru) {
 ; RV32V-LABEL: mgather_v1f32:
 ; RV32V:       # %bb.0:
@@ -9293,8 +9243,6 @@ define <1 x float> @mgather_v1f32(<1 x ptr> %ptrs, <1 x i1> %m, <1 x float> %pas
   %v = call <1 x float> @llvm.masked.gather.v1f32.v1p0(<1 x ptr> %ptrs, i32 4, <1 x i1> %m, <1 x float> %passthru)
   ret <1 x float> %v
 }
-
-declare <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x float>)
 
 define <2 x float> @mgather_v2f32(<2 x ptr> %ptrs, <2 x i1> %m, <2 x float> %passthru) {
 ; RV32V-LABEL: mgather_v2f32:
@@ -9345,8 +9293,6 @@ define <2 x float> @mgather_v2f32(<2 x ptr> %ptrs, <2 x i1> %m, <2 x float> %pas
   %v = call <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr> %ptrs, i32 4, <2 x i1> %m, <2 x float> %passthru)
   ret <2 x float> %v
 }
-
-declare <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x float>)
 
 define <4 x float> @mgather_v4f32(<4 x ptr> %ptrs, <4 x i1> %m, <4 x float> %passthru) {
 ; RV32-LABEL: mgather_v4f32:
@@ -9468,8 +9414,6 @@ define <4 x float> @mgather_falsemask_v4f32(<4 x ptr> %ptrs, <4 x float> %passth
   %v = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %ptrs, i32 4, <4 x i1> zeroinitializer, <4 x float> %passthru)
   ret <4 x float> %v
 }
-
-declare <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x float>)
 
 define <8 x float> @mgather_v8f32(<8 x ptr> %ptrs, <8 x i1> %m, <8 x float> %passthru) {
 ; RV32-LABEL: mgather_v8f32:
@@ -10583,8 +10527,6 @@ define <8 x float> @mgather_baseidx_v8f32(ptr %base, <8 x i32> %idxs, <8 x i1> %
   ret <8 x float> %v
 }
 
-declare <1 x double> @llvm.masked.gather.v1f64.v1p0(<1 x ptr>, i32, <1 x i1>, <1 x double>)
-
 define <1 x double> @mgather_v1f64(<1 x ptr> %ptrs, <1 x i1> %m, <1 x double> %passthru) {
 ; RV32V-LABEL: mgather_v1f64:
 ; RV32V:       # %bb.0:
@@ -10624,8 +10566,6 @@ define <1 x double> @mgather_v1f64(<1 x ptr> %ptrs, <1 x i1> %m, <1 x double> %p
   %v = call <1 x double> @llvm.masked.gather.v1f64.v1p0(<1 x ptr> %ptrs, i32 8, <1 x i1> %m, <1 x double> %passthru)
   ret <1 x double> %v
 }
-
-declare <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x double>)
 
 define <2 x double> @mgather_v2f64(<2 x ptr> %ptrs, <2 x i1> %m, <2 x double> %passthru) {
 ; RV32V-LABEL: mgather_v2f64:
@@ -10687,8 +10627,6 @@ define <2 x double> @mgather_v2f64(<2 x ptr> %ptrs, <2 x i1> %m, <2 x double> %p
   %v = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> %ptrs, i32 8, <2 x i1> %m, <2 x double> %passthru)
   ret <2 x double> %v
 }
-
-declare <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x double>)
 
 define <4 x double> @mgather_v4f64(<4 x ptr> %ptrs, <4 x i1> %m, <4 x double> %passthru) {
 ; RV32V-LABEL: mgather_v4f64:
@@ -10881,8 +10819,6 @@ define <4 x double> @mgather_falsemask_v4f64(<4 x ptr> %ptrs, <4 x double> %pass
   %v = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> %ptrs, i32 8, <4 x i1> zeroinitializer, <4 x double> %passthru)
   ret <4 x double> %v
 }
-
-declare <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x double>)
 
 define <8 x double> @mgather_v8f64(<8 x ptr> %ptrs, <8 x i1> %m, <8 x double> %passthru) {
 ; RV32V-LABEL: mgather_v8f64:
@@ -13247,8 +13183,6 @@ define <8 x double> @mgather_baseidx_v8f64(ptr %base, <8 x i64> %idxs, <8 x i1> 
   ret <8 x double> %v
 }
 
-declare <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x i8>)
-
 define <16 x i8> @mgather_baseidx_v16i8(ptr %base, <16 x i8> %idxs, <16 x i1> %m, <16 x i8> %passthru) {
 ; RV32-LABEL: mgather_baseidx_v16i8:
 ; RV32:       # %bb.0:
@@ -13469,8 +13403,6 @@ define <16 x i8> @mgather_baseidx_v16i8(ptr %base, <16 x i8> %idxs, <16 x i1> %m
   %v = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> %ptrs, i32 2, <16 x i1> %m, <16 x i8> %passthru)
   ret <16 x i8> %v
 }
-
-declare <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr>, i32, <32 x i1>, <32 x i8>)
 
 define <32 x i8> @mgather_baseidx_v32i8(ptr %base, <32 x i8> %idxs, <32 x i1> %m, <32 x i8> %passthru) {
 ; RV32-LABEL: mgather_baseidx_v32i8:
@@ -13903,7 +13835,6 @@ define <32 x i8> @mgather_baseidx_v32i8(ptr %base, <32 x i8> %idxs, <32 x i1> %m
   %v = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %ptrs, i32 2, <32 x i1> %m, <32 x i8> %passthru)
   ret <32 x i8> %v
 }
-
 
 define <4 x i32> @mgather_broadcast_load_unmasked(ptr %base) {
 ; CHECK-LABEL: mgather_broadcast_load_unmasked:

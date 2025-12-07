@@ -2464,8 +2464,6 @@ multiclass sve_fp_3op_u_zd_bfloat<bits<3> opc, string asm, SDPatternOperator op>
   def NAME : sve_fp_3op_u_zd<0b00, opc, asm, ZPR16>;
 
   def : SVE_2_Op_Pat<nxv8bf16, op, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME)>;
-  def : SVE_2_Op_Pat<nxv4bf16, op, nxv4bf16, nxv4bf16, !cast<Instruction>(NAME)>;
-  def : SVE_2_Op_Pat<nxv2bf16, op, nxv2bf16, nxv2bf16, !cast<Instruction>(NAME)>;
 }
 
 multiclass sve_fp_3op_u_zd_ftsmul<bits<3> opc, string asm, SDPatternOperator op> {
@@ -11166,6 +11164,12 @@ class sve2_fp8_mmla<bit opc, ZPRRegOp dst_ty, string mnemonic>
   let DestructiveInstType = DestructiveOther;
   let ElementSize         = dst_ty.ElementSize;
   let Uses = [FPMR, FPCR];
+}
+
+multiclass sve2_fp8_fmmla<bits<1> opc, ZPRRegOp zprty, string mnemonic, ValueType ResVT> {
+  def NAME : sve2_fp8_mmla<opc, zprty, mnemonic>;
+  def : Pat<(ResVT (int_aarch64_sve_fp8_fmmla ResVT:$acc, nxv16i8:$zn, nxv16i8:$zm)),
+            (!cast<Instruction>(NAME) $acc, $zn, $zm)>;
 }
 
 class sve_fp8_dot_indexed<bits<4> opc, ZPRRegOp dst_ty, Operand iop_ty, string mnemonic>
