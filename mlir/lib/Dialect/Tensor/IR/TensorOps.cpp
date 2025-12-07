@@ -9,7 +9,9 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#ifndef MLIR_TENSOR_NO_COMPLEX
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#endif
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
@@ -47,9 +49,11 @@ Operation *TensorDialect::materializeConstant(OpBuilder &builder,
                                               Location loc) {
   if (auto op = arith::ConstantOp::materialize(builder, value, type, loc))
     return op;
+#ifndef MLIR_TENSOR_NO_COMPLEX
   if (complex::ConstantOp::isBuildableWith(value, type))
     return complex::ConstantOp::create(builder, loc, type,
                                        llvm::cast<ArrayAttr>(value));
+#endif
   return nullptr;
 }
 

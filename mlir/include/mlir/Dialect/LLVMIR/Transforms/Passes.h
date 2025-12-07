@@ -12,7 +12,9 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
+#ifndef MLIR_LLVMIR_TRANSFORMS_NO_NVVM
 #include "mlir/Dialect/LLVMIR/Transforms/OptimizeForNVVM.h"
+#endif // MLIR_LLVMIR_TRANSFORMS_NO_NVVM
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
 #include "mlir/Pass/Pass.h"
 
