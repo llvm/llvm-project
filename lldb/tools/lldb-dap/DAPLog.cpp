@@ -9,21 +9,26 @@
 #include "DAPLog.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
 #include <mutex>
-#include <system_error>
 
 using namespace llvm;
 
 namespace lldb_dap {
 
-Log::Log(StringRef filename, std::error_code &EC) : m_stream(filename, EC) {}
+void Log::Emit(StringRef message) { Emit(message, "", 0); }
 
-void Log::WriteMessage(StringRef message) {
-  std::lock_guard<std::mutex> lock(m_mutex);
+void Log::Emit(StringRef message, StringRef file, size_t line) {
+  std::lock_guard<Log::Mutex> lock(m_mutex);
   const llvm::sys::TimePoint<> time = std::chrono::system_clock::now();
-  m_stream << formatv("[{0:%H:%M:%S.%L}] ", time) << message << '\n';
+  m_stream << formatv("[{0:%H:%M:%S.%L}]", time) << " ";
+  if (!file.empty())
+    m_stream << sys::path::filename(file) << ":" << line << " ";
+  if (!m_prefix.empty())
+    m_stream << m_prefix;
+  m_stream << message << "\n";
   m_stream.flush();
 }
 
