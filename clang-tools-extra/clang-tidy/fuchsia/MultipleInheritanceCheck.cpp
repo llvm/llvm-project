@@ -35,22 +35,20 @@ bool MultipleInheritanceCheck::isInterface(const CXXBaseSpecifier &Base) {
   if (CachedValue != InterfaceMap.end())
     return CachedValue->second;
 
-  const bool CurrentClassIsInterface = [&] {
-    // To be an interface, all base classes must be interfaces as well.
-    if (llvm::any_of(Node->bases(), [&](const CXXBaseSpecifier &I) {
-          return !I.isVirtual() && !isInterface(I);
-        }))
-      return false;
+  // To be an interface, a class must have...
+  const bool CurrentClassIsInterface =
+      // ...no bases that aren't interfaces...
+      llvm::none_of(Node->bases(),
+                    [&](const CXXBaseSpecifier &I) {
+                      return !I.isVirtual() && !isInterface(I);
+                    }) &&
+      // ...no fields, and...
+      Node->field_empty() &&
+      // ...no methods that aren't pure virtual.
+      llvm::none_of(Node->methods(), [](const CXXMethodDecl *M) {
+        return M->isUserProvided() && !M->isPureVirtual() && !M->isStatic();
+      });
 
-    // Interfaces should have no fields.
-    if (!Node->field_empty())
-      return false;
-
-    // Interfaces should have exclusively pure virtual methods.
-    return llvm::none_of(Node->methods(), [](const CXXMethodDecl *M) {
-      return M->isUserProvided() && !M->isPureVirtual() && !M->isStatic();
-    });
-  }();
   InterfaceMap.try_emplace(Node, CurrentClassIsInterface);
   return CurrentClassIsInterface;
 }
