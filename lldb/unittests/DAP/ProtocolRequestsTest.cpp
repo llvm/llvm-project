@@ -182,3 +182,14 @@ TEST(ProtocolRequestsTest, InitializeRequestArguments) {
   EXPECT_THAT_EXPECTED(parse<InitializeRequestArguments>(R"({})"),
                        FailedWithMessage("missing value at (root).adapterID"));
 }
+
+TEST(ProtocolRequestsTest, PauseRequestArguments) {
+  llvm::Expected<PauseArguments> expected =
+      parse<PauseArguments>(R"({"threadId": 123})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->threadId, 123U);
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<PauseArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).threadId"));
+}
