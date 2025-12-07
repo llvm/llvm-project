@@ -23,11 +23,13 @@ define fp128 @copysign0() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr x8, [x8, :lo12:val_double]
 ; CHECK-NEXT:    ldrb w9, [sp, #15]
+; CHECK-NEXT:    adrp x0, .LCPI0_0
 ; CHECK-NEXT:    and x8, x8, #0x8000000000000000
 ; CHECK-NEXT:    lsr x8, x8, #56
 ; CHECK-NEXT:    bfxil w8, w9, #0, #7
 ; CHECK-NEXT:    strb w8, [sp, #15]
-; CHECK-NEXT:    ldr q0, [sp], #16
+; CHECK-NEXT:    ldr q0, [x0, :lo12:.LCPI0_0]
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NONEON-LABEL: copysign0:
@@ -39,11 +41,13 @@ define fp128 @copysign0() {
 ; CHECK-NONEON-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NONEON-NEXT:    ldr x8, [x8, :lo12:val_double]
 ; CHECK-NONEON-NEXT:    ldrb w9, [sp, #15]
+; CHECK-NONEON-NEXT:    adrp x0, .LCPI0_0
 ; CHECK-NONEON-NEXT:    and x8, x8, #0x8000000000000000
 ; CHECK-NONEON-NEXT:    lsr x8, x8, #56
 ; CHECK-NONEON-NEXT:    bfxil w8, w9, #0, #7
 ; CHECK-NONEON-NEXT:    strb w8, [sp, #15]
-; CHECK-NONEON-NEXT:    ldr q0, [sp], #16
+; CHECK-NONEON-NEXT:    ldr q0, [x0, :lo12:.LCPI0_0]
+; CHECK-NONEON-NEXT:    add sp, sp, #16
 ; CHECK-NONEON-NEXT:    ret
 entry:
   %v = load double, ptr @val_double, align 8

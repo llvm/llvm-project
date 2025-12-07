@@ -193,6 +193,7 @@
 ; CHECK-NEXT:       Machine Loop Invariant Code Motion
 ; CHECK-NEXT:       AArch64 Redundant Copy Elimination
 ; CHECK-NEXT:       A57 FP Anti-dependency breaker
+; CHECK-NEXT:       AArch64 Collect Constant Pool Spill Info
 ; CHECK-NEXT:       Remove Redundant DEBUG_VALUE analysis
 ; CHECK-NEXT:       Fixup Statepoint Caller Saved
 ; CHECK-NEXT:       PostRA Machine Sink

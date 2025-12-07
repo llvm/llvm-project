@@ -75,6 +75,7 @@ FunctionPass *createAArch64PostLegalizerLowering();
 FunctionPass *createAArch64PostSelectOptimize();
 FunctionPass *createAArch64StackTaggingPass(bool IsOptNone);
 FunctionPass *createAArch64StackTaggingPreRAPass();
+FunctionPass *createAArch64CollectCPSpillInfoPass();
 ModulePass *createAArch64Arm64ECCallLoweringPass();
 
 void initializeAArch64A53Fix835769Pass(PassRegistry&);
@@ -108,6 +109,7 @@ void initializeAArch64SLSHardeningPass(PassRegistry &);
 void initializeAArch64SpeculationHardeningPass(PassRegistry &);
 void initializeAArch64StackTaggingPass(PassRegistry &);
 void initializeAArch64StackTaggingPreRAPass(PassRegistry &);
+void initializeAArch64CollectCPSpillInfoPass(PassRegistry &);
 void initializeAArch64StorePairSuppressPass(PassRegistry&);
 void initializeFalkorHWPFFixPass(PassRegistry&);
 void initializeFalkorMarkStridedAccessesLegacyPass(PassRegistry&);

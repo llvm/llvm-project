@@ -1446,50 +1446,25 @@ define <2 x fp128> @vec_extend_f64(<2 x double> %val) {
 }
 
 define <2 x fp128> @vec_neg_sub(<2 x fp128> %in) {
-; CHECK-SD-LABEL: vec_neg_sub:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    str q1, [sp, #32] // 16-byte Spill
-; CHECK-SD-NEXT:    mov v1.16b, v0.16b
-; CHECK-SD-NEXT:    adrp x8, .LCPI47_0
-; CHECK-SD-NEXT:    ldr q0, [x8, :lo12:.LCPI47_0]
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-SD-NEXT:    bl __subtf3
-; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
-; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
-; CHECK-SD-NEXT:    bl __subtf3
-; CHECK-SD-NEXT:    mov v1.16b, v0.16b
-; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
-; CHECK-SD-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
-; CHECK-SD-NEXT:    add sp, sp, #64
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vec_neg_sub:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sub sp, sp, #64
-; CHECK-GI-NEXT:    str x30, [sp, #48] // 8-byte Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    mov v2.16b, v0.16b
-; CHECK-GI-NEXT:    adrp x8, .LCPI47_0
-; CHECK-GI-NEXT:    str q1, [sp, #32] // 16-byte Spill
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI47_0]
-; CHECK-GI-NEXT:    mov v1.16b, v2.16b
-; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-GI-NEXT:    bl __subtf3
-; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Spill
-; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-GI-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
-; CHECK-GI-NEXT:    bl __subtf3
-; CHECK-GI-NEXT:    mov v1.16b, v0.16b
-; CHECK-GI-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
-; CHECK-GI-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
-; CHECK-GI-NEXT:    add sp, sp, #64
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vec_neg_sub:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    bl __subtf3
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    adrp x0, .LCPI47_0
+; CHECK-NEXT:    ldr q0, [x0, :lo12:.LCPI47_0]
+; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; CHECK-NEXT:    bl __subtf3
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
   %ret = fsub <2 x fp128> zeroinitializer, %in
   ret <2 x fp128> %ret
 }

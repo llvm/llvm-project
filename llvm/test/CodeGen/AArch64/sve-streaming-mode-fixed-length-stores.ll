@@ -98,14 +98,9 @@ define void @store_v2f16(ptr %a) {
 ;
 ; NONEON-NOSVE-LABEL: store_v2f16:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    sub sp, sp, #16
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
-; NONEON-NOSVE-NEXT:    adrp x8, .LCPI5_0
-; NONEON-NOSVE-NEXT:    ldr d0, [x8, :lo12:.LCPI5_0]
-; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #8]
+; NONEON-NOSVE-NEXT:    adrp x1, .LCPI5_0
+; NONEON-NOSVE-NEXT:    ldr w8, [x1, :lo12:.LCPI5_0]
 ; NONEON-NOSVE-NEXT:    str w8, [x0]
-; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   store <2 x half> zeroinitializer, ptr %a
   ret void

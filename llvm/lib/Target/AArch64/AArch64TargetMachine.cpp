@@ -111,6 +111,12 @@ static cl::opt<bool> EnableLoadStoreOpt("aarch64-enable-ldst-opt",
                                                  " optimization pass"),
                                         cl::init(true), cl::Hidden);
 
+static cl::opt<bool>
+    EnableCPSpillReload("aarch64-enable-cp-spill-reload",
+                        cl::desc("Enable reloading spilled values directly "
+                                 "from the constant pool"),
+                        cl::init(true), cl::Hidden);
+
 static cl::opt<bool> EnableAtomicTidy(
     "aarch64-enable-atomic-cfg-tidy", cl::Hidden,
     cl::desc("Run SimplifyCFG after expanding atomic operations"
@@ -260,6 +266,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PostSelectOptimizePass(PR);
   initializeAArch64PromoteConstantPass(PR);
   initializeAArch64RedundantCopyEliminationPass(PR);
+  initializeAArch64CollectCPSpillInfoPass(PR);
   initializeAArch64StorePairSuppressPass(PR);
   initializeFalkorHWPFFixPass(PR);
   initializeFalkorMarkStridedAccessesLegacyPass(PR);
@@ -823,6 +830,10 @@ void AArch64PassConfig::addPostRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None && usingDefaultRegAlloc())
     // Improve performance for some FP/SIMD code for A57.
     addPass(createAArch64A57FPLoadBalancing());
+
+  // Replace reloads of spilled constant pool values with direct CP loads.
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableCPSpillReload)
+    addPass(createAArch64CollectCPSpillInfoPass());
 }
 
 void AArch64PassConfig::addPreSched2() {
