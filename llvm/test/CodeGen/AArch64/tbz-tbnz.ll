@@ -836,30 +836,11 @@ if.then28:                                        ; preds = %if.end26
 }
 
 define i1 @avifSequenceHeaderParse() {
-; CHECK-SD-LABEL: avifSequenceHeaderParse:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #1 // =0x1
-; CHECK-SD-NEXT:    cbz w8, .LBB24_2
-; CHECK-SD-NEXT:  .LBB24_1: // %bb6
-; CHECK-SD-NEXT:    mov w0, wzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB24_2: // %bb1
-; CHECK-SD-NEXT:    cbz w8, .LBB24_4
-; CHECK-SD-NEXT:  // %bb.3:
-; CHECK-SD-NEXT:    b .LBB24_1
-; CHECK-SD-NEXT:  .LBB24_4: // %bb2
-; CHECK-SD-NEXT:    mov w8, #1 // =0x1
-; CHECK-SD-NEXT:    tbz x8, #63, .LBB24_1
-; CHECK-SD-NEXT:  // %bb.5: // %bb4
-; CHECK-SD-NEXT:    mov w8, #1 // =0x1
-; CHECK-SD-NEXT:    mov w0, wzr
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: avifSequenceHeaderParse:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w0, wzr
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: avifSequenceHeaderParse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    ret
 entry:
   %a = icmp slt i64 0, 0
   br i1 %a, label %bb1, label %bb6
