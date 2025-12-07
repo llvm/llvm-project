@@ -1,7 +1,7 @@
 .. title:: clang-tidy - modernize-avoid-c-style-cast
 
 modernize-avoid-c-style-cast
-==========================
+============================
 
 Finds usages of C-style casts.
 
