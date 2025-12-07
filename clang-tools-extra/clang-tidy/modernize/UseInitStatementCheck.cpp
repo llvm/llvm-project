@@ -108,9 +108,10 @@ static Matcher<Stmt> callByRef(Matcher<Decl> VarOrBindingNodeMatcher) {
 static Matcher<Stmt> hasStealingMatcher() {
   const auto IsStealingViaPointer =
       hasParent(unaryOperator(hasOperatorName("&")));
+  const auto HasLTE = hasInitializer(expr(hasDescendant(expr(materializeTemporaryExpr()))));
   const auto IsNonreferenceType = unless(hasType(referenceType()));
   const auto BoundVar =
-      varDecl(equalsBoundNode("singleVar"), IsNonreferenceType);
+      varDecl(equalsBoundNode("singleVar"), anyOf(IsNonreferenceType, HasLTE));
   const auto BoundBind =
       bindingDecl(equalsBoundNode("bindingDecl"),
                   hasParent(decompositionDecl(IsNonreferenceType)));
@@ -163,6 +164,12 @@ static Matcher<Stmt> compoundStmtMatcher(
                              RefToBoundMatcher);
 }
 
+static Matcher<Stmt> forBuiltinTypes(Matcher<ReferenceType> ConditionForReference) {
+  return unless(has(varDecl(hasType(qualType(unless(
+      anyOf(hasCanonicalType(builtinType()), hasCanonicalType(pointerType()),
+            hasCanonicalType(referenceType(ConditionForReference)))))))));
+}
+
 // Registers matchers for if/switch statements with regular variable
 // declarations.
 void UseInitStatementCheck::registerVariableDeclMatchers(MatchFinder *Finder) {
@@ -171,20 +178,23 @@ void UseInitStatementCheck::registerVariableDeclMatchers(MatchFinder *Finder) {
   const auto RefToBoundVarDecl =
       declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
 
+  const auto IncludeLTE = has(varDecl(
+      hasInitializer(expr(hasDescendant(expr(materializeTemporaryExpr()))))));
+  const auto ExcludeLTE = unless(IncludeLTE);
+
   // Matchers for declaration statements that precede if/switch
-  const auto ForBuiltinTypes = unless(has(varDecl(hasType(qualType(unless(
-      anyOf(hasCanonicalType(builtinType()), hasCanonicalType(pointerType()),
-            hasCanonicalType(referenceType()))))))));
-  const auto ExcludeLTE = unless(has(varDecl(
-      hasInitializer(expr(hasDescendant(expr(materializeTemporaryExpr())))))));
   const auto PrevDeclStmt =
-      declStmt(forEach(SingleVarDecl), ForBuiltinTypes, ExcludeLTE)
+      declStmt(forEach(SingleVarDecl), forBuiltinTypes(anything()), ExcludeLTE)
           .bind("prevDecl");
+  const auto PrevDeclStmtLTE =
+      declStmt(forEach(SingleVarDecl), forBuiltinTypes(pointee(builtinType())), IncludeLTE)
+          .bind("prevDecl");
+  const auto PrevDeclStmtMatcher = anyOf(PrevDeclStmt, PrevDeclStmtLTE);
 
   Finder->addMatcher(
-      compoundStmtMatcher(ifStmt, "ifStmt", PrevDeclStmt, RefToBoundVarDecl),
+      compoundStmtMatcher(ifStmt, "ifStmt", PrevDeclStmtMatcher, RefToBoundVarDecl),
       this);
-  Finder->addMatcher(compoundStmtMatcher(switchStmt, "switchStmt", PrevDeclStmt,
+  Finder->addMatcher(compoundStmtMatcher(switchStmt, "switchStmt", PrevDeclStmtMatcher,
                                          RefToBoundVarDecl),
                      this);
 }
