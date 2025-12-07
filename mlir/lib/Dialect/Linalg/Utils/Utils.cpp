@@ -324,7 +324,7 @@ static bool bodyMatcherForZeroPointOffsets(Operation *addOp, Operation *mulOp,
 ///       %input - %input_scalar
 ///          where, %input_scalar can have optional upcast operation.
 static bool bodyMatcherForConvolutionOps(Value yieldVal, Block *body,
-                                         bool zeroPointOffset = false) {
+                                         bool containsZeroPointOffset = false) {
   Operation *addOp = yieldVal.getDefiningOp();
   if (!isa_and_present<arith::AddIOp, arith::AddFOp>(addOp))
     return false;
@@ -333,7 +333,7 @@ static bool bodyMatcherForConvolutionOps(Value yieldVal, Block *body,
   if (!isa_and_present<arith::MulIOp, arith::MulFOp>(mulOp))
     return false;
 
-  if (zeroPointOffset) {
+  if (containsZeroPointOffset) {
     return bodyMatcherForZeroPointOffsets(addOp, mulOp, body);
   }
   BlockArgument lhsBlockArg =
