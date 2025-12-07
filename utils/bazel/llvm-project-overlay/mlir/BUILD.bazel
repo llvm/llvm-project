@@ -13395,11 +13395,16 @@ cc_library(
     srcs = glob(
         ["lib/Dialect/MemRef/Transforms/*.cpp"],
         exclude = [
+            # These files use VectorDialect
             "lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp",
             "lib/Dialect/MemRef/Transforms/EmulateWideInt.cpp",
-            "lib/Dialect/MemRef/Transforms/ExtractAddressComputations.cpp",
             "lib/Dialect/MemRef/Transforms/FlattenMemRefs.cpp",
+            # These files use NVGPUDialect
+            "lib/Dialect/MemRef/Transforms/ExtractAddressComputations.cpp",
             "lib/Dialect/MemRef/Transforms/FoldMemRefAliasOps.cpp",
+            # These files use BufferizationDialect
+            "lib/Dialect/MemRef/Transforms/AllocationOpInterfaceImpl.cpp",
+            "lib/Dialect/MemRef/Transforms/BufferViewFlowOpInterfaceImpl.cpp",
         ],
     ),
     hdrs = glob(["include/mlir/Dialect/MemRef/Transforms/*.h"]),
@@ -13412,7 +13417,6 @@ cc_library(
         ":ArithDialect",
         ":TrimmedArithTransforms",
         ":ArithUtils",
-        ":BufferizationDialect",
         ":BufferizationInterfaces",
         ":ControlFlowDialect",
         ":DestinationStyleOpInterface",
@@ -13425,7 +13429,6 @@ cc_library(
         ":MemRefDialect",
         ":MemRefPassIncGen",
         ":TrimmedMemRefUtils",
-        ":NVGPUDialect",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
         ":SCFDialect",
