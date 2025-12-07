@@ -288,3 +288,42 @@ func.func @unsupported_bitwidth(%arg0: f128, %arg1: f128, %arg2: f32) {
   %8 = arith.sitofp %6 : i92 to f32
   return
 }
+
+// -----
+
+// CHECK-LABEL: func.func @addf_vector
+//     CHECK-2:   vector.to_elements
+
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   call
+//       CHECK:   arith.trunci
+
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   call
+//       CHECK:   arith.trunci
+
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   call
+//       CHECK:   arith.trunci
+
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   arith.bitcast
+//       CHECK:   arith.extui
+//       CHECK:   call
+//       CHECK:   arith.trunci
+
+//       CHECK:   vector.from_elements
+func.func @addf_vector(%arg0: vector<4xf4E2M1FN>, %arg1: vector<4xf4E2M1FN>) {
+  %0 = arith.addf %arg0, %arg1 : vector<4xf4E2M1FN>
+  return
+}

@@ -15,4 +15,5 @@ add_mlir_conversion_library(MLIRArithToAPFloat
   MLIRArithTransforms
   MLIRFuncDialect
   MLIRFuncUtils
+  MLIRVectorDialect
   )
