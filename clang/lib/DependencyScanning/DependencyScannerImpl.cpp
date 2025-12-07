@@ -815,7 +815,7 @@ bool CompilerInstanceWithContext::computeDependencies(
     // file. In this case, we call BeginSourceFile to initialize.
     std::unique_ptr<FrontendAction> Action =
         std::make_unique<PreprocessOnlyAction>();
-    auto InputFile = CI.getFrontendOpts().Inputs.begin();
+    auto *InputFile = CI.getFrontendOpts().Inputs.begin();
     bool ActionBeginSucceeded = Action->BeginSourceFile(CI, *InputFile);
     assert(ActionBeginSucceeded && "Action BeginSourceFile must succeed");
     (void)ActionBeginSucceeded;
