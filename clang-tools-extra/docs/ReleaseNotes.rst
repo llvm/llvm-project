@@ -443,9 +443,9 @@ Changes in existing checks
 
 - Improved :doc:`fuchsia-multiple-inheritance
   <clang-tidy/checks/fuchsia/multiple-inheritance>`
-  by fixing an issue where the check would only analyze the first class with a
-  given name in the program, even if there were multiple classes with that
-  name in different scopes.
+  by fixing an issue where the check would only analyze the first class with
+  a given name in the program, missing any subsequent classes with that same
+  name (declared in a different scope).
 
 - Improved :doc:`google-readability-casting
   <clang-tidy/checks/google/readability-casting>` check by adding fix-it
