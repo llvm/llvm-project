@@ -939,34 +939,6 @@ void bad_prevents_redeclaration4() {
     }
 }
 
-void bad_stolen_reference1_no_use_after() {
-    {
-        const int* pi = nullptr;
-        int i1 = 0; DUMMY_TOKEN
-        if (i1 == 0) {
-// CHECK-MESSAGES: [[@LINE-2]]:9: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
-// CHECK-FIXES: DUMMY_TOKEN
-// CHECK-FIXES-NEXT: if (int i1 = 0; i1 == 0) {
-            do_some();
-            pi = &i1;
-        }
-    }
-
-    {
-        const int* pi = nullptr;
-        int i2 = 0; DUMMY_TOKEN
-        switch (i2) {
-// CHECK-MESSAGES: [[@LINE-2]]:9: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
-// CHECK-FIXES: DUMMY_TOKEN
-// CHECK-FIXES-NEXT: switch (int i2 = 0; i2) {
-            case 0:
-                do_some();
-                pi = &i2;
-                break;
-        }
-    }
-}
-
 // void bad_stolen_reference_as_this_no_use_after() {
 //     {
 //         const UserDefined* pa = nullptr;

@@ -40,18 +40,6 @@ Examples
 Options
 -------
 
-.. option:: StrictMode
-
-    When ``true`` (default), the check will suggest transformations even in
-    cases where moving the variable into the init statement doesn't reduce its
-    scope. This includes situations where the variable is already in an inner
-    scope (like inside a loop body or nested block).
-    When ``false``, the check only suggests transformations when scope
-    reduction would occur.
-
-    In strict mode, the check prioritizes consistent use of C++17 init
-    statements for readability, even when scope isn't affected.
-
 .. option:: IgnoreConditionVariableStatements
 
     When ``true``, the check will not suggest transformations for variable

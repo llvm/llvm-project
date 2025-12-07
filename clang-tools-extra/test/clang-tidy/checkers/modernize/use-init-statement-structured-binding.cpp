@@ -477,36 +477,6 @@ void good_stolen_reference2_string() {
     sv.empty();
 }
 
-void bad_stolen_reference1_no_use_after() {
-    {
-        const int* pi = nullptr;
-        int arr[2] = {0, 1};
-        auto [i1, k1] = arr; DUMMY_TOKEN
-        if (i1 == 0) {
-// CHECK-MESSAGES: [[@LINE-2]]:9: warning: structured binding declaration before if statement could be moved into if init statement [modernize-use-init-statement]
-// CHECK-FIXES: DUMMY_TOKEN
-// CHECK-FIXES-NEXT: if (auto [i1, k1] = arr; i1 == 0) {
-            do_some();
-            pi = &i1;
-        }
-    }
-
-    {
-        const int* pi = nullptr;
-        int arr2[2] = {0, 1};
-        auto [i2, k2] = arr2; DUMMY_TOKEN
-        switch (i2) {
-// CHECK-MESSAGES: [[@LINE-2]]:9: warning: structured binding declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
-// CHECK-FIXES: DUMMY_TOKEN
-// CHECK-FIXES-NEXT: switch (auto [i2, k2] = arr2; i2) {
-            case 0:
-                do_some();
-                pi = &i2;
-                break;
-        }
-    }
-}
-
 // void bad_stolen_reference_as_this_no_use_after() {
 //     {
 //         const UserDefined* pa = nullptr;

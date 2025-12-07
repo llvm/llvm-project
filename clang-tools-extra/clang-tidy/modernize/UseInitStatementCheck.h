@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USEINITSTATEMENTCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "../GlobList.h"
 
 namespace clang::tidy::modernize {
 
@@ -35,15 +34,10 @@ private:
   void registerVariableDeclMatchers(ast_matchers::MatchFinder *Finder);
   void registerStructuredBindingMatchers(ast_matchers::MatchFinder *Finder);
 
-  bool isSingleVarWithSafeDestructor(
-      const ast_matchers::MatchFinder::MatchResult &Result) const;
   int getKindOfMatchedDeclStmt(
       const ast_matchers::MatchFinder::MatchResult &Result) const;
 
-  const bool StrictMode;
   const bool IgnoreConditionVariableStatements;
-  const llvm::StringRef SafeTypes;
-  const GlobList SafeTypesGlobList;
 };
 
 } // namespace clang::tidy::modernize
