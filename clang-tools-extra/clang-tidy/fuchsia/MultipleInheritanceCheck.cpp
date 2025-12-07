@@ -24,6 +24,8 @@ AST_MATCHER(CXXRecordDecl, hasBases) {
 } // namespace
 
 bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
+  assert(Node->isCompleteDefinition());
+
   // Short circuit the lookup if we have analyzed this record before.
   const auto CachedValue = InterfaceMap.find(Node);
   if (CachedValue != InterfaceMap.end())
@@ -37,7 +39,6 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
       const auto *Base = I.getType()->getAsCXXRecordDecl();
       if (!Base)
         continue;
-      assert(Base->isCompleteDefinition());
       if (!isInterface(Base))
         return false;
     }
@@ -72,7 +73,6 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *Base = I.getType()->getAsCXXRecordDecl();
     if (!Base)
       continue;
-    assert(Base->isCompleteDefinition());
     if (!isInterface(Base))
       ++NumConcrete;
   }
@@ -83,7 +83,6 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *Base = V.getType()->getAsCXXRecordDecl();
     if (!Base)
       continue;
-    assert(Base->isCompleteDefinition());
     if (!isInterface(Base))
       ++NumConcrete;
   }
