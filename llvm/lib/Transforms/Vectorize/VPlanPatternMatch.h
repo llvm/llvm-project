@@ -387,9 +387,9 @@ m_EVL(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
-inline VPInstruction_match<VPInstruction::ExtractLastElement, Op0_t>
-m_ExtractLastElement(const Op0_t &Op0) {
-  return m_VPInstruction<VPInstruction::ExtractLastElement>(Op0);
+inline VPInstruction_match<VPInstruction::ExtractLastLane, Op0_t>
+m_ExtractLastLane(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExtractLastLane>(Op0);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -405,9 +405,17 @@ m_ExtractLane(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t>
-inline VPInstruction_match<VPInstruction::ExtractLastLanePerPart, Op0_t>
-m_ExtractLastLanePerPart(const Op0_t &Op0) {
-  return m_VPInstruction<VPInstruction::ExtractLastLanePerPart>(Op0);
+inline VPInstruction_match<VPInstruction::ExtractLastPart, Op0_t>
+m_ExtractLastPart(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExtractLastPart>(Op0);
+}
+
+template <typename Op0_t>
+inline VPInstruction_match<
+    VPInstruction::ExtractLastLane,
+    VPInstruction_match<VPInstruction::ExtractLastPart, Op0_t>>
+m_ExtractLastLaneOfLastPart(const Op0_t &Op0) {
+  return m_ExtractLastLane(m_ExtractLastPart(Op0));
 }
 
 template <typename Op0_t>

@@ -499,7 +499,7 @@ static void createExtractsForLiveOuts(VPlan &Plan, VPBasicBlock *MiddleVPBB) {
                ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
                "exit values from early exits must be fixed when branch to "
                "early-exit is added");
-        ExitIRI->extractLastLaneOfFirstOperand(B);
+        ExitIRI->extractLastLaneOfLastPartOfFirstOperand(B);
       }
     }
   }
