@@ -23,7 +23,7 @@ AST_MATCHER(CXXRecordDecl, hasBases) {
 }
 } // namespace
 
-// Adds a node (by name) to the interface map, if it was not present in the map
+// Adds a node to the interface map, if it was not present in the map
 // previously.
 void MultipleInheritanceCheck::addNodeToInterfaceMap(const CXXRecordDecl *Node,
                                                      bool IsInterface) {
