@@ -118,7 +118,7 @@ func.func @address_of() {
 // CHECK-LABEL: void dereference
 // CHECK-SAME:                   (int32_t* [[ARG0:[^ ]*]]) {
 func.func @dereference(%arg0: !emitc.ptr<i32>) {
-  // CHECK: int32_t [[V1:[^ ]*]] = *[[ARG0]];
+  // CHECK-NEXT: int32_t [[V1:[^ ]*]] = *[[ARG0]];
   %2 = emitc.dereference %arg0 : !emitc.ptr<i32>
   emitc.load %2 : !emitc.lvalue<i32>
   return
