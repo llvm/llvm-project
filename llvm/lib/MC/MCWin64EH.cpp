@@ -887,7 +887,11 @@ static void simplifyARM64Opcodes(std::vector<WinEH::Instruction> &Instructions,
   unsigned PrevOffset = -1;
   unsigned PrevRegister = -1;
 
-  auto VisitInstruction = [&](WinEH::Instruction &Inst) {
+  // Iterate over instructions in a forward order (for prologues),
+  // backwards for epilogues (i.e. always reverse compared to how the
+  // opcodes are stored).
+  for (WinEH::Instruction &Inst :
+       llvm::reverse_conditionally(Instructions, Reverse)) {
     // Convert 2-byte opcodes into equivalent 1-byte ones.
     if (Inst.Operation == Win64EH::UOP_SaveRegP && Inst.Register == 29) {
       Inst.Operation = Win64EH::UOP_SaveFPLR;
@@ -930,17 +934,6 @@ static void simplifyARM64Opcodes(std::vector<WinEH::Instruction> &Instructions,
       PrevRegister = -1;
       PrevOffset = -1;
     }
-  };
-
-  // Iterate over instructions in a forward order (for prologues),
-  // backwards for epilogues (i.e. always reverse compared to how the
-  // opcodes are stored).
-  if (Reverse) {
-    for (auto It = Instructions.rbegin(); It != Instructions.rend(); It++)
-      VisitInstruction(*It);
-  } else {
-    for (WinEH::Instruction &Inst : Instructions)
-      VisitInstruction(Inst);
   }
 }
 
