@@ -63,8 +63,7 @@ void MultipleInheritanceCheck::registerMatchers(MatchFinder *Finder) {
 
 void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
   const auto &D = *Result.Nodes.getNodeAs<CXXRecordDecl>("decl");
-  // Check against map to see if the class inherits from multiple
-  // concrete classes
+  // Check to see if the class inherits from multiple concrete classes.
   unsigned NumConcrete = 0;
   for (const CXXBaseSpecifier &I : D.bases()) {
     if (I.isVirtual())
