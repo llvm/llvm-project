@@ -7638,6 +7638,53 @@ cc_library(
     ],
 )
 
+# Trimmed TensorDialect without TransformDialectInterfaces dependency
+# Transform interface declarations are guarded by MLIR_TENSOR_NO_TRANSFORM_INTERFACES
+cc_library(
+    name = "TrimmedTensorDialect",
+    srcs = [
+        "lib/Dialect/Tensor/IR/TensorDialect.cpp",
+        "lib/Dialect/Tensor/IR/TensorOps.cpp",
+        "lib/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Tensor/IR/ShardingInterfaceImpl.h",
+        "include/mlir/Dialect/Tensor/IR/Tensor.h",
+        "include/mlir/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.h",
+    ],
+    includes = ["include"],
+    local_defines = ["MLIR_TENSOR_NO_TRANSFORM_INTERFACES"],
+    deps = [
+        ":AffineDialect",
+        ":ArithDialect",
+        ":ArithUtils",
+        ":BufferizationInterfaces",
+        ":BytecodeOpInterface",
+        ":CastInterfaces",
+        ":ComplexDialect",
+        ":ControlFlowInterfaces",
+        ":DestinationStyleOpInterface",
+        ":DialectUtils",
+        ":IR",
+        ":InferIntRangeCommon",
+        ":InferIntRangeInterface",
+        ":InferTypeOpInterface",
+        ":InliningUtils",
+        ":LoopLikeInterface",
+        ":ParallelCombiningOpInterface",
+        ":RuntimeVerifiableOpInterface",
+        ":ShapedOpInterfaces",
+        ":SideEffectInterfaces",
+        ":SubsetOpInterface",
+        ":Support",
+        ":TensorOpsIncGen",
+        ":TilingInterface",
+        ":ValueBoundsOpInterface",
+        ":ViewLikeInterface",
+        "//llvm:Support",
+    ],
+)
+
 cc_library(
     name = "TensorInferTypeOpInterfaceImpl",
     srcs = ["lib/Dialect/Tensor/IR/TensorInferTypeOpInterfaceImpl.cpp"],

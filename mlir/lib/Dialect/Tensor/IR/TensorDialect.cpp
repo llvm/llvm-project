@@ -10,7 +10,9 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#ifndef MLIR_TENSOR_NO_TRANSFORM_INTERFACES
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
+#endif
 #include "mlir/Interfaces/RuntimeVerifiableOpInterface.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -53,9 +55,11 @@ void TensorDialect::initialize() {
       DimOp, EmptyOp, ExpandShapeOp, ExtractSliceOp, ExtractOp, FromElementsOp,
       GenerateOp, InsertOp, InsertSliceOp, PadOp, ParallelInsertSliceOp, RankOp,
       ReshapeOp, SplatOp>();
+#ifndef MLIR_TENSOR_NO_TRANSFORM_INTERFACES
   declarePromisedInterfaces<transform::FindPayloadReplacementOpInterface,
                             CollapseShapeOp, ExpandShapeOp, ExtractSliceOp,
                             InsertSliceOp, ReshapeOp>();
+#endif
   declarePromisedInterfaces<ReifyRankedShapedTypeOpInterface, ExpandShapeOp,
                             CollapseShapeOp, PadOp>();
   declarePromisedInterfaces<RuntimeVerifiableOpInterface, CastOp, DimOp,
