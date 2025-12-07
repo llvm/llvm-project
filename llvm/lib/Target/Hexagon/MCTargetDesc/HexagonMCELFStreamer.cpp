@@ -67,6 +67,11 @@ void HexagonMCELFStreamer::emitInstruction(const MCInst &MCB,
   assert(MCB.getOpcode() == Hexagon::BUNDLE);
   assert(HexagonMCInstrInfo::bundleSize(MCB) <= HEXAGON_PACKET_SIZE);
   assert(HexagonMCInstrInfo::bundleSize(MCB) > 0);
+  const MCRegisterInfo *RI = getContext().getRegisterInfo();
+  HexagonMCChecker Check(getContext(), *MCII, STI, const_cast<MCInst &>(MCB),
+                         *RI);
+  [[maybe_unused]] bool CheckOk = Check.check(false);
+  assert(CheckOk);
 
   // At this point, MCB is a bundle
   // Iterate through the bundle and assign addends for the instructions
@@ -186,6 +191,9 @@ static unsigned featureToArchVersion(unsigned Feature) {
   case Hexagon::ArchV79:
   case Hexagon::ExtensionHVXV79:
     return 79;
+  case Hexagon::ArchV81:
+  case Hexagon::ExtensionHVXV81:
+    return 81;
   }
   llvm_unreachable("Expected valid arch feature");
   return 0;

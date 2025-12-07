@@ -24,7 +24,9 @@ using namespace mlir::LLVM;
 /// prints it as usual.
 static void dispatchPrint(AsmPrinter &printer, Type type) {
   if (isCompatibleType(type) &&
-      !llvm::isa<IntegerType, FloatType, VectorType>(type))
+      !(llvm::isa<IntegerType, FloatType, VectorType>(type) ||
+        (llvm::isa<PtrLikeTypeInterface>(type) &&
+         !llvm::isa<LLVMPointerType>(type))))
     return mlir::LLVM::detail::printType(type, printer);
   printer.printType(type);
 }
@@ -43,9 +45,7 @@ static StringRef getTypeKeyword(Type type) {
       .Case<LLVMStructType>([&](Type) { return "struct"; })
       .Case<LLVMTargetExtType>([&](Type) { return "target"; })
       .Case<LLVMX86AMXType>([&](Type) { return "x86_amx"; })
-      .Default([](Type) -> StringRef {
-        llvm_unreachable("unexpected 'llvm' type kind");
-      });
+      .DefaultUnreachable("unexpected 'llvm' type kind");
 }
 
 /// Prints a structure type. Keeps track of known struct names to handle self-

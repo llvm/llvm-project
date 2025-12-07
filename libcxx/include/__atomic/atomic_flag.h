@@ -49,22 +49,16 @@ struct atomic_flag {
   }
 
 #if _LIBCPP_STD_VER >= 20
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void wait(bool __v, memory_order __m = memory_order_seq_cst) const
-      volatile _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI void wait(bool __v, memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT {
     std::__atomic_wait(*this, _LIBCPP_ATOMIC_FLAG_TYPE(__v), __m);
   }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void
-  wait(bool __v, memory_order __m = memory_order_seq_cst) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI void wait(bool __v, memory_order __m = memory_order_seq_cst) const _NOEXCEPT {
     std::__atomic_wait(*this, _LIBCPP_ATOMIC_FLAG_TYPE(__v), __m);
   }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_one() volatile _NOEXCEPT {
-    std::__atomic_notify_one(*this);
-  }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_one() _NOEXCEPT { std::__atomic_notify_one(*this); }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_all() volatile _NOEXCEPT {
-    std::__atomic_notify_all(*this);
-  }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_all() _NOEXCEPT { std::__atomic_notify_all(*this); }
+  _LIBCPP_HIDE_FROM_ABI void notify_one() volatile _NOEXCEPT { std::__atomic_notify_one(*this); }
+  _LIBCPP_HIDE_FROM_ABI void notify_one() _NOEXCEPT { std::__atomic_notify_one(*this); }
+  _LIBCPP_HIDE_FROM_ABI void notify_all() volatile _NOEXCEPT { std::__atomic_notify_all(*this); }
+  _LIBCPP_HIDE_FROM_ABI void notify_all() _NOEXCEPT { std::__atomic_notify_all(*this); }
 #endif
 
 #if _LIBCPP_STD_VER >= 20
@@ -82,6 +76,8 @@ struct atomic_flag {
 
 template <>
 struct __atomic_waitable_traits<atomic_flag> {
+  using __value_type _LIBCPP_NODEBUG = _LIBCPP_ATOMIC_FLAG_TYPE;
+
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATOMIC_FLAG_TYPE __atomic_load(const atomic_flag& __a, memory_order __order) {
     return std::__cxx_atomic_load(&__a.__a_, __order);
   }
@@ -143,43 +139,26 @@ inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_clear_explicit(atomic_flag* __o, m
 }
 
 #if _LIBCPP_STD_VER >= 20
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
-atomic_flag_wait(const volatile atomic_flag* __o, bool __v) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_wait(const volatile atomic_flag* __o, bool __v) _NOEXCEPT {
   __o->wait(__v);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
-atomic_flag_wait(const atomic_flag* __o, bool __v) _NOEXCEPT {
-  __o->wait(__v);
-}
+inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_wait(const atomic_flag* __o, bool __v) _NOEXCEPT { __o->wait(__v); }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
+inline _LIBCPP_HIDE_FROM_ABI void
 atomic_flag_wait_explicit(const volatile atomic_flag* __o, bool __v, memory_order __m) _NOEXCEPT {
   __o->wait(__v, __m);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
+inline _LIBCPP_HIDE_FROM_ABI void
 atomic_flag_wait_explicit(const atomic_flag* __o, bool __v, memory_order __m) _NOEXCEPT {
   __o->wait(__v, __m);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
-atomic_flag_notify_one(volatile atomic_flag* __o) _NOEXCEPT {
-  __o->notify_one();
-}
-
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void atomic_flag_notify_one(atomic_flag* __o) _NOEXCEPT {
-  __o->notify_one();
-}
-
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
-atomic_flag_notify_all(volatile atomic_flag* __o) _NOEXCEPT {
-  __o->notify_all();
-}
-
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void atomic_flag_notify_all(atomic_flag* __o) _NOEXCEPT {
-  __o->notify_all();
-}
+inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_notify_one(volatile atomic_flag* __o) _NOEXCEPT { __o->notify_one(); }
+inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_notify_one(atomic_flag* __o) _NOEXCEPT { __o->notify_one(); }
+inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_notify_all(volatile atomic_flag* __o) _NOEXCEPT { __o->notify_all(); }
+inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_notify_all(atomic_flag* __o) _NOEXCEPT { __o->notify_all(); }
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD

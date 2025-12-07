@@ -398,6 +398,14 @@ def : AlwaysUniform<int_amdgcn_icmp>;
 def : AlwaysUniform<int_amdgcn_fcmp>;
 def : AlwaysUniform<int_amdgcn_ballot>;
 def : AlwaysUniform<int_amdgcn_if_break>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_x>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_y>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_z>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_flat_id>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_id_x>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_id_y>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_id_z>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_flat_id>;
 def : AlwaysUniform<int_amdgcn_workgroup_id_x>;
 def : AlwaysUniform<int_amdgcn_workgroup_id_y>;
 def : AlwaysUniform<int_amdgcn_workgroup_id_z>;
@@ -405,3 +413,12 @@ def : AlwaysUniform<int_amdgcn_s_getpc>;
 def : AlwaysUniform<int_amdgcn_s_getreg>;
 def : AlwaysUniform<int_amdgcn_s_memrealtime>;
 def : AlwaysUniform<int_amdgcn_s_memtime>;
+
+def AMDGPUImageDMaskIntrinsicTable : GenericTable {
+  let FilterClass = "AMDGPUImageDMaskIntrinsic";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "getAMDGPUImageDMaskIntrinsic";
+  let PrimaryKeyEarlyOut = 1;
+}

@@ -90,9 +90,20 @@ class CFIInstrInserter : public MachineFunctionPass {
   /// contains the location where CSR register is saved.
   struct CSRSavedLocation {
     CSRSavedLocation(std::optional<unsigned> R, std::optional<int> O)
-        : Reg(R), Offset(O) {}
+        : Reg(R), Offset(O) {
+      assert((Reg.has_value() ^ Offset.has_value()) &&
+             "Register and offset can not both be valid");
+    }
     std::optional<unsigned> Reg;
     std::optional<int> Offset;
+
+    bool operator==(const CSRSavedLocation &RHS) const {
+      return Reg == RHS.Reg && Offset == RHS.Offset;
+    }
+
+    bool operator!=(const CSRSavedLocation &RHS) const {
+      return !(*this == RHS);
+    }
   };
 
   /// Contains cfa offset and register values valid at entry and exit of basic
@@ -267,12 +278,11 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
         break;
       }
       if (CSRReg || CSROffset) {
-        auto It = CSRLocMap.find(CFI.getRegister());
-        if (It == CSRLocMap.end()) {
-          CSRLocMap.insert(
-              {CFI.getRegister(), CSRSavedLocation(CSRReg, CSROffset)});
-        } else if (It->second.Reg != CSRReg || It->second.Offset != CSROffset) {
-          llvm_unreachable("Different saved locations for the same CSR");
+        CSRSavedLocation Loc(CSRReg, CSROffset);
+        auto [It, Inserted] = CSRLocMap.insert({CFI.getRegister(), Loc});
+        if (!Inserted && It->second != Loc) {
+          reportFatalInternalError(
+              "Different saved locations for the same CSR");
         }
         CSRSaved.set(CFI.getRegister());
       }
@@ -396,11 +406,11 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
       if (!RO.Reg && RO.Offset) {
         CFIIndex = MF.addFrameInst(
             MCCFIInstruction::createOffset(nullptr, Reg, *RO.Offset));
-      } else if (RO.Reg && !RO.Offset) {
+      } else {
+        assert((RO.Reg && !RO.Offset) &&
+               "Reg and Offset cannot both be valid/invalid");
         CFIIndex = MF.addFrameInst(
             MCCFIInstruction::createRegister(nullptr, Reg, *RO.Reg));
-      } else {
-        llvm_unreachable("RO.Reg and RO.Offset cannot both be valid/invalid");
       }
       BuildMI(*MBBInfo.MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);

@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUISELDAGTODAG_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUISELDAGTODAG_H
 
+#include "AMDGPUSelectionDAGInfo.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIModeRegisterDefaults.h"
@@ -43,21 +44,6 @@ static inline bool getConstantValue(SDValue N, uint32_t &Out) {
   }
 
   return false;
-}
-
-// TODO: Handle undef as zero
-static inline SDNode *packConstantV2I16(const SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::BUILD_VECTOR && N->getNumOperands() == 2);
-  uint32_t LHSVal, RHSVal;
-  if (getConstantValue(N->getOperand(0), LHSVal) &&
-      getConstantValue(N->getOperand(1), RHSVal)) {
-    SDLoc SL(N);
-    uint32_t K = (LHSVal & 0xffff) | (RHSVal << 16);
-    return DAG.getMachineNode(AMDGPU::S_MOV_B32, SL, N->getValueType(0),
-                              DAG.getTargetConstant(K, SL, MVT::i32));
-  }
-
-  return nullptr;
 }
 
 /// AMDGPU specific code to select AMDGPU machine instructions for
@@ -115,6 +101,8 @@ private:
 
   MachineSDNode *buildSMovImm64(SDLoc &DL, uint64_t Val, EVT VT) const;
 
+  SDNode *packConstantV2I16(const SDNode *N, SelectionDAG &DAG) const;
+
   SDNode *glueCopyToOp(SDNode *N, SDValue NewChain, SDValue Glue) const;
   SDNode *glueCopyToM0(SDNode *N, SDValue Val) const;
   SDNode *glueCopyToM0LDSInit(SDNode *N) const;
@@ -171,11 +159,16 @@ private:
   bool SelectGlobalSAddrCPol(SDNode *N, SDValue Addr, SDValue &SAddr,
                              SDValue &VOffset, SDValue &Offset,
                              SDValue &CPol) const;
+  bool SelectGlobalSAddrCPolM0(SDNode *N, SDValue Addr, SDValue &SAddr,
+                               SDValue &VOffset, SDValue &Offset,
+                               SDValue &CPol) const;
   bool SelectGlobalSAddrGLC(SDNode *N, SDValue Addr, SDValue &SAddr,
                             SDValue &VOffset, SDValue &Offset,
                             SDValue &CPol) const;
   bool SelectGlobalSAddrNoIOffset(SDNode *N, SDValue Addr, SDValue &SAddr,
                                   SDValue &VOffset, SDValue &CPol) const;
+  bool SelectGlobalSAddrNoIOffsetM0(SDNode *N, SDValue Addr, SDValue &SAddr,
+                                    SDValue &VOffset, SDValue &CPol) const;
   bool SelectScratchSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                           SDValue &Offset) const;
   bool checkFlatScratchSVSSwizzleBug(SDValue VAddr, SDValue SAddr,

@@ -1,4 +1,4 @@
-//===--- MultipleInheritanceCheck.cpp - clang-tidy-------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,13 +23,11 @@ AST_MATCHER(CXXRecordDecl, hasBases) {
 }
 } // namespace
 
-// Adds a node (by name) to the interface map, if it was not present in the map
+// Adds a node to the interface map, if it was not present in the map
 // previously.
 void MultipleInheritanceCheck::addNodeToInterfaceMap(const CXXRecordDecl *Node,
                                                      bool IsInterface) {
-  assert(Node->getIdentifier());
-  StringRef Name = Node->getIdentifier()->getName();
-  InterfaceMap.insert(std::make_pair(Name, IsInterface));
+  InterfaceMap.try_emplace(Node, IsInterface);
 }
 
 // Returns "true" if the boolean "isInterface" has been set to the
@@ -37,9 +35,7 @@ void MultipleInheritanceCheck::addNodeToInterfaceMap(const CXXRecordDecl *Node,
 // interface status for the current node is not yet known.
 bool MultipleInheritanceCheck::getInterfaceStatus(const CXXRecordDecl *Node,
                                                   bool &IsInterface) const {
-  assert(Node->getIdentifier());
-  StringRef Name = Node->getIdentifier()->getName();
-  llvm::StringMapConstIterator<bool> Pair = InterfaceMap.find(Name);
+  auto Pair = InterfaceMap.find(Node);
   if (Pair == InterfaceMap.end())
     return false;
   IsInterface = Pair->second;
@@ -59,9 +55,6 @@ bool MultipleInheritanceCheck::isCurrentClassInterface(
 }
 
 bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
-  if (!Node->getIdentifier())
-    return false;
-
   // Short circuit the lookup if we have analyzed this record before.
   bool PreviousIsInterfaceResult = false;
   if (getInterfaceStatus(Node, PreviousIsInterfaceResult))
@@ -81,7 +74,7 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
     }
   }
 
-  bool CurrentClassIsInterface = isCurrentClassInterface(Node);
+  const bool CurrentClassIsInterface = isCurrentClassInterface(Node);
   addNodeToInterfaceMap(Node, CurrentClassIsInterface);
   return CurrentClassIsInterface;
 }

@@ -481,7 +481,7 @@ class Foo final {})cpp";
        [](HoverInfo &HI) {
          HI.Name = "auto";
          HI.Kind = index::SymbolKind::TypeAlias;
-         HI.Definition = "/* not deduced */";
+         HI.Definition = "T";
        }},
       // constrained auto
       {R"cpp(
@@ -2657,7 +2657,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "/* not deduced */";
+            HI.Definition = "T";
           }},
       {
           R"cpp(// Undeduced auto return type
@@ -3457,13 +3457,15 @@ template <typename T, typename C = bool> class Foo {}
 ```
 
 ---
-**Template Parameters:**
+### Brief
+
+documentation
+
+---
+### Template Parameters
 
 - `typename T`
 - `typename C = bool`
-
----
-documentation
 
 ---
 Size: 10 bytes)",
@@ -3506,7 +3508,7 @@ ret_type foo(params) {}
 ```
 
 ---
-**Parameters:**
+### Parameters
 
 - 
 - `type (aka can_type)`
@@ -3514,7 +3516,7 @@ ret_type foo(params) {}
 - `type foo = default (aka can_type)`
 
 ---
-**Returns:**
+### Returns
 
 `ret_type (aka can_ret_type)`)",
       },
@@ -3649,7 +3651,7 @@ protected: size_t method()
 ```
 
 ---
-**Returns:**
+### Returns
 
 `size_t (aka unsigned long)`)",
       },
@@ -3688,7 +3690,7 @@ public: cls(int a, int b = 5)
 ```
 
 ---
-**Parameters:**
+### Parameters
 
 - `int a`
 - `int b = 5`)",
@@ -4001,9 +4003,13 @@ void foo()
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
+### Details
+
 longer doc)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
@@ -4034,20 +4040,34 @@ int foo()
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
-**Returns:**
+### Returns
 
 `int`
 
 ---
+### Details
+
 longer doc)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
-         HI.Documentation = "@brief brief doc\n\n"
-                            "longer doc\n@param a this is a param\n@return it "
-                            "returns something";
+         HI.Documentation = R"(@brief brief doc
+
+longer doc
+@note this is a note
+
+As you see, notes are "inlined".
+@warning this is a warning
+
+As well as warnings
+@param a this is a param
+@return it returns something
+@retval 0 if successful
+@retval 1 if failed)";
          HI.Definition = "int foo(int a)";
          HI.ReturnType = "int";
          HI.Name = "foo";
@@ -4067,9 +4087,17 @@ Parameters:
 
 @brief brief doc
 
-longer doc
-@param a this is a param
-@return it returns something
+longer doc  
+@note this is a note
+
+As you see, notes are "inlined".  
+@warning this is a warning
+
+As well as warnings  
+@param a this is a param  
+@return it returns something  
+@retval 0 if successful  
+@retval 1 if failed
 
 ---
 ```cpp
@@ -4083,20 +4111,37 @@ int foo(int a)
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
-**Parameters:**
+### Parameters
 
 - `int a` - this is a param
 
 ---
-**Returns:**
+### Returns
 
 `int` - it returns something
 
+- `0` - if successful
+- `1` - if failed
+
 ---
-longer doc)"},
+### Details
+
+longer doc
+
+**Note:**  
+this is a note
+
+As you see, notes are "inlined".
+
+**Warning:**  
+this is a warning
+
+As well as warnings)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
          HI.Documentation = "@brief brief doc\n\n"
@@ -4121,9 +4166,9 @@ Parameters:
 
 @brief brief doc
 
-longer doc
-@param a this is a param
-@param b does not exist
+longer doc  
+@param a this is a param  
+@param b does not exist  
 @return it returns something
 
 ---
@@ -4138,19 +4183,23 @@ int foo(int a)
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
-**Parameters:**
+### Parameters
 
 - `int a` - this is a param
 
 ---
-**Returns:**
+### Returns
 
 `int` - it returns something
 
 ---
+### Details
+
 longer doc)"},
   };
 
@@ -4266,19 +4315,19 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo.\nbar",
-                   "foo.\nbar",
-                   "foo.\nbar",
+                   "foo.  \nbar",
+                   "foo.  \nbar",
                    "foo.\nbar",
                },
                {
                    "foo. \nbar",
-                   "foo. \nbar",
-                   "foo. \nbar",
+                   "foo.   \nbar",
+                   "foo.   \nbar",
                    "foo.\nbar",
                },
                {
                    "foo\n*bar",
-                   "foo\n\\*bar",
+                   "foo  \n\\*bar",
                    "foo\n*bar",
                    "foo\n*bar",
                },
@@ -4305,6 +4354,24 @@ TEST(Hover, ParseDocumentation) {
                    "\\`not\nparsed\\`",
                    "`not\nparsed`",
                    "`not parsed`",
+               },
+               {
+                   R"(@brief this is a typical use case
+@param x this is x
+\param y this is y
+@return something)",
+                   R"(@brief this is a typical use case  
+@param x this is x  
+\\param y this is y  
+@return something)",
+                   R"(@brief this is a typical use case  
+@param x this is x  
+\param y this is y  
+@return something)",
+                   R"(@brief this is a typical use case
+@param x this is x
+\param y this is y
+@return something)",
                }};
 
   for (const auto &C : Cases) {
@@ -4765,6 +4832,48 @@ constexpr u64 pow_with_mod(u64 a, u64 b, u64 p) {
   ASSERT_TRUE(H);
   EXPECT_TRUE(H->Value);
   EXPECT_TRUE(H->Type);
+}
+
+TEST(Hover, HoverMacroContentsLimit) {
+  const char *const Code =
+      R"cpp(
+          #define C(A) A##A // Concatenate
+          #define E(A) C(A) // Expand
+          #define Z0032 00000000000000000000000000000000
+          #define Z0064 E(Z0032)
+          #define Z0128 E(Z0064)
+          #define Z0256 E(Z0128)
+          #define Z0512 E(Z0256)
+          #define Z1024 E(Z0512)
+          #define Z2048 E(Z1024)
+          #define Z4096 E(Z2048) // 4096 zeroes
+          int main() { return [[^Z4096]]; }
+      )cpp";
+
+  struct {
+    uint32_t MacroContentsLimit;
+    const std::string ExpectedDefinition;
+  } Cases[] = {
+      // With a limit of 2048, the macro expansion should get dropped.
+      {2048, "#define Z4096 E(Z2048)"},
+      // With a limit of 8192, the macro expansion should be fully expanded.
+      {8192, std::string("#define Z4096 E(Z2048)\n\n") +
+                 std::string("// Expands to\n") + std::string(4096, '0')},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Code);
+
+    Annotations T(Code);
+    TestTU TU = TestTU::withCode(T.code());
+    auto AST = TU.build();
+    Config Cfg;
+    Cfg.Hover.MacroContentsLimit = Case.MacroContentsLimit;
+    WithContextValue WithCfg(Config::Key, std::move(Cfg));
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+
+    EXPECT_EQ(H->Definition, Case.ExpectedDefinition);
+  }
 }
 
 TEST(Hover, FunctionParameters) {

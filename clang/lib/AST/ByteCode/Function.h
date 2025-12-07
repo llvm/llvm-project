@@ -41,6 +41,8 @@ public:
     unsigned Offset;
     /// Descriptor of the local.
     Descriptor *Desc;
+    /// If the cleanup for this local should be emitted.
+    bool EnabledByDefault = true;
   };
 
   using LocalVectorTy = llvm::SmallVector<Local, 8>;
@@ -236,9 +238,10 @@ private:
            bool HasRVO, bool IsLambdaStaticInvoker);
 
   /// Sets the code of a function.
-  void setCode(unsigned NewFrameSize, llvm::SmallVector<std::byte> &&NewCode,
-               SourceMap &&NewSrcMap, llvm::SmallVector<Scope, 2> &&NewScopes,
-               bool NewHasBody) {
+  void setCode(FunctionDeclTy Source, unsigned NewFrameSize,
+               llvm::SmallVector<std::byte> &&NewCode, SourceMap &&NewSrcMap,
+               llvm::SmallVector<Scope, 2> &&NewScopes, bool NewHasBody) {
+    this->Source = Source;
     FrameSize = NewFrameSize;
     Code = std::move(NewCode);
     SrcMap = std::move(NewSrcMap);
@@ -309,8 +312,8 @@ private:
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().
-  void dump() const;
-  void dump(llvm::raw_ostream &OS) const;
+  void dump(CodePtr PC = {}) const;
+  void dump(llvm::raw_ostream &OS, CodePtr PC = {}) const;
 };
 
 } // namespace interp

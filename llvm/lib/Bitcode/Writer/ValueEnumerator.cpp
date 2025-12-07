@@ -495,6 +495,12 @@ ValueEnumerator::ValueEnumerator(const Module &M,
             EnumerateMetadata(&F, Op);
       }
   }
+  for (const GlobalIFunc &GIF : M.ifuncs()) {
+    MDs.clear();
+    GIF.getAllMetadata(MDs);
+    for (const auto &I : MDs)
+      EnumerateMetadata(nullptr, I.second);
+  }
 
   // Optimize constant ordering.
   OptimizeConstants(FirstConstant, Values.size());
@@ -610,9 +616,8 @@ void ValueEnumerator::OptimizeConstants(unsigned CstStart, unsigned CstEnd) {
 /// EnumerateValueSymbolTable - Insert all of the values in the specified symbol
 /// table into the values table.
 void ValueEnumerator::EnumerateValueSymbolTable(const ValueSymbolTable &VST) {
-  for (ValueSymbolTable::const_iterator VI = VST.begin(), VE = VST.end();
-       VI != VE; ++VI)
-    EnumerateValue(VI->getValue());
+  for (const auto &VI : VST)
+    EnumerateValue(VI.getValue());
 }
 
 /// Insert all of the values referenced by named metadata in the specified

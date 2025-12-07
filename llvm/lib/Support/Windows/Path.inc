@@ -27,6 +27,7 @@
 #include "llvm/Support/Windows/WindowsSupport.h"
 #include <shellapi.h>
 #include <shlobj.h>
+#include <winioctl.h>
 
 #undef max
 
@@ -169,14 +170,19 @@ UniqueID file_status::getUniqueID() const {
 
 ErrorOr<space_info> disk_space(const Twine &Path) {
   ULARGE_INTEGER Avail, Total, Free;
-  if (!::GetDiskFreeSpaceExA(Path.str().c_str(), &Avail, &Total, &Free))
+  SmallVector<wchar_t, 128> PathUTF16;
+
+  if (std::error_code EC = widenPath(Path, PathUTF16))
+    return EC;
+
+  if (!::GetDiskFreeSpaceExW(PathUTF16.data(), &Avail, &Total, &Free))
     return mapWindowsError(::GetLastError());
+
   space_info SpaceInfo;
-  SpaceInfo.capacity =
-      (static_cast<uint64_t>(Total.HighPart) << 32) + Total.LowPart;
-  SpaceInfo.free = (static_cast<uint64_t>(Free.HighPart) << 32) + Free.LowPart;
-  SpaceInfo.available =
-      (static_cast<uint64_t>(Avail.HighPart) << 32) + Avail.LowPart;
+  SpaceInfo.capacity = Total.QuadPart;
+  SpaceInfo.free = Free.QuadPart;
+  SpaceInfo.available = Avail.QuadPart;
+
   return SpaceInfo;
 }
 
@@ -615,6 +621,22 @@ std::error_code resize_file(int FD, uint64_t Size) {
   errno_t error = ::_chsize(FD, Size);
 #endif
   return std::error_code(error, std::generic_category());
+}
+
+std::error_code resize_file_sparse(int FD, uint64_t Size) {
+  HANDLE hFile = reinterpret_cast<HANDLE>(::_get_osfhandle(FD));
+  DWORD temp;
+  if (!DeviceIoControl(hFile, FSCTL_SET_SPARSE, NULL, 0, NULL, 0, &temp,
+                       NULL)) {
+    return mapWindowsError(GetLastError());
+  }
+  LARGE_INTEGER liSize;
+  liSize.QuadPart = Size;
+  if (!SetFilePointerEx(hFile, liSize, NULL, FILE_BEGIN) ||
+      !SetEndOfFile(hFile)) {
+    return mapWindowsError(GetLastError());
+  }
+  return std::error_code();
 }
 
 std::error_code access(const Twine &Path, AccessMode Mode) {

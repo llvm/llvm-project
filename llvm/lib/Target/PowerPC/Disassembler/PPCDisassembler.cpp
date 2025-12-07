@@ -18,6 +18,7 @@
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 DEFINE_PPC_REGCLASSES
 
@@ -183,9 +184,6 @@ DecodeG8RC_NOX0RegisterClass(MCInst &Inst, uint64_t RegNo, uint64_t Address,
                              const MCDisassembler *Decoder) {
   return decodeRegisterClass(Inst, RegNo, XRegsNoX0);
 }
-
-#define DecodePointerLikeRegClass0 DecodeGPRCRegisterClass
-#define DecodePointerLikeRegClass1 DecodeGPRC_NOR0RegisterClass
 
 static DecodeStatus DecodeSPERCRegisterClass(MCInst &Inst, uint64_t RegNo,
                                              uint64_t Address,

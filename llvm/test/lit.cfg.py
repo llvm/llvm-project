@@ -17,18 +17,27 @@ from lit.llvm.subst import ToolSubst
 # name: The name of this test suite.
 config.name = "LLVM"
 
+# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
+# See https://github.com/llvm/llvm-project/issues/106636 for more details.
+#
+# We prefer the lit internal shell which provides a better user experience on failures
+# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
+# env var.
+use_lit_shell = True
+lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
+if lit_shell_env:
+    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
+
 # testFormat: The test format to use to interpret tests.
 extra_substitutions = extra_substitutions = (
     [
-        (r"\| not FileCheck .*", "> /dev/null"),
-        (r"\| FileCheck .*", "> /dev/null"),
+        (r"FileCheck .*", "cat > /dev/null"),
+        (r"not FileCheck .*", "cat > /dev/null"),
     ]
     if config.enable_profcheck
     else []
 )
-config.test_format = lit.formats.ShTest(
-    not llvm_config.use_lit_shell, extra_substitutions
-)
+config.test_format = lit.formats.ShTest(not use_lit_shell, extra_substitutions)
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
@@ -38,6 +47,28 @@ config.suffixes = [".ll", ".c", ".test", ".txt", ".s", ".mir", ".yaml", ".spv"]
 # subdirectories contain auxiliary inputs for various tests in their parent
 # directories.
 config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
+
+if config.enable_profcheck:
+    config.available_features.add("profcheck")
+    # Exclude llvm-reduce tests for profcheck because we substitute the FileCheck
+    # binary with a no-op command for profcheck, but llvm-reduce tests have RUN
+    # commands of the form llvm-reduce --test FileCheck, which explode if we
+    # substitute FileCheck because llvm-reduce expects FileCheck in these tests.
+    # It's not really possible to exclude these tests from the command substitution,
+    # so we just exclude llvm-reduce tests from this config altogether. This should
+    # be fine though as profcheck config tests are mostly concerned with opt.
+    config.excludes.append("llvm-reduce")
+    # Exclude llvm-objcopy tests - not the target of this effort, and some use
+    # cat in ways that conflict with how profcheck uses it.
+    config.excludes.append("llvm-objcopy")
+    # (Issue #161235) Temporarily exclude LoopVectorize.
+    config.excludes.append("LoopVectorize")
+    # exclude UpdateTestChecks - they fail because of inserted prof annotations
+    config.excludes.append("UpdateTestChecks")
+    # TODO(#166655): Reenable Instrumentation tests
+    config.excludes.append("Instrumentation")
+    # profiling doesn't work quite well on GPU, excluding
+    config.excludes.append("AMDGPU")
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -137,7 +168,7 @@ if re.search(r"windows-msvc", config.target_triple):
 ld64_cmd = config.ld64_executable
 asan_rtlib = get_asan_rtlib()
 if asan_rtlib:
-    ld64_cmd = "DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
+    ld64_cmd = "env DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
 if config.osx_sysroot:
     ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, config.osx_sysroot)
 
@@ -203,6 +234,7 @@ tools.extend(
         "llvm-addr2line",
         "llvm-bcanalyzer",
         "llvm-bitcode-strip",
+        "llvm-cas",
         "llvm-cgdata",
         "llvm-config",
         "llvm-cov",
@@ -294,79 +326,138 @@ tools.extend(
 )
 
 
-# Find (major, minor) version of ptxas
 def ptxas_version(ptxas):
-    ptxas_cmd = subprocess.Popen([ptxas, "--version"], stdout=subprocess.PIPE)
-    ptxas_out = ptxas_cmd.stdout.read().decode("ascii")
-    ptxas_cmd.wait()
-    match = re.search(r"release (\d+)\.(\d+)", ptxas_out)
-    if match:
-        return (int(match.group(1)), int(match.group(2)))
-    print("couldn't determine ptxas version")
-    return None
+    output = subprocess.check_output([ptxas, "--version"], text=True)
+    match = re.search(r"release (\d+)\.(\d+)", output)
+    if not match:
+        raise RuntimeError("Couldn't determine ptxas version")
+    return int(match.group(1)), int(match.group(2))
 
 
-# Enable %ptxas and %ptxas-verify tools.
-# %ptxas-verify defaults to sm_60 architecture. It can be overriden
-# by specifying required one, for instance: %ptxas-verify -arch=sm_80.
+def ptxas_isa_versions(ptxas):
+    result = subprocess.run(
+        [ptxas, "--list-version"],
+        capture_output=True,
+        text=True,
+    )
+    versions = []
+    for line in result.stdout.splitlines():
+        match = re.match(r"(\d+)\.(\d+)", line)
+        if match:
+            versions.append((int(match.group(1)), int(match.group(2))))
+    return versions
+
+
+def ptxas_supported_isa_versions(ptxas, major_version, minor_version):
+    supported_isa_versions = ptxas_isa_versions(ptxas)
+    if supported_isa_versions:
+        return supported_isa_versions
+    if major_version >= 13:
+        raise RuntimeError(f"ptxas {ptxas} does not support ISA version listing")
+
+    cuda_version_to_isa_version = {
+        (12, 9): [(8, 8)],
+        (12, 8): [(8, 7)],
+        (12, 7): [(8, 6)],
+        (12, 6): [(8, 5)],
+        (12, 5): [(8, 5)],
+        (12, 4): [(8, 4)],
+        (12, 3): [(8, 3)],
+        (12, 2): [(8, 2)],
+        (12, 1): [(8, 1)],
+        (12, 0): [(8, 0)],
+        (11, 8): [(7, 8)],
+        (11, 7): [(7, 7)],
+        (11, 6): [(7, 6)],
+        (11, 5): [(7, 5)],
+        (11, 4): [(7, 4)],
+        (11, 3): [(7, 3)],
+        (11, 2): [(7, 2)],
+        (11, 1): [(7, 1)],
+        (11, 0): [(7, 0)],
+        (10, 2): [(6, 5)],
+        (10, 1): [(6, 4)],
+        (10, 0): [(6, 3)],
+        (9, 2): [(6, 2)],
+        (9, 1): [(6, 1)],
+        (9, 0): [(6, 0)],
+        (8, 0): [(5, 0)],
+        (7, 5): [(4, 3)],
+        (7, 0): [(4, 2)],
+        (6, 5): [(4, 1)],
+        (6, 0): [(4, 0)],
+        (5, 5): [(3, 2)],
+        (5, 0): [(3, 1)],
+        (4, 1): [(3, 0)],
+        (4, 0): [(2, 3)],
+        (3, 2): [(2, 2)],
+        (3, 1): [(2, 1)],
+        (3, 0): [(2, 0), (1, 5)],
+        (2, 2): [(1, 4)],
+        (2, 1): [(1, 3)],
+        (2, 0): [(1, 2)],
+        (1, 1): [(1, 1)],
+        (1, 0): [(1, 0)],
+    }
+
+    supported_isa_versions = []
+    for (major, minor), isa_versions in cuda_version_to_isa_version.items():
+        if (major, minor) <= (major_version, minor_version):
+            for isa_version in isa_versions:
+                supported_isa_versions.append(isa_version)
+    return supported_isa_versions
+
+
+def ptxas_supported_sms(ptxas_executable):
+    output = subprocess.check_output([ptxas_executable, "--help"], text=True)
+
+    gpu_arch_section = re.search(r"--gpu-name(.*?)--", output, re.DOTALL)
+    allowed_values = gpu_arch_section.group(1)
+    supported_sms = re.findall(r"'sm_(\d+(?:[af]?))'", allowed_values)
+
+    if not supported_sms:
+        raise RuntimeError("No SM architecture values found in ptxas help output")
+    return supported_sms
+
+
+def ptxas_supports_address_size_32(ptxas_executable):
+    # Linux outputs the error message to stderr, while Windows outputs to stdout.
+    # Pipe both to stdout to make sure we get the error message.
+    result = subprocess.run(
+        [ptxas_executable, "-m 32"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    if "is not defined for option 'machine'" in result.stdout:
+        return False
+    if "Missing .version directive at start of file" in result.stdout:
+        return True
+    raise RuntimeError(f"Unexpected ptxas output: {result.stdout}")
+
+
 def enable_ptxas(ptxas_executable):
-    version = ptxas_version(ptxas_executable)
-    if version:
-        # ptxas is supposed to be backward compatible with previous
-        # versions, so add a feature for every known version prior to
-        # the current one.
-        ptxas_known_versions = [
-            (9, 0),
-            (9, 1),
-            (9, 2),
-            (10, 0),
-            (10, 1),
-            (10, 2),
-            (11, 0),
-            (11, 1),
-            (11, 2),
-            (11, 3),
-            (11, 4),
-            (11, 5),
-            (11, 6),
-            (11, 7),
-            (11, 8),
-            (12, 0),
-            (12, 1),
-            (12, 2),
-            (12, 3),
-            (12, 4),
-            (12, 5),
-            (12, 6),
-            (12, 8),
-        ]
-
-        def version_int(ver):
-            return ver[0] * 100 + ver[1]
-
-        # ignore ptxas if its version is below the minimum supported
-        # version
-        min_version = ptxas_known_versions[0]
-        if version_int(version) < version_int(min_version):
-            print(
-                "Warning: ptxas version {}.{} is not supported".format(
-                    version[0], version[1]
-                )
-            )
-            return
-
-        for known_version in ptxas_known_versions:
-            if version_int(known_version) <= version_int(version):
-                major, minor = known_version
-                config.available_features.add("ptxas-{}.{}".format(major, minor))
-
     config.available_features.add("ptxas")
     tools.extend(
         [
             ToolSubst("%ptxas", ptxas_executable),
-            ToolSubst("%ptxas-verify", "{} -arch=sm_60 -c -".format(ptxas_executable)),
+            ToolSubst("%ptxas-verify", f"{ptxas_executable} -c -"),
         ]
     )
+
+    major_version, minor_version = ptxas_version(ptxas_executable)
+    config.available_features.add(f"ptxas-{major_version}.{minor_version}")
+
+    for major, minor in ptxas_supported_isa_versions(
+        ptxas_executable, major_version, minor_version
+    ):
+        config.available_features.add(f"ptxas-isa-{major}.{minor}")
+
+    for sm in ptxas_supported_sms(ptxas_executable):
+        config.available_features.add(f"ptxas-sm_{sm}")
+
+    if ptxas_supports_address_size_32(ptxas_executable):
+        config.available_features.add("ptxas-ptr32")
 
 
 ptxas_executable = (
@@ -394,7 +485,7 @@ if config.host_ldflags.find("-m32") < 0 and any(
 config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 if config.target_triple:
     if re.match(
-        r"(aarch64_be|arc|armeb|bpfeb|lanai|m68k|mips|mips64|powerpc|powerpc64|sparc|sparcv9|s390x|s390|tce|thumbeb)-.*",
+        r"(aarch64_be|arc|armeb|bpfeb|lanai|m68k|mips|mips64|powerpc|powerpc64|sparc|sparcv9|sparc64|s390x|s390|tce|thumbeb)-.*",
         config.target_triple,
     ):
         config.available_features.add("target-byteorder-big-endian")
@@ -499,7 +590,7 @@ def have_cxx_shared_library():
         print("could not exec llvm-readobj")
         return False
 
-    readobj_out = readobj_cmd.stdout.read().decode("ascii")
+    readobj_out = readobj_cmd.stdout.read().decode("utf-8")
     readobj_cmd.wait()
 
     regex = re.compile(r"(libc\+\+|libstdc\+\+|msvcp).*\.(so|dylib|dll)")
@@ -673,10 +764,17 @@ if not hasattr(sys, "getwindowsversion") or sys.getwindowsversion().build >= 170
     config.available_features.add("unix-sockets")
 
 # .debug_frame is not emitted for targeting Windows x64, aarch64/arm64, AIX, or Apple Silicon Mac.
-if not re.match(
-    r"^(x86_64|aarch64|arm64|powerpc|powerpc64).*-(windows-cygnus|windows-gnu|windows-msvc|aix)",
-    config.target_triple,
-) and not re.match(r"^arm64(e)?-apple-(macos|darwin)", config.target_triple):
+if (
+    not re.match(
+        r"^(x86_64|aarch64|arm64|powerpc|powerpc64).*-(windows-cygnus|windows-gnu|windows-msvc|aix)",
+        config.target_triple,
+    )
+    and not re.match(
+        r"^arm64(e)?-apple-(macos|darwin)",
+        config.target_triple,
+    )
+    and not re.match(r".*-zos.*", config.target_triple)
+):
     config.available_features.add("debug_frame")
 
 if config.enable_backtrace:
@@ -700,9 +798,18 @@ if config.have_opt_viewer_modules:
 if config.expensive_checks:
     config.available_features.add("expensive_checks")
 
+if config.have_ondisk_cas:
+    config.available_features.add("ondisk_cas")
+
 if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add("use_msan_with_origins")
 
+
+# Restrict the size of the on-disk CAS for tests. This allows testing in
+# constrained environments (e.g. small TMPDIR). It also prevents leaving
+# behind large files on file systems that do not support sparse files if a test
+# crashes before resizing the file.
+config.environment["LLVM_CAS_MAX_MAPPING_SIZE"] = "%d" % (100 * 1024 * 1024)
 
 # Some tools support an environment variable "OBJECT_MODE" on AIX OS, which
 # controls the kind of objects they will support. If there is no "OBJECT_MODE"

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --xevm-attach-target='module=xevm.* O=3 chip=pvc' -convert-vector-to-xegpu -split-input-file | FileCheck %s --check-prefix=STORE-ND
+// RUN: mlir-opt %s --xevm-attach-target='module=xevm_* O=3 chip=pvc' -convert-vector-to-xegpu -split-input-file | FileCheck %s --check-prefix=STORE-ND
 // RUN: mlir-opt %s -convert-vector-to-xegpu -split-input-file | FileCheck %s --check-prefix=STORE-SCATTER
 
 
@@ -15,11 +15,12 @@ gpu.func @store_1D_vector(%vec: vector<8xf32>,
 // STORE-ND-SAME:  %[[VEC:.+]]: vector<8xf32>,
 // STORE-ND-SAME:  %[[SRC:.+]]: memref<8x16x32xf32>,
 // STORE-ND-SAME:  %[[OFFSET:.+]]: index
+// STORE-ND:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFFSET]], %[[OFFSET]], 0]
 // STORE-ND:       %[[DESC:.+]] = xegpu.create_nd_tdesc
-// STORE-ND-SAME:    %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]]
-// STORE-ND-SAME:    memref<8x16x32xf32> -> !xegpu.tensor_desc<8xf32,
+// STORE-ND-SAME:    %[[COLLAPSED]]
+// STORE-ND-SAME:    memref<32xf32, strided<[1], offset: ?>> -> !xegpu.tensor_desc<8xf32,
 // STORE-ND-SAME:    boundary_check = false
-// STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]] : vector<8xf32>
+// STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFFSET]]] : vector<8xf32>
 
 // STORE-SCATTER-LABEL:  @store_1D_vector(
 // STORE-SCATTER-SAME:   %[[VEC:.+]]: vector<8xf32>,
@@ -30,8 +31,9 @@ gpu.func @store_1D_vector(%vec: vector<8xf32>,
 // STORE-SCATTER-COUNT2: arith.addi {{.*}} : index
 // STORE-SCATTER-DAG:    %[[BCAST:.+]] = vector.broadcast {{.*}} : index to vector<8xindex>
 // STORE-SCATTER-DAG:    %[[IDX:.+]] = arith.addi %[[BCAST]], %{{.*}} : vector<8xindex>
-// STORE-SCATTER-DAG:    %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1, 2]{{\]}} : memref<8x16x32xf32> into memref<4096xf32>
-// STORE-SCATTER:       xegpu.store %[[VEC]], %[[COLLAPSE]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8xf32>, memref<4096xf32>, vector<8xindex>, vector<8xi1>
+// STORE-SCATTER-DAG:    %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
+// STORE-SCATTER-DAG:    %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// STORE-SCATTER:       xegpu.store %[[VEC]], %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8xf32>, i64, vector<8xindex>, vector<8xi1>
 }
 
 // -----
@@ -48,11 +50,12 @@ gpu.func @store_2D_vector(%vec: vector<8x16xf32>,
 // STORE-ND-SAME:  %[[VEC:.+]]: vector<8x16xf32>,
 // STORE-ND-SAME:  %[[SRC:.+]]: memref<8x16x32xf32>,
 // STORE-ND-SAME:  %[[OFFSET:.+]]: index
+// STORE-ND:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFFSET]], 0, 0]
 // STORE-ND:       %[[DESC:.+]] = xegpu.create_nd_tdesc
-// STORE-ND-SAME:    %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]]
-// STORE-ND-SAME:    memref<8x16x32xf32> -> !xegpu.tensor_desc<8x16xf32,
+// STORE-ND-SAME:    %[[COLLAPSED]]
+// STORE-ND-SAME:    memref<16x32xf32, strided<[32, 1], offset: ?>> -> !xegpu.tensor_desc<8x16xf32,
 // STORE-ND-SAME:    boundary_check = false
-// STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]] : vector<8x16xf32>
+// STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFFSET]], %[[OFFSET]]] : vector<8x16xf32>
 
 // STORE-SCATTER-LABEL:  @store_2D_vector(
 // STORE-SCATTER-SAME:   %[[VEC:.+]]: vector<8x16xf32>,
@@ -64,15 +67,16 @@ gpu.func @store_2D_vector(%vec: vector<8x16xf32>,
 // STORE-SCATTER-COUNT2: vector.broadcast {{.*}} : vector<8x16xindex>
 // STORE-SCATTER-DAG:    %[[BCAST2:.+]] = vector.broadcast {{.*}} : index to vector<8x16xindex>
 // STORE-SCATTER-DAG:    %[[IDX:.+]] = arith.addi %[[BCAST2]], {{.*}} : vector<8x16xindex>
-// STORE-SCATTER-DAG:    %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1, 2]{{\]}} : memref<8x16x32xf32> into memref<4096xf32>
-// STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8x16xf32>, memref<4096xf32>, vector<8x16xindex>, vector<8x16xi1>
+// STORE-SCATTER-DAG:    %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
+// STORE-SCATTER-DAG:    %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8x16xf32>, i64, vector<8x16xindex>, vector<8x16xi1>
 }
 
 // -----
 gpu.module @xevm_module {
 gpu.func @store_dynamic_source(%vec: vector<8x16xf32>,
-    %source: memref<?x?x?xf32>, %offset: index) {
-  vector.transfer_write %vec, %source[%offset, %offset, %offset]
+    %source: memref<?x?x?xf32>, %i: index, %j: index, %k: index) {
+  vector.transfer_write %vec, %source[%i, %j, %k]
     {in_bounds = [true, true]}
     : vector<8x16xf32>, memref<?x?x?xf32>
   gpu.return
@@ -81,18 +85,11 @@ gpu.func @store_dynamic_source(%vec: vector<8x16xf32>,
 // STORE-ND-LABEL: @store_dynamic_source(
 // STORE-ND-SAME:  %[[VEC:.+]]: vector<8x16xf32>,
 // STORE-ND-SAME:  %[[SRC:.+]]: memref<?x?x?xf32>,
-// STORE-ND-SAME:  %[[OFFSET:.+]]: index
-// STORE-ND-DAG:   %[[C0:.+]] = arith.constant 0 : index
-// STORE-ND-DAG:   %[[C1:.+]] = arith.constant 1 : index
-// STORE-ND-DAG:   %[[C2:.+]] = arith.constant 2 : index
-// STORE-ND-DAG:   %[[DIM_0:.+]] = memref.dim %[[SRC]], %[[C0]]
-// STORE-ND-DAG:   %[[DIM_1:.+]] = memref.dim %[[SRC]], %[[C1]]
-// STORE-ND-DAG:   %[[DIM_2:.+]] = memref.dim %[[SRC]], %[[C2]]
-// STORE-ND:       %[[DIM_0_STRIDE:.+]] = arith.muli %[[DIM_2]], %[[DIM_1]]
-// STORE-ND:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]]
-// STORE-ND-SAME:  , shape : [%[[DIM_0]], %[[DIM_1]], %[[DIM_2]]], strides : [%[[DIM_0_STRIDE]], %[[DIM_2]], 1]
-// STORE-ND-SAME:    memref<?x?x?xf32> -> !xegpu.tensor_desc<8x16xf32
-// STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]] : vector<8x16xf32>
+// STORE-ND-SAME:  %[[OFF0:.+]]: index, %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
+// STORE-ND:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFF0]], 0, 0]
+// STORE-ND:       {{.*}} %[[SIZES:.+]]:2, %[[STRIDES:.+]]:2 = memref.extract_strided_metadata %[[COLLAPSED]]
+// STORE-ND:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[COLLAPSED]]
+// STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFF1]], %[[OFF2]]] : vector<8x16xf32>
 
 // STORE-SCATTER-LABEL: @store_dynamic_source(
 // STORE-SCATTER-SAME:  %[[VEC:.+]]: vector<8x16xf32>,
@@ -104,8 +101,9 @@ gpu.func @store_dynamic_source(%vec: vector<8x16xf32>,
 // STORE-SCATTER-COUNT2: vector.broadcast {{.*}} : vector<8x16xindex>
 // STORE-SCATTER-DAG:   %[[BCAST2:.+]] = vector.broadcast {{.*}} : index to vector<8x16xindex>
 // STORE-SCATTER-DAG:   %[[IDX:.+]] = arith.addi %[[BCAST2]], {{.*}} : vector<8x16xindex>
-// STORE-SCATTER-DAG:   %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1, 2]{{\]}} : memref<?x?x?xf32> into memref<?xf32>
-// STORE-SCATTER:       xegpu.store %[[VEC]], %[[COLLAPSE]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8x16xf32>, memref<?xf32>, vector<8x16xindex>, vector<8x16xi1>
+// STORE-SCATTER-DAG:   %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<?x?x?xf32> -> index
+// STORE-SCATTER-DAG:   %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// STORE-SCATTER:       xegpu.store %[[VEC]], %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8x16xf32>, i64, vector<8x16xindex>, vector<8x16xi1>
 }
 
 // -----
@@ -123,9 +121,9 @@ gpu.func @store_out_of_bounds(%vec: vector<8x16xf32>,
 // STORE-ND-SAME:  %[[SRC:.+]]: memref<7x64xf32>,
 // STORE-ND-SAME:  %[[OFFSET:.+]]: index
 // STORE-ND:       %[[DESC:.+]] = xegpu.create_nd_tdesc
-// STORE-ND-SAME:    %[[SRC]][%[[OFFSET]], %[[OFFSET]]]
+// STORE-ND-SAME:    %[[SRC]]
 // STORE-ND-SAME:    memref<7x64xf32> -> !xegpu.tensor_desc<8x16xf32>
-// STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]] : vector<8x16xf32>
+// STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFFSET]], %[[OFFSET]]] : vector<8x16xf32>
 
 // STORE-SCATTER-LABEL:  @store_out_of_bounds(
 // STORE-SCATTER:   vector.transfer_write
@@ -155,8 +153,9 @@ gpu.func @no_store_transposed(%vec: vector<8x16xf32>,
 // STORE-SCATTER-COUNT2: vector.broadcast {{.*}} : vector<8x16xindex>
 // STORE-SCATTER-DAG:    %[[BCAST2:.+]] = vector.broadcast {{.*}} : index to vector<8x16xindex>
 // STORE-SCATTER-DAG:    %[[IDX:.+]] = arith.addi %[[BCAST2]], {{.*}} : vector<8x16xindex>
-// STORE-SCATTER-DAG:    %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1]{{\]}} : memref<32x64xf32> into memref<2048xf32>
-// STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8x16xf32>, memref<2048xf32>, vector<8x16xindex>, vector<8x16xi1>
+// STORE-SCATTER-DAG:    %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<32x64xf32> -> index
+// STORE-SCATTER-DAG:    %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8x16xf32>, i64, vector<8x16xindex>, vector<8x16xi1>
 }
 
 // -----
@@ -186,8 +185,9 @@ gpu.func @store_high_dim_vector(%vec: vector<8x16x32xf32>,
 // STORE-SCATTER-COUNT2: arith.addi {{.*}} : vector<8x16x32xindex>
 // STORE-SCATTER:        %[[BCASTOFF:.+]] = vector.broadcast {{.*}} : index to vector<8x16x32xindex>
 // STORE-SCATTER:        %[[IDX:.+]] = arith.addi %[[BCASTOFF]], {{.*}} : vector<8x16x32xindex>
-// STORE-SCATTER:        %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1, 2]{{\]}} : memref<16x32x64xf32> into memref<32768xf32>
-// STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE]][%[[IDX]]], %[[CST]] : vector<8x16x32xf32>, memref<32768xf32>, vector<8x16x32xindex>, vector<8x16x32xi1> 
+// STORE-SCATTER:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<16x32x64xf32> -> index
+// STORE-SCATTER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE_I]][%[[IDX]]], %[[CST]] : vector<8x16x32xf32>, i64, vector<8x16x32xindex>, vector<8x16x32xi1>
 }
 
 // -----
@@ -275,4 +275,49 @@ gpu.func @no_store_out_of_bounds_1D_vector(%vec: vector<8xf32>,
 
 // STORE-SCATTER-LABEL:  @no_store_out_of_bounds_1D_vector(
 // STORE-SCATTER:        vector.transfer_write
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @store_to_subview(%vec: vector<8xf16>,
+    %source: memref<4096x4096xf16>, %off1: index, %off2: index) {
+  %subview = memref.subview %source[%off1, %off2] [256, 256] [1, 1]
+      : memref<4096x4096xf16>
+        to memref<256x256xf16, strided<[4096, 1], offset: ?>>
+  vector.transfer_write %vec, %subview[%off2, %off2]
+      {in_bounds = [true]}
+      : vector<8xf16>, memref<256x256xf16, strided<[4096, 1], offset: ?>>
+  gpu.return
+}
+// STORE-ND-LABEL:  @store_to_subview(
+// STORE-ND-SAME:   %[[VEC:.+]]: vector<8xf16>,
+// STORE-ND-SAME:   %[[SRC:.+]]: memref<4096x4096xf16>,
+// STORE-ND-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
+// STORE-ND:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1] : memref<4096x4096xf16> to memref<256x256xf16, strided<[4096, 1], offset: ?>>
+// STORE-ND:        %[[COLLAPSED:.+]] = memref.subview %[[SUBVIEW]][%[[OFF2]], 0]
+// STORE-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc
+// STORE-ND-SAME:     %[[COLLAPSED]]
+// STORE-ND-SAME:     memref<256xf16, strided<[1], offset: ?>> -> !xegpu.tensor_desc<8xf16,
+// STORE-ND-SAME:     boundary_check = false
+// STORE-ND:        xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFF2]]] : vector<8xf16>
+
+// STORE-SCATTER-LABEL:  @store_to_subview(
+// STORE-SCATTER-SAME:   %[[VEC:.+]]: vector<8xf16>,
+// STORE-SCATTER-SAME:   %[[SRC:.+]]: memref<4096x4096xf16>,
+// STORE-SCATTER-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
+// STORE-SCATTER:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
+// STORE-SCATTER:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1]
+// STORE-SCATTER-SAME:     : memref<4096x4096xf16> to memref<256x256xf16, strided<[4096, 1], offset: ?>>
+// STORE-SCATTER:        %[[BB:.+]], %[[OFFSET:.+]], {{.*}}, {{.*}} = memref.extract_strided_metadata %[[SUBVIEW]]
+// STORE-SCATTER-SAME:     : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> memref<f16>, index, index, index, index, index
+// STORE-SCATTER:        %[[STEP:.+]] = vector.step : vector<8xindex>
+// STORE-SCATTER:        arith.muli {{.*}} : index
+// STORE-SCATTER:        arith.addi %[[OFFSET]]{{.*}} : index
+// STORE-SCATTER:        arith.addi {{.*}} : index
+// STORE-SCATTER:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<8xindex>
+// STORE-SCATTER:        %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[STEP]] : vector<8xindex>
+// STORE-SCATTER:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SUBVIEW]]
+// STORE-SCATTER-SAME:     : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> index
+// STORE-SCATTER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8xf16>, i64, vector<8xindex>, vector<8xi1>
 }

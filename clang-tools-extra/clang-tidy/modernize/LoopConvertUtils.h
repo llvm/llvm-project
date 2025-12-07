@@ -1,4 +1,4 @@
-//===--- LoopConvertUtils.h - clang-tidy ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_LOOP_CONVERT_UTILS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_LOOP_CONVERT_UTILS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_LOOPCONVERTUTILS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_LOOPCONVERTUTILS_H
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -354,7 +354,7 @@ private:
   bool VisitDeclStmt(DeclStmt *S);
   bool TraverseStmt(Stmt *S);
 
-  bool TraverseStmtImpl(Stmt *S);
+  bool traverseStmtImpl(Stmt *S);
 
   /// Add an expression to the list of expressions on which the container
   /// expression depends.
@@ -466,4 +466,4 @@ private:
 
 } // namespace clang::tidy::modernize
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_LOOP_CONVERT_UTILS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_LOOPCONVERTUTILS_H

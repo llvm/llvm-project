@@ -8,10 +8,10 @@
 
 #include "clang/Frontend/SerializedDiagnosticPrinter.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/DiagnosticRenderer.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/SerializedDiagnosticReader.h"
 #include "clang/Frontend/SerializedDiagnostics.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"

@@ -15,6 +15,7 @@
 #define LLVM_TARGET_TARGETOPTIONS_H
 
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/IR/SystemLibraries.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -118,9 +119,8 @@ enum CodeObjectVersionKind {
 class TargetOptions {
 public:
   TargetOptions()
-      : UnsafeFPMath(false), NoInfsFPMath(false), NoNaNsFPMath(false),
-        NoTrappingFPMath(true), NoSignedZerosFPMath(false),
-        ApproxFuncFPMath(false), EnableAIXExtendedAltivecABI(false),
+      : NoInfsFPMath(false), NoNaNsFPMath(false), NoTrappingFPMath(true),
+        NoSignedZerosFPMath(false), EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
         EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
@@ -156,13 +156,6 @@ public:
   /// MCAsmInfo::BinutilsVersion.
   std::pair<int, int> BinutilsVersion{0, 0};
 
-  /// UnsafeFPMath - This flag is enabled when the
-  /// -enable-unsafe-fp-math flag is specified on the command line.  When
-  /// this flag is off (the default), the code generator is not allowed to
-  /// produce results that are "less precise" than IEEE allows.  This includes
-  /// use of X86 instructions like FSIN and FCOS instead of libcalls.
-  unsigned UnsafeFPMath : 1;
-
   /// NoInfsFPMath - This flag is enabled when the
   /// -enable-no-infs-fp-math flag is specified on the command line. When
   /// this flag is off (the default), the code generator is not allowed to
@@ -185,12 +178,6 @@ public:
   /// specifies that optimizations are allowed to treat the sign of a zero
   /// argument or result as insignificant.
   unsigned NoSignedZerosFPMath : 1;
-
-  /// ApproxFuncFPMath - This flag is enabled when the
-  /// -enable-approx-func-fp-math is specified on the command line. This
-  /// specifies that optimizations are allowed to substitute math functions
-  /// with approximate calculations
-  unsigned ApproxFuncFPMath : 1;
 
   /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
   /// specified. The code generator is then able to use both volatile and
@@ -422,6 +409,9 @@ public:
 
   /// Which debugger to tune for.
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
+
+  /// Vector math library to use.
+  VectorLibrary VecLib = VectorLibrary::NoLibrary;
 
 private:
   /// Flushing mode to assume in default FP environment.

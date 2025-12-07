@@ -80,6 +80,8 @@ struct Entry {
     FrameRegisterFlags,
     FrameRegisterByName,
     FrameIsArtificial,
+    FrameKind,
+    FrameBorrowedInfo,
     ScriptFrame,
     FunctionID,
     FunctionDidChange,

@@ -158,18 +158,6 @@ v_tanh_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf
 // GFX1250: v_tanh_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0xca,0xd5,0xfa,0x00,0x00,0x00,0x01,0x50,0x01,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
-v_tanh_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1
-// GFX1250: v_tanh_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x00,0xca,0xd5,0xfa,0x00,0x00,0x08,0x01,0x5f,0x01,0x01]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_tanh_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
-// GFX1250: v_tanh_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x00,0xca,0xd5,0xfa,0x00,0x00,0x10,0x01,0x60,0x09,0x13]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_tanh_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
-// GFX1250: v_tanh_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x81,0xca,0xd5,0xfa,0x00,0x00,0x38,0xff,0x6f,0x05,0x30]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
 v_prng_b32_e64_dpp v5, v1 quad_perm:[3,2,1,0]
 // GFX1250: v_prng_b32_e64_dpp v5, v1 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0xcb,0xd5,0xfa,0x00,0x00,0x00,0x01,0x1b,0x00,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
@@ -258,18 +246,6 @@ v_rcp_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf
 // GFX1250: v_rcp_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0xf9,0xd5,0xfa,0x00,0x00,0x00,0x01,0x50,0x01,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
-v_rcp_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1
-// GFX1250: v_rcp_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x00,0xf9,0xd5,0xfa,0x00,0x00,0x08,0x01,0x5f,0x01,0x01]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_rcp_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
-// GFX1250: v_rcp_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x00,0xf9,0xd5,0xfa,0x00,0x00,0x10,0x01,0x60,0x09,0x13]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_rcp_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
-// GFX1250: v_rcp_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x81,0xf9,0xd5,0xfa,0x00,0x00,0x38,0xff,0x6f,0x05,0x30]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
 v_sqrt_bf16_e64_dpp v5, v1 quad_perm:[3,2,1,0]
 // GFX1250: v_sqrt_bf16_e64_dpp v5, v1 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0xfa,0xd5,0xfa,0x00,0x00,0x00,0x01,0x1b,0x00,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
@@ -312,18 +288,6 @@ v_sqrt_bf16_e64_dpp v5, v1 row_ror:15
 
 v_sqrt_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf
 // GFX1250: v_sqrt_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0xfa,0xd5,0xfa,0x00,0x00,0x00,0x01,0x50,0x01,0xff]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_sqrt_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1
-// GFX1250: v_sqrt_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x00,0xfa,0xd5,0xfa,0x00,0x00,0x08,0x01,0x5f,0x01,0x01]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_sqrt_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
-// GFX1250: v_sqrt_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x00,0xfa,0xd5,0xfa,0x00,0x00,0x10,0x01,0x60,0x09,0x13]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_sqrt_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
-// GFX1250: v_sqrt_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x81,0xfa,0xd5,0xfa,0x00,0x00,0x38,0xff,0x6f,0x05,0x30]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
 v_rsq_bf16_e64_dpp v5, v1 quad_perm:[3,2,1,0]
@@ -370,18 +334,6 @@ v_rsq_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf
 // GFX1250: v_rsq_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0xfb,0xd5,0xfa,0x00,0x00,0x00,0x01,0x50,0x01,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
-v_rsq_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1
-// GFX1250: v_rsq_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x00,0xfb,0xd5,0xfa,0x00,0x00,0x08,0x01,0x5f,0x01,0x01]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_rsq_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
-// GFX1250: v_rsq_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x00,0xfb,0xd5,0xfa,0x00,0x00,0x10,0x01,0x60,0x09,0x13]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_rsq_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
-// GFX1250: v_rsq_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x81,0xfb,0xd5,0xfa,0x00,0x00,0x38,0xff,0x6f,0x05,0x30]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
 v_log_bf16_e64_dpp v5, v1 quad_perm:[3,2,1,0]
 // GFX1250: v_log_bf16_e64_dpp v5, v1 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0xfc,0xd5,0xfa,0x00,0x00,0x00,0x01,0x1b,0x00,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
@@ -424,18 +376,6 @@ v_log_bf16_e64_dpp v5, v1 row_ror:15
 
 v_log_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf
 // GFX1250: v_log_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0xfc,0xd5,0xfa,0x00,0x00,0x00,0x01,0x50,0x01,0xff]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_log_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1
-// GFX1250: v_log_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x00,0xfc,0xd5,0xfa,0x00,0x00,0x08,0x01,0x5f,0x01,0x01]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_log_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
-// GFX1250: v_log_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x00,0xfc,0xd5,0xfa,0x00,0x00,0x10,0x01,0x60,0x09,0x13]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_log_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
-// GFX1250: v_log_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x81,0xfc,0xd5,0xfa,0x00,0x00,0x38,0xff,0x6f,0x05,0x30]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
 v_exp_bf16_e64_dpp v5, v1 quad_perm:[3,2,1,0]
@@ -482,18 +422,6 @@ v_exp_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf
 // GFX1250: v_exp_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0xfd,0xd5,0xfa,0x00,0x00,0x00,0x01,0x50,0x01,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
-v_exp_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1
-// GFX1250: v_exp_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x00,0xfd,0xd5,0xfa,0x00,0x00,0x08,0x01,0x5f,0x01,0x01]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_exp_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
-// GFX1250: v_exp_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x00,0xfd,0xd5,0xfa,0x00,0x00,0x10,0x01,0x60,0x09,0x13]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_exp_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
-// GFX1250: v_exp_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x81,0xfd,0xd5,0xfa,0x00,0x00,0x38,0xff,0x6f,0x05,0x30]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
 v_sin_bf16_e64_dpp v5, v1 quad_perm:[3,2,1,0]
 // GFX1250: v_sin_bf16_e64_dpp v5, v1 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0xfe,0xd5,0xfa,0x00,0x00,0x00,0x01,0x1b,0x00,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
@@ -538,18 +466,6 @@ v_sin_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf
 // GFX1250: v_sin_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0xfe,0xd5,0xfa,0x00,0x00,0x00,0x01,0x50,0x01,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
-v_sin_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1
-// GFX1250: v_sin_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x00,0xfe,0xd5,0xfa,0x00,0x00,0x08,0x01,0x5f,0x01,0x01]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_sin_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
-// GFX1250: v_sin_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x00,0xfe,0xd5,0xfa,0x00,0x00,0x10,0x01,0x60,0x09,0x13]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_sin_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
-// GFX1250: v_sin_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x81,0xfe,0xd5,0xfa,0x00,0x00,0x38,0xff,0x6f,0x05,0x30]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
 v_cos_bf16_e64_dpp v5, v1 quad_perm:[3,2,1,0]
 // GFX1250: v_cos_bf16_e64_dpp v5, v1 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0xff,0xd5,0xfa,0x00,0x00,0x00,0x01,0x1b,0x00,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
@@ -592,18 +508,6 @@ v_cos_bf16_e64_dpp v5, v1 row_ror:15
 
 v_cos_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf
 // GFX1250: v_cos_bf16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0xff,0xd5,0xfa,0x00,0x00,0x00,0x01,0x50,0x01,0xff]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_cos_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1
-// GFX1250: v_cos_bf16_e64_dpp v5, v1 mul:2 row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x00,0xff,0xd5,0xfa,0x00,0x00,0x08,0x01,0x5f,0x01,0x01]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_cos_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
-// GFX1250: v_cos_bf16_e64_dpp v5, v1 mul:4 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x00,0xff,0xd5,0xfa,0x00,0x00,0x10,0x01,0x60,0x09,0x13]
-// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
-v_cos_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
-// GFX1250: v_cos_bf16_e64_dpp v255, -|v255| clamp div:2 row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x81,0xff,0xd5,0xfa,0x00,0x00,0x38,0xff,0x6f,0x05,0x30]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
 v_cvt_f32_bf16_e64_dpp v5, v1 quad_perm:[3,2,1,0]

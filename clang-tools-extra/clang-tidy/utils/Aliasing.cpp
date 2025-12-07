@@ -1,4 +1,4 @@
-//===------------- Aliasing.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,15 +65,9 @@ static bool hasPtrOrReferenceInStmt(const Stmt *S, const ValueDecl *Var) {
   if (isPtrOrReferenceForVar(S, Var))
     return true;
 
-  for (const Stmt *Child : S->children()) {
-    if (!Child)
-      continue;
-
-    if (hasPtrOrReferenceInStmt(Child, Var))
-      return true;
-  }
-
-  return false;
+  return llvm::any_of(S->children(), [&](const Stmt *Child) {
+    return Child && hasPtrOrReferenceInStmt(Child, Var);
+  });
 }
 
 static bool refersToEnclosingLambdaCaptureByRef(const Decl *Func,

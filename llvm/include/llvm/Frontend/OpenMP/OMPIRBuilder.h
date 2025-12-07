@@ -17,6 +17,7 @@
 #include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
@@ -38,6 +39,10 @@ class OpenMPIRBuilder;
 class Loop;
 class LoopAnalysis;
 class LoopInfo;
+
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 
 /// Move the instruction after an InsertPoint to the beginning of another
 /// BasicBlock.
@@ -121,15 +126,20 @@ public:
 
   /// First separator used between the initial two parts of a name.
   std::optional<StringRef> FirstSeparator;
-  /// Separator used between all of the rest consecutive parts of s name
+  /// Separator used between all of the rest consecutive parts of s name.
   std::optional<StringRef> Separator;
 
-  // Grid Value for the GPU target
+  // Grid Value for the GPU target.
   std::optional<omp::GV> GridValue;
 
   /// When compilation is being done for the OpenMP host (i.e. `IsTargetDevice =
   /// false`), this contains the list of offloading triples associated, if any.
   SmallVector<Triple> TargetTriples;
+
+  // Default address space for the target.
+  unsigned DefaultTargetAS = 0;
+
+  CallingConv::ID RuntimeCC = llvm::CallingConv::C;
 
   LLVM_ABI OpenMPIRBuilderConfig();
   LLVM_ABI OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
@@ -160,6 +170,10 @@ public:
     assert(GridValue.has_value() && "GridValue is not set");
     return *GridValue;
   }
+
+  unsigned getDefaultTargetAS() const { return DefaultTargetAS; }
+
+  CallingConv::ID getRuntimeCC() const { return RuntimeCC; }
 
   bool hasRequiresFlags() const { return RequiresFlags; }
   LLVM_ABI bool hasRequiresReverseOffload() const;
@@ -198,6 +212,8 @@ public:
   void setFirstSeparator(StringRef FS) { FirstSeparator = FS; }
   void setSeparator(StringRef S) { Separator = S; }
   void setGridValue(omp::GV G) { GridValue = G; }
+  void setDefaultTargetAS(unsigned AS) { DefaultTargetAS = AS; }
+  void setRuntimeCC(CallingConv::ID CC) { RuntimeCC = CC; }
 
   LLVM_ABI void setHasRequiresReverseOffload(bool Value);
   LLVM_ABI void setHasRequiresUnifiedAddress(bool Value);
@@ -560,16 +576,33 @@ public:
   using FinalizeCallbackTy = std::function<Error(InsertPointTy CodeGenIP)>;
 
   struct FinalizationInfo {
+    FinalizationInfo(FinalizeCallbackTy FiniCB, omp::Directive DK,
+                     bool IsCancellable)
+        : DK(DK), IsCancellable(IsCancellable), FiniCB(std::move(FiniCB)) {}
+    /// The directive kind of the innermost directive that has an associated
+    /// region which might require finalization when it is left.
+    const omp::Directive DK;
+
+    /// Flag to indicate if the directive is cancellable.
+    const bool IsCancellable;
+
+    /// The basic block to which control should be transferred to
+    /// implement the FiniCB. Memoized to avoid generating finalization
+    /// multiple times.
+    Expected<BasicBlock *> getFiniBB(IRBuilderBase &Builder);
+
+    /// For cases where there is an unavoidable existing finalization block
+    /// (e.g. loop finialization after omp sections). The existing finalization
+    /// block must not contain any non-finalization code.
+    Error mergeFiniBB(IRBuilderBase &Builder, BasicBlock *ExistingFiniBB);
+
+  private:
+    /// Access via getFiniBB.
+    BasicBlock *FiniBB = nullptr;
+
     /// The finalization callback provided by the last in-flight invocation of
     /// createXXXX for the directive of kind DK.
     FinalizeCallbackTy FiniCB;
-
-    /// The directive kind of the innermost directive that has an associated
-    /// region which might require finalization when it is left.
-    omp::Directive DK;
-
-    /// Flag to indicate if the directive is cancellable.
-    bool IsCancellable;
   };
 
   /// Push a finalization callback on the finalization stack.
@@ -1075,11 +1108,13 @@ private:
   ///                 preheader of the loop.
   /// \param LoopType Information about type of loop worksharing.
   ///                 It corresponds to type of loop workshare OpenMP pragma.
+  /// \param NoLoop   If true, no-loop code is generated.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
                                          InsertPointTy AllocaIP,
-                                         omp::WorksharingLoopType LoopType);
+                                         omp::WorksharingLoopType LoopType,
+                                         bool NoLoop);
 
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
@@ -1098,11 +1133,17 @@ private:
   /// \param NeedsBarrier Indicates whether a barrier must be inserted after
   ///                     the loop.
   /// \param LoopType Type of workshare loop.
+  /// \param HasDistSchedule Defines if the clause being lowered is
+  /// dist_schedule as this is handled slightly differently
+  /// \param DistScheduleSchedType Defines the Schedule Type for the Distribute
+  /// loop. Defaults to None if no Distribute loop is present.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointOrErrorTy applyStaticWorkshareLoop(
       DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-      omp::WorksharingLoopType LoopType, bool NeedsBarrier);
+      omp::WorksharingLoopType LoopType, bool NeedsBarrier,
+      bool HasDistSchedule = false,
+      omp::OMPScheduleType DistScheduleSchedType = omp::OMPScheduleType::None);
 
   /// Modifies the canonical loop a statically-scheduled workshare loop with a
   /// user-specified chunk size.
@@ -1115,13 +1156,22 @@ private:
   /// \param NeedsBarrier Indicates whether a barrier must be inserted after the
   ///                     loop.
   /// \param ChunkSize    The user-specified chunk size.
+  /// \param SchedType    Optional type of scheduling to be passed to the init
+  /// function.
+  /// \param DistScheduleChunkSize    The size of dist_shcedule chunk considered
+  /// as a unit when
+  ///                 scheduling. If \p nullptr, defaults to 1.
+  /// \param DistScheduleSchedType Defines the Schedule Type for the Distribute
+  /// loop. Defaults to None if no Distribute loop is present.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointOrErrorTy applyStaticChunkedWorkshareLoop(DebugLoc DL,
-                                                       CanonicalLoopInfo *CLI,
-                                                       InsertPointTy AllocaIP,
-                                                       bool NeedsBarrier,
-                                                       Value *ChunkSize);
+  InsertPointOrErrorTy applyStaticChunkedWorkshareLoop(
+      DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+      bool NeedsBarrier, Value *ChunkSize,
+      omp::OMPScheduleType SchedType =
+          omp::OMPScheduleType::UnorderedStaticChunked,
+      Value *DistScheduleChunkSize = nullptr,
+      omp::OMPScheduleType DistScheduleSchedType = omp::OMPScheduleType::None);
 
   /// Modifies the canonical loop to be a dynamically-scheduled workshare loop.
   ///
@@ -1199,6 +1249,11 @@ public:
   ///                         present.
   /// \param LoopType Information about type of loop worksharing.
   ///                 It corresponds to type of loop workshare OpenMP pragma.
+  /// \param NoLoop If true, no-loop code is generated.
+  /// \param HasDistSchedule Defines if the clause being lowered is
+  /// dist_schedule as this is handled slightly differently
+  ///
+  /// \param DistScheduleChunkSize The chunk size for dist_schedule loop
   ///
   /// \returns Point where to insert code after the workshare construct.
   LLVM_ABI InsertPointOrErrorTy applyWorkshareLoop(
@@ -1209,7 +1264,9 @@ public:
       bool HasMonotonicModifier = false, bool HasNonmonotonicModifier = false,
       bool HasOrderedClause = false,
       omp::WorksharingLoopType LoopType =
-          omp::WorksharingLoopType::ForStaticLoop);
+          omp::WorksharingLoopType::ForStaticLoop,
+      bool NoLoop = false, bool HasDistSchedule = false,
+      Value *DistScheduleChunkSize = nullptr);
 
   /// Tile a loop nest.
   ///
@@ -1392,7 +1449,7 @@ public:
   /// any.
   LLVM_ABI static TargetRegionEntryInfo
   getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
-                           StringRef ParentName = "");
+                           vfs::FileSystem &VFS, StringRef ParentName = "");
 
   /// Enum class for the RedctionGen CallBack type to be used.
   enum class ReductionGenCBKind { Clang, MLIR };
@@ -1426,6 +1483,9 @@ public:
   using ReductionGenAtomicCBTy = std::function<InsertPointOrErrorTy(
       InsertPointTy, Type *, Value *, Value *)>;
 
+  using ReductionGenDataPtrPtrCBTy = std::function<InsertPointOrErrorTy(
+      InsertPointTy, Value *ByRefVal, Value *&Res)>;
+
   /// Enum class for reduction evaluation types scalar, complex and aggregate.
   enum class EvalKind { Scalar, Complex, Aggregate };
 
@@ -1434,17 +1494,25 @@ public:
     ReductionInfo(Type *ElementType, Value *Variable, Value *PrivateVariable,
                   EvalKind EvaluationKind, ReductionGenCBTy ReductionGen,
                   ReductionGenClangCBTy ReductionGenClang,
-                  ReductionGenAtomicCBTy AtomicReductionGen)
+                  ReductionGenAtomicCBTy AtomicReductionGen,
+                  ReductionGenDataPtrPtrCBTy DataPtrPtrGen,
+                  Type *ByRefAllocatedType = nullptr,
+                  Type *ByRefElementType = nullptr)
         : ElementType(ElementType), Variable(Variable),
           PrivateVariable(PrivateVariable), EvaluationKind(EvaluationKind),
           ReductionGen(ReductionGen), ReductionGenClang(ReductionGenClang),
-          AtomicReductionGen(AtomicReductionGen) {}
+          AtomicReductionGen(AtomicReductionGen), DataPtrPtrGen(DataPtrPtrGen),
+          ByRefAllocatedType(ByRefAllocatedType),
+          ByRefElementType(ByRefElementType) {}
+
     ReductionInfo(Value *PrivateVariable)
         : ElementType(nullptr), Variable(nullptr),
           PrivateVariable(PrivateVariable), EvaluationKind(EvalKind::Scalar),
-          ReductionGen(), ReductionGenClang(), AtomicReductionGen() {}
+          ReductionGen(), ReductionGenClang(), AtomicReductionGen(),
+          DataPtrPtrGen() {}
 
-    /// Reduction element type, must match pointee type of variable.
+    /// Reduction element type, must match pointee type of variable. For by-ref
+    /// reductions, this would be just an opaque `ptr`.
     Type *ElementType;
 
     /// Reduction variable of pointer type.
@@ -1471,6 +1539,21 @@ public:
     /// reduction. If null, the implementation will use the non-atomic version
     /// along with the appropriate synchronization mechanisms.
     ReductionGenAtomicCBTy AtomicReductionGen;
+
+    ReductionGenDataPtrPtrCBTy DataPtrPtrGen;
+
+    /// For by-ref reductions, we need to keep track of 2 extra types that are
+    /// potentially different:
+    /// * The allocated type is the type of the storage allocated by the
+    /// reduction op's `alloc` region. For example, for allocatables and arrays,
+    /// this type would be the descriptor/box struct.
+    Type *ByRefAllocatedType;
+
+    /// * The by-ref element type is the type of the actual storage needed for
+    /// the data of the allocatable or array. For example, an float allocatable
+    /// of would need some float storage to store intermediate reduction
+    /// results.
+    Type *ByRefElementType;
   };
 
   enum class CopyAction : unsigned {
@@ -1515,14 +1598,15 @@ private:
 
   /// Function to shuffle over the value from the remote lane.
   void shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr, Value *DstAddr,
-                       Type *ElementType, Value *Offset,
-                       Type *ReductionArrayTy);
+                       Type *ElementType, Value *Offset, Type *ReductionArrayTy,
+                       bool IsByRefElem);
 
   /// Emit instructions to copy a Reduce list, which contains partially
   /// aggregated values, in the specified direction.
-  void emitReductionListCopy(
+  Error emitReductionListCopy(
       InsertPointTy AllocaIP, CopyAction Action, Type *ReductionArrayTy,
       ArrayRef<ReductionInfo> ReductionInfos, Value *SrcBase, Value *DestBase,
+      ArrayRef<bool> IsByRef,
       CopyOptionsTy CopyOptions = {nullptr, nullptr, nullptr});
 
   /// Emit a helper that reduces data across two OpenMP threads (lanes)
@@ -1596,11 +1680,13 @@ private:
   /// \param ReduceFn The reduction function.
   /// \param FuncAttrs Optional param to specify any function attributes that
   ///                  need to be copied to the new function.
+  /// \param IsByRef For each reduction clause, whether the reduction is by-ref
+  ///                  or not.
   ///
   /// \return The ShuffleAndReduce function.
-  Function *emitShuffleAndReduceFunction(
+  Expected<Function *> emitShuffleAndReduceFunction(
       ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
-      Function *ReduceFn, AttributeList FuncAttrs);
+      Function *ReduceFn, AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 
   /// Helper function for CreateCanonicalScanLoops to create InputLoop
   /// in the firstGen and Scan Loop in the SecondGen
@@ -1660,12 +1746,14 @@ private:
   /// \param ReductionInfos Array type containing the ReductionOps.
   /// \param FuncAttrs Optional param to specify any function attributes that
   ///                  need to be copied to the new function.
+  /// \param IsByRef For each reduction clause, whether the reduction is by-ref
+  ///                  or not.
   ///
   /// \return The InterWarpCopy function.
   Expected<Function *>
   emitInterWarpCopyFunction(const LocationDescription &Loc,
                             ArrayRef<ReductionInfo> ReductionInfos,
-                            AttributeList FuncAttrs);
+                            AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that copies all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1680,9 +1768,10 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The ListToGlobalCopy function.
-  Function *emitListToGlobalCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
-                                         Type *ReductionsBufferTy,
-                                         AttributeList FuncAttrs);
+  Expected<Function *>
+  emitListToGlobalCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
+                               Type *ReductionsBufferTy,
+                               AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that copies all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1697,9 +1786,10 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The GlobalToList function.
-  Function *emitGlobalToListCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
-                                         Type *ReductionsBufferTy,
-                                         AttributeList FuncAttrs);
+  Expected<Function *>
+  emitGlobalToListCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
+                               Type *ReductionsBufferTy,
+                               AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that reduces all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1718,10 +1808,11 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The ListToGlobalReduce function.
-  Function *
+  Expected<Function *>
   emitListToGlobalReduceFunction(ArrayRef<ReductionInfo> ReductionInfos,
                                  Function *ReduceFn, Type *ReductionsBufferTy,
-                                 AttributeList FuncAttrs);
+                                 AttributeList FuncAttrs,
+                                 ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that reduces all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1740,10 +1831,11 @@ private:
   ///                  need to be copied to the new function.
   ///
   /// \return The GlobalToListReduce function.
-  Function *
+  Expected<Function *>
   emitGlobalToListReduceFunction(ArrayRef<ReductionInfo> ReductionInfos,
                                  Function *ReduceFn, Type *ReductionsBufferTy,
-                                 AttributeList FuncAttrs);
+                                 AttributeList FuncAttrs,
+                                 ArrayRef<bool> IsByRef);
 
   /// Get the function name of a reduction function.
   std::string getReductionFuncName(StringRef Name) const;
@@ -1759,6 +1851,7 @@ private:
   /// \return The reduction function.
   Expected<Function *> createReductionFunction(
       StringRef ReducerName, ArrayRef<ReductionInfo> ReductionInfos,
+      ArrayRef<bool> IsByRef,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       AttributeList FuncAttrs = {});
 
@@ -2011,11 +2104,13 @@ public:
   ///                           reduction variables.
   /// \param AllocaIP           An insertion point suitable for allocas usable
   ///                           in reductions.
-  /// \param CodeGenIP           An insertion point suitable for code
-  /// generation. \param ReductionInfos     A list of info on each reduction
-  /// variable. \param IsNoWait           Optional flag set if the reduction is
-  /// marked as
-  ///                           nowait.
+  /// \param CodeGenIP          An insertion point suitable for code
+  ///                           generation.
+  /// \param ReductionInfos     A list of info on each reduction
+  ///                           variable.
+  /// \param IsNoWait           Optional flag set if the reduction is
+  ///                           marked as nowait.
+  /// \param IsByRef For each reduction clause, whether the reduction is by-ref.
   /// \param IsTeamsReduction   Optional flag set if it is a teams
   ///                           reduction.
   /// \param GridValue          Optional GPU grid value.
@@ -2025,7 +2120,8 @@ public:
   LLVM_ABI InsertPointOrErrorTy createReductionsGPU(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
-      bool IsNoWait = false, bool IsTeamsReduction = false,
+      ArrayRef<bool> IsByRef, bool IsNoWait = false,
+      bool IsTeamsReduction = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
       Value *SrcLocInfo = nullptr);
@@ -2118,6 +2214,10 @@ public:
 
   LLVM_ABI Function *getOrCreateRuntimeFunctionPtr(omp::RuntimeFunction FnID);
 
+  CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
+                                      ArrayRef<Value *> Args,
+                                      StringRef Name = "");
+
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
   LLVM_ABI Constant *getOrCreateSrcLocStr(StringRef LocStr,
                                           uint32_t &SrcLocStrSize);
@@ -2167,8 +2267,7 @@ public:
   ///
   /// \return an error, if any were triggered during execution.
   LLVM_ABI Error emitCancelationCheckImpl(Value *CancelFlag,
-                                          omp::Directive CanceledDirective,
-                                          FinalizeCallbackTy ExitCB = {});
+                                          omp::Directive CanceledDirective);
 
   /// Generate a target region entry call.
   ///
@@ -2369,7 +2468,7 @@ public:
     /// runtime library for debugging
     Value *MapNamesArray = nullptr;
 
-    explicit TargetDataRTArgs() {}
+    explicit TargetDataRTArgs() = default;
     explicit TargetDataRTArgs(Value *BasePointersArray, Value *PointersArray,
                               Value *SizesArray, Value *MapTypesArray,
                               Value *MapTypesArrayEnd, Value *MappersArray,
@@ -2432,20 +2531,24 @@ public:
     /// The number of threads.
     ArrayRef<Value *> NumThreads;
     /// The size of the dynamic shared memory.
-    Value *DynCGGroupMem = nullptr;
+    Value *DynCGroupMem = nullptr;
     /// True if the kernel has 'no wait' clause.
     bool HasNoWait = false;
+    /// The fallback mechanism for the shared memory.
+    omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
+        omp::OMPDynGroupprivateFallbackType::Abort;
 
     // Constructors for TargetKernelArgs.
-    TargetKernelArgs() {}
+    TargetKernelArgs() = default;
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
                      Value *NumIterations, ArrayRef<Value *> NumTeams,
-                     ArrayRef<Value *> NumThreads, Value *DynCGGroupMem,
-                     bool HasNoWait)
+                     ArrayRef<Value *> NumThreads, Value *DynCGroupMem,
+                     bool HasNoWait,
+                     omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback)
         : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
           NumIterations(NumIterations), NumTeams(NumTeams),
-          NumThreads(NumThreads), DynCGGroupMem(DynCGGroupMem),
-          HasNoWait(HasNoWait) {}
+          NumThreads(NumThreads), DynCGroupMem(DynCGroupMem),
+          HasNoWait(HasNoWait), DynCGroupMemFallback(DynCGroupMemFallback) {}
   };
 
   /// Create the kernel args vector used by emitTargetKernel. This function
@@ -2480,7 +2583,7 @@ public:
     /// Whether the `target ... data` directive has a `nowait` clause.
     bool HasNoWait = false;
 
-    explicit TargetDataInfo() {}
+    explicit TargetDataInfo() = default;
     explicit TargetDataInfo(bool RequiresDevicePointerInfo,
                             bool SeparateBeginEndCalls)
         : RequiresDevicePointerInfo(RequiresDevicePointerInfo),
@@ -3230,6 +3333,10 @@ public:
   ///        dependency information as passed in the depend clause
   /// \param HasNowait Whether the target construct has a `nowait` clause or
   ///        not.
+  /// \param DynCGroupMem The size of the dynamic groupprivate memory for each
+  /// cgroup.
+  /// \param DynCGroupMem The fallback mechanism to execute if the requested
+  /// cgroup memory cannot be provided.
   LLVM_ABI InsertPointOrErrorTy createTarget(
       const LocationDescription &Loc, bool IsOffloadEntry,
       OpenMPIRBuilder::InsertPointTy AllocaIP,
@@ -3241,7 +3348,10 @@ public:
       TargetBodyGenCallbackTy BodyGenCB,
       TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
       CustomMapperCallbackTy CustomMapperCB,
-      const SmallVector<DependData> &Dependencies, bool HasNowait = false);
+      const SmallVector<DependData> &Dependencies, bool HasNowait = false,
+      Value *DynCGroupMem = nullptr,
+      omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
+          omp::OMPDynGroupprivateFallbackType::Abort);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call
@@ -3312,7 +3422,8 @@ private:
   /// Common interface to finalize the region
   ///
   /// \param OMPD Directive to generate exiting code for
-  /// \param FinIP Insertion point for emitting Finalization code and exit call
+  /// \param FinIP Insertion point for emitting Finalization code and exit call.
+  ///              This block must not contain any non-finalization code.
   /// \param ExitCall Call to the ending OMP Runtime Function
   /// \param HasFinalize indicate if the directive will require finalization
   ///         and has a finalization callback in the stack that
@@ -3629,7 +3740,8 @@ public:
   /// \param HostFilePath The path to the host IR file,
   /// used to load in offload metadata for the device, allowing host and device
   /// to maintain the same metadata mapping.
-  LLVM_ABI void loadOffloadInfoMetadata(StringRef HostFilePath);
+  LLVM_ABI void loadOffloadInfoMetadata(vfs::FileSystem &VFS,
+                                        StringRef HostFilePath);
 
   /// Gets (if variable with the given name already exist) or creates
   /// internal global variable with the specified Name. The created variable has
@@ -3639,7 +3751,7 @@ public:
   /// \param Name Name of the variable.
   LLVM_ABI GlobalVariable *
   getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
-                              unsigned AddressSpace = 0);
+                              std::optional<unsigned> AddressSpace = {});
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.
@@ -3986,15 +4098,17 @@ public:
 
   /// Keeps track of value of iteration variable for input/scan loop to be
   /// used for Scan directive lowering
-  llvm::Value *IV;
+  llvm::Value *IV = nullptr;
 
   /// Stores the span of canonical loop being lowered to be used for temporary
   /// buffer allocation or Finalization.
-  llvm::Value *Span;
+  llvm::Value *Span = nullptr;
 
   ScanInfo() {
     ScanBuffPtrs = new llvm::SmallDenseMap<llvm::Value *, llvm::Value *>();
   }
+  ScanInfo(ScanInfo &) = delete;
+  ScanInfo &operator=(const ScanInfo &) = delete;
 
   ~ScanInfo() { delete (ScanBuffPtrs); }
 };

@@ -16,6 +16,7 @@
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 
@@ -58,6 +59,63 @@ static bool ShrinkDemandedConstant(Instruction *I, unsigned OpNo,
   I->setOperand(OpNo, ConstantInt::get(Op->getType(), *C & Demanded));
 
   return true;
+}
+
+/// Let N = 2 * M.
+/// Given an N-bit integer representing a pack of two M-bit integers,
+/// we can select one of the packed integers by right-shifting by either
+/// zero or M (which is the most straightforward to check if M is a power
+/// of 2), and then isolating the lower M bits. In this case, we can
+/// represent the shift as a select on whether the shr amount is nonzero.
+static Value *simplifyShiftSelectingPackedElement(Instruction *I,
+                                                  const APInt &DemandedMask,
+                                                  InstCombinerImpl &IC,
+                                                  unsigned Depth) {
+  assert(I->getOpcode() == Instruction::LShr &&
+         "Only lshr instruction supported");
+
+  uint64_t ShlAmt;
+  Value *Upper, *Lower;
+  if (!match(I->getOperand(0),
+             m_OneUse(m_c_DisjointOr(
+                 m_OneUse(m_Shl(m_Value(Upper), m_ConstantInt(ShlAmt))),
+                 m_Value(Lower)))))
+    return nullptr;
+
+  if (!isPowerOf2_64(ShlAmt))
+    return nullptr;
+
+  const uint64_t DemandedBitWidth = DemandedMask.getActiveBits();
+  if (DemandedBitWidth > ShlAmt)
+    return nullptr;
+
+  // Check that upper demanded bits are not lost from lshift.
+  if (Upper->getType()->getScalarSizeInBits() < ShlAmt + DemandedBitWidth)
+    return nullptr;
+
+  KnownBits KnownLowerBits = IC.computeKnownBits(Lower, I, Depth);
+  if (!KnownLowerBits.getMaxValue().isIntN(ShlAmt))
+    return nullptr;
+
+  Value *ShrAmt = I->getOperand(1);
+  KnownBits KnownShrBits = IC.computeKnownBits(ShrAmt, I, Depth);
+
+  // Verify that ShrAmt is either exactly ShlAmt (which is a power of 2) or
+  // zero.
+  if (~KnownShrBits.Zero != ShlAmt)
+    return nullptr;
+
+  IRBuilderBase::InsertPointGuard Guard(IC.Builder);
+  IC.Builder.SetInsertPoint(I);
+  Value *ShrAmtZ =
+      IC.Builder.CreateICmpEQ(ShrAmt, Constant::getNullValue(ShrAmt->getType()),
+                              ShrAmt->getName() + ".z");
+  // There is no existing !prof metadata we can derive the !prof metadata for
+  // this select.
+  Value *Select = IC.Builder.CreateSelectWithUnknownProfile(ShrAmtZ, Lower,
+                                                            Upper, DEBUG_TYPE);
+  Select->takeName(I);
+  return Select;
 }
 
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,
@@ -795,13 +853,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         I->dropPoisonGeneratingFlags();
         return I;
       }
-      Known.Zero.lshrInPlace(ShiftAmt);
-      Known.One.lshrInPlace(ShiftAmt);
+      Known >>= ShiftAmt;
       if (ShiftAmt)
         Known.Zero.setHighBits(ShiftAmt);  // high bits known zero.
-    } else {
-      llvm::computeKnownBits(I, Known, Q, Depth);
+      break;
     }
+    if (Value *V =
+            simplifyShiftSelectingPackedElement(I, DemandedMask, *this, Depth))
+      return V;
+
+    llvm::computeKnownBits(I, Known, Q, Depth);
     break;
   }
   case Instruction::AShr: {
@@ -1066,10 +1127,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
           }
         }
 
-        Known.Zero = LHSKnown.Zero.shl(ShiftAmt) |
-                     RHSKnown.Zero.lshr(BitWidth - ShiftAmt);
-        Known.One = LHSKnown.One.shl(ShiftAmt) |
-                    RHSKnown.One.lshr(BitWidth - ShiftAmt);
+        LHSKnown <<= ShiftAmt;
+        RHSKnown >>= BitWidth - ShiftAmt;
+        Known = LHSKnown.unionWith(RHSKnown);
         KnownBitsComputed = true;
         break;
       }
@@ -1834,7 +1894,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       // segfaults which didn't exist in the original program.
       APInt DemandedPtrs(APInt::getAllOnes(VWidth)),
           DemandedPassThrough(DemandedElts);
-      if (auto *CMask = dyn_cast<Constant>(II->getOperand(2))) {
+      if (auto *CMask = dyn_cast<Constant>(II->getOperand(1))) {
         for (unsigned i = 0; i < VWidth; i++) {
           if (Constant *CElt = CMask->getAggregateElement(i)) {
             if (CElt->isNullValue())
@@ -1847,7 +1907,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
 
       if (II->getIntrinsicID() == Intrinsic::masked_gather)
         simplifyAndSetOp(II, 0, DemandedPtrs, PoisonElts2);
-      simplifyAndSetOp(II, 3, DemandedPassThrough, PoisonElts3);
+      simplifyAndSetOp(II, 2, DemandedPassThrough, PoisonElts3);
 
       // Output elements are undefined if the element from both sources are.
       // TODO: can strengthen via mask as well.

@@ -1565,8 +1565,11 @@ void SplitPtrStructs::processConditionals() {
     } else if (isa<SelectInst>(I)) {
       if (MaybeRsrc) {
         if (auto *RsrcInst = dyn_cast<Instruction>(Rsrc)) {
-          ConditionalTemps.push_back(RsrcInst);
-          RsrcInst->replaceAllUsesWith(*MaybeRsrc);
+          // Guard against conditionals that were already folded away.
+          if (RsrcInst != *MaybeRsrc) {
+            ConditionalTemps.push_back(RsrcInst);
+            RsrcInst->replaceAllUsesWith(*MaybeRsrc);
+          }
         }
         for (Value *V : Seen)
           FoundRsrcs[V] = *MaybeRsrc;
@@ -1745,6 +1748,12 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
     case AtomicRMWInst::FMin:
       IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin;
       break;
+    case AtomicRMWInst::USubCond:
+      IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32;
+      break;
+    case AtomicRMWInst::USubSat:
+      IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32;
+      break;
     case AtomicRMWInst::FSub: {
       reportFatalUsageError(
           "atomic floating point subtraction not supported for "
@@ -1770,14 +1779,12 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
       break;
     case AtomicRMWInst::UIncWrap:
     case AtomicRMWInst::UDecWrap:
-      reportFatalUsageError("wrapping increment/decrement not supported for "
-                            "buffer resources and should've ben expanded away");
+      reportFatalUsageError(
+          "wrapping increment/decrement not supported for "
+          "buffer resources and should've been expanded away");
       break;
     case AtomicRMWInst::BAD_BINOP:
       llvm_unreachable("Not sure how we got a bad binop");
-    case AtomicRMWInst::USubCond:
-    case AtomicRMWInst::USubSat:
-      break;
     }
   }
 
@@ -2059,17 +2066,7 @@ PtrParts SplitPtrStructs::visitICmpInst(ICmpInst &Cmp) {
          "Pointer comparison is only equal or unequal");
   auto [LhsRsrc, LhsOff] = getPtrParts(Lhs);
   auto [RhsRsrc, RhsOff] = getPtrParts(Rhs);
-  Value *RsrcCmp =
-      IRB.CreateICmp(Pred, LhsRsrc, RhsRsrc, Cmp.getName() + ".rsrc");
-  copyMetadata(RsrcCmp, &Cmp);
-  Value *OffCmp = IRB.CreateICmp(Pred, LhsOff, RhsOff, Cmp.getName() + ".off");
-  copyMetadata(OffCmp, &Cmp);
-
-  Value *Res = nullptr;
-  if (Pred == ICmpInst::ICMP_EQ)
-    Res = IRB.CreateAnd(RsrcCmp, OffCmp);
-  else if (Pred == ICmpInst::ICMP_NE)
-    Res = IRB.CreateOr(RsrcCmp, OffCmp);
+  Value *Res = IRB.CreateICmp(Pred, LhsOff, RhsOff);
   copyMetadata(Res, &Cmp);
   Res->takeName(&Cmp);
   SplitUsers.insert(&Cmp);
@@ -2328,6 +2325,12 @@ void SplitPtrStructs::processFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "Splitting pointer structs in function: " << F.getName()
                     << "\n");
   for (Instruction *I : Originals) {
+    // In some cases, instruction order doesn't reflect program order,
+    // so the visit() call will have already visited coertain instructions
+    // by the time this loop gets to them. Avoid re-visiting these so as to,
+    // for example, avoid processing the same conditional twice.
+    if (SplitUsers.contains(I))
+      continue;
     auto [Rsrc, Off] = visit(I);
     assert(((Rsrc && Off) || (!Rsrc && !Off)) &&
            "Can't have a resource but no offset");
@@ -2556,7 +2559,9 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
   for (Function *F : NeedsPostProcess)
     Splitter.processFunction(*F);
   for (Function *F : Intrinsics) {
-    if (isRemovablePointerIntrinsic(F->getIntrinsicID())) {
+    // use_empty() can also occur with cases like masked load, which will
+    // have been rewritten out of the module by now but not erased.
+    if (F->use_empty() || isRemovablePointerIntrinsic(F->getIntrinsicID())) {
       F->eraseFromParent();
     } else {
       std::optional<Function *> NewF = Intrinsic::remangleIntrinsicFunction(F);

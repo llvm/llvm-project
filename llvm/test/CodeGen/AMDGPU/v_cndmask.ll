@@ -64,7 +64,7 @@ define amdgpu_kernel void @v_cnd_nan_nosgpr(ptr addrspace(1) %out, i32 %c, ptr a
 ; GFX10-NEXT:    global_load_dword v0, v0, s[0:1]
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_cmp_eq_u32 s2, 0
@@ -561,7 +561,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_vgprZ_f32(ptr addrspace(1) %o
 ; GFX10-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_cmp_nlg_f32_e64 vcc, s2, 0
@@ -663,7 +663,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_vgprZ_f32(ptr addrspace(1) %o
 ; GFX10-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_cmp_nlg_f32_e64 vcc, s2, 0
@@ -1545,9 +1545,9 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i1(ptr addrspace(1) %ou
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
-; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; SI-NEXT:    v_mov_b32_e32 v3, v1
 ; SI-NEXT:    s_mov_b64 s[2:3], s[6:7]
@@ -2216,7 +2216,7 @@ define amdgpu_kernel void @v_cndmask_abs_neg_f16(ptr addrspace(1) %out, i32 %c, 
 ; GFX10-NEXT:    global_load_ushort v0, v0, s[0:1]
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_cmp_lg_u32 s2, 0
@@ -2377,7 +2377,7 @@ define amdgpu_kernel void @v_cndmask_abs_neg_f32(ptr addrspace(1) %out, i32 %c, 
 ; GFX10-NEXT:    global_load_dword v0, v0, s[0:1]
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_cmp_lg_u32 s2, 0
@@ -2491,7 +2491,7 @@ define amdgpu_kernel void @v_cndmask_abs_neg_f64(ptr addrspace(1) %out, i32 %c, 
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v0, s[0:1]
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_cmp_lg_u32 s2, 0

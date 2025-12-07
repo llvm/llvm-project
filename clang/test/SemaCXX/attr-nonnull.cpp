@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
 struct S {
   S(const char *) __attribute__((nonnull(2)));
 
@@ -11,6 +11,13 @@ struct S {
 
   void h(const char*) __attribute__((nonnull(1))); // \
       expected-error{{invalid for the implicit this argument}}
+
+  void i(this S* self, const char*) __attribute__((nonnull(1)));
+
+  void j(this S* self, const char*) __attribute__((nonnull(2)));
+
+  void k(this S* self, const char*) __attribute__((nonnull(3))); // \
+      expected-error{{'nonnull' attribute parameter 1 is out of bounds}}
 };
 
 void test() {

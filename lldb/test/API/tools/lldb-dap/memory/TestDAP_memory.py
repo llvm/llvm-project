@@ -70,13 +70,9 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_next_stop()
 
         ptr_value = self.get_local_as_int("rawptr")
-        locals_ref = self.get_locals_scope_reference()
-        self.assertIsNotNone(locals_ref, "Failed to get locals scope reference")
         self.assertIn(
             "memoryReference",
-            self.dap_server.request_setVariable(locals_ref, "rawptr", ptr_value + 2)[
-                "body"
-            ].keys(),
+            self.set_local("rawptr", ptr_value + 2)["body"].keys(),
         )
 
     @skipIfWindows

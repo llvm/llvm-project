@@ -71,8 +71,10 @@ class TestStatusline(PExpectTest):
         )
         self.expect('set set separator "| "')
 
-        # Hide the statusline and check or the control character.
-        self.expect("set set show-statusline false", ["\x1b[1;0r"])
+        # Hide the statusline and check for the control character.
+        self.expect(
+            "set set show-statusline false", ["\x1b[1;{}r".format(self.TERMINAL_HEIGHT)]
+        )
 
     def test_no_color(self):
         """Basic test for the statusline with colors disabled."""
@@ -124,6 +126,7 @@ class TestStatusline(PExpectTest):
     @skipIfRemote
     @skipIfWindows
     @skipIfDarwin
+    @skipIfLinux # https://github.com/llvm/llvm-project/issues/154763
     @add_test_categories(["lldb-server"])
     def test_modulelist_deadlock(self):
         """Regression test for a deadlock that occurs when the status line is enabled before connecting

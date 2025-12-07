@@ -315,7 +315,7 @@ def GPR32NONZERO : RegisterClass<"Mips", [i32], 32, (add
   // Reserved
   K0, K1, GP, SP, FP, RA)>;
 
-def DSPR  : GPR32Class<[v4i8, v2i16]>;
+def DSPR  : GPR32Class<[v4i8, v2i16, i32]>;
 
 def GPRMM16 : RegisterClass<"Mips", [i32], 32, (add
   // Callee save
@@ -758,3 +758,19 @@ def MSA128DOpnd : RegisterOperand<MSA128D> {
 def MSA128CROpnd : RegisterOperand<MSACtrl> {
   let ParserMatchClass = MSACtrlAsmOperand;
 }
+
+def mips_ptr_rc : RegClassByHwMode<
+  [MIPS32, MIPS64],
+  [GPR32, GPR64]>;
+
+def ptr_gpr16mm_rc : RegClassByHwMode<
+  [MIPS32, MIPS64],
+  [GPRMM16, GPRMM16]>; // FIXME: Why even use this if it's just a constant
+
+def ptr_sp_rc : RegClassByHwMode<
+  [MIPS32, MIPS64],
+  [SP32, SP64]>;
+
+def ptr_gp_rc : RegClassByHwMode<
+  [MIPS32, MIPS64],
+  [GP32, GP64]>;

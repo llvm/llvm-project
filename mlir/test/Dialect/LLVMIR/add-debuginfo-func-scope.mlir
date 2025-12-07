@@ -141,3 +141,22 @@ module {
   llvm.func @func_callsiteloc() loc(callsite("foo" at "mysource.cc":10:8))
 } loc(unknown)
 
+// -----
+
+// CHECK-LABEL: llvm.func @func_cross_file_op()
+// CHECK: #di_file = #llvm.di_file<"<unknown>" in "">
+// CHECK: #di_file1 = #llvm.di_file<"caller.py" in "">
+// CHECK: #di_file2 = #llvm.di_file<"callee.py" in "">
+// CHECK: #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+// CHECK: #di_subprogram = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #di_compile_unit, scope = #di_file1, name = "func_cross_file_op", linkageName = "func_cross_file_op", file = #di_file1, line = 5, scopeLine = 5, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
+// CHECK: #di_lexical_block_file = #llvm.di_lexical_block_file<scope = #di_subprogram, file = #di_file2, discriminator = 0>
+
+#loc = loc("caller.py":5:1)
+#loc1 = loc("callee.py":10:5)
+
+module {
+  llvm.func @func_cross_file_op() {
+    llvm.return loc(#loc1)
+  } loc(#loc)
+} loc(unknown)
+

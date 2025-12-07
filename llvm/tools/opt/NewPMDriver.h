@@ -52,7 +52,7 @@ enum PGOKind {
   SampleUse
 };
 enum CSPGOKind { NoCSPGO, CSInstrGen, CSInstrUse };
-}
+} // namespace opt_tool
 
 void printPasses(raw_ostream &OS);
 
@@ -70,7 +70,7 @@ bool runPassPipeline(
     ToolOutputFile *Out, ToolOutputFile *ThinLinkOut,
     ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
     ArrayRef<PassPlugin> PassPlugins,
-    ArrayRef<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks,
+    ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks,
     opt_tool::OutputKind OK, opt_tool::VerifierKind VK,
     bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,

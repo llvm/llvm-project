@@ -17,6 +17,7 @@
 @import _Builtin_stdarg;
 @import _Builtin_stdatomic;
 @import _Builtin_stdbool;
+@import _Builtin_stdckdint;
 @import _Builtin_stdcountof;
 @import _Builtin_stddef;
 @import _Builtin_stdint;

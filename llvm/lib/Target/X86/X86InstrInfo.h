@@ -222,7 +222,7 @@ inline static bool isMemInstrWithGOTPCREL(const MachineInstr &MI) {
 }
 
 class X86InstrInfo final : public X86GenInstrInfo {
-  X86Subtarget &Subtarget;
+  const X86Subtarget &Subtarget;
   const X86RegisterInfo RI;
 
   LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
@@ -238,7 +238,7 @@ class X86InstrInfo final : public X86GenInstrInfo {
                          bool MakeChange) const;
 
 public:
-  explicit X86InstrInfo(X86Subtarget &STI);
+  explicit X86InstrInfo(const X86Subtarget &STI);
 
   /// Given a machine instruction descriptor, returns the register
   /// class constraint for OpNum, or NULL. Returned register class
@@ -246,10 +246,8 @@ public:
   /// GR*RegClass (definition in TD file)
   /// ->
   /// GR*_NOREX2RegClass (Returned register class)
-  const TargetRegisterClass *
-  getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-              const TargetRegisterInfo *TRI,
-              const MachineFunction &MF) const override;
+  const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID,
+                                         unsigned OpNum) const override;
 
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should
@@ -341,11 +339,10 @@ public:
   Register isStoreToStackSlotPostFE(const MachineInstr &MI,
                                     int &FrameIndex) const override;
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig,
-                     const TargetRegisterInfo &TRI) const override;
+                     const MachineInstr &Orig) const override;
 
   /// Given an operand within a MachineInstr, insert preceding code to put it
   /// into the right format for a particular kind of LEA instruction. This may
@@ -470,14 +467,14 @@ public:
                    bool RenamableSrc = false) const override;
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
       int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+
+      Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadStoreTileReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,

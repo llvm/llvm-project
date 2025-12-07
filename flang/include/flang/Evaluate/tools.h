@@ -750,11 +750,11 @@ Expr<SomeKind<CAT>> PromoteAndCombine(
 // one of the operands to the type of the other.  Handles special cases with
 // typeless literal operands and with REAL/COMPLEX exponentiation to INTEGER
 // powers.
-template <template <typename> class OPR, bool CAN_BE_UNSIGNED = true>
+template <template <typename> class OPR>
 std::optional<Expr<SomeType>> NumericOperation(parser::ContextualMessages &,
     Expr<SomeType> &&, Expr<SomeType> &&, int defaultRealKind);
 
-extern template std::optional<Expr<SomeType>> NumericOperation<Power, false>(
+extern template std::optional<Expr<SomeType>> NumericOperation<Power>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
     int defaultRealKind);
 extern template std::optional<Expr<SomeType>> NumericOperation<Multiply>(
@@ -1110,6 +1110,9 @@ bool IsArraySection(const Expr<SomeType> &expr);
 // Predicate: does an expression contain constant?
 bool HasConstant(const Expr<SomeType> &);
 
+// Predicate: Does an expression contain a component
+bool HasStructureComponent(const Expr<SomeType> &expr);
+
 // Utilities for attaching the location of the declaration of a symbol
 // of interest to a message.  Handles the case of USE association gracefully.
 parser::Message *AttachDeclaration(parser::Message &, const Symbol &);
@@ -1289,16 +1292,7 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
-inline bool IsCUDADeviceSymbol(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    if (details->cudaDataAttr() &&
-        *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
-      return true;
-    }
-  }
-  return false;
-}
+bool IsCUDADeviceSymbol(const Symbol &sym);
 
 inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
   if (const auto *details =
@@ -1351,10 +1345,12 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   int rhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
   int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
 
-  // Special case where only managed or unifed symbols are involved. This is
-  // performed on the host.
-  if (lhsNbManagedSymbols == 1 && rhsNbManagedSymbols == 1 &&
-      rhsNbSymbols == 1) {
+  // Special cases perforemd on the host:
+  // - Only managed or unifed symbols are involved on RHS and LHS.
+  // - LHS is managed or unified and the RHS is host only.
+  if ((lhsNbManagedSymbols == 1 && rhsNbManagedSymbols == 1 &&
+          rhsNbSymbols == 1) ||
+      (lhsNbManagedSymbols == 1 && rhsNbSymbols == 0)) {
     return false;
   }
   return HasCUDADeviceAttrs(lhs) || rhsNbSymbols > 0;
@@ -1521,6 +1517,9 @@ bool IsVarSubexpressionOf(
 // it returns std::nullopt.
 std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
 
+// How many ancestors does have a derived type have?
+std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
@@ -1530,6 +1529,12 @@ class Scope;
 // If a symbol represents an ENTRY, return the symbol of the main entry
 // point to its subprogram.
 const Symbol *GetMainEntry(const Symbol *);
+
+inline bool IsAlternateEntry(const Symbol *symbol) {
+  // If symbol is not alternate entry symbol, GetMainEntry() returns the same
+  // symbol.
+  return symbol && GetMainEntry(symbol) != symbol;
+}
 
 // These functions are used in Evaluate so they are defined here rather than in
 // Semantics to avoid a link-time dependency on Semantics.

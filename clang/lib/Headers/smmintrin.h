@@ -17,15 +17,9 @@
 #include <tmmintrin.h>
 
 /* Define the default attributes for the functions in this file. */
-#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
-#define __DEFAULT_FN_ATTRS                                                     \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("sse4.1,no-evex512"), __min_vector_width__(128)))
-#else
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("sse4.1"),         \
                  __min_vector_width__(128)))
-#endif
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
@@ -445,9 +439,8 @@
 ///    position in the result. When a mask bit is 1, the corresponding 64-bit
 ///    element in operand \a __V2 is copied to the same position in the result.
 /// \returns A 128-bit vector of [2 x double] containing the copied values.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_blendv_pd(__m128d __V1,
-                                                           __m128d __V2,
-                                                           __m128d __M) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_blendv_pd(__m128d __V1, __m128d __V2, __m128d __M) {
   return (__m128d)__builtin_ia32_blendvpd((__v2df)__V1, (__v2df)__V2,
                                           (__v2df)__M);
 }
@@ -472,9 +465,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_blendv_pd(__m128d __V1,
 ///    position in the result. When a mask bit is 1, the corresponding 32-bit
 ///    element in operand \a __V2 is copied to the same position in the result.
 /// \returns A 128-bit vector of [4 x float] containing the copied values.
-static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_blendv_ps(__m128 __V1,
-                                                          __m128 __V2,
-                                                          __m128 __M) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_blendv_ps(__m128 __V1, __m128 __V2, __m128 __M) {
   return (__m128)__builtin_ia32_blendvps((__v4sf)__V1, (__v4sf)__V2,
                                          (__v4sf)__M);
 }
@@ -499,9 +491,8 @@ static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_blendv_ps(__m128 __V1,
 ///    position in the result. When a mask bit is 1, the corresponding 8-bit
 ///    element in operand \a __V2 is copied to the same position in the result.
 /// \returns A 128-bit vector of [16 x i8] containing the copied values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_blendv_epi8(__m128i __V1,
-                                                             __m128i __V2,
-                                                             __m128i __M) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_blendv_epi8(__m128i __V1, __m128i __V2, __m128i __M) {
   return (__m128i)__builtin_ia32_pblendvb128((__v16qi)__V1, (__v16qi)__V2,
                                              (__v16qi)__M);
 }
@@ -548,8 +539,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_blendv_epi8(__m128i __V1,
 /// \param __V2
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the products of both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mullo_epi32(__m128i __V1,
-                                                             __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_mullo_epi32(__m128i __V1, __m128i __V2) {
   return (__m128i)((__v4su)__V1 * (__v4su)__V2);
 }
 
@@ -675,8 +666,8 @@ _mm_stream_load_si128(const void *__V) {
 /// \param __V2
 ///    A 128-bit vector of [16 x i8]
 /// \returns A 128-bit vector of [16 x i8] containing the lesser values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epi8(__m128i __V1,
-                                                          __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_min_epi8(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_min((__v16qs)__V1, (__v16qs)__V2);
 }
 
@@ -693,8 +684,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epi8(__m128i __V1,
 /// \param __V2
 ///    A 128-bit vector of [16 x i8].
 /// \returns A 128-bit vector of [16 x i8] containing the greater values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epi8(__m128i __V1,
-                                                          __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_max_epi8(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_max((__v16qs)__V1, (__v16qs)__V2);
 }
 
@@ -711,8 +702,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epi8(__m128i __V1,
 /// \param __V2
 ///    A 128-bit vector of [8 x u16].
 /// \returns A 128-bit vector of [8 x u16] containing the lesser values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epu16(__m128i __V1,
-                                                           __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_min_epu16(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_min((__v8hu)__V1, (__v8hu)__V2);
 }
 
@@ -729,8 +720,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epu16(__m128i __V1,
 /// \param __V2
 ///    A 128-bit vector of [8 x u16].
 /// \returns A 128-bit vector of [8 x u16] containing the greater values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epu16(__m128i __V1,
-                                                           __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_max_epu16(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_max((__v8hu)__V1, (__v8hu)__V2);
 }
 
@@ -747,8 +738,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epu16(__m128i __V1,
 /// \param __V2
 ///    A 128-bit vector of [4 x i32].
 /// \returns A 128-bit vector of [4 x i32] containing the lesser values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epi32(__m128i __V1,
-                                                           __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_min_epi32(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_min((__v4si)__V1, (__v4si)__V2);
 }
 
@@ -765,8 +756,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epi32(__m128i __V1,
 /// \param __V2
 ///    A 128-bit vector of [4 x i32].
 /// \returns A 128-bit vector of [4 x i32] containing the greater values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epi32(__m128i __V1,
-                                                           __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_max_epi32(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_max((__v4si)__V1, (__v4si)__V2);
 }
 
@@ -783,8 +774,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epi32(__m128i __V1,
 /// \param __V2
 ///    A 128-bit vector of [4 x u32].
 /// \returns A 128-bit vector of [4 x u32] containing the lesser values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epu32(__m128i __V1,
-                                                           __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_min_epu32(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_min((__v4su)__V1, (__v4su)__V2);
 }
 
@@ -801,8 +792,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epu32(__m128i __V1,
 /// \param __V2
 ///    A 128-bit vector of [4 x u32].
 /// \returns A 128-bit vector of [4 x u32] containing the greater values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epu32(__m128i __V1,
-                                                           __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_max_epu32(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_elementwise_max((__v4su)__V1, (__v4su)__V2);
 }
 
@@ -1102,8 +1093,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epu32(__m128i __V1,
 /// \param __V
 ///    A 128-bit integer vector selecting which bits to test in operand \a __M.
 /// \returns TRUE if the specified bits are all zeros; FALSE otherwise.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_testz_si128(__m128i __M,
-                                                         __m128i __V) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_testz_si128(__m128i __M, __m128i __V) {
   return __builtin_ia32_ptestz128((__v2di)__M, (__v2di)__V);
 }
 
@@ -1119,8 +1110,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_testz_si128(__m128i __M,
 /// \param __V
 ///    A 128-bit integer vector selecting which bits to test in operand \a __M.
 /// \returns TRUE if the specified bits are all ones; FALSE otherwise.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_testc_si128(__m128i __M,
-                                                         __m128i __V) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_testc_si128(__m128i __M, __m128i __V) {
   return __builtin_ia32_ptestc128((__v2di)__M, (__v2di)__V);
 }
 
@@ -1137,8 +1128,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_testc_si128(__m128i __M,
 ///    A 128-bit integer vector selecting which bits to test in operand \a __M.
 /// \returns TRUE if the specified bits are neither all zeros nor all ones;
 ///    FALSE otherwise.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_testnzc_si128(__m128i __M,
-                                                           __m128i __V) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_testnzc_si128(__m128i __M, __m128i __V) {
   return __builtin_ia32_ptestnzc128((__v2di)__M, (__v2di)__V);
 }
 
@@ -1211,8 +1202,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_testnzc_si128(__m128i __M,
 /// \param __V2
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi64(__m128i __V1,
-                                                             __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpeq_epi64(__m128i __V1, __m128i __V2) {
   return (__m128i)((__v2di)__V1 == (__v2di)__V2);
 }
 
@@ -1475,8 +1466,8 @@ _mm_cvtepu32_epi64(__m128i __V) {
 ///    A 128-bit vector of [4 x i32]. The converted [4 x i16] values are
 ///    written to the higher 64 bits of the result.
 /// \returns A 128-bit vector of [8 x i16] containing the converted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packus_epi32(__m128i __V1,
-                                                              __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_packus_epi32(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_ia32_packusdw128((__v4si)__V1, (__v4si)__V2);
 }
 
@@ -1533,7 +1524,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packus_epi32(__m128i __V1,
 /// \returns A 128-bit value where bits [15:0] contain the minimum value found
 ///    in parameter \a __V, bits [18:16] contain the index of the minimum value
 ///    and the remaining bits are set to 0.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_minpos_epu16(__m128i __V) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_minpos_epu16(__m128i __V) {
   return (__m128i)__builtin_ia32_phminposuw128((__v8hi)__V);
 }
 
@@ -1543,8 +1535,15 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_minpos_epu16(__m128i __V) {
    so we'll do the same.  */
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("sse4.2")))
+
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
 
 /* These specify the type of data that we're comparing.  */
 #define _SIDD_UBYTE_OPS 0x00
@@ -2338,8 +2337,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_minpos_epu16(__m128i __V) {
 /// \param __V2
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi64(__m128i __V1,
-                                                             __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpgt_epi64(__m128i __V1, __m128i __V2) {
   return (__m128i)((__v2di)__V1 > (__v2di)__V2);
 }
 

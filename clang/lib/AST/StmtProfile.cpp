@@ -510,6 +510,13 @@ void OMPClauseProfiler::VisitOMPPartialClause(const OMPPartialClause *C) {
     Profiler->VisitExpr(Factor);
 }
 
+void OMPClauseProfiler::VisitOMPLoopRangeClause(const OMPLoopRangeClause *C) {
+  if (const Expr *First = C->getFirst())
+    Profiler->VisitExpr(First);
+  if (const Expr *Count = C->getCount())
+    Profiler->VisitExpr(Count);
+}
+
 void OMPClauseProfiler::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
   if (C->getAllocator())
     Profiler->VisitStmt(C->getAllocator());
@@ -538,6 +545,8 @@ void OMPClauseProfiler::VisitOMPNocontextClause(const OMPNocontextClause *C) {
 }
 
 void OMPClauseProfiler::VisitOMPDefaultClause(const OMPDefaultClause *C) { }
+
+void OMPClauseProfiler::VisitOMPThreadsetClause(const OMPThreadsetClause *C) {}
 
 void OMPClauseProfiler::VisitOMPProcBindClause(const OMPProcBindClause *C) { }
 
@@ -578,7 +587,10 @@ void OMPClauseProfiler::VisitOMPOrderedClause(const OMPOrderedClause *C) {
     Profiler->VisitStmt(Num);
 }
 
-void OMPClauseProfiler::VisitOMPNowaitClause(const OMPNowaitClause *) {}
+void OMPClauseProfiler::VisitOMPNowaitClause(const OMPNowaitClause *C) {
+  if (C->getCondition())
+    Profiler->VisitStmt(C->getCondition());
+}
 
 void OMPClauseProfiler::VisitOMPUntiedClause(const OMPUntiedClause *) {}
 
@@ -956,6 +968,12 @@ void OMPClauseProfiler::VisitOMPXDynCGroupMemClause(
   if (Expr *Size = C->getSize())
     Profiler->VisitStmt(Size);
 }
+void OMPClauseProfiler::VisitOMPDynGroupprivateClause(
+    const OMPDynGroupprivateClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  if (auto *Size = C->getSize())
+    Profiler->VisitStmt(Size);
+}
 void OMPClauseProfiler::VisitOMPDoacrossClause(const OMPDoacrossClause *C) {
   VisitOMPClauseList(C);
 }
@@ -999,30 +1017,39 @@ void StmtProfiler::VisitOMPSimdDirective(const OMPSimdDirective *S) {
   VisitOMPLoopDirective(S);
 }
 
-void StmtProfiler::VisitOMPLoopTransformationDirective(
-    const OMPLoopTransformationDirective *S) {
+void StmtProfiler::VisitOMPCanonicalLoopNestTransformationDirective(
+    const OMPCanonicalLoopNestTransformationDirective *S) {
   VisitOMPLoopBasedDirective(S);
 }
 
 void StmtProfiler::VisitOMPTileDirective(const OMPTileDirective *S) {
-  VisitOMPLoopTransformationDirective(S);
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
 void StmtProfiler::VisitOMPStripeDirective(const OMPStripeDirective *S) {
-  VisitOMPLoopTransformationDirective(S);
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
 void StmtProfiler::VisitOMPUnrollDirective(const OMPUnrollDirective *S) {
-  VisitOMPLoopTransformationDirective(S);
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
 void StmtProfiler::VisitOMPReverseDirective(const OMPReverseDirective *S) {
-  VisitOMPLoopTransformationDirective(S);
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
 void StmtProfiler::VisitOMPInterchangeDirective(
     const OMPInterchangeDirective *S) {
-  VisitOMPLoopTransformationDirective(S);
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
+}
+
+void StmtProfiler::VisitOMPCanonicalLoopSequenceTransformationDirective(
+    const OMPCanonicalLoopSequenceTransformationDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPFuseDirective(const OMPFuseDirective *S) {
+  VisitOMPCanonicalLoopSequenceTransformationDirective(S);
 }
 
 void StmtProfiler::VisitOMPForDirective(const OMPForDirective *S) {
@@ -1353,7 +1380,8 @@ void StmtProfiler::VisitExpr(const Expr *S) {
 }
 
 void StmtProfiler::VisitConstantExpr(const ConstantExpr *S) {
-  VisitExpr(S);
+  // Profile exactly as the sub-expression.
+  Visit(S->getSubExpr());
 }
 
 void StmtProfiler::VisitDeclRefExpr(const DeclRefExpr *S) {
@@ -2636,8 +2664,9 @@ void OpenACCClauseProfiler::VisitPrivateClause(
     const OpenACCPrivateClause &Clause) {
   VisitClauseWithVarList(Clause);
 
-  for (auto *VD : Clause.getInitRecipes())
-    Profiler.VisitDecl(VD);
+  for (auto &Recipe : Clause.getInitRecipes()) {
+    Profiler.VisitDecl(Recipe.AllocaDecl);
+  }
 }
 
 void OpenACCClauseProfiler::VisitFirstPrivateClause(
@@ -2645,7 +2674,7 @@ void OpenACCClauseProfiler::VisitFirstPrivateClause(
   VisitClauseWithVarList(Clause);
 
   for (auto &Recipe : Clause.getInitRecipes()) {
-    Profiler.VisitDecl(Recipe.RecipeDecl);
+    Profiler.VisitDecl(Recipe.AllocaDecl);
     Profiler.VisitDecl(Recipe.InitFromTemporary);
   }
 }
@@ -2750,11 +2779,20 @@ void OpenACCClauseProfiler::VisitReductionClause(
   VisitClauseWithVarList(Clause);
 
   for (auto &Recipe : Clause.getRecipes()) {
-    Profiler.VisitDecl(Recipe.RecipeDecl);
+    Profiler.VisitDecl(Recipe.AllocaDecl);
+
     // TODO: OpenACC: Make sure we remember to update this when we figure out
     // what we're adding for the operation recipe, in the meantime, a static
     // assert will make sure we don't add something.
-    static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
+    static_assert(sizeof(OpenACCReductionRecipe::CombinerRecipe) ==
+                  3 * sizeof(int *));
+    for (auto &CombinerRecipe : Recipe.CombinerRecipes) {
+      if (CombinerRecipe.Op) {
+        Profiler.VisitDecl(CombinerRecipe.LHS);
+        Profiler.VisitDecl(CombinerRecipe.RHS);
+        Profiler.VisitStmt(CombinerRecipe.Op);
+      }
+    }
   }
 }
 

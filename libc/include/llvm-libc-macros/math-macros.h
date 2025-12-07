@@ -42,13 +42,36 @@
 #define FP_LLOGBNAN LONG_MAX
 #endif
 
-#if defined(__NVPTX__) || defined(__AMDGPU__) || defined(__FAST_MATH__)
-#define math_errhandling 0
-#elif defined(__NO_MATH_ERRNO__)
+// Math error handling. Target support is assumed to be existent unless
+// explicitly disabled.
+#if defined(__NVPTX__) || defined(__AMDGPU__) || defined(__FAST_MATH__) ||     \
+    defined(__NO_MATH_ERRNO__)
+#define __LIBC_SUPPORTS_MATH_ERRNO 0
+#else
+#define __LIBC_SUPPORTS_MATH_ERRNO 1
+#endif
+
+#if defined(__FAST_MATH__) ||                                                  \
+    ((defined(__arm__) || defined(_M_ARM) || defined(__thumb__) ||             \
+      defined(__aarch64__) || defined(_M_ARM64)) &&                            \
+     !defined(__ARM_FP))
+#define __LIBC_SUPPORTS_MATH_ERREXCEPT 0
+#else
+#define __LIBC_SUPPORTS_MATH_ERREXCEPT 1
+#endif
+
+#if __LIBC_SUPPORTS_MATH_ERRNO && __LIBC_SUPPORTS_MATH_ERREXCEPT
+#define math_errhandling (MATH_ERRNO | MATH_ERREXCEPT)
+#elif __LIBC_SUPPORTS_MATH_ERRNO
+#define math_errhandling (MATH_ERRNO)
+#elif __LIBC_SUPPORTS_MATH_ERREXCEPT
 #define math_errhandling (MATH_ERREXCEPT)
 #else
-#define math_errhandling (MATH_ERRNO | MATH_ERREXCEPT)
+#define math_errhandling 0
 #endif
+
+#undef __LIBC_SUPPORTS_MATH_ERRNO
+#undef __LIBC_SUPPORTS_MATH_ERREXCEPT
 
 // POSIX math constants
 // https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/math.h.html

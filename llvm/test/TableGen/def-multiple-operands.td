@@ -24,7 +24,7 @@ def Reg3Opnd : Operand<OtherVT> {
 // CHECK: archInstrTable {{.* = \{}}
 // CHECK: {{\{}}
 // CHECK: {{\{}} [[ID:[0-9]+]], 4, 3, 13, {{.+\}, \/\/}}
-// CHECK-SAME: Inst #[[ID]] = InstA
+// CHECK-SAME: InstA
 def InstA : Instruction {
   let Namespace = "MyNS";
   let Size = 13;
@@ -35,3 +35,5 @@ def InstA : Instruction {
   field bits<8> SoftFail = 0;
   let hasSideEffects = false;
 }
+
+defm : RemapAllTargetPseudoPointerOperands<P1>;

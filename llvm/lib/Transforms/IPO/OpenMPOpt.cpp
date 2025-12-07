@@ -208,7 +208,7 @@ namespace KernelInfo {
 // };
 
 #define KERNEL_ENVIRONMENT_IDX(MEMBER, IDX)                                    \
-  constexpr const unsigned MEMBER##Idx = IDX;
+  constexpr unsigned MEMBER##Idx = IDX;
 
 KERNEL_ENVIRONMENT_IDX(Configuration, 0)
 KERNEL_ENVIRONMENT_IDX(Ident, 1)
@@ -216,7 +216,7 @@ KERNEL_ENVIRONMENT_IDX(Ident, 1)
 #undef KERNEL_ENVIRONMENT_IDX
 
 #define KERNEL_ENVIRONMENT_CONFIGURATION_IDX(MEMBER, IDX)                      \
-  constexpr const unsigned MEMBER##Idx = IDX;
+  constexpr unsigned MEMBER##Idx = IDX;
 
 KERNEL_ENVIRONMENT_CONFIGURATION_IDX(UseGenericStateMachine, 0)
 KERNEL_ENVIRONMENT_CONFIGURATION_IDX(MayUseNestedParallelism, 1)
@@ -258,7 +258,7 @@ KERNEL_ENVIRONMENT_CONFIGURATION_GETTER(MaxTeams)
 
 GlobalVariable *
 getKernelEnvironementGVFromKernelInitCB(CallBase *KernelInitCB) {
-  constexpr const int InitKernelEnvironmentArgNo = 0;
+  constexpr int InitKernelEnvironmentArgNo = 0;
   return cast<GlobalVariable>(
       KernelInitCB->getArgOperand(InitKernelEnvironmentArgNo)
           ->stripPointerCasts());
@@ -2693,7 +2693,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   AAExecutionDomainFunction(const IRPosition &IRP, Attributor &A)
       : AAExecutionDomain(IRP, A) {}
 
-  ~AAExecutionDomainFunction() { delete RPOT; }
+  ~AAExecutionDomainFunction() override { delete RPOT; }
 
   void initialize(Attributor &A) override {
     Function *F = getAnchorScope();

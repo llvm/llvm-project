@@ -167,7 +167,7 @@ struct LinalgOpTilingInterface
            llvm::zip_equal(indexingMap.getResults(), offsets, sizes)) {
         auto dimExpr = dyn_cast<AffineDimExpr>(resultExpr);
         if (!dimExpr)
-          continue;
+          return failure();
         unsigned position = dimExpr.getPosition();
         auto it = mappedOffsets.find(position);
         if (it != mappedOffsets.end()) {
@@ -216,8 +216,6 @@ struct LinalgOpTilingInterface
       SmallVectorImpl<OpFoldResult> &iterDomainSizes) const {
     auto linalgOp = cast<LinalgOp>(op);
 
-    std::optional<SmallVector<OpFoldResult>> iterationSpaceOffsets,
-        iterationSpaceSizes;
     SmallVector<AffineMap> indexingMaps =
         llvm::map_to_vector(operandNumbers, [&](unsigned operandNumber) {
           OpOperand &opOperand = linalgOp->getOpOperand(operandNumber);
@@ -358,6 +356,32 @@ struct LinalgOpTilingInterface
 
     /// Inline the op payload and store the result.
     return inlinePayload(builder, linalgOp, ivs, indexedValues);
+  }
+
+  bool isOpFusableWithConsumerSlice(Operation *op, unsigned resultNumber,
+                                    ArrayRef<OpFoldResult> offsets,
+                                    ArrayRef<OpFoldResult> sizes) const {
+    // The verifier gives all the necessary requirements for consumer fusion.
+    return true;
+  }
+
+  bool isOpFusableWithProducerSlices(
+      Operation *op, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
+
+    auto linalgOp = cast<LinalgOp>(op);
+    SmallVector<AffineMap> indexingMaps =
+        llvm::map_to_vector(operandNumbers, [&](unsigned operandNumber) {
+          OpOperand &opOperand = linalgOp->getOpOperand(operandNumber);
+          return linalgOp.getMatchingIndexingMap(&opOperand);
+        });
+    // Check that offsets/sizes are consistent across all operands.
+    OpBuilder b(op);
+    SmallVector<OpFoldResult> mappedOffsets, mappedSizes;
+    return succeeded(getMappedOffsetAndSize(linalgOp, b, indexingMaps,
+                                            allOffsets, allSizes, mappedOffsets,
+                                            mappedSizes));
   }
 };
 

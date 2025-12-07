@@ -23,9 +23,11 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Remarks.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
+#include "mlir/Remark/RemarkStreamer.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/Timing.h"
 #include "mlir/Support/ToolUtilities.h"
@@ -33,7 +35,9 @@
 #include "mlir/Tools/Plugins/DialectPlugin.h"
 #include "mlir/Tools/Plugins/PassPlugin.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -204,6 +208,71 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
             cl::location(generateReproducerFileFlag), cl::init(""),
             cl::value_desc("filename"));
 
+    static cl::OptionCategory remarkCategory(
+        "Remark Options",
+        "Filter remarks by regular expression (llvm::Regex syntax).");
+
+    static llvm::cl::opt<RemarkFormat, /*ExternalStorage=*/true> remarkFormat{
+        "remark-format",
+        llvm::cl::desc("Specify the format for remark output."),
+        cl::location(remarkFormatFlag),
+        llvm::cl::value_desc("format"),
+        llvm::cl::init(RemarkFormat::REMARK_FORMAT_STDOUT),
+        llvm::cl::values(clEnumValN(RemarkFormat::REMARK_FORMAT_STDOUT,
+                                    "emitRemark",
+                                    "Print as emitRemark to command-line"),
+                         clEnumValN(RemarkFormat::REMARK_FORMAT_YAML, "yaml",
+                                    "Print yaml file"),
+                         clEnumValN(RemarkFormat::REMARK_FORMAT_BITSTREAM,
+                                    "bitstream", "Print bitstream file")),
+        llvm::cl::cat(remarkCategory)};
+
+    static llvm::cl::opt<RemarkPolicy, /*ExternalStorage=*/true> remarkPolicy{
+        "remark-policy",
+        llvm::cl::desc("Specify the policy for remark output."),
+        cl::location(remarkPolicyFlag),
+        llvm::cl::value_desc("format"),
+        llvm::cl::init(RemarkPolicy::REMARK_POLICY_ALL),
+        llvm::cl::values(clEnumValN(RemarkPolicy::REMARK_POLICY_ALL, "all",
+                                    "Print all remarks"),
+                         clEnumValN(RemarkPolicy::REMARK_POLICY_FINAL, "final",
+                                    "Print final remarks")),
+        llvm::cl::cat(remarkCategory)};
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> remarksAll(
+        "remarks-filter",
+        cl::desc("Show all remarks: passed, missed, failed, analysis"),
+        cl::location(remarksAllFilterFlag), cl::init(""),
+        cl::cat(remarkCategory));
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> remarksFile(
+        "remarks-output-file",
+        cl::desc(
+            "Output file for yaml and bitstream remark formats. Default is "
+            "mlir-remarks.yaml or mlir-remarks.bitstream"),
+        cl::location(remarksOutputFileFlag), cl::init(""),
+        cl::cat(remarkCategory));
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> remarksPassed(
+        "remarks-filter-passed", cl::desc("Show passed remarks"),
+        cl::location(remarksPassedFilterFlag), cl::init(""),
+        cl::cat(remarkCategory));
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> remarksFailed(
+        "remarks-filter-failed", cl::desc("Show failed remarks"),
+        cl::location(remarksFailedFilterFlag), cl::init(""),
+        cl::cat(remarkCategory));
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> remarksMissed(
+        "remarks-filter-missed", cl::desc("Show missed remarks"),
+        cl::location(remarksMissedFilterFlag), cl::init(""),
+        cl::cat(remarkCategory));
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> remarksAnalyse(
+        "remarks-filter-analyse", cl::desc("Show analysis remarks"),
+        cl::location(remarksAnalyseFilterFlag), cl::init(""),
+        cl::cat(remarkCategory));
+
     /// Set the callback to load a pass plugin.
     passPlugins.setCallback([&](const std::string &pluginPath) {
       auto plugin = PassPlugin::load(pluginPath);
@@ -241,23 +310,23 @@ public:
     setHandler([verbosityLevel, showNotes](Diagnostic &diag) {
       auto severity = diag.getSeverity();
       switch (severity) {
-      case DiagnosticSeverity::Error:
+      case mlir::DiagnosticSeverity::Error:
         // failure indicates that the error is not handled by the filter and
         // goes through to the default handler. Therefore, the error can be
         // successfully printed.
         return failure();
-      case DiagnosticSeverity::Warning:
+      case mlir::DiagnosticSeverity::Warning:
         if (verbosityLevel == VerbosityLevel::ErrorsOnly)
           return success();
         else
           return failure();
-      case DiagnosticSeverity::Remark:
+      case mlir::DiagnosticSeverity::Remark:
         if (verbosityLevel == VerbosityLevel::ErrorsOnly ||
             verbosityLevel == VerbosityLevel::ErrorsAndWarnings)
           return success();
         else
           return failure();
-      case DiagnosticSeverity::Note:
+      case mlir::DiagnosticSeverity::Note:
         if (showNotes)
           return failure();
         else
@@ -461,6 +530,51 @@ performActions(raw_ostream &os,
     return failure();
 
   context->enableMultithreading(wasThreadingEnabled);
+  // Set the remark categories and policy.
+  remark::RemarkCategories cats{
+      config.getRemarksAllFilter(), config.getRemarksPassedFilter(),
+      config.getRemarksMissedFilter(), config.getRemarksAnalyseFilter(),
+      config.getRemarksFailedFilter()};
+
+  mlir::MLIRContext &ctx = *context;
+  // Helper to create the appropriate policy based on configuration
+  auto createPolicy = [&config]()
+      -> std::unique_ptr<mlir::remark::detail::RemarkEmittingPolicyBase> {
+    if (config.getRemarkPolicy() == RemarkPolicy::REMARK_POLICY_ALL)
+      return std::make_unique<mlir::remark::RemarkEmittingPolicyAll>();
+    if (config.getRemarkPolicy() == RemarkPolicy::REMARK_POLICY_FINAL)
+      return std::make_unique<mlir::remark::RemarkEmittingPolicyFinal>();
+
+    llvm_unreachable("Invalid remark policy");
+  };
+
+  switch (config.getRemarkFormat()) {
+  case RemarkFormat::REMARK_FORMAT_STDOUT:
+    if (failed(mlir::remark::enableOptimizationRemarks(
+            ctx, nullptr, createPolicy(), cats, true /*printAsEmitRemarks*/)))
+      return failure();
+    break;
+
+  case RemarkFormat::REMARK_FORMAT_YAML: {
+    std::string file = config.getRemarksOutputFile().empty()
+                           ? "mlir-remarks.yaml"
+                           : config.getRemarksOutputFile();
+    if (failed(mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
+            ctx, file, llvm::remarks::Format::YAML, createPolicy(), cats)))
+      return failure();
+    break;
+  }
+
+  case RemarkFormat::REMARK_FORMAT_BITSTREAM: {
+    std::string file = config.getRemarksOutputFile().empty()
+                           ? "mlir-remarks.bitstream"
+                           : config.getRemarksOutputFile();
+    if (failed(mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
+            ctx, file, llvm::remarks::Format::Bitstream, createPolicy(), cats)))
+      return failure();
+    break;
+  }
+  }
 
   // Prepare the pass manager, applying command-line and reproducer options.
   PassManager pm(op.get()->getName(), PassManager::Nesting::Implicit);
@@ -502,6 +616,12 @@ performActions(raw_ostream &os,
   AsmState asmState(op.get(), OpPrintingFlags(), /*locationMap=*/nullptr,
                     &fallbackResourceMap);
   os << OpWithState(op.get(), asmState) << '\n';
+
+  // This is required if the remark policy is final. Otherwise, the remarks are
+  // not emitted.
+  if (remark::detail::RemarkEngine *engine = ctx.getRemarkEngine())
+    engine->getRemarkEmittingPolicy()->finalize();
+
   return success();
 }
 
@@ -523,8 +643,8 @@ processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
       SMLoc());
   sourceMgr->AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
 
-  // Create a context just for the current buffer. Disable threading on creation
-  // since we'll inject the thread-pool separately.
+  // Create a context just for the current buffer. Disable threading on
+  // creation since we'll inject the thread-pool separately.
   MLIRContext context(registry, MLIRContext::Threading::DISABLED);
   if (threadPool)
     context.setThreadPool(*threadPool);
@@ -561,17 +681,8 @@ processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
   return success();
 }
 
-std::pair<std::string, std::string>
-mlir::registerAndParseCLIOptions(int argc, char **argv,
-                                 llvm::StringRef toolName,
-                                 DialectRegistry &registry) {
-  static cl::opt<std::string> inputFilename(
-      cl::Positional, cl::desc("<input file>"), cl::init("-"));
-
-  static cl::opt<std::string> outputFilename("o", cl::desc("Output filename"),
-                                             cl::value_desc("filename"),
-                                             cl::init("-"));
-  // Register any command line options.
+std::string mlir::registerCLIOptions(llvm::StringRef toolName,
+                                     DialectRegistry &registry) {
   MlirOptMainConfig::registerCLOptions(registry);
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
@@ -586,9 +697,27 @@ mlir::registerAndParseCLIOptions(int argc, char **argv,
     interleaveComma(registry.getDialectNames(), os,
                     [&](auto name) { os << name; });
   }
-  // Parse pass names in main to ensure static initialization completed.
+  return helpHeader;
+}
+
+std::pair<std::string, std::string>
+mlir::parseCLIOptions(int argc, char **argv, llvm::StringRef helpHeader) {
+  static cl::opt<std::string> inputFilename(
+      cl::Positional, cl::desc("<input file>"), cl::init("-"));
+
+  static cl::opt<std::string> outputFilename("o", cl::desc("Output filename"),
+                                             cl::value_desc("filename"),
+                                             cl::init("-"));
   cl::ParseCommandLineOptions(argc, argv, helpHeader);
   return std::make_pair(inputFilename.getValue(), outputFilename.getValue());
+}
+
+std::pair<std::string, std::string>
+mlir::registerAndParseCLIOptions(int argc, char **argv,
+                                 llvm::StringRef toolName,
+                                 DialectRegistry &registry) {
+  auto helpHeader = registerCLIOptions(toolName, registry);
+  return parseCLIOptions(argc, argv, helpHeader);
 }
 
 static LogicalResult printRegisteredDialects(DialectRegistry &registry) {
@@ -669,9 +798,9 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv,
   if (config.shouldListPasses())
     return printRegisteredPassesAndReturn();
 
-  // When reading from stdin and the input is a tty, it is often a user mistake
-  // and the process "appears to be stuck". Print a message to let the user know
-  // about it!
+  // When reading from stdin and the input is a tty, it is often a user
+  // mistake and the process "appears to be stuck". Print a message to let the
+  // user know about it!
   if (inputFilename == "-" &&
       sys::Process::FileDescriptorIsDisplayed(fileno(stdin)))
     llvm::errs() << "(processing input from stdin now, hit ctrl-c/ctrl-d to "

@@ -920,10 +920,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
     assert(!Subtarget->isAIXABI() &&
            "AIX does not support patchable function entry!");
-    // PATCHABLE_FUNCTION_ENTER on little endian is for XRAY support which is
-    // handled in PPCLinuxAsmPrinter.
-    if (MAI->isLittleEndian())
-      return;
     const Function &F = MF->getFunction();
     unsigned Num = 0;
     (void)F.getFnAttribute("patchable-function-entry")
@@ -1789,7 +1785,13 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Update compiler-rt/lib/xray/xray_powerpc64.cc accordingly when number
     // of instructions change.
     // XRAY is only supported on PPC Linux little endian.
-    if (!MAI->isLittleEndian())
+    const Function &F = MF->getFunction();
+    unsigned Num = 0;
+    (void)F.getFnAttribute("patchable-function-entry")
+        .getValueAsString()
+        .getAsInteger(10, Num);
+
+    if (!MAI->isLittleEndian() || Num)
       break;
     MCSymbol *BeginOfSled = OutContext.createTempSymbol();
     MCSymbol *EndOfSled = OutContext.createTempSymbol();
@@ -2402,7 +2404,7 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
             << static_cast<unsigned>(((V) & (TracebackTable::Field##Mask)) >>  \
                                      (TracebackTable::Field##Shift))
 
-  GENBOOLCOMMENT("", FirstHalfOfMandatoryField, IsGlobaLinkage);
+  GENBOOLCOMMENT("", FirstHalfOfMandatoryField, IsGlobalLinkage);
   GENBOOLCOMMENT(", ", FirstHalfOfMandatoryField, IsOutOfLineEpilogOrPrologue);
   EmitComment();
 
@@ -2700,7 +2702,7 @@ static bool isSpecialLLVMGlobalArrayToSkip(const GlobalVariable *GV) {
 
 static bool isSpecialLLVMGlobalArrayForStaticInit(const GlobalVariable *GV) {
   return StringSwitch<bool>(GV->getName())
-      .Cases("llvm.global_ctors", "llvm.global_dtors", true)
+      .Cases({"llvm.global_ctors", "llvm.global_dtors"}, true)
       .Default(false);
 }
 
@@ -2746,6 +2748,10 @@ static void tocDataChecks(unsigned PointerSize, const GlobalVariable *GV) {
 void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // Special LLVM global arrays have been handled at the initialization.
   if (isSpecialLLVMGlobalArrayToSkip(GV) || isSpecialLLVMGlobalArrayForStaticInit(GV))
+    return;
+
+  // Ignore non-emitted data.
+  if (GV->getSection() == "llvm.metadata")
     return;
 
   // If the Global Variable has the toc-data attribute, it needs to be emitted
