@@ -333,7 +333,8 @@ private:
 
 /// Determine whether expression \p op should be emitted in a deferred way.
 static bool hasDeferredEmission(Operation *op) {
-  return isa_and_nonnull<emitc::GetGlobalOp, emitc::LiteralOp, emitc::MemberOp,
+  return isa_and_nonnull<emitc::DereferenceOp, emitc::GetGlobalOp,
+                         emitc::LiteralOp, emitc::MemberOp,
                          emitc::MemberOfPtrOp, emitc::SubscriptOp,
                          emitc::GetFieldOp>(op);
 }
