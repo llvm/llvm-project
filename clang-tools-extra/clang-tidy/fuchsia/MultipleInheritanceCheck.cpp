@@ -24,6 +24,9 @@ AST_MATCHER(CXXRecordDecl, hasBases) {
 } // namespace
 
 bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
+  if (!Node)
+    return false;
+
   assert(Node->isCompleteDefinition());
 
   // Short circuit the lookup if we have analyzed this record before.
@@ -36,10 +39,7 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
     for (const CXXBaseSpecifier &I : Node->bases()) {
       if (I.isVirtual())
         continue;
-      const auto *Base = I.getType()->getAsCXXRecordDecl();
-      if (!Base)
-        continue;
-      if (!isInterface(Base))
+      if (!isInterface(I.getType()->getAsCXXRecordDecl()))
         return false;
     }
 
@@ -68,20 +68,14 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
   for (const CXXBaseSpecifier &I : D.bases()) {
     if (I.isVirtual())
       continue;
-    const auto *Base = I.getType()->getAsCXXRecordDecl();
-    if (!Base)
-      continue;
-    if (!isInterface(Base))
+    if (!isInterface(I.getType()->getAsCXXRecordDecl()))
       ++NumConcrete;
   }
 
   // Check virtual bases to see if there is more than one concrete
   // non-virtual base.
   for (const CXXBaseSpecifier &V : D.vbases()) {
-    const auto *Base = V.getType()->getAsCXXRecordDecl();
-    if (!Base)
-      continue;
-    if (!isInterface(Base))
+    if (!isInterface(V.getType()->getAsCXXRecordDecl()))
       ++NumConcrete;
   }
 
