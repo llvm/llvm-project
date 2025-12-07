@@ -49,7 +49,6 @@ int main(int, char**) {
                     << run << "  notify iteration " << i << std::endl;
 
         while (waiter_ready.load() < num_waiters) {
-          std::this_thread::yield();
         }
         waiter_ready.store(0);
         state.fetch_add(1);
