@@ -19,6 +19,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/DTLTO/DTLTO.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Caching.h"
@@ -93,8 +94,8 @@ BitcodeCompiler::BitcodeCompiler() {
         onIndexWrite, ctx.arg.thinLTOEmitIndexFiles,
         ctx.arg.thinLTOEmitImportsFiles);
   }
-  ltoObj = std::make_unique<lto::LTO>(createConfig(), backend,
-                                      ctx.arg.ltoPartitions);
+  ltoObj = std::make_unique<lto::DTLTO>(createConfig(), backend,
+                                        ctx.arg.ltoPartitions);
 }
 
 BitcodeCompiler::~BitcodeCompiler() = default;

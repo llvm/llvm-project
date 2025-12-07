@@ -12,12 +12,30 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/MemoryBuffer.h"
 
-namespace dtlto {
+namespace llvm {
+namespace lto {
 
-llvm::Expected<llvm::lto::InputFile *>
-addInput(llvm::lto::LTO *LtoObj, std::unique_ptr<llvm::lto::InputFile> Input);
+class DTLTO : public LTO {
+public:
+  // Inherit contructors from LTO base class.
+  using LTO::LTO;
+  ~DTLTO() { removeTempFiles(); }
 
-llvm::Error process(llvm::lto::LTO &LtoObj);
-} // namespace dtlto
+  BumpPtrAllocator PtrAlloc;
+  StringSaver Saver{PtrAlloc};
+
+  // Remove temporary files.
+  void removeTempFiles();
+
+  // Array of input bitcode files for LTO.
+  std::vector<std::shared_ptr<lto::InputFile>> InputFiles;
+
+  virtual Expected<std::shared_ptr<lto::InputFile>>
+  addInput(std::unique_ptr<lto::InputFile> InputPtr) override;
+
+  virtual llvm::Error dtlto_process() override;
+};
+} // namespace lto
+} // namespace llvm
 
 #endif // LLVM_DTLTO_H

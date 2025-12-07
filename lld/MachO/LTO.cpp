@@ -18,6 +18,7 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/DTLTO/DTLTO.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Caching.h"
@@ -101,7 +102,7 @@ BitcodeCompiler::BitcodeCompiler() {
         config->thinLTOEmitImportsFiles);
   }
 
-  ltoObj = std::make_unique<lto::LTO>(createConfig(), backend);
+  ltoObj = std::make_unique<lto::DTLTO>(createConfig(), backend);
 }
 
 void BitcodeCompiler::add(BitcodeFile &f) {

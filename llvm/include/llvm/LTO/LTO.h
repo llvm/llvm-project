@@ -616,23 +616,12 @@ public:
   // DTLTO mode.
   bool Dtlto = false;
 
-  BumpPtrAllocator PtrAlloc;
-  StringSaver Saver{PtrAlloc};
+  virtual Expected<std::shared_ptr<lto::InputFile>>
+  addInput(std::unique_ptr<lto::InputFile> InputPtr) {
+    return std::shared_ptr<lto::InputFile>(InputPtr.release());
+  }
 
-  class TempFilesRemover {
-    LTO *Lto;
-
-  public:
-    TempFilesRemover(LTO *P) : Lto{P} {};
-    ~TempFilesRemover();
-  };
-
-  // Array of input bitcode files for LTO.
-  std::vector<std::shared_ptr<lto::InputFile>> InputFiles;
-  TempFilesRemover TempsRemover{ this };
-
-  Expected<std::shared_ptr<lto::InputFile>>
-  addInput(std::unique_ptr<lto::InputFile> InputPtr);
+  virtual llvm::Error dtlto_process() { return llvm::Error::success(); }
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

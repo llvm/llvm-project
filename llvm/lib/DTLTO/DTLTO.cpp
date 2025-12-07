@@ -33,17 +33,7 @@
 using namespace llvm;
 
 
-// Removes any temporary regular archive member files that were created during
-// processing.
-lto::LTO::TempFilesRemover::~TempFilesRemover() {
-  for (auto &Input : Lto->InputFiles) {
-    if (Input->isMemberOfArchive())
-      sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
-  }
-}
-
 namespace dtlto {
-
 
 // Writes the content of a memory buffer into a file.
 static llvm::Error saveBuffer(StringRef FileBuffer, StringRef FilePath) {
@@ -129,6 +119,15 @@ Expected<bool> isThinArchive(const StringRef ArchivePath) {
 
 } // namespace dtlto
 
+// Removes any temporary regular archive member files that were created during
+// processing.
+void lto::DTLTO::removeTempFiles() {
+  for (auto &Input : InputFiles) {
+    if (Input->isMemberOfArchive())
+      sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
+  }
+}
+
 // This function performs the following tasks:
 // 1. Adds the input file to the LTO object's list of input files.
 // 2. For thin archive members, generates a new module ID which is a path to a
@@ -136,7 +135,7 @@ Expected<bool> isThinArchive(const StringRef ArchivePath) {
 // 3. For regular archive members, generates a new unique module ID.
 // 4. Updates the bitcode module's identifier.
 Expected<std::shared_ptr<lto::InputFile>>
-lto::LTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
+lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
 
   // Skip processing if not in DTLTO mode.
   if (!Dtlto)
@@ -187,7 +186,7 @@ namespace dtlto {
 // Write the archive member content to a file named after the module ID.
 // If a file with that name already exists, it's likely a leftover from a
 // previously terminated linker process and can be safely overwritten.
-Error saveInputArchiveMember(lto::LTO &LtoObj, lto::InputFile *Input) {
+Error saveInputArchiveMember(lto::DTLTO &LtoObj, lto::InputFile *Input) {
   StringRef ModuleId = Input->getName();
   if (Input->isMemberOfArchive()) {
     MemoryBufferRef MemoryBufferRef = Input->getFileBuffer();
@@ -199,7 +198,7 @@ Error saveInputArchiveMember(lto::LTO &LtoObj, lto::InputFile *Input) {
 
 // Iterates through all ThinLTO-enabled input files and saves their content
 // to separate files if they are regular archive members.
-Error saveInputArchiveMembers(lto::LTO &LtoObj) {
+Error saveInputArchiveMembers(lto::DTLTO &LtoObj) {
   for (auto &Input : LtoObj.InputFiles) {
     if (!Input->isThinLTO())
       continue;
@@ -209,18 +208,16 @@ Error saveInputArchiveMembers(lto::LTO &LtoObj) {
   return Error::success();
 }
 
+} // namespace dtlto
+
 // Entry point for DTLTO archives support.
 //
 // Sets up the temporary file remover and processes archive members.
 // Must be called after all inputs are added but before optimization begins.
-llvm::Error process(llvm::lto::LTO &LtoObj) {
-  if (!LtoObj.Dtlto)
-    return Error::success();
+llvm::Error lto::DTLTO::dtlto_process() {
 
   // Process and save archive members to separate files if needed.
-  if (Error EC = saveInputArchiveMembers(LtoObj))
+  if (Error EC = dtlto::saveInputArchiveMembers(*this))
     return EC;
   return Error::success();
 }
-
-} // namespace dtlto

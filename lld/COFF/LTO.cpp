@@ -21,6 +21,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/DTLTO/DTLTO.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Caching.h"
@@ -133,7 +134,7 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
         llvm::heavyweight_hardware_concurrency(ctx.config.thinLTOJobs));
   }
 
-  ltoObj = std::make_unique<lto::LTO>(createConfig(), backend,
+  ltoObj = std::make_unique<lto::DTLTO>(createConfig(), backend,
                                       ctx.config.ltoPartitions);
 
   if (!ctx.config.dtltoDistributor.empty())

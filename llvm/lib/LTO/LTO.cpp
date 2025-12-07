@@ -1214,7 +1214,7 @@ Error LTO::checkPartiallySplit() {
 
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   if (Dtlto) {
-    if (Error EC = dtlto::process(*this))
+    if (Error EC = dtlto_process())
       return EC;
   }
   // Compute "dead" symbols, we don't want to import/export these!
