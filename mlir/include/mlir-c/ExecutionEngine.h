@@ -41,6 +41,9 @@ DEFINE_C_API_STRUCT(MlirExecutionEngine, void);
 /// generation. The number and array of paths corresponding to shared libraries
 /// that will be loaded are specified via `numPaths` and `sharedLibPaths`
 /// respectively.
+/// The `enablePIC` arguments controls the relocation model, when true the
+/// generated code is emitted as "position independent", making it possible to
+/// save it and reload it as a shared object in another process.
 /// TODO: figure out other options.
 MLIR_CAPI_EXPORTED MlirExecutionEngine mlirExecutionEngineCreate(
     MlirModule op, int optLevel, int numPaths,
