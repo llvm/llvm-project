@@ -29,8 +29,6 @@ struct __libcpp_timed_backoff_policy {
       __libcpp_thread_sleep_for(chrono::milliseconds(8));
     else if (__elapsed > chrono::microseconds(64))
       __libcpp_thread_sleep_for(__elapsed / 2);
-    else if (__elapsed > chrono::microseconds(4))
-      __libcpp_thread_yield();
     else {
     } // poll
     return false;
