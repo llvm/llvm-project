@@ -67,36 +67,35 @@ void MultipleInheritanceCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
-  if (const auto *D = Result.Nodes.getNodeAs<CXXRecordDecl>("decl")) {
-    // Check against map to see if the class inherits from multiple
-    // concrete classes
-    unsigned NumConcrete = 0;
-    for (const auto &I : D->bases()) {
-      if (I.isVirtual())
-        continue;
-      const auto *Base = I.getType()->getAsCXXRecordDecl();
-      if (!Base)
-        continue;
-      assert(Base->isCompleteDefinition());
-      if (!isInterface(Base))
-        ++NumConcrete;
-    }
+  const auto &D = *Result.Nodes.getNodeAs<CXXRecordDecl>("decl");
+  // Check against map to see if the class inherits from multiple
+  // concrete classes
+  unsigned NumConcrete = 0;
+  for (const auto &I : D.bases()) {
+    if (I.isVirtual())
+      continue;
+    const auto *Base = I.getType()->getAsCXXRecordDecl();
+    if (!Base)
+      continue;
+    assert(Base->isCompleteDefinition());
+    if (!isInterface(Base))
+      ++NumConcrete;
+  }
 
-    // Check virtual bases to see if there is more than one concrete
-    // non-virtual base.
-    for (const auto &V : D->vbases()) {
-      const auto *Base = V.getType()->getAsCXXRecordDecl();
-      if (!Base)
-        continue;
-      assert(Base->isCompleteDefinition());
-      if (!isInterface(Base))
-        ++NumConcrete;
-    }
+  // Check virtual bases to see if there is more than one concrete
+  // non-virtual base.
+  for (const auto &V : D.vbases()) {
+    const auto *Base = V.getType()->getAsCXXRecordDecl();
+    if (!Base)
+      continue;
+    assert(Base->isCompleteDefinition());
+    if (!isInterface(Base))
+      ++NumConcrete;
+  }
 
-    if (NumConcrete > 1) {
-      diag(D->getBeginLoc(), "inheriting multiple classes that aren't "
-                             "pure virtual is discouraged");
-    }
+  if (NumConcrete > 1) {
+    diag(D.getBeginLoc(), "inheriting multiple classes that aren't "
+                          "pure virtual is discouraged");
   }
 }
 
