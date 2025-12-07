@@ -2178,6 +2178,9 @@ public:
     return false;
   }
 
+  /// Returns true, if this call has a floating-point operand bundle.
+  bool hasFloatingPointOperandBundle() const;
+
   /// Return the effective rounding mode for this call.
   RoundingMode getRoundingMode() const;
 
