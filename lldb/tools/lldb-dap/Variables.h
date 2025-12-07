@@ -60,7 +60,8 @@ struct Variables {
   /// If \p var_ref is invalid an empty SBValue is returned.
   lldb::SBValue GetVariable(int64_t var_ref) const;
 
-  lldb::SBValueList *GetScope(const uint32_t frame_id, const ScopeKind kind);
+  lldb::SBValueList *GetScope(const uint64_t dap_frame_id,
+                              const ScopeKind kind);
 
   /// Insert a new \p variable.
   /// \return variableReference assigned to this expandable variable.
@@ -71,7 +72,7 @@ struct Variables {
   lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name);
 
   /// Initialize a frame if it hasn't been already, otherwise do nothing
-  std::vector<protocol::Scope> ReadyFrame(uint32_t frame_id,
+  std::vector<protocol::Scope> ReadyFrame(const uint64_t dap_frame_id,
                                           lldb::SBFrame &frame);
   std::optional<ScopeData> GetScopeKind(const int64_t variablesReference);
 
@@ -83,8 +84,8 @@ private:
   static constexpr int64_t PermanentVariableStartIndex = (1ll << 32);
   int64_t m_next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
 
-  // Variable Reference,                 frame_id
-  std::map<int64_t, std::pair<ScopeKind, uint32_t>> m_scope_kinds;
+  // Variable Reference,                 dap_frame_id
+  std::map<int64_t, std::pair<ScopeKind, uint64_t>> m_scope_kinds;
 
   /// Variables that are alive in this stop state.
   /// Will be cleared when debuggee resumes.
@@ -94,9 +95,9 @@ private:
   /// These are the variables evaluated from debug console REPL.
   llvm::DenseMap<int64_t, lldb::SBValue> m_referencedpermanent_variables;
 
-  /// Key = frame_id
-  /// Value = (locals, globals Registers) scopes
-  std::map<uint32_t,
+  /// Key = dap_frame_id (encodes both thread index ID and frame ID)
+  /// Value = (locals, globals, registers) scopes
+  std::map<uint64_t,
            std::tuple<lldb::SBValueList, lldb::SBValueList, lldb::SBValueList>>
       m_frames;
   int64_t m_next_permanent_var_ref{PermanentVariableStartIndex};
