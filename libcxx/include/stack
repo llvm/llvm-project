@@ -126,6 +126,7 @@ template <class T, class Container>
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
 #  include <__ranges/from_range.h>
+#  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_same.h>
 #  include <__utility/forward.h>
 #  include <deque>

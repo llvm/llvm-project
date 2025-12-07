@@ -83,14 +83,14 @@ constexpr void test() {
 }
 
 template <class T>
-struct ThrowingMoveAllocator {
+struct PotentiallyThrowingMoveAllocator {
   using value_type                                    = T;
-  explicit ThrowingMoveAllocator()                    = default;
-  ThrowingMoveAllocator(const ThrowingMoveAllocator&) = default;
-  constexpr ThrowingMoveAllocator(ThrowingMoveAllocator&&) noexcept(false) {}
+  explicit PotentiallyThrowingMoveAllocator()                    = default;
+  PotentiallyThrowingMoveAllocator(const PotentiallyThrowingMoveAllocator&) = default;
+  constexpr PotentiallyThrowingMoveAllocator(PotentiallyThrowingMoveAllocator&&) noexcept(false) {}
   constexpr T* allocate(std::ptrdiff_t n) { return std::allocator<T>().allocate(n); }
   constexpr void deallocate(T* p, std::ptrdiff_t n) { return std::allocator<T>().deallocate(p, n); }
-  friend bool operator==(ThrowingMoveAllocator, ThrowingMoveAllocator) = default;
+  friend bool operator==(PotentiallyThrowingMoveAllocator, PotentiallyThrowingMoveAllocator) = default;
 };
 
 struct ThrowingMoveComp {
@@ -117,9 +117,9 @@ constexpr void test_move_noexcept() {
 #if _LIBCPP_VERSION
   if (!TEST_IS_CONSTANT_EVALUATED) {
     // Container fails to be nothrow-move-constructible; this relies on libc++'s support for non-nothrow-copyable allocators
-    using C = std::flat_set<int, std::less<int>, std::deque<int, ThrowingMoveAllocator<int>>>;
-    static_assert(!std::is_nothrow_move_constructible_v<std::deque<int, ThrowingMoveAllocator<int>>>);
-    static_assert(!std::is_nothrow_move_constructible_v<C>);
+    using C = std::flat_set<int, std::less<int>, std::deque<int, PotentiallyThrowingMoveAllocator<int>>>;
+    static_assert(std::is_nothrow_move_constructible_v<std::deque<int, PotentiallyThrowingMoveAllocator<int>>>);
+    static_assert(std::is_nothrow_move_constructible_v<C>);
     C c;
     C d = std::move(c);
   }

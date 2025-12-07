@@ -92,17 +92,6 @@ constexpr bool test() {
   return true;
 }
 
-template <class T>
-struct ThrowingMoveAllocator {
-  using value_type                                    = T;
-  explicit ThrowingMoveAllocator()                    = default;
-  ThrowingMoveAllocator(const ThrowingMoveAllocator&) = default;
-  ThrowingMoveAllocator(ThrowingMoveAllocator&&) noexcept(false) {}
-  T* allocate(std::ptrdiff_t n) { return std::allocator<T>().allocate(n); }
-  void deallocate(T* p, std::ptrdiff_t n) { return std::allocator<T>().deallocate(p, n); }
-  friend bool operator==(ThrowingMoveAllocator, ThrowingMoveAllocator) = default;
-};
-
 struct ThrowingMoveComp {
   ThrowingMoveComp() = default;
   ThrowingMoveComp(const ThrowingMoveComp&) noexcept(true) {}
@@ -136,16 +125,6 @@ void test_move_noexcept() {
     C c;
     C d = std::move(c);
   }
-#if _LIBCPP_VERSION
-  {
-    // Container fails to be nothrow-move-constructible; this relies on libc++'s support for non-nothrow-copyable allocators
-    using C = std::flat_multiset<int, std::less<int>, std::deque<int, ThrowingMoveAllocator<int>>>;
-    static_assert(!std::is_nothrow_move_constructible_v<std::deque<int, ThrowingMoveAllocator<int>>>);
-    static_assert(!std::is_nothrow_move_constructible_v<C>);
-    C c;
-    C d = std::move(c);
-  }
-#endif // _LIBCPP_VERSION
   {
     // Comparator fails to be nothrow-move-constructible
     using C = std::flat_multiset<int, ThrowingMoveComp>;

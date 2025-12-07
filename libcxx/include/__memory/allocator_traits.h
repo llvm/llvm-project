@@ -374,6 +374,10 @@ inline const bool __is_cpp17_copy_insertable_v =
      (!__is_std_allocator_v<_Alloc> &&
       __has_construct_v<_Alloc, typename _Alloc::value_type*, const typename _Alloc::value_type&>));
 
+template <typename _Alloc, typename _Traits = allocator_traits<_Alloc> >
+inline const bool __is_allocator_aware_container_move_nothrow_v =
+    _Traits::propagate_on_container_move_assignment::value || _Traits::is_always_equal::value;
+
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

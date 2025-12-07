@@ -29,17 +29,6 @@
 #include "MoveOnly.h"
 #include "test_allocator.h"
 
-template <class T>
-struct ThrowingMoveAllocator {
-  using value_type                                    = T;
-  explicit ThrowingMoveAllocator()                    = default;
-  ThrowingMoveAllocator(const ThrowingMoveAllocator&) = default;
-  ThrowingMoveAllocator(ThrowingMoveAllocator&&) noexcept(false) {}
-  T* allocate(std::ptrdiff_t n) { return std::allocator<T>().allocate(n); }
-  void deallocate(T* p, std::ptrdiff_t n) { return std::allocator<T>().deallocate(p, n); }
-  friend bool operator==(ThrowingMoveAllocator, ThrowingMoveAllocator) = default;
-};
-
 struct ThrowingMoveComp {
   ThrowingMoveComp() = default;
   ThrowingMoveComp(const ThrowingMoveComp&) noexcept(true) {}
@@ -73,26 +62,6 @@ int main(int, char**) {
     C c;
     C d = std::move(c);
   }
-#if _LIBCPP_VERSION
-  {
-    // Container fails to be nothrow-move-constructible; this relies on libc++'s support for non-nothrow-copyable allocators
-    using C =
-        std::flat_multimap<int, int, std::less<int>, std::deque<int, ThrowingMoveAllocator<int>>, std::vector<int>>;
-    static_assert(!std::is_nothrow_move_constructible_v<std::deque<int, ThrowingMoveAllocator<int>>>);
-    static_assert(!std::is_nothrow_move_constructible_v<C>);
-    C c;
-    C d = std::move(c);
-  }
-  {
-    // Container fails to be nothrow-move-constructible; this relies on libc++'s support for non-nothrow-copyable allocators
-    using C =
-        std::flat_multimap<int, int, std::less<int>, std::vector<int>, std::deque<int, ThrowingMoveAllocator<int>>>;
-    static_assert(!std::is_nothrow_move_constructible_v<std::deque<int, ThrowingMoveAllocator<int>>>);
-    static_assert(!std::is_nothrow_move_constructible_v<C>);
-    C c;
-    C d = std::move(c);
-  }
-#endif // _LIBCPP_VERSION
   {
     // Comparator fails to be nothrow-move-constructible
     using C = std::flat_multimap<int, int, ThrowingMoveComp>;
