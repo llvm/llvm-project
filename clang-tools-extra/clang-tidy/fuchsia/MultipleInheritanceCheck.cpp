@@ -17,9 +17,7 @@ namespace clang::tidy::fuchsia {
 
 namespace {
 AST_MATCHER(CXXRecordDecl, hasBases) {
-  if (Node.hasDefinition())
-    return Node.getNumBases() > 0;
-  return false;
+  return Node.hasDefinition() && Node.getNumBases() > 0;
 }
 } // namespace
 
