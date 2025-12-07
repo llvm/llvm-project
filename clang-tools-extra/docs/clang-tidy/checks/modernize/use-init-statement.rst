@@ -61,10 +61,8 @@ Options
 Limitations
 -----------
 
-* The check supports exclusively builtin types for non-reference, non-pointer
-  variable declarations;
-
-* The check doesn't provide change for lifetime-extended references;
+* The check supports exclusively builtin types for both non-reference,
+  non-pointer variable declarations and lifetime-extended references.
 
 * The check may provide false-negative if you have template code.
 

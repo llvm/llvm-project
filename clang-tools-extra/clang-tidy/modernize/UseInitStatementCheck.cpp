@@ -102,25 +102,45 @@ static Matcher<Stmt> callByRef(Matcher<Decl> VarOrBindingNodeMatcher) {
       cxxConstructExpr(forEachArgumentWithParam(argMatcher, paramMatcher)));
 }
 
+static Matcher<VarDecl> hasInitializerWithLifetimeExtension() {
+  return hasInitializer(expr(hasDescendant(expr(materializeTemporaryExpr()))));
+}
+
+static Matcher<DeclStmt> includingLifetimeExtension() {
+  return has(varDecl(hasInitializerWithLifetimeExtension()));
+}
+
+static Matcher<DeclStmt> excludingLifetimeExtension() {
+  return unless(includingLifetimeExtension());
+}
+
 // Complete matcher to detect stealing cases, preventing
 // the checker from generating code that could result in dangling references,
 // such as: `int* p; if (int v;cond) { p=&v; } use(p);`
 static Matcher<Stmt> hasStealingMatcher() {
   const auto IsStealingViaPointer =
       hasParent(unaryOperator(hasOperatorName("&")));
-  const auto HasLTE = hasInitializer(expr(hasDescendant(expr(materializeTemporaryExpr()))));
+  const auto HasLTE = hasInitializerWithLifetimeExtension();
+  const auto HasLTEForBind =
+      hasParent(declStmt(has(varDecl(equalsBoundNode("singleVar"), HasLTE))));
   const auto IsNonreferenceType = unless(hasType(referenceType()));
   const auto BoundVar =
       varDecl(equalsBoundNode("singleVar"), anyOf(IsNonreferenceType, HasLTE));
-  const auto BoundBind =
-      bindingDecl(equalsBoundNode("bindingDecl"),
-                  hasParent(decompositionDecl(IsNonreferenceType)));
+  const auto BoundBind = bindingDecl(
+      equalsBoundNode("bindingDecl"),
+      hasParent(decompositionDecl(anyOf(IsNonreferenceType, HasLTEForBind))));
   const auto VarOrBindingNode = anyOf(BoundVar, BoundBind);
-  const auto HasStealingByPointer = hasDescendant(
-      declRefExpr(to(VarOrBindingNode), IsStealingViaPointer));
+  const auto StealingAsThis =
+      anyOf(hasParent(memberExpr()),
+            hasParent(implicitCastExpr(hasCastKind(CK_NoOp),
+                                       hasParent(memberExpr()))));
+  const auto HasStealingByPointer =
+      hasDescendant(declRefExpr(to(VarOrBindingNode), IsStealingViaPointer));
   const auto HasStealingByReference =
       hasDescendant(callByRef(VarOrBindingNode));
-  return anyOf(HasStealingByPointer, HasStealingByReference);
+  const auto HasStealingAsThis =
+      hasDescendant(declRefExpr(to(VarOrBindingNode), StealingAsThis));
+  return anyOf(HasStealingByPointer, HasStealingByReference, HasStealingAsThis);
 }
 
 static Matcher<Stmt> hasConflictMatcher() {
@@ -164,10 +184,28 @@ static Matcher<Stmt> compoundStmtMatcher(
                              RefToBoundMatcher);
 }
 
-static Matcher<Stmt> forBuiltinTypes(Matcher<ReferenceType> ConditionForReference) {
-  return unless(has(varDecl(hasType(qualType(unless(
+template <bool IsDecomposition = false>
+static auto forBuiltinTypes(Matcher<ReferenceType> ConditionForReference)
+    -> std::conditional_t<IsDecomposition, Matcher<DecompositionDecl>,
+                          Matcher<Stmt>> {
+  const auto AllowedTypeMatcher = qualType(unless(
       anyOf(hasCanonicalType(builtinType()), hasCanonicalType(pointerType()),
-            hasCanonicalType(referenceType(ConditionForReference)))))))));
+            hasCanonicalType(referenceType(ConditionForReference)))));
+
+  if constexpr (IsDecomposition) {
+    const auto NonReferenceVarDecl =
+        varDecl(hasType(qualType(unless(hasCanonicalType(referenceType())))));
+    const auto BindingWithAllowedType =
+        bindingDecl(hasType(AllowedTypeMatcher));
+    const auto DecompositionWithAllowedBinding =
+        unless(has(BindingWithAllowedType));
+    const auto VarDeclInParent =
+        hasParent(declStmt(unless(has(NonReferenceVarDecl))));
+    return anyOf(DecompositionWithAllowedBinding, VarDeclInParent);
+  } else {
+    const auto VarDeclWithAllowedType = varDecl(hasType(AllowedTypeMatcher));
+    return unless(has(VarDeclWithAllowedType));
+  }
 }
 
 // Registers matchers for if/switch statements with regular variable
@@ -178,23 +216,22 @@ void UseInitStatementCheck::registerVariableDeclMatchers(MatchFinder *Finder) {
   const auto RefToBoundVarDecl =
       declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
 
-  const auto IncludeLTE = has(varDecl(
-      hasInitializer(expr(hasDescendant(expr(materializeTemporaryExpr()))))));
-  const auto ExcludeLTE = unless(IncludeLTE);
-
   // Matchers for declaration statements that precede if/switch
   const auto PrevDeclStmt =
-      declStmt(forEach(SingleVarDecl), forBuiltinTypes(anything()), ExcludeLTE)
+      declStmt(forEach(SingleVarDecl), forBuiltinTypes(anything()),
+               excludingLifetimeExtension())
           .bind("prevDecl");
   const auto PrevDeclStmtLTE =
-      declStmt(forEach(SingleVarDecl), forBuiltinTypes(pointee(builtinType())), IncludeLTE)
+      declStmt(forEach(SingleVarDecl), forBuiltinTypes(pointee(builtinType())),
+               includingLifetimeExtension())
           .bind("prevDecl");
   const auto PrevDeclStmtMatcher = anyOf(PrevDeclStmt, PrevDeclStmtLTE);
 
-  Finder->addMatcher(
-      compoundStmtMatcher(ifStmt, "ifStmt", PrevDeclStmtMatcher, RefToBoundVarDecl),
-      this);
-  Finder->addMatcher(compoundStmtMatcher(switchStmt, "switchStmt", PrevDeclStmtMatcher,
+  Finder->addMatcher(compoundStmtMatcher(ifStmt, "ifStmt", PrevDeclStmtMatcher,
+                                         RefToBoundVarDecl),
+                     this);
+  Finder->addMatcher(compoundStmtMatcher(switchStmt, "switchStmt",
+                                         PrevDeclStmtMatcher,
                                          RefToBoundVarDecl),
                      this);
 }
@@ -205,27 +242,32 @@ void UseInitStatementCheck::registerStructuredBindingMatchers(
   // Matchers for variable declarations
   const auto SingleVarDecl = varDecl().bind("singleVar");
 
-  const auto ForBuiltinTypes2 = unless(has(
-      varDecl(hasType(qualType(unless(hasCanonicalType(referenceType())))))));
-  const auto ForBuiltinTypes = unless(has(bindingDecl(hasType(qualType(unless(
-      anyOf(hasCanonicalType(builtinType()), hasCanonicalType(pointerType()),
-            hasCanonicalType(referenceType()))))))));
-  const auto ExcludeLTE = unless(has(varDecl(
-      hasInitializer(expr(hasDescendant(expr(materializeTemporaryExpr())))))));
-  const auto DecompositionDecl = decompositionDecl(
-      forEach(bindingDecl().bind("bindingDecl")),
-      anyOf(ForBuiltinTypes, hasParent(declStmt(ForBuiltinTypes2))));
+  const auto DecompositionDecl =
+      decompositionDecl(forEach(bindingDecl().bind("bindingDecl")),
+                        forBuiltinTypes<true>(anything()));
+  const auto DecompositionDeclLTE =
+      decompositionDecl(forEach(bindingDecl().bind("bindingDecl")),
+                        forBuiltinTypes<true>(pointee(builtinType())));
   const auto PrevDecomposeStmt =
-      declStmt(has(DecompositionDecl), has(SingleVarDecl), ExcludeLTE)
+      declStmt(has(DecompositionDecl), has(SingleVarDecl),
+               excludingLifetimeExtension())
           .bind("prevDecl");
+  const auto PrevDecomposeStmtLTE =
+      declStmt(has(DecompositionDeclLTE), has(SingleVarDecl),
+               includingLifetimeExtension())
+          .bind("prevDecl");
+  const auto PrevDecomposeStmtMatcher =
+      anyOf(PrevDecomposeStmt, PrevDecomposeStmtLTE);
   const auto RefToBoundBindDecl =
       declRefExpr(to(bindingDecl(equalsBoundNode("bindingDecl"))));
 
-  Finder->addMatcher(compoundStmtMatcher(ifStmt, "ifStmt", PrevDecomposeStmt,
+  Finder->addMatcher(compoundStmtMatcher(ifStmt, "ifStmt",
+                                         PrevDecomposeStmtMatcher,
                                          RefToBoundBindDecl),
                      this);
   Finder->addMatcher(compoundStmtMatcher(switchStmt, "switchStmt",
-                                         PrevDecomposeStmt, RefToBoundBindDecl),
+                                         PrevDecomposeStmtMatcher,
+                                         RefToBoundBindDecl),
                      this);
 }
 

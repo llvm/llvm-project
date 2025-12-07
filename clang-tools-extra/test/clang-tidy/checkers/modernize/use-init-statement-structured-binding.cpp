@@ -684,14 +684,14 @@ void bad_lifetime_extension_of_builtin_structured_binding() {
     struct IntWrapper { int value; };
     const auto& [i1] = IntWrapper{0}; DUMMY_TOKEN
     if (i1 == 0) {
-// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before if statement could be moved into if init statement [modernize-use-init-statement]
 // CHECK-FIXES: DUMMY_TOKEN
 // CHECK-FIXES-NEXT: if (const auto& [i1] = IntWrapper{0}; i1 == 0) {
         do_some();
     }
     const auto& [i2] = IntWrapper{0}; DUMMY_TOKEN
     switch (i2) {
-// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
 // CHECK-FIXES: DUMMY_TOKEN
 // CHECK-FIXES-NEXT: switch (const auto& [i2] = IntWrapper{0}; i2) {
         case 0:
