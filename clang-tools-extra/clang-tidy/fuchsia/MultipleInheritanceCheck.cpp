@@ -23,18 +23,6 @@ AST_MATCHER(CXXRecordDecl, hasBases) {
 }
 } // namespace
 
-// Returns "true" if the boolean "isInterface" has been set to the
-// interface status of the current Node. Return "false" if the
-// interface status for the current node is not yet known.
-bool MultipleInheritanceCheck::getInterfaceStatus(const CXXRecordDecl *Node,
-                                                  bool &IsInterface) const {
-  auto Pair = InterfaceMap.find(Node);
-  if (Pair == InterfaceMap.end())
-    return false;
-  IsInterface = Pair->second;
-  return true;
-}
-
 bool MultipleInheritanceCheck::isCurrentClassInterface(
     const CXXRecordDecl *Node) const {
   // Interfaces should have no fields.
@@ -49,9 +37,9 @@ bool MultipleInheritanceCheck::isCurrentClassInterface(
 
 bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
   // Short circuit the lookup if we have analyzed this record before.
-  bool PreviousIsInterfaceResult = false;
-  if (getInterfaceStatus(Node, PreviousIsInterfaceResult))
-    return PreviousIsInterfaceResult;
+  const auto CachedValue = InterfaceMap.find(Node);
+  if (CachedValue != InterfaceMap.end())
+    return CachedValue->second;
 
   // To be an interface, all base classes must be interfaces as well.
   for (const auto &I : Node->bases()) {
