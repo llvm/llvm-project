@@ -148,3 +148,18 @@ void test_no_crash() {
   auto foo = []() {};
   WithTemplBase<decltype(foo)>();
 }
+
+struct S1 {};
+struct S2 {};
+
+struct S3 : S1, S2 {};
+
+namespace N {
+
+struct S1 { int i; };
+struct S2 { int i; };
+
+// CHECK-MESSAGES: [[@LINE+1]]:1: warning: inheriting multiple classes that aren't pure virtual is discouraged [fuchsia-multiple-inheritance]
+struct S3 : S1, S2 {};
+
+} // namespace N

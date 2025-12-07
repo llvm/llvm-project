@@ -92,7 +92,7 @@
 // CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 // CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 
-// Make sure that using -nostdinc, -nostdinc++ or -nostdlibinc will drop both the toolchain
+// Make sure that using -nostdinc, -nostdinc++ or -nostdlib will drop both the toolchain
 // C++ include path and the sysroot one.
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
@@ -116,7 +116,7 @@
 // RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
 // RUN:     -stdlib=platform \
 // RUN:     -nostdinc++ \
-// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr \
 // RUN:               -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain \
 // RUN:               --check-prefix=CHECK-LIBCXX-NOSTDINCXX %s
 // CHECK-LIBCXX-NOSTDINCXX: "-cc1"
