@@ -1330,8 +1330,6 @@ bool RegisterCoalescer::shouldSkipRematerializationForReturn(
       RegRedefinedAfterCopy = true;
       break;
     }
-    if (I->isReturn())
-      break;
   }
 
   // Only consider skipping remat if there's no duplicate def and register
