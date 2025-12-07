@@ -319,8 +319,7 @@ public:
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  Register isLoadFromStackSlot(const MachineInstr &MI,
-                               int &FrameIndex,
+  Register isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
                                TypeSize &MemBytes) const override;
   /// isLoadFromStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
@@ -330,8 +329,7 @@ public:
 
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
-  Register isStoreToStackSlot(const MachineInstr &MI,
-                              int &FrameIndex,
+  Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               TypeSize &MemBytes) const override;
   /// isStoreToStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
@@ -492,12 +490,12 @@ public:
   /// is likely that the referenced instruction has been changed.
   ///
   /// \returns true on success.
-  MachineInstr *
-  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr,
-                        VirtRegMap *VRM = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops,
+                                      MachineBasicBlock::iterator InsertPt,
+                                      int FrameIndex,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
 
   /// Same as the previous version except it allows folding of any load and
   /// store from / to any address, not just from a specific stack slot.
@@ -722,6 +720,12 @@ private:
   bool isFrameOperand(const MachineInstr &MI, unsigned int Op,
                       int &FrameIndex) const;
 
+  /// Expand the CTSELECT pseudo-instructions.
+  bool expandCtSelectWithCMOV(MachineInstr &MI) const;
+  bool expandCtSelectIntWithoutCMOV(MachineInstr &MI) const;
+
+  bool expandCtSelectVector(MachineInstr &MI) const;
+
   /// Returns true iff the routine could find two commutable operands in the
   /// given machine instruction with 3 vector inputs.
   /// The 'SrcOpIdx1' and 'SrcOpIdx2' are INPUT and OUTPUT arguments. Their
@@ -740,8 +744,7 @@ private:
   ///
   /// If IsIntrinsic is set, operand 1 will be ignored for commuting.
   bool findThreeSrcCommutedOpIndices(const MachineInstr &MI,
-                                     unsigned &SrcOpIdx1,
-                                     unsigned &SrcOpIdx2,
+                                     unsigned &SrcOpIdx1, unsigned &SrcOpIdx2,
                                      bool IsIntrinsic = false) const;
 
   /// Returns true when instruction \p FlagI produces the same flags as \p OI.
