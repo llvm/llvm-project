@@ -4926,6 +4926,33 @@ cc_library(
     ],
 )
 
+# Trimmed FuncExtensions without ShardDialect dependency
+# Excludes ShardingExtensions.cpp and AllExtensions.cpp (which registers sharding)
+cc_library(
+    name = "TrimmedFuncExtensions",
+    srcs = glob(
+        ["lib/Dialect/Func/Extensions/*.cpp"],
+        exclude = [
+            "lib/Dialect/Func/Extensions/ShardingExtensions.cpp",
+            "lib/Dialect/Func/Extensions/AllExtensions.cpp",
+        ],
+    ),
+    hdrs = glob(
+        ["include/mlir/Dialect/Func/Extensions/*.h"],
+        exclude = [
+            "include/mlir/Dialect/Func/Extensions/AllExtensions.h",
+            "include/mlir/Dialect/Func/Extensions/ShardingExtensions.h",
+        ],
+    ),
+    includes = ["include"],
+    deps = [
+        ":ControlFlowDialect",
+        ":FuncDialect",
+        ":IR",
+        ":InliningUtils",
+    ],
+)
+
 cc_library(
     name = "FuncUtils",
     srcs = glob(["lib/Dialect/Func/Utils/*.cpp"]),
