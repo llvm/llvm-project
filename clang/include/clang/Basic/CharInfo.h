@@ -89,16 +89,15 @@ LLVM_READONLY inline bool isAsciiIdentifierContinue(unsigned char c,
 ///
 /// Note that this returns false for '\\0'.
 LLVM_READONLY inline bool isHorizontalWhitespace(unsigned char c) {
-  using namespace charinfo;
-  return (InfoTable[c] & (CHAR_HORZ_WS|CHAR_SPACE)) != 0;
+  constexpr unsigned long long Mask = 0b100000000000000000001101000000000;
+  return (c <= 32) && (Mask >> c) & 1;
 }
 
 /// Returns true if this character is vertical ASCII whitespace: '\\n', '\\r'.
 ///
 /// Note that this returns false for '\\0'.
 LLVM_READONLY inline bool isVerticalWhitespace(unsigned char c) {
-  using namespace charinfo;
-  return (InfoTable[c] & CHAR_VERT_WS) != 0;
+  return c == '\n' || c == '\r';
 }
 
 /// Return true if this character is horizontal or vertical ASCII whitespace:
@@ -106,26 +105,23 @@ LLVM_READONLY inline bool isVerticalWhitespace(unsigned char c) {
 ///
 /// Note that this returns false for '\\0'.
 LLVM_READONLY inline bool isWhitespace(unsigned char c) {
-  using namespace charinfo;
-  return (InfoTable[c] & (CHAR_HORZ_WS|CHAR_VERT_WS|CHAR_SPACE)) != 0;
+  constexpr unsigned long long Mask = 0b100000000000000000011111000000000;
+  return (c <= 32) && (Mask >> c) & 1;
 }
 
 /// Return true if this character is an ASCII digit: [0-9]
 LLVM_READONLY inline bool isDigit(unsigned char c) {
-  using namespace charinfo;
-  return (InfoTable[c] & CHAR_DIGIT) != 0;
+  return c >= '0' && c <= '9';
 }
 
 /// Return true if this character is a lowercase ASCII letter: [a-z]
 LLVM_READONLY inline bool isLowercase(unsigned char c) {
-  using namespace charinfo;
-  return (InfoTable[c] & CHAR_LOWER) != 0;
+  return c >= 'a' && c <= 'z';
 }
 
 /// Return true if this character is an uppercase ASCII letter: [A-Z]
 LLVM_READONLY inline bool isUppercase(unsigned char c) {
-  using namespace charinfo;
-  return (InfoTable[c] & CHAR_UPPER) != 0;
+  return c >= 'A' && c <= 'Z';
 }
 
 /// Return true if this character is an ASCII letter: [a-zA-Z]
@@ -158,9 +154,7 @@ LLVM_READONLY inline bool isPunctuation(unsigned char c) {
 /// character that should take exactly one column to print in a fixed-width
 /// terminal.
 LLVM_READONLY inline bool isPrintable(unsigned char c) {
-  using namespace charinfo;
-  return (InfoTable[c] & (CHAR_UPPER | CHAR_LOWER | CHAR_PERIOD | CHAR_PUNCT |
-                          CHAR_DIGIT | CHAR_UNDER | CHAR_SPACE)) != 0;
+  return c >= 32 && c <= 126;
 }
 
 /// Return true if this is the body character of a C preprocessing number,
@@ -235,7 +229,6 @@ LLVM_READONLY inline char toUppercase(char c) {
     return c + 'A' - 'a';
   return c;
 }
-
 
 /// Return true if this is a valid ASCII identifier.
 ///
