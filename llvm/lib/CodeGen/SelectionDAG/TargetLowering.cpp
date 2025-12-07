@@ -152,11 +152,13 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
 /// Generate a libcall taking the given operands as arguments and returning a
 /// result of type RetVT.
 std::pair<SDValue, SDValue>
-TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
-                            ArrayRef<SDValue> Ops,
-                            MakeLibCallOptions CallOptions,
-                            const SDLoc &dl,
+TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::LibcallImpl LibcallImpl,
+                            EVT RetVT, ArrayRef<SDValue> Ops,
+                            MakeLibCallOptions CallOptions, const SDLoc &dl,
                             SDValue InChain) const {
+  if (LibcallImpl == RTLIB::Unsupported)
+    reportFatalInternalError("unsupported library call operation");
+
   if (!InChain)
     InChain = DAG.getEntryNode();
 
@@ -185,12 +187,8 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
     Args.push_back(Entry);
   }
 
-  RTLIB::LibcallImpl LibcallImpl = getLibcallImpl(LC);
-  if (LibcallImpl == RTLIB::Unsupported)
-    reportFatalInternalError("unsupported library call operation");
-
-  SDValue Callee = DAG.getExternalSymbol(getLibcallImplName(LibcallImpl).data(),
-                                         getPointerTy(DAG.getDataLayout()));
+  SDValue Callee =
+      DAG.getExternalSymbol(LibcallImpl, getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   Type *OrigRetTy = RetTy;
@@ -6345,7 +6343,6 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
-  EVT SVT = VT.getScalarType();
   EVT ShVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
   EVT ShSVT = ShVT.getScalarType();
 
@@ -6355,6 +6352,8 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
   auto BuildSDIVPattern = [&](ConstantSDNode *C) {
     if (C->isZero())
       return false;
+
+    EVT CT = C->getValueType(0);
     APInt Divisor = C->getAPIntValue();
     unsigned Shift = Divisor.countr_zero();
     if (Shift) {
@@ -6363,12 +6362,13 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
     }
     APInt Factor = Divisor.multiplicativeInverse();
     Shifts.push_back(DAG.getConstant(Shift, dl, ShSVT));
-    Factors.push_back(DAG.getConstant(Factor, dl, SVT));
+    Factors.push_back(DAG.getConstant(Factor, dl, CT));
     return true;
   };
 
   // Collect all magic values from the build vector.
-  if (!ISD::matchUnaryPredicate(Op1, BuildSDIVPattern))
+  if (!ISD::matchUnaryPredicate(Op1, BuildSDIVPattern, /*AllowUndefs=*/false,
+                                /*AllowTruncation=*/true))
     return SDValue();
 
   SDValue Shift, Factor;
@@ -12261,8 +12261,8 @@ bool TargetLowering::expandMultipleResultFPLibCall(
                       ? Node->getValueType(*CallRetResNo).getTypeForEVT(Ctx)
                       : Type::getVoidTy(Ctx);
   SDValue InChain = StoresInChain ? StoresInChain : DAG.getEntryNode();
-  SDValue Callee = DAG.getExternalSymbol(getLibcallImplName(LibcallImpl).data(),
-                                         getPointerTy(DAG.getDataLayout()));
+  SDValue Callee =
+      DAG.getExternalSymbol(LibcallImpl, getPointerTy(DAG.getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
       getLibcallImplCallingConv(LibcallImpl), RetType, Callee, std::move(Args));

@@ -735,7 +735,6 @@ define void @infiniteloop() {
 ; ENABLE-NEXT:    .cfi_offset w29, -16
 ; ENABLE-NEXT:    .cfi_offset w19, -24
 ; ENABLE-NEXT:    .cfi_offset w20, -32
-; ENABLE-NEXT:    cbnz wzr, LBB10_3
 ; ENABLE-NEXT:  ; %bb.1: ; %if.then
 ; ENABLE-NEXT:    sub x19, sp, #16
 ; ENABLE-NEXT:    mov sp, x19
@@ -746,7 +745,7 @@ define void @infiniteloop() {
 ; ENABLE-NEXT:    add w20, w0, w20
 ; ENABLE-NEXT:    str w20, [x19]
 ; ENABLE-NEXT:    b LBB10_2
-; ENABLE-NEXT:  LBB10_3: ; %if.end
+; ENABLE-NEXT:  ; %bb.3: ; %if.end
 ; ENABLE-NEXT:    sub sp, x29, #16
 ; ENABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
@@ -762,7 +761,6 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:    .cfi_offset w29, -16
 ; DISABLE-NEXT:    .cfi_offset w19, -24
 ; DISABLE-NEXT:    .cfi_offset w20, -32
-; DISABLE-NEXT:    cbnz wzr, LBB10_3
 ; DISABLE-NEXT:  ; %bb.1: ; %if.then
 ; DISABLE-NEXT:    sub x19, sp, #16
 ; DISABLE-NEXT:    mov sp, x19
@@ -773,7 +771,7 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:    add w20, w0, w20
 ; DISABLE-NEXT:    str w20, [x19]
 ; DISABLE-NEXT:    b LBB10_2
-; DISABLE-NEXT:  LBB10_3: ; %if.end
+; DISABLE-NEXT:  ; %bb.3: ; %if.end
 ; DISABLE-NEXT:    sub sp, x29, #16
 ; DISABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; DISABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
@@ -808,7 +806,6 @@ define void @infiniteloop2() {
 ; ENABLE-NEXT:    .cfi_offset w29, -16
 ; ENABLE-NEXT:    .cfi_offset w19, -24
 ; ENABLE-NEXT:    .cfi_offset w20, -32
-; ENABLE-NEXT:    cbnz wzr, LBB11_3
 ; ENABLE-NEXT:  ; %bb.1: ; %if.then
 ; ENABLE-NEXT:    sub x8, sp, #16
 ; ENABLE-NEXT:    mov sp, x8
@@ -825,7 +822,7 @@ define void @infiniteloop2() {
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    ; InlineAsm End
 ; ENABLE-NEXT:    b LBB11_2
-; ENABLE-NEXT:  LBB11_3: ; %if.end
+; ENABLE-NEXT:  ; %bb.3: ; %if.end
 ; ENABLE-NEXT:    sub sp, x29, #16
 ; ENABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
@@ -841,7 +838,6 @@ define void @infiniteloop2() {
 ; DISABLE-NEXT:    .cfi_offset w29, -16
 ; DISABLE-NEXT:    .cfi_offset w19, -24
 ; DISABLE-NEXT:    .cfi_offset w20, -32
-; DISABLE-NEXT:    cbnz wzr, LBB11_3
 ; DISABLE-NEXT:  ; %bb.1: ; %if.then
 ; DISABLE-NEXT:    sub x8, sp, #16
 ; DISABLE-NEXT:    mov sp, x8
@@ -858,7 +854,7 @@ define void @infiniteloop2() {
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    ; InlineAsm End
 ; DISABLE-NEXT:    b LBB11_2
-; DISABLE-NEXT:  LBB11_3: ; %if.end
+; DISABLE-NEXT:  ; %bb.3: ; %if.end
 ; DISABLE-NEXT:    sub sp, x29, #16
 ; DISABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; DISABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
@@ -893,7 +889,6 @@ if.end:
 define void @infiniteloop3() {
 ; ENABLE-LABEL: infiniteloop3:
 ; ENABLE:       ; %bb.0: ; %entry
-; ENABLE-NEXT:    cbnz wzr, LBB12_5
 ; ENABLE-NEXT:  ; %bb.1: ; %loop2a.preheader
 ; ENABLE-NEXT:    mov x8, xzr
 ; ENABLE-NEXT:    mov x9, xzr
@@ -912,12 +907,11 @@ define void @infiniteloop3() {
 ; ENABLE-NEXT:    mov x8, x10
 ; ENABLE-NEXT:    mov x11, x10
 ; ENABLE-NEXT:    b LBB12_3
-; ENABLE-NEXT:  LBB12_5: ; %end
+; ENABLE-NEXT:  ; %bb.5: ; %end
 ; ENABLE-NEXT:    ret
 ;
 ; DISABLE-LABEL: infiniteloop3:
 ; DISABLE:       ; %bb.0: ; %entry
-; DISABLE-NEXT:    cbnz wzr, LBB12_5
 ; DISABLE-NEXT:  ; %bb.1: ; %loop2a.preheader
 ; DISABLE-NEXT:    mov x8, xzr
 ; DISABLE-NEXT:    mov x9, xzr
@@ -936,7 +930,7 @@ define void @infiniteloop3() {
 ; DISABLE-NEXT:    mov x8, x10
 ; DISABLE-NEXT:    mov x11, x10
 ; DISABLE-NEXT:    b LBB12_3
-; DISABLE-NEXT:  LBB12_5: ; %end
+; DISABLE-NEXT:  ; %bb.5: ; %end
 ; DISABLE-NEXT:    ret
 entry:
   br i1 undef, label %loop2a, label %body
