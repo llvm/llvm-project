@@ -79,7 +79,7 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
         continue;
       assert(Base->isCompleteDefinition());
       if (!isInterface(Base))
-        NumConcrete++;
+        ++NumConcrete;
     }
 
     // Check virtual bases to see if there is more than one concrete
@@ -90,7 +90,7 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
         continue;
       assert(Base->isCompleteDefinition());
       if (!isInterface(Base))
-        NumConcrete++;
+        ++NumConcrete;
     }
 
     if (NumConcrete > 1) {
