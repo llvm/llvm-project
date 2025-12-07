@@ -9486,6 +9486,29 @@ cc_library(
     ],
 )
 
+# Trimmed MlirOptLib without IRDLDialect dependency
+# IRDL loading functionality is guarded by MLIR_MLIROPTLIB_NO_IRDL
+cc_library(
+    name = "TrimmedMlirOptLib",
+    srcs = ["lib/Tools/mlir-opt/MlirOptMain.cpp"],
+    hdrs = ["include/mlir/Tools/mlir-opt/MlirOptMain.h"],
+    includes = ["include"],
+    local_defines = ["MLIR_MLIROPTLIB_NO_IRDL"],
+    deps = [
+        ":BytecodeWriter",
+        ":Debug",
+        ":IR",
+        ":ParseUtilities",
+        ":Parser",
+        ":Pass",
+        ":PluginsLib",
+        ":RemarkStreamer",
+        ":Support",
+        "//llvm:Remarks",
+        "//llvm:Support",
+    ],
+)
+
 cc_library(
     name = "AllTranslations",
     hdrs = ["include/mlir/InitAllTranslations.h"],

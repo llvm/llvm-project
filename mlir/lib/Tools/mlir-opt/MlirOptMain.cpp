@@ -15,8 +15,10 @@
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/Debug/CLOptionsSetup.h"
 #include "mlir/Debug/Counter.h"
+#ifndef MLIR_MLIROPTLIB_NO_IRDL
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
 #include "mlir/Dialect/IRDL/IRDLLoading.h"
+#endif
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -101,10 +103,12 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
             cl::desc("Use specified bytecode when generating output"),
             cl::location(emitBytecodeVersion), cl::init(std::nullopt));
 
+#ifndef MLIR_MLIROPTLIB_NO_IRDL
     static cl::opt<std::string, /*ExternalStorage=*/true> irdlFile(
         "irdl-file",
         cl::desc("IRDL file to register before processing the input"),
         cl::location(irdlFileFlag), cl::init(""), cl::value_desc("filename"));
+#endif
 
     static cl::opt<VerbosityLevel, /*ExternalStorage=*/true>
         diagnosticVerbosityLevel(
@@ -382,6 +386,7 @@ void MlirOptMainConfigCLOptions::setDialectPluginsCallback(
   });
 }
 
+#ifndef MLIR_MLIROPTLIB_NO_IRDL
 LogicalResult loadIRDLDialects(StringRef irdlFile, MLIRContext &ctx) {
   DialectRegistry registry;
   registry.insert<irdl::IRDLDialect>();
@@ -410,6 +415,7 @@ LogicalResult loadIRDLDialects(StringRef irdlFile, MLIRContext &ctx) {
   // Load IRDL dialects.
   return irdl::loadDialects(module.get());
 }
+#endif // MLIR_MLIROPTLIB_NO_IRDL
 
 // Return success if the module can correctly round-trip. This intended to test
 // that the custom printers/parsers are complete.
@@ -423,9 +429,11 @@ static LogicalResult doVerifyRoundTrip(Operation *op,
       op->getContext()->getDialectRegistry());
   if (op->getContext()->allowsUnregisteredDialects())
     roundtripContext.allowUnregisteredDialects();
+#ifndef MLIR_MLIROPTLIB_NO_IRDL
   StringRef irdlFile = config.getIrdlFile();
   if (!irdlFile.empty() && failed(loadIRDLDialects(irdlFile, roundtripContext)))
     return failure();
+#endif
 
   std::string testType = (useBytecode) ? "bytecode" : "textual";
   // Print a first time with custom format (or bytecode) and parse it back to
@@ -651,9 +659,11 @@ processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
   if (verifyHandler)
     verifyHandler->registerInContext(&context);
 
+#ifndef MLIR_MLIROPTLIB_NO_IRDL
   StringRef irdlFile = config.getIrdlFile();
   if (!irdlFile.empty() && failed(loadIRDLDialects(irdlFile, context)))
     return failure();
+#endif
 
   // Parse the input file.
   context.allowUnregisteredDialects(config.shouldAllowUnregisteredDialects());
