@@ -27,9 +27,7 @@ AST_MATCHER(CXXRecordDecl, hasBases) {
 // previously.
 void MultipleInheritanceCheck::addNodeToInterfaceMap(const CXXRecordDecl *Node,
                                                      bool IsInterface) {
-  assert(Node->getIdentifier());
-  const StringRef Name = Node->getIdentifier()->getName();
-  InterfaceMap.insert(std::make_pair(Name, IsInterface));
+  InterfaceMap.try_emplace(Node, IsInterface);
 }
 
 // Returns "true" if the boolean "isInterface" has been set to the
@@ -37,9 +35,7 @@ void MultipleInheritanceCheck::addNodeToInterfaceMap(const CXXRecordDecl *Node,
 // interface status for the current node is not yet known.
 bool MultipleInheritanceCheck::getInterfaceStatus(const CXXRecordDecl *Node,
                                                   bool &IsInterface) const {
-  assert(Node->getIdentifier());
-  const StringRef Name = Node->getIdentifier()->getName();
-  auto Pair = InterfaceMap.find(Name);
+  auto Pair = InterfaceMap.find(Node);
   if (Pair == InterfaceMap.end())
     return false;
   IsInterface = Pair->second;
@@ -59,9 +55,6 @@ bool MultipleInheritanceCheck::isCurrentClassInterface(
 }
 
 bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
-  if (!Node->getIdentifier())
-    return false;
-
   // Short circuit the lookup if we have analyzed this record before.
   bool PreviousIsInterfaceResult = false;
   if (getInterfaceStatus(Node, PreviousIsInterfaceResult))
