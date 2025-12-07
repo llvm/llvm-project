@@ -15,12 +15,14 @@ namespace std {
     public:
         string() {}
         ~string() {}
+        string& operator=(const char*) { return *this; }
         bool empty() const { return true; }
     };
     class string_view {
     public:
         string_view() {}
         string_view(const string&) {}
+        string_view& operator=(const string&) { return *this; }
         bool empty() const { return true; }
     };
 }
@@ -447,6 +449,30 @@ void good_stolen_reference2_string() {
         sv = s1;
     }
     sv.empty();
+}
+
+// Real-life case, got from LSPClient.cpp and CompileCommands.cpp
+void good_stringref_storage_lifetime() {
+    std::string_view path;
+    std::string Storage;
+    // Storage is assigned inside if, and path is reassigned to point to Storage
+    // This matches the pattern: if (!is_absolute(Path)) Path = Storage = testPath(Path);
+    // The key is that Storage must outlive the if because path points to it after the if
+    if (Storage.empty()) {  // condition can use Storage or path
+        path = Storage = "absolute_path";
+    }
+    // path is used after if, so Storage must outlive the if statement
+    path.empty();
+    
+    // Same pattern with switch
+    std::string_view path2;
+    std::string Storage2;
+    switch (Storage2.empty() ? 0 : 1) {
+        case 0:
+            path2 = Storage2 = "absolute_path2";
+            break;
+    }
+    path2.empty();
 }
 
 int get_temporary() { return 0; }
