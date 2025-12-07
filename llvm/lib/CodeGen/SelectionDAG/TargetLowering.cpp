@@ -1789,8 +1789,6 @@ bool TargetLowering::SimplifyDemandedBits(
       }
       return Changed;
     }
-    // TODO: Should we check for other forms of sign-bit comparisons?
-    // Example: X <= -1, X > -1
     if (getBooleanContents(Op0.getValueType()) ==
             TargetLowering::ZeroOrOneBooleanContent &&
         BitWidth > 1)
