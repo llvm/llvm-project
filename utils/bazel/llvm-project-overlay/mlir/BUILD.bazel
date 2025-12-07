@@ -13302,6 +13302,56 @@ cc_library(
     ],
 )
 
+# Trimmed MemRefTransforms without VectorDialect dependency
+# Excludes files that use vector ops: EmulateNarrowType, EmulateWideInt,
+# ExtractAddressComputations, FlattenMemRefs, FoldMemRefAliasOps
+cc_library(
+    name = "TrimmedMemRefTransforms",
+    srcs = glob(
+        ["lib/Dialect/MemRef/Transforms/*.cpp"],
+        exclude = [
+            "lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp",
+            "lib/Dialect/MemRef/Transforms/EmulateWideInt.cpp",
+            "lib/Dialect/MemRef/Transforms/ExtractAddressComputations.cpp",
+            "lib/Dialect/MemRef/Transforms/FlattenMemRefs.cpp",
+            "lib/Dialect/MemRef/Transforms/FoldMemRefAliasOps.cpp",
+        ],
+    ),
+    hdrs = glob(["include/mlir/Dialect/MemRef/Transforms/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":TrimmedAffineTransforms",
+        ":AffineUtils",
+        ":AllocationOpInterface",
+        ":ArithDialect",
+        ":ArithTransforms",
+        ":ArithUtils",
+        ":BufferizationDialect",
+        ":BufferizationInterfaces",
+        ":ControlFlowDialect",
+        ":DestinationStyleOpInterface",
+        ":DialectUtils",
+        ":FuncDialect",
+        ":GPUDialect",
+        ":IR",
+        ":InferTypeOpInterface",
+        ":LoopLikeInterface",
+        ":MemRefDialect",
+        ":MemRefPassIncGen",
+        ":MemRefUtils",
+        ":NVGPUDialect",
+        ":Pass",
+        ":RuntimeVerifiableOpInterface",
+        ":SCFDialect",
+        ":Support",
+        ":TensorDialect",
+        ":TransformUtils",
+        ":ValueBoundsOpInterface",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "MemRefTransformOpsTdFiles",
     srcs = [
