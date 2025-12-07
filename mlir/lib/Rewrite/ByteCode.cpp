@@ -11,6 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "ByteCode.h"
+
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
+
 #include "mlir/Analysis/Liveness.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
@@ -2328,3 +2331,5 @@ LogicalResult PDLByteCode::rewrite(PatternRewriter &rewriter,
   }
   return result;
 }
+
+#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH

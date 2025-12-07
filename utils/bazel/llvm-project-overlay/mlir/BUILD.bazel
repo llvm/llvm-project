@@ -518,6 +518,70 @@ mlir_c_api_cc_library(
     ],
 )
 
+# Trimmed CAPIIR without IRDL and PDL dependencies
+# Excludes IRDL.cpp and uses TrimmedRewrite
+mlir_c_api_cc_library(
+    name = "TrimmedCAPIIR",
+    srcs = [
+        "lib/CAPI/Dialect/Func.cpp",
+        "lib/CAPI/IR/AffineExpr.cpp",
+        "lib/CAPI/IR/AffineMap.cpp",
+        "lib/CAPI/IR/BuiltinAttributes.cpp",
+        "lib/CAPI/IR/BuiltinTypes.cpp",
+        "lib/CAPI/IR/Diagnostics.cpp",
+        "lib/CAPI/IR/DialectHandle.cpp",
+        "lib/CAPI/IR/IR.cpp",
+        "lib/CAPI/IR/IntegerSet.cpp",
+        "lib/CAPI/IR/Pass.cpp",
+        "lib/CAPI/IR/Support.cpp",
+    ],
+    hdrs = [
+        "include/mlir-c/AffineExpr.h",
+        "include/mlir-c/AffineMap.h",
+        "include/mlir-c/BuiltinAttributes.h",
+        "include/mlir-c/BuiltinTypes.h",
+        "include/mlir-c/Diagnostics.h",
+        "include/mlir-c/Dialect/Func.h",
+        "include/mlir-c/ExecutionEngine.h",
+        "include/mlir-c/IR.h",
+        "include/mlir-c/IntegerSet.h",
+        "include/mlir-c/Interfaces.h",
+        "include/mlir-c/Pass.h",
+        "include/mlir-c/RegisterEverything.h",
+        "include/mlir-c/Rewrite.h",
+        "include/mlir-c/Support.h",
+        "include/mlir/CAPI/AffineExpr.h",
+        "include/mlir/CAPI/AffineMap.h",
+        "include/mlir/CAPI/Diagnostics.h",
+        "include/mlir/CAPI/IR.h",
+        "include/mlir/CAPI/IntegerSet.h",
+        "include/mlir/CAPI/Interfaces.h",
+        "include/mlir/CAPI/Pass.h",
+        "include/mlir/CAPI/Registration.h",
+        "include/mlir/CAPI/Rewrite.h",
+        "include/mlir/CAPI/Support.h",
+        "include/mlir/CAPI/Utils.h",
+        "include/mlir/CAPI/Wrap.h",
+    ],
+    header_deps = [
+        ":BytecodeWriter",
+        ":IR",
+        ":Pass",
+        ":Support",
+        ":config",
+        ":TrimmedRewrite",
+        "//llvm:Support",
+    ],
+    includes = ["include"],
+    deps = [
+        ":AsmParser",
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":InferTypeOpInterface",
+        ":Parser",
+    ],
+)
+
 cc_library(
     name = "RemarkStreamer",
     srcs = glob([
@@ -7858,6 +7922,26 @@ cc_library(
         ":PDLDialect",
         ":PDLInterpDialect",
         ":PDLToPDLInterp",
+        ":Pass",
+        ":SideEffectInterfaces",
+        "//llvm:Support",
+    ],
+)
+
+# Trimmed Rewrite without PDLDialect/PDLInterpDialect dependency
+# PDL support is disabled via MLIR_ENABLE_PDL_IN_PATTERNMATCH=0
+cc_library(
+    name = "TrimmedRewrite",
+    srcs = glob([
+        "lib/Rewrite/*.cpp",
+        "lib/Rewrite/*.h",
+    ]),
+    hdrs = glob(["include/mlir/Rewrite/*.h"]),
+    includes = ["include"],
+    local_defines = ["MLIR_ENABLE_PDL_IN_PATTERNMATCH=0"],
+    deps = [
+        ":Analysis",
+        ":IR",
         ":Pass",
         ":SideEffectInterfaces",
         "//llvm:Support",
