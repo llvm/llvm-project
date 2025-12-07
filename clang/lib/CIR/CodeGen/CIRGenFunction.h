@@ -1231,6 +1231,7 @@ public:
   };
 
   LexicalScope *curLexScope = nullptr;
+  mlir::Operation *currentFuncletPad = nullptr;
 
   typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
 
