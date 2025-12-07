@@ -1756,9 +1756,6 @@ bool TargetLowering::SimplifyDemandedBits(
     // If we're testing X < 0, X >= 0, X <= -1 (X is of integer type) or X > -1
     // (X is of integer type) then we only need the sign mask of the previous
     // result
-    // FIXME: We're limiting to integer types for X < 0 or X >= 0 here, but this
-    // should also work if we don't care about FP signed-zero. The use of SETLT
-    // with FP means that we don't care about NaNs.
     if (((CC == ISD::SETLT || CC == ISD::SETGE) &&
          Op1.getValueType().isInteger() && isNullOrNullSplat(Op1)) ||
         ((CC == ISD::SETLE || CC == ISD::SETGT) &&
