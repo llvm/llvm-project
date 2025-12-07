@@ -398,7 +398,7 @@ static void emitCatchDispatchBlock(CIRGenFunction &cgf,
     const EHCatchScope::Handler &handler = catchScope.getHandler(i);
 
     [[maybe_unused]] mlir::TypedAttr typeValue = handler.type.rtti;
-    assert(handler.Type.Flags == 0 && "catch handler flags not supported");
+    assert(handler.type.flags == 0 && "catch handler flags not supported");
     assert(typeValue && "fell into catch-all case!");
 
     // Check for address space mismatch
