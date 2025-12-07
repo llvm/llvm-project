@@ -26,8 +26,8 @@
 #include "TargetInfo.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
@@ -3583,12 +3583,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::IntegerType *IntTy = cast<llvm::IntegerType>(ArgValue->getType());
     assert(IntTy && "LLVM's __builtin_bswapg only supports integer variants");
-    assert(((IntTy->getBitWidth() % 16 == 0 && IntTy->getBitWidth() != 0) ||
-            IntTy->getBitWidth() == 8) &&
+    if (IntTy->getBitWidth() == 1 || IntTy->getBitWidth() == 8)
+      return RValue::get(ArgValue);
+    assert(((IntTy->getBitWidth() % 16 == 0 && IntTy->getBitWidth() != 0)) &&
            "LLVM's __builtin_bswapg only supports integer variants that has a "
            "multiple of 16 bits as well as a single byte");
-    if (IntTy->getBitWidth() == 8)
-      return RValue::get(ArgValue);
     return RValue::get(
         emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bswap));
   }
@@ -3693,9 +3692,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       if (auto *CATy =
               ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
           CATy && CATy->getKind() == CountAttributedType::CountedBy) {
-        const auto *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
-        if (const FieldDecl *CountFD = FAMDecl->findCountedByField())
-          Result = GetCountedByFieldExprGEP(Arg, FAMDecl, CountFD);
+        const auto *MemberDecl = cast<FieldDecl>(ME->getMemberDecl());
+        if (const FieldDecl *CountFD = MemberDecl->findCountedByField())
+          Result = GetCountedByFieldExprGEP(Arg, MemberDecl, CountFD);
         else
           llvm::report_fatal_error("Cannot find the counted_by 'count' field");
       }

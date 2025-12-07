@@ -118,8 +118,8 @@ public:
 
   protected:
     PointerImpl(ProxyT Value, FileOffset Offset, bool IsValue = true)
-        : Value(Value), OffsetLow32((uint64_t)Offset.get()),
-          OffsetHigh16((uint64_t)Offset.get() >> 32), IsValue(IsValue) {
+        : Value(Value), OffsetLow32(Offset.get()),
+          OffsetHigh16(Offset.get() >> 32), IsValue(IsValue) {
       if (IsValue)
         assert(validOffset(Offset));
     }

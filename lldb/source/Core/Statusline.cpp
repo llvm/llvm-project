@@ -91,7 +91,7 @@ void Statusline::UpdateScrollWindow(ScrollWindowMode mode) {
   if (!stream_sp)
     return;
 
-  const unsigned reduced_scroll_window = m_terminal_height - 1;
+  const unsigned reduced_scroll_rows = m_terminal_height - 1;
   LockedStreamFile locked_stream = stream_sp->Lock();
 
   switch (mode) {
@@ -101,13 +101,14 @@ void Statusline::UpdateScrollWindow(ScrollWindowMode mode) {
     locked_stream.Printf(ANSI_UP_ROWS, 1);
     // Reduce the scroll window.
     locked_stream << ANSI_SAVE_CURSOR;
-    locked_stream.Printf(ANSI_SET_SCROLL_ROWS, reduced_scroll_window);
+    locked_stream.Printf(ANSI_SET_SCROLL_ROWS, reduced_scroll_rows);
     locked_stream << ANSI_RESTORE_CURSOR;
     break;
   case DisableStatusline:
     // Reset the scroll window.
     locked_stream << ANSI_SAVE_CURSOR;
-    locked_stream.Printf(ANSI_SET_SCROLL_ROWS, 0);
+    locked_stream.Printf(ANSI_SET_SCROLL_ROWS,
+                         static_cast<unsigned>(m_terminal_height));
     locked_stream << ANSI_RESTORE_CURSOR;
     // Clear the screen below to hide the old statusline.
     locked_stream << ANSI_CLEAR_BELOW;
@@ -116,7 +117,7 @@ void Statusline::UpdateScrollWindow(ScrollWindowMode mode) {
     // Clear the screen and update the scroll window.
     // FIXME: Find a better solution (#146919).
     locked_stream << ANSI_CLEAR_SCREEN;
-    locked_stream.Printf(ANSI_SET_SCROLL_ROWS, reduced_scroll_window);
+    locked_stream.Printf(ANSI_SET_SCROLL_ROWS, reduced_scroll_rows);
     break;
   }
 

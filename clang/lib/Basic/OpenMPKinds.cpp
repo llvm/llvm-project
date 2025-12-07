@@ -680,7 +680,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 }
 
 bool clang::isOpenMPLoopDirective(OpenMPDirectiveKind DKind) {
-  return getDirectiveAssociation(DKind) == Association::Loop;
+  return getDirectiveAssociation(DKind) == Association::LoopNest;
 }
 
 bool clang::isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind) {
@@ -741,7 +741,7 @@ bool clang::isOpenMPTeamsDirective(OpenMPDirectiveKind DKind) {
 
 bool clang::isOpenMPSimdDirective(OpenMPDirectiveKind DKind) {
   // Avoid OMPD_declare_simd
-  if (getDirectiveAssociation(DKind) != Association::Loop)
+  if (getDirectiveAssociation(DKind) != Association::LoopNest)
     return false;
   // Formally, OMPD_end_do_simd also has a loop association, but
   // it's a Fortran-specific directive.

@@ -34,19 +34,30 @@ static std::unique_ptr<Generator> getHTMLMustacheGenerator() {
   return std::move(G.get());
 }
 
-static ClangDocContext
-getClangDocContext(std::vector<std::string> UserStylesheets = {},
-                   StringRef RepositoryUrl = "",
-                   StringRef RepositoryLinePrefix = "", StringRef Base = "") {
-  ClangDocContext CDCtx{
-      {},   "test-project", {}, {}, {}, RepositoryUrl, RepositoryLinePrefix,
-      Base, UserStylesheets};
-  CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(), "");
-  CDCtx.JsScripts.emplace_back("");
-  return CDCtx;
-}
+class HTMLMustacheGeneratorTest : public ClangDocContextTest {
+protected:
+  ClangDocContext
+  getClangDocContext(std::vector<std::string> UserStylesheets = {},
+                     StringRef RepositoryUrl = "",
+                     StringRef RepositoryLinePrefix = "", StringRef Base = "") {
+    ClangDocContext CDCtx{nullptr,
+                          "test-project",
+                          false,
+                          "",
+                          "",
+                          RepositoryUrl,
+                          RepositoryLinePrefix,
+                          Base,
+                          UserStylesheets,
+                          Diags,
+                          false};
+    CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(), "");
+    CDCtx.JsScripts.emplace_back("");
+    return CDCtx;
+  }
+};
 
-TEST(HTMLMustacheGeneratorTest, createResources) {
+TEST_F(HTMLMustacheGeneratorTest, createResources) {
   auto G = getHTMLMustacheGenerator();
   ASSERT_THAT(G, NotNull()) << "Could not find HTMLMustacheGenerator";
   ClangDocContext CDCtx = getClangDocContext();

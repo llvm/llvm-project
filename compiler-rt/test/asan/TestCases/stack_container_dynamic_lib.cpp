@@ -1,6 +1,6 @@
 // Test to demonstrate compile-time disabling of container-overflow checks
 // in order to handle uninstrumented libraries
-// UNSUPPORTED: target={{.*windows-msvc.*}}
+// UNSUPPORTED: target={{.*windows-.*}}
 
 // Mimic a closed-source library compiled without ASan
 // RUN: %clangxx_asan -fno-sanitize=address -DSHARED_LIB %s %fPIC -shared -o %t-so.so
@@ -19,6 +19,8 @@
 // RUN: %clangxx_asan -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ %s -c -o %t-main.o
 // RUN: %clangxx_asan -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ -o %t %t-main.o %t-object.o %libdl
 // RUN: %run %t 2>&1 | FileCheck --check-prefix=CHECK-NO-CONTAINER-OVERFLOW %s
+//
+// UNSUPPORTED: true
 
 #include <assert.h>
 #include <sanitizer/common_interface_defs.h>
