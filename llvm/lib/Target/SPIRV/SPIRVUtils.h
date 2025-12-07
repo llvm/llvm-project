@@ -159,6 +159,11 @@ struct FPFastMathDefaultInfoVector
   }
 };
 
+// This code restores function args/retvalue types for composite cases
+// because the final types should still be aggregate whereas they're i32
+// during the translation to cope with aggregate flattening etc.
+FunctionType *getOriginalFunctionType(const Function &F);
+FunctionType *getOriginalFunctionType(const CallBase &CB);
 } // namespace SPIRV
 
 // Add the given string as a series of integer operand, inserting null
