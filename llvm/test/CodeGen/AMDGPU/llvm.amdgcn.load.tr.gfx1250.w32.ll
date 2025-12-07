@@ -365,18 +365,6 @@ define { i32, <3 x i32> } @global_load_tr6_b96_vaddr_no_align2_requirement(ptr a
 }
 
 define { i32, <3 x i32> } @global_load_tr6_b96_saddr_no_align2_requirement(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use) {
-; GFX1250-LABEL: global_load_tr6_b96_saddr_no_align2_requirement:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    global_load_tr6_b96 v[2:4], v0, s[0:1] offset:32
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, v2
-; GFX1250-NEXT:    v_dual_mov_b32 v2, v3 :: v_dual_mov_b32 v3, v4
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-;
 ; GFX1250-SDAG-LABEL: global_load_tr6_b96_saddr_no_align2_requirement:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -395,6 +383,7 @@ define { i32, <3 x i32> } @global_load_tr6_b96_saddr_no_align2_requirement(ptr a
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-GISEL-NEXT:    global_load_tr6_b96 v[2:4], v0, s[0:1] offset:32
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v2, v3 :: v_dual_mov_b32 v3, v4
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
