@@ -23,7 +23,8 @@ AST_MATCHER(CXXRecordDecl, hasBases) {
 }
 } // namespace
 
-bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
+bool MultipleInheritanceCheck::isInterface(const CXXBaseSpecifier &Base) {
+  const CXXRecordDecl *const Node = Base.getType()->getAsCXXRecordDecl();
   if (!Node)
     return false;
 
@@ -37,7 +38,7 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
   const bool CurrentClassIsInterface = [&] {
     // To be an interface, all base classes must be interfaces as well.
     for (const CXXBaseSpecifier &I : Node->bases()) {
-      if (!I.isVirtual() && !isInterface(I.getType()->getAsCXXRecordDecl()))
+      if (!I.isVirtual() && !isInterface(I))
         return false;
     }
 
@@ -64,14 +65,14 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
   // Check to see if the class inherits from multiple concrete classes.
   unsigned NumConcrete = 0;
   for (const CXXBaseSpecifier &I : D.bases()) {
-    if (!I.isVirtual() && !isInterface(I.getType()->getAsCXXRecordDecl()))
+    if (!I.isVirtual() && !isInterface(I))
       ++NumConcrete;
   }
 
   // Check virtual bases to see if there is more than one concrete
   // non-virtual base.
   for (const CXXBaseSpecifier &V : D.vbases()) {
-    if (!isInterface(V.getType()->getAsCXXRecordDecl()))
+    if (!isInterface(V))
       ++NumConcrete;
   }
 
