@@ -702,10 +702,11 @@ entry:
 define i32 @vmsk2_sge_allzeros_i8(<32 x i8> %a) {
 ; LA32-LABEL: vmsk2_sge_allzeros_i8:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    vxori.b $vr0, $vr0, 255
+; LA32-NEXT:    vrepli.b $vr2, 0
+; LA32-NEXT:    vsle.b $vr0, $vr2, $vr0
 ; LA32-NEXT:    vmskltz.b $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    vxori.b $vr0, $vr1, 255
+; LA32-NEXT:    vsle.b $vr0, $vr2, $vr1
 ; LA32-NEXT:    vmskltz.b $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.hu $a1, $vr0, 0
 ; LA32-NEXT:    slli.w $a1, $a1, 16
@@ -714,10 +715,11 @@ define i32 @vmsk2_sge_allzeros_i8(<32 x i8> %a) {
 ;
 ; LA64-LABEL: vmsk2_sge_allzeros_i8:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vxori.b $vr0, $vr0, 255
+; LA64-NEXT:    vrepli.b $vr2, 0
+; LA64-NEXT:    vsle.b $vr0, $vr2, $vr0
 ; LA64-NEXT:    vmskltz.b $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    vxori.b $vr0, $vr1, 255
+; LA64-NEXT:    vsle.b $vr0, $vr2, $vr1
 ; LA64-NEXT:    vmskltz.b $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.hu $a1, $vr0, 0
 ; LA64-NEXT:    slli.d $a1, $a1, 16

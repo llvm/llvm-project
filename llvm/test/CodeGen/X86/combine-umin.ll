@@ -116,7 +116,7 @@ define <16 x i8> @test_v16i8_demandedbits(<16 x i8> %x, <16 x i8> %y, <16 x i8> 
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $xmm3 killed $xmm3 def $zmm3
 ; AVX512BW-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512BW-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpcmpnltb %zmm1, %zmm0, %k1
 ; AVX512BW-NEXT:    vpblendmb %zmm2, %zmm3, %zmm0 {%k1}
