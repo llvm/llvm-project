@@ -705,21 +705,20 @@ public:
 
     if (const auto *CXXRecord = E->getType()->getAsCXXRecordDecl()) {
       const auto &InitExprs = E->getUserSpecifiedInitExprs();
-      size_t InitInx = 0;
 
-      // Inherited members are first, skip them for now.
+      if (InitExprs.size() <= CXXRecord->getNumBases())
+        return true;
+
+      // Inherited members are first, skip hinting them for now.
       // FIXME: '.base=' or 'base:' hint?
-      for (const auto &_ : CXXRecord->bases()) {
-        InitInx++;
-      }
+      const auto &MemberInitExprs =
+          InitExprs.drop_front(CXXRecord->getNumBases());
 
-      // Then the members defined in this record
-      auto RecordFields = CXXRecord->fields().begin();
-
-      for (; InitInx < InitExprs.size();
-           ++InitInx, RecordFields = std::next(RecordFields)) {
-        addDesignatorHint(InitExprs[InitInx]->getSourceRange(),
-                          "." + RecordFields->getName().str());
+      // Then the fields in this record
+      for (const auto &[InitExpr, Field] :
+           llvm::zip(MemberInitExprs, CXXRecord->fields())) {
+        addDesignatorHint(InitExpr->getSourceRange(),
+                          "." + Field->getName().str());
       }
     }
 
