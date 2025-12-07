@@ -7536,7 +7536,6 @@ cc_library(
         ":InliningUtils",
         ":LoopLikeInterface",
         ":ParallelCombiningOpInterface",
-        ":RelayoutOpInterface",
         ":RuntimeVerifiableOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",

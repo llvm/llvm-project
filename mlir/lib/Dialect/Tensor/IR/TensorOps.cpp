@@ -10,7 +10,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
-#include "mlir/Dialect/Linalg/IR/RelayoutOpInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
@@ -4109,8 +4108,9 @@ struct FoldTensorCastProducerOp
 
     // Reject PackOp/UnpackOp (i.e. RelayoutOps) - there are dedicated patterns
     // for that instead.
-    if (!foldTensorCastPrecondition(op) ||
-        isa<linalg::RelayoutOpInterface>(*op))
+    StringRef opName = op->getName().getStringRef();
+    if (!foldTensorCastPrecondition(op) || opName == "linalg.pack" ||
+        opName == "linalg.unpack")
       return failure();
 
     SmallVector<Type> newResultTypes(op->getResultTypes());
