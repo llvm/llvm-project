@@ -1982,6 +1982,11 @@ static Instruction *foldOrToXor(BinaryOperator &I,
       match(Op1, m_c_And(m_Not(m_Specific(A)), m_Specific(B))))
     return BinaryOperator::CreateXor(A, B);
 
+  // (A & ~B) | (A ^ B) -> A ^ B
+  if (match(Op0, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
+      match(Op1, m_c_Xor(m_Specific(A), m_Specific(B))))
+    return replaceInstUsesWith(I, Op1);
+
   return nullptr;
 }
 
