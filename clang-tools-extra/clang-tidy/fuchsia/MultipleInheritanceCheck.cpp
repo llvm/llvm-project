@@ -45,7 +45,7 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
     if (!Node->field_empty())
       return false;
 
-    // Interfaces should have exclusively pure methods.
+    // Interfaces should have exclusively pure virtual methods.
     return llvm::none_of(Node->methods(), [](const CXXMethodDecl *M) {
       return M->isUserProvided() && !M->isPureVirtual() && !M->isStatic();
     });
