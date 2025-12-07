@@ -41,21 +41,20 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
   if (CachedValue != InterfaceMap.end())
     return CachedValue->second;
 
-  // To be an interface, all base classes must be interfaces as well.
-  for (const auto &I : Node->bases()) {
-    if (I.isVirtual())
-      continue;
-    const auto *Base = I.getType()->getAsCXXRecordDecl();
-    if (!Base)
-      continue;
-    assert(Base->isCompleteDefinition());
-    if (!isInterface(Base)) {
-      InterfaceMap.try_emplace(Node, false);
-      return false;
+  const bool CurrentClassIsInterface = [&] {
+    // To be an interface, all base classes must be interfaces as well.
+    for (const auto &I : Node->bases()) {
+      if (I.isVirtual())
+        continue;
+      const auto *Base = I.getType()->getAsCXXRecordDecl();
+      if (!Base)
+        continue;
+      assert(Base->isCompleteDefinition());
+      if (!isInterface(Base))
+        return false;
     }
-  }
-
-  const bool CurrentClassIsInterface = isCurrentClassInterface(Node);
+    return isCurrentClassInterface(Node);
+  }();
   InterfaceMap.try_emplace(Node, CurrentClassIsInterface);
   return CurrentClassIsInterface;
 }
