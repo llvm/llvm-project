@@ -102,6 +102,10 @@ struct BinaryArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
+    if (op.getType().getIntOrFloatBitWidth() > 64)
+      return rewriter.notifyMatchFailure(op,
+                                         "bitwidth > 64 bits is not supported");
+
     // Get APFloat function from runtime library.
     FailureOr<FuncOp> fn =
         lookupOrCreateBinaryFn(rewriter, symTable, APFloatName);
@@ -148,6 +152,11 @@ struct FpToFpConversion final : OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
+    if (op.getType().getIntOrFloatBitWidth() > 64 ||
+        op.getOperand().getType().getIntOrFloatBitWidth() > 64)
+      return rewriter.notifyMatchFailure(op,
+                                         "bitwidth > 64 bits is not supported");
+
     // Get APFloat function from runtime library.
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
     auto i64Type = IntegerType::get(symTable->getContext(), 64);
@@ -195,9 +204,10 @@ struct FpToIntConversion final : OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    if (op.getType().getIntOrFloatBitWidth() > 64)
-      return rewriter.notifyMatchFailure(
-          op, "result type > 64 bits is not supported");
+    if (op.getType().getIntOrFloatBitWidth() > 64 ||
+        op.getOperand().getType().getIntOrFloatBitWidth() > 64)
+      return rewriter.notifyMatchFailure(op,
+                                         "bitwidth > 64 bits is not supported");
 
     // Get APFloat function from runtime library.
     auto i1Type = IntegerType::get(symTable->getContext(), 1);
@@ -252,11 +262,10 @@ struct IntToFpConversion final : OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    Location loc = op.getLoc();
-    if (op.getIn().getType().getIntOrFloatBitWidth() > 64) {
-      return rewriter.notifyMatchFailure(
-          loc, "integer bitwidth > 64 is not supported");
-    }
+    if (op.getType().getIntOrFloatBitWidth() > 64 ||
+        op.getOperand().getType().getIntOrFloatBitWidth() > 64)
+      return rewriter.notifyMatchFailure(op,
+                                         "bitwidth > 64 bits is not supported");
 
     // Get APFloat function from runtime library.
     auto i1Type = IntegerType::get(symTable->getContext(), 1);
@@ -270,6 +279,7 @@ struct IntToFpConversion final : OpRewritePattern<OpTy> {
 
     rewriter.setInsertionPoint(op);
     // Cast operands to 64-bit integers.
+    Location loc = op.getLoc();
     auto inIntTy = cast<IntegerType>(op.getOperand().getType());
     Value operandBits = op.getOperand();
     if (operandBits.getType().getIntOrFloatBitWidth() < 64) {
@@ -317,6 +327,10 @@ struct CmpFOpToAPFloatConversion final : OpRewritePattern<arith::CmpFOp> {
 
   LogicalResult matchAndRewrite(arith::CmpFOp op,
                                 PatternRewriter &rewriter) const override {
+    if (op.getLhs().getType().getIntOrFloatBitWidth() > 64)
+      return rewriter.notifyMatchFailure(op,
+                                         "bitwidth > 64 bits is not supported");
+
     // Get APFloat function from runtime library.
     auto i1Type = IntegerType::get(symTable->getContext(), 1);
     auto i8Type = IntegerType::get(symTable->getContext(), 8);
@@ -456,6 +470,10 @@ struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
 
   LogicalResult matchAndRewrite(arith::NegFOp op,
                                 PatternRewriter &rewriter) const override {
+    if (op.getOperand().getType().getIntOrFloatBitWidth() > 64)
+      return rewriter.notifyMatchFailure(op,
+                                         "bitwidth > 64 bits is not supported");
+
     // Get APFloat function from runtime library.
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
     auto i64Type = IntegerType::get(symTable->getContext(), 64);
