@@ -20,6 +20,7 @@
 #include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
@@ -1032,6 +1033,193 @@ TEST(runToolOnCode, TestResetDiagnostics) {
       runToolOnCode(std::make_unique<ResetDiagnosticAction>(),
                     "struct Foo { Foo(int); ~Foo(); struct Fwd _fwd; };"
                     "void func() { long x; Foo f(x); }"));
+}
+
+TEST(ClangToolTest, ProgressReportSingleFile) {
+  SmallString<32> BaseDir;
+  llvm::sys::path::system_temp_directory(false, BaseDir);
+  llvm::sys::path::native(BaseDir, llvm::sys::path::Style::posix);
+  std::string BaseDirStr(BaseDir);
+
+  std::string File = BaseDirStr + "/test.cpp";
+
+  std::string ErrorMessage;
+  std::string JSONDatabase = R"json([
+  {
+    "directory": "%DIR%",
+    "command": "clang++ -c test.cpp",
+    "file": "test.cpp"
+  }])json";
+
+  {
+    size_t Pos = JSONDatabase.find("%DIR%");
+    ASSERT_NE(Pos, std::string::npos);
+    JSONDatabase.replace(Pos, 5, BaseDirStr);
+  }
+
+  std::unique_ptr<CompilationDatabase> Database(
+      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
+                                              JSONCommandLineSyntax::Gnu));
+  ASSERT_TRUE(Database);
+
+  ClangTool Tool(*Database, {File});
+  Tool.mapVirtualFile(File, "int x;");
+
+  testing::internal::CaptureStderr();
+  Tool.run(newFrontendActionFactory<SyntaxOnlyAction>().get());
+  std::string Output = testing::internal::GetCapturedStderr();
+
+  EXPECT_TRUE(Output.empty());
+}
+
+TEST(ClangToolTest, ProgressReportMultipleFiles) {
+  SmallString<32> BaseDir;
+  llvm::sys::path::system_temp_directory(false, BaseDir);
+  llvm::sys::path::native(BaseDir, llvm::sys::path::Style::posix);
+  std::string BaseDirStr(BaseDir);
+
+  std::string File1 = BaseDirStr + "/test1.cpp";
+  std::string File2 = BaseDirStr + "/test2.cpp";
+
+  std::string ErrorMessage;
+  std::string JSONDatabase = R"json([
+  {
+    "directory": "%DIR%",
+    "command": "clang++ -c test1.cpp",
+    "file": "test1.cpp"
+  },
+  {
+    "directory": "%DIR%",
+    "command": "clang++ -c test2.cpp",
+    "file": "test2.cpp"
+  }])json";
+
+  for (size_t Pos = 0;
+       (Pos = JSONDatabase.find("%DIR%", Pos)) != std::string::npos;) {
+    JSONDatabase.replace(Pos, 5, BaseDirStr);
+    Pos += BaseDirStr.size();
+  }
+
+  std::unique_ptr<CompilationDatabase> Database(
+      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
+                                              JSONCommandLineSyntax::Gnu));
+  ASSERT_TRUE(Database);
+
+  ClangTool Tool(*Database, {File1, File2});
+  Tool.mapVirtualFile(File1, "int x;");
+  Tool.mapVirtualFile(File2, "int y;");
+
+  testing::internal::CaptureStderr();
+  Tool.run(newFrontendActionFactory<SyntaxOnlyAction>().get());
+  std::string Output = testing::internal::GetCapturedStderr();
+
+  std::string Expected = "[1/2] Processing file " + File1 + ".\n" +
+                         "[2/2] Processing file " + File2 + ".\n";
+  EXPECT_EQ(Output, Expected);
+}
+
+TEST(ClangToolTest, ProgressReportMultipleCommands) {
+  SmallString<32> BaseDir;
+  llvm::sys::path::system_temp_directory(false, BaseDir);
+  llvm::sys::path::native(BaseDir, llvm::sys::path::Style::posix);
+  std::string BaseDirStr(BaseDir);
+
+  std::string File = BaseDirStr + "/test.cpp";
+
+  std::string ErrorMessage;
+  std::string JSONDatabase = R"json([
+  {
+    "directory": "%DIR%",
+    "command": "clang++ -c test.cpp -DCMD1",
+    "file": "test.cpp"
+  },
+  {
+    "directory": "%DIR%",
+    "command": "clang++ -c test.cpp -DCMD2",
+    "file": "test.cpp"
+  }])json";
+
+  for (size_t Pos = 0;
+       (Pos = JSONDatabase.find("%DIR%", Pos)) != std::string::npos;) {
+    JSONDatabase.replace(Pos, 5, BaseDirStr);
+    Pos += BaseDirStr.size();
+  }
+
+  std::unique_ptr<CompilationDatabase> Database(
+      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
+                                              JSONCommandLineSyntax::Gnu));
+  ASSERT_TRUE(Database);
+
+  ClangTool Tool(*Database, {File});
+  Tool.mapVirtualFile(File, "int x;");
+
+  testing::internal::CaptureStderr();
+  Tool.run(newFrontendActionFactory<SyntaxOnlyAction>().get());
+  std::string Output = testing::internal::GetCapturedStderr();
+
+  std::string Expected = "[1/1] (1/2) Processing file " + File + ".\n" +
+                         "[1/1] (2/2) Processing file " + File + ".\n";
+  EXPECT_EQ(Output, Expected);
+}
+
+TEST(ClangToolTest, ProgressReportMixed) {
+  SmallString<32> BaseDir;
+  llvm::sys::path::system_temp_directory(false, BaseDir);
+  llvm::sys::path::native(BaseDir, llvm::sys::path::Style::posix);
+  std::string BaseDirStr(BaseDir);
+
+  std::string File1 = BaseDirStr + "/test1.cpp";
+  std::string File2 = BaseDirStr + "/test2.cpp";
+  std::string File3 = BaseDirStr + "/test3.cpp";
+
+  std::string ErrorMessage;
+  std::string JSONDatabase = R"json([
+  {
+    "directory": "%DIR%",
+    "command": "clang++ -c test1.cpp",
+    "file": "test1.cpp"
+  },
+  {
+    "directory": "%DIR%",
+    "command": "clang++ -c test2.cpp -DCMD1",
+    "file": "test2.cpp"
+  },
+  {
+    "directory": "%DIR%",
+    "command": "clang++ -c test2.cpp -DCMD2",
+    "file": "test2.cpp"
+  },
+  {
+    "directory": "%DIR%",
+    "command": "clang++ -c test3.cpp",
+    "file": "test3.cpp"
+  }])json";
+
+  for (size_t Pos = 0;
+       (Pos = JSONDatabase.find("%DIR%", Pos)) != std::string::npos;) {
+    JSONDatabase.replace(Pos, 5, BaseDirStr);
+    Pos += BaseDirStr.size();
+  }
+
+  std::unique_ptr<CompilationDatabase> Database(
+      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
+                                              JSONCommandLineSyntax::Gnu));
+  ASSERT_TRUE(Database);
+
+  ClangTool Tool(*Database, {File1, File2, File3});
+  Tool.mapVirtualFile(File1, "int x;");
+  Tool.mapVirtualFile(File2, "int y;");
+  Tool.mapVirtualFile(File3, "int z;");
+
+  testing::internal::CaptureStderr();
+  Tool.run(newFrontendActionFactory<SyntaxOnlyAction>().get());
+  std::string Output = testing::internal::GetCapturedStderr();
+
+  std::string Expected = "[1/3] Processing file " + File1 + ".\n" +
+                         "[2/3] (1/2) Processing file " + File2 + ".\n" +
+                         "[2/3] (2/2) Processing file " + File2 + ".\n" +
+                         "[3/3] Processing file " + File3 + ".\n";
+  EXPECT_EQ(Output, Expected);
 }
 
 } // end namespace tooling
