@@ -156,6 +156,9 @@ __m512i test_mm512_inserti64x4(__m512i __A, __m256i __B) {
 
   // LLVM-LABEL: test_mm512_inserti64x4
   // LLVM: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+
+  // OGCG-LABEL: test_mm512_inserti64x4
+  // OGCG: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   return _mm512_inserti64x4(__A, __B, 1);
 }
 

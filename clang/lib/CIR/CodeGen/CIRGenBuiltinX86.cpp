@@ -1013,27 +1013,28 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     unsigned srcNumElts = cast<cir::VectorType>(ops[1].getType()).getSize();
     unsigned subVectors = dstNumElts / srcNumElts;
     assert(llvm::isPowerOf2_32(subVectors) && "Expected power of 2 subvectors");
+    assert(dstNumElts <= 16);
 
     uint64_t index = getZExtIntValueFromConstOp(ops[2]);
     index &= subVectors - 1; // Remove any extra bits.
     index *= srcNumElts;
 
-    int64_t indices[16];
+    llvm::SmallVector<int64_t, 16> mask(dstNumElts);
     for (unsigned i = 0; i != dstNumElts; ++i)
-      indices[i] = (i >= srcNumElts) ? srcNumElts + (i % srcNumElts) : i;
+      mask[i] = (i >= srcNumElts) ? srcNumElts + (i % srcNumElts) : i;
 
-    mlir::Value op1 = builder.createVecShuffle(
-        getLoc(expr->getExprLoc()), ops[1], ArrayRef(indices, dstNumElts));
+    mlir::Value op1 =
+        builder.createVecShuffle(getLoc(expr->getExprLoc()), ops[1], mask);
 
     for (unsigned i = 0; i != dstNumElts; ++i) {
       if (i >= index && i < (index + srcNumElts))
-        indices[i] = (i - index) + dstNumElts;
+        mask[i] = (i - index) + dstNumElts;
       else
-        indices[i] = i;
+        mask[i] = i;
     }
 
     return builder.createVecShuffle(getLoc(expr->getExprLoc()), ops[0], op1,
-                                    ArrayRef(indices, dstNumElts));
+                                    mask);
   }
   case X86::BI__builtin_ia32_pmovqd512_mask:
   case X86::BI__builtin_ia32_pmovwb512_mask:
