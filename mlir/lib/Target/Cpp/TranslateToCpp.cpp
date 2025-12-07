@@ -397,6 +397,51 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   return false;
 }
 
+/// Helper function to check if a value traces back to a const global.
+/// Handles direct GetGlobalOp and GetGlobalOp through one or more SubscriptOps.
+/// Returns the GlobalOp if found and it has const_specifier, nullptr otherwise.
+static emitc::GlobalOp getConstGlobal(Value value, Operation *fromOp) {
+  while (auto subscriptOp = value.getDefiningOp<emitc::SubscriptOp>()) {
+    value = subscriptOp.getValue();
+  }
+
+  auto getGlobalOp = value.getDefiningOp<emitc::GetGlobalOp>();
+  if (!getGlobalOp)
+    return nullptr;
+
+  // Find the nearest symbol table to check whether the global is const.
+  Operation *symbolTableOp = fromOp;
+  while (symbolTableOp && !symbolTableOp->hasTrait<OpTrait::SymbolTable>()) {
+    symbolTableOp = symbolTableOp->getParentOp();
+  }
+
+  if (!symbolTableOp)
+    return nullptr;
+
+  SymbolTable symbolTable(symbolTableOp);
+  auto globalOp = symbolTable.lookup<emitc::GlobalOp>(getGlobalOp.getName());
+
+  if (globalOp && globalOp.getConstSpecifier())
+    return globalOp;
+
+  return nullptr;
+}
+
+/// Emit address-of with a cast to strip const qualification.
+/// Produces: (ResultType)(&operand)
+static LogicalResult emitAddressOfWithConstCast(CppEmitter &emitter,
+                                                Operation &op, Value operand) {
+  raw_ostream &os = emitter.ostream();
+  os << "(";
+  if (failed(emitter.emitType(op.getLoc(), op.getResult(0).getType())))
+    return failure();
+  os << ")(&";
+  if (failed(emitter.emitOperand(operand)))
+    return failure();
+  os << ")";
+  return success();
+}
+
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::DereferenceOp dereferenceOp) {
   std::string out;
@@ -496,8 +541,15 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
   if (failed(emitter.emitAssignPrefix(op)))
     return failure();
+
+  Value operand = addressOfOp.getReference();
+
+  // Check if we're taking address of a const global.
+  if (getConstGlobal(operand, &op))
+    return emitAddressOfWithConstCast(emitter, op, operand);
+
   os << "&";
-  return emitter.emitOperand(addressOfOp.getReference());
+  return emitter.emitOperand(operand);
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
@@ -903,8 +955,16 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
   if (failed(emitter.emitAssignPrefix(op)))
     return failure();
-  os << applyOp.getApplicableOperator();
-  return emitter.emitOperand(applyOp.getOperand());
+
+  StringRef applicableOperator = applyOp.getApplicableOperator();
+  Value operand = applyOp.getOperand();
+
+  // Check if we're taking address of a const global.
+  if (applicableOperator == "&" && getConstGlobal(operand, &op))
+    return emitAddressOfWithConstCast(emitter, op, operand);
+
+  os << applicableOperator;
+  return emitter.emitOperand(operand);
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
