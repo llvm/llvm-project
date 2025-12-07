@@ -8,10 +8,6 @@
 
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// TODO: This test (unreliably) fails when back-deploying to macOS 15. However,
-//       we've only managed to observe the failure on the Github-provided CI
-//       runners, which is suspicious.
-// UNSUPPORTED: stdlib=system && target={{.+}}-apple-macosx15{{.*}}
 
 // This is a stress test for std::atomic::wait for lost wake ups.
 
