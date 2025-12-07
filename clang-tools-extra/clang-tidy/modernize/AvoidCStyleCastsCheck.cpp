@@ -14,7 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::google::readability {
+namespace clang::tidy::modernize {
 
 void AvoidCStyleCastsCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
@@ -288,4 +288,4 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << "static_cast/const_cast/reinterpret_cast";
 }
 
-} // namespace clang::tidy::google::readability
+} // namespace clang::tidy::modernize

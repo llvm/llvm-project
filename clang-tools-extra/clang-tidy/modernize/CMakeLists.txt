@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangTidyModernizeModule STATIC
   AvoidBindCheck.cpp
   AvoidCArraysCheck.cpp
+  AvoidCStyleCastsCheck.cpp
   AvoidSetjmpLongjmpCheck.cpp
   AvoidVariadicFunctionsCheck.cpp
   ConcatNestedNamespacesCheck.cpp
