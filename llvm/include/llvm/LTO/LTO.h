@@ -425,7 +425,7 @@ public:
   LLVM_ABI LTO(Config Conf, ThinBackend Backend = {},
                unsigned ParallelCodeGenParallelismLevel = 1,
                LTOKind LTOMode = LTOK_Default);
-  LLVM_ABI ~LTO();
+  LLVM_ABI virtual ~LTO();
 
   /// Add an input file to the LTO link, using the provided symbol resolutions.
   /// The symbol resolutions must appear in the enumeration order given by

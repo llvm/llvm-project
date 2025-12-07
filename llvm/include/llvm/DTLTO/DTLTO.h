@@ -25,15 +25,15 @@ public:
   StringSaver Saver{PtrAlloc};
 
   // Remove temporary files.
-  void removeTempFiles();
+  LLVM_ABI void removeTempFiles();
 
   // Array of input bitcode files for LTO.
   std::vector<std::shared_ptr<lto::InputFile>> InputFiles;
 
-  virtual Expected<std::shared_ptr<lto::InputFile>>
+  LLVM_ABI virtual Expected<std::shared_ptr<lto::InputFile>>
   addInput(std::unique_ptr<lto::InputFile> InputPtr) override;
 
-  virtual llvm::Error dtlto_process() override;
+  LLVM_ABI virtual llvm::Error dtlto_process() override;
 };
 } // namespace lto
 } // namespace llvm
