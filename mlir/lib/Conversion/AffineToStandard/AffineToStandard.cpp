@@ -18,20 +18,24 @@
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#ifdef MLIR_AFFINE_TO_STD_ENABLE_VECTOR
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#endif
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 
+#ifdef MLIR_AFFINE_TO_STD_ENABLE_VECTOR
 namespace mlir {
 #define GEN_PASS_DEF_LOWERAFFINEPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
+using namespace mlir::vector;
+#endif
 
 using namespace mlir;
 using namespace mlir::affine;
-using namespace mlir::vector;
 
 /// Given a range of values, emit the code that reduces them with "min" or "max"
 /// depending on the provided comparison predicate, sgt for max and slt for min.
@@ -477,6 +481,7 @@ public:
   }
 };
 
+#ifdef MLIR_AFFINE_TO_STD_ENABLE_VECTOR
 /// Apply the affine map from an 'affine.vector_load' operation to its operands,
 /// and feed the results to a newly created 'vector.load' operation (which
 /// replaces the original 'affine.vector_load').
@@ -521,6 +526,7 @@ public:
     return success();
   }
 };
+#endif // MLIR_AFFINE_TO_STD_ENABLE_VECTOR
 
 } // namespace
 
@@ -542,6 +548,7 @@ void mlir::populateAffineToStdConversionPatterns(RewritePatternSet &patterns) {
   // clang-format on
 }
 
+#ifdef MLIR_AFFINE_TO_STD_ENABLE_VECTOR
 void mlir::populateAffineToVectorConversionPatterns(
     RewritePatternSet &patterns) {
   // clang-format off
@@ -567,3 +574,4 @@ class LowerAffine : public impl::LowerAffinePassBase<LowerAffine> {
   }
 };
 } // namespace
+#endif // MLIR_AFFINE_TO_STD_ENABLE_VECTOR

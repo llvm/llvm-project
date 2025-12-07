@@ -8,17 +8,22 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
+#ifdef MLIR_ARITH_EXPAND_ENABLE_VECTOR
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#endif
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+#ifdef MLIR_ARITH_EXPAND_ENABLE_VECTOR
 namespace mlir {
 namespace arith {
 #define GEN_PASS_DEF_ARITHEXPANDOPSPASS
 #include "mlir/Dialect/Arith/Transforms/Passes.h.inc"
 } // namespace arith
 } // namespace mlir
+#endif
 
 using namespace mlir;
 
@@ -721,6 +726,7 @@ struct ScalingTruncFOpConverter
   }
 };
 
+#ifdef MLIR_ARITH_EXPAND_ENABLE_VECTOR
 struct ArithExpandOpsPass
     : public arith::impl::ArithExpandOpsPassBase<ArithExpandOpsPass> {
   using ArithExpandOpsPassBase::ArithExpandOpsPassBase;
@@ -791,6 +797,7 @@ struct ArithExpandOpsPass
       signalPassFailure();
   }
 };
+#endif // MLIR_ARITH_EXPAND_ENABLE_VECTOR
 
 } // namespace
 

@@ -4434,6 +4434,7 @@ cc_library(
     ]),
     hdrs = glob(["include/mlir/Conversion/AffineToStandard/*.h"]),
     includes = ["include"],
+    local_defines = ["MLIR_AFFINE_TO_STD_ENABLE_VECTOR"],
     deps = [
         ":AffineDialect",
         ":AffineTransforms",
@@ -4446,6 +4447,29 @@ cc_library(
         ":TransformUtils",
         ":Transforms",
         ":VectorDialect",
+    ],
+)
+
+# Trimmed AffineToStandard without VectorDialect
+# The Vector dependency is only for AffineVectorLoad/Store patterns
+cc_library(
+    name = "TrimmedAffineToStandard",
+    srcs = glob([
+        "lib/Conversion/AffineToStandard/*.cpp",
+    ]),
+    hdrs = glob(["include/mlir/Conversion/AffineToStandard/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":TrimmedAffineTransforms",
+        ":AffineUtils",
+        ":ConversionPassIncGen",
+        ":IR",
+        ":MemRefDialect",
+        ":SCFDialect",
+        ":Support",
+        ":TransformUtils",
+        ":Transforms",
     ],
 )
 
@@ -12928,6 +12952,7 @@ cc_library(
         "include/mlir/Dialect/Arith/Transforms/*.h",
     ]),
     includes = ["include"],
+    local_defines = ["MLIR_ARITH_EXPAND_ENABLE_VECTOR"],
     deps = [
         ":Analysis",
         ":ArithDialect",
@@ -12952,8 +12977,9 @@ cc_library(
 )
 
 # Trimmed ArithTransforms without VectorDialect dependency
+# ExpandOps.cpp is conditionally compiled (Vector parts guarded by MLIR_ARITH_EXPAND_ENABLE_VECTOR)
 # Excludes files that use vector ops: EmulateWideInt, EmulateUnsupportedFloats
-# Note: ExpandOps.cpp was patched to remove VectorDialect dependency
+# Also excludes BufferizableOpInterfaceImpl to avoid BufferizationTransforms dep
 cc_library(
     name = "TrimmedArithTransforms",
     srcs = glob(
@@ -12961,6 +12987,7 @@ cc_library(
         exclude = [
             "lib/Dialect/Arith/Transforms/EmulateWideInt.cpp",
             "lib/Dialect/Arith/Transforms/EmulateUnsupportedFloats.cpp",
+            "lib/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.cpp",
         ],
     ),
     hdrs = glob([
@@ -12973,7 +13000,6 @@ cc_library(
         ":ArithPassIncGen",
         ":ArithUtils",
         ":BufferizationInterfaces",
-        ":BufferizationTransforms",
         ":DialectUtils",
         ":FuncDialect",
         ":FuncTransforms",
@@ -13286,6 +13312,27 @@ cc_library(
     ],
 )
 
+# Trimmed MemRefUtils without VectorDialect (the dep was incorrectly declared)
+cc_library(
+    name = "TrimmedMemRefUtils",
+    srcs = glob(
+        [
+            "lib/Dialect/MemRef/Utils/*.cpp",
+        ],
+    ),
+    hdrs = [
+        "include/mlir/Dialect/MemRef/Utils/MemRefUtils.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":ArithUtils",
+        ":MemRefDialect",
+        ":ViewLikeInterface",
+        "//llvm:Support",
+    ],
+)
+
 gentbl_cc_library(
     name = "MemRefPassIncGen",
     tbl_outs = {"include/mlir/Dialect/MemRef/Transforms/Passes.h.inc": [
@@ -13377,7 +13424,7 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":MemRefPassIncGen",
-        ":MemRefUtils",
+        ":TrimmedMemRefUtils",
         ":NVGPUDialect",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
