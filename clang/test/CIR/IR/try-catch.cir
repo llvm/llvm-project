@@ -1,6 +1,7 @@
 // RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
 
 module {
 
@@ -95,6 +96,39 @@ cir.func @empty_try_block_with_catch_unwind_contains_resume() {
 // CHECK: cir.func @empty_try_block_with_catch_unwind_contains_resume() {
 // CHECK:   cir.scope {
 // CHECK:     cir.try {
+// CHECK:       cir.yield
+// CHECK:     } unwind {
+// CHECK:       cir.resume
+// CHECK:     }
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
+
+cir.func private @function_with_cleanup() -> !s32i
+
+// CHECK: cir.func private @function_with_cleanup() -> !s32i
+
+cir.func @try_catch_with_call_that_has_cleanup() {
+  cir.scope {
+    cir.try {
+      cir.call @function_with_cleanup() : () -> !s32i cleanup {
+        cir.yield
+      }
+      cir.yield
+    } unwind {
+      cir.resume
+    }
+  }
+  cir.return
+}
+
+// CHECK: cir.func @try_catch_with_call_that_has_cleanup() {
+// CHECK:   cir.scope {
+// CHECK:     cir.try {
+// CHECK:       cir.call @function_with_cleanup() : () -> !s32i cleanup {
+// CHECK:         cir.yield
+// CHECK:       }
 // CHECK:       cir.yield
 // CHECK:     } unwind {
 // CHECK:       cir.resume

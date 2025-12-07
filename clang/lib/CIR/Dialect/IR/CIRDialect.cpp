@@ -847,6 +847,16 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   if (parser.resolveOperands(ops, opsFnTy.getInputs(), opsLoc, result.operands))
     return mlir::failure();
 
+  // If exception is present and there are cleanups, this should be latest thing
+  // present (after all attributes, etc).
+  if (!hasDestinationBlocks) {
+    mlir::Region *cleanupRegion = result.addRegion();
+    if (parser.parseOptionalKeyword("cleanup").succeeded()) {
+      if (parser.parseRegion(*cleanupRegion))
+        return failure();
+    }
+  }
+
   return mlir::success();
 }
 
@@ -899,6 +909,14 @@ static void printCallCommon(mlir::Operation *op,
   printer << " : ";
   printer.printFunctionalType(op->getOperands().getTypes(),
                               op->getResultTypes());
+
+  // If exception is present and there are cleanups, this should be latest thing
+  // present (after all attributes, etc).
+  auto call = dyn_cast<cir::CallOp>(op);
+  if (call && !call.getCleanup().empty()) {
+    printer << " cleanup ";
+    printer.printRegion(call.getCleanup());
+  }
 }
 
 mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
