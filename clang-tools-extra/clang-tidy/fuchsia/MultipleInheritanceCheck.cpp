@@ -63,18 +63,15 @@ void MultipleInheritanceCheck::registerMatchers(MatchFinder *Finder) {
 void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
   const auto &D = *Result.Nodes.getNodeAs<CXXRecordDecl>("decl");
   // Check to see if the class inherits from multiple concrete classes.
-  unsigned NumConcrete = 0;
-  for (const CXXBaseSpecifier &I : D.bases()) {
-    if (!I.isVirtual() && !isInterface(I))
-      ++NumConcrete;
-  }
+  unsigned NumConcrete =
+      llvm::count_if(D.bases(), [&](const CXXBaseSpecifier &I) {
+        return !I.isVirtual() && !isInterface(I);
+      });
 
   // Check virtual bases to see if there is more than one concrete
   // non-virtual base.
-  for (const CXXBaseSpecifier &V : D.vbases()) {
-    if (!isInterface(V))
-      ++NumConcrete;
-  }
+  NumConcrete += llvm::count_if(
+      D.vbases(), [&](const CXXBaseSpecifier &V) { return !isInterface(V); });
 
   if (NumConcrete > 1) {
     diag(D.getBeginLoc(), "inheriting multiple classes that aren't "
