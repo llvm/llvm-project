@@ -37,10 +37,10 @@ bool MultipleInheritanceCheck::isInterface(const CXXBaseSpecifier &Base) {
 
   const bool CurrentClassIsInterface = [&] {
     // To be an interface, all base classes must be interfaces as well.
-    for (const CXXBaseSpecifier &I : Node->bases()) {
-      if (!I.isVirtual() && !isInterface(I))
-        return false;
-    }
+    if (llvm::any_of(Node->bases(), [&](const CXXBaseSpecifier &I) {
+          return !I.isVirtual() && !isInterface(I);
+        }))
+      return false;
 
     // Interfaces should have no fields.
     if (!Node->field_empty())
