@@ -23,13 +23,6 @@ AST_MATCHER(CXXRecordDecl, hasBases) {
 }
 } // namespace
 
-// Adds a node to the interface map, if it was not present in the map
-// previously.
-void MultipleInheritanceCheck::addNodeToInterfaceMap(const CXXRecordDecl *Node,
-                                                     bool IsInterface) {
-  InterfaceMap.try_emplace(Node, IsInterface);
-}
-
 // Returns "true" if the boolean "isInterface" has been set to the
 // interface status of the current Node. Return "false" if the
 // interface status for the current node is not yet known.
@@ -69,13 +62,13 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
       continue;
     assert(Base->isCompleteDefinition());
     if (!isInterface(Base)) {
-      addNodeToInterfaceMap(Node, false);
+      InterfaceMap.try_emplace(Node, false);
       return false;
     }
   }
 
   const bool CurrentClassIsInterface = isCurrentClassInterface(Node);
-  addNodeToInterfaceMap(Node, CurrentClassIsInterface);
+  InterfaceMap.try_emplace(Node, CurrentClassIsInterface);
   return CurrentClassIsInterface;
 }
 
