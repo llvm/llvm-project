@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -733,7 +732,6 @@ struct ArithExpandOpsPass
     arith::populateArithExpandOpsPatterns(patterns);
 
     target.addLegalDialect<arith::ArithDialect>();
-    target.addLegalDialect<vector::VectorDialect>();
 
     // clang-format off
     target.addIllegalOp<

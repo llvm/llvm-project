@@ -12951,6 +12951,44 @@ cc_library(
     ],
 )
 
+# Trimmed ArithTransforms without VectorDialect dependency
+# Excludes files that use vector ops: EmulateWideInt, EmulateUnsupportedFloats
+# Note: ExpandOps.cpp was patched to remove VectorDialect dependency
+cc_library(
+    name = "TrimmedArithTransforms",
+    srcs = glob(
+        ["lib/Dialect/Arith/Transforms/*.cpp"],
+        exclude = [
+            "lib/Dialect/Arith/Transforms/EmulateWideInt.cpp",
+            "lib/Dialect/Arith/Transforms/EmulateUnsupportedFloats.cpp",
+        ],
+    ),
+    hdrs = glob([
+        "include/mlir/Dialect/Arith/Transforms/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":Analysis",
+        ":ArithDialect",
+        ":ArithPassIncGen",
+        ":ArithUtils",
+        ":BufferizationInterfaces",
+        ":BufferizationTransforms",
+        ":DialectUtils",
+        ":FuncDialect",
+        ":FuncTransforms",
+        ":IR",
+        ":MemRefDialect",
+        ":Pass",
+        ":ShardingInterface",
+        ":SideEffectInterfaces",
+        ":TensorDialect",
+        ":TransformUtils",
+        ":ValueBoundsOpInterface",
+        "//llvm:Support",
+    ],
+)
+
 cc_library(
     name = "ArithUtils",
     srcs = glob([
@@ -13325,7 +13363,7 @@ cc_library(
         ":AffineUtils",
         ":AllocationOpInterface",
         ":ArithDialect",
-        ":ArithTransforms",
+        ":TrimmedArithTransforms",
         ":ArithUtils",
         ":BufferizationDialect",
         ":BufferizationInterfaces",
