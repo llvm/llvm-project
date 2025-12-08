@@ -1,9 +1,5 @@
 # REQUIRES: aarch64
 
-## FIXME: This test is very similar to arm64-stubs.s, but has been split into a
-## separate file because llvm-objdump doesn't correctly symbolize arm64_32. In
-## particular, the "literal pool symbol address" comments are missing (PR49944).
-
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %t/foo.s -o %t/foo.o
 # RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %t/bar.s -o %t/bar.o
@@ -21,10 +17,10 @@
 
 # CHECK-LABEL: Contents of (__TEXT,__stubs) section
 # CHECK-NEXT:  [[#BAR]]: adrp x16
-# CHECK-NEXT:            ldr w16, [x16{{.*}}]
+# CHECK-NEXT:            ldr w16, [x16{{.*}}] ; literal pool symbol address: _bar
 # CHECK-NEXT:            br x16
 # CHECK-NEXT:  [[#FOO]]: adrp x16
-# CHECK-NEXT:            ldr w16, [x16{{.*}}]
+# CHECK-NEXT:            ldr w16, [x16{{.*}}] ; literal pool symbol address: _foo
 # CHECK-NEXT:            br x16
 
 # CHECK-LABEL: Contents of (__TEXT,__stub_helper) section
@@ -32,7 +28,7 @@
 # CHECK-NEXT:                          add x17, x17
 # CHECK-NEXT:                          stp x16, x17, [sp, #-16]!
 # CHECK-NEXT:                          adrp x16
-# CHECK-NEXT:                          ldr w16, [x16]
+# CHECK-NEXT:                          ldr w16, [x16] ; literal pool symbol address: dyld_stub_binder
 # CHECK-NEXT:                          br x16
 # CHECK-NEXT:                          ldr w16, 0x[[#%x,BAR_BIND_OFF_ADDR:]]
 # CHECK-NEXT:                          b 0x[[#HELPER_HEADER]]
