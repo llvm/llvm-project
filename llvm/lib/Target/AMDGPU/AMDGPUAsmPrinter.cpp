@@ -534,9 +534,9 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   MCSectionELF *MaxGPRSection =
       OutContext.getELFSection(".AMDGPU.gpr_maximums", ELF::SHT_PROGBITS, 0);
   OutStreamer->switchSection(MaxGPRSection);
-  getTargetStreamer()->EmitMCResourceMaximums(RI.getMaxVGPRSymbol(OutContext),
-                                              RI.getMaxAGPRSymbol(OutContext),
-                                              RI.getMaxSGPRSymbol(OutContext));
+  getTargetStreamer()->EmitMCResourceMaximums(
+      RI.getMaxVGPRSymbol(OutContext), RI.getMaxAGPRSymbol(OutContext),
+      RI.getMaxSGPRSymbol(OutContext), RI.getMaxNamedBarrierSymbol(OutContext));
   OutStreamer->popSection();
 
   for (Function &F : M.functions())

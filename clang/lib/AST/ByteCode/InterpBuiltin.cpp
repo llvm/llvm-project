@@ -877,7 +877,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
   // Write Result to ResultPtr and put Overflow on the stack.
   assignInteger(S, ResultPtr, ResultT, Result);
   if (ResultPtr.canBeInitialized())
-    ResultPtr.initialize();
+    ResultPtr.initialize(S);
 
   assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
@@ -934,7 +934,7 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
   assignInteger(S, CarryOutPtr, CarryOutT, CarryOut);
-  CarryOutPtr.initialize();
+  CarryOutPtr.initialize(S);
 
   assert(Call->getType() == Call->getArg(0)->getType());
   pushInteger(S, Result, Call->getType());
@@ -1743,7 +1743,7 @@ static bool interp__builtin_elementwise_countzeroes(InterpState &S,
       } else {
         Dst.atIndex(I).deref<T>() = T::from(EltVal.countLeadingZeros());
       }
-      Dst.atIndex(I).initialize();
+      Dst.atIndex(I).initialize(S);
     });
   }
 
@@ -1960,7 +1960,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   // Now, read both pointers to a buffer and compare those.
   BitcastBuffer BufferA(
       Bits(ASTCtx.getTypeSize(ElemTypeA) * PtrA.getNumElems()));
-  readPointerToBuffer(S.getContext(), PtrA, BufferA, false);
+  readPointerToBuffer(S, S.getContext(), PtrA, BufferA, false);
   // FIXME: The swapping here is UNDOING something we do when reading the
   // data into the buffer.
   if (ASTCtx.getTargetInfo().isBigEndian())
@@ -1968,7 +1968,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
 
   BitcastBuffer BufferB(
       Bits(ASTCtx.getTypeSize(ElemTypeB) * PtrB.getNumElems()));
-  readPointerToBuffer(S.getContext(), PtrB, BufferB, false);
+  readPointerToBuffer(S, S.getContext(), PtrB, BufferB, false);
   // FIXME: The swapping here is UNDOING something we do when reading the
   // data into the buffer.
   if (ASTCtx.getTargetInfo().isBigEndian())
@@ -2872,39 +2872,6 @@ static bool interp__builtin_select_scalar(InterpState &S,
     Dst.elem<Floating>(0) = A.elem<Floating>(0);
 
   Dst.initializeAllElements();
-  return true;
-}
-
-static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
-                                  const CallExpr *Call) {
-  APSInt Mask = popToAPSInt(S, Call->getArg(2));
-  const Pointer &TrueVec = S.Stk.pop<Pointer>();
-  const Pointer &FalseVec = S.Stk.pop<Pointer>();
-  const Pointer &Dst = S.Stk.peek<Pointer>();
-
-  assert(FalseVec.getNumElems() == TrueVec.getNumElems());
-  assert(FalseVec.getNumElems() == Dst.getNumElems());
-  unsigned NumElems = FalseVec.getNumElems();
-  PrimType ElemT = FalseVec.getFieldDesc()->getPrimType();
-  PrimType DstElemT = Dst.getFieldDesc()->getPrimType();
-
-  for (unsigned I = 0; I != NumElems; ++I) {
-    bool MaskBit = Mask[I % 8];
-    if (ElemT == PT_Float) {
-      assert(DstElemT == PT_Float);
-      Dst.elem<Floating>(I) =
-          MaskBit ? TrueVec.elem<Floating>(I) : FalseVec.elem<Floating>(I);
-    } else {
-      assert(DstElemT == ElemT);
-      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
-        Dst.elem<T>(I) =
-            static_cast<T>(MaskBit ? TrueVec.elem<T>(I).toAPSInt()
-                                   : FalseVec.elem<T>(I).toAPSInt());
-      });
-    }
-  }
-  Dst.initializeAllElements();
-
   return true;
 }
 
@@ -4796,7 +4763,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pblendw256:
   case clang::X86::BI__builtin_ia32_pblendd128:
   case clang::X86::BI__builtin_ia32_pblendd256:
-    return interp__builtin_blend(S, OpPC, Call);
+    return interp__builtin_ia32_shuffle_generic(
+      S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+        // Bit index for mask.
+        unsigned MaskBit = (ShuffleMask >> (DstIdx % 8)) & 0x1;
+        unsigned SrcVecIdx = MaskBit ? 1 : 0;  // 1 = TrueVec, 0 = FalseVec
+        return std::pair<unsigned, int>{SrcVecIdx, static_cast<int>(DstIdx)};
+      });
+
+
 
   case clang::X86::BI__builtin_ia32_blendvpd:
   case clang::X86::BI__builtin_ia32_blendvpd256:
@@ -5583,7 +5558,7 @@ bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
 
   INT_TYPE_SWITCH(FieldT,
                   FieldPtr.deref<T>() = T::from(IntValue.getSExtValue()));
-  FieldPtr.initialize();
+  FieldPtr.initialize(S);
   return true;
 }
 
@@ -5639,7 +5614,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
       TYPE_SWITCH(*FT, {
         DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
         if (Src.atField(F.Offset).isInitialized())
-          DestField.initialize();
+          DestField.initialize(S);
         if (Activate)
           DestField.activate();
       });
@@ -5677,7 +5652,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
       return false;
   }
 
-  Dest.initialize();
+  Dest.initialize(S);
   return true;
 }
 
@@ -5698,7 +5673,7 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
       Pointer DestElem = Dest.atIndex(I);
       TYPE_SWITCH(ET, {
         DestElem.deref<T>() = Src.elem<T>(I);
-        DestElem.initialize();
+        DestElem.initialize(S);
       });
     }
     return true;
