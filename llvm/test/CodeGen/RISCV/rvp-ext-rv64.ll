@@ -274,7 +274,7 @@ define void @test_pdif_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld a1, 0(a1)
 ; CHECK-NEXT:    ld a2, 0(a2)
-; CHECK-NEXT:    pdif.h a1, a1, a2
+; CHECK-NEXT:    pabd.h a1, a1, a2
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %a_ptr
@@ -293,7 +293,7 @@ define void @test_pdifu_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld a1, 0(a1)
 ; CHECK-NEXT:    ld a2, 0(a2)
-; CHECK-NEXT:    pdifu.h a1, a1, a2
+; CHECK-NEXT:    pabdu.h a1, a1, a2
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %a_ptr
@@ -311,7 +311,7 @@ define void @test_pdif_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld a1, 0(a1)
 ; CHECK-NEXT:    ld a2, 0(a2)
-; CHECK-NEXT:    pdif.b a1, a1, a2
+; CHECK-NEXT:    pabd.b a1, a1, a2
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %a_ptr
@@ -329,7 +329,7 @@ define void @test_pdifu_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld a1, 0(a1)
 ; CHECK-NEXT:    ld a2, 0(a2)
-; CHECK-NEXT:    pdifu.b a1, a1, a2
+; CHECK-NEXT:    pabdu.b a1, a1, a2
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %a_ptr
@@ -701,12 +701,12 @@ define void @test_build_vector_i8(ptr %ret_ptr, i8 %a, i8 %b, i8 %c, i8 %d, i8 %
 ; CHECK-LABEL: test_build_vector_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lbu t0, 0(sp)
-; CHECK-NEXT:    ppack.h a5, a5, a6
-; CHECK-NEXT:    ppack.h a3, a3, a4
-; CHECK-NEXT:    ppack.h a1, a1, a2
-; CHECK-NEXT:    ppack.h a2, a7, t0
-; CHECK-NEXT:    ppack.w a2, a5, a2
-; CHECK-NEXT:    ppack.w a1, a1, a3
+; CHECK-NEXT:    ppaire.b a5, a5, a6
+; CHECK-NEXT:    ppaire.b a3, a3, a4
+; CHECK-NEXT:    ppaire.b a1, a1, a2
+; CHECK-NEXT:    ppaire.b a2, a7, t0
+; CHECK-NEXT:    ppaire.h a2, a5, a2
+; CHECK-NEXT:    ppaire.h a1, a1, a3
 ; CHECK-NEXT:    pack a1, a1, a2
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    ret
@@ -725,8 +725,8 @@ define void @test_build_vector_i8(ptr %ret_ptr, i8 %a, i8 %b, i8 %c, i8 %d, i8 %
 define void @test_build_vector_i16(ptr %ret_ptr, i16 %a, i16 %b, i16 %c, i16 %d) {
 ; CHECK-LABEL: test_build_vector_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ppack.w a3, a3, a4
-; CHECK-NEXT:    ppack.w a1, a1, a2
+; CHECK-NEXT:    ppaire.h a3, a3, a4
+; CHECK-NEXT:    ppaire.h a1, a1, a2
 ; CHECK-NEXT:    pack a1, a1, a3
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    ret

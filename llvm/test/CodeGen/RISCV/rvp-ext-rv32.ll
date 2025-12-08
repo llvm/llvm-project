@@ -272,7 +272,7 @@ define void @test_pdif_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lw a1, 0(a1)
 ; CHECK-NEXT:    lw a2, 0(a2)
-; CHECK-NEXT:    pdif.h a1, a1, a2
+; CHECK-NEXT:    pabd.h a1, a1, a2
 ; CHECK-NEXT:    sw a1, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i16>, ptr %a_ptr
@@ -290,7 +290,7 @@ define void @test_pdifu_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lw a1, 0(a1)
 ; CHECK-NEXT:    lw a2, 0(a2)
-; CHECK-NEXT:    pdifu.h a1, a1, a2
+; CHECK-NEXT:    pabdu.h a1, a1, a2
 ; CHECK-NEXT:    sw a1, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i16>, ptr %a_ptr
@@ -308,7 +308,7 @@ define void @test_pdif_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lw a1, 0(a1)
 ; CHECK-NEXT:    lw a2, 0(a2)
-; CHECK-NEXT:    pdif.b a1, a1, a2
+; CHECK-NEXT:    pabd.b a1, a1, a2
 ; CHECK-NEXT:    sw a1, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i8>, ptr %a_ptr
@@ -326,7 +326,7 @@ define void @test_pdifu_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lw a1, 0(a1)
 ; CHECK-NEXT:    lw a2, 0(a2)
-; CHECK-NEXT:    pdifu.b a1, a1, a2
+; CHECK-NEXT:    pabdu.b a1, a1, a2
 ; CHECK-NEXT:    sw a1, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i8>, ptr %a_ptr
@@ -558,16 +558,16 @@ define void @test_non_const_splat_i16(ptr %ret_ptr, ptr %a_ptr, i16 %elt) {
 define void @test_build_vector_i8(i8 %a, i8 %c, i8 %b, i8 %d, ptr %ret_ptr) {
 ; CHECK-RV32-LABEL: test_build_vector_i8:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    ppack.dh a0, a0, a2
+; CHECK-RV32-NEXT:    ppaire.db a0, a0, a2
 ; CHECK-RV32-NEXT:    pack a0, a0, a1
 ; CHECK-RV32-NEXT:    sw a0, 0(a4)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_build_vector_i8:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    ppack.h a1, a1, a3
-; CHECK-RV64-NEXT:    ppack.h a0, a0, a2
-; CHECK-RV64-NEXT:    ppack.w a0, a0, a1
+; CHECK-RV64-NEXT:    ppaire.b a1, a1, a3
+; CHECK-RV64-NEXT:    ppaire.b a0, a0, a2
+; CHECK-RV64-NEXT:    ppaire.h a0, a0, a1
 ; CHECK-RV64-NEXT:    sw a0, 0(a4)
 ; CHECK-RV64-NEXT:    ret
   %v0 = insertelement <4 x i8> poison, i8 %a, i32 0
@@ -587,7 +587,7 @@ define void @test_build_vector_i16(ptr %ret_ptr, i16 %a, i16 %b) {
 ;
 ; CHECK-RV64-LABEL: test_build_vector_i16:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    ppack.w a1, a1, a2
+; CHECK-RV64-NEXT:    ppaire.h a1, a1, a2
 ; CHECK-RV64-NEXT:    sw a1, 0(a0)
 ; CHECK-RV64-NEXT:    ret
   %v0 = insertelement <2 x i16> poison, i16 %a, i32 0

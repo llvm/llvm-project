@@ -1901,7 +1901,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                 0);
 
     MachineSDNode *PackDH = CurDAG->getMachineNode(
-        RISCV::PPACK_DH, DL, MVT::Untyped, {RegPair0, RegPair1});
+        RISCV::PPAIRE_DB, DL, MVT::Untyped, {RegPair0, RegPair1});
 
     SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
                                                 MVT::i32, SDValue(PackDH, 0));
