@@ -1753,13 +1753,11 @@ bool TargetLowering::SimplifyDemandedBits(
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
-    // If we're testing X < 0, X >= 0, X <= -1 (X is of integer type) or X > -1
+    // If we're testing X < 0, X >= 0, X <= -1 or X > -1
     // (X is of integer type) then we only need the sign mask of the previous
     // result
-    if (((CC == ISD::SETLT || CC == ISD::SETGE) &&
-         Op1.getValueType().isInteger() && isNullOrNullSplat(Op1)) ||
-        ((CC == ISD::SETLE || CC == ISD::SETGT) &&
-         Op1.getValueType().isInteger() && isAllOnesOrAllOnesSplat(Op1))) {
+    if (Op1.getValueType().isInteger() && (((CC == ISD::SETLT || CC == ISD::SETGE) && isNullOrNullSplat(Op1)) ||
+        ((CC == ISD::SETLE || CC == ISD::SETGT) && isAllOnesOrAllOnesSplat(Op1)))) {
       KnownBits KnownOp0;
       bool Changed = false;
       if (SimplifyDemandedBits(
