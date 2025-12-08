@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64-unknown-unknown | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-unknown-unknown | %ptxas-verify %}
+; RUN: %if ptxas-sm_50 && ptxas-isa-8.3 %{ llc < %s -mtriple=nvptx64-unknown-unknown -mcpu=sm_50 | %ptxas-verify -arch=sm_50 %}
 ;
 ; Check that parameters of a __device__ function with private or internal
 ; linkage called from a __global__ (kernel) function get increased alignment,
