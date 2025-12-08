@@ -3443,6 +3443,79 @@ TEST_P(UncheckedStatusOrAccessModelTest, AccessorCall) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, PointerLike) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    class Foo {
+     public:
+      std::pair<int, STATUSOR_VOIDPTR>& operator*() const;
+      std::pair<int, STATUSOR_VOIDPTR>* operator->() const;
+      bool operator!=(const Foo& other) const;
+    };
+
+    void target() {
+      Foo foo;
+      if (foo->second.ok() && *foo->second != nullptr) {
+        *foo->second;
+        (*foo).second.value();
+      }
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    class Foo {
+     public:
+      std::pair<int, STATUSOR_INT>& operator*() const;
+      std::pair<int, STATUSOR_INT>* operator->() const;
+    };
+    void target() {
+      Foo foo;
+      if (!foo->second.ok()) return;
+      foo->second.value();
+      (*foo).second.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(std::pair<int, STATUSOR_VOIDPTR>* foo) {
+      if (foo->second.ok() && *foo->second != nullptr) {
+        *foo->second;
+        (*foo).second.value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, UniquePtr) {
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void target() {
+          auto sor_up = Make<std::unique_ptr<STATUSOR_INT>>();
+          if (sor_up->ok()) sor_up->value();
+        }
+      )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, UniquePtrReset) {
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void target() {
+          auto sor_up = Make<std::unique_ptr<STATUSOR_INT>>();
+          if (sor_up->ok()) {
+            sor_up.reset(Make<STATUSOR_INT*>());
+            sor_up->value();  // [[unsafe]]
+          }
+        }
+      )cc");
+}
+
 } // namespace
 
 std::string
@@ -3492,6 +3565,7 @@ GetHeaders(UncheckedStatusOrAccessModelTestAliasKind AliasKind) {
 #include "std_pair.h"
 #include "absl_log.h"
 #include "testing_defs.h"
+#include "std_unique_ptr.h"
 
                              template <typename T>
                              T Make();
