@@ -106,7 +106,7 @@ define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2:       [[VECTOR_PH]]:
 ; RV64-UF2-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-UF2-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
-; RV64-UF2-NEXT:    [[TMP6:%.*]] = mul nuw nsw i64 [[TMP5]], 2
+; RV64-UF2-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
 ; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 1023, [[TMP6]]
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = sub i64 1023, [[N_VEC]]
 ; RV64-UF2-NEXT:    [[TMP33:%.*]] = sub i64 1023, [[TMP7]]
@@ -340,7 +340,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2:       [[VECTOR_PH]]:
 ; RV64-UF2-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-UF2-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP17]], 4
-; RV64-UF2-NEXT:    [[TMP19:%.*]] = mul nuw nsw i64 [[TMP18]], 2
+; RV64-UF2-NEXT:    [[TMP19:%.*]] = mul nuw i64 [[TMP18]], 2
 ; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 [[TMP0]], [[TMP19]]
 ; RV64-UF2-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
 ; RV64-UF2-NEXT:    [[TMP48:%.*]] = sub i64 [[TMP0]], [[TMP20]]
@@ -591,7 +591,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2:       [[VECTOR_PH]]:
 ; RV64-UF2-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-UF2-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP17]], 4
-; RV64-UF2-NEXT:    [[TMP19:%.*]] = mul nuw nsw i64 [[TMP18]], 2
+; RV64-UF2-NEXT:    [[TMP19:%.*]] = mul nuw i64 [[TMP18]], 2
 ; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 [[TMP0]], [[TMP19]]
 ; RV64-UF2-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
 ; RV64-UF2-NEXT:    [[TMP48:%.*]] = sub i64 [[TMP0]], [[TMP20]]
@@ -769,7 +769,7 @@ define void @vector_reverse_f32_simplify(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2:       [[VECTOR_PH]]:
 ; RV64-UF2-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-UF2-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
-; RV64-UF2-NEXT:    [[TMP6:%.*]] = mul nuw nsw i64 [[TMP5]], 2
+; RV64-UF2-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
 ; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 1023, [[TMP6]]
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = sub i64 1023, [[N_VEC]]
 ; RV64-UF2-NEXT:    [[TMP33:%.*]] = sub i64 1023, [[TMP7]]

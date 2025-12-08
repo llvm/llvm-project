@@ -4593,8 +4593,8 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   VF.replaceAllUsesWith(RuntimeVF);
 
   VPValue *UF = Plan.getConstantInt(TCTy, Plan.getUF());
-  VPValue *MulByUF = Builder.createOverflowingOp(Instruction::Mul,
-                                                 {RuntimeVF, UF}, {true, true});
+  VPValue *MulByUF = Builder.createOverflowingOp(
+      Instruction::Mul, {RuntimeVF, UF}, {true, false});
   VFxUF.replaceAllUsesWith(MulByUF);
 }
 
@@ -4883,7 +4883,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     VPValue *VScale = PHBuilder.createElementCount(
         VectorLoop->getCanonicalIVType(), ElementCount::getScalable(1));
     VPValue *VScaleUF = PHBuilder.createOverflowingOp(
-        Instruction::Mul, {VScale, UF}, {true, true});
+        Instruction::Mul, {VScale, UF}, {true, false});
     Inc->setOperand(1, VScaleUF);
     Plan.getVF().replaceAllUsesWith(VScale);
   } else {
