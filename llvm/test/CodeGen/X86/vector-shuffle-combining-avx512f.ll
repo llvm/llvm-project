@@ -1035,68 +1035,23 @@ define <8 x double> @concat_vpermilvar_v8f64_v4f64(<4 x double> %a0, <4 x double
   ret <8 x double> %res
 }
 
-; TODO - shift elements up by one
+; shift elements up by one
 define <16 x i32> @combine_vexpandd_as_valignd(<16 x i32>  %x) {
-; X86-AVX512F-LABEL: combine_vexpandd_as_valignd:
-; X86-AVX512F:       # %bb.0:
-; X86-AVX512F-NEXT:    movw $-2, %ax
-; X86-AVX512F-NEXT:    kmovw %eax, %k1
-; X86-AVX512F-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
-; X86-AVX512F-NEXT:    retl
-;
-; X86-AVX512BW-LABEL: combine_vexpandd_as_valignd:
-; X86-AVX512BW:       # %bb.0:
-; X86-AVX512BW-NEXT:    movw $-2, %ax
-; X86-AVX512BW-NEXT:    kmovd %eax, %k1
-; X86-AVX512BW-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
-; X86-AVX512BW-NEXT:    retl
-;
-; X64-AVX512F-LABEL: combine_vexpandd_as_valignd:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    movw $-2, %ax
-; X64-AVX512F-NEXT:    kmovw %eax, %k1
-; X64-AVX512F-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
-; X64-AVX512F-NEXT:    retq
-;
-; X64-AVX512BW-LABEL: combine_vexpandd_as_valignd:
-; X64-AVX512BW:       # %bb.0:
-; X64-AVX512BW-NEXT:    movw $-2, %ax
-; X64-AVX512BW-NEXT:    kmovd %eax, %k1
-; X64-AVX512BW-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
-; X64-AVX512BW-NEXT:    retq
+; CHECK-LABEL: combine_vexpandd_as_valignd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    valignd {{.*#+}} zmm0 = zmm1[15],zmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32> %x, <16 x i32> zeroinitializer, <16 x i1> <i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
   ret <16 x i32> %res
 }
 
-; TODO - zero upper half of vector
+; zero upper half of vector
 define <16 x i32> @combine_vcompressd_as_vmov(<16 x i32> %x) {
-; X86-AVX512F-LABEL: combine_vcompressd_as_vmov:
-; X86-AVX512F:       # %bb.0:
-; X86-AVX512F-NEXT:    movw $255, %ax
-; X86-AVX512F-NEXT:    kmovw %eax, %k1
-; X86-AVX512F-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
-; X86-AVX512F-NEXT:    retl
-;
-; X86-AVX512BW-LABEL: combine_vcompressd_as_vmov:
-; X86-AVX512BW:       # %bb.0:
-; X86-AVX512BW-NEXT:    movw $255, %ax
-; X86-AVX512BW-NEXT:    kmovd %eax, %k1
-; X86-AVX512BW-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
-; X86-AVX512BW-NEXT:    retl
-;
-; X64-AVX512F-LABEL: combine_vcompressd_as_vmov:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    movw $255, %ax
-; X64-AVX512F-NEXT:    kmovw %eax, %k1
-; X64-AVX512F-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
-; X64-AVX512F-NEXT:    retq
-;
-; X64-AVX512BW-LABEL: combine_vcompressd_as_vmov:
-; X64-AVX512BW:       # %bb.0:
-; X64-AVX512BW-NEXT:    movw $255, %ax
-; X64-AVX512BW-NEXT:    kmovd %eax, %k1
-; X64-AVX512BW-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
-; X64-AVX512BW-NEXT:    retq
+; CHECK-LABEL: combine_vcompressd_as_vmov:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> %x, <16 x i32> zeroinitializer, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>)
   ret <16 x i32> %res
 }
