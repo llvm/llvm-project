@@ -3811,7 +3811,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (VecToReduceCount.isFixed()) {
           unsigned VectorSize = VecToReduceCount.getFixedValue();
           return BinaryOperator::CreateMul(
-              Splat, ConstantInt::get(Splat->getType(), VectorSize));
+              Splat,
+              ConstantInt::get(Splat->getType(), VectorSize, /*IsSigned=*/false,
+                               /*ImplicitTrunc=*/true));
         }
       }
     }
