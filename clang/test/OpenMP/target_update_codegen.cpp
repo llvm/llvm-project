@@ -1231,9 +1231,9 @@ struct ST {
     // CK21: store i64 1, ptr [[COUNT_4]],
     // CK21: [[STRIDE_4:%.+]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DIM_4]], {{.+}} 0, {{.+}} 2
     // CK21: store i64 {{4|8}}, ptr [[STRIDE_4]],
-    // CK21-DAG: [[GEPBP:%.+]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
-    // CK21-DAG: [[GEPP:%.+]]  = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
-    // CK21-DAG: [[GEPSZ:%.+]] = getelementptr inbounds [2 x i64], ptr %.offload_sizes, i32 0, i32 0
+    // CK21-DAG: [[GEPBP:%.+]] = getelementptr inbounds [2 x ptr], ptr [[OFFLOAD_BASEPTRS:%.+]], i32 0, i32 0
+    // CK21-DAG: [[GEPP:%.+]]  = getelementptr inbounds [2 x ptr], ptr [[OFFLOAD_PTRS:%.+]], i32 0, i32 0
+    // CK21-DAG: [[GEPSZ:%.+]] = getelementptr inbounds [2 x i64], ptr [[OFFLOAD_SIZES:%.+]], i32 0, i32 0
     // CK21-DAG: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[GEPBP]], ptr [[GEPP]], ptr [[GEPSZ]], ptr @.offload_maptypes, ptr null, ptr null)
     // CK21: ret void
 #pragma omp target update to(dptr[0:2][1:3][0:4])
