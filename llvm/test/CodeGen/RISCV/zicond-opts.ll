@@ -407,8 +407,7 @@ define i32 @addi_addi(i1 %a, i16 %b) {
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    andi a0, a0, 1
 ; RV32ZICOND-NEXT:    bset a1, zero, a1
-; RV32ZICOND-NEXT:    addi a1, a1, -1
-; RV32ZICOND-NEXT:    addi a1, a1, -1
+; RV32ZICOND-NEXT:    addi a1, a1, -2
 ; RV32ZICOND-NEXT:    czero.nez a0, a1, a0
 ; RV32ZICOND-NEXT:    addi a0, a0, 1
 ; RV32ZICOND-NEXT:    ret
@@ -417,8 +416,7 @@ define i32 @addi_addi(i1 %a, i16 %b) {
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    andi a0, a0, 1
 ; RV64ZICOND-NEXT:    bset a1, zero, a1
-; RV64ZICOND-NEXT:    addi a1, a1, -1
-; RV64ZICOND-NEXT:    addi a1, a1, -1
+; RV64ZICOND-NEXT:    addi a1, a1, -2
 ; RV64ZICOND-NEXT:    czero.nez a0, a1, a0
 ; RV64ZICOND-NEXT:    addi a0, a0, 1
 ; RV64ZICOND-NEXT:    ret

@@ -4609,8 +4609,7 @@ define i64 @add_u32simm32_zextw(i64 %x) nounwind {
 ; RV64XANDESPERF-NEXT:    nds.lea.b.ze a0, a0, a1
 ; RV64XANDESPERF-NEXT:    li a1, 1
 ; RV64XANDESPERF-NEXT:    slli a1, a1, 32
-; RV64XANDESPERF-NEXT:    addi a1, a1, -2
-; RV64XANDESPERF-NEXT:    addi a1, a1, 1
+; RV64XANDESPERF-NEXT:    addi a1, a1, -1
 ; RV64XANDESPERF-NEXT:    and a0, a0, a1
 ; RV64XANDESPERF-NEXT:    ret
 entry:

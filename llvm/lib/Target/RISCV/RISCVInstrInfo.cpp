@@ -2654,6 +2654,22 @@ static bool getSHXADDPatterns(const MachineInstr &Root,
   return Found;
 }
 
+// Check (addi (addi X, C1), C2) -> (addi X, C1+C2) pattern.
+static bool getADDIADDIPatterns(const MachineInstr &Root,
+                                SmallVectorImpl<unsigned> &Patterns) {
+  if (Root.getOpcode() != RISCV::ADDI)
+    return false;
+  const MachineBasicBlock &MBB = *Root.getParent();
+  const MachineInstr *Inner = canCombine(MBB, Root.getOperand(1), RISCV::ADDI);
+  if (!Inner || !Inner->getOperand(1).isReg())
+    return false;
+  int64_t Sum = Inner->getOperand(2).getImm() + Root.getOperand(2).getImm();
+  if (!isInt<12>(Sum))
+    return false;
+  Patterns.push_back(RISCVMachineCombinerPattern::ADDI_ADDI);
+  return true;
+}
+
 CombinerObjective RISCVInstrInfo::getCombinerObjective(unsigned Pattern) const {
   switch (Pattern) {
   case RISCVMachineCombinerPattern::FMADD_AX:
@@ -2674,6 +2690,9 @@ bool RISCVInstrInfo::getMachineCombinerPatterns(
     return true;
 
   if (getSHXADDPatterns(Root, Patterns))
+    return true;
+
+  if (getADDIADDIPatterns(Root, Patterns))
     return true;
 
   return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
@@ -2819,6 +2838,27 @@ genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
   DelInstrs.push_back(&Root);
 }
 
+// Fold (addi (addi X, C1), C2) -> (addi X, C1+C2)
+static void combineADDIADDI(MachineInstr &Root,
+                            SmallVectorImpl<MachineInstr *> &InsInstrs,
+                            SmallVectorImpl<MachineInstr *> &DelInstrs) {
+  MachineFunction *MF = Root.getMF();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+
+  MachineInstr *Inner = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
+  const MachineOperand &X = Inner->getOperand(1);
+  int64_t Sum = Inner->getOperand(2).getImm() + Root.getOperand(2).getImm();
+
+  auto MIB = BuildMI(*MF, MIMetadata(Root), TII->get(RISCV::ADDI),
+                     Root.getOperand(0).getReg())
+                  .addReg(X.getReg(), getKillRegState(X.isKill()))
+                  .addImm(Sum);
+  InsInstrs.push_back(MIB);
+  DelInstrs.push_back(Inner);
+  DelInstrs.push_back(&Root);
+}
+
 void RISCVInstrInfo::genAlternativeCodeSequence(
     MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
@@ -2847,6 +2887,9 @@ void RISCVInstrInfo::genAlternativeCodeSequence(
     return;
   case RISCVMachineCombinerPattern::SHXADD_ADD_SLLI_OP2:
     genShXAddAddShift(Root, 2, InsInstrs, DelInstrs, InstrIdxForVirtReg);
+    return;
+  case RISCVMachineCombinerPattern::ADDI_ADDI:
+    combineADDIADDI(Root, InsInstrs, DelInstrs);
     return;
   }
 }
