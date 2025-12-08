@@ -68,26 +68,24 @@ void InconsistentIfElseBracesCheck::checkIfStmt(
   if (const Stmt *const Else = If->getElse()) {
     if (const auto *NestedIf = dyn_cast<const IfStmt>(Else))
       checkIfStmt(Result, NestedIf);
-    else if (!isa<CompoundStmt>(Else)) {
+    else if (!isa<CompoundStmt>(Else))
       emitDiagnostic(Result, If->getElse(), If->getElseLoc());
-    }
   }
 }
 
 void InconsistentIfElseBracesCheck::emitDiagnostic(
     const MatchFinder::MatchResult &Result, const Stmt *S,
     SourceLocation StartLoc, SourceLocation EndLocHint) {
-  const SourceManager &SM = *Result.SourceManager;
-  const LangOptions &LangOpts = Result.Context->getLangOpts();
-  if (!StartLoc.isMacroID()) {
-    const utils::BraceInsertionHints Hints =
-        utils::getBraceInsertionsHints(S, LangOpts, SM, StartLoc, EndLocHint);
-    assert(Hints && Hints.offersFixIts() && "Expected hints or fix-its");
-    diag(Hints.DiagnosticPos, "statement should have braces")
-        << Hints.openingBraceFixIt() << Hints.closingBraceFixIt();
-  } else {
-    diag(StartLoc, "<message-for-macro-expansions>") << StartLoc.isMacroID();
+  if (StartLoc.isMacroID()) {
+    diag(StartLoc, "statement should have braces") << StartLoc.isMacroID();
+    return;
   }
+  const utils::BraceInsertionHints Hints = utils::getBraceInsertionsHints(
+      S, Result.Context->getLangOpts(), *Result.SourceManager, StartLoc,
+      EndLocHint);
+  assert(Hints && Hints.offersFixIts() && "Expected hints or fix-its");
+  diag(Hints.DiagnosticPos, "statement should have braces")
+      << Hints.openingBraceFixIt() << Hints.closingBraceFixIt();
 }
 
 } // namespace clang::tidy::readability
