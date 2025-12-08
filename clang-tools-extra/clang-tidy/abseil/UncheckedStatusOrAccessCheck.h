@@ -10,7 +10,7 @@ namespace clang::tidy::abseil {
 // assuring that it contains a value.
 //
 // For details on the dataflow analysis implemented in this check see:
-// http://google3/devtools/cymbal/nullability/statusor
+// clang/lib/Analysis/FlowSensitive/Models/UncheckedStatusOrAccessModel.cpp
 class UncheckedStatusOrAccessCheck : public ClangTidyCheck {
 public:
   using ClangTidyCheck::ClangTidyCheck;
