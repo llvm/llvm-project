@@ -38,9 +38,9 @@
 
 // Include some standard headers to avoid CUDA headers including them
 // while some required macros (like __THROW) are in a weird state.
+#include <climits>
 #include <cmath>
 #include <cstdlib>
-#include <climits>
 #include <stdlib.h>
 #include <string.h>
 #undef __CUDACC__
