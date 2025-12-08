@@ -13,7 +13,6 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/CFGMatchSwitch.h"
-#include "clang/Analysis/FlowSensitive/CachedConstAccessorsLattice.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
@@ -70,8 +69,7 @@ struct UncheckedStatusOrAccessModelOptions {};
 
 // Dataflow analysis that discovers unsafe uses of StatusOr values.
 class UncheckedStatusOrAccessModel
-    : public DataflowAnalysis<UncheckedStatusOrAccessModel,
-                              CachedConstAccessorsLattice<NoopLattice>> {
+    : public DataflowAnalysis<UncheckedStatusOrAccessModel, NoopLattice> {
 public:
   explicit UncheckedStatusOrAccessModel(ASTContext &Ctx, Environment &Env);
 
