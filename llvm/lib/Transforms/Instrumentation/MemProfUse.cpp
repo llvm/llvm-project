@@ -504,29 +504,14 @@ struct CallSiteEntry {
   ArrayRef<Frame> Frames;
   // Potential targets for indirect calls.
   ArrayRef<GlobalValue::GUID> CalleeGuids;
-
-  // Only compare Frame contents.
-  // Use pointer-based equality instead of ArrayRef's operator== which does
-  // element-wise comparison. We want to check if it's the same slice of the
-  // underlying array, not just equivalent content.
-  bool operator==(const CallSiteEntry &Other) const {
-    return Frames.data() == Other.Frames.data() &&
-           Frames.size() == Other.Frames.size();
-  }
 };
 
-struct CallSiteEntryHash {
-  size_t operator()(const CallSiteEntry &Entry) const {
-    return computeFullStackId(Entry.Frames);
-  }
-};
-
-static void handleCallSite(
-    Instruction &I, const Function *CalledFunction,
-    ArrayRef<uint64_t> InlinedCallStack,
-    const std::unordered_set<CallSiteEntry, CallSiteEntryHash> &CallSiteEntries,
-    Module &M, std::set<std::vector<uint64_t>> &MatchedCallSites,
-    OptimizationRemarkEmitter &ORE) {
+static void handleCallSite(Instruction &I, const Function *CalledFunction,
+                           ArrayRef<uint64_t> InlinedCallStack,
+                           const std::vector<CallSiteEntry> &CallSiteEntries,
+                           Module &M,
+                           std::set<std::vector<uint64_t>> &MatchedCallSites,
+                           OptimizationRemarkEmitter &ORE) {
   auto &Ctx = M.getContext();
   // Set of Callee GUIDs to attach to indirect calls. We accumulate all of them
   // to support cases where the instuction's inlined frames match multiple call
@@ -646,8 +631,7 @@ static void readMemprof(Module &M, Function &F,
 
   // For the callsites we need to record slices of the frame array (see comments
   // below where the map entries are added) along with their CalleeGuids.
-  std::map<uint64_t, std::unordered_set<CallSiteEntry, CallSiteEntryHash>>
-      LocHashToCallSites;
+  std::map<uint64_t, std::vector<CallSiteEntry>> LocHashToCallSites;
   for (auto &AI : MemProfRec->AllocSites) {
     NumOfMemProfAllocContextProfiles++;
     // Associate the allocation info with the leaf frame. The later matching
@@ -666,7 +650,7 @@ static void readMemprof(Module &M, Function &F,
       uint64_t StackId = computeStackId(StackFrame);
       ArrayRef<Frame> FrameSlice = ArrayRef<Frame>(CS.Frames).drop_front(Idx++);
       ArrayRef<GlobalValue::GUID> CalleeGuids(CS.CalleeGuids);
-      LocHashToCallSites[StackId].insert({FrameSlice, CalleeGuids});
+      LocHashToCallSites[StackId].push_back({FrameSlice, CalleeGuids});
 
       ProfileHasColumns |= StackFrame.Column;
       // Once we find this function, we can stop recording.
