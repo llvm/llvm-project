@@ -5166,13 +5166,20 @@ def ffuchsia_api_level_EQ : Joined<["-"], "ffuchsia-api-level=">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set Fuchsia API level">,
   MarshallingInfoInt<LangOpts<"FuchsiaAPILevel">>;
-def fblock_size_threshold
-    : Joined<["-"], "fblock-size-threshold=">,
+def fcfg_block_num_threshold
+    : Joined<["-"], "fcfg-block-num-threshold=">,
       Group<m_Group>,
       Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Set Threshold for block size above which lifetime analysis "
-               "will be skipped">,
-      MarshallingInfoInt<LangOpts<"BlockFactNumThreshold">>;
+      HelpText<"Set Threshold for number of blocks above which lifetime analysis "
+               "will be skipped for a CFG">,
+      MarshallingInfoInt<LangOpts<"CfgBlocknumThreshold">>;
+def fcfg_origin_count_threshold
+    : Joined<["-"], "fcfg-origin-count-threshold=">,
+      Group<m_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Set Threshold for number of origins after fact generation after which lifetime analysis "
+               "will be skipped for a CFG">,
+      MarshallingInfoInt<LangOpts<"CfgOriginCountThreshold">>;
 def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
   Visibility<[ClangOption, CC1Option, FlangOption]>,
   Group<m_Group>, HelpText<"Set macOS deployment target">;

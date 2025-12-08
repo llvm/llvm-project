@@ -58,15 +58,10 @@ private:
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                   const LiveOriginsAnalysis &LiveOrigins, const FactManager &FM,
-                  AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter,
-                  uint32_t BlockFactNumThreshold)
+                  AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter)
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
         Reporter(Reporter) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>()) {
-      const auto &BlockFacts = FactMgr.getFacts(B);
-      if (BlockFactNumThreshold > 0 &&
-          BlockFacts.size() > BlockFactNumThreshold)
-        continue;
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
           checkExpiry(EF);
@@ -144,11 +139,9 @@ public:
 void runLifetimeChecker(const LoanPropagationAnalysis &LP,
                         const LiveOriginsAnalysis &LO,
                         const FactManager &FactMgr, AnalysisDeclContext &ADC,
-                        LifetimeSafetyReporter *Reporter,
-                        uint32_t BlockFactNumThreshold) {
+                        LifetimeSafetyReporter *Reporter) {
   llvm::TimeTraceScope TimeProfile("LifetimeChecker");
-  LifetimeChecker Checker(LP, LO, FactMgr, ADC, Reporter,
-                          BlockFactNumThreshold);
+  LifetimeChecker Checker(LP, LO, FactMgr, ADC, Reporter);
 }
 
 } // namespace clang::lifetimes::internal
