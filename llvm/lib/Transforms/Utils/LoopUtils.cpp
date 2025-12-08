@@ -2094,13 +2094,16 @@ expandBounds(const SmallVectorImpl<RuntimePointerCheck> &PointerChecks, Loop *L,
 Value *llvm::addRuntimeChecks(
     Instruction *Loc, Loop *TheLoop,
     const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
-    SCEVExpander &Exp, bool HoistRuntimeChecks) {
+    SCEVExpander &Exp, bool HoistRuntimeChecks, bool &AllChecksHoisted) {
   // TODO: Move noalias annotation code from LoopVersioning here and share with LV if possible.
   // TODO: Pass  RtPtrChecking instead of PointerChecks and SE separately, if possible
   auto ExpandedChecks =
       expandBounds(PointerChecks, TheLoop, Loc, Exp, HoistRuntimeChecks);
 
   LLVMContext &Ctx = Loc->getContext();
+  auto *SE = Exp.getSE();
+  auto *OuterLoop = TheLoop->getParentLoop();
+  AllChecksHoisted = HoistRuntimeChecks && OuterLoop != nullptr;
   IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
   ChkBuilder.SetInsertPoint(Loc);
   // Our instructions might fold to a constant.
@@ -2139,6 +2142,20 @@ Value *llvm::addRuntimeChecks(
           "stride.check");
       IsConflict = ChkBuilder.CreateOr(IsConflict, IsNegativeStride);
     }
+
+    if (AllChecksHoisted) {
+      AllChecksHoisted &= SE->isLoopInvariant(SE->getSCEV(A.Start), OuterLoop);
+      AllChecksHoisted &= SE->isLoopInvariant(SE->getSCEV(B.Start), OuterLoop);
+      AllChecksHoisted &= SE->isLoopInvariant(SE->getSCEV(A.End), OuterLoop);
+      AllChecksHoisted &= SE->isLoopInvariant(SE->getSCEV(B.End), OuterLoop);
+      if (A.StrideToCheck)
+        AllChecksHoisted &=
+            SE->isLoopInvariant(SE->getSCEV(A.StrideToCheck), OuterLoop);
+      if (B.StrideToCheck)
+        AllChecksHoisted &=
+            SE->isLoopInvariant(SE->getSCEV(B.StrideToCheck), OuterLoop);
+    }
+
     if (MemoryRuntimeCheck) {
       IsConflict =
           ChkBuilder.CreateOr(MemoryRuntimeCheck, IsConflict, "conflict.rdx");

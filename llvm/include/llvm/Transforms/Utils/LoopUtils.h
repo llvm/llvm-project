@@ -613,10 +613,13 @@ LLVM_ABI Loop *cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM, LoopInfo *LI,
 
 /// Add code that checks at runtime if the accessed arrays in \p PointerChecks
 /// overlap. Returns the final comparator value or NULL if no check is needed.
+/// If \p HoistRuntimeChecks and \p TheLoop has a parent, sets \p
+/// AllChecksHoisted when all checks are outer-loop invariant (hoistable).
 LLVM_ABI Value *
 addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
                  const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
-                 SCEVExpander &Expander, bool HoistRuntimeChecks = false);
+                 SCEVExpander &Expander, bool HoistRuntimeChecks,
+                 bool &AllChecksHoisted);
 
 LLVM_ABI Value *addDiffRuntimeChecks(
     Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
