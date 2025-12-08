@@ -123,6 +123,10 @@ public:
 
   GlobalDecl curSEHParent;
 
+  /// A mapping from NRVO variables to the flags used to indicate
+  /// when the NRVO has been applied to this variable.
+  llvm::DenseMap<const VarDecl *, mlir::Value> nrvoFlags;
+
   llvm::DenseMap<const clang::ValueDecl *, clang::FieldDecl *>
       lambdaCaptureFields;
   clang::FieldDecl *lambdaThisCaptureField = nullptr;
@@ -201,6 +205,22 @@ public:
   mlir::Type convertType(clang::QualType t);
   mlir::Type convertType(const TypeDecl *t) {
     return convertType(getContext().getTypeDeclType(t));
+  }
+
+  /// Get integer from a mlir::Value that is an int constant or a constant op.
+  static int64_t getSExtIntValueFromConstOp(mlir::Value val) {
+    auto constOp = val.getDefiningOp<cir::ConstantOp>();
+    assert(constOp && "getIntValueFromConstOp call with non ConstantOp");
+    return constOp.getIntValue().getSExtValue();
+  }
+
+  /// Get zero-extended integer from a mlir::Value that is an int constant or a
+  /// constant op.
+  static int64_t getZExtIntValueFromConstOp(mlir::Value val) {
+    auto constOp = val.getDefiningOp<cir::ConstantOp>();
+    assert(constOp &&
+           "getZeroExtendedIntValueFromConstOp call with non ConstantOp");
+    return constOp.getIntValue().getZExtValue();
   }
 
   ///  Return the cir::TypeEvaluationKind of QualType \c type.
@@ -638,6 +658,14 @@ public:
     return JumpDest(target, ehStack.getInnermostNormalCleanup(),
                     nextCleanupDestIndex++);
   }
+  /// IndirectBranch - The first time an indirect goto is seen we create a block
+  /// reserved for the indirect branch. Unlike before,the actual 'indirectbr'
+  /// is emitted at the end of the function, once all block destinations have
+  /// been resolved.
+  mlir::Block *indirectGotoBlock = nullptr;
+
+  void resolveBlockAddresses();
+  void finishIndirectBranch();
 
   /// Perform the usual unary conversions on the specified expression and
   /// compare the result against zero, returning an Int1Ty value.
@@ -1220,6 +1248,14 @@ public:
   /// CIR emit functions
   /// ----------------------
 public:
+  mlir::Value emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
+                                     ReturnValueSlot returnValue,
+                                     llvm::Triple::ArchType arch);
+  mlir::Value emitAArch64SMEBuiltinExpr(unsigned builtinID,
+                                        const CallExpr *expr);
+  mlir::Value emitAArch64SVEBuiltinExpr(unsigned builtinID,
+                                        const CallExpr *expr);
+
   mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, QualType ty,
                                       SourceLocation loc,
                                       SourceLocation assumptionLoc,
@@ -1363,6 +1399,8 @@ public:
                                               bool isDynamic);
 
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
+
+  void instantiateIndirectGotoBlock();
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
@@ -1546,6 +1584,8 @@ public:
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
   mlir::LogicalResult emitGotoStmt(const clang::GotoStmt &s);
+
+  mlir::LogicalResult emitIndirectGotoStmt(const IndirectGotoStmt &s);
 
   void emitImplicitAssignmentOperatorBody(FunctionArgList &args);
 
@@ -1816,7 +1856,7 @@ public:
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
-  mlir::Value emitX86BuiltinExpr(unsigned builtinID, const CallExpr *e);
+  mlir::Value emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr);
 
   /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
   /// nonnull, if 1\p LHS is marked _Nonnull.

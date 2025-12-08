@@ -24,6 +24,7 @@ def isNotOSWindows : RuntimeLibcallPredicate<"!TT.isOSWindows()">;
 def isNotOSLinux : RuntimeLibcallPredicate<[{!TT.isOSLinux()}]>;
 def isNotOSMSVCRT : RuntimeLibcallPredicate<"!TT.isOSMSVCRT()">;
 def isPS : RuntimeLibcallPredicate<"TT.isPS()">;
+def isMacOSX : RuntimeLibcallPredicate<[{TT.isMacOSX()}]>;
 def isNotOSWindowsOrIsCygwinMinGW
   : RuntimeLibcallPredicate<"!TT.isOSWindows() || TT.isOSCygMing()">;
 def isWindowsMSVCEnvironment : RuntimeLibcallPredicate<
@@ -1982,6 +1983,10 @@ defvar DarwinMemsetPattern = LibcallImpls<(add memset_pattern4,
                                                memset_pattern16),
                                                darwinHasMemsetPattern>;
 
+defvar MacOSUnlockedIO = LibcallImpls<(add
+  getc_unlocked, getchar_unlocked, putc_unlocked, putchar_unlocked),
+  isMacOSX>;
+
 defvar SecurityCheckCookieIfWinMSVC =
     LibcallImpls<(add __security_check_cookie, __security_cookie),
                  isWindowsMSVCOrItaniumEnvironment>;
@@ -2140,6 +2145,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        LibcallImpls<(add Int128RTLibcalls), isAArch64_ILP64>,
        LibcallImpls<(add bzero), isOSDarwin>,
        DarwinExp10, DarwinSinCosStret, DarwinMemsetPattern,
+       MacOSUnlockedIO,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
        DefaultLibmExp10,
        DefaultStackProtector,
@@ -3152,6 +3158,10 @@ def PPCSystemLibrary
            has__stack_smash_handler,
            has___guard_local,
            AvailableIf<__ssp_canary_word, isAIX>,
+           AvailableIf<vec_calloc, isAIX>,
+           AvailableIf<vec_malloc, isAIX>,
+           AvailableIf<vec_realloc, isAIX>,
+           AvailableIf<vec_free, isAIX>,
            AvailableIf<__stack_chk_fail, isNotOSOpenBSD>,
            AvailableIf<__stack_chk_guard, isNotOSAIXAndNotOSOpenBSD>)>;
 
@@ -3294,7 +3304,7 @@ defvar MemChkLibcalls = [__memcpy_chk, __memset_chk, __memmove_chk];
 
 defvar X86CommonLibcalls =
   (add (sub WinDefaultLibcallImpls, WindowsDivRemMulLibcallOverrides, MemChkLibcalls),
-       DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern,
+       DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern, MacOSUnlockedIO,
        X86_F128_Libcalls,
        LibmHasSinCosF80, // FIXME: Depends on long double
        SinCosF32F64Libcalls,
@@ -3343,6 +3353,7 @@ def XCoreSystemLibrary
     (add DefaultRuntimeLibcallImpls,
          exp10f, exp10, exp10l_f128,
          __memcpy_4,
+         iprintf, siprintf, fiprintf,
          LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLibcalls), isGNUEnvironment>
 )>;
 
@@ -3451,6 +3462,7 @@ def SystemZZOSSystemLibrary
 def emscripten_return_address : RuntimeLibcallImpl<RETURN_ADDRESS>;
 
 def isWasm : RuntimeLibcallPredicate<"TT.isWasm()">;
+def isOSEmscripten : RuntimeLibcallPredicate<[{TT.isOSEmscripten()}]>;
 
 // Define the emscripten name for return address helper.
 // TODO: when implementing other Wasm backends, make this generic or only do
@@ -3462,6 +3474,9 @@ def WasmSystemLibrary
            exp10f, exp10,
            _Unwind_CallPersonality,
            emscripten_return_address,
+           LibcallImpls<(add __small_printf,
+                             __small_sprintf,
+                             __small_fprintf), isOSEmscripten>,
            __stack_chk_fail, __stack_chk_guard)>;
 
 //===----------------------------------------------------------------------===//
