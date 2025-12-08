@@ -1025,6 +1025,8 @@ else ()
                               C_STANDARD 11
                               CXX_STANDARD 17
                               PARENT_TARGET builtins)
+      # Write out the sources that were used to compile the builtins so that tests can be run in
+      # an independent compiler-rt build (see: compiler-rt/test/builtins/CMakeLists.txt)
       file(WRITE "${CMAKE_BINARY_DIR}/clang_rt.builtins-${arch}.sources.txt" "${${arch}_SOURCES}")
       cmake_pop_check_state()
     endif ()
