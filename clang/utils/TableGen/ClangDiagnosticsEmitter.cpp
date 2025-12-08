@@ -1584,7 +1584,8 @@ namespace clang {
 namespace diag {
 enum {
 #define DIAG(ENUM, FLAGS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, NOWERROR,      \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
+             LEGACY_STABLE_IDS) \
   ENUM,
 #define %sSTART
 #include "clang/Basic/Diagnostic%sKinds.inc"
@@ -1672,6 +1673,144 @@ void clang::EmitClangDiagsEnums(const RecordKeeper &Records, raw_ostream &OS,
   }
 }
 
+//===----------------------------------------------------------------------===//
+// Stable ID Tables generation
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+/// Holds the string table for all Stable IDs, plus the arrays of legacy Stable
+/// IDs for renamed diagnostics.
+class DiagStableIDsMap {
+  StringToOffsetTable StableIDs;
+  std::vector<uint32_t> LegacyStableIDs;
+  std::map<StringRef, uint32_t> LegacyStableIDsStartOffsets;
+
+public:
+  DiagStableIDsMap(const RecordKeeper &Records) {
+    LegacyStableIDs.push_back(0); // Empty array at offset 0
+
+    for (const Record *Diag : Records.getAllDerivedDefinitions("Diagnostic")) {
+      StringRef StableID = getStableID(*Diag);
+      // Memoize the Stable ID
+      StableIDs.GetOrAddStringOffset(StableID);
+
+      auto LegacyIDList = Diag->getValueAsListOfStrings("LegacyStableIds");
+      if (!LegacyIDList.empty()) {
+        // Memoize any Legacy Stable IDs, and list their offsets in an array.
+        size_t StartOffset = LegacyStableIDs.size();
+        LegacyStableIDsStartOffsets.insert(
+            std::make_pair(Diag->getName(), StartOffset));
+        for (const auto LegacyID : LegacyIDList) {
+          unsigned Offset = StableIDs.GetOrAddStringOffset(LegacyID);
+          LegacyStableIDs.push_back(Offset);
+        }
+        LegacyStableIDs.push_back(0); // Terminate the array.
+      }
+    }
+  }
+
+  /// Gets the string table offset of the Stable ID for the specified Diagnostic
+  /// record.
+  uint32_t getStableIDOffset(const Record &R) const {
+    return StableIDs.GetStringOffset(getStableID(R)).value();
+  }
+
+  /// Gets the offset in the DiagLegacyStableIDs array of the first element of
+  /// the diagnostic's list of legacy Stable IDs.
+  uint32_t getLegacyStableIDsStartOffset(StringRef Name) const {
+    auto found = LegacyStableIDsStartOffsets.find(Name);
+    if (found != LegacyStableIDsStartOffsets.cend()) {
+      return found->second;
+    } else {
+      return 0;
+    }
+  }
+
+  /// Emit diagnostic stable ID arrays and related data structures.
+  ///
+  /// This creates the table of stable IDs, plus the array of arrays of old
+  /// stable IDs.
+  ///
+  /// \code
+  ///  #ifdef GET_DIAG_STABLE_ID_ARRAYS
+  ///     static const int32_t DiagOldStableIds[];
+  ///     static constexpr llvm::StringTable DiagStableIds;
+  ///  #endif
+  /// \endcode
+  void emit(raw_ostream &OS) const {
+    OS << "\n#ifdef GET_DIAG_STABLE_ID_ARRAYS\n";
+    emitStableIDs(OS);
+    emitLegacyStableIDs(OS);
+    OS << "#endif // GET_DIAG_STABLE_ID_ARRAYS\n\n";
+  }
+
+private:
+  /// Gets the Stable ID for the specified Diagnostic record.
+  /// The Stable ID can be explicitly specified via the "StableId"
+  /// property. If not specified explicitly, the Stable ID defaults
+  /// to the name of the diagnostic.
+  static StringRef getStableID(const Record &R) {
+    StringRef StableID = R.getValueAsString("StableId");
+    if (!StableID.empty()) {
+      return StableID;
+    } else {
+      return R.getName();
+    }
+  }
+
+  /// Emit a list of stable IDs, used by both the "StableId" and
+  /// "LegacyStableIds" properties.
+  ///
+  /// This creates an `llvm::StringTable` of all the stable ids in use.
+  void emitStableIDs(raw_ostream &OS) const {
+    StableIDs.EmitStringTableDef(OS, "DiagStableIDs");
+    OS << "\n";
+  }
+
+  /// Emit the array of legacy stable IDs for diagnostics.
+  ///
+  /// The array of stable IDs contains for each diagnostic a list of its legacy
+  /// stable IDs. The individual lists are separated by '0'. Diagnostics with
+  /// no legacy stable IDs are skipped.
+  ///
+  /// \code
+  ///   static const uint16_t DiagOldStableIds[] = {
+  ///     /* Empty */ 0,
+  ///     /* Diag0 */ 142, 0,
+  ///     /* Diag13 */ 265, 322, 399, 0
+  ///   }
+  /// \endcode
+  ///
+  void emitLegacyStableIDs(raw_ostream &OS) const {
+    OS << "static const uint32_t DiagLegacyStableIDs[] = {\n";
+
+    bool StartOfLine = true;
+    for (auto Offset : LegacyStableIDs) {
+      if (StartOfLine) {
+        OS << "  ";
+        StartOfLine = false;
+      }
+      OS << Offset << ",";
+      if (Offset > 0) {
+        OS << " ";
+      } else {
+        OS << "\n";
+        StartOfLine = true;
+      }
+    }
+    OS << "};\n\n";
+  }
+};
+} // namespace
+
+/// Emit the definitions of the Stable ID and old Stable ID tables.
+void clang::EmitClangDiagsStableIDs(const RecordKeeper &Records,
+                                    raw_ostream &OS) {
+  DiagStableIDsMap StableIDs(Records);
+  StableIDs.emit(OS);
+}
+
 /// ClangDiagsDefsEmitter - The top-level class emits .def files containing
 /// declarations of Clang diagnostics.
 void clang::EmitClangDiagsDefs(const RecordKeeper &Records, raw_ostream &OS,
@@ -1699,6 +1838,7 @@ void clang::EmitClangDiagsDefs(const RecordKeeper &Records, raw_ostream &OS,
 
   DiagCategoryIDMap CategoryIDs(Records);
   DiagGroupParentMap DGParentMap(Records);
+  DiagStableIDsMap StableIDs(Records);
 
   // Compute the set of diagnostics that are in -Wpedantic.
   RecordSet DiagsInPedantic;
@@ -1781,6 +1921,16 @@ void clang::EmitClangDiagsDefs(const RecordKeeper &Records, raw_ostream &OS,
 
     // Category number.
     OS << ", " << CategoryIDs.getID(getDiagnosticCategory(&R, DGParentMap));
+
+    // Stable ID.
+    uint32_t StableIDOffset = StableIDs.getStableIDOffset(R);
+    OS << ", " << StableIDOffset;
+
+    // Old Stable IDs.
+    uint32_t LegacyStableIDsStartOffset =
+        StableIDs.getLegacyStableIDsStartOffset(R.getName());
+    OS << ", " << LegacyStableIDsStartOffset;
+
     OS << ")\n";
   }
 }

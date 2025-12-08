@@ -105,6 +105,8 @@ void EmitClangDiagGroups(const llvm::RecordKeeper &Records,
                          llvm::raw_ostream &OS);
 void EmitClangDiagsIndexName(const llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
+void EmitClangDiagsStableIDs(const llvm::RecordKeeper &Records,
+                             llvm::raw_ostream &OS);
 void EmitClangDiagsInterface(llvm::raw_ostream &OS,
                              const std::string &Component);
 

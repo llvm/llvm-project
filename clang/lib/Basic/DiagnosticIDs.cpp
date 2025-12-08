@@ -32,12 +32,17 @@ namespace {
 
 struct StaticDiagInfoRec;
 
+#define GET_DIAG_STABLE_ID_ARRAYS
+#include "clang/Basic/DiagnosticStableIDs.inc"
+#undef GET_DIAG_STABLE_ID_ARRAYS
+
 // Store the descriptions in a separate table to avoid pointers that need to
 // be relocated, and also decrease the amount of data needed on 64-bit
 // platforms. See "How To Write Shared Libraries" by Ulrich Drepper.
 struct StaticDiagInfoDescriptionStringTable {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
+             LEGACY_STABLE_IDS)                                                \
   char ENUM##_desc[sizeof(DESC)];
 #include "clang/Basic/AllDiagnosticKinds.inc"
 #undef DIAG
@@ -45,24 +50,9 @@ struct StaticDiagInfoDescriptionStringTable {
 
 const StaticDiagInfoDescriptionStringTable StaticDiagInfoDescriptions = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
+             LEGACY_STABLE_IDS)                                                \
   DESC,
-#include "clang/Basic/AllDiagnosticKinds.inc"
-#undef DIAG
-};
-
-struct StaticDiagInfoStableIDStringTable {
-#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
-  char ENUM##_id[sizeof(#ENUM)];
-#include "clang/Basic/AllDiagnosticKinds.inc"
-#undef DIAG
-};
-
-const StaticDiagInfoStableIDStringTable StaticDiagInfoStableIDs = {
-#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
-  #ENUM,
 #include "clang/Basic/AllDiagnosticKinds.inc"
 #undef DIAG
 };
@@ -73,7 +63,8 @@ extern const StaticDiagInfoRec StaticDiagInfo[];
 // StaticDiagInfoRec would have extra padding on 64-bit platforms.
 const uint32_t StaticDiagInfoDescriptionOffsets[] = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
+             LEGACY_STABLE_IDS)                                                \
   offsetof(StaticDiagInfoDescriptionStringTable, ENUM##_desc),
 #include "clang/Basic/AllDiagnosticKinds.inc"
 #undef DIAG
@@ -81,8 +72,18 @@ const uint32_t StaticDiagInfoDescriptionOffsets[] = {
 
 const uint32_t StaticDiagInfoStableIDOffsets[] = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
-  offsetof(StaticDiagInfoStableIDStringTable, ENUM##_id),
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
+             LEGACY_STABLE_IDS)                                                \
+  STABLE_ID,
+#include "clang/Basic/AllDiagnosticKinds.inc"
+#undef DIAG
+};
+
+const uint32_t StaticDiagInfoLegacyStableIDStartOffsets[] = {
+#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
+             LEGACY_STABLE_IDS)                                                \
+  LEGACY_STABLE_IDS,
 #include "clang/Basic/AllDiagnosticKinds.inc"
 #undef DIAG
 };
@@ -119,7 +120,6 @@ struct StaticDiagInfoRec {
   uint16_t Deferrable : 1;
 
   uint16_t DescriptionLen;
-  uint16_t StableIDLen;
 
   unsigned getOptionGroupIndex() const {
     return OptionGroupIndex;
@@ -135,9 +135,19 @@ struct StaticDiagInfoRec {
   StringRef getStableID() const {
     size_t MyIndex = this - &StaticDiagInfo[0];
     uint32_t StringOffset = StaticDiagInfoStableIDOffsets[MyIndex];
-    const char *Table =
-        reinterpret_cast<const char *>(&StaticDiagInfoStableIDs);
-    return StringRef(&Table[StringOffset], StableIDLen);
+    return DiagStableIDs[StringOffset];
+  }
+
+  llvm::SmallVector<StringRef, 4> getLegacyStableIDs() const {
+    llvm::SmallVector<StringRef, 4> Result;
+    size_t MyIndex = this - &StaticDiagInfo[0];
+    uint32_t StartOffset = StaticDiagInfoLegacyStableIDStartOffsets[MyIndex];
+    for (uint32_t Offset = StartOffset; DiagLegacyStableIDs[Offset] != 0;
+         ++Offset) {
+      Result.push_back(DiagStableIDs[DiagLegacyStableIDs[Offset]]);
+    }
+
+    return Result;
   }
 
   diag::Flavor getFlavor() const {
@@ -180,7 +190,8 @@ VALIDATE_DIAG_SIZE(TRAP)
 const StaticDiagInfoRec StaticDiagInfo[] = {
 // clang-format off
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
+             LEGACY_STABLE_IDS)                                                   \
   {                                                                            \
       diag::ENUM,                                                              \
       DEFAULT_SEVERITY,                                                        \
@@ -192,8 +203,7 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
       SHOWINSYSMACRO,                                                          \
       GROUP,                                                                   \
 	    DEFERRABLE,                                                              \
-      STR_SIZE(DESC, uint16_t),                                               \
-      STR_SIZE(#ENUM, uint16_t)},
+      STR_SIZE(DESC, uint16_t)},
 #include "clang/Basic/DiagnosticCommonKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"
 #include "clang/Basic/DiagnosticFrontendKinds.inc"
@@ -468,13 +478,24 @@ StringRef DiagnosticIDs::getDescription(unsigned DiagID) const {
   return CustomDiagInfo->getDescription(DiagID).GetDescription();
 }
 
-/// getIDString - Given a diagnostic ID, return the stable ID of the diagnostic.
+/// getStableID - Given a diagnostic ID, return the stable ID of the diagnostic.
 std::string DiagnosticIDs::getStableID(unsigned DiagID) const {
   if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
     return Info->getStableID().str();
   assert(CustomDiagInfo && "Invalid CustomDiagInfo");
   // TODO: Stable IDs for custom diagnostics?
   return std::to_string(DiagID);
+}
+
+/// getLegacyStableIDs - Given a diagnostic ID, return the previous stable IDs
+/// of the diagnostic.
+SmallVector<StringRef, 4>
+DiagnosticIDs::getLegacyStableIDs(unsigned DiagID) const {
+  if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
+    return Info->getLegacyStableIDs();
+  assert(CustomDiagInfo && "Invalid CustomDiagInfo");
+  // TODO: Stable IDs for custom diagnostics?
+  return {};
 }
 
 static DiagnosticIDs::Level toLevel(diag::Severity SV) {

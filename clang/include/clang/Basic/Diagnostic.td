@@ -65,6 +65,24 @@ class DiagGroup<string Name, list<DiagGroup> subgroups = [], code docs = [{}]> {
 class InGroup<DiagGroup G> { DiagGroup Group = G; }
 //class IsGroup<string Name> { DiagGroup Group = DiagGroup<Name>; }
 
+// Specifies an explicit Stable ID for a diagnostic, rather than the default one
+// generated from the diagnostic's name.
+class StableId<string Id> { string StableId = Id; }
+
+// Specifies a list of Stable IDs by which the diagnostic was previously known.
+// If the Stable ID of a diagnostic is renamed, the previous Stable ID should be
+// added to the LegacyStableIds list.
+//
+// If a diagnostic is split into two or more diagnostics for specific cases, the
+// Stable ID of the original diagnostic should be added to the LegacyStableIds
+// list of each of the new diagnostics created from it.
+//
+// If two or more diagnostics
+// are merged into a single diagnostic, the Stable ID of each of the original
+// diagnostics should be added to the LegacyStableIds list of the new (merged)
+// diagnostic.
+class LegacyStableIds<list<string> Ids> { list<string> LegacyStableIds = Ids; }
+
 // This defines documentation for diagnostic groups.
 include "DiagnosticDocs.td"
 
@@ -90,6 +108,10 @@ class Diagnostic<string summary, DiagClass DC, Severity defaultmapping> {
   Severity       DefaultSeverity = defaultmapping;
   DiagGroup      Group;
   string         CategoryName = "";
+  /// The default of "" means that the actual Stable ID should be generated from
+  /// the name of the diagnostic.
+  string         StableId = "";
+  list<string>   LegacyStableIds = [];
 }
 
 class SFINAEFailure {

@@ -335,6 +335,9 @@ public:
   /// Given a diagnostic ID, return the stable ID of the diagnostic.
   std::string getStableID(unsigned DiagID) const;
 
+  /// Given a diagnostic ID, return the previous stable IDs of the diagnostic.
+  llvm::SmallVector<StringRef, 4> getLegacyStableIDs(unsigned DiagID) const;
+
   /// Return true if the unmapped diagnostic levelof the specified
   /// diagnostic ID is a Warning or Extension.
   ///
