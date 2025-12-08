@@ -19,11 +19,27 @@
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/Support/Casting.h"
 
 using namespace mlir;
 using namespace mlir::vector;
 using namespace mlir::x86vector;
 
+// This function retrives the source operation of the load or transfer
+// reads and creates subviews for the BF16 packed-operations to
+// broadcast or load BF16 elements as F32 packed elements.
+//
+// For example:
+// ```
+//   vector.load %arg0[%c0, %c0, %c0]:memref<4x1x2xbf16>,vector<1x1x2xbf16>
+//   vector.load %arg0[%c0, %c0, %c0]:memref<1x32x2xbf16>,vector<1x8x2xbf16>
+// ```
+// to
+// ```
+//   memref.subview %arg0[%c0,%c0,%c1]:memref<4x1x2xbf16> to memref<1x1x1xbf16>
+//   memref.subview %arg1[%c0,%c0,%c0]:memref<1x32x2xbf16> to memref<1x8x2xbf16>
+//   memref.subview %arg0[%c0,%c0,%c0]:memref<4x1x2xbf16> to memref<1x1x1xbf16>
+// ```
 static FailureOr<llvm::SmallVector<mlir::memref::SubViewOp>>
 getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter,
                           mlir::Value prodOp, int64_t mnDim, int64_t vnniDim,
@@ -50,6 +66,10 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter,
   }
 
   if (!srcOperation)
+    return failure();
+
+  Type srcType = srcOperation.getType();
+  if (!llvm::isa<mlir::MemRefType>(srcType))
     return failure();
 
   llvm::SmallVector<OpFoldResult> strides;
@@ -83,6 +103,24 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter,
   return subviews;
 }
 
+// Implements outer product contraction as a sequence of BF16-packed
+// operation even/odd loads and FMA operations.
+//
+// For example:
+// ```
+//   %1 = vector.load from memref (%m1) -> vector<1x1x2xbf16>
+//   %2 = vector.load from memref (%m2) -> vector<1x8x2xbf16>
+//   return vector.contract %1, %2, %arg1
+// ```
+// to
+// ```
+//   %1 = x86vector.avx.bcst_to_f32.packed %m1[c1] -> vector<8xf32>
+//   %2 = x86vector.avx.cvt.packed.odd.indexed_to_f32 %m2 -> vector<8xf32>
+//   %3 = vector.fma %1, %2, %arg1
+//   %4 = x86vector.avx.bcst_to_f32.packed %m1[c0] -> vector<8xf32>
+//   %5 = x86vector.avx.cvt.packed.even.indexed_to_f32 %m2 -> vector<8xf32>
+//   return vector.fma %4, %5, %3
+// ```
 struct VectorContractBF16ToFMA
     : public OpRewritePattern<vector::ContractionOp> {
   using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
@@ -94,6 +132,9 @@ struct VectorContractBF16ToFMA
       return rewriter.notifyMatchFailure(contractOp,
                                          "Expects add combining kind.");
 
+    // TODO: Move this validation to a comon utility folder. Planned to
+    // do once (code refactoring), all architecture specific nanokernel
+    // passes are merged into the repo.
     VectorType lhsTy = contractOp.getLhsType();
     if (!lhsTy.getElementType().isBF16())
       return rewriter.notifyMatchFailure(contractOp,
@@ -141,8 +182,7 @@ struct VectorContractBF16ToFMA
       return rewriter.notifyMatchFailure(
           contractOp, "A or B should be a non-unit dim in acc.");
 
-    // Non-unit dimensions should match the vector length of BF16 or Int8
-    // dot-product.
+    // Non-unit dimensions should match the vector length of BF16.
     unsigned int nonUnitDim = nonUnitDimLhs.size() == 2 ? nonUnitDimLhs.front()
                                                         : nonUnitDimRhs.front();
     if (nonUnitDim != 4 && nonUnitDim != 8 &&
@@ -151,25 +191,25 @@ struct VectorContractBF16ToFMA
           contractOp, "BF16 packed load operation expects non-unit (LHR or "
                       "RHS) dim and acc dim of size 4/8.");
 
+    // Lower vector.contract to FMAs with help of BF16 packed ops.
     auto loc = contractOp.getLoc();
-    auto castAcc = vector::ShapeCastOp::create(
-        rewriter, loc,
-        VectorType::get(nonUnitDimAcc.front(), accTy.getElementType()),
-        contractOp.getAcc());
-    mlir::VectorType dstType =
-        mlir::VectorType::get(nonUnitDimAcc.front(), rewriter.getF32Type());
-
     llvm::SmallVector<mlir::memref::SubViewOp> unitDimSubview;
     llvm::SmallVector<mlir::memref::SubViewOp> nonUnitDimSubview;
 
+    // create the unit-dimension LHS or RHS subview and the
+    // corresponding non-unit dimension LHS or RHS subview on the other-side.
+    // For example, if LHS has type vector<1x1x2xbf16> and RHS has type
+    // vector<1x8x2xbf16>, we create two subview for the LHS and one subview
+    // for the RHS. In the opposite case (non-unit dimension on the LHS), we
+    // do vice-versa.
     if ((nonUnitDimRhs.size() - 1) > 0) {
-
       auto unitSubview = getSubviewFromVectorInput(
           loc, rewriter, contractOp.getLhs(), 1, 1, 2);
       auto nonUnitSubview = getSubviewFromVectorInput(
           loc, rewriter, contractOp.getRhs(), nonUnitDimRhs.front(), 2, 2);
       if (failed(unitSubview) || failed(nonUnitSubview))
-        return failure();
+        return rewriter.notifyMatchFailure(
+            contractOp, " The input source is not MemRef Type.");
 
       unitDimSubview = *unitSubview;
       nonUnitDimSubview = *nonUnitSubview;
@@ -180,12 +220,21 @@ struct VectorContractBF16ToFMA
       auto unitSubview = getSubviewFromVectorInput(
           loc, rewriter, contractOp.getRhs(), 1, 1, 2);
       if (failed(unitSubview) || failed(nonUnitSubview))
-        return failure();
+        return rewriter.notifyMatchFailure(
+            contractOp, " The input source is not MemRef Type.");
 
       unitDimSubview = *unitSubview;
       nonUnitDimSubview = *nonUnitSubview;
     }
 
+    auto castAcc = vector::ShapeCastOp::create(
+        rewriter, loc,
+        VectorType::get(nonUnitDimAcc.front(), accTy.getElementType()),
+        contractOp.getAcc());
+    mlir::VectorType dstType =
+        mlir::VectorType::get(nonUnitDimAcc.front(), rewriter.getF32Type());
+
+    // Load, broadcast, and do FMA for odd indexed BF16 elements.
     auto loadBcstOddIndxElementToF32 = x86vector::BcstToPackedF32Op::create(
         rewriter, loc, dstType, unitDimSubview[0]);
     auto loadOddIndxElementF32 = x86vector::CvtPackedOddIndexedToF32Op::create(
@@ -203,12 +252,12 @@ struct VectorContractBF16ToFMA
       rewriter.setInsertionPoint(users[0]);
     }
 
+    // Load, broadcast, and do FMA for even indexed BF16 elements.
     auto loadBcstEvenIndxElementToF32 = x86vector::BcstToPackedF32Op::create(
         rewriter, loc, dstType, unitDimSubview[1]);
     auto loadEvenIndxElementF32 =
         x86vector::CvtPackedEvenIndexedToF32Op::create(rewriter, loc, dstType,
                                                        nonUnitDimSubview[0]);
-
     vector::FMAOp fma =
         vector::FMAOp::create(rewriter, loc, loadBcstEvenIndxElementToF32,
                               loadEvenIndxElementF32, oddIndxFMA);
