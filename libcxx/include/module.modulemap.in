@@ -14,18 +14,19 @@ module std_config [system] {
 }
 
 module std_core [system] {
-  // TODO: Investigate whether we should bring the whole <concepts> here.
-  module concepts_core {
+  module concepts {
     module arithmetic               { header "__concepts/arithmetic.h" }
     module assignable               { header "__concepts/assignable.h" }
     module boolean_testable         { header "__concepts/boolean_testable.h" }
     module class_or_enum            { header "__concepts/class_or_enum.h" }
     module common_reference_with    { header "__concepts/common_reference_with.h" }
+    module common_with              { header "__concepts/common_with.h" }
     module constructible            { header "__concepts/constructible.h" }
     module convertible_to           { header "__concepts/convertible_to.h" }
     module copyable                 { header "__concepts/copyable.h" }
     module derived_from             { header "__concepts/derived_from.h" }
     module destructible             { header "__concepts/destructible.h" }
+    module different_from           { header "__concepts/different_from.h" }
     module equality_comparable      { header "__concepts/equality_comparable.h" }
     module invocable                { header "__concepts/invocable.h" }
     module movable                  { header "__concepts/movable.h" }
@@ -36,6 +37,9 @@ module std_core [system] {
     module semiregular              { header "__concepts/semiregular.h" }
     module swappable                { header "__concepts/swappable.h" }
     module totally_ordered          { header "__concepts/totally_ordered.h" }
+
+    header "concepts"
+    export *
   }
 
   module cstddef {
@@ -54,18 +58,8 @@ module std_core [system] {
     export *
   }
 
-  module get_fwd {
-    header "__fwd/get.h"
-    export std_core.fwd.pair
-    export std_core.fwd.tuple
-    export std_core.fwd.array
-    export std_core.fwd.complex
-    export std_core.fwd.subrange
-    export std_core.fwd.variant
-  }
-
   // Only the truly dependency-free parts of __functional are here
-  module functional_core {
+  module functional {
     module invoke   { header "__functional/invoke.h" }
   }
 
@@ -74,6 +68,15 @@ module std_core [system] {
     module complex      { header "__fwd/complex.h" }
     module byte         { header "__fwd/byte.h" }
     module functional   { header "__fwd/functional.h" }
+    module get {
+      header "__fwd/get.h"
+      export std_core.fwd.pair
+      export std_core.fwd.tuple
+      export std_core.fwd.array
+      export std_core.fwd.complex
+      export std_core.fwd.subrange
+      export std_core.fwd.variant
+    }
     module pair         { header "__fwd/pair.h" }
     module subrange     { header "__fwd/subrange.h" }
     module tuple        { header "__fwd/tuple.h" }
@@ -81,7 +84,7 @@ module std_core [system] {
   }
 
   // Only the truly dependency-free parts of __iterator are here
-  module iterator_core {
+  module iterator {
     module concepts {
       header "__iterator/concepts.h"
       export std_core.type_traits.common_reference
@@ -125,13 +128,13 @@ module std_core [system] {
   }
 
   // Only the truly dependency-free parts of __memory are here
-  module memory_core {
+  module memory {
     module addressof                          { header "__memory/addressof.h" }
     module pointer_traits                     { header "__memory/pointer_traits.h" }
   }
 
   // Only the truly dependency-free parts of __tuple are here
-  module tuple_core {
+  module tuple {
     module tuple_element            { header "__tuple/tuple_element.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
@@ -530,7 +533,7 @@ module std [system] {
     module iter_swap                              { header "__algorithm/iter_swap.h" }
     module iterator_operations {
       header "__algorithm/iterator_operations.h"
-      export std_core.iterator_core.iter_move
+      export std_core.iterator.iter_move
       export std.iterator.advance
       export std.iterator.distance
       export std.iterator.iter_swap
@@ -1138,14 +1141,6 @@ module std [system] {
 
   module complex {
     header "complex"
-    export *
-  }
-
-  module concepts {
-    module common_with              { header "__concepts/common_with.h" }
-    module different_from           { header "__concepts/different_from.h" }
-
-    header "concepts"
     export *
   }
 
