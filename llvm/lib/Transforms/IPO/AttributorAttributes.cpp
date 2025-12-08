@@ -5220,6 +5220,13 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
         return AlignAA->getKnownAlign().value();
       break;
     }
+    case Intrinsic::amdgcn_make_buffer_rsrc: {
+      const auto *AlignAA = A.getAAFor<AAAlign>(
+          QueryingAA, IRPosition::value(*II), DepClassTy::NONE);
+      if (AlignAA)
+        return AlignAA->getKnownAlign().value();
+      break;
+    }
     default:
       break;
     }
@@ -5543,7 +5550,7 @@ struct AAAlignCallSiteReturned final
         const auto *AlignAA =
             A.getAAFor<AAAlign>(*this, IRPosition::value(*(II->getOperand(0))),
                                 DepClassTy::REQUIRED);
-        if (AlignAA && AlignAA->isValidState()) {
+        if (AlignAA) {
           Alignment = std::max(AlignAA->getAssumedAlign(), Alignment);
           Valid = true;
         }
@@ -5552,6 +5559,18 @@ struct AAAlignCallSiteReturned final
           return clampStateAndIndicateChange<StateType>(
               this->getState(),
               std::min(this->getAssumedAlign(), Alignment).value());
+        break;
+      }
+      // FIXME: Should introduce target specific sub-attributes and letting
+      // getAAfor<AAAlign> lead to create sub-attribute to handle target
+      // specific intrinsics.
+      case Intrinsic::amdgcn_make_buffer_rsrc: {
+        const auto *AlignAA =
+            A.getAAFor<AAAlign>(*this, IRPosition::value(*(II->getOperand(0))),
+                                DepClassTy::REQUIRED);
+        if (AlignAA)
+          return clampStateAndIndicateChange<StateType>(
+              this->getState(), AlignAA->getAssumedAlign().value());
         break;
       }
       default:
