@@ -761,14 +761,16 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
 
   const CGFunctionInfo &FI = CGM.getTypes().arrangeObjCMethodDeclaration(OMD);
   if (OMD->isDirectMethod()) {
-    Fn->setVisibility(llvm::GlobalValue::HiddenVisibility);
+    // Default hidden visibility
+    Fn->setVisibility(llvm::Function::HiddenVisibility);
     if (CGM.shouldExposeSymbol(OMD)) {
-      // Find the decl that may have visibility set (property or method)
+      // However, if we expose the symbol, and the decl (property or method)
+      // have visibility attribute set
       const NamedDecl *Decl = OMD;
       if (const auto *PD = OMD->findPropertyDecl()) {
         Decl = PD;
       }
-      // and respect source level visibility setting
+      // then respect source level visibility setting
       if (auto V = Decl->getExplicitVisibility(NamedDecl::VisibilityForValue)) {
         Fn->setVisibility(CGM.GetLLVMVisibility(*V));
       }
