@@ -5199,6 +5199,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // Try to compute a friendly type for this partition of the alloca. This
   // won't always succeed, in which case we fall back to a legal integer type
   // or an i8 array of an appropriate size.
+  // Returns a tuple: <PartitionType, IsIntegerWideningViable (true if integer widening promotion is used), VectorType (if vector promotion is used, otherwise nullptr)>.
   auto SelectPartitionTy = [&]() -> std::tuple<Type *, bool, VectorType *> {
     // First check if the partition is viable for vetor promotion.
     //
@@ -5275,7 +5276,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     return {ArrayType::get(Type::getInt8Ty(*C), P.size()), false, nullptr};
   };
 
-  auto [PartitionTy, IsIntegerPromotable, VecTy] = SelectPartitionTy();
+  auto [PartitionTy, IsIntegerWideningViable, VecTy] = SelectPartitionTy();
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
@@ -5317,7 +5318,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   SmallSetVector<SelectInst *, 8> SelectUsers;
 
   AllocaSliceRewriter Rewriter(DL, AS, *this, AI, *NewAI, P.beginOffset(),
-                               P.endOffset(), IsIntegerPromotable, VecTy,
+                               P.endOffset(), IsIntegerWideningViable, VecTy,
                                PHIUsers, SelectUsers);
   bool Promotable = true;
   // Check whether we can have tree-structured merge.
