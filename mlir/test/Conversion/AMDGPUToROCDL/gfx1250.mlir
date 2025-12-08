@@ -369,7 +369,7 @@ func.func @make_dma_descriptor_atomic_barrier(%base: !amdgpu.tdm_base<i32>, %bar
 
 // CHECK-LABEL: func @make_dma_descriptor_workgroup_mask
 // CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[WG_MASK:.+]]: i16, %[[TIMEOUT:.+]]: i1)
-func.func @make_dma_descriptor_workgroup_mask(%base: !amdgpu.tdm_base<i32>, %wg_mask: i16, %timeout: i1) -> !amdgpu.tdm_descriptor<2> {
+func.func @make_dma_descriptor_workgroup_mask(%base: !amdgpu.tdm_base<i32>, %wg_mask: i16, %timeout: i1) -> !amdgpu.tdm_descriptor {
   // CHECK-DAG: %[[DGROUP0:.+]] = builtin.unrealized_conversion_cast %[[BASE]]
 
   // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32)
@@ -440,126 +440,107 @@ func.func @make_dma_descriptor_workgroup_mask(%base: !amdgpu.tdm_base<i32>, %wg_
   // CHECK: %[[DGROUP1:.+]] = llvm.insertelement %[[SGPR7]], %[[DGROUP1_6]][%[[C7]] : i32]
 
   // CHECK: %[[DGROUPS:.+]] = builtin.unrealized_conversion_cast %[[DGROUP0]], %[[DGROUP1]] : vector<4xi32>, vector<8xi32> to !amdgpu.tdm_descriptor
-  %descriptor = amdgpu.make_dma_descriptor %base globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] workgroupMask %wg_mask earlyTimeout %timeout : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor<2>
-  func.return %descriptor : !amdgpu.tdm_descriptor<2>
-}
-
-// CHECK-LABEL: func @tensor_load_to_lds_d2
-// CHECK-SAME: (%[[DESC:.+]]: !amdgpu.tdm_descriptor<2>)
-func.func @tensor_load_to_lds_d2(%desc: !amdgpu.tdm_descriptor<2>) {
-  // CHECK: %[[DGROUPS:.+]]:2 = builtin.unrealized_conversion_cast %[[DESC]]
-  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 0 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 0 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { cache_scope = #amdgpu.cache_scope<workgroup> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 1 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { cache_scope = #amdgpu.cache_scope<shader_engine> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 2 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { cache_scope = #amdgpu.cache_scope<device> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 3 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { cache_scope = #amdgpu.cache_scope<system> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 0 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<regular> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 4 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<nontemporal> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 8 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<highpriority> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 12 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<lastuse> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 16 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<nontemporal_regular> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 20 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<regular_nontemporal> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 24 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<nontemporal_highpriority> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 0 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { non_volatile = false } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 32 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { non_volatile = true } : !amdgpu.tdm_descriptor<2>
-
-  func.return
+  %descriptor = amdgpu.make_dma_descriptor %base globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] workgroupMask %wg_mask earlyTimeout %timeout : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  func.return %descriptor : !amdgpu.tdm_descriptor
 }
 
 // CHECK-LABEL: func @tensor_load_to_lds
-// CHECK-SAME: (%[[DESC:.+]]: !amdgpu.tdm_descriptor<4>)
-func.func @tensor_load_to_lds(%desc: !amdgpu.tdm_descriptor<4>) {
+// CHECK-SAME: (%[[DESC:.+]]: !amdgpu.tdm_descriptor)
+func.func @tensor_load_to_lds(%desc: !amdgpu.tdm_descriptor) {
   // CHECK: %[[DGROUPS:.+]]:4 = builtin.unrealized_conversion_cast %[[DESC]]
   // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc : !amdgpu.tdm_descriptor<4>
+  amdgpu.tensor_load_to_lds %desc : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc { cache_scope = #amdgpu.cache_scope<workgroup> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 1 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc { cache_scope = #amdgpu.cache_scope<shader_engine> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 2 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc { cache_scope = #amdgpu.cache_scope<device> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 3 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc { cache_scope = #amdgpu.cache_scope<system> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<regular> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 4 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<nontemporal> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 8 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<highpriority> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 12 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<lastuse> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 16 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<nontemporal_regular> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 20 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<regular_nontemporal> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 24 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<nontemporal_highpriority> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc { non_volatile = false } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 32 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_load_to_lds %desc { non_volatile = true } : !amdgpu.tdm_descriptor
+
   func.return
 }
-
-// CHECK-LABEL: func @tensor_store_from_lds_d2
-// CHECK-SAME: (%[[DESC:.+]]: !amdgpu.tdm_descriptor<2>)
-func.func @tensor_store_from_lds_d2(%desc: !amdgpu.tdm_descriptor<2>) {
-  // CHECK: %[[DGROUPS:.+]]:2 = builtin.unrealized_conversion_cast %[[DESC]]
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 0 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 0 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { cache_scope = #amdgpu.cache_scope<workgroup> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 1 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { cache_scope = #amdgpu.cache_scope<shader_engine> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 2 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { cache_scope = #amdgpu.cache_scope<device> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 3 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { cache_scope = #amdgpu.cache_scope<system> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 0 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<regular> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 4 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<nontemporal> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 8 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<highpriority> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 12 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<writeback> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 16 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<nontemporal_regular> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 20 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<regular_nontemporal> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 24 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<nontemporal_highpriority> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 28 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<nontemporal_writeback> } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 0 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { non_volatile = false } : !amdgpu.tdm_descriptor<2>
-
-  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DGROUPS]]#0, %[[DGROUPS]]#1 cachepolicy 32 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { non_volatile = true } : !amdgpu.tdm_descriptor<2>
-  func.return
-}
-
 
 // CHECK-LABEL: func @tensor_store_from_lds
-// CHECK-SAME: (%[[DESC:.+]]: !amdgpu.tdm_descriptor<4>)
-func.func @tensor_store_from_lds(%desc: !amdgpu.tdm_descriptor<4>) {
+// CHECK-SAME: (%[[DESC:.+]]: !amdgpu.tdm_descriptor)
+func.func @tensor_store_from_lds(%desc: !amdgpu.tdm_descriptor) {
   // CHECK: %[[DGROUPS:.+]]:4 = builtin.unrealized_conversion_cast %[[DESC]]
   // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc : !amdgpu.tdm_descriptor<4>
+  amdgpu.tensor_store_from_lds %desc : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc { cache_scope = #amdgpu.cache_scope<workgroup> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 1 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc { cache_scope = #amdgpu.cache_scope<shader_engine> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 2 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc { cache_scope = #amdgpu.cache_scope<device> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 3 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc { cache_scope = #amdgpu.cache_scope<system> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<regular> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 4 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<nontemporal> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 8 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<highpriority> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 12 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<writeback> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 16 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<nontemporal_regular> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 20 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<regular_nontemporal> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 24 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<nontemporal_highpriority> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 28 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<nontemporal_writeback> } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc { non_volatile = false } : !amdgpu.tdm_descriptor
+
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 32 : vector<4xi32>, vector<8xi32>
+  amdgpu.tensor_store_from_lds %desc { non_volatile = true } : !amdgpu.tdm_descriptor
   func.return
 }
 

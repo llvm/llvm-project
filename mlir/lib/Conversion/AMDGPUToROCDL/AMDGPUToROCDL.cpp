@@ -2705,7 +2705,7 @@ struct AMDGPUMakeDmaDescriptorLowering
   }
 };
 
-template <typename SourceOp, typename TargetD2Op, typename TargetOp>
+template <typename SourceOp, typename TargetOp>
 struct AMDGPUTensorLoadStoreOpLowering
     : public ConvertOpToLLVMPattern<SourceOp> {
   using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
@@ -2727,20 +2727,11 @@ struct AMDGPUTensorLoadStoreOpLowering
     uint32_t cacheScope = static_cast<uint32_t>(op.getCacheScope());
     int32_t cachePolicy = cacheScope | temporalHint << 2 | nonVolatile << 5;
 
-    if (op.getDesc().getType().getSize() == 2) {
-      rewriter.replaceOpWithNewOp<TargetD2Op>(op, desc[0], desc[1], cachePolicy,
-                                              /*alias_scopes=*/nullptr,
-                                              /*noalias_scopes=*/nullptr,
-                                              /*tbaa=*/nullptr);
-      return success();
-    }
-
     rewriter.replaceOpWithNewOp<TargetOp>(op, desc[0], desc[1], desc[2],
                                           desc[3], cachePolicy,
                                           /*alias_scopes=*/nullptr,
                                           /*noalias_scopes=*/nullptr,
                                           /*tbaa=*/nullptr);
-
     return success();
   }
 };
@@ -2771,10 +2762,8 @@ struct ConvertAMDGPUToROCDLPass
           Type v8i32 = converter.convertType(VectorType::get(8, i32));
           result.push_back(v4i32);
           result.push_back(v8i32);
-          if (type.getSize() != 2) {
-            result.push_back(v4i32);
-            result.push_back(v4i32);
-          }
+          result.push_back(v4i32);
+          result.push_back(v4i32);
           return success();
         });
 
@@ -2845,10 +2834,8 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
       GatherToLDSOpLowering, TransposeLoadOpLowering, AMDGPUPermlaneLowering,
       AMDGPUMakeDmaBaseLowering, AMDGPUMakeDmaDescriptorLowering,
       AMDGPUTensorLoadStoreOpLowering<TensorLoadToLDSOp,
-                                      ROCDL::TensorLoadToLDSD2Op,
                                       ROCDL::TensorLoadToLDSOp>,
       AMDGPUTensorLoadStoreOpLowering<TensorStoreFromLDSOp,
-                                      ROCDL::TensorStoreFromLDSD2Op,
                                       ROCDL::TensorStoreFromLDSOp>>(converter,
                                                                     chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
