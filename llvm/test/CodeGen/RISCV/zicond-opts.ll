@@ -444,8 +444,7 @@ define i64 @addiw_addi(i32 %x) {
 ; RV64ZICOND-LABEL: addiw_addi:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    sext.w a1, a0
-; RV64ZICOND-NEXT:    addi a0, a0, -1
-; RV64ZICOND-NEXT:    addi a0, a0, -63
+; RV64ZICOND-NEXT:    addi a0, a0, -64
 ; RV64ZICOND-NEXT:    czero.eqz a0, a0, a1
 ; RV64ZICOND-NEXT:    addi a0, a0, 63
 ; RV64ZICOND-NEXT:    bset a0, zero, a0

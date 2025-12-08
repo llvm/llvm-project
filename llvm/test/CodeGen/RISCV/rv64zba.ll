@@ -5098,8 +5098,7 @@ define i32 @shl_add_shl_add(i32 %a, i32 %b, i32 %c) {
 ;
 ; RV64ZBA-LABEL: shl_add_shl_add:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a2, a2, 5
-; RV64ZBA-NEXT:    add a1, a1, a2
+; RV64ZBA-NEXT:    sh2add a0, a2, a0
 ; RV64ZBA-NEXT:    sh3add a0, a0, a1
 ; RV64ZBA-NEXT:    sext.w a0, a0
 ; RV64ZBA-NEXT:    ret

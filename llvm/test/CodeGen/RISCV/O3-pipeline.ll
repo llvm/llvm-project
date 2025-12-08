@@ -124,6 +124,9 @@
 ; CHECK-NEXT:       Peephole Optimizations
 ; CHECK-NEXT:       Remove dead machine instructions
 ; RV64-NEXT:        RISC-V Optimize W Instructions
+; RV64-NEXT:        Machine Trace Metrics
+; RV64-NEXT:        Lazy Machine Block Frequency Analysis
+; RV64-NEXT:        Machine InstCombiner
 ; CHECK-NEXT:       RISC-V Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V Merge Base Offset
 ; CHECK-NEXT:       MachineDominator Tree Construction

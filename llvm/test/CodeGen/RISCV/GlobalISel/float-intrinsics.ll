@@ -1235,12 +1235,12 @@ define i1 @fpclass(float %x) {
 ; RV64I-NEXT:    seqz a2, a2
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    seqz a6, a6
-; RV64I-NEXT:    sltu a4, a5, a4
-; RV64I-NEXT:    and a3, a3, a0
-; RV64I-NEXT:    or a2, a2, a6
 ; RV64I-NEXT:    or a1, a2, a1
+; RV64I-NEXT:    sltu a2, a5, a4
+; RV64I-NEXT:    and a3, a3, a0
+; RV64I-NEXT:    or a1, a1, a6
 ; RV64I-NEXT:    or a1, a1, a3
-; RV64I-NEXT:    and a0, a4, a0
+; RV64I-NEXT:    and a0, a2, a0
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
   %cmp = call i1 @llvm.is.fpclass.f32(float %x, i32 639)
