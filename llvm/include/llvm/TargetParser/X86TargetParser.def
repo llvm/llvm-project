@@ -12,6 +12,9 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
+// ABI_VALUE is used throughout the file by compiler frontend to match values
+// in compiler-rt/libgcc.
+
 #ifndef X86_VENDOR
 #define X86_VENDOR(ENUM, STR, ABI_VALUE)
 #endif
@@ -20,14 +23,8 @@ X86_VENDOR(VENDOR_AMD,   "amd",   2)
 X86_VENDOR(VENDOR_OTHER, "other", 4)
 #undef X86_VENDOR
 
-// This macro is used for cpu types present in compiler-rt/libgcc.
-// ABI_VALUE is used to match
 #ifndef X86_CPU_TYPE
 #define X86_CPU_TYPE(ENUM, STR, ABI_VALUE)
-#endif
-
-#ifndef X86_CPU_TYPE_ALIAS
-#define X86_CPU_TYPE_ALIAS(ENUM, STR)
 #endif
 
 // This list must match what is implemented in libgcc and compilert-rt. Clang
@@ -53,23 +50,19 @@ X86_CPU_TYPE(INTEL_GRANDRIDGE,       "grandridge",       18)
 X86_CPU_TYPE(INTEL_CLEARWATERFOREST, "clearwaterforest", 19)
 X86_CPU_TYPE(AMDFAM1AH,              "amdfam1ah",        20)
 
-// Alternate names supported by __builtin_cpu_is and target multiversioning.
-X86_CPU_TYPE_ALIAS(INTEL_BONNELL,    "atom")
-X86_CPU_TYPE_ALIAS(AMDFAM10H,        "amdfam10")
-X86_CPU_TYPE_ALIAS(AMDFAM15H,        "amdfam15")
-X86_CPU_TYPE_ALIAS(AMDFAM1AH,        "amdfam1a")
-X86_CPU_TYPE_ALIAS(INTEL_SILVERMONT, "slm")
+// Aliases -- a different name for the same cpu, represented as having the same
+// ABI_VALUE.
+X86_CPU_TYPE(ATOM,                   "atom",             1)
+X86_CPU_TYPE(AMDFAM10,               "amdfam10",         4)
+X86_CPU_TYPE(AMDFAM15,               "amdfam15",         5)
+X86_CPU_TYPE(AMDFAM1A,               "amdfam1a",         20)
+X86_CPU_TYPE(SLM,                    "slm",              6)
 
-#undef X86_CPU_TYPE_ALIAS
 #undef X86_CPU_TYPE
 
 // This macro is used for cpu subtypes present in compiler-rt/libgcc.
 #ifndef X86_CPU_SUBTYPE
 #define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE)
-#endif
-
-#ifndef X86_CPU_SUBTYPE_ALIAS
-#define X86_CPU_SUBTYPE_ALIAS(ENUM, STR)
 #endif
 
 // This list must match what is implemented in libgcc and compilert-rt. Clang
@@ -112,23 +105,19 @@ X86_CPU_SUBTYPE(AMDFAM1AH_ZNVER5,            "znver5",                 36)
 X86_CPU_SUBTYPE(INTEL_COREI7_DIAMONDRAPIDS,  "diamondrapids",          38)
 X86_CPU_SUBTYPE(INTEL_COREI7_NOVALAKE,       "novalake",               39)
 
-// Alternate names supported by __builtin_cpu_is and target multiversioning.
-X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "raptorlake")
-X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "meteorlake")
-X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_SAPPHIRERAPIDS, "emeraldrapids")
-X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ARROWLAKE_S,"lunarlake")
-X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "gracemont")
-X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_PANTHERLAKE, "wildcatlake")
+// Aliases
+X86_CPU_SUBTYPE(INTEL_COREI7_RAPTORLAKE,     "raptorlake",             25)
+X86_CPU_SUBTYPE(INTEL_COREI7_METEORLAKE,     "meteorlake",             25)
+X86_CPU_SUBTYPE(INTEL_COREI7_EMERALRAPIDS,   "emeraldrapids",          24)
+X86_CPU_SUBTYPE(INTEL_COREI7_LUNARLAKE,      "lunarlake",              33)
+X86_CPU_SUBTYPE(INTEL_COREI7_GRACEMONT,      "gracemont",              25)
+X86_CPU_SUBTYPE(INTEL_COREI7_WILDCATLAKE,    "wildcatlake",            34)
 
-#undef X86_CPU_SUBTYPE_ALIAS
 #undef X86_CPU_SUBTYPE
 
 // X86_FEATURE_COMPAT is used for cpu types present in compiler-rt/libgcc (i.e.
 // types we can multiversion on). The third parameter PRIORITY is required
 // by the attribute 'target' checking.
-
-// Order of bits has to match what's implemented in compiler-rt/libgcc. That's what the
-// ABI_VALUE is for - CodeGenFunction::GetX86CpuSupportsMask uses it.
 #ifndef X86_FEATURE_COMPAT
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) X86_FEATURE(ENUM, STR)
 #endif
@@ -277,7 +266,7 @@ X86_FEATURE       (RETPOLINE_INDIRECT_CALLS,    "retpoline-indirect-calls")
 X86_FEATURE       (LVI_CFI,                     "lvi-cfi")
 X86_FEATURE       (LVI_LOAD_HARDENING,          "lvi-load-hardening")
 
-// Max number of priorities. Priorities form a consecutive range
+// Max number of priorities. Priorities form a consecutive range.
 #define MAX_PRIORITY 35
 
 #undef X86_FEATURE_COMPAT
