@@ -18,7 +18,14 @@ static const std::pair<StringRef, StringRef> DependentFeaturesList[] = {
     {"__opencl_c_3d_image_writes", "__opencl_c_images"},
     {"__opencl_c_pipes", "__opencl_c_generic_address_space"},
     {"__opencl_c_device_enqueue", "__opencl_c_generic_address_space"},
-    {"__opencl_c_device_enqueue", "__opencl_c_program_scope_global_variables"}};
+    {"__opencl_c_device_enqueue", "__opencl_c_program_scope_global_variables"},
+    {"__opencl_c_work_group_collective_functions",
+     "cl_khr_work_group_uniform_arithmetic"},
+    {"__opencl_c_integer_dot_product_input_4x8bit",
+     "cl_khr_integer_dot_product"},
+    {"__opencl_c_integer_dot_product_input_4x8bit_packed",
+     "cl_khr_integer_dot_product"},
+};
 
 // Extensions and equivalent feature pairs.
 static const std::pair<StringRef, StringRef> FeatureExtensionMap[] = {
