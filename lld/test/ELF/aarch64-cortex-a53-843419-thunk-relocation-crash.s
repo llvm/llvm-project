@@ -69,7 +69,7 @@ dat:    .quad 0
 // CHECK-NEXT:                br      x16
 // CHECK-NEXT: 8010028: 34 10 01 10   .word   0x10011034
 
-// CHECK: <__AArch64BTIThunk_$x>:
+// CHECK: <__AArch64BTIThunk_>:
 // CHECK-NEXT: 8010030:       bti     c
 // CHECK-NEXT:                b       0x8011028 <far_away_no_bti+0xff0>
 
@@ -84,14 +84,14 @@ dat:    .quad 0
 // Check that the errata thunk does NOT contain a landing pad
 // CHECK: <__CortexA53843419_8011004>:
 // CHECK-NEXT: 1001102c:       ldr     x0, [x0, #64]
-// CHECK-NEXT:                 b       0x10011040 <__AArch64AbsLongThunk_$x>
+// CHECK-NEXT:                 b       0x10011040 <__AArch64AbsLongThunk_>
 
 // Rest of generated code for readability
 // CHECK: <__AArch64BTIThunk___CortexA53843419_8011004>:
 // CHECK-NEXT: 10011034:       bti     c
 // CHECK-NEXT:                 b       0x1001102c <__CortexA53843419_8011004>
 
-// CHECK: <__AArch64AbsLongThunk_$x>
+// CHECK: <__AArch64AbsLongThunk_>
 // CHECK-NEXT: 10011040:       ldr     x16, 0x10011048
 // CHECK-NEXT:                 br      x16
 // CHECK-NEXT: 10011048: 30 00 01 08   .word   0x08010030
