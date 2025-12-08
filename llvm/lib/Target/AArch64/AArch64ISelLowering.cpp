@@ -15664,9 +15664,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     SDValue FirstVal = Op.getOperand(0);
 
     auto IsZero = [&](SDValue V) {
-      if (isNullConstant(V))
-        return true;
-      return V.getValueType().isFloatingPoint() && isNullFPConstant(V);
+      return isNullConstant(V) || isNullFPConstant(V);
     };
 
     if (llvm::all_of(llvm::seq<unsigned>(0, NumElts), [&](unsigned I) {
