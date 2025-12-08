@@ -2096,9 +2096,8 @@ int64_t RewriteScheduleStage::getRewriteCost(
             ? MBFI.getBlockFreq(DefMI->getParent()).getFrequency() / EntryFreq
             : 1;
 
-    unsigned RegSize = DAG.TRI->getRegSizeInBits(*DAG.MRI.getRegClass(DefReg));
-    unsigned NumRegs = std::max(RegSize / 32, (unsigned)1);
-    CopyCost += NumRegs * DefFreq;
+    const TargetRegisterClass *RC = DAG.MRI.getRegClass(DefReg);
+    CopyCost += RC->getCopyCost() * DefFreq;
   }
 
   // Account for CopyForUse copies in each block that the register is used.
@@ -2107,10 +2106,8 @@ int64_t RewriteScheduleStage::getRewriteCost(
         EntryFreq ? MBFI.getBlockFreq(UseBlock).getFrequency() / EntryFreq : 1;
 
     for (Register UseReg : UseRegs) {
-      unsigned RegSize =
-          DAG.TRI->getRegSizeInBits(*DAG.MRI.getRegClass(UseReg));
-      unsigned NumRegs = std::max(RegSize / 32, (unsigned)1);
-      CopyCost += NumRegs * UseFreq;
+      const TargetRegisterClass *RC = DAG.MRI.getRegClass(UseReg);
+      CopyCost += RC->getCopyCost() * UseFreq;
     }
   }
 
@@ -2118,7 +2115,7 @@ int64_t RewriteScheduleStage::getRewriteCost(
 
   // Reset to the vgpr form. We must do rewriting after copy-insertion, as some
   // defs of the register may require VGPR.
-  for (auto &[MI, OriginalOpcode] : RewriteCands) {
+  for (auto [MI, OriginalOpcode] : RewriteCands) {
     assert(TII->isMAI(*MI));
     const TargetRegisterClass *AGPRRC =
         DAG.MRI.getRegClass(MI->getOperand(0).getReg());
@@ -2252,10 +2249,10 @@ bool RewriteScheduleStage::rewrite(
           // Do not create redundant copies.
           if (ReachingDefCopyMap[Src2Reg].insert(RD).second) {
             MachineInstrBuilder VGPRCopy =
-                BuildMI(DAG.MF, RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
+                BuildMI(*RD->getParent(), std::next(RD->getIterator()),
+                        RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
                     .addDef(MappedReg, 0, 0)
-                    .addUse(Src2Reg, 0, 0)
-                    .insertAfter(RD);
+                    .addUse(Src2Reg, 0, 0);
             DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
 
             // If this reaching def was the last MI in the region, update the
@@ -2335,10 +2332,10 @@ bool RewriteScheduleStage::rewrite(
         // Do not create reundant copies.
         if (ReachingDefCopyMap[DstReg].insert(RD).second) {
           MachineInstrBuilder VGPRCopy =
-              BuildMI(DAG.MF, RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
+              BuildMI(*RD->getParent(), std::next(RD->getIterator()),
+                      RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
                   .addDef(MappedReg, 0, 0)
-                  .addUse(DstReg, 0, 0)
-                  .insertAfter(RD);
+                  .addUse(DstReg, 0, 0);
           DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
 
           // If this reaching def was the last MI in the region, update the

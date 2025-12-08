@@ -432,15 +432,6 @@ public:
     return *this;
   }
 
-  /// Inserts the newly-built instruction after the given position in the
-  /// given MachineBasicBlock.
-  const MachineInstrBuilder &insertAfter(MachineInstr *MInstr) const {
-    MachineBasicBlock *MBB = MInstr->getParent();
-    MachineBasicBlock::iterator I = MInstr->getIterator();
-    MBB->insertAfter(I, MI);
-    return *this;
-  }
-
   bool constrainAllUses(const TargetInstrInfo &TII,
                         const TargetRegisterInfo &TRI,
                         const RegisterBankInfo &RBI) const {
