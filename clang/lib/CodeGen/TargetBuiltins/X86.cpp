@@ -75,6 +75,70 @@ static Value *getMaskVecValue(CodeGenFunction &CGF, Value *Mask,
   return MaskVec;
 }
 
+static Value *emitX86Round(CodeGenFunction &CGF,
+                            Value *X,
+                            unsigned M) {
+  unsigned RoundingMask = 0b11;
+  unsigned UpdatePEBit = 0b100;
+  unsigned UseMXCSRBit = 0b1000;
+  
+  unsigned roundingMode = M & RoundingMask;
+  bool updatePE = M & UpdatePEBit;
+  bool useMXCSR = M & UseMXCSRBit;
+  
+  Intrinsic::ID ID = Intrinsic::not_intrinsic;
+  LLVMContext &Ctx = CGF.CGM.getLLVMContext();
+  
+  if (useMXCSR) {
+    ID = Intrinsic::experimental_constrained_nearbyint;
+  
+    auto PE_metatadata = updatePE ? "fpexcept.strict" : "fpexcept.ignore";
+
+    Value *ExceptMode = MetadataAsValue::get(
+      Ctx,
+      MDString::get(Ctx, PE_metatadata)
+    );
+
+    Value *RoundingMode = MetadataAsValue::get(
+      Ctx,
+      MDString::get(Ctx, "rounding.dynamic")
+    );
+
+    Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
+    return CGF.Builder.CreateCall(F, {X, ExceptMode, RoundingMode});
+  } 
+
+  if (updatePE) {
+    switch (roundingMode) {
+      case 0b00: ID = Intrinsic::experimental_constrained_roundeven; break;
+      case 0b01: ID = Intrinsic::experimental_constrained_floor; break;
+      case 0b10: ID = Intrinsic::experimental_constrained_ceil; break;
+      case 0b11: ID = Intrinsic::experimental_constrained_trunc; break;
+      default: llvm_unreachable("Invalid rounding mode");
+    }
+
+    Value *ExceptMode =MetadataAsValue::get(
+      Ctx,
+      MDString::get(Ctx, "fpexcept.strict")
+    );
+
+    Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
+    return CGF.Builder.CreateCall(F, {X, ExceptMode});
+  }
+
+  // Otherwise we can use the standard ops
+  switch (roundingMode) {
+    case 0b00: ID = Intrinsic::roundeven; break;
+    case 0b01: ID = Intrinsic::floor; break;
+    case 0b10: ID = Intrinsic::ceil; break;
+    case 0b11: ID = Intrinsic::trunc; break;
+    default: llvm_unreachable("Invalid rounding mode");
+  }
+
+  Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
+  return CGF.Builder.CreateCall(F, {X});
+}
+
 static Value *EmitX86MaskedStore(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
                                  Align Alignment) {
   Value *Ptr = Ops[0];
@@ -843,100 +907,19 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_roundps:
   case X86::BI__builtin_ia32_roundpd:
   case X86::BI__builtin_ia32_roundps256:
-  case X86::BI__builtin_ia32_roundpd256: {
+  case X86::BI__builtin_ia32_roundpd256: {    
     unsigned M = cast<ConstantInt>(Ops[1])->getZExtValue();
-    unsigned roundingModeAndPE = M & 0b111;
-    unsigned updatePE = M & 0b100;
-    unsigned use_MXCSR = M & 0b1000;
-    
-    Intrinsic::ID ID;
-
-    // Currently no ops for MXCSR bit set, so lower directly to SSE41 instruction
-    if (use_MXCSR) {
-      switch (BuiltinID) {
-        case X86::BI__builtin_ia32_roundps: ID = Intrinsic::x86_sse41_round_ps; break;
-        case X86::BI__builtin_ia32_roundpd: ID = Intrinsic::x86_sse41_round_pd; break;
-      }
-      return nullptr;
-    } else {
-      switch (roundingModeAndPE) {
-        default: return nullptr;
-        case 0b000: ID = Intrinsic::nearbyint; break;
-        case 0b001: ID = Intrinsic::floor; break;
-        case 0b010: ID = Intrinsic::ceil; break;
-        case 0b011: ID = Intrinsic::trunc; break;
-        case 0b100: ID = Intrinsic::experimental_constrained_floor; break; // TODO: replace with actual op
-        case 0b101: ID = Intrinsic::experimental_constrained_floor; break;
-        case 0b110: ID = Intrinsic::experimental_constrained_ceil; break;
-        case 0b111: ID = Intrinsic::experimental_constrained_trunc; break;
-      }
-    }
-
-    Function *F = CGM.getIntrinsic(ID, Ops[0]->getType());
-
-    if (updatePE) {
-      LLVMContext &Ctx = CGM.getLLVMContext();
-
-      Value *ExceptMode =MetadataAsValue::get(
-        Ctx,
-        MDString::get(Ctx, "fpexcept.strict")
-      );
-
-      return Builder.CreateCall(F, {Ops[0], ExceptMode});
-    }
-    
-    return Builder.CreateCall(F, {Ops[0]});
+    return emitX86Round(*this, Ops[0], M);
   }
   case X86::BI__builtin_ia32_roundss:
   case X86::BI__builtin_ia32_roundsd: {
     unsigned M = cast<ConstantInt>(Ops[2])->getZExtValue();
-    unsigned roundingModeAndPE = M & 0b111;
-    unsigned updatePE = M & 0b100;
-    unsigned use_MXCSR = M & 0b1000;
     
-    Intrinsic::ID ID;
-
-    // Currently no ops for MXCSR bit set, so lower directly to SSE41 instruction
-    if (use_MXCSR) {
-      switch (BuiltinID) {
-        case X86::BI__builtin_ia32_roundss: ID = Intrinsic::x86_sse41_round_ss; break;
-        case X86::BI__builtin_ia32_roundsd: ID = Intrinsic::x86_sse41_round_sd; break;
-      }
-      return nullptr;
-    } else {
-      switch (roundingModeAndPE) {
-        default: return nullptr;
-        case 0b000: ID = Intrinsic::nearbyint; break;
-        case 0b001: ID = Intrinsic::floor; break;
-        case 0b010: ID = Intrinsic::ceil; break;
-        case 0b011: ID = Intrinsic::trunc; break;
-        case 0b100: ID = Intrinsic::experimental_constrained_floor; break; // TODO: replace with actual op
-        case 0b101: ID = Intrinsic::experimental_constrained_floor; break;
-        case 0b110: ID = Intrinsic::experimental_constrained_ceil; break;
-        case 0b111: ID = Intrinsic::experimental_constrained_trunc; break;
-      }
-    }
-
     Value *idx = Builder.getInt32(0);
-    Value *b0 = Builder.CreateExtractElement(Ops[1], idx);
-    Value *rounded0;
-
-    Function *F = CGM.getIntrinsic(ID, b0->getType());
-
-    if (updatePE) {
-      LLVMContext &Ctx = CGM.getLLVMContext();
-
-      Value *ExceptMode =MetadataAsValue::get(
-        Ctx,
-        MDString::get(Ctx, "fpexcept.strict")
-      );
-
-      rounded0 = Builder.CreateCall(F, {b0, ExceptMode});
-    } else {
-      rounded0 =  Builder.CreateCall(F, {b0});
-    }
+    Value *ValAt0 = Builder.CreateExtractElement(Ops[1], idx);
+    Value *RoundedAt0 = emitX86Round(*this, ValAt0, M);
   
-    return Builder.CreateInsertElement(Ops[0], rounded0, idx);
+    return Builder.CreateInsertElement(Ops[0], RoundedAt0, idx);
   }
   case X86::BI__builtin_ia32_lzcnt_u16:
   case X86::BI__builtin_ia32_lzcnt_u32:
