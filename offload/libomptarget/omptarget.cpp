@@ -41,6 +41,15 @@ using llvm::SmallVector;
 #ifdef OMPT_SUPPORT
 using namespace llvm::omp::target::ompt;
 #endif
+static inline bool isImplicitPointerHop(int64_t MapType, int64_t Size) {
+  //Pointer hop entries flagged as PTR and MEMBER_OF
+  const bool IsPointer  = (MapType & OMP_TGT_MAPTYPE_PTR) != 0;
+  const bool IsMemberOf = (MapType & OMP_TGT_MAPTYPE_MEMBER_OF) != 0;
+  const bool HasExplicit =
+      (MapType & (OMP_TGT_MAPTYPE_TO | OMP_TGT_MAPTYPE_FROM |
+                  OMP_TGT_MAPTYPE_ALWAYS | OMP_TGT_MAPTYPE_DELETE)) != 0;
+  return IsPointer && IsMemberOf && !HasExplicit && Size == 0;
+}
 
 int AsyncInfoTy::synchronize() {
   int Result = OFFLOAD_SUCCESS;
@@ -598,6 +607,9 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // may be considered a hack, we could revise the scheme in the future.
     bool UpdateRef =
         !(ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) && !(FromMapper && I == 0);
+    if (IsImplicit && isImplicitPointerHop(ArgTypes[I], ArgSizes[I])) {
+         UpdateRef = false;
+    }
 
     MappingInfoTy::HDTTMapAccessorTy HDTTMap =
         Device.getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
