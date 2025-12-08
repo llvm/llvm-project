@@ -40,10 +40,10 @@ unsigned NextUseResult::materializeForRank(int64_t Stored,
 
   // Tier 1: Finite distances (0 to LoopTag-1) → return as-is
   // Tier 2: Loop-exit distances (LoopTag to DeadTag-1) → map to 60000-64999
-  // range Tier 3: Dead registers (DeadTag+) → return Infinity (65535)
-  if (Mat64 >= DeadTag) {
-    return Infinity; // Tier 3: Dead registers get maximum distance
-  }
+  // Tier 3: Dead registers (DeadTag+) → return DeadDistance (65535)
+  if (Mat64 >= DeadTag)
+    return DeadDistance;
+
   if (Mat64 >= LoopTag) {
     // Tier 2: Loop-exit distances get mapped to high range [60000, 64999]
     int64_t LoopRemainder = Mat64 - LoopTag;
@@ -52,17 +52,18 @@ unsigned NextUseResult::materializeForRank(int64_t Stored,
         std::min(LoopRemainder, static_cast<int64_t>(4999)));
     return 60000 + ClampedRemainder;
   }
-  if (Mat64 <= 0) {
+
+  if (Mat64 <= 0)
     return 0; // Tier 1: Zero-distance for immediate uses
-  }
+
   return static_cast<unsigned>(Mat64); // Tier 1: Finite distances as-is
 }
 
 void NextUseResult::init(const MachineFunction &MF) {
-  for (auto *L : LI->getLoopsInPreorder()) {
+  for (const auto *L : LI->getLoopsInPreorder()) {
     SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock *>> Exiting;
     L->getExitEdges(Exiting);
-    for (auto P : Exiting) {
+    for (const auto &P : Exiting) {
       LoopExits[P.first->getNumber()] = P.second->getNumber();
     }
   }
@@ -108,8 +109,7 @@ void NextUseResult::analyze(const MachineFunction &MF) {
         // Check if the edge from MBB to Succ goes out of the Loop
         int64_t EdgeWeight = 0;
         if (LoopExits.contains(MBB->getNumber())) {
-          unsigned ExitTo = LoopExits[MBB->getNumber()];
-          if (SuccNum == ExitTo)
+          if (SuccNum == LoopExits[MBB->getNumber()])
             EdgeWeight = LoopTag;
         }
 
@@ -191,7 +191,6 @@ void NextUseResult::analyze(const MachineFunction &MF) {
         }
         NextUseMap[MBBNum].InstrDist[&MI] = Curr;
         NextUseMap[MBBNum].InstrOffset[&MI] = Offset;
-        // printVregDistances(Curr, Offset);
         if (!MI.isPHI())
           ++Offset;
       }
@@ -268,7 +267,6 @@ NextUseResult::getSortedSubregUses(const MachineBasicBlock::iterator I,
   unsigned MBBNum = MBB->getNumber();
   if (NextUseMap.contains(MBBNum) &&
       NextUseMap[MBBNum].InstrDist.contains(&*I)) {
-    // VRegDistances Dists = NextUseMap[MBBNum].InstrDist[&*I];
     if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP.getVReg())) {
       VRegDistances::SortedRecords Dists =
           NextUseMap[MBBNum].InstrDist[&*I][VMP.getVReg()];
@@ -325,7 +323,7 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
   if (EnableTimers)
     GetDistanceTimer.startTimer();
 
-  unsigned Dist = Infinity;
+  unsigned Dist = DeadDistance;
   const MachineBasicBlock *MBB = I->getParent();
   unsigned MBBNum = MBB->getNumber();
   if (NextUseMap.contains(MBBNum) &&
@@ -349,7 +347,7 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock &MBB,
   if (EnableTimers)
     GetDistanceTimer.startTimer();
 
-  unsigned Dist = Infinity;
+  unsigned Dist = DeadDistance;
   unsigned MBBNum = MBB.getNumber();
   if (NextUseMap.contains(MBBNum)) {
     if (NextUseMap[MBBNum].Bottom.contains(VMP.getVReg())) {

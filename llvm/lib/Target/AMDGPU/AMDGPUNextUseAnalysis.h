@@ -238,17 +238,15 @@ class NextUseResult {
 public:
 private:
   DenseMap<unsigned, VRegMaskPairSet> UsedInBlock;
-  DenseMap<int, int> LoopExits;
+  DenseMap<unsigned, unsigned> LoopExits;
   // Signed tag used to mark "outside current loop" in stored values.
   // Must be >> any finite distance you can accumulate in one function.
   static constexpr int64_t LoopTag = (int64_t)1 << 40; // ~1e12 headroom
   static constexpr int64_t DeadTag = (int64_t)1 << 60; // ~1e18, >> LoopTag
 
-  // Unsigned Infinity for external API/DAG users who want a sentinel.
-  static constexpr unsigned PrintedInfinity =
-      std::numeric_limits<unsigned>::max();
+  // Sentinel returned by getNextUseDistance() for dead/unused registers.
+  static constexpr unsigned DeadDistance = std::numeric_limits<uint16_t>::max();
 
-  const uint16_t Infinity = std::numeric_limits<unsigned short>::max();
   void init(const MachineFunction &MF);
   void analyze(const MachineFunction &MF);
 
@@ -396,19 +394,8 @@ public:
               const VRegMaskPair VMP) {
     if (!VMP.getVReg().isVirtual())
       report_fatal_error("Only virtual registers allowed!\n", true);
-    // FIXME: We use the same Infinity value to indicate both invalid distance
-    // and too long for out of block values. It is okay if the use out of block
-    // is at least one instruction further then the end of loop exit. In this
-    // case we have a distance Infinity + 1 and hence register is not considered
-    // dead. What if the register is defined by the last instruction in the loop
-    // exit block and out of loop use is in PHI? By design the dist of all PHIs
-    // from the beginning of block are ZERO and hence the distance of
-    // out-of-the-loop use will be exactly Infinity So, the register will be
-    // mistakenly considered DEAD! On another hand, any predecessor of the block
-    // containing PHI must have a branch as the last instruction. In this case
-    // the current design works.
-    return I == MBB.end() ? getNextUseDistance(MBB, VMP) == Infinity
-                          : getNextUseDistance(I, VMP) == Infinity;
+    return I == MBB.end() ? getNextUseDistance(MBB, VMP) == DeadDistance
+                          : getNextUseDistance(I, VMP) == DeadDistance;
   }
 
   VRegMaskPairSet &usedInBlock(MachineBasicBlock &MBB) {
