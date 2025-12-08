@@ -45,7 +45,7 @@ struct OpenACCDeclareCleanup final : EHScopeStack::Cleanup {
     }
   }
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     auto exitOp = mlir::acc::DeclareExitOp::create(
         cgf.getBuilder(), enterOp.getLoc(), enterOp, {});
 
@@ -303,14 +303,16 @@ void CIRGenModule::emitGlobalOpenACCRoutineDecl(const OpenACCRoutineDecl *d) {
 namespace {
 class OpenACCRoutineClauseEmitter final
     : public OpenACCClauseVisitor<OpenACCRoutineClauseEmitter> {
+  CIRGenModule &cgm;
   CIRGen::CIRGenBuilderTy &builder;
   mlir::acc::RoutineOp routineOp;
   llvm::SmallVector<mlir::acc::DeviceType> lastDeviceTypeValues;
 
 public:
-  OpenACCRoutineClauseEmitter(CIRGen::CIRGenBuilderTy &builder,
+  OpenACCRoutineClauseEmitter(CIRGenModule &cgm,
+                              CIRGen::CIRGenBuilderTy &builder,
                               mlir::acc::RoutineOp routineOp)
-      : builder(builder), routineOp(routineOp) {}
+      : cgm(cgm), builder(builder), routineOp(routineOp) {}
 
   void emitClauses(ArrayRef<const OpenACCClause *> clauses) {
     this->VisitClauseList(clauses);
@@ -332,6 +334,47 @@ public:
 
   void VisitNoHostClause(const OpenACCNoHostClause &clause) {
     routineOp.setNohost(/*attrValue=*/true);
+  }
+
+  void VisitGangClause(const OpenACCGangClause &clause) {
+    // Gang has an optional 'dim' value, which is a constant int of 1, 2, or 3.
+    // If we don't store any expressions in the clause, there are none, else we
+    // expect there is 1, since Sema should enforce that the single 'dim' is the
+    // only valid value.
+    if (clause.getNumExprs() == 0) {
+      routineOp.addGang(builder.getContext(), lastDeviceTypeValues);
+    } else {
+      assert(clause.getNumExprs() == 1);
+      auto [kind, expr] = clause.getExpr(0);
+      assert(kind == OpenACCGangKind::Dim);
+
+      llvm::APSInt curValue = expr->EvaluateKnownConstInt(cgm.getASTContext());
+      // The value is 1, 2, or 3, but 64 bit seems right enough.
+      curValue = curValue.sextOrTrunc(64);
+      routineOp.addGang(builder.getContext(), lastDeviceTypeValues,
+                        curValue.getZExtValue());
+    }
+  }
+
+  void VisitDeviceTypeClause(const OpenACCDeviceTypeClause &clause) {
+    lastDeviceTypeValues.clear();
+
+    for (const DeviceTypeArgument &arg : clause.getArchitectures())
+      lastDeviceTypeValues.push_back(decodeDeviceType(arg.getIdentifierInfo()));
+  }
+
+  void VisitBindClause(const OpenACCBindClause &clause) {
+    if (clause.isStringArgument()) {
+      mlir::StringAttr value =
+          builder.getStringAttr(clause.getStringArgument()->getString());
+
+      routineOp.addBindStrName(builder.getContext(), lastDeviceTypeValues,
+                               value);
+    } else {
+      assert(clause.isIdentifierArgument());
+      cgm.errorNYI(clause.getSourceRange(),
+                   "Bind with an identifier argument is not yet supported");
+    }
   }
 };
 } // namespace
@@ -373,6 +416,6 @@ void CIRGenModule::emitOpenACCRoutineDecl(
       mlir::acc::getRoutineInfoAttrName(),
       mlir::acc::RoutineInfoAttr::get(func.getContext(), funcRoutines));
 
-  OpenACCRoutineClauseEmitter emitter{builder, routineOp};
+  OpenACCRoutineClauseEmitter emitter{*this, builder, routineOp};
   emitter.emitClauses(clauses);
 }

@@ -1,6 +1,6 @@
 ; Test prof-verify for functions explicitly marked as cold
 
-; RUN: opt -passes=prof-inject,prof-verify %s -o - 2>&1 | FileCheck %s
+; RUN: opt -passes='function(prof-inject),module(prof-verify)' %s -o - 2>&1 | FileCheck %s
 
 define void @foo(i32 %i) !prof !0 {
   %c = icmp eq i32 %i, 0
