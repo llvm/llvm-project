@@ -1285,7 +1285,8 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
       NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty);
 
     // Forward whether the strict modifier is specified.
-    llvm::Value *StrictNumThreadsVal = llvm::ConstantInt::get(CGM.Int32Ty, NumThreadsModifier == OMPC_NUMTHREADS_strict);
+    llvm::Value *StrictNumThreadsVal = llvm::ConstantInt::get(
+        CGM.Int32Ty, NumThreadsModifier == OMPC_NUMTHREADS_strict);
 
     assert(IfCondVal && "Expected a value");
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);

@@ -47,8 +47,7 @@ namespace {
 
 void handleStrictNumThreadsError() { __builtin_trap(); }
 
-uint32_t determineNumberOfThreads(int32_t NumThreadsClause,
-                                  int32_t Strict) {
+uint32_t determineNumberOfThreads(int32_t NumThreadsClause, int32_t Strict) {
   uint32_t NThreadsICV =
       NumThreadsClause != -1 ? NumThreadsClause : icv::NThreads;
   uint32_t NumThreads = mapping::getMaxTeamThreads();
@@ -88,11 +87,9 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause,
 
 extern "C" {
 
-[[clang::always_inline]] void __kmpc_parallel_spmd(IdentTy *ident,
-                                                   int32_t num_threads,
-                                                   void *fn, void **args,
-                                                   const int64_t nargs,
-                                                   int32_t nt_strict) {
+[[clang::always_inline]] void
+__kmpc_parallel_spmd(IdentTy *ident, int32_t num_threads, void *fn, void **args,
+                     const int64_t nargs, int32_t nt_strict) {
   uint32_t TId = mapping::getThreadIdInBlock();
   uint32_t NumThreads = determineNumberOfThreads(num_threads, nt_strict);
   uint32_t PTeamSize =
