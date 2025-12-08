@@ -12,13 +12,13 @@ namespace clang::ssaf {
 
 EntityName::EntityName(llvm::StringRef USR, llvm::StringRef Suffix,
                        NestedBuildNamespace Namespace)
-  : USR(USR.str()), Suffix(Suffix), Namespace(std::move(Namespace)) {}
+    : USR(USR.str()), Suffix(Suffix), Namespace(std::move(Namespace)) {}
 
-bool EntityName::operator==(const EntityName& Other) const {
+bool EntityName::operator==(const EntityName &Other) const {
   return asTuple() == Other.asTuple();
 }
 
-bool EntityName::operator!=(const EntityName& Other) const {
+bool EntityName::operator!=(const EntityName &Other) const {
   return !(*this == Other);
 }
 

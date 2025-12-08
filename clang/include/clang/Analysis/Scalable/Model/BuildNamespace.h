@@ -26,10 +26,7 @@
 
 namespace clang::ssaf {
 
-enum class BuildNamespaceKind : unsigned short {
-  CompilationUnit,
-  LinkUnit
-};
+enum class BuildNamespaceKind : unsigned short { CompilationUnit, LinkUnit };
 
 llvm::StringRef toString(BuildNamespaceKind BNK);
 
@@ -43,8 +40,8 @@ std::optional<BuildNamespaceKind> parseBuildNamespaceKind(llvm::StringRef Str);
 /// kind.
 ///
 /// BuildNamespaces can be composed into NestedBuildNamespace to represent
-/// hierarchical namespace structures that model how software is constructed from
-/// its components.
+/// hierarchical namespace structures that model how software is constructed
+/// from its components.
 class BuildNamespace {
   BuildNamespaceKind Kind;
   std::string Name;
@@ -53,7 +50,7 @@ class BuildNamespace {
 
 public:
   BuildNamespace(BuildNamespaceKind Kind, llvm::StringRef Name)
-    : Kind(Kind), Name(Name.str()) {}
+      : Kind(Kind), Name(Name.str()) {}
 
   /// Creates a BuildNamespace representing a compilation unit.
   ///
@@ -61,9 +58,9 @@ public:
   /// \returns A BuildNamespace with CompilationUnit kind.
   static BuildNamespace makeCompilationUnit(llvm::StringRef CompilationId);
 
-  bool operator==(const BuildNamespace& Other) const;
-  bool operator!=(const BuildNamespace& Other) const;
-  bool operator<(const BuildNamespace& Other) const;
+  bool operator==(const BuildNamespace &Other) const;
+  bool operator!=(const BuildNamespace &Other) const;
+  bool operator<(const BuildNamespace &Other) const;
 
   friend class SerializationFormat;
 };
@@ -85,10 +82,10 @@ class NestedBuildNamespace {
 public:
   NestedBuildNamespace() = default;
 
-  explicit NestedBuildNamespace(const std::vector<BuildNamespace>& Namespaces)
-    : Namespaces(Namespaces) {}
+  explicit NestedBuildNamespace(const std::vector<BuildNamespace> &Namespaces)
+      : Namespaces(Namespaces) {}
 
-  explicit NestedBuildNamespace(const BuildNamespace& N) {
+  explicit NestedBuildNamespace(const BuildNamespace &N) {
     Namespaces.push_back(N);
   }
 
@@ -97,23 +94,25 @@ public:
   /// \param CompilationId The unique identifier for the compilation unit.
   /// \returns A NestedBuildNamespace containing a single CompilationUnit
   ///          BuildNamespace.
-  static NestedBuildNamespace makeCompilationUnit(llvm::StringRef CompilationId);
+  static NestedBuildNamespace
+  makeCompilationUnit(llvm::StringRef CompilationId);
 
   /// Creates a new NestedBuildNamespace by appending additional namespace.
   ///
   /// \param Namespace The namespace to append.
   NestedBuildNamespace makeQualified(NestedBuildNamespace Namespace) const {
     auto Copy = *this;
-    Copy.Namespaces.reserve(Copy.Namespaces.size() + Namespace.Namespaces.size());
+    Copy.Namespaces.reserve(Copy.Namespaces.size() +
+                            Namespace.Namespaces.size());
     llvm::append_range(Copy.Namespaces, Namespace.Namespaces);
     return Copy;
   }
 
   bool empty() const;
 
-  bool operator==(const NestedBuildNamespace& Other) const;
-  bool operator!=(const NestedBuildNamespace& Other) const;
-  bool operator<(const NestedBuildNamespace& Other) const;
+  bool operator==(const NestedBuildNamespace &Other) const;
+  bool operator!=(const NestedBuildNamespace &Other) const;
+  bool operator<(const NestedBuildNamespace &Other) const;
 
   friend class JSONWriter;
   friend class LinkUnitResolution;

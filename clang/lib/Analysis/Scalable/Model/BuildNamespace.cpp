@@ -13,9 +13,11 @@
 namespace clang::ssaf {
 
 llvm::StringRef toString(BuildNamespaceKind BNK) {
-  switch(BNK) {
-    case BuildNamespaceKind::CompilationUnit: return "compilation_unit";
-    case BuildNamespaceKind::LinkUnit: return "link_unit";
+  switch (BNK) {
+  case BuildNamespaceKind::CompilationUnit:
+    return "compilation_unit";
+  case BuildNamespaceKind::LinkUnit:
+    return "link_unit";
   }
   llvm_unreachable("Unknown BuildNamespaceKind");
 }
@@ -28,41 +30,43 @@ std::optional<BuildNamespaceKind> parseBuildNamespaceKind(llvm::StringRef Str) {
   return std::nullopt;
 }
 
-BuildNamespace BuildNamespace::makeCompilationUnit(llvm::StringRef CompilationId) {
-  return BuildNamespace{BuildNamespaceKind::CompilationUnit, CompilationId.str()};
+BuildNamespace
+BuildNamespace::makeCompilationUnit(llvm::StringRef CompilationId) {
+  return BuildNamespace{BuildNamespaceKind::CompilationUnit,
+                        CompilationId.str()};
 }
 
-bool BuildNamespace::operator==(const BuildNamespace& Other) const {
+bool BuildNamespace::operator==(const BuildNamespace &Other) const {
   return asTuple() == Other.asTuple();
 }
 
-bool BuildNamespace::operator!=(const BuildNamespace& Other) const {
+bool BuildNamespace::operator!=(const BuildNamespace &Other) const {
   return !(*this == Other);
 }
 
-bool BuildNamespace::operator<(const BuildNamespace& Other) const {
+bool BuildNamespace::operator<(const BuildNamespace &Other) const {
   return asTuple() < Other.asTuple();
 }
 
-NestedBuildNamespace NestedBuildNamespace::makeCompilationUnit(llvm::StringRef CompilationId) {
+NestedBuildNamespace
+NestedBuildNamespace::makeCompilationUnit(llvm::StringRef CompilationId) {
   NestedBuildNamespace Result;
-  Result.Namespaces.push_back(BuildNamespace::makeCompilationUnit(CompilationId));
+  Result.Namespaces.push_back(
+      BuildNamespace::makeCompilationUnit(CompilationId));
   return Result;
 }
 
-bool NestedBuildNamespace::empty() const {
-  return Namespaces.empty();
-}
+bool NestedBuildNamespace::empty() const { return Namespaces.empty(); }
 
-bool NestedBuildNamespace::operator==(const NestedBuildNamespace& Other) const {
+bool NestedBuildNamespace::operator==(const NestedBuildNamespace &Other) const {
   return Namespaces == Other.Namespaces;
 }
 
-bool NestedBuildNamespace::operator!=(const NestedBuildNamespace& Other) const {
+bool NestedBuildNamespace::operator!=(const NestedBuildNamespace &Other) const {
   return !(*this == Other);
 }
 
-bool NestedBuildNamespace::operator<(const NestedBuildNamespace& Other) const {
+bool NestedBuildNamespace::operator<(const NestedBuildNamespace &Other) const {
   return Namespaces < Other.Namespaces;
 }
 

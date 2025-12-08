@@ -18,7 +18,7 @@
 
 namespace clang::ssaf {
 
-std::optional<EntityName> getEntityName(const Decl* D) {
+std::optional<EntityName> getEntityName(const Decl *D) {
   if (!D)
     return std::nullopt;
 
@@ -34,9 +34,11 @@ std::optional<EntityName> getEntityName(const Decl* D) {
   llvm::SmallString<16> Suffix;
   const Decl *USRDecl = D;
 
-  // For parameters, use the parent function's USR with parameter index as suffix
-  if (const auto * PVD = dyn_cast<ParmVarDecl>(D)) {
-    const auto *FD = dyn_cast_or_null<FunctionDecl>(PVD->getParentFunctionOrMethod());
+  // For parameters, use the parent function's USR with parameter index as
+  // suffix
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+    const auto *FD =
+        dyn_cast_or_null<FunctionDecl>(PVD->getParentFunctionOrMethod());
     if (!FD)
       return std::nullopt;
     USRDecl = FD;
@@ -57,7 +59,7 @@ std::optional<EntityName> getEntityName(const Decl* D) {
   return EntityName(USRBuf.str(), Suffix, {});
 }
 
-std::optional<EntityName> getEntityNameForReturn(const FunctionDecl* FD) {
+std::optional<EntityName> getEntityNameForReturn(const FunctionDecl *FD) {
   if (!FD)
     return std::nullopt;
 

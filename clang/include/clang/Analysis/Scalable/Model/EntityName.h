@@ -38,9 +38,9 @@ public:
   EntityName(llvm::StringRef USR, llvm::StringRef Suffix,
              NestedBuildNamespace Namespace);
 
-  bool operator==(const EntityName& Other) const;
-  bool operator!=(const EntityName& Other) const;
-  bool operator<(const EntityName& Other) const;
+  bool operator==(const EntityName &Other) const;
+  bool operator!=(const EntityName &Other) const;
+  bool operator<(const EntityName &Other) const;
 
   /// Creates a new EntityName with additional build namespace qualification.
   ///

@@ -106,7 +106,7 @@ TEST(ASTEntityMappingTest, ImplicitDeclLambda) {
   auto Matches = match(Matcher, Ctx);
   ASSERT_GT(Matches.size(), 0u);
 
-  const auto * ImplCXXRD = Matches[0].getNodeAs<CXXRecordDecl>("decl");
+  const auto *ImplCXXRD = Matches[0].getNodeAs<CXXRecordDecl>("decl");
   ASSERT_NE(ImplCXXRD, nullptr);
 
   auto EntityName = getEntityName(ImplCXXRD);
