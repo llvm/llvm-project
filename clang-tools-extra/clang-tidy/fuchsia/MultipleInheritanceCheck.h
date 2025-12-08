@@ -38,7 +38,7 @@ private:
   // Contains the identity of each named CXXRecord as an interface.  This is
   // used to memoize lookup speeds and improve performance from O(N^2) to O(N),
   // where N is the number of classes.
-  llvm::StringMap<bool> InterfaceMap;
+  llvm::DenseMap<const CXXRecordDecl *, bool> InterfaceMap;
 };
 
 } // namespace clang::tidy::fuchsia
