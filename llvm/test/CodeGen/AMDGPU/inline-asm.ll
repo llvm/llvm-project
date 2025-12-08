@@ -363,3 +363,15 @@ define void @mixed_def_sgpr_vgpr_def_asm() {
   call void asm sideeffect "; use $0 ", "{s[4:5]}"(i64 %sgpr.add)
   ret void
 }
+
+define void @i1_used_as_vgpr_operand(ptr %p, i1 %b) {
+; CHECK-LABEL: i1_used_as_vgpr_operand:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    global_store_byte v[0:1], v2, off glc slc
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  tail call void asm sideeffect "global_store_byte $0, $1, off glc slc", "v,v"(ptr %p, i1 %b)
+  ret void
+}
