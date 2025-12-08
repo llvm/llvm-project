@@ -597,6 +597,49 @@ LogicalResult PermlaneSwapOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// MemoryCounterWaitOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Fuse adjacent memory counter wait ops, taking the minimum value of the
+/// counters.
+struct FuseMemoryCounterWaitOp final : OpRewritePattern<MemoryCounterWaitOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(MemoryCounterWaitOp op,
+                                PatternRewriter &rewriter) const override {
+    auto next = dyn_cast<MemoryCounterWaitOp>(op->getNextNode());
+    if (!next)
+      return failure();
+
+    auto setters = {&MemoryCounterWaitOp::setLoad,
+                    &MemoryCounterWaitOp::setStore, &MemoryCounterWaitOp::setDs,
+                    &MemoryCounterWaitOp::setExp};
+    auto lhsVals = {op.getLoad(), op.getStore(), op.getDs(), op.getExp()};
+    auto rhsVals = {next.getLoad(), next.getStore(), next.getDs(),
+                    next.getExp()};
+    for (const auto &[setter, lhs, rhs] :
+         llvm::zip(setters, lhsVals, rhsVals)) {
+      if (lhs && rhs) {
+        (op.*setter)(std::min(*lhs, *rhs));
+      } else if (lhs) {
+        (op.*setter)(*lhs);
+      } else if (rhs) {
+        (op.*setter)(*rhs);
+      }
+    }
+    rewriter.eraseOp(next);
+    return success();
+  }
+};
+} // namespace
+
+void MemoryCounterWaitOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<FuseMemoryCounterWaitOp>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // GatherToLDSOp
 //===----------------------------------------------------------------------===//
 
