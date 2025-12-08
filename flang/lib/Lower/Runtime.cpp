@@ -125,7 +125,7 @@ void Fortran::lower::genStopStatement(
            !currentBlock->back().hasTrait<mlir::OpTrait::IsTerminator>();
   };
   if (blockIsUnterminated())
-    genUnreachable(builder, loc);
+    Fortran::lower::genUnreachable(builder, loc);
 }
 
 void Fortran::lower::genFailImageStatement(
@@ -135,7 +135,7 @@ void Fortran::lower::genFailImageStatement(
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(FailImageStatement)>(loc, builder);
   fir::CallOp::create(builder, loc, callee, mlir::ValueRange{});
-  genUnreachable(builder, loc);
+  Fortran::lower::genUnreachable(builder, loc);
 }
 
 void Fortran::lower::genNotifyWaitStatement(
