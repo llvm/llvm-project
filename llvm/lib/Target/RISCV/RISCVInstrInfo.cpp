@@ -934,8 +934,7 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     return nullptr;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  bool Invert =
-      (MRI.getVRegDef(MI.getOperand(4).getReg()) == &LoadMI) ? true : false;
+  bool Invert = MRI.getVRegDef(MI.getOperand(4).getReg()) == &LoadMI;
   MachineOperand FalseReg = MI.getOperand(Invert ? 5 : 4);
   Register DestReg = MI.getOperand(0).getReg();
   const TargetRegisterClass *PreviousClass = MRI.getRegClass(FalseReg.getReg());
