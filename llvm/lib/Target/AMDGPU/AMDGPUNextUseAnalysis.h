@@ -33,13 +33,6 @@ using namespace llvm;
 
 // namespace {
 
-// Helper function for rebasing successor distances into current block frame
-static inline int64_t rebaseFromSucc(int64_t SuccStored, unsigned SuccEntryOff,
-                                     int64_t EdgeWeight /*0 or LoopTag*/) {
-  // Move succ-relative value into "current block end" frame.
-  return (int64_t)SuccStored + (int64_t)SuccEntryOff + (int64_t)EdgeWeight;
-}
-
 class NextUseResult {
   friend class AMDGPUNextUseAnalysisWrapper;
   SlotIndexes *Indexes;
@@ -47,9 +40,12 @@ class NextUseResult {
   const SIRegisterInfo *TRI;
   MachineLoopInfo *LI;
 
+public:
   class VRegDistances {
-
+  public:
     using Record = std::pair<LaneBitmask, int64_t>;
+
+  private:
     struct CompareByDist {
       bool operator()(const Record &LHS, const Record &RHS) const {
         if (LHS.second != RHS.second)     // Different distances
@@ -61,21 +57,24 @@ class NextUseResult {
 
   public:
     using SortedRecords = std::set<Record, CompareByDist>;
+    using iterator = DenseMap<unsigned, SortedRecords>::iterator;
+    using const_iterator = DenseMap<unsigned, SortedRecords>::const_iterator;
 
   private:
     DenseMap<unsigned, SortedRecords> NextUseMap;
 
   public:
-    auto begin() { return NextUseMap.begin(); }
-    auto end() { return NextUseMap.end(); }
+    iterator begin() { return NextUseMap.begin(); }
+    iterator end() { return NextUseMap.end(); }
 
-    auto begin() const { return NextUseMap.begin(); }
-    auto end() const { return NextUseMap.end(); }
+    const_iterator begin() const { return NextUseMap.begin(); }
+    const_iterator end() const { return NextUseMap.end(); }
 
     size_t size() const { return NextUseMap.size(); }
     std::pair<bool, SortedRecords> get(unsigned Key) const {
-      if (NextUseMap.contains(Key))
-        return {true, NextUseMap.find(Key)->second};
+      const_iterator It = NextUseMap.find(Key);
+      if (It != NextUseMap.end())
+        return {true, It->second};
       return {false, SortedRecords()};
     }
 
@@ -83,12 +82,14 @@ class NextUseResult {
 
     SmallVector<unsigned> keys() {
       SmallVector<unsigned> Keys;
-      for (auto P : NextUseMap)
-        Keys.push_back(P.first);
+      for (auto &[Key, Recs] : NextUseMap)
+        Keys.push_back(Key);
       return Keys;
     }
 
-    bool contains(unsigned Key) { return NextUseMap.contains(Key); }
+    bool contains(unsigned Key) const { return NextUseMap.contains(Key); }
+
+    iterator find(unsigned Key) { return NextUseMap.find(Key); }
 
     // Compare two stored distances: returns true if A is closer or equal to B.
     // Handles mixed-sign values correctly:
@@ -113,13 +114,14 @@ class NextUseResult {
 
     bool insert(VRegMaskPair VMP, int64_t Dist) {
       Record R(VMP.getLaneMask(), Dist);
-      if (NextUseMap.contains(VMP.getVReg())) {
-        SortedRecords &Dists = NextUseMap[VMP.getVReg()];
+      iterator MapIt = NextUseMap.find(VMP.getVReg());
+      if (MapIt != NextUseMap.end()) {
+        SortedRecords &Dists = MapIt->second;
 
         if (Dists.find(R) == Dists.end()) {
           SmallVector<SortedRecords::iterator, 4> ToErase;
 
-          for (auto It = Dists.begin(); It != Dists.end(); ++It) {
+          for (SortedRecords::iterator It = Dists.begin(); It != Dists.end(); ++It) {
             const Record &D = *It;
 
             // Check if existing use covers the new use
@@ -136,7 +138,7 @@ class NextUseResult {
             if ((D.first & R.first) == D.first) {
               // New use covers existing use - evict if new is closer
               if (isCloserOrEqual(R.second, D.second)) {
-                // New use is closer → mark existing for removal
+                // New use is closer -> mark existing for removal
                 ToErase.push_back(It);
               } else {
                 // New use is further → reject it
@@ -146,7 +148,7 @@ class NextUseResult {
           }
 
           // Remove all records that the new use supersedes
-          for (auto It : ToErase) {
+          for (SortedRecords::iterator It : ToErase) {
             Dists.erase(It);
           }
 
@@ -160,9 +162,10 @@ class NextUseResult {
     }
 
     void clear(VRegMaskPair VMP) {
-      if (NextUseMap.contains(VMP.getVReg())) {
-        auto &Dists = NextUseMap[VMP.getVReg()];
-        for (auto It = Dists.begin(); It != Dists.end();) {
+      iterator MapIt = NextUseMap.find(VMP.getVReg());
+      if (MapIt != NextUseMap.end()) {
+        SortedRecords &Dists = MapIt->second;
+        for (SortedRecords::iterator It = Dists.begin(); It != Dists.end();) {
           LaneBitmask Masked = It->first & ~VMP.getLaneMask();
           if (Masked.none()) {
             It = Dists.erase(It);
@@ -180,17 +183,16 @@ class NextUseResult {
       if (Other.size() != size())
         return false;
 
-      for (auto P : NextUseMap) {
+      for (auto &[Key, Dists] : NextUseMap) {
 
-        std::pair<bool, SortedRecords> OtherDists = Other.get(P.getFirst());
+        std::pair<bool, SortedRecords> OtherDists = Other.get(Key);
         if (!OtherDists.first)
           return false;
-        SortedRecords &Dists = P.getSecond();
 
         if (Dists.size() != OtherDists.second.size())
           return false;
 
-        for (auto R : OtherDists.second) {
+        for (const Record &R : OtherDists.second) {
           SortedRecords::iterator I = Dists.find(R);
           if (I == Dists.end())
             return false;
@@ -210,12 +212,11 @@ class NextUseResult {
     // then merge using insert's coverage logic.
     void merge(const VRegDistances &Other, unsigned SuccEntryOff,
                int64_t EdgeWeight = 0) {
-      for (const auto &P : Other) {
-        unsigned Key = P.getFirst();
-        const auto &OtherDists = P.getSecond();
+      for (const auto &[Key, OtherDists] : Other) {
 
-        for (const auto &D : OtherDists) {
-          int64_t Rebased = rebaseFromSucc(D.second, SuccEntryOff, EdgeWeight);
+        for (const Record &D : OtherDists) {
+          // Rebase from successor's frame into current block end frame
+          int64_t Rebased = D.second + SuccEntryOff + EdgeWeight;
           // Use insert's coverage logic for consistent handling
           insert(VRegMaskPair(Register(Key), D.first), Rebased);
         }
@@ -302,9 +303,8 @@ private:
                           StringRef Indent = "      ") const {
     bool Any = false;
     O << "\n";
-    for (const auto &X : Records) {
-      const LaneBitmask UseMask = X.first;
-      const int64_t Stored = X.second; // stored relative (may be negative)
+    for (const auto &[UseMask, Stored] : Records) {
+      // Stored is relative (may be negative)
 
       // Use enhanced materialization for display that shows three-tier
       // structure
@@ -345,8 +345,8 @@ private:
                           int64_t EdgeWeight = 0, raw_ostream &O = dbgs(),
                           StringRef Indent = "      ") const {
     bool Any = false;
-    for (const auto &P : D) {
-      Any |= printSortedRecords(P.second, P.first, SnapshotOffset, EdgeWeight,
+    for (const auto &[VReg, Recs] : D) {
+      Any |= printSortedRecords(Recs, VReg, SnapshotOffset, EdgeWeight,
                                 O, Indent);
     }
     return Any;
