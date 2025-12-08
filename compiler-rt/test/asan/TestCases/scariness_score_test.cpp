@@ -74,6 +74,10 @@
 // Parts of the test are too platform-specific:
 // REQUIRES: x86_64-target-arch
 // REQUIRES: shell
+// TODO(boomanaiden154): This test currently fails with the internal
+// shell because python is not able to set RLIMIT_STACK. We should
+// reenable this when the behavior is fixed.
+// UNSUPPORTED: system-darwin
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
