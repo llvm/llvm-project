@@ -1844,6 +1844,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::v4i32, MVT::v1i64, MVT::v2i64}) {
       setOperationAction(ISD::SDIV, VT, Custom);
       setOperationAction(ISD::UDIV, VT, Custom);
+      setOperationAction(ISD::MULHS, VT, Custom);
+      setOperationAction(ISD::MULHU, VT, Custom);
     }
 
     // NEON doesn't support 64-bit vector integer muls, but SVE does.
@@ -1880,10 +1882,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CTLZ, MVT::v1i64, Custom);
       setOperationAction(ISD::CTLZ, MVT::v2i64, Custom);
       setOperationAction(ISD::CTTZ, MVT::v1i64, Custom);
-      setOperationAction(ISD::MULHS, MVT::v1i64, Custom);
-      setOperationAction(ISD::MULHS, MVT::v2i64, Custom);
-      setOperationAction(ISD::MULHU, MVT::v1i64, Custom);
-      setOperationAction(ISD::MULHU, MVT::v2i64, Custom);
       setOperationAction(ISD::SMAX, MVT::v1i64, Custom);
       setOperationAction(ISD::SMAX, MVT::v2i64, Custom);
       setOperationAction(ISD::SMIN, MVT::v1i64, Custom);
