@@ -769,6 +769,20 @@ LnoR2Fix:
 #define __has_feature(__feature) 0
 #endif
 
+#ifdef __ARM_FEATURE_PAC_DEFAULT
+# define UNW_ARM_FEATURE_PAC_DEFAULT __ARM_FEATURE_PAC_DEFAULT
+#else
+# if __has_feature(ptrauth_returns)
+#  define UNW_ARM_FEATURE_PAC_DEFAULT 2
+# else
+#  define UNW_ARM_FEATURE_PAC_DEFAULT 0
+# endif
+#endif
+
+#define UNW_RA_SIGNED            ((UNW_ARM_FEATURE_PAC_DEFAULT & 3) != 0)
+#define UNW_RA_SIGNED_WITH_B_KEY ((UNW_ARM_FEATURE_PAC_DEFAULT & 2) != 0)
+#define UNW_RA_SIGNED_WITH_PC    ((UNW_ARM_FEATURE_PAC_DEFAULT & 8) != 0)
+
 //
 // extern int __unw_getcontext(unw_context_t* thread_state)
 //
@@ -778,8 +792,16 @@ LnoR2Fix:
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 
-#if __has_feature(ptrauth_calls)
-  pacibsp
+#if UNW_RA_SIGNED
+# if UNW_RA_SIGNED_WITH_PC
+  hint   0x27                     // pacm
+.L__unw_getcontext_start:
+# endif
+# if UNW_RA_SIGNED_WITH_B_KEY
+  hint   0x1b                     // pacibsp
+# else
+  hint   0x19                     // paciasp
+# endif
 #endif
 
   stp    x0, x1,  [x0, #0x000]
@@ -801,33 +823,69 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   mov    x1,sp
   str    x1,      [x0, #0x0F8]
   str    x30,     [x0, #0x100]    // store return address as pc
+
+  // Fill subfields of __ra_sign field
+#if UNW_RA_SIGNED
+# if UNW_RA_SIGNED_WITH_PC
+  adrp   x16, .L__unw_getcontext_start
+  add    x16, x16, :lo12:.L__unw_getcontext_start
+  str    x16,     [x0, #0x110]    // __second_modifier = x16
+# else
+  str    xzr,     [x0, #0x110]    // __second_modifier = 0
+# endif
+
+  mov    x16, #1
+  str    x16,     [x0, #0x108]    // __state = 1
+
+# if UNW_RA_SIGNED_WITH_B_KEY
+  str    x16,     [x0, #0x118]    // __use_b_key = 1
+# else
+  str    xzr,     [x0, #0x118]    // __use_b_key = 0
+# endif
+
+  ldr    x16,     [x0, #0x080]    // restore x16 after clobber
+#else
+  str    xzr,     [x0, #0x108]    // __state = 0
+  str    xzr,     [x0, #0x110]    // __second_modifier = 0
+  str    xzr,     [x0, #0x118]    // __use_b_key = 0
+#endif
+
   // skip cpsr
 #if defined(__ARM_FP) && __ARM_FP != 0
-  stp    d0, d1,  [x0, #0x110]
-  stp    d2, d3,  [x0, #0x120]
-  stp    d4, d5,  [x0, #0x130]
-  stp    d6, d7,  [x0, #0x140]
-  stp    d8, d9,  [x0, #0x150]
-  stp    d10,d11, [x0, #0x160]
-  stp    d12,d13, [x0, #0x170]
-  stp    d14,d15, [x0, #0x180]
-  stp    d16,d17, [x0, #0x190]
-  stp    d18,d19, [x0, #0x1A0]
-  stp    d20,d21, [x0, #0x1B0]
-  stp    d22,d23, [x0, #0x1C0]
-  stp    d24,d25, [x0, #0x1D0]
-  stp    d26,d27, [x0, #0x1E0]
-  stp    d28,d29, [x0, #0x1F0]
-  str    d30,     [x0, #0x200]
-  str    d31,     [x0, #0x208]
+  stp    d0, d1,  [x0, #0x120]
+  stp    d2, d3,  [x0, #0x130]
+  stp    d4, d5,  [x0, #0x140]
+  stp    d6, d7,  [x0, #0x150]
+  stp    d8, d9,  [x0, #0x160]
+  stp    d10,d11, [x0, #0x170]
+  stp    d12,d13, [x0, #0x180]
+  stp    d14,d15, [x0, #0x190]
+  stp    d16,d17, [x0, #0x1A0]
+  stp    d18,d19, [x0, #0x1B0]
+  stp    d20,d21, [x0, #0x1C0]
+  stp    d22,d23, [x0, #0x1D0]
+  stp    d24,d25, [x0, #0x1E0]
+  stp    d26,d27, [x0, #0x1F0]
+  str    d28,     [x0, #0x200]
+  str    d29,     [x0, #0x208]
+  str    d30,     [x0, #0x210]
+  str    d31,     [x0, #0x218]
 #endif
   mov    x0, #0                   // return UNW_ESUCCESS
 
-#if __has_feature(ptrauth_calls)
-  retab
-#else
-  ret
+#if UNW_RA_SIGNED
+# if UNW_RA_SIGNED_WITH_PC
+  adrp   x16, .L__unw_getcontext_start
+  add    x16, x16, :lo12:.L__unw_getcontext_start
+  hint   0x27                     // pacm
+# endif
+# if UNW_RA_SIGNED_WITH_B_KEY
+  hint   0x1f                     // autibsp
+# else
+  hint   0x1d                     // autiasp
+# endif
 #endif
+  ret
 
 //
 // extern "C" int64_t __libunwind_Registers_arm64_za_disable()
