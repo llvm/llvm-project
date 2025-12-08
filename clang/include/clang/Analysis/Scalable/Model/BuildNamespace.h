@@ -55,7 +55,11 @@ public:
   BuildNamespace(BuildNamespaceKind Kind, llvm::StringRef Name)
     : Kind(Kind), Name(Name.str()) {}
 
-  static BuildNamespace makeTU(llvm::StringRef CompilationId);
+  /// Creates a BuildNamespace representing a compilation unit.
+  ///
+  /// \param CompilationId The unique identifier for the compilation unit.
+  /// \returns A BuildNamespace with CompilationUnit kind.
+  static BuildNamespace makeCompilationUnit(llvm::StringRef CompilationId);
 
   bool operator==(const BuildNamespace& Other) const;
   bool operator!=(const BuildNamespace& Other) const;
@@ -88,7 +92,12 @@ public:
     Namespaces.push_back(N);
   }
 
-  static NestedBuildNamespace makeTU(llvm::StringRef CompilationId);
+  /// Creates a NestedBuildNamespace representing a compilation unit.
+  ///
+  /// \param CompilationId The unique identifier for the compilation unit.
+  /// \returns A NestedBuildNamespace containing a single CompilationUnit
+  ///          BuildNamespace.
+  static NestedBuildNamespace makeCompilationUnit(llvm::StringRef CompilationId);
 
   /// Creates a new NestedBuildNamespace by appending additional namespace.
   ///

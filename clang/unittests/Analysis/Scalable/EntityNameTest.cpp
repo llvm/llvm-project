@@ -14,8 +14,8 @@ namespace clang::ssaf {
 namespace {
 
 TEST(EntityNameTest, Equality) {
-  auto NBN1 = NestedBuildNamespace::makeTU("test.cpp");
-  auto NBN2 = NestedBuildNamespace::makeTU("test.cpp");
+  auto NBN1 = NestedBuildNamespace::makeCompilationUnit("test.cpp");
+  auto NBN2 = NestedBuildNamespace::makeCompilationUnit("test.cpp");
 
   EntityName EN1("c:@F@foo", "", NBN1);
   EntityName EN2("c:@F@foo", "", NBN2);
@@ -26,7 +26,7 @@ TEST(EntityNameTest, Equality) {
 }
 
 TEST(EntityNameTest, EqualityWithDifferentSuffix) {
-  auto NBN = NestedBuildNamespace::makeTU("test.cpp");
+  auto NBN = NestedBuildNamespace::makeCompilationUnit("test.cpp");
 
   EntityName EN1("c:@F@foo", "1", NBN);
   EntityName EN2("c:@F@foo", "2", NBN);
@@ -35,8 +35,8 @@ TEST(EntityNameTest, EqualityWithDifferentSuffix) {
 }
 
 TEST(EntityNameTest, EqualityWithDifferentNamespace) {
-  auto NBN1 = NestedBuildNamespace::makeTU("test1.cpp");
-  auto NBN2 = NestedBuildNamespace::makeTU("test2.cpp");
+  auto NBN1 = NestedBuildNamespace::makeCompilationUnit("test1.cpp");
+  auto NBN2 = NestedBuildNamespace::makeCompilationUnit("test2.cpp");
 
   EntityName EN1("c:@F@foo", "", NBN1);
   EntityName EN2("c:@F@foo", "", NBN2);
@@ -45,7 +45,7 @@ TEST(EntityNameTest, EqualityWithDifferentNamespace) {
 }
 
 TEST(EntityNameTest, MakeQualified) {
-  auto NBN1 = NestedBuildNamespace::makeTU("test.cpp");
+  auto NBN1 = NestedBuildNamespace::makeCompilationUnit("test.cpp");
   EntityName EN("c:@F@foo", "", NBN1);
 
   BuildNamespace LinkNS(BuildNamespaceKind::LinkUnit, "app");

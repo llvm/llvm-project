@@ -28,7 +28,7 @@ std::optional<BuildNamespaceKind> parseBuildNamespaceKind(llvm::StringRef Str) {
   return std::nullopt;
 }
 
-BuildNamespace BuildNamespace::makeTU(llvm::StringRef CompilationId) {
+BuildNamespace BuildNamespace::makeCompilationUnit(llvm::StringRef CompilationId) {
   return BuildNamespace{BuildNamespaceKind::CompilationUnit, CompilationId.str()};
 }
 
@@ -44,9 +44,9 @@ bool BuildNamespace::operator<(const BuildNamespace& Other) const {
   return asTuple() < Other.asTuple();
 }
 
-NestedBuildNamespace NestedBuildNamespace::makeTU(llvm::StringRef CompilationId) {
+NestedBuildNamespace NestedBuildNamespace::makeCompilationUnit(llvm::StringRef CompilationId) {
   NestedBuildNamespace Result;
-  Result.Namespaces.push_back(BuildNamespace::makeTU(CompilationId));
+  Result.Namespaces.push_back(BuildNamespace::makeCompilationUnit(CompilationId));
   return Result;
 }
 

@@ -13,9 +13,9 @@ namespace clang::ssaf {
 namespace {
 
 TEST(BuildNamespaceTest, Equality) {
-  auto BN1 = BuildNamespace::makeTU("test.cpp");
-  auto BN2 = BuildNamespace::makeTU("test.cpp");
-  auto BN3 = BuildNamespace::makeTU("other.cpp");
+  auto BN1 = BuildNamespace::makeCompilationUnit("test.cpp");
+  auto BN2 = BuildNamespace::makeCompilationUnit("test.cpp");
+  auto BN3 = BuildNamespace::makeCompilationUnit("other.cpp");
 
   EXPECT_EQ(BN1, BN2);
   EXPECT_NE(BN1, BN3);
@@ -54,28 +54,28 @@ TEST(NestedBuildNamespaceTest, DefaultConstruction) {
 }
 
 TEST(NestedBuildNamespaceTest, SingleNamespaceConstruction) {
-  auto BN = BuildNamespace::makeTU("test.cpp");
+  auto BN = BuildNamespace::makeCompilationUnit("test.cpp");
   NestedBuildNamespace NBN(BN);
 
   EXPECT_FALSE(NBN.empty());
 }
 
 TEST(NestedBuildNamespaceTest, MakeTU) {
-  auto NBN = NestedBuildNamespace::makeTU("test.cpp");
+  auto NBN = NestedBuildNamespace::makeCompilationUnit("test.cpp");
   EXPECT_FALSE(NBN.empty());
 }
 
 TEST(NestedBuildNamespaceTest, Equality) {
-  auto NBN1 = NestedBuildNamespace::makeTU("test.cpp");
-  auto NBN2 = NestedBuildNamespace::makeTU("test.cpp");
-  auto NBN3 = NestedBuildNamespace::makeTU("other.cpp");
+  auto NBN1 = NestedBuildNamespace::makeCompilationUnit("test.cpp");
+  auto NBN2 = NestedBuildNamespace::makeCompilationUnit("test.cpp");
+  auto NBN3 = NestedBuildNamespace::makeCompilationUnit("other.cpp");
 
   EXPECT_EQ(NBN1, NBN2);
   EXPECT_NE(NBN1, NBN3);
 }
 
 TEST(NestedBuildNamespaceTest, MakeQualified) {
-  auto NBN1 = NestedBuildNamespace::makeTU("test.cpp");
+  auto NBN1 = NestedBuildNamespace::makeCompilationUnit("test.cpp");
   BuildNamespace LinkNS(BuildNamespaceKind::LinkUnit, "app");
   NestedBuildNamespace NBN2(LinkNS);
 
@@ -87,7 +87,7 @@ TEST(NestedBuildNamespaceTest, MakeQualified) {
 
 TEST(NestedBuildNamespaceTest, EmptyQualified) {
   NestedBuildNamespace Empty;
-  auto NBN = NestedBuildNamespace::makeTU("test.cpp");
+  auto NBN = NestedBuildNamespace::makeCompilationUnit("test.cpp");
 
   auto Qualified = Empty.makeQualified(NBN);
   EXPECT_EQ(Qualified, NBN);
