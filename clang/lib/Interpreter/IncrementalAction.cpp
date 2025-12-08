@@ -120,17 +120,6 @@ std::unique_ptr<llvm::Module> IncrementalAction::GenModule() {
   return nullptr;
 }
 
-void IncrementalAction::discardCurrentCodeGenModule() {
-  if (CodeGenerator *CG = getCodeGen()) {
-    if (auto *CurM = CG->GetModule()) {
-      llvm::LLVMContext &Ctx = CurM->getContext();
-      std::string Name = CurM->getName().str();
-      std::unique_ptr<llvm::Module> Dead(CG->ReleaseModule());
-      CG->StartModule(Name, Ctx);
-    }
-  }
-}
-
 CodeGenerator *IncrementalAction::getCodeGen() const {
   FrontendAction *WrappedAct = getWrapped();
   if (!WrappedAct || !WrappedAct->hasIRSupport())
@@ -144,6 +133,11 @@ InProcessPrintingASTConsumer::InProcessPrintingASTConsumer(
 
 bool InProcessPrintingASTConsumer::HandleTopLevelDecl(DeclGroupRef DGR) {
   if (DGR.isNull())
+    return true;
+
+  CompilerInstance *CI = Interp.getCompilerInstance();
+  DiagnosticsEngine &Diags = CI->getDiagnostics();
+  if (Diags.hasErrorOccurred())
     return true;
 
   for (Decl *D : DGR)

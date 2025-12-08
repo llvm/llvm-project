@@ -82,7 +82,6 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
 
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.hasErrorOccurred()) {
-    Act->discardCurrentCodeGenModule();
     CleanUpPTU(C.getTranslationUnitDecl());
 
     Diags.Reset(/*soft=*/true);
