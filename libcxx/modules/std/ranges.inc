@@ -315,15 +315,17 @@ export namespace std {
       using std::ranges::views::adjacent_transform;
       using std::ranges::views::pairwise_transform;
     } // namespace views
+#endif
 
+#if _LIBCPP_STD_VER >= 23
     using std::ranges::chunk_view;
-
-    using std::ranges::chunk_view<V>;
 
     namespace views {
       using std::ranges::views::chunk;
     }
+#endif
 
+#if 0
     using std::ranges::slide_view;
 
     namespace views {
