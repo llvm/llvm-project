@@ -54,7 +54,6 @@ static const unsigned ARM64AddrSpaceMap[] = {
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
-  virtual void setDataLayout() = 0;
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
   static const char *const GCCRegNames[];
 
@@ -274,9 +273,7 @@ public:
   AArch64leTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
 
   void getTargetDefines(const LangOptions &Opts,
-                            MacroBuilder &Builder) const override;
-private:
-  void setDataLayout() override;
+                        MacroBuilder &Builder) const override;
 };
 
 template <>
@@ -296,8 +293,6 @@ class LLVM_LIBRARY_VISIBILITY WindowsARM64TargetInfo
 public:
   WindowsARM64TargetInfo(const llvm::Triple &Triple,
                          const TargetOptions &Opts);
-
-  void setDataLayout() override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override;
 
@@ -332,9 +327,6 @@ public:
   AArch64beTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
-
-private:
-  void setDataLayout() override;
 };
 
 void getAppleMachOAArch64Defines(MacroBuilder &Builder, const LangOptions &Opts,
