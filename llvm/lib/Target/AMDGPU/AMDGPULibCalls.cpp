@@ -845,7 +845,7 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
           return false;
         }
       }
-      LLVMContext &context = CI->getParent()->getParent()->getContext();
+      LLVMContext &context = CI->getContext();
       Constant *nval;
       if (getArgType(FInfo) == AMDGPULibFunc::F32) {
         SmallVector<float, 0> FVal;

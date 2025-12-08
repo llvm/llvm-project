@@ -794,29 +794,36 @@ bool TwoAddressInstructionImpl::convertInstTo3Addr(
   if (!NewMI)
     return false;
 
-  LLVM_DEBUG(dbgs() << "2addr: CONVERTING 2-ADDR: " << *mi);
-  LLVM_DEBUG(dbgs() << "2addr:         TO 3-ADDR: " << *NewMI);
-
-  // If the old instruction is debug value tracked, an update is required.
-  if (auto OldInstrNum = mi->peekDebugInstrNum()) {
-    assert(mi->getNumExplicitDefs() == 1);
-    assert(NewMI->getNumExplicitDefs() == 1);
-
-    // Find the old and new def location.
-    unsigned OldIdx = mi->defs().begin()->getOperandNo();
-    unsigned NewIdx = NewMI->defs().begin()->getOperandNo();
-
-    // Record that one def has been replaced by the other.
-    unsigned NewInstrNum = NewMI->getDebugInstrNum();
-    MF->makeDebugValueSubstitution(std::make_pair(OldInstrNum, OldIdx),
-                                   std::make_pair(NewInstrNum, NewIdx));
-  }
-
-  MBB->erase(mi); // Nuke the old inst.
-
   for (MachineInstr &MI : MIS)
     DistanceMap.insert(std::make_pair(&MI, Dist++));
-  Dist--;
+
+  if (&*mi == NewMI) {
+    LLVM_DEBUG(dbgs() << "2addr: CONVERTED IN-PLACE TO 3-ADDR: " << *mi);
+  } else {
+    LLVM_DEBUG({
+      dbgs() << "2addr: CONVERTING 2-ADDR: " << *mi;
+      dbgs() << "2addr:         TO 3-ADDR: " << *NewMI;
+    });
+
+    // If the old instruction is debug value tracked, an update is required.
+    if (auto OldInstrNum = mi->peekDebugInstrNum()) {
+      assert(mi->getNumExplicitDefs() == 1);
+      assert(NewMI->getNumExplicitDefs() == 1);
+
+      // Find the old and new def location.
+      unsigned OldIdx = mi->defs().begin()->getOperandNo();
+      unsigned NewIdx = NewMI->defs().begin()->getOperandNo();
+
+      // Record that one def has been replaced by the other.
+      unsigned NewInstrNum = NewMI->getDebugInstrNum();
+      MF->makeDebugValueSubstitution(std::make_pair(OldInstrNum, OldIdx),
+                                     std::make_pair(NewInstrNum, NewIdx));
+    }
+
+    MBB->erase(mi); // Nuke the old inst.
+    Dist--;
+  }
+
   mi = NewMI;
   nmi = std::next(mi);
 
@@ -1329,6 +1336,9 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
 
   bool Commuted = tryInstructionCommute(&MI, DstIdx, SrcIdx, regBKilled, Dist);
 
+  // Give targets a chance to convert bundled instructions.
+  bool ConvertibleTo3Addr = MI.isConvertibleTo3Addr(MachineInstr::AnyInBundle);
+
   // If the instruction is convertible to 3 Addr, instead
   // of returning try 3 Addr transformation aggressively and
   // use this variable to check later. Because it might be better.
@@ -1337,7 +1347,7 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
   //   addl     %esi, %edi
   //   movl     %edi, %eax
   //   ret
-  if (Commuted && !MI.isConvertibleTo3Addr())
+  if (Commuted && !ConvertibleTo3Addr)
     return false;
 
   if (shouldOnlyCommute)
@@ -1357,7 +1367,7 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
     regBKilled = isKilled(MI, regB, true);
   }
 
-  if (MI.isConvertibleTo3Addr()) {
+  if (ConvertibleTo3Addr) {
     // This instruction is potentially convertible to a true
     // three-address instruction.  Check if it is profitable.
     if (!regBKilled || isProfitableToConv3Addr(regA, regB)) {

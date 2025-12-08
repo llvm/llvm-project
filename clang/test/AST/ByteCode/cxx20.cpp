@@ -1201,3 +1201,13 @@ namespace NonPureVirtualCall {
 
   int main() { check(); }
 }
+
+namespace DyamicCast {
+  struct X {
+    virtual constexpr ~X() {}
+  };
+  struct Y : X {};
+  constexpr Y y;
+  constexpr const X *p = &y;
+  constexpr const Y *q = dynamic_cast<const Y*>(p);
+}

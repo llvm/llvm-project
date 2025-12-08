@@ -29,8 +29,8 @@ contains
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_3:.*]] = fir.address_of(@_QMcomponents_testEinstance) : !fir.ref<!fir.type<_QMcomponents_testTt3
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QMcomponents_testEinstance"} : (!fir.ref<!fir.type<_QMcomponents_testTt3
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] {uniq_name = "_QMcomponents_testFs1Ei"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_2]] {uniq_name = "_QMcomponents_testFs1Ej"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QMcomponents_testFs1Ei"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QMcomponents_testFs1Ej"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 2 : index
@@ -130,7 +130,7 @@ end subroutine
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %[[VAL_1]] {uniq_name = "_QFlhs_char_sectionEa"} : (!fir.ref<!fir.array<10x!fir.type<_QFlhs_char_sectionTt
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFlhs_char_sectionEa"} : (!fir.ref<!fir.array<10x!fir.type<_QFlhs_char_sectionTt
 ! CHECK:           %[[VAL_5:.*]] = fir.address_of(@_QQclX68656C6C6F) : !fir.ref<!fir.char<1,5>>
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 5 : index
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_6]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX68656C6C6F"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
@@ -154,13 +154,13 @@ end subroutine
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) dummy_scope %[[VAL_2]] {uniq_name = "_QFrhs_char_sectionEa"} : (!fir.ref<!fir.array<10x!fir.type<_QFrhs_char_sectionTt
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFrhs_char_sectionEa"} : (!fir.ref<!fir.array<10x!fir.type<_QFrhs_char_sectionTt
 ! CHECK:           %[[VAL_6:.*]]:2 = fir.unboxchar %[[VAL_1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<10x!fir.char<1,10>>>
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_9]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_10]]) typeparams %[[VAL_8]] dummy_scope %[[VAL_2]] {uniq_name = "_QFrhs_char_sectionEc"} : (!fir.ref<!fir.array<10x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.ref<!fir.array<10x!fir.char<1,10>>>, !fir.ref<!fir.array<10x!fir.char<1,10>>>)
+! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_10]]) typeparams %[[VAL_8]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFrhs_char_sectionEc"} : (!fir.ref<!fir.array<10x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.ref<!fir.array<10x!fir.char<1,10>>>, !fir.ref<!fir.array<10x!fir.char<1,10>>>)
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_13:.*]] = hlfir.designate %[[VAL_5]]#0{"c"}   shape %[[VAL_4]] typeparams %[[VAL_12]] : (!fir.ref<!fir.array<10x!fir.type<_QFrhs_char_sectionTt
 ! CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_11]]#0 : !fir.ref<!fir.array<10x!fir.char<1,10>>>, !fir.ref<!fir.array<10x!fir.char<1,10>>>
@@ -181,10 +181,10 @@ end subroutine
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) dummy_scope %[[VAL_2]] {uniq_name = "_QFelemental_char_sectionEa"} : (!fir.ref<!fir.array<10x!fir.type<_QFelemental_char_sectionTt
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFelemental_char_sectionEa"} : (!fir.ref<!fir.array<10x!fir.type<_QFelemental_char_sectionTt
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_7]]) dummy_scope %[[VAL_2]] {uniq_name = "_QFelemental_char_sectionEi"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_7]]) dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFelemental_char_sectionEi"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_10:.*]] = hlfir.designate %[[VAL_5]]#0{"c"}   shape %[[VAL_4]] typeparams %[[VAL_9]] : (!fir.ref<!fir.array<10x!fir.type<_QFelemental_char_sectionTt
 ! CHECK:           %[[VAL_11:.*]] = fir.address_of(@_QQclX68656C6C6F) : !fir.ref<!fir.char<1,5>>

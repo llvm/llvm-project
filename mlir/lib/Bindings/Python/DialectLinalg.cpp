@@ -80,6 +80,28 @@ static void populateDialectLinalgSubmodule(nb::module_ m) {
         "op.",
         nb::arg("op"));
 
+  m.def(
+      "infer_contraction_dimensions_from_maps",
+      [](std::vector<MlirAffineMap> indexingMaps)
+          -> std::optional<MlirLinalgContractionDimensions> {
+        if (indexingMaps.empty())
+          return std::nullopt;
+
+        MlirLinalgContractionDimensions dims =
+            mlirLinalgInferContractionDimensionsFromMaps(indexingMaps.data(),
+                                                         indexingMaps.size());
+
+        // Detect "empty" result from invalid input or failed inference.
+        if (mlirAttributeIsNull(dims.batch) && mlirAttributeIsNull(dims.m) &&
+            mlirAttributeIsNull(dims.n) && mlirAttributeIsNull(dims.k)) {
+          return std::nullopt;
+        }
+        return dims;
+      },
+      "Infers contraction dimensions (batch/m/n/k) from a list of affine "
+      "maps.",
+      nb::arg("indexing_maps"));
+
   m.def("isa_convolution_op", &mlirLinalgIsAConvolutionOp,
         "Checks if the given operation is a Linalg convolution operation.",
         nb::arg("op"));

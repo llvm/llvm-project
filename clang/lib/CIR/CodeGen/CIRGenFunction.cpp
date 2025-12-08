@@ -412,6 +412,16 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
   (void)emitReturn(localScope->endLoc);
 }
 
+cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
+  LexicalScope *scope = this;
+  while (scope) {
+    if (scope->isTry())
+      return scope->getTry();
+    scope = scope->parentScope;
+  }
+  return nullptr;
+}
+
 void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
                                    cir::FuncOp fn, cir::FuncType funcType,
                                    FunctionArgList args, SourceLocation loc,
@@ -521,7 +531,48 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   }
 }
 
+void CIRGenFunction::resolveBlockAddresses() {
+  for (cir::BlockAddressOp &blockAddress : cgm.unresolvedBlockAddressToLabel) {
+    cir::LabelOp labelOp =
+        cgm.lookupBlockAddressInfo(blockAddress.getBlockAddrInfo());
+    assert(labelOp && "expected cir.labelOp to already be emitted");
+    cgm.updateResolvedBlockAddress(blockAddress, labelOp);
+  }
+  cgm.unresolvedBlockAddressToLabel.clear();
+}
+
+void CIRGenFunction::finishIndirectBranch() {
+  if (!indirectGotoBlock)
+    return;
+  llvm::SmallVector<mlir::Block *> succesors;
+  llvm::SmallVector<mlir::ValueRange> rangeOperands;
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(indirectGotoBlock);
+  for (auto &[blockAdd, labelOp] : cgm.blockAddressToLabel) {
+    succesors.push_back(labelOp->getBlock());
+    rangeOperands.push_back(labelOp->getBlock()->getArguments());
+  }
+  cir::IndirectBrOp::create(builder, builder.getUnknownLoc(),
+                            indirectGotoBlock->getArgument(0), false,
+                            rangeOperands, succesors);
+  cgm.blockAddressToLabel.clear();
+}
+
 void CIRGenFunction::finishFunction(SourceLocation endLoc) {
+  // Resolve block address-to-label mappings, then emit the indirect branch
+  // with the corresponding targets.
+  resolveBlockAddresses();
+  finishIndirectBranch();
+
+  // If a label address was taken but no indirect goto was used, we can't remove
+  // the block argument here. Instead, we mark the 'indirectbr' op
+  // as poison so that the cleanup can be deferred to lowering, since the
+  // verifier doesn't allow the 'indirectbr' target address to be null.
+  if (indirectGotoBlock && indirectGotoBlock->hasNoPredecessors()) {
+    auto indrBr = cast<cir::IndirectBrOp>(indirectGotoBlock->front());
+    indrBr.setPoison(true);
+  }
+
   // Pop any cleanups that might have been associated with the
   // parameters.  Do this in whatever block we're currently in; it's
   // important to do this before we enter the return block or return
@@ -560,7 +611,7 @@ static void eraseEmptyAndUnusedBlocks(cir::FuncOp func) {
 
 cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                                          cir::FuncType funcType) {
-  const auto funcDecl = cast<FunctionDecl>(gd.getDecl());
+  const auto *funcDecl = cast<FunctionDecl>(gd.getDecl());
   curGD = gd;
 
   if (funcDecl->isInlineBuiltinDeclaration()) {
@@ -630,7 +681,12 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   {
     LexicalScope lexScope(*this, fusedLoc, entryBB);
 
+    // Emit the standard function prologue.
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
+
+    // Save parameters for coroutine function.
+    if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
+      llvm::append_range(fnArgs, funcDecl->parameters());
 
     if (isa<CXXDestructorDecl>(funcDecl)) {
       emitDestructorBody(args);
@@ -652,6 +708,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       // copy-constructors.
       emitImplicitAssignmentOperatorBody(args);
     } else if (body) {
+      // Emit standard function body.
       if (mlir::failed(emitFunctionBody(body))) {
         return nullptr;
       }
@@ -678,6 +735,8 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
   assert((cgm.getTarget().getCXXABI().hasConstructorVariants() ||
           ctorType == Ctor_Complete) &&
          "can only generate complete ctor for this ABI");
+
+  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), ctor);
 
   if (ctorType == Ctor_Complete && isConstructorDelegationValid(ctor) &&
       cgm.getTarget().getCXXABI().hasConstructorVariants()) {
@@ -716,6 +775,8 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
 void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(curGD.getDecl());
   CXXDtorType dtorType = curGD.getDtorType();
+
+  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), dtor);
 
   // For an abstract class, non-base destructors are never used (and can't
   // be emitted in general, because vbase dtors may not have been validated
@@ -883,6 +944,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitConditionalOperatorLValue(cast<BinaryConditionalOperator>(e));
   case Expr::ArraySubscriptExprClass:
     return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
+  case Expr::ExtVectorElementExprClass:
+    return emitExtVectorElementExpr(cast<ExtVectorElementExpr>(e));
   case Expr::UnaryOperatorClass:
     return emitUnaryOpLValue(cast<UnaryOperator>(e));
   case Expr::StringLiteralClass:
@@ -912,6 +975,18 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXOperatorCallExprClass:
   case Expr::UserDefinedLiteralClass:
     return emitCallExprLValue(cast<CallExpr>(e));
+  case Expr::ExprWithCleanupsClass: {
+    const auto *cleanups = cast<ExprWithCleanups>(e);
+    RunCleanupsScope scope(*this);
+    LValue lv = emitLValue(cleanups->getSubExpr());
+    assert(!cir::MissingFeatures::cleanupWithPreservedValues());
+    return lv;
+  }
+  case Expr::CXXDefaultArgExprClass: {
+    auto *dae = cast<CXXDefaultArgExpr>(e);
+    CXXDefaultArgExprScope scope(*this, dae);
+    return emitLValue(dae->getExpr());
+  }
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::GenericSelectionExprClass:
@@ -1052,6 +1127,17 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   return builder.getConstInt(*currSrcLoc, sizeTy, countFromCLAs);
 }
 
+void CIRGenFunction::instantiateIndirectGotoBlock() {
+  // If we already made the indirect branch for indirect goto, return its block.
+  if (indirectGotoBlock)
+    return;
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  indirectGotoBlock =
+      builder.createBlock(builder.getBlock()->getParent(), {}, {voidPtrTy},
+                          {builder.getUnknownLoc()});
+}
+
 mlir::Value CIRGenFunction::emitAlignmentAssumption(
     mlir::Value ptrValue, QualType ty, SourceLocation loc,
     SourceLocation assumptionLoc, int64_t alignment, mlir::Value offsetValue) {
@@ -1102,6 +1188,14 @@ CIRGenFunction::getVLASize(const VariableArrayType *type) {
 
   assert(numElements && "Undefined elements number");
   return {numElements, elementType};
+}
+
+CIRGenFunction::VlaSizePair
+CIRGenFunction::getVLAElements1D(const VariableArrayType *vla) {
+  mlir::Value vlaSize = vlaSizeMap[vla->getSizeExpr()];
+  assert(vlaSize && "no size for VLA!");
+  assert(vlaSize.getType() == sizeTy);
+  return {vlaSize, vla->getElementType()};
 }
 
 // TODO(cir): Most of this function can be shared between CIRGen

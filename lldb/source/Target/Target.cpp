@@ -156,8 +156,6 @@ static Status installExecutable(const Installer &installer) {
   return Status();
 }
 
-constexpr std::chrono::milliseconds EvaluateExpressionOptions::default_timeout;
-
 Target::Arch::Arch(const ArchSpec &spec)
     : m_spec(spec),
       m_plugin_up(PluginManager::CreateArchitectureInstance(spec)) {}
@@ -187,6 +185,8 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_internal_stop_hooks(), m_latest_stop_hook_id(0), m_valid(true),
       m_suppress_stop_hooks(false), m_is_dummy_target(is_dummy_target),
       m_target_unique_id(g_target_unique_id++),
+      m_target_session_name(
+          llvm::formatv("Session {0}", m_target_unique_id).str()),
       m_frame_recognizer_manager_up(
           std::make_unique<StackFrameRecognizerManager>()) {
   SetEventName(eBroadcastBitBreakpointChanged, "breakpoint-changed");
@@ -194,6 +194,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
   SetEventName(eBroadcastBitModulesUnloaded, "modules-unloaded");
   SetEventName(eBroadcastBitWatchpointChanged, "watchpoint-changed");
   SetEventName(eBroadcastBitSymbolsLoaded, "symbols-loaded");
+  SetEventName(eBroadcastBitNewTargetCreated, "new-target-created");
 
   CheckInWithManager();
 
@@ -1855,6 +1856,9 @@ void Target::NotifyModulesRemoved(lldb_private::ModuleList &module_list) {
 }
 
 void Target::ModulesDidLoad(ModuleList &module_list) {
+  if (GetPreloadSymbols())
+    module_list.PreloadSymbols(GetParallelModuleLoad());
+
   const size_t num_images = module_list.GetSize();
   if (m_valid && num_images) {
     for (size_t idx = 0; idx < num_images; ++idx) {
@@ -2279,8 +2283,10 @@ size_t Target::ReadScalarIntegerFromMemory(const Address &addr, uint32_t byte_si
       else
         scalar = data.GetMaxU64(&offset, byte_size);
 
-      if (is_signed)
+      if (is_signed) {
+        scalar.MakeSigned();
         scalar.SignExtend(byte_size * 8);
+      }
       return bytes_read;
     }
   } else {
@@ -2295,7 +2301,7 @@ int64_t Target::ReadSignedIntegerFromMemory(const Address &addr,
                                             int64_t fail_value, Status &error,
                                             bool force_live_memory) {
   Scalar scalar;
-  if (ReadScalarIntegerFromMemory(addr, integer_byte_size, false, scalar, error,
+  if (ReadScalarIntegerFromMemory(addr, integer_byte_size, true, scalar, error,
                                   force_live_memory))
     return scalar.SLongLong(fail_value);
   return fail_value;
@@ -2509,10 +2515,6 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         if (symbol_file_spec)
           module_sp->SetSymbolFileFileSpec(symbol_file_spec);
 
-        // Preload symbols outside of any lock, so hopefully we can do this for
-        // each library in parallel.
-        if (GetPreloadSymbols())
-          module_sp->PreloadSymbols();
         llvm::SmallVector<ModuleSP, 1> replaced_modules;
         for (ModuleSP &old_module_sp : old_modules) {
           if (m_images.GetIndexForModule(old_module_sp.get()) !=
@@ -5143,17 +5145,17 @@ void TargetProperties::SetProcessLaunchInfo(
   const FileAction *input_file_action =
       launch_info.GetFileActionForFD(STDIN_FILENO);
   if (input_file_action) {
-    SetStandardInputPath(input_file_action->GetPath());
+    SetStandardInputPath(input_file_action->GetFileSpec().GetPath());
   }
   const FileAction *output_file_action =
       launch_info.GetFileActionForFD(STDOUT_FILENO);
   if (output_file_action) {
-    SetStandardOutputPath(output_file_action->GetPath());
+    SetStandardOutputPath(output_file_action->GetFileSpec().GetPath());
   }
   const FileAction *error_file_action =
       launch_info.GetFileActionForFD(STDERR_FILENO);
   if (error_file_action) {
-    SetStandardErrorPath(error_file_action->GetPath());
+    SetStandardErrorPath(error_file_action->GetFileSpec().GetPath());
   }
   SetDetachOnError(launch_info.GetFlags().Test(lldb::eLaunchFlagDetachOnError));
   SetDisableASLR(launch_info.GetFlags().Test(lldb::eLaunchFlagDisableASLR));
@@ -5256,6 +5258,11 @@ Target::TargetEventData::TargetEventData(const lldb::TargetSP &target_sp,
                                          const ModuleList &module_list)
     : EventData(), m_target_sp(target_sp), m_module_list(module_list) {}
 
+Target::TargetEventData::TargetEventData(
+    const lldb::TargetSP &target_sp, const lldb::TargetSP &created_target_sp)
+    : EventData(), m_target_sp(target_sp),
+      m_created_target_sp(created_target_sp), m_module_list() {}
+
 Target::TargetEventData::~TargetEventData() = default;
 
 llvm::StringRef Target::TargetEventData::GetFlavorString() {
@@ -5288,6 +5295,15 @@ TargetSP Target::TargetEventData::GetTargetFromEvent(const Event *event_ptr) {
   if (event_data)
     target_sp = event_data->m_target_sp;
   return target_sp;
+}
+
+TargetSP
+Target::TargetEventData::GetCreatedTargetFromEvent(const Event *event_ptr) {
+  TargetSP created_target_sp;
+  const TargetEventData *event_data = GetEventDataFromEvent(event_ptr);
+  if (event_data)
+    created_target_sp = event_data->m_created_target_sp;
+  return created_target_sp;
 }
 
 ModuleList

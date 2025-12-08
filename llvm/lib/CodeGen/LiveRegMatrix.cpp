@@ -76,7 +76,7 @@ void LiveRegMatrixWrapperLegacy::releaseMemory() { LRM.releaseMemory(); }
 
 void LiveRegMatrix::releaseMemory() {
   for (unsigned i = 0, e = Matrix.size(); i != e; ++i) {
-    Matrix[i].clear();
+    Matrix[static_cast<MCRegUnit>(i)].clear();
     // No need to clear Queries here, since LiveIntervalUnion::Query doesn't
     // have anything important to clear and LiveRegMatrix's runOnFunction()
     // does a std::unique_ptr::reset anyways.
@@ -185,7 +185,7 @@ bool LiveRegMatrix::checkRegUnitInterference(const LiveInterval &VirtReg,
 
 LiveIntervalUnion::Query &LiveRegMatrix::query(const LiveRange &LR,
                                                MCRegUnit RegUnit) {
-  LiveIntervalUnion::Query &Q = Queries[RegUnit];
+  LiveIntervalUnion::Query &Q = Queries[static_cast<unsigned>(RegUnit)];
   Q.init(UserTag, LR, Matrix[RegUnit]);
   return Q;
 }

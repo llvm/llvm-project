@@ -104,6 +104,13 @@ Changes to the AArch64 Backend
 * Assembler/disassembler support has been added for Armv9.7-A (2025)
   architecture extensions.
 
+* Assembler/disassembler support has been added for 'Virtual Tagging
+  Extension (vMTE)' and 'Permission Overlay Extension version 2 (POE2)'
+  Future Architecture Technologies extensions.
+
+* `FEAT_TME` support has been removed, as it has been withdrawn from
+   all future versions of the A-profile architecture.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -142,6 +149,8 @@ Changes to the RISC-V Backend
 * Adds experimental support for the 'Zibi` (Branch with Immediate) extension.
 * Add support for Zvfofp8min (OFP8 conversion extension)
 * Adds assembler support for the Andes `XAndesvsinth` (Andes Vector Small Int Handling Extension).
+* DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the RISC-V platform.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -168,6 +177,42 @@ Changes to the C API
 
 * Add `LLVMGetOrInsertFunction` to get or insert a function, replacing the combination of `LLVMGetNamedFunction` and `LLVMAddFunction`.
 * Allow `LLVMGetVolatile` to work with any kind of Instruction.
+* Add `LLVMConstFPFromBits` to get a constant floating-point value from an array of 64 bit values.
+* Functions working on the global context have been deprecated. Use the
+  functions that work on a specific context instead.
+
+  * `LLVMGetGlobalContext` -> use `LLVMContextCreate` context instead
+  * `LLVMInt1Type` -> `LLVMInt1TypeInContext`
+  * `LLVMInt8Type` -> `LLVMInt8TypeInContext`
+  * `LLVMInt16Type` -> `LLVMInt16TypeInContext`
+  * `LLVMInt32Type` -> `LLVMInt32TypeInContext`
+  * `LLVMInt64Type` -> `LLVMInt64TypeInContext`
+  * `LLVMInt128Type` -> `LLVMInt128TypeInContext`
+  * `LLVMIntType` -> `LLVMIntTypeInContext`
+  * `LLVMHalfType` -> `LLVMHalfTypeInContext`
+  * `LLVMBFloatType` -> `LLVMBFloatTypeInContext`
+  * `LLVMFloatType` -> `LLVMFloatTypeInContext`
+  * `LLVMDoubleType` -> `LLVMDoubleTypeInContext`
+  * `LLVMX86FP80Type` -> `LLVMX86FP80TypeInContext`
+  * `LLVMFP128Type` -> `LLVMFP128TypeInContext`
+  * `LLVMPPCFP128Type` -> `LLVMPPCFP128TypeInContext`
+  * `LLVMStructType` -> `LLVMStructTypeInContext`
+  * `LLVMVoidType` -> `LLVMVoidTypeInContext`
+  * `LLVMLabelType` -> `LLVMLabelTypeInContext`
+  * `LLVMX86AMXType` -> `LLVMX86AMXTypeInContext`
+  * `LLVMConstString` -> `LLVMConstStringInContext2`
+  * `LLVMConstStruct` -> `LLVMConstStructInContext`
+  * `LLVMMDString` -> `LLVMMDStringInContext2`
+  * `LLVMMDNode` -> `LLVMMDNodeInContext2`
+  * `LLVMAppendBasicBlock` -> `LLVMAppendBasicBlockInContext`
+  * `LLVMInsertBasicBlock` -> `LLVMInsertBasicBlockInContext`
+  * `LLVMCreateBuilder` -> `LLVMCreateBuilderInContext`
+  * `LLVMIntPtrType` -> `LLVMIntPtrTypeInContext`
+  * `LLVMIntPtrTypeForAS` -> `LLVMIntPtrTypeForASInContext`
+  * `LLVMParseBitcode` -> `LLVMParseBitcodeInContext2`
+  * `LLVMParseBitcode2` -> `LLVMParseBitcodeInContext2`
+  * `LLVMGetBitcodeModule` -> `LLVMGetBitcodeModuleInContext2`
+  * `LLVMGetBitcodeModule2` -> `LLVMGetBitcodeModuleInContext2`
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -187,6 +232,7 @@ Changes to the LLVM tools
 * Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
 * Support for `%T` in lit has been removed.
 * Add `--save-stats` option to `llc` to save LLVM statistics to a file. Compatible with the Clang option.
+* Add `--save-stats` option to `opt` to save LLVM statistics to a file. Compatible with the Clang option.
 
 * `llvm-config` gained a new flag `--quote-paths` which quotes and escapes paths
   emitted on stdout, to account for spaces or other special characters in path.
@@ -213,6 +259,11 @@ Changes to BOLT
 
 Changes to Sanitizers
 ---------------------
+
+* Support running TypeSanitizer with UndefinedBehaviourSanitizer.
+* TypeSanitizer no longer inlines all instrumentation by default. Added the
+  `-f[no-]sanitize-type-outline-instrumentation` flags to give users control
+  over this behaviour.
 
 Other Changes
 -------------

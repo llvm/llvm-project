@@ -704,25 +704,44 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
 
 bool llvm::willNotFreeBetween(const Instruction *Assume,
                               const Instruction *CtxI) {
-  if (CtxI->getParent() != Assume->getParent() || !Assume->comesBefore(CtxI))
-    return false;
+  // Helper to check if there are any calls in the range that may free memory.
+  auto hasNoFreeCalls = [](auto Range) {
+    for (const auto &[Idx, I] : enumerate(Range)) {
+      if (Idx > MaxInstrsToCheckForFree)
+        return false;
+      if (const auto *CB = dyn_cast<CallBase>(&I))
+        if (!CB->hasFnAttr(Attribute::NoFree))
+          return false;
+    }
+    return true;
+  };
+
   // Make sure the current function cannot arrange for another thread to free on
   // its behalf.
   if (!CtxI->getFunction()->hasNoSync())
     return false;
 
-  // Check if there are any calls between the assume and CtxI that may
-  // free memory.
-  for (const auto &[Idx, I] :
-       enumerate(make_range(Assume->getIterator(), CtxI->getIterator()))) {
-    // Limit number of instructions to walk.
-    if (Idx > MaxInstrsToCheckForFree)
+  // Handle cross-block case: CtxI in a successor of Assume's block.
+  const BasicBlock *CtxBB = CtxI->getParent();
+  const BasicBlock *AssumeBB = Assume->getParent();
+  BasicBlock::const_iterator CtxIter = CtxI->getIterator();
+  if (CtxBB != AssumeBB) {
+    if (CtxBB->getSinglePredecessor() != AssumeBB)
       return false;
-    if (const auto *CB = dyn_cast<CallBase>(&I))
-      if (!CB->hasFnAttr(Attribute::NoFree))
-        return false;
+
+    if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxIter)))
+      return false;
+
+    CtxIter = AssumeBB->end();
+  } else {
+    // Same block case: check that Assume comes before CtxI.
+    if (!Assume->comesBefore(CtxI))
+      return false;
   }
-  return true;
+
+  // Check if there are any calls between Assume and CtxIter that may free
+  // memory.
+  return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter));
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
@@ -2230,6 +2249,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::ShuffleVector: {
+    if (auto *Splat = getSplatValue(I)) {
+      computeKnownBits(Splat, Known, Q, Depth + 1);
+      break;
+    }
+
     auto *Shuf = dyn_cast<ShuffleVectorInst>(I);
     // FIXME: Do we need to handle ConstantExpr involving shufflevectors?
     if (!Shuf) {
@@ -5858,6 +5882,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::ShuffleVector: {
+    // Handle vector splat idiom
+    if (Value *Splat = getSplatValue(V)) {
+      computeKnownFPClass(Splat, Known, InterestedClasses, Q, Depth + 1);
+      break;
+    }
+
     // For undef elements, we don't know anything about the common state of
     // the shuffle result.
     APInt DemandedLHS, DemandedRHS;
@@ -10485,7 +10515,8 @@ bool llvm::collectPossibleValues(const Value *V,
   SmallPtrSet<const Instruction *, 8> Visited;
   SmallVector<const Instruction *, 8> Worklist;
   auto Push = [&](const Value *V) -> bool {
-    if (auto *C = dyn_cast<Constant>(V)) {
+    Constant *C;
+    if (match(const_cast<Value *>(V), m_ImmConstant(C))) {
       if (!AllowUndefOrPoison && !isGuaranteedNotToBeUndefOrPoison(C))
         return false;
       // Check existence first to avoid unnecessary allocations.

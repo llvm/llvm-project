@@ -14,9 +14,9 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4:       [[VECTOR_BODY]]:
 ; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
-; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 4
-; VF4IC4-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 8
-; VF4IC4-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 12
+; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 4
+; VF4IC4-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 8
+; VF4IC4-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 12
 ; VF4IC4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; VF4IC4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; VF4IC4-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP12]], align 4

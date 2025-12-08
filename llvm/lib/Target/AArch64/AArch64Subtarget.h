@@ -157,7 +157,7 @@ public:
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
   bool enableSubRegLiveness() const override { return EnableSubregLiveness; }
-  bool enableTerminalRule() const override { return true; }
+
   bool enableMachinePipeliner() const override;
   bool useDFAforSMS() const override { return false; }
 
@@ -167,6 +167,21 @@ public:
   /// initializeProperties().
   ARMProcFamilyEnum getProcFamily() const {
     return ARMProcFamily;
+  }
+
+  /// Returns true if the processor is an Apple M-series or aligned A-series
+  /// (A14 or newer).
+  bool isAppleMLike() const {
+    switch (ARMProcFamily) {
+    case AppleA14:
+    case AppleA15:
+    case AppleA16:
+    case AppleA17:
+    case AppleM4:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool isXRaySupported() const override { return true; }

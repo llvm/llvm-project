@@ -89,9 +89,21 @@ void InterpFrame::destroyScopes() {
 void InterpFrame::initScope(unsigned Idx) {
   if (!Func)
     return;
+
   for (auto &Local : Func->getScope(Idx).locals()) {
     localBlock(Local.Offset)->invokeCtor();
   }
+}
+
+void InterpFrame::enableLocal(unsigned Idx) {
+  assert(Func);
+
+  // FIXME: This is a little dirty, but to avoid adding a flag to
+  // InlineDescriptor that's only ever useful on the toplevel of local
+  // variables, we reuse the IsActive flag for the enabled state. We should
+  // probably use a different struct than InlineDescriptor for the block-level
+  // inline descriptor of local varaibles.
+  localInlineDesc(Idx)->IsActive = true;
 }
 
 void InterpFrame::destroy(unsigned Idx) {

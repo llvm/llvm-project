@@ -1495,8 +1495,7 @@ transform::detail::checkApplyToOne(Operation *transformOp,
 
 template <typename T>
 static SmallVector<T> castVector(ArrayRef<transform::MappedValue> range) {
-  return llvm::to_vector(llvm::map_range(
-      range, [](transform::MappedValue value) { return cast<T>(value); }));
+  return llvm::map_to_vector(range, llvm::CastTo<T>);
 }
 
 void transform::detail::setApplyToOneResults(

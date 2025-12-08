@@ -547,8 +547,8 @@ public:
     using pointer = const RegisterMaskPair *;
     using reference = const RegisterMaskPair &;
 
-    liveout_iterator(const MachineBasicBlock &MBB, MCPhysReg ExceptionPointer,
-                     MCPhysReg ExceptionSelector, bool End)
+    liveout_iterator(const MachineBasicBlock &MBB, MCRegister ExceptionPointer,
+                     MCRegister ExceptionSelector, bool End)
         : ExceptionPointer(ExceptionPointer),
           ExceptionSelector(ExceptionSelector), BlockI(MBB.succ_begin()),
           BlockEnd(MBB.succ_end()) {
@@ -613,7 +613,7 @@ public:
       return true;
     }
 
-    MCPhysReg ExceptionPointer, ExceptionSelector;
+    MCRegister ExceptionPointer, ExceptionSelector;
     const_succ_iterator BlockI;
     const_succ_iterator BlockEnd;
     livein_iterator LiveRegI;

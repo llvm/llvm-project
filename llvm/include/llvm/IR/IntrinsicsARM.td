@@ -972,6 +972,13 @@ def int_arm_mve_vmaxnma_predicated: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty],
     [IntrNoMem]>;
 
+def int_arm_mve_vminnm: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+    [IntrNoMem]>;
+def int_arm_mve_vmaxnm: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+    [IntrNoMem]>;
+
 multiclass MVEPredicated<list<LLVMType> rets, list<LLVMType> params,
                          LLVMType pred = llvm_anyvector_ty,
                          list<IntrinsicProperty> props = [IntrNoMem],
@@ -1138,6 +1145,18 @@ def int_arm_mve_vshlc_predicated: DefaultAttrsIntrinsic<
    [llvm_i32_ty /* bits shifted out */, llvm_anyvector_ty],
    [LLVMMatchType<0>, llvm_i32_ty /* bits shifted in */,
     llvm_i32_ty /* shift count */, llvm_anyvector_ty], [IntrNoMem]>;
+def int_arm_mve_vadd: DefaultAttrsIntrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_vsub: DefaultAttrsIntrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+   [IntrNoMem]>;
+def int_arm_mve_vmul: DefaultAttrsIntrinsic<
+   [llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+   [IntrNoMem]>;
 def int_arm_mve_vmulh: DefaultAttrsIntrinsic<
    [llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty /* unsigned */],
@@ -1350,6 +1369,9 @@ def int_arm_mve_vqmovn_predicated: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
     llvm_i32_ty /* unsigned output */, llvm_i32_ty /* unsigned input */,
     llvm_i32_ty /* top half */, llvm_anyvector_ty /* pred */], [IntrNoMem]>;
 
+def int_arm_mve_fma: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0> /* mult op #1 */, LLVMMatchType<0> /* mult op #2 */,
+    LLVMMatchType<0> /* addend */], [IntrNoMem]>;
 // fma_predicated returns the add operand for disabled lanes.
 def int_arm_mve_fma_predicated: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0> /* mult op #1 */, LLVMMatchType<0> /* mult op #2 */,

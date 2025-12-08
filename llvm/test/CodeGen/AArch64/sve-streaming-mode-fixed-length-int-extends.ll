@@ -332,10 +332,10 @@ define void @sext_v32i8_v32i16(ptr %in, ptr %out) {
 ; NONEON-NOSVE-NEXT:    add w10, w10, w10
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #90]
 ; NONEON-NOSVE-NEXT:    sxtb w9, w11
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #8] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #8] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #88]
 ; NONEON-NOSVE-NEXT:    sxtb w8, w10
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #12] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #12] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #86]
 ; NONEON-NOSVE-NEXT:    add w11, w11, w11
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #84]
@@ -633,9 +633,9 @@ define void @sext_v32i8_v32i32(ptr %in, ptr %out) {
 ; NONEON-NOSVE-NEXT:    add w10, w10, w10
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #128]
 ; NONEON-NOSVE-NEXT:    sxtb w9, w11
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #8] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #8] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    sxtb w8, w10
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #12] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #12] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    add w11, w11, w11
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [sp, #80]
 ; NONEON-NOSVE-NEXT:    add w10, w10, w10
@@ -1038,9 +1038,9 @@ define void @sext_v32i8_v32i64(ptr %in, ptr %out) {
 ; NONEON-NOSVE-NEXT:    add w10, w10, w10
 ; NONEON-NOSVE-NEXT:    stp x8, x9, [sp, #208]
 ; NONEON-NOSVE-NEXT:    sxtb x9, w11
-; NONEON-NOSVE-NEXT:    ldr w11, [sp, #8] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w11, [sp, #8] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    sxtb x8, w10
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #12] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #12] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    add w11, w11, w11
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [sp, #144]
 ; NONEON-NOSVE-NEXT:    add w10, w10, w10
@@ -1724,11 +1724,11 @@ define void @zext_v32i8_v32i16(ptr %in, ptr %out) {
 ; NONEON-NOSVE-NEXT:    add w10, w10, w10
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #88]
 ; NONEON-NOSVE-NEXT:    and w8, w9, #0xff
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #8] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #8] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    ldrb w30, [sp, #20]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #86]
 ; NONEON-NOSVE-NEXT:    and w8, w10, #0xff
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #12] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #12] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    strh w6, [sp, #78]
 ; NONEON-NOSVE-NEXT:    add w9, w9, w9
 ; NONEON-NOSVE-NEXT:    add w6, w30, w30
@@ -2029,9 +2029,9 @@ define void @zext_v32i8_v32i32(ptr %in, ptr %out) {
 ; NONEON-NOSVE-NEXT:    add w8, w10, w10
 ; NONEON-NOSVE-NEXT:    and w9, w11, #0xff
 ; NONEON-NOSVE-NEXT:    and w8, w8, #0xff
-; NONEON-NOSVE-NEXT:    ldr w10, [sp, #8] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w10, [sp, #8] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #120]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #12] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #12] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    add w10, w10, w10
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [sp, #80]
 ; NONEON-NOSVE-NEXT:    add w9, w9, w9
@@ -2459,9 +2459,9 @@ define void @zext_v32i8_v32i64(ptr %in, ptr %out) {
 ; NONEON-NOSVE-NEXT:    and w8, w8, #0xff
 ; NONEON-NOSVE-NEXT:    and w9, w9, #0xff
 ; NONEON-NOSVE-NEXT:    stp wzr, w8, [sp, #196]
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #8] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #8] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    stp wzr, w9, [sp, #188]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #12] // 4-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #12] // 4-byte Reload
 ; NONEON-NOSVE-NEXT:    and w22, w22, #0xff
 ; NONEON-NOSVE-NEXT:    add w8, w8, w8
 ; NONEON-NOSVE-NEXT:    stp wzr, w22, [sp, #164]

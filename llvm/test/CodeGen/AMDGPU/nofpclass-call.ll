@@ -189,3 +189,150 @@ define <2 x half> @call_nofpclass_intrinsic_v2f16(float %x, float %y, float %z, 
   %min = select nsz <2 x i1> %lt, <2 x half> %call0, <2 x half> %call1
   ret <2 x half> %min
 }
+
+define nofpclass(nan inf) { double, double } @aggregate() {
+; CHECK-LABEL: aggregate:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s16, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    v_writelane_b32 v40, s16, 2
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, aggregate@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, aggregate@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
+; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
+; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
+; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-NEXT:    s_mov_b32 s32, s33
+; CHECK-NEXT:    v_readlane_b32 s4, v40, 2
+; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
+; CHECK-NEXT:    s_mov_b32 s33, s4
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %call.i.i = call { double, double } @aggregate()
+  ret { double, double } %call.i.i
+}
+
+declare hidden nofpclass(nan inf) { float, float } @aggregate_f32()
+
+define { float, float } @aggregate_use(float %z) {
+; CHECK-LABEL: aggregate_use:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s16, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
+; CHECK-NEXT:    v_writelane_b32 v41, s16, 2
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    v_writelane_b32 v41, s30, 0
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, aggregate_f32@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, aggregate_f32@rel32@hi+12
+; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_writelane_b32 v41, s31, 1
+; CHECK-NEXT:    v_mov_b32_e32 v40, v0
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CHECK-NEXT:    v_max_f32_e32 v2, v40, v40
+; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_min_f32_e32 v0, v0, v2
+; CHECK-NEXT:    v_min_f32_e32 v1, v1, v2
+; CHECK-NEXT:    v_readlane_b32 s31, v41, 1
+; CHECK-NEXT:    v_readlane_b32 s30, v41, 0
+; CHECK-NEXT:    s_mov_b32 s32, s33
+; CHECK-NEXT:    v_readlane_b32 s4, v41, 2
+; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
+; CHECK-NEXT:    s_mov_b32 s33, s4
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+   %call = call nofpclass(nan inf) { float, float } @aggregate_f32()
+   %i = extractvalue { float, float } %call, 0
+   %i1 = extractvalue { float, float } %call, 1
+   %min0 = call float @llvm.minnum.f32(float %i, float %z)
+   %min1 = call float @llvm.minnum.f32(float %i1, float %z)
+   %insert.0 = insertvalue { float, float } poison, float %min0, 0
+   %insert.1 = insertvalue { float, float } %insert.0, float %min1, 1
+   ret { float, float } %insert.1
+}
+
+define internal <5 x double> @func_v5f64(ptr addrspace(1) %ptr) {
+; CHECK-LABEL: func_v5f64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v11, v1
+; CHECK-NEXT:    v_mov_b32_e32 v10, v0
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v[10:11], off glc
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[10:11], off offset:16 glc
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_dwordx2 v[8:9], v[10:11], off offset:32 glc
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %ld = load volatile <5 x double>, ptr addrspace(1) %ptr
+  ret <5 x double> %ld
+}
+
+define <5 x double> @call_nofpclass_funcs_v5f64_non_mvt_vector(ptr addrspace(1) %ptr) {
+; CHECK-LABEL: call_nofpclass_funcs_v5f64_non_mvt_vector:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s18, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_xor_saveexec_b64 s[16:17], -1
+; CHECK-NEXT:    buffer_store_dword v24, off, s[0:3], s33 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    v_writelane_b32 v24, s30, 0
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, func_v5f64@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, func_v5f64@rel32@hi+12
+; CHECK-NEXT:    v_writelane_b32 v24, s31, 1
+; CHECK-NEXT:    v_mov_b32_e32 v22, v1
+; CHECK-NEXT:    v_mov_b32_e32 v23, v0
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CHECK-NEXT:    v_mov_b32_e32 v12, v0
+; CHECK-NEXT:    v_mov_b32_e32 v13, v1
+; CHECK-NEXT:    v_mov_b32_e32 v0, v23
+; CHECK-NEXT:    v_mov_b32_e32 v1, v22
+; CHECK-NEXT:    v_mov_b32_e32 v14, v2
+; CHECK-NEXT:    v_mov_b32_e32 v15, v3
+; CHECK-NEXT:    v_mov_b32_e32 v16, v4
+; CHECK-NEXT:    v_mov_b32_e32 v17, v5
+; CHECK-NEXT:    v_mov_b32_e32 v18, v6
+; CHECK-NEXT:    v_mov_b32_e32 v19, v7
+; CHECK-NEXT:    v_mov_b32_e32 v20, v8
+; CHECK-NEXT:    v_mov_b32_e32 v21, v9
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CHECK-NEXT:    v_min_f64 v[0:1], v[12:13], v[0:1]
+; CHECK-NEXT:    v_min_f64 v[2:3], v[14:15], v[2:3]
+; CHECK-NEXT:    v_min_f64 v[4:5], v[16:17], v[4:5]
+; CHECK-NEXT:    v_min_f64 v[6:7], v[18:19], v[6:7]
+; CHECK-NEXT:    v_min_f64 v[8:9], v[20:21], v[8:9]
+; CHECK-NEXT:    v_readlane_b32 s31, v24, 1
+; CHECK-NEXT:    v_readlane_b32 s30, v24, 0
+; CHECK-NEXT:    s_mov_b32 s32, s33
+; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; CHECK-NEXT:    buffer_load_dword v24, off, s[0:3], s33 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
+; CHECK-NEXT:    s_mov_b32 s33, s18
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %call0 = call nofpclass(nan) <5 x double> @func_v5f64(ptr addrspace(1) %ptr)
+  %call1 = call nofpclass(nan) <5 x double> @func_v5f64(ptr addrspace(1) %ptr)
+  %min = call <5 x double> @llvm.minnum.v5f64(<5 x double> %call0, <5 x double> %call1)
+  ret <5 x double> %min
+}

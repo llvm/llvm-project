@@ -66,6 +66,9 @@ struct OpenMPOpConversion : public ConvertOpToLLVMPattern<T> {
     for (NamedAttribute attr : op->getAttrs()) {
       if (auto typeAttr = dyn_cast<TypeAttr>(attr.getValue())) {
         Type convertedType = converter->convertType(typeAttr.getValue());
+        if (!convertedType)
+          return rewriter.notifyMatchFailure(
+              op, "failed to convert type in attribute");
         convertedAttrs.emplace_back(attr.getName(),
                                     TypeAttr::get(convertedType));
       } else {

@@ -66,4 +66,24 @@ def PoisonOp : UB_Op<"poison", [ConstantLike, Pure]> {
   let hasFolder = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// UnreachableOp
+//===----------------------------------------------------------------------===//
+
+def UnreachableOp : UB_Op<"unreachable", [Terminator]> {
+  let summary = "Unreachable operation.";
+  let description = [{
+    The `unreachable` operation triggers immediate undefined behavior if
+    executed.
+
+    Example:
+
+    ```
+    ub.unreachable
+    ```
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 #endif // MLIR_DIALECT_UB_IR_UBOPS_TD

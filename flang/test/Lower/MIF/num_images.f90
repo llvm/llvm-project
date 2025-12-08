@@ -3,7 +3,7 @@
 program test
   use iso_fortran_env
   integer :: i
-  integer :: team_number 
+  integer :: team_number
   type(team_type) :: team
 
   ! CHECK: mif.num_images : () -> i32

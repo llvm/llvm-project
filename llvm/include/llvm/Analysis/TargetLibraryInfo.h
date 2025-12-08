@@ -10,10 +10,12 @@
 #define LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/SystemLibraries.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
@@ -23,7 +25,6 @@
 namespace llvm {
 
 template <typename T> class ArrayRef;
-enum class VectorLibrary;
 
 /// Provides info so a possible vectorization of a function can be
 /// computed. Function 'VectorFnName' is equivalent to 'ScalarFnName'
@@ -70,13 +71,8 @@ public:
   LLVM_ABI std::string getVectorFunctionABIVariantString() const;
 };
 
-  enum LibFunc : unsigned {
-#define TLI_DEFINE_ENUM
-#include "llvm/Analysis/TargetLibraryInfo.def"
-
-    NumLibFuncs,
-    NotLibFunc
-  };
+#define GET_TARGET_LIBRARY_INFO_ENUM
+#include "llvm/Analysis/TargetLibraryInfo.inc"
 
 /// Implementation of the target library information.
 ///
@@ -89,7 +85,8 @@ class TargetLibraryInfoImpl {
 
   unsigned char AvailableArray[(NumLibFuncs+3)/4];
   DenseMap<unsigned, std::string> CustomNames;
-  LLVM_ABI static StringLiteral const StandardNames[NumLibFuncs];
+#define GET_TARGET_LIBRARY_INFO_IMPL_DECL
+#include "llvm/Analysis/TargetLibraryInfo.inc"
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return;
   unsigned SizeOfInt;
 
@@ -119,7 +116,8 @@ class TargetLibraryInfoImpl {
 
 public:
   TargetLibraryInfoImpl() = delete;
-  LLVM_ABI explicit TargetLibraryInfoImpl(const Triple &T);
+  LLVM_ABI explicit TargetLibraryInfoImpl(
+      const Triple &T, VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
   // Provide value semantics.
   LLVM_ABI TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI);
@@ -159,7 +157,8 @@ public:
   /// Forces a function to be marked as available and provide an alternate name
   /// that must be used.
   void setAvailableWithName(LibFunc F, StringRef Name) {
-    if (StandardNames[F] != Name) {
+    if (StringRef(StandardNamesStrTable.getCString(StandardNamesOffsets[F]),
+                  StandardNamesSizeTable[F]) != Name) {
       setState(F, CustomName);
       CustomNames[F] = std::string(Name);
       assert(CustomNames.contains(F));
@@ -437,7 +436,9 @@ public:
   /// Return the canonical name for a LibFunc. This should not be used for
   /// semantic purposes, use getName instead.
   static StringRef getStandardName(LibFunc F) {
-    return TargetLibraryInfoImpl::StandardNames[F];
+    return StringRef(TargetLibraryInfoImpl::StandardNamesStrTable.getCString(
+                         TargetLibraryInfoImpl::StandardNamesOffsets[F]),
+                     TargetLibraryInfoImpl::StandardNamesSizeTable[F]);
   }
 
   StringRef getName(LibFunc F) const {
@@ -445,7 +446,9 @@ public:
     if (State == TargetLibraryInfoImpl::Unavailable)
       return StringRef();
     if (State == TargetLibraryInfoImpl::StandardName)
-      return Impl->StandardNames[F];
+      return StringRef(
+          Impl->StandardNamesStrTable.getCString(Impl->StandardNamesOffsets[F]),
+          Impl->StandardNamesSizeTable[F]);
     assert(State == TargetLibraryInfoImpl::CustomName);
     return Impl->CustomNames.find(F)->second;
   }

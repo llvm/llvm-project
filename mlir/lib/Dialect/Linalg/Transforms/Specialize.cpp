@@ -237,6 +237,69 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp);
 }
 
+/// Utility to specialize a `genericOp` with a convolution op of type `ConvOpTy`
+/// with `dilations` and `strides`.
+template <typename ConvOpTy>
+static FailureOr<LinalgOp>
+specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp,
+                   ArrayRef<int64_t> dilations, ArrayRef<int64_t> strides) {
+  SmallVector<Value> inputs = genericOp.getDpsInputs();
+  ValueRange outputs = genericOp.getDpsInits();
+  SmallVector<Type> resultTypes = genericOp.hasPureTensorSemantics()
+                                      ? TypeRange(ValueRange(outputs))
+                                      : TypeRange{};
+  LinalgOp namedOp;
+  // Ops with no dilations and no strides.
+  if constexpr (std::is_same_v<ConvOpTy, linalg::Conv1DOp> ||
+                std::is_same_v<ConvOpTy, linalg::Conv2DOp> ||
+                std::is_same_v<ConvOpTy, linalg::Conv3DOp>) {
+    namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(genericOp, resultTypes,
+                                                    inputs, outputs);
+  } else {
+    Attribute stridesAttr = rewriter.getI64TensorAttr(strides);
+    Attribute dilationsAttr = rewriter.getI64TensorAttr(dilations);
+    namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(
+        genericOp, resultTypes, inputs, outputs, stridesAttr, dilationsAttr);
+  }
+  return namedOp;
+}
+
+/// Converts linalg.generic to named linalg.*conv/pooling* where possible.
+static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
+                                                        GenericOp genericOp) {
+  SmallVector<int64_t> dilations, strides;
+#define CONV_OP_SPECIALIZER(ConvOpTy)                                          \
+  if (isaConvolutionOpOfType<ConvOpTy>(genericOp, &dilations, &strides))       \
+    return specializeToConvOp<ConvOpTy>(rewriter, genericOp, dilations,        \
+                                        strides);                              \
+  // -----------------------------
+  // Convolution ops.
+  // -----------------------------
+  CONV_OP_SPECIALIZER(linalg::Conv1DOp);
+  CONV_OP_SPECIALIZER(linalg::Conv1DNwcWcfOp);
+  CONV_OP_SPECIALIZER(linalg::Conv1DNcwFcwOp);
+  CONV_OP_SPECIALIZER(linalg::Conv2DOp);
+  CONV_OP_SPECIALIZER(linalg::Conv3DOp);
+  // -----------------------------
+  // Depthwise Convolution ops.
+  // -----------------------------
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv1DNcwCwOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv1DNwcWcOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv1DNwcWcmOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv2DNchwChwOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv3DNdhwcDhwcmOp);
+  // -----------------------------
+  // Pooling ops.
+  // -----------------------------
+  CONV_OP_SPECIALIZER(linalg::PoolingNhwcMaxOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNhwcMinOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNhwcSumOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNhwcMaxUnsignedOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNhwcMinUnsignedOp);
+#undef CONV_OP_SPECIALIZER
+  return failure();
+}
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -315,6 +378,11 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
   // Contraction - e.g. matmul
   if (isaContractionOpInterface(genericOp)) {
     return specializeLinalgContractions(rewriter, genericOp);
+  }
+
+  // Convolution - e.g. *conv/pooling*
+  if (isaConvolutionOpInterface(genericOp)) {
+    return specializeLinalgConvolutions(rewriter, genericOp);
   }
   return failure();
 }

@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/LinkAllAsmWriterComponents.h"
@@ -65,6 +66,7 @@
 using namespace llvm;
 
 static codegen::RegisterCodeGenFlags CGF;
+static codegen::RegisterSaveStatsFlag SSF;
 
 // General options for llc.  Other pass-specific options are specified
 // within the corresponding llc passes, and target-specific options
@@ -211,20 +213,6 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
-enum SaveStatsMode { None, Cwd, Obj };
-
-static cl::opt<SaveStatsMode> SaveStats(
-    "save-stats",
-    cl::desc("Save LLVM statistics to a file in the current directory"
-             "(`-save-stats`/`-save-stats=cwd`) or the directory of the output"
-             "file (`-save-stats=obj`). (default: cwd)"),
-    cl::values(clEnumValN(SaveStatsMode::Cwd, "cwd",
-                          "Save to the current working directory"),
-               clEnumValN(SaveStatsMode::Cwd, "", ""),
-               clEnumValN(SaveStatsMode::Obj, "obj",
-                          "Save to the output file directory")),
-    cl::init(SaveStatsMode::None), cl::ValueOptional);
-
 static cl::opt<bool> EnableNewPassManager(
     "enable-new-pm", cl::desc("Enable the new pass manager"), cl::init(false));
 
@@ -319,9 +307,7 @@ static int compileModule(char **argv, LLVMContext &Context,
   llvm_unreachable("reportError() should not return");
 }
 
-static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
-                                                       Triple::OSType OS,
-                                                       const char *ProgName) {
+static std::unique_ptr<ToolOutputFile> GetOutputStream(Triple::OSType OS) {
   // If we don't yet have an output filename, make one.
   if (OutputFilename.empty()) {
     if (InputFilename == "-")
@@ -370,51 +356,9 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
   if (!Binary)
     OpenFlags |= sys::fs::OF_TextWithCRLF;
   auto FDOut = std::make_unique<ToolOutputFile>(OutputFilename, EC, OpenFlags);
-  if (EC) {
+  if (EC)
     reportError(EC.message());
-    return nullptr;
-  }
-
   return FDOut;
-}
-
-static int MaybeEnableStats() {
-  if (SaveStats == SaveStatsMode::None)
-    return 0;
-
-  llvm::EnableStatistics(false);
-  return 0;
-}
-
-static int MaybeSaveStats(std::string &&OutputFilename) {
-  if (SaveStats == SaveStatsMode::None)
-    return 0;
-
-  SmallString<128> StatsFilename;
-  if (SaveStats == SaveStatsMode::Obj) {
-    StatsFilename = OutputFilename;
-    llvm::sys::path::remove_filename(StatsFilename);
-  } else {
-    assert(SaveStats == SaveStatsMode::Cwd &&
-           "Should have been a valid --save-stats value");
-  }
-
-  auto BaseName = llvm::sys::path::filename(OutputFilename);
-  llvm::sys::path::append(StatsFilename, BaseName);
-  llvm::sys::path::replace_extension(StatsFilename, "stats");
-
-  auto FileFlags = llvm::sys::fs::OF_TextWithCRLF;
-  std::error_code EC;
-  auto StatsOS =
-      std::make_unique<llvm::raw_fd_ostream>(StatsFilename, EC, FileFlags);
-  if (EC) {
-    WithColor::error(errs(), "llc")
-        << "Unable to open statistics file: " << EC.message() << "\n";
-    return 1;
-  }
-
-  llvm::PrintStatisticsJSON(*StatsOS);
-  return 0;
 }
 
 // main - Entry point for the llc compiler.
@@ -494,8 +438,7 @@ int main(int argc, char **argv) {
     reportError(std::move(E), RemarksFilename);
   LLVMRemarkFileHandle RemarksFile = std::move(*RemarksFileOrErr);
 
-  if (int RetVal = MaybeEnableStats())
-    return RetVal;
+  codegen::MaybeEnableStatistics();
   std::string OutputFilename;
 
   if (InputLanguage != "" && InputLanguage != "ir" && InputLanguage != "mir")
@@ -510,7 +453,7 @@ int main(int argc, char **argv) {
   if (RemarksFile)
     RemarksFile->keep();
 
-  return MaybeSaveStats(std::move(OutputFilename));
+  return codegen::MaybeSaveStatistics(OutputFilename, "llc");
 }
 
 static bool addPass(PassManagerBase &PM, const char *argv0, StringRef PassName,
@@ -603,6 +546,12 @@ static int compileModule(char **argv, LLVMContext &Context,
         reportError("-mxcoff-roptr option must be used with -data-sections",
                     InputFilename);
     }
+
+    if (TheTriple.isX86() &&
+        codegen::getFuseFPOps() != FPOpFusion::FPOpFusionMode::Standard)
+      WithColor::warning(errs(), argv[0])
+          << "X86 backend ignores --fp-contract setting; use IR fast-math "
+             "flags instead.";
 
     Options.BinutilsVersion =
         TargetMachine::parseBinutilsVersion(BinutilsVersion);
@@ -719,8 +668,7 @@ static int compileModule(char **argv, LLVMContext &Context,
     Target->Options.FloatABIType = codegen::getFloatABIForCalls();
 
   // Figure out where we are going to send the output.
-  std::unique_ptr<ToolOutputFile> Out =
-      GetOutputStream(TheTarget->getName(), TheTriple.getOS(), argv[0]);
+  std::unique_ptr<ToolOutputFile> Out = GetOutputStream(TheTriple.getOS());
   if (!Out)
     return 1;
 
@@ -744,7 +692,7 @@ static int compileModule(char **argv, LLVMContext &Context,
   }
 
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  TargetLibraryInfoImpl TLII(M->getTargetTriple());
+  TargetLibraryInfoImpl TLII(M->getTargetTriple(), Target->Options.VecLib);
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)
@@ -780,6 +728,10 @@ static int compileModule(char **argv, LLVMContext &Context,
   // Build up all of the passes that we want to do to the module.
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
+  PM.add(new RuntimeLibraryInfoWrapper(
+      M->getTargetTriple(), Target->Options.ExceptionModel,
+      Target->Options.FloatABIType, Target->Options.EABIVersion,
+      Options.MCOptions.ABIName, Target->Options.VecLib));
 
   {
     raw_pwrite_stream *OS = &Out->os();

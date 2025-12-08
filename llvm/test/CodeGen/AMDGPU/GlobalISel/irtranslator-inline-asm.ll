@@ -331,6 +331,100 @@ define amdgpu_kernel void @asm_constraint_n_n()  {
   ret void
 }
 
+define void @test_indirectify_i32_value(i32 %x, i32 %y) {
+  ; CHECK-LABEL: name: test_indirectify_i32_value
+  ; CHECK: bb.1.entry:
+  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
+  ; CHECK-NEXT:   G_STORE [[COPY]](s32), [[FRAME_INDEX]](p5) :: (store (s32) into %stack.0, addrspace 5)
+  ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.1
+  ; CHECK-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX1]](p5) :: (store (s32) into %stack.1, addrspace 5)
+  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, 262158 /* mem:m */, [[FRAME_INDEX]](p5), 262158 /* mem:m */, [[FRAME_INDEX1]](p5)
+  ; CHECK-NEXT:   SI_RETURN
+entry:
+  tail call void asm sideeffect "", "imr,imr,~{memory}"(i32 %x, i32 %y)
+  ret void
+}
+
+define void @test_indirectify_i32_constant() {
+  ; CHECK-LABEL: name: test_indirectify_i32_constant
+  ; CHECK: bb.1.entry:
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
+  ; CHECK-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX]](p5) :: (store (s32) into %stack.0, addrspace 5)
+  ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.1
+  ; CHECK-NEXT:   G_STORE [[C1]](s32), [[FRAME_INDEX1]](p5) :: (store (s32) into %stack.1, addrspace 5)
+  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, 262158 /* mem:m */, [[FRAME_INDEX]](p5), 262158 /* mem:m */, [[FRAME_INDEX1]](p5)
+  ; CHECK-NEXT:   SI_RETURN
+entry:
+  tail call void asm sideeffect "", "imr,imr,~{memory}"(i32 42, i32 0)
+  ret void
+}
+
+
+define void @test_indirectify_i16_value(i16 %val) {
+  ; CHECK-LABEL: name: test_indirectify_i16_value
+  ; CHECK: bb.1.entry:
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
+  ; CHECK-NEXT:   G_STORE [[TRUNC]](s16), [[FRAME_INDEX]](p5) :: (store (s16) into %stack.0, addrspace 5)
+  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, 262158 /* mem:m */, [[FRAME_INDEX]](p5)
+  ; CHECK-NEXT:   SI_RETURN
+entry:
+  tail call void asm sideeffect "", "imr,~{memory}"(i16 %val)
+  ret void
+}
+
+define void @test_indirectify_i16_constant() {
+  ; CHECK-LABEL: name: test_indirectify_i16_constant
+  ; CHECK: bb.1.entry:
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 42
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
+  ; CHECK-NEXT:   G_STORE [[C]](s16), [[FRAME_INDEX]](p5) :: (store (s16) into %stack.0, addrspace 5)
+  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, 262158 /* mem:m */, [[FRAME_INDEX]](p5)
+  ; CHECK-NEXT:   SI_RETURN
+entry:
+  tail call void asm sideeffect "", "imr,~{memory}"(i16 42)
+  ret void
+}
+
+define void @test_indirectify_i64_value(i64 %val) {
+  ; CHECK-LABEL: name: test_indirectify_i64_value
+  ; CHECK: bb.1.entry:
+  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
+  ; CHECK-NEXT:   G_STORE [[MV]](s64), [[FRAME_INDEX]](p5) :: (store (s64) into %stack.0, addrspace 5)
+  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, 262158 /* mem:m */, [[FRAME_INDEX]](p5)
+  ; CHECK-NEXT:   SI_RETURN
+entry:
+  tail call void asm sideeffect "", "imr,~{memory}"(i64 %val)
+  ret void
+}
+
+define void @test_indirectify_i64_constant() {
+  ; CHECK-LABEL: name: test_indirectify_i64_constant
+  ; CHECK: bb.1.entry:
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
+  ; CHECK-NEXT:   G_STORE [[C]](s64), [[FRAME_INDEX]](p5) :: (store (s64) into %stack.0, addrspace 5)
+  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, 262158 /* mem:m */, [[FRAME_INDEX]](p5)
+  ; CHECK-NEXT:   SI_RETURN
+entry:
+  tail call void asm sideeffect "", "imr,~{memory}"(i64 42)
+  ret void
+}
+
 !llvm.module.flags = !{!1}
 !0 = !{i32 70}
 !1 = !{i32 1, !"amdhsa_code_object_version", i32 500}

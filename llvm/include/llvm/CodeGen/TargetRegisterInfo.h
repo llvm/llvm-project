@@ -958,7 +958,7 @@ public:
   TypeSize getRegSizeInBits(Register Reg, const MachineRegisterInfo &MRI) const;
 
   /// Get the weight in units of pressure for this register unit.
-  virtual unsigned getRegUnitWeight(unsigned RegUnit) const = 0;
+  virtual unsigned getRegUnitWeight(MCRegUnit RegUnit) const = 0;
 
   /// Get the number of dimensions of register pressure.
   virtual unsigned getNumRegPressureSets() const = 0;
@@ -978,7 +978,7 @@ public:
 
   /// Get the dimensions of register pressure impacted by this register unit.
   /// Returns a -1 terminated array of pressure set IDs.
-  virtual const int *getRegUnitPressureSets(unsigned RegUnit) const = 0;
+  virtual const int *getRegUnitPressureSets(MCRegUnit RegUnit) const = 0;
 
   /// Get the scale factor of spill weight for this register class.
   virtual float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const;
@@ -1450,7 +1450,7 @@ LLVM_ABI Printable printRegUnit(MCRegUnit Unit, const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print virtual registers and physical
 /// registers on a \ref raw_ostream.
-LLVM_ABI Printable printVRegOrUnit(unsigned VRegOrUnit,
+LLVM_ABI Printable printVRegOrUnit(VirtRegOrUnit VRegOrUnit,
                                    const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print register classes or register banks

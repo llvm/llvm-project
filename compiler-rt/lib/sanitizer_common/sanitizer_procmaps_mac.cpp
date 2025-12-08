@@ -101,6 +101,8 @@ static bool VerifyMemoryMapping(MemoryMappingLayout* mapping) {
     }
   }
 
+  for (auto& m : modules) m.clear();
+
   mapping->Reset();
   return well_formed;
 }
@@ -305,7 +307,7 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
   layout_data->current_load_cmd_count--;
   if (((const load_command *)lc)->cmd == kLCSegment) {
     const SegmentCommand* sc = (const SegmentCommand *)lc;
-    if (strncmp(sc->segname, "__LINKEDIT", sizeof("__LINKEDIT")) == 0) {
+    if (internal_strcmp(sc->segname, "__LINKEDIT") == 0) {
       // The LINKEDIT sections are for internal linker use, and may alias
       // with the LINKEDIT section for other modules. (If we included them,
       // our memory map would contain overlappping sections.)
@@ -331,6 +333,7 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
       seg_data->base_virt_addr = base_virt_addr;
       internal_strncpy(seg_data->name, sc->segname,
                        ARRAY_SIZE(seg_data->name));
+      seg_data->name[ARRAY_SIZE(seg_data->name) - 1] = 0;
     }
 
     // Return the initial protection.
@@ -344,6 +347,7 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
                             ? kDyldPath
                             : _dyld_get_image_name(layout_data->current_image);
       internal_strncpy(segment->filename, src, segment->filename_size);
+      segment->filename[segment->filename_size - 1] = 0;
     }
     segment->arch = layout_data->current_arch;
     internal_memcpy(segment->uuid, layout_data->current_uuid, kModuleUUIDSize);

@@ -1,4 +1,5 @@
 ; XFAIL: *
+; UNSUPPORTED: expensive_checks
 ; FIXME: asserts
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-gnu-linux -filetype=null -enable-legalize-types-checking=0 \
 ; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names %s

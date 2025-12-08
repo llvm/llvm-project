@@ -871,6 +871,8 @@ CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
       hasRequiresUnifiedSharedMemory(), /*HasRequiresDynamicAllocators*/ false);
   Config.setDefaultTargetAS(
       CGM.getContext().getTargetInfo().getTargetAddressSpace(LangAS::Default));
+  Config.setRuntimeCC(CGM.getRuntimeCC());
+
   OMPBuilder.setConfig(Config);
 
   if (!CGM.getLangOpts().OpenMPIsTargetDevice)
@@ -1289,6 +1291,9 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
     else
       NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty);
 
+    // No strict prescriptiveness for the number of threads.
+    llvm::Value *StrictNumThreadsVal = llvm::ConstantInt::get(CGF.Int32Ty, 0);
+
     assert(IfCondVal && "Expected a value");
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
     llvm::Value *Args[] = {
@@ -1301,9 +1306,11 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
         ID,
         Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
                                    CGF.VoidPtrPtrTy),
-        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
+        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size()),
+        StrictNumThreadsVal};
+
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL___kmpc_parallel_51),
+                            CGM.getModule(), OMPRTL___kmpc_parallel_60),
                         Args);
   };
 
@@ -1725,7 +1732,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
                           CGF.Builder.GetInsertPoint());
   llvm::OpenMPIRBuilder::LocationDescription OmpLoc(
       CodeGenIP, CGF.SourceLocToDebugLoc(Loc));
-  llvm::SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> ReductionInfos;
+  llvm::SmallVector<llvm::OpenMPIRBuilder::ReductionInfo, 2> ReductionInfos;
 
   CodeGenFunction::OMPPrivateScope Scope(CGF);
   unsigned Idx = 0;
@@ -1778,14 +1785,15 @@ void CGOpenMPRuntimeGPU::emitReduction(
     };
     ReductionInfos.emplace_back(llvm::OpenMPIRBuilder::ReductionInfo(
         ElementType, Variable, PrivateVariable, EvalKind,
-        /*ReductionGen=*/nullptr, ReductionGen, AtomicReductionGen));
+        /*ReductionGen=*/nullptr, ReductionGen, AtomicReductionGen,
+        /*DataPtrPtrGen=*/nullptr));
     Idx++;
   }
 
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createReductionsGPU(
-          OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, false, TeamsReduction,
-          llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
+          OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, /*IsByRef=*/{}, false,
+          TeamsReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
           CGF.getTarget().getGridValue(),
           C.getLangOpts().OpenMPCUDAReductionBufNum, RTLoc));
   CGF.Builder.restoreIP(AfterIP);

@@ -1270,6 +1270,17 @@ namespace StmtExprs {
   namespace CrossFuncLabelDiff {
     constexpr long a(bool x) { return x ? 0 : (intptr_t)&&lbl + (0 && ({lbl: 0;})); }
   }
+
+  /// GCC agrees with the bytecode interpreter here.
+  void switchInSE() {
+    static_assert(({ // ref-error {{not an integral constant expression}}
+          int i = 20;
+           switch(10) {
+             case 10: i = 300; // ref-note {{a constant expression cannot modify an object that is visible outside that expression}}
+           }
+           i;
+        }) == 300);
+  }
 }
 #endif
 

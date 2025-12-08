@@ -10,6 +10,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 
@@ -69,5 +70,35 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
 
   return isNormalAssignmentOperator(FD);
 }
+
+template <typename T> static bool isRecordWithAttr(QualType Type) {
+  auto *RD = Type->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+  // Generally, if a primary template class declaration is annotated with an
+  // attribute, all its specializations generated from template instantiations
+  // should inherit the attribute.
+  //
+  // However, since lifetime analysis occurs during parsing, we may encounter
+  // cases where a full definition of the specialization is not required. In
+  // such cases, the specialization declaration remains incomplete and lacks the
+  // attribute. Therefore, we fall back to checking the primary template class.
+  //
+  // Note: it is possible for a specialization declaration to have an attribute
+  // even if the primary template does not.
+  //
+  // FIXME: What if the primary template and explicit specialization
+  // declarations have conflicting attributes? We should consider diagnosing
+  // this scenario.
+  bool Result = RD->hasAttr<T>();
+
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+    Result |= CTSD->getSpecializedTemplate()->getTemplatedDecl()->hasAttr<T>();
+
+  return Result;
+}
+
+bool isGslPointerType(QualType QT) { return isRecordWithAttr<PointerAttr>(QT); }
+bool isGslOwnerType(QualType QT) { return isRecordWithAttr<OwnerAttr>(QT); }
 
 } // namespace clang::lifetimes

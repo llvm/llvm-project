@@ -7,9 +7,9 @@ Detects when a variable is both incremented/decremented and referenced inside a
 complex condition and suggests moving them outside to avoid ambiguity in the
 variable's value.
 
-When a variable is modified and also used in a complex condition, it can lead to
-unexpected behavior. The side-effect of changing the variable's value within the
-condition can make the code difficult to reason about. Additionally, the
+When a variable is modified and also used in a complex condition, it can lead
+to unexpected behavior. The side-effect of changing the variable's value within
+the condition can make the code difficult to reason about. Additionally, the
 developer's intended timing for the modification of the variable may not be
 clear, leading to misunderstandings and errors. This can be particularly
 problematic when the condition involves logical operators like ``&&`` and
@@ -44,8 +44,8 @@ throughout the code.
     // do something
   }
 
-Another common issue occurs when multiple increments or decrements are performed
-on the same variable inside a complex condition. For example:
+Another common issue occurs when multiple increments or decrements are
+performed on the same variable inside a complex condition. For example:
 
 .. code-block:: c++
 
@@ -55,13 +55,14 @@ on the same variable inside a complex condition. For example:
     // do something
   }
 
-There is a potential issue with this code due to the order of evaluation in C++.
-The ``||`` operator used in the condition statement guarantees that if the first
-operand evaluates to ``true``, the second operand will not be evaluated. This
-means that if ``i`` were initially ``4``, the first operand ``i < 5`` would
-evaluate to ``true`` and the second operand ``i > 2`` would not be evaluated.
-As a result, the decrement operation ``--i`` would not be executed and ``i``
-would hold value ``5``, which may not be the intended behavior for the developer.
+There is a potential issue with this code due to the order of evaluation in
+C++. The ``||`` operator used in the condition statement guarantees that if
+the first operand evaluates to ``true``, the second operand will not be
+evaluated. This means that if ``i`` were initially ``4``, the first operand
+``i < 5`` would evaluate to ``true`` and the second operand ``i > 2`` would
+not be evaluated. As a result, the decrement operation ``--i`` would not be
+executed and ``i`` would hold value ``5``, which may not be the intended
+behavior for the developer.
 
 To avoid this potential issue, the both increment and decrement operation on
 ``i`` should be moved outside the condition statement.
