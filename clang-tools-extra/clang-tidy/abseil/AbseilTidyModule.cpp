@@ -27,6 +27,7 @@
 #include "StringFindStrContainsCheck.h"
 #include "TimeComparisonCheck.h"
 #include "TimeSubtractionCheck.h"
+#include "UncheckedStatusOrAccessCheck.h"
 #include "UpgradeDurationConversionsCheck.h"
 
 namespace clang::tidy {
@@ -69,6 +70,8 @@ public:
         "abseil-time-subtraction");
     CheckFactories.registerCheck<UpgradeDurationConversionsCheck>(
         "abseil-upgrade-duration-conversions");
+        CheckFactories.registerCheck<UncheckedStatusOrAccessCheck>(
+        "abseil-unchecked-statusor-access");
   }
 };
 
