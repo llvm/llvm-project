@@ -5,6 +5,10 @@
 google-build-namespaces
 =======================
 
+https://google.github.io/styleguide/cppguide.html#Namespaces
+
+Corresponding cpplint.py check name: `build/namespaces`.
+
 The `google-build-namespaces` check is an alias, please see
 :doc:`misc-anonymous-namespace-in-header <../misc/anonymous-namespace-in-header>`
 for more information.

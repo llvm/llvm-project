@@ -3,12 +3,8 @@
 anonymous-namespace-in-header
 =============================
 
-`cert-dcl59-cpp` redirects here as an alias for this check.
-`fuchsia-header-anon-namespaces` redirects here as an alias for this check.
-`google-build-namespaces` redirects here as an alias for this check.
-
-Finds anonymous namespaces in headers.
-
-https://google.github.io/styleguide/cppguide.html#Namespaces
-
-Corresponding cpplint.py check name: `build/namespaces`.
+Finds anonymous namespaces in headers. Anonymous namespaces in headers can lead to
+ODR (One Definition Rule) violations, as each translation unit including the header
+will have its own unique version of the entities declared within the anonymous
+namespace. This can cause issues when linking, as the linker may see multiple
+definitions of the same entity, leading to unexpected behavior or linker errors.
