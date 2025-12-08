@@ -26,7 +26,7 @@
 using namespace mlir;
 using llvm::Record;
 using llvm::RecordKeeper;
-using mlir::tblgen::Interface;
+using mlir::tblgen::DialectInterface;
 using mlir::tblgen::InterfaceMethod;
 
 /// Emit a string corresponding to a C++ type, followed by a space if necessary.
@@ -74,7 +74,7 @@ public:
   bool emitInterfaceDecls();
 
 protected:
-  void emitInterfaceDecl(const Interface &interface);
+  void emitInterfaceDecl(const DialectInterface &interface);
 
   /// The set of interface records to emit.
   std::vector<const Record *> defs;
@@ -93,7 +93,7 @@ static void emitInterfaceMethodDoc(const InterfaceMethod &method,
     tblgen::emitDescriptionComment(*description, os, prefix);
 }
 
-static void emitInterfaceMethodsDef(const Interface &interface,
+static void emitInterfaceMethodsDef(const DialectInterface &interface,
                                     raw_ostream &os) {
 
   raw_indented_ostream ios(os);
@@ -104,6 +104,18 @@ static void emitInterfaceMethodsDef(const Interface &interface,
     ios << "virtual ";
     emitCPPType(method.getReturnType(), ios);
     emitMethodNameAndArgs(method, method.getName(), ios);
+
+    if (method.isDeclaration()) {
+      ios << ";\n";
+      continue;
+    }
+
+    if (method.isPureVirtual()) {
+      ios << " = 0;\n";
+      continue;
+    }
+    
+    // Otherwise it's a normal interface method
     ios << " {";
 
     if (auto body = method.getBody()) {
@@ -116,7 +128,17 @@ static void emitInterfaceMethodsDef(const Interface &interface,
   }
 }
 
-void DialectInterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
+static void emitInterfaceAliasDeclarations(const DialectInterface &interface, raw_ostream &os) {
+  raw_indented_ostream ios(os);
+  ios.indent(2);
+
+  for (auto [alias, typeId] : interface.getAliasDeclarations()) {
+    ios << "using " << alias << " = " << typeId << ";\n";
+  }
+
+}
+
+void DialectInterfaceGenerator::emitInterfaceDecl(const DialectInterface &interface) {
   llvm::NamespaceEmitter ns(os, interface.getCppNamespace());
 
   StringRef interfaceName = interface.getName();
@@ -130,6 +152,8 @@ void DialectInterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
       "public:\n"
       "  {0}(::mlir::Dialect *dialect) : Base(dialect) {{}\n",
       interfaceName);
+
+  emitInterfaceAliasDeclarations(interface, os);
 
   emitInterfaceMethodsDef(interface, os);
 
@@ -148,7 +172,7 @@ bool DialectInterfaceGenerator::emitInterfaceDecls() {
   });
 
   for (const Record *def : sortedDefs)
-    emitInterfaceDecl(Interface(def));
+    emitInterfaceDecl(DialectInterface(def));
 
   return false;
 }
