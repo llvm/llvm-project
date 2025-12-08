@@ -153,6 +153,8 @@ struct MissingFeatures {
   static bool coroEndBuiltinCall() { return false; }
   static bool emitBodyAndFallthrough() { return false; }
   static bool coroOutsideFrameMD() { return false; }
+  static bool coroCoReturn() { return false; }
+  static bool coroCoYield() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
@@ -188,6 +190,10 @@ struct MissingFeatures {
   static bool globalCtorAssociatedData() { return false; }
 
   // Misc
+  static bool aarch64SIMDIntrinsics() { return false; }
+  static bool aarch64SMEIntrinsics() { return false; }
+  static bool aarch64SVEIntrinsics() { return false; }
+  static bool aarch64TblBuiltinExpr() { return false; }
   static bool abiArgInfo() { return false; }
   static bool addAutoInitAnnotation() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
@@ -248,7 +254,7 @@ struct MissingFeatures {
   static bool devirtualizeDestructor() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
   static bool dtorCleanups() { return false; }
-  static bool ehCleanupFlags() { return false; }
+  static bool ehCleanupActiveFlag() { return false; }
   static bool ehCleanupHasPrebranchedFallthrough() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
@@ -291,6 +297,7 @@ struct MissingFeatures {
   static bool metaDataNode() { return false; }
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
+  static bool neonSISDIntrinsics() { return false; }
   static bool nrvo() { return false; }
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }
@@ -327,6 +334,7 @@ struct MissingFeatures {
   static bool thunks() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool typeChecks() { return false; }
+  static bool useEHCleanupForArray() { return false; }
   static bool vaArgABILowering() { return false; }
   static bool vectorConstants() { return false; }
   static bool vlas() { return false; }

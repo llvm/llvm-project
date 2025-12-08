@@ -58,6 +58,10 @@ Potentially Breaking Changes
   :program:`clang-tidy-20`. Users should use the check-specific options of the
   same name instead.
 
+- Removed `clang-analyzer-*` checks from default checks in :program:`clang-tidy`.
+  From now on, users should specify explicitly that they want CSA checks to run
+  in :program:`clang-tidy` via `clang-analyzer-*`.
+
 - Renamed a few :program:`clang-tidy` check options, as they
   were misspelled:
 
@@ -183,6 +187,10 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py`
   scripts by adding the `-hide-progress` option to suppress progress and
   informational messages.
+
+- Removed `clang-analyzer-*` check from default checks in :program:`clang-tidy`.
+  From now on, users should specify explicitly that they want CSA checks to run
+  in :program:`clang-tidy`.
 
 - Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
   moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
@@ -400,6 +408,10 @@ Changes in existing checks
   suffix when the reason starts with the character `>` in the `CustomFunctions`
   option.
 
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check by adding
+  `InvalidationFunctions` option to support custom invalidation functions.
+
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
   by adding a new option `AllowThreadLocal` that suppresses warnings on
@@ -424,6 +436,17 @@ Changes in existing checks
   adding an option to allow pointer arithmetic via prefix/postfix increment or
   decrement operators.
 
+- Improved :doc:`cppcoreguidelines-pro-type-member-init
+  <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check to
+  correctly ignore ``std::array`` and other array-like containers when
+  `IgnoreArrays` option is set to `true`.
+
+- Improved :doc:`fuchsia-multiple-inheritance
+  <clang-tidy/checks/fuchsia/multiple-inheritance>`
+  by fixing an issue where the check would only analyze the first class with
+  a given name in the program, missing any subsequent classes with that same
+  name (declared in a different scope).
+
 - Improved :doc:`google-readability-casting
   <clang-tidy/checks/google/readability-casting>` check by adding fix-it
   notes for downcasts and casts to void pointer.
@@ -447,7 +470,8 @@ Changes in existing checks
   positives when pointers is transferred to non-const references
   and avoid false positives of function pointer and fix false
   positives on return of non-const pointer and fix false positives on
-  pointer-to-member operator.
+  pointer-to-member operator and avoid false positives when the address
+  of a variable is taken to be passed to a function.
 
 - Improved :doc:`misc-coroutine-hostile-raii
   <clang-tidy/checks/misc/coroutine-hostile-raii>` check by adding the option
@@ -544,9 +568,18 @@ Changes in existing checks
   adding parentheses when the inner expression are implicitly converted
   multiple times.
 
+- Improved :doc:`readability-inconsistent-declaration-parameter-name
+  <clang-tidy/checks/readability/inconsistent-declaration-parameter-name>` check
+  by not enforcing parameter name consistency between a variadic parameter pack
+  in the primary template and specific parameters in its specializations.
+
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
+
+- Improved :doc:`readability-redundant-casting
+  <clang-tidy/checks/readability/redundant-casting>` check by fixing false
+  negatives when explicitly cast from function pointer.
 
 - Improved :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
@@ -555,6 +588,11 @@ Changes in existing checks
 - Improved :doc:`readability-use-concise-preprocessor-directives
   <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check to
   generate correct fix-its for forms without a space after the directive.
+
+- Improved :doc:`readability-use-std-min-max
+  <clang-tidy/checks/readability/use-std-min-max>` check by ensuring that
+  comments between the ``if`` condition and the ``then`` block are preserved
+  when applying the fix.
 
 Removed checks
 ^^^^^^^^^^^^^^

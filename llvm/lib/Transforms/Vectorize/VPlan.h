@@ -1010,7 +1010,7 @@ public:
       Metadata.emplace_back(Kind, Node);
   }
 
-  /// Intersect this VPIRMetada object with \p MD, keeping only metadata
+  /// Intersect this VPIRMetadata object with \p MD, keeping only metadata
   /// nodes that are common to both.
   void intersect(const VPIRMetadata &MD);
 
@@ -1020,6 +1020,11 @@ public:
         find_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
     return It != Metadata.end() ? It->second : nullptr;
   }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print metadata with node IDs.
+  void print(raw_ostream &O, VPSlotTracker &SlotTracker) const;
+#endif
 };
 
 /// This is a concrete Recipe that models a single VPlan-level instruction.
@@ -1069,12 +1074,10 @@ public:
     ComputeAnyOfResult,
     ComputeFindIVResult,
     ComputeReductionResult,
-    // Extracts the last lane from its operand if it is a vector, or the last
-    // part if scalar. In the latter case, the recipe will be removed during
-    // unrolling.
-    ExtractLastElement,
-    // Extracts the last lane for each part from its operand.
-    ExtractLastLanePerPart,
+    // Extracts the last part of its operand. Removed during unrolling.
+    ExtractLastPart,
+    // Extracts the last lane of its vector operand, per part.
+    ExtractLastLane,
     // Extracts the second-to-last lane from its operand or the second-to-last
     // part if it is scalar. In the latter case, the recipe will be removed
     // during unrolling.
@@ -1461,10 +1464,10 @@ public:
     return true;
   }
 
-  /// Update the recipes first operand to the last lane of the operand using \p
-  /// Builder. Must only be used for VPIRInstructions with at least one operand
-  /// wrapping a PHINode.
-  void extractLastLaneOfFirstOperand(VPBuilder &Builder);
+  /// Update the recipe's first operand to the last lane of the last part of the
+  /// operand using \p Builder. Must only be used for VPIRInstructions with at
+  /// least one operand wrapping a PHINode.
+  void extractLastLaneOfLastPartOfFirstOperand(VPBuilder &Builder);
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1510,12 +1513,6 @@ class LLVM_ABI_FOR_TEST VPWidenRecipe : public VPRecipeWithIRFlags,
   unsigned Opcode;
 
 public:
-  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, const VPIRMetadata &Metadata,
-                DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, Flags, DL),
-        VPIRMetadata(Metadata), Opcode(Opcode) {}
-
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
                 DebugLoc DL = {})
@@ -1527,10 +1524,8 @@ public:
   ~VPWidenRecipe() override = default;
 
   VPWidenRecipe *clone() override {
-    auto *R =
-        new VPWidenRecipe(getOpcode(), operands(), *this, *this, getDebugLoc());
-    R->setUnderlyingValue(getUnderlyingValue());
-    return R;
+    return new VPWidenRecipe(*getUnderlyingInstr(), operands(), *this, *this,
+                             getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenSC)
