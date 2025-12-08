@@ -155,8 +155,7 @@ define <4 x float> @test_vbfdotq_laneq_f32_v4i32_shufflevector(<8 x bfloat> %a, 
 ; CHECK-LABEL: test_vbfdotq_laneq_f32_v4i32_shufflevector:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    dup v1.4s, v1.s[0]
-; CHECK-NEXT:    bfdot v2.4s, v0.8h, v1.8h
+; CHECK-NEXT:    bfdot v2.4s, v0.8h, v1.2h[0]
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -170,10 +169,9 @@ entry:
 define <2 x float> @test_vbfdotq_laneq_f32_v2i32_shufflevector(<4 x bfloat> %a, <4 x bfloat> %b)  {
 ; CHECK-LABEL: test_vbfdotq_laneq_f32_v2i32_shufflevector:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    movi d2, #0000000000000000
-; CHECK-NEXT:    dup v1.2s, v1.s[0]
-; CHECK-NEXT:    bfdot v2.2s, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    bfdot v2.2s, v0.4h, v1.2h[0]
 ; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 entry:
