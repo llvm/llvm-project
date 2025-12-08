@@ -25,6 +25,12 @@
 #include <unistd.h>
 #endif
 
+#ifndef LLDB_DAP_README_URL
+#define LLDB_DAP_README_URL                                                    \
+  "https://github.com/llvm/llvm-project/blob/main/lldb/tools/lldb-dap/"        \
+  "README.md#debug-console"
+#endif
+
 using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
@@ -257,12 +263,15 @@ llvm::Error BaseRequestHandler::LaunchProcess(
 }
 
 void BaseRequestHandler::PrintWelcomeMessage() const {
-#ifdef LLDB_DAP_WELCOME_MESSAGE
-  dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
-#endif
-
   std::string message;
   llvm::raw_string_ostream OS(message);
+
+#ifdef LLDB_DAP_WELCOME_MESSAGE
+  OS << LLDB_DAP_WELCOME_MESSAGE << "\r\n";
+#endif
+
+  // Trying to provide a brief but helpful welcome message for users to better
+  // understand how the debug console repl works.
   OS << "To get started with the lldb-dap debug console try ";
 
   switch (dap.repl_mode) {
@@ -281,9 +290,7 @@ void BaseRequestHandler::PrintWelcomeMessage() const {
     break;
   }
 
-  OS << "For more information visit "
-        "https://github.com/llvm/llvm-project/blob/main/lldb/tools/"
-        "lldb-dap/README.md#debug-console\r\n";
+  OS << "For more information visit " LLDB_DAP_README_URL "\r\n";
 
   dap.SendOutput(OutputType::Console, message);
 }
