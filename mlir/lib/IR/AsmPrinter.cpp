@@ -1941,12 +1941,43 @@ void FallbackAsmResourceMap::ResourceCollection::buildResources(
 
 namespace mlir {
 namespace detail {
+
+/// Verifies the operation and switches to generic op printing if verification
+/// fails. We need to do this because custom print functions may fail/crash for
+/// invalid ops.
+static void verifyOpAndAdjustFlags(Operation *op, OpPrintingFlags &printerFlags,
+                                   bool &failedVerification) {
+  if (printerFlags.shouldPrintGenericOpForm() ||
+      printerFlags.shouldAssumeVerified())
+    return;
+
+  // Ignore errors emitted by the verifier. We check the thread id to avoid
+  // consuming other threads' errors.
+  auto parentThreadId = llvm::get_threadid();
+  ScopedDiagnosticHandler diagHandler(op->getContext(), [&](Diagnostic &diag) {
+    if (parentThreadId == llvm::get_threadid()) {
+      LLVM_DEBUG({
+        diag.print(llvm::dbgs());
+        llvm::dbgs() << "\n";
+      });
+      return success();
+    }
+    return failure();
+  });
+  if (failed(verify(op))) {
+    printerFlags.printGenericOpForm();
+    failedVerification = true;
+  }
+}
+
 class AsmStateImpl {
 public:
   explicit AsmStateImpl(Operation *op, const OpPrintingFlags &printerFlags,
                         AsmState::LocationMap *locationMap)
       : interfaces(op->getContext()), nameState(op, printerFlags),
-        printerFlags(printerFlags), locationMap(locationMap) {}
+        printerFlags(printerFlags), locationMap(locationMap) {
+    verifyOpAndAdjustFlags(op, this->printerFlags, failedVerification);
+  }
   explicit AsmStateImpl(MLIRContext *ctx, const OpPrintingFlags &printerFlags,
                         AsmState::LocationMap *locationMap)
       : interfaces(ctx), printerFlags(printerFlags), locationMap(locationMap) {}
@@ -1998,6 +2029,8 @@ public:
 
   void popCyclicPrinting() { cyclicPrintingStack.pop_back(); }
 
+  bool verificationFailed() const { return failedVerification; }
+
 private:
   /// Collection of OpAsm interfaces implemented in the context.
   DialectInterfaceCollection<OpAsmDialectInterface> interfaces;
@@ -2019,6 +2052,10 @@ private:
 
   /// Flags that control op output.
   OpPrintingFlags printerFlags;
+
+  /// Whether the operation from which the AsmState was created, failed
+  /// verification.
+  bool failedVerification = false;
 
   /// An optional location map to be populated.
   AsmState::LocationMap *locationMap;
@@ -2047,41 +2084,9 @@ static void printDimensionList(raw_ostream &stream, Range &&shape) {
 } // namespace detail
 } // namespace mlir
 
-/// Verifies the operation and switches to generic op printing if verification
-/// fails. We need to do this because custom print functions may fail for
-/// invalid ops.
-static OpPrintingFlags verifyOpAndAdjustFlags(Operation *op,
-                                              OpPrintingFlags printerFlags) {
-  if (printerFlags.shouldPrintGenericOpForm() ||
-      printerFlags.shouldAssumeVerified())
-    return printerFlags;
-
-  // Ignore errors emitted by the verifier. We check the thread id to avoid
-  // consuming other threads' errors.
-  auto parentThreadId = llvm::get_threadid();
-  ScopedDiagnosticHandler diagHandler(op->getContext(), [&](Diagnostic &diag) {
-    if (parentThreadId == llvm::get_threadid()) {
-      LLVM_DEBUG({
-        diag.print(llvm::dbgs());
-        llvm::dbgs() << "\n";
-      });
-      return success();
-    }
-    return failure();
-  });
-  if (failed(verify(op))) {
-    LDBG() << op->getName()
-           << "' failed to verify and will be printed in generic form";
-    printerFlags.printGenericOpForm();
-  }
-
-  return printerFlags;
-}
-
 AsmState::AsmState(Operation *op, const OpPrintingFlags &printerFlags,
                    LocationMap *locationMap, FallbackAsmResourceMap *map)
-    : impl(std::make_unique<AsmStateImpl>(
-          op, verifyOpAndAdjustFlags(op, printerFlags), locationMap)) {
+    : impl(std::make_unique<AsmStateImpl>(op, printerFlags, locationMap)) {
   if (map)
     attachFallbackResourcePrinter(*map);
 }
@@ -3244,7 +3249,8 @@ public:
   using Impl::printType;
 
   explicit OperationPrinter(raw_ostream &os, AsmStateImpl &state)
-      : Impl(os, state), OpAsmPrinter(static_cast<Impl &>(*this)) {}
+      : Impl(os, state), OpAsmPrinter(static_cast<Impl &>(*this)),
+        verificationFailed(state.verificationFailed()) {}
 
   /// Print the given top-level operation.
   void printTopLevelOperation(Operation *op);
@@ -3432,10 +3438,19 @@ private:
 
   // This is the current indentation level for nested structures.
   unsigned currentIndent = 0;
+
+  /// Whether the operation from which the AsmState was created, failed
+  /// verification.
+  bool verificationFailed = false;
 };
 } // namespace
 
 void OperationPrinter::printTopLevelOperation(Operation *op) {
+  if (verificationFailed) {
+    os << "// '" << op->getName()
+       << "' failed to verify and will be printed in generic form\n";
+  }
+
   // Output the aliases at the top level that can't be deferred.
   state.getAliasState().printNonDeferredAliases(*this, newLine);
 
