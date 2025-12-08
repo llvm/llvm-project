@@ -17,7 +17,7 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP6]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP10]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP10]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], [[TMP7]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[N_VEC]], 8

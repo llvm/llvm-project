@@ -20,7 +20,7 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP2]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 510, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 510, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[INDEX_NEXT:%.*]] = add i64 3, [[N_VEC]]

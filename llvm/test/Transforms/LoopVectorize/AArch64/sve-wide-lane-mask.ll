@@ -43,7 +43,7 @@ define void @scalable_wide_active_lane_mask(ptr noalias %dst, ptr readonly %src,
 ; CHECK-UF4:       vector.ph:
 ; CHECK-UF4-NEXT:    [[TMP61:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF4-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP61]], 16
-; CHECK-UF4-NEXT:    [[TMP62:%.*]] = mul i64 [[TMP1]], 4
+; CHECK-UF4-NEXT:    [[TMP62:%.*]] = mul nuw i64 [[TMP1]], 4
 ; CHECK-UF4-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF4-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 6
 ; CHECK-UF4-NEXT:    [[TMP7:%.*]] = sub i64 [[N]], [[TMP3]]
@@ -101,7 +101,7 @@ define void @scalable_wide_active_lane_mask(ptr noalias %dst, ptr readonly %src,
 ; CHECK-TF:       vector.ph:
 ; CHECK-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TF-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP0]], 16
-; CHECK-TF-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP10]], 2
+; CHECK-TF-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP10]], 2
 ; CHECK-TF-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TF-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 5
 ; CHECK-TF-NEXT:    [[TMP4:%.*]] = sub i64 [[N]], [[TMP3]]
@@ -195,7 +195,7 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF4:       vector.ph:
 ; CHECK-UF4-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF4-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP2]], 2
-; CHECK-UF4-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP1]], 4
+; CHECK-UF4-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP1]], 4
 ; CHECK-UF4-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF4-NEXT:    [[TMP26:%.*]] = shl nuw i64 [[TMP4]], 3
 ; CHECK-UF4-NEXT:    [[TMP31:%.*]] = sub i64 [[N]], [[TMP26]]
@@ -256,7 +256,7 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-TF:       vector.ph:
 ; CHECK-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TF-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP0]], 2
-; CHECK-TF-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP10]], 2
+; CHECK-TF-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP10]], 2
 ; CHECK-TF-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TF-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; CHECK-TF-NEXT:    [[TMP4:%.*]] = sub i64 [[N]], [[TMP3]]

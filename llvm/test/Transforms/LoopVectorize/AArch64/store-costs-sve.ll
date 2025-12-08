@@ -21,7 +21,7 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; DEFAULT:       vector.ph:
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP2]], 16
-; DEFAULT-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP5]], 2
+; DEFAULT-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP5]], 2
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 101, [[TMP3]]
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 101, [[N_MOD_VF]]
 ; DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -134,7 +134,7 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT:       vector.ph:
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP2]], 16
-; DEFAULT-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP16]], 2
+; DEFAULT-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP16]], 2
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1000, [[TMP3]]
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 1000, [[N_MOD_VF]]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i16> poison, i16 [[X]], i64 0

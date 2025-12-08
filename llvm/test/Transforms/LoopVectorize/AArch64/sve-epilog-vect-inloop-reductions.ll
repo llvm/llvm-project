@@ -17,7 +17,7 @@ define i64 @int_reduction_and(ptr noalias nocapture %a, i64 %N) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]

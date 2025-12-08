@@ -43,7 +43,7 @@ define void @loop(i64 %N, ptr noalias %a, ptr noalias %b) {
 ; CHECKUF2:       [[VECTOR_PH]]:
 ; CHECKUF2-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECKUF2-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP5]], 4
-; CHECKUF2-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP3]], 2
+; CHECKUF2-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP3]], 2
 ; CHECKUF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP6]]
 ; CHECKUF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECKUF2-NEXT:    br label %[[VECTOR_BODY:.*]]

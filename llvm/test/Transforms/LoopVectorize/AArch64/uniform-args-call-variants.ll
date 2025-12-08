@@ -37,7 +37,7 @@ define void @test_uniform(ptr noalias %dst, ptr readonly %src, i64 %uniform , i6
 ; INTERLEAVE-NEXT:  entry:
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP0]], 2
+; INTERLEAVE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP4]])
@@ -120,7 +120,7 @@ define void @test_uniform_smaller_scalar(ptr noalias %dst, ptr readonly %src, i3
 ; INTERLEAVE-NEXT:  entry:
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP0]], 2
+; INTERLEAVE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP4]])

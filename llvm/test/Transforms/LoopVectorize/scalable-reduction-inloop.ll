@@ -13,7 +13,7 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i32 [[TMP2]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i32 [[TMP4]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 256, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 256, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]

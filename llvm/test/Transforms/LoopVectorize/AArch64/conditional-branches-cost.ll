@@ -529,7 +529,7 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP4]], 4
-; DEFAULT-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP11]], 4
+; DEFAULT-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP11]], 4
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 257, [[TMP5]]
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 257, [[N_MOD_VF]]
 ; DEFAULT-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[N_VEC]], 8

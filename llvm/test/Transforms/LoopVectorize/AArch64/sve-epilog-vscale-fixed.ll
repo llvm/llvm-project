@@ -37,7 +37,7 @@ define void @main_vf_vscale_x_16(ptr %A, i64 %n) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP2]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP5]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -90,7 +90,7 @@ define void @main_vf_vscale_x_16(ptr %A, i64 %n) #0 {
 ; CHECK-EPILOG-PREFER-SCALABLE:       vector.ph:
 ; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP4]], 16
-; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP7]], 2
+; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP7]], 2
 ; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP5]]
 ; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    br label [[VECTOR_BODY:%.*]]

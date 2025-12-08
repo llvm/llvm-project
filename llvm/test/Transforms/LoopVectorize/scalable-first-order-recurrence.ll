@@ -97,7 +97,7 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF2:       [[VECTOR_PH]]:
 ; CHECK-VF4UF2-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF4UF2-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP10]], 4
-; CHECK-VF4UF2-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP12]], 2
+; CHECK-VF4UF2-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP12]], 2
 ; CHECK-VF4UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP11]]
 ; CHECK-VF4UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-VF4UF2-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vscale.i32()
@@ -249,7 +249,7 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; CHECK-VF4UF2:       [[VECTOR_PH]]:
 ; CHECK-VF4UF2-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF4UF2-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP3]], 4
-; CHECK-VF4UF2-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP11]], 2
+; CHECK-VF4UF2-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP11]], 2
 ; CHECK-VF4UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
 ; CHECK-VF4UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-VF4UF2-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vscale.i32()
@@ -448,7 +448,7 @@ define void @recurrence_3(ptr nocapture readonly %a, ptr nocapture %b, i32 %n, f
 ; CHECK-VF4UF2:       [[VECTOR_PH]]:
 ; CHECK-VF4UF2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF4UF2-NEXT:    [[TMP13:%.*]] = mul nuw i64 [[TMP11]], 4
-; CHECK-VF4UF2-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP13]], 2
+; CHECK-VF4UF2-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP13]], 2
 ; CHECK-VF4UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP12]]
 ; CHECK-VF4UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-VF4UF2-NEXT:    [[TMP15:%.*]] = add i64 1, [[N_VEC]]
@@ -803,7 +803,7 @@ define void @sink_after(ptr %a, ptr %b, i64 %n) {
 ; CHECK-VF4UF2:       [[VECTOR_PH]]:
 ; CHECK-VF4UF2-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF4UF2-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP5]], 4
-; CHECK-VF4UF2-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP7]], 2
+; CHECK-VF4UF2-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP7]], 2
 ; CHECK-VF4UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP6]]
 ; CHECK-VF4UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4UF2-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()

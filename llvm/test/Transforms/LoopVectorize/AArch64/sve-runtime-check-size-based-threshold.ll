@@ -44,7 +44,7 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP15]], 2
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP17]], 2
+; CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP17]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX]], [[TMP16]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]

@@ -376,7 +376,7 @@ define void @single_stride_int_scaled(ptr %p, i64 %stride) {
 ; NOSTRIDED-UF2:       vector.ph:
 ; NOSTRIDED-UF2-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; NOSTRIDED-UF2-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP2]], 4
-; NOSTRIDED-UF2-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP5]], 2
+; NOSTRIDED-UF2-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP5]], 2
 ; NOSTRIDED-UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; NOSTRIDED-UF2-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; NOSTRIDED-UF2-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -498,7 +498,7 @@ define void @single_stride_int_iv(ptr %p, i64 %stride) {
 ; NOSTRIDED-UF2:       vector.ph:
 ; NOSTRIDED-UF2-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; NOSTRIDED-UF2-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP2]], 4
-; NOSTRIDED-UF2-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP5]], 2
+; NOSTRIDED-UF2-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP5]], 2
 ; NOSTRIDED-UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; NOSTRIDED-UF2-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; NOSTRIDED-UF2-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -680,7 +680,7 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-UF2:       vector.ph:
 ; NOSTRIDED-UF2-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; NOSTRIDED-UF2-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP6]], 4
-; NOSTRIDED-UF2-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP9]], 2
+; NOSTRIDED-UF2-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP9]], 2
 ; NOSTRIDED-UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP7]]
 ; NOSTRIDED-UF2-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; NOSTRIDED-UF2-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -992,7 +992,7 @@ define void @double_stride_int_iv(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-UF2:       vector.ph:
 ; NOSTRIDED-UF2-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; NOSTRIDED-UF2-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP2]], 4
-; NOSTRIDED-UF2-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP5]], 2
+; NOSTRIDED-UF2-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP5]], 2
 ; NOSTRIDED-UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; NOSTRIDED-UF2-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; NOSTRIDED-UF2-NEXT:    br label [[VECTOR_BODY:%.*]]
