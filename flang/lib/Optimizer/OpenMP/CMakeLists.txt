@@ -9,6 +9,7 @@ add_flang_library(FlangOpenMPTransforms
   MapInfoFinalization.cpp
   MarkDeclareTarget.cpp
   LowerWorkdistribute.cpp
+  LowerWorkdistributeToStableHlo.cpp
   LowerWorkshare.cpp
   LowerNontemporal.cpp
   SimdOnly.cpp

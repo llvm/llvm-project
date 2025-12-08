@@ -97,6 +97,10 @@ def LowerWorkdistribute : Pass<"lower-workdistribute", "::mlir::ModuleOp"> {
   let summary = "Lower workdistribute construct";
 }
 
+def LowerWorkdistributeToStableHlo : Pass<"lower-workdistribute-to-stablehlo", "::mlir::ModuleOp"> {
+  let summary = "Lower workdistributedwi construct";
+}
+
 def GenericLoopConversionPass
     : Pass<"omp-generic-loop-conversion", "mlir::func::FuncOp"> {
   let summary = "Converts OpenMP generic `omp.loop` to semantically "
