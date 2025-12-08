@@ -708,6 +708,7 @@ bool fromJSON(const llvm::json::Value &Params, LocationsArguments &Args,
 }
 
 llvm::json::Value toJSON(const LocationsResponseBody &Body) {
+  assert(Body.line != LLDB_INVALID_LINE_NUMBER);
   json::Object result{{"source", Body.source}, {"line", Body.line}};
 
   if (Body.column != 0 && Body.column != LLDB_INVALID_COLUMN_NUMBER)
