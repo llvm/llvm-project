@@ -671,18 +671,20 @@ func.func @gather_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf16>, %
 
 // CHECK-LABEL: func @memory_counter_wait
 func.func @memory_counter_wait() {
-  // CHECK: amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
-  // CHECK: amdgpu.memory_counter_wait load(4) store(2) ds(3) exp(1)
+  // CHECK: amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4) tensor(5)
+  // CHECK: amdgpu.memory_counter_wait load(4) store(2) ds(3) exp(1) tensor(0)
   // CHECK: amdgpu.memory_counter_wait load(1)
   // CHECK: amdgpu.memory_counter_wait store(2)
   // CHECK: amdgpu.memory_counter_wait ds(3)
   // CHECK: amdgpu.memory_counter_wait exp(4)
-  amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
-  amdgpu.memory_counter_wait exp(1) store(2) ds(3) load(4)
+  // CHECK: amdgpu.memory_counter_wait tensor(5)
+  amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4) tensor(5)
+  amdgpu.memory_counter_wait tensor(0) exp(1) store(2) ds(3) load(4)
   amdgpu.memory_counter_wait load(1)
   amdgpu.memory_counter_wait store(2)
   amdgpu.memory_counter_wait ds(3)
   amdgpu.memory_counter_wait exp(4)
+  amdgpu.memory_counter_wait tensor(5)
   func.return
 }
 

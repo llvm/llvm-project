@@ -250,10 +250,10 @@ func.func @scaled_mfma_ugly_shapes(%opA: vector<32xf4E2M1FN>, %opB: vector<32xf4
 // CHECK-LABEL fuse_memory_counter_wait
 func.func @fuse_memory_counter_wait() {
   //      CHECK: amdgpu.memory_counter_wait
-  // CHECK-SAME: load(1) store(2) ds(2) exp(1)
+  // CHECK-SAME: load(1) store(2) ds(2) exp(1) tensor(0)
   // CHECK-NEXT: return
-  amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
-  amdgpu.memory_counter_wait load(4) store(3) ds(2) exp(1)
+  amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4) tensor(5)
+  amdgpu.memory_counter_wait load(4) store(3) ds(2) exp(1) tensor(0)
   return
 }
 

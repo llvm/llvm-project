@@ -55,7 +55,7 @@ int bar(int n){
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[TMP4]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 1
 // CHECK-NEXT:    store ptr [[D]], ptr [[TMP5]], align 8
-// CHECK-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l13_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l13_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 2)
+// CHECK-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l13_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l13_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 2, i32 0)
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[TMP0]], i64 0, i64 3
 // CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], 1

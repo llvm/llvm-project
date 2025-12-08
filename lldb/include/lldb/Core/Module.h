@@ -298,29 +298,12 @@ public:
   ///     matches.
   void FindCompileUnits(const FileSpec &path, SymbolContextList &sc_list);
 
-  /// Find functions by lookup info.
-  ///
-  /// If the function is an inlined function, it will have a block,
-  /// representing the inlined function, and the function will be the
-  /// containing function.  If it is not inlined, then the block will be NULL.
-  ///
-  /// \param[in] lookup_info
-  ///     The lookup info of the function we are looking for.
-  ///
-  /// \param[out] sc_list
-  ///     A symbol context list that gets filled in with all of the
-  ///     matches.
-  void FindFunctions(const LookupInfo &lookup_info,
-                     const CompilerDeclContext &parent_decl_ctx,
-                     const ModuleFunctionSearchOptions &options,
-                     SymbolContextList &sc_list);
-
   /// Find functions by a vector of lookup infos.
   ///
   /// If the function is an inlined function, it will have a block,
   /// representing the inlined function, and the function will be the
   /// containing function.  If it is not inlined, then the block will be NULL.
-  void FindFunctions(const std::vector<LookupInfo> &lookup_infos,
+  void FindFunctions(llvm::ArrayRef<LookupInfo> lookup_infos,
                      const CompilerDeclContext &parent_decl_ctx,
                      const ModuleFunctionSearchOptions &options,
                      SymbolContextList &sc_list);
