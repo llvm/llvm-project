@@ -842,9 +842,8 @@ bool PPCMIPeephole::simplifyCode() {
         // vector element zero.
         if (DefOpcode == PPC::XXSLDWI) {
           Register ShiftOp1 = DefMI->getOperand(1).getReg();
-          Register ShiftOp2 = DefMI->getOperand(2).getReg();
 
-          if (ShiftOp1 == ShiftOp2) {
+          if (ShiftOp1 == DefMI->getOperand(2).getReg()) {
             // For example, We can erase XXSLDWI from in following:
             //    %2:vrrc = XXSLDWI killed %1:vrrc, %1:vrrc, 1
             //    %6:vrrc = VSPLTB 15, killed %2:vrrc
