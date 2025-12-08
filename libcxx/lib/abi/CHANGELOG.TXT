@@ -16,6 +16,20 @@ New entries should be added directly below the "Version" header.
 Version 22.0
 ------------
 
+* [libc++] Allows any types of size 4 and 8 to use native platform ulock_wait
+
+  This patch added symbols for platform wait functions with the size of the type 
+
+  All platforms
+  -------------
+  Symbol added: __ZNSt3__123__atomic_monitor_globalEPKv
+  Symbol added: __ZNSt3__126__atomic_wait_global_tableEPKvx
+  Symbol added: __ZNSt3__126__atomic_notify_one_nativeILm8EEEvPKv
+  Symbol added: __ZNSt3__132__atomic_notify_all_global_tableEPKv
+  Symbol added: __ZNSt3__120__atomic_wait_nativeILm8EEEvPKvS2_
+  Symbol added: __ZNSt3__126__atomic_notify_all_nativeILm8EEEvPKv
+  Symbol added: __ZNSt3__132__atomic_notify_one_global_tableEPKv
+
 * [libc++] Remove __time_get_storage::{__analyze,init} from the ABI
 
   These functions have never been used outside the dylib, so there is no point in exporting them.
