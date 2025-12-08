@@ -7,9 +7,9 @@ define void @bar() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq out@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    addq $-1, (%rax)
+; CHECK-NEXT:    addl $-1, (%rax)
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    retq
-  call void asm "addq $1,$0", "=*m,L,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) @out, i32 -1)
+  call void asm "addl $1,$0", "=*m,L,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) @out, i32 -1)
   ret void
 }
