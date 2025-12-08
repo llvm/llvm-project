@@ -1444,8 +1444,6 @@ struct TestInitSizeConfig {
   static const bool QuarantineDisabled = true;
 
   struct Primary {
-    // In order to properly test the usable size, this Primary config has
-    // four real size classes: 1024, 2048, 4096, 8192.
     using SizeClassMap = scudo::FixedSizeClassMap<InitSizeClassConfig>;
     static const scudo::uptr RegionSizeLog = 21U;
     static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
