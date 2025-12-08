@@ -114,7 +114,7 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   ModifiedRegUnits.init(*TRI);
   UsedRegUnits.init(*TRI);
 
-  if (Subtarget.useMIPSLoadStorePairs()) {
+  if (Subtarget.useMIPSLoadStorePairs() || Subtarget.hasVendorXqcilsm()) {
     for (MachineBasicBlock &MBB : Fn) {
       LLVM_DEBUG(dbgs() << "MBB: " << MBB.getName() << "\n");
 
@@ -168,14 +168,85 @@ bool RISCVLoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   return false;
 }
 
-// Merge two adjacent load/store instructions into a paired instruction
-// (LDP/SDP/SWP/LWP) if the effective address is 8-byte aligned in case of
-// SWP/LWP 16-byte aligned in case of LDP/SDP. This function selects the
-// appropriate paired opcode, verifies that the memory operand is properly
-// aligned, and checks that the offset is valid. If all conditions are met, it
-// builds and inserts the paired instruction.
+// Merge two adjacent load/store instructions into a paired instruction.
+// This function selects the appropriate paired opcode, verifies that the
+// memory operand is properly aligned, and checks that the offset is valid. If
+// all conditions are met, it builds and inserts the paired instruction.
 bool RISCVLoadStoreOpt::tryConvertToLdStPair(
     MachineBasicBlock::iterator First, MachineBasicBlock::iterator Second) {
+  MachineFunction *MF = First->getMF();
+  const RISCVSubtarget &STI = MF->getSubtarget<RISCVSubtarget>();
+  const MachineMemOperand *MMO = *First->memoperands_begin();
+  Align MMOAlign = MMO->getAlign();
+
+  // Try converting to QC_LWMI/QC_SWMI if the XQCILSM extension is enabled.
+  if (!STI.is64Bit() && STI.hasVendorXqcilsm()) {
+    unsigned Opc = First->getOpcode();
+    if ((Opc != RISCV::LW && Opc != RISCV::SW) || Second->getOpcode() != Opc)
+      return false;
+
+    // Require simple reg+imm addressing for both.
+    if (!First->getOperand(1).isReg() || !Second->getOperand(1).isReg() ||
+        !First->getOperand(2).isImm() || !Second->getOperand(2).isImm())
+      return false;
+
+    Register Base1 = First->getOperand(1).getReg();
+    Register Base2 = Second->getOperand(1).getReg();
+
+    if (Base1 != Base2)
+      return false;
+
+    if (MMOAlign < Align(4))
+      return false;
+
+    int64_t Off1 = First->getOperand(2).getImm();
+    int64_t Off2 = Second->getOperand(2).getImm();
+    int64_t BaseOff = std::min(Off1, Off2);
+
+    if (!isShiftedUInt<5, 2>(BaseOff) || std::abs(Off1 - Off2) != 4)
+      return false;
+
+    Register StartReg = First->getOperand(0).getReg();
+    Register NextReg = Second->getOperand(0).getReg();
+
+    if (StartReg == RISCV::X0 || NextReg == RISCV::X0)
+      return false;
+
+    // If the base reg gets overwritten by one of the loads then bail out.
+    if (Opc == RISCV::LW && (StartReg == Base1 || NextReg == Base1))
+      return false;
+
+    if (Off2 < Off1)
+      std::swap(StartReg, NextReg);
+
+    if (NextReg != StartReg + 1)
+      return false;
+
+    unsigned XqciOpc = (Opc == RISCV::LW) ? RISCV::QC_LWMI : RISCV::QC_SWMI;
+
+    auto StartRegState = (Opc == RISCV::LW) ? RegState::Define : 0;
+    auto NextRegState =
+        (Opc == RISCV::LW) ? RegState::ImplicitDefine : RegState::Implicit;
+
+    DebugLoc DL =
+        First->getDebugLoc() ? First->getDebugLoc() : Second->getDebugLoc();
+    MachineInstrBuilder MIB = BuildMI(*MF, DL, TII->get(XqciOpc));
+    MIB.addReg(StartReg, StartRegState)
+        .addReg(Base1)
+        .addImm(2)
+        .addImm(BaseOff)
+        .cloneMergedMemRefs({&*First, &*Second})
+        .addReg(NextReg, NextRegState);
+
+    First->getParent()->insert(First, MIB);
+    First->removeFromParent();
+    Second->removeFromParent();
+
+    return true;
+  }
+
+  // Try converting to SWP/LWP/LDP/SDP.
+  // SWP/LWP requires 8-byte alignment whereas LDP/SDP needs 16-byte alignment.
   unsigned PairOpc;
   Align RequiredAlignment;
   switch (First->getOpcode()) {
@@ -198,10 +269,6 @@ bool RISCVLoadStoreOpt::tryConvertToLdStPair(
     RequiredAlignment = Align(16);
     break;
   }
-
-  MachineFunction *MF = First->getMF();
-  const MachineMemOperand *MMO = *First->memoperands_begin();
-  Align MMOAlign = MMO->getAlign();
 
   if (MMOAlign < RequiredAlignment)
     return false;
