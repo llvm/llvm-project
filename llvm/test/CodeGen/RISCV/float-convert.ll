@@ -150,7 +150,6 @@ start:
   %0 = tail call i32 @llvm.fptosi.sat.i32.f32(float %a)
   ret i32 %0
 }
-declare i32 @llvm.fptosi.sat.i32.f32(float)
 
 define i32 @fcvt_wu_s(float %a) nounwind {
 ; CHECKIF-LABEL: fcvt_wu_s:
@@ -334,7 +333,6 @@ start:
   %0 = tail call i32 @llvm.fptoui.sat.i32.f32(float %a)
   ret i32 %0
 }
-declare i32 @llvm.fptoui.sat.i32.f32(float)
 
 define signext i32 @fmv_x_w(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fmv_x_w:
@@ -801,7 +799,6 @@ start:
   %0 = tail call i64 @llvm.fptosi.sat.i64.f32(float %a)
   ret i64 %0
 }
-declare i64 @llvm.fptosi.sat.i64.f32(float)
 
 define i64 @fcvt_lu_s(float %a) nounwind {
 ; RV32IF-LABEL: fcvt_lu_s:
@@ -989,7 +986,6 @@ start:
   %0 = tail call i64 @llvm.fptoui.sat.i64.f32(float %a)
   ret i64 %0
 }
-declare i64 @llvm.fptoui.sat.i64.f32(float)
 
 define float @fcvt_s_l(i64 %a) nounwind {
 ; RV32IF-LABEL: fcvt_s_l:
@@ -1547,7 +1543,6 @@ start:
   %0 = tail call i16 @llvm.fptosi.sat.i16.f32(float %a)
   ret i16 %0
 }
-declare i16 @llvm.fptosi.sat.i16.f32(float)
 
 define zeroext i16 @fcvt_wu_s_i16(float %a) nounwind {
 ; RV32IF-LABEL: fcvt_wu_s_i16:
@@ -1709,7 +1704,6 @@ start:
   %0 = tail call i16 @llvm.fptoui.sat.i16.f32(float %a)
   ret i16 %0
 }
-declare i16 @llvm.fptoui.sat.i16.f32(float)
 
 define signext i8 @fcvt_w_s_i8(float %a) nounwind {
 ; RV32IF-LABEL: fcvt_w_s_i8:
@@ -1889,7 +1883,6 @@ start:
   %0 = tail call i8 @llvm.fptosi.sat.i8.f32(float %a)
   ret i8 %0
 }
-declare i8 @llvm.fptosi.sat.i8.f32(float)
 
 define zeroext i8 @fcvt_wu_s_i8(float %a) nounwind {
 ; RV32IF-LABEL: fcvt_wu_s_i8:
@@ -2041,7 +2034,6 @@ start:
   %0 = tail call i8 @llvm.fptoui.sat.i8.f32(float %a)
   ret i8 %0
 }
-declare i8 @llvm.fptoui.sat.i8.f32(float)
 
 define zeroext i32 @fcvt_wu_s_sat_zext(float %a) nounwind {
 ; RV32IF-LABEL: fcvt_wu_s_sat_zext:

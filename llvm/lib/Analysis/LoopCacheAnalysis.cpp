@@ -368,8 +368,16 @@ bool IndexedReference::tryDelinearizeFixedSize(
   // the load/store instruction being analyzed. It is not needed for further
   // analysis.
   // TODO: Maybe this property should be enforced in delinearizeFixedSizeArray.
+#ifndef NDEBUG
   assert(!Sizes.empty() && Subscripts.size() == Sizes.size() &&
-         Sizes.back() == ElementSize && "Unexpected delinearization result");
+         "Inconsistent length of Sizes and Subscripts");
+  Type *WideTy =
+      SE.getWiderType(ElementSize->getType(), Sizes.back()->getType());
+  const SCEV *ElemSizeExt = SE.getNoopOrZeroExtend(ElementSize, WideTy);
+  const SCEV *LastSizeExt = SE.getNoopOrZeroExtend(Sizes.back(), WideTy);
+  assert(ElemSizeExt == LastSizeExt && "Unexpected last element of Sizes");
+#endif
+
   Sizes.pop_back();
   return true;
 }

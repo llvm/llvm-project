@@ -194,6 +194,7 @@ set(files
   __algorithm/simd_utils.h
   __algorithm/sort.h
   __algorithm/sort_heap.h
+  __algorithm/specialized_algorithms.h
   __algorithm/stable_partition.h
   __algorithm/stable_sort.h
   __algorithm/swap_ranges.h
@@ -532,6 +533,7 @@ set(files
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
   __locale_dir/support/netbsd.h
+  __locale_dir/support/newlib.h
   __locale_dir/support/no_locale/characters.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h

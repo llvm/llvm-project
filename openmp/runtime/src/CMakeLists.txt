@@ -377,11 +377,6 @@ if(WIN32)
   endif()
 endif()
 
-# Building the Fortran module files
-# One compilation step creates both omp_lib.mod and omp_lib_kinds.mod
-configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
-configure_file(${LIBOMP_INC_DIR}/omp_lib.F90.var omp_lib.F90 @ONLY)
-
 # Move files to exports/ directory if requested
 if(${LIBOMP_COPY_EXPORTS})
   include(LibompExports)
@@ -461,33 +456,4 @@ if(${LIBOMP_OMPT_SUPPORT})
   # install under legacy name ompt.h
   install(FILES ${LIBOMP_HEADERS_INTDIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
   set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
-endif()
-
-
-# Build the modules files if a Fortran compiler is available.
-# Only LLVM_ENABLE_RUNTIMES=openmp is supported, LLVM_ENABLE_PROJECTS=openmp
-# has been deprecated.
-if(LIBOMP_FORTRAN_MODULES)
-  add_library(libomp-mod OBJECT
-    omp_lib.F90
-  )
-  set_target_properties(libomp-mod PROPERTIES FOLDER "OpenMP/Fortran Modules")
-
-  if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
-   target_compile_options(libomp-mod PRIVATE -fno-range-check)
-  endif()
-
-  flang_module_target(libomp-mod PUBLIC)
-  if (FORTRAN_MODULE_DEPS)
-    add_dependencies(libomp-mod ${FORTRAN_MODULE_DEPS})
-  endif ()
-
-  set (destination ${LIBOMP_HEADERS_INSTALL_PATH})
-  if (NOT ${LIBOMP_MODULES_INSTALL_PATH} STREQUAL "")
-    set (destination ${LIBOMP_MODULES_INSTALL_PATH})
-  endif()
-  install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
-    DESTINATION ${destination}
-  )
 endif()

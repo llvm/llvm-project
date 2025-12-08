@@ -70,29 +70,44 @@ enum {
 } // end namespace RegState
 
 /// Set of metadata that should be preserved when using BuildMI(). This provides
-/// a more convenient way of preserving DebugLoc, PCSections and MMRA.
+/// a more convenient way of preserving certain data from the original
+/// instruction.
 class MIMetadata {
 public:
   MIMetadata() = default;
-  MIMetadata(DebugLoc DL, MDNode *PCSections = nullptr, MDNode *MMRA = nullptr)
-      : DL(std::move(DL)), PCSections(PCSections), MMRA(MMRA) {}
+  MIMetadata(DebugLoc DL, MDNode *PCSections = nullptr, MDNode *MMRA = nullptr,
+             Value *DeactivationSymbol = nullptr)
+      : DL(std::move(DL)), PCSections(PCSections), MMRA(MMRA),
+        DeactivationSymbol(DeactivationSymbol) {}
   MIMetadata(const DILocation *DI, MDNode *PCSections = nullptr,
              MDNode *MMRA = nullptr)
       : DL(DI), PCSections(PCSections), MMRA(MMRA) {}
   explicit MIMetadata(const Instruction &From)
       : DL(From.getDebugLoc()),
-        PCSections(From.getMetadata(LLVMContext::MD_pcsections)) {}
+        PCSections(From.getMetadata(LLVMContext::MD_pcsections)),
+        DeactivationSymbol(getDeactivationSymbol(&From)) {}
   explicit MIMetadata(const MachineInstr &From)
-      : DL(From.getDebugLoc()), PCSections(From.getPCSections()) {}
+      : DL(From.getDebugLoc()), PCSections(From.getPCSections()),
+        DeactivationSymbol(From.getDeactivationSymbol()) {}
 
   const DebugLoc &getDL() const { return DL; }
   MDNode *getPCSections() const { return PCSections; }
   MDNode *getMMRAMetadata() const { return MMRA; }
+  Value *getDeactivationSymbol() const { return DeactivationSymbol; }
 
 private:
   DebugLoc DL;
   MDNode *PCSections = nullptr;
   MDNode *MMRA = nullptr;
+  Value *DeactivationSymbol = nullptr;
+
+  static inline Value *getDeactivationSymbol(const Instruction *I) {
+    if (auto *CB = dyn_cast<CallBase>(I))
+      if (auto Bundle =
+              CB->getOperandBundle(llvm::LLVMContext::OB_deactivation_symbol))
+        return Bundle->Inputs[0].get();
+    return nullptr;
+  }
 };
 
 class MachineInstrBuilder {
@@ -292,6 +307,11 @@ public:
     return *this;
   }
 
+  const MachineInstrBuilder &addLaneMask(LaneBitmask LaneMask) const {
+    MI->addOperand(*MF, MachineOperand::CreateLaneMask(LaneMask));
+    return *this;
+  }
+
   const MachineInstrBuilder &addSym(MCSymbol *Sym,
                                     unsigned char TargetFlags = 0) const {
     MI->addOperand(*MF, MachineOperand::CreateMCSymbol(Sym, TargetFlags));
@@ -348,6 +368,8 @@ public:
       MI->setPCSections(*MF, MIMD.getPCSections());
     if (MIMD.getMMRAMetadata())
       MI->setMMRAMetadata(*MF, MIMD.getMMRAMetadata());
+    if (MIMD.getDeactivationSymbol())
+      MI->setDeactivationSymbol(*MF, MIMD.getDeactivationSymbol());
     return *this;
   }
 

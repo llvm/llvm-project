@@ -189,7 +189,7 @@ bool requiresImplicitDefaultDeclareMapper(
 
     semantics::DirectComponentIterator directComponents{spec};
     for (const semantics::Symbol &component : directComponents) {
-      if (semantics::IsAllocatableOrPointer(component))
+      if (component.attrs().test(semantics::Attr::ALLOCATABLE))
         return true;
 
       if (const semantics::DeclTypeSpec *declType = component.GetType())
@@ -796,7 +796,7 @@ static void processTileSizesFromOpenMPConstruct(
   }
 }
 
-static pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
+pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
   for (pft::Evaluation &nested : eval.getNestedEvaluations()) {
     // In an OpenMPConstruct there can be compiler directives:
     // 1 <<OpenMPConstruct>>
