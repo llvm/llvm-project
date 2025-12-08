@@ -139,7 +139,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 operator bool() const _NOEXCEPT {
     return static_cast<bool>(*__seg_ & __mask_);
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool operator~() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool operator~() const _NOEXCEPT {
     return !static_cast<bool>(*this);
   }
 
