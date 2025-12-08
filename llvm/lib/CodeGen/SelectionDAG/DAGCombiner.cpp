@@ -4888,8 +4888,8 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
 
   // fold (mul (add x, c1), c2) -> (add (mul x, c2), c1*c2)
   if (sd_context_match(N0, Matcher, m_Opc(ISD::ADD)) &&
-      DAG.isConstantIntBuildVectorOrConstantInt(N1) &&
-      DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1)) &&
+      isConstantOrConstantVector(N1) &&
+      isConstantOrConstantVector(N0.getOperand(1)) &&
       isMulAddWithConstProfitable(N, N0, N1))
     return Matcher.getNode(
         ISD::ADD, DL, VT,
