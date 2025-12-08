@@ -21,6 +21,11 @@ const char *call_memchr(const void *src, int c, size_t size) {
   return reinterpret_cast<const char *>(LIBC_NAMESPACE::memchr(src, c, size));
 }
 
+TEST(LlvmLibcMemChrTest, WideReadMultiIteration) {
+  const char *src = "abcdefghijklmnopqrst$\n";
+  ASSERT_STREQ(call_memchr(src, '$', 22), "$\n");
+}
+
 TEST(LlvmLibcMemChrTest, FindsCharacterAfterNullTerminator) {
   // memchr should continue searching after a null terminator.
   const size_t size = 5;

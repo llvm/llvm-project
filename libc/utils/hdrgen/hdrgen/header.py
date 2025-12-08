@@ -147,8 +147,8 @@ class HeaderFile:
             }
             | {
                 COMPILER_HEADER_TYPES.get(
-                    typ.type_name,
-                    PurePosixPath("llvm-libc-types") / f"{typ.type_name}.h",
+                    typ.name,
+                    PurePosixPath("llvm-libc-types") / f"{typ.name}.h",
                 )
                 for typ in self.all_types()
             }
@@ -227,7 +227,7 @@ class HeaderFile:
             )
         ]
 
-        for macro in self.macros:
+        for macro in sorted(self.macros):
             # When there is nothing to define, the Macro object converts to str
             # as an empty string.  Don't emit a blank line for those cases.
             if str(macro):
@@ -242,7 +242,12 @@ class HeaderFile:
         content.append("\n__BEGIN_C_DECLS\n")
 
         current_guard = None
-        for function in self.functions:
+        last_name = None
+        for function in sorted(self.functions):
+            # If the last function's name was the same after underscores,
+            # elide the blank line between the declarations.
+            if last_name == function.name_without_underscores():
+                content.pop()
             if function.guard == None and current_guard == None:
                 content.append(str(function) + " __NOEXCEPT;")
                 content.append("")
@@ -264,6 +269,7 @@ class HeaderFile:
                         content.append(f"#ifdef {current_guard}")
                     content.append(str(function) + " __NOEXCEPT;")
                     content.append("")
+            last_name = function.name_without_underscores()
         if current_guard != None:
             content.pop()
             content.append(f"#endif // {current_guard}")

@@ -906,6 +906,8 @@ int main (int argc, char **argv) {
 // CHECK4:       omp.par.region.parallel.after:
 // CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK4:       omp.par.pre_finalize:
+// CHECK4-NEXT:    br label [[FINI:%.*]]
+// CHECK4:       .fini:
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG35]]
 // CHECK4:       omp.par.exit.exitStub:
 // CHECK4-NEXT:    ret void
@@ -975,6 +977,8 @@ int main (int argc, char **argv) {
 // CHECK4:       omp.par.region.parallel.after:
 // CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK4:       omp.par.pre_finalize:
+// CHECK4-NEXT:    br label [[FINI:%.*]]
+// CHECK4:       .fini:
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG66]]
 // CHECK4:       omp.par.exit.exitStub:
 // CHECK4-NEXT:    ret void

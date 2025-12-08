@@ -2329,20 +2329,21 @@ TEST(LlvmLibcStrftimeTest, TimeFormatFullDateTime) {
 
 TEST(LlvmLibcStrftimeTest, BufferTooSmall) {
   struct tm time;
-  char buffer[1];
+  char tiny_buffer[1];
 
   time.tm_year = get_adjusted_year(2025);
   time.tm_mon = 10;
   time.tm_mday = 24;
 
   size_t written =
-      LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%F", &time);
+      LIBC_NAMESPACE::strftime(tiny_buffer, sizeof(tiny_buffer), "%F", &time);
   EXPECT_EQ(written, size_t{0});
 
-  char buffer2[10];
+  char small_buffer[10];
 
   // The string "2025-11-24" is 10 chars,
   // so strftime needs 10 + 1 bytes to write the string and the null terminator.
-  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer2), "%F", &time);
+  written =
+      LIBC_NAMESPACE::strftime(small_buffer, sizeof(small_buffer), "%F", &time);
   EXPECT_EQ(written, size_t{0});
 }

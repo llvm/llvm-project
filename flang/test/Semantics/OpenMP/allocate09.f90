@@ -23,11 +23,11 @@ use omp_lib
   !$omp allocate
     allocate(e(5), f(6), g(7))
 
-  !ERROR: Object 'i' in ALLOCATE directive not found in corresponding ALLOCATE statement
+  !ERROR: A list item on an executable ALLOCATE must be specified on the associated ALLOCATE statement
   !$omp allocate(h, i) allocator(omp_default_mem_alloc)
     allocate(h(8))
 
-  !ERROR: Object 'j' in ALLOCATE directive not found in corresponding ALLOCATE statement
+  !ERROR: A list item on an executable ALLOCATE must be specified on the associated ALLOCATE statement
   !$omp allocate(j, k) allocator(omp_default_mem_alloc)
   !$omp allocate(l) allocator(omp_default_mem_alloc)
     allocate(k(9), l(10))

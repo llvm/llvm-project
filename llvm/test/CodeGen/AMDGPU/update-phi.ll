@@ -37,3 +37,42 @@ n28:                                               ; preds = %.loopexit, %n28
 n31:                                               ; preds =
   ret void
 }
+
+define amdgpu_ps void @_amdgpu_ps_main_callbr() local_unnamed_addr #3 {
+; IR-LABEL: @_amdgpu_ps_main_callbr(
+; IR-NEXT:  .entry:
+; IR-NEXT:    callbr void asm "", ""()
+; IR-NEXT:            to label [[DOTLOOPEXIT:%.*]] []
+; IR:       .loopexit:
+; IR-NEXT:    callbr void asm "", ""()
+; IR-NEXT:            to label [[N28:%.*]] []
+; IR:       n28:
+; IR-NEXT:    [[DOT01:%.*]] = phi float [ 0.000000e+00, [[DOTLOOPEXIT]] ], [ [[N29:%.*]], [[TRANSITIONBLOCK:%.*]] ]
+; IR-NEXT:    [[N29]] = fadd float [[DOT01]], 1.000000e+00
+; IR-NEXT:    [[N30:%.*]] = fcmp ogt float [[N29]], 4.000000e+00
+; IR-NEXT:    [[N30_32:%.*]] = zext i1 [[N30]] to i32
+; IR-NEXT:    br i1 true, label [[TRANSITIONBLOCK]], label [[DUMMYRETURNBLOCK:%.*]]
+; IR:       TransitionBlock:
+; IR-NEXT:    callbr void asm "", "r,!i"(i32 [[N30_32]])
+; IR-NEXT:            to label [[DOTLOOPEXIT]] [label %n28]
+; IR:       n31:
+; IR-NEXT:    ret void
+; IR:       DummyReturnBlock:
+; IR-NEXT:    ret void
+;
+.entry:
+  callbr void asm "", ""() to label %.loopexit []
+
+.loopexit:                                        ; preds = %n28, %.entry
+  callbr void asm "", ""() to label %n28 []
+
+n28:                                               ; preds = %.loopexit, %n28
+  %.01 = phi float [ 0.000000e+00, %.loopexit ], [ %n29, %n28 ]
+  %n29 = fadd float %.01, 1.0
+  %n30 = fcmp ogt float %n29, 4.000000e+00
+  %n30.32 = zext i1 %n30 to i32
+  callbr void asm "", "r,!i"(i32 %n30.32) to label %.loopexit [label %n28]
+
+n31:                                               ; preds =
+  ret void
+}

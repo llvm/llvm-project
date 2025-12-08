@@ -338,7 +338,8 @@ std::string DetailsToString(const Details &details) {
           [](const TypeParamDetails &) { return "TypeParam"; },
           [](const MiscDetails &) { return "Misc"; },
           [](const AssocEntityDetails &) { return "AssocEntity"; },
-          [](const UserReductionDetails &) { return "UserReductionDetails"; }},
+          [](const UserReductionDetails &) { return "UserReductionDetails"; },
+          [](const MapperDetails &) { return "MapperDetails"; }},
       details);
 }
 
@@ -379,6 +380,7 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
             [&](const UserReductionDetails &) {
               return has<UserReductionDetails>();
             },
+            [&](const MapperDetails &) { return has<MapperDetails>(); },
             [](const auto &) { return false; },
         },
         details);
@@ -685,6 +687,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
               DumpType(os, type);
             }
           },
+          // Avoid recursive streaming for MapperDetails; nothing more to dump
+          [&](const MapperDetails &) {},
           [&](const auto &x) { os << x; },
       },
       details);

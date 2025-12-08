@@ -15,18 +15,6 @@
 namespace clang::lifetimes::internal {
 using llvm::isa_and_present;
 
-static bool isGslPointerType(QualType QT) {
-  if (const auto *RD = QT->getAsCXXRecordDecl()) {
-    // We need to check the template definition for specializations.
-    if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-      return CTSD->getSpecializedTemplate()
-          ->getTemplatedDecl()
-          ->hasAttr<PointerAttr>();
-    return RD->hasAttr<PointerAttr>();
-  }
-  return false;
-}
-
 static bool isPointerType(QualType QT) {
   return QT->isPointerOrReferenceType() || isGslPointerType(QT);
 }
@@ -43,29 +31,38 @@ static bool hasOrigin(const VarDecl *VD) {
 /// This function should be called whenever a DeclRefExpr represents a borrow.
 /// \param DRE The declaration reference expression that initiates the borrow.
 /// \return The new Loan on success, nullptr otherwise.
-static const Loan *createLoan(FactManager &FactMgr, const DeclRefExpr *DRE) {
+static const PathLoan *createLoan(FactManager &FactMgr,
+                                  const DeclRefExpr *DRE) {
   if (const auto *VD = dyn_cast<ValueDecl>(DRE->getDecl())) {
     AccessPath Path(VD);
     // The loan is created at the location of the DeclRefExpr.
-    return &FactMgr.getLoanMgr().addLoan(Path, DRE);
+    return FactMgr.getLoanMgr().createLoan<PathLoan>(Path, DRE);
   }
   return nullptr;
 }
 
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
+  const CFG &Cfg = *AC.getCFG();
+  llvm::SmallVector<Fact *> PlaceholderLoanFacts = issuePlaceholderLoans();
   // Iterate through the CFG blocks in reverse post-order to ensure that
   // initializations and destructions are processed in the correct sequence.
   for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
     CurrentBlockFacts.clear();
+    EscapesInCurrentBlock.clear();
+    if (Block == &Cfg.getEntry())
+      CurrentBlockFacts.append(PlaceholderLoanFacts.begin(),
+                               PlaceholderLoanFacts.end());
     for (unsigned I = 0; I < Block->size(); ++I) {
       const CFGElement &Element = Block->Elements[I];
       if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>())
         Visit(CS->getStmt());
-      else if (std::optional<CFGAutomaticObjDtor> DtorOpt =
-                   Element.getAs<CFGAutomaticObjDtor>())
-        handleDestructor(*DtorOpt);
+      else if (std::optional<CFGLifetimeEnds> LifetimeEnds =
+                   Element.getAs<CFGLifetimeEnds>())
+        handleLifetimeEnds(*LifetimeEnds);
     }
+    CurrentBlockFacts.append(EscapesInCurrentBlock.begin(),
+                             EscapesInCurrentBlock.end());
     FactMgr.addBlockFacts(Block, CurrentBlockFacts);
   }
 }
@@ -94,7 +91,7 @@ void FactsGenerator::VisitDeclRefExpr(const DeclRefExpr *DRE) {
     if (const Loan *L = createLoan(FactMgr, DRE)) {
       OriginID ExprOID = FactMgr.getOriginMgr().getOrCreate(*DRE);
       CurrentBlockFacts.push_back(
-          FactMgr.createFact<IssueFact>(L->ID, ExprOID));
+          FactMgr.createFact<IssueFact>(L->getID(), ExprOID));
     }
   }
 }
@@ -166,7 +163,8 @@ void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
   if (const Expr *RetExpr = RS->getRetValue()) {
     if (hasOrigin(RetExpr)) {
       OriginID OID = FactMgr.getOriginMgr().getOrCreate(*RetExpr);
-      CurrentBlockFacts.push_back(FactMgr.createFact<ReturnOfOriginFact>(OID));
+      EscapesInCurrentBlock.push_back(
+          FactMgr.createFact<OriginEscapesFact>(OID, RetExpr));
     }
   }
 }
@@ -174,6 +172,15 @@ void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
   if (BO->isAssignmentOp())
     handleAssignment(BO->getLHS(), BO->getRHS());
+}
+
+void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
+  if (hasOrigin(CO)) {
+    // Merge origins from both branches of the conditional operator.
+    // We kill to clear the initial state and merge both origins into it.
+    killAndFlowOrigin(*CO, *CO->getTrueExpr());
+    flowOrigin(*CO, *CO->getFalseExpr());
+  }
 }
 
 void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
@@ -216,25 +223,20 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   killAndFlowOrigin(*MTE, *MTE->getSubExpr());
 }
 
-void FactsGenerator::handleDestructor(const CFGAutomaticObjDtor &DtorOpt) {
-  /// TODO: Also handle trivial destructors (e.g., for `int`
-  /// variables) which will never have a CFGAutomaticObjDtor node.
+void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   /// TODO: Handle loans to temporaries.
-  /// TODO: Consider using clang::CFG::BuildOptions::AddLifetime to reuse the
-  /// lifetime ends.
-  const VarDecl *DestructedVD = DtorOpt.getVarDecl();
-  if (!DestructedVD)
+  const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
+  if (!LifetimeEndsVD)
     return;
   // Iterate through all loans to see if any expire.
-  /// TODO(opt): Do better than a linear search to find loans associated with
-  /// 'DestructedVD'.
-  for (const Loan &L : FactMgr.getLoanMgr().getLoans()) {
-    const AccessPath &LoanPath = L.Path;
-    // Check if the loan is for a stack variable and if that variable
-    // is the one being destructed.
-    if (LoanPath.D == DestructedVD)
-      CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-          L.ID, DtorOpt.getTriggerStmt()->getEndLoc()));
+  for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
+    if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
+      // Check if the loan is for a stack variable and if that variable
+      // is the one being destructed.
+      if (BL->getAccessPath().D == LifetimeEndsVD)
+        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+            BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc()));
+    }
   }
 }
 
@@ -333,7 +335,7 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
 // (e.g. on the left-hand side of an assignment).
 void FactsGenerator::handleUse(const DeclRefExpr *DRE) {
   if (isPointerType(DRE->getType())) {
-    UseFact *UF = FactMgr.createFact<UseFact>(DRE);
+    UseFact *UF = FactMgr.createFact<UseFact>(DRE, FactMgr.getOriginMgr());
     CurrentBlockFacts.push_back(UF);
     assert(!UseFacts.contains(DRE));
     UseFacts[DRE] = UF;
@@ -345,6 +347,26 @@ void FactsGenerator::markUseAsWrite(const DeclRefExpr *DRE) {
     return;
   assert(UseFacts.contains(DRE));
   UseFacts[DRE]->markAsWritten();
+}
+
+// Creates an IssueFact for a new placeholder loan for each pointer or reference
+// parameter at the function's entry.
+llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
+  const auto *FD = dyn_cast<FunctionDecl>(AC.getDecl());
+  if (!FD)
+    return {};
+
+  llvm::SmallVector<Fact *> PlaceholderLoanFacts;
+  for (const ParmVarDecl *PVD : FD->parameters()) {
+    if (hasOrigin(PVD)) {
+      const PlaceholderLoan *L =
+          FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(PVD);
+      OriginID OID = FactMgr.getOriginMgr().getOrCreate(*PVD);
+      PlaceholderLoanFacts.push_back(
+          FactMgr.createFact<IssueFact>(L->getID(), OID));
+    }
+  }
+  return PlaceholderLoanFacts;
 }
 
 } // namespace clang::lifetimes::internal

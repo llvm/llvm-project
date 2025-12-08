@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LexerUtils.h"
-#include "clang/AST/AST.h"
 #include "clang/Basic/SourceManager.h"
 #include <optional>
 #include <utility>
@@ -42,7 +41,7 @@ SourceLocation findPreviousTokenStart(SourceLocation Start,
   if (Start.isInvalid() || Start.isMacroID())
     return {};
 
-  SourceLocation BeforeStart = Start.getLocWithOffset(-1);
+  const SourceLocation BeforeStart = Start.getLocWithOffset(-1);
   if (BeforeStart.isInvalid() || BeforeStart.isMacroID())
     return {};
 
@@ -57,7 +56,7 @@ SourceLocation findPreviousTokenKind(SourceLocation Start,
     return {};
 
   while (true) {
-    SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
+    const SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
     if (L.isInvalid() || L.isMacroID())
       return {};
 
@@ -123,8 +122,9 @@ std::optional<Token> getQualifyingToken(tok::TokenKind TK,
   assert((TK == tok::kw_const || TK == tok::kw_volatile ||
           TK == tok::kw_restrict) &&
          "TK is not a qualifier keyword");
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Range.getBegin());
-  StringRef File = SM.getBufferData(LocInfo.first);
+  const std::pair<FileID, unsigned> LocInfo =
+      SM.getDecomposedLoc(Range.getBegin());
+  const StringRef File = SM.getBufferData(LocInfo.first);
   Lexer RawLexer(SM.getLocForStartOfFile(LocInfo.first), Context.getLangOpts(),
                  File.begin(), File.data() + LocInfo.second, File.end());
   std::optional<Token> LastMatchBeforeTemplate;
@@ -169,7 +169,6 @@ static bool breakAndReturnEndPlus1Token(const Stmt &S) {
 static SourceLocation getSemicolonAfterStmtEndLoc(const SourceLocation &EndLoc,
                                                   const SourceManager &SM,
                                                   const LangOptions &LangOpts) {
-
   if (EndLoc.isMacroID()) {
     // Assuming EndLoc points to a function call foo within macro F.
     // This method is supposed to return location of the semicolon within
@@ -205,7 +204,6 @@ static SourceLocation getSemicolonAfterStmtEndLoc(const SourceLocation &EndLoc,
 
 SourceLocation getUnifiedEndLoc(const Stmt &S, const SourceManager &SM,
                                 const LangOptions &LangOpts) {
-
   const Stmt *LastChild = &S;
   while (!LastChild->children().empty() && !breakAndReturnEnd(*LastChild) &&
          !breakAndReturnEndPlus1Token(*LastChild)) {
