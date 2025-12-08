@@ -11,6 +11,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Version/Version.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -31,18 +32,13 @@ CommandObjectVersion::~CommandObjectVersion() = default;
 
 // Dump the array values on a single line.
 static void dump(const StructuredData::Array &array, Stream &s) {
-  s << '[';
-
-  bool add_separator = false;
+  std::vector<std::string> values;
   array.ForEach([&](StructuredData::Object *object) -> bool {
-    if (add_separator)
-      s << ", ";
-    s << object->GetStringValue();
-    add_separator = true;
+    values.emplace_back(object->GetStringValue().str());
     return true;
   });
 
-  s << ']';
+  s << '[' << llvm::join(values, ", ") << ']';
 }
 
 // The default dump output is too verbose.
