@@ -3848,9 +3848,9 @@ static bool interp_builtin_ia32_gfni_affine(InterpState &S, CodePtr OpPC,
   X = S.Stk.pop<Pointer>();
 
   const Pointer &Dst = S.Stk.peek<Pointer>();
-  const auto *XVecT = XType->castAs<VectorType>();
   const auto *AVecT = AType->castAs<VectorType>();
-  assert(XVecT->getNumElements() == AVecT->getNumElements());
+  assert(XType->castAs<VectorType>()->getNumElements() ==
+         AVecT->getNumElements());
   unsigned NumBytesInQWord = 8;
   unsigned NumBytes = AVecT->getNumElements();
   unsigned NumBitsInQWord = 64;
@@ -3905,8 +3905,8 @@ static bool interp__builtin_ia32_gfni_mul(InterpState &S, CodePtr OpPC,
 
   const Pointer &Dst = S.Stk.peek<Pointer>();
   const auto *AVecT = AType->castAs<VectorType>();
-  const auto *BVecT = BType->castAs<VectorType>();
-  assert(AVecT->getNumElements() == BVecT->getNumElements());
+  assert(AVecT->getNumElements() ==
+         BType->castAs<VectorType>()->getNumElements());
 
   PrimType AElemT = *S.getContext().classify(AVecT->getElementType());
   unsigned NumBytes = A.getNumElems();
