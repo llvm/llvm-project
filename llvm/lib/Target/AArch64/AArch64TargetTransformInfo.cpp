@@ -4212,6 +4212,15 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
     TTI::VectorInstrContext VIC) const {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
+
+  // There's no scalarization overhead if ld1/st1 is cheap and the
+  // insert/extracts can be folded into the load/stores.
+  if (ST->hasFastLD1Single()) {
+    if ((VIC == TTI::VectorInstrContext::Store && Extract) ||
+        (VIC == TTI::VectorInstrContext::Load && Insert))
+      return 0;
+  }
+
   if (Ty->getElementType()->isFloatingPointTy())
     return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
                                            CostKind);
