@@ -1564,8 +1564,7 @@ public:
   child_range children();
 
   const_child_range children() const {
-    auto Children = const_cast<Stmt *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<Stmt *>(this)->children();
   }
 
   child_iterator child_begin() { return children().begin(); }

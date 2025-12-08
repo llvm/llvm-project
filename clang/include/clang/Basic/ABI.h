@@ -32,12 +32,11 @@ enum CXXCtorType {
 
 /// C++ destructor types.
 enum CXXDtorType {
-  Dtor_Deleting,       ///< Deleting dtor
-  Dtor_Complete,       ///< Complete object dtor
-  Dtor_Base,           ///< Base object dtor
-  Dtor_Comdat,         ///< The COMDAT used for dtors
-  Dtor_Unified,        ///< GCC-style unified dtor
-  Dtor_VectorDeleting, ///< Vector deleting dtor
+  Dtor_Deleting, ///< Deleting dtor
+  Dtor_Complete, ///< Complete object dtor
+  Dtor_Base,     ///< Base object dtor
+  Dtor_Comdat,   ///< The COMDAT used for dtors
+  Dtor_Unified,  ///< GCC-style unified dtor
 };
 
 } // end namespace clang

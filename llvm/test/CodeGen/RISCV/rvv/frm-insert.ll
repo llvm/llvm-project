@@ -3,12 +3,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs -target-abi=lp64d \
 ; RUN: -riscv-disable-frm-insert-opt < %s | FileCheck %s --check-prefix=UNOPT
 
-declare <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-  <vscale x 1 x float>,
-  <vscale x 1 x float>,
-  <vscale x 1 x float>,
-  i64, i64)
-
 ; Test only save/restore frm once.
 define <vscale x 1 x float> @test(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
 ; CHECK-LABEL: test:
@@ -452,7 +446,6 @@ entry:
 ; Test restoring frm before reading frm and doing nothing with following
 ; dynamic rounding mode operations.
 ; TODO: The frrm could be elided.
-declare i32 @llvm.get.rounding()
 define <vscale x 1 x float> @test5(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2, ptr %p) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
@@ -502,7 +495,6 @@ entry:
 }
 
 ; Test not set FRM for vfadd with DYN after WriteFRMImm.
-declare void @llvm.set.rounding(i32)
 define <vscale x 1 x float> @after_fsrm1(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
 ; CHECK-LABEL: after_fsrm1:
 ; CHECK:       # %bb.0: # %entry

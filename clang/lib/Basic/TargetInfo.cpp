@@ -636,15 +636,19 @@ bool TargetInfo::callGlobalDeleteInDeletingDtor(
   return false;
 }
 
-bool TargetInfo::emitVectorDeletingDtors(const LangOptions &LangOpts) const {
-  if (getCXXABI() == TargetCXXABI::Microsoft &&
-      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
-    return true;
-  return false;
-}
-
 bool TargetInfo::areDefaultedSMFStillPOD(const LangOptions &LangOpts) const {
   return LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver15;
+}
+
+void TargetInfo::setDependentOpenCLOpts() {
+  auto &Opts = getSupportedOpenCLOpts();
+  if (!hasFeatureEnabled(Opts, "cl_khr_fp64") ||
+      !hasFeatureEnabled(Opts, "__opencl_c_fp64")) {
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_global_atomic_add", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_local_atomic_add", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_global_atomic_min_max", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_local_atomic_min_max", false);
+  }
 }
 
 LangAS TargetInfo::getOpenCLTypeAddrSpace(OpenCLTypeKind TK) const {

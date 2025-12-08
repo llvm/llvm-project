@@ -1354,12 +1354,13 @@ void ConsumedAnalyzer::run(AnalysisDeclContext &AC) {
 
       case CFGElement::AutomaticObjectDtor: {
         const CFGAutomaticObjDtor &DTor = B.castAs<CFGAutomaticObjDtor>();
+        const auto *DD = DTor.getDestructorDecl(AC.getASTContext());
+        if (!DD)
+          break;
+
         SourceLocation Loc = DTor.getTriggerStmt()->getEndLoc();
         const VarDecl *Var = DTor.getVarDecl();
-
-        Visitor.checkCallability(PropagationInfo(Var),
-                                 DTor.getDestructorDecl(AC.getASTContext()),
-                                 Loc);
+        Visitor.checkCallability(PropagationInfo(Var), DD, Loc);
         break;
       }
 

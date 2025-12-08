@@ -313,6 +313,8 @@ public:
   // represents the Verdef index within the input DSO, which will be converted
   // to a Verneed index in the output. Otherwise, this represents the Verdef
   // index (VER_NDX_LOCAL, VER_NDX_GLOBAL, or a named version).
+  // VER_NDX_LOCAL indicates a defined symbol that has been localized by a
+  // version script's local: directive or --exclude-libs.
   uint16_t versionId;
   LLVM_PREFERRED_TYPE(bool)
   uint8_t versionScriptAssigned : 1;

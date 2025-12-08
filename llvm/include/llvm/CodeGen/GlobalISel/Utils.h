@@ -155,12 +155,10 @@ LLVM_ABI bool isTriviallyDead(const MachineInstr &MI,
 /// Report an ISel error as a missed optimization remark to the LLVMContext's
 /// diagnostic stream.  Set the FailedISel MachineFunction property.
 LLVM_ABI void reportGISelFailure(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  MachineOptimizationRemarkMissed &R);
 
 LLVM_ABI void reportGISelFailure(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  const char *PassName, StringRef Msg,
                                  const MachineInstr &MI);
@@ -168,7 +166,6 @@ LLVM_ABI void reportGISelFailure(MachineFunction &MF,
 /// Report an ISel warning as a missed optimization remark to the LLVMContext's
 /// diagnostic stream.
 LLVM_ABI void reportGISelWarning(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  MachineOptimizationRemarkMissed &R);
 

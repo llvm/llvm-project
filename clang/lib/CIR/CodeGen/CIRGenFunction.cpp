@@ -531,7 +531,48 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   }
 }
 
+void CIRGenFunction::resolveBlockAddresses() {
+  for (cir::BlockAddressOp &blockAddress : cgm.unresolvedBlockAddressToLabel) {
+    cir::LabelOp labelOp =
+        cgm.lookupBlockAddressInfo(blockAddress.getBlockAddrInfo());
+    assert(labelOp && "expected cir.labelOp to already be emitted");
+    cgm.updateResolvedBlockAddress(blockAddress, labelOp);
+  }
+  cgm.unresolvedBlockAddressToLabel.clear();
+}
+
+void CIRGenFunction::finishIndirectBranch() {
+  if (!indirectGotoBlock)
+    return;
+  llvm::SmallVector<mlir::Block *> succesors;
+  llvm::SmallVector<mlir::ValueRange> rangeOperands;
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(indirectGotoBlock);
+  for (auto &[blockAdd, labelOp] : cgm.blockAddressToLabel) {
+    succesors.push_back(labelOp->getBlock());
+    rangeOperands.push_back(labelOp->getBlock()->getArguments());
+  }
+  cir::IndirectBrOp::create(builder, builder.getUnknownLoc(),
+                            indirectGotoBlock->getArgument(0), false,
+                            rangeOperands, succesors);
+  cgm.blockAddressToLabel.clear();
+}
+
 void CIRGenFunction::finishFunction(SourceLocation endLoc) {
+  // Resolve block address-to-label mappings, then emit the indirect branch
+  // with the corresponding targets.
+  resolveBlockAddresses();
+  finishIndirectBranch();
+
+  // If a label address was taken but no indirect goto was used, we can't remove
+  // the block argument here. Instead, we mark the 'indirectbr' op
+  // as poison so that the cleanup can be deferred to lowering, since the
+  // verifier doesn't allow the 'indirectbr' target address to be null.
+  if (indirectGotoBlock && indirectGotoBlock->hasNoPredecessors()) {
+    auto indrBr = cast<cir::IndirectBrOp>(indirectGotoBlock->front());
+    indrBr.setPoison(true);
+  }
+
   // Pop any cleanups that might have been associated with the
   // parameters.  Do this in whatever block we're currently in; it's
   // important to do this before we enter the return block or return
@@ -754,9 +795,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // outside of the function-try-block, which means it's always
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
-  if (dtorType == Dtor_Deleting || dtorType == Dtor_VectorDeleting) {
-    if (cxxStructorImplicitParamValue && dtorType == Dtor_VectorDeleting)
-      cgm.errorNYI(dtor->getSourceRange(), "emitConditionalArrayDtorCall");
+  if (dtorType == Dtor_Deleting) {
     RunCleanupsScope dtorEpilogue(*this);
     enterDtorCleanups(dtor, Dtor_Deleting);
     if (haveInsertPoint()) {
@@ -789,7 +828,6 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting:
-  case Dtor_VectorDeleting:
     llvm_unreachable("already handled deleting case");
 
   case Dtor_Complete:
@@ -1089,6 +1127,17 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   return builder.getConstInt(*currSrcLoc, sizeTy, countFromCLAs);
 }
 
+void CIRGenFunction::instantiateIndirectGotoBlock() {
+  // If we already made the indirect branch for indirect goto, return its block.
+  if (indirectGotoBlock)
+    return;
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  indirectGotoBlock =
+      builder.createBlock(builder.getBlock()->getParent(), {}, {voidPtrTy},
+                          {builder.getUnknownLoc()});
+}
+
 mlir::Value CIRGenFunction::emitAlignmentAssumption(
     mlir::Value ptrValue, QualType ty, SourceLocation loc,
     SourceLocation assumptionLoc, int64_t alignment, mlir::Value offsetValue) {
@@ -1139,6 +1188,14 @@ CIRGenFunction::getVLASize(const VariableArrayType *type) {
 
   assert(numElements && "Undefined elements number");
   return {numElements, elementType};
+}
+
+CIRGenFunction::VlaSizePair
+CIRGenFunction::getVLAElements1D(const VariableArrayType *vla) {
+  mlir::Value vlaSize = vlaSizeMap[vla->getSizeExpr()];
+  assert(vlaSize && "no size for VLA!");
+  assert(vlaSize.getType() == sizeTy);
+  return {vlaSize, vla->getElementType()};
 }
 
 // TODO(cir): Most of this function can be shared between CIRGen

@@ -666,6 +666,10 @@ smoothstep(__detail::HLSL_FIXED_VECTOR<float, N> Min,
   return __detail::smoothstep_vec_impl(Min, Max, X);
 }
 
+inline bool CheckAccessFullyMapped(uint Status) {
+  return static_cast<bool>(Status);
+}
+
 //===----------------------------------------------------------------------===//
 // fwidth builtin
 //===----------------------------------------------------------------------===//

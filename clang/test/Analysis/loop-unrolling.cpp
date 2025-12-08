@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true -verify=expected,default -std=c++14 -analyzer-config exploration_strategy=unexplored_first_queue %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true,exploration_strategy=dfs -verify=expected,dfs -std=c++14 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true -verify=expected,default -std=c++17 -analyzer-config exploration_strategy=unexplored_first_queue %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true,exploration_strategy=dfs -verify=expected,dfs -std=c++17 %s
 
 void clang_analyzer_numTimesReached();
 void clang_analyzer_warnIfReached();
@@ -578,5 +578,23 @@ void test_escaping_on_var_before_switch_case_no_crash(int c) {
       for (i = 0; i < 16; i++) {}
       break;
     }
+  }
+}
+
+template <int Val> struct Integer {
+  static constexpr int value = Val;
+};
+
+void complicated_compile_time_upper_bound() {
+  static_assert((sizeof(char) * Integer<4>::value + 3) == 7);
+  for (int i = 0; i < (sizeof(char) * Integer<4>::value + (((3)))); ++i) {
+    clang_analyzer_numTimesReached(); // expected-warning {{7}}
+  }
+}
+
+void complicated_compile_time_upper_bound_indirect() {
+  using Seven = Integer<(sizeof(char) * Integer<4>::value + 3)>;
+  for (int i = 0; i < ((Seven::value)); ++i) {
+    clang_analyzer_numTimesReached(); // expected-warning {{7}}
   }
 }

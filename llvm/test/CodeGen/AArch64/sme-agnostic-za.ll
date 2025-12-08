@@ -67,10 +67,10 @@ define i64 @agnostic_caller_private_za_callee(i64 %v) nounwind "aarch64_za_state
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x8
 ; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
 ; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
-; CHECK-NEWLOWERING-NEXT:    mov x8, x0
+; CHECK-NEWLOWERING-NEXT:    mov x1, x0
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x19
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_restore
-; CHECK-NEWLOWERING-NEXT:    mov x0, x8
+; CHECK-NEWLOWERING-NEXT:    mov x0, x1
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x29
 ; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
@@ -170,11 +170,11 @@ define i64 @streaming_agnostic_caller_nonstreaming_private_za_callee(i64 %v) nou
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x8
 ; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
 ; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
+; CHECK-NEWLOWERING-NEXT:    mov x1, x0
 ; CHECK-NEWLOWERING-NEXT:    smstart sm
-; CHECK-NEWLOWERING-NEXT:    mov x8, x0
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x20
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_restore
-; CHECK-NEWLOWERING-NEXT:    mov x0, x8
+; CHECK-NEWLOWERING-NEXT:    mov x0, x1
 ; CHECK-NEWLOWERING-NEXT:    sub sp, x29, #64
 ; CHECK-NEWLOWERING-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
@@ -267,14 +267,14 @@ define i64 @streaming_compatible_agnostic_caller_nonstreaming_private_za_callee(
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x8
 ; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
 ; CHECK-NEWLOWERING-NEXT:    bl private_za_decl
+; CHECK-NEWLOWERING-NEXT:    mov x1, x0
 ; CHECK-NEWLOWERING-NEXT:    tbz w20, #0, .LBB5_4
 ; CHECK-NEWLOWERING-NEXT:  // %bb.3:
 ; CHECK-NEWLOWERING-NEXT:    smstart sm
 ; CHECK-NEWLOWERING-NEXT:  .LBB5_4:
-; CHECK-NEWLOWERING-NEXT:    mov x8, x0
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x19
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_restore
-; CHECK-NEWLOWERING-NEXT:    mov x0, x8
+; CHECK-NEWLOWERING-NEXT:    mov x0, x1
 ; CHECK-NEWLOWERING-NEXT:    sub sp, x29, #64
 ; CHECK-NEWLOWERING-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
@@ -336,10 +336,10 @@ define i64  @test_many_callee_arguments(
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x8
 ; CHECK-NEWLOWERING-NEXT:    bl many_args_private_za_callee
 ; CHECK-NEWLOWERING-NEXT:    add sp, sp, #16
-; CHECK-NEWLOWERING-NEXT:    mov x8, x0
+; CHECK-NEWLOWERING-NEXT:    mov x1, x0
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x19
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_restore
-; CHECK-NEWLOWERING-NEXT:    mov x0, x8
+; CHECK-NEWLOWERING-NEXT:    mov x0, x1
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x29
 ; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload

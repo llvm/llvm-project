@@ -5,8 +5,6 @@
 ; these instructions. MachineMemOperand handling can't currently deal with a
 ; negative stride that would allow memory before the pointer to be read.
 
-declare <vscale x 1 x i8> @llvm.experimental.vp.strided.load.nxv1i8.p0.i8(ptr, i8, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x i8> @strided_vpload_nxv1i8_i8(ptr %ptr, i8 signext %stride, <vscale x 1 x i1> %m, i32 zeroext %evl) {
   ; CHECK-LABEL: name: strided_vpload_nxv1i8_i8
   ; CHECK: bb.0 (%ir-block.0):
@@ -23,8 +21,6 @@ define <vscale x 1 x i8> @strided_vpload_nxv1i8_i8(ptr %ptr, i8 signext %stride,
   %load = call <vscale x 1 x i8> @llvm.experimental.vp.strided.load.nxv1i8.p0.i8(ptr %ptr, i8 %stride, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i8> %load
 }
-
-declare void @llvm.experimental.vp.strided.store.nxv1i8.p0.i8(<vscale x 1 x i8>, ptr, i8, <vscale x 1 x i1>, i32)
 
 define void @strided_vpstore_nxv1i8_i8(<vscale x 1 x i8> %val, ptr %ptr, i8 signext %stride, <vscale x 1 x i1> %m, i32 zeroext %evl) {
   ; CHECK-LABEL: name: strided_vpstore_nxv1i8_i8

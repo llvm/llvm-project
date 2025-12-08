@@ -174,11 +174,22 @@ public:
 
   mlir::Value VisitAddrLabelExpr(const AddrLabelExpr *e) {
     auto func = cast<cir::FuncOp>(cgf.curFn);
-    auto blockInfoAttr = cir::BlockAddrInfoAttr::get(
+    cir::BlockAddrInfoAttr blockInfoAttr = cir::BlockAddrInfoAttr::get(
         &cgf.getMLIRContext(), func.getSymName(), e->getLabel()->getName());
-    return cir::BlockAddressOp::create(builder, cgf.getLoc(e->getSourceRange()),
-                                       cgf.convertType(e->getType()),
-                                       blockInfoAttr);
+    cir::BlockAddressOp blockAddressOp = cir::BlockAddressOp::create(
+        builder, cgf.getLoc(e->getSourceRange()), cgf.convertType(e->getType()),
+        blockInfoAttr);
+    cir::LabelOp resolvedLabel = cgf.cgm.lookupBlockAddressInfo(blockInfoAttr);
+    if (!resolvedLabel) {
+      cgf.cgm.mapUnresolvedBlockAddress(blockAddressOp);
+      // Still add the op to maintain insertion order it will be resolved in
+      // resolveBlockAddresses
+      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, nullptr);
+    } else {
+      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, resolvedLabel);
+    }
+    cgf.instantiateIndirectGotoBlock();
+    return blockAddressOp;
   }
 
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *e) {
@@ -2325,14 +2336,50 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
   const QualType typeToSize = e->getTypeOfArgument();
   const mlir::Location loc = cgf.getLoc(e->getSourceRange());
   if (auto kind = e->getKind();
-      kind == UETT_SizeOf || kind == UETT_DataSizeOf) {
-    if (cgf.getContext().getAsVariableArrayType(typeToSize)) {
-      cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
-                                     "sizeof operator for VariableArrayType",
-                                     e->getStmtClassName());
-      return builder.getConstant(
-          loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
-                                 llvm::APSInt(llvm::APInt(64, 1), true)));
+      kind == UETT_SizeOf || kind == UETT_DataSizeOf || kind == UETT_CountOf) {
+    if (const VariableArrayType *vat =
+            cgf.getContext().getAsVariableArrayType(typeToSize)) {
+      // For _Countof, we only want to evaluate if the extent is actually
+      // variable as opposed to a multi-dimensional array whose extent is
+      // constant but whose element type is variable.
+      bool evaluateExtent = true;
+      if (kind == UETT_CountOf && vat->getElementType()->isArrayType()) {
+        evaluateExtent =
+            !vat->getSizeExpr()->isIntegerConstantExpr(cgf.getContext());
+      }
+
+      if (evaluateExtent) {
+        if (e->isArgumentType()) {
+          // sizeof(type) - make sure to emit the VLA size.
+          cgf.emitVariablyModifiedType(typeToSize);
+        } else {
+          // C99 6.5.3.4p2: If the argument is an expression of type
+          // VLA, it is evaluated.
+          cgf.emitIgnoredExpr(e->getArgumentExpr());
+        }
+
+        // For _Countof, we just want to return the size of a single dimension.
+        if (kind == UETT_CountOf)
+          return cgf.getVLAElements1D(vat).numElts;
+
+        // For sizeof and __datasizeof, we need to scale the number of elements
+        // by the size of the array element type.
+        CIRGenFunction::VlaSizePair vlaSize = cgf.getVLASize(vat);
+        mlir::Value numElts = vlaSize.numElts;
+
+        // Scale the number of non-VLA elements by the non-VLA element size.
+        CharUnits eltSize = cgf.getContext().getTypeSizeInChars(vlaSize.type);
+        if (!eltSize.isOne()) {
+          mlir::Location loc = cgf.getLoc(e->getSourceRange());
+          mlir::Value eltSizeValue =
+              builder.getConstAPInt(numElts.getLoc(), numElts.getType(),
+                                    cgf.cgm.getSize(eltSize).getValue());
+          return builder.createMul(loc, eltSizeValue, numElts,
+                                   cir::OverflowBehavior::NoUnsignedWrap);
+        }
+
+        return numElts;
+      }
     }
   } else if (e->getKind() == UETT_OpenMPRequiredSimdAlign) {
     cgf.getCIRGenModule().errorNYI(

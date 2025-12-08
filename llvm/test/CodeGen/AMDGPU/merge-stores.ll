@@ -1054,18 +1054,17 @@ define amdgpu_kernel void @merge_global_store_8_constants_i32(ptr addrspace(1) %
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, 34
-; SI-NEXT:    v_mov_b32_e32 v1, 0x3e7
-; SI-NEXT:    v_mov_b32_e32 v2, 0x41
-; SI-NEXT:    v_mov_b32_e32 v3, 33
+; SI-NEXT:    v_mov_b32_e32 v2, 34
+; SI-NEXT:    v_mov_b32_e32 v3, 0x3e7
+; SI-NEXT:    v_mov_b32_e32 v4, 0x41
+; SI-NEXT:    v_mov_b32_e32 v5, 33
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
+; SI-NEXT:    buffer_store_dwordx4 v[2:5], off, s[0:3], 0
+; SI-NEXT:    v_mov_b32_e32 v0, 0x62
+; SI-NEXT:    v_mov_b32_e32 v1, 0x5b
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v2, 0x62
-; SI-NEXT:    v_mov_b32_e32 v3, 0x5b
-; SI-NEXT:    v_mov_b32_e32 v4, 0xd4
-; SI-NEXT:    v_mov_b32_e32 v5, v1
-; SI-NEXT:    buffer_store_dwordx4 v[2:5], off, s[0:3], 0 offset:16
+; SI-NEXT:    v_mov_b32_e32 v2, 0xd4
+; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; SI-NEXT:    s_endpgm
 ;
 ; CI-LABEL: merge_global_store_8_constants_i32:
@@ -1073,17 +1072,16 @@ define amdgpu_kernel void @merge_global_store_8_constants_i32(ptr addrspace(1) %
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
-; CI-NEXT:    v_mov_b32_e32 v0, 34
-; CI-NEXT:    v_mov_b32_e32 v1, 0x3e7
-; CI-NEXT:    v_mov_b32_e32 v2, 0x41
-; CI-NEXT:    v_mov_b32_e32 v3, 33
+; CI-NEXT:    v_mov_b32_e32 v2, 34
+; CI-NEXT:    v_mov_b32_e32 v3, 0x3e7
+; CI-NEXT:    v_mov_b32_e32 v4, 0x41
+; CI-NEXT:    v_mov_b32_e32 v5, 33
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; CI-NEXT:    v_mov_b32_e32 v4, 0xd4
-; CI-NEXT:    v_mov_b32_e32 v2, 0x62
-; CI-NEXT:    v_mov_b32_e32 v3, 0x5b
-; CI-NEXT:    v_mov_b32_e32 v5, v1
-; CI-NEXT:    buffer_store_dwordx4 v[2:5], off, s[0:3], 0 offset:16
+; CI-NEXT:    buffer_store_dwordx4 v[2:5], off, s[0:3], 0
+; CI-NEXT:    v_mov_b32_e32 v0, 0x62
+; CI-NEXT:    v_mov_b32_e32 v1, 0x5b
+; CI-NEXT:    v_mov_b32_e32 v2, 0xd4
+; CI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; CI-NEXT:    s_endpgm
   store i32 34, ptr addrspace(1) %out, align 4
   %idx1 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 1

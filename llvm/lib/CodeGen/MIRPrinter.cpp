@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -895,6 +896,10 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
   }
   if (uint32_t CFIType = MI.getCFIType())
     OS << LS << "cfi-type " << CFIType;
+  if (Value *DS = MI.getDeactivationSymbol()) {
+    OS << LS << "deactivation-symbol ";
+    MIRFormatter::printIRValue(OS, *DS, State.MST);
+  }
 
   if (auto Num = MI.peekDebugInstrNum())
     OS << LS << "debug-instr-number " << Num;
@@ -960,7 +965,8 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
   case MachineOperand::MO_Predicate:
   case MachineOperand::MO_BlockAddress:
   case MachineOperand::MO_DbgInstrRef:
-  case MachineOperand::MO_ShuffleMask: {
+  case MachineOperand::MO_ShuffleMask:
+  case MachineOperand::MO_LaneMask: {
     unsigned TiedOperandIdx = 0;
     if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())
       TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);

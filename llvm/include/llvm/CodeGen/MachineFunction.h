@@ -1207,7 +1207,7 @@ public:
       ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol = nullptr,
       MCSymbol *PostInstrSymbol = nullptr, MDNode *HeapAllocMarker = nullptr,
       MDNode *PCSections = nullptr, uint32_t CFIType = 0,
-      MDNode *MMRAs = nullptr);
+      MDNode *MMRAs = nullptr, Value *DS = nullptr);
 
   /// Allocate a string and populate it with the given external symbol name.
   const char *createExternalSymbolName(StringRef Name);

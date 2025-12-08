@@ -1301,43 +1301,43 @@ unsigned decodeFieldVaSsrc(unsigned Encoded);
 unsigned decodeFieldHoldCnt(unsigned Encoded);
 
 /// \returns \p VmVsrc as an encoded Depctr immediate.
-unsigned encodeFieldVmVsrc(unsigned VmVsrc);
+unsigned encodeFieldVmVsrc(unsigned VmVsrc, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VmVsrc.
 unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc);
 
 /// \returns \p VaVdst as an encoded Depctr immediate.
-unsigned encodeFieldVaVdst(unsigned VaVdst);
+unsigned encodeFieldVaVdst(unsigned VaVdst, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VaVdst.
 unsigned encodeFieldVaVdst(unsigned Encoded, unsigned VaVdst);
 
 /// \returns \p SaSdst as an encoded Depctr immediate.
-unsigned encodeFieldSaSdst(unsigned SaSdst);
+unsigned encodeFieldSaSdst(unsigned SaSdst, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p SaSdst.
 unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst);
 
 /// \returns \p VaSdst as an encoded Depctr immediate.
-unsigned encodeFieldVaSdst(unsigned VaSdst);
+unsigned encodeFieldVaSdst(unsigned VaSdst, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VaSdst.
 unsigned encodeFieldVaSdst(unsigned Encoded, unsigned VaSdst);
 
 /// \returns \p VaVcc as an encoded Depctr immediate.
-unsigned encodeFieldVaVcc(unsigned VaVcc);
+unsigned encodeFieldVaVcc(unsigned VaVcc, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VaVcc.
 unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc);
 
 /// \returns \p HoldCnt as an encoded Depctr immediate.
-unsigned encodeFieldHoldCnt(unsigned HoldCnt);
+unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p HoldCnt.
-unsigned encodeFieldHoldCnt(unsigned HoldCnt, unsigned Encoded);
+unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt);
 
 /// \returns \p VaSsrc as an encoded Depctr immediate.
-unsigned encodeFieldVaSsrc(unsigned VaSsrc);
+unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VaSsrc.
 unsigned encodeFieldVaSsrc(unsigned Encoded, unsigned VaSsrc);
@@ -1513,6 +1513,8 @@ constexpr inline bool isKernel(CallingConv::ID CC) {
     return false;
   }
 }
+
+inline bool isKernel(const Function &F) { return isKernel(F.getCallingConv()); }
 
 LLVM_READNONE
 constexpr bool canGuaranteeTCO(CallingConv::ID CC) {

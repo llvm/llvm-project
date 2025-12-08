@@ -881,6 +881,8 @@ set(ve_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES})
 
+set(m68k_SOURCES ${GENERIC_SOURCES})
+
 add_custom_target(builtins)
 set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT/Metatargets")
 
@@ -988,9 +990,6 @@ else ()
           endif()
         endif()
       endif()
-      check_c_source_compiles("_Float16 foo(_Float16 x) { return x; }
-                               int main(void) { return 0; }"
-                              COMPILER_RT_HAS_${arch}_FLOAT16)
       append_list_if(COMPILER_RT_HAS_${arch}_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTIN_CFLAGS_${arch})
       check_c_source_compiles("__bf16 foo(__bf16 x) { return x; }
                                int main(void) { return 0; }"
@@ -1009,9 +1008,10 @@ else ()
         list(APPEND BUILTIN_CFLAGS_${arch} -fomit-frame-pointer -DCOMPILER_RT_ARMHF_TARGET)
       endif()
 
-      # For RISCV32, we must force enable int128 for compiling long
+      # For RISCV32 and 32-bit SPARC, we must force enable int128 for compiling long
       # double routines.
-      if(COMPILER_RT_ENABLE_SOFTWARE_INT128 OR "${arch}" STREQUAL "riscv32")
+      if (COMPILER_RT_ENABLE_SOFTWARE_INT128 OR ("${arch}" MATCHES "riscv32|sparc$"
+        AND NOT CMAKE_COMPILER_IS_GNUCC))
         list(APPEND BUILTIN_CFLAGS_${arch} -fforce-enable-int128)
       endif()
 
@@ -1025,6 +1025,9 @@ else ()
                               C_STANDARD 11
                               CXX_STANDARD 17
                               PARENT_TARGET builtins)
+      # Write out the sources that were used to compile the builtins so that tests can be run in
+      # an independent compiler-rt build (see: compiler-rt/test/builtins/CMakeLists.txt)
+      file(WRITE "${CMAKE_BINARY_DIR}/clang_rt.builtins-${arch}.sources.txt" "${${arch}_SOURCES}")
       cmake_pop_check_state()
     endif ()
   endforeach ()
