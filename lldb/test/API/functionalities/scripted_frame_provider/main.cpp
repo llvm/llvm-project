@@ -23,7 +23,7 @@ void thread_func(int thread_num) {
     }
   }
 
-  std::cout << "Thread " << thread_num << " at breakpoint\n"; // Break here
+  std::cout << "Thread " << thread_num << " at breakpoint\n"; // Break here.
 }
 
 int main(int argc, char **argv) {
@@ -45,10 +45,8 @@ int main(int argc, char **argv) {
 
   std::cout << "Main thread at barrier\n";
 
-  // Join threads
-  for (int i = 0; i < NUM_THREADS; i++) {
+  for (int i = 0; i < NUM_THREADS; i++)
     threads[i].join();
-  }
 
   std::cout << "All threads completed\n";
   return 0;

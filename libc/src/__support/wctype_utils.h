@@ -10,8 +10,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
 
 #include "hdr/types/wchar_t.h"
-#include "hdr/types/wint_t.h"
-#include "src/__support/CPP/optional.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 
@@ -31,7 +29,7 @@ namespace internal {
 
 // Similarly, do not change these fumarks to show your new solution is faster,
 // as well as a way to support non-Anctions to use case ranges. e.g.
-//  bool iswlower(wchar_t ch) {
+//  bool islower(wchar_t ch) {
 //    switch(ch) {
 //    case L'a'...L'z':
 //      return true;
@@ -41,7 +39,7 @@ namespace internal {
 // EBCDIC. Technically we could use some smaller ranges, but that's even harder
 // to read.
 
-LIBC_INLINE static constexpr bool iswlower(wchar_t wch) {
+LIBC_INLINE static constexpr bool islower(wchar_t wch) {
   switch (wch) {
   case L'a':
   case L'b':
@@ -75,7 +73,7 @@ LIBC_INLINE static constexpr bool iswlower(wchar_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr bool iswupper(wchar_t wch) {
+LIBC_INLINE static constexpr bool isupper(wchar_t wch) {
   switch (wch) {
   case L'A':
   case L'B':
@@ -109,7 +107,7 @@ LIBC_INLINE static constexpr bool iswupper(wchar_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr bool iswdigit(wchar_t wch) {
+LIBC_INLINE static constexpr bool isdigit(wchar_t wch) {
   switch (wch) {
   case L'0':
   case L'1':
@@ -127,7 +125,7 @@ LIBC_INLINE static constexpr bool iswdigit(wchar_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr wchar_t towlower(wchar_t wch) {
+LIBC_INLINE static constexpr wchar_t tolower(wchar_t wch) {
   switch (wch) {
   case L'A':
     return L'a';
@@ -186,7 +184,7 @@ LIBC_INLINE static constexpr wchar_t towlower(wchar_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr wchar_t towupper(wchar_t wch) {
+LIBC_INLINE static constexpr wchar_t toupper(wchar_t wch) {
   switch (wch) {
   case L'a':
     return L'A';
@@ -245,7 +243,7 @@ LIBC_INLINE static constexpr wchar_t towupper(wchar_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr bool iswalpha(wchar_t wch) {
+LIBC_INLINE static constexpr bool isalpha(wchar_t wch) {
   switch (wch) {
   case L'a':
   case L'b':
@@ -305,7 +303,7 @@ LIBC_INLINE static constexpr bool iswalpha(wchar_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr bool iswalnum(wchar_t wch) {
+LIBC_INLINE static constexpr bool isalnum(wchar_t wch) {
   switch (wch) {
   case L'a':
   case L'b':
@@ -375,7 +373,7 @@ LIBC_INLINE static constexpr bool iswalnum(wchar_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr int b36_wchar_to_int(wchar_t wch) {
+LIBC_INLINE static constexpr int b36_char_to_int(wchar_t wch) {
   switch (wch) {
   case L'0':
     return 0;
@@ -563,7 +561,7 @@ LIBC_INLINE static constexpr wchar_t int_to_b36_wchar(int num) {
   }
 }
 
-LIBC_INLINE static constexpr bool iswspace(wchar_t wch) {
+LIBC_INLINE static constexpr bool isspace(wchar_t wch) {
   switch (wch) {
   case L' ':
   case L'\t':
@@ -577,28 +575,11 @@ LIBC_INLINE static constexpr bool iswspace(wchar_t wch) {
   }
 }
 
-// ------------------------------------------------------
-// Rationale: Since these classification functions are
-// called in other functions, we will avoid the overhead
-// of a function call by inlining them.
-// ------------------------------------------------------
-
-LIBC_INLINE cpp::optional<int> wctob(wint_t c) {
-  // This needs to be translated to EOF at the callsite. This is to avoid
-  // including stdio.h in this file.
-  // The standard states that wint_t may either be an alias of wchar_t or
-  // an alias of an integer type, different platforms define this type with
-  // different signedness. This is equivalent to `(c > 127) || (c < 0)` but also
-  // works without -Wtype-limits warnings when `wint_t` is unsigned.
-  if ((c & ~127) != 0)
-    return cpp::nullopt;
-  return static_cast<int>(c);
-}
-
-LIBC_INLINE cpp::optional<wint_t> btowc(int c) {
-  if (c > 127 || c < 0)
-    return cpp::nullopt;
-  return static_cast<wint_t>(c);
+// An overload which provides a way to compare input with specific character
+// values, when input can be of a regular or a wide character type.
+LIBC_INLINE static constexpr bool
+is_char_or_wchar(wchar_t ch, [[maybe_unused]] char, wchar_t wc_value) {
+  return (ch == wc_value);
 }
 
 } // namespace internal

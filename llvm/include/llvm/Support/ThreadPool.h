@@ -27,7 +27,6 @@
 #include <condition_variable>
 #include <deque>
 #include <functional>
-#include <memory>
 #include <mutex>
 #include <utility>
 
@@ -225,6 +224,12 @@ public:
 
   /// Blocking destructor: the pool will first execute the pending tasks.
   ~SingleThreadExecutor() override;
+
+  // Excplicitly disable copy. This is necessary for the MSVC LLVM_DYLIB build
+  // because MSVC tries to generate copy constructor and assignment operator
+  // for classes marked with `__declspec(dllexport)`.
+  SingleThreadExecutor(const SingleThreadExecutor &) = delete;
+  SingleThreadExecutor &operator=(const SingleThreadExecutor &) = delete;
 
   /// Blocking wait for all the tasks to execute first
   void wait() override;

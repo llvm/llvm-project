@@ -419,8 +419,6 @@ public:
   /// Enable the MachineScheduler pass for all X86 subtargets.
   bool enableMachineScheduler() const override { return true; }
 
-  bool enableTerminalRule() const override { return true; }
-
   bool enableEarlyIfConversion() const override;
 
   void getPostRAMutations(std::vector<std::unique_ptr<ScheduleDAGMutation>>

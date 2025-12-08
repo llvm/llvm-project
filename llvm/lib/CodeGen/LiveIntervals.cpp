@@ -173,8 +173,8 @@ void LiveIntervals::analyze(MachineFunction &fn) {
   if (EnablePrecomputePhysRegs) {
     // For stress testing, precompute live ranges of all physical register
     // units, including reserved registers.
-    for (unsigned i = 0, e = TRI->getNumRegUnits(); i != e; ++i)
-      getRegUnit(i);
+    for (MCRegUnit Unit : TRI->regunits())
+      getRegUnit(Unit);
   }
 }
 
@@ -184,7 +184,8 @@ void LiveIntervals::print(raw_ostream &OS) const {
   // Dump the regunits.
   for (unsigned Unit = 0, UnitE = RegUnitRanges.size(); Unit != UnitE; ++Unit)
     if (LiveRange *LR = RegUnitRanges[Unit])
-      OS << printRegUnit(Unit, TRI) << ' ' << *LR << '\n';
+      OS << printRegUnit(static_cast<MCRegUnit>(Unit), TRI) << ' ' << *LR
+         << '\n';
 
   // Dump the virtregs.
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
@@ -367,10 +368,11 @@ void LiveIntervals::computeLiveInRegUnits() {
     LLVM_DEBUG(dbgs() << Begin << "\t" << printMBBReference(MBB));
     for (const auto &LI : MBB.liveins()) {
       for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
-        LiveRange *LR = RegUnitRanges[Unit];
+        LiveRange *LR = RegUnitRanges[static_cast<unsigned>(Unit)];
         if (!LR) {
           // Use segment set to speed-up initial computation of the live range.
-          LR = RegUnitRanges[Unit] = new LiveRange(UseSegmentSetForPhysRegs);
+          LR = RegUnitRanges[static_cast<unsigned>(Unit)] =
+              new LiveRange(UseSegmentSetForPhysRegs);
           NewRanges.push_back(Unit);
         }
         VNInfo *VNI = LR->createDeadDef(Begin, getVNInfoAllocator());
@@ -384,7 +386,7 @@ void LiveIntervals::computeLiveInRegUnits() {
 
   // Compute the 'normal' part of the ranges.
   for (MCRegUnit Unit : NewRanges)
-    computeRegUnitRange(*RegUnitRanges[Unit], Unit);
+    computeRegUnitRange(*RegUnitRanges[static_cast<unsigned>(Unit)], Unit);
 }
 
 static void createSegmentsForValues(LiveRange &LR,

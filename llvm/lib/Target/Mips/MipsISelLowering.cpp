@@ -171,131 +171,9 @@ SDValue MipsTargetLowering::getTargetNode(ConstantPoolSDNode *N, EVT Ty,
                                    N->getOffset(), Flag);
 }
 
-const char *MipsTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch ((MipsISD::NodeType)Opcode) {
-  case MipsISD::FIRST_NUMBER:      break;
-  case MipsISD::JmpLink:           return "MipsISD::JmpLink";
-  case MipsISD::TailCall:          return "MipsISD::TailCall";
-  case MipsISD::Highest:           return "MipsISD::Highest";
-  case MipsISD::Higher:            return "MipsISD::Higher";
-  case MipsISD::Hi:                return "MipsISD::Hi";
-  case MipsISD::Lo:                return "MipsISD::Lo";
-  case MipsISD::GotHi:             return "MipsISD::GotHi";
-  case MipsISD::TlsHi:             return "MipsISD::TlsHi";
-  case MipsISD::GPRel:             return "MipsISD::GPRel";
-  case MipsISD::ThreadPointer:     return "MipsISD::ThreadPointer";
-  case MipsISD::Ret:               return "MipsISD::Ret";
-  case MipsISD::ERet:              return "MipsISD::ERet";
-  case MipsISD::EH_RETURN:         return "MipsISD::EH_RETURN";
-  case MipsISD::FAbs:              return "MipsISD::FAbs";
-  case MipsISD::FMS:               return "MipsISD::FMS";
-  case MipsISD::FPBrcond:          return "MipsISD::FPBrcond";
-  case MipsISD::FPCmp:             return "MipsISD::FPCmp";
-  case MipsISD::FSELECT:           return "MipsISD::FSELECT";
-  case MipsISD::MTC1_D64:          return "MipsISD::MTC1_D64";
-  case MipsISD::CMovFP_T:          return "MipsISD::CMovFP_T";
-  case MipsISD::CMovFP_F:          return "MipsISD::CMovFP_F";
-  case MipsISD::TruncIntFP:        return "MipsISD::TruncIntFP";
-  case MipsISD::MFHI:              return "MipsISD::MFHI";
-  case MipsISD::MFLO:              return "MipsISD::MFLO";
-  case MipsISD::MTLOHI:            return "MipsISD::MTLOHI";
-  case MipsISD::Mult:              return "MipsISD::Mult";
-  case MipsISD::Multu:             return "MipsISD::Multu";
-  case MipsISD::MAdd:              return "MipsISD::MAdd";
-  case MipsISD::MAddu:             return "MipsISD::MAddu";
-  case MipsISD::MSub:              return "MipsISD::MSub";
-  case MipsISD::MSubu:             return "MipsISD::MSubu";
-  case MipsISD::DivRem:            return "MipsISD::DivRem";
-  case MipsISD::DivRemU:           return "MipsISD::DivRemU";
-  case MipsISD::DivRem16:          return "MipsISD::DivRem16";
-  case MipsISD::DivRemU16:         return "MipsISD::DivRemU16";
-  case MipsISD::BuildPairF64:      return "MipsISD::BuildPairF64";
-  case MipsISD::ExtractElementF64: return "MipsISD::ExtractElementF64";
-  case MipsISD::Wrapper:           return "MipsISD::Wrapper";
-  case MipsISD::DynAlloc:          return "MipsISD::DynAlloc";
-  case MipsISD::Sync:              return "MipsISD::Sync";
-  case MipsISD::Ext:               return "MipsISD::Ext";
-  case MipsISD::Ins:               return "MipsISD::Ins";
-  case MipsISD::CIns:              return "MipsISD::CIns";
-  case MipsISD::LWL:               return "MipsISD::LWL";
-  case MipsISD::LWR:               return "MipsISD::LWR";
-  case MipsISD::SWL:               return "MipsISD::SWL";
-  case MipsISD::SWR:               return "MipsISD::SWR";
-  case MipsISD::LDL:               return "MipsISD::LDL";
-  case MipsISD::LDR:               return "MipsISD::LDR";
-  case MipsISD::SDL:               return "MipsISD::SDL";
-  case MipsISD::SDR:               return "MipsISD::SDR";
-  case MipsISD::EXTP:              return "MipsISD::EXTP";
-  case MipsISD::EXTPDP:            return "MipsISD::EXTPDP";
-  case MipsISD::EXTR_S_H:          return "MipsISD::EXTR_S_H";
-  case MipsISD::EXTR_W:            return "MipsISD::EXTR_W";
-  case MipsISD::EXTR_R_W:          return "MipsISD::EXTR_R_W";
-  case MipsISD::EXTR_RS_W:         return "MipsISD::EXTR_RS_W";
-  case MipsISD::SHILO:             return "MipsISD::SHILO";
-  case MipsISD::MTHLIP:            return "MipsISD::MTHLIP";
-  case MipsISD::MULSAQ_S_W_PH:     return "MipsISD::MULSAQ_S_W_PH";
-  case MipsISD::MAQ_S_W_PHL:       return "MipsISD::MAQ_S_W_PHL";
-  case MipsISD::MAQ_S_W_PHR:       return "MipsISD::MAQ_S_W_PHR";
-  case MipsISD::MAQ_SA_W_PHL:      return "MipsISD::MAQ_SA_W_PHL";
-  case MipsISD::MAQ_SA_W_PHR:      return "MipsISD::MAQ_SA_W_PHR";
-  case MipsISD::DOUBLE_SELECT_I:   return "MipsISD::DOUBLE_SELECT_I";
-  case MipsISD::DOUBLE_SELECT_I64: return "MipsISD::DOUBLE_SELECT_I64";
-  case MipsISD::DPAU_H_QBL:        return "MipsISD::DPAU_H_QBL";
-  case MipsISD::DPAU_H_QBR:        return "MipsISD::DPAU_H_QBR";
-  case MipsISD::DPSU_H_QBL:        return "MipsISD::DPSU_H_QBL";
-  case MipsISD::DPSU_H_QBR:        return "MipsISD::DPSU_H_QBR";
-  case MipsISD::DPAQ_S_W_PH:       return "MipsISD::DPAQ_S_W_PH";
-  case MipsISD::DPSQ_S_W_PH:       return "MipsISD::DPSQ_S_W_PH";
-  case MipsISD::DPAQ_SA_L_W:       return "MipsISD::DPAQ_SA_L_W";
-  case MipsISD::DPSQ_SA_L_W:       return "MipsISD::DPSQ_SA_L_W";
-  case MipsISD::DPA_W_PH:          return "MipsISD::DPA_W_PH";
-  case MipsISD::DPS_W_PH:          return "MipsISD::DPS_W_PH";
-  case MipsISD::DPAQX_S_W_PH:      return "MipsISD::DPAQX_S_W_PH";
-  case MipsISD::DPAQX_SA_W_PH:     return "MipsISD::DPAQX_SA_W_PH";
-  case MipsISD::DPAX_W_PH:         return "MipsISD::DPAX_W_PH";
-  case MipsISD::DPSX_W_PH:         return "MipsISD::DPSX_W_PH";
-  case MipsISD::DPSQX_S_W_PH:      return "MipsISD::DPSQX_S_W_PH";
-  case MipsISD::DPSQX_SA_W_PH:     return "MipsISD::DPSQX_SA_W_PH";
-  case MipsISD::MULSA_W_PH:        return "MipsISD::MULSA_W_PH";
-  case MipsISD::MULT:              return "MipsISD::MULT";
-  case MipsISD::MULTU:             return "MipsISD::MULTU";
-  case MipsISD::MADD_DSP:          return "MipsISD::MADD_DSP";
-  case MipsISD::MADDU_DSP:         return "MipsISD::MADDU_DSP";
-  case MipsISD::MSUB_DSP:          return "MipsISD::MSUB_DSP";
-  case MipsISD::MSUBU_DSP:         return "MipsISD::MSUBU_DSP";
-  case MipsISD::SHLL_DSP:          return "MipsISD::SHLL_DSP";
-  case MipsISD::SHRA_DSP:          return "MipsISD::SHRA_DSP";
-  case MipsISD::SHRL_DSP:          return "MipsISD::SHRL_DSP";
-  case MipsISD::SETCC_DSP:         return "MipsISD::SETCC_DSP";
-  case MipsISD::SELECT_CC_DSP:     return "MipsISD::SELECT_CC_DSP";
-  case MipsISD::VALL_ZERO:         return "MipsISD::VALL_ZERO";
-  case MipsISD::VANY_ZERO:         return "MipsISD::VANY_ZERO";
-  case MipsISD::VALL_NONZERO:      return "MipsISD::VALL_NONZERO";
-  case MipsISD::VANY_NONZERO:      return "MipsISD::VANY_NONZERO";
-  case MipsISD::VCEQ:              return "MipsISD::VCEQ";
-  case MipsISD::VCLE_S:            return "MipsISD::VCLE_S";
-  case MipsISD::VCLE_U:            return "MipsISD::VCLE_U";
-  case MipsISD::VCLT_S:            return "MipsISD::VCLT_S";
-  case MipsISD::VCLT_U:            return "MipsISD::VCLT_U";
-  case MipsISD::VEXTRACT_SEXT_ELT: return "MipsISD::VEXTRACT_SEXT_ELT";
-  case MipsISD::VEXTRACT_ZEXT_ELT: return "MipsISD::VEXTRACT_ZEXT_ELT";
-  case MipsISD::VNOR:              return "MipsISD::VNOR";
-  case MipsISD::VSHF:              return "MipsISD::VSHF";
-  case MipsISD::SHF:               return "MipsISD::SHF";
-  case MipsISD::ILVEV:             return "MipsISD::ILVEV";
-  case MipsISD::ILVOD:             return "MipsISD::ILVOD";
-  case MipsISD::ILVL:              return "MipsISD::ILVL";
-  case MipsISD::ILVR:              return "MipsISD::ILVR";
-  case MipsISD::PCKEV:             return "MipsISD::PCKEV";
-  case MipsISD::PCKOD:             return "MipsISD::PCKOD";
-  case MipsISD::INSVE:             return "MipsISD::INSVE";
-  }
-  return nullptr;
-}
-
 MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
                                        const MipsSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI), ABI(TM.getABI()) {
+    : TargetLowering(TM, STI), Subtarget(STI), ABI(TM.getABI()) {
   // Mips does not have i1 type, so use i32 for
   // setcc operations results (slt, sgt, ...).
   setBooleanContents(ZeroOrOneBooleanContent);
@@ -356,6 +234,13 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FCOPYSIGN,          MVT::f32,   Custom);
   setOperationAction(ISD::FCOPYSIGN,          MVT::f64,   Custom);
   setOperationAction(ISD::FP_TO_SINT,         MVT::i32,   Custom);
+  setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::i32,   Custom);
+  setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::i32,   Custom);
+
+  setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Custom);
+  setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
+  setOperationAction(ISD::STRICT_FSETCC, MVT::f64, Custom);
+  setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
 
   if (Subtarget.hasMips32r2() ||
       getTargetMachine().getTargetTriple().isOSLinux())
@@ -395,6 +280,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
       setOperationAction(ISD::STORE,              MVT::i64,   Custom);
     }
     setOperationAction(ISD::FP_TO_SINT,         MVT::i64,   Custom);
+    setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::i64,   Custom);
+    setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::i64,   Custom);
     setOperationAction(ISD::SHL_PARTS,          MVT::i64,   Custom);
     setOperationAction(ISD::SRA_PARTS,          MVT::i64,   Custom);
     setOperationAction(ISD::SRL_PARTS,          MVT::i64,   Custom);
@@ -433,6 +320,7 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FP_TO_UINT,        MVT::i32,   Expand);
   setOperationAction(ISD::FP_TO_UINT,        MVT::i64,   Expand);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1,    Expand);
+
   if (Subtarget.hasCnMips()) {
     setOperationAction(ISD::CTPOP,           MVT::i32,   Legal);
     setOperationAction(ISD::CTPOP,           MVT::i64,   Legal);
@@ -661,7 +549,8 @@ static bool invertFPCondCodeUser(Mips::CondCode CC) {
 // Returns Op if setcc is not a floating point comparison.
 static SDValue createFPCmp(SelectionDAG &DAG, const SDValue &Op) {
   // must be a SETCC node
-  if (Op.getOpcode() != ISD::SETCC)
+  if (Op.getOpcode() != ISD::SETCC && Op.getOpcode() != ISD::STRICT_FSETCC &&
+      Op.getOpcode() != ISD::STRICT_FSETCCS)
     return Op;
 
   SDValue LHS = Op.getOperand(0);
@@ -1338,6 +1227,9 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::JumpTable:          return lowerJumpTable(Op, DAG);
   case ISD::SELECT:             return lowerSELECT(Op, DAG);
   case ISD::SETCC:              return lowerSETCC(Op, DAG);
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
+    return lowerFSETCC(Op, DAG);
   case ISD::VASTART:            return lowerVASTART(Op, DAG);
   case ISD::VAARG:              return lowerVAARG(Op, DAG);
   case ISD::FCOPYSIGN:          return lowerFCOPYSIGN(Op, DAG);
@@ -1354,6 +1246,9 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::LOAD:               return lowerLOAD(Op, DAG);
   case ISD::STORE:              return lowerSTORE(Op, DAG);
   case ISD::EH_DWARF_CFA:       return lowerEH_DWARF_CFA(Op, DAG);
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
+    return lowerSTRICT_FP_TO_INT(Op, DAG);
   case ISD::FP_TO_SINT:         return lowerFP_TO_SINT(Op, DAG);
   case ISD::READCYCLECOUNTER:
     return lowerREADCYCLECOUNTER(Op, DAG);
@@ -2227,6 +2122,24 @@ SDValue MipsTargetLowering::lowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   return createCMovFP(DAG, Cond, True, False, DL);
 }
 
+SDValue MipsTargetLowering::lowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
+  assert(!Subtarget.hasMips32r6() && !Subtarget.hasMips64r6());
+
+  SDLoc DL(Op);
+  SDValue Chain = Op.getOperand(0);
+  SDValue LHS = Op.getOperand(1);
+  SDValue RHS = Op.getOperand(2);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(3))->get();
+
+  SDValue Cond = DAG.getNode(MipsISD::FPCmp, DL, MVT::Glue, LHS, RHS,
+                             DAG.getConstant(condCodeToFCC(CC), DL, MVT::i32));
+  SDValue True = DAG.getConstant(1, DL, MVT::i32);
+  SDValue False = DAG.getConstant(0, DL, MVT::i32);
+  SDValue CMovFP = createCMovFP(DAG, Cond, True, False, DL);
+
+  return DAG.getMergeValues({CMovFP, Chain}, DL);
+}
+
 SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
   EVT Ty = Op.getValueType();
@@ -3009,6 +2922,20 @@ SDValue MipsTargetLowering::lowerFP_TO_SINT(SDValue Op,
   SDValue Trunc = DAG.getNode(MipsISD::TruncIntFP, SDLoc(Op), FPTy,
                               Op.getOperand(0));
   return DAG.getNode(ISD::BITCAST, SDLoc(Op), Op.getValueType(), Trunc);
+}
+
+SDValue MipsTargetLowering::lowerSTRICT_FP_TO_INT(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  assert(Op->isStrictFPOpcode());
+  SDValue SrcVal = Op.getOperand(1);
+  SDLoc Loc(Op);
+
+  SDValue Result =
+      DAG.getNode(Op.getOpcode() == ISD::STRICT_FP_TO_SINT ? ISD::FP_TO_SINT
+                                                           : ISD::FP_TO_UINT,
+                  Loc, Op.getValueType(), SrcVal);
+
+  return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
 }
 
 //===----------------------------------------------------------------------===//

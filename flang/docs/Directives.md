@@ -32,6 +32,22 @@ A list of non-standard directives supported by Flang
     end
   end interface
 ```
+  Note that it's not allowed to pass array actual argument to `ignore_trk(R)`
+  dummy argument that is a scalar with `VALUE` attribute, for example:
+```
+  interface
+    subroutine s(b)
+      !dir$ ignore_tkr(r) b
+      integer, value :: b
+    end
+  end interface
+  integer :: a(5)
+  call s(a)
+```
+  The reason for this limitation is that scalars with `VALUE` attribute can
+  be passed in registers, so it's not clear how lowering should handle this
+  case. (Passing scalar actual argument to `ignore_tkr(R)` dummy argument
+  that is a scalar with `VALUE` attribute is allowed.)
 * `!dir$ assume_aligned desginator:alignment`, where designator is a variable,
   maybe with array indices, and alignment is what the compiler should assume the
   alignment to be. E.g A:64 or B(1,1,1):128. The alignment should be a power of 2,
@@ -41,6 +57,15 @@ A list of non-standard directives supported by Flang
 * `!dir$ vector always` forces vectorization on the following loop regardless
   of cost model decisions. The loop must still be vectorizable.
   [This directive currently only works on plain do loops without labels].
+* `!dir$ vector vectorlength({fixed|scalable|<num>|<num>,fixed|<num>,scalable})`
+  specifies a hint to the compiler about the desired vectorization factor. If
+  `fixed` is used, the compiler should prefer fixed-width vectorization.
+  Scalable vectorization instructions may still be used with a fixed-width
+  predicate. If `scalable` is used the compiler should prefer scalable
+  vectorization, though it can choose to use fixed length vectorization or not
+  at all. `<num>` means that the compiler should consider using this specific
+  vectorization factor, which should be an integer literal. This directive
+  currently has the same limitations as `!dir$ vector always`.
 * `!dir$ unroll [n]` specifies that the compiler ought to unroll the immediately
   following loop `n` times. When `n` is `0` or `1`, the loop should not be unrolled
   at all. When `n` is `2` or greater, the loop should be unrolled exactly `n`

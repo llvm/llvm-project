@@ -318,8 +318,8 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
   if (!EOL)
     EOL = Begin + strlen(Begin);
 
-  const char *PosList[] = {strchr(Begin, '='), strchr(Begin, ';'),
-                           strchr(Begin, ','), strchr(Begin, ')'), EOL};
+  const char *const PosList[] = {strchr(Begin, '='), strchr(Begin, ';'),
+                                 strchr(Begin, ','), strchr(Begin, ')'), EOL};
   for (const auto &Pos : PosList) {
     if (Pos > Begin)
       EOL = std::min(EOL, Pos);
@@ -408,7 +408,6 @@ IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
     : RenamerClangTidyCheck(Name, Context), Context(Context),
       GetConfigPerFile(Options.get("GetConfigPerFile", true)),
       IgnoreFailedSplit(Options.get("IgnoreFailedSplit", false)) {
-
   auto IterAndInserted = NamingStylesCache.try_emplace(
       llvm::sys::path::parent_path(Context->getCurrentFile()),
       getFileStyleFromOptions(Options));
@@ -447,7 +446,6 @@ bool IdentifierNamingCheck::HungarianNotation::isOptionEnabled(
 void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
     const ClangTidyCheck::OptionsView &Options,
     IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
-
   static constexpr StringRef HNOpts[] = {"TreatStructAsClass"};
   static constexpr StringRef HNDerivedTypes[] = {"Array", "Pointer",
                                                  "FunctionPointer"};
@@ -643,7 +641,6 @@ std::string IdentifierNamingCheck::HungarianNotation::getDataTypePrefix(
 std::string IdentifierNamingCheck::HungarianNotation::getClassPrefix(
     const CXXRecordDecl *CRD,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
-
   if (CRD->isUnion())
     return {};
 
@@ -723,7 +720,6 @@ size_t IdentifierNamingCheck::HungarianNotation::getAsteriskCount(
 
 void IdentifierNamingCheck::HungarianNotation::loadDefaultConfig(
     IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
-
   // Options
   static constexpr std::pair<StringRef, StringRef> General[] = {
       {"TreatStructAsClass", "false"}};

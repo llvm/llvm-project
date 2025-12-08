@@ -153,6 +153,43 @@ define amdgpu_ps i32 @and64(i64 inreg %val0, i64 inreg %val1) {
   ret i32 %zext
 }
 
+define amdgpu_ps i32 @and32_clear_one_bit(i32 inreg %val0) {
+; CHECK-LABEL: and32_clear_one_bit:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_and_b32 s0, s0, 0x7fffffff
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    ; return to shader part epilog
+  %result = and i32 %val0, 2147483647
+  call void asm "; use $0", "s"(i32 %result)
+  %cmp = icmp ne i32 %result, 0
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
+}
+
+define amdgpu_ps i32 @and64_clear_one_bit(i64 inreg %val0) {
+; CHECK-LABEL: and64_clear_one_bit:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_bitset0_b32 s0, 31
+; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[0:1]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    ; return to shader part epilog
+  %result = and i64 %val0, -2147483649
+  call void asm "; use $0", "s"(i64 %result)
+  %cmp = icmp ne i64 %result, 0
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
+}
+
 define amdgpu_ps i32 @or32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: or32:
 ; CHECK:       ; %bb.0:
@@ -623,14 +660,14 @@ define amdgpu_ps i32 @si_pc_add_rel_offset_must_not_optimize() {
 ; CHECK-NEXT:    s_add_u32 s0, s0, __unnamed_1@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, __unnamed_1@rel32@hi+12
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB36_2
+; CHECK-NEXT:    s_cbranch_scc0 .LBB38_2
 ; CHECK-NEXT:  ; %bb.1: ; %endif
 ; CHECK-NEXT:    s_mov_b32 s0, 1
-; CHECK-NEXT:    s_branch .LBB36_3
-; CHECK-NEXT:  .LBB36_2: ; %if
+; CHECK-NEXT:    s_branch .LBB38_3
+; CHECK-NEXT:  .LBB38_2: ; %if
 ; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    s_branch .LBB36_3
-; CHECK-NEXT:  .LBB36_3:
+; CHECK-NEXT:    s_branch .LBB38_3
+; CHECK-NEXT:  .LBB38_3:
   %cmp = icmp ne ptr addrspace(4) @1, null
   br i1 %cmp, label %endif, label %if
 

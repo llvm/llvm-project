@@ -23,7 +23,7 @@
 #  define _LIBCPP_ELAST ELAST
 #elif defined(__LLVM_LIBC__)
 // No _LIBCPP_ELAST needed for LLVM libc
-#elif defined(_NEWLIB_VERSION)
+#elif _LIBCPP_LIBC_NEWLIB
 #  define _LIBCPP_ELAST __ELASTERROR
 #elif defined(__NuttX__)
 // No _LIBCPP_ELAST needed on NuttX
