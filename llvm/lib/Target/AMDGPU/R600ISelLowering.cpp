@@ -2185,6 +2185,8 @@ R600TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:

@@ -48,7 +48,6 @@ define <1 x half> @round_v1f16(<1 x half> %x) {
   %a = call <1 x half> @llvm.round.v1f16(<1 x half> %x)
   ret <1 x half> %a
 }
-declare <1 x half> @llvm.round.v1f16(<1 x half>)
 
 define <2 x half> @round_v2f16(<2 x half> %x) {
 ; ZVFH-LABEL: round_v2f16:
@@ -88,7 +87,6 @@ define <2 x half> @round_v2f16(<2 x half> %x) {
   %a = call <2 x half> @llvm.round.v2f16(<2 x half> %x)
   ret <2 x half> %a
 }
-declare <2 x half> @llvm.round.v2f16(<2 x half>)
 
 define <4 x half> @round_v4f16(<4 x half> %x) {
 ; ZVFH-LABEL: round_v4f16:
@@ -128,7 +126,6 @@ define <4 x half> @round_v4f16(<4 x half> %x) {
   %a = call <4 x half> @llvm.round.v4f16(<4 x half> %x)
   ret <4 x half> %a
 }
-declare <4 x half> @llvm.round.v4f16(<4 x half>)
 
 define <8 x half> @round_v8f16(<8 x half> %x) {
 ; ZVFH-LABEL: round_v8f16:
@@ -168,7 +165,6 @@ define <8 x half> @round_v8f16(<8 x half> %x) {
   %a = call <8 x half> @llvm.round.v8f16(<8 x half> %x)
   ret <8 x half> %a
 }
-declare <8 x half> @llvm.round.v8f16(<8 x half>)
 
 define <16 x half> @round_v16f16(<16 x half> %x) {
 ; ZVFH-LABEL: round_v16f16:
@@ -208,7 +204,6 @@ define <16 x half> @round_v16f16(<16 x half> %x) {
   %a = call <16 x half> @llvm.round.v16f16(<16 x half> %x)
   ret <16 x half> %a
 }
-declare <16 x half> @llvm.round.v16f16(<16 x half>)
 
 define <32 x half> @round_v32f16(<32 x half> %x) {
 ; ZVFH-LABEL: round_v32f16:
@@ -250,7 +245,6 @@ define <32 x half> @round_v32f16(<32 x half> %x) {
   %a = call <32 x half> @llvm.round.v32f16(<32 x half> %x)
   ret <32 x half> %a
 }
-declare <32 x half> @llvm.round.v32f16(<32 x half>)
 
 define <1 x float> @round_v1f32(<1 x float> %x) {
 ; CHECK-LABEL: round_v1f32:
@@ -270,7 +264,6 @@ define <1 x float> @round_v1f32(<1 x float> %x) {
   %a = call <1 x float> @llvm.round.v1f32(<1 x float> %x)
   ret <1 x float> %a
 }
-declare <1 x float> @llvm.round.v1f32(<1 x float>)
 
 define <2 x float> @round_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: round_v2f32:
@@ -290,7 +283,6 @@ define <2 x float> @round_v2f32(<2 x float> %x) {
   %a = call <2 x float> @llvm.round.v2f32(<2 x float> %x)
   ret <2 x float> %a
 }
-declare <2 x float> @llvm.round.v2f32(<2 x float>)
 
 define <4 x float> @round_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: round_v4f32:
@@ -310,7 +302,6 @@ define <4 x float> @round_v4f32(<4 x float> %x) {
   %a = call <4 x float> @llvm.round.v4f32(<4 x float> %x)
   ret <4 x float> %a
 }
-declare <4 x float> @llvm.round.v4f32(<4 x float>)
 
 define <8 x float> @round_v8f32(<8 x float> %x) {
 ; CHECK-LABEL: round_v8f32:
@@ -330,7 +321,6 @@ define <8 x float> @round_v8f32(<8 x float> %x) {
   %a = call <8 x float> @llvm.round.v8f32(<8 x float> %x)
   ret <8 x float> %a
 }
-declare <8 x float> @llvm.round.v8f32(<8 x float>)
 
 define <16 x float> @round_v16f32(<16 x float> %x) {
 ; CHECK-LABEL: round_v16f32:
@@ -350,7 +340,6 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
   %a = call <16 x float> @llvm.round.v16f32(<16 x float> %x)
   ret <16 x float> %a
 }
-declare <16 x float> @llvm.round.v16f32(<16 x float>)
 
 define <1 x double> @round_v1f64(<1 x double> %x) {
 ; RV32ZVFH-LABEL: round_v1f64:
@@ -417,7 +406,6 @@ define <1 x double> @round_v1f64(<1 x double> %x) {
   %a = call <1 x double> @llvm.round.v1f64(<1 x double> %x)
   ret <1 x double> %a
 }
-declare <1 x double> @llvm.round.v1f64(<1 x double>)
 
 define <2 x double> @round_v2f64(<2 x double> %x) {
 ; RV32ZVFH-LABEL: round_v2f64:
@@ -484,7 +472,6 @@ define <2 x double> @round_v2f64(<2 x double> %x) {
   %a = call <2 x double> @llvm.round.v2f64(<2 x double> %x)
   ret <2 x double> %a
 }
-declare <2 x double> @llvm.round.v2f64(<2 x double>)
 
 define <4 x double> @round_v4f64(<4 x double> %x) {
 ; RV32ZVFH-LABEL: round_v4f64:
@@ -551,7 +538,6 @@ define <4 x double> @round_v4f64(<4 x double> %x) {
   %a = call <4 x double> @llvm.round.v4f64(<4 x double> %x)
   ret <4 x double> %a
 }
-declare <4 x double> @llvm.round.v4f64(<4 x double>)
 
 define <8 x double> @round_v8f64(<8 x double> %x) {
 ; RV32ZVFH-LABEL: round_v8f64:
@@ -618,4 +604,3 @@ define <8 x double> @round_v8f64(<8 x double> %x) {
   %a = call <8 x double> @llvm.round.v8f64(<8 x double> %x)
   ret <8 x double> %a
 }
-declare <8 x double> @llvm.round.v8f64(<8 x double>)

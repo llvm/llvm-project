@@ -1556,6 +1556,9 @@ Currently, only the following parameter attributes are defined:
     attribute may only be applied to pointer-typed parameters. This is not
     checked or enforced by LLVM; if the parameter or return pointer is null,
     :ref:`poison value <poisonvalues>` is returned or passed instead.
+    The ``nonnull`` attribute only refers to the address bits of the pointers.
+    If all the address bits are zero, the result will be a poison value, even
+    if the pointer has non-zero non-address bits or non-zero external state.
     The ``nonnull`` attribute should be combined with the ``noundef`` attribute
     to ensure a pointer is not null or otherwise the behavior is undefined.
 
@@ -3233,6 +3236,24 @@ Convergence Control Operand Bundles
 A "convergencectrl" operand bundle is only valid on a ``convergent`` operation.
 When present, the operand bundle must contain exactly one value of token type.
 See the :doc:`ConvergentOperations` document for details.
+
+.. _deactivationsymbol:
+
+Deactivation Symbol Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A ``"deactivation-symbol"`` operand bundle is valid on the following
+instructions (AArch64 only):
+
+- Call to a normal function with ``notail`` attribute and a first argument and
+  return value of type ``ptr``.
+- Call to ``llvm.ptrauth.sign`` or ``llvm.ptrauth.auth`` intrinsics.
+
+This operand bundle specifies that if the deactivation symbol is defined
+to a valid value for the target, the marked instruction will return the
+value of its first argument instead of calling the specified function
+or intrinsic. This is achieved with ``PATCHINST`` relocations on the
+target instructions (see the AArch64 psABI for details).
 
 .. _moduleasm:
 
@@ -5284,7 +5305,7 @@ need to refer to the actual function body.
 Pointer Authentication Constants
 --------------------------------
 
-``ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC]?]?)``
+``ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC[, ptr DS]?]?]?)``
 
 A '``ptrauth``' constant represents a pointer with a cryptographic
 authentication signature embedded into some bits, as described in the
@@ -5312,6 +5333,11 @@ Otherwise, the expression is equivalent to:
     %tmp1 = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr ADDRDISC to i64), i64 DISC)
     %tmp2 = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr CST to i64), i32 KEY, i64 %tmp1)
     %val = inttoptr i64 %tmp2 to ptr
+
+If the deactivation symbol operand ``DS`` has a non-null value,
+the semantics are as if a :ref:`deactivation-symbol operand bundle
+<deactivationsymbol>` were added to the ``llvm.ptrauth.sign`` intrinsic
+calls above, with ``DS`` as the only operand.
 
 .. _constantexprs:
 
@@ -8063,6 +8089,21 @@ pass should record the new estimates by calling
 loop, ``llvm::getLoopEstimatedTripCount`` returns its value instead of
 estimating the trip count from the loop's ``branch_weights`` metadata.
 
+Zero
+""""
+
+Some passes set ``llvm.loop.estimated_trip_count`` to 0.  For example, after
+peeling 10 or more iterations from a loop with an estimated trip count of 10,
+``llvm.loop.estimated_trip_count`` becomes 0 on the remaining loop.  It
+indicates that, each time execution reaches the peeled iterations, execution is
+estimated to exit them without reaching the remaining loop's header.
+
+Even if the probability of reaching a loop's header is low, if it is reached, it
+is the start of an iteration.  Consequently, some passes historically assume
+that ``llvm::getLoopEstimatedTripCount`` always returns a positive count or
+``std::nullopt``.  Thus, it returns ``std::nullopt`` when
+``llvm.loop.estimated_trip_count`` is 0.
+
 '``llvm.licm.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -9823,8 +9864,12 @@ The '``callbr``' instruction causes control to transfer to a specified
 function, with the possibility of control flow transfer to either the
 '``fallthrough``' label or one of the '``indirect``' labels.
 
-This instruction should only be used to implement the "goto" feature of gcc
-style inline assembly. Any other usage is an error in the IR verifier.
+This instruction can currently only be used
+
+#. to implement the "goto" feature of gcc style inline assembly or
+#. to call selected intrinsics.
+
+Any other usage is an error in the IR verifier.
 
 Note that in order to support outputs along indirect edges, LLVM may need to
 split critical edges, which may require synthesizing a replacement block for
@@ -9873,7 +9918,7 @@ This instruction requires several arguments:
    indicates the function accepts a variable number of arguments, the
    extra arguments can be specified.
 #. '``fallthrough label``': the label reached when the inline assembly's
-   execution exits the bottom.
+   execution exits the bottom / the intrinsic call returns.
 #. '``indirect labels``': the labels reached when a callee transfers control
    to a location other than the '``fallthrough label``'. Label constraints
    refer to these destinations.
@@ -9891,9 +9936,12 @@ flow goes after the call.
 The output values of a '``callbr``' instruction are available both in the
 the '``fallthrough``' block, and any '``indirect``' blocks(s).
 
-The only use of this today is to implement the "goto" feature of gcc inline
-assembly where additional labels can be provided as locations for the inline
-assembly to jump to.
+The only current uses of this are:
+
+#. implement the "goto" feature of gcc inline assembly where additional
+   labels can be provided as locations for the inline assembly to jump to.
+#. support selected intrinsics which manipulate control flow and should
+   be chained to specific terminators, such as '``unreachable``'.
 
 Example:
 """"""""
@@ -9907,6 +9955,14 @@ Example:
       ; "asm goto" with output constraints.
       <result> = callbr i32 asm "", "=r,r,!i"(i32 %x)
                   to label %fallthrough [label %indirect]
+
+      ; intrinsic which should be followed by unreachable (the order of the
+      ; blocks after the callbr instruction doesn't matter)
+        callbr void @llvm.amdgcn.kill(i1 %c) to label %cont [label %kill]
+      cont:
+        ...
+      kill:
+        unreachable
 
 .. _i_resume:
 
@@ -13011,8 +13067,10 @@ code given as ``cond``. The comparison performed always yields either an
 #. ``sle``: interprets the operands as signed values and yields ``true``
    if ``op1`` is less than or equal to ``op2``.
 
-If the operands are :ref:`pointer <t_pointer>` typed, the pointer values
-are compared as if they were integers.
+If the operands are :ref:`pointer <t_pointer>` typed, the address bits of the
+pointers are compared as if they were integers. Non-address bits or external
+state are not compared. That is, ``icmp`` on pointers is equivalent to ``icmp``
+on the ``ptrtoaddr`` of the pointers.
 
 If the operands are integer vectors, then they are compared element by
 element. The result is an ``i1`` vector with the same number of elements
@@ -31683,3 +31741,55 @@ Semantics:
 
 The '``llvm.preserve.struct.access.index``' intrinsic produces the same result
 as a getelementptr with base ``base`` and access operands ``{0, gep_index}``.
+
+'``llvm.protected.field.ptr``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare ptr @llvm.protected.field.ptr(ptr ptr, i64 disc, i1 use_hw_encoding)
+
+Overview:
+"""""""""
+
+The '``llvm.protected.field.ptr``' intrinsic returns a pointer to the
+storage location of a pointer that has special properties as described
+below.
+
+Arguments:
+""""""""""
+
+The first argument is the pointer specifying the location to store the
+pointer. The second argument is the discriminator, which is used as an
+input for the pointer encoding. The third argument specifies whether to
+use a target-specific mechanism to encode the pointer.
+
+Semantics:
+""""""""""
+
+This intrinsic returns a pointer which may be used to store a
+pointer at the specified address that is encoded using the specified
+discriminator. Stores via the pointer will cause the stored pointer to be
+blended with the second argument before being stored. The blend operation
+shall be either a weak but cheap and target-independent operation (if
+the third argument is 0) or a stronger target-specific operation (if the
+third argument is 1). When loading from the pointer, the inverse operation
+is done on the loaded pointer after it is loaded. Specifically, when the
+third argument is 1, the pointer is signed (using pointer authentication
+instructions or emulated PAC if not supported by the hardware) using
+the discriminator before being stored, and authenticated after being
+loaded. Note that it is currently unsupported to have the third argument
+be 1 on targets other than AArch64, and it is also currently unsupported
+to have the third argument be 0 at all.
+
+If the pointer is used other than for loading or storing (e.g. its
+address escapes), that will disable all blending operations using
+the deactivation symbol specified in the intrinsic's operand bundle.
+The deactivation symbol operand bundle is copied onto any sign and auth
+intrinsics that this intrinsic is lowered into. The intent is that the
+deactivation symbol represents a field identifier.
+
+This intrinsic is used to implement structure protection.

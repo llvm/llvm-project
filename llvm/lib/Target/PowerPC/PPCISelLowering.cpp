@@ -681,6 +681,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // To handle counter-based loop conditions.
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i1, Custom);
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
 
   setOperationAction(ISD::INTRINSIC_VOID, MVT::i8, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::i16, Custom);
@@ -793,6 +794,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Legal);
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f64, Legal);
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f32, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
     setOperationAction(ISD::FCANONICALIZE, MVT::f64, Legal);
     setOperationAction(ISD::FCANONICALIZE, MVT::f32, Legal);
   }
@@ -827,8 +832,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       }
 
       if (Subtarget.hasVSX()) {
+        setOperationAction(ISD::FMAXNUM_IEEE, VT, Legal);
+        setOperationAction(ISD::FMINNUM_IEEE, VT, Legal);
         setOperationAction(ISD::FMAXNUM, VT, Legal);
         setOperationAction(ISD::FMINNUM, VT, Legal);
+        setOperationAction(ISD::FCANONICALIZE, VT, Legal);
       }
 
       // Vector instructions introduced in P8
@@ -12657,7 +12665,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ROTL:               return LowerROTL(Op, DAG);
 
   // For counter-based loop handling.
-  case ISD::INTRINSIC_W_CHAIN:  return SDValue();
+  case ISD::INTRINSIC_W_CHAIN:
+    return SDValue();
 
   case ISD::BITCAST:            return LowerBITCAST(Op, DAG);
 
@@ -14568,6 +14577,46 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addReg(Val, MI.getOpcode() == PPC::LQX_PSEUDO ? RegState::Define : 0)
         .addImm(0)
         .addReg(Ptr);
+  } else if (MI.getOpcode() == PPC::LWAT_PSEUDO ||
+             MI.getOpcode() == PPC::LDAT_PSEUDO) {
+    DebugLoc DL = MI.getDebugLoc();
+    Register DstReg = MI.getOperand(0).getReg();
+    Register PtrReg = MI.getOperand(1).getReg();
+    Register ValReg = MI.getOperand(2).getReg();
+    unsigned FC = MI.getOperand(3).getImm();
+    bool IsLwat = MI.getOpcode() == PPC::LWAT_PSEUDO;
+    Register Val64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    if (IsLwat)
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::SUBREG_TO_REG), Val64)
+          .addImm(0)
+          .addReg(ValReg)
+          .addImm(PPC::sub_32);
+    else
+      Val64 = ValReg;
+
+    Register G8rPair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
+    Register UndefG8r = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), UndefG8r);
+    BuildMI(*BB, MI, DL, TII->get(PPC::REG_SEQUENCE), G8rPair)
+        .addReg(UndefG8r)
+        .addImm(PPC::sub_gp8_x0)
+        .addReg(Val64)
+        .addImm(PPC::sub_gp8_x1);
+
+    Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(IsLwat ? PPC::LWAT : PPC::LDAT), PairResult)
+        .addReg(G8rPair)
+        .addReg(PtrReg)
+        .addImm(FC);
+    Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
+        .addReg(PairResult, 0, PPC::sub_gp8_x0);
+    if (IsLwat)
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+          .addReg(Result64, 0, PPC::sub_32);
+    else
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+          .addReg(Result64);
   } else {
     llvm_unreachable("Unexpected instr type to insert");
   }
@@ -15628,10 +15677,80 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
                       CC == ISD::SETNE ? ISD::SETEQ : ISD::SETNE);
 }
 
+// Detect whether there is a pattern like (setcc (and X, 1), 0, eq).
+// If it is , return true; otherwise return false.
+static bool canConvertSETCCToXori(SDNode *N) {
+  assert(N->getOpcode() == ISD::SETCC && "Should be SETCC SDNode here.");
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  if (CC != ISD::SETEQ)
+    return false;
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // Check the `SDValue &V` is from `and` with `1`.
+  auto IsAndWithOne = [](SDValue &V) {
+    if (V.getOpcode() == ISD::AND) {
+      for (const SDValue &Op : V->ops())
+        if (auto *C = dyn_cast<ConstantSDNode>(Op))
+          if (C->isOne())
+            return true;
+    }
+    return false;
+  };
+
+  // Check whether the SETCC compare with zero.
+  auto IsCompareWithZero = [](SDValue &V) {
+    if (auto *C = dyn_cast<ConstantSDNode>(V))
+      if (C->isZero())
+        return true;
+    return false;
+  };
+
+  return (IsAndWithOne(LHS) && IsCompareWithZero(RHS)) ||
+         (IsAndWithOne(RHS) && IsCompareWithZero(LHS));
+}
+
+// You must check whether the `SDNode* N` can be converted to Xori using
+// the function `static bool canConvertSETCCToXori(SDNode *N)`
+// before calling the function; otherwise, it may produce incorrect results.
+static SDValue ConvertSETCCToXori(SDNode *N, SelectionDAG &DAG) {
+
+  assert(N->getOpcode() == ISD::SETCC && "Should be SETCC SDNode here.");
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDLoc DL(N);
+
+  [[maybe_unused]] ISD::CondCode CC =
+      cast<CondCodeSDNode>(N->getOperand(2))->get();
+  assert((CC == ISD::SETEQ) && "CC must be ISD::SETEQ.");
+  // Rewrite it as XORI (and X, 1), 1.
+  auto MakeXor1 = [&](SDValue V) {
+    EVT VT = V.getValueType();
+    SDValue One = DAG.getConstant(1, DL, VT);
+    SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, V, One);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Xor);
+  };
+
+  if (LHS.getOpcode() == ISD::AND && RHS.getOpcode() != ISD::AND)
+    return MakeXor1(LHS);
+
+  if (RHS.getOpcode() == ISD::AND && LHS.getOpcode() != ISD::AND)
+    return MakeXor1(RHS);
+
+  llvm_unreachable("Should not reach here.");
+}
+
 SDValue PPCTargetLowering::combineSetCC(SDNode *N,
                                         DAGCombinerInfo &DCI) const {
   assert(N->getOpcode() == ISD::SETCC &&
          "Should be called with a SETCC node");
+
+  // Check if the pattern (setcc (and X, 1), 0, eq) is present.
+  // If it is, rewrite it as XORI (and X, 1), 1.
+  if (canConvertSETCCToXori(N))
+    return ConvertSETCCToXori(N, DCI.DAG);
 
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
   if (CC == ISD::SETNE || CC == ISD::SETEQ) {
@@ -18425,7 +18544,7 @@ PPCTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
 }
 
 bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                           const CallInst &I,
+                                           const CallBase &I,
                                            MachineFunction &MF,
                                            unsigned Intrinsic) const {
   switch (Intrinsic) {

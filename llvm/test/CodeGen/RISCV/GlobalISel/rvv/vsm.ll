@@ -4,8 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v \
 ; RUN:   -global-isel -verify-machineinstrs | FileCheck %s
 
-declare void @llvm.riscv.vsm.nxv1i1(<vscale x 1 x i1>, ptr, iXLen);
-
 define void @intrinsic_vsm_v_nxv1i1(<vscale x 1 x i1> %0, ptr %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm_v_nxv1i1:
 ; CHECK:       # %bb.0: # %entry
@@ -16,8 +14,6 @@ entry:
   call void @llvm.riscv.vsm.nxv1i1(<vscale x 1 x i1> %0, ptr %1, iXLen %2)
   ret void
 }
-
-declare void @llvm.riscv.vsm.nxv2i1(<vscale x 2 x i1>, ptr, iXLen);
 
 define void @intrinsic_vsm_v_nxv2i1(<vscale x 2 x i1> %0, ptr %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm_v_nxv2i1:
@@ -30,8 +26,6 @@ entry:
   ret void
 }
 
-declare void @llvm.riscv.vsm.nxv4i1(<vscale x 4 x i1>, ptr, iXLen);
-
 define void @intrinsic_vsm_v_nxv4i1(<vscale x 4 x i1> %0, ptr %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm_v_nxv4i1:
 ; CHECK:       # %bb.0: # %entry
@@ -42,8 +36,6 @@ entry:
   call void @llvm.riscv.vsm.nxv4i1(<vscale x 4 x i1> %0, ptr %1, iXLen %2)
   ret void
 }
-
-declare void @llvm.riscv.vsm.nxv8i1(<vscale x 8 x i1>, ptr, iXLen);
 
 define void @intrinsic_vsm_v_nxv8i1(<vscale x 8 x i1> %0, ptr %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm_v_nxv8i1:
@@ -56,8 +48,6 @@ entry:
   ret void
 }
 
-declare void @llvm.riscv.vsm.nxv16i1(<vscale x 16 x i1>, ptr, iXLen);
-
 define void @intrinsic_vsm_v_nxv16i1(<vscale x 16 x i1> %0, ptr %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm_v_nxv16i1:
 ; CHECK:       # %bb.0: # %entry
@@ -68,8 +58,6 @@ entry:
   call void @llvm.riscv.vsm.nxv16i1(<vscale x 16 x i1> %0, ptr %1, iXLen %2)
   ret void
 }
-
-declare void @llvm.riscv.vsm.nxv32i1(<vscale x 32 x i1>, ptr, iXLen);
 
 define void @intrinsic_vsm_v_nxv32i1(<vscale x 32 x i1> %0, ptr %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm_v_nxv32i1:
@@ -82,8 +70,6 @@ entry:
   ret void
 }
 
-declare void @llvm.riscv.vsm.nxv64i1(<vscale x 64 x i1>, ptr, iXLen);
-
 define void @intrinsic_vsm_v_nxv64i1(<vscale x 64 x i1> %0, ptr %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm_v_nxv64i1:
 ; CHECK:       # %bb.0: # %entry
@@ -94,11 +80,6 @@ entry:
   call void @llvm.riscv.vsm.nxv64i1(<vscale x 64 x i1> %0, ptr %1, iXLen %2)
   ret void
 }
-
-declare <vscale x 1 x i1> @llvm.riscv.vmseq.nxv1i16(
-  <vscale x 1 x i16>,
-  <vscale x 1 x i16>,
-  iXLen);
 
 ; Make sure we can use the vsetvli from the producing instruction.
 define void @test_vsetvli_i16(<vscale x 1 x i16> %0, <vscale x 1 x i16> %1, ptr %2, iXLen %3) nounwind {
@@ -116,11 +97,6 @@ entry:
   call void @llvm.riscv.vsm.nxv1i1(<vscale x 1 x i1> %a, ptr %2, iXLen %3)
   ret void
 }
-
-declare <vscale x 1 x i1> @llvm.riscv.vmseq.nxv1i32(
-  <vscale x 1 x i32>,
-  <vscale x 1 x i32>,
-  iXLen);
 
 define void @test_vsetvli_i32(<vscale x 1 x i32> %0, <vscale x 1 x i32> %1, ptr %2, iXLen %3) nounwind {
 ; CHECK-LABEL: test_vsetvli_i32:

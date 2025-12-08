@@ -2322,6 +2322,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[3], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_LambdaDefinitionLParen);
   EXPECT_TOKEN(Tokens[10], tok::l_square, TT_ArraySubscriptLSquare);
+
+  Tokens = annotate("foo = bar * [] { return 2; }();");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[4], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_LambdaLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
@@ -2918,6 +2924,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   EXPECT_EQ(Tokens[0]->TokenText, R"(\busa+index\
 +)");
   EXPECT_TOKEN(Tokens[1], tok::semi, TT_Unknown);
+
+  // A C++ keyword should be treated as an identifier.
+  Tokens = Annotate("volatile delete;");
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+
   // An escaped newline should not be treated as an escaped identifier.
   Tokens = Annotate("\\\n");
   ASSERT_EQ(Tokens.size(), 1u) << Tokens;

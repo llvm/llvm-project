@@ -129,7 +129,8 @@ def main(
         # If the job succeeds and there is not an existing comment, we
         # should not write one to reduce noise.
         comments = []
-    with open("comments", "w") as comment_file_handle:
+    comments_file_name = f"comments-{platform.system()}-{platform.machine()}"
+    with open(comments_file_name, "w") as comment_file_handle:
         json.dump(comments, comment_file_handle)
 
 

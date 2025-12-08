@@ -2019,7 +2019,6 @@ def int_aarch64_sve_ext       : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpecula
 def int_aarch64_sve_sel       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_lasta     : AdvSIMD_SVE_Reduce_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_lastb     : AdvSIMD_SVE_Reduce_Intrinsic<[IntrSpeculatable]>;
-def int_aarch64_sve_rev       : AdvSIMD_1VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_rev_b16   : AdvSIMD_SVE_2SVBoolArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_rev_b32   : AdvSIMD_SVE_2SVBoolArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_rev_b64   : AdvSIMD_SVE_2SVBoolArg_Intrinsic<[IntrSpeculatable]>;
@@ -2450,7 +2449,9 @@ def int_aarch64_sve_sqrdmlsh_lane : AdvSIMD_3VectorArgIndexed_Intrinsic<[IntrSpe
 def int_aarch64_sve_sqrdmulh      : AdvSIMD_2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sqrdmulh_lane : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sqrshl        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_sqrshl_u      : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sqshl         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_sqshl_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sqshlu        : AdvSIMD_SVE_ShiftByImm_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sqsub         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sqsub_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
@@ -2458,6 +2459,7 @@ def int_aarch64_sve_sqsubr        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpecul
 def int_aarch64_sve_srhadd        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sri           : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_srshl         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_srshl_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_srshr         : AdvSIMD_SVE_ShiftByImm_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_srsra         : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_ssra          : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpeculatable]>;
@@ -2468,13 +2470,16 @@ def int_aarch64_sve_uhsub         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpecul
 def int_aarch64_sve_uhsubr        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqadd         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqrshl        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_uqrshl_u      : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqshl         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_uqshl_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqsub         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqsub_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqsubr        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_urecpe        : AdvSIMD_Merged1VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_urhadd        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_urshl         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_urshl_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_urshr         : AdvSIMD_SVE_ShiftByImm_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_ursqrte       : AdvSIMD_Merged1VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_ursra         : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpeculatable]>;
@@ -2792,7 +2797,16 @@ def int_aarch64_sve_sudot_lane : AdvSIMD_SVE_DOT_Indexed_Intrinsic<[IntrSpeculat
 //
 // SVE ACLE: 7.4/5. FP64/FP32 matrix multiply extensions
 //
-def int_aarch64_sve_fmmla : AdvSIMD_3VectorArg_Intrinsic;
+
+def int_aarch64_sve_fmmla
+  : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                          [LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<1>],
+                          [IntrNoMem]>;
+
+def int_aarch64_sve_fp8_fmmla
+  : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                          [LLVMMatchType<0>, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+                          [IntrReadMem, IntrInaccessibleMemOnly]>;
 
 //
 // SVE ACLE: 7.2. BFloat16 extensions
@@ -3293,6 +3307,12 @@ let TargetPrefix = "aarch64" in {
                  LLVMMatchType<0>],
                 [IntrNoMem]>;
 
+  class SVE2_VG2_Multi_Single_Scale_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                [LLVMMatchType<0>, LLVMMatchType<0>,
+                 LLVMVectorOfBitcastsToInt<0>],
+                [IntrNoMem]>;
+
   class SVE2_VG4_Multi_Single_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
                              LLVMMatchType<0>,  LLVMMatchType<0>],
@@ -3301,10 +3321,24 @@ let TargetPrefix = "aarch64" in {
                              LLVMMatchType<0>],
                             [IntrNoMem]>;
 
+  class SVE2_VG4_Multi_Single_Scale_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
+                             LLVMMatchType<0>,  LLVMMatchType<0>],
+                            [LLVMMatchType<0>,  LLVMMatchType<0>,
+                             LLVMMatchType<0>,  LLVMMatchType<0>,
+                             LLVMVectorOfBitcastsToInt<0>],
+                            [IntrNoMem]>;
+
   class SVE2_VG2_Multi_Multi_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                 [LLVMMatchType<0>, LLVMMatchType<0>,
                  LLVMMatchType<0>, LLVMMatchType<0>],
+                [IntrNoMem]>;
+
+  class SVE2_VG2_Multi_Multi_Scale_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                [LLVMMatchType<0>, LLVMMatchType<0>,
+                 LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
                 [IntrNoMem]>;
 
   class SVE2_VG4_Multi_Multi_Intrinsic
@@ -3314,6 +3348,15 @@ let TargetPrefix = "aarch64" in {
                              LLVMMatchType<0>,  LLVMMatchType<0>,
                              LLVMMatchType<0>, LLVMMatchType<0>,
                              LLVMMatchType<0>, LLVMMatchType<0>],
+                            [IntrNoMem]>;
+
+  class SVE2_VG4_Multi_Multi_Scale_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
+                             LLVMMatchType<0>,  LLVMMatchType<0>],
+                            [LLVMMatchType<0>,  LLVMMatchType<0>,
+                             LLVMMatchType<0>,  LLVMMatchType<0>,
+                             LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>,
+                             LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
                             [IntrNoMem]>;
 
   class SVE2_VG2_Sel_Intrinsic
@@ -3614,10 +3657,10 @@ let TargetPrefix = "aarch64" in {
   }
 
   //
-  // Multi-vector floating point min/max number
+  // Multi-vector floating point min/max number, scale, and multiply
   //
 
-  foreach instr = ["fmaxnm", "fminnm"] in {
+  foreach instr = ["fmaxnm", "fminnm", "fmul"] in {
     def int_aarch64_sve_ # instr # _single_x2 : SVE2_VG2_Multi_Single_Intrinsic;
     def int_aarch64_sve_ # instr # _single_x4 : SVE2_VG4_Multi_Single_Intrinsic;
 
@@ -3625,6 +3668,16 @@ let TargetPrefix = "aarch64" in {
     def int_aarch64_sve_ # instr # _x4 : SVE2_VG4_Multi_Multi_Intrinsic;
   }
 
+  //
+  // Multi-vector floating point scale
+  //
+
+  def int_aarch64_sve_fscale_single_x2 : SVE2_VG2_Multi_Single_Scale_Intrinsic;
+  def int_aarch64_sve_fscale_single_x4 : SVE2_VG4_Multi_Single_Scale_Intrinsic;
+
+  def int_aarch64_sve_fscale_x2 : SVE2_VG2_Multi_Multi_Scale_Intrinsic;
+  def int_aarch64_sve_fscale_x4 : SVE2_VG4_Multi_Multi_Scale_Intrinsic;
+  
   //
   // Multi-vector floating point absolute min/max number
   //

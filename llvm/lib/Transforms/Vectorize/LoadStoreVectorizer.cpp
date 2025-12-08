@@ -953,15 +953,15 @@ bool Vectorizer::vectorizeChain(Chain &C) {
       unsigned EOffset =
           (E.OffsetFromLeader - C[0].OffsetFromLeader).getZExtValue();
       unsigned VecIdx = 8 * EOffset / DL.getTypeSizeInBits(VecElemTy);
-      if (auto *VT = dyn_cast<FixedVectorType>(T)) {
+      if (!VecTy->isVectorTy()) {
+        V = VecInst;
+      } else if (auto *VT = dyn_cast<FixedVectorType>(T)) {
         auto Mask = llvm::to_vector<8>(
             llvm::seq<int>(VecIdx, VecIdx + VT->getNumElements()));
         V = Builder.CreateShuffleVector(VecInst, Mask, I->getName());
-      } else if (VecTy != VecElemTy) {
+      } else {
         V = Builder.CreateExtractElement(VecInst, Builder.getInt32(VecIdx),
                                          I->getName());
-      } else {
-        V = VecInst;
       }
       if (V->getType() != I->getType())
         V = Builder.CreateBitOrPointerCast(V, I->getType());

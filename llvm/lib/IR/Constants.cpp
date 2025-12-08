@@ -960,8 +960,10 @@ ConstantInt *ConstantInt::get(LLVMContext &Context, ElementCount EC,
   return Slot.get();
 }
 
-Constant *ConstantInt::get(Type *Ty, uint64_t V, bool isSigned) {
-  Constant *C = get(cast<IntegerType>(Ty->getScalarType()), V, isSigned);
+Constant *ConstantInt::get(Type *Ty, uint64_t V, bool IsSigned,
+                           bool ImplicitTrunc) {
+  Constant *C =
+      get(cast<IntegerType>(Ty->getScalarType()), V, IsSigned, ImplicitTrunc);
 
   // For vectors, broadcast the value.
   if (VectorType *VTy = dyn_cast<VectorType>(Ty))
@@ -970,11 +972,10 @@ Constant *ConstantInt::get(Type *Ty, uint64_t V, bool isSigned) {
   return C;
 }
 
-ConstantInt *ConstantInt::get(IntegerType *Ty, uint64_t V, bool isSigned) {
-  // TODO: Avoid implicit trunc?
-  // See https://github.com/llvm/llvm-project/issues/112510.
+ConstantInt *ConstantInt::get(IntegerType *Ty, uint64_t V, bool IsSigned,
+                              bool ImplicitTrunc) {
   return get(Ty->getContext(),
-             APInt(Ty->getBitWidth(), V, isSigned, /*implicitTrunc=*/true));
+             APInt(Ty->getBitWidth(), V, IsSigned, ImplicitTrunc));
 }
 
 Constant *ConstantInt::get(Type *Ty, const APInt& V) {
@@ -2081,28 +2082,33 @@ Value *NoCFIValue::handleOperandChangeImpl(Value *From, Value *To) {
 //
 
 ConstantPtrAuth *ConstantPtrAuth::get(Constant *Ptr, ConstantInt *Key,
-                                      ConstantInt *Disc, Constant *AddrDisc) {
-  Constant *ArgVec[] = {Ptr, Key, Disc, AddrDisc};
+                                      ConstantInt *Disc, Constant *AddrDisc,
+                                      Constant *DeactivationSymbol) {
+  Constant *ArgVec[] = {Ptr, Key, Disc, AddrDisc, DeactivationSymbol};
   ConstantPtrAuthKeyType MapKey(ArgVec);
   LLVMContextImpl *pImpl = Ptr->getContext().pImpl;
   return pImpl->ConstantPtrAuths.getOrCreate(Ptr->getType(), MapKey);
 }
 
 ConstantPtrAuth *ConstantPtrAuth::getWithSameSchema(Constant *Pointer) const {
-  return get(Pointer, getKey(), getDiscriminator(), getAddrDiscriminator());
+  return get(Pointer, getKey(), getDiscriminator(), getAddrDiscriminator(),
+             getDeactivationSymbol());
 }
 
 ConstantPtrAuth::ConstantPtrAuth(Constant *Ptr, ConstantInt *Key,
-                                 ConstantInt *Disc, Constant *AddrDisc)
+                                 ConstantInt *Disc, Constant *AddrDisc,
+                                 Constant *DeactivationSymbol)
     : Constant(Ptr->getType(), Value::ConstantPtrAuthVal, AllocMarker) {
   assert(Ptr->getType()->isPointerTy());
   assert(Key->getBitWidth() == 32);
   assert(Disc->getBitWidth() == 64);
   assert(AddrDisc->getType()->isPointerTy());
+  assert(DeactivationSymbol->getType()->isPointerTy());
   setOperand(0, Ptr);
   setOperand(1, Key);
   setOperand(2, Disc);
   setOperand(3, AddrDisc);
+  setOperand(4, DeactivationSymbol);
 }
 
 /// Remove the constant from the constant table.
@@ -2150,6 +2156,11 @@ bool ConstantPtrAuth::hasSpecialAddressDiscriminator(uint64_t Value) const {
 bool ConstantPtrAuth::isKnownCompatibleWith(const Value *Key,
                                             const Value *Discriminator,
                                             const DataLayout &DL) const {
+  // This function may only be validly called to analyze a ptrauth operation
+  // with no deactivation symbol, so if we have one it isn't compatible.
+  if (!getDeactivationSymbol()->isNullValue())
+    return false;
+
   // If the keys are different, there's no chance for this to be compatible.
   if (getKey() != Key)
     return false;

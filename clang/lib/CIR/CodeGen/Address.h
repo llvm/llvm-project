@@ -77,6 +77,12 @@ public:
     return Address(newPtr, getElementType(), getAlignment());
   }
 
+  /// Return address with different alignment, but same pointer and element
+  /// type.
+  Address withAlignment(clang::CharUnits newAlignment) const {
+    return Address(getPointer(), getElementType(), newAlignment);
+  }
+
   /// Return address with different element type, a bitcast pointer, and
   /// the same alignment.
   Address withElementType(CIRGenBuilderTy &builder, mlir::Type ElemTy) const;

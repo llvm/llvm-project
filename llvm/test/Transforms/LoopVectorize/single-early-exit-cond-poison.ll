@@ -38,10 +38,9 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP11]], 4
 ; VF4IC2-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 [[TMP10]]
 ; VF4IC2-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP14]] to i32
-; VF4IC2-NEXT:    [[TMP16:%.*]] = add i32 0, [[TMP15]]
 ; VF4IC2-NEXT:    br label %[[RETURN]]
 ; VF4IC2:       [[RETURN]]:
-; VF4IC2-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ [[TMP16]], %[[VECTOR_EARLY_EXIT]] ]
+; VF4IC2-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ [[TMP15]], %[[VECTOR_EARLY_EXIT]] ]
 ; VF4IC2-NEXT:    ret i32 [[RES]]
 ;
 ; VF8IC1-LABEL: define noundef i32 @f(
@@ -66,10 +65,9 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF8IC1:       [[VECTOR_EARLY_EXIT]]:
 ; VF8IC1-NEXT:    [[TMP5:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP2]], i1 false)
 ; VF8IC1-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
-; VF8IC1-NEXT:    [[TMP7:%.*]] = add i32 0, [[TMP6]]
 ; VF8IC1-NEXT:    br label %[[RETURN]]
 ; VF8IC1:       [[RETURN]]:
-; VF8IC1-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[TMP7]], %[[VECTOR_EARLY_EXIT]] ]
+; VF8IC1-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[TMP6]], %[[VECTOR_EARLY_EXIT]] ]
 ; VF8IC1-NEXT:    ret i32 [[RES]]
 ;
 entry:
