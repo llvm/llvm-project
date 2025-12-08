@@ -741,29 +741,15 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimpleGPU) {
   User *WrapperUsr = *++OutlinedFn->users().begin();
 
   ASSERT_TRUE(isa<CallInst>(Usr));
-  CallInst *Parallel51CI = dyn_cast<CallInst>(Usr);
-  ASSERT_NE(Parallel51CI, nullptr);
+  CallInst *Parallel60CI = dyn_cast<CallInst>(Usr);
+  ASSERT_NE(Parallel60CI, nullptr);
 
-  EXPECT_EQ(Parallel51CI->getCalledFunction()->getName(), "__kmpc_parallel_51");
-  EXPECT_EQ(Parallel51CI->arg_size(), 9U);
-  EXPECT_EQ(Parallel51CI->getArgOperand(5), OutlinedFn);
+  EXPECT_EQ(Parallel60CI->getCalledFunction()->getName(), "__kmpc_parallel_60");
+  EXPECT_EQ(Parallel60CI->arg_size(), 10U);
+  EXPECT_EQ(Parallel60CI->getArgOperand(5), OutlinedFn);
   EXPECT_TRUE(
-      isa<GlobalVariable>(Parallel51CI->getArgOperand(0)->stripPointerCasts()));
-  EXPECT_EQ(Parallel51CI, Usr);
-
-  ASSERT_TRUE(isa<CallInst>(WrapperUsr));
-  CallInst *OutlinedCI = dyn_cast<CallInst>(WrapperUsr);
-  ASSERT_NE(OutlinedCI, nullptr);
-  EXPECT_EQ(OutlinedCI->getCalledFunction(), OutlinedFn);
-
-  Function *WrapperFn = OutlinedCI->getFunction();
-  EXPECT_TRUE(WrapperFn->hasInternalLinkage());
-  EXPECT_EQ(WrapperFn->arg_size(), 2U);
-  EXPECT_EQ(WrapperFn->getArg(0)->getType(),
-            IntegerType::getInt16Ty(M->getContext()));
-  EXPECT_EQ(WrapperFn->getArg(1)->getType(),
-            IntegerType::getInt32Ty(M->getContext()));
-
+      isa<GlobalVariable>(Parallel60CI->getArgOperand(0)->stripPointerCasts()));
+  EXPECT_EQ(Parallel60CI, Usr);
   M->setDataLayout(oldDLStr);
 }
 
