@@ -1131,7 +1131,8 @@ def CIR_SwitchOp : CIR_Op<"switch", [
     ```
   }];
 
-  let arguments = (ins CIR_IntType:$condition);
+  let arguments = (ins CIR_IntType:$condition,
+                       DefaultValuedAttr<BoolAttr, "false">:$allEnumCasesCovered);
 
   let regions = (region AnyRegion:$body);
 
