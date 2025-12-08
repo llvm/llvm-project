@@ -734,8 +734,8 @@ void explicit_maps_single (){
 // CK14-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK14: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
-// Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
-// CK14: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 544]
+// Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_LITERAL | OMP_MAP_IMPLICIT = 800
+// CK14: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 800]
 
 // CK14-LABEL: explicit_maps_single{{.*}}(
 void explicit_maps_single (){
