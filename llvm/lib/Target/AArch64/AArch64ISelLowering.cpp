@@ -6171,14 +6171,12 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     uint64_t Distance = Op.getConstantOperandVal(5);
     int64_t Stride = Op.getConstantOperandVal(6);
-    uint64_t Count = Op.getConstantOperandVal(7);
+    uint64_t Count = Op.getConstantOperandVal(7) - 1;
     int64_t Length = Op.getConstantOperandVal(8);
     uint64_t Mask22 = (1ULL << 22) - 1;
     uint64_t Mask16 = (1ULL << 16) - 1;
-    uint64_t Metadata = (Distance << 60) |
-                        ((Stride & Mask22) << 38) |
-                        ((Count & Mask16) << 22) |
-                        (Length & Mask22);
+    uint64_t Metadata = (Distance << 60) | ((Stride & Mask22) << 38) |
+                        ((Count & Mask16) << 22) | (Length & Mask22);
 
     return DAG.getNode(AArch64ISD::RANGE_PREFETCH, DL, MVT::Other, Chain,
                        DAG.getTargetConstant(PrfOp, DL, MVT::i32), Addr,

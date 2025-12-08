@@ -6714,12 +6714,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(Stride > -2049 && Stride < 2041,
           "stride argument to llvm.aarch64.range.prefetch must be -2048 - 2040",
           Call);
-    Check(cast<ConstantInt>(Call.getArgOperand(5))->getZExtValue() < 65536,
-          "count argument to llvm.aarch64.range.prefetch must be < 65536");
+    int Count = cast<ConstantInt>(Call.getArgOperand(5))->getZExtValue();
+    Check(Count > 0 && Count < 65537,
+          "count argument to llvm.aarch64.range.prefetch must be < 65537",
+          Call);
     int Length = cast<ConstantInt>(Call.getArgOperand(6))->getZExtValue();
     Check(Length > -2049 && Length < 2041,
-          "length argument to llvm.aarch64.range.prefetch must be -2048 -"
-          "2040");
+          "length argument to llvm.aarch64.range.prefetch must be -2048 - "
+          "2040",
+          Call);
     break;
   }
   case Intrinsic::callbr_landingpad: {

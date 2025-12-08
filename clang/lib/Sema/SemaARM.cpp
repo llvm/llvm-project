@@ -1127,7 +1127,7 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
            SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 1) ||
            SemaRef.BuiltinConstantArgRange(TheCall, 3, 0, 15) ||
            SemaRef.BuiltinConstantArgRange(TheCall, 4, -2048, 2040) ||
-           SemaRef.BuiltinConstantArgRange(TheCall, 5, 0, 65535) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 5, 1, 65536) ||
            SemaRef.BuiltinConstantArgRange(TheCall, 6, -2048, 2040);
   }
 

@@ -1758,14 +1758,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     int64_t Distance = MI.getOperand(4).getImm();
     int64_t Stride = MI.getOperand(5).getImm();
-    int64_t Count = MI.getOperand(6).getImm();
+    int64_t Count = MI.getOperand(6).getImm() - 1;
     int64_t Length = MI.getOperand(7).getImm();
     uint64_t Mask22 = (1ULL << 22) - 1;
     uint64_t Mask16 = (1ULL << 16) - 1;
-    uint64_t Metadata = (Distance << 60) |
-                        ((Stride & Mask22) << 38) |
-                        ((Count & Mask16) << 22) |
-                        (Length & Mask22);
+    uint64_t Metadata = (Distance << 60) | ((Stride & Mask22) << 38) |
+                        ((Count & Mask16) << 22) | (Length & Mask22);
 
     auto MetadataReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
     MIB.buildConstant(MetadataReg, Metadata);

@@ -13,16 +13,16 @@ define void @test(ptr %a, ptr %b) {
 ; CHECK-NEXT: movk  x8, #65472, lsl #16
 
 ; CHECK-NEXT: rprfm pldkeep, x8, [x0]
-  call void @llvm.aarch64.range.prefetch(ptr %a, i32 0, i32 0, i32 15, i32 -2048, i32 65535, i32 2040)
+  call void @llvm.aarch64.range.prefetch(ptr %a, i32 0, i32 0, i32 15, i32 -2048, i32 65536, i32 2040)
 
 ; CHECK-NEXT: rprfm pstkeep, x8, [x1]
-  call void @llvm.aarch64.range.prefetch(ptr %b, i32 1, i32 0, i32 15, i32 -2048, i32 65535, i32 2040)
+  call void @llvm.aarch64.range.prefetch(ptr %b, i32 1, i32 0, i32 15, i32 -2048, i32 65536, i32 2040)
 
 ; CHECK-NEXT: rprfm pldstrm, x9, [x0]
-  call void @llvm.aarch64.range.prefetch(ptr %a, i32 0, i32 1, i32 0, i32 2040, i32 0, i32 -2048)
+  call void @llvm.aarch64.range.prefetch(ptr %a, i32 0, i32 1, i32 0, i32 2040, i32 1, i32 -2048)
 
 ; CHECK-NEXT: rprfm pststrm, x9, [x1]
-  call void @llvm.aarch64.range.prefetch(ptr %b, i32 1, i32 1, i32 0, i32 2040, i32 0, i32 -2048)
+  call void @llvm.aarch64.range.prefetch(ptr %b, i32 1, i32 1, i32 0, i32 2040, i32 1, i32 -2048)
 
   ret void
 }
