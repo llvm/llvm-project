@@ -854,8 +854,7 @@ bool PPCMIPeephole::simplifyCode() {
             //     %6:vrrc = VSPLTB 3, killed %1:vrrc
             //     %7:vsrc = XXLAND killed %6:vrrc, killed %1:vrrc
 
-            Register ShiftRes = DefMI->getOperand(0).getReg();
-            if (MRI->hasOneNonDBGUse(ShiftRes)) {
+            if (MRI->hasOneNonDBGUse(DefMI->getOperand(0).getReg())) {
               LLVM_DEBUG(dbgs() << "Removing redundant shift: ");
               LLVM_DEBUG(DefMI->dump());
               ToErase = DefMI;
