@@ -338,7 +338,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::MUL, ISD::SDIV, ISD::SREM, ISD::UDIV, ISD::UREM},
                          VT, Legal);
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
-      setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
+      setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Custom);
       setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
       setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Legal);
       setCondCodeAction(
@@ -618,8 +618,69 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerVECREDUCE(Op, DAG);
   case ISD::ConstantFP:
     return lowerConstantFP(Op, DAG);
+  case ISD::SRA:
+  case ISD::SRL:
+  case ISD::SHL:
+    return lowerVectorSRA_SRL_SHL(Op, DAG);
   }
   return SDValue();
+}
+
+/// getVShiftImm - Check if this is a valid build_vector for the immediate
+/// operand of a vector shift operation, where all the elements of the
+/// build_vector must have the same constant integer value.
+static bool getVShiftImm(SDValue Op, unsigned ElementBits, int64_t &Cnt) {
+  // Ignore bit_converts.
+  while (Op.getOpcode() == ISD::BITCAST)
+    Op = Op.getOperand(0);
+  BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(Op.getNode());
+  APInt SplatBits, SplatUndef;
+  unsigned SplatBitSize;
+  bool HasAnyUndefs;
+  if (!BVN ||
+      !BVN->isConstantSplat(SplatBits, SplatUndef, SplatBitSize, HasAnyUndefs,
+                            ElementBits) ||
+      SplatBitSize > ElementBits)
+    return false;
+  Cnt = SplatBits.getSExtValue();
+  return true;
+}
+
+SDValue
+LoongArchTargetLowering::lowerVectorSRA_SRL_SHL(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+  int64_t Cnt;
+
+  if (!Op.getOperand(1).getValueType().isVector())
+    return Op;
+  unsigned EltSize = VT.getScalarSizeInBits();
+  MVT GRLenVT = Subtarget.getGRLenVT();
+
+  switch (Op.getOpcode()) {
+  case ISD::SHL:
+    if (getVShiftImm(Op.getOperand(1), EltSize, Cnt) && Cnt >= 0 &&
+        Cnt < EltSize)
+      return DAG.getNode(LoongArchISD::VSLLI, DL, VT, Op.getOperand(0),
+                         DAG.getConstant(Cnt, DL, GRLenVT));
+    return DAG.getNode(LoongArchISD::VSLL, DL, VT, Op.getOperand(0),
+                       Op.getOperand(1));
+  case ISD::SRA:
+  case ISD::SRL:
+    if (getVShiftImm(Op.getOperand(1), EltSize, Cnt) && Cnt >= 0 &&
+        Cnt < EltSize) {
+      unsigned Opc = (Op.getOpcode() == ISD::SRA) ? LoongArchISD::VSRAI
+                                                  : LoongArchISD::VSRLI;
+      return DAG.getNode(Opc, DL, VT, Op.getOperand(0),
+                         DAG.getConstant(Cnt, DL, GRLenVT));
+    }
+    unsigned Opc =
+        (Op.getOpcode() == ISD::SRA) ? LoongArchISD::VSRA : LoongArchISD::VSRL;
+    return DAG.getNode(Opc, DL, VT, Op.getOperand(0), Op.getOperand(1));
+  }
+
+  llvm_unreachable("unexpected shift opcode");
 }
 
 // Helper to attempt to return a cheaper, bit-inverted version of \p V.
