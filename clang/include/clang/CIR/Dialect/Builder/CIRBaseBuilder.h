@@ -331,6 +331,14 @@ public:
     return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, order);
   }
 
+  /// Emit a load from an boolean flag variable.
+  cir::LoadOp createFlagLoad(mlir::Location loc, mlir::Value addr) {
+    mlir::Type boolTy = getBoolTy();
+    if (boolTy != mlir::cast<cir::PointerType>(addr.getType()).getPointee())
+      addr = createPtrBitcast(addr, boolTy);
+    return createLoad(loc, addr, /*isVolatile=*/false, /*alignment=*/1);
+  }
+
   cir::StoreOp createFlagStore(mlir::Location loc, bool val, mlir::Value dst) {
     mlir::Value flag = getBool(val, loc);
     return CIRBaseBuilderTy::createStore(loc, flag, dst);

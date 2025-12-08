@@ -86,15 +86,6 @@ Potentially Breaking Changes
   options-related code has been moved out of the Driver into a separate library.
 - The ``clangFrontend`` library no longer depends on ``clangDriver``, which may
   break downstream projects that relied on this transitive dependency.
-- Clang is now more precise with regards to the lifetime of temporary objects
-  such as when aggregates are passed by value to a function, resulting in
-  better sharing of stack slots and reduced stack usage. This change can lead
-  to use-after-scope related issues in code that unintentionally relied on the
-  previous behavior. If recompiling with ``-fsanitize=address`` shows a
-  use-after-scope warning, then this is likely the case, and the report printed
-  should be able to help users pinpoint where the use-after-scope is occurring.
-  Users can use ``-Xclang -sloppy-temporary-lifetimes`` to retain the old
-  behavior until they are able to find and resolve issues in their code.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -352,6 +343,7 @@ Modified Compiler Flags
 -----------------------
 - The `-gkey-instructions` compiler flag is now enabled by default when DWARF is emitted for plain C/C++ and optimizations are enabled. (#GH149509)
 - The `-fconstexpr-steps` compiler flag now accepts value `0` to opt out of this limit. (#GH160440)
+- The `-fdevirtualize-speculatively` compiler flag is now supported to enable speculative devirtualization of virtual function calls, it's disabled by default. (#GH159685)
 
 Removed Compiler Flags
 -------------------------
@@ -472,6 +464,10 @@ Improvements to Clang's diagnostics
 - Clang now detects potential missing format and format_matches attributes on function,
   Objective-C method and block declarations when calling format functions. It is part
   of the format-nonliteral diagnostic (#GH60718)
+
+- Fixed a crash when enabling ``-fdiagnostics-format=sarif`` and the output 
+  carries messages like 'In file included from ...' or 'In module ...'.
+  Now the include/import locations are written into `sarif.run.result.relatedLocations`.
 
 Improvements to Clang's time-trace
 ----------------------------------
