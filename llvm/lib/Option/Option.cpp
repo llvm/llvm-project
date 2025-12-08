@@ -109,6 +109,36 @@ bool Option::matches(OptSpecifier Opt) const {
   return false;
 }
 
+/// Describes how to treat `nullptr` argument strings produced for
+/// newlines and empty lines when advancing through the argument
+/// list.
+enum class NextArgStringBehavior {
+  /// Skip over `nullptr` entries and return the next non-null
+  /// argument string, if any.
+  SkipEmpty,
+  /// Treat a `nullptr` entry as a hard boundary and stop
+  /// advancing. This is used for options that should not
+  /// consume arguments past such boundaries (for example,
+  /// RemainingArgs* options that must not cross @file
+  /// segments).
+  StopAtNull,
+};
+
+/// Advances to and returns the next argument string according to the given
+/// behavior.
+static const char *advanceToNextArgString(
+    const ArgList &Args, unsigned &Index,
+    NextArgStringBehavior Behavior = NextArgStringBehavior::SkipEmpty) {
+  while (Index <= Args.getNumInputArgStrings()) {
+    if (const char *ArgStr = Args.getArgString(Index - 1))
+      return ArgStr;
+    if (Behavior == NextArgStringBehavior::StopAtNull)
+      return nullptr;
+    ++Index;
+  }
+  return nullptr;
+}
+
 std::unique_ptr<Arg> Option::acceptInternal(const ArgList &Args,
                                             StringRef Spelling,
                                             unsigned &Index) const {
@@ -152,31 +182,41 @@ std::unique_ptr<Arg> Option::acceptInternal(const ArgList &Args,
 
     return A;
   }
-  case SeparateClass:
+  case SeparateClass: {
     // Matches iff this is an exact match.
     if (SpellingSize != ArgStringSize)
       return nullptr;
 
+    unsigned StartIndex = Index;
     Index += 2;
-    if (Index > Args.getNumInputArgStrings() ||
-        Args.getArgString(Index - 1) == nullptr)
+
+    const char *ArgString = advanceToNextArgString(Args, Index);
+    if (!ArgString)
       return nullptr;
 
-    return std::make_unique<Arg>(*this, Spelling, Index - 2,
-                                 Args.getArgString(Index - 1));
+    return std::make_unique<Arg>(*this, Spelling, StartIndex, ArgString);
+  }
   case MultiArgClass: {
     // Matches iff this is an exact match.
     if (SpellingSize != ArgStringSize)
       return nullptr;
 
-    Index += 1 + getNumArgs();
-    if (Index > Args.getNumInputArgStrings())
-      return nullptr;
+    unsigned StartIndex = Index;
+    Index += 2;
 
-    auto A = std::make_unique<Arg>(*this, Spelling, Index - 1 - getNumArgs(),
-                                   Args.getArgString(Index - getNumArgs()));
+    SmallVector<const char *, 4> Values;
+    for (unsigned i = 0; i < getNumArgs(); ++i) {
+      const char *ArgString = advanceToNextArgString(Args, Index);
+      if (!ArgString)
+        return nullptr;
+      Values.push_back(ArgString);
+      if (i + 1 < getNumArgs())
+        ++Index;
+    }
+
+    auto A = std::make_unique<Arg>(*this, Spelling, StartIndex, Values[0]);
     for (unsigned i = 1; i != getNumArgs(); ++i)
-      A->getValues().push_back(Args.getArgString(Index - getNumArgs() + i));
+      A->getValues().push_back(Values[i]);
     return A;
   }
   case JoinedOrSeparateClass: {
@@ -187,32 +227,39 @@ std::unique_ptr<Arg> Option::acceptInternal(const ArgList &Args,
     }
 
     // Otherwise it must be separate.
+    unsigned StartIndex = Index;
     Index += 2;
-    if (Index > Args.getNumInputArgStrings() ||
-        Args.getArgString(Index - 1) == nullptr)
+
+    const char *ArgString = advanceToNextArgString(Args, Index);
+    if (!ArgString)
       return nullptr;
 
-    return std::make_unique<Arg>(*this, Spelling, Index - 2,
-                                 Args.getArgString(Index - 1));
+    return std::make_unique<Arg>(*this, Spelling, StartIndex, ArgString);
   }
-  case JoinedAndSeparateClass:
+  case JoinedAndSeparateClass: {
     // Always matches.
+    unsigned StartIndex = Index;
+    const char *JoinedValue = Args.getArgString(StartIndex) + SpellingSize;
     Index += 2;
-    if (Index > Args.getNumInputArgStrings() ||
-        Args.getArgString(Index - 1) == nullptr)
+
+    const char *SeparateValue = advanceToNextArgString(Args, Index);
+    if (!SeparateValue)
       return nullptr;
 
-    return std::make_unique<Arg>(*this, Spelling, Index - 2,
-                                 Args.getArgString(Index - 2) + SpellingSize,
-                                 Args.getArgString(Index - 1));
+    return std::make_unique<Arg>(*this, Spelling, StartIndex, JoinedValue,
+                                 SeparateValue);
+  }
   case RemainingArgsClass: {
     // Matches iff this is an exact match.
     if (SpellingSize != ArgStringSize)
       return nullptr;
-    auto A = std::make_unique<Arg>(*this, Spelling, Index++);
-    while (Index < Args.getNumInputArgStrings() &&
-           Args.getArgString(Index) != nullptr)
-      A->getValues().push_back(Args.getArgString(Index++));
+    auto A = std::make_unique<Arg>(*this, Spelling, Index);
+    Index += 2;
+    while (const char *ArgString = advanceToNextArgString(
+               Args, Index, NextArgStringBehavior::StopAtNull)) {
+      A->getValues().push_back(ArgString);
+      Index++;
+    }
     return A;
   }
   case RemainingArgsJoinedClass: {
@@ -221,10 +268,12 @@ std::unique_ptr<Arg> Option::acceptInternal(const ArgList &Args,
       // An inexact match means there is a joined arg.
       A->getValues().push_back(Args.getArgString(Index) + SpellingSize);
     }
-    Index++;
-    while (Index < Args.getNumInputArgStrings() &&
-           Args.getArgString(Index) != nullptr)
-      A->getValues().push_back(Args.getArgString(Index++));
+    Index += 2;
+    while (const char *ArgString = advanceToNextArgString(
+               Args, Index, NextArgStringBehavior::StopAtNull)) {
+      A->getValues().push_back(ArgString);
+      Index++;
+    }
     return A;
   }
 

@@ -559,3 +559,120 @@ OPTIONS:
                   multiple lines in it
 )");
 }
+
+TYPED_TEST(OptTableTest, ResponseFileNullptrMarkers) {
+  TypeParam T;
+  unsigned MAI, MAC;
+
+  // This simulates a response file with:
+  //   -C
+  //   value
+  const char *Args1[] = {"-C", nullptr, "value"};
+  InputArgList AL = T.ParseArgs(Args1, MAI, MAC);
+  EXPECT_TRUE(AL.hasArg(OPT_C));
+  EXPECT_EQ("value", AL.getLastArgValue(OPT_C));
+  EXPECT_EQ(0U, MAC);
+
+  // This simulates blank lines in a response file:
+  //   -C
+  //
+  //
+  //   value
+  const char *Args2[] = {"-C", nullptr, nullptr, nullptr, "value"};
+  InputArgList AL2 = T.ParseArgs(Args2, MAI, MAC);
+  EXPECT_TRUE(AL2.hasArg(OPT_C));
+  EXPECT_EQ("value", AL2.getLastArgValue(OPT_C));
+  EXPECT_EQ(0U, MAC);
+
+  // This simulates a response file with -E takes 2 arguments:
+  //   -E
+  //   arg1
+  //   arg2
+  const char *Args3[] = {"-E", nullptr, "arg1", nullptr, "arg2"};
+  InputArgList AL3 = T.ParseArgs(Args3, MAI, MAC);
+  EXPECT_TRUE(AL3.hasArg(OPT_E));
+  std::vector<std::string> EValues = AL3.getAllArgValues(OPT_E);
+  ASSERT_EQ(2U, EValues.size());
+  EXPECT_EQ("arg1", EValues[0]);
+  EXPECT_EQ("arg2", EValues[1]);
+  EXPECT_EQ(0U, MAC);
+
+  // -F can be either joined or separate, test the separate case:
+  //   -F
+  //   value
+  const char *Args4[] = {"-F", nullptr, "value"};
+  InputArgList AL4 = T.ParseArgs(Args4, MAI, MAC);
+  EXPECT_TRUE(AL4.hasArg(OPT_F));
+  EXPECT_EQ("value", AL4.getLastArgValue(OPT_F));
+  EXPECT_EQ(0U, MAC);
+
+  // Test that missing argument is still detected correctly with missing
+  // arguments at the end.
+  const char *Args5[] = {"-C", nullptr, nullptr};
+  InputArgList AL5 = T.ParseArgs(Args5, MAI, MAC);
+  EXPECT_FALSE(AL5.hasArg(OPT_C));
+  EXPECT_GT(MAC, 0U);
+  EXPECT_EQ(0U, MAI);
+
+  // -G joined to "joined" and followed by "separate":
+  //   -Gjoined
+  //
+  //   separate
+  const char *Args7[] = {"-Gjoined", nullptr, nullptr, "separate"};
+  InputArgList AL7 = T.ParseArgs(Args7, MAI, MAC);
+  EXPECT_TRUE(AL7.hasArg(OPT_G));
+  EXPECT_EQ("joined", AL7.getLastArgValue(OPT_G));
+  EXPECT_EQ(2U, AL7.getAllArgValues(OPT_G).size());
+  EXPECT_EQ("joined", AL7.getAllArgValues(OPT_G)[0]);
+  EXPECT_EQ("separate", AL7.getAllArgValues(OPT_G)[1]);
+  EXPECT_EQ(0U, MAC);
+
+  // -slurp consumes arguments up to the first nullptr marker,
+  // treating it as a boundary between segments:
+  //   -slurp
+  //   arg1
+  //
+  //   arg2
+  const char *Args8[] = {"-slurp", "arg1", nullptr, nullptr, "arg2"};
+  InputArgList AL8 = T.ParseArgs(Args8, MAI, MAC);
+  EXPECT_TRUE(AL8.hasArg(OPT_Slurp));
+  std::vector<std::string> SlurpValues = AL8.getAllArgValues(OPT_Slurp);
+  ASSERT_EQ(1U, SlurpValues.size());
+  EXPECT_EQ("arg1", SlurpValues[0]);
+  EXPECT_EQ(0U, MAC);
+
+  // -slurpjoined consumes joined arg and arguments up to the
+  // first nullptr marker:
+  //   -slurpjoinedjoined
+  //   arg1
+  //
+  //   arg2
+  const char *Args9[] = {"-slurpjoinedjoined", "arg1", nullptr, nullptr,
+                         "arg2"};
+  InputArgList AL9 = T.ParseArgs(Args9, MAI, MAC);
+  EXPECT_TRUE(AL9.hasArg(OPT_SlurpJoined));
+  std::vector<std::string> SlurpJoinedValues =
+      AL9.getAllArgValues(OPT_SlurpJoined);
+  ASSERT_EQ(2U, SlurpJoinedValues.size());
+  EXPECT_EQ("joined", SlurpJoinedValues[0]);
+  EXPECT_EQ("arg1", SlurpJoinedValues[1]);
+  EXPECT_EQ(0U, MAC);
+}
+
+TYPED_TEST(OptTableTest, ResponseFileIntegration) {
+  TypeParam T;
+  unsigned MAI, MAC;
+
+  const char *ExpandedArgs[] = {
+      "-A",     nullptr, "-C", nullptr, nullptr,
+      "cvalue", nullptr, "-F", nullptr, "fvalue",
+  };
+
+  InputArgList AL = T.ParseArgs(ExpandedArgs, MAI, MAC);
+  EXPECT_TRUE(AL.hasArg(OPT_A));
+  EXPECT_TRUE(AL.hasArg(OPT_C));
+  EXPECT_TRUE(AL.hasArg(OPT_F));
+  EXPECT_EQ("cvalue", AL.getLastArgValue(OPT_C));
+  EXPECT_EQ("fvalue", AL.getLastArgValue(OPT_F));
+  EXPECT_EQ(0U, MAC);
+}
