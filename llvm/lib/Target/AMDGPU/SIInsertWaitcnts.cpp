@@ -1082,13 +1082,17 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
             }
           }
         }
-        if (Slot || LDSDMAStores.size() == NUM_LDS_VGPRS - 1)
+        if (Slot)
           break;
+        // The slot may not be valid because it can be >= NUM_LDS_VGPRS which
+        // means the scoreboard cannot track it. We still want to preserve the
+        // MI in order to check alias information, though.
         LDSDMAStores.push_back(&Inst);
         Slot = LDSDMAStores.size();
         break;
       }
-      setRegScore(FIRST_LDS_VGPR + Slot, T, CurrScore);
+      if (Slot < NUM_LDS_VGPRS)
+        setRegScore(FIRST_LDS_VGPR + Slot, T, CurrScore);
       if (Slot)
         setRegScore(FIRST_LDS_VGPR, T, CurrScore);
     }
@@ -2006,15 +2010,23 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         if (Ptr && Memop->getAAInfo()) {
           const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
           for (unsigned I = 0, E = LDSDMAStores.size(); I != E; ++I) {
-            if (MI.mayAlias(AA, *LDSDMAStores[I], true))
+            if (MI.mayAlias(AA, *LDSDMAStores[I], true)) {
+              if ((I + 1) >= NUM_LDS_VGPRS) {
+                // We didn't have enough slot to track this LDS DMA store, it
+                // has been tracked using the common RegNo (FIRST_LDS_VGPR).
+                ScoreBrackets.determineWait(LOAD_CNT, RegNo, Wait);
+                break;
+              }
+
               ScoreBrackets.determineWait(LOAD_CNT, RegNo + I + 1, Wait);
+            }
           }
         } else {
           ScoreBrackets.determineWait(LOAD_CNT, RegNo, Wait);
         }
-        if (Memop->isStore()) {
+
+        if (Memop->isStore())
           ScoreBrackets.determineWait(EXP_CNT, RegNo, Wait);
-        }
       }
 
       // Loop over use and def operands.
