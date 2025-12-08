@@ -1928,8 +1928,6 @@ def TuneShortForwardBranchIMul
                        [TuneShortForwardBranchIALU]>;
 def HasShortForwardBranchIMul : Predicate<"Subtarget->hasShortForwardBranchIMul()">;
 
-
-
 def TuneShortForwardBranchILoad
     : SubtargetFeature<"short-forward-branch-iload", "HasShortForwardBranchILoad",
                        "true", "Enable short forward branch optimization for load instructions",
