@@ -15,12 +15,15 @@
 #include <string>
 
 namespace clang::ssaf {
-
 /// Uniquely identifies an entity in a program.
 ///
-/// EntityName provides a globally unique identifier for program entities that remains
-/// stable across compilation boundaries. This enables whole-program analysis to track
-/// and relate entities across separately compiled translation units.
+/// EntityName provides a globally unique identifier for program entities that
+/// remains stable across compilation boundaries. This enables whole-program
+/// analysis to track and relate entities across separately compiled translation
+/// units.
+///
+/// Client code should not make assumptions about the implementation details,
+/// such as USRs.
 class EntityName {
   std::string USR;
   llvm::SmallString<16> Suffix;
@@ -29,6 +32,9 @@ class EntityName {
   auto asTuple() const { return std::tie(USR, Suffix, Namespace); }
 
 public:
+  /// Client code should not use this constructor directly.
+  /// Use getEntityName and other functions in ASTEntityMapping.h to get
+  /// entity names.
   EntityName(llvm::StringRef USR, llvm::StringRef Suffix,
              NestedBuildNamespace Namespace);
 
