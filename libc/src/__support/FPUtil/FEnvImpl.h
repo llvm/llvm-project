@@ -31,8 +31,7 @@
 // the dummy implementations below. Once a proper x86_64 darwin fenv is set up,
 // the apple condition here should be removed.
 // TODO: fully support fenv for MSVC.
-#elif defined(LIBC_TARGET_ARCH_IS_X86) && !defined(__APPLE__) &&               \
-    !defined(LIBC_COMPILER_IS_MSVC)
+#elif defined(LIBC_TARGET_ARCH_IS_X86) && !defined(__APPLE__)
 #include "x86_64/FEnvImpl.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ARM) && defined(__ARM_FP) &&                 \
     !defined(LIBC_COMPILER_IS_MSVC)
@@ -110,12 +109,7 @@ raise_except_if_required([[maybe_unused]] int excepts) {
   } else {
 #ifndef LIBC_MATH_HAS_NO_EXCEPT
     if (math_errhandling & MATH_ERREXCEPT)
-#ifdef LIBC_TARGET_ARCH_IS_X86_64
-      return raise_except</*SKIP_X87_FPU*/ true>(excepts);
-#else  // !LIBC_TARGET_ARCH_IS_X86
       return raise_except(excepts);
-#endif // LIBC_TARGET_ARCH_IS_X86
-
 #endif // LIBC_MATH_HAS_NO_EXCEPT
     return 0;
   }

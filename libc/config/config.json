@@ -141,5 +141,11 @@
       "value": "LIBC_WCTYPE_MODE_ASCII",
       "doc": "The implementation used for wctype, acceptable values are LIBC_WCTYPE_MODE_ASCII and LIBC_WCTYPE_MODE_UTF8."
     }
+  },
+  "fenv": {
+    "LIBC_CONF_TRAP_ON_RAISE_FP_EXCEPT": {
+      "value": false,
+      "doc": "Trap with SIGFPE when feraiseexcept is called with unmasked floating point exceptions, similar to glibc's behavior.  This is currently working only on x86 with SSE."
+    }
   }
 }
