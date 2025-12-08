@@ -676,16 +676,25 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
     Value baseAddr32 = adaptor.getMemDesc();
     Value mdescVal = op.getMemDesc();
     // Load result or Store value Type can be vector or scalar.
-    Value data;
-    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>)
-      data = op.getResult();
-    else
-      data = adaptor.getData();
-    VectorType valOrResVecTy = dyn_cast<VectorType>(data.getType());
+    Type dataTy;
+    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
+      Type resType = op.getResult().getType();
+      // Some transforms may leave unit dimension in the 2D vector, adaptors do
+      // not catch it for results.
+      if (auto vecType = dyn_cast<VectorType>(resType)) {
+        auto nonUnitDims = llvm::count_if(vecType.getShape(),
+                                          [](int64_t d) { return d != 1; });
+        assert(nonUnitDims <= 1 &&
+               "Expected either 1D vector or nD with unit dimensions");
+        resType = VectorType::get({vecType.getNumElements()},
+                                  vecType.getElementType());
+      }
+      dataTy = resType;
+    } else
+      dataTy = adaptor.getData().getType();
+    VectorType valOrResVecTy = dyn_cast<VectorType>(dataTy);
     if (!valOrResVecTy)
-      valOrResVecTy = VectorType::get(1, data.getType());
-    if (valOrResVecTy.getShape().size() != 1)
-      return rewriter.notifyMatchFailure(op, "Expected 1D data vector.");
+      valOrResVecTy = VectorType::get(1, dataTy);
 
     int64_t elemBitWidth =
         valOrResVecTy.getElementType().getIntOrFloatBitWidth();
@@ -1176,6 +1185,7 @@ struct ConvertXeGPUToXeVMPass
     };
     typeConverter.addSourceMaterialization(
         singleElementVectorMaterializationCast);
+    typeConverter.addSourceMaterialization(vectorMaterializationCast);
     typeConverter.addTargetMaterialization(memrefMaterializationCast);
     typeConverter.addTargetMaterialization(ui32MaterializationCast);
     typeConverter.addTargetMaterialization(ui64MaterializationCast);
