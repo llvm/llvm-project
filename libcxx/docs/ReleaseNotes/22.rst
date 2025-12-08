@@ -95,6 +95,7 @@ Improvements and New Features
 - ``std::for_each`` and ``ranges::for_each`` have been optimized to iterate more efficiently over the associative
   containers, resulting in performance improvements of up to 2x.
 
+- The performance fo ``search_n`` has been significantly improved.
 - The ``num_get::do_get`` integral overloads have been optimized, resulting in a performance improvement of up to 2.8x.
 
 - The performance of ``std::align`` has been improved by making it an inline function, which allows the compiler to

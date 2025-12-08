@@ -14,11 +14,7 @@
 #include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__iterator/advance.h>
-#include <__iterator/concepts.h>
-#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
-#include <__ranges/concepts.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_callable.h>
@@ -68,44 +64,60 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter> __search_
   }
 }
 
-template <class _AlgPolicy, class _Pred, class _Iter, class _Sent, class _SizeT, class _Type, class _Proj, class _DiffT>
+// Finds the longest suffix in [__first, __last) where each element satisfies __pred.
+template <class _RAIter, class _Pred, class _Proj, class _ValueT>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _RAIter
+__find_longest_suffix(_RAIter __first, _RAIter __last, const _ValueT& __value, _Pred& __pred, _Proj& __proj) {
+  while (__first != __last) {
+    if (!std::__invoke(__pred, std::__invoke(__proj, *--__last), __value)) {
+      return ++__last;
+    }
+  }
+  return __first;
+}
+
+template <class _AlgPolicy, class _Pred, class _Iter, class _SizeT, class _Type, class _Proj, class _DiffT>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 std::pair<_Iter, _Iter> __search_n_random_access_impl(
-    _Iter __first, _Sent __last, _SizeT __count, const _Type& __value, _Pred& __pred, _Proj& __proj, _DiffT __size1) {
-  using difference_type = typename iterator_traits<_Iter>::difference_type;
+    _Iter __first, _SizeT __count_in, const _Type& __value, _Pred& __pred, _Proj& __proj, _DiffT __size) {
+  auto __last  = __first + __size;
+  auto __count = static_cast<_DiffT>(__count_in);
+
   if (__count == 0)
     return std::make_pair(__first, __first);
-  if (__size1 < static_cast<_DiffT>(__count)) {
-    _IterOps<_AlgPolicy>::__advance_to(__first, __last);
-    return std::make_pair(__first, __first);
-  }
+  if (__size < __count)
+    return std::make_pair(__last, __last);
 
-  const auto __s = __first + __size1 - difference_type(__count - 1); // Start of pattern match can't go beyond here
+  // [__match_start, __match_start + __count) is the subrange which we currently check whether it only contains matching
+  // elements. This subrange is returned in case all the elements match.
+  // [__match_start, __matched_until) is the longest subrange where all elements are known to match at any given point
+  // in time.
+  // [__matched_until, __match_start + __count) is the subrange where we don't know whether the elements match.
+
+  // This algorithm tries to expand the subrange [__match_start, __matched_until) into a range of sufficient length.
+  // When we fail to do that because we find a mismatching element, we move it forward to the beginning of the next
+  // consecutive sequence that is not known not to match.
+
+  const _Iter __try_match_until = __last - __count;
+  _Iter __match_start           = __first;
+  _Iter __matched_until         = __first;
+
   while (true) {
-    // Find first element in sequence that matchs __value, with a mininum of loop checks
-    while (true) {
-      if (__first >= __s) { // return __last if no element matches __value
-        _IterOps<_AlgPolicy>::__advance_to(__first, __last);
-        return std::make_pair(__first, __first);
-      }
-      if (std::__invoke(__pred, std::__invoke(__proj, *__first), __value))
-        break;
-      ++__first;
-    }
-    // *__first matches __value_, now match elements after here
-    auto __m = __first;
-    _SizeT __c(0);
-    while (true) {
-      if (++__c == __count) // If pattern exhausted, __first is the answer (works for 1 element pattern)
-        return std::make_pair(__first, __first + _DiffT(__count));
-      ++__m; // no need to check range on __m because __s guarantees we have enough source
+    // There's no chance of expanding the subrange into a sequence of sufficient length, since we don't have enough
+    // elements in the haystack anymore.
+    if (__match_start > __try_match_until)
+      return std::make_pair(__last, __last);
 
-      // if there is a mismatch, restart with a new __first
-      if (!std::__invoke(__pred, std::__invoke(__proj, *__m), __value)) {
-        __first = __m;
-        ++__first;
-        break;
-      } // else there is a match, check next elements
-    }
+    auto __mismatch = std::__find_longest_suffix(__matched_until, __match_start + __count, __value, __pred, __proj);
+
+    // If all elements in [__matched_until, __match_start + __count) match, we know that
+    // [__match_start, __match_start + __count) is a full sequence of matching elements, so we're done.
+    if (__mismatch == __matched_until)
+      return std::make_pair(__match_start, __match_start + __count);
+
+    // Otherwise, we have to move the [__match_start, __matched_until) subrange forward past the point where we know for
+    // sure a match is impossible.
+    __matched_until = __match_start + __count;
+    __match_start   = __mismatch;
   }
 }
 
@@ -119,7 +131,7 @@ template <class _Iter,
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
 __search_n_impl(_Iter __first, _Sent __last, _DiffT __count, const _Type& __value, _Pred& __pred, _Proj& __proj) {
   return std::__search_n_random_access_impl<_ClassicAlgPolicy>(
-      __first, __last, __count, __value, __pred, __proj, __last - __first);
+      __first, __count, __value, __pred, __proj, __last - __first);
 }
 
 template <class _Iter1,
