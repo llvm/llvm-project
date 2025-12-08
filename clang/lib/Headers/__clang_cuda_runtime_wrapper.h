@@ -40,6 +40,7 @@
 // while some required macros (like __THROW) are in a weird state.
 #include <cmath>
 #include <cstdlib>
+#include <climits>
 #include <stdlib.h>
 #include <string.h>
 #undef __CUDACC__
