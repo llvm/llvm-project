@@ -186,6 +186,14 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMSqrtOpLowering::matchAndRewrite(
+    cir::SqrtOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::SqrtOp>(op, resTy, adaptor.getSrc());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMCosOpLowering::matchAndRewrite(
     cir::CosOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
