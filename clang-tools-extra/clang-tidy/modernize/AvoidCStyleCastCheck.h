@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDCSTYLECASTSCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDCSTYLECASTSCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDCSTYLECASTCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDCSTYLECASTCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -25,9 +25,9 @@ namespace clang::tidy::modernize {
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-c-style-cast.html
-class AvoidCStyleCastsCheck : public ClangTidyCheck {
+class AvoidCStyleCastCheck : public ClangTidyCheck {
 public:
-  AvoidCStyleCastsCheck(StringRef Name, ClangTidyContext *Context)
+  AvoidCStyleCastCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -38,4 +38,4 @@ public:
 
 } // namespace clang::tidy::modernize
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDCSTYLECASTSCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDCSTYLECASTCHECK_H

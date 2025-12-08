@@ -67,7 +67,7 @@ public:
     CheckFactories
         .registerCheck<readability::AvoidUnderscoreInGoogletestNameCheck>(
             "google-readability-avoid-underscore-in-googletest-name");
-    CheckFactories.registerCheck<modernize::AvoidCStyleCastsCheck>(
+    CheckFactories.registerCheck<modernize::AvoidCStyleCastCheck>(
         "google-readability-casting");
     CheckFactories.registerCheck<readability::TodoCommentCheck>(
         "google-readability-todo");

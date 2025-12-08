@@ -16,7 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-void AvoidCStyleCastsCheck::registerMatchers(
+void AvoidCStyleCastCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
   Finder->addMatcher(
       cStyleCastExpr(
@@ -113,7 +113,7 @@ static bool sameTypeAsWritten(QualType X, QualType Y) {
   }
 }
 
-void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
+void AvoidCStyleCastCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CastExpr = Result.Nodes.getNodeAs<ExplicitCastExpr>("cast");
 
   // Ignore casts in macros.

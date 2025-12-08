@@ -66,7 +66,7 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidBindCheck>("modernize-avoid-bind");
     CheckFactories.registerCheck<AvoidCArraysCheck>("modernize-avoid-c-arrays");
-    CheckFactories.registerCheck<AvoidCStyleCastsCheck>(
+    CheckFactories.registerCheck<AvoidCStyleCastCheck>(
         "modernize-avoid-c-style-cast");
     CheckFactories.registerCheck<AvoidSetjmpLongjmpCheck>(
         "modernize-avoid-setjmp-longjmp");
