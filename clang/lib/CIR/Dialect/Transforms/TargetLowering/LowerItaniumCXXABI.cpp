@@ -46,8 +46,8 @@ public:
 
 } // namespace
 
-CIRCXXABI *createItaniumCXXABI(LowerModule &lm) {
-  return new LowerItaniumCXXABI(lm);
+std::unique_ptr<CIRCXXABI> createItaniumCXXABI(LowerModule &lm) {
+  return std::make_unique<LowerItaniumCXXABI>(lm);
 }
 
 static cir::IntType getPtrDiffCIRTy(LowerModule &lm) {

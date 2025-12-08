@@ -48,7 +48,7 @@ public:
 };
 
 /// Creates an Itanium-family ABI.
-CIRCXXABI *createItaniumCXXABI(LowerModule &lm);
+std::unique_ptr<CIRCXXABI> createItaniumCXXABI(LowerModule &lm);
 
 } // namespace cir
 

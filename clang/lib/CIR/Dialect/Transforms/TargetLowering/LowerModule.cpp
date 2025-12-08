@@ -23,7 +23,7 @@
 
 namespace cir {
 
-static CIRCXXABI *createCXXABI(LowerModule &lm) {
+static std::unique_ptr<CIRCXXABI> createCXXABI(LowerModule &lm) {
   switch (lm.getCXXABIKind()) {
   case clang::TargetCXXABI::AppleARM64:
   case clang::TargetCXXABI::Fuchsia:
