@@ -94,7 +94,7 @@ static void insertComment(Object &Description, json::Value &Comment,
     Description[Key] = std::move(CommentsArray);
     Description["Has" + Key.str()] = true;
   } else {
-    DescriptionIt->getSecond().getAsArray()->push_back(Comment);
+    DescriptionIt->second.getAsArray()->push_back(Comment);
   }
 }
 
