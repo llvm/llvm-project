@@ -98,7 +98,7 @@ TEST(ASTEntityMappingTest, NullDecl) {
 
 TEST(ASTEntityMappingTest, ImplicitDeclLambda) {
   auto AST = tooling::buildASTFromCode(
-    R"cpp(
+      R"cpp(
     auto L = [](){};
   )cpp",
       "test.cpp", std::make_shared<PCHContainerOperations>());
