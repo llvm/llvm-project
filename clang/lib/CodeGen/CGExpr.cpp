@@ -5798,6 +5798,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLArrayRValue:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
@@ -6600,8 +6601,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       FD && DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()))
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
 
-  bool CFIUnchecked =
-      CalleeType->hasPointeeToToCFIUncheckedCalleeFunctionType();
+  bool CFIUnchecked = CalleeType->hasPointeeToCFIUncheckedCalleeFunctionType();
 
   // If we are checking indirect calls and this call is indirect, check that the
   // function pointer is a member of the bit set for the function type.

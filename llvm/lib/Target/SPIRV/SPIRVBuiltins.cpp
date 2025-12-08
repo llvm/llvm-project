@@ -533,14 +533,11 @@ static Register buildBuiltinVariableLoad(
   return LoadedRegister;
 }
 
-/// Helper external function for inserting ASSIGN_TYPE instuction between \p Reg
-/// and its definition, set the new register as a destination of the definition,
-/// assign SPIRVType to both registers. If SpirvTy is provided, use it as
-/// SPIRVType in ASSIGN_TYPE, otherwise create it from \p Ty. Defined in
-/// SPIRVPreLegalizer.cpp.
-extern void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
-                              SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
-                              MachineRegisterInfo &MRI);
+/// Helper external function for assigning SPIRVType to a register, ensuring the
+/// register class and type are set in MRI. Defined in SPIRVPreLegalizer.cpp.
+extern void updateRegType(Register Reg, Type *Ty, SPIRVType *SpirvTy,
+                          SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
+                          MachineRegisterInfo &MRI);
 
 // TODO: Move to TableGen.
 static SPIRV::MemorySemantics::MemorySemantics
@@ -860,8 +857,8 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
       MIRBuilder.buildInstr(TargetOpcode::G_FNEG)
           .addDef(NegValueReg)
           .addUse(ValueReg);
-      insertAssignInstr(NegValueReg, nullptr, Call->ReturnType, GR, MIRBuilder,
-                        MIRBuilder.getMF().getRegInfo());
+      updateRegType(NegValueReg, nullptr, Call->ReturnType, GR, MIRBuilder,
+                    MIRBuilder.getMF().getRegInfo());
       ValueReg = NegValueReg;
     }
   }
@@ -1285,8 +1282,8 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
         MIRBuilder.buildICmp(
             CmpInst::ICMP_NE, Arg0, BoolReg,
             GR->buildConstantInt(0, MIRBuilder, BoolRegType, true));
-        insertAssignInstr(Arg0, nullptr, BoolType, GR, MIRBuilder,
-                          MIRBuilder.getMF().getRegInfo());
+        updateRegType(Arg0, nullptr, BoolType, GR, MIRBuilder,
+                      MIRBuilder.getMF().getRegInfo());
       } else if (BoolRegType->getOpcode() != SPIRV::OpTypeBool) {
         report_fatal_error("Expect a boolean argument");
       }
@@ -1337,8 +1334,8 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
       MIB.addUse(Call->Arguments[i]);
       setRegClassIfNull(Call->Arguments[i], MRI, GR);
     }
-    insertAssignInstr(VecReg, nullptr, VecType, GR, MIRBuilder,
-                      MIRBuilder.getMF().getRegInfo());
+    updateRegType(VecReg, nullptr, VecType, GR, MIRBuilder,
+                  MIRBuilder.getMF().getRegInfo());
   }
 
   // Build work/sub group instruction.
@@ -1603,8 +1600,7 @@ static bool genWorkgroupQuery(const SPIRV::IncomingCall *Call,
 
     // If the index is dynamic, need check if it's < 3, and then use a select.
     if (!IsConstantIndex) {
-      insertAssignInstr(Extracted, nullptr, PointerSizeType, GR, MIRBuilder,
-                        *MRI);
+      updateRegType(Extracted, nullptr, PointerSizeType, GR, MIRBuilder, *MRI);
 
       auto IndexType = GR->getSPIRVTypeForVReg(IndexRegister);
       auto BoolType = GR->getOrCreateSPIRVBoolType(MIRBuilder, true);
@@ -1992,8 +1988,8 @@ static bool generateImageSizeQueryInst(const SPIRV::IncomingCall *Call,
         .addUse(QueryResult)
         .addImm(ExtractedComposite);
     if (NewType != nullptr)
-      insertAssignInstr(Call->ReturnRegister, nullptr, NewType, GR, MIRBuilder,
-                        MIRBuilder.getMF().getRegInfo());
+      updateRegType(Call->ReturnRegister, nullptr, NewType, GR, MIRBuilder,
+                    MIRBuilder.getMF().getRegInfo());
   } else {
     // More than 1 component is expected, fill a new vector.
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpVectorShuffle)
@@ -2766,8 +2762,8 @@ static bool generateAsyncCopy(const SPIRV::IncomingCall *Call,
                                : buildConstantIntReg32(1, MIRBuilder, GR))
                    .addUse(EventReg);
     if (NewType != nullptr)
-      insertAssignInstr(Call->ReturnRegister, nullptr, NewType, GR, MIRBuilder,
-                        MIRBuilder.getMF().getRegInfo());
+      updateRegType(Call->ReturnRegister, nullptr, NewType, GR, MIRBuilder,
+                    MIRBuilder.getMF().getRegInfo());
     return Res;
   }
   case SPIRV::OpGroupWaitEvents:

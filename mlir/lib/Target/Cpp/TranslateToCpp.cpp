@@ -70,6 +70,7 @@ static inline LogicalResult interleaveCommaWithError(const Container &c,
 /// imply higher precedence.
 static FailureOr<int> getOperatorPrecedence(Operation *operation) {
   return llvm::TypeSwitch<Operation *, FailureOr<int>>(operation)
+      .Case<emitc::AddressOfOp>([&](auto op) { return 15; })
       .Case<emitc::AddOp>([&](auto op) { return 12; })
       .Case<emitc::ApplyOp>([&](auto op) { return 15; })
       .Case<emitc::BitwiseAndOp>([&](auto op) { return 7; })
@@ -110,6 +111,8 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
       .Case<emitc::UnaryPlusOp>([&](auto op) { return 15; })
       .Default([](auto op) { return op->emitError("unsupported operation"); });
 }
+
+static bool shouldBeInlined(Operation *op);
 
 namespace {
 /// Emitter that uses dialect specific emitters to emit C++ code.
@@ -254,24 +257,19 @@ struct CppEmitter {
   }
 
   /// Is expression currently being emitted.
-  bool isEmittingExpression() { return emittedExpression; }
+  bool isEmittingExpression() { return !emittedExpressionPrecedence.empty(); }
 
   /// Determine whether given value is part of the expression potentially being
   /// emitted.
   bool isPartOfCurrentExpression(Value value) {
-    if (!emittedExpression)
-      return false;
     Operation *def = value.getDefiningOp();
-    if (!def)
-      return false;
-    return isPartOfCurrentExpression(def);
+    return def ? isPartOfCurrentExpression(def) : false;
   }
 
   /// Determine whether given operation is part of the expression potentially
   /// being emitted.
   bool isPartOfCurrentExpression(Operation *def) {
-    auto operandExpression = dyn_cast<ExpressionOp>(def->getParentOp());
-    return operandExpression && operandExpression == emittedExpression;
+    return isEmittingExpression() && shouldBeInlined(def);
   };
 
   // Resets the value counter to 0.
@@ -318,7 +316,6 @@ private:
   unsigned int valueCount{0};
 
   /// State of the current expression being emitted.
-  ExpressionOp emittedExpression;
   SmallVector<int> emittedExpressionPrecedence;
 
   void pushExpressionPrecedence(int precedence) {
@@ -336,17 +333,28 @@ private:
 
 /// Determine whether expression \p op should be emitted in a deferred way.
 static bool hasDeferredEmission(Operation *op) {
-  return isa_and_nonnull<emitc::GetGlobalOp, emitc::LiteralOp, emitc::MemberOp,
+  return isa_and_nonnull<emitc::DereferenceOp, emitc::GetGlobalOp,
+                         emitc::LiteralOp, emitc::MemberOp,
                          emitc::MemberOfPtrOp, emitc::SubscriptOp,
                          emitc::GetFieldOp>(op);
 }
 
-/// Determine whether expression \p expressionOp should be emitted inline, i.e.
+/// Determine whether operation \p op should be emitted inline, i.e.
 /// as part of its user. This function recommends inlining of any expressions
 /// that can be inlined unless it is used by another expression, under the
 /// assumption that  any expression fusion/re-materialization was taken care of
 /// by transformations run by the backend.
-static bool shouldBeInlined(ExpressionOp expressionOp) {
+static bool shouldBeInlined(Operation *op) {
+  // CExpression operations are inlined if and only if they reside within an
+  // ExpressionOp.
+  if (isa<CExpressionInterface>(op))
+    return isa<ExpressionOp>(op->getParentOp());
+
+  // Only other inlinable operation is ExpressionOp itself.
+  ExpressionOp expressionOp = dyn_cast<ExpressionOp>(op);
+  if (!expressionOp)
+    return false;
+
   // Do not inline if expression is marked as such.
   if (expressionOp.getDoNotInline())
     return false;
@@ -394,6 +402,15 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   }
 
   return false;
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::DereferenceOp dereferenceOp) {
+  std::string out;
+  llvm::raw_string_ostream ss(out);
+  ss << "*" << emitter.getOrCreateName(dereferenceOp.getPointer());
+  emitter.cacheDeferredOpResult(dereferenceOp.getResult(), out);
+  return success();
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
@@ -477,6 +494,17 @@ static LogicalResult printConstantOp(CppEmitter &emitter, Operation *operation,
   if (failed(emitter.emitAssignPrefix(*operation)))
     return failure();
   return emitter.emitAttribute(operation->getLoc(), value);
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::AddressOfOp addressOfOp) {
+  raw_ostream &os = emitter.ostream();
+  Operation &op = *addressOfOp.getOperation();
+
+  if (failed(emitter.emitAssignPrefix(op)))
+    return failure();
+  os << "&";
+  return emitter.emitOperand(addressOfOp.getReference());
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
@@ -1564,7 +1592,6 @@ LogicalResult CppEmitter::emitExpression(ExpressionOp expressionOp) {
          "Expected precedence stack to be empty");
   Operation *rootOp = expressionOp.getRootOp();
 
-  emittedExpression = expressionOp;
   FailureOr<int> precedence = getOperatorPrecedence(rootOp);
   if (failed(precedence))
     return failure();
@@ -1576,7 +1603,6 @@ LogicalResult CppEmitter::emitExpression(ExpressionOp expressionOp) {
   popExpressionPrecedence();
   assert(emittedExpressionPrecedence.empty() &&
          "Expected precedence stack to be empty");
-  emittedExpression = nullptr;
 
   return success();
 }
@@ -1617,14 +1643,8 @@ LogicalResult CppEmitter::emitOperand(Value value, bool isInBrackets) {
     // If this operand is a block argument of an expression, emit instead the
     // matching expression parameter.
     Operation *argOp = arg.getParentBlock()->getParentOp();
-    if (auto expressionOp = dyn_cast<ExpressionOp>(argOp)) {
-      // This scenario is only expected when one of the operations within the
-      // expression being emitted references one of the expression's block
-      // arguments.
-      assert(expressionOp == emittedExpression &&
-             "Expected expression being emitted");
-      value = expressionOp->getOperand(arg.getArgNumber());
-    }
+    if (auto expressionOp = dyn_cast<ExpressionOp>(argOp))
+      return emitOperand(expressionOp->getOperand(arg.getArgNumber()));
   }
 
   os << getOrCreateName(value);
@@ -1768,14 +1788,14 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<cf::BranchOp, cf::CondBranchOp>(
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
-          .Case<emitc::AddOp, emitc::ApplyOp, emitc::AssignOp,
-                emitc::BitwiseAndOp, emitc::BitwiseLeftShiftOp,
+          .Case<emitc::AddressOfOp, emitc::AddOp, emitc::ApplyOp,
+                emitc::AssignOp, emitc::BitwiseAndOp, emitc::BitwiseLeftShiftOp,
                 emitc::BitwiseNotOp, emitc::BitwiseOrOp,
                 emitc::BitwiseRightShiftOp, emitc::BitwiseXorOp, emitc::CallOp,
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::ClassOp,
                 emitc::CmpOp, emitc::ConditionalOp, emitc::ConstantOp,
-                emitc::DeclareFuncOp, emitc::DivOp, emitc::DoOp,
-                emitc::ExpressionOp, emitc::FieldOp, emitc::FileOp,
+                emitc::DeclareFuncOp, emitc::DereferenceOp, emitc::DivOp,
+                emitc::DoOp, emitc::ExpressionOp, emitc::FieldOp, emitc::FileOp,
                 emitc::ForOp, emitc::FuncOp, emitc::GetFieldOp,
                 emitc::GetGlobalOp, emitc::GlobalOp, emitc::IfOp,
                 emitc::IncludeOp, emitc::LiteralOp, emitc::LoadOp,

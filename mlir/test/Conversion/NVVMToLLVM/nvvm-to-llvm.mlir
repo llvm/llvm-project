@@ -584,29 +584,6 @@ func.func @cp_async_bulk_wait_group() {
 
 // -----
 
-func.func @fence_mbarrier_init() {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.mbarrier_init.release.cluster;"
-  nvvm.fence.mbarrier.init
-  func.return 
-}
-// -----
-
-func.func @fence_proxy() {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.alias;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<alias>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async.global;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.global>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async.shared::cta;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cta>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async.shared::cluster;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cluster>}
-  func.return
-}
-
-// -----
-
 // CHECK-LABEL: @llvm_nvvm_barrier_arrive
 // CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
 llvm.func @llvm_nvvm_barrier_arrive(%barID : i32, %numberOfThreads : i32) {

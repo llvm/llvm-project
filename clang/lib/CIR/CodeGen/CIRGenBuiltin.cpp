@@ -60,6 +60,33 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
   return RValue::get(result);
 }
 
+static mlir::Value makeAtomicFenceValue(CIRGenFunction &cgf,
+                                        const CallExpr *expr,
+                                        cir::SyncScopeKind syncScope) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Value orderingVal = cgf.emitScalarExpr(expr->getArg(0));
+
+  auto constOrdering = orderingVal.getDefiningOp<cir::ConstantOp>();
+
+  if (!constOrdering) {
+    // TODO(cir): Emit code to switch on `orderingVal`,
+    //            and creating the fence op for valid values.
+    cgf.cgm.errorNYI("Variable atomic fence ordering");
+    return {};
+  }
+
+  auto constOrderingAttr = constOrdering.getValueAttr<cir::IntAttr>();
+  assert(constOrderingAttr && "Expected integer constant for ordering");
+
+  auto ordering = static_cast<cir::MemOrder>(constOrderingAttr.getUInt());
+
+  cir::AtomicFence::create(
+      builder, cgf.getLoc(expr->getSourceRange()), ordering,
+      cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
+
+  return {};
+}
+
 namespace {
 struct WidthAndSignedness {
   unsigned width;
@@ -982,8 +1009,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__atomic_is_lock_free:
   case Builtin::BI__atomic_test_and_set:
   case Builtin::BI__atomic_clear:
+    return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__atomic_thread_fence:
+    return RValue::get(
+        makeAtomicFenceValue(*this, e, cir::SyncScopeKind::System));
   case Builtin::BI__atomic_signal_fence:
+    return RValue::get(
+        makeAtomicFenceValue(*this, e, cir::SyncScopeKind::SingleThread));
   case Builtin::BI__c11_atomic_thread_fence:
   case Builtin::BI__c11_atomic_signal_fence:
   case Builtin::BI__scoped_atomic_thread_fence:
@@ -1361,9 +1393,13 @@ static mlir::Value emitTargetArchBuiltinExpr(CIRGenFunction *cgf,
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
+    // These are actually NYI, but that will be reported by emitBuiltinExpr.
+    // At this point, we don't even know that the builtin is target-specific.
+    return nullptr;
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64_be:
+    return cgf->emitAArch64BuiltinExpr(builtinID, e, returnValue, arch);
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
     // These are actually NYI, but that will be reported by emitBuiltinExpr.

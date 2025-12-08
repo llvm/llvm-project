@@ -577,8 +577,8 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
 
   // strcmp(x, y)  -> cnst  (if both x and y are constant strings)
   if (HasStr1 && HasStr2)
-    return ConstantInt::get(CI->getType(),
-                            std::clamp(Str1.compare(Str2), -1, 1));
+    return ConstantInt::getSigned(CI->getType(),
+                                  std::clamp(Str1.compare(Str2), -1, 1));
 
   if (HasStr1 && Str1.empty()) // strcmp("", x) -> -*x
     return B.CreateNeg(B.CreateZExt(
@@ -657,8 +657,8 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
     // Avoid truncating the 64-bit Length to 32 bits in ILP32.
     StringRef SubStr1 = substr(Str1, Length);
     StringRef SubStr2 = substr(Str2, Length);
-    return ConstantInt::get(CI->getType(),
-                            std::clamp(SubStr1.compare(SubStr2), -1, 1));
+    return ConstantInt::getSigned(CI->getType(),
+                                  std::clamp(SubStr1.compare(SubStr2), -1, 1));
   }
 
   if (HasStr1 && Str1.empty()) // strncmp("", x, n) -> -*x
@@ -1534,7 +1534,7 @@ static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
   int IRes = UChar(LStr[Pos]) < UChar(RStr[Pos]) ? -1 : 1;
   Value *MaxSize = ConstantInt::get(Size->getType(), Pos);
   Value *Cmp = B.CreateICmp(ICmpInst::ICMP_ULE, Size, MaxSize);
-  Value *Res = ConstantInt::get(CI->getType(), IRes);
+  Value *Res = ConstantInt::getSigned(CI->getType(), IRes);
   return B.CreateSelect(Cmp, Zero, Res);
 }
 
@@ -2543,6 +2543,30 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
                                                 CI->getArgOperand(1), FMF));
 }
 
+Value *LibCallSimplifier::optimizeFMinimumnumFMaximumnum(CallInst *CI,
+                                                         IRBuilderBase &B) {
+  Module *M = CI->getModule();
+
+  // If we can shrink the call to a float function rather than a double
+  // function, do that first.
+  Function *Callee = CI->getCalledFunction();
+  StringRef Name = Callee->getName();
+  if ((Name == "fminimum_num" || Name == "fmaximum_num") &&
+      hasFloatVersion(M, Name))
+    if (Value *Ret = optimizeBinaryDoubleFP(CI, B, TLI))
+      return Ret;
+
+  // The new fminimum_num/fmaximum_num functions, unlike fmin/fmax, *are*
+  // sensitive to the sign of zero, so we don't change the fast-math flags like
+  // we did for those.
+
+  Intrinsic::ID IID = Callee->getName().starts_with("fminimum_num")
+                          ? Intrinsic::minimumnum
+                          : Intrinsic::maximumnum;
+  return copyFlags(*CI, B.CreateBinaryIntrinsic(IID, CI->getArgOperand(0),
+                                                CI->getArgOperand(1), CI));
+}
+
 Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   Function *LogFn = Log->getCalledFunction();
   StringRef LogNm = LogFn->getName();
@@ -3159,7 +3183,7 @@ Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
 
   B.CreateAlignedStore(
-      ConstantInt::get(B.getIntNTy(IntBW), QuotInt.getExtValue()),
+      ConstantInt::getSigned(B.getIntNTy(IntBW), QuotInt.getExtValue()),
       CI->getArgOperand(2), CI->getParamAlign(2));
   return ConstantFP::get(CI->getType(), Rem);
 }
@@ -4123,6 +4147,13 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_fmax:
   case LibFunc_fmaxl:
     return optimizeFMinFMax(CI, Builder);
+  case LibFunc_fminimum_numf:
+  case LibFunc_fminimum_num:
+  case LibFunc_fminimum_numl:
+  case LibFunc_fmaximum_numf:
+  case LibFunc_fmaximum_num:
+  case LibFunc_fmaximum_numl:
+    return optimizeFMinimumnumFMaximumnum(CI, Builder);
   case LibFunc_cabs:
   case LibFunc_cabsf:
   case LibFunc_cabsl:
