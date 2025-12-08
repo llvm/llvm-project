@@ -2888,6 +2888,8 @@ static bool isTargetShuffle(unsigned Opcode) {
   case X86ISD::VPERMV:
   case X86ISD::VPERMV3:
   case X86ISD::VZEXT_MOVL:
+  case X86ISD::COMPRESS:
+  case X86ISD::EXPAND:
     return true;
   }
 }
@@ -5838,6 +5840,48 @@ static bool getTargetShuffleMask(SDValue N, bool AllowSentinelZero,
       break;
     }
     return false;
+  }
+  case X86ISD::COMPRESS: {
+    SDValue CmpVec = N.getOperand(0);
+    SDValue PassThru = N.getOperand(1);
+    SDValue CmpMask = N.getOperand(2);
+    APInt UndefElts;
+    SmallVector<APInt> EltBits;
+    if (!getTargetConstantBitsFromNode(CmpMask, 1, UndefElts, EltBits))
+      return false;
+    assert(UndefElts.getBitWidth() == NumElems && EltBits.size() == NumElems &&
+           "Illegal compression mask");
+    for (unsigned I = 0; I != NumElems; ++I) {
+      if (!EltBits[I].isZero())
+        Mask.push_back(I);
+    }
+    while (Mask.size() != NumElems) {
+      Mask.push_back(NumElems + Mask.size());
+    }
+    Ops.push_back(CmpVec);
+    Ops.push_back(PassThru);
+    return true;
+  }
+  case X86ISD::EXPAND: {
+    SDValue ExpVec = N.getOperand(0);
+    SDValue PassThru = N.getOperand(1);
+    SDValue ExpMask = N.getOperand(2);
+    APInt UndefElts;
+    SmallVector<APInt> EltBits;
+    if (!getTargetConstantBitsFromNode(ExpMask, 1, UndefElts, EltBits))
+      return false;
+    assert(UndefElts.getBitWidth() == NumElems && EltBits.size() == NumElems &&
+           "Illegal expansion mask");
+    unsigned ExpIndex = 0;
+    for (unsigned I = 0; I != NumElems; ++I) {
+      if (EltBits[I].isZero())
+        Mask.push_back(I + NumElems);
+      else
+        Mask.push_back(ExpIndex++);
+    }
+    Ops.push_back(ExpVec);
+    Ops.push_back(PassThru);
+    return true;
   }
   default:
     llvm_unreachable("unknown target shuffle node");
@@ -61325,6 +61369,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VPERM2X128:
   case X86ISD::SHUF128:
   case X86ISD::VZEXT_MOVL:
+  case X86ISD::COMPRESS:
+  case X86ISD::EXPAND:
   case ISD::VECTOR_SHUFFLE: return combineShuffle(N, DAG, DCI,Subtarget);
   case X86ISD::FMADD_RND:
   case X86ISD::FMSUB:
