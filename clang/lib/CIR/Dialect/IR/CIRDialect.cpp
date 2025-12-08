@@ -1792,6 +1792,25 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       return failure();
   }
 
+  // Parse CXXSpecialMember attribute
+  mlir::StringAttr cxxSpecialMemberAttrName =
+      getCxxSpecialMemberAttrName(state.name);
+  if (parser.parseOptionalKeyword("special_member").succeeded()) {
+    cir::CXXCtorAttr ctorAttr;
+    cir::CXXDtorAttr dtorAttr;
+    cir::CXXAssignAttr assignAttr;
+    if (parser.parseLess().failed())
+      return failure();
+    if (parser.parseOptionalAttribute(ctorAttr).has_value())
+      state.addAttribute(cxxSpecialMemberAttrName, ctorAttr);
+    if (parser.parseOptionalAttribute(dtorAttr).has_value())
+      state.addAttribute(cxxSpecialMemberAttrName, dtorAttr);
+    if (parser.parseOptionalAttribute(assignAttr).has_value())
+      state.addAttribute(cxxSpecialMemberAttrName, assignAttr);
+    if (parser.parseGreater().failed())
+      return failure();
+  }
+
   // Parse the optional function body.
   auto *body = state.addRegion();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
@@ -1887,6 +1906,14 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
   if (cir::InlineAttr inlineAttr = getInlineKindAttr()) {
     p << " inline(" << cir::stringifyInlineKind(inlineAttr.getValue()) << ")";
+  }
+
+  if (auto specialMemberAttr = getCxxSpecialMemberAttr()) {
+    assert((mlir::isa<cir::CXXCtorAttr, cir::CXXDtorAttr, cir::CXXAssignAttr>(
+        specialMemberAttr)));
+    p << " special_member<";
+    p.printAttribute(specialMemberAttr);
+    p << '>';
   }
 
   // Print the body if this is not an external function.

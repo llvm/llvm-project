@@ -486,6 +486,11 @@ public:
                                 cir::FuncType funcType,
                                 const clang::FunctionDecl *funcDecl);
 
+  /// Sets the CXX special member attribute for the function based on the
+  /// function declaration.
+  void setCXXSpecialMemberAttr(cir::FuncOp func,
+                               const clang::FunctionDecl *funcDecl);
+
   /// Create a CIR function with builtin attribute set.
   cir::FuncOp createCIRBuiltinFunction(mlir::Location loc, llvm::StringRef name,
                                        cir::FuncType ty,
