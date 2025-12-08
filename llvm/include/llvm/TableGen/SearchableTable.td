@@ -50,6 +50,11 @@ class GenericEnum {
 
   // If true, emit the enum as a scoped C++ enum class.
   bit Scoped = 0;
+
+  // (Optional) Bit width of the underlying integral type when emitting a scoped
+  // enum class. When unset, the compiler's default underlying type is used.
+  // Supported widths are 8, 16, 32, and 64.
+  int Size = ?;
 }
 
 class GenericEnumClass : GenericEnum {
