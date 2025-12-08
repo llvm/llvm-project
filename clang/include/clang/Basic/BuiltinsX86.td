@@ -585,13 +585,14 @@ let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] i
   def psadbw256
       : X86Builtin<
             "_Vector<4, long long int>(_Vector<32, char>, _Vector<32, char>)">;
-  def permdf256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Constant int)">;
   def permti256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>, _Constant int)">;
-  def permdi256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Constant int)">;
 }
 
-
 let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
+  def permdf256
+      : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Constant int)">;
+  def permdi256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long "
+                             "int>, _Constant int)">;
   def pmovmskb256 : X86Builtin<"int(_Vector<32, char>)">;
   def pavgb256 : X86Builtin<"_Vector<32, unsigned char>(_Vector<32, unsigned char>, _Vector<32, unsigned char>)">;
   def pavgw256 : X86Builtin<"_Vector<16, unsigned short>(_Vector<16, unsigned short>, _Vector<16, unsigned short>)">;
@@ -3148,28 +3149,28 @@ let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def kxordi : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
 }
 
-let Features = "avx512dq", Attributes = [NoThrow, Const] in {
+let Features = "avx512dq", Attributes = [NoThrow, Const, Constexpr] in {
   def kshiftliqi : X86Builtin<"unsigned char(unsigned char, _Constant unsigned int)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr] in {
   def kshiftlihi : X86Builtin<"unsigned short(unsigned short, _Constant unsigned int)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const] in {
+let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def kshiftlisi : X86Builtin<"unsigned int(unsigned int, _Constant unsigned int)">;
   def kshiftlidi : X86Builtin<"unsigned long long int(unsigned long long int, _Constant unsigned int)">;
 }
 
-let Features = "avx512dq", Attributes = [NoThrow, Const] in {
+let Features = "avx512dq", Attributes = [NoThrow, Const, Constexpr] in {
   def kshiftriqi : X86Builtin<"unsigned char(unsigned char, _Constant unsigned int)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr] in {
   def kshiftrihi : X86Builtin<"unsigned short(unsigned short, _Constant unsigned int)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const] in {
+let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def kshiftrisi : X86Builtin<"unsigned int(unsigned int, _Constant unsigned int)">;
   def kshiftridi : X86Builtin<"unsigned long long int(unsigned long long int, _Constant unsigned int)">;
 }

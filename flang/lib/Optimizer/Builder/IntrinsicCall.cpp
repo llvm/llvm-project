@@ -727,6 +727,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"shifta", &I::genShiftA},
     {"shiftl", &I::genShift<mlir::arith::ShLIOp>},
     {"shiftr", &I::genShift<mlir::arith::ShRUIOp>},
+    {"show_descriptor",
+     &I::genShowDescriptor,
+     {{{"d", asBox}}},
+     /*isElemental=*/false},
     {"sign", &I::genSign},
     {"signal",
      &I::genSignalSubroutine,
@@ -7882,6 +7886,16 @@ mlir::Value IntrinsicLibrary::genShiftA(mlir::Type resultType,
   if (resultType.isUnsignedInteger())
     return builder.createConvert(loc, resultType, result);
   return result;
+}
+
+void IntrinsicLibrary::genShowDescriptor(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1 && "expected single argument for show_descriptor");
+  const mlir::Value descriptor = fir::getBase(args[0]);
+
+  assert(fir::isa_box_type(descriptor.getType()) &&
+         "argument must have been lowered to box type");
+  fir::runtime::genShowDescriptor(builder, loc, descriptor);
 }
 
 // SIGNAL

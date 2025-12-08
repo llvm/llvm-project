@@ -877,7 +877,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
   // Write Result to ResultPtr and put Overflow on the stack.
   assignInteger(S, ResultPtr, ResultT, Result);
   if (ResultPtr.canBeInitialized())
-    ResultPtr.initialize();
+    ResultPtr.initialize(S);
 
   assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
@@ -934,7 +934,7 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
   assignInteger(S, CarryOutPtr, CarryOutT, CarryOut);
-  CarryOutPtr.initialize();
+  CarryOutPtr.initialize(S);
 
   assert(Call->getType() == Call->getArg(0)->getType());
   pushInteger(S, Result, Call->getType());
@@ -1743,7 +1743,7 @@ static bool interp__builtin_elementwise_countzeroes(InterpState &S,
       } else {
         Dst.atIndex(I).deref<T>() = T::from(EltVal.countLeadingZeros());
       }
-      Dst.atIndex(I).initialize();
+      Dst.atIndex(I).initialize(S);
     });
   }
 
@@ -1960,7 +1960,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   // Now, read both pointers to a buffer and compare those.
   BitcastBuffer BufferA(
       Bits(ASTCtx.getTypeSize(ElemTypeA) * PtrA.getNumElems()));
-  readPointerToBuffer(S.getContext(), PtrA, BufferA, false);
+  readPointerToBuffer(S, S.getContext(), PtrA, BufferA, false);
   // FIXME: The swapping here is UNDOING something we do when reading the
   // data into the buffer.
   if (ASTCtx.getTargetInfo().isBigEndian())
@@ -1968,7 +1968,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
 
   BitcastBuffer BufferB(
       Bits(ASTCtx.getTypeSize(ElemTypeB) * PtrB.getNumElems()));
-  readPointerToBuffer(S.getContext(), PtrB, BufferB, false);
+  readPointerToBuffer(S, S.getContext(), PtrB, BufferB, false);
   // FIXME: The swapping here is UNDOING something we do when reading the
   // data into the buffer.
   if (ASTCtx.getTargetInfo().isBigEndian())
@@ -4255,6 +4255,30 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return APInt(sizeof(unsigned char) * 8, (A | B) == 0);
         });
 
+  case clang::X86::BI__builtin_ia32_kshiftliqi:
+  case clang::X86::BI__builtin_ia32_kshiftlihi:
+  case clang::X86::BI__builtin_ia32_kshiftlisi:
+  case clang::X86::BI__builtin_ia32_kshiftlidi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          unsigned Amt = RHS.getZExtValue() & 0xFF;
+          if (Amt >= LHS.getBitWidth())
+            return APInt::getZero(LHS.getBitWidth());
+          return LHS.shl(Amt);
+        });
+
+  case clang::X86::BI__builtin_ia32_kshiftriqi:
+  case clang::X86::BI__builtin_ia32_kshiftrihi:
+  case clang::X86::BI__builtin_ia32_kshiftrisi:
+  case clang::X86::BI__builtin_ia32_kshiftridi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          unsigned Amt = RHS.getZExtValue() & 0xFF;
+          if (Amt >= LHS.getBitWidth())
+            return APInt::getZero(LHS.getBitWidth());
+          return LHS.lshr(Amt);
+        });
+
   case clang::X86::BI__builtin_ia32_lzcnt_u16:
   case clang::X86::BI__builtin_ia32_lzcnt_u32:
   case clang::X86::BI__builtin_ia32_lzcnt_u64:
@@ -5092,6 +5116,16 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return std::make_pair(0, static_cast<int>(LaneOffset + Index));
         });
 
+  case X86::BI__builtin_ia32_permdf256:
+  case X86::BI__builtin_ia32_permdi256:
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned Control) {
+          // permute4x64 operates on 4 64-bit elements
+          // For element i (0-3), extract bits [2*i+1:2*i] from Control
+          unsigned Index = (Control >> (2 * DstIdx)) & 0x3;
+          return std::make_pair(0, static_cast<int>(Index));
+        });
+
   case X86::BI__builtin_ia32_vpmultishiftqb128:
   case X86::BI__builtin_ia32_vpmultishiftqb256:
   case X86::BI__builtin_ia32_vpmultishiftqb512:
@@ -5549,7 +5583,7 @@ bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
 
   INT_TYPE_SWITCH(FieldT,
                   FieldPtr.deref<T>() = T::from(IntValue.getSExtValue()));
-  FieldPtr.initialize();
+  FieldPtr.initialize(S);
   return true;
 }
 
@@ -5605,7 +5639,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
       TYPE_SWITCH(*FT, {
         DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
         if (Src.atField(F.Offset).isInitialized())
-          DestField.initialize();
+          DestField.initialize(S);
         if (Activate)
           DestField.activate();
       });
@@ -5643,7 +5677,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
       return false;
   }
 
-  Dest.initialize();
+  Dest.initialize(S);
   return true;
 }
 
@@ -5664,7 +5698,7 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
       Pointer DestElem = Dest.atIndex(I);
       TYPE_SWITCH(ET, {
         DestElem.deref<T>() = Src.elem<T>(I);
-        DestElem.initialize();
+        DestElem.initialize(S);
       });
     }
     return true;
