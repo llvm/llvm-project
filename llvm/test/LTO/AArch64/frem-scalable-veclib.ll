@@ -13,8 +13,8 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define fastcc <vscale x 2 x double> @compute(<vscale x 2 x double> %0) {
+define <vscale x 2 x double> @compute(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 entry:
-  %1 = frem <vscale x 2 x double> %0, zeroinitializer
-  ret <vscale x 2 x double> %1
+  %rem = frem <vscale x 2 x double> %a, %b
+  ret <vscale x 2 x double> %rem
 }
