@@ -2,4 +2,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fdefer-ts %s
 
 // expected-no-diagnostics
-int defer;
+int _Defer;
