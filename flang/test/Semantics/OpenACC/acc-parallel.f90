@@ -204,7 +204,7 @@ end program openacc_parallel_validity
 subroutine acc_parallel_default_none
   integer :: i, l
   real :: a(10,10)
-  l = 10  
+  l = 10
   !$acc parallel default(none)
   !$acc loop
   !ERROR: The DEFAULT(NONE) clause requires that 'l' must be listed in a data-mapping clause
