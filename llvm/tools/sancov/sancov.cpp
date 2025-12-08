@@ -92,6 +92,7 @@ public:
 
 enum ActionType {
   CoveredFunctionsAction,
+  DiffAction,
   HtmlReportAction,
   MergeAction,
   NotCoveredFunctionsAction,
@@ -108,6 +109,7 @@ static bool ClSkipDeadFiles;
 static bool ClUseDefaultIgnorelist;
 static std::string ClStripPathPrefix;
 static std::string ClIgnorelist;
+static std::string ClOutputFile;
 
 static const char *const DefaultIgnorelistStr = "fun:__sanitizer_.*\n"
                                                 "src:/usr/include/.*\n"
@@ -138,6 +140,10 @@ struct RawCoverage {
   // Read binary .sancov file.
   static ErrorOr<std::unique_ptr<RawCoverage>>
   read(const std::string &FileName);
+
+  // Write binary .sancov file.
+  static void write(const std::string &FileName, const RawCoverage &Coverage,
+                    FileHeader Header);
 
   std::unique_ptr<std::set<uint64_t>> Addrs;
 };
@@ -275,6 +281,33 @@ raw_ostream &operator<<(raw_ostream &OS, const RawCoverage &CoverageData) {
     OS << "\n";
   }
   return OS;
+}
+
+// Write coverage addresses in binary format.
+void RawCoverage::write(const std::string &FileName,
+                        const RawCoverage &Coverage, FileHeader Header) {
+  std::error_code EC;
+  raw_fd_ostream OS(FileName, EC, sys::fs::OF_None);
+  failIfError(EC);
+
+  OS.write(reinterpret_cast<const char *>(&Header), sizeof(Header));
+
+  switch (Header.Bitness) {
+  case Bitness64:
+    for (auto Addr : *Coverage.Addrs) {
+      uint64_t Addr64 = Addr;
+      OS.write(reinterpret_cast<const char *>(&Addr64), sizeof(Addr64));
+    }
+    break;
+  case Bitness32:
+    for (auto Addr : *Coverage.Addrs) {
+      uint32_t Addr32 = static_cast<uint32_t>(Addr);
+      OS.write(reinterpret_cast<const char *>(&Addr32), sizeof(Addr32));
+    }
+    break;
+  default:
+    fail("Unsupported bitness: " + std::to_string(Header.Bitness));
+  }
 }
 
 static raw_ostream &operator<<(raw_ostream &OS, const CoverageStats &Stats) {
@@ -1015,6 +1048,59 @@ static void readAndPrintRawCoverage(const std::vector<std::string> &FileNames,
   }
 }
 
+static const char *bitnessToString(uint32_t Bitness) {
+  switch (Bitness) {
+  case Bitness64:
+    return "64-bit";
+  case Bitness32:
+    return "32-bit";
+  default:
+    fail("Unsupported bitness: " + std::to_string(Bitness));
+    return nullptr;
+  }
+}
+
+// Compute difference between two coverage files (A - B) and write to output
+// file.
+static void diffRawCoverage(const std::string &FileA, const std::string &FileB,
+                            const std::string &OutputFile) {
+  auto CovA = RawCoverage::read(FileA);
+  failIfError(CovA);
+
+  auto CovB = RawCoverage::read(FileB);
+  failIfError(CovB);
+
+  // Determine bitness from both files
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErrA =
+      MemoryBuffer::getFile(FileA);
+  failIfError(BufOrErrA);
+  const FileHeader *HeaderA =
+      reinterpret_cast<const FileHeader *>(BufOrErrA.get()->getBufferStart());
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErrB =
+      MemoryBuffer::getFile(FileB);
+  failIfError(BufOrErrB);
+  const FileHeader *HeaderB =
+      reinterpret_cast<const FileHeader *>(BufOrErrB.get()->getBufferStart());
+
+  // Warn if bitness differs
+  if (HeaderA->Bitness != HeaderB->Bitness) {
+    errs() << "WARNING: Input files have different bitness (File A: "
+           << bitnessToString(HeaderA->Bitness)
+           << ", File B: " << bitnessToString(HeaderB->Bitness)
+           << "). Using bitness from File A.\n";
+  }
+
+  // Compute A - B
+  auto DiffAddrs = std::make_unique<std::set<uint64_t>>();
+  std::set_difference(CovA.get()->Addrs->begin(), CovA.get()->Addrs->end(),
+                      CovB.get()->Addrs->begin(), CovB.get()->Addrs->end(),
+                      std::inserter(*DiffAddrs, DiffAddrs->end()));
+
+  RawCoverage DiffCov(std::move(DiffAddrs));
+  RawCoverage::write(OutputFile, DiffCov, *HeaderA);
+}
+
 static std::unique_ptr<SymbolizedCoverage>
 merge(const std::vector<std::unique_ptr<SymbolizedCoverage>> &Coverages) {
   if (Coverages.empty())
@@ -1176,6 +1262,9 @@ static void parseArgs(int Argc, char **Argv) {
     case OPT_print:
       Action = ActionType::PrintAction;
       break;
+    case OPT_diff:
+      Action = ActionType::DiffAction;
+      break;
     case OPT_printCoveragePcs:
       Action = ActionType::PrintCovPointsAction;
       break;
@@ -1209,6 +1298,7 @@ static void parseArgs(int Argc, char **Argv) {
 
   ClStripPathPrefix = Args.getLastArgValue(OPT_stripPathPrefix_EQ);
   ClIgnorelist = Args.getLastArgValue(OPT_ignorelist_EQ);
+  ClOutputFile = Args.getLastArgValue(OPT_output_EQ);
 }
 
 int sancov_main(int Argc, char **Argv, const llvm::ToolContext &) {
@@ -1221,6 +1311,16 @@ int sancov_main(int Argc, char **Argv, const llvm::ToolContext &) {
   // -print doesn't need object files.
   if (Action == PrintAction) {
     readAndPrintRawCoverage(ClInputFiles, outs());
+    return 0;
+  }
+  if (Action == DiffAction) {
+    // -diff requires exactly 2 input files and an output file.
+    failIf(ClInputFiles.size() != 2,
+           "diff action requires exactly 2 input sancov files");
+    failIf(
+        ClOutputFile.empty(),
+        "diff action requires --output option to specify output sancov file");
+    diffRawCoverage(ClInputFiles[0], ClInputFiles[1], ClOutputFile);
     return 0;
   }
   if (Action == PrintCovPointsAction) {
@@ -1257,6 +1357,7 @@ int sancov_main(int Argc, char **Argv, const llvm::ToolContext &) {
     errs() << "-html-report option is removed: "
               "use -symbolize & coverage-report-server.py instead\n";
     return 1;
+  case DiffAction:
   case PrintAction:
   case PrintCovPointsAction:
     llvm_unreachable("unsupported action");
