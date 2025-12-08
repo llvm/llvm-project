@@ -3270,6 +3270,179 @@ TEST_P(UncheckedStatusOrAccessModelTest, ConstructStatusFromReference) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, AccessorCall) {
+  // Accessor returns reference.
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          STATUSOR_INT sor_;
+
+          const STATUSOR_INT& sor() const { return sor_; }
+        };
+
+        void target(Foo foo) {
+          if (foo.sor().ok()) foo.sor().value();
+        }
+      )cc");
+
+  // Uses an operator
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          STATUSOR_INT sor_;
+
+          const STATUSOR_INT& operator()() const { return sor_; }
+        };
+
+        void target(Foo foo) {
+          if (foo().ok()) foo().value();
+        }
+      )cc");
+
+  // Calls nonconst method in between.
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          STATUSOR_INT sor_;
+
+          void invalidate() {}
+
+          const STATUSOR_INT& sor() const { return sor_; }
+        };
+
+        void target(Foo foo) {
+          if (foo.sor().ok()) {
+            foo.invalidate();
+            foo.sor().value();  // [[unsafe]]
+          }
+        }
+      )cc");
+
+  // Calls nonconst operator in between.
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          STATUSOR_INT sor_;
+
+          void operator()() {}
+
+          const STATUSOR_INT& sor() const { return sor_; }
+        };
+
+        void target(Foo foo) {
+          if (foo.sor().ok()) {
+            foo();
+            foo.sor().value();  // [[unsafe]]
+          }
+        }
+      )cc");
+
+  // Accessor returns copy.
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          STATUSOR_INT sor_;
+
+          STATUSOR_INT sor() const { return sor_; }
+        };
+
+        void target(Foo foo) {
+          if (foo.sor().ok()) foo.sor().value();
+        }
+      )cc");
+
+  // Non-const accessor.
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          STATUSOR_INT sor_;
+
+          const STATUSOR_INT& sor() { return sor_; }
+        };
+
+        void target(Foo foo) {
+          if (foo.sor().ok()) foo.sor().value();  // [[unsafe]]
+        }
+      )cc");
+
+  // Non-const rvalue accessor.
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          STATUSOR_INT sor_;
+
+          STATUSOR_INT&& sor() { return std::move(sor_); }
+        };
+
+        void target(Foo foo) {
+          if (foo.sor().ok()) foo.sor().value();  // [[unsafe]]
+        }
+      )cc");
+
+  // const pointer accessor.
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          STATUSOR_INT sor_;
+
+          const STATUSOR_INT* sor() const { return &sor_; }
+        };
+
+        void target(Foo foo) {
+          if (foo.sor()->ok()) foo.sor()->value();
+        }
+      )cc");
+
+  // const pointer operator.
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          STATUSOR_INT sor_;
+
+          const STATUSOR_INT* operator->() const { return &sor_; }
+        };
+
+        void target(Foo foo) {
+          if (foo->ok()) foo->value();
+        }
+      )cc");
+
+  // We copy the result of the accessor.
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT sor_;
+
+      const STATUSOR_INT& sor() const { return sor_; }
+    };
+    void target() {
+      Foo foo;
+      if (!foo.sor().ok()) return;
+      const auto sor = foo.sor();
+      sor.value();
+    }
+  )cc");
+}
+
 } // namespace
 
 std::string
