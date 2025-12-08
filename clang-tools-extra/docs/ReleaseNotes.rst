@@ -328,7 +328,7 @@ New check aliases
   <clang-tidy/checks/bugprone/copy-constructor-mutates-argument>`
   keeping initial check as an alias to the new one.
 
-- Renamed :doc:`google-build-namespaces` to
+- Renamed :doc:`google-build-namespaces <clang-tidy/checks/google/build-namespaces>` to
   :doc:`misc-anonymous-namespace-in-header
   <clang-tidy/checks/misc/anonymous-namespace-in-header>`
   keeping initial check as an alias to the new one.
