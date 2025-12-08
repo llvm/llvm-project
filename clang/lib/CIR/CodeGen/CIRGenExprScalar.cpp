@@ -159,6 +159,14 @@ public:
   mlir::Value VisitCoawaitExpr(CoawaitExpr *s) {
     return cgf.emitCoawaitExpr(*s).getValue();
   }
+  mlir::Value VisitCoyieldExpr(CoyieldExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "coyield expr");
+    return {};
+  }
+  mlir::Value VisitUnaryCoawait(const UnaryOperator *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "unary coawait expr");
+    return {};
+  }
 
   mlir::Value emitLoadOfLValue(LValue lv, SourceLocation loc) {
     return cgf.emitLoadOfLValue(lv, loc).getValue();
@@ -198,6 +206,11 @@ public:
                                    cir::IntAttr::get(type, e->getValue()));
   }
 
+  mlir::Value VisitFixedPointLiteral(const FixedPointLiteral *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "fixed point literal");
+    return {};
+  }
+
   mlir::Value VisitFloatingLiteral(const FloatingLiteral *e) {
     mlir::Type type = cgf.convertType(e->getType());
     assert(mlir::isa<cir::FPTypeInterface>(type) &&
@@ -229,6 +242,19 @@ public:
 
   mlir::Value VisitOffsetOfExpr(OffsetOfExpr *e);
 
+  mlir::Value VisitSizeOfPackExpr(SizeOfPackExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "size of pack expr");
+    return {};
+  }
+  mlir::Value VisitPseudoObjectExpr(PseudoObjectExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "pseudo object expr");
+    return {};
+  }
+  mlir::Value VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "sycl unique stable name expr");
+    return {};
+  }
+
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     if (e->isGLValue())
       return emitLoadOfLValue(cgf.getOrCreateOpaqueLValueMapping(e),
@@ -236,6 +262,36 @@ public:
 
     // Otherwise, assume the mapping is the scalar directly.
     return cgf.getOrCreateOpaqueRValueMapping(e).getValue();
+  }
+
+  mlir::Value VisitObjCSelectorExpr(ObjCSelectorExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "objc selector expr");
+    return {};
+  }
+  mlir::Value VisitObjCProtocolExpr(ObjCProtocolExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "objc protocol expr");
+    return {};
+  }
+  mlir::Value VisitObjCIVarRefExpr(ObjCIvarRefExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "objc ivar ref expr");
+    return {};
+  }
+  mlir::Value VisitObjCMessageExpr(ObjCMessageExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "objc message expr");
+    return {};
+  }
+  mlir::Value VisitObjCIsaExpr(ObjCIsaExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "objc isa expr");
+    return {};
+  }
+  mlir::Value VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "objc availability check expr");
+    return {};
+  }
+
+  mlir::Value VisitMatrixSubscriptExpr(MatrixSubscriptExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "matrix subscript expr");
+    return {};
   }
 
   mlir::Value VisitCastExpr(CastExpr *e);
@@ -318,6 +374,16 @@ public:
   }
 
   mlir::Value VisitInitListExpr(InitListExpr *e);
+
+  mlir::Value VisitArrayInitIndexExpr(ArrayInitIndexExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "array init index expr");
+    return {};
+  }
+
+  mlir::Value VisitImplicitValueInitExpr(const ImplicitValueInitExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "implicit value init expr");
+    return {};
+  }
 
   mlir::Value VisitExplicitCastExpr(ExplicitCastExpr *e) {
     return VisitCastExpr(e);
@@ -726,6 +792,15 @@ public:
     return Visit(e->getSubExpr());
   }
 
+  // C++
+  mlir::Value VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "materialize temporary expr");
+    return {};
+  }
+  mlir::Value VisitSourceLocExpr(SourceLocExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "source loc expr");
+    return {};
+  }
   mlir::Value VisitCXXDefaultArgExpr(CXXDefaultArgExpr *dae) {
     CIRGenFunction::CXXDefaultArgExprScope scope(cgf, dae);
     return Visit(dae->getExpr());
@@ -745,9 +820,37 @@ public:
     cgf.emitCXXDeleteExpr(e);
     return {};
   }
-
+  mlir::Value VisitTypeTraitExpr(const TypeTraitExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "type trait expr");
+    return {};
+  }
+  mlir::Value
+  VisitConceptSpecializationExpr(const ConceptSpecializationExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "concept specialization expr");
+    return {};
+  }
+  mlir::Value VisitRequiresExpr(const RequiresExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "requires expr");
+    return {};
+  }
+  mlir::Value VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "array type trait expr");
+    return {};
+  }
+  mlir::Value VisitExpressionTraitExpr(const ExpressionTraitExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "expression trait expr");
+    return {};
+  }
+  mlir::Value VisitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "cxx pseudo destructor expr");
+    return {};
+  }
   mlir::Value VisitCXXThrowExpr(const CXXThrowExpr *e) {
     cgf.emitCXXThrowExpr(e);
+    return {};
+  }
+  mlir::Value VisitCXXNoexceptExpr(CXXNoexceptExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "cxx noexcept expr");
     return {};
   }
 
@@ -1211,6 +1314,49 @@ public:
         });
 
     return maybePromoteBoolResult(resOp.getResult(), resTy);
+  }
+
+  mlir::Value VisitBinPtrMemD(const BinaryOperator *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ptr mem d expr");
+    return {};
+  }
+
+  mlir::Value VisitBinPtrMemI(const BinaryOperator *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ptr mem i expr");
+    return {};
+  }
+
+  // Other Operators.
+  mlir::Value VisitBlockExpr(const BlockExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "block expr");
+    return {};
+  }
+
+  mlir::Value VisitChooseExpr(ChooseExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "choose expr");
+    return {};
+  }
+
+  mlir::Value VisitObjCStringLiteral(const ObjCStringLiteral *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "objc string literal");
+    return {};
+  }
+  mlir::Value VisitObjCBoxedExpr(ObjCBoxedExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "objc boxed expr");
+    return {};
+  }
+  mlir::Value VisitObjCArrayLiteral(ObjCArrayLiteral *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "objc array literal");
+    return {};
+  }
+  mlir::Value VisitObjCDictionaryLiteral(ObjCDictionaryLiteral *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "objc dictionary literal");
+    return {};
+  }
+
+  mlir::Value VisitAsTypeExpr(AsTypeExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "as type expr");
+    return {};
   }
 
   mlir::Value VisitAtomicExpr(AtomicExpr *e) {
