@@ -8,6 +8,7 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
 
@@ -20,7 +21,7 @@ llvm::Error
 PauseRequestHandler::Run(const protocol::PauseArguments &args) const {
   lldb::SBProcess process = dap.target.GetProcess();
   lldb::SBError error = process.Stop();
-  return llvm::Error::success();
+  return ToError(error);
 }
 
 } // namespace lldb_dap
