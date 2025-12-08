@@ -33,7 +33,7 @@ const DeclType *findDecl(ASTContext &Ctx, StringRef Name) {
 }
 
 TEST(ASTEntityMappingTest, FunctionDecl) {
-  auto AST = tooling::buildASTFromCode("void foo() {}");
+  auto AST = tooling::buildASTFromCode(R"cpp(void foo() {})cpp");
   auto &Ctx = AST->getASTContext();
 
   const auto *FD = findDecl<FunctionDecl>(Ctx, "foo");
@@ -44,7 +44,7 @@ TEST(ASTEntityMappingTest, FunctionDecl) {
 }
 
 TEST(ASTEntityMappingTest, VarDecl) {
-  auto AST = tooling::buildASTFromCode("int x = 42;");
+  auto AST = tooling::buildASTFromCode(R"cpp(int x = 42;)cpp");
   auto &Ctx = AST->getASTContext();
 
   const auto *VD = findDecl<VarDecl>(Ctx, "x");
@@ -55,7 +55,7 @@ TEST(ASTEntityMappingTest, VarDecl) {
 }
 
 TEST(ASTEntityMappingTest, ParmVarDecl) {
-  auto AST = tooling::buildASTFromCode("void foo(int x) {}");
+  auto AST = tooling::buildASTFromCode(R"cpp(void foo(int x) {})cpp");
   auto &Ctx = AST->getASTContext();
 
   const auto *FD = findDecl<FunctionDecl>(Ctx, "foo");
@@ -70,7 +70,7 @@ TEST(ASTEntityMappingTest, ParmVarDecl) {
 }
 
 TEST(ASTEntityMappingTest, RecordDecl) {
-  auto AST = tooling::buildASTFromCode("struct S {};");
+  auto AST = tooling::buildASTFromCode(R"cpp(struct S {};)cpp");
   auto &Ctx = AST->getASTContext();
 
   const auto *RD = findDecl<RecordDecl>(Ctx, "S");
@@ -81,7 +81,7 @@ TEST(ASTEntityMappingTest, RecordDecl) {
 }
 
 TEST(ASTEntityMappingTest, FieldDecl) {
-  auto AST = tooling::buildASTFromCode("struct S { int field; };");
+  auto AST = tooling::buildASTFromCode(R"cpp(struct S { int field; };)cpp");
   auto &Ctx = AST->getASTContext();
 
   const auto *FD = findDecl<FieldDecl>(Ctx, "field");
@@ -97,9 +97,11 @@ TEST(ASTEntityMappingTest, NullDecl) {
 }
 
 TEST(ASTEntityMappingTest, ImplicitDeclLambda) {
-  auto AST = tooling::buildASTFromCode(R"(
+  auto AST = tooling::buildASTFromCode(
+    R"cpp(
     auto L = [](){};
-  )", "test.cpp", std::make_shared<PCHContainerOperations>());
+  )cpp",
+      "test.cpp", std::make_shared<PCHContainerOperations>());
   auto &Ctx = AST->getASTContext();
 
   auto Matcher = cxxRecordDecl(isImplicit()).bind("decl");
@@ -114,11 +116,11 @@ TEST(ASTEntityMappingTest, ImplicitDeclLambda) {
 }
 
 TEST(ASTEntityMappingTest, BuiltinFunction) {
-  auto AST = tooling::buildASTFromCode(R"(
+  auto AST = tooling::buildASTFromCode(R"cpp(
     void test() {
       __builtin_memcpy(0, 0, 0);
     }
-  )");
+  )cpp");
   auto &Ctx = AST->getASTContext();
 
   // Find the builtin call
@@ -138,7 +140,7 @@ TEST(ASTEntityMappingTest, BuiltinFunction) {
 }
 
 TEST(ASTEntityMappingTest, UnsupportedDecl) {
-  auto AST = tooling::buildASTFromCode("namespace N {}");
+  auto AST = tooling::buildASTFromCode(R"cpp(namespace N {})cpp");
   auto &Ctx = AST->getASTContext();
 
   const auto *ND = findDecl<NamespaceDecl>(Ctx, "N");
@@ -149,7 +151,7 @@ TEST(ASTEntityMappingTest, UnsupportedDecl) {
 }
 
 TEST(ASTEntityMappingTest, FunctionReturn) {
-  auto AST = tooling::buildASTFromCode("int foo() { return 42; }");
+  auto AST = tooling::buildASTFromCode(R"cpp(int foo() { return 42; })cpp");
   auto &Ctx = AST->getASTContext();
 
   const auto *FD = findDecl<FunctionDecl>(Ctx, "foo");
@@ -165,11 +167,11 @@ TEST(ASTEntityMappingTest, FunctionReturnNull) {
 }
 
 TEST(ASTEntityMappingTest, FunctionReturnBuiltin) {
-  auto AST = tooling::buildASTFromCode(R"(
+  auto AST = tooling::buildASTFromCode(R"cpp(
     void test() {
       __builtin_memcpy(0, 0, 0);
     }
-  )");
+  )cpp");
   auto &Ctx = AST->getASTContext();
 
   // Find the builtin call
@@ -188,10 +190,10 @@ TEST(ASTEntityMappingTest, FunctionReturnBuiltin) {
 }
 
 TEST(ASTEntityMappingTest, DifferentFunctionsDifferentNames) {
-  auto AST = tooling::buildASTFromCode(R"(
+  auto AST = tooling::buildASTFromCode(R"cpp(
     void foo() {}
     void bar() {}
-  )");
+  )cpp");
   auto &Ctx = AST->getASTContext();
 
   const auto *Foo = findDecl<FunctionDecl>(Ctx, "foo");
@@ -210,10 +212,10 @@ TEST(ASTEntityMappingTest, DifferentFunctionsDifferentNames) {
 // Redeclaration tests
 
 TEST(ASTEntityMappingTest, FunctionRedeclaration) {
-  auto AST = tooling::buildASTFromCode(R"(
+  auto AST = tooling::buildASTFromCode(R"cpp(
     void foo();
     void foo() {}
-  )");
+  )cpp");
   auto &Ctx = AST->getASTContext();
 
   auto Matcher = functionDecl(hasName("foo")).bind("decl");
@@ -237,10 +239,10 @@ TEST(ASTEntityMappingTest, FunctionRedeclaration) {
 }
 
 TEST(ASTEntityMappingTest, VarRedeclaration) {
-  auto AST = tooling::buildASTFromCode(R"(
+  auto AST = tooling::buildASTFromCode(R"cpp(
     extern int x;
     int x = 42;
-  )");
+  )cpp");
   auto &Ctx = AST->getASTContext();
 
   auto Matcher = varDecl(hasName("x")).bind("decl");
@@ -264,10 +266,10 @@ TEST(ASTEntityMappingTest, VarRedeclaration) {
 }
 
 TEST(ASTEntityMappingTest, RecordRedeclaration) {
-  auto AST = tooling::buildASTFromCode(R"(
+  auto AST = tooling::buildASTFromCode(R"cpp(
     struct S;
     struct S {};
-  )");
+  )cpp");
   auto &Ctx = AST->getASTContext();
 
   auto Matcher = recordDecl(hasName("S"), unless(isImplicit())).bind("decl");
@@ -291,12 +293,12 @@ TEST(ASTEntityMappingTest, RecordRedeclaration) {
 }
 
 TEST(ASTEntityMappingTest, ParmVarDeclRedeclaration) {
-  auto AST = tooling::buildASTFromCode(R"(
+  auto AST = tooling::buildASTFromCode(R"cpp(
     void foo(int);
     void foo(int x);
     void foo(int y);
     void foo(int x) {}
-  )");
+  )cpp");
   auto &Ctx = AST->getASTContext();
 
   auto Matcher = functionDecl(hasName("foo")).bind("decl");
@@ -321,10 +323,10 @@ TEST(ASTEntityMappingTest, ParmVarDeclRedeclaration) {
 }
 
 TEST(ASTEntityMappingTest, FunctionReturnRedeclaration) {
-  auto AST = tooling::buildASTFromCode(R"(
+  auto AST = tooling::buildASTFromCode(R"cpp(
     int foo();
     int foo() { return 42; }
-  )");
+  )cpp");
   auto &Ctx = AST->getASTContext();
 
   auto Matcher = functionDecl(hasName("foo")).bind("decl");
