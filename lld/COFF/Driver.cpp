@@ -2281,7 +2281,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
           enqueuePath(*path, inLib,
                       isWholeArchive(*path) ? InputType::WholeArchive
-                                            : InputType::Direct);
+                                            : InputType::Plain);
         break;
       default:
         // Ignore other options.

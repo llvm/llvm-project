@@ -88,13 +88,13 @@ public:
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
                             StringRef parentName);
 
-  enum class InputType { Direct, DefaultLib, WholeArchive };
+  enum class InputType { Plain, DefaultLib, WholeArchive };
   void enqueuePDB(StringRef Path) { enqueuePath(Path, false); }
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> mb);
 
   void enqueuePath(StringRef path, bool lazy,
-                   InputType inputType = InputType::Direct);
+                   InputType inputType = InputType::Plain);
 
   // Returns a list of chunks of selected symbols.
   std::vector<Chunk *> getChunks() const;
