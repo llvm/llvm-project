@@ -706,8 +706,8 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: i16, %tim
         globalSize [64, 64]
         // CHECK-SAME: globalStride [64, 1]
         globalStride [64, 1]
-        // CHECK-SAME: sharedSize [64, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor<2>
-        sharedSize [64, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor<2>
+        // CHECK-SAME: sharedSize [64, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+        sharedSize [64, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
@@ -719,7 +719,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: i16, %tim
         sharedSize [64, 64]
         // CHECK-SAME: padShared(%[[IDX]] every %[[IDX]])
         padShared(%idx every %idx)
-        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor<2>
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
@@ -757,7 +757,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: i16, %tim
         sharedSize [64, 64]
         // CHECK-SAME: atomicBarrier(%[[BARRIER]][%[[IDX]]] : memref<8xi32, #gpu.address_space<workgroup>>)
         atomicBarrier(%barrier[%idx] : memref<8xi32, #gpu.address_space<workgroup>>)
-        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor<2>
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
@@ -769,7 +769,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: i16, %tim
         sharedSize [64, 64]
         // CHECK-SAME: iterate %[[IDX]], %[[IDX]], %[[IDX]]
         iterate %idx, %idx, %idx
-        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor<4>
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
   func.return
 }

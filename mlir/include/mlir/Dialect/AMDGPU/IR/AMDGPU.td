@@ -202,11 +202,6 @@ def AMDGPU_TDMDescriptorType : AMDGPU_Type<"TDMDescriptor", "tdm_descriptor"> {
     used in tensor_load_to_lds or tensor_store_from_lds.
   }];
 
-  let parameters = (ins "unsigned": $size);
-
-  let assemblyFormat = "`<` $size `>`";
-  let genVerifyDecl = 1;
-
 }
 
 //===----------------------------------------------------------------------===//

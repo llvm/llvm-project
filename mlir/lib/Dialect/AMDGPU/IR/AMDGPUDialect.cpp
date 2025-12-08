@@ -781,15 +781,6 @@ LogicalResult MakeDmaBaseOp::verify() {
 // MakeDmaDescriptorOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-TDMDescriptorType::verify(function_ref<InFlightDiagnostic()> emitError,
-                          unsigned size) {
-  if (!llvm::is_contained<unsigned>({2, 4}, size))
-    return emitError() << "only groups of size 2 or 4 are valid but got "
-                       << size;
-  return success();
-}
-
 LogicalResult MakeDmaDescriptorOp::verify() {
   ArrayRef<int64_t> globalStaticStrides = getGlobalStaticStrides();
 
