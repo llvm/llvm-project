@@ -71,7 +71,7 @@ jobs:
         python-version: '3.14'
 
     - name: Checkout LLVM
-      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
     - name: Install Dependencies
       shell: bash
@@ -187,7 +187,7 @@ jobs:
     steps:
 
     - name: Checkout LLVM
-      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       with:
         ref: ${{ needs.prepare.outputs.ref }}
 
@@ -257,7 +257,7 @@ jobs:
 
     steps:
       - name: Checkout Release Scripts
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           sparse-checkout: |
             .github/workflows/upload-release-artifact

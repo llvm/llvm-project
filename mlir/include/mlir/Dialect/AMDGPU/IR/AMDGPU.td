@@ -906,7 +906,8 @@ def AMDGPU_MemoryCounterWaitOp :
       OptionalAttr<I32Attr>:$load,
       OptionalAttr<I32Attr>:$store,
       OptionalAttr<I32Attr>:$ds,
-      OptionalAttr<I32Attr>:$exp
+      OptionalAttr<I32Attr>:$exp,
+      OptionalAttr<I32Attr>:$tensor
     )>
   {
   let summary = "Wait for specified hardware counters";
@@ -919,8 +920,10 @@ def AMDGPU_MemoryCounterWaitOp :
     counters into one.
   }];
   let assemblyFormat = [{
-    oilist( `load` `(` $load `)` | `store` `(` $store `)` | `ds` `(` $ds `)` | `exp` `(` $exp `)` ) attr-dict
+    oilist( `load` `(` $load `)` | `store` `(` $store `)` | `ds` `(` $ds `)` | `exp` `(` $exp `)` | `tensor` `(` $tensor `)` ) attr-dict
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 def AMDGPU_MFMAPermB : I32EnumAttr<"MFMAPermB",
@@ -1293,6 +1296,8 @@ def AMDGPU_MakeDmaDescriptorOp :
     DenseI64ArrayAttr: $global_static_strides,
     Variadic<Index>: $shared_dynamic_sizes,
     DenseI64ArrayAttr: $shared_static_sizes,
+    Optional<I16>: $workgroup_mask,
+    Optional<I1>: $early_timeout,
     Optional<Index>: $pad_amount,
     Optional<Index>: $pad_interval,
     Optional<AnyMemRef>: $atomic_barrier_address,
@@ -1312,6 +1317,12 @@ def AMDGPU_MakeDmaDescriptorOp :
      $global_{static/dynamic}_sizes determine the size of the tensor.
      $global_{static/dynamic}_strides determine the strides of the tensor.
      $shared_{static/dynamic}_sizes determines the size of the tile.
+
+     $workgroup_mask broadcast load to workgroups inside of a workgroup cluster
+     (0 = do not broadcast result to workgroup, 1 = broadcast result to workgroup). Ignored for stores.
+     An all zeros mask is interpreted as a non-broadcasted load.
+
+     $early_timeout return data to requesters as soon as cache supplies it.
 
      Padding can be applied to the LDS address when copying from memory to LDS,
      but not when copying from LDS to memory.
@@ -1345,6 +1356,7 @@ def AMDGPU_MakeDmaDescriptorOp :
     `globalStride` custom<DynamicIndexList>($global_dynamic_strides, $global_static_strides)
     `sharedSize` custom<DynamicIndexList>($shared_dynamic_sizes, $shared_static_sizes)
     ( `padShared` `(` $pad_amount^ `every` $pad_interval `)` )?
+    ( `workgroupMask` $workgroup_mask^ ( `earlyTimeout` $early_timeout^)?)?
     ( `atomicBarrier` `(` $atomic_barrier_address^ `[` $atomic_barrier_indices `]`
                       `:` type($atomic_barrier_address) `)`)?
     ( `iterate` $global_increment^ `,` $lds_increment `,` $iteration_count )?

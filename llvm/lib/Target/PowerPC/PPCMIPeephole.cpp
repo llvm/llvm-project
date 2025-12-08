@@ -797,6 +797,7 @@ bool PPCMIPeephole::simplifyCode() {
       case PPC::VSPLTH:
       case PPC::XXSPLTW: {
         unsigned MyOpcode = MI.getOpcode();
+        // The operand number of the source register in the splat instruction.
         unsigned OpNo = MyOpcode == PPC::XXSPLTW ? 1 : 2;
         Register TrueReg =
           TRI->lookThruCopyLike(MI.getOperand(OpNo).getReg(), MRI);
@@ -823,6 +824,7 @@ bool PPCMIPeephole::simplifyCode() {
           (MyOpcode == PPC::XXSPLTW && DefOpcode == PPC::LXVWSX) ||
           (MyOpcode == PPC::XXSPLTW && DefOpcode == PPC::MTVSRWS)||
           (MyOpcode == PPC::XXSPLTW && isConvertOfSplat());
+
         // If the instruction[s] that feed this splat have already splat
         // the value, this splat is redundant.
         if (AlreadySplat) {
@@ -835,30 +837,56 @@ bool PPCMIPeephole::simplifyCode() {
           ToErase = &MI;
           Simplified = true;
         }
+
         // Splat fed by a shift. Usually when we align value to splat into
         // vector element zero.
         if (DefOpcode == PPC::XXSLDWI) {
-          Register ShiftRes = DefMI->getOperand(0).getReg();
           Register ShiftOp1 = DefMI->getOperand(1).getReg();
-          Register ShiftOp2 = DefMI->getOperand(2).getReg();
-          unsigned ShiftImm = DefMI->getOperand(3).getImm();
-          unsigned SplatImm =
-              MI.getOperand(MyOpcode == PPC::XXSPLTW ? 2 : 1).getImm();
-          if (ShiftOp1 == ShiftOp2) {
-            unsigned NewElem = (SplatImm + ShiftImm) & 0x3;
-            if (MRI->hasOneNonDBGUse(ShiftRes)) {
+
+          if (ShiftOp1 == DefMI->getOperand(2).getReg()) {
+            // For example, We can erase XXSLDWI from in following:
+            //    %2:vrrc = XXSLDWI killed %1:vrrc, %1:vrrc, 1
+            //    %6:vrrc = VSPLTB 15, killed %2:vrrc
+            //    %7:vsrc = XXLAND killed %6:vrrc, killed %1:vrrc
+            //
+            // --->
+            //
+            //     %6:vrrc = VSPLTB 3, killed %1:vrrc
+            //     %7:vsrc = XXLAND killed %6:vrrc, killed %1:vrrc
+
+            if (MRI->hasOneNonDBGUse(DefMI->getOperand(0).getReg())) {
               LLVM_DEBUG(dbgs() << "Removing redundant shift: ");
               LLVM_DEBUG(DefMI->dump());
               ToErase = DefMI;
             }
             Simplified = true;
+            unsigned ShiftImm = DefMI->getOperand(3).getImm();
+            // The operand number of the splat Imm in the instruction.
+            unsigned SplatImmNo = MyOpcode == PPC::XXSPLTW ? 2 : 1;
+            unsigned SplatImm = MI.getOperand(SplatImmNo).getImm();
+
+            // Calculate the new splat-element immediate. We need to convert the
+            // element index into the proper unit (byte for VSPLTB, halfword for
+            // VSPLTH, word for VSPLTW) because PPC::XXSLDWI interprets its
+            // ShiftImm in 32-bit word units.
+            auto CalculateNewElementIdx = [&](unsigned Opcode) {
+              if (Opcode == PPC::VSPLTB)
+                return (SplatImm + ShiftImm * 4) & 0xF;
+              else if (Opcode == PPC::VSPLTH)
+                return (SplatImm + ShiftImm * 2) & 0x7;
+              else
+                return (SplatImm + ShiftImm) & 0x3;
+            };
+
+            unsigned NewElem = CalculateNewElementIdx(MyOpcode);
+
             LLVM_DEBUG(dbgs() << "Changing splat immediate from " << SplatImm
                               << " to " << NewElem << " in instruction: ");
             LLVM_DEBUG(MI.dump());
             addRegToUpdate(MI.getOperand(OpNo).getReg());
             addRegToUpdate(ShiftOp1);
             MI.getOperand(OpNo).setReg(ShiftOp1);
-            MI.getOperand(2).setImm(NewElem);
+            MI.getOperand(SplatImmNo).setImm(NewElem);
           }
         }
         break;

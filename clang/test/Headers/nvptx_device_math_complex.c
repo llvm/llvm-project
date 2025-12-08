@@ -12,32 +12,32 @@
 #endif
 
 // CHECK: define weak {{.*}} @__divsc3
-// CHECK-DAG: call i32 @__nv_isnanf(
-// CHECK-DAG: call i32 @__nv_isinff(
-// CHECK-DAG: call i32 @__nv_finitef(
-// CHECK-DAG: call float @__nv_copysignf(
+// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, i32 3)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, i32 516)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, i32 504)
+// CHECK-DAG: call float @llvm.copysign.f32(
 // CHECK-DAG: call float @__nv_scalbnf(
-// CHECK-DAG: call float @__nv_fabsf(
+// CHECK-DAG: call float @llvm.fabs.f32(
 // CHECK-DAG: call float @__nv_logbf(
 
 // CHECK: define weak {{.*}} @__mulsc3
-// CHECK-DAG: call i32 @__nv_isnanf(
-// CHECK-DAG: call i32 @__nv_isinff(
-// CHECK-DAG: call float @__nv_copysignf(
+// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, i32 3)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, i32 516)
+// CHECK-DAG: call float @llvm.copysign.f32(
 
 // CHECK: define weak {{.*}} @__divdc3
-// CHECK-DAG: call i32 @__nv_isnand(
-// CHECK-DAG: call i32 @__nv_isinfd(
-// CHECK-DAG: call i32 @__nv_isfinited(
-// CHECK-DAG: call double @__nv_copysign(
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, i32 3)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, i32 504)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, i32 516)
+// CHECK-DAG: call double @llvm.copysign.f64(
 // CHECK-DAG: call double @__nv_scalbn(
-// CHECK-DAG: call double @__nv_fabs(
+// CHECK-DAG: call double @llvm.fabs.f64(
 // CHECK-DAG: call double @__nv_logb(
 
 // CHECK: define weak {{.*}} @__muldc3
-// CHECK-DAG: call i32 @__nv_isnand(
-// CHECK-DAG: call i32 @__nv_isinfd(
-// CHECK-DAG: call double @__nv_copysign(
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, i32 3)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, i32 516)
+// CHECK-DAG: call double @llvm.copysign.f64(
 
 void test_scmplx(float _Complex a) {
 #pragma omp target
