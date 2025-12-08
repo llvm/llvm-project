@@ -28,6 +28,7 @@ target_link_libraries(fir-opt PRIVATE
   FlangOpenMPTransforms
   FIRAnalysis
   MIFDialect
+  FortranLower
   ${test_libs}
 )
 
