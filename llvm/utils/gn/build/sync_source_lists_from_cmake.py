@@ -40,6 +40,7 @@ def patch_gn_file(gn_file, add, remove):
             gn_contents = gn_contents[:tokloc] + ('"%s",' % a) + gn_contents[tokloc:]
     for r in remove:
         gn_contents = gn_contents.replace('"%s",' % r, "")
+        gn_contents = gn_contents.replace('"%s"' % r, "")
     with open(gn_file, "w") as f:
         f.write(gn_contents)
 

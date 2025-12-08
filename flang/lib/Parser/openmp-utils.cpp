@@ -205,8 +205,7 @@ OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x) {
   return info;
 }
 
-template <bool IsConst>
-LoopRange<IsConst>::LoopRange(QualReference x) {
+template <bool IsConst> LoopRange<IsConst>::LoopRange(QualReference x) {
   if (auto *doLoop{Unwrap<DoConstruct>(x)}) {
     Initialize(std::get<Block>(doLoop->t));
   } else if (auto *omp{Unwrap<OpenMPLoopConstruct>(x)}) {
@@ -214,8 +213,7 @@ LoopRange<IsConst>::LoopRange(QualReference x) {
   }
 }
 
-template <bool IsConst>
-void LoopRange<IsConst>::Initialize(QualBlock &body) {
+template <bool IsConst> void LoopRange<IsConst>::Initialize(QualBlock &body) {
   using QualIterator = decltype(std::declval<QualBlock>().begin());
   auto makeRange{[](auto &container) {
     return llvm::make_range(container.begin(), container.end());
