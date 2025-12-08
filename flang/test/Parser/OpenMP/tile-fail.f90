@@ -8,7 +8,7 @@
 ! Parser error
 
 subroutine stray_end1
-  !CHECK: error: expected OpenMP construct
+  !CHECK: error: Misplaced OpenMP end-directive
   !$omp end tile
 end subroutine
 
@@ -17,7 +17,7 @@ end subroutine
 
 subroutine stray_end2
   print *
-  !CHECK: error: expected 'END'
+  !CHECK: error: Misplaced OpenMP end-directive
   !$omp end tile
 end subroutine
 

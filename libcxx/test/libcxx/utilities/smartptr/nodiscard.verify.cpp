@@ -41,6 +41,14 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::make_unique_for_overwrite<int[]>(5);
 #endif
+
+    std::hash<std::unique_ptr<int>> hash;
+    hash(uPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+  { // [util.smartptr.weak.bad]
+    std::bad_weak_ptr bwp;
+
+    bwp.what(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
   { // [util.sharedptr]
     std::shared_ptr<int[]> sPtr;
@@ -118,6 +126,9 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::get_deleter<int[]>(sPtr);
 #endif
+
+    std::hash<std::shared_ptr<int[]>> hash;
+    hash(sPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
   { // [util.smartptr.weak]
     std::weak_ptr<int> wPtr;

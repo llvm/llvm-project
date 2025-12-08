@@ -211,6 +211,16 @@ private:
     return true;
   }
 
+  static bool darwinHasMemsetPattern(const Triple &TT) {
+    // memset_pattern{4,8,16} is only available on iOS 3.0 and Mac OS X 10.5 and
+    // later. All versions of watchOS support it.
+    if (TT.isMacOSX())
+      return !TT.isMacOSXVersionLT(10, 5);
+    if (TT.isiOS())
+      return !TT.isOSVersionLT(3, 0);
+    return TT.isWatchOS();
+  }
+
   static bool hasAEABILibcalls(const Triple &TT) {
     return TT.isTargetAEABI() || TT.isTargetGNUAEABI() ||
            TT.isTargetMuslAEABI() || TT.isOSFuchsia() || TT.isAndroid();
