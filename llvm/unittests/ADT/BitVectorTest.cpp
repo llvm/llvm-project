@@ -11,6 +11,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "gtest/gtest.h"
+#include <initializer_list>
 
 using namespace llvm;
 
@@ -875,11 +876,11 @@ TYPED_TEST(BitVectorTest, BinOps) {
 }
 
 template <typename VecType>
-static inline VecType createBitVectorFromBits(uint32_t Size,
-                                              const std::vector<int> &SetBits) {
+static inline VecType
+createBitVectorFromBits(uint32_t Size, std::initializer_list<int> SetBits) {
   VecType V;
   V.resize(Size);
-  for (auto &BitIndex : SetBits)
+  for (int BitIndex : SetBits)
     V.set(BitIndex);
   return V;
 }
@@ -888,14 +889,14 @@ TYPED_TEST(BitVectorTest, BinOpsLiteral) {
   // More tests of binary operations with more focus on the semantics and
   // less focus on mutability.
 
-  auto AnyCommon = [](uint32_t SizeLHS, const std::vector<int> &SetBitsLHS,
-                      uint32_t SizeRHS, const std::vector<int> &SetBitsRHS) {
+  auto AnyCommon = [](uint32_t SizeLHS, std::initializer_list<int> SetBitsLHS,
+                      uint32_t SizeRHS, std::initializer_list<int> SetBitsRHS) {
     auto LHS = createBitVectorFromBits<TypeParam>(SizeLHS, SetBitsLHS);
     auto RHS = createBitVectorFromBits<TypeParam>(SizeRHS, SetBitsRHS);
     return LHS.anyCommon(RHS);
   };
-  auto SubsetOf = [](uint32_t SizeLHS, const std::vector<int> &SetBitsLHS,
-                     uint32_t SizeRHS, const std::vector<int> &SetBitsRHS) {
+  auto SubsetOf = [](uint32_t SizeLHS, std::initializer_list<int> SetBitsLHS,
+                     uint32_t SizeRHS, std::initializer_list<int> SetBitsRHS) {
     auto LHS = createBitVectorFromBits<TypeParam>(SizeLHS, SetBitsLHS);
     auto RHS = createBitVectorFromBits<TypeParam>(SizeRHS, SetBitsRHS);
     return LHS.subsetOf(RHS);
