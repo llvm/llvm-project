@@ -103,8 +103,7 @@
 ! RUN:     -ftree-dce                                                       \
 ! RUN:     -ftree-ter                                                       \
 ! RUN:     -ftree-vrp                                                       \
-! RUN:     -fno-devirtualize                                                \
-! RUN:     -fno-devirtualize-speculatively 2>&1                             \
+! RUN:     -fno-devirtualize 2>&1                                           \
 ! RUN:     | FileCheck --check-prefix=CHECK-WARNING %s
 ! CHECK-WARNING-DAG: optimization flag '-finline-limit=1000' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-finline-limit' is not supported
@@ -158,4 +157,3 @@
 ! CHECK-WARNING-DAG: optimization flag '-ftree-ter' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-ftree-vrp' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fno-devirtualize' is not supported
-! CHECK-WARNING-DAG: optimization flag '-fno-devirtualize-speculatively' is not supported
