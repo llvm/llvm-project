@@ -768,6 +768,9 @@ LogicalResult MakeDmaDescriptorOp::verify() {
       return emitOpError("atomic barrier address must be in LDS.");
   }
 
+  if (getEarlyTimeout() && !getWorkgroupMask())
+    return emitOpError(
+        "early timeout does not apply when workgroup_mask is not set.");
   return success();
 }
 
