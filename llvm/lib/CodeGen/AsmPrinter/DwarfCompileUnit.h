@@ -316,11 +316,8 @@ public:
   /// \p PCAddr points to the PC value after the call instruction.
   /// \p CallAddr points to the PC value at the call instruction (or is null).
   /// \p CallTarget a location holding the target address for an indirect call.
-  /// For direct
-  ///            calls \p CallTarget register is set to 0.
+  ///               For direct calls \p CallTarget register is set to 0.
   /// \p Offset from \p CallTarget register value if the location is indirect.
-  /// \p MemOffset determines whether to create a register (false) or memory
-  //               (true) location.
   DIE &constructCallSiteEntryDIE(DIE &ScopeDIE, const DISubprogram *CalleeSP,
                                  const Function *CalleeF, bool IsTail,
                                  const MCSymbol *PCAddr,
