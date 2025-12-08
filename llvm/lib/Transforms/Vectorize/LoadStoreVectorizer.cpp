@@ -322,8 +322,8 @@ private:
   /// !IsLoad) to ChainBegin -- i.e. there are no intervening may-alias
   /// instructions.
   ///
-  /// The map ChainSet must contain all of the elements in
-  /// [ChainBegin, ChainElem]. It's ok if it contains additional entries.
+  /// ChainSet must contain all of the elements in [ChainBegin, ChainElem].
+  /// It's ok if it contains additional entries.
   template <bool IsLoadChain>
   bool isSafeToMove(Instruction *ChainElem, Instruction *ChainBegin,
                     const DenseSet<Instruction *> &ChainSet,
