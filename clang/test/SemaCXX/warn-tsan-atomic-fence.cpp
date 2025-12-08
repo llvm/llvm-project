@@ -1,23 +1,23 @@
 // No warnings in regular compile
-// RUN: %clang_cc1 -verify=no-warnings %s
+// RUN: %clang_cc1 -triple=x86_64-linux-unknown -verify=no-warnings %s
 
 // Emits warnings with `-fsanitize=thread`
-// RUN: %clang_cc1 -verify=with-tsan,warn-global-function,warn-member-function -fsanitize=thread %s
+// RUN: %clang_cc1 -triple=x86_64-linux-unknown -verify=with-tsan,warn-global-function,warn-member-function -fsanitize=thread %s
 
 // No warnings if `-Wno-tsan` is passed
-// RUN: %clang_cc1 -verify=no-warnings -fsanitize=thread -Wno-tsan %s
+// RUN: %clang_cc1 -triple=x86_64-linux-unknown -verify=no-warnings -fsanitize=thread -Wno-tsan %s
 
 // Ignoring source file
 // RUN: echo "src:%s" > %t
-// RUN: %clang_cc1 -verify=no-warnings -fsanitize=thread -fsanitize-ignorelist=%t %s
+// RUN: %clang_cc1 -triple=x86_64-linux-unknown -triple=%itanium_abi_triple -verify=no-warnings -fsanitize=thread -fsanitize-ignorelist=%t %s
 
 // Ignoring global function
 // RUN: echo "fun:*global_function_to_maybe_ignore*" > %t
-// RUN: %clang_cc1 -verify=with-tsan,warn-member-function -fsanitize=thread -fsanitize-ignorelist=%t %s
+// RUN: %clang_cc1 -triple=x86_64-linux-unknown -triple=%itanium_abi_triple -verify=with-tsan,warn-member-function -fsanitize=thread -fsanitize-ignorelist=%t %s
 
 // Ignoring "S::member_function"
 // RUN: echo "fun:_ZN1S15member_functionEv" > %t
-// RUN: %clang_cc1 -triple=%itanium_abi_triple -verify=with-tsan,warn-global-function -fsanitize=thread -fsanitize-ignorelist=%t %s
+// RUN: %clang_cc1 -triple=x86_64-linux-unknown -verify=with-tsan,warn-global-function -fsanitize=thread -fsanitize-ignorelist=%t %s
 
 // no-warnings-no-diagnostics
 
