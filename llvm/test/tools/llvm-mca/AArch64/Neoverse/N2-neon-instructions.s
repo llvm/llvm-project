@@ -1207,6 +1207,7 @@
 # CHECK-NEXT:  6      6     1.50           *            st4	{ v22.s, v23.s, v24.s, v25.s }[0], [x7]
 # CHECK-NEXT:  6      4     1.50           *            st4	{ v23.d, v24.d, v25.d, v26.d }[1], [x5]
 # CHECK-NEXT:  6      6     1.50           *            st4	{ v0.b, v1.b, v2.b, v3.b }[9], [x0]
+# CHECK-NEXT:  7      6     1.50           *            st4	{ v0.b, v1.b, v2.b, v3.b }[9], [x0], x5
 # CHECK-NEXT:  7      4     1.50           *            st4	{ v0.d, v1.d, v2.d, v3.d }[1], [x0], x5
 # CHECK-NEXT:  1      2     0.50                        sub	d15, d5, d16
 # CHECK-NEXT:  1      2     0.50                        sub	v0.2d, v0.2d, v0.2d
@@ -1586,7 +1587,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]
-# CHECK-NEXT:  -      -      -      -     102.67 198.17 198.17 43.00  12.00  12.00  12.00  1101.00 947.00
+# CHECK-NEXT:  -      -      -      -     102.67 199.67 199.67 43.25  12.25  12.25  12.25  1102.50 948.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    Instructions:
@@ -2787,6 +2788,7 @@
 # CHECK-NEXT:  -      -      -      -      -     1.50   1.50    -      -      -      -     1.50   1.50   st4	{ v22.s, v23.s, v24.s, v25.s }[0], [x7]
 # CHECK-NEXT:  -      -      -      -      -     1.50   1.50    -      -      -      -     1.50   1.50   st4	{ v23.d, v24.d, v25.d, v26.d }[1], [x5]
 # CHECK-NEXT:  -      -      -      -      -     1.50   1.50    -      -      -      -     1.50   1.50   st4	{ v0.b, v1.b, v2.b, v3.b }[9], [x0]
+# CHECK-NEXT:  -      -      -      -      -     1.50   1.50   0.25   0.25   0.25   0.25   1.50   1.50   st4	{ v0.b, v1.b, v2.b, v3.b }[9], [x0], x5
 # CHECK-NEXT:  -      -      -      -      -     1.50   1.50   0.25   0.25   0.25   0.25   1.50   1.50   st4	{ v0.d, v1.d, v2.d, v3.d }[1], [x0], x5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   sub	d15, d5, d16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   sub	v0.2d, v0.2d, v0.2d

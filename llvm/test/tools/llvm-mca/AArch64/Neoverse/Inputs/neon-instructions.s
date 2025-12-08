@@ -1195,6 +1195,7 @@ st4 { v5.h, v6.h, v7.h, v8.h }[4], [x13]
 st4 { v22.s, v23.s, v24.s, v25.s }[0], [x7]
 st4 { v23.d, v24.d, v25.d, v26.d }[1], [x5]
 st4 { v0.b, v1.b, v2.b, v3.b }[9], [x0]
+st4 { v0.b, v1.b, v2.b, v3.b }[9], [x0], x5
 st4 { v0.d, v1.d, v2.d, v3.d }[1], [x0], x5
 sub d15, d5, d16
 sub v0.2d, v0.2d, v0.2d
