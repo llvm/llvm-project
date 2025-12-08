@@ -6994,8 +6994,8 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       }
       // Unused FOR splices are removed by VPlan transforms, so the VPlan-based
       // cost model won't cost it whilst the legacy will.
+      using namespace VPlanPatternMatch;
       if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
-        using namespace VPlanPatternMatch;
         if (none_of(FOR->users(),
                     match_fn(m_VPInstruction<
                              VPInstruction::FirstOrderRecurrenceSplice>())))
@@ -7026,10 +7026,19 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
                 RepR->getUnderlyingInstr(), VF))
           return true;
       }
+
+      // The VPlan-based cost model knows that if TC <= VF then no compare is
+      // needed in branch-on-count, but the legacy cost model does not.
+      if (match(&R, m_BranchOnCount(m_VPValue(), m_VPValue()))) {
+        Value *TC = Plan.getTripCount()->getUnderlyingValue();
+        ConstantInt *TCConst = dyn_cast_if_present<ConstantInt>(TC);
+        if (TCConst && TCConst->getValue().ule(VF.getKnownMinValue()))
+          return true;
+      }
+
       if (Instruction *UI = GetInstructionForCost(&R)) {
         // If we adjusted the predicate of the recipe, the cost in the legacy
         // cost model may be different.
-        using namespace VPlanPatternMatch;
         CmpPredicate Pred;
         if (match(&R, m_Cmp(Pred, m_VPValue(), m_VPValue())) &&
             cast<VPRecipeWithIRFlags>(R).getPredicate() !=
@@ -7037,6 +7046,37 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
           return true;
         SeenInstrs.insert(UI);
       }
+    }
+  }
+
+  // The VPlan may have been transformed such that the original loop exit
+  // condition, and the instructions that are used only by it, no longer
+  // exists, but we expect the transformed version to have the same cost.
+  // Therefore mark all such instructions as seen.
+  SmallVector<BasicBlock *> Exiting;
+  CostCtx.CM.TheLoop->getExitingBlocks(Exiting);
+  SetVector<Instruction *> ExitInstrs;
+  // Collect all exit conditions.
+  for (BasicBlock *EB : Exiting) {
+    auto *Term = dyn_cast<BranchInst>(EB->getTerminator());
+    if (!Term)
+      continue;
+    if (auto *CondI = dyn_cast<Instruction>(Term->getOperand(0)))
+      ExitInstrs.insert(CondI);
+  }
+  // Collect all instructions only feeding the exit conditions.
+  for (unsigned I = 0; I != ExitInstrs.size(); ++I) {
+    Instruction *CondI = ExitInstrs[I];
+    SeenInstrs.insert(CondI);
+    for (Value *Op : CondI->operands()) {
+      auto *OpI = dyn_cast<Instruction>(Op);
+      if (!OpI || CostCtx.skipCostComputation(OpI, VF.isVector()) ||
+          any_of(OpI->users(), [&ExitInstrs, TheLoop](User *U) {
+            return TheLoop->contains(cast<Instruction>(U)->getParent()) &&
+                   !ExitInstrs.contains(cast<Instruction>(U));
+          }))
+        continue;
+      ExitInstrs.insert(OpI);
     }
   }
 
