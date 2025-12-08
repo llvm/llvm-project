@@ -92,6 +92,8 @@ RISCVInstrInfo::RISCVInstrInfo(const RISCVSubtarget &STI)
 void RISCVInstrInfo::insertNoop(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const {
   DebugLoc DL;
+  if (STI.hasStdExtZca())
+    BuildMI(MBB, MI, DL, get(RISCV::C_NOP));;
   BuildMI(MBB, MI, DL, get(RISCV::ADDI))
       .addReg(RISCV::X0)
       .addReg(RISCV::X0)
