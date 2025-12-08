@@ -1104,7 +1104,8 @@ Value *IRBuilderBase::CreateVectorSplice(Value *V1, Value *V2, int64_t Imm,
     Module *M = BB->getParent()->getParent();
     Function *F = Intrinsic::getOrInsertDeclaration(
         M,
-        Imm >= 0 ? Intrinsic::vector_splice_down : Intrinsic::vector_splice_up,
+        Imm >= 0 ? Intrinsic::vector_splice_left
+                 : Intrinsic::vector_splice_right,
         VTy);
 
     Value *Ops[] = {V1, V2, getInt32(std::abs(Imm))};

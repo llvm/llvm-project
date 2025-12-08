@@ -11905,8 +11905,8 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
 
 SDValue TargetLowering::expandVectorSplice(SDNode *Node,
                                            SelectionDAG &DAG) const {
-  assert((Node->getOpcode() == ISD::VECTOR_SPLICE_DOWN ||
-          Node->getOpcode() == ISD::VECTOR_SPLICE_UP) &&
+  assert((Node->getOpcode() == ISD::VECTOR_SPLICE_LEFT ||
+          Node->getOpcode() == ISD::VECTOR_SPLICE_RIGHT) &&
          "Unexpected opcode!");
   assert(Node->getValueType(0).isScalableVector() &&
          "Fixed length vector types expected to use SHUFFLE_VECTOR!");
@@ -11945,7 +11945,7 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
   SDValue StackPtr2 = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, VTBytes);
   SDValue StoreV2 = DAG.getStore(StoreV1, DL, V2, StackPtr2, PtrInfo);
 
-  if (Node->getOpcode() == ISD::VECTOR_SPLICE_DOWN) {
+  if (Node->getOpcode() == ISD::VECTOR_SPLICE_LEFT) {
     // Load back the required element. getVectorElementPointer takes care of
     // clamping the index if it's out-of-bounds.
     StackPtr = getVectorElementPointer(DAG, StackPtr, VT, Node->getOperand(2));

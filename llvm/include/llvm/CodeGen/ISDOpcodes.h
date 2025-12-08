@@ -641,16 +641,12 @@ enum NodeType {
   /// in terms of the element size of VEC1/VEC2, not in terms of bytes.
   VECTOR_SHUFFLE,
 
-  /// VECTOR_SPLICE_DOWN(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1, VEC2)
-  /// down by OFFSET elements and returns the lower half. If OFFSET is greater
-  /// than the runtime number of elements in the result type the result is
-  /// poison.
-  VECTOR_SPLICE_DOWN,
-  /// VECTOR_SPLICE_UP(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1, VEC2)
-  /// up by OFFSET elements and returns the upper half. If OFFSET is greater
-  /// than the runtime number of elements in the result type the result is
-  /// poison.
-  VECTOR_SPLICE_UP,
+  /// VECTOR_SPLICE_LEFT(VEC1, VEC2, IMM) - Shifts CONCAT_VECTORS(VEC1, VEC2)
+  /// left by IMM elements and returns the lower half.
+  VECTOR_SPLICE_LEFT,
+  /// VECTOR_SPLICE_RIGHT(VEC1, VEC2, IMM) - Shifts CONCAT_VECTORS(VEC1, VEC2)
+  /// right by IMM elements and returns the upper half.
+  VECTOR_SPLICE_RIGHT,
 
   /// SCALAR_TO_VECTOR(VAL) - This represents the operation of loading a
   /// scalar value into element 0 of the resultant vector type.  The top

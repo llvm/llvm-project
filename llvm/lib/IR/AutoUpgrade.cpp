@@ -1669,7 +1669,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       return true;
     }
     if (Name.consume_front("vector.splice")) {
-      if (Name.starts_with(".down") || Name.starts_with(".up"))
+      if (Name.starts_with(".left") || Name.starts_with(".right"))
         break;
       return true;
     }
@@ -4685,8 +4685,9 @@ static Value *upgradeVectorSplice(CallBase *CI, IRBuilder<> &Builder) {
   if (!Offset)
     reportFatalUsageError("Invalid llvm.vector.splice offset argument");
   int64_t OffsetVal = Offset->getSExtValue();
-  return Builder.CreateIntrinsic(OffsetVal >= 0 ? Intrinsic::vector_splice_down
-                                                : Intrinsic::vector_splice_up,
+  return Builder.CreateIntrinsic(OffsetVal >= 0
+                                     ? Intrinsic::vector_splice_left
+                                     : Intrinsic::vector_splice_right,
                                  CI->getType(),
                                  {CI->getArgOperand(0), CI->getArgOperand(1),
                                   Builder.getInt32(std::abs(OffsetVal))});
@@ -4719,9 +4720,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     bool IsARM = Name.consume_front("arm.");
     bool IsAMDGCN = Name.consume_front("amdgcn.");
     bool IsDbg = Name.consume_front("dbg.");
-    bool IsOldSplice = (Name.consume_front("experimental.vector.splice") ||
-                        Name.consume_front("vector.splice")) &&
-                       !(Name.starts_with(".down") || Name.starts_with(".up"));
+    bool IsOldSplice =
+        (Name.consume_front("experimental.vector.splice") ||
+         Name.consume_front("vector.splice")) &&
+        !(Name.starts_with(".left") || Name.starts_with(".right"));
     Value *Rep = nullptr;
 
     if (!IsX86 && Name == "stackprotectorcheck") {

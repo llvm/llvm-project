@@ -20729,7 +20729,7 @@ Arguments:
 All arguments must be vectors of the same type whereby their logical
 concatenation matches the result type.
 
-'``llvm.vector.splice.down``' Intrinsic
+'``llvm.vector.splice.left``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20738,14 +20738,14 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <2 x double> @llvm.vector.splice.down.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
-      declare <vscale x 4 x i32> @llvm.vector.splice.down.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+      declare <2 x double> @llvm.vector.splice.left.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
+      declare <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
 
 Overview:
 """""""""
 
-The '``llvm.vector.splice.down.*``' intrinsics construct a vector by
-concatenating two vectors together, shifting the elements down by ``imm``, and
+The '``llvm.vector.splice.left.*``' intrinsics construct a vector by
+concatenating two vectors together, shifting the elements left by ``imm``, and
 extracting the lower half.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
@@ -20757,7 +20757,7 @@ For example:
 
 .. code-block:: text
 
- llvm.vector.splice.down(<A,B,C,D>, <E,F,G,H>, 1);
+ llvm.vector.splice.left(<A,B,C,D>, <E,F,G,H>, 1);
 		     ==> <A,B,C,D,E,F,G,H>
 		     ==> <B,C,D,E,F,G,H,_>
 		     ==> <B,C,D,E>
@@ -20780,14 +20780,14 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <2 x double> @llvm.vector.splice.up.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
-      declare <vscale x 4 x i32> @llvm.vector.splice.up.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+      declare <2 x double> @llvm.vector.splice.right.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
+      declare <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
 
 Overview:
 """""""""
 
-The '``llvm.vector.splice.up.*``' intrinsics construct a vector by
-concatenating two vectors together, shifting the elements up by ``imm``, and
+The '``llvm.vector.splice.right.*``' intrinsics construct a vector by
+concatenating two vectors together, shifting the elements right by ``imm``, and
 extracting the upper half.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
@@ -20799,7 +20799,7 @@ For example:
 
 .. code-block:: text
 
- llvm.vector.splice.up(<A,B,C,D>, <E,F,G,H>, 1);
+ llvm.vector.splice.right(<A,B,C,D>, <E,F,G,H>, 1);
 		   ==> <A,B,C,D,E,F,G,H>
 		   ==> <_,A,B,C,D,E,F,G>
 		   ==>         <D,E,F,G>

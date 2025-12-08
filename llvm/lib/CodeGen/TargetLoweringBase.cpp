@@ -1134,7 +1134,7 @@ void TargetLoweringBase::initActions() {
         VT, Expand);
 
     // Named vector shuffles default to expand.
-    setOperationAction({ISD::VECTOR_SPLICE_DOWN, ISD::VECTOR_SPLICE_UP}, VT,
+    setOperationAction({ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT}, VT,
                        Expand);
 
     // Only some target support this vector operation. Most need to expand it.

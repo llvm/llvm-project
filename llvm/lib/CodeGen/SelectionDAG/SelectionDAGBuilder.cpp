@@ -8355,8 +8355,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vector_reverse:
     visitVectorReverse(I);
     return;
-  case Intrinsic::vector_splice_down:
-  case Intrinsic::vector_splice_up:
+  case Intrinsic::vector_splice_left:
+  case Intrinsic::vector_splice_right:
     visitVectorSplice(I);
     return;
   case Intrinsic::callbr_landingpad:
@@ -12893,21 +12893,22 @@ void SelectionDAGBuilder::visitVectorSplice(const CallInst &I) {
   SDValue V1 = getValue(I.getOperand(0));
   SDValue V2 = getValue(I.getOperand(1));
   uint64_t Imm = cast<ConstantInt>(I.getOperand(2))->getSExtValue();
-  const bool IsDown = I.getIntrinsicID() == Intrinsic::vector_splice_down;
+  const bool IsLeft = I.getIntrinsicID() == Intrinsic::vector_splice_left;
 
   // VECTOR_SHUFFLE doesn't support a scalable mask so use a dedicated node.
   if (VT.isScalableVector()) {
-    setValue(&I, DAG.getNode(
-                     IsDown ? ISD::VECTOR_SPLICE_DOWN : ISD::VECTOR_SPLICE_UP,
-                     DL, VT, V1, V2,
-                     DAG.getConstant(Imm, DL,
-                                     TLI.getVectorIdxTy(DAG.getDataLayout()))));
+    setValue(
+        &I,
+        DAG.getNode(
+            IsLeft ? ISD::VECTOR_SPLICE_LEFT : ISD::VECTOR_SPLICE_RIGHT, DL, VT,
+            V1, V2,
+            DAG.getConstant(Imm, DL, TLI.getVectorIdxTy(DAG.getDataLayout()))));
     return;
   }
 
   unsigned NumElts = VT.getVectorNumElements();
 
-  uint64_t Idx = (NumElts + (IsDown ? Imm : -Imm)) % NumElts;
+  uint64_t Idx = (NumElts + (IsLeft ? Imm : -Imm)) % NumElts;
 
   // Use VECTOR_SHUFFLE to maintain original behaviour for fixed-length vectors.
   SmallVector<int, 8> Mask;
