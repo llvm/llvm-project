@@ -926,23 +926,18 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
   if (MI.getOpcode() != RISCV::PseudoCCMOVGPR)
     return nullptr;
 
-  if (!STI.hasShortForwardBranchILoad() ||
-      (LoadMI.getOpcode() != RISCV::LB && LoadMI.getOpcode() != RISCV::LBU &&
-       LoadMI.getOpcode() != RISCV::LH && LoadMI.getOpcode() != RISCV::LHU &&
-       LoadMI.getOpcode() != RISCV::LW && LoadMI.getOpcode() != RISCV::LWU &&
-       LoadMI.getOpcode() != RISCV::LD))
+  unsigned PredOpc = getLoadPredicatedOpcode(LoadMI.getOpcode());
+
+  if (!STI.hasShortForwardBranchILoad() || !PredOpc)
     return nullptr;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   bool Invert = MRI.getVRegDef(MI.getOperand(4).getReg()) == &LoadMI;
-  MachineOperand FalseReg = MI.getOperand(Invert ? 5 : 4);
+  const MachineOperand &FalseReg = MI.getOperand(Invert ? 5 : 4);
   Register DestReg = MI.getOperand(0).getReg();
   const TargetRegisterClass *PreviousClass = MRI.getRegClass(FalseReg.getReg());
   if (!MRI.constrainRegClass(DestReg, PreviousClass))
     return nullptr;
-
-  unsigned PredOpc = getLoadPredicatedOpcode(LoadMI.getOpcode());
-  assert(PredOpc != 0 && "Unexpected opcode!");
 
   // Create a new predicated version of DefMI.
   MachineInstrBuilder NewMI = BuildMI(*MI.getParent(), InsertPt,
