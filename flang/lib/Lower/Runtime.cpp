@@ -34,7 +34,8 @@ using namespace Fortran::runtime;
 
 /// Runtime calls that do not return to the caller indicate this condition by
 /// terminating the current basic block with an unreachable op.
-void Fortran::lower::genUnreachable(fir::FirOpBuilder &builder, mlir::Location loc) {
+void Fortran::lower::genUnreachable(fir::FirOpBuilder &builder,
+                                    mlir::Location loc) {
   mlir::Block *curBlock = builder.getBlock();
   mlir::Operation *parentOp = curBlock->getParentOp();
   if (parentOp->getDialect()->getNamespace() ==
