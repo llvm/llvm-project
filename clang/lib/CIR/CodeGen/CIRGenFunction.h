@@ -658,6 +658,14 @@ public:
     return JumpDest(target, ehStack.getInnermostNormalCleanup(),
                     nextCleanupDestIndex++);
   }
+  /// IndirectBranch - The first time an indirect goto is seen we create a block
+  /// reserved for the indirect branch. Unlike before,the actual 'indirectbr'
+  /// is emitted at the end of the function, once all block destinations have
+  /// been resolved.
+  mlir::Block *indirectGotoBlock = nullptr;
+
+  void resolveBlockAddresses();
+  void finishIndirectBranch();
 
   /// Perform the usual unary conversions on the specified expression and
   /// compare the result against zero, returning an Int1Ty value.
@@ -1392,6 +1400,8 @@ public:
 
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
 
+  void instantiateIndirectGotoBlock();
+
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
@@ -1574,6 +1584,8 @@ public:
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
   mlir::LogicalResult emitGotoStmt(const clang::GotoStmt &s);
+
+  mlir::LogicalResult emitIndirectGotoStmt(const IndirectGotoStmt &s);
 
   void emitImplicitAssignmentOperatorBody(FunctionArgList &args);
 
