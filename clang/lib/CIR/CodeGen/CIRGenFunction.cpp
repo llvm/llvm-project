@@ -1003,8 +1003,6 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
   case Expr::ExtVectorElementExprClass:
     return emitExtVectorElementExpr(cast<ExtVectorElementExpr>(e));
-  case Expr::MatrixElementExprClass:
-    return emitMatrixElementExpr(cast<MatrixElementExpr>(e));
   case Expr::UnaryOperatorClass:
     return emitUnaryOpLValue(cast<UnaryOperator>(e));
   case Expr::StringLiteralClass:

@@ -309,7 +309,7 @@ public:
     MLV_DuplicateVectorComponents,
     MLV_DuplicateMatrixComponents,
     MLV_InvalidExpression,
-    MLV_LValueCast,           // Specialized form of MLV_InvalidExpression.
+    MLV_LValueCast, // Specialized form of MLV_InvalidExpression.
     MLV_IncompleteType,
     MLV_ConstQualified,
     MLV_ConstQualifiedField,
@@ -342,17 +342,17 @@ public:
     enum Kinds {
       CL_LValue,
       CL_XValue,
-      CL_Function, // Functions cannot be lvalues in C.
-      CL_Void, // Void cannot be an lvalue in C.
+      CL_Function,        // Functions cannot be lvalues in C.
+      CL_Void,            // Void cannot be an lvalue in C.
       CL_AddressableVoid, // Void expression whose address can be taken in C.
       CL_DuplicateVectorComponents, // A vector shuffle with dupes.
       CL_DuplicateMatrixComponents, // A matrix shuffle with dupes.
       CL_MemberFunction, // An expression referring to a member function
       CL_SubObjCPropertySetting,
-      CL_ClassTemporary, // A temporary of class type, or subobject thereof.
-      CL_ArrayTemporary, // A temporary of array type.
+      CL_ClassTemporary,    // A temporary of class type, or subobject thereof.
+      CL_ArrayTemporary,    // A temporary of array type.
       CL_ObjCMessageRValue, // ObjC message is an rvalue
-      CL_PRValue // A prvalue for any other reason, of any other type
+      CL_PRValue            // A prvalue for any other reason, of any other type
     };
     /// The results of modification testing.
     enum ModifiableType {
@@ -6589,11 +6589,6 @@ public:
     return getBase()->getBeginLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY { return AccessorLoc; }
-
-  /*static bool classof(const Stmt *T) {
-    return T->getStmtClass() == ExtVectorElementExprClass ||
-           T->getStmtClass() == MatrixElementExprClass;
-  }*/
 
   child_range children() { return child_range(&Base, &Base + 1); }
   const_child_range children() const {
