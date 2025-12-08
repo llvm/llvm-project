@@ -477,34 +477,6 @@ void good_stolen_reference2_string() {
     sv.empty();
 }
 
-// void bad_stolen_reference_as_this_no_use_after() {
-//     {
-//         const UserDefined* pa = nullptr;
-//         struct Pair { UserDefined first; int second; };
-//         Pair p1{UserDefined{}, 0};
-//         auto [a, unused1] = p1; DUMMY_TOKEN
-//         if (a.a == 0) {
-// // FIXME: fixit should be here
-//             do_some();
-//             pa = a.get_pointer_to_this();
-//         }
-//     }
-
-//     {
-//         const UserDefined* pa = nullptr;
-//         struct Pair { UserDefined first; int second; };
-//         Pair p2{UserDefined{}, 0};
-//         auto [b, unused2] = p2; DUMMY_TOKEN
-//         switch (b.a) {
-// // FIXME: fixit should be here
-//             case 0:
-//                 do_some();
-//                 pa = b.get_pointer_to_this();
-//                 break;
-//         }
-//     }
-// }
-
 void bad_stolen_reference2() {
     const int* pi = nullptr;
     int arr[2] = {0, 1};
@@ -653,7 +625,7 @@ void bad_prevents_redeclaration4() {
 }
 
 
-// FIXME: the same test but for `auto [str, val]` (when std::pair will be one of default type in DefaultSafeTypes)
+// FIXME: the same test but for `auto [str, val]`
 void bad_safe_string_default() {
     std::pair<std::string, int> p;
     const auto& [str, val] = p; DUMMY_TOKEN

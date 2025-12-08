@@ -569,15 +569,6 @@ void bad_unused_in_condition() {
     }
 }
 
-// void bad_user_defined() {
-//     struct A { int val = 0; };
-//     A i1; DUMMY_TOKEN
-//     if (i1.val == 0) {
-// // FIXME: fixit should be here
-//         do_some();
-//     }
-// }
-
 void bad_const() {
     const int i1 = 0; DUMMY_TOKEN
     if (i1 == 0) {
@@ -710,27 +701,6 @@ void bad_multiple_not_all_used() {
             break;
     }
 }
-// void bad_unique_lock() {
-//     static std::mutex counter_mutex;
-//     static int counter;
-
-//     std::unique_lock<std::mutex> lock(counter_mutex); DUMMY_TOKEN
-//     if (lock.owns_lock()) {
-// // FIXME: fixit should be here
-//         do_some();
-//     }
-// }
-
-// void bad_unique_lock_lifetime_extension() {
-//     static std::mutex counter_mutex;
-//     static int counter;
-
-//     const auto& lock = std::unique_lock<std::mutex>{counter_mutex}; DUMMY_TOKEN
-//     if (lock.owns_lock()) {
-// // FIXME: fixit should be here
-//         do_some();
-//     }
-// }
 
 void bad_lifetime_extension_of_builtin() {
     const int& i1 = 0; DUMMY_TOKEN
@@ -826,15 +796,6 @@ void bad_reference_to_unique_lock_using() {
     }
     ++counter;
 }
-
-// void bad_safe_string_default() {
-//     std::string str; DUMMY_TOKEN
-//     if (str.empty()) {
-// // FIXME: fixit should be here
-//         do_some();
-//     }
-//     do_some(); // Additional statement after if
-// }
 
 void bad_condition_with_declaration() {
     int i1 = 0; DUMMY_TOKEN
@@ -958,30 +919,6 @@ void bad_prevents_redeclaration4() {
         }
     }
 }
-
-// void bad_stolen_reference_as_this_no_use_after() {
-//     {
-//         const UserDefined* pa = nullptr;
-//         UserDefined a; DUMMY_TOKEN
-//         if (a.a == 0) {
-// // FIXME: fixit should be here
-//             do_some();
-//             pa = a.get_pointer_to_this();
-//         }
-//     }
-
-//     {
-//         const UserDefined* pa = nullptr;
-//         UserDefined b; DUMMY_TOKEN
-//         switch (b.a) {
-// // FIXME: fixit should be here
-//             case 0:
-//                 do_some();
-//                 pa = b.get_pointer_to_this();
-//                 break;
-//         }
-//     }
-// }
 
 void bad_stolen_reference1() {
     const int* pi = nullptr;
@@ -1199,12 +1136,12 @@ void bad_macro10() {
 // void bad_macro11() {
 //     int i1 = 0;
 //     MY_IF (i1 == 0,
-// // FIXME: fixme should be suggested
+// // FIXME: fixit should be suggested
 //         do_some();
 //     )
 //     int i2 = 0;
 //     MY_ONE_STMT_SWITCH (i2,
-// // FIXME: fixme should be suggested
+// // FIXME: fixit should be suggested
 //         do_some();
 //     )
 // }
