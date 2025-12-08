@@ -96,27 +96,20 @@ TEST(ASTEntityMappingTest, NullDecl) {
   EXPECT_FALSE(EntityName.has_value());
 }
 
-TEST(ASTEntityMappingTest, ImplicitDecl) {
+TEST(ASTEntityMappingTest, ImplicitDeclLambda) {
   auto AST = tooling::buildASTFromCode(R"(
-    struct S {
-      S() = default;
-    };
+    auto L = [](){};
   )", "test.cpp", std::make_shared<PCHContainerOperations>());
   auto &Ctx = AST->getASTContext();
 
-  const auto *RD = findDecl<CXXRecordDecl>(Ctx, "S");
-  ASSERT_NE(RD, nullptr);
+  auto Matcher = cxxRecordDecl(isImplicit()).bind("decl");
+  auto Matches = match(Matcher, Ctx);
+  ASSERT_GT(Matches.size(), 0u);
 
-  // Find the implicitly-declared copy constructor
-  const CXXConstructorDecl * ImplCtor = nullptr;
-  for (const auto *Ctor : RD->ctors()) {
-    if (Ctor->isCopyConstructor() && Ctor->isImplicit()) {
-      ImplCtor = Ctor;
-      break;
-    }
-  }
+  const auto * ImplCXXRD = Matches[0].getNodeAs<CXXRecordDecl>("decl");
+  ASSERT_NE(ImplCXXRD, nullptr);
 
-  auto EntityName = getEntityName(ImplCtor);
+  auto EntityName = getEntityName(ImplCXXRD);
   EXPECT_FALSE(EntityName.has_value());
 }
 
