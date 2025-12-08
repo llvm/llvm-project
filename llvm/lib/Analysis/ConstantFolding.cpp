@@ -1943,6 +1943,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   // environment, they can be folded in any case.
   case Intrinsic::ceil:
   case Intrinsic::floor:
+  case Intrinsic::llrint:
   case Intrinsic::round:
   case Intrinsic::roundeven:
   case Intrinsic::trunc:
@@ -2007,7 +2008,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
     return Name == "log" || Name == "logf" || Name == "logl" ||
            Name == "log2" || Name == "log2f" || Name == "log10" ||
            Name == "log10f" || Name == "logb" || Name == "logbf" ||
-           Name == "log1p" || Name == "log1pf";
+           Name == "log1p" || Name == "log1pf" || Name=="llrint" ||
+           Name=="llrintf";
   case 'n':
     return Name == "nearbyint" || Name == "nearbyintf";
   case 'p':
@@ -2519,8 +2521,24 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
     // Use internal versions of these intrinsics.
 
-    if (IntrinsicID == Intrinsic::nearbyint || IntrinsicID == Intrinsic::rint ||
-        IntrinsicID == Intrinsic::roundeven) {
+    
+    if (IntrinsicID == Intrinsic::llrint) {
+      unsigned Width = Ty->getIntegerBitWidth();
+      APSInt Result(Width, /*isUnsigned=*/false);
+      bool IsExact = false;
+      APFloat Tmp = U;
+      APFloat::opStatus Status = Tmp.convertToInteger(
+      Result, APFloat::rmNearestTiesToEven, &IsExact);
+
+        // Allowed: opOK or opInexact
+        // Disallowed: opInvalidOp (overflow)
+      if (Status == APFloat::opOK || Status == APFloat::opInexact)
+        return ConstantInt::get(Ty, Result);
+
+      return nullptr;
+    }
+
+    if (IntrinsicID == Intrinsic::nearbyint || IntrinsicID == Intrinsic::rint) {
       U.roundToIntegral(APFloat::rmNearestTiesToEven);
       return ConstantFP::get(Ty->getContext(), U);
     }
@@ -2937,6 +2955,12 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_floorf:
       if (TLI->has(Func)) {
         U.roundToIntegral(APFloat::rmTowardNegative);
+        return ConstantFP::get(Ty->getContext(), U);
+      }
+      break;
+    case LibFunc_llrint:
+    case LibFunc_llrintf:
+      if (TLI->has(Func)) {
         return ConstantFP::get(Ty->getContext(), U);
       }
       break;

@@ -3188,28 +3188,6 @@ Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
   return ConstantFP::get(CI->getType(), Rem);
 }
 
-Value *LibCallSimplifier::optimizellrint(CallInst *CI,IRBuilderBase &B){
-  const APFloat *X;
-  if(!match(CI->getOperand(0),m_APFloat(X))){
-    return nullptr;
-  }
-  Type *type=CI->getType();
-
-  unsigned width=type->getIntegerBitWidth();
-
-  APSInt Result(width,false);
-  bool Isexact;
-
-  APFloat::opStatus Status=X->convertToInteger(Result,APFloat::rmNearestTiesToEven,&Isexact);
-
-  if(Status==APFloat::opOK || Status==APFloat::opInexact){
-    return ConstantInt::get(type,Result);
-  }
-
-  return nullptr;
-
-}
-
 /// Constant folds fdim
 Value *LibCallSimplifier::optimizeFdim(CallInst *CI, IRBuilderBase &B) {
   // Cannot perform the fold unless the call has attribute memory(none)
@@ -4130,6 +4108,8 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return replaceUnaryCall(CI, Builder, Intrinsic::ceil);
   case LibFunc_floor:
     return replaceUnaryCall(CI, Builder, Intrinsic::floor);
+  case LibFunc_llrint:
+    return replaceUnaryCall(CI, Builder, Intrinsic::llrint);
   case LibFunc_round:
     return replaceUnaryCall(CI, Builder, Intrinsic::round);
   case LibFunc_roundeven:

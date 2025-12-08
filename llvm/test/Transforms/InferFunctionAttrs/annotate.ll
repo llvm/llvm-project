@@ -1250,7 +1250,6 @@ declare void @memset_pattern16(ptr, ptr, i64)
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { mustprogress nocallback nofree nounwind willreturn memory(read) }
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY]] = { nofree nounwind memory(read) }
-; CHECK-DAG: attributes [[MATH_NOACCESS]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_FREE_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE0_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }

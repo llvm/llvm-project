@@ -411,6 +411,7 @@ public:
     case LibFunc_fmax:         case LibFunc_fmaxf:      case LibFunc_fmaxl:
     case LibFunc_fmin:         case LibFunc_fminf:      case LibFunc_fminl:
     case LibFunc_ldexp:        case LibFunc_ldexpf:     case LibFunc_ldexpl:
+    case LibFunc_llrint:       case LibFunc_llrintf:    case LibFunc_llrintl:
     case LibFunc_log2:         case LibFunc_log2f:      case LibFunc_log2l:
     case LibFunc_memcmp:       case LibFunc_bcmp:       case LibFunc_strcmp:
     case LibFunc_memcpy:       case LibFunc_memset:     case LibFunc_memmove:

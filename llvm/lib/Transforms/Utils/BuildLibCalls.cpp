@@ -1361,6 +1361,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fminimum_numl:
   case LibFunc_labs:
   case LibFunc_llabs:
+  case LibFunc_llrintf:
+  case LibFunc_llrintl:
+  case LibFunc_llrint:
   case LibFunc_nearbyint:
   case LibFunc_nearbyintf:
   case LibFunc_nearbyintl:
@@ -1383,13 +1386,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotFreeMemory(F);
     Changed |= setWillReturn(F);
     break;
-  case LibFunc_llrintf:
-  case LibFunc_llrintl:
-  case LibFunc_llrint:
-    Changed|=setDoesNotThrow(F);
-    Changed|=setDoesNotAccessMemory(F);
-    Changed|=setWillReturn(F);
-    break;  
   case LibFunc_sincos:
   case LibFunc_sincosf:
   case LibFunc_sincosl:

@@ -1141,6 +1141,15 @@ def ilogbf : TargetLibCall<"ilogbf", Int, [Flt]>;
 /// int ilogbl(long double x);
 def ilogbl : TargetLibCall<"ilogbl", Int, [LDbl]>;
 
+/// long long llrint(double x);
+def llrint : TargetLibCall<"llrint",LLong,[Dbl]>;
+
+///long long llrintf( float x);
+def llrintf : TargetLibCall<"llrintf",LLong,[Flt]>;
+
+///long long llrintl(long double x);
+def llrintl : TargetLibCall<"llrintl",LLong,[LDbl]>;
+
 /// double logb(double x);
 def logb : TargetLibCall<"logb", Dbl, [Dbl]>;
 

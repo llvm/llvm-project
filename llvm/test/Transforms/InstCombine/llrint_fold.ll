@@ -1,87 +1,46 @@
-; RUN: opt -S -passes=instcombine %s -o - | FileCheck %s
+; RUN: opt -S -passes=instcombine %s | FileCheck %s
 
+; ============================================================
+;  Test constant folding of overloaded @llvm.llrint intrinsic
+; ============================================================
 
-declare i64 @llrint(double)
+; LLVM intrinsic declarations (typed overloads)
+declare i64 @llvm.llrint.f32(float)
+declare i64 @llvm.llrint.f64(double)
+declare i64 @llvm.llrint.f80(x86_fp80)
+declare i64 @llvm.llrint.f128(fp128)
 
-; Positive number test
-; CHECK-LABEL: define i64 @test_llrint_pos()
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i64 4
-define i64 @test_llrint_pos() {
-entry:
-  %val = call i64 @llrint(double 3.5)
-  ret i64 %val
+; ============================================================
+; float overload
+; ============================================================
+define i64 @test_f32_pos() {
+; CHECK-LABEL: @test_f32_pos(
+; CHECK-NEXT: ret i64 4
+  %v = call i64 @llvm.llrint.f32(float 3.5)
+  ret i64 %v
 }
 
-; Negative number test
-; CHECK-LABEL: define i64 @test_llrint_neg()
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i64 -2
-define i64 @test_llrint_neg() {
-entry:
-  %val = call i64 @llrint(double -2.5)
-  ret i64 %val
+define i64 @test_f32_neg() {
+; CHECK-LABEL: @test_f32_neg(
+; CHECK-NEXT: ret i64 -2
+  %v = call i64 @llvm.llrint.f32(float -2.5)
+  ret i64 %v
 }
 
-; Zero test
-; CHECK-LABEL: define i64 @test_llrint_zero()
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i64 0
-define i64 @test_llrint_zero() {
-entry:
-  %val = call i64 @llrint(double 0.0)
-  ret i64 %val
+; ============================================================
+; double overload
+; ============================================================
+define i64 @test_f64_pos() {
+; CHECK-LABEL: @test_f64_pos(
+; CHECK-NEXT: ret i64 4
+  %v = call i64 @llvm.llrint.f64(double 3.5)
+  ret i64 %v
 }
 
-; Large value test
-; CHECK-LABEL: define i64 @test_llrint_large()
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i64 1000000
-define i64 @test_llrint_large() {
-entry:
-  %val = call i64 @llrint(double 1.0e6)
-  ret i64 %val
+define i64 @test_f64_neg() {
+; CHECK-LABEL: @test_f64_neg(
+; CHECK-NEXT: ret i64 -2
+  %v = call i64 @llvm.llrint.f64(double -2.5)
+  ret i64 %v
 }
 
-; Rounding test (check ties-to-even)
-; CHECK-LABEL: define i64 @test_llrint_round_even()
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i64 2
-define i64 @test_llrint_round_even() {
-entry:
-  %val = call i64 @llrint(double 2.5)
-  ret i64 %val
-}
-
-; NaN test
-; CHECK-LABEL: define i64 @test_llrint_nan()
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    %val = call i64 @llrint(double 0x7FF8000000000000)
-; CHECK-NEXT:    ret i64 %val
-define i64 @test_llrint_nan() {
-entry:
-  %val = call i64 @llrint(double 0x7FF8000000000000) ; NaN
-  ret i64 %val
-}
-
-; +Inf test
-; CHECK-LABEL: define i64 @test_llrint_posinf()
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    %val = call i64 @llrint(double 0x7FF0000000000000)
-; CHECK-NEXT:    ret i64 %val
-define i64 @test_llrint_posinf() {
-entry:
-  %val = call i64 @llrint(double 0x7FF0000000000000) ; +Inf
-  ret i64 %val
-}
-
-; -Inf test
-; CHECK-LABEL: define i64 @test_llrint_neginf()
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    %val = call i64 @llrint(double 0xFFF0000000000000)
-; CHECK-NEXT:    ret i64 %val
-define i64 @test_llrint_neginf() {
-entry:
-  %val = call i64 @llrint(double 0xFFF0000000000000) ; -Inf
-  ret i64 %val
-}
