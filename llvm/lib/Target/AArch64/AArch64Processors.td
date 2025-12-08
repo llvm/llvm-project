@@ -690,6 +690,48 @@ def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "Neover
                                       FeatureAvoidLDAPUR,
                                       FeaturePredictableSelectIsExpensive]>;
 
+def TuneC1Nano : SubtargetFeature<"c1-nano", "ARMProcFamily",
+                                  "C1Nano", "C1-Nano ARM Processors",[
+                                  FeatureFuseAES,
+                                  FeatureFuseAdrpAdd,
+                                  FeaturePostRAScheduler,
+                                  FeatureUseWzrToVecMove,
+                                  FeatureUseFixedOverScalableIfEqualCost]>;
+
+def TuneC1Pro : SubtargetFeature<"c1-pro", "ARMProcFamily",
+                                  "C1Pro", "C1-Pro ARM Processors",[
+                                  FeatureFuseAES,
+                                  FeaturePostRAScheduler,
+                                  FeatureCmpBccFusion,
+                                  FeatureALULSLFast,
+                                  FeatureFuseAdrpAdd,
+                                  FeatureFuseCmpCSel,
+                                  FeatureFuseCmpCSet,
+                                  FeatureEnableSelectOptimize,
+                                  FeaturePredictableSelectIsExpensive]>;
+
+def TuneC1Premium : SubtargetFeature<"c1-premium", "ARMProcFamily",
+                                  "C1Premium", "C1-Premium ARM Processors",[
+                                  FeatureALULSLFast,
+                                  FeatureFuseAdrpAdd,
+                                  FeatureFuseAES,
+                                  FeaturePostRAScheduler,
+                                  FeatureEnableSelectOptimize,
+                                  FeaturePredictableSelectIsExpensive]>;
+
+def TuneC1Ultra : SubtargetFeature<"c1-ultra", "ARMProcFamily",
+                                  "C1Ultra", "C1-Ultra ARM Processors",[
+                                  FeatureALULSLFast,
+                                  FeatureFuseAdrpAdd,
+                                  FeatureFuseCmpCSel,
+                                  FeatureFuseCmpCSet,
+                                  FeatureFuseAES,
+                                  FeaturePostRAScheduler,
+                                  FeatureEnableSelectOptimize,
+                                  FeatureUseFixedOverScalableIfEqualCost,
+                                  FeatureAvoidLDAPUR,
+                                  FeaturePredictableSelectIsExpensive]>;
+
 def TuneSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    "Qualcomm Saphira processors", [
                                    FeaturePostRAScheduler,
@@ -1176,6 +1218,63 @@ def ProcessorFeatures {
                                       FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8, FeatureJS,
                                       FeatureLSE, FeatureNEON, FeatureRAS, FeatureRCPC, FeatureRDM,
                                       FeatureRME, FeatureFPAC];
+  list<SubtargetFeature> C1Nano = [HasV9_3aOps, FeatureNEON, FeatureCLRBHB,
+                                   FeatureCHK, FeatureFPARMv8, FeaturePerfMon,
+                                   FeatureSPECRES2, FeatureSSBS, FeatureRDM,
+                                   FeatureVH, FeatureBF16, FeatureDotProd,
+                                   FeatureFP16FML, FeatureFullFP16, FeatureMPAM,
+                                   FeatureSVE, FeatureCCIDX, FeatureComplxNum,
+                                   FeatureFPAC, FeatureJS, FeatureAM,
+                                   FeatureRAS, FeatureSEL2, FeatureTRACEV8_4,
+                                   FeatureAltFPCmp, FeatureFRInt3264,
+                                   FeatureMTE, FeatureFineGrainedTraps,
+                                   FeatureHCX, FeatureRCPC3, FeatureETE,
+                                   FeatureSVEBitPerm, FeatureSVE2, FeatureTRBE,
+                                   FeatureSME, FeatureSME2];
+  list<SubtargetFeature> C1Pro = [HasV9_3aOps, FeatureNEON, FeatureCLRBHB,
+                                  FeatureCHK, FeatureFPARMv8, FeaturePerfMon,
+                                  FeatureSPECRES2, FeatureSSBS, FeatureRDM,
+                                  FeatureVH, FeatureBF16, FeatureDotProd,
+                                  FeatureFP16FML, FeatureFullFP16, FeatureMPAM,
+                                  FeatureSPE, FeatureSVE, FeatureCCIDX,
+                                  FeatureComplxNum, FeatureFPAC, FeatureJS,
+                                  FeatureAM, FeatureRAS, FeatureSEL2,
+                                  FeatureTRACEV8_4, FeatureAltFPCmp,
+                                  FeatureFRInt3264, FeatureMTE,
+                                  FeatureFineGrainedTraps, FeatureHCX,
+                                  FeatureSPE_EEF, FeatureRCPC3, FeatureETE,
+                                  FeatureSVEBitPerm, FeatureSVE2, FeatureTRBE,
+                                  FeatureSME, FeatureSME2];
+  list<SubtargetFeature> C1Premium = [HasV9_3aOps, FeatureNEON, FeatureCLRBHB,
+                                      FeatureCHK, FeatureFPARMv8,
+                                      FeaturePerfMon, FeatureSPECRES2,
+                                      FeatureSSBS, FeatureRDM, FeatureVH,
+                                      FeatureBF16, FeatureDotProd,
+                                      FeatureFP16FML, FeatureFullFP16,
+                                      FeatureMPAM, FeatureSPE, FeatureSVE,
+                                      FeatureCCIDX, FeatureComplxNum,
+                                      FeatureFPAC, FeatureJS, FeatureAM,
+                                      FeatureRAS, FeatureSEL2, FeatureTRACEV8_4,
+                                      FeatureAltFPCmp, FeatureFRInt3264,
+                                      FeatureMTE, FeatureFineGrainedTraps,
+                                      FeatureHCX, FeatureSPE_EEF, FeatureRCPC3,
+                                      FeatureETE, FeatureSVEBitPerm,
+                                      FeatureSVE2, FeatureTRBE, FeatureSME,
+                                      FeatureSME2];
+  list<SubtargetFeature> C1Ultra = [HasV9_3aOps, FeatureNEON, FeatureCLRBHB,
+                                    FeatureCHK, FeatureFPARMv8, FeaturePerfMon,
+                                    FeatureSPECRES2, FeatureSSBS, FeatureRDM,
+                                    FeatureVH, FeatureBF16, FeatureDotProd,
+                                    FeatureFP16FML, FeatureFullFP16,
+                                    FeatureMPAM, FeatureSPE, FeatureSVE,
+                                    FeatureCCIDX, FeatureComplxNum, FeatureFPAC,
+                                    FeatureJS, FeatureAM, FeatureRAS,
+                                    FeatureSEL2, FeatureTRACEV8_4,
+                                    FeatureAltFPCmp, FeatureFRInt3264,
+                                    FeatureMTE, FeatureFineGrainedTraps,
+                                    FeatureHCX, FeatureSPE_EEF, FeatureRCPC3,
+                                    FeatureETE, FeatureSVEBitPerm, FeatureSVE2,
+                                    FeatureTRBE, FeatureSME, FeatureSME2];
   list<SubtargetFeature> Saphira    = [HasV8_4aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                        FeatureNEON, FeatureSPE, FeaturePerfMon, FeatureCRC,
                                        FeatureCCIDX,
@@ -1338,6 +1437,14 @@ def : ProcessorModel<"neoverse-v3", NeoverseV3Model,
                      ProcessorFeatures.NeoverseV3, [TuneNeoverseV3]>;
 def : ProcessorModel<"neoverse-v3ae", NeoverseV3AEModel,
                      ProcessorFeatures.NeoverseV3AE, [TuneNeoverseV3AE]>;
+def : ProcessorModel<"c1-nano", CortexA510Model,
+                     ProcessorFeatures.C1Nano, [TuneC1Nano]>;
+def : ProcessorModel<"c1-pro", NeoverseN2Model,
+                     ProcessorFeatures.C1Pro, [TuneC1Pro]>;
+def : ProcessorModel<"c1-premium", NeoverseV3Model,
+                     ProcessorFeatures.C1Premium, [TuneC1Premium]>;
+def : ProcessorModel<"c1-ultra", NeoverseV3Model,
+                     ProcessorFeatures.C1Ultra, [TuneC1Ultra]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, ProcessorFeatures.ExynosM3,
                      [TuneExynosM3]>;
 def : ProcessorModel<"exynos-m4", ExynosM4Model, ProcessorFeatures.ExynosM4,
