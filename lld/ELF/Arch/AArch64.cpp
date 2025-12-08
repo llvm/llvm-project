@@ -527,19 +527,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     write32(ctx, loc, val);
     break;
   case R_AARCH64_ABS64:
-    // AArch64 relocations to tagged symbols have extended semantics, as
-    // described here:
-    // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#841extended-semantics-of-r_aarch64_relative.
-    // tl;dr: encode the symbol's special addend in the place, which is an
-    // offset to the point where the logical tag is derived from. Quick hack, if
-    // the addend is within the symbol's bounds, no need to encode the tag
-    // derivation offset.
-    if (rel.sym && rel.sym->isTagged() &&
-        (rel.addend < 0 ||
-         rel.addend >= static_cast<int64_t>(rel.sym->getSize())))
-      write64(ctx, loc, -rel.addend);
-    else
-      write64(ctx, loc, val);
+    write64(ctx, loc, val);
     break;
   case R_AARCH64_PREL64:
     write64(ctx, loc, val);
