@@ -20775,12 +20775,6 @@ vector <N x eltty>, imm is an unsigned integer constant in the range
 0 <= imm < N. For a scalable vector <vscale x N x eltty>, imm is an unsigned
 integer constant in the range 0 <= imm < X where X=vscale_range_min * N.
 
-Semantics:
-""""""""""
-
-For a scalable vector, if the value of ``imm`` exceeds the runtime length of the
-source vector type, the result is a :ref:`poison value <poisonvalues>`.
-
 '``llvm.vector.splice.up``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -20826,12 +20820,6 @@ modulo the runtime number of elements in the source vector. For a fixed-width
 vector <N x eltty>, imm is an unsigned integer constant in the range
 0 <= imm <= N. For a scalable vector <vscale x N x eltty>, imm is an unsigned
 integer constant in the range 0 <= imm <= X where X=vscale_range_min * N.
-
-Semantics:
-""""""""""
-
-For a scalable vector, if the value of ``imm`` exceeds the runtime length of the
-source vector type, the result is a :ref:`poison value <poisonvalues>`.
 
 '``llvm.stepvector``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
