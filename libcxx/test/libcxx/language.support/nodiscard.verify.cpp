@@ -15,7 +15,6 @@
 #include <compare>
 #include <coroutine>
 #include <exception>
-#include <functional>
 #include <initializer_list>
 
 #include "test_macros.h"

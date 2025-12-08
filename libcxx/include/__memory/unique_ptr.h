@@ -800,7 +800,7 @@ struct hash<__enable_hash_helper< unique_ptr<_Tp, _Dp>, typename unique_ptr<_Tp,
   _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const unique_ptr<_Tp, _Dp>& __ptr) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t operator()(const unique_ptr<_Tp, _Dp>& __ptr) const {
     typedef typename unique_ptr<_Tp, _Dp>::pointer pointer;
     return hash<pointer>()(__ptr.get());
   }
