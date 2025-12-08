@@ -148,13 +148,13 @@ void test_amdgcn_wmma_f16_16x16x64_bf8_bf8(global v8h* out, v8i a, v8i b, v8h c)
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_wmma_i32_16x16x64_iu8(
 // CHECK-GFX1250-NEXT:  entry:
-// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x64.iu8.v8i32.v8i32(i1 false, <8 x i32> [[A:%.*]], i1 false, <8 x i32> [[B:%.*]], <8 x i32> [[C:%.*]], i1 false, i1 true)
+// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x64.iu8.v8i32.v8i32(i1 false, <8 x i32> [[A:%.*]], i1 false, <8 x i32> [[B:%.*]], <8 x i32> [[C:%.*]], i1 false, i1 true, i1 false)
 // CHECK-GFX1250-NEXT:    store <8 x i32> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 32, !tbaa [[TBAA4]]
 // CHECK-GFX1250-NEXT:    ret void
 //
 void test_amdgcn_wmma_i32_16x16x64_iu8(global v8i* out, v8i a, v8i b, v8i c)
 {
-  *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, 0, b, c, false, true);
+  *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, 0, b, c, false, true, false);
 }
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_wmma_f32_16x16x128_f8f6f4(

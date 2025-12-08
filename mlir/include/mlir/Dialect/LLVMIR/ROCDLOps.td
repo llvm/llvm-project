@@ -805,15 +805,16 @@ class ROCDL_WMMA_ModsAll_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> :
 }
 
 class ROCDL_WMMA_ModsAB_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
-    [0], [1], [], 1, 0, 0, 0, [0, 2, 5, 6], ["signA", "signB", "reuseA","reuseB"]>,
-  Arguments<(ins
+    [0], [1], [], 1, 0, 0, 0, [0, 2, 5, 6, 7], ["signA", "signB", "reuseA","reuseB", "clamp"]>,
+  Arguments<(ins 
              DefaultValuedAttr<I1Attr, "0">:$signA,
              LLVM_ScalarOrVectorOf<AB>:$a,
              DefaultValuedAttr<I1Attr, "0">:$signB,
              LLVM_ScalarOrVectorOf<AB>:$b,
-             LLVM_ScalarOrVectorOf<CD>:$c,
-             DefaultValuedAttr<I1Attr, "0">:$reuseA,
-             DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
+             LLVM_ScalarOrVectorOf<CD>:$c, 
+             DefaultValuedAttr<I1Attr, "0">:$reuseA, 
+             DefaultValuedAttr<I1Attr, "0">:$reuseB,
+             DefaultValuedAttr<I1Attr, "0">:$clamp)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
     $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)

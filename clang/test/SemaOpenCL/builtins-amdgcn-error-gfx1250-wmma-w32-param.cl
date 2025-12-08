@@ -108,10 +108,11 @@ void test_amdgcn_wmma_f16_16x16x64_bf8_bf8(global v8h* out, v8i a, v8i b, v8h c,
 
 void test_amdgcn_wmma_i32_16x16x64_iu8(global v8i* out, v8i a, v8i b, v8i c, int mod)
 {
-  *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(mod, a, 0, b, c, false, false); // expected-error {{'__builtin_amdgcn_wmma_i32_16x16x64_iu8' must be a constant integer}}
-  *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, mod, b, c, false, false); // expected-error {{'__builtin_amdgcn_wmma_i32_16x16x64_iu8' must be a constant integer}}
-  *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, 0, b, c, mod, false); // expected-error {{'__builtin_amdgcn_wmma_i32_16x16x64_iu8' must be a constant integer}}
-  *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, 0, b, c, false, mod); // expected-error {{'__builtin_amdgcn_wmma_i32_16x16x64_iu8' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(mod, a, 0, b, c, false, false, false); // expected-error {{'__builtin_amdgcn_wmma_i32_16x16x64_iu8' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, mod, b, c, false, false, false); // expected-error {{'__builtin_amdgcn_wmma_i32_16x16x64_iu8' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, 0, b, c, mod, false, false); // expected-error {{'__builtin_amdgcn_wmma_i32_16x16x64_iu8' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, 0, b, c, false, mod, false); // expected-error {{'__builtin_amdgcn_wmma_i32_16x16x64_iu8' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, 0, b, c, false, false, mod); // expected-error {{'__builtin_amdgcn_wmma_i32_16x16x64_iu8' must be a constant integer}}
 }
 
 void test_amdgcn_wmma_f32_16x16x128_f8f6f4(global v8f* out, v16i a, v16i b, v8f c, int mod)
