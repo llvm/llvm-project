@@ -596,7 +596,7 @@ bool HexagonGenWideningVecInstr::replaceWithIntrinsic(Instruction *Inst,
   if (IsConstScalar && OPK == OP_Shl) {
     if (((NewOpEltSize == 8) && (SplatVal > 0) && (SplatVal < 8)) ||
         ((NewOpEltSize == 16) && (SplatVal > 0) && (SplatVal < 16))) {
-      SplatVal = 1 << SplatVal;
+      SplatVal = 1LL << SplatVal;
       OPK = OP_Mul;
     } else {
       return false;
