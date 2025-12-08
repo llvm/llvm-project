@@ -300,7 +300,7 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
 #define GET_WMMAInstInfoTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
-int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
+int getMIMGOpcode(MIMGBaseOpcode BaseOpcode, unsigned MIMGEncoding,
                   unsigned VDataDwords, unsigned VAddrDwords) {
   const MIMGInfo *Info =
       getMIMGOpcodeHelper(BaseOpcode, MIMGEncoding, VDataDwords, VAddrDwords);

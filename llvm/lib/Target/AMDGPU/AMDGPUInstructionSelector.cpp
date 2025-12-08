@@ -2054,7 +2054,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   MachineInstr &MI, const AMDGPU::ImageDimIntrinsicInfo *Intr) const {
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
-  unsigned IntrOpcode = Intr->BaseOpcode;
+  AMDGPU::MIMGBaseOpcode IntrOpcode = Intr->BaseOpcode;
 
   // For image atomic: use no-return opcode if result is unused.
   if (Intr->AtomicNoRetBaseOpcode != Intr->BaseOpcode) {

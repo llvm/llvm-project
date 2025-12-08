@@ -443,7 +443,7 @@ LLVM_READONLY
 const MIMGBaseOpcodeInfo *getMIMGBaseOpcode(unsigned Opc);
 
 LLVM_READONLY
-const MIMGBaseOpcodeInfo *getMIMGBaseOpcodeInfo(unsigned BaseOpcode);
+const MIMGBaseOpcodeInfo *getMIMGBaseOpcodeInfo(MIMGBaseOpcode BaseOpcode);
 
 struct MIMGDimInfo {
   MIMGDim Dim;
@@ -490,7 +490,7 @@ struct MIMGG16MappingInfo {
 };
 
 LLVM_READONLY
-const MIMGLZMappingInfo *getMIMGLZMappingInfo(unsigned L);
+const MIMGLZMappingInfo *getMIMGLZMappingInfo(MIMGBaseOpcode L);
 
 struct WMMAOpcodeMappingInfo {
   unsigned Opcode2Addr;
@@ -498,19 +498,19 @@ struct WMMAOpcodeMappingInfo {
 };
 
 LLVM_READONLY
-const MIMGMIPMappingInfo *getMIMGMIPMappingInfo(unsigned MIP);
+const MIMGMIPMappingInfo *getMIMGMIPMappingInfo(MIMGBaseOpcode MIP);
 
 LLVM_READONLY
-const MIMGBiasMappingInfo *getMIMGBiasMappingInfo(unsigned Bias);
+const MIMGBiasMappingInfo *getMIMGBiasMappingInfo(MIMGBaseOpcode Bias);
 
 LLVM_READONLY
-const MIMGOffsetMappingInfo *getMIMGOffsetMappingInfo(unsigned Offset);
+const MIMGOffsetMappingInfo *getMIMGOffsetMappingInfo(MIMGBaseOpcode Offset);
 
 LLVM_READONLY
-const MIMGG16MappingInfo *getMIMGG16MappingInfo(unsigned G);
+const MIMGG16MappingInfo *getMIMGG16MappingInfo(MIMGBaseOpcode G);
 
 LLVM_READONLY
-int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
+int getMIMGOpcode(MIMGBaseOpcode BaseOpcode, unsigned MIMGEncoding,
                   unsigned VDataDwords, unsigned VAddrDwords);
 
 LLVM_READONLY
@@ -523,7 +523,7 @@ unsigned getAddrSizeMIMGOp(const MIMGBaseOpcodeInfo *BaseOpcode,
 
 struct MIMGInfo {
   uint16_t Opcode;
-  uint16_t BaseOpcode;
+  MIMGBaseOpcode BaseOpcode;
   uint8_t MIMGEncoding;
   uint8_t VDataDwords;
   uint8_t VAddrDwords;

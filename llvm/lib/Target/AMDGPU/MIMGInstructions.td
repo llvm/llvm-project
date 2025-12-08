@@ -55,8 +55,9 @@ class MIMGBaseOpcode : PredicateControl {
   bit PointSampleAccel = 0; // Opcode eligible for gfx11.5 point sample acceleration
 }
 
-def MIMGBaseOpcode : GenericEnum {
+def MIMGBaseOpcode : GenericEnumClass {
   let FilterClass = "MIMGBaseOpcode";
+  let Size = 8;
 }
 
 def MIMGBaseOpcodesTable : GenericTable {
@@ -1888,6 +1889,7 @@ def ImageDimIntrinsicTable : GenericTable {
 def getImageDimIntrinsicByBaseOpcode : SearchIndex {
   let Table = ImageDimIntrinsicTable;
   let Key = ["BaseOpcode", "Dim"];
+  string TypeOf_BaseOpcode = "MIMGBaseOpcode";
 }
 
 foreach intr = AMDGPUImageDimIntrinsics in {

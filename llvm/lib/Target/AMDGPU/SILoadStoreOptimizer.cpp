@@ -613,7 +613,9 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
     if (TII.isImage(Opc)) {
       const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Opc);
       assert(Info);
-      return Info->BaseOpcode;
+      // FIXME: MIMGInfo.BaseOpcode is a different class of opcodes and can
+      // potentially have overlap with regular opcodes.
+      return (unsigned)Info->BaseOpcode;
     }
     if (TII.isMTBUF(Opc))
       return AMDGPU::getMTBUFBaseOpcode(Opc);

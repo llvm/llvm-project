@@ -49,8 +49,8 @@ const D16ImageDimIntrinsic *lookupD16ImageDimIntrinsic(unsigned Intr);
 
 struct ImageDimIntrinsicInfo {
   unsigned Intr;
-  unsigned BaseOpcode;
-  unsigned AtomicNoRetBaseOpcode;
+  MIMGBaseOpcode BaseOpcode;
+  MIMGBaseOpcode AtomicNoRetBaseOpcode;
   MIMGDim Dim;
 
   uint8_t NumOffsetArgs;
@@ -85,7 +85,7 @@ struct ImageDimIntrinsicInfo {
 const ImageDimIntrinsicInfo *getImageDimIntrinsicInfo(unsigned Intr);
 
 const ImageDimIntrinsicInfo *
-getImageDimIntrinsicByBaseOpcode(unsigned BaseOpcode, unsigned Dim);
+getImageDimIntrinsicByBaseOpcode(MIMGBaseOpcode BaseOpcode, unsigned Dim);
 
 } // end AMDGPU namespace
 } // End llvm namespace

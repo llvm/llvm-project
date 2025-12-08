@@ -6850,8 +6850,10 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   }
 
   const bool IsAtomicPacked16Bit =
-      (BaseOpcode->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16 ||
-       BaseOpcode->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16);
+      (BaseOpcode->BaseOpcode ==
+           AMDGPU::MIMGBaseOpcode::IMAGE_ATOMIC_PK_ADD_F16 ||
+       BaseOpcode->BaseOpcode ==
+           AMDGPU::MIMGBaseOpcode::IMAGE_ATOMIC_PK_ADD_BF16);
 
   // Check for 16 bit addresses and pack if true.
   LLT GradTy =
@@ -7476,10 +7478,11 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
   const bool UseNSA =
       IsGFX12Plus || (ST.hasNSAEncoding() && NumVAddrs <= ST.getNSAMaxSize());
 
-  const unsigned BaseOpcodes[2][2] = {
-      {AMDGPU::IMAGE_BVH_INTERSECT_RAY, AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16},
-      {AMDGPU::IMAGE_BVH64_INTERSECT_RAY,
-       AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16}};
+  const AMDGPU::MIMGBaseOpcode BaseOpcodes[2][2] = {
+      {AMDGPU::MIMGBaseOpcode::IMAGE_BVH_INTERSECT_RAY,
+       AMDGPU::MIMGBaseOpcode::IMAGE_BVH_INTERSECT_RAY_a16},
+      {AMDGPU::MIMGBaseOpcode::IMAGE_BVH64_INTERSECT_RAY,
+       AMDGPU::MIMGBaseOpcode::IMAGE_BVH64_INTERSECT_RAY_a16}};
   int Opcode;
   if (UseNSA) {
     Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
@@ -7622,8 +7625,8 @@ bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
   const unsigned NumVDataDwords = 10;
   const unsigned NumVAddrDwords = IsBVH8 ? 11 : 12;
   int Opcode = AMDGPU::getMIMGOpcode(
-      IsBVH8 ? AMDGPU::IMAGE_BVH8_INTERSECT_RAY
-             : AMDGPU::IMAGE_BVH_DUAL_INTERSECT_RAY,
+      IsBVH8 ? AMDGPU::MIMGBaseOpcode::IMAGE_BVH8_INTERSECT_RAY
+             : AMDGPU::MIMGBaseOpcode::IMAGE_BVH_DUAL_INTERSECT_RAY,
       AMDGPU::MIMGEncGfx12, NumVDataDwords, NumVAddrDwords);
   assert(Opcode != -1);
 
