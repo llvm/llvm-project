@@ -1753,7 +1753,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Enc, ~0u);
       Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, ~0u);
 
-      if (Enc != 0xffff) {
+      if (Enc != (unsigned)AMDGPU::DepCtr::getDefaultDepCtrEncoding(*ST)) {
         Modified |= updateOperandIfDifferent(II, AMDGPU::OpName::simm16, Enc);
         Modified |= promoteSoftWaitCnt(&II);
       } else {
@@ -1912,7 +1912,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     // If that new encoded Depctr immediate would actually still wait
     // for anything, update the instruction's operand. Otherwise it can
     // just be deleted.
-    if (Enc != 0xffff) {
+    if (Enc != (unsigned)AMDGPU::DepCtr::getDefaultDepCtrEncoding(*ST)) {
       Modified |= updateOperandIfDifferent(*WaitcntDepctrInstr,
                                            AMDGPU::OpName::simm16, Enc);
       LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
