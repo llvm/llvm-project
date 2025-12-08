@@ -221,7 +221,7 @@ public:
               ///< significant bit is 1.
     NonZero,  ///< Convert in-memory bools to i1 by checking if any bit is set
               ///< to 1.
-    NonStrictDefault = Truncate
+    NonStrictDefault = NonZero
   };
 
   /// The code model to use (-mcmodel).

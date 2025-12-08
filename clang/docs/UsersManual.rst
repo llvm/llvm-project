@@ -2335,15 +2335,21 @@ are listed below.
 
     Disable optimizations based on the assumption that all ``bool`` values,
     which are typically represented as 8-bit integers in memory, only ever
-    contain bit patterns 0 or 1. When ``=truncate`` is specified, a ``bool`` is
-    true if its least significant bit is set, and false otherwise. When
+    contain bit patterns 0 or 1. When ``=truncate`` is specified, a ``bool``
+    is true if its least significant bit is set, and false otherwise. When
     ``=nonzero`` is specified, a ``bool`` is true when any bit is set, and
-    false otherwise. The default is ``=truncate``, but this could change in
-    future releases.
+    false otherwise. The default is ``=nonzero``.
 
-    ``-fno-strict-bool`` does not permit Clang to store a value other than 0 or
-    1 in a ``bool``: it is a safety net against programmer mistakes, such as
-    ``memcpy``ing invalid data over a ``bool``.
+    ``-fno-strict-bool`` does not permit developers to store a value other
+    than 0 or 1 in a ``bool``: it is a safety net against mistakes, such as
+    ``memcpy``ing invalid data over a ``bool``. Using invalid ``bool`` bit
+    patterns is still undefined behavior, even as this option limits the
+    negative consequences. In particular, enabling the UBSan
+    ``-fsanitize=bool`` check will continue to trap for invalid ``bool``
+    values when ``-fno-strict-bool`` is also specified, and program parts
+    that were compiled without ``-fno-strict-bool`` (or by different
+    compilers that have no equivalent option) will continue to behave
+    erratically.
 
 .. option:: -fstrict-vtable-pointers
 

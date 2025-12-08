@@ -2040,12 +2040,12 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(LValue lvalue,
                           lvalue.getTBAAInfo(), lvalue.isNontemporal());
 }
 
-// XXX: safety first! This method SHOULD NOT be extended to support additional
-// types, like BitInt types, without an opt-in bool controlled by a
-// CodeGenOptions setting (like -fstrict-bool) and a new UBSan check (like
-// SanitizerKind::Bool) as breaking that assumption would lead to memory
-// corruption. See link for examples of how having a bool that has a value
-// different from 0 or 1 in memory can lead to memory corruption.
+// This method SHOULD NOT be extended to support additional types, like BitInt
+// types, without an opt-in bool controlled by a CodeGenOptions setting (like
+// -fstrict-bool) and a new UBSan check (like SanitizerKind::Bool) as breaking
+// that assumption would lead to memory corruption. See link for examples of how
+// having a bool that has a value different from 0 or 1 in memory can lead to
+// memory corruption.
 // https://discourse.llvm.org/t/defining-what-happens-when-a-bool-isn-t-0-or-1/86778
 static bool getRangeForType(CodeGenFunction &CGF, QualType Ty, llvm::APInt &Min,
                             llvm::APInt &End, bool StrictEnums, bool StrictBool,
@@ -2069,11 +2069,12 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty, llvm::APInt &Min,
 
 llvm::MDNode *CodeGenFunction::getRangeForLoadFromType(QualType Ty) {
   llvm::APInt Min, End;
-  bool IsStrictBool = CGM.getCodeGenOpts().getLoadBoolFromMem() ==
-                      CodeGenOptions::BoolFromMem::Strict;
-  if (!getRangeForType(*this, Ty, Min, End, CGM.getCodeGenOpts().StrictEnums,
-                       IsStrictBool,
-                       Ty->hasBooleanRepresentation() && !Ty->isVectorType()))
+  bool IsBool = Ty->hasBooleanRepresentation() && !Ty->isVectorType();
+  bool StrictBoolEnabled = CGM.getCodeGenOpts().getLoadBoolFromMem() ==
+                           CodeGenOptions::BoolFromMem::Strict;
+  if (!getRangeForType(*this, Ty, Min, End,
+                       /*StrictEnums=*/CGM.getCodeGenOpts().StrictEnums,
+                       /*StrictBool=*/StrictBoolEnabled, /*IsBool=*/IsBool))
     return nullptr;
 
   llvm::MDBuilder MDHelper(getLLVMContext());
