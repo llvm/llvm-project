@@ -465,6 +465,10 @@ Improvements to Clang's diagnostics
   Objective-C method and block declarations when calling format functions. It is part
   of the format-nonliteral diagnostic (#GH60718)
 
+- Fixed a crash when enabling ``-fdiagnostics-format=sarif`` and the output 
+  carries messages like 'In file included from ...' or 'In module ...'.
+  Now the include/import locations are written into `sarif.run.result.relatedLocations`.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
