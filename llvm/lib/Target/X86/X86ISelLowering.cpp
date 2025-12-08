@@ -49872,6 +49872,41 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue V = combineMulToPMULDQ(N, DL, DAG, Subtarget))
     return V;
+  // ==============================================================
+  // Optimize VPMULLQ on slow targets
+  // ==============================================================
+  if (VT.getScalarType() == MVT::i64 && Subtarget.hasSlowPMULLQ()) {
+    SDValue Op0 = N->getOperand(0);
+    SDValue Op1 = N->getOperand(1);
+
+    KnownBits Known0 = DAG.computeKnownBits(Op0);
+    KnownBits Known1 = DAG.computeKnownBits(Op1);
+    unsigned Count0 = Known0.countMinLeadingZeros();
+    unsigned Count1 = Known1.countMinLeadingZeros();
+
+    // Optimization 1: Use VPMULUDQ (32-bit multiply).
+    // If the upper 32 bits are zero, we can use the standard PMULUDQ
+    // instruction. This is generally the fastest option and widely supported.
+    if (Count0 >= 32 && Count1 >= 32) {
+      return DAG.getNode(X86ISD::PMULUDQ, DL, VT, Op0, Op1);
+    }
+
+    // Optimization 2: Use VPMADD52L (52-bit multiply-add).
+    // On targets with slow VPMULLQ (e.g., Ice Lake), VPMADD52L is significantly
+    // faster (lower latency/better throughput).
+    // VPMADD52L performs (A * B) + C. We can use it for pure multiplication if
+    // the operands fit within 52 bits (top 12 bits are zero) by setting the
+    // accumulator (C) to zero.
+    if (Subtarget.hasAVX512() && Subtarget.hasIFMA()) {
+      if (Count0 >= 12 && Count1 >= 12) {
+        SDValue Zero = getZeroVector(VT.getSimpleVT(), Subtarget, DAG, DL);
+        return DAG.getNode(X86ISD::VPMADD52L, DL, VT, Op0, Op1, Zero);
+      }
+    }
+
+    // Fallback: If no optimization applies, LLVM will proceed to select
+    // the standard VPMULLQ instruction.
+  }
 
   if (DCI.isBeforeLegalize() && VT.isVector())
     return reduceVMULWidth(N, DL, DAG, Subtarget);
