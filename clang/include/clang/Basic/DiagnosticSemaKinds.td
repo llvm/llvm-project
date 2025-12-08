@@ -6287,6 +6287,10 @@ def err_definition_of_explicitly_defaulted_member : Error<
 def err_redefinition_extern_inline : Error<
   "redefinition of a 'extern inline' function %0 is not supported in "
   "%select{C99 mode|C++}1">;
+def err_empty_abi_tag : Error<
+  "ABI tag cannot be empty">;
+def err_invalid_char_in_abi_tag : Error<
+  "character '%0' is not allowed %select{at the start of an ABI tag|in ABI tags}1">;
 def warn_attr_abi_tag_namespace : Warning<
   "'abi_tag' attribute on %select{non-inline|anonymous}0 namespace ignored">,
   InGroup<IgnoredAttributes>;
