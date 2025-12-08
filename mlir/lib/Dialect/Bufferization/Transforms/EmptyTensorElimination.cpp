@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
+#include "mlir/Transforms/RegionUtils.h"
 
 namespace mlir {
 namespace bufferization {
@@ -105,8 +106,13 @@ Value mlir::bufferization::buildSubsetExtraction(RewriterBase &rewriter,
   // this replacement.
   Operation *insertionPoint =
       findValidInsertionPoint(emptyTensorOp, user, neededValues);
-  if (!insertionPoint)
-    return {};
+  if (!insertionPoint) {
+    // If no already suitable insertion point was found, attempt to move all
+    // needed values before the user.
+    if (failed(moveValueDefinitions(rewriter, neededValues, user)))
+      return {};
+    insertionPoint = user;
+  }
 
   rewriter.setInsertionPoint(insertionPoint);
   Value replacement =
