@@ -948,11 +948,10 @@ static void handleNonConstMemberCall(const CallExpr *Expr,
                                      RecordStorageLocation *RecordLoc,
                                      const MatchFinder::MatchResult &Result,
                                      LatticeTransferState &State) {
-  if (RecordLoc == nullptr)
-    return;
-  State.Lattice.clearConstMethodReturnValues(*RecordLoc);
-  State.Lattice.clearConstMethodReturnStorageLocations(*RecordLoc);
-
+  if (RecordLoc) {
+    State.Lattice.clearConstMethodReturnValues(*RecordLoc);
+    State.Lattice.clearConstMethodReturnStorageLocations(*RecordLoc);
+  }
   if (isStatusOrType(Expr->getType()))
     transferStatusOrReturningCall(Expr, State);
 }
