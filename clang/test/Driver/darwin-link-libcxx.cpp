@@ -1,5 +1,8 @@
 // UNSUPPORTED: system-windows
 
+// TODO: Make this test portable across platforms
+// REQUIRES: system-darwin
+
 // Tests to check that we link against the toolchain-provided libc++ built library when it is provided.
 // This is required to prefer the toolchain's libc++ over the system's libc++, which matches the behavior
 // we have for header search paths.
