@@ -700,45 +700,45 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8x
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
-        // CHECK-SAME: globalSize [0]
-        globalSize [0]
-        // CHECK-SAME: globalStride [1]
-        globalStride [1]
-        // CHECK-SAME: sharedSize [0] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
-        sharedSize [0] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+        // CHECK-SAME: globalSize [64, 64]
+        globalSize [64, 64]
+        // CHECK-SAME: globalStride [64, 1]
+        globalStride [64, 1]
+        // CHECK-SAME: sharedSize [64, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+        sharedSize [64, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
-        // CHECK-SAME: globalSize [0]
-        globalSize [0]
-        // CHECK-SAME: globalStride [1]
-        globalStride [1]
-        // CHECK-SAME: sharedSize [0]
-        sharedSize [0]
+        // CHECK-SAME: globalSize [64, 64]
+        globalSize [64, 64]
+        // CHECK-SAME: globalStride [64, 1]
+        globalStride [64, 1]
+        // CHECK-SAME: sharedSize [64, 64]
+        sharedSize [64, 64]
         // CHECK-SAME: padShared(%[[IDX]] every %[[IDX]])
         padShared(%idx every %idx)
         : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
-        // CHECK-SAME: globalSize [0]
-        globalSize [0]
-        // CHECK-SAME: globalStride [1]
-        globalStride [1]
-        // CHECK-SAME: sharedSize [0]
-        sharedSize [0]
+        // CHECK-SAME: globalSize [64, 64]
+        globalSize [64, 64]
+        // CHECK-SAME: globalStride [64, 1]
+        globalStride [64, 1]
+        // CHECK-SAME: sharedSize [64, 64]
+        sharedSize [64, 64]
         // CHECK-SAME: atomicBarrier(%[[BARRIER]][%[[IDX]]] : memref<8xi32, #gpu.address_space<workgroup>>)
         atomicBarrier(%barrier[%idx] : memref<8xi32, #gpu.address_space<workgroup>>)
         : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
-        // CHECK-SAME: globalSize [0]
-        globalSize [0]
-        // CHECK-SAME: globalStride [1]
-        globalStride [1]
-        // CHECK-SAME: sharedSize [0]
-        sharedSize [0]
+        // CHECK-SAME: globalSize [64, 64]
+        globalSize [64, 64]
+        // CHECK-SAME: globalStride [64, 1]
+        globalStride [64, 1]
+        // CHECK-SAME: sharedSize [64, 64]
+        sharedSize [64, 64]
         // CHECK-SAME: iterate %[[IDX]], %[[IDX]], %[[IDX]]
         iterate %idx, %idx, %idx
         : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor

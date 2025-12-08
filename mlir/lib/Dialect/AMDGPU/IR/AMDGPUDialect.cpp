@@ -692,15 +692,14 @@ LogicalResult TransposeLoadOp::verify() {
   };
 
   auto validNumElems = kValidLoadSizeMap.find(elementTypeSize);
-  if (validNumElems == kValidLoadSizeMap.end()) {
+  if (validNumElems == kValidLoadSizeMap.end())
     return emitOpError("Unsupported element type size for transpose load: ")
            << elementTypeSize << " bits";
-  }
-  if (numElements != validNumElems->second) {
+
+  if (numElements != validNumElems->second)
     return emitOpError(
                "Transferring type size mismatch: expected num of elements: ")
            << validNumElems->second;
-  }
 
   return success();
 }
@@ -710,16 +709,24 @@ LogicalResult TransposeLoadOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult MakeDmaBaseOp::verify() {
-  MemRefType ldsType = cast<MemRefType>(getLds().getType());
-  MemRefType globalType = cast<MemRefType>(getGlobal().getType());
-  if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace())) {
+
+  auto ldsType = cast<MemRefType>(getLds().getType());
+  auto globalType = cast<MemRefType>(getGlobal().getType());
+  if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace()))
     return emitOpError(
         "lds memref must have workgroup address space attribute.");
-  }
-  if (!hasGlobalMemorySpace(globalType.getMemorySpace())) {
+  if (!hasGlobalMemorySpace(globalType.getMemorySpace()))
     return emitOpError(
         "global memref must have global address space attribute.");
-  }
+
+  Type elementType = ldsType.getElementType();
+  unsigned width = elementType.getIntOrFloatBitWidth();
+
+  if (!llvm::is_contained<unsigned>({8, 16, 32, 64}, width))
+    return emitOpError(
+               "element type must be 1, 2, 4, or 8 bytes long but type was ")
+           << width << " bits long.";
+
   return success();
 }
 
@@ -730,35 +737,73 @@ LogicalResult MakeDmaBaseOp::verify() {
 LogicalResult MakeDmaDescriptorOp::verify() {
   ArrayRef<int64_t> globalStaticStrides = getGlobalStaticStrides();
 
-  if (globalStaticStrides.empty()) {
+  if (globalStaticStrides.empty())
     return emitOpError("strides must not be empty.");
-  }
-  if (globalStaticStrides.back() != 1) {
+  if (globalStaticStrides.back() != 1)
     return emitOpError("strides for the innermost dimension must be 1.");
-  }
 
   ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
   size_t rank = globalStaticSizes.size();
-  if (rank != globalStaticStrides.size()) {
+  if (rank > 5)
+    return emitOpError("tensor and tile must be at most of rank 5.");
+  if (rank != globalStaticStrides.size())
     return emitOpError("strides and sizes must have same rank.");
-  }
 
   ArrayRef<int64_t> sharedStaticSizes = getSharedStaticSizes();
-  if (rank != sharedStaticSizes.size()) {
+  if (rank != sharedStaticSizes.size())
     return emitOpError("tensor must have same rank as tile.");
-  }
+
+  unsigned elementTypeWidth = getElementTypeWidth();
+  if (!llvm::is_contained<unsigned>({8, 16, 32, 64}, elementTypeWidth))
+    return emitOpError(
+               "element type width must be 1, 2, 4 or 8 bytes, but was ")
+           << elementTypeWidth << " bits long";
 
   if (Value atomicBarrierAddress = getAtomicBarrierAddress()) {
-    MemRefType atomicBarrierAddressType =
+    auto atomicBarrierAddressType =
         cast<MemRefType>(atomicBarrierAddress.getType());
     bool barrierInLDS =
         hasWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
-    if (!barrierInLDS) {
+    if (!barrierInLDS)
       return emitOpError("atomic barrier address must be in LDS.");
-    }
   }
 
   return success();
+}
+
+OpFoldResult MakeDmaDescriptorOp::fold(FoldAdaptor adaptor) {
+  SmallVector<OpFoldResult> mixedGlobalSizes(getMixedGlobalSizes());
+  SmallVector<OpFoldResult> mixedGlobalStrides(getMixedGlobalStrides());
+  SmallVector<OpFoldResult> mixedSharedSizes(getMixedSharedSizes());
+
+  if (failed(foldDynamicIndexList(mixedGlobalSizes, /*onlyNonNegative=*/true,
+                                  /*onlyNonZero=*/true)) &&
+      failed(foldDynamicIndexList(mixedGlobalStrides, /*onlyNonNegative=*/true,
+                                  /*onlyNonZero=*/true)) &&
+      failed(foldDynamicIndexList(mixedSharedSizes, /*onlyNonNegative=*/true,
+                                  /*onlyNonZero=*/true)))
+    return nullptr;
+
+  SmallVector<Value> dynamicGlobalSizes, dynamicGlobalStrides,
+      dynamicSharedSizes;
+  SmallVector<int64_t> staticGlobalSizes, staticGlobalStrides,
+      staticSharedSizes;
+
+  dispatchIndexOpFoldResults(mixedGlobalSizes, dynamicGlobalSizes,
+                             staticGlobalSizes);
+  setGlobalStaticSizes(staticGlobalSizes);
+  getGlobalDynamicSizesMutable().assign(dynamicGlobalSizes);
+
+  dispatchIndexOpFoldResults(mixedGlobalStrides, dynamicGlobalStrides,
+                             staticGlobalStrides);
+  setGlobalStaticStrides(staticGlobalStrides);
+  getGlobalDynamicStridesMutable().assign(dynamicGlobalStrides);
+
+  dispatchIndexOpFoldResults(mixedSharedSizes, dynamicSharedSizes,
+                             staticSharedSizes);
+  setSharedStaticSizes(staticSharedSizes);
+  getSharedDynamicSizesMutable().assign(dynamicSharedSizes);
+  return getResult();
 }
 
 //===----------------------------------------------------------------------===//
