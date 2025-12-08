@@ -63,6 +63,11 @@ static cl::opt<bool>
                             cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
+    PrintFunctionGuids("memprof-print-function-guids",
+                       cl::desc("Print function GUIDs computed for matching"),
+                       cl::Hidden, cl::init(false));
+
+static cl::opt<bool>
     SalvageStaleProfile("memprof-salvage-stale-profile",
                         cl::desc("Salvage stale MemProf profile"),
                         cl::init(false), cl::Hidden);
@@ -577,6 +582,9 @@ static void readMemprof(Module &M, Function &F,
   // linkage function.
   auto FuncName = F.getName();
   auto FuncGUID = Function::getGUIDAssumingExternalLinkage(FuncName);
+  if (PrintFunctionGuids)
+    errs() << "MemProf: Function GUID " << FuncGUID << " is " << FuncName
+           << "\n";
   std::optional<memprof::MemProfRecord> MemProfRec;
   auto Err = MemProfReader->getMemProfRecord(FuncGUID).moveInto(MemProfRec);
   if (Err) {
