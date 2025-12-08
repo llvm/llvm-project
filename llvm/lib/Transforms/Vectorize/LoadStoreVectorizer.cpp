@@ -351,8 +351,10 @@ private:
   /// in the chain is the leader, and an instr touches distance 0 from itself.
   std::vector<Chain> gatherChains(ArrayRef<Instruction *> Instrs);
 
-  /// Is a load/store with this alignment allowed by TTI and at least as fast
-  /// as an unvectorized load/store.
+  /// Checks if a potential vector load/store with a given alignment is allowed
+  /// and fast. Aligned accesses are always allowed and fast, while misaligned
+  /// accesses depend on TTI checks to determine whether they can and should be
+  /// vectorized or kept as element-wise accesses.
   bool accessIsAllowedAndFast(unsigned SizeBytes, unsigned AS, Align Alignment,
                               unsigned VecElemBits) const;
 
@@ -1909,7 +1911,7 @@ bool Vectorizer::accessIsAllowedAndFast(unsigned SizeBytes, unsigned AS,
   if (Alignment.value() % SizeBytes == 0)
     return true;
 
-  // Element-wise access *might* be faster than misaligned vector accesses.
+  // Ask TTI whether misaligned accesses are faster as vector or element-wise.
   unsigned VectorizedSpeed = 0;
   bool AllowsMisaligned = TTI.allowsMisalignedMemoryAccesses(
       F.getContext(), SizeBytes * 8, AS, Alignment, &VectorizedSpeed);
