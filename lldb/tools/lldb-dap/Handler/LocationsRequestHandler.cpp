@@ -46,34 +46,29 @@ LocationsRequestHandler::Run(const protocol::LocationsArguments &args) const {
       return llvm::make_error<DAPError>(
           "Failed to resolve line entry for location");
 
-    const std::optional<protocol::Source> source =
+    std::optional<protocol::Source> source =
         CreateSource(line_entry.GetFileSpec());
     if (!source)
       return llvm::make_error<DAPError>(
           "Failed to resolve file path for location");
 
     response.source = std::move(*source);
-    if (int line = line_entry.GetLine())
-      response.line = line;
-    if (int column = line_entry.GetColumn())
-      response.column = column;
+    response.line = line_entry.GetLine();
+    response.column = line_entry.GetColumn();
   } else {
     // Get the declaration location
     lldb::SBDeclaration decl = variable.GetDeclaration();
     if (!decl.IsValid())
       return llvm::make_error<DAPError>("No declaration location available");
 
-    const std::optional<protocol::Source> source =
-        CreateSource(decl.GetFileSpec());
+    std::optional<protocol::Source> source = CreateSource(decl.GetFileSpec());
     if (!source)
       return llvm::make_error<DAPError>(
           "Failed to resolve file path for location");
 
     response.source = std::move(*source);
-    if (int line = decl.GetLine())
-      response.line = line;
-    if (int column = decl.GetColumn())
-      response.column = column;
+    response.line = decl.GetLine();
+    response.column = decl.GetColumn();
   }
 
   return response;
