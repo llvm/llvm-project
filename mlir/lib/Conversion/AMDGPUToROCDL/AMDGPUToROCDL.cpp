@@ -2728,8 +2728,7 @@ struct AMDGPUTensorLoadStoreOpLowering
     int32_t cachePolicy = cacheScope | temporalHint << 2 | nonVolatile << 5;
 
     if (op.getDesc().getType().getSize() == 2) {
-      rewriter.replaceOpWithNewOp<TargetD2Op>(op, desc[0], desc[1],
-                                              cachePolicy,
+      rewriter.replaceOpWithNewOp<TargetD2Op>(op, desc[0], desc[1], cachePolicy,
                                               /*alias_scopes=*/nullptr,
                                               /*noalias_scopes=*/nullptr,
                                               /*tbaa=*/nullptr);
