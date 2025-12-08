@@ -36,7 +36,7 @@ enum CompactBranchPolicy {
   CB_Never,   ///< The policy 'never' may in some circumstances or for some
               ///< ISAs not be absolutely adhered to.
   CB_Optimal, ///< Optimal is the default and will produce compact branches
-              ///< when delay slots cannot be filled.
+              ///< when appropriate.
   CB_Always   ///< 'always' may in some circumstances may not be
               ///< absolutely adhered to, there may not be a corresponding
               ///< compact form of a branch.
