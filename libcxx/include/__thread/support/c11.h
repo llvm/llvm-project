@@ -77,6 +77,11 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_mutex_destroy(__libcpp_mutex_t* __m) {
 }
 
 //
+// Shared mutex (C11 doesn't provide one)
+//
+#define _LIBCPP_HAS_NATIVE_RW_MUTEX 0
+
+//
 // Condition Variable
 //
 typedef cnd_t __libcpp_condvar_t;

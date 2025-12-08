@@ -106,6 +106,40 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_mute
 inline _LIBCPP_HIDE_FROM_ABI int __libcpp_mutex_destroy(__libcpp_mutex_t* __m) { return pthread_mutex_destroy(__m); }
 
 //
+// Shared mutex
+//
+#define _LIBCPP_HAS_NATIVE_RW_MUTEX 1
+using __libcpp_rw_mutex_t = pthread_rwlock_t;
+#define _LIBCPP_RW_MUTEX_INITIALIZER PTHREAD_RWLOCK_INITIALIZER
+
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_rw_mutex_lock(__libcpp_rw_mutex_t* __m) {
+  return pthread_rwlock_wrlock(__m);
+}
+
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
+__libcpp_rw_mutex_lock_shared(__libcpp_rw_mutex_t* __m) {
+  return pthread_rwlock_rdlock(__m);
+}
+
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS bool
+__libcpp_rw_mutex_trylock(__libcpp_rw_mutex_t* __m) {
+  return pthread_rwlock_trywrlock(__m) == 0;
+}
+
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS bool
+__libcpp_rw_mutex_trylock_shared(__libcpp_rw_mutex_t* __m) {
+  return pthread_rwlock_tryrdlock(__m) == 0;
+}
+
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_rw_mutex_unlock(__libcpp_rw_mutex_t* __m) {
+  return pthread_rwlock_unlock(__m);
+}
+
+inline _LIBCPP_HIDE_FROM_ABI int __libcpp_rw_mutex_destroy(__libcpp_rw_mutex_t* __m) {
+  return pthread_rwlock_destroy(__m);
+}
+
+//
 // Condition Variable
 //
 typedef pthread_cond_t __libcpp_condvar_t;
