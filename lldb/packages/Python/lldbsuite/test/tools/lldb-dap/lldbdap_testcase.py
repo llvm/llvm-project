@@ -376,8 +376,6 @@ class DAPTestCaseBase(TestBase):
 
     def set_local(self, name, value, id=None):
         """Set a top level local variable only."""
-    def set_local(self, name, value, id=None):
-        """Set a top level local variable only."""
         # Get the locals scope reference dynamically
         locals_ref = self.get_locals_scope_reference()
         if locals_ref is None:
