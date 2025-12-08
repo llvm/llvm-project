@@ -424,7 +424,7 @@ func.func @simple(i64, i1) -> i64 {
 **Context:** The "block argument" representation eliminates a number of special
 cases from the IR compared to traditional "PHI nodes are operations" SSA IRs
 (like LLVM). For example, the
-[parallel copy semantics](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.524.5461&rep=rep1&type=pdf)
+[parallel copy semantics](https://ieeexplore.ieee.org/document/4907656)
 of SSA is immediately apparent, and function arguments are no longer a special
 case: they become arguments to the entry block
 [[more rationale](Rationale/Rationale.md/#block-arguments-vs-phi-nodes)]. Blocks
