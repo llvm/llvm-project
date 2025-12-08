@@ -93,13 +93,13 @@ void UseInitStatementCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 IgnoreConditionVariableStatements);
 }
 
-static Matcher<Stmt> callByRef(Matcher<Decl> VarOrBindingNodeMatcher) {
-  const auto argMatcher = declRefExpr(to(VarOrBindingNodeMatcher));
-  const auto paramMatcher = parmVarDecl(hasType(referenceType()));
+static Matcher<Stmt> callByRef(const Matcher<Decl> &VarOrBindingNodeMatcher) {
+  const auto ArgMatcher = declRefExpr(to(VarOrBindingNodeMatcher));
+  const auto ParamMatcher = parmVarDecl(hasType(referenceType()));
 
   return anyOf(
-      callExpr(forEachArgumentWithParam(argMatcher, paramMatcher)),
-      cxxConstructExpr(forEachArgumentWithParam(argMatcher, paramMatcher)));
+      callExpr(forEachArgumentWithParam(ArgMatcher, ParamMatcher)),
+      cxxConstructExpr(forEachArgumentWithParam(ArgMatcher, ParamMatcher)));
 }
 
 static Matcher<VarDecl> hasInitializerWithLifetimeExtension() {
@@ -149,10 +149,10 @@ static Matcher<Stmt> hasConflictMatcher() {
                            .bind("conflict"));
 }
 
-static Matcher<Stmt> compoundStmtMatcher(Matcher<Stmt> StmtMatcher,
-                                         StringRef StmtName,
-                                         Matcher<Stmt> PrevStmtMatcher,
-                                         Matcher<Stmt> RefToBoundMatcher) {
+static Matcher<Stmt>
+compoundStmtMatcher(const Matcher<Stmt> &StmtMatcher, StringRef StmtName,
+                    const Matcher<Stmt> &PrevStmtMatcher,
+                    const Matcher<Stmt> &RefToBoundMatcher) {
   const auto NoOtherVarRefs =
       unless(has(stmt(unless(equalsBoundNode(StmtName.str())),
                       hasDescendant(RefToBoundMatcher))));
@@ -169,9 +169,9 @@ static Matcher<Stmt> compoundStmtMatcher(Matcher<Stmt> StmtMatcher,
 //                            declRefExpr(to(varDecl(equalsBoundNode("singleVar")))))
 template <typename IfOrSwitchStmt>
 static Matcher<Stmt> compoundStmtMatcher(
-    VariadicDynCastAllOfMatcher<Stmt, IfOrSwitchStmt> StmtMatcher,
-    StringRef StmtName, Matcher<Stmt> PrevStmtMatcher,
-    Matcher<Stmt> RefToBoundMatcher) {
+    const VariadicDynCastAllOfMatcher<Stmt, IfOrSwitchStmt> &StmtMatcher,
+    StringRef StmtName, const Matcher<Stmt> &PrevStmtMatcher,
+    const Matcher<Stmt> &RefToBoundMatcher) {
   const auto StmtWithCondition =
       StmtMatcher(unless(hasInitStatement(anything())),
                   unless(hasStealingMatcher()),
@@ -185,7 +185,7 @@ static Matcher<Stmt> compoundStmtMatcher(
 }
 
 template <bool IsDecomposition = false>
-static auto forBuiltinTypes(Matcher<ReferenceType> ConditionForReference)
+static auto forBuiltinTypes(const Matcher<ReferenceType> &ConditionForReference)
     -> std::conditional_t<IsDecomposition, Matcher<DecompositionDecl>,
                           Matcher<Stmt>> {
   const auto AllowedTypeMatcher = qualType(unless(
