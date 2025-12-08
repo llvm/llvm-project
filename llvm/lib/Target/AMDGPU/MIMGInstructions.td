@@ -57,6 +57,7 @@ class MIMGBaseOpcode : PredicateControl {
 
 def MIMGBaseOpcode : GenericEnumClass {
   let FilterClass = "MIMGBaseOpcode";
+  let Size = 8;
 }
 
 def MIMGBaseOpcodesTable : GenericTable {
