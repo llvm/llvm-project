@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple armv7-apple-darwin -O1 -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,CHECK-STRICT
 // RUN: %clang_cc1 -triple armv7-apple-darwin -O1 -load-bool-from-mem=strict -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,CHECK-STRICT
-// RUN: %clang_cc1 -triple armv7-apple-darwin -O1 -load-bool-from-mem=nonstrict -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,CHECK-TRUNCATE
+// RUN: %clang_cc1 -triple armv7-apple-darwin -O1 -load-bool-from-mem=nonstrict -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,CHECK-NONZERO
 // RUN: %clang_cc1 -triple armv7-apple-darwin -O1 -load-bool-from-mem=truncate -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,CHECK-TRUNCATE
 // RUN: %clang_cc1 -triple armv7-apple-darwin -O1 -load-bool-from-mem=nonzero -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,CHECK-NONZERO
 // RUN: %clang_cc1 -triple armv7-apple-darwin -O1 -fsanitize=bool -load-bool-from-mem=strict -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,CHECK-UBSAN-STRICT

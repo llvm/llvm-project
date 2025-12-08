@@ -12,11 +12,17 @@
 // RUN: %clang -### -mkernel -fstrict-bool %s 2>&1 | FileCheck %s --check-prefix=CHECK-STRICT
 // RUN: %clang -### -fstrict-bool -mkernel %s 2>&1 | FileCheck %s --check-prefix=CHECK-STRICT
 
-// RUN: not %clang -### -fno-strict-bool=ow-ouch %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID
+// RUN: not %clang -### -fno-strict-bool= %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-FNO
+// RUN: not %clang -### -fno-strict-bool=ow-ouch %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-FNO
+// RUN: not %clang -### -fstrict-bool= %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID
+// RUN: not %clang -### -fstrict-bool=ow-ouch %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID
+// RUN: not %clang -### -fstrict-bool=truncate %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID
+// RUN: not %clang -### -fstrict-bool=nonzero %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID
 
 // CHECK-NONE-NOT: -load-bool-from-mem
 // CHECK-STRICT: -load-bool-from-mem=strict
 // CHECK-NONSTRICT: -load-bool-from-mem=nonstrict
 // CHECK-TRUNCATE: -load-bool-from-mem=truncate
 // CHECK-NONZERO: -load-bool-from-mem=nonzero
-// CHECK-INVALID: invalid value 'ow-ouch' in '-fno-strict-bool=ow-ouch'
+// CHECK-INVALID: unknown argument{{:?}} '-fstrict-bool={{.*}}'
+// CHECK-INVALID-FNO: invalid value '{{.*}}' in '-f{{(no-)?}}strict-bool={{.*}}'
