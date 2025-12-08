@@ -16,8 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-void AvoidCStyleCastCheck::registerMatchers(
-    ast_matchers::MatchFinder *Finder) {
+void AvoidCStyleCastCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   Finder->addMatcher(
       cStyleCastExpr(
           // Filter out (EnumType)IntegerLiteral construct, which is generated
