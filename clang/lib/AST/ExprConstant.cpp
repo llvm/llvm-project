@@ -19590,7 +19590,7 @@ uint8_t GFNIMultiplicativeInverse(uint8_t Byte) {
   return GFInv[Byte];
 }
 
-uint8_t GFNIAffine(uint8_t XByte, const APInt &AQword, const APSInt Imm,
+uint8_t GFNIAffine(uint8_t XByte, const APInt &AQword, const APSInt &Imm,
                    bool Inverse) {
   unsigned NumBitsInByte = 8;
   // Computing the affine transformation
