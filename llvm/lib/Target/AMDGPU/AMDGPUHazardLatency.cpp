@@ -28,23 +28,21 @@ namespace {
 
 class HazardLatency : public ScheduleDAGMutation {
 private:
-  const GCNSubtarget *ST;
-  const SIRegisterInfo *TRI;
-  const MachineRegisterInfo *MRI;
+  const GCNSubtarget &ST;
+  const SIRegisterInfo &TRI;
+  const MachineRegisterInfo &MRI;
 
 public:
-  HazardLatency(MachineFunction *MF) {
-    ST = &MF->getSubtarget<GCNSubtarget>();
-    TRI = ST->getRegisterInfo();
-    MRI = &MF->getRegInfo();
-  }
+  HazardLatency(MachineFunction *MF)
+      : ST(MF->getSubtarget<GCNSubtarget>()), TRI(*ST.getRegisterInfo()),
+        MRI(MF->getRegInfo()) {}
   void apply(ScheduleDAGInstrs *DAG) override;
 };
 
 void HazardLatency::apply(ScheduleDAGInstrs *DAG) {
   constexpr unsigned MaskLatencyBoost = 3;
 
-  if (!ST->hasVALUMaskWriteHazard() || !ST->isWave64())
+  if (!ST.hasVALUMaskWriteHazard() || !ST.isWave64())
     return;
 
   for (SUnit &SU : DAG->SUnits) {
@@ -63,7 +61,7 @@ void HazardLatency::apply(ScheduleDAGInstrs *DAG) {
       if (!SIInstrInfo::isVALU(*DestMI))
         continue;
       Register Reg = SuccDep.getReg();
-      if (!TRI->isSGPRReg(*MRI, Reg))
+      if (!TRI.isSGPRReg(MRI, Reg))
         continue;
       SuccDep.setLatency(SuccDep.getLatency() * MaskLatencyBoost);
     }
