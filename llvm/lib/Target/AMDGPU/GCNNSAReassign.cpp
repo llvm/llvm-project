@@ -170,9 +170,9 @@ GCNNSAReassignImpl::CheckNSA(const MachineInstr &MI, bool Fast) const {
   if (!Info)
     return NSA_Status::NOT_NSA;
 
-  switch (Info->MIMGEncoding) {
-  case AMDGPU::MIMGEncGfx10NSA:
-  case AMDGPU::MIMGEncGfx11NSA:
+  switch (Info->Encoding) {
+  case AMDGPU::MIMGEncoding::MIMGEncGfx10NSA:
+  case AMDGPU::MIMGEncoding::MIMGEncGfx11NSA:
     break;
   default:
     return NSA_Status::NOT_NSA;

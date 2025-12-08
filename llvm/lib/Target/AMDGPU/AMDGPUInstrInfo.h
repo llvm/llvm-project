@@ -85,7 +85,7 @@ struct ImageDimIntrinsicInfo {
 const ImageDimIntrinsicInfo *getImageDimIntrinsicInfo(unsigned Intr);
 
 const ImageDimIntrinsicInfo *
-getImageDimIntrinsicByBaseOpcode(MIMGBaseOpcode BaseOpcode, unsigned Dim);
+getImageDimIntrinsicByBaseOpcode(MIMGBaseOpcode BaseOpcode, MIMGDim Dim);
 
 } // end AMDGPU namespace
 } // End llvm namespace

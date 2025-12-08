@@ -2196,22 +2196,26 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
 
   int Opcode = -1;
   if (IsGFX12Plus) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode =
+        AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncoding::MIMGEncGfx12,
+                              NumVDataDwords, NumVAddrDwords);
   } else if (IsGFX11Plus) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
-                                   UseNSA ? AMDGPU::MIMGEncGfx11NSA
-                                          : AMDGPU::MIMGEncGfx11Default,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode = AMDGPU::getMIMGOpcode(
+        IntrOpcode,
+        UseNSA ? AMDGPU::MIMGEncoding::MIMGEncGfx11NSA
+               : AMDGPU::MIMGEncoding::MIMGEncGfx11Default,
+        NumVDataDwords, NumVAddrDwords);
   } else if (IsGFX10Plus) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
-                                   UseNSA ? AMDGPU::MIMGEncGfx10NSA
-                                          : AMDGPU::MIMGEncGfx10Default,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode = AMDGPU::getMIMGOpcode(
+        IntrOpcode,
+        UseNSA ? AMDGPU::MIMGEncoding::MIMGEncGfx10NSA
+               : AMDGPU::MIMGEncoding::MIMGEncGfx10Default,
+        NumVDataDwords, NumVAddrDwords);
   } else {
     if (Subtarget->hasGFX90AInsts()) {
-      Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx90a,
-                                     NumVDataDwords, NumVAddrDwords);
+      Opcode =
+          AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncoding::MIMGEncGfx90a,
+                                NumVDataDwords, NumVAddrDwords);
       if (Opcode == -1) {
         LLVM_DEBUG(
             dbgs()
@@ -2221,11 +2225,13 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
     }
     if (Opcode == -1 &&
         STI.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
-      Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx8,
-                                     NumVDataDwords, NumVAddrDwords);
+      Opcode =
+          AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncoding::MIMGEncGfx8,
+                                NumVDataDwords, NumVAddrDwords);
     if (Opcode == -1)
-      Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx6,
-                                     NumVDataDwords, NumVAddrDwords);
+      Opcode =
+          AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncoding::MIMGEncGfx6,
+                                NumVDataDwords, NumVAddrDwords);
   }
   if (Opcode == -1)
     return false;

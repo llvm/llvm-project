@@ -456,7 +456,7 @@ struct MIMGDimInfo {
 };
 
 LLVM_READONLY
-const MIMGDimInfo *getMIMGDimInfo(unsigned DimEnum);
+const MIMGDimInfo *getMIMGDimInfo(MIMGDim DimEnum);
 
 LLVM_READONLY
 const MIMGDimInfo *getMIMGDimInfoByEncoding(uint8_t DimEnc);
@@ -510,7 +510,7 @@ LLVM_READONLY
 const MIMGG16MappingInfo *getMIMGG16MappingInfo(MIMGBaseOpcode G);
 
 LLVM_READONLY
-int getMIMGOpcode(MIMGBaseOpcode BaseOpcode, unsigned MIMGEncoding,
+int getMIMGOpcode(MIMGBaseOpcode BaseOpcode, MIMGEncoding Encoding,
                   unsigned VDataDwords, unsigned VAddrDwords);
 
 LLVM_READONLY
@@ -524,7 +524,7 @@ unsigned getAddrSizeMIMGOp(const MIMGBaseOpcodeInfo *BaseOpcode,
 struct MIMGInfo {
   uint16_t Opcode;
   MIMGBaseOpcode BaseOpcode;
-  uint8_t MIMGEncoding;
+  MIMGEncoding Encoding;
   uint8_t VDataDwords;
   uint8_t VAddrDwords;
   uint8_t VAddrOperands;

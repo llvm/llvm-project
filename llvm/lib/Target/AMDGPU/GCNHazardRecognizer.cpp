@@ -2311,7 +2311,7 @@ int GCNHazardRecognizer::checkNSAtoVMEMHazard(MachineInstr *MI) {
     if (!SIInstrInfo::isMIMG(I))
       return false;
     const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(I.getOpcode());
-    return Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA &&
+    return Info->Encoding == AMDGPU::MIMGEncoding::MIMGEncGfx10NSA &&
            TII->getInstSizeInBytes(I) >= 16;
   };
 
