@@ -863,15 +863,26 @@ static void transferPointerToBoolean(const ImplicitCastExpr *Expr,
           dyn_cast_or_null<BoolValue>(State.Env.getValue(*Expr->getSubExpr())))
     State.Env.setValue(*Expr, *SubExprVal);
 }
-static void handleConstStatusOrAccessorMemberCall(
+
+static void transferStatusOrReturningCall(const CallExpr *Expr,
+                                          LatticeTransferState &State) {
+  RecordStorageLocation *StatusOrLoc =
+      Expr->isPRValue() ? &State.Env.getResultObjectLocation(*Expr)
+                        : State.Env.get<RecordStorageLocation>(*Expr);
+  if (StatusOrLoc != nullptr &&
+      State.Env.getValue(locForOk(locForStatus(*StatusOrLoc))) == nullptr)
+    initializeStatusOr(*StatusOrLoc, State.Env);
+}
+
+static bool doHandleConstStatusOrAccessorMemberCall(
     const CallExpr *Expr, RecordStorageLocation *RecordLoc,
     const MatchFinder::MatchResult &Result, LatticeTransferState &State) {
   assert(isStatusOrType(Expr->getType()));
   if (RecordLoc == nullptr)
-    return;
+    return false;
   const FunctionDecl *DirectCallee = Expr->getDirectCallee();
   if (DirectCallee == nullptr)
-    return;
+    return false;
   StorageLocation &Loc =
       State.Lattice.getOrCreateConstMethodReturnStorageLocation(
           *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
@@ -883,8 +894,15 @@ static void handleConstStatusOrAccessorMemberCall(
   } else {
     State.Env.setStorageLocation(*Expr, Loc);
   }
+  return true;
 }
 
+static void handleConstStatusOrAccessorMemberCall(
+    const CallExpr *Expr, RecordStorageLocation *RecordLoc,
+    const MatchFinder::MatchResult &Result, LatticeTransferState &State) {
+  if (!doHandleConstStatusOrAccessorMemberCall(Expr, RecordLoc, Result, State))
+    transferStatusOrReturningCall(Expr, State);
+}
 static void handleConstStatusOrPointerAccessorMemberCall(
     const CallExpr *Expr, RecordStorageLocation *RecordLoc,
     const MatchFinder::MatchResult &Result, LatticeTransferState &State) {
@@ -924,16 +942,6 @@ static void transferConstStatusOrPointerAccessorMemberOperatorCall(
   auto *RecordLoc = cast_or_null<RecordStorageLocation>(
       State.Env.getStorageLocation(*Expr->getArg(0)));
   handleConstStatusOrPointerAccessorMemberCall(Expr, RecordLoc, Result, State);
-}
-
-static void transferStatusOrReturningCall(const CallExpr *Expr,
-                                          LatticeTransferState &State) {
-  RecordStorageLocation *StatusOrLoc =
-      Expr->isPRValue() ? &State.Env.getResultObjectLocation(*Expr)
-                        : State.Env.get<RecordStorageLocation>(*Expr);
-  if (StatusOrLoc != nullptr &&
-      State.Env.getValue(locForOk(locForStatus(*StatusOrLoc))) == nullptr)
-    initializeStatusOr(*StatusOrLoc, State.Env);
 }
 
 static void handleNonConstMemberCall(const CallExpr *Expr,
