@@ -20,6 +20,9 @@ const char* c_null_str = 0; c_null_str
 "Hello, world"
 // CHECK-NEXT: ({{(const )?}}char[13]) "Hello, world"
 
+printf("Hello World\n");
+// expected-error {{call to undeclared library function 'printf' with type 'int (const char *, ...)' }}
+
 int x = 42; x
 // CHECK-NEXT: (int) 42
 
