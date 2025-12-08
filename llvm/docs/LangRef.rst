@@ -20748,9 +20748,6 @@ The '``llvm.vector.splice.down.*``' intrinsics construct a vector by
 concatenating two vectors together, shifting the elements down by ``imm``, and
 extracting the lower half.
 
-This is equivalent to :ref:`llvm.fshr.* <int_fshr>`, but operating on elements
-instead of bits.
-
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
 fixed-width vectors is still to use a shufflevector, as that may allow for more
@@ -20792,9 +20789,6 @@ Overview:
 The '``llvm.vector.splice.up.*``' intrinsics construct a vector by
 concatenating two vectors together, shifting the elements up by ``imm``, and
 extracting the upper half.
-
-This is equivalent to :ref:`llvm.fshl.* <int_fshl>`, but operating on elements instead
-of bits.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
