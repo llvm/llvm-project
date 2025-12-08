@@ -75,8 +75,9 @@ protected:
 };
 } // anonymous namespace
 
-llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
-    const std::vector<std::string> &CommandLine, StringRef CWD) {
+llvm::Expected<std::string>
+DependencyScanningTool::getDependencyFile(ArrayRef<std::string> CommandLine,
+                                          StringRef CWD) {
   MakeDependencyPrinterConsumer Consumer;
   CallbackActionController Controller(nullptr);
   auto Result =
@@ -218,7 +219,7 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
 
 llvm::Expected<TranslationUnitDeps>
 DependencyScanningTool::getTranslationUnitDependencies(
-    const std::vector<std::string> &CommandLine, StringRef CWD,
+    ArrayRef<std::string> CommandLine, StringRef CWD,
     const llvm::DenseSet<ModuleID> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput,
     std::optional<llvm::MemoryBufferRef> TUBuffer) {
@@ -233,8 +234,8 @@ DependencyScanningTool::getTranslationUnitDependencies(
 
 llvm::Expected<TranslationUnitDeps>
 DependencyScanningTool::getModuleDependencies(
-    StringRef ModuleName, const std::vector<std::string> &CommandLine,
-    StringRef CWD, const llvm::DenseSet<ModuleID> &AlreadySeen,
+    StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
+    const llvm::DenseSet<ModuleID> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput) {
   FullDependencyConsumer Consumer(AlreadySeen);
   auto Controller = createActionController(LookupModuleOutput);
@@ -255,7 +256,7 @@ DependencyScanningTool::getModuleDependencies(
 }
 
 llvm::Error DependencyScanningTool::initializeCompilerInstanceWithContext(
-    StringRef CWD, const std::vector<std::string> &CommandLine) {
+    StringRef CWD, ArrayRef<std::string> CommandLine) {
   return Worker.initializeCompilerInstanceWithContextOrError(CWD, CommandLine);
 }
 

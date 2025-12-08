@@ -39,7 +39,7 @@ DependencyScanningWorker::~DependencyScanningWorker() = default;
 DependencyActionController::~DependencyActionController() = default;
 
 llvm::Error DependencyScanningWorker::computeDependencies(
-    StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
+    StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
     std::optional<llvm::MemoryBufferRef> TUBuffer) {
   // Capture the emitted diagnostics and report them to the client
@@ -72,8 +72,7 @@ static bool forEachDriverJob(
 }
 
 static bool createAndRunToolInvocation(
-    const std::vector<std::string> &CommandLine,
-    DependencyScanningAction &Action,
+    ArrayRef<std::string> CommandLine, DependencyScanningAction &Action,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     std::shared_ptr<clang::PCHContainerOperations> &PCHContainerOps,
     DiagnosticsEngine &Diags) {
@@ -87,7 +86,7 @@ static bool createAndRunToolInvocation(
 }
 
 bool DependencyScanningWorker::scanDependencies(
-    StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
+    StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
     DiagnosticConsumer &DC,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
@@ -154,7 +153,7 @@ bool DependencyScanningWorker::scanDependencies(
 }
 
 bool DependencyScanningWorker::computeDependencies(
-    StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
+    StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
     DiagnosticConsumer &DC, std::optional<llvm::MemoryBufferRef> TUBuffer) {
   if (TUBuffer) {
@@ -162,11 +161,11 @@ bool DependencyScanningWorker::computeDependencies(
         DepFS, CommandLine, WorkingDirectory, *TUBuffer, CAS);
     return scanDependencies(WorkingDirectory, FinalCommandLine, Consumer,
                             Controller, DC, FinalFS);
-  } else {
-    DepFS->setCurrentWorkingDirectory(WorkingDirectory);
-    return scanDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
-                            DC);
   }
+
+  DepFS->setCurrentWorkingDirectory(WorkingDirectory);
+  return scanDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
+                          DC);
 }
 
 void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
@@ -213,7 +212,7 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
 
 llvm::Error
 DependencyScanningWorker::initializeCompilerInstanceWithContextOrError(
-    StringRef CWD, const std::vector<std::string> &CommandLine) {
+    StringRef CWD, ArrayRef<std::string> CommandLine) {
   bool Success = initializeCompilerInstanceWithContext(CWD, CommandLine);
   return CIWithContext->handleReturnStatus(Success);
 }
@@ -234,8 +233,7 @@ DependencyScanningWorker::finalizeCompilerInstanceWithContextOrError() {
 }
 
 bool DependencyScanningWorker::initializeCompilerInstanceWithContext(
-    StringRef CWD, const std::vector<std::string> &CommandLine,
-    DiagnosticConsumer *DC) {
+    StringRef CWD, ArrayRef<std::string> CommandLine, DiagnosticConsumer *DC) {
   CIWithContext =
       std::make_unique<CompilerInstanceWithContext>(*this, CWD, CommandLine);
   return CIWithContext->initialize(DC);
