@@ -34,12 +34,6 @@ static cl::opt<unsigned> MoveAutoInitThreshold(
     "move-auto-init-threshold", cl::Hidden, cl::init(128),
     cl::desc("Maximum instructions to analyze per moved initialization"));
 
-static bool hasAutoInitMetadata(const Instruction &I) {
-  return I.hasMetadata(LLVMContext::MD_annotation) &&
-         any_of(I.getMetadata(LLVMContext::MD_annotation)->operands(),
-                [](const MDOperand &Op) { return Op.equalsStr("auto-init"); });
-}
-
 static std::optional<MemoryLocation> writeToAlloca(const Instruction &I) {
   MemoryLocation ML;
   if (auto *MI = dyn_cast<MemIntrinsic>(&I))
@@ -101,9 +95,7 @@ static BasicBlock *usersDominator(const MemoryLocation &ML, Instruction *I,
   return CurrentDominator;
 }
 
-static bool
-runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA,
-                function_ref<bool(const Instruction &)> ShouldProcess) {
+static bool runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA) {
   BasicBlock &EntryBB = F.getEntryBlock();
   SmallVector<std::pair<Instruction *, BasicBlock *>> JobList;
 
@@ -111,8 +103,6 @@ runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA,
   // Compute movable instructions.
   //
   for (Instruction &I : EntryBB) {
-    if (!ShouldProcess(I))
-      continue;
 
     std::optional<MemoryLocation> ML = writeToAlloca(I);
     if (!ML)
@@ -223,11 +213,7 @@ PreservedAnalyses MoveAutoInitPass::run(Function &F,
 
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  auto ShouldProcess = [](const Instruction &I) -> bool {
-    return hasAutoInitMetadata(I);
-  };
-  if (!runMoveAutoInit(F, DT, MSSA, ShouldProcess) &&
-      !runMoveAutoInit(F, DT, MSSA, [](const Instruction &) { return true; }))
+  if (!runMoveAutoInit(F, DT, MSSA))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
