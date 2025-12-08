@@ -159,3 +159,21 @@ define void @i1_used_as_vgpr_operand(ptr %p, i1 %b) {
   tail call void asm sideeffect "global_store_byte $0, $1, off glc slc", "v,v"(ptr %p, i1 %b)
   ret void
 }
+
+; ERR: error: couldn't allocate input reg for constraint 'a'
+define void @i1_used_as_agpr_operand(ptr %p, i1 %b) {
+  tail call void asm sideeffect "global_store_byte $0, $1, off glc slc", "v,a"(ptr %p, i1 %b)
+  ret void
+}
+
+; ERR: error: couldn't allocate input reg for constraint 's'
+define void @i1_used_as_sgpr_operand_s(ptr %p, i1 %b) {
+  tail call void asm sideeffect "global_store_byte $0, $1, off glc slc", "v,s"(ptr %p, i1 %b)
+  ret void
+}
+
+; ERR: error: couldn't allocate input reg for constraint 'r'
+define void @i1_used_as_sgpr_operand_r(ptr %p, i1 %b) {
+  tail call void asm sideeffect "global_store_byte $0, $1, off glc slc", "v,r"(ptr %p, i1 %b)
+  ret void
+}

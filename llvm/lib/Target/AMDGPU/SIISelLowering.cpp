@@ -17703,6 +17703,8 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       if (!Subtarget->hasMAIInsts())
         break;
       switch (BitWidth) {
+      case 1:
+        return std::pair(0U, nullptr);
       case 16:
         RC = &AMDGPU::AGPR_32RegClass;
         break;
