@@ -370,7 +370,6 @@ void OmpStructureChecker::CheckNestedConstruct(
   //     do 100 j = ...
   //   100 continue
   //   !$omp end do    ! error
-  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
   auto &flags{std::get<parser::OmpDirectiveSpecification::Flags>(beginSpec.t)};
   if (flags.test(parser::OmpDirectiveSpecification::Flag::CrossesLabelDo)) {
     if (auto &endSpec{x.EndDir()}) {
