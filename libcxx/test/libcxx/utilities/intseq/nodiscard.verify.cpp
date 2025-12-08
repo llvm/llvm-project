@@ -6,13 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_SYNCHRONIZATION_CL_MEM_FENCE_FLAGS_H__
-#define __CLC_OPENCL_SYNCHRONIZATION_CL_MEM_FENCE_FLAGS_H__
+// REQUIRES: std-at-least-c++14
 
-typedef uint cl_mem_fence_flags;
+// <utility>
 
-#define CLK_LOCAL_MEM_FENCE 1
-#define CLK_GLOBAL_MEM_FENCE 2
-#define CLK_IMAGE_MEM_FENCE 4
+// Check that functions are marked [[nodiscard]]
 
-#endif // __CLC_OPENCL_SYNCHRONIZATION_CL_MEM_FENCE_FLAGS_H__
+#include <utility>
+
+void test() {
+  std::integer_sequence<int, 49, 82, 94> seq;
+
+  seq.size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+}
