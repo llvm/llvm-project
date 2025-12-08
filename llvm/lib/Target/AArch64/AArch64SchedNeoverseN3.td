@@ -49,6 +49,12 @@ def N3UnitM : ProcResGroup<[N3UnitM0, N3UnitM1]>;
 def N3UnitL : ProcResGroup<[N3UnitL01, N3UnitL2]>;
 def N3UnitI : ProcResGroup<[N3UnitS, N3UnitM0, N3UnitM1]>;
 
+// Group required for modelling SVE gather loads throughput
+def N3UnitVL : ProcResGroup<[N3UnitL01, N3UnitV0, N3UnitV1]>;
+// Unused group to fix: "error: proc resource group overlaps with N3UnitVL but
+// no supergroup contains both."
+def : ProcResGroup<[N3UnitL01, N3UnitL2, N3UnitV0, N3UnitV1]>;
+
 //===----------------------------------------------------------------------===//
 
 def : ReadAdvance<ReadI,       0>;
@@ -319,6 +325,12 @@ def N3Write_8c_2V_2V1 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV1, N3UnitV1]> {
 def N3Write_6c_2I_2L : SchedWriteRes<[N3UnitI, N3UnitI, N3UnitL, N3UnitL]> {
     let Latency = 6;
     let NumMicroOps = 4;
+}
+
+def N3Write_6c_2L01_2V : SchedWriteRes<[N3UnitVL]> {
+    let Latency = 6;
+    let NumMicroOps = 4;
+    let ReleaseAtCycles = [5];
 }
 
 def N3Write_6c_4V0 : SchedWriteRes<[N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0]> {
@@ -2270,8 +2282,8 @@ def : InstRW<[N3Write_7c_4L], (instregex "^LDNT1[BHW]_ZZR_S$",
                                          "^LDNT1S[BH]_ZZR_S$")>;
 
 // Non temporal gather load, vector + scalar 64-bit element size
-def : InstRW<[N3Write_6c_2L], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
-def : InstRW<[N3Write_6c_2L], (instrs LDNT1D_ZZR_D)>;
+def : InstRW<[N3Write_6c_2L01_2V], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
+def : InstRW<[N3Write_6c_2L01_2V], (instrs LDNT1D_ZZR_D)>;
 
 // Contiguous first faulting load, scalar + scalar
 def : InstRW<[N3Write_6c_1L], (instregex "^LDFF1[BHWD]$",
@@ -2320,11 +2332,11 @@ def : InstRW<[N3Write_7c_4L], (instregex "^GLD(FF)?1S?[BH]_S_IMM$",
                                          "^GLD(FF)?1W_IMM$")>;
 
 // Gather load, vector + imm, 64-bit element size
-def : InstRW<[N3Write_6c_2L], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
+def : InstRW<[N3Write_6c_2L01_2V], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
                                          "^GLD(FF)?1D_IMM$")>;
 
 // Gather load, 64-bit element size
-def : InstRW<[N3Write_6c_2L],
+def : InstRW<[N3Write_6c_2L01_2V],
              (instregex "^GLD(FF)?1S?[BHW]_D_[SU]XTW(_SCALED)?$",
                         "^GLD(FF)?1S?[BHW]_D(_SCALED)?$",
                         "^GLD(FF)?1D_[SU]XTW(_SCALED)?$",

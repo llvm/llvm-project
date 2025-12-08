@@ -181,6 +181,7 @@ class TestReports(unittest.TestCase):
                 "tools/check-langley",
                 dedent(
                     """\
+                    ModuleNotFoundError: No module named 'mount_langley'
                     FAILED: tools/check-langley
                     Wow! This system is really broken!"""
                 ),
@@ -194,7 +195,7 @@ class TestReports(unittest.TestCase):
                 """\
                 # Foo
 
-                The build succeeded and no tests ran. This is expected in some build configurations."""
+                :white_check_mark: The build succeeded and no tests ran. This is expected in some build configurations."""
             ),
         )
 
@@ -308,7 +309,9 @@ class TestReports(unittest.TestCase):
                     """\
               # Foo
 
-              * 1 test passed"""
+              * 1 test passed
+              
+              :white_check_mark: The build succeeded and all tests passed."""
                 )
             ),
         )

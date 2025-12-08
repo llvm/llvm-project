@@ -1623,6 +1623,10 @@ public:
     return hasKernargPreload() && !GFX1250Insts;
   }
 
+  bool hasCondSubInsts() const { return GFX12Insts; }
+
+  bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(this);
@@ -1865,6 +1869,12 @@ public:
   // Requires s_wait_alu(0) after s102/s103 write and src_flat_scratch_base
   // read.
   bool hasScratchBaseForwardingHazard() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
+
+  // src_flat_scratch_hi cannot be used as a source in SALU producing a 64-bit
+  // result.
+  bool hasFlatScratchHiInB64InstHazard() const {
     return GFX1250Insts && getGeneration() == GFX12;
   }
 

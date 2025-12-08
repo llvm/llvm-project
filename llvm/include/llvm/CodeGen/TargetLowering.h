@@ -1243,7 +1243,7 @@ public:
   /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
   /// true and store the intrinsic information into the IntrinsicInfo that was
   /// passed to the function.
-  virtual bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
+  virtual bool getTgtMemIntrinsic(IntrinsicInfo &, const CallBase &,
                                   MachineFunction &,
                                   unsigned /*Intrinsic*/) const {
     return false;
@@ -4116,12 +4116,21 @@ public:
   }
 
   /// Returns a pair of (return value, chain).
+  /// It is an error to pass RTLIB::Unsupported as \p LibcallImpl
+  std::pair<SDValue, SDValue>
+  makeLibCall(SelectionDAG &DAG, RTLIB::LibcallImpl LibcallImpl, EVT RetVT,
+              ArrayRef<SDValue> Ops, MakeLibCallOptions CallOptions,
+              const SDLoc &dl, SDValue Chain = SDValue()) const;
+
   /// It is an error to pass RTLIB::UNKNOWN_LIBCALL as \p LC.
   std::pair<SDValue, SDValue> makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC,
                                           EVT RetVT, ArrayRef<SDValue> Ops,
                                           MakeLibCallOptions CallOptions,
                                           const SDLoc &dl,
-                                          SDValue Chain = SDValue()) const;
+                                          SDValue Chain = SDValue()) const {
+    return makeLibCall(DAG, getLibcallImpl(LC), RetVT, Ops, CallOptions, dl,
+                       Chain);
+  }
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be

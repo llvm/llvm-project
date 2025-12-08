@@ -345,9 +345,7 @@ public:
 
 class WaitcntGeneratorPreGFX12 : public WaitcntGenerator {
 public:
-  WaitcntGeneratorPreGFX12() = default;
-  WaitcntGeneratorPreGFX12(const MachineFunction &MF)
-      : WaitcntGenerator(MF, NUM_NORMAL_INST_CNTS) {}
+  using WaitcntGenerator::WaitcntGenerator;
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -381,10 +379,7 @@ public:
 
 class WaitcntGeneratorGFX12Plus : public WaitcntGenerator {
 public:
-  WaitcntGeneratorGFX12Plus() = default;
-  WaitcntGeneratorGFX12Plus(const MachineFunction &MF,
-                            InstCounterType MaxCounter)
-      : WaitcntGenerator(MF, MaxCounter) {}
+  using WaitcntGenerator::WaitcntGenerator;
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -552,9 +547,7 @@ public:
       return VMEM_ACCESS;
     if (Inst.mayStore() &&
         (!Inst.mayLoad() || SIInstrInfo::isAtomicNoRet(Inst))) {
-      // FLAT and SCRATCH instructions may access scratch. Other VMEM
-      // instructions do not.
-      if (TII->mayAccessScratchThroughFlat(Inst))
+      if (TII->mayAccessScratch(Inst))
         return SCRATCH_WRITE_ACCESS;
       return VMEM_WRITE_ACCESS;
     }
@@ -924,6 +917,7 @@ bool WaitcntBrackets::hasPointSamplePendingVmemTypes(
 
 void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
   InstCounterType T = eventCounter(Context->WaitEventMaskForInst, E);
+  assert(T < Context->MaxCounter);
 
   unsigned UB = getScoreUB(T);
   unsigned CurrScore = UB + 1;
@@ -1088,13 +1082,17 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
             }
           }
         }
-        if (Slot || LDSDMAStores.size() == NUM_LDS_VGPRS - 1)
+        if (Slot)
           break;
+        // The slot may not be valid because it can be >= NUM_LDS_VGPRS which
+        // means the scoreboard cannot track it. We still want to preserve the
+        // MI in order to check alias information, though.
         LDSDMAStores.push_back(&Inst);
         Slot = LDSDMAStores.size();
         break;
       }
-      setRegScore(FIRST_LDS_VGPR + Slot, T, CurrScore);
+      if (Slot < NUM_LDS_VGPRS)
+        setRegScore(FIRST_LDS_VGPR + Slot, T, CurrScore);
       if (Slot)
         setRegScore(FIRST_LDS_VGPR, T, CurrScore);
     }
@@ -2012,15 +2010,23 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         if (Ptr && Memop->getAAInfo()) {
           const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
           for (unsigned I = 0, E = LDSDMAStores.size(); I != E; ++I) {
-            if (MI.mayAlias(AA, *LDSDMAStores[I], true))
+            if (MI.mayAlias(AA, *LDSDMAStores[I], true)) {
+              if ((I + 1) >= NUM_LDS_VGPRS) {
+                // We didn't have enough slot to track this LDS DMA store, it
+                // has been tracked using the common RegNo (FIRST_LDS_VGPR).
+                ScoreBrackets.determineWait(LOAD_CNT, RegNo, Wait);
+                break;
+              }
+
               ScoreBrackets.determineWait(LOAD_CNT, RegNo + I + 1, Wait);
+            }
           }
         } else {
           ScoreBrackets.determineWait(LOAD_CNT, RegNo, Wait);
         }
-        if (Memop->isStore()) {
+
+        if (Memop->isStore())
           ScoreBrackets.determineWait(EXP_CNT, RegNo, Wait);
-        }
       }
 
       // Loop over use and def operands.
@@ -2291,10 +2297,12 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(LDS_ACCESS, Inst);
     }
 
-    // This is a flat memory operation that access both VMEM and LDS, so note it
-    // - it will require that both the VM and LGKM be flushed to zero if it is
-    // pending when a VM or LGKM dependency occurs.
-    if (FlatASCount > 1)
+    // Async/LDSDMA operations have FLAT encoding but do not actually use flat
+    // pointers. They do have two operands that each access global and LDS, thus
+    // making it appear at this point that they are using a flat pointer. Filter
+    // them out, and for the rest, generate a dependency on flat pointers so
+    // that both VM and LGKM counters are flushed.
+    if (!SIInstrInfo::isLDSDMA(Inst) && FlatASCount > 1)
       ScoreBrackets->setPendingFlat();
   } else if (SIInstrInfo::isVMEM(Inst) &&
              !llvm::AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode())) {
@@ -2746,7 +2754,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     WCG = &WCGGFX12Plus;
   } else {
     MaxCounter = NUM_NORMAL_INST_CNTS;
-    WCGPreGFX12 = WaitcntGeneratorPreGFX12(MF);
+    WCGPreGFX12 = WaitcntGeneratorPreGFX12(MF, MaxCounter);
     WCG = &WCGPreGFX12;
   }
 

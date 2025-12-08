@@ -43,11 +43,13 @@ define void @minmax_qnan_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %mi
 ; Note that maxnum/minnum return qnan here for snan inputs, unlike maximumnum/minimumnum
 define void @minmax_snan_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_snan_f32(
-; CHECK-NEXT:    store float 0x7FFC000000000000, ptr [[MINNUM_RES:%.*]], align 4
-; CHECK-NEXT:    store float 0x7FFC000000000000, ptr [[MAXNUM_RES:%.*]], align 4
+; CHECK-NEXT:    [[MINNUM:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 0x7FF4000000000000)
+; CHECK-NEXT:    store float [[MINNUM]], ptr [[MINNUM_RES:%.*]], align 4
+; CHECK-NEXT:    [[MAXNUM:%.*]] = call float @llvm.maxnum.f32(float [[X]], float 0x7FF4000000000000)
+; CHECK-NEXT:    store float [[MAXNUM]], ptr [[MAXNUM_RES:%.*]], align 4
 ; CHECK-NEXT:    store float 0x7FFC000000000000, ptr [[MINIMUM_RES:%.*]], align 4
 ; CHECK-NEXT:    store float 0x7FFC000000000000, ptr [[MAXIMUM_RES:%.*]], align 4
-; CHECK-NEXT:    store float [[X:%.*]], ptr [[MINIMUMNUM_RES:%.*]], align 4
+; CHECK-NEXT:    store float [[X]], ptr [[MINIMUMNUM_RES:%.*]], align 4
 ; CHECK-NEXT:    store float [[X]], ptr [[MAXIMUMNUM_RES:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -98,11 +100,13 @@ define void @minmax_qnan_nxv2f64_op0(<vscale x 2 x double> %x, ptr %minnum_res, 
 ; Note that maxnum/minnum return qnan here for snan inputs, unlike maximumnum/minimumnum
 define void @minmax_snan_nxv2f64_op1(<vscale x 2 x double> %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_snan_nxv2f64_op1(
-; CHECK-NEXT:    store <vscale x 2 x double> splat (double 0x7FFC00DEAD00DEAD), ptr [[MINNUM_RES:%.*]], align 16
-; CHECK-NEXT:    store <vscale x 2 x double> splat (double 0x7FFC00DEAD00DEAD), ptr [[MAXNUM_RES:%.*]], align 16
+; CHECK-NEXT:    [[MINNUM:%.*]] = call <vscale x 2 x double> @llvm.minnum.nxv2f64(<vscale x 2 x double> splat (double 0x7FF400DEAD00DEAD), <vscale x 2 x double> [[X:%.*]])
+; CHECK-NEXT:    store <vscale x 2 x double> [[MINNUM]], ptr [[MINNUM_RES:%.*]], align 16
+; CHECK-NEXT:    [[MAXNUM:%.*]] = call <vscale x 2 x double> @llvm.maxnum.nxv2f64(<vscale x 2 x double> splat (double 0x7FF400DEAD00DEAD), <vscale x 2 x double> [[X]])
+; CHECK-NEXT:    store <vscale x 2 x double> [[MAXNUM]], ptr [[MAXNUM_RES:%.*]], align 16
 ; CHECK-NEXT:    store <vscale x 2 x double> splat (double 0x7FFC00DEAD00DEAD), ptr [[MINIMUM_RES:%.*]], align 16
 ; CHECK-NEXT:    store <vscale x 2 x double> splat (double 0x7FFC00DEAD00DEAD), ptr [[MAXIMUM_RES:%.*]], align 16
-; CHECK-NEXT:    store <vscale x 2 x double> [[X:%.*]], ptr [[MINIMUMNUM_RES:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 2 x double> [[X]], ptr [[MINIMUMNUM_RES:%.*]], align 16
 ; CHECK-NEXT:    store <vscale x 2 x double> [[X]], ptr [[MAXIMUMNUM_RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -255,7 +259,8 @@ define void @minmax_pos_inf_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr 
 ; CHECK-LABEL: @minmax_pos_inf_f32(
 ; CHECK-NEXT:    [[MINNUM:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 0x7FF0000000000000)
 ; CHECK-NEXT:    store float [[MINNUM]], ptr [[MINNUM_RES:%.*]], align 4
-; CHECK-NEXT:    store float 0x7FF0000000000000, ptr [[MAXNUM_RES:%.*]], align 4
+; CHECK-NEXT:    [[MAXNUM:%.*]] = call float @llvm.maxnum.f32(float [[X]], float 0x7FF0000000000000)
+; CHECK-NEXT:    store float [[MAXNUM]], ptr [[MAXNUM_RES:%.*]], align 4
 ; CHECK-NEXT:    store float [[X]], ptr [[MINIMUM_RES:%.*]], align 4
 ; CHECK-NEXT:    [[MAXIMUM:%.*]] = call float @llvm.maximum.f32(float [[X]], float 0x7FF0000000000000)
 ; CHECK-NEXT:    store float [[MAXIMUM]], ptr [[MAXIMUM_RES:%.*]], align 4
@@ -322,8 +327,9 @@ define void @minmax_pos_inf_nnan_v2f32(<2 x float> %x, ptr %minnum_res, ptr %max
 ; Can only optimize minnum, maximum, and minimumnum without the nnan flag
 define void @minmax_neg_inf_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_neg_inf_f32(
-; CHECK-NEXT:    store float 0xFFF0000000000000, ptr [[MINNUM_RES:%.*]], align 4
-; CHECK-NEXT:    [[MAXNUM:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float 0xFFF0000000000000)
+; CHECK-NEXT:    [[MINNUM:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 0xFFF0000000000000)
+; CHECK-NEXT:    store float [[MINNUM]], ptr [[MINNUM_RES:%.*]], align 4
+; CHECK-NEXT:    [[MAXNUM:%.*]] = call float @llvm.maxnum.f32(float [[X]], float 0xFFF0000000000000)
 ; CHECK-NEXT:    store float [[MAXNUM]], ptr [[MAXNUM_RES:%.*]], align 4
 ; CHECK-NEXT:    [[MINIMUM:%.*]] = call float @llvm.minimum.f32(float [[X]], float 0xFFF0000000000000)
 ; CHECK-NEXT:    store float [[MINIMUM]], ptr [[MINIMUM_RES:%.*]], align 4
@@ -427,7 +433,8 @@ define void @minmax_largest_f32_ninf(float %x, ptr %minnum_res, ptr %maxnum_res,
 ; CHECK-LABEL: @minmax_largest_f32_ninf(
 ; CHECK-NEXT:    [[MINNUM:%.*]] = call ninf float @llvm.minnum.f32(float [[X:%.*]], float 0x47EFFFFFE0000000)
 ; CHECK-NEXT:    store float [[MINNUM]], ptr [[MINNUM_RES:%.*]], align 4
-; CHECK-NEXT:    store float 0x47EFFFFFE0000000, ptr [[MAXNUM_RES:%.*]], align 4
+; CHECK-NEXT:    [[MAXNUM:%.*]] = call ninf float @llvm.maxnum.f32(float [[X]], float 0x47EFFFFFE0000000)
+; CHECK-NEXT:    store float [[MAXNUM]], ptr [[MAXNUM_RES:%.*]], align 4
 ; CHECK-NEXT:    store float [[X]], ptr [[MINIMUM_RES:%.*]], align 4
 ; CHECK-NEXT:    [[MAXIMUM:%.*]] = call ninf float @llvm.maximum.f32(float [[X]], float 0x47EFFFFFE0000000)
 ; CHECK-NEXT:    store float [[MAXIMUM]], ptr [[MAXIMUM_RES:%.*]], align 4
@@ -528,8 +535,9 @@ define void @minmax_neg_largest_f32(float %x, ptr %minnum_res, ptr %maxnum_res, 
 ; We can optimize minnum, maximum, and minimumnum if we know ninf is set
 define void @minmax_neg_largest_f32_ninf(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_neg_largest_f32_ninf(
-; CHECK-NEXT:    store float 0xC7EFFFFFE0000000, ptr [[MINNUM_RES:%.*]], align 4
-; CHECK-NEXT:    [[MAXNUM:%.*]] = call ninf float @llvm.maxnum.f32(float [[X:%.*]], float 0xC7EFFFFFE0000000)
+; CHECK-NEXT:    [[MINNUM:%.*]] = call ninf float @llvm.minnum.f32(float [[X:%.*]], float 0xC7EFFFFFE0000000)
+; CHECK-NEXT:    store float [[MINNUM]], ptr [[MINNUM_RES:%.*]], align 4
+; CHECK-NEXT:    [[MAXNUM:%.*]] = call ninf float @llvm.maxnum.f32(float [[X]], float 0xC7EFFFFFE0000000)
 ; CHECK-NEXT:    store float [[MAXNUM]], ptr [[MAXNUM_RES:%.*]], align 4
 ; CHECK-NEXT:    [[MINIMUM:%.*]] = call ninf float @llvm.minimum.f32(float [[X]], float 0xC7EFFFFFE0000000)
 ; CHECK-NEXT:    store float [[MINIMUM]], ptr [[MINIMUM_RES:%.*]], align 4
@@ -632,7 +640,8 @@ define void @minmax_mixed_pos_inf_poison_snan_v3f32(<3 x float> %x, ptr %minnum_
 ; CHECK-LABEL: @minmax_mixed_pos_inf_poison_snan_v3f32(
 ; CHECK-NEXT:    [[MINNUM:%.*]] = call nnan <3 x float> @llvm.minnum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> [[X:%.*]])
 ; CHECK-NEXT:    store <3 x float> [[MINNUM]], ptr [[MINNUM_RES:%.*]], align 16
-; CHECK-NEXT:    store <3 x float> <float poison, float 0x7FF0000000000000, float 0x7FFC000000000000>, ptr [[MAXNUM_RES:%.*]], align 16
+; CHECK-NEXT:    [[MAXNUM:%.*]] = call nnan <3 x float> @llvm.maxnum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> [[X]])
+; CHECK-NEXT:    store <3 x float> [[MAXNUM]], ptr [[MAXNUM_RES:%.*]], align 16
 ; CHECK-NEXT:    [[MINIMUM:%.*]] = call nnan <3 x float> @llvm.minimum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> [[X]])
 ; CHECK-NEXT:    store <3 x float> [[MINIMUM]], ptr [[MINIMUM_RES:%.*]], align 16
 ; CHECK-NEXT:    store <3 x float> <float poison, float 0x7FF0000000000000, float 0x7FFC000000000000>, ptr [[MAXIMUM_RES:%.*]], align 16

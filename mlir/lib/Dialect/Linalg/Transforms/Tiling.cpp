@@ -452,8 +452,7 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
   SmallVector<OpFoldResult> allShapeSizes =
       op.createFlatListOfOperandDims(b, op.getLoc());
   AffineMap shapeSizesToLoopsMap = op.getShapesToLoopsMap();
-  if (!shapeSizesToLoopsMap)
-    return failure();
+  assert(shapeSizesToLoopsMap && "invalid linalgOp with null ShapesToLoopsMap");
 
   auto [loopRanges, loopIndexToRangeIndex] = makeTiledLoopRanges(
       b, op.getLoc(), shapeSizesToLoopsMap, allShapeSizes, tileSizes);
