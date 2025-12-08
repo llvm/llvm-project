@@ -22,6 +22,58 @@ using namespace mlir;
 using namespace mlir::vector;
 using namespace mlir::x86vector;
 
+static FailureOr<llvm::SmallVector<Operation *>> getAllUsers(Operation *op) {
+  llvm::SmallVector<Operation *> opUsers;
+  for (OpResult result : op->getResults()) {
+    for (Operation *user : result.getUsers()) {
+      // Check prod and users belongs to same block.
+      if (op->getBlock() != user->getBlock())
+        return failure();
+      opUsers.push_back(user);
+    }
+  }
+
+  return opUsers;
+}
+
+// Prevent pathological looping:
+// If two/three producers are used by same consumer, will end in looping of
+// moving the producers.
+// For example:
+// %1 = prod1
+// %2 = prod2
+// %3 = prod3
+// %4 = op %1, %2, %3
+static bool checkLooping(Operation *op) {
+  llvm::SmallVector<Operation *> operations;
+  operations.push_back(op);
+
+  // Retrive the next immediate two/three operation until it is a vector.load or
+  // a vector.transfer_read
+  Operation *nextOp = op->getNextNode();
+  while (operations.size() < 3 && nextOp) {
+    if (isa<vector::LoadOp>(nextOp) || isa<vector::TransferReadOp>(nextOp)) {
+      operations.push_back(op);
+    } else {
+      break;
+    }
+    nextOp = nextOp->getNextNode();
+  }
+
+  // If all the loads or transfer_reads have same immediate nextOp as its
+  // user, then it loops.
+  for (Operation *op : operations) {
+    FailureOr<llvm::SmallVector<Operation *>> users = getAllUsers(op);
+    if (failed(users))
+      return false;
+
+    if (!llvm::is_contained(*users, nextOp))
+      return false;
+  }
+
+  return true;
+}
+
 /// Sink vector producers forward to reduce live ranges.
 /// This pattern applies to ops such as vector.load and vector.transfer_read.
 template <typename producerOp>
@@ -31,74 +83,59 @@ struct SinkVectorProducerOps final : public OpRewritePattern<producerOp> {
   LogicalResult matchAndRewrite(producerOp op,
                                 PatternRewriter &rewriter) const override {
 
-    // Collect all users of the producer op.
-    llvm::SmallVector<Operation *> opUsers;
-    for (OpResult result : op->getResults())
-      for (Operation *user : result.getUsers())
-        opUsers.push_back(user);
-
-    // If there are no users, nothing to sink.
-    if (opUsers.empty())
+    auto users = getAllUsers(op);
+    if (failed(users))
       return failure();
 
-    // If the next op is already a user, do not move.
+    if (checkLooping(op))
+      return failure();
+
+    llvm::DenseMap<Operation *, llvm::SmallVector<Operation *>> prodsAllUsers;
+    llvm::DenseMap<Operation *, Operation *> prodsFirstUser;
+
+    llvm::SmallVector<Operation *> opUsers = *users;
+    prodsAllUsers.try_emplace(op, opUsers);
+
+    // Iterate until the last instruction to find the first users of all
+    // producers within the block.
     Operation *nextOp = op->getNextNode();
-    if (llvm::is_contained(opUsers, nextOp))
-      return failure();
 
-    // Prevent pathological looping:
-    // If two producers are used by same consumer, will end in looping of
-    // moving the producers.
-    // For example:
-    // %1 = prod1
-    // %2 = prod2
-    // %3 = op %1, %2
-    llvm::SmallVector<Operation *> nextOpUsers;
-    for (OpResult result : nextOp->getResults())
-      for (Operation *user : result.getUsers())
-        nextOpUsers.push_back(user);
+    while (nextOp) {
 
-    // Both producers have one same users.
-    if (opUsers.size() == 1 && nextOpUsers.size() != 1 &&
-        llvm::is_contained(opUsers, nextOpUsers.front()))
-      return failure();
+      if (isa<vector::LoadOp>(nextOp) || isa<vector::TransferReadOp>(nextOp)) {
+        auto nextUsers = getAllUsers(nextOp);
 
-    // Get the first user of both the current and next operation.
-    Operation *opFirstUser = op->getNextNode();
-    Operation *nextOpFirstUser = op->getNextNode();
+        if (failed(nextUsers))
+          continue;
+        llvm::SmallVector<Operation *> nextOpUsers = *nextUsers;
+        prodsAllUsers.try_emplace(nextOp, nextOpUsers);
+      } else {
+        llvm::SmallVector<Operation *> operations;
 
-    while (opFirstUser) {
-      if (llvm::is_contained(opUsers, opFirstUser))
-        break;
+        for (auto &entry : prodsAllUsers) {
+          llvm::SmallVector<Operation *> &users = entry.second;
 
-      opFirstUser = opFirstUser->getNextNode();
+          if (llvm::is_contained(users, nextOp)) {
+            Operation *operation = entry.first;
+            operations.push_back(operation);
+            prodsFirstUser.try_emplace(operation, nextOp);
+          }
+        }
+
+        for (Operation *op : operations) {
+          prodsAllUsers.erase(op);
+        }
+      }
+      nextOp = nextOp->getNextNode();
     }
 
-    while (nextOpFirstUser) {
-      if (llvm::is_contained(nextOpUsers, nextOpFirstUser))
-        break;
+    // Move all the loads or transfer_reads before its first use.
+    for (auto &entry : prodsFirstUser) {
+      Operation *prod = entry.first;
+      Operation *consumer = entry.second;
 
-      nextOpFirstUser = nextOpFirstUser->getNextNode();
+      prod->moveBefore(consumer);
     }
-
-    if (!opFirstUser)
-      return failure();
-
-    // The Op first user and next Op first user are same. Break here to
-    // to avoid the shift cycle looping.
-    if (opFirstUser == nextOpFirstUser)
-      return failure();
-
-    // Both ops must be in the same block to safely move.
-    if (op->getBlock() != opFirstUser->getBlock())
-      return failure();
-
-    // Move producer immediately before its first user.
-    op->moveBefore(opFirstUser);
-
-    // Move the nextOp to its first user
-    if (nextOpFirstUser && (nextOpFirstUser->getBlock() == nextOp->getBlock()))
-      nextOp->moveBefore(nextOpFirstUser);
 
     return success();
   }
