@@ -1701,6 +1701,7 @@ module cxx03_std_private_ranges_all                        [system] {
 }
 module cxx03_std_private_ranges_as_rvalue_view             [system] { header "__ranges/as_rvalue_view.h" }
 module cxx03_std_private_ranges_chunk_by_view              [system] { header "__ranges/chunk_by_view.h" }
+module cxx03_std_private_ranges_chunk_view                 [system] { header "__ranges/chunk_view.h" }
 module cxx03_std_private_ranges_common_view                [system] { header "__ranges/common_view.h" }
 module cxx03_std_private_ranges_concepts                   [system] {
   header "__ranges/concepts.h"
