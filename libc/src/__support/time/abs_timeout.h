@@ -1,4 +1,4 @@
-//===--- Linux absolute timeout ---------------------------------*- C++ -*-===//
+//===--- absolute timeout ---------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_ABS_TIMEOUT_H
-#define LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_ABS_TIMEOUT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_TIME_ABS_TIMEOUT_H
+#define LLVM_LIBC_SRC___SUPPORT_TIME_ABS_TIMEOUT_H
 
 #include "hdr/time_macros.h"
 #include "hdr/types/struct_timespec.h"
@@ -47,4 +47,4 @@ public:
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_ABS_TIMEOUT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_TIME_ABS_TIMEOUT_H

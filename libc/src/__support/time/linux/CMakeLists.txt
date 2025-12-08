@@ -28,24 +28,3 @@ add_object_library(
     libc.src.__support.error_or
     libc.src.__support.OSUtil.osutil
 )
-
-
-add_header_library(
-  abs_timeout
-  HDRS
-    abs_timeout.h
-  DEPENDS
-    libc.hdr.types.struct_timespec
-    libc.src.__support.time.units
-    libc.src.__support.CPP.expected
-)
-
-add_header_library(
-  monotonicity
-  HDRS
-    monotonicity.h
-  DEPENDS
-    .abs_timeout
-    libc.hdr.time_macros
-    libc.src.__support.time.clock_conversion
-)

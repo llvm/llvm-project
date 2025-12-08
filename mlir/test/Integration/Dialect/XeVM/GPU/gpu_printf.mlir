@@ -3,7 +3,7 @@
 // RUN: | mlir-opt -convert-scf-to-cf -convert-cf-to-llvm -convert-vector-to-llvm -convert-arith-to-llvm \
 // RUN: | mlir-opt -gpu-to-llvm -reconcile-unrealized-casts -cse -gpu-module-to-binary \
 // RUN: | mlir-runner \
-// RUN:   --shared-libs=%mlir_sycl_runtime \
+// RUN:   --shared-libs=%mlir_levelzero_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --shared-libs=%mlir_c_runner_utils \
 // RUN:   --entry-point-result=void \
