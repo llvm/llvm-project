@@ -413,3 +413,12 @@ def : AlwaysUniform<int_amdgcn_s_getpc>;
 def : AlwaysUniform<int_amdgcn_s_getreg>;
 def : AlwaysUniform<int_amdgcn_s_memrealtime>;
 def : AlwaysUniform<int_amdgcn_s_memtime>;
+
+def AMDGPUImageDMaskIntrinsicTable : GenericTable {
+  let FilterClass = "AMDGPUImageDMaskIntrinsic";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "getAMDGPUImageDMaskIntrinsic";
+  let PrimaryKeyEarlyOut = 1;
+}
