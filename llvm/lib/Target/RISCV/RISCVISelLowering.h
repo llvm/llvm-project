@@ -92,12 +92,6 @@ public:
                                          CallingConv::ID CC,
                                          EVT VT) const override;
 
-  unsigned getVectorTypeBreakdownForCallingConv(LLVMContext &Context,
-                                                CallingConv::ID CC, EVT VT,
-                                                EVT &IntermediateVT,
-                                                unsigned &NumIntermediates,
-                                                MVT &RegisterVT) const override;
-
   bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
                                             unsigned SelectOpcode, SDValue X,
                                             SDValue Y) const override;
