@@ -10,6 +10,7 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
+#include "flang/Lower/Runtime.h"
 #include "flang/Runtime/stop.h"
 
 using namespace Fortran::runtime;
@@ -21,13 +22,14 @@ void fir::runtime::genExit(fir::FirOpBuilder &builder, mlir::Location loc,
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, exitFunc.getFunctionType(), status);
   fir::CallOp::create(builder, loc, exitFunc, args);
-  builder.create<fir::UnreachableOp>(loc);
+  Fortran::lower::genUnreachable(builder, loc);
 }
 
 void fir::runtime::genAbort(fir::FirOpBuilder &builder, mlir::Location loc) {
   mlir::func::FuncOp abortFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Abort)>(loc, builder);
   fir::CallOp::create(builder, loc, abortFunc, mlir::ValueRange{});
+  Fortran::lower::genUnreachable(builder, loc);
 }
 
 void fir::runtime::genReportFatalUserError(fir::FirOpBuilder &builder,
