@@ -1184,6 +1184,17 @@ struct EvaluateResponseBody {
 };
 llvm::json::Value toJSON(const EvaluateResponseBody &);
 
+/// Arguments for `pause` request.
+struct PauseArguments {
+  /// Pause execution for this thread.
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
+};
+bool fromJSON(const llvm::json::Value &, PauseArguments &, llvm::json::Path);
+
+/// Response to `pause` request. This is just an acknowledgement, so no body
+/// field is required.
+using PauseResponse = VoidResponse;
+
 } // namespace lldb_dap::protocol
 
 #endif
