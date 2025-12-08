@@ -99,6 +99,7 @@ struct PythonAPI {
   PyTuple_SetItem_t *PyTuple_SetItem;
   PyTuple_New_t *PyTuple_New;
 
+private:
   PythonAPI() : Ready(false) {
     if (!loadDylib(findPython()))
       return;
@@ -112,6 +113,14 @@ struct PythonAPI {
     if (std::atomic_exchange(&Ready, false)) {
       Py_FinalizeEx();
     }
+  }
+
+public:
+  // Python interface is initialized on first access and it is shared across all
+  // threads. It can be used like a state-less thread-safe object.
+  static const PythonAPI &instance() {
+    static const PythonAPI PyAPI;
+    return PyAPI;
   }
 
   bool loadDylib(std::string Path) {
@@ -216,16 +225,9 @@ private:
   };
 };
 
-// Python interface is initialized on first access and it is shared across all
-// threads. It can be used like a state-less thread-safe object.
-const PythonAPI &getPyAPI() {
-  static const PythonAPI PyAPI;
-  return PyAPI;
-}
-
 class PyPassContext {
 public:
-  PyPassContext() : PyAPI(getPyAPI()) {}
+  PyPassContext() : PyAPI(PythonAPI::instance()) {}
 
   bool loadScript(const std::string &Path) {
     if (!PyAPI.isReady())
