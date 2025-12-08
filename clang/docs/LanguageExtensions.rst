@@ -2260,7 +2260,8 @@ Hard Register Operands for ASM Constraints
 ==========================================
 
 Clang supports the ability to specify specific hardware registers in inline
-assembly constraints via the use of curly braces ``{}``.
+assembly constraints via the use of curly braces ``{}``. These register names
+are the same names as what would be used in the clobber list.
 
 Prior to clang-19, the only way to associate an inline assembly constraint
 with a specific register is via the local register variable feature (`GCC
