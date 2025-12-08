@@ -695,8 +695,8 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32>, %smem: memref<8xi32, 
 }
 
 // CHECK-LABEL: func @make_dma_descriptor
-// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[BARRIER:.+]]: memref<8xi32, #gpu.address_space<workgroup>>, %[[IDX:.+]]: index)
-func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8xi32, #gpu.address_space<workgroup>>, %idx: index) {
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[WG_MASK:.+]]: i16, %[[TIMEOUT:.+]]: i1, %[[BARRIER:.+]]: memref<8xi32, #gpu.address_space<workgroup>>, %[[IDX:.+]]: index)
+func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: i16, %timeout: i1, %barrier: memref<8xi32, #gpu.address_space<workgroup>>, %idx: index) {
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
@@ -727,6 +727,32 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8x
         globalStride [64, 1]
         // CHECK-SAME: sharedSize [64, 64]
         sharedSize [64, 64]
+        // CHECK-SAME: workgroupMask %[[WG_MASK]]
+        workgroupMask %wg_mask
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [64, 64]
+        globalSize [64, 64]
+        // CHECK-SAME: globalStride [64, 1]
+        globalStride [64, 1]
+        // CHECK-SAME: sharedSize [64, 64]
+        sharedSize [64, 64]
+        // CHECK-SAME: workgroupMask %[[WG_MASK]]
+        workgroupMask %wg_mask
+        // CHECK-SAME: earlyTimeout %[[TIMEOUT]]
+        earlyTimeout %timeout
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [64, 64]
+        globalSize [64, 64]
+        // CHECK-SAME: globalStride [64, 1]
+        globalStride [64, 1]
+        // CHECK-SAME: sharedSize [64, 64]
+        sharedSize [64, 64]
         // CHECK-SAME: atomicBarrier(%[[BARRIER]][%[[IDX]]] : memref<8xi32, #gpu.address_space<workgroup>>)
         atomicBarrier(%barrier[%idx] : memref<8xi32, #gpu.address_space<workgroup>>)
         : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
@@ -745,4 +771,3 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8x
 
   func.return
 }
-
