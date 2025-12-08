@@ -91,49 +91,49 @@ entry:
 ; CHECK-DAG: OpStore %[[#PTR0_S]] %[[#VAL0_S]] Aligned 64
 ; CHECK-DAG: %[[#PTR1_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C1]]
 ; CHECK-DAG: %[[#VAL1_S:]] = OpCompositeExtract %[[#int]] %[[#INS3]] 1
-; CHECK-DAG: OpStore %[[#PTR1_S]] %[[#VAL1_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR1_S]] %[[#VAL1_S]] Aligned 4
 ; CHECK-DAG: %[[#PTR2_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C2]]
 ; CHECK-DAG: %[[#VAL2_S:]] = OpCompositeExtract %[[#int]] %[[#INS3]] 2
-; CHECK-DAG: OpStore %[[#PTR2_S]] %[[#VAL2_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR2_S]] %[[#VAL2_S]] Aligned 8
 ; CHECK-DAG: %[[#PTR3_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C3]]
 ; CHECK-DAG: %[[#VAL3_S:]] = OpCompositeExtract %[[#int]] %[[#INS3]] 3
-; CHECK-DAG: OpStore %[[#PTR3_S]] %[[#VAL3_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR3_S]] %[[#VAL3_S]] Aligned 4
 ; CHECK-DAG: %[[#PTR4_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C4]]
 ; CHECK-DAG: %[[#VAL4_S:]] = OpCompositeExtract %[[#int]] %[[#INS7]] 0
-; CHECK-DAG: OpStore %[[#PTR4_S]] %[[#VAL4_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR4_S]] %[[#VAL4_S]] Aligned 16
 ; CHECK-DAG: %[[#PTR5_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C5]]
 ; CHECK-DAG: %[[#VAL5_S:]] = OpCompositeExtract %[[#int]] %[[#INS7]] 1
-; CHECK-DAG: OpStore %[[#PTR5_S]] %[[#VAL5_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR5_S]] %[[#VAL5_S]] Aligned 4
 ; CHECK-DAG: %[[#PTR6_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C6]]
 ; CHECK-DAG: %[[#VAL6_S:]] = OpCompositeExtract %[[#int]] %[[#INS7]] 2
-; CHECK-DAG: OpStore %[[#PTR6_S]] %[[#VAL6_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR6_S]] %[[#VAL6_S]] Aligned 8
 ; CHECK-DAG: %[[#PTR7_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C7]]
 ; CHECK-DAG: %[[#VAL7_S:]] = OpCompositeExtract %[[#int]] %[[#INS7]] 3
-; CHECK-DAG: OpStore %[[#PTR7_S]] %[[#VAL7_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR7_S]] %[[#VAL7_S]] Aligned 4
 ; CHECK-DAG: %[[#PTR8_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C8]]
 ; CHECK-DAG: %[[#VAL8_S:]] = OpCompositeExtract %[[#int]] %[[#INS11]] 0
-; CHECK-DAG: OpStore %[[#PTR8_S]] %[[#VAL8_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR8_S]] %[[#VAL8_S]] Aligned 32
 ; CHECK-DAG: %[[#PTR9_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C9]]
 ; CHECK-DAG: %[[#VAL9_S:]] = OpCompositeExtract %[[#int]] %[[#INS11]] 1
-; CHECK-DAG: OpStore %[[#PTR9_S]] %[[#VAL9_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR9_S]] %[[#VAL9_S]] Aligned 4
 ; CHECK-DAG: %[[#PTR10_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C10]]
 ; CHECK-DAG: %[[#VAL10_S:]] = OpCompositeExtract %[[#int]] %[[#INS11]] 2
-; CHECK-DAG: OpStore %[[#PTR10_S]] %[[#VAL10_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR10_S]] %[[#VAL10_S]] Aligned 8
 ; CHECK-DAG: %[[#PTR11_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C11]]
 ; CHECK-DAG: %[[#VAL11_S:]] = OpCompositeExtract %[[#int]] %[[#INS11]] 3
-; CHECK-DAG: OpStore %[[#PTR11_S]] %[[#VAL11_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR11_S]] %[[#VAL11_S]] Aligned 4
 ; CHECK-DAG: %[[#PTR12_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C12]]
 ; CHECK-DAG: %[[#VAL12_S:]] = OpCompositeExtract %[[#int]] %[[#INS15]] 0
-; CHECK-DAG: OpStore %[[#PTR12_S]] %[[#VAL12_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR12_S]] %[[#VAL12_S]] Aligned 16
 ; CHECK-DAG: %[[#PTR13_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C13]]
 ; CHECK-DAG: %[[#VAL13_S:]] = OpCompositeExtract %[[#int]] %[[#INS15]] 1
-; CHECK-DAG: OpStore %[[#PTR13_S]] %[[#VAL13_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR13_S]] %[[#VAL13_S]] Aligned 4
 ; CHECK-DAG: %[[#PTR14_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C14]]
 ; CHECK-DAG: %[[#VAL14_S:]] = OpCompositeExtract %[[#int]] %[[#INS15]] 2
-; CHECK-DAG: OpStore %[[#PTR14_S]] %[[#VAL14_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR14_S]] %[[#VAL14_S]] Aligned 8
 ; CHECK-DAG: %[[#PTR15_S:]] = OpAccessChain %[[#ptr_int]] %[[#G16]] %[[#C15]]
 ; CHECK-DAG: %[[#VAL15_S:]] = OpCompositeExtract %[[#int]] %[[#INS15]] 3
-; CHECK-DAG: OpStore %[[#PTR15_S]] %[[#VAL15_S]] Aligned 64
+; CHECK-DAG: OpStore %[[#PTR15_S]] %[[#VAL15_S]] Aligned 4
   store <16 x i32> %0, ptr addrspace(10) @G_16, align 64
   ret void
 }
