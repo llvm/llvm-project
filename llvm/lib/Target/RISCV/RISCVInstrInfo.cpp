@@ -2852,8 +2852,8 @@ static void combineADDIADDI(MachineInstr &Root,
 
   auto MIB = BuildMI(*MF, MIMetadata(Root), TII->get(RISCV::ADDI),
                      Root.getOperand(0).getReg())
-                  .addReg(X.getReg(), getKillRegState(X.isKill()))
-                  .addImm(Sum);
+                 .addReg(X.getReg(), getKillRegState(X.isKill()))
+                 .addImm(Sum);
   InsInstrs.push_back(MIB);
   DelInstrs.push_back(Inner);
   DelInstrs.push_back(&Root);
