@@ -29,12 +29,11 @@ public:
       EABI EABIVersion = EABI::Default, StringRef ABIName = "",
       VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
-  LLVM_ABI RTLIB::RuntimeLibcallsInfo run(const Module &M,
-                                          ModuleAnalysisManager &);
+  RTLIB::RuntimeLibcallsInfo run(const Module &M, ModuleAnalysisManager &);
 
 private:
   friend AnalysisInfoMixin<RuntimeLibraryAnalysis>;
-  LLVM_ABI static AnalysisKey Key;
+  static AnalysisKey Key;
 
   std::optional<RTLIB::RuntimeLibcallsInfo> LibcallsInfo;
 };
