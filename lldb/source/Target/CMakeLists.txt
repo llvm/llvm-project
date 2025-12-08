@@ -46,6 +46,7 @@ add_lldb_library(lldbTarget
   SyntheticFrameProvider.cpp
   SectionLoadHistory.cpp
   SectionLoadList.cpp
+  BorrowedStackFrame.cpp
   StackFrame.cpp
   StackFrameList.cpp
   StackFrameRecognizer.cpp

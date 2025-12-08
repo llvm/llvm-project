@@ -4991,15 +4991,24 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     // Compiling HIP in device-only non-RDC mode requires linking each action
     // individually.
     for (Action *&A : DeviceActions) {
-      // Special handling for the HIP SPIR-V toolchain because it doesn't use
-      // the SPIR-V backend yet doesn't report the output as an object.
       bool IsAMDGCNSPIRV = A->getOffloadingToolChain() &&
                            A->getOffloadingToolChain()->getTriple().getOS() ==
                                llvm::Triple::OSType::AMDHSA &&
                            A->getOffloadingToolChain()->getTriple().isSPIRV();
+      bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
+                                          options::OPT_no_use_spirv_backend,
+                                          /*Default=*/false);
+
+      // Special handling for the HIP SPIR-V toolchain in device-only.
+      // The translator path has a linking step, whereas the SPIR-V backend path
+      // does not to avoid any external dependency such as spirv-link. The
+      // linking step is skipped for the SPIR-V backend path.
+      bool IsAMDGCNSPIRVWithBackend = IsAMDGCNSPIRV && UseSPIRVBackend;
+
       if ((A->getType() != types::TY_Object && !IsAMDGCNSPIRV &&
            A->getType() != types::TY_LTO_BC) ||
-          HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly())
+          HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly() ||
+          (IsAMDGCNSPIRVWithBackend && offloadDeviceOnly()))
         continue;
       ActionList LinkerInput = {A};
       A = C.MakeAction<LinkJobAction>(LinkerInput, types::TY_Image);
@@ -5225,12 +5234,28 @@ Action *Driver::ConstructPhaseAction(
           Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
+    bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
+                                        options::OPT_no_use_spirv_backend,
+                                        /*Default=*/false);
+
+    auto OffloadingToolChain = Input->getOffloadingToolChain();
+    // For AMD SPIRV, if offloadDeviceOnly(), we call the SPIRV backend unless
+    // LLVM bitcode was requested explicitly or RDC is set. If
+    // !offloadDeviceOnly, we emit LLVM bitcode, and clang-linker-wrapper will
+    // compile it to SPIRV.
+    bool UseSPIRVBackendForHipDeviceOnlyNoRDC =
+        TargetDeviceOffloadKind == Action::OFK_HIP && OffloadingToolChain &&
+        OffloadingToolChain->getTriple().isSPIRV() && UseSPIRVBackend &&
+        offloadDeviceOnly() &&
+        !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
+
     if (Args.hasArg(options::OPT_emit_llvm) ||
         TargetDeviceOffloadKind == Action::OFK_SYCL ||
         (((Input->getOffloadingToolChain() &&
            Input->getOffloadingToolChain()->getTriple().isAMDGPU() &&
            TargetDeviceOffloadKind != Action::OFK_None) ||
           TargetDeviceOffloadKind == Action::OFK_HIP) &&
+         !UseSPIRVBackendForHipDeviceOnlyNoRDC &&
          ((Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
                         false) ||
            (Args.hasFlag(options::OPT_offload_new_driver,
@@ -5252,6 +5277,19 @@ Action *Driver::ConstructPhaseAction(
               : types::TY_LLVM_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
+
+    // The SPIRV backend compilation path for HIP must avoid external
+    // dependencies. The default compilation path assembles and links its
+    // output, but the SPIRV assembler and linker are external tools. This code
+    // ensures the backend emits binary SPIRV directly to bypass those steps and
+    // avoid failures. Without -save-temps, the compiler may already skip
+    // assembling and linking. With -save-temps, these steps must be explicitly
+    // disabled, as done here. We also force skipping these steps regardless of
+    // -save-temps to avoid relying on optimizations (unless -S is set).
+    // The current HIP bundling expects the type to be types::TY_Image
+    if (UseSPIRVBackendForHipDeviceOnlyNoRDC && !Args.hasArg(options::OPT_S))
+      return C.MakeAction<BackendJobAction>(Input, types::TY_Image);
+
     return C.MakeAction<BackendJobAction>(Input, types::TY_PP_Asm);
   }
   case phases::Assemble:

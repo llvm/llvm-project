@@ -477,18 +477,17 @@ bool AddPythonDLLToSearchPath() {
 #endif
 
 #ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
-/// Returns whether `python3x.dll` is in the DLL search path.
+/// Returns true if `python3x.dll` can be loaded.
 bool IsPythonDLLInPath() {
 #define WIDEN2(x) L##x
 #define WIDEN(x) WIDEN2(x)
-  WCHAR foundPath[MAX_PATH];
-  DWORD result =
-      SearchPathW(nullptr, WIDEN(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME), nullptr,
-                  MAX_PATH, foundPath, nullptr);
+  HMODULE h = LoadLibraryW(WIDEN(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME));
+  if (!h)
+    return false;
+  FreeLibrary(h);
+  return true;
 #undef WIDEN2
 #undef WIDEN
-
-  return result > 0;
 }
 #endif
 

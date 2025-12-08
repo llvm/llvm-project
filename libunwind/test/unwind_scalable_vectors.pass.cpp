@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: linux && target={{riscv64-.+}}
+// REQUIRES: target={{riscv64-.+}}
 
 #undef NDEBUG
 #include <assert.h>

@@ -917,6 +917,9 @@ public:
               CodeGenDAGPatterns &ise);
   TreePattern(const Record *TheRec, const DagInit *Pat, bool isInput,
               CodeGenDAGPatterns &ise);
+  TreePattern(const Record *TheRec, ArrayRef<const Init *> Args,
+              ArrayRef<const StringInit *> ArgNames, bool isInput,
+              CodeGenDAGPatterns &ise);
   TreePattern(const Record *TheRec, TreePatternNodePtr Pat, bool isInput,
               CodeGenDAGPatterns &ise);
 
@@ -981,6 +984,9 @@ public:
 
 private:
   TreePatternNodePtr ParseTreePattern(const Init *DI, StringRef OpName);
+  TreePatternNodePtr
+  ParseRootlessTreePattern(ArrayRef<const Init *> Args,
+                           ArrayRef<const StringInit *> ArgNames);
   void ComputeNamedNodes();
   void ComputeNamedNodes(TreePatternNode &N);
 };

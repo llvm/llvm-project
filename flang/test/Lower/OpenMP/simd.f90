@@ -270,7 +270,7 @@ subroutine lastprivate_with_simd
   integer :: i
   real :: sum
 
-  
+
 !CHECK: omp.simd private(@_QFlastprivate_with_simdEsum_private_f32 %[[VAR_SUM_DECLARE]]#0 -> %[[VAR_SUM_PINNED:.*]], @{{.*}}) {
 !CHECK: omp.loop_nest (%[[ARG:.*]]) : i32 = ({{.*}} to ({{.*}}) inclusive step ({{.*}}) {
 !CHECK: %[[VAR_SUM_PINNED_DECLARE:.*]]:2 = hlfir.declare %[[VAR_SUM_PINNED]] {{.*}}

@@ -1984,6 +1984,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   switch (Name[0]) {
   default:
     return false;
+    // clang-format off
   case 'a':
     return Name == "acos" || Name == "acosf" ||
            Name == "asin" || Name == "asinf" ||
@@ -2014,7 +2015,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case 'r':
     return Name == "remainder" || Name == "remainderf" ||
            Name == "rint" || Name == "rintf" ||
-           Name == "round" || Name == "roundf";
+           Name == "round" || Name == "roundf" ||
+           Name == "roundeven" || Name == "roundevenf";
   case 's':
     return Name == "sin" || Name == "sinf" ||
            Name == "sinh" || Name == "sinhf" ||
@@ -2052,6 +2054,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
     case 's':
       return Name == "__sinh_finite" || Name == "__sinhf_finite";
     }
+    // clang-format on
   }
 }
 
@@ -2516,7 +2519,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
     // Use internal versions of these intrinsics.
 
-    if (IntrinsicID == Intrinsic::nearbyint || IntrinsicID == Intrinsic::rint) {
+    if (IntrinsicID == Intrinsic::nearbyint || IntrinsicID == Intrinsic::rint ||
+        IntrinsicID == Intrinsic::roundeven) {
       U.roundToIntegral(APFloat::rmNearestTiesToEven);
       return ConstantFP::get(Ty->getContext(), U);
     }
@@ -2988,6 +2992,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_nearbyintf:
     case LibFunc_rint:
     case LibFunc_rintf:
+    case LibFunc_roundeven:
+    case LibFunc_roundevenf:
       if (TLI->has(Func)) {
         U.roundToIntegral(APFloat::rmNearestTiesToEven);
         return ConstantFP::get(Ty->getContext(), U);
@@ -3348,8 +3354,12 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       case Intrinsic::copysign:
         return ConstantFP::get(Ty->getContext(), APFloat::copySign(Op1V, Op2V));
       case Intrinsic::minnum:
+        if (Op1V.isSignaling() || Op2V.isSignaling())
+          return nullptr;
         return ConstantFP::get(Ty->getContext(), minnum(Op1V, Op2V));
       case Intrinsic::maxnum:
+        if (Op1V.isSignaling() || Op2V.isSignaling())
+          return nullptr;
         return ConstantFP::get(Ty->getContext(), maxnum(Op1V, Op2V));
       case Intrinsic::minimum:
         return ConstantFP::get(Ty->getContext(), minimum(Op1V, Op2V));
