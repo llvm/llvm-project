@@ -63,9 +63,8 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
     const QualType StructFieldTy = StructField->getType();
     if (StructFieldTy->isIncompleteType())
       return;
-    const unsigned int StructFieldWidth =
-        (unsigned int)Result.Context->getTypeInfo(StructFieldTy.getTypePtr())
-            .Width;
+    const unsigned int StructFieldWidth = static_cast<unsigned int>(
+        Result.Context->getTypeInfo(StructFieldTy.getTypePtr()).Width);
     FieldSizes.emplace_back(StructFieldWidth, StructField->getFieldIndex());
     // FIXME: Recommend a reorganization of the struct (sort by StructField
     // size, largest to smallest).
@@ -79,7 +78,7 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
       CharUnits::fromQuantity(std::max<clang::CharUnits::QuantityType>(
           std::ceil(static_cast<float>(TotalBitSize) / CharSize), 1));
   const CharUnits MaxAlign = CharUnits::fromQuantity(
-      std::ceil((float)Struct->getMaxAlignment() / CharSize));
+      std::ceil(static_cast<float>(Struct->getMaxAlignment()) / CharSize));
   const CharUnits CurrAlign =
       Result.Context->getASTRecordLayout(Struct).getAlignment();
   const CharUnits NewAlign = computeRecommendedAlignment(MinByteSize);
@@ -99,8 +98,7 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
     diag(Struct->getLocation(),
          "accessing fields in struct %0 is inefficient due to padding; only "
          "needs %1 bytes but is using %2 bytes")
-        << Struct << (int)MinByteSize.getQuantity()
-        << (int)CurrSize.getQuantity()
+        << Struct << MinByteSize.getQuantity() << CurrSize.getQuantity()
         << FixItHint::CreateInsertion(Struct->getEndLoc().getLocWithOffset(1),
                                       " __attribute__((packed))");
     diag(Struct->getLocation(),
@@ -112,8 +110,7 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
 
   FixItHint FixIt;
   auto *Attribute = Struct->getAttr<AlignedAttr>();
-  const std::string NewAlignQuantity =
-      std::to_string((int)NewAlign.getQuantity());
+  const std::string NewAlignQuantity = std::to_string(NewAlign.getQuantity());
   if (Attribute) {
     FixIt = FixItHint::CreateReplacement(
         Attribute->getRange(),
@@ -130,7 +127,7 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
     diag(Struct->getLocation(),
          "accessing fields in struct %0 is inefficient due to poor alignment; "
          "currently aligned to %1 bytes, but recommended alignment is %2 bytes")
-        << Struct << (int)CurrAlign.getQuantity() << NewAlignQuantity << FixIt;
+        << Struct << CurrAlign.getQuantity() << NewAlignQuantity << FixIt;
 
     diag(Struct->getLocation(),
          "use \"__attribute__((aligned(%0)))\" to align struct %1 to %0 bytes",
