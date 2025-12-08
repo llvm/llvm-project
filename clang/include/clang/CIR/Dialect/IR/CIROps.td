@@ -1047,6 +1047,11 @@ def CIR_SwitchOp : CIR_Op<"switch", [
     conditionally executing multiple regions of code. The operand to an switch
     is an integral condition value.
 
+    Besides accepting an int type of condition and regions of cir code, it also accepts 
+    a boolean allEnumCasesCovered indicating if all cases of an enum is covered. Note that 
+    having a default CaseOp inside the switch doesn't imply allEnumCasesCovered, the OG AST switch
+    needs to have each case spelled out.
+
     The set of `cir.case` operations and their enclosing `cir.switch`
     represent the semantics of a C/C++ switch statement. Users can use
     `collectCases(llvm::SmallVector<CaseOp> &cases)` to collect the `cir.case`
@@ -1173,7 +1178,8 @@ def CIR_SwitchOp : CIR_Op<"switch", [
     ```
   }];
 
-  let arguments = (ins CIR_IntType:$condition);
+  let arguments = (ins CIR_IntType:$condition,
+                       DefaultValuedAttr<BoolAttr, "false">:$allEnumCasesCovered);
 
   let regions = (region AnyRegion:$body);
 
