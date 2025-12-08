@@ -807,6 +807,7 @@ def testDumpToObjectFile():
                 # because RTDyldObjectLinkingLayer::emit will try to resolve symbols before dumping
                 # (see the jitLinkForORC call at the bottom there).
                 shared_libs=[MLIR_C_RUNNER_UTILS],
+                enable_pic=True,
             )
 
             # CHECK: Object file exists: True
