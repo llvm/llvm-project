@@ -364,6 +364,8 @@ VALUE_CODEGENOPT(WarnStackSize     , 32, UINT_MAX, Benign) ///< Set via -fwarn-s
 CODEGENOPT(NoStackArgProbe, 1, 0, Benign) ///< Set when -mno-stack-arg-probe is used
 CODEGENOPT(EmitLLVMUseLists, 1, 0, Benign) ///< Control whether to serialize use-lists.
 
+CODEGENOPT(DevirtualizeSpeculatively, 1, 0, Benign) ///< Whether to apply the speculative
+                                                    /// devirtualization optimization.
 CODEGENOPT(WholeProgramVTables, 1, 0, Benign) ///< Whether to apply whole-program
                                               ///  vtable optimization.
 
