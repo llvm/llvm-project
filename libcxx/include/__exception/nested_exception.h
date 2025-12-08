@@ -40,7 +40,7 @@ public:
 
   // access functions
   [[__noreturn__]] void rethrow_nested() const;
-  _LIBCPP_HIDE_FROM_ABI exception_ptr nested_ptr() const _NOEXCEPT { return __ptr_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI exception_ptr nested_ptr() const _NOEXCEPT { return __ptr_; }
 };
 
 template <class _Tp>
