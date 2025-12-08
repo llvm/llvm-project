@@ -256,6 +256,10 @@ public:
   BasicBugReport(const BugType &bt, StringRef desc, PathDiagnosticLocation l)
       : BugReport(Kind::Basic, bt, desc), Location(l) {}
 
+  BasicBugReport(const BugType &BT, StringRef ShortDesc, StringRef Desc,
+                 PathDiagnosticLocation L)
+      : BugReport(Kind::Basic, BT, ShortDesc, Desc), Location(L) {}
+
   static bool classof(const BugReport *R) {
     return R->getKind() == Kind::Basic;
   }

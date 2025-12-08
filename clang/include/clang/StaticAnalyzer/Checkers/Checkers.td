@@ -416,6 +416,11 @@ def EnumCastOutOfRangeChecker : Checker<"EnumCastOutOfRange">,
   HelpText<"Check integer to enumeration casts for out of range values">,
   Documentation<HasDocumentation>;
 
+def UnconditionalVAArgChecker
+    : Checker<"UnconditionalVAArg">,
+      HelpText<"Check variadic functions unconditionally using va_arg">,
+      Documentation<HasDocumentation>;
+
 } // end "optin.core"
 
 //===----------------------------------------------------------------------===//
