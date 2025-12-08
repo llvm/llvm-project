@@ -256,7 +256,10 @@ public:
                      "ScalarExprEmitter: sycl unique stable name");
     return {};
   }
-
+  mlir::Value VisitEmbedExpr(EmbedExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: embed");
+    return {};
+  }
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     if (e->isGLValue())
       return emitLoadOfLValue(cgf.getOrCreateOpaqueLValueMapping(e),
