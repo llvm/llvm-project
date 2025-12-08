@@ -12040,7 +12040,7 @@ bool ASTContext::mergeExtParameterInfo(
 void ASTContext::ResetObjCLayout(const ObjCInterfaceDecl *D) {
   if (auto It = ObjCLayouts.find(D); It != ObjCLayouts.end()) {
     It->second = nullptr;
-    for (auto *SubClass : ObjCSubClasses[D])
+    for (auto *SubClass : ObjCSubClasses.lookup(D))
       ResetObjCLayout(SubClass);
   }
 }

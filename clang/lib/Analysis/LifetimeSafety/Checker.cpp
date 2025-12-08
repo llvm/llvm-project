@@ -50,6 +50,7 @@ struct PendingWarning {
 class LifetimeChecker {
 private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
+  llvm::DenseMap<const ParmVarDecl *, const Expr *> AnnotationWarningsMap;
   const LoanPropagationAnalysis &LoanPropagation;
   const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
@@ -65,7 +66,26 @@ public:
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
           checkExpiry(EF);
+        else if (const auto *OEF = F->getAs<OriginEscapesFact>())
+          checkAnnotations(OEF);
     issuePendingWarnings();
+    suggestAnnotations();
+  }
+
+  /// Checks if an escaping origin holds a placeholder loan, indicating a
+  /// missing [[clang::lifetimebound]] annotation.
+  void checkAnnotations(const OriginEscapesFact *OEF) {
+    OriginID EscapedOID = OEF->getEscapedOriginID();
+    LoanSet EscapedLoans = LoanPropagation.getLoans(EscapedOID, OEF);
+    for (LoanID LID : EscapedLoans) {
+      const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
+      if (const auto *PL = dyn_cast<PlaceholderLoan>(L)) {
+        const ParmVarDecl *PVD = PL->getParmVarDecl();
+        if (PVD->hasAttr<LifetimeBoundAttr>())
+          continue;
+        AnnotationWarningsMap.try_emplace(PVD, OEF->getEscapeExpr());
+      }
+    }
   }
 
   /// Checks for use-after-free & use-after-return errors when a loan expires.
@@ -114,8 +134,9 @@ public:
     if (!Reporter)
       return;
     for (const auto &[LID, Warning] : FinalWarningsMap) {
-      const Loan &L = FactMgr.getLoanMgr().getLoan(LID);
-      const Expr *IssueExpr = L.IssueExpr;
+      const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
+      const auto *BL = cast<PathLoan>(L);
+      const Expr *IssueExpr = BL->getIssueExpr();
       llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
           CausingFact = Warning.CausingFact;
       Confidence Confidence = Warning.ConfidenceLevel;
@@ -131,6 +152,13 @@ public:
       else
         llvm_unreachable("Unhandled CausingFact type");
     }
+  }
+
+  void suggestAnnotations() {
+    if (!Reporter)
+      return;
+    for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap)
+      Reporter->suggestAnnotation(PVD, EscapeExpr);
   }
 };
 } // namespace

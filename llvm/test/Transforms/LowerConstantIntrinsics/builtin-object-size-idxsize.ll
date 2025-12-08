@@ -96,7 +96,6 @@ entry:
 ; Indices are truncated to the pointer size in a gep. So "i32 -65526" should
 ; be treated as "i16 10" and we expect same result as for
 ; @possible_out_of_bounds_gep_i16 above.
-; FIXME: The result here is incorrect (max/min is swapped).
 define i32 @possible_out_of_bounds_gep_i32_trunc(i1 %c0, i1 %c1) {
 ; CHECK-LABEL: define i32 @possible_out_of_bounds_gep_i32_trunc(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]]) {
@@ -104,7 +103,7 @@ define i32 @possible_out_of_bounds_gep_i32_trunc(i1 %c0, i1 %c1) {
 ; CHECK-NEXT:    [[OBJ:%.*]] = alloca [5 x i8], align 1
 ; CHECK-NEXT:    [[OFFSET:%.*]] = select i1 [[C0]], i32 2, i32 -65526
 ; CHECK-NEXT:    [[PTR_SLIDE:%.*]] = getelementptr i8, ptr [[OBJ]], i32 [[OFFSET]]
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i32 0, i32 3
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i32 3, i32 0
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -169,12 +168,12 @@ entry:
   ret i32 %res
 }
 
-; In this test the index will be out-of-bounds, but the current analysis won't
-; detect that. The analysis will find out that %offset is in the range [-2,
-; 10] which includes valid offsets that aren't out-of-bounds. Therefore we can
-; expect to get -1 for %objsize_max even if an advanced analysis should be
-; able to derive that we are out-of-bounds (returning 0 also for
-; %objsize_max).
+; In this test the index will be out-of-bounds (both 10 and -2 is
+; out-of-bounds), but the current analysis won't detect that. The analysis
+; will find out that %offset is in the range [-2, 10] which includes valid
+; offsets that aren't out-of-bounds. Therefore we can expect to get -1 for
+; %objsize_max even if an advanced analysis should be able to derive that we
+; are out-of-bounds (returning 0 also for %objsize_max).
 define i32 @out_of_bounds_gep_i16_pos_neg(i1 %c0, i1 %c1) {
 ; CHECK-LABEL: define i32 @out_of_bounds_gep_i16_pos_neg(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]]) {
@@ -196,7 +195,7 @@ entry:
 }
 
 ; With 16-bit index size %offset is either 32767 or -32768. Thus, when
-; aggregating the possible offsets it we know that it is in the range [-32768,
+; aggregating the possible offsets we know that they are in the range [-32768,
 ; 32767], which includes valid offsets that aren't out-of-bounds. This is
 ; similar to the out_of_bounds_gep_i16_pos_neg test above, and the current
 ; implementation is expected to derive the result -1 for %objsize_max.
@@ -207,7 +206,8 @@ define i32 @out_of_bounds_gep_i32_trunc_select(i1 %c0, i1 %c1) {
 ; CHECK-NEXT:    [[OBJ:%.*]] = alloca [5 x i8], align 1
 ; CHECK-NEXT:    [[OFFSET:%.*]] = select i1 [[C0]], i32 32767, i32 32768
 ; CHECK-NEXT:    [[PTR_SLIDE:%.*]] = getelementptr i8, ptr [[OBJ]], i32 [[OFFSET]]
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i32 -1, i32 0
+; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
   %obj = alloca [5 x i8]

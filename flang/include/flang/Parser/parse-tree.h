@@ -4672,10 +4672,10 @@ struct OmpLinearClause {
 
 // Ref: [6.0:207-208]
 //
-// loop-range-clause ->
+// looprange-clause ->
 //    LOOPRANGE(first, count)                       // since 6.0
-struct OmpLoopRangeClause {
-  TUPLE_CLASS_BOILERPLATE(OmpLoopRangeClause);
+struct OmpLooprangeClause {
+  TUPLE_CLASS_BOILERPLATE(OmpLooprangeClause);
   std::tuple<ScalarIntConstantExpr, ScalarIntConstantExpr> t;
 };
 
@@ -4982,7 +4982,7 @@ struct OmpClauseList {
 // --- Directives and constructs
 
 struct OmpDirectiveSpecification {
-  ENUM_CLASS(Flag, DeprecatedSyntax)
+  ENUM_CLASS(Flag, DeprecatedSyntax, CrossesLabelDo)
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);

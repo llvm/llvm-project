@@ -122,6 +122,7 @@ private:
   /// Check whether we have enough local memory for promotion.
   bool hasSufficientLocalMem(const Function &F);
 
+  FixedVectorType *getVectorTypeForAlloca(Type *AllocaTy) const;
   bool tryPromoteAllocaToVector(AllocaInst &I);
   bool tryPromoteAllocaToLDS(AllocaInst &I, bool SufficientLDS);
 
@@ -460,13 +461,15 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     return nullptr;
 
   Value *Offset = VarOffset.first;
-  auto *OffsetType = dyn_cast<IntegerType>(Offset->getType());
-  if (!OffsetType)
+  if (!isa<IntegerType>(Offset->getType()))
     return nullptr;
 
+  Offset = Builder.CreateSExtOrTrunc(Offset, Builder.getIntNTy(BW));
+  if (Offset != VarOffset.first)
+    NewInsts.push_back(cast<Instruction>(Offset));
+
   if (!OffsetQuot.isOne()) {
-    ConstantInt *ConstMul =
-        ConstantInt::get(Ctx, OffsetQuot.sext(OffsetType->getBitWidth()));
+    ConstantInt *ConstMul = ConstantInt::get(Ctx, OffsetQuot.sextOrTrunc(BW));
     Offset = Builder.CreateMul(Offset, ConstMul);
     if (Instruction *NewInst = dyn_cast<Instruction>(Offset))
       NewInsts.push_back(NewInst);
@@ -474,8 +477,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   if (ConstOffset.isZero())
     return Offset;
 
-  ConstantInt *ConstIndex =
-      ConstantInt::get(Ctx, IndexQuot.sext(OffsetType->getBitWidth()));
+  ConstantInt *ConstIndex = ConstantInt::get(Ctx, IndexQuot.sextOrTrunc(BW));
   Value *IndexAdd = Builder.CreateAdd(Offset, ConstIndex);
   if (Instruction *NewInst = dyn_cast<Instruction>(IndexAdd))
     NewInsts.push_back(NewInst);
@@ -501,26 +503,13 @@ static Value *promoteAllocaUserToVector(
     Instruction *Inst, const DataLayout &DL, FixedVectorType *VectorTy,
     unsigned VecStoreSize, unsigned ElementSize,
     DenseMap<MemTransferInst *, MemTransferInfo> &TransferInfo,
-    std::map<GetElementPtrInst *, WeakTrackingVH> &GEPVectorIdx, Value *CurVal,
-    SmallVectorImpl<LoadInst *> &DeferredLoads) {
+    std::map<GetElementPtrInst *, WeakTrackingVH> &GEPVectorIdx,
+    function_ref<Value *()> GetCurVal) {
   // Note: we use InstSimplifyFolder because it can leverage the DataLayout
   // to do more folding, especially in the case of vector splats.
   IRBuilder<InstSimplifyFolder> Builder(Inst->getContext(),
                                         InstSimplifyFolder(DL));
   Builder.SetInsertPoint(Inst);
-
-  const auto GetOrLoadCurrentVectorValue = [&]() -> Value * {
-    if (CurVal)
-      return CurVal;
-
-    // If the current value is not known, insert a dummy load and lower it on
-    // the second pass.
-    LoadInst *Dummy =
-        Builder.CreateLoad(VectorTy, PoisonValue::get(Builder.getPtrTy()),
-                           "promotealloca.dummyload");
-    DeferredLoads.push_back(Dummy);
-    return Dummy;
-  };
 
   const auto CreateTempPtrIntCast = [&Builder, DL](Value *Val,
                                                    Type *PtrTy) -> Value * {
@@ -541,12 +530,7 @@ static Value *promoteAllocaUserToVector(
 
   switch (Inst->getOpcode()) {
   case Instruction::Load: {
-    // Loads can only be lowered if the value is known.
-    if (!CurVal) {
-      DeferredLoads.push_back(cast<LoadInst>(Inst));
-      return nullptr;
-    }
-
+    Value *CurVal = GetCurVal();
     Value *Index = calculateVectorIndex(
         cast<LoadInst>(Inst)->getPointerOperand(), GEPVectorIdx);
 
@@ -636,7 +620,7 @@ static Value *promoteAllocaUserToVector(
 
       Val = Builder.CreateBitOrPointerCast(Val, SubVecTy);
 
-      Value *CurVec = GetOrLoadCurrentVectorValue();
+      Value *CurVec = GetCurVal();
       for (unsigned K = 0, NumElts = std::min(NumWrittenElts, NumVecElts);
            K < NumElts; ++K) {
         Value *CurIdx =
@@ -649,8 +633,7 @@ static Value *promoteAllocaUserToVector(
 
     if (Val->getType() != VecEltTy)
       Val = Builder.CreateBitOrPointerCast(Val, VecEltTy);
-    return Builder.CreateInsertElement(GetOrLoadCurrentVectorValue(), Val,
-                                       Index);
+    return Builder.CreateInsertElement(GetCurVal(), Val, Index);
   }
   case Instruction::Call: {
     if (auto *MTI = dyn_cast<MemTransferInst>(Inst)) {
@@ -672,7 +655,7 @@ static Value *promoteAllocaUserToVector(
         }
       }
 
-      return Builder.CreateShuffleVector(GetOrLoadCurrentVectorValue(), Mask);
+      return Builder.CreateShuffleVector(GetCurVal(), Mask);
     }
 
     if (auto *MSI = dyn_cast<MemSetInst>(Inst)) {
@@ -791,16 +774,13 @@ static BasicBlock::iterator skipToNonAllocaInsertPt(BasicBlock &BB,
   return I;
 }
 
-// FIXME: Should try to pick the most likely to be profitable allocas first.
-bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
-  LLVM_DEBUG(dbgs() << "Trying to promote to vector: " << Alloca << '\n');
-
+FixedVectorType *
+AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   if (DisablePromoteAllocaToVector) {
-    LLVM_DEBUG(dbgs() << "  Promote alloca to vector is disabled\n");
-    return false;
+    LLVM_DEBUG(dbgs() << "  Promote alloca to vectors is disabled\n");
+    return nullptr;
   }
 
-  Type *AllocaTy = Alloca.getAllocatedType();
   auto *VectorTy = dyn_cast<FixedVectorType>(AllocaTy);
   if (auto *ArrayTy = dyn_cast<ArrayType>(AllocaTy)) {
     uint64_t NumElems = 1;
@@ -832,10 +812,9 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       }
     }
   }
-
   if (!VectorTy) {
     LLVM_DEBUG(dbgs() << "  Cannot convert type to vector\n");
-    return false;
+    return nullptr;
   }
 
   const unsigned MaxElements =
@@ -845,8 +824,28 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       VectorTy->getNumElements() < 2) {
     LLVM_DEBUG(dbgs() << "  " << *VectorTy
                       << " has an unsupported number of elements\n");
-    return false;
+    return nullptr;
   }
+
+  Type *VecEltTy = VectorTy->getElementType();
+  unsigned ElementSizeInBits = DL->getTypeSizeInBits(VecEltTy);
+  if (ElementSizeInBits != DL->getTypeAllocSizeInBits(VecEltTy)) {
+    LLVM_DEBUG(dbgs() << "  Cannot convert to vector if the allocation size "
+                         "does not match the type's size\n");
+    return nullptr;
+  }
+
+  return VectorTy;
+}
+
+// FIXME: Should try to pick the most likely to be profitable allocas first.
+bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
+  LLVM_DEBUG(dbgs() << "Trying to promote to vectors: " << Alloca << '\n');
+
+  Type *AllocaTy = Alloca.getAllocatedType();
+  FixedVectorType *VectorTy = getVectorTypeForAlloca(AllocaTy);
+  if (!VectorTy)
+    return false;
 
   std::map<GetElementPtrInst *, WeakTrackingVH> GEPVectorIdx;
   SmallVector<Instruction *> WorkList;
@@ -869,13 +868,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   LLVM_DEBUG(dbgs() << "  Attempting promotion to: " << *VectorTy << "\n");
 
   Type *VecEltTy = VectorTy->getElementType();
-  unsigned ElementSizeInBits = DL->getTypeSizeInBits(VecEltTy);
-  if (ElementSizeInBits != DL->getTypeAllocSizeInBits(VecEltTy)) {
-    LLVM_DEBUG(dbgs() << "  Cannot convert to vector if the allocation size "
-                         "does not match the type's size\n");
-    return false;
-  }
-  unsigned ElementSize = ElementSizeInBits / 8;
+  unsigned ElementSize = DL->getTypeSizeInBits(VecEltTy) / 8;
   assert(ElementSize > 0);
   for (auto *U : Uses) {
     Instruction *Inst = cast<Instruction>(U->getUser());
@@ -1027,37 +1020,46 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
 
   Updater.AddAvailableValue(EntryBB, AllocaInitValue);
 
-  // First handle the initial worklist.
-  SmallVector<LoadInst *, 4> DeferredLoads;
+  // First handle the initial worklist, in basic block order.
+  //
+  // Insert a placeholder whenever we need the vector value at the top of a
+  // basic block.
+  SmallVector<Instruction *> Placeholders;
   forEachWorkListItem(WorkList, [&](Instruction *I) {
     BasicBlock *BB = I->getParent();
-    // On the first pass, we only take values that are trivially known, i.e.
-    // where AddAvailableValue was already called in this block.
-    Value *Result = promoteAllocaUserToVector(
-        I, *DL, VectorTy, VecStoreSize, ElementSize, TransferInfo, GEPVectorIdx,
-        Updater.FindValueForBlock(BB), DeferredLoads);
+    auto GetCurVal = [&]() -> Value * {
+      if (Value *CurVal = Updater.FindValueForBlock(BB))
+        return CurVal;
+
+      if (!Placeholders.empty() && Placeholders.back()->getParent() == BB)
+        return Placeholders.back();
+
+      // If the current value in the basic block is not yet known, insert a
+      // placeholder that we will replace later.
+      IRBuilder<> Builder(I);
+      auto *Placeholder = cast<Instruction>(Builder.CreateFreeze(
+          PoisonValue::get(VectorTy), "promotealloca.placeholder"));
+      Placeholders.push_back(Placeholder);
+      return Placeholders.back();
+    };
+
+    Value *Result =
+        promoteAllocaUserToVector(I, *DL, VectorTy, VecStoreSize, ElementSize,
+                                  TransferInfo, GEPVectorIdx, GetCurVal);
     if (Result)
       Updater.AddAvailableValue(BB, Result);
   });
 
-  // Then handle deferred loads.
-  forEachWorkListItem(DeferredLoads, [&](Instruction *I) {
-    SmallVector<LoadInst *, 0> NewDLs;
-    BasicBlock *BB = I->getParent();
-    // On the second pass, we use GetValueInMiddleOfBlock to guarantee we always
-    // get a value, inserting PHIs as needed.
-    Value *Result = promoteAllocaUserToVector(
-        I, *DL, VectorTy, VecStoreSize, ElementSize, TransferInfo, GEPVectorIdx,
-        Updater.GetValueInMiddleOfBlock(I->getParent()), NewDLs);
-    if (Result)
-      Updater.AddAvailableValue(BB, Result);
-    assert(NewDLs.empty() && "No more deferred loads should be queued!");
-  });
+  // Now fixup the placeholders.
+  for (Instruction *Placeholder : Placeholders) {
+    Placeholder->replaceAllUsesWith(
+        Updater.GetValueInMiddleOfBlock(Placeholder->getParent()));
+    Placeholder->eraseFromParent();
+  }
 
   // Delete all instructions. On the first pass, new dummy loads may have been
   // added so we need to collect them too.
   DenseSet<Instruction *> InstsToDelete(WorkList.begin(), WorkList.end());
-  InstsToDelete.insert_range(DeferredLoads);
   for (Instruction *I : InstsToDelete) {
     assert(I->use_empty());
     I->eraseFromParent();
