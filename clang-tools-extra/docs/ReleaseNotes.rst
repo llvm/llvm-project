@@ -543,7 +543,7 @@ Changes in existing checks
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check by correctly
   adding parentheses when the inner expression are implicitly converted
-  multiple times, enabling the check in C99,  and avoiding false positives when
+  multiple times, enabling the check in C99, and avoiding false positives when
   using logical operators with ``bool`` operands in C23.
 
 - Improved :doc:`readability-qualified-auto
