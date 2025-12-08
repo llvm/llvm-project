@@ -672,7 +672,8 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    x8, x9,  [x0, #0x040]
   ldp    x10,x11, [x0, #0x050]
   ldp    x12,x13, [x0, #0x060]
-  ldp    x14,x15, [x0, #0x070]
+  // x14 and x15 are used as scratch registers in this function
+  // and will be restored later.
   // x16 and x17 were clobbered by the call into the unwinder, so no point in
   // restoring them.
   ldp    x18,x19, [x0, #0x090]
@@ -683,42 +684,143 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    x28,x29, [x0, #0x0E0]
 
 #if defined(__ARM_FP) && __ARM_FP != 0
-  ldp    d0, d1,  [x0, #0x110]
-  ldp    d2, d3,  [x0, #0x120]
-  ldp    d4, d5,  [x0, #0x130]
-  ldp    d6, d7,  [x0, #0x140]
-  ldp    d8, d9,  [x0, #0x150]
-  ldp    d10,d11, [x0, #0x160]
-  ldp    d12,d13, [x0, #0x170]
-  ldp    d14,d15, [x0, #0x180]
-  ldp    d16,d17, [x0, #0x190]
-  ldp    d18,d19, [x0, #0x1A0]
-  ldp    d20,d21, [x0, #0x1B0]
-  ldp    d22,d23, [x0, #0x1C0]
-  ldp    d24,d25, [x0, #0x1D0]
-  ldp    d26,d27, [x0, #0x1E0]
-  ldp    d28,d29, [x0, #0x1F0]
-  ldr    d30,     [x0, #0x200]
-  ldr    d31,     [x0, #0x208]
+  ldp    d0, d1,  [x0, #0x120]
+  ldp    d2, d3,  [x0, #0x130]
+  ldp    d4, d5,  [x0, #0x140]
+  ldp    d6, d7,  [x0, #0x150]
+  ldp    d8, d9,  [x0, #0x160]
+  ldp    d10,d11, [x0, #0x170]
+  ldp    d12,d13, [x0, #0x180]
+  ldp    d14,d15, [x0, #0x190]
+  ldp    d16,d17, [x0, #0x1A0]
+  ldp    d18,d19, [x0, #0x1B0]
+  ldp    d20,d21, [x0, #0x1C0]
+  ldp    d22,d23, [x0, #0x1D0]
+  ldp    d24,d25, [x0, #0x1E0]
+  ldp    d26,d27, [x0, #0x1F0]
+  ldr    d28,     [x0, #0x200]
+  ldr    d29,     [x0, #0x208]
+  ldr    d30,     [x0, #0x210]
+  ldr    d31,     [x0, #0x218]
 #endif
+
+  // The lr value stored in __pc might be signed with IA/IB key (as described
+  // by __ra_sign.__use_b_key field) and &__pc address as a modifier.
+  // If the lr value is signed, re-sign that with the corresponding key
+  // and initial signing scheme using __sp as a modifier and potentially
+  // involving a second modifier (as described by (__ra_sign.__state & 2)).
+
+  ldr    x14,     [x0, #0x0F8]  // x14 = __sp
+  ldr    x15,     [x0, #0x110]  // x15 = __ra_sign.__second_modifier
+  add    x16, x0, #0x100        // x16 = &__pc
+  ldr    x17,     [x0, #0x100]  // x17 = __pc
+
+  ldr    x1,      [x0, #0x108]  // x1 = __ra_sign.__state
+  and    x1, x1, #1
+  cbz    x1, .Lresign_end
+
+  // lr needs resign
+  ldr    x1,      [x0, #0x108]  // x1 = __ra_sign.__state
+  and    x1, x1, #2
+  cbnz   x1, .Lresign_with_pc
+
+  // lr needs resign without pc as a second modifier
+  ldr    x1,      [x0, #0x118]  // x1 = __ra_sign.__use_b_key
+  cbnz   x1, .Lresign_with_b_key
+
+  // lr needs resign with A key and without pc as a second modifier
+  hint   0xc                    // autia1716
+  mov    x16, x14               // x16 = __sp
+  hint   0x8                    // pacia1716
+  b .Lresign_end
+
+.Lresign_with_b_key:
+  // lr needs resign with B key and without pc as a second modifier
+  hint   0xe                    // autib1716
+  mov    x16, x14               // x16 = __sp
+  hint   0xa                    // pacib1716
+  b .Lresign_end
+
+.Lresign_with_pc:
+  // lr needs resign with pc as a second modifier
+  ldr    x1,      [x0, #0x118]  // x1 = __ra_sign.__use_b_key
+  cbnz   x1, .Lresign_with_pc_b_key
+
+  // lr needs resign with A key and pc as a second modifier
+  hint   0xc                    // autia1716
+  mov    x16, x14               // x16 = __sp
+  hint   0x27                   // pacm
+  hint   0x8                    // pacia1716
+  b .Lresign_end
+
+.Lresign_with_pc_b_key:
+  // lr needs resign with B key and pc as a second modifier
+  hint   0xe                    // autib1716
+  mov    x16, x14               // x16 = __sp
+  hint   0x27                   // pacm
+  hint   0xa                    // pacib1716
+  b .Lresign_end
+
+.Lresign_end:
+  mov    lr, x17                // assign final lr value
+  ldp    x14,x15, [x0, #0x070]  // restore x14,x15
+  ldr    x16,     [x0, #0x110]  // second modifier for auti{a|b}sp with PACM
+
   // Finally, restore sp. This must be done after the last read from the
   // context struct, because it is allocated on the stack, and an exception
   // could clobber the de-allocated portion of the stack after sp has been
   // restored.
+  ldr    x17,     [x0, #0x0F8]  // load sp into scratch
 
-  ldr    x16,     [x0, #0x0F8]  // load sp into scratch
-  ldr    lr,      [x0, #0x100]  // restore pc into lr
+  ldr    x1,      [x0, #0x108]  // x1 = __ra_sign.__state
+  and    x1, x1, #1
+  cbz    x1, .Lauth_end
 
-#if __has_feature(ptrauth_calls)
-  // The LR is signed with its address inside the register state.  Time
-  // to resign to be a regular ROP protected signed pointer
-  add    x1, x0, #0x100
-  autib  lr, x1
-  pacib  lr, x16  // signed the scratch register for sp
-#endif
+  // lr is signed
+  ldr    x1,      [x0, #0x108]  // x1 = __ra_sign.__state
+  and    x1, x1, #2
+  cbnz   x1, .Lauth_with_pc
 
+  // lr is signed without pc as a second modifier
+  ldr    x1,      [x0, #0x118]  // x1 = __ra_sign.__use_b_key
+  cbnz   x1, .Lauth_with_b_key
+
+  // lr is signed with A key and without pc as a second modifier
   ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
-  mov    sp,x16                 // restore sp
+  mov    sp,x17                 // restore sp
+  hint   0x1d                   // autiasp
+  ret    x30
+
+.Lauth_with_b_key:
+  // lr is signed with B key and without pc as a second modifier
+  ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
+  mov    sp,x17                 // restore sp
+  hint   0x1f                   // autibsp
+  ret    x30
+
+.Lauth_with_pc:
+  // lr is signed with pc as a second modifier
+  ldr    x1,      [x0, #0x118]  // x1 = __ra_sign.__use_b_key
+  cbnz   x1, .Lauth_with_pc_b_key
+
+  // lr is signed with A key and pc as a second modifier
+  ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
+  mov    sp,x17                 // restore sp
+  hint   0x27                   // pacm
+  hint   0x1d                   // autiasp
+  ret    x30
+
+.Lauth_with_pc_b_key:
+  // lr is signed with B key and pc as a second modifier
+  ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
+  mov    sp,x17                 // restore sp
+  hint   0x27                   // pacm
+  hint   0x1f                   // autibsp
+  ret    x30
+
+.Lauth_end:
+  ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
+  mov    sp,x17                 // restore sp
 #if defined(__ARM_FEATURE_GCS_DEFAULT)
   // If GCS is enabled we need to push the address we're returning to onto the
   // GCS stack. We can't just return using br, as there won't be a BTI landing
@@ -729,12 +831,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   gcspushm x30
 Lnogcs:
 #endif
-
-#if __has_feature(ptrauth_calls)
-  retab
-#else
   ret    x30                    // jump to pc
-#endif
 
 #elif defined(__arm__) && !defined(__APPLE__)
 
