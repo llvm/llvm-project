@@ -271,8 +271,10 @@ bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
   IRBuilder<> Builder(&II);
   Type *STy = VTy->getElementType();
   Value *Val = Builder.CreateLoad(STy, BasePtr);
-  Value *Res = Builder.CreateIntrinsic(Intrinsic::experimental_vp_splat, {VTy},
-                                       {Val, II.getOperand(2), VL});
+  Value *Res = Builder.CreateIntrinsic(
+      Intrinsic::vp_merge, VTy,
+      {II.getOperand(2), Builder.CreateVectorSplat(VTy->getElementCount(), Val),
+       PoisonValue::get(VTy), VL});
 
   II.replaceAllUsesWith(Res);
   II.eraseFromParent();
