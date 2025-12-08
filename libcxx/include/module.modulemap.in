@@ -51,6 +51,9 @@ module std_core [system] {
     module nullptr_t    { header "__cstddef/nullptr_t.h" }
     module ptrdiff_t    { header "__cstddef/ptrdiff_t.h" }
     module size_t       { header "__cstddef/size_t.h" }
+
+    header "cstddef"
+    export *
   }
 
   module cstdint {
@@ -1220,11 +1223,6 @@ module std [system] {
 
   module cstdbool {
     header "cstdbool"
-    export *
-  }
-
-  module cstddef {
-    header "cstddef"
     export *
   }
 
