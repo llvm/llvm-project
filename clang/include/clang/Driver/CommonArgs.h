@@ -312,6 +312,9 @@ void setComplexRange(const Driver &D, StringRef NewOpt,
                      LangOptions::ComplexRangeKind NewRange, StringRef &LastOpt,
                      LangOptions::ComplexRangeKind &Range);
 
+// This function expects that the inputs to llvm-link will be specified by the
+// caller, but the output is handled by this function, with the optional ability
+// to set the output filename.
 void constructLlvmLinkCommand(Compilation &C, const Tool &T,
                               const JobAction &JA,
                               const InputInfoList &JobInputs,
