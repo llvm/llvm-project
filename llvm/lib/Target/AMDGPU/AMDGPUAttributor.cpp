@@ -1604,7 +1604,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID, &AAPointerInfo::ID,
        &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
        &AANoAliasAddrSpace::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAAMDGPUClusterDims::ID});
+       &AAAMDGPUClusterDims::ID, &AAAlign::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1668,6 +1668,10 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
       if (Ptr) {
         A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
         A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
+        if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Ptr)) {
+          if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
+            A.getOrCreateAAFor<AAAlign>(IRPosition::value(*Ptr));
+        }
       }
     }
   }
