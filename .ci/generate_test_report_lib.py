@@ -62,6 +62,18 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
         # aligned with the failure.
         failing_action = ninja_log[index].split("FAILED: ")[1]
         failure_log = []
+
+        # Parse the lines above the FAILED: string if the line does not come
+        # immediately after a progress indicator to ensure that we capture the
+        # entire failure message.
+        if not ninja_log[index - 1].startswith("["):
+            before_index = index - 1
+            while before_index > 0 and not ninja_log[before_index].startswith("["):
+                failure_log.append(ninja_log[before_index])
+                before_index = before_index - 1
+            failure_log.reverse()
+
+        # Parse the failure information, which comes after the FAILED: tag.
         while (
             index < len(ninja_log)
             and not ninja_log[index].startswith("[")

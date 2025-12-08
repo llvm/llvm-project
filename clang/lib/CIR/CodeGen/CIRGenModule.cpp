@@ -2227,6 +2227,15 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
 
     if (!cgf)
       theModule.push_back(func);
+
+    if (this->getLangOpts().OpenACC) {
+      // We only have to handle this attribute, since OpenACCAnnotAttrs are
+      // handled via the end-of-TU work.
+      for (const auto *attr :
+           funcDecl->specific_attrs<OpenACCRoutineDeclAttr>())
+        emitOpenACCRoutineDecl(funcDecl, func, attr->getLocation(),
+                               attr->Clauses);
+    }
   }
   return func;
 }
@@ -2488,4 +2497,40 @@ DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
 DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
                                          llvm::StringRef feature) {
   return errorNYI(loc.getBegin(), feature) << loc;
+}
+
+void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
+                                   cir::LabelOp label) {
+  [[maybe_unused]] auto result =
+      blockAddressInfoToLabel.try_emplace(blockInfo, label);
+  assert(result.second &&
+         "attempting to map a blockaddress info that is already mapped");
+}
+
+void CIRGenModule::mapUnresolvedBlockAddress(cir::BlockAddressOp op) {
+  [[maybe_unused]] auto result = unresolvedBlockAddressToLabel.insert(op);
+  assert(result.second &&
+         "attempting to map a blockaddress operation that is already mapped");
+}
+
+void CIRGenModule::mapResolvedBlockAddress(cir::BlockAddressOp op,
+                                           cir::LabelOp label) {
+  [[maybe_unused]] auto result = blockAddressToLabel.try_emplace(op, label);
+  assert(result.second &&
+         "attempting to map a blockaddress operation that is already mapped");
+}
+
+void CIRGenModule::updateResolvedBlockAddress(cir::BlockAddressOp op,
+                                              cir::LabelOp newLabel) {
+  auto *it = blockAddressToLabel.find(op);
+  assert(it != blockAddressToLabel.end() &&
+         "trying to update a blockaddress not previously mapped");
+  assert(!it->second && "blockaddress already has a resolved label");
+
+  it->second = newLabel;
+}
+
+cir::LabelOp
+CIRGenModule::lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo) {
+  return blockAddressInfoToLabel.lookup(blockInfo);
 }

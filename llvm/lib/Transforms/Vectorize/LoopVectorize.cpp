@@ -5143,8 +5143,18 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
       InstructionCost C = getInstructionCost(&I, VF);
 
       // Check if we should override the cost.
-      if (C.isValid() && ForceTargetInstructionCost.getNumOccurrences() > 0)
-        C = InstructionCost(ForceTargetInstructionCost);
+      if (C.isValid() && ForceTargetInstructionCost.getNumOccurrences() > 0) {
+        // For interleave groups, use ForceTargetInstructionCost once for the
+        // whole group.
+        if (VF.isVector() && getWideningDecision(&I, VF) == CM_Interleave) {
+          if (getInterleavedAccessGroup(&I)->getInsertPos() == &I)
+            C = InstructionCost(ForceTargetInstructionCost);
+          else
+            C = InstructionCost(0);
+        } else {
+          C = InstructionCost(ForceTargetInstructionCost);
+        }
+      }
 
       BlockCost += C;
       LLVM_DEBUG(dbgs() << "LV: Found an estimated cost of " << C << " for VF "
@@ -8818,9 +8828,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
                  match(CurrentLink, m_Sub(m_VPValue(), m_VPValue()))) {
         Type *PhiTy = TypeInfo.inferScalarType(PhiR);
         auto *Zero = Plan->getConstantInt(PhiTy, 0);
-        VPWidenRecipe *Sub = new VPWidenRecipe(
-            Instruction::Sub, {Zero, CurrentLink->getOperand(1)}, {},
-            VPIRMetadata(), CurrentLinkI->getDebugLoc());
+        auto *Sub = new VPInstruction(Instruction::Sub,
+                                      {Zero, CurrentLink->getOperand(1)}, {},
+                                      {}, CurrentLinkI->getDebugLoc());
         Sub->setUnderlyingValue(CurrentLinkI);
         LinkVPBB->insert(Sub, CurrentLink->getIterator());
         VecOp = Sub;
@@ -8985,14 +8995,19 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     }
 
     // Update all users outside the vector region. Also replace redundant
-    // ExtractLastElement.
+    // extracts.
     for (auto *U : to_vector(OrigExitingVPV->users())) {
       auto *Parent = cast<VPRecipeBase>(U)->getParent();
       if (FinalReductionResult == U || Parent->getParent())
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
-      if (match(U, m_CombineOr(m_ExtractLastElement(m_VPValue()),
-                               m_ExtractLane(m_VPValue(), m_VPValue()))))
+
+      // Look through ExtractLastPart.
+      if (match(U, m_ExtractLastPart(m_VPValue())))
+        U = cast<VPInstruction>(U)->getSingleUser();
+
+      if (match(U, m_CombineOr(m_ExtractLane(m_VPValue(), m_VPValue()),
+                               m_ExtractLastLane(m_VPValue()))))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
     }
 

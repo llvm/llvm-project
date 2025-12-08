@@ -177,6 +177,42 @@ Changes to the C API
 
 * Add `LLVMGetOrInsertFunction` to get or insert a function, replacing the combination of `LLVMGetNamedFunction` and `LLVMAddFunction`.
 * Allow `LLVMGetVolatile` to work with any kind of Instruction.
+* Add `LLVMConstFPFromBits` to get a constant floating-point value from an array of 64 bit values.
+* Functions working on the global context have been deprecated. Use the
+  functions that work on a specific context instead.
+
+  * `LLVMGetGlobalContext` -> use `LLVMContextCreate` context instead
+  * `LLVMInt1Type` -> `LLVMInt1TypeInContext`
+  * `LLVMInt8Type` -> `LLVMInt8TypeInContext`
+  * `LLVMInt16Type` -> `LLVMInt16TypeInContext`
+  * `LLVMInt32Type` -> `LLVMInt32TypeInContext`
+  * `LLVMInt64Type` -> `LLVMInt64TypeInContext`
+  * `LLVMInt128Type` -> `LLVMInt128TypeInContext`
+  * `LLVMIntType` -> `LLVMIntTypeInContext`
+  * `LLVMHalfType` -> `LLVMHalfTypeInContext`
+  * `LLVMBFloatType` -> `LLVMBFloatTypeInContext`
+  * `LLVMFloatType` -> `LLVMFloatTypeInContext`
+  * `LLVMDoubleType` -> `LLVMDoubleTypeInContext`
+  * `LLVMX86FP80Type` -> `LLVMX86FP80TypeInContext`
+  * `LLVMFP128Type` -> `LLVMFP128TypeInContext`
+  * `LLVMPPCFP128Type` -> `LLVMPPCFP128TypeInContext`
+  * `LLVMStructType` -> `LLVMStructTypeInContext`
+  * `LLVMVoidType` -> `LLVMVoidTypeInContext`
+  * `LLVMLabelType` -> `LLVMLabelTypeInContext`
+  * `LLVMX86AMXType` -> `LLVMX86AMXTypeInContext`
+  * `LLVMConstString` -> `LLVMConstStringInContext2`
+  * `LLVMConstStruct` -> `LLVMConstStructInContext`
+  * `LLVMMDString` -> `LLVMMDStringInContext2`
+  * `LLVMMDNode` -> `LLVMMDNodeInContext2`
+  * `LLVMAppendBasicBlock` -> `LLVMAppendBasicBlockInContext`
+  * `LLVMInsertBasicBlock` -> `LLVMInsertBasicBlockInContext`
+  * `LLVMCreateBuilder` -> `LLVMCreateBuilderInContext`
+  * `LLVMIntPtrType` -> `LLVMIntPtrTypeInContext`
+  * `LLVMIntPtrTypeForAS` -> `LLVMIntPtrTypeForASInContext`
+  * `LLVMParseBitcode` -> `LLVMParseBitcodeInContext2`
+  * `LLVMParseBitcode2` -> `LLVMParseBitcodeInContext2`
+  * `LLVMGetBitcodeModule` -> `LLVMGetBitcodeModuleInContext2`
+  * `LLVMGetBitcodeModule2` -> `LLVMGetBitcodeModuleInContext2`
 
 Changes to the CodeGen infrastructure
 -------------------------------------

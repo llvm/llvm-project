@@ -1243,42 +1243,12 @@ cc_library(
     ],
 )
 
-AnalysisFpExcSrcs = [
-    "lib/Analysis/ConstantFolding.cpp",
-]
-
-cc_library(
-    name = "AnalysisFpExc",
-    srcs = AnalysisFpExcSrcs,
-    hdrs = glob(
-        [
-            "include/llvm/Analysis/*.h",
-            "include/llvm/Analysis/Utils/*.h",
-        ],
-    ),
-    copts = llvm_copts + ["-ftrapping-math"],
-    textual_hdrs = glob([
-        "include/llvm/Analysis/*.def",
-    ]),
-    deps = [
-        ":BinaryFormat",
-        ":Core",
-        ":Object",
-        ":ProfileData",
-        ":Support",
-        ":TargetParser",
-        ":config",
-        ":target_library_info_gen",
-    ],
-)
-
 cc_library(
     name = "Analysis",
     srcs = glob(
         [
             "lib/Analysis/*.cpp",
         ],
-        exclude = AnalysisFpExcSrcs,
     ),
     hdrs = glob(
         [
@@ -1288,12 +1258,11 @@ cc_library(
     ) + [
         "include/llvm-c/Analysis.h",
     ],
-    copts = llvm_copts,
+    copts = llvm_copts + ["-ftrapping-math"],
     textual_hdrs = glob([
         "include/llvm/Analysis/*.def",
     ]),
     deps = [
-        ":AnalysisFpExc",
         ":BinaryFormat",
         ":Core",
         ":FrontendHLSL",
@@ -1559,18 +1528,6 @@ td_library(
     srcs = glob([
         "lib/Target/AMDGPU/**/*.td",
     ]),
-)
-
-gentbl_cc_library(
-    name = "InstCombineTableGen",
-    strip_include_prefix = "lib/Target/AMDGPU",
-    tbl_outs = {"lib/Target/AMDGPU/InstCombineTables.inc": ["-gen-searchable-tables"]},
-    tblgen = ":llvm-tblgen",
-    td_file = "lib/Target/AMDGPU/InstCombineTables.td",
-    deps = [
-        ":AMDGPUTargetTdFiles",
-        ":CommonTargetTdFiles",
-    ],
 )
 
 cc_library(
@@ -2453,7 +2410,6 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
         "tbl_deps": [
-            ":InstCombineTableGen",
             ":amdgpu_isel_target_gen",
             ":r600_target_gen",
         ],
@@ -2796,6 +2752,12 @@ llvm_target_lib_list = [lib for lib in [
                     "lib/Target/Mips/MipsGenRegisterInfoMCDesc.inc",
                     "lib/Target/Mips/MipsGenRegisterInfoHeader.inc",
                     "lib/Target/Mips/MipsGenRegisterInfoTargetDesc.inc",
+                ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                [
+                    "lib/Target/Mips/MipsGenSDNodeInfo.inc",
                 ],
             ),
             (
