@@ -7,144 +7,111 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @kernel3 = global [512 x float] zeroinitializer, align 16
 @kernel4 = global [512 x float] zeroinitializer, align 16
 @src_data = global [1536 x float] zeroinitializer, align 16
-@r_ = global i8 0, align 1
-@g_ = global i8 0, align 1
-@b_ = global i8 0, align 1
 
 ; We don't want to vectorize most loops containing gathers because they are
-; expensive. This function represents a point where vectorization starts to
-; become beneficial.
-; Make sure we are conservative and don't vectorize it.
+; expensive.
+; Make sure we don't vectorize it.
 
-define void @_Z4testmm(i64 %size, i64 %offset) {
+define float @_Z4testmm(i64 %size, i64 %offset) {
 ; CHECK-LABEL: @_Z4testmm(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP53:%.*]] = icmp eq i64 [[SIZE:%.*]], 0
-; CHECK-NEXT:    br i1 [[CMP53]], label [[FOR_END:%.*]], label [[FOR_BODY_LR_PH:%.*]]
-; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[R_057:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[ADD10:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[G_056:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[ADD20:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[V_055:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[B_054:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[ADD30:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[V_055]], [[OFFSET:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX_0:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[RDX_0_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX_1:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[RDX_1_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED_2:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[RDX_2_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[IV]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[ADD]], 3
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1536 x float], ptr @src_data, i64 0, i64 [[MUL]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [512 x float], ptr @kernel, i64 0, i64 [[V_055]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[GEP_SRC_DATA:%.*]] = getelementptr inbounds [1536 x float], ptr @src_data, i64 0, i64 [[MUL]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[GEP_SRC_DATA]], align 4
+; CHECK-NEXT:    [[GEP_KERNEL:%.*]] = getelementptr inbounds [512 x float], ptr @kernel, i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[GEP_KERNEL]], align 4
 ; CHECK-NEXT:    [[MUL3:%.*]] = fmul fast float [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [512 x float], ptr @kernel2, i64 0, i64 [[V_055]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    [[GEP_KERNEL2:%.*]] = getelementptr inbounds [512 x float], ptr @kernel2, i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[GEP_KERNEL2]], align 4
 ; CHECK-NEXT:    [[MUL5:%.*]] = fmul fast float [[MUL3]], [[TMP2]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [512 x float], ptr @kernel3, i64 0, i64 [[V_055]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX6]], align 4
+; CHECK-NEXT:    [[GEP_KERNEL3:%.*]] = getelementptr inbounds [512 x float], ptr @kernel3, i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP_KERNEL3]], align 4
 ; CHECK-NEXT:    [[MUL7:%.*]] = fmul fast float [[MUL5]], [[TMP3]]
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [512 x float], ptr @kernel4, i64 0, i64 [[V_055]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[ARRAYIDX8]], align 4
+; CHECK-NEXT:    [[GEP_KERNEL4:%.*]] = getelementptr inbounds [512 x float], ptr @kernel4, i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP_KERNEL4]], align 4
 ; CHECK-NEXT:    [[MUL9:%.*]] = fmul fast float [[MUL7]], [[TMP4]]
-; CHECK-NEXT:    [[ADD10]] = fadd fast float [[R_057]], [[MUL9]]
-; CHECK-NEXT:    [[ARRAYIDX_SUM:%.*]] = add i64 [[MUL]], 1
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [1536 x float], ptr @src_data, i64 0, i64 [[ARRAYIDX_SUM]]
+; CHECK-NEXT:    [[RDX_0_NEXT]] = fadd fast float [[RDX_0]], [[MUL9]]
+; CHECK-NEXT:    [[GEP_SRC_DATA_SUM:%.*]] = add i64 [[MUL]], 1
+; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [1536 x float], ptr @src_data, i64 0, i64 [[GEP_SRC_DATA_SUM]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[ARRAYIDX11]], align 4
 ; CHECK-NEXT:    [[MUL13:%.*]] = fmul fast float [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    [[MUL15:%.*]] = fmul fast float [[TMP2]], [[MUL13]]
 ; CHECK-NEXT:    [[MUL17:%.*]] = fmul fast float [[TMP3]], [[MUL15]]
 ; CHECK-NEXT:    [[MUL19:%.*]] = fmul fast float [[TMP4]], [[MUL17]]
-; CHECK-NEXT:    [[ADD20]] = fadd fast float [[G_056]], [[MUL19]]
-; CHECK-NEXT:    [[ARRAYIDX_SUM52:%.*]] = add i64 [[MUL]], 2
-; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds [1536 x float], ptr @src_data, i64 0, i64 [[ARRAYIDX_SUM52]]
+; CHECK-NEXT:    [[RDX_1_NEXT]] = fadd fast float [[RDX_1]], [[MUL19]]
+; CHECK-NEXT:    [[GEP_SRC_DATA_SUM52:%.*]] = add i64 [[MUL]], 2
+; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds [1536 x float], ptr @src_data, i64 0, i64 [[GEP_SRC_DATA_SUM52]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[ARRAYIDX21]], align 4
 ; CHECK-NEXT:    [[MUL23:%.*]] = fmul fast float [[TMP1]], [[TMP6]]
 ; CHECK-NEXT:    [[MUL25:%.*]] = fmul fast float [[TMP2]], [[MUL23]]
 ; CHECK-NEXT:    [[MUL27:%.*]] = fmul fast float [[TMP3]], [[MUL25]]
 ; CHECK-NEXT:    [[MUL29:%.*]] = fmul fast float [[TMP4]], [[MUL27]]
-; CHECK-NEXT:    [[ADD30]] = fadd fast float [[B_054]], [[MUL29]]
-; CHECK-NEXT:    [[INC]] = add i64 [[V_055]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INC]], [[SIZE]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]]
-; CHECK:       for.cond.for.end_crit_edge:
-; CHECK-NEXT:    [[ADD30_LCSSA:%.*]] = phi float [ [[ADD30]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ADD20_LCSSA:%.*]] = phi float [ [[ADD20]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ADD10_LCSSA:%.*]] = phi float [ [[ADD10]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[PHITMP:%.*]] = fptoui float [[ADD10_LCSSA]] to i8
-; CHECK-NEXT:    [[PHITMP60:%.*]] = fptoui float [[ADD20_LCSSA]] to i8
-; CHECK-NEXT:    [[PHITMP61:%.*]] = fptoui float [[ADD30_LCSSA]] to i8
-; CHECK-NEXT:    br label [[FOR_END]]
-; CHECK:       for.end:
-; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i8 [ [[PHITMP]], [[FOR_COND_FOR_END_CRIT_EDGE]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[G_0_LCSSA:%.*]] = phi i8 [ [[PHITMP60]], [[FOR_COND_FOR_END_CRIT_EDGE]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[B_0_LCSSA:%.*]] = phi i8 [ [[PHITMP61]], [[FOR_COND_FOR_END_CRIT_EDGE]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    store i8 [[R_0_LCSSA]], ptr @r_, align 1
-; CHECK-NEXT:    store i8 [[G_0_LCSSA]], ptr @g_, align 1
-; CHECK-NEXT:    store i8 [[B_0_LCSSA]], ptr @b_, align 1
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[RDX_2_NEXT]] = fadd fast float [[RED_2]], [[MUL29]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_NEXT]], [[SIZE:%.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RDX_0_NEXT_LCSSA:%.*]] = phi float [ [[RDX_0_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX_1_NEXT_LCSSA:%.*]] = phi float [ [[RDX_1_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX_2_NEXT_LCSSA:%.*]] = phi float [ [[RDX_2_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[RES_0:%.*]] = fadd float [[RDX_0_NEXT_LCSSA]], [[RDX_1_NEXT_LCSSA]]
+; CHECK-NEXT:    [[RES_1:%.*]] = fadd float [[RES_0]], [[RDX_2_NEXT_LCSSA]]
+; CHECK-NEXT:    ret float [[RES_1]]
 ;
 entry:
-  %cmp53 = icmp eq i64 %size, 0
-  br i1 %cmp53, label %for.end, label %for.body.lr.ph
+  br label %loop
 
-for.body.lr.ph:
-  br label %for.body
-
-for.body:
-  %r.057 = phi float [ 0.000000e+00, %for.body.lr.ph ], [ %add10, %for.body ]
-  %g.056 = phi float [ 0.000000e+00, %for.body.lr.ph ], [ %add20, %for.body ]
-  %v.055 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
-  %b.054 = phi float [ 0.000000e+00, %for.body.lr.ph ], [ %add30, %for.body ]
-  %add = add i64 %v.055, %offset
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx.0 = phi float [ 0.000000e+00, %entry ], [ %rdx.0.next, %loop ]
+  %rdx.1 = phi float [ 0.000000e+00, %entry ], [ %rdx.1.next, %loop ]
+  %red.2 = phi float [ 0.000000e+00, %entry ], [ %rdx.2.next, %loop ]
+  %add = add i64 %iv, %offset
   %mul = mul i64 %add, 3
-  %arrayidx = getelementptr inbounds [1536 x float], ptr @src_data, i64 0, i64 %mul
-  %0 = load float, ptr %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds [512 x float], ptr @kernel, i64 0, i64 %v.055
-  %1 = load float, ptr %arrayidx2, align 4
+  %gep.src_data = getelementptr inbounds [1536 x float], ptr @src_data, i64 0, i64 %mul
+  %0 = load float, ptr %gep.src_data, align 4
+  %gep.kernel = getelementptr inbounds [512 x float], ptr @kernel, i64 0, i64 %iv
+  %1 = load float, ptr %gep.kernel, align 4
   %mul3 = fmul fast float %0, %1
-  %arrayidx4 = getelementptr inbounds [512 x float], ptr @kernel2, i64 0, i64 %v.055
-  %2 = load float, ptr %arrayidx4, align 4
+  %gep.kernel2 = getelementptr inbounds [512 x float], ptr @kernel2, i64 0, i64 %iv
+  %2 = load float, ptr %gep.kernel2, align 4
   %mul5 = fmul fast float %mul3, %2
-  %arrayidx6 = getelementptr inbounds [512 x float], ptr @kernel3, i64 0, i64 %v.055
-  %3 = load float, ptr %arrayidx6, align 4
+  %gep.kernel3 = getelementptr inbounds [512 x float], ptr @kernel3, i64 0, i64 %iv
+  %3 = load float, ptr %gep.kernel3, align 4
   %mul7 = fmul fast float %mul5, %3
-  %arrayidx8 = getelementptr inbounds [512 x float], ptr @kernel4, i64 0, i64 %v.055
-  %4 = load float, ptr %arrayidx8, align 4
+  %gep.kernel4 = getelementptr inbounds [512 x float], ptr @kernel4, i64 0, i64 %iv
+  %4 = load float, ptr %gep.kernel4, align 4
   %mul9 = fmul fast float %mul7, %4
-  %add10 = fadd fast float %r.057, %mul9
-  %arrayidx.sum = add i64 %mul, 1
-  %arrayidx11 = getelementptr inbounds [1536 x float], ptr @src_data, i64 0, i64 %arrayidx.sum
+  %rdx.0.next = fadd fast float %rdx.0, %mul9
+  %gep.src_data.sum = add i64 %mul, 1
+  %arrayidx11 = getelementptr inbounds [1536 x float], ptr @src_data, i64 0, i64 %gep.src_data.sum
   %5 = load float, ptr %arrayidx11, align 4
   %mul13 = fmul fast float %1, %5
   %mul15 = fmul fast float %2, %mul13
   %mul17 = fmul fast float %3, %mul15
   %mul19 = fmul fast float %4, %mul17
-  %add20 = fadd fast float %g.056, %mul19
-  %arrayidx.sum52 = add i64 %mul, 2
-  %arrayidx21 = getelementptr inbounds [1536 x float], ptr @src_data, i64 0, i64 %arrayidx.sum52
+  %rdx.1.next = fadd fast float %rdx.1, %mul19
+  %gep.src_data.sum52 = add i64 %mul, 2
+  %arrayidx21 = getelementptr inbounds [1536 x float], ptr @src_data, i64 0, i64 %gep.src_data.sum52
   %6 = load float, ptr %arrayidx21, align 4
   %mul23 = fmul fast float %1, %6
   %mul25 = fmul fast float %2, %mul23
   %mul27 = fmul fast float %3, %mul25
   %mul29 = fmul fast float %4, %mul27
-  %add30 = fadd fast float %b.054, %mul29
-  %inc = add i64 %v.055, 1
-  %exitcond = icmp ne i64 %inc, %size
-  br i1 %exitcond, label %for.body, label %for.cond.for.end_crit_edge
+  %rdx.2.next = fadd fast float %red.2, %mul29
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp ne i64 %iv.next, %size
+  br i1 %exitcond, label %loop, label %exit
 
-for.cond.for.end_crit_edge:
-  %add30.lcssa = phi float [ %add30, %for.body ]
-  %add20.lcssa = phi float [ %add20, %for.body ]
-  %add10.lcssa = phi float [ %add10, %for.body ]
-  %phitmp = fptoui float %add10.lcssa to i8
-  %phitmp60 = fptoui float %add20.lcssa to i8
-  %phitmp61 = fptoui float %add30.lcssa to i8
-  br label %for.end
-
-for.end:
-  %r.0.lcssa = phi i8 [ %phitmp, %for.cond.for.end_crit_edge ], [ 0, %entry ]
-  %g.0.lcssa = phi i8 [ %phitmp60, %for.cond.for.end_crit_edge ], [ 0, %entry ]
-  %b.0.lcssa = phi i8 [ %phitmp61, %for.cond.for.end_crit_edge ], [ 0, %entry ]
-  store i8 %r.0.lcssa, ptr @r_, align 1
-  store i8 %g.0.lcssa, ptr @g_, align 1
-  store i8 %b.0.lcssa, ptr @b_, align 1
-  ret void
+exit:
+  %res.0 = fadd float %rdx.0.next, %rdx.1.next
+  %res.1 = fadd float %res.0, %rdx.2.next
+  ret float %res.1
 }
