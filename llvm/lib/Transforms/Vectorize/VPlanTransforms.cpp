@@ -5067,8 +5067,6 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
 
   auto *WideLoad = cast<VPWidenLoadRecipe>(R);
   VPValue *PtrOp = WideLoad->getAddr();
-  if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(PtrOp))
-    PtrOp = VecPtr->getOperand(0);
   // Narrow wide load to uniform scalar load, as transformed VPlan will only
   // process one original iteration.
   auto *N = new VPReplicateRecipe(&WideLoad->getIngredient(), {PtrOp},
@@ -5115,14 +5113,6 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
 
     auto *InterleaveR = dyn_cast<VPInterleaveRecipe>(&R);
     if (R.mayWriteToMemory() && !InterleaveR)
-      return;
-
-    // Do not narrow interleave groups if there are VectorPointer recipes and
-    // the plan was unrolled. The recipe implicitly uses VF from
-    // VPTransformState.
-    // TODO: Remove restriction once the VF for the VectorPointer offset is
-    // modeled explicitly as operand.
-    if (isa<VPVectorPointerRecipe>(&R) && Plan.getUF() > 1)
       return;
 
     // All other ops are allowed, but we reject uses that cannot be converted
