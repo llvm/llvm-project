@@ -662,10 +662,6 @@ size_t DataExtractor::ExtractBytes(offset_t offset, offset_t length,
   const uint8_t *src = PeekData(offset, length);
   if (src) {
     if (dst_byte_order != GetByteOrder()) {
-      // Validate that only a word- or register-sized dst is byte swapped
-      assert(length == 1 || length == 2 || length == 4 || length == 8 ||
-             length == 10 || length == 16 || length == 32);
-
       for (uint32_t i = 0; i < length; ++i)
         (static_cast<uint8_t *>(dst))[i] = src[length - i - 1];
     } else

@@ -55,7 +55,7 @@ void R600AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   StringRef Err;
   if (!STI.getInstrInfo()->verifyInstruction(*MI, Err)) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
+    LLVMContext &C = MI->getMF()->getFunction().getContext();
     C.emitError("Illegal instruction detected: " + Err);
     MI->print(errs());
   }

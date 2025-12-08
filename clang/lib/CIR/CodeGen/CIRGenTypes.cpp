@@ -97,7 +97,8 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
   llvm::raw_svector_ostream outStream(typeName);
 
   PrintingPolicy policy = recordDecl->getASTContext().getPrintingPolicy();
-  policy.SuppressInlineNamespace = false;
+  policy.SuppressInlineNamespace =
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::None);
   policy.AlwaysIncludeTypeForTemplateArgument = true;
   policy.PrintAsCanonical = true;
   policy.SuppressTagKeyword = true;
@@ -404,7 +405,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     const ReferenceType *refTy = cast<ReferenceType>(ty);
     QualType elemTy = refTy->getPointeeType();
     auto pointeeType = convertTypeForMem(elemTy);
-    resultType = builder.getPointerTo(pointeeType);
+    resultType = builder.getPointerTo(pointeeType, elemTy.getAddressSpace());
     assert(resultType && "Cannot get pointer type?");
     break;
   }

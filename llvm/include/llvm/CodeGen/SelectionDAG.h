@@ -759,6 +759,7 @@ public:
                                  int64_t offset = 0, unsigned TargetFlags = 0) {
     return getGlobalAddress(GV, DL, VT, offset, true, TargetFlags);
   }
+  LLVM_ABI SDValue getDeactivationSymbol(const GlobalValue *GV);
   LLVM_ABI SDValue getFrameIndex(int FI, EVT VT, bool isTarget = false);
   SDValue getTargetFrameIndex(int FI, EVT VT) {
     return getFrameIndex(FI, VT, true);
@@ -792,6 +793,7 @@ public:
   // to provide debug info for the BB at that time, so keep this one around.
   LLVM_ABI SDValue getBasicBlock(MachineBasicBlock *MBB);
   LLVM_ABI SDValue getExternalSymbol(const char *Sym, EVT VT);
+  LLVM_ABI SDValue getExternalSymbol(RTLIB::LibcallImpl LCImpl, EVT VT);
   LLVM_ABI SDValue getTargetExternalSymbol(const char *Sym, EVT VT,
                                            unsigned TargetFlags = 0);
   LLVM_ABI SDValue getMCSymbol(MCSymbol *Sym, EVT VT);
@@ -1184,11 +1186,17 @@ public:
   SDValue getPOISON(EVT VT) { return getNode(ISD::POISON, SDLoc(), VT); }
 
   /// Return a node that represents the runtime scaling 'MulImm * RuntimeVL'.
-  LLVM_ABI SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm,
-                             bool ConstantFold = true);
+  LLVM_ABI SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm);
 
-  LLVM_ABI SDValue getElementCount(const SDLoc &DL, EVT VT, ElementCount EC,
-                                   bool ConstantFold = true);
+  LLVM_ABI SDValue getElementCount(const SDLoc &DL, EVT VT, ElementCount EC);
+
+  LLVM_ABI SDValue getTypeSize(const SDLoc &DL, EVT VT, TypeSize TS);
+
+  /// Return a vector with the first 'Len' lanes set to true and remaining lanes
+  /// set to false. The mask's ValueType is the same as when comparing vectors
+  /// of type VT.
+  LLVM_ABI SDValue getMaskFromElementCount(const SDLoc &DL, EVT VT,
+                                           ElementCount Len);
 
   /// Return a GLOBAL_OFFSET_TABLE node. This does not have a useful SDLoc.
   SDValue getGLOBAL_OFFSET_TABLE(EVT VT) {
@@ -1717,24 +1725,6 @@ public:
   /// Return the specified value casted to
   /// the target's desired shift amount type.
   LLVM_ABI SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
-
-  /// Expands a node with multiple results to an FP or vector libcall. The
-  /// libcall is expected to take all the operands of the \p Node followed by
-  /// output pointers for each of the results. \p CallRetResNo can be optionally
-  /// set to indicate that one of the results comes from the libcall's return
-  /// value.
-  LLVM_ABI bool
-  expandMultipleResultFPLibCall(RTLIB::Libcall LC, SDNode *Node,
-                                SmallVectorImpl<SDValue> &Results, EVT CallType,
-                                std::optional<unsigned> CallRetResNo = {});
-
-  // FIXME: Ths should be removed, and form using RTLIB::Libcall should be
-  // preferred. Callers should resolve the exact type libcall to use.
-  LLVM_ABI bool
-  expandMultipleResultFPLibCall(StringRef LibcallName, CallingConv::ID CC,
-                                SDNode *Node, SmallVectorImpl<SDValue> &Results,
-                                std::optional<unsigned> CallRetResNo = {},
-                                bool IsVectorMasked = false);
 
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   LLVM_ABI SDValue expandVAArg(SDNode *Node);

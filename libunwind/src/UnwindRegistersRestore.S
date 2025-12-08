@@ -645,13 +645,26 @@ Lnovec:
 #endif
 
 //
-// extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *);
+// extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *, unsigned);
 //
 // On entry:
 //  thread_state pointer is in x0
+//  walked_frames counter is in x1
 //
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
+
+  #if defined(_LIBUNWIND_TRACE_RET_INJECT)
+    cbz     w1, 1f
+  0:
+    subs    w1, w1, #1
+    adr     x16, #8
+    ret     x16
+
+    b.ne    0b
+  1:
+  #endif
+
   // skip restore of x0,x1 for now
   ldp    x2, x3,  [x0, #0x010]
   ldp    x4, x5,  [x0, #0x020]

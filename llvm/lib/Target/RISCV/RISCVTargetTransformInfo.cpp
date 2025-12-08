@@ -1008,13 +1008,52 @@ InstructionCost RISCVTTIImpl::getScalarizationOverhead(
 }
 
 InstructionCost
-RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                                    unsigned AddressSpace,
+RISCVTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                                       TTI::TargetCostKind CostKind) const {
+  Type *DataTy = MICA.getDataType();
+  Align Alignment = MICA.getAlignment();
+  switch (MICA.getID()) {
+  case Intrinsic::vp_load_ff: {
+    EVT DataTypeVT = TLI->getValueType(DL, DataTy);
+    if (!TLI->isLegalFirstFaultLoad(DataTypeVT, Alignment))
+      return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
+
+    unsigned AS = MICA.getAddressSpace();
+    return getMemoryOpCost(Instruction::Load, DataTy, Alignment, AS, CostKind,
+                           {TTI::OK_AnyValue, TTI::OP_None}, nullptr);
+  }
+  case Intrinsic::experimental_vp_strided_load:
+  case Intrinsic::experimental_vp_strided_store:
+    return getStridedMemoryOpCost(MICA, CostKind);
+  case Intrinsic::masked_compressstore:
+  case Intrinsic::masked_expandload:
+    return getExpandCompressMemoryOpCost(MICA, CostKind);
+  case Intrinsic::vp_scatter:
+  case Intrinsic::vp_gather:
+  case Intrinsic::masked_scatter:
+  case Intrinsic::masked_gather:
+    return getGatherScatterOpCost(MICA, CostKind);
+  case Intrinsic::vp_load:
+  case Intrinsic::vp_store:
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_store:
+    return getMaskedMemoryOpCost(MICA, CostKind);
+  }
+  return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
+}
+
+InstructionCost
+RISCVTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                     TTI::TargetCostKind CostKind) const {
+  unsigned Opcode = MICA.getID() == Intrinsic::masked_load ? Instruction::Load
+                                                           : Instruction::Store;
+  Type *Src = MICA.getDataType();
+  Align Alignment = MICA.getAlignment();
+  unsigned AddressSpace = MICA.getAddressSpace();
+
   if (!isLegalMaskedLoadStore(Src, Alignment) ||
       CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                        CostKind);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   return getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
 }
@@ -1116,19 +1155,24 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
   return MemCost + ShuffleCost;
 }
 
-InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
-    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
+InstructionCost
+RISCVTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                     TTI::TargetCostKind CostKind) const {
+
+  bool IsLoad = MICA.getID() == Intrinsic::masked_gather ||
+                MICA.getID() == Intrinsic::vp_gather;
+  unsigned Opcode = IsLoad ? Instruction::Load : Instruction::Store;
+  Type *DataTy = MICA.getDataType();
+  Align Alignment = MICA.getAlignment();
+  const Instruction *I = MICA.getInst();
   if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   if ((Opcode == Instruction::Load &&
        !isLegalMaskedGather(DataTy, Align(Alignment))) ||
       (Opcode == Instruction::Store &&
        !isLegalMaskedScatter(DataTy, Align(Alignment))))
-    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   // Cost is proportional to the number of memory operations implied.  For
   // scalable vectors, we use an estimate on that number since we don't
@@ -1142,15 +1186,20 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
 }
 
 InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
-    unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
-    TTI::TargetCostKind CostKind, const Instruction *I) const {
+    const MemIntrinsicCostAttributes &MICA,
+    TTI::TargetCostKind CostKind) const {
+  unsigned Opcode = MICA.getID() == Intrinsic::masked_expandload
+                        ? Instruction::Load
+                        : Instruction::Store;
+  Type *DataTy = MICA.getDataType();
+  bool VariableMask = MICA.getVariableMask();
+  Align Alignment = MICA.getAlignment();
   bool IsLegal = (Opcode == Instruction::Store &&
                   isLegalMaskedCompressStore(DataTy, Alignment)) ||
                  (Opcode == Instruction::Load &&
                   isLegalMaskedExpandLoad(DataTy, Alignment));
   if (!IsLegal || CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getExpandCompressMemoryOpCost(Opcode, DataTy, VariableMask,
-                                                Alignment, CostKind, I);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
   // Example compressstore sequence:
   // vsetivli        zero, 8, e32, m2, ta, ma (ignored)
   // vcompress.vm    v10, v8, v0
@@ -1179,14 +1228,20 @@ InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
          LT.first * getRISCVInstructionCost(Opcodes, LT.second, CostKind);
 }
 
-InstructionCost RISCVTTIImpl::getStridedMemoryOpCost(
-    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
-  if (((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
-       !isLegalStridedLoadStore(DataTy, Alignment)) ||
-      (Opcode != Instruction::Load && Opcode != Instruction::Store))
-    return BaseT::getStridedMemoryOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
+InstructionCost
+RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                     TTI::TargetCostKind CostKind) const {
+
+  unsigned Opcode = MICA.getID() == Intrinsic::experimental_vp_strided_load
+                        ? Instruction::Load
+                        : Instruction::Store;
+
+  Type *DataTy = MICA.getDataType();
+  Align Alignment = MICA.getAlignment();
+  const Instruction *I = MICA.getInst();
+
+  if (!isLegalStridedLoadStore(DataTy, Alignment))
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   if (CostKind == TTI::TCK_CodeSize)
     return TTI::TCC_Basic;
@@ -1501,6 +1556,23 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first *
              getRISCVInstructionCost({RISCV::VRSUB_VI, RISCV::VMAX_VV},
                                      LT.second, CostKind);
+    }
+    break;
+  }
+  case Intrinsic::fshl:
+  case Intrinsic::fshr: {
+    if (ICA.getArgs().empty())
+      break;
+
+    // Funnel-shifts are ROTL/ROTR when the first and second operand are equal.
+    // When Zbb/Zbkb is enabled we can use a single ROL(W)/ROR(I)(W)
+    // instruction.
+    if ((ST->hasStdExtZbb() || ST->hasStdExtZbkb()) && RetTy->isIntegerTy() &&
+        ICA.getArgs()[0] == ICA.getArgs()[1] &&
+        (RetTy->getIntegerBitWidth() == 32 ||
+         RetTy->getIntegerBitWidth() == 64) &&
+        RetTy->getIntegerBitWidth() <= ST->getXLen()) {
+      return 1;
     }
     break;
   }

@@ -142,7 +142,7 @@ public:
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I)
       Ops.push_back({PN->getIncomingBlock(I), PN->getIncomingValue(I)});
 
-    auto ComesBefore = [BlockOrder](OpsType O1, OpsType O2) {
+    auto ComesBefore = [&](OpsType O1, OpsType O2) {
       return BlockOrder.lookup(O1.first) < BlockOrder.lookup(O2.first);
     };
     // Sort in a deterministic order.
@@ -167,8 +167,8 @@ public:
   verifyModelledPHI(const DenseMap<const BasicBlock *, unsigned> &BlockOrder) {
     assert(Values.size() > 1 && Blocks.size() > 1 &&
            "Modelling PHI with less than 2 values");
-    auto ComesBefore = [BlockOrder](const BasicBlock *BB1,
-                                    const BasicBlock *BB2) {
+    [[maybe_unused]] auto ComesBefore = [&](const BasicBlock *BB1,
+                                            const BasicBlock *BB2) {
       return BlockOrder.lookup(BB1) < BlockOrder.lookup(BB2);
     };
     assert(llvm::is_sorted(Blocks, ComesBefore));

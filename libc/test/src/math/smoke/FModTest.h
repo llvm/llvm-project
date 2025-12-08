@@ -10,19 +10,28 @@
 #define LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H
 
 #include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "hdr/fenv_macros.h"
+#ifdef FE_DENORM
+#define DENORM_EXCEPT FE_DENORM
+#elif defined(__FE_DENORM)
+#define DENORM_EXCEPT __FE_DENORM
+#else
+#define DENORM_EXCEPT 0
+#endif // FE_DENORM
 
 #define TEST_SPECIAL(x, y, expected, dom_err, expected_exception)              \
-  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                         \
-  EXPECT_FP_EQ(expected, f(x, y));                                             \
-  EXPECT_MATH_ERRNO((dom_err) ? EDOM : 0);                                     \
-  EXPECT_FP_EXCEPTION(expected_exception);                                     \
-  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)
+  do {                                                                         \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FP_EQ(expected, f(x, y));                                           \
+    EXPECT_MATH_ERRNO((dom_err) ? EDOM : 0);                                   \
+    LIBC_NAMESPACE::fputil::clear_except(DENORM_EXCEPT);                       \
+    EXPECT_FP_EXCEPTION(expected_exception);                                   \
+  } while (0)
 
 #define TEST_REGULAR(x, y, expected) TEST_SPECIAL(x, y, expected, false, 0)
 

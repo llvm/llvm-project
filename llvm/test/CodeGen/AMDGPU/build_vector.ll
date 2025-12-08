@@ -186,10 +186,12 @@ define amdgpu_kernel void @build_vector_v2i16_trunc (ptr addrspace(1) %out, i32 
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dword s6, s[4:5], 0xb
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GFX6-NEXT:    s_mov_b32 s7, 5
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    v_alignbit_b32 v0, 5, s6, 16
+; GFX6-NEXT:    s_lshr_b64 s[4:5], s[6:7], 16
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
 ;

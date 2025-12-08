@@ -28,8 +28,6 @@ AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D,
   // Lookup binaries into the driver directory, this is used to
   // discover the 'amdgpu-arch' executable.
   getProgramPaths().push_back(getDriver().Dir);
-  // Diagnose unsupported sanitizer options only once.
-  diagnoseUnsupportedSanitizers(Args);
 }
 
 void AMDGPUOpenMPToolChain::addClangTargetOptions(
@@ -66,16 +64,11 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
 
   const OptTable &Opts = getDriver().getOpts();
 
-  // Skip sanitize options passed from the HostTC. Claim them early.
-  // The decision to sanitize device code is computed only by
-  // 'shouldSkipSanitizeOption'.
-  if (DAL->hasArg(options::OPT_fsanitize_EQ))
-    DAL->claimAllArgs(options::OPT_fsanitize_EQ);
-
-  for (Arg *A : Args)
-    if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A) &&
-        !llvm::is_contained(*DAL, A))
+  for (Arg *A : Args) {
+    // Filter unsupported sanitizers passed from the HostTC.
+    if (!handleSanitizeOption(*this, *DAL, Args, BoundArch, A))
       DAL->append(A);
+  }
 
   if (!BoundArch.empty()) {
     DAL->eraseArg(options::OPT_march_EQ);
@@ -115,9 +108,8 @@ void AMDGPUOpenMPToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
 SanitizerMask AMDGPUOpenMPToolChain::getSupportedSanitizers() const {
   // The AMDGPUOpenMPToolChain only supports sanitizers in the sense that it
   // allows sanitizer arguments on the command line if they are supported by the
-  // host toolchain. The AMDGPUOpenMPToolChain will actually ignore any command
-  // line arguments for any of these "supported" sanitizers. That means that no
-  // sanitization of device code is actually supported at this time.
+  // host toolchain. The AMDGPUOpenMPToolChain will later filter unsupported
+  // sanitizers from the command line arguments.
   //
   // This behavior is necessary because the host and device toolchains
   // invocations often share the command line, so the device toolchain must
