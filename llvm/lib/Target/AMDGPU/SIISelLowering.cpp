@@ -17685,10 +17685,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
     case 'v':
       switch (BitWidth) {
       case 1:
-        RC = Subtarget->has1024AddressableVGPRs()
-                 ? &AMDGPU::VGPR_32_Lo256RegClass
-                 : &AMDGPU::VGPR_32RegClass;
-        break;
+        return std::pair(0U, nullptr);
       case 16:
         RC = Subtarget->useRealTrue16Insts() ? &AMDGPU::VGPR_16RegClass
                                              : &AMDGPU::VGPR_32_Lo256RegClass;

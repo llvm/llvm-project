@@ -153,3 +153,9 @@ define <4 x i32> @misaligned_sgpr_4xi32_out_2() {
   %asm = call <4 x i32> asm sideeffect "; def $0", "={s[2:5]}"()
   ret <4 x i32> %asm
 }
+
+; ERR: error: couldn't allocate input reg for constraint 'v'
+define void @i1_used_as_vgpr_operand(ptr %p, i1 %b) {
+  tail call void asm sideeffect "global_store_byte $0, $1, off glc slc", "v,v"(ptr %p, i1 %b)
+  ret void
+}
