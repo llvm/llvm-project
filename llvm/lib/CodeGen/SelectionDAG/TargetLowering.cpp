@@ -1756,8 +1756,10 @@ bool TargetLowering::SimplifyDemandedBits(
     // If we're testing X < 0, X >= 0, X <= -1 or X > -1
     // (X is of integer type) then we only need the sign mask of the previous
     // result
-    if (Op1.getValueType().isInteger() && (((CC == ISD::SETLT || CC == ISD::SETGE) && isNullOrNullSplat(Op1)) ||
-        ((CC == ISD::SETLE || CC == ISD::SETGT) && isAllOnesOrAllOnesSplat(Op1)))) {
+    if (Op1.getValueType().isInteger() &&
+        (((CC == ISD::SETLT || CC == ISD::SETGE) && isNullOrNullSplat(Op1)) ||
+         ((CC == ISD::SETLE || CC == ISD::SETGT) &&
+          isAllOnesOrAllOnesSplat(Op1)))) {
       KnownBits KnownOp0;
       bool Changed = false;
       if (SimplifyDemandedBits(
