@@ -614,10 +614,12 @@ struct FuseMemoryCounterWaitOp final : OpRewritePattern<MemoryCounterWaitOp> {
 
     auto setters = {&MemoryCounterWaitOp::setLoad,
                     &MemoryCounterWaitOp::setStore, &MemoryCounterWaitOp::setDs,
-                    &MemoryCounterWaitOp::setExp};
-    auto lhsVals = {op.getLoad(), op.getStore(), op.getDs(), op.getExp()};
+                    &MemoryCounterWaitOp::setExp,
+                    &MemoryCounterWaitOp::setTensor};
+    auto lhsVals = {op.getLoad(), op.getStore(), op.getDs(), op.getExp(),
+                    op.getTensor()};
     auto rhsVals = {next.getLoad(), next.getStore(), next.getDs(),
-                    next.getExp()};
+                    next.getExp(), next.getTensor()};
     rewriter.modifyOpInPlace(op, [&] {
       for (auto [setter, lhs, rhs] :
            llvm::zip_equal(setters, lhsVals, rhsVals)) {
