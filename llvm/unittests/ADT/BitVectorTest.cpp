@@ -905,7 +905,6 @@ TYPED_TEST(BitVectorTest, BinOpsLiteral) {
   // clang-format off
 
   // Test small-sized vectors.
-
   EXPECT_TRUE (AnyCommon(10, {1, 2, 3}, 10, {3, 4, 5}));
   EXPECT_FALSE(AnyCommon(10, {1, 2, 3}, 10, {4, 5}));
 
@@ -915,7 +914,6 @@ TYPED_TEST(BitVectorTest, BinOpsLiteral) {
   EXPECT_TRUE (SubsetOf(10, {1, 2, 3}, 10, {1, 2, 3}));
 
   // Test representations of empty sets of various sizes.
-
   EXPECT_FALSE(AnyCommon(10,  {}, 10,  {}));
   EXPECT_FALSE(AnyCommon(10,  {}, 123, {}));
   EXPECT_FALSE(AnyCommon(123, {}, 10,  {}));
@@ -926,7 +924,6 @@ TYPED_TEST(BitVectorTest, BinOpsLiteral) {
   EXPECT_TRUE(SubsetOf(123, {}, 123, {}));
 
   // Test handling of the remainder words.
-
   EXPECT_FALSE(AnyCommon(10,  {1, 2},  123, {5, 70}));
   EXPECT_TRUE (AnyCommon(10,  {1, 2},  123, {1, 70}));
   EXPECT_FALSE(AnyCommon(123, {5, 70}, 10,  {1, 2}));
