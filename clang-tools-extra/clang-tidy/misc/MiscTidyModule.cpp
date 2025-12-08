@@ -42,7 +42,7 @@ namespace misc {
 class MiscModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<build::UnnamedNamespaceInHeaderCheck>(
+    CheckFactories.registerCheck<UnnamedNamespaceInHeaderCheck>(
         "misc-anonymous-namespace-in-header");
     CheckFactories.registerCheck<ConfusableIdentifierCheck>(
         "misc-confusable-identifiers");

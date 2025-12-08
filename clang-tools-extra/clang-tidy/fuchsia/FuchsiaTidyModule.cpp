@@ -32,7 +32,7 @@ public:
         "fuchsia-default-arguments-calls");
     CheckFactories.registerCheck<DefaultArgumentsDeclarationsCheck>(
         "fuchsia-default-arguments-declarations");
-    CheckFactories.registerCheck<misc::build::UnnamedNamespaceInHeaderCheck>(
+    CheckFactories.registerCheck<misc::UnnamedNamespaceInHeaderCheck>(
         "fuchsia-header-anon-namespaces");
     CheckFactories.registerCheck<MultipleInheritanceCheck>(
         "fuchsia-multiple-inheritance");

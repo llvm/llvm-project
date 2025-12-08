@@ -12,7 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "../utils/FileExtensionsUtils.h"
 
-namespace clang::tidy::misc::build {
+namespace clang::tidy::misc {
 
 /// Finds anonymous namespaces in headers.
 ///
@@ -21,7 +21,7 @@ namespace clang::tidy::misc::build {
 /// Corresponding cpplint.py check name: 'build/namespaces'.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/misc/build-namespaces.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/anonymous-namespace-in-header.html
 class UnnamedNamespaceInHeaderCheck : public ClangTidyCheck {
 public:
   UnnamedNamespaceInHeaderCheck(StringRef Name, ClangTidyContext *Context);

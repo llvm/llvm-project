@@ -40,7 +40,7 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<build::ExplicitMakePairCheck>(
         "google-build-explicit-make-pair");
-    CheckFactories.registerCheck<misc::build::UnnamedNamespaceInHeaderCheck>(
+    CheckFactories.registerCheck<misc::UnnamedNamespaceInHeaderCheck>(
         "google-build-namespaces");
     CheckFactories.registerCheck<build::UsingNamespaceDirectiveCheck>(
         "google-build-using-namespace");

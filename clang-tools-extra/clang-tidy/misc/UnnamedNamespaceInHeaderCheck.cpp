@@ -12,7 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::misc::build {
+namespace clang::tidy::misc {
 
 UnnamedNamespaceInHeaderCheck::UnnamedNamespaceInHeaderCheck(
     StringRef Name, ClangTidyContext *Context)
