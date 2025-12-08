@@ -11,7 +11,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "AvoidBindCheck.h"
 #include "AvoidCArraysCheck.h"
-#include "AvoidCStyleCastsCheck.h"
+#include "AvoidCStyleCastCheck.h"
 #include "AvoidSetjmpLongjmpCheck.h"
 #include "AvoidVariadicFunctionsCheck.h"
 #include "ConcatNestedNamespacesCheck.h"

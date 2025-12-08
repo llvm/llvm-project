@@ -3,4 +3,10 @@
 google-readability-casting
 ==========================
 
-The `google-readability-casting` check is an alias, please see `modernize-avoid-c-style-cast <../modernize/avoid-c-style-cast.html>`_ for more information.
+The `google-readability-casting` check is an alias, please see 
+:doc:`modernize-avoid-c-style-cast <../modernize/avoid-c-style-cast.html>`_ 
+for more information.
+
+Finds usages of C-style casts.
+
+https://google.github.io/styleguide/cppguide.html#Casting
