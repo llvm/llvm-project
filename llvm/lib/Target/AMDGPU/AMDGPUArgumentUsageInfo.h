@@ -180,10 +180,9 @@ public:
   static const AMDGPUFunctionArgInfo ExternFunctionInfo;
   static const AMDGPUFunctionArgInfo FixedABIFunctionInfo;
 
-  bool doInitialization(Module &M);
-  bool doFinalization(Module &M);
-
   void print(raw_ostream &OS, const Module *M = nullptr) const;
+
+  void clear() { ArgInfoMap.clear(); }
 
   void setFuncArgInfo(const Function &F, const AMDGPUFunctionArgInfo &ArgInfo) {
     ArgInfoMap[&F] = ArgInfo;
@@ -214,11 +213,14 @@ public:
   }
 
   bool doInitialization(Module &M) override {
-    AUIP.reset(new AMDGPUArgumentUsageInfo());
-    return AUIP->doInitialization(M);
+    AUIP = std::make_unique<AMDGPUArgumentUsageInfo>();
+    return false;
   }
 
-  bool doFinalization(Module &M) override { return AUIP->doFinalization(M); }
+  bool doFinalization(Module &M) override {
+    AUIP->clear();
+    return false;
+  }
 
   void print(raw_ostream &OS, const Module *M = nullptr) const override {
     AUIP->print(OS, M);

@@ -50,15 +50,6 @@ const AMDGPUFunctionArgInfo AMDGPUArgumentUsageInfo::ExternFunctionInfo{};
 const AMDGPUFunctionArgInfo AMDGPUArgumentUsageInfo::FixedABIFunctionInfo
   = AMDGPUFunctionArgInfo::fixedABILayout();
 
-bool AMDGPUArgumentUsageInfo::doInitialization(Module &M) {
-  return false;
-}
-
-bool AMDGPUArgumentUsageInfo::doFinalization(Module &M) {
-  ArgInfoMap.clear();
-  return false;
-}
-
 // TODO: Print preload kernargs?
 void AMDGPUArgumentUsageInfo::print(raw_ostream &OS, const Module *M) const {
   for (const auto &FI : ArgInfoMap) {
@@ -199,9 +190,8 @@ AMDGPUArgumentUsageInfo::lookupFuncArgInfo(const Function &F) const {
 }
 
 AnalysisKey AMDGPUArgumentUsageAnalysis::Key;
+
 AMDGPUArgumentUsageInfo
 AMDGPUArgumentUsageAnalysis::run(Module &M, ModuleAnalysisManager &) {
-  AMDGPUArgumentUsageInfo AUIP;
-  AUIP.doInitialization(M);
-  return AUIP;
+  return AMDGPUArgumentUsageInfo();
 }
