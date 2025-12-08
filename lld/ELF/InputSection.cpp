@@ -784,6 +784,8 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return r.sym->getVA(ctx, a);
   case R_ADDEND:
     return a;
+  case R_ADDEND_NEG:
+    return -static_cast<uint64_t>(a);
   case R_RELAX_HINT:
     return 0;
   case RE_ARM_SBREL:

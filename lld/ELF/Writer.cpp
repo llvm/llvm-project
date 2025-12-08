@@ -1583,9 +1583,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       if (part.relrAuthDyn) {
         auto it = llvm::remove_if(
             part.relrAuthDyn->relocs, [this, &part](const RelativeReloc &elem) {
-              const Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
+              Relocation &reloc = elem.inputSec->relocs()[elem.relocIdx];
               if (isInt<32>(reloc.sym->getVA(ctx, reloc.addend)))
                 return false;
+              reloc.expr = R_NONE;
               part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
                                       reloc.offset, false, *reloc.sym,
                                       reloc.addend, R_ABS});
