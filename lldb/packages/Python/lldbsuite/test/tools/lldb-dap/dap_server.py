@@ -2,14 +2,12 @@
 
 import argparse
 import binascii
-import copy
 import dataclasses
 import enum
 import json
 import logging
 import os
 import pathlib
-import pprint
 import re
 import signal
 import socket
@@ -1792,7 +1790,7 @@ def run_adapter(dbg: DebugCommunication, opts: argparse.Namespace) -> None:
     if response["success"]:
         dbg.wait_for_stopped()
     else:
-        print("failed to launch/attach: ", response)
+        print("failed to launch/attach: ", response, file=sys.stderr)
     dbg.request_disconnect(terminateDebuggee=True)
 
 
