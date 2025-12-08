@@ -1474,8 +1474,10 @@ defm : VPatNConvertI2FPSDNode_W_RM<any_uint_to_fp, "PseudoVFNCVT_F_XU_W">;
 foreach fvtiToFWti = AllWidenableFloatAndBF16Vectors in {
   defvar fvti = fvtiToFWti.Vti;
   defvar fwti = fvtiToFWti.Wti;
-  let Predicates = !listconcat(GetVTypeMinimalPredicates<fvti>.Predicates,
-                               GetVTypeMinimalPredicates<fwti>.Predicates) in
+  let Predicates = !listconcat(GetVTypeMinimalPredicates<fwti>.Predicates,
+                               !if(!eq(fvti.Scalar, bf16),
+                                   [HasStdExtZvfbfmin],
+                                   GetVTypeMinimalPredicates<fvti>.Predicates)) in
   def : Pat<(fvti.Vector (fpround (fwti.Vector fwti.RegClass:$rs1))),
             (!cast<Instruction>("PseudoVFNCVT"#
                                 !if(!eq(fvti.Scalar, bf16), "BF16", "")#
@@ -1486,7 +1488,7 @@ foreach fvtiToFWti = AllWidenableFloatAndBF16Vectors in {
                 // RISCVInsertReadWriteCSR
                 FRM_DYN,
                 fvti.AVL, fvti.Log2SEW, TA_MA)>;
-  // Define vfncvt.f.f.w for bf16 when Zvfbfa is enable.
+  // Define vfncvt.f.f.w for bf16 when Zvfbfa is enabled.
   if !eq(fvti.Scalar, bf16) then
   let Predicates = [HasStdExtZvfbfa] in
   def : Pat<(fvti.Vector (fpround (fwti.Vector fwti.RegClass:$rs1))),
