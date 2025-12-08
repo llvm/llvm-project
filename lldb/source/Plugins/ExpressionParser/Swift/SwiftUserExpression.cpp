@@ -440,23 +440,20 @@ static llvm::Error AddVariableInfo(
 }
 
 /// Collets all the variables visible in the current scope.
-static bool CollectVariablesInScope(SymbolContext &sc,
+static void CollectVariablesInScope(SymbolContext &sc,
                                     lldb::StackFrameSP &stack_frame_sp,
                                     VariableList &variables) {
-  if (!sc.block && !sc.function)
-    return true;
-
   Block *block = sc.block;
-  Block *top_block = block->GetContainingInlinedBlock();
+  Block *top_block = block ? block->GetContainingInlinedBlock() : nullptr;  
 
-  if (!top_block)
+  if (!top_block && sc.function)
     top_block = &sc.function->GetBlock(true);
 
   // The module scoped variables are stored at the CompUnit level, so
   // after we go through the current context, then we have to take one
   // more pass through the variables in the CompUnit.
   bool done = false;
-  do {
+  while (block) {
     // Iterate over all parent contexts *including* the top_block.
     if (block == top_block)
       done = true;
@@ -468,9 +465,10 @@ static bool CollectVariablesInScope(SymbolContext &sc,
         can_create, get_parent_variables, stop_if_block_is_inlined_function,
         [](Variable *) { return true; }, &variables);
 
-    if (!done)
-      block = block->GetParent();
-  } while (block && !done);
+    if (done)
+      break;
+    block = block->GetParent();
+  }
 
   // Also add local copies of globals. This is in many cases redundant
   // work because the globals would also be found in the expression
@@ -483,7 +481,6 @@ static bool CollectVariablesInScope(SymbolContext &sc,
     if (globals_sp)
       variables.AddVariables(globals_sp.get());
   }
-  return true;
 }
 
 /// Create a \c VariableInfo record for each visible variable.
