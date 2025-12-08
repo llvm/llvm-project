@@ -492,11 +492,12 @@ public:
   Run(const std::optional<protocol::ModulesArguments> &args) const override;
 };
 
-class PauseRequestHandler : public LegacyRequestHandler {
+class PauseRequestHandler
+    : public RequestHandler<protocol::PauseArguments, protocol::PauseResponse> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "pause"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Error Run(const protocol::PauseArguments &args) const override;
 };
 
 class ScopesRequestHandler final

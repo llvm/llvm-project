@@ -320,7 +320,8 @@ def mno_mpx : Flag<["-"], "mno-mpx">, Group<clang_ignored_legacy_options_Group>;
 
 // Group that ignores all gcc optimizations that won't be implemented
 def clang_ignored_gcc_optimization_f_Group : OptionGroup<
-  "<clang_ignored_gcc_optimization_f_Group>">, Group<f_Group>, Flags<[Ignored]>;
+  "<clang_ignored_gcc_optimization_f_Group>">,
+  Group<f_Group>, Flags<[Ignored]>, Visibility<[ClangOption, FlangOption]>;
 
 class DiagnosticOpts<string base>
   : KeyPathAndMacro<"DiagnosticOpts->", base, "DIAG_"> {}

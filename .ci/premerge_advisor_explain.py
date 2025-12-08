@@ -132,6 +132,7 @@ def main(
     comments_file_name = f"comments-{platform.system()}-{platform.machine()}"
     with open(comments_file_name, "w") as comment_file_handle:
         json.dump(comments, comment_file_handle)
+    print(f"Wrote comments to {comments_file_name}")
 
 
 if __name__ == "__main__":

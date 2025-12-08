@@ -959,6 +959,14 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     if (const Arg *A = Args.getLastArg(Opt))
       D.Diag(diag::warn_drv_invalid_argument_for_flang) << A->getSpelling();
 
+  // Warn about options that are ignored by flang. These are options that are
+  // accepted by gfortran, but have no equivalent in flang.
+  for (const Arg *A :
+       Args.filtered(options::OPT_clang_ignored_gcc_optimization_f_Group)) {
+    D.Diag(diag::warn_ignored_gcc_optimization) << A->getAsString(Args);
+    A->claim();
+  }
+
   const InputInfo &Input = Inputs[0];
   types::ID InputType = Input.getType();
 

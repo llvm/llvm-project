@@ -695,4 +695,10 @@ llvm::json::Value toJSON(const EvaluateResponseBody &Body) {
   return result;
 }
 
+bool fromJSON(const llvm::json::Value &Params, PauseArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("threadId", Args.threadId);
+}
+
 } // namespace lldb_dap::protocol
