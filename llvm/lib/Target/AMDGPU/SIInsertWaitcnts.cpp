@@ -1092,12 +1092,13 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
             }
           }
         }
-        if (Slot || LDSDMAStores.size() == NUM_LDSDMA - 1)
+        if (Slot)
           break;
         // The slot may not be valid because it can be >= NUM_LDSDMA which
         // means the scoreboard cannot track it. We still want to preserve the
         // MI in order to check alias information, though.
         LDSDMAStores.push_back(&Inst);
+        Slot = LDSDMAStores.size();
         break;
       }
       setVMemScore(LDSDMA_BEGIN, T, CurrScore);

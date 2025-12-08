@@ -221,7 +221,7 @@ define amdgpu_kernel void @buffer_load_lds_dword_10_arrays(<4 x i32> %rsrc, i32 
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    ds_read_b32 v7, v9 offset:1792
 ; GFX9-NEXT:    ; wave barrier
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    ds_read_b32 v8, v9 offset:2048
 ; GFX9-NEXT:    ; wave barrier
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -288,7 +288,7 @@ define amdgpu_kernel void @buffer_load_lds_dword_10_arrays(<4 x i32> %rsrc, i32 
 ; GFX10-NEXT:    s_waitcnt vmcnt(2)
 ; GFX10-NEXT:    ds_read_b32 v7, v9 offset:1792
 ; GFX10-NEXT:    ; wave barrier
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-NEXT:    ds_read_b32 v8, v9 offset:2048
 ; GFX10-NEXT:    ; wave barrier
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
