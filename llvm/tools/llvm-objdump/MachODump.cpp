@@ -7104,8 +7104,7 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
       *ReferenceName = info->demangled_name;
       *ReferenceType = LLVMDisassembler_ReferenceType_DeMangled_Name;
     }
-  }
-  else {
+  } else {
     *ReferenceName = nullptr;
     *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
   }
