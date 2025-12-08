@@ -306,7 +306,9 @@ static void registerCallbacks(PassBuilder &PB) {
   // Context is shared across all entry-points in this pipeline
   auto Context = std::make_shared<PyPassContext>();
 
-  // All entry-point callbacks run the same script
+  // All entry-point callbacks are forwarded to the same script
+  // TODO: In order to support multiple instances of the plugin with different
+  // scripts, we will need an isolated interpreter session for each.
   std::string ScriptPath = findScript();
   if (!Context->loadScript(ScriptPath))
     return;
