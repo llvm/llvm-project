@@ -18,7 +18,7 @@
 
 namespace clang::ssaf {
 
-std::optional<EntityName> getLocalEntityNameForDecl(const Decl* D) {
+std::optional<EntityName> getEntityName(const Decl* D) {
   if (!D)
     return std::nullopt;
 
@@ -58,7 +58,7 @@ std::optional<EntityName> getLocalEntityNameForDecl(const Decl* D) {
   return EntityName(USRBuf.str(), Suffix, {});
 }
 
-std::optional<EntityName> getLocalEntityNameForFunctionReturn(const FunctionDecl* FD) {
+std::optional<EntityName> getEntityNameForReturn(const FunctionDecl* FD) {
   if (!FD)
     return std::nullopt;
 
