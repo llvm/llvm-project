@@ -1903,6 +1903,10 @@ public:
   virtual bool validateOpenCLTarget(const LangOptions &Opts,
                                     DiagnosticsEngine &Diags) const;
 
+  /// Determine whether the specified target is a valid target
+  /// for SYCL device compilation. The default is false.
+  virtual bool isValidSYCLDeviceTarget() const;
+
   virtual void setAuxTarget(const TargetInfo *Aux) {}
 
   bool hasMicrosoftRecordLayout() const { return HasMicrosoftRecordLayout; }

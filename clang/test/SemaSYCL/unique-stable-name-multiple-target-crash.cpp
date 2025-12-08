@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s %s -std=c++17 -triple x86_64-linux-gnu -fsycl-is-device -verify -fsyntax-only -Wno-unused
+// RUN: %clang_cc1 %s %s -std=c++17 -triple spirv64-unknown-unknown -fsycl-is-device -verify -fsyntax-only -Wno-unused
 
 // This would crash due to the double-inputs, since the 'magic static' use in
 // the AST Context SCYL Filtering would end up caching an old version of the

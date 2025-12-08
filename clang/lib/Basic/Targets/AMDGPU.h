@@ -496,6 +496,8 @@ public:
 
   bool hasHIPImageSupport() const override { return HasImage; }
 
+  bool isValidSYCLDeviceTarget() const override { return true; }
+
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     // This is imprecise as the value can vary between 64, 128 (even 256!) bytes
     // depending on the level of cache and the target architecture. We select
