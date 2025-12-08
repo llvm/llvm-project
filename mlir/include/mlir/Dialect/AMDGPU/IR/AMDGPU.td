@@ -1485,7 +1485,7 @@ def AMDGPU_TensorLoadToLDSOp :
   Arguments<(ins AMDGPU_TDMDescriptorType: $desc,
                  DefaultValuedOptionalAttr<AMDGPU_CacheScopeAttr, "CacheScope::Workgroup">: $cache_scope,
                  DefaultValuedOptionalAttr<AMDGPU_TemporalLoadHintsAttr, "TemporalLoadHints::RegularTemporal">: $temporal_hint,
-                 DefaultValuedOptionalAttr<BoolAttr, "false">: $non_volatile)> {
+                 DefaultValuedOptionalAttr<BoolAttr, "true">: $is_volatile)> {
   let summary = "Load tensors from global memory to LDS.";
   let description = [{
     Load tensors of up to five dimensions from global memory to LDS.
@@ -1503,7 +1503,7 @@ def AMDGPU_TensorStoreFromLDSOp :
   Arguments<(ins AMDGPU_TDMDescriptorType: $desc,
                  DefaultValuedOptionalAttr<AMDGPU_CacheScopeAttr, "CacheScope::Workgroup">: $cache_scope,
                  DefaultValuedOptionalAttr<AMDGPU_TemporalStoreHintsAttr, "TemporalStoreHints::RegularTemporal">: $temporal_hint,
-                 DefaultValuedOptionalAttr<BoolAttr, "false">: $non_volatile)> {
+                 DefaultValuedOptionalAttr<BoolAttr, "true">: $is_volatile)> {
 
   let summary = "Store tensors from LDS to global memory.";
   let description = [{

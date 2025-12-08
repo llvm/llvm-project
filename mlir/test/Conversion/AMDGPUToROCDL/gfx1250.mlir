@@ -485,10 +485,10 @@ func.func @tensor_load_to_lds(%desc: !amdgpu.tdm_descriptor) {
   amdgpu.tensor_load_to_lds %desc { temporal_hint = #amdgpu.temporal_load_hint<nontemporal_highpriority> } : !amdgpu.tdm_descriptor
 
   // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { non_volatile = false } : !amdgpu.tdm_descriptor
+  amdgpu.tensor_load_to_lds %desc { is_volatile = true } : !amdgpu.tdm_descriptor
 
   // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 32 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_load_to_lds %desc { non_volatile = true } : !amdgpu.tdm_descriptor
+  amdgpu.tensor_load_to_lds %desc { is_volatile = false } : !amdgpu.tdm_descriptor
 
   func.return
 }
@@ -537,10 +537,10 @@ func.func @tensor_store_from_lds(%desc: !amdgpu.tdm_descriptor) {
   amdgpu.tensor_store_from_lds %desc { temporal_hint = #amdgpu.temporal_store_hint<nontemporal_writeback> } : !amdgpu.tdm_descriptor
 
   // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { non_volatile = false } : !amdgpu.tdm_descriptor
+  amdgpu.tensor_store_from_lds %desc { is_volatile = true } : !amdgpu.tdm_descriptor
 
   // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3 cachepolicy 32 : vector<4xi32>, vector<8xi32>
-  amdgpu.tensor_store_from_lds %desc { non_volatile = true } : !amdgpu.tdm_descriptor
+  amdgpu.tensor_store_from_lds %desc { is_volatile = false } : !amdgpu.tdm_descriptor
   func.return
 }
 
