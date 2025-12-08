@@ -198,7 +198,8 @@ def ArithToAPFloatConversionPass
     calls (APFloatWrappers.cpp). APFloat is a software implementation of
     floating-point arithmetic operations.
   }];
-  let dependentDialects = ["func::FuncDialect"];
+  let dependentDialects = ["arith::ArithDialect", "func::FuncDialect",
+                           "vector::VectorDialect"];
 }
 
 //===----------------------------------------------------------------------===//
