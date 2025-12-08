@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNNAMEDNAMESPACEINHEADERCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNNAMEDNAMESPACEINHEADERCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_ANONYMOUSNAMESPACEINHEADERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_ANONYMOUSNAMESPACEINHEADERCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "../utils/FileExtensionsUtils.h"
@@ -22,9 +22,9 @@ namespace clang::tidy::misc {
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/misc/anonymous-namespace-in-header.html
-class UnnamedNamespaceInHeaderCheck : public ClangTidyCheck {
+class AnonymousNamespaceInHeaderCheck : public ClangTidyCheck {
 public:
-  UnnamedNamespaceInHeaderCheck(StringRef Name, ClangTidyContext *Context);
+  AnonymousNamespaceInHeaderCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
@@ -35,6 +35,6 @@ private:
   FileExtensionsSet HeaderFileExtensions;
 };
 
-} // namespace clang::tidy::misc::build
+} // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNNAMEDNAMESPACEINHEADERCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_ANONYMOUSNAMESPACEINHEADERCHECK_H

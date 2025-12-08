@@ -9,7 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "../misc/UnnamedNamespaceInHeaderCheck.h"
+#include "../misc/AnonymousNamespaceInHeaderCheck.h"
 #include "../readability/BracesAroundStatementsCheck.h"
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
@@ -40,7 +40,7 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<build::ExplicitMakePairCheck>(
         "google-build-explicit-make-pair");
-    CheckFactories.registerCheck<misc::UnnamedNamespaceInHeaderCheck>(
+    CheckFactories.registerCheck<misc::AnonymousNamespaceInHeaderCheck>(
         "google-build-namespaces");
     CheckFactories.registerCheck<build::UsingNamespaceDirectiveCheck>(
         "google-build-using-namespace");
