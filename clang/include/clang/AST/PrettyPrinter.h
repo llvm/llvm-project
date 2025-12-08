@@ -65,6 +65,10 @@ struct PrintingPolicy {
 
     /// Suppress keyword when printing the inner type of elaborated types,
     /// (as the tag keyword is part of the elaborated type):
+    ///
+    /// \code
+    /// struct Geometry::Point;
+    /// \endcode
     InElaboratedNames
   };
 
@@ -128,10 +132,6 @@ struct PrintingPolicy {
   unsigned SuppressSpecifiers : 1;
 
   /// Whether type printing should skip printing the tag keyword.
-  ///
-  /// \code
-  /// struct Geometry::Point;
-  /// \endcode
   LLVM_PREFERRED_TYPE(SuppressTagKeywordMode)
   unsigned SuppressTagKeyword : 1;
 
