@@ -9209,6 +9209,11 @@ bool DeclarationVisitor::CheckNonPointerInitialization(
 
 void DeclarationVisitor::NonPointerInitialization(
     const parser::Name &name, const parser::ConstantExpr &constExpr) {
+  // Don't evaluate initializers for arrays with a rank greater than the
+  // maximum supported, to avoid running out of memory.
+  if (name.symbol && name.symbol->Rank() > common::maxRank) {
+    return;
+  }
   if (CheckNonPointerInitialization(
           name, /*inLegacyDataInitialization=*/false)) {
     Symbol &ultimate{name.symbol->GetUltimate()};
