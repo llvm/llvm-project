@@ -4786,37 +4786,8 @@ static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::semantics::SemanticsContext &semanticsContext,
        const Fortran::parser::OpenACCCacheConstruct &cacheConstruct) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  auto loopOp = builder.getRegion().getParentOfType<mlir::acc::LoopOp>();
-  auto crtPos = builder.saveInsertionPoint();
-  if (loopOp) {
-    builder.setInsertionPoint(loopOp);
-    Fortran::lower::StatementContext stmtCtx;
-    llvm::SmallVector<mlir::Value> cacheOperands;
-    const Fortran::parser::AccObjectListWithModifier &listWithModifier =
-        std::get<Fortran::parser::AccObjectListWithModifier>(cacheConstruct.t);
-    const auto &accObjectList =
-        std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
-    const auto &modifier =
-        std::get<std::optional<Fortran::parser::AccDataModifier>>(
-            listWithModifier.t);
-
-    mlir::acc::DataClause dataClause = mlir::acc::DataClause::acc_cache;
-    if (modifier &&
-        (*modifier).v == Fortran::parser::AccDataModifier::Modifier::ReadOnly)
-      dataClause = mlir::acc::DataClause::acc_cache_readonly;
-    genDataOperandOperations<mlir::acc::CacheOp>(
-        accObjectList, converter, semanticsContext, stmtCtx, cacheOperands,
-        dataClause,
-        /*structured=*/true, /*implicit=*/false,
-        /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
-        /*setDeclareAttr*/ false);
-    loopOp.getCacheOperandsMutable().append(cacheOperands);
-  } else {
-    llvm::report_fatal_error(
-        "could not find loop to attach OpenACC cache information.");
-  }
-  builder.restoreInsertionPoint(crtPos);
+  mlir::Location loc = converter.genLocation(cacheConstruct.source);
+  TODO(loc, "OpenACC cache directive");
 }
 
 mlir::Value Fortran::lower::genOpenACCConstruct(
