@@ -21,6 +21,7 @@
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InlineAdvisor.h"
+#include "llvm/Analysis/MitigationAnalysis.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -1703,6 +1704,10 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
+
+  if (Phase == ThinOrFullLTOPhase::None)
+    MPM.addPass(llvm::MitigationAnalysisPass(getMitigationAnalysisOptions()));
+
   return MPM;
 }
 
@@ -1853,6 +1858,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
   }
 
+  MPM.addPass(llvm::MitigationAnalysisPass(getMitigationAnalysisOptions()));
+
   if (Level == OptimizationLevel::O0) {
     // Run a second time to clean up any type tests left behind by WPD for use
     // in ICP.
@@ -1912,6 +1919,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Create a function that performs CFI checks for cross-DSO calls with targets
   // in the current module.
   MPM.addPass(CrossDSOCFIPass());
+
+  MPM.addPass(llvm::MitigationAnalysisPass(getMitigationAnalysisOptions()));
 
   if (Level == OptimizationLevel::O0) {
     // The WPD and LowerTypeTest passes need to run at -O0 to lower type
@@ -2385,6 +2394,9 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
     addRequiredLTOPreLinkPasses(MPM);
 
   MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
+
+  if (Phase == ThinOrFullLTOPhase::None)
+    MPM.addPass(llvm::MitigationAnalysisPass(getMitigationAnalysisOptions()));
 
   return MPM;
 }

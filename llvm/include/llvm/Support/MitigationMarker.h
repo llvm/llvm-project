@@ -33,6 +33,8 @@ enum class MitigationKey {
   CFI_ICALL = 5,
   CFI_VCALL = 6,
   CFI_NVCALL = 7,
+
+  MITIGATION_KEY_MAX
 };
 
 const llvm::DenseMap<MitigationKey, StringRef> &GetMitigationMetadataMapping();
