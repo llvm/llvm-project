@@ -4464,6 +4464,45 @@ void RoutineOp::addGang(MLIRContext *context,
   setGangDimDeviceTypeAttr(mlir::ArrayAttr::get(context, deviceTypes));
 }
 
+void RoutineOp::addBindStrName(MLIRContext *context,
+                               llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+                               mlir::StringAttr val) {
+  unsigned before = getBindStrNameDeviceTypeAttr()
+                        ? getBindStrNameDeviceTypeAttr().size()
+                        : 0;
+
+  setBindStrNameDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getBindStrNameDeviceTypeAttr(), effectiveDeviceTypes));
+  unsigned after = getBindStrNameDeviceTypeAttr().size();
+
+  llvm::SmallVector<mlir::Attribute> vals;
+  if (getBindStrNameAttr())
+    llvm::copy(getBindStrNameAttr(), std::back_inserter(vals));
+  for (unsigned i = 0; i < after - before; ++i)
+    vals.push_back(val);
+
+  setBindStrNameAttr(mlir::ArrayAttr::get(context, vals));
+}
+
+void RoutineOp::addBindIDName(MLIRContext *context,
+                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+                              mlir::SymbolRefAttr val) {
+  unsigned before =
+      getBindIdNameDeviceTypeAttr() ? getBindIdNameDeviceTypeAttr().size() : 0;
+
+  setBindIdNameDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getBindIdNameDeviceTypeAttr(), effectiveDeviceTypes));
+  unsigned after = getBindIdNameDeviceTypeAttr().size();
+
+  llvm::SmallVector<mlir::Attribute> vals;
+  if (getBindIdNameAttr())
+    llvm::copy(getBindIdNameAttr(), std::back_inserter(vals));
+  for (unsigned i = 0; i < after - before; ++i)
+    vals.push_back(val);
+
+  setBindIdNameAttr(mlir::ArrayAttr::get(context, vals));
+}
+
 //===----------------------------------------------------------------------===//
 // InitOp
 //===----------------------------------------------------------------------===//
