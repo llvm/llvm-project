@@ -373,6 +373,11 @@ public:
     static_assert(!is_reference<_Hp>::value, "Attempted to default construct a reference element in a tuple");
   }
 
+  template <class _Alloc, class... _Args>
+  _LIBCPP_HIDE_FROM_ABI __tuple_leaf(integral_constant<int, -1>, const _Alloc&, _Args&&...) {
+    static_assert(false, "If uses_allocator_v<T, A> is true, T has to be allocator-constructible");
+  }
+
   template <class _Alloc>
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 0>, const _Alloc&) : __value_() {
     static_assert(!is_reference<_Hp>::value, "Attempted to default construct a reference element in a tuple");
@@ -446,6 +451,11 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf() noexcept(is_nothrow_default_constructible<_Hp>::value) {}
+
+  template <class _Alloc, class... _Args>
+  _LIBCPP_HIDE_FROM_ABI __tuple_leaf(integral_constant<int, -1>, const _Alloc&, _Args&&...) {
+    static_assert(false, "If uses_allocator_v<T, A> is true, T has to be allocator-constructible");
+  }
 
   template <class _Alloc>
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 0>, const _Alloc&) {}
