@@ -309,16 +309,14 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
   if (FoldTail) {
     assert(Plan.getExitBlocks().size() == 1 &&
            "only a single-exit block is supported currently");
-    VPBasicBlock *EB = Plan.getExitBlocks().front();
-    assert(EB->getSinglePredecessor() == Plan.getMiddleBlock() &&
+    assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
+               Plan.getMiddleBlock() &&
            "the exit block must have middle block as single predecessor");
 
     VPBuilder B(Plan.getMiddleBlock()->getTerminator());
-    for (auto &P : EB->phis()) {
-      auto *ExitIRI = cast<VPIRPhi>(&P);
-      VPValue *Inc = ExitIRI->getIncomingValue(0);
+    for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
       VPValue *Op;
-      if (!match(Inc, m_ExtractLastElement(m_VPValue(Op))))
+      if (!match(&R, m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op)))))
         continue;
 
       // Compute the index of the last active lane.
@@ -327,7 +325,7 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
           B.createNaryOp(VPInstruction::LastActiveLane, HeaderMask);
       auto *Ext =
           B.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
-      Inc->replaceAllUsesWith(Ext);
+      R.getVPSingleValue()->replaceAllUsesWith(Ext);
     }
   }
   return Predicator.getBlockMaskCache();
