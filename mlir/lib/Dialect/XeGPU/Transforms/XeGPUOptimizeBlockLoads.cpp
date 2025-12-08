@@ -214,7 +214,7 @@ static Value generateLoads(ConversionPatternRewriter &rewriter,
           newTensorDesc, ArrayRef<OpFoldResult>{loadOffsetX, loadOffsetY},
           origLoadOp.getPackedAttr(), origLoadOp.getTransposeAttr(),
           origLoadOp.getL1HintAttr(), origLoadOp.getL2HintAttr(),
-          origLoadOp.getL3HintAttr());
+          origLoadOp.getL3HintAttr(), origLoadOp.getLayoutAttr());
       // Set the layout for the loadOp.
       auto layoutAttr = newTensorDesc.getType().getLayoutAttr();
       xegpu::setDistributeLayoutAttr(loadOp->getOpResult(0), layoutAttr);

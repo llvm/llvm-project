@@ -238,6 +238,9 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
     if (!targetShape)
       return failure();
 
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropInstData();
     int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
     bool hasOffsets = (offsetSize != 0) || op.getConstOffsetsAttr();
 
@@ -255,7 +258,7 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
       auto createPrefetch = [&](SmallVector<OpFoldResult> offsets) -> Value {
         xegpu::PrefetchNdOp::create(rewriter, loc, convertedTdesc[0], offsets,
                                     op.getL1HintAttr(), op.getL2HintAttr(),
-                                    op.getL3HintAttr());
+                                    op.getL3HintAttr(), layout);
         // return dummy Value to satisfy function's signature
         return nullptr;
       };
@@ -282,6 +285,9 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     if (!targetShape)
       return failure();
 
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropInstData();
     int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
     bool hasOffsets = (offsetSize != 0) || op.getConstOffsetsAttr();
 
@@ -306,7 +312,7 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
         return xegpu::LoadNdOp::create(
             rewriter, loc, newValueTy, convertedTdescs[0], offsets,
             op.getPackedAttr(), op.getTransposeAttr(), op.getL1HintAttr(),
-            op.getL2HintAttr(), op.getL3HintAttr());
+            op.getL2HintAttr(), op.getL3HintAttr(), layout);
       };
       newOps = computeUnrolledOffsets(op.getMixedOffsets(), tdescTy,
                                       *targetShape, createLoad, loc, rewriter);
@@ -331,6 +337,9 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
     if (!targetShape)
       return failure();
 
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropInstData();
     int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
     bool hasOffsets = (offsetSize != 0) || op.getConstOffsetsAttr();
 
@@ -354,7 +363,7 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
         xegpu::StoreNdOp::create(rewriter, loc, convertedValues[valueIndex++],
                                  convertedTdescs[0], offsets,
                                  op.getL1HintAttr(), op.getL2HintAttr(),
-                                 op.getL3HintAttr());
+                                 op.getL3HintAttr(), layout);
         // return dummy Value to satisfy function's signature
         return nullptr;
       };
