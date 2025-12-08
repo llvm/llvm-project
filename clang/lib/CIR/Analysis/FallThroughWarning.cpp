@@ -1,5 +1,8 @@
 #include "clang/CIR/Analysis/FallThroughWarning.h"
+#include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Operation.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
@@ -7,8 +10,11 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+
+#define DEBUG_TYPE "cir-fallthrough"
 
 using namespace mlir;
 using namespace cir;
@@ -290,12 +296,29 @@ FallThroughWarningPass::getLiveSet(cir::FuncOp cfg) {
   if (cfg.getBody().empty())
     return liveSet;
 
-  auto &first = cfg.getBody().getBlocks().front();
-
-  for (auto &block : cfg.getBody()) {
-    if (&first == &block || first.isReachable(&block))
-      liveSet.insert(&block);
+  DataFlowSolver solver;
+  solver.load<mlir::dataflow::DeadCodeAnalysis>();
+  int blockCount = 0;
+  auto result = solver.initializeAndRun(cfg);
+  if (result.failed()) {
+    llvm::errs() << "Failure to perform deadcode analysis for ClangIR analyzer, returning empty live set\n";
+  } else {
+    cfg->walk([&](mlir::Block *op) {
+      blockCount++;
+      if (solver.lookupState<mlir::dataflow::Executable>(solver.getProgramPointBefore(op)))  {
+        liveSet.insert(op);
+      }
+    });
   }
+
+  LLVM_DEBUG({
+    llvm::dbgs() << "=== DCA result for cir analysis fallthrough for " << cfg.getName() << " ===\n";
+    llvm::dbgs() << "Live set size: " << liveSet.size() << "\n";
+    llvm::dbgs() << "Block traversal count: " << blockCount << "\n";
+    llvm::dbgs() << "Dead blocks: " << (blockCount - liveSet.size()) << "\n";
+    llvm::dbgs() << "If this is unexpected, please file an issue via GitHub with mlir tag" << "\n";
+  });
+
   return liveSet;
 }
 
@@ -323,18 +346,17 @@ ControlFlowKind FallThroughWarningPass::checkFallThrough(cir::FuncOp cfg) {
   //
   // I guess in CIR, we can pretend exit blocks are all blocks that have no
   // successor?
-  for (mlir::Block &pred : cfg.getBody().getBlocks()) {
-    if (!liveSet.contains(&pred))
-      continue;
-
+  for (mlir::Block *pred : liveSet) {
     // We consider no predecessors as 'exit blocks'
-    if (!pred.hasNoSuccessors())
+    if (!pred->hasNoSuccessors())
       continue;
 
-    if (!pred.mightHaveTerminator())
+    if (!pred->mightHaveTerminator())
       continue;
 
-    mlir::Operation *term = pred.getTerminator();
+    mlir::Operation *term = pred->getTerminator();
+
+    LLVM_DEBUG(pred->dump());
 
     // TODO: hasNoReturnElement() in OG here, not sure how to work it in here
     // yet
@@ -343,14 +365,10 @@ ControlFlowKind FallThroughWarningPass::checkFallThrough(cir::FuncOp cfg) {
     // return but i guess not in CIR? In this case we'll only be examining the
     // terminator
 
-    if (isa<cir::TryOp>(term)) {
-      hasAbnormalEdge = true;
-      continue;
-    }
-
     // INFO: OG clang has this equals true whenever ri == re, which means this
     // is true only when a block only has the terminator, or its size is 1.
-    hasPlainEdge = std::distance(pred.begin(), pred.end()) == 1;
+    //
+    // equivalent is std::distance(pred.begin(), pred.end()) == 1;
 
     if (auto returnOp = dyn_cast<cir::ReturnOp>(term)) {
       if (!isPhonyReturn(returnOp)) {
@@ -358,8 +376,9 @@ ControlFlowKind FallThroughWarningPass::checkFallThrough(cir::FuncOp cfg) {
         continue;
       }
     }
+
     if (isa<cir::TryOp>(term)) {
-      hasLiveReturn = true;
+      hasAbnormalEdge = true;
       continue;
     }
 
