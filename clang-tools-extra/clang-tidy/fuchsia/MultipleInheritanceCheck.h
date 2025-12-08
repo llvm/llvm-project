@@ -30,10 +30,7 @@ public:
   void onEndOfTranslationUnit() override { InterfaceMap.clear(); }
 
 private:
-  void addNodeToInterfaceMap(const CXXRecordDecl *Node, bool IsInterface);
-  bool getInterfaceStatus(const CXXRecordDecl *Node, bool &IsInterface) const;
-  bool isCurrentClassInterface(const CXXRecordDecl *Node) const;
-  bool isInterface(const CXXRecordDecl *Node);
+  bool isInterface(const CXXBaseSpecifier &Base);
 
   // Contains the identity of each named CXXRecord as an interface.  This is
   // used to memoize lookup speeds and improve performance from O(N^2) to O(N),
