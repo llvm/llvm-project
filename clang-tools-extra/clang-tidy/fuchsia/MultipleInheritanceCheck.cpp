@@ -29,8 +29,8 @@ bool MultipleInheritanceCheck::isInterface(const CXXBaseSpecifier &Base) {
   assert(Node->isCompleteDefinition());
 
   // Short circuit the lookup if we have analyzed this record before.
-  const auto CachedValue = InterfaceMap.find(Node);
-  if (CachedValue != InterfaceMap.end())
+  if (const auto CachedValue = InterfaceMap.find(Node);
+      CachedValue != InterfaceMap.end())
     return CachedValue->second;
 
   // To be an interface, a class must have...
@@ -69,10 +69,9 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
   NumConcrete += llvm::count_if(
       D.vbases(), [&](const CXXBaseSpecifier &V) { return !isInterface(V); });
 
-  if (NumConcrete > 1) {
+  if (NumConcrete > 1)
     diag(D.getBeginLoc(), "inheriting multiple classes that aren't "
                           "pure virtual is discouraged");
-  }
 }
 
 } // namespace clang::tidy::fuchsia
