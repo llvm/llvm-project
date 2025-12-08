@@ -272,6 +272,13 @@ static cl::opt<bool>
                     cl::desc("Split static data sections into hot and cold "
                              "sections using profile information"));
 
+/// Enable matching and inference when using propeller.
+static cl::opt<bool> BasicBlockSectionMatchInfer(
+    "basic-block-section-match-infer",
+    cl::desc(
+        "Enable matching and inference when generating basic block sections"),
+    cl::init(false), cl::Optional);
+
 cl::opt<bool> EmitBBHash(
     "emit-bb-hash",
     cl::desc(
@@ -1285,12 +1292,15 @@ void TargetPassConfig::addMachinePasses() {
   // address map (or both).
   if (TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
       TM->Options.BBAddrMap) {
-    if (EmitBBHash)
+    if (EmitBBHash || BasicBlockSectionMatchInfer)
       addPass(llvm::createMachineBlockHashInfoPass());
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));
-      addPass(llvm::createBasicBlockPathCloningPass());
+      if (BasicBlockSectionMatchInfer)
+        addPass(llvm::createBasicBlockMatchingAndInferencePass());
+      else
+        addPass(llvm::createBasicBlockPathCloningPass());
     }
     addPass(llvm::createBasicBlockSectionsPass());
   }

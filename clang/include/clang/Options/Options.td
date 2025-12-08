@@ -4522,6 +4522,13 @@ defm new_infallible : BoolFOption<"new-infallible",
   BothFlags<[], [ClangOption, CC1Option],
           " treating throwing global C++ operator new as always returning valid memory "
   "(annotates with __attribute__((returns_nonnull)) and throw()). This is detectable in source.">>;
+defm devirtualize_speculatively
+    : BoolFOption<"devirtualize-speculatively",
+                  CodeGenOpts<"DevirtualizeSpeculatively">, DefaultFalse,
+                  PosFlag<SetTrue, [], [],
+                          "Enables speculative devirtualization optimization.">,
+                  NegFlag<SetFalse>,
+                  BothFlags<[], [ClangOption, CLOption, CC1Option]>>;
 defm whole_program_vtables : BoolFOption<"whole-program-vtables",
   CodeGenOpts<"WholeProgramVTables">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -7132,9 +7139,8 @@ defm variable_expansion_in_unroller : BooleanFFlag<"variable-expansion-in-unroll
     Group<clang_ignored_gcc_optimization_f_Group>;
 defm web : BooleanFFlag<"web">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm whole_program : BooleanFFlag<"whole-program">, Group<clang_ignored_gcc_optimization_f_Group>;
-defm devirtualize : BooleanFFlag<"devirtualize">, Group<clang_ignored_gcc_optimization_f_Group>;
-defm devirtualize_speculatively : BooleanFFlag<"devirtualize-speculatively">,
-    Group<clang_ignored_gcc_optimization_f_Group>;
+defm devirtualize : BooleanFFlag<"devirtualize">,
+                    Group<clang_ignored_gcc_optimization_f_Group>;
 
 // Generic gfortran options.
 def A_DASH : Joined<["-"], "A-">, Group<gfortran_Group>;
