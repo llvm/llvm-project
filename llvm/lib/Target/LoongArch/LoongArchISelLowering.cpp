@@ -626,10 +626,10 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
   return SDValue();
 }
 
-/// getVShiftImm - Check if this is a valid build_vector for the immediate
+/// getVShiftAmt - Check if this is a valid build_vector for the immediate
 /// operand of a vector shift operation, where all the elements of the
 /// build_vector must have the same constant integer value.
-static bool getVShiftImm(SDValue Op, unsigned ElementBits, int64_t &Cnt) {
+static bool getVShiftAmt(SDValue Op, unsigned ElementBits, int64_t &Amt) {
   // Ignore bit_converts.
   while (Op.getOpcode() == ISD::BITCAST)
     Op = Op.getOperand(0);
@@ -642,7 +642,7 @@ static bool getVShiftImm(SDValue Op, unsigned ElementBits, int64_t &Cnt) {
                             ElementBits) ||
       SplatBitSize > ElementBits)
     return false;
-  Cnt = SplatBits.getSExtValue();
+  Amt = SplatBits.getSExtValue();
   return true;
 }
 
@@ -651,7 +651,7 @@ LoongArchTargetLowering::lowerVectorSRA_SRL_SHL(SDValue Op,
                                                 SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
-  int64_t Cnt;
+  int64_t Amt;
 
   if (!Op.getOperand(1).getValueType().isVector())
     return Op;
@@ -660,20 +660,20 @@ LoongArchTargetLowering::lowerVectorSRA_SRL_SHL(SDValue Op,
 
   switch (Op.getOpcode()) {
   case ISD::SHL:
-    if (getVShiftImm(Op.getOperand(1), EltSize, Cnt) && Cnt >= 0 &&
-        Cnt < EltSize)
+    if (getVShiftAmt(Op.getOperand(1), EltSize, Amt) && Amt >= 0 &&
+        Amt < EltSize)
       return DAG.getNode(LoongArchISD::VSLLI, DL, VT, Op.getOperand(0),
-                         DAG.getConstant(Cnt, DL, GRLenVT));
+                         DAG.getConstant(Amt, DL, GRLenVT));
     return DAG.getNode(LoongArchISD::VSLL, DL, VT, Op.getOperand(0),
                        Op.getOperand(1));
   case ISD::SRA:
   case ISD::SRL:
-    if (getVShiftImm(Op.getOperand(1), EltSize, Cnt) && Cnt >= 0 &&
-        Cnt < EltSize) {
+    if (getVShiftAmt(Op.getOperand(1), EltSize, Amt) && Amt >= 0 &&
+        Amt < EltSize) {
       unsigned Opc = (Op.getOpcode() == ISD::SRA) ? LoongArchISD::VSRAI
                                                   : LoongArchISD::VSRLI;
       return DAG.getNode(Opc, DL, VT, Op.getOperand(0),
-                         DAG.getConstant(Cnt, DL, GRLenVT));
+                         DAG.getConstant(Amt, DL, GRLenVT));
     }
     unsigned Opc =
         (Op.getOpcode() == ISD::SRA) ? LoongArchISD::VSRA : LoongArchISD::VSRL;
