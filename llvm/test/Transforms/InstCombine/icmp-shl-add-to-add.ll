@@ -49,13 +49,11 @@ define i1 @shl_add_const_eq_mismatch_shl_amt(i64 %v0, i64 %v3) {
   ret i1 %v6
 }
 
-; Test: Constant is wrong (32 vs 64).
-define i1 @shl_add_const_eq_wrong_constant(i64 %v0, i64 %v3) {
-; CHECK-LABEL: @shl_add_const_eq_wrong_constant(
-; CHECK-NEXT:    [[V1:%.*]] = shl nsw i64 [[V0:%.*]], 5
-; CHECK-NEXT:    [[V4:%.*]] = shl nsw i64 [[V3:%.*]], 5
-; CHECK-NEXT:    [[V5:%.*]] = add nsw i64 [[V4]], 64
-; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V1]], [[V5]]
+; Test: Constant K is a multiple of 2^L (64 vs 32). Should simplify to K/2^L = 2.
+define i1 @shl_add_const_eq_k_multiple_of_pow2(i64 %v0, i64 %v3) {
+; CHECK-LABEL: @shl_add_const_eq_k_multiple_of_pow2(
+; CHECK-NEXT:    [[V5:%.*]] = add nsw i64 [[V3:%.*]], 2
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V1:%.*]], [[V5]]
 ; CHECK-NEXT:    ret i1 [[V6]]
 ;
   %v1 = shl nsw i64 %v0, 5

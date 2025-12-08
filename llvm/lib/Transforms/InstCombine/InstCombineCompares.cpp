@@ -6024,8 +6024,9 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   const CmpInst::Predicate Pred = I.getPredicate();
 
-  // icmp (shl nsw X, Log2), (add nsw (shl nsw Y, Log2), K) -> icmp X, (add nsw
-  // Y, 1)
+  // icmp (shl nsw X, L), (add nsw (shl nsw Y, L), K) where K is a multiple of
+  // 2^L
+  // -> icmp X, (add nsw Y, K / 2^L)
   Value *X, *Y;
   const APInt *CLog2M0, *CLog2M1, *CVal;
   auto M0 = m_NSWShl(m_Value(X), m_APIntAllowPoison(CLog2M0));
@@ -6035,9 +6036,9 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   if (match(&I, m_c_ICmp(M0, M1)) && *CLog2M0 == *CLog2M1) {
     unsigned BitWidth = CLog2M0->getBitWidth();
     unsigned ShAmt = (unsigned)CLog2M0->getLimitedValue(BitWidth);
-    APInt ExpectedK = APInt::getOneBitSet(BitWidth, ShAmt);
-    if (*CVal == ExpectedK) {
-      Value *NewRHS = Builder.CreateAdd(Y, ConstantInt::get(Y->getType(), 1),
+    if (CVal->countr_zero() >= ShAmt) {
+      APInt NewK = CVal->lshr(ShAmt);
+      Value *NewRHS = Builder.CreateAdd(Y, ConstantInt::get(Y->getType(), NewK),
                                         "", /*HasNUW=*/false, /*HasNSW=*/true);
       return new ICmpInst(Pred, X, NewRHS);
     }
