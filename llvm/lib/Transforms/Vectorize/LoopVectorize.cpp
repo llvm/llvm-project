@@ -1726,7 +1726,10 @@ public:
   /// unless necessary, e.g. when the loop isn't legal to vectorize or when
   /// there is no predication.
   std::function<BlockFrequencyInfo &()> GetBFI;
+  /// The BlockFrequencyInfo returned from GetBFI.
   BlockFrequencyInfo *BFI = nullptr;
+  /// Returns the BlockFrequencyInfo for the function if cached, otherwise
+  /// fetches it via GetBFI. Avoids an indirect call to the std::function.
   BlockFrequencyInfo &getBFI() {
     if (!BFI)
       BFI = &GetBFI();

@@ -7,17 +7,17 @@
 ; innermost loop headers have a greater than or equal to frequency than any
 ; block it dominates.
 
-define void @f(i1 %0) !prof !0 {
+define void @f(i1 %x) !prof !0 {
 ; CHECK-LABEL: define void @f(
-; CHECK-SAME: i1 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {{.*}}{
-; CHECK-NEXT:  [[VECTOR_PH:.*]]:
-; CHECK-NEXT:    [[DOTSCALAR:%.*]] = xor i1 [[TMP0]], true
+; CHECK-SAME: i1 [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {{.*}}{
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[DOTSCALAR:%.*]] = xor i1 [[X]], true
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <vscale x 2 x i1> poison, i1 [[DOTSCALAR]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <vscale x 2 x i1> [[TMP1]], <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 65, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 65, %[[ENTRY]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr null, i64 [[EVL_BASED_IV]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> poison, ptr align 8 [[TMP4]], <vscale x 2 x i1> [[TMP2]], i32 [[TMP3]])
@@ -26,34 +26,35 @@ define void @f(i1 %0) !prof !0 {
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[EVL_BASED_IV]], [[TMP5]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw nsw i64 [[AVL]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP1:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[EXIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP1:![0-9]+]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
-  br label %2
+entry:
+  br label %loop
 
-2:                                                ; preds = %9, %1
-  %3 = phi i64 [ %10, %9 ], [ 0, %1 ]
-  %4 = getelementptr i64, ptr null, i64 %3
-  br label %5
+loop:
+  %iv = phi i64 [ %iv.next, %latch ], [ 0, %entry ]
+  %gep = getelementptr i64, ptr null, i64 %iv
+  br label %foo
 
-5:                                                ; preds = %8, %2
-  %6 = phi i1 [ false, %2 ], [ true, %8 ]
-  br i1 %0, label %8, label %7
+foo:
+  %phi = phi i1 [ false, %loop ], [ true, %baz ]
+  br i1 %x, label %baz, label %bar
 
-7:                                                ; preds = %5
-  store i64 0, ptr %4, align 8
-  br label %8
+bar:
+  store i64 0, ptr %gep
+  br label %baz
 
-8:                                                ; preds = %7, %5
-  br i1 %6, label %9, label %5
+baz:
+  br i1 %phi, label %latch, label %foo
 
-9:                                                ; preds = %8
-  %10 = add i64 %3, 1
-  %11 = icmp eq i64 %3, 64
-  br i1 %11, label %12, label %2
+latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 64
+  br i1 %ec, label %exit, label %loop
 
-12:                                               ; preds = %9
+exit:
   ret void
 }
 
