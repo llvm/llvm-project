@@ -386,3 +386,17 @@ void checkResultAssignment(void) {
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'int' -> 'bool'
   // CHECK-FIXES: bool b = (returns_bool() && returns_bool()) != 0;
 }
+
+void checkNestedLogic(void) {
+  bool a = true;
+  bool b = false;
+  bool c = true;
+
+  if ((a && b) || c) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: implicit conversion 'bool' -> 'int' [readability-implicit-bool-conversion]
+  // CHECK-FIXES: if ((a && b) || (int)c) {}
+
+  if (c && (a || b)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: implicit conversion 'bool' -> 'int' [readability-implicit-bool-conversion]
+  // CHECK-FIXES: if ((int)c && (a || b)) {}
+}
