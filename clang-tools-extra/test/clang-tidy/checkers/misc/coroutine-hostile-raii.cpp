@@ -2,7 +2,7 @@
 // RUN:   -config="{CheckOptions: {\
 // RUN:             misc-coroutine-hostile-raii.RAIITypesList: 'my::Mutex; ::my::other::Mutex', \
 // RUN:             misc-coroutine-hostile-raii.AllowedAwaitablesList: 'safe::awaitable; ::transformable::awaitable', \
-// RUN:             misc-coroutine-hostile-raii.AllowedCallees: 'safe::AwaitFunc; ::safe::Obj::AwaitMethod' \
+// RUN:             misc-coroutine-hostile-raii.AllowedCallees: 'safe::AwaitFunc; ::safe::Obj::AwaitMethod; retExemptedAwaitable' \
 // RUN:             }}"
 
 namespace std {
@@ -163,7 +163,10 @@ ReturnObject RAIISafeSuspendTest() {
 // ================================================================================
 // Safe transformable awaitable
 // ================================================================================
-struct transformable { struct awaitable{}; };
+struct transformable {
+  struct awaitable{};
+  struct unsafe_awaitable{};
+};
 using alias_transformable_awaitable = transformable::awaitable;
 struct UseTransformAwaitable {
   struct promise_type {
@@ -172,13 +175,18 @@ struct UseTransformAwaitable {
     std::suspend_always final_suspend() noexcept { return {}; }
     void unhandled_exception() {}
     std::suspend_always await_transform(transformable::awaitable) { return {}; }
+    std::suspend_always await_transform(transformable::unsafe_awaitable) {
+      return {};
+    }
   };
 };
 
 auto retAwaitable() { return transformable::awaitable{}; }
+auto retExemptedAwaitable() { return transformable::unsafe_awaitable{}; }
 UseTransformAwaitable RAIISafeSuspendTest2() {
   absl::Mutex a;
   co_await retAwaitable();
+  co_await retExemptedAwaitable();
   co_await transformable::awaitable{};
   co_await alias_transformable_awaitable{};
 }

@@ -22,11 +22,20 @@
 #ifndef POLLY_DEPENDENCE_INFO_H
 #define POLLY_DEPENDENCE_INFO_H
 
-#include "polly/ScopPass.h"
+#include "llvm/ADT/DenseMap.h"
 #include "isl/ctx.h"
 #include "isl/isl-noexceptions.h"
 
+namespace llvm {
+class raw_ostream;
+}
+
 namespace polly {
+class MemoryAccess;
+class Scop;
+class ScopStmt;
+
+using llvm::DenseMap;
 
 /// The accumulated dependence information for a SCoP.
 ///
@@ -193,8 +202,7 @@ private:
 
 extern Dependences::AnalysisLevel OptAnalysisLevel;
 
-struct DependenceAnalysis final : public AnalysisInfoMixin<DependenceAnalysis> {
-  static AnalysisKey Key;
+struct DependenceAnalysis final {
   struct Result {
     Scop &S;
     std::unique_ptr<Dependences> D[Dependences::NumAnalysisLevels];
@@ -219,18 +227,6 @@ struct DependenceAnalysis final : public AnalysisInfoMixin<DependenceAnalysis> {
     /// dependencies.
     void abandonDependences();
   };
-  Result run(Scop &S, ScopAnalysisManager &SAM,
-             ScopStandardAnalysisResults &SAR);
-};
-
-struct DependenceInfoPrinterPass final
-    : PassInfoMixin<DependenceInfoPrinterPass> {
-  DependenceInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
-
-  PreservedAnalyses run(Scop &S, ScopAnalysisManager &,
-                        ScopStandardAnalysisResults &, SPMUpdater &);
-
-  raw_ostream &OS;
 };
 
 DependenceAnalysis::Result runDependenceAnalysis(Scop &S);

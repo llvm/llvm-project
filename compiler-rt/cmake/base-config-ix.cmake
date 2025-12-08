@@ -59,9 +59,9 @@ if (LLVM_TREE_AVAILABLE)
     set(_host_executable_suffix ${CMAKE_EXECUTABLE_SUFFIX})
   endif()
   set(COMPILER_RT_TEST_COMPILER
-    ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang${_host_executable_suffix})
+    ${LLVM_TOOLS_BINARY_DIR}/clang${_host_executable_suffix})
   set(COMPILER_RT_TEST_CXX_COMPILER
-    ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++${_host_executable_suffix})
+    ${LLVM_TOOLS_BINARY_DIR}/clang++${_host_executable_suffix})
 else()
     # Take output dir and install path from the user.
   set(COMPILER_RT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE PATH

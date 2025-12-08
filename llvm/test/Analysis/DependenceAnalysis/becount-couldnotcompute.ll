@@ -7,7 +7,9 @@
 define void @test(i64 %conv, ptr %a) {
 ; CHECK-LABEL: 'test'
 ; CHECK-NEXT:  Src: %ld = load i32, ptr %arrayidx12, align 4 --> Dst: %ld = load i32, ptr %arrayidx12, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: (4 + (4 * %conv)) ne) 0
 ;
 entry:
   %sub = add i64 %conv, 1

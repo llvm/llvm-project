@@ -3019,7 +3019,7 @@ private:
                          llvm::SmallBitVector &CheckedVarArgs);
   bool CheckFormatArguments(ArrayRef<const Expr *> Args,
                             FormatArgumentPassingKind FAPK,
-                            const StringLiteral *ReferenceFormatString,
+                            StringLiteral *ReferenceFormatString,
                             unsigned format_idx, unsigned firstDataArg,
                             FormatStringType Type, VariadicCallType CallType,
                             SourceLocation Loc, SourceRange range,
@@ -4456,6 +4456,10 @@ public:
       NamedDecl *New, Decl *Old,
       AvailabilityMergeKind AMK = AvailabilityMergeKind::Redeclaration);
 
+  /// CheckAttributesOnDeducedType - Calls Sema functions for attributes that
+  /// requires the type to be deduced.
+  void CheckAttributesOnDeducedType(Decl *D);
+
   /// MergeTypedefNameDecl - We just parsed a typedef 'New' which has the
   /// same name and scope as a previous declaration 'Old'.  Figure out
   /// how to resolve this situation, merging decls or emitting
@@ -4760,6 +4764,8 @@ private:
   // linkage or not.
   static bool mightHaveNonExternalLinkage(const DeclaratorDecl *FD);
 
+#include "clang/Sema/AttrIsTypeDependent.inc"
+
   ///@}
 
   //
@@ -4951,6 +4957,11 @@ public:
                                             IdentifierInfo *Format,
                                             int FormatIdx,
                                             StringLiteral *FormatStr);
+  ModularFormatAttr *mergeModularFormatAttr(Decl *D,
+                                            const AttributeCommonInfo &CI,
+                                            IdentifierInfo *ModularImplFn,
+                                            StringRef ImplName,
+                                            MutableArrayRef<StringRef> Aspects);
 
   /// AddAlignedAttr - Adds an aligned attribute to a particular declaration.
   void AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
@@ -5104,6 +5115,11 @@ public:
   /// been delayed in the current context instead of in the given pool.
   /// Essentially, this just moves them to the current pool.
   void redelayDiagnostics(sema::DelayedDiagnosticPool &pool);
+
+  /// Check that the type is a plain record with one field being a pointer
+  /// type and the other field being an integer. This matches the common
+  /// implementation of std::span or sized_allocation_t in P0901R11.
+  bool CheckSpanLikeType(const AttributeCommonInfo &CI, const QualType &Ty);
 
   /// Check if IdxExpr is a valid parameter index for a function or
   /// instance method D.  May output an error.
@@ -8570,8 +8586,7 @@ public:
   FunctionDecl *FindDeallocationFunctionForDestructor(SourceLocation StartLoc,
                                                       CXXRecordDecl *RD,
                                                       bool Diagnose,
-                                                      bool LookForGlobal,
-                                                      DeclarationName Name);
+                                                      bool LookForGlobal);
 
   /// ActOnCXXDelete - Parsed a C++ 'delete' expression (C++ 5.3.5), as in:
   /// @code ::delete ptr; @endcode
@@ -8710,10 +8725,6 @@ public:
   QualType CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
                                        ExprResult &RHS,
                                        SourceLocation QuestionLoc);
-
-  QualType CheckSizelessVectorConditionalTypes(ExprResult &Cond,
-                                               ExprResult &LHS, ExprResult &RHS,
-                                               SourceLocation QuestionLoc);
 
   //// Determines if a type is trivially relocatable
   /// according to the C++26 rules.
@@ -15468,6 +15479,8 @@ public:
   /// optional on error.
   std::optional<FunctionEffectMode>
   ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName);
+
+  void ActOnCleanupAttr(Decl *D, const Attr *A);
 
 private:
   /// The implementation of RequireCompleteType

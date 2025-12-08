@@ -18,8 +18,8 @@ MyObj* return_local_addr() {
   return p;
 // CHECK:   Use ([[O_P]] (Decl: p), Read)
 // CHECK:   OriginFlow (Dest: [[O_RET_VAL:[0-9]+]] (Expr: ImplicitCastExpr), Src: [[O_P]] (Decl: p))
-// CHECK:   ReturnOfOrigin ([[O_RET_VAL]] (Expr: ImplicitCastExpr))
 // CHECK:   Expire ([[L_X]] (Path: x))
+// CHECK:   OriginEscapes ([[O_RET_VAL]] (Expr: ImplicitCastExpr))
 }
 
 
@@ -49,8 +49,8 @@ MyObj* assign_and_return_local_addr() {
   return ptr2;
 // CHECK:   Use ([[O_PTR2]] (Decl: ptr2), Read)
 // CHECK:   OriginFlow (Dest: [[O_RET_VAL:[0-9]+]] (Expr: ImplicitCastExpr), Src: [[O_PTR2]] (Decl: ptr2))
-// CHECK:   ReturnOfOrigin ([[O_RET_VAL]] (Expr: ImplicitCastExpr))
 // CHECK:   Expire ([[L_Y]] (Path: y))
+// CHECK:   OriginEscapes ([[O_RET_VAL]] (Expr: ImplicitCastExpr))
 }
 
 // Return of Non-Pointer Type
@@ -59,6 +59,7 @@ int return_int_val() {
   int x = 10;
 // CHECK: Block B{{[0-9]+}}:
 // CHECK:   Issue ([[L_X:[0-9]+]] (Path: x), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr))
+// CHECK:   Expire ([[L_X:[0-9]+]] (Path: x))
   return x;
 }
 // CHECK-NEXT: End of Block
@@ -77,7 +78,6 @@ void loan_expires_cpp() {
 }
 
 
-// FIXME: No expire for Trivial Destructors
 // CHECK-LABEL: Function: loan_expires_trivial
 void loan_expires_trivial() {
   int trivial_obj = 1;
@@ -86,10 +86,28 @@ void loan_expires_trivial() {
 // CHECK:   OriginFlow (Dest: [[O_ADDR_TRIVIAL_OBJ:[0-9]+]] (Expr: UnaryOperator), Src: [[O_DRE_TRIVIAL]] (Expr: DeclRefExpr))
   int* pTrivialObj = &trivial_obj;
 // CHECK:   OriginFlow (Dest: {{[0-9]+}} (Decl: pTrivialObj), Src: [[O_ADDR_TRIVIAL_OBJ]] (Expr: UnaryOperator))
-// CHECK-NOT: Expire
+// CHECK:   Expire ([[L_TRIVIAL_OBJ:[0-9]+]] (Path: trivial_obj))
 // CHECK-NEXT: End of Block
-  // FIXME: Add check for Expire once trivial destructors are handled for expiration.
 }
+
+// Trivial Destructors
+// CHECK-LABEL: Function: return_int_pointer
+int* return_int_pointer() {
+  int* ptr;
+// CHECK: Block B{{[0-9]+}}:
+  int x = 1;
+// CHECK:   Issue ([[L_X:[0-9]+]] (Path: x), ToOrigin: [[O_DRE_X:[0-9]+]] (Expr: DeclRefExpr))
+// CHECK:   OriginFlow (Dest: [[O_ADDR_X:[0-9]+]] (Expr: UnaryOperator), Src: [[O_DRE_X]] (Expr: DeclRefExpr))
+  ptr = &x;
+// CHECK:   Use ([[O_PTR:[0-9]+]] (Decl: ptr), Write)
+// CHECK:   OriginFlow (Dest: [[O_PTR]] (Decl: ptr), Src: [[O_ADDR_X]] (Expr: UnaryOperator))
+// CHECK:   Use ([[O_PTR]] (Decl: ptr), Read)
+// CHECK:   OriginFlow (Dest: [[O_RET_VAL:[0-9]+]] (Expr: ImplicitCastExpr), Src: [[O_PTR]] (Decl: ptr))
+// CHECK:   Expire ([[L_X]] (Path: x))
+// CHECK:   OriginEscapes ([[O_RET_VAL]] (Expr: ImplicitCastExpr))
+  return ptr;
+}
+// CHECK-NEXT: End of Block
 
 // CHECK-LABEL: Function: conditional
 void conditional(bool condition) {

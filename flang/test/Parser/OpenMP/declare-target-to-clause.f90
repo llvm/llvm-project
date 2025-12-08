@@ -18,4 +18,4 @@ end
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | OmpObject -> Designator -> DataRef -> Name = 'y'
 !PARSE-TREE: | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}

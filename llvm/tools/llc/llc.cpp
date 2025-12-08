@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/LinkAllAsmWriterComponents.h"
@@ -306,9 +307,7 @@ static int compileModule(char **argv, LLVMContext &Context,
   llvm_unreachable("reportError() should not return");
 }
 
-static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
-                                                       Triple::OSType OS,
-                                                       const char *ProgName) {
+static std::unique_ptr<ToolOutputFile> GetOutputStream(Triple::OSType OS) {
   // If we don't yet have an output filename, make one.
   if (OutputFilename.empty()) {
     if (InputFilename == "-")
@@ -357,13 +356,11 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
   if (!Binary)
     OpenFlags |= sys::fs::OF_TextWithCRLF;
   auto FDOut = std::make_unique<ToolOutputFile>(OutputFilename, EC, OpenFlags);
-  if (EC) {
+  if (EC)
     reportError(EC.message());
-    return nullptr;
-  }
-
   return FDOut;
 }
+
 // main - Entry point for the llc compiler.
 //
 int main(int argc, char **argv) {
@@ -671,8 +668,7 @@ static int compileModule(char **argv, LLVMContext &Context,
     Target->Options.FloatABIType = codegen::getFloatABIForCalls();
 
   // Figure out where we are going to send the output.
-  std::unique_ptr<ToolOutputFile> Out =
-      GetOutputStream(TheTarget->getName(), TheTriple.getOS(), argv[0]);
+  std::unique_ptr<ToolOutputFile> Out = GetOutputStream(TheTriple.getOS());
   if (!Out)
     return 1;
 
@@ -732,6 +728,10 @@ static int compileModule(char **argv, LLVMContext &Context,
   // Build up all of the passes that we want to do to the module.
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
+  PM.add(new RuntimeLibraryInfoWrapper(
+      M->getTargetTriple(), Target->Options.ExceptionModel,
+      Target->Options.FloatABIType, Target->Options.EABIVersion,
+      Options.MCOptions.ABIName, Target->Options.VecLib));
 
   {
     raw_pwrite_stream *OS = &Out->os();

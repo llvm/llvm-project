@@ -218,10 +218,10 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64PrologueEpilogue.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -973,8 +973,7 @@ bool AArch64FrameLowering::shouldSignReturnAddressEverywhere(
   if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
     return false;
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  bool SignReturnAddressAll = AFI->shouldSignReturnAddress(/*SpillsLR=*/false);
-  return SignReturnAddressAll;
+  return AFI->getSignReturnAddressCondition() == SignReturnAddress::All;
 }
 
 // Given a load or a store instruction, generate an appropriate unwinding SEH
@@ -1712,12 +1711,10 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
   // NOTE: we currently do not account for the D registers as LLVM does not
   // support non-ABI compliant D register spills.
   bool SpillExtendedVolatile =
-      IsWindows && std::any_of(std::begin(CSI), std::end(CSI),
-                               [](const CalleeSavedInfo &CSI) {
-                                 const auto &Reg = CSI.getReg();
-                                 return Reg >= AArch64::X0 &&
-                                        Reg <= AArch64::X18;
-                               });
+      IsWindows && llvm::any_of(CSI, [](const CalleeSavedInfo &CSI) {
+        const auto &Reg = CSI.getReg();
+        return Reg >= AArch64::X0 && Reg <= AArch64::X18;
+      });
 
   int ZPRByteOffset = 0;
   int PPRByteOffset = 0;
@@ -2758,8 +2755,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
 bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *RegInfo,
-    std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
-    unsigned &MaxCSFrameIndex) const {
+    std::vector<CalleeSavedInfo> &CSI) const {
   bool NeedsWinCFI = needsWinCFI(MF);
   unsigned StackHazardSize = getStackHazardSize(MF);
   // To match the canonical windows frame layout, reverse the list of
@@ -2782,10 +2778,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   if (UsesWinAAPCS && hasFP(MF) && AFI->hasSwiftAsyncContext()) {
     int FrameIdx = MFI.CreateStackObject(8, Align(16), true);
     AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
-    if ((unsigned)FrameIdx < MinCSFrameIndex)
-      MinCSFrameIndex = FrameIdx;
-    if ((unsigned)FrameIdx > MaxCSFrameIndex)
-      MaxCSFrameIndex = FrameIdx;
+    MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
   }
 
   // Insert VG into the list of CSRs, immediately before LR if saved.
@@ -2815,31 +2808,21 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
       LLVM_DEBUG(dbgs() << "Created CSR Hazard at slot " << HazardSlotIndex
                         << "\n");
       AFI->setStackHazardCSRSlotIndex(HazardSlotIndex);
-      if ((unsigned)HazardSlotIndex < MinCSFrameIndex)
-        MinCSFrameIndex = HazardSlotIndex;
-      if ((unsigned)HazardSlotIndex > MaxCSFrameIndex)
-        MaxCSFrameIndex = HazardSlotIndex;
+      MFI.setIsCalleeSavedObjectIndex(HazardSlotIndex, true);
     }
 
     unsigned Size = RegInfo->getSpillSize(*RC);
     Align Alignment(RegInfo->getSpillAlign(*RC));
     int FrameIdx = MFI.CreateStackObject(Size, Alignment, true);
     CS.setFrameIdx(FrameIdx);
-
-    if ((unsigned)FrameIdx < MinCSFrameIndex)
-      MinCSFrameIndex = FrameIdx;
-    if ((unsigned)FrameIdx > MaxCSFrameIndex)
-      MaxCSFrameIndex = FrameIdx;
+    MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
 
     // Grab 8 bytes below FP for the extended asynchronous frame info.
     if (hasFP(MF) && AFI->hasSwiftAsyncContext() && !UsesWinAAPCS &&
         Reg == AArch64::FP) {
       FrameIdx = MFI.CreateStackObject(8, Alignment, true);
       AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
-      if ((unsigned)FrameIdx < MinCSFrameIndex)
-        MinCSFrameIndex = FrameIdx;
-      if ((unsigned)FrameIdx > MaxCSFrameIndex)
-        MaxCSFrameIndex = FrameIdx;
+      MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
     }
     LastReg = Reg;
   }
@@ -2851,10 +2834,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     LLVM_DEBUG(dbgs() << "Created CSR Hazard at slot " << HazardSlotIndex
                       << "\n");
     AFI->setStackHazardCSRSlotIndex(HazardSlotIndex);
-    if ((unsigned)HazardSlotIndex < MinCSFrameIndex)
-      MinCSFrameIndex = HazardSlotIndex;
-    if ((unsigned)HazardSlotIndex > MaxCSFrameIndex)
-      MaxCSFrameIndex = HazardSlotIndex;
+    MFI.setIsCalleeSavedObjectIndex(HazardSlotIndex, true);
   }
 
   return true;
@@ -2971,9 +2951,8 @@ static SVEStackSizes determineSVEStackSizes(MachineFunction &MF,
   }
 
   for (int FI = 0, E = MFI.getObjectIndexEnd(); FI != E; ++FI) {
-    if (FI == StackProtectorFI || MFI.isDeadObjectIndex(FI))
-      continue;
-    if (MaxCSFrameIndex >= FI && FI >= MinCSFrameIndex)
+    if (FI == StackProtectorFI || MFI.isDeadObjectIndex(FI) ||
+        MFI.isCalleeSavedObjectIndex(FI))
       continue;
 
     if (MFI.getStackID(FI) != TargetStackID::ScalableVector &&

@@ -793,9 +793,8 @@ define <1 x i1> @whilewr_8_scalarize(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_8_scalarize:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub x8, x1, x0
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    ccmp x8, #0, #4, le
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    cmn x8, #1
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <1 x i1> @llvm.loop.dependence.war.mask.v1i1(ptr %a, ptr %b, i64 1)
@@ -845,9 +844,8 @@ define <1 x i1> @whilerw_8_scalarize(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilerw_8_scalarize:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub x8, x1, x0
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    ccmp x8, #0, #4, le
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    cmn x8, #1
+; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <1 x i1> @llvm.loop.dependence.raw.mask.v1i1(ptr %a, ptr %b, i64 1)

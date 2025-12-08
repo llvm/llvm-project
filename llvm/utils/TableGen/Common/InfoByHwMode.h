@@ -103,6 +103,8 @@ template <typename InfoT> struct InfoByHwMode {
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   const_iterator end() const { return Map.end(); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
+  size_t size() const { return Map.size(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool empty() const { return Map.empty(); }
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE

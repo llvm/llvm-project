@@ -283,14 +283,14 @@ end subroutine
 ! CHECK:           hlfir.assign %[[VAL_8]]#0 to %[[VAL_14]]#0 realloc keep_lhs_len : !fir.box<!fir.array<20x!fir.char<1,?>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 
 subroutine test_derived_with_init(x, y)
-  type t 
+  type t
     integer, allocatable :: a(:)
-  end type                                                                                     
-  type(t), allocatable :: x                                                                    
-  type(t) :: y                                                                                 
+  end type
+  type(t), allocatable :: x
+  type(t) :: y
   ! The allocatable component of `x` need to be initialized
   ! during the automatic allocation (setting its rank and allocation
-  ! status) before it is assigned with the component of `y` 
+  ! status) before it is assigned with the component of `y`
   x = y
 end subroutine
 ! CHECK-LABEL:   func.func @_QMalloc_assignPtest_derived_with_init(
@@ -357,7 +357,7 @@ end module
 !  real :: y(2, 3) = reshape([1,2,3,4,5,6], [2,3])
 !  real, allocatable :: x (:, :)
 !  allocate(x(2,2))
-!  call test_with_lbounds(x, y) 
+!  call test_with_lbounds(x, y)
 !  print *, x(10, 20)
 !  print *, x
 !end

@@ -1829,7 +1829,7 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   // If the difference is positive then some elements may alias
   EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
                                      Diff.getValueType());
-  SDValue Zero = DAG.getTargetConstant(0, DL, PtrVT);
+  SDValue Zero = DAG.getConstant(0, DL, PtrVT);
   SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
                              IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
 

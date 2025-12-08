@@ -48,7 +48,6 @@ add_llvm_pass_plugin(Polly
   Analysis/ScopInfo.cpp
   Analysis/ScopBuilder.cpp
   Analysis/ScopGraphPrinter.cpp
-  Analysis/ScopPass.cpp
   Analysis/PruneUnprofitable.cpp
   CodeGen/BlockGenerators.cpp
   ${ISL_CODEGEN_FILES}

@@ -264,7 +264,7 @@ define i64 @test_v16i64_load_store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[52:53], 0x50
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[54:55], 64
 ; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v0, 0xc8 :: v_dual_mov_b32 v1, 0
+; GCN-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, 0xc8
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x7
 ; GCN-SDAG-NEXT:    global_store_b128 v[2:3], v[6:9], off
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x6
@@ -404,6 +404,7 @@ define i64 @test_v16i64_load_store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr2, ptr addrspace(1) %out) {
 ; GCN-SDAG-LABEL: test_v7i16_load_store_kernel:
 ; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GCN-SDAG-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
 ; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
@@ -431,6 +432,7 @@ define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, 
 ;
 ; GCN-GISEL-LABEL: test_v7i16_load_store_kernel:
 ; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GCN-GISEL-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
 ; GCN-GISEL-NEXT:    s_wait_xcnt 0x0

@@ -22,6 +22,7 @@
 #include "format-specification.h"
 #include "message.h"
 #include "provenance.h"
+#include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/reference.h"
@@ -269,9 +270,9 @@ struct AccEndCombinedDirective;
 struct OpenACCDeclarativeConstruct;
 struct OpenACCRoutineConstruct;
 struct OpenMPConstruct;
-struct OpenMPLoopConstruct;
 struct OpenMPDeclarativeConstruct;
-struct OmpEndLoopDirective;
+struct OpenMPInvalidDirective;
+struct OpenMPMisplacedEndDirective;
 struct CUFKernelDoConstruct;
 
 // Cooked character stream locations
@@ -407,6 +408,8 @@ struct SpecificationConstruct {
       common::Indirection<StructureDef>,
       common::Indirection<OpenACCDeclarativeConstruct>,
       common::Indirection<OpenMPDeclarativeConstruct>,
+      common::Indirection<OpenMPMisplacedEndDirective>,
+      common::Indirection<OpenMPInvalidDirective>,
       common::Indirection<CompilerDirective>>
       u;
 };
@@ -539,7 +542,8 @@ struct ExecutableConstruct {
       common::Indirection<OpenACCConstruct>,
       common::Indirection<AccEndCombinedDirective>,
       common::Indirection<OpenMPConstruct>,
-      common::Indirection<OmpEndLoopDirective>,
+      common::Indirection<OpenMPMisplacedEndDirective>,
+      common::Indirection<OpenMPInvalidDirective>,
       common::Indirection<CUFKernelDoConstruct>>
       u;
 };
@@ -3380,6 +3384,12 @@ struct CompilerDirective {
     std::tuple<common::Indirection<Designator>, uint64_t> t;
   };
   EMPTY_CLASS(VectorAlways);
+  struct VectorLength {
+    TUPLE_CLASS_BOILERPLATE(VectorLength);
+    ENUM_CLASS(Kind, Auto, Fixed, Scalable);
+
+    std::tuple<std::uint64_t, Kind> t;
+  };
   struct NameValue {
     TUPLE_CLASS_BOILERPLATE(NameValue);
     std::tuple<Name, std::optional<std::uint64_t>> t;
@@ -3404,9 +3414,9 @@ struct CompilerDirective {
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
-      VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized,
-      NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline, NoInline,
-      Prefetch, IVDep>
+      VectorAlways, VectorLength, std::list<NameValue>, Unroll, UnrollAndJam,
+      Unrecognized, NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline,
+      NoInline, Prefetch, IVDep>
       u;
 };
 
@@ -4662,10 +4672,10 @@ struct OmpLinearClause {
 
 // Ref: [6.0:207-208]
 //
-// loop-range-clause ->
+// looprange-clause ->
 //    LOOPRANGE(first, count)                       // since 6.0
-struct OmpLoopRangeClause {
-  TUPLE_CLASS_BOILERPLATE(OmpLoopRangeClause);
+struct OmpLooprangeClause {
+  TUPLE_CLASS_BOILERPLATE(OmpLooprangeClause);
   std::tuple<ScalarIntConstantExpr, ScalarIntConstantExpr> t;
 };
 
@@ -4972,7 +4982,9 @@ struct OmpClauseList {
 // --- Directives and constructs
 
 struct OmpDirectiveSpecification {
-  ENUM_CLASS(Flags, None, DeprecatedSyntax);
+  ENUM_CLASS(Flag, DeprecatedSyntax, CrossesLabelDo)
+  using Flags = common::EnumSet<Flag, Flag_enumSize>;
+
   TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
   const OmpDirectiveName &DirName() const {
     return std::get<OmpDirectiveName>(t);
@@ -5345,12 +5357,10 @@ struct OmpEndLoopDirective : public OmpEndDirective {
 };
 
 // OpenMP directives enclosing do loop
-using NestedConstruct =
-    std::variant<DoConstruct, common::Indirection<OpenMPLoopConstruct>>;
 struct OpenMPLoopConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
   OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
-      : t({std::move(a), std::nullopt, std::nullopt}) {}
+      : t({std::move(a), Block{}, std::nullopt}) {}
 
   const OmpBeginLoopDirective &BeginDir() const {
     return std::get<OmpBeginLoopDirective>(t);
@@ -5358,8 +5368,11 @@ struct OpenMPLoopConstruct {
   const std::optional<OmpEndLoopDirective> &EndDir() const {
     return std::get<std::optional<OmpEndLoopDirective>>(t);
   }
-  std::tuple<OmpBeginLoopDirective, std::optional<NestedConstruct>,
-      std::optional<OmpEndLoopDirective>>
+  const DoConstruct *GetNestedLoop() const;
+  const OpenMPLoopConstruct *GetNestedConstruct() const;
+
+  CharBlock source;
+  std::tuple<OmpBeginLoopDirective, Block, std::optional<OmpEndLoopDirective>>
       t;
 };
 
@@ -5378,6 +5391,19 @@ struct OpenMPConstruct {
       OpenMPUtilityConstruct, OpenMPAllocatorsConstruct, OpenMPAssumeConstruct,
       OpenMPCriticalConstruct>
       u;
+};
+
+// Orphaned !$OMP END <directive>, i.e. not being a part of a valid OpenMP
+// construct.
+struct OpenMPMisplacedEndDirective : public OmpEndDirective {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(
+      OpenMPMisplacedEndDirective, OmpEndDirective);
+};
+
+// Unrecognized string after the !$OMP sentinel.
+struct OpenMPInvalidDirective {
+  using EmptyTrait = std::true_type;
+  CharBlock source;
 };
 
 // Parse tree nodes for OpenACC 3.3 directives and clauses

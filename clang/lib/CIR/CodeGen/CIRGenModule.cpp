@@ -675,7 +675,10 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       errorNYI(d->getSourceRange(), "OpenMP target global variable");
 
     gv.setAlignmentAttr(getSize(astContext.getDeclAlign(d)));
-    assert(!cir::MissingFeatures::opGlobalConstant());
+    // FIXME: This code is overly simple and should be merged with other global
+    // handling.
+    gv.setConstant(d->getType().isConstantStorage(
+        astContext, /*ExcludeCtor=*/false, /*ExcludeDtor=*/false));
 
     setLinkageForGV(gv, d);
 
@@ -864,7 +867,11 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   if (emitter)
     emitter->finalize(gv);
 
-  assert(!cir::MissingFeatures::opGlobalConstant());
+  // If it is safe to mark the global 'constant', do so now.
+  gv.setConstant((vd->hasAttr<CUDAConstantAttr>() && langOpts.CUDAIsDevice) ||
+                 (!needsGlobalCtor && !needsGlobalDtor &&
+                  vd->getType().isConstantStorage(
+                      astContext, /*ExcludeCtor=*/true, /*ExcludeDtor=*/true)));
   assert(!cir::MissingFeatures::opGlobalSection());
 
   // Set CIR's linkage type as appropriate.
@@ -876,8 +883,17 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   // FIXME(cir): setLinkage should likely set MLIR's visibility automatically.
   gv.setVisibility(getMLIRVisibilityFromCIRLinkage(linkage));
   assert(!cir::MissingFeatures::opGlobalDLLImportExport());
-  if (linkage == cir::GlobalLinkageKind::CommonLinkage)
-    errorNYI(initExpr->getSourceRange(), "common linkage");
+  if (linkage == cir::GlobalLinkageKind::CommonLinkage) {
+    // common vars aren't constant even if declared const.
+    gv.setConstant(false);
+    // Tentative definition of global variables may be initialized with
+    // non-zero null pointers. In this case they should have weak linkage
+    // since common linkage must have zero initializer and must not have
+    // explicit section therefore cannot have non-zero initial value.
+    std::optional<mlir::Attribute> initializer = gv.getInitialValue();
+    if (initializer && !getBuilder().isNullValue(*initializer))
+      gv.setLinkage(cir::GlobalLinkageKind::WeakAnyLinkage);
+  }
 
   setNonAliasAttributes(vd, gv);
 
@@ -1231,10 +1247,8 @@ cir::GlobalLinkageKind CIRGenModule::getCIRLinkageForDeclarator(
   // linkage.
   if (!getLangOpts().CPlusPlus && isa<VarDecl>(dd) &&
       !isVarDeclStrongDefinition(astContext, *this, cast<VarDecl>(dd),
-                                 getCodeGenOpts().NoCommon)) {
-    errorNYI(dd->getBeginLoc(), "common linkage", dd->getDeclKindName());
+                                 getCodeGenOpts().NoCommon))
     return cir::GlobalLinkageKind::CommonLinkage;
-  }
 
   // selectany symbols are externally visible, so use weak instead of
   // linkonce.  MSVC optimizes away references to const selectany globals, so
@@ -1499,10 +1513,10 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
   }
   case Decl::OpenACCRoutine:
-    emitGlobalOpenACCDecl(cast<OpenACCRoutineDecl>(decl));
+    emitGlobalOpenACCRoutineDecl(cast<OpenACCRoutineDecl>(decl));
     break;
   case Decl::OpenACCDeclare:
-    emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
+    emitGlobalOpenACCDeclareDecl(cast<OpenACCDeclareDecl>(decl));
     break;
   case Decl::Enum:
   case Decl::Using:          // using X; [C++]
@@ -1542,10 +1556,14 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
 
   case Decl::ClassTemplateSpecialization:
-  case Decl::CXXRecord:
+  case Decl::CXXRecord: {
+    CXXRecordDecl *crd = cast<CXXRecordDecl>(decl);
     assert(!cir::MissingFeatures::generateDebugInfo());
-    assert(!cir::MissingFeatures::cxxRecordStaticMembers());
+    for (auto *childDecl : crd->decls())
+      if (isa<VarDecl, CXXRecordDecl, EnumDecl, OpenACCDeclareDecl>(childDecl))
+        emitTopLevelDecl(childDecl);
     break;
+  }
 
   case Decl::FileScopeAsm:
     // File-scope asm is ignored during device-side CUDA compilation.
@@ -1957,7 +1975,6 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
       existingInlineKind && *existingInlineKind == cir::InlineKind::NoInline;
   bool isAlwaysInline = existingInlineKind &&
                         *existingInlineKind == cir::InlineKind::AlwaysInline;
-
   if (!decl) {
     assert(!cir::MissingFeatures::hlsl());
 
@@ -1966,8 +1983,7 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
       // If inlining is disabled and we don't have a declaration to control
       // inlining, mark the function as 'noinline' unless it is explicitly
       // marked as 'alwaysinline'.
-      f.setInlineKindAttr(
-          cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+      f.setInlineKind(cir::InlineKind::NoInline);
     }
 
     return;
@@ -1984,19 +2000,16 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   // Handle inline attributes
   if (decl->hasAttr<NoInlineAttr>() && !isAlwaysInline) {
     // Add noinline if the function isn't always_inline.
-    f.setInlineKindAttr(
-        cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+    f.setInlineKind(cir::InlineKind::NoInline);
   } else if (decl->hasAttr<AlwaysInlineAttr>() && !isNoInline) {
     // Don't override AlwaysInline with NoInline, or vice versa, since we can't
     // specify both in IR.
-    f.setInlineKindAttr(
-        cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::AlwaysInline));
+    f.setInlineKind(cir::InlineKind::AlwaysInline);
   } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
     // If inlining is disabled, force everything that isn't always_inline
     // to carry an explicit noinline attribute.
     if (!isAlwaysInline) {
-      f.setInlineKindAttr(
-          cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+      f.setInlineKind(cir::InlineKind::NoInline);
     }
   } else {
     // Otherwise, propagate the inline hint attribute and potentially use its
@@ -2018,13 +2031,11 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
         return any_of(pattern->redecls(), checkRedeclForInline);
       };
       if (checkForInline(fd)) {
-        f.setInlineKindAttr(cir::InlineAttr::get(&getMLIRContext(),
-                                                 cir::InlineKind::InlineHint));
+        f.setInlineKind(cir::InlineKind::InlineHint);
       } else if (codeGenOpts.getInlining() ==
                      CodeGenOptions::OnlyHintInlining &&
                  !fd->isInlined() && !isAlwaysInline) {
-        f.setInlineKindAttr(
-            cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+        f.setInlineKind(cir::InlineKind::NoInline);
       }
     }
   }
@@ -2211,8 +2222,20 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
 
+    // Mark C++ special member functions (Constructor, Destructor etc.)
+    setCXXSpecialMemberAttr(func, funcDecl);
+
     if (!cgf)
       theModule.push_back(func);
+
+    if (this->getLangOpts().OpenACC) {
+      // We only have to handle this attribute, since OpenACCAnnotAttrs are
+      // handled via the end-of-TU work.
+      for (const auto *attr :
+           funcDecl->specific_attrs<OpenACCRoutineDeclAttr>())
+        emitOpenACCRoutineDecl(funcDecl, func, attr->getLocation(),
+                               attr->Clauses);
+    }
   }
   return func;
 }
@@ -2224,6 +2247,58 @@ CIRGenModule::createCIRBuiltinFunction(mlir::Location loc, StringRef name,
   cir::FuncOp fnOp = createCIRFunction(loc, name, ty, fd);
   fnOp.setBuiltin(true);
   return fnOp;
+}
+
+static cir::CtorKind getCtorKindFromDecl(const CXXConstructorDecl *ctor) {
+  if (ctor->isDefaultConstructor())
+    return cir::CtorKind::Default;
+  if (ctor->isCopyConstructor())
+    return cir::CtorKind::Copy;
+  if (ctor->isMoveConstructor())
+    return cir::CtorKind::Move;
+  return cir::CtorKind::Custom;
+}
+
+static cir::AssignKind getAssignKindFromDecl(const CXXMethodDecl *method) {
+  if (method->isCopyAssignmentOperator())
+    return cir::AssignKind::Copy;
+  if (method->isMoveAssignmentOperator())
+    return cir::AssignKind::Move;
+  llvm_unreachable("not a copy or move assignment operator");
+}
+
+void CIRGenModule::setCXXSpecialMemberAttr(
+    cir::FuncOp funcOp, const clang::FunctionDecl *funcDecl) {
+  if (!funcDecl)
+    return;
+
+  if (const auto *dtor = dyn_cast<CXXDestructorDecl>(funcDecl)) {
+    auto cxxDtor = cir::CXXDtorAttr::get(
+        convertType(getASTContext().getCanonicalTagType(dtor->getParent())),
+        dtor->isTrivial());
+    funcOp.setCxxSpecialMemberAttr(cxxDtor);
+    return;
+  }
+
+  if (const auto *ctor = dyn_cast<CXXConstructorDecl>(funcDecl)) {
+    cir::CtorKind kind = getCtorKindFromDecl(ctor);
+    auto cxxCtor = cir::CXXCtorAttr::get(
+        convertType(getASTContext().getCanonicalTagType(ctor->getParent())),
+        kind, ctor->isTrivial());
+    funcOp.setCxxSpecialMemberAttr(cxxCtor);
+    return;
+  }
+
+  const auto *method = dyn_cast<CXXMethodDecl>(funcDecl);
+  if (method && (method->isCopyAssignmentOperator() ||
+                 method->isMoveAssignmentOperator())) {
+    cir::AssignKind assignKind = getAssignKindFromDecl(method);
+    auto cxxAssign = cir::CXXAssignAttr::get(
+        convertType(getASTContext().getCanonicalTagType(method->getParent())),
+        assignKind, method->isTrivial());
+    funcOp.setCxxSpecialMemberAttr(cxxAssign);
+    return;
+  }
 }
 
 cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
@@ -2422,4 +2497,40 @@ DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
 DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
                                          llvm::StringRef feature) {
   return errorNYI(loc.getBegin(), feature) << loc;
+}
+
+void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
+                                   cir::LabelOp label) {
+  [[maybe_unused]] auto result =
+      blockAddressInfoToLabel.try_emplace(blockInfo, label);
+  assert(result.second &&
+         "attempting to map a blockaddress info that is already mapped");
+}
+
+void CIRGenModule::mapUnresolvedBlockAddress(cir::BlockAddressOp op) {
+  [[maybe_unused]] auto result = unresolvedBlockAddressToLabel.insert(op);
+  assert(result.second &&
+         "attempting to map a blockaddress operation that is already mapped");
+}
+
+void CIRGenModule::mapResolvedBlockAddress(cir::BlockAddressOp op,
+                                           cir::LabelOp label) {
+  [[maybe_unused]] auto result = blockAddressToLabel.try_emplace(op, label);
+  assert(result.second &&
+         "attempting to map a blockaddress operation that is already mapped");
+}
+
+void CIRGenModule::updateResolvedBlockAddress(cir::BlockAddressOp op,
+                                              cir::LabelOp newLabel) {
+  auto *it = blockAddressToLabel.find(op);
+  assert(it != blockAddressToLabel.end() &&
+         "trying to update a blockaddress not previously mapped");
+  assert(!it->second && "blockaddress already has a resolved label");
+
+  it->second = newLabel;
+}
+
+cir::LabelOp
+CIRGenModule::lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo) {
+  return blockAddressInfoToLabel.lookup(blockInfo);
 }

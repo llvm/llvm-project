@@ -29,6 +29,8 @@ struct CUDAIntrinsicLibrary : IntrinsicLibrary {
   template <int extent>
   fir::ExtendedValue genAtomicAddVector(mlir::Type,
                                         llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genAtomicAddVector4x4(mlir::Type,
+                                           llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAtomicAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAtomicCas(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
@@ -47,6 +49,8 @@ struct CUDAIntrinsicLibrary : IntrinsicLibrary {
   void genBarrierInit(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genBarrierTryWait(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genBarrierTryWaitSleep(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genClusterBlockIndex(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genClusterDimBlocks(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genFenceProxyAsync(llvm::ArrayRef<fir::ExtendedValue>);
   template <const char *fctName, int extent>
   fir::ExtendedValue genLDXXFunc(mlir::Type,
@@ -60,6 +64,7 @@ struct CUDAIntrinsicLibrary : IntrinsicLibrary {
   mlir::Value genSyncThreadsCount(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSyncThreadsOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genSyncWarp(llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genThisCluster(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genThisGrid(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genThisThreadBlock(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genThisWarp(mlir::Type, llvm::ArrayRef<mlir::Value>);

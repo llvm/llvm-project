@@ -369,7 +369,7 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_SPCallSeqStart,
 def callseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_SPCallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
-def SDT_SPCall    : SDTypeProfile<0, -1, [SDTCisVT<0, i32>]>;
+def SDT_SPCall    : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 def call          : SDNode<"SPISD::CALL", SDT_SPCall,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                             SDNPVariadic]>;

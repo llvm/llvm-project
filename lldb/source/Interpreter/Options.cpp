@@ -14,13 +14,13 @@
 #include <set>
 
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/AnsiTerminal.h"
-#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -1410,7 +1410,9 @@ llvm::Error lldb_private::CreateOptionParsingError(
     llvm::StringRef long_option, llvm::StringRef additional_context) {
   std::string buffer;
   llvm::raw_string_ostream stream(buffer);
-  stream << "Invalid value ('" << option_arg << "') for -" << short_option;
+  stream << "invalid value ('" << option_arg << "')";
+  if (short_option)
+    stream << " for -" << short_option;
   if (!long_option.empty())
     stream << " (" << long_option << ")";
   if (!additional_context.empty())

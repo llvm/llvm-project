@@ -796,6 +796,112 @@ every time. For more information, refer PTX ISA
 Membar/Fences
 -------------
 
+'``llvm.nvvm.fence.acquire/release.sync_restrict.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.acquire.sync_restrict.space.cluster.scope.cluster()
+  declare void @llvm.nvvm.fence.release.sync_restrict.space.cta.scope.cluster()
+
+Overview:
+"""""""""
+
+The `nvvm.fence.{semantics}.sync_restrict.*` restrict the class of memory
+operations for which the fence instruction provides the memory ordering guarantees.
+When `.sync_restrict` is restricted to `shared_cta`, then memory semantics must
+be `release` and the effect of the fence operation only applies to operations
+performed on objects in `shared_cta` space. Likewise, when `sync_restrict` is
+restricted to `shared_cluster`, then memory semantics must be `acquire` and the
+effect of the fence operation only applies to operations performed on objects in
+`shared_cluster` memory space. The scope for both operations is `cluster`. For more details,
+please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
+'``llvm.nvvm.fence.mbarrier_init.release.cluster``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.mbarrier_init.release.cluster()
+
+Overview:
+"""""""""
+
+`nvvm.fence.mbarrier_init.release.cluster` intrinsic restrict the class of
+memory operations for which the fence instruction provides the memory ordering
+guarantees. The `mbarrier_init` modifiers restricts the synchronizing effect to
+the prior `mbarrier_init` operation executed by the same thread on mbarrier objects
+in `shared_cta` memory space. For more details, please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
+'``llvm.nvvm.fence.proxy.async_generic.acquire/release.sync_restrict``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.proxy.async.generic.acquire.sync_restrict.space.cluster.scope.cluster()
+  declare void @llvm.nvvm.fence.proxy.async.generic.release.sync_restrict.space.cta.scope.cluster()
+
+Overview:
+"""""""""
+
+`nvvm.fence.proxy.async_generic.{semantics}.sync_restrict` are used to establish
+ordering between a prior memory access performed via the `async proxy<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>__`
+and a subsequent memory access performed via the generic proxy.
+``nvvm.fence.proxy.async_generic.release.sync_restrict`` can form a release
+sequence that synchronizes with an acquire sequence that contains the
+``nvvm.fence.proxy.async_generic.acquire.sync_restrict`` proxy fence. When
+`.sync_restrict` is restricted to `shared_cta`, then memory semantics must
+be `release` and the effect of the fence operation only applies to operations
+performed on objects in `shared_cta` space. Likewise, when `sync_restrict` is
+restricted to `shared_cluster`, then memory semantics must be `acquire` and the
+effect of the fence operation only applies to operations performed on objects in
+`shared_cluster` memory space. The scope for both operations is `cluster`.
+For more details, please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
+'``llvm.nvvm.fence.proxy.<proxykind>``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.proxy.alias()
+  declare void @llvm.nvvm.fence.proxy.async()
+  declare void @llvm.nvvm.fence.proxy.async.global()
+  declare void @llvm.nvvm.fence.proxy.async.shared_cluster()
+  declare void @llvm.nvvm.fence.proxy.async.shared_cta()
+
+Overview:
+"""""""""
+
+`nvvm.fence.proxy.{proxykind}` intrinsics represent a fence with bi-directional
+proxy ordering that is established between the memory accesses done between the
+`generic proxy<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>__`
+and the proxy specified by `proxykind`. A `bi-directional proxy` ordering between
+two proxykinds establishes two `uni-directional` proxy orderings: one from the
+first proxykind to the second proxykind and the other from the second proxykind
+to the first proxykind.
+
+`alias` proxykind refers to memory accesses performed using virtually aliased
+addresses to the same memory location
+
+`async` proxykind specifies that the memory ordering is established between the
+`async proxy` and the `generic proxy`. The memory ordering is limited only to
+operations performed on objects in the state space specified (`generic`, `global`,
+`shared_cluster`, `shared_cta`). If no state space is specified, then the memory
+ordering applies on all state spaces. For more details, please refer the
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
 '``llvm.nvvm.fence.proxy.tensormap_generic.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -911,7 +1017,7 @@ Semantics:
 """"""""""
 
 Unlike, '``llvm.fabs.*``', these intrinsics do not perfectly preserve NaN
-values. Instead, a NaN input yeilds an unspecified NaN output.
+values. Instead, a NaN input yields an unspecified NaN output.
 
 
 '``llvm.nvvm.fabs.ftz.*``' Intrinsic
@@ -2627,7 +2733,7 @@ the `nvvm.tcgen05.mma` will result in the initiation of the whole matrix and acc
 operation
 
 When `.sp` is specifed, the dimension of A matrix is `M x (K/2)` and requires
-specifiying an additional `%spmetadata` argument
+specifying an additional `%spmetadata` argument
 
 `.ashift` shifts the rows of the A matrix down by one row, except for the last row
 in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
@@ -2639,7 +2745,7 @@ along with `.ashift`
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
 
-The following tables describes the possible values of the flag arguments
+The following tables describe the possible values of the flag arguments
 
 `%kind_flag` flag:
 
@@ -2716,14 +2822,14 @@ Overview:
 
 `nvvm.tcgen05.mma.block_scale` has single thread semantics, unlike the collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing the `nvvm.tcgen05.mma.block_scale` will result in the initiation of the whole matrix multiply and accumulate operation
 
-When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires specifiying an additional `%spmetadata` argument
+When `.sp` is specified, the dimension of A matrix is `M x (K / 2)` and requires specifying an additional `%spmetadata` argument
 
 The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer for matrix `A`
 
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
 
-The following tables describes the possible values of the flag arguments
+The following tables describe the possible values of the flag arguments
 
 `%cta_group`:
 

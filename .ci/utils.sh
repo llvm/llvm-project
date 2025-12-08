@@ -33,7 +33,7 @@ function at-exit {
   # If building fails there will be no results files.
   shopt -s nullglob
 
-  if [[ "$GITHUB_ACTIONS" != "" ]]; then
+  if [[ -n "$GITHUB_ACTIONS" ]]; then
     python "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py \
       $retcode "${BUILD_DIR}"/test-results.*.xml "${MONOREPO_ROOT}"/ninja*.log \
       >> $GITHUB_STEP_SUMMARY
@@ -44,7 +44,7 @@ function at-exit {
   fi
 
   if [[ "$retcode" != "0" ]]; then
-    if [[ "$GITHUB_ACTIONS" != "" ]]; then
+    if [[ -n "$GITHUB_ACTIONS" ]]; then
       python "${MONOREPO_ROOT}"/.ci/premerge_advisor_upload.py \
         $(git rev-parse HEAD~1) $GITHUB_RUN_NUMBER \
         "${BUILD_DIR}"/test-results.*.xml "${MONOREPO_ROOT}"/ninja*.log
@@ -59,10 +59,10 @@ trap at-exit EXIT
 
 function start-group {
   groupname=$1
-  if [[ "$GITHUB_ACTIONS" != "" ]]; then
+  if [[ -n "$GITHUB_ACTIONS" ]]; then
     echo "::endgroup"
     echo "::group::$groupname"
-  elif [[ "$POSTCOMMIT_CI" != "" ]]; then
+  elif [[ -n "$POSTCOMMIT_CI" ]]; then
     echo "@@@$STEP@@@"
   else
     echo "Starting $groupname"
@@ -73,6 +73,6 @@ export PIP_BREAK_SYSTEM_PACKAGES=1
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
 # The ARM64 builders run on AWS and don't have access to the GCS cache.
-if [[ "$GITHUB_ACTIONS" != "" ]] && [[ "$RUNNER_ARCH" != "ARM64" ]]; then
+if [[ -n "$GITHUB_ACTIONS" ]] && [[ "$RUNNER_ARCH" != "ARM64" ]]; then
   python .ci/cache_lit_timing_files.py download
 fi

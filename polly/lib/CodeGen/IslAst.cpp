@@ -32,7 +32,6 @@
 #include "polly/Options.h"
 #include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
-#include "polly/ScopPass.h"
 #include "polly/Support/GICHelper.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Function.h"
@@ -663,15 +662,6 @@ static std::unique_ptr<IslAstInfo> runIslAst(
   return Ast;
 }
 
-IslAstInfo IslAstAnalysis::run(Scop &S, ScopAnalysisManager &SAM,
-                               ScopStandardAnalysisResults &SAR) {
-  auto GetDeps = [&](Dependences::AnalysisLevel Lvl) -> const Dependences & {
-    return SAM.getResult<DependenceAnalysis>(S, SAR).getDependences(Lvl);
-  };
-
-  return std::move(*runIslAst(S, GetDeps));
-}
-
 static __isl_give isl_printer *cbPrintUser(__isl_take isl_printer *P,
                                            __isl_take isl_ast_print_options *O,
                                            __isl_keep isl_ast_node *Node,
@@ -769,15 +759,6 @@ void IslAstInfo::print(raw_ostream &OS) {
   free(AstStr);
 
   isl_printer_free(P);
-}
-
-AnalysisKey IslAstAnalysis::Key;
-PreservedAnalyses IslAstPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                         ScopStandardAnalysisResults &SAR,
-                                         SPMUpdater &U) {
-  auto &Ast = SAM.getResult<IslAstAnalysis>(S, SAR);
-  Ast.print(OS);
-  return PreservedAnalyses::all();
 }
 
 std::unique_ptr<IslAstInfo>

@@ -282,14 +282,14 @@ private:
   unsigned getSparseIndexFromVirtRegOrUnit(VirtRegOrUnit VRegOrUnit) const {
     if (VRegOrUnit.isVirtualReg())
       return VRegOrUnit.asVirtualReg().virtRegIndex() + NumRegUnits;
-    assert(VRegOrUnit.asMCRegUnit() < NumRegUnits);
-    return VRegOrUnit.asMCRegUnit();
+    assert(static_cast<unsigned>(VRegOrUnit.asMCRegUnit()) < NumRegUnits);
+    return static_cast<unsigned>(VRegOrUnit.asMCRegUnit());
   }
 
   VirtRegOrUnit getVirtRegOrUnitFromSparseIndex(unsigned SparseIndex) const {
     if (SparseIndex >= NumRegUnits)
       return VirtRegOrUnit(Register::index2VirtReg(SparseIndex - NumRegUnits));
-    return VirtRegOrUnit(SparseIndex);
+    return VirtRegOrUnit(static_cast<MCRegUnit>(SparseIndex));
   }
 
 public:

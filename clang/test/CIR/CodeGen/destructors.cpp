@@ -18,7 +18,7 @@ out_of_line_destructor::~out_of_line_destructor() {
 
 // CIR: !rec_out_of_line_destructor = !cir.record<struct "out_of_line_destructor" {!s32i}>
 
-// CIR: cir.func dso_local @_ZN22out_of_line_destructorD2Ev(%{{.+}}: !cir.ptr<!rec_out_of_line_destructor>
+// CIR: cir.func {{.*}} @_ZN22out_of_line_destructorD2Ev(%{{.+}}: !cir.ptr<!rec_out_of_line_destructor>
 // CIR:   cir.call @_Z13some_functionv() nothrow : () -> () 
 // CIR:   cir.return 
 
@@ -30,7 +30,7 @@ out_of_line_destructor::~out_of_line_destructor() {
 // OGCG:   call void @_Z13some_functionv()
 // OGCG:   ret void
 
-// CIR: cir.func dso_local @_ZN22out_of_line_destructorD1Ev(%{{.+}}: !cir.ptr<!rec_out_of_line_destructor>
+// CIR: cir.func {{.*}} @_ZN22out_of_line_destructorD1Ev(%{{.+}}: !cir.ptr<!rec_out_of_line_destructor>
 // CIR:  cir.call @_ZN22out_of_line_destructorD2Ev(%{{.*}}) nothrow : (!cir.ptr<!rec_out_of_line_destructor>)
 // CIR:  cir.return
 
@@ -61,7 +61,7 @@ void test_array_destructor() {
   array_element arr[5]{};
 }
 
-// CIR: cir.func dso_local @_Z21test_array_destructorv()
+// CIR: cir.func {{.*}} @_Z21test_array_destructorv()
 // CIR:   %[[ARR:.*]] = cir.alloca !cir.array<!rec_array_element x 5>, !cir.ptr<!cir.array<!rec_array_element x 5>>, ["arr", init]
 // CIR:   %[[ARR_PTR:.*]] = cir.alloca !cir.ptr<!rec_array_element>, !cir.ptr<!cir.ptr<!rec_array_element>>, ["arrayinit.temp", init]
 // CIR:   %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!rec_array_element x 5>>

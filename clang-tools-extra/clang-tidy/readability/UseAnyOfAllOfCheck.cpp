@@ -71,7 +71,6 @@ void UseAnyOfAllOfCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 static bool isViableLoop(const CXXForRangeStmt &S, ASTContext &Context) {
-
   ExprMutationAnalyzer Mutations(*S.getBody(), Context);
   if (Mutations.isMutated(S.getLoopVariable()))
     return false;
@@ -86,7 +85,6 @@ static bool isViableLoop(const CXXForRangeStmt &S, ASTContext &Context) {
 }
 
 void UseAnyOfAllOfCheck::check(const MatchFinder::MatchResult &Result) {
-
   if (const auto *S = Result.Nodes.getNodeAs<CXXForRangeStmt>("any_of_loop")) {
     if (!isViableLoop(*S, *Result.Context))
       return;

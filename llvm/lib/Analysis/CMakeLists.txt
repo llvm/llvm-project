@@ -166,6 +166,7 @@ add_llvm_component_library(LLVMAnalysis
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Analysis
 
   DEPENDS
+  analysis_gen
   intrinsics_gen
   ${MLDeps}
 

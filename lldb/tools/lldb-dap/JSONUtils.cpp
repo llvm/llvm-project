@@ -11,6 +11,7 @@
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolRequests.h"
 #include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
@@ -553,9 +554,8 @@ llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
 
   lldb::SBModule module = frame.GetModule();
   if (module.IsValid()) {
-    std::string uuid = module.GetUUIDString();
-    if (!uuid.empty())
-      object.try_emplace("moduleId", uuid);
+    if (const llvm::StringRef uuid = module.GetUUIDString(); !uuid.empty())
+      object.try_emplace("moduleId", uuid.str());
   }
 
   return llvm::json::Value(std::move(object));
@@ -676,7 +676,14 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
       EmplaceSafeString(body, "description", desc_str);
     }
   } break;
-  case lldb::eStopReasonWatchpoint:
+  case lldb::eStopReasonWatchpoint: {
+    body.try_emplace("reason", "data breakpoint");
+    lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
+    body.try_emplace("hitBreakpointIds",
+                     llvm::json::Array{llvm::json::Value(bp_id)});
+    EmplaceSafeString(body, "description",
+                      llvm::formatv("data breakpoint {0}", bp_id).str());
+  } break;
   case lldb::eStopReasonInstrumentation:
     body.try_emplace("reason", "breakpoint");
     break;
@@ -817,10 +824,10 @@ VariableDescription::VariableDescription(lldb::SBValue v,
   evaluate_name = llvm::StringRef(evaluateStream.GetData()).str();
 }
 
-std::string VariableDescription::GetResult(llvm::StringRef context) {
+std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
   // In repl context, the results can be displayed as multiple lines so more
   // detailed descriptions can be returned.
-  if (context != "repl")
+  if (context != protocol::eEvaluateContextRepl)
     return display_value;
 
   if (!v.IsValid())

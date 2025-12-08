@@ -99,6 +99,7 @@ private:
                                   LLT *IndexVT = nullptr) const;
   bool selectIntrinsicWithSideEffects(MachineInstr &I,
                                       MachineIRBuilder &MIB) const;
+  bool selectExtractSubvector(MachineInstr &MI, MachineIRBuilder &MIB) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root,
                                      unsigned ShiftWidth) const;
@@ -967,6 +968,45 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
   }
 }
 
+bool RISCVInstructionSelector::selectExtractSubvector(
+    MachineInstr &MI, MachineIRBuilder &MIB) const {
+  assert(MI.getOpcode() == TargetOpcode::G_EXTRACT_SUBVECTOR);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+
+  LLT DstTy = MRI->getType(DstReg);
+  LLT SrcTy = MRI->getType(SrcReg);
+
+  unsigned Idx = static_cast<unsigned>(MI.getOperand(2).getImm());
+
+  MVT DstMVT = getMVTForLLT(DstTy);
+  MVT SrcMVT = getMVTForLLT(SrcTy);
+
+  unsigned SubRegIdx;
+  std::tie(SubRegIdx, Idx) =
+      RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+          SrcMVT, DstMVT, Idx, &TRI);
+
+  if (Idx != 0)
+    return false;
+
+  unsigned DstRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(DstMVT);
+  const TargetRegisterClass *DstRC = TRI.getRegClass(DstRegClassID);
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
+    return false;
+
+  unsigned SrcRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(SrcMVT);
+  const TargetRegisterClass *SrcRC = TRI.getRegClass(SrcRegClassID);
+  if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
+    return false;
+
+  MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {}).addReg(SrcReg, 0, SubRegIdx);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
   MachineIRBuilder MIB(MI);
 
@@ -1239,6 +1279,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return selectIntrinsicWithSideEffects(MI, MIB);
+  case TargetOpcode::G_EXTRACT_SUBVECTOR:
+    return selectExtractSubvector(MI, MIB);
   default:
     return false;
   }
@@ -1569,7 +1611,7 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
 
   switch (TM.getCodeModel()) {
   default: {
-    reportGISelFailure(*MF, *TPC, *MORE, getName(),
+    reportGISelFailure(*MF, *MORE, getName(),
                        "Unsupported code model for lowering", MI);
     return false;
   }

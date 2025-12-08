@@ -292,11 +292,14 @@ public:
   Run(const std::optional<protocol::DisconnectArguments> &args) const override;
 };
 
-class EvaluateRequestHandler : public LegacyRequestHandler {
+class EvaluateRequestHandler
+    : public RequestHandler<protocol::EvaluateArguments,
+                            llvm::Expected<protocol::EvaluateResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "evaluate"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::EvaluateResponseBody>
+  Run(const protocol::EvaluateArguments &) const override;
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureEvaluateForHovers};
   }
@@ -432,6 +435,9 @@ class DataBreakpointInfoRequestHandler
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "dataBreakpointInfo"; }
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureDataBreakpointBytes};
+  }
   llvm::Expected<protocol::DataBreakpointInfoResponseBody>
   Run(const protocol::DataBreakpointInfoArguments &args) const override;
 };

@@ -39,9 +39,8 @@ define signext i32 @zeroEqualityTest01(ptr %x, ptr %y) {
 ; CHECK-NEXT:    lxvd2x 35, 0, 3
 ; CHECK-NEXT:    vcmpequb. 2, 3, 2
 ; CHECK-NEXT:    mfocrf 3, 2
+; CHECK-NEXT:    not 3, 3
 ; CHECK-NEXT:    rlwinm 3, 3, 25, 31, 31
-; CHECK-NEXT:    cntlzw 3, 3
-; CHECK-NEXT:    srwi 3, 3, 5
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(ptr %x, ptr %y, i64 16)
   %not.tobool = icmp ne i32 %call, 0

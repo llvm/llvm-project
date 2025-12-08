@@ -438,7 +438,7 @@ public:
   /// number.  Returns -1 if there is no equivalent value.  The second
   /// parameter allows targets to use different numberings for EH info and
   /// debugging info.
-  virtual int64_t getDwarfRegNum(MCRegister RegNum, bool isEH) const;
+  virtual int64_t getDwarfRegNum(MCRegister Reg, bool isEH) const;
 
   /// Map a dwarf register back to a target register. Returns std::nullopt if
   /// there is no mapping.
@@ -450,11 +450,11 @@ public:
 
   /// Map a target register to an equivalent SEH register
   /// number.  Returns LLVM register number if there is no equivalent value.
-  int getSEHRegNum(MCRegister RegNum) const;
+  int getSEHRegNum(MCRegister Reg) const;
 
   /// Map a target register to an equivalent CodeView register
   /// number.
-  int getCodeViewRegNum(MCRegister RegNum) const;
+  int getCodeViewRegNum(MCRegister Reg) const;
 
   regclass_iterator regclass_begin() const { return Classes; }
   regclass_iterator regclass_end() const { return Classes+NumClasses; }
@@ -724,9 +724,10 @@ public:
   MCRegUnitRootIterator() = default;
 
   MCRegUnitRootIterator(MCRegUnit RegUnit, const MCRegisterInfo *MCRI) {
-    assert(RegUnit < MCRI->getNumRegUnits() && "Invalid register unit");
-    Reg0 = MCRI->RegUnitRoots[RegUnit][0];
-    Reg1 = MCRI->RegUnitRoots[RegUnit][1];
+    assert(static_cast<unsigned>(RegUnit) < MCRI->getNumRegUnits() &&
+           "Invalid register unit");
+    Reg0 = MCRI->RegUnitRoots[static_cast<unsigned>(RegUnit)][0];
+    Reg1 = MCRI->RegUnitRoots[static_cast<unsigned>(RegUnit)][1];
   }
 
   /// Dereference to get the current root register.
@@ -803,7 +804,9 @@ MCRegisterInfo::sub_and_superregs_inclusive(MCRegister Reg) const {
 }
 
 inline iota_range<MCRegUnit> MCRegisterInfo::regunits() const {
-  return seq(getNumRegUnits());
+  return enum_seq(static_cast<MCRegUnit>(0),
+                  static_cast<MCRegUnit>(getNumRegUnits()),
+                  force_iteration_on_noniterable_enum);
 }
 
 inline iterator_range<MCRegUnitIterator>

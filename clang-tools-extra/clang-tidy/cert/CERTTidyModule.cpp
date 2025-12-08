@@ -34,6 +34,7 @@
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/NonCopyableObjectsCheck.h"
+#include "../misc/PredictableRandCheck.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
 #include "../modernize/AvoidSetjmpLongjmpCheck.h"
@@ -41,7 +42,6 @@
 #include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "LimitedRandomnessCheck.h"
 
 namespace {
 
@@ -271,7 +271,7 @@ public:
         .registerCheck<bugprone::DefaultOperatorNewOnOveralignedTypeCheck>(
             "cert-mem57-cpp");
     // MSC
-    CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc50-cpp");
+    CheckFactories.registerCheck<misc::PredictableRandCheck>("cert-msc50-cpp");
     CheckFactories.registerCheck<bugprone::RandomGeneratorSeedCheck>(
         "cert-msc51-cpp");
     CheckFactories.registerCheck<bugprone::SignalHandlerCheck>(
@@ -324,7 +324,7 @@ public:
     // MSC
     CheckFactories.registerCheck<bugprone::UnsafeFunctionsCheck>(
         "cert-msc24-c");
-    CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc30-c");
+    CheckFactories.registerCheck<misc::PredictableRandCheck>("cert-msc30-c");
     CheckFactories.registerCheck<bugprone::RandomGeneratorSeedCheck>(
         "cert-msc32-c");
     CheckFactories.registerCheck<bugprone::UnsafeFunctionsCheck>(

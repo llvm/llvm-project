@@ -15,7 +15,7 @@
 ; GCN-DEFAULT:      t4: f32,ch = CopyFromReg # D:1 t0, Register:f32 %1
 ; GCN-DEFAULT:   t6: f32 = fadd # D:1 t5, t4
 ; GCN-DEFAULT:  t9: ch,glue = CopyToReg # D:1 t0, Register:f32 $vgpr0, t6
-; GCN-DEFAULT:  t10: ch = RETURN_TO_EPILOG t9, Register:f32 $vgpr0, t9:1
+; GCN-DEFAULT:  t10: ch = AMDGPUISD::RETURN_TO_EPILOG t9, Register:f32 $vgpr0, t9:1
 
 ; GCN-VERBOSE:  t0: ch,glue = EntryToken # D:0
 ; GCN-VERBOSE:  t2: f32,ch = CopyFromReg [ORD=1] # D:0 t0, Register:f32 %0 # D:0
@@ -24,7 +24,7 @@
 ; GCN-VERBOSE:      t4: f32,ch = CopyFromReg [ORD=1] # D:1 t0, Register:f32 %1 # D:0
 ; GCN-VERBOSE:    t6: f32 = fadd [ORD=3] # D:1 t5, t4
 ; GCN-VERBOSE:  t9: ch,glue = CopyToReg [ORD=4] # D:1 t0, Register:f32 $vgpr0 # D:0, t6
-; GCN-VERBOSE:  t10: ch = RETURN_TO_EPILOG [ORD=4] # D:0 t9, Register:f32 $vgpr0 # D:0, t9:1
+; GCN-VERBOSE:  t10: ch = AMDGPUISD::RETURN_TO_EPILOG [ORD=4] # D:0 t9, Register:f32 $vgpr0 # D:0, t9:1
 
 define amdgpu_ps float @test_sdag_dump(float inreg %scalar, float %vector)  {
 entry:
