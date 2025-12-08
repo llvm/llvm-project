@@ -75,52 +75,53 @@ static Value *getMaskVecValue(CodeGenFunction &CGF, Value *Mask,
   return MaskVec;
 }
 
-static Value *emitX86Round(CodeGenFunction &CGF,
-                            Value *X,
-                            unsigned M) {
+static Value *emitX86Round(CodeGenFunction &CGF, Value *X, unsigned M) {
   unsigned RoundingMask = 0b11;
   unsigned UpdatePEBit = 0b100;
   unsigned UseMXCSRBit = 0b1000;
-  
+
   unsigned roundingMode = M & RoundingMask;
   bool updatePE = M & UpdatePEBit;
   bool useMXCSR = M & UseMXCSRBit;
-  
+
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
   LLVMContext &Ctx = CGF.CGM.getLLVMContext();
-  
+
   if (useMXCSR) {
     ID = Intrinsic::experimental_constrained_nearbyint;
-  
+
     auto PE_metatadata = updatePE ? "fpexcept.strict" : "fpexcept.ignore";
 
-    Value *ExceptMode = MetadataAsValue::get(
-      Ctx,
-      MDString::get(Ctx, PE_metatadata)
-    );
+    Value *ExceptMode =
+        MetadataAsValue::get(Ctx, MDString::get(Ctx, PE_metatadata));
 
-    Value *RoundingMode = MetadataAsValue::get(
-      Ctx,
-      MDString::get(Ctx, "rounding.dynamic")
-    );
+    Value *RoundingMode =
+        MetadataAsValue::get(Ctx, MDString::get(Ctx, "rounding.dynamic"));
 
     Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
     return CGF.Builder.CreateCall(F, {X, ExceptMode, RoundingMode});
-  } 
+  }
 
   if (updatePE) {
     switch (roundingMode) {
-      case 0b00: ID = Intrinsic::experimental_constrained_roundeven; break;
-      case 0b01: ID = Intrinsic::experimental_constrained_floor; break;
-      case 0b10: ID = Intrinsic::experimental_constrained_ceil; break;
-      case 0b11: ID = Intrinsic::experimental_constrained_trunc; break;
-      default: llvm_unreachable("Invalid rounding mode");
+    case 0b00:
+      ID = Intrinsic::experimental_constrained_roundeven;
+      break;
+    case 0b01:
+      ID = Intrinsic::experimental_constrained_floor;
+      break;
+    case 0b10:
+      ID = Intrinsic::experimental_constrained_ceil;
+      break;
+    case 0b11:
+      ID = Intrinsic::experimental_constrained_trunc;
+      break;
+    default:
+      llvm_unreachable("Invalid rounding mode");
     }
 
-    Value *ExceptMode =MetadataAsValue::get(
-      Ctx,
-      MDString::get(Ctx, "fpexcept.strict")
-    );
+    Value *ExceptMode =
+        MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.strict"));
 
     Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
     return CGF.Builder.CreateCall(F, {X, ExceptMode});
@@ -128,11 +129,20 @@ static Value *emitX86Round(CodeGenFunction &CGF,
 
   // Otherwise we can use the standard ops
   switch (roundingMode) {
-    case 0b00: ID = Intrinsic::roundeven; break;
-    case 0b01: ID = Intrinsic::floor; break;
-    case 0b10: ID = Intrinsic::ceil; break;
-    case 0b11: ID = Intrinsic::trunc; break;
-    default: llvm_unreachable("Invalid rounding mode");
+  case 0b00:
+    ID = Intrinsic::roundeven;
+    break;
+  case 0b01:
+    ID = Intrinsic::floor;
+    break;
+  case 0b10:
+    ID = Intrinsic::ceil;
+    break;
+  case 0b11:
+    ID = Intrinsic::trunc;
+    break;
+  default:
+    llvm_unreachable("Invalid rounding mode");
   }
 
   Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
@@ -907,18 +917,18 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_roundps:
   case X86::BI__builtin_ia32_roundpd:
   case X86::BI__builtin_ia32_roundps256:
-  case X86::BI__builtin_ia32_roundpd256: {    
+  case X86::BI__builtin_ia32_roundpd256: {
     unsigned M = cast<ConstantInt>(Ops[1])->getZExtValue();
     return emitX86Round(*this, Ops[0], M);
   }
   case X86::BI__builtin_ia32_roundss:
   case X86::BI__builtin_ia32_roundsd: {
     unsigned M = cast<ConstantInt>(Ops[2])->getZExtValue();
-    
+
     Value *idx = Builder.getInt32(0);
     Value *ValAt0 = Builder.CreateExtractElement(Ops[1], idx);
     Value *RoundedAt0 = emitX86Round(*this, ValAt0, M);
-  
+
     return Builder.CreateInsertElement(Ops[0], RoundedAt0, idx);
   }
   case X86::BI__builtin_ia32_lzcnt_u16:

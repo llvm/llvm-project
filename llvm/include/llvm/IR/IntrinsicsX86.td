@@ -626,14 +626,20 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
 // FP rounding ops
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_sse41_round_ss        : DefaultAttrsIntrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty,
-                             llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<2>>]>;
-  def int_x86_sse41_round_ps        : DefaultAttrsIntrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty,
-                             llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
-  def int_x86_sse41_round_sd        : DefaultAttrsIntrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty,
-                             llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<2>>]>;
-  def int_x86_sse41_round_pd        : DefaultAttrsIntrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty,
-                             llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_x86_sse41_round_ss
+      : DefaultAttrsIntrinsic<[llvm_v4f32_ty],
+                              [llvm_v4f32_ty, llvm_v4f32_ty, llvm_i32_ty],
+                              [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  def int_x86_sse41_round_ps
+      : DefaultAttrsIntrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_i32_ty],
+                              [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_x86_sse41_round_sd
+      : DefaultAttrsIntrinsic<[llvm_v2f64_ty],
+                              [llvm_v2f64_ty, llvm_v2f64_ty, llvm_i32_ty],
+                              [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  def int_x86_sse41_round_pd
+      : DefaultAttrsIntrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_i32_ty],
+                              [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 }
 
 // Vector min element
@@ -917,10 +923,12 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx_rcp_ps_256 : ClangBuiltin<"__builtin_ia32_rcpps256">,
       DefaultAttrsIntrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty], [IntrNoMem]>;
 
-  def int_x86_avx_round_pd_256 : DefaultAttrsIntrinsic<[llvm_v4f64_ty], [llvm_v4f64_ty, llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
-  def int_x86_avx_round_ps_256 : DefaultAttrsIntrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_x86_avx_round_pd_256
+      : DefaultAttrsIntrinsic<[llvm_v4f64_ty], [llvm_v4f64_ty, llvm_i32_ty],
+                              [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_x86_avx_round_ps_256
+      : DefaultAttrsIntrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_i32_ty],
+                              [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 }
 
 // Horizontal ops
