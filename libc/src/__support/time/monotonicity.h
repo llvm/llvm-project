@@ -1,4 +1,4 @@
-//===--- timeout linux implementation ---------------------------*- C++ -*-===//
+//===--- timeout implementation ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_MONOTONICITY_H
-#define LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_MONOTONICITY_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_TIME_MONOTONICITY_H
+#define LLVM_LIBC_SRC___SUPPORT_TIME_MONOTONICITY_H
 
 #include "hdr/time_macros.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/time/abs_timeout.h"
 #include "src/__support/time/clock_conversion.h"
-#include "src/__support/time/linux/abs_timeout.h"
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 // This function is separated from abs_timeout.
@@ -41,4 +41,4 @@ LIBC_INLINE void ensure_monotonicity(AbsTimeout &timeout) {
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_MONOTONICITY_H
+#endif // LLVM_LIBC_SRC___SUPPORT_TIME_MONOTONICITY_H

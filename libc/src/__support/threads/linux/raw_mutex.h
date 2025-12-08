@@ -17,14 +17,14 @@
 #include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/sleep.h"
-#include "src/__support/time/linux/abs_timeout.h"
+#include "src/__support/time/abs_timeout.h"
 
 #ifndef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
 #define LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY 1
 #endif
 
 #if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
-#include "src/__support/time/linux/monotonicity.h"
+#include "src/__support/time/monotonicity.h"
 #endif
 
 #ifndef LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT
