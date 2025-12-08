@@ -691,7 +691,7 @@ define void @test_psll_hs_vec_shamt(ptr %ret_ptr, ptr %a_ptr, ptr %shamt_ptr) {
 ; CHECK-RV64-NEXT:    srli a2, a2, 16
 ; CHECK-RV64-NEXT:    srli a1, a1, 16
 ; CHECK-RV64-NEXT:    sll a1, a1, a2
-; CHECK-RV64-NEXT:    ppack.w a1, a3, a1
+; CHECK-RV64-NEXT:    ppaire.h a1, a3, a1
 ; CHECK-RV64-NEXT:    sw a1, 0(a0)
 ; CHECK-RV64-NEXT:    ret
   %a = load <2 x i16>, ptr %a_ptr
@@ -716,7 +716,7 @@ define void @test_psll_bs_vec_shamt(ptr %ret_ptr, ptr %a_ptr, ptr %shamt_ptr) {
 ; CHECK-RV32-NEXT:    srli a2, a2, 16
 ; CHECK-RV32-NEXT:    srli a1, a1, 16
 ; CHECK-RV32-NEXT:    sll a5, a1, a2
-; CHECK-RV32-NEXT:    ppack.dh a2, a4, a6
+; CHECK-RV32-NEXT:    ppaire.db a2, a4, a6
 ; CHECK-RV32-NEXT:    pack a1, a2, a3
 ; CHECK-RV32-NEXT:    sw a1, 0(a0)
 ; CHECK-RV32-NEXT:    ret
@@ -735,9 +735,9 @@ define void @test_psll_bs_vec_shamt(ptr %ret_ptr, ptr %a_ptr, ptr %shamt_ptr) {
 ; CHECK-RV64-NEXT:    srli a2, a2, 8
 ; CHECK-RV64-NEXT:    srli a1, a1, 8
 ; CHECK-RV64-NEXT:    sll a1, a1, a2
-; CHECK-RV64-NEXT:    ppack.h a2, a4, a3
-; CHECK-RV64-NEXT:    ppack.h a1, a5, a1
-; CHECK-RV64-NEXT:    ppack.w a1, a1, a2
+; CHECK-RV64-NEXT:    ppaire.b a2, a4, a3
+; CHECK-RV64-NEXT:    ppaire.b a1, a5, a1
+; CHECK-RV64-NEXT:    ppaire.h a1, a1, a2
 ; CHECK-RV64-NEXT:    sw a1, 0(a0)
 ; CHECK-RV64-NEXT:    ret
   %a = load <4 x i8>, ptr %a_ptr
