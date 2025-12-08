@@ -1124,6 +1124,15 @@ def LegacyF16ToF32 : DXILOp<131, legacyF16ToF32> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def LegacyF32ToF16 : DXILOp<130, legacyF32ToF16> {
+  let Doc = "converts the float stored in the first element of the float2 "
+            "to a half and stores it in the low 16 bits of the output uint";
+  let intrinsics = [IntrinSelect<int_dx_legacyf32tof16>];
+  let arguments = [FloatTy];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def WaveAllBitCount : DXILOp<135, waveAllOp> {
   let Doc = "returns the count of bits set to 1 across the wave";
   let intrinsics = [IntrinSelect<int_dx_wave_active_countbits>];

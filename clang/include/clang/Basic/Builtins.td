@@ -5272,6 +5272,12 @@ def HLSLF16ToF32 : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLF32ToF16 : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_f32tof16"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def HLSLDdxCoarse : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_ddx_coarse"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
