@@ -130,6 +130,17 @@ struct ForallOpInterface
     : public ValueBoundsOpInterface::ExternalModel<ForallOpInterface,
                                                    ForallOp> {
 
+  static AffineExpr getTripCountExpr(scf::ForallOp forAllOp,
+                                     ValueBoundsConstraintSet &cstr,
+                                     int64_t idx) {
+    AffineExpr lbExpr = cstr.getExpr(forAllOp.getMixedLowerBound()[idx]);
+    AffineExpr ubExpr = cstr.getExpr(forAllOp.getMixedUpperBound()[idx]);
+    AffineExpr stepExpr = cstr.getExpr(forAllOp.getMixedStep()[idx]);
+    AffineExpr tripCountExpr =
+        AffineExpr(ubExpr - lbExpr).ceilDiv(stepExpr); // (ub - lb) / step
+    return tripCountExpr;
+  }
+
   void populateBoundsForIndexValue(Operation *op, Value value,
                                    ValueBoundsConstraintSet &cstr) const {
     auto forallOp = cast<ForallOp>(op);
@@ -141,11 +152,20 @@ struct ForallOpInterface
     assert(blockArg.getArgNumber() < forallOp.getInductionVars().size() &&
            "expected index value to be an induction var");
     int64_t idx = blockArg.getArgNumber();
-    // TODO: Take into account step size.
     AffineExpr lb = cstr.getExpr(forallOp.getMixedLowerBound()[idx]);
     AffineExpr ub = cstr.getExpr(forallOp.getMixedUpperBound()[idx]);
     cstr.bound(value) >= lb;
     cstr.bound(value) < ub;
+    // iv <= lb + ((ub-lb)/step - 1) * step
+    // This bound does not replace the `iv < ub` constraint mentioned above,
+    // since constraints involving the multiplication of two constraint set
+    // dimensions are not supported.
+    AffineExpr tripCountMinusOne =
+        getTripCountExpr(forallOp, cstr, idx) - cstr.getExpr(1);
+    AffineExpr computedUpperBound =
+        lb + AffineExpr(tripCountMinusOne *
+                        cstr.getExpr(forallOp.getMixedStep()[idx]));
+    cstr.bound(value) <= computedUpperBound;
   }
 
   void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
