@@ -61,9 +61,8 @@ public:
         ES.reportError(std::move(Err));
     } else if (!FinalizeFuture.valid()) {
       // WorkingMem was not finalized
-      WorkingMem.abandon([ES = &this->ES](Error Err) {
-        ES->reportError(std::move(Err));
-      });
+      WorkingMem.abandon(
+          [ES = &this->ES](Error Err) { ES->reportError(std::move(Err)); });
     }
   }
 
