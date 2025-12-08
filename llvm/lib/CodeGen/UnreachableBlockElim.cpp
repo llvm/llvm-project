@@ -110,6 +110,7 @@ void UnreachableMachineBlockElimLegacy::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -125,7 +126,8 @@ UnreachableMachineBlockElimPass::run(MachineFunction &MF,
 
   return getMachineFunctionPassPreservedAnalyses()
       .preserve<MachineLoopAnalysis>()
-      .preserve<MachineDominatorTreeAnalysis>();
+      .preserve<MachineDominatorTreeAnalysis>()
+      .preserve<MachinePostDominatorTreeAnalysis>();
 }
 
 bool UnreachableMachineBlockElimLegacy::runOnMachineFunction(
@@ -163,6 +165,8 @@ bool UnreachableMachineBlockElim::run(MachineFunction &F) {
       // Update dominator and loop info.
       if (MLI) MLI->removeBlock(&BB);
       if (MDT && MDT->getNode(&BB)) MDT->eraseNode(&BB);
+      if (MPDT && MPDT->getNode(&BB))
+        MPDT->eraseNode(&BB);
 
       while (!BB.succ_empty()) {
         (*BB.succ_begin())->removePHIsIncomingValuesForPredecessor(BB);
