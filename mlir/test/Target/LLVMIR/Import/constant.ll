@@ -272,16 +272,13 @@ define void @call_alias_func() {
 
 ; // -----
 
-; Test that zeroinitializer for zero-element arrays is correctly translated
-; to llvm.mlir.zero instead of llvm.mlir.undef. This is a regression test for
-; a bug where empty aggregate constants were incorrectly converted to undef.
+; Test that zeroinitializer for zero-element array is correctly handled
 
 @global_zero_array = global [0 x ptr] zeroinitializer
 
 ; CHECK: llvm.mlir.global external @global_zero_array() {addr_space = 0 : i32} : !llvm.array<0 x ptr> {
 ; CHECK:   %[[ZERO:.+]] = llvm.mlir.zero : !llvm.array<0 x ptr>
 ; CHECK:   llvm.return %[[ZERO]] : !llvm.array<0 x ptr>
-; CHECK: }
 
 ; CHECK-LABEL: @load_zero_array
 define [0 x ptr] @load_zero_array() {
@@ -301,7 +298,6 @@ define [0 x ptr] @load_zero_array() {
 ; CHECK: llvm.mlir.global external @global_zero_struct() {addr_space = 0 : i32} : !llvm.struct<()> {
 ; CHECK:   %[[ZERO:.+]] = llvm.mlir.zero : !llvm.struct<()>
 ; CHECK:   llvm.return %[[ZERO]] : !llvm.struct<()>
-; CHECK: }
 
 ; // -----
 

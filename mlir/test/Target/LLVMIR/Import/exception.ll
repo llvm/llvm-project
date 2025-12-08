@@ -195,9 +195,7 @@ declare i32 @__gxx_personality_v0(...)
 declare void @foo(ptr)
 
 ; Test that landingpad filter clauses with zeroinitializer are correctly
-; translated to llvm.mlir.zero instead of llvm.mlir.undef.
-; This is a regression test for a bug where zero-element arrays used in
-; filter clauses were incorrectly converted to undef.
+; translated to llvm.mlir.zero
 
 ; CHECK-LABEL: @landingpad_zero_filter
 define void @landingpad_zero_filter() personality ptr @__gxx_personality_v0 {
