@@ -563,6 +563,113 @@ exit:
   ret double %accum
 }
 
+define double @test_load_used_by_other_load_scev_low_trip_count(ptr %ptr.a, ptr %ptr.b, ptr %ptr.c) {
+; I64-LABEL: define double @test_load_used_by_other_load_scev_low_trip_count(
+; I64-SAME: ptr [[PTR_A:%.*]], ptr [[PTR_B:%.*]], ptr [[PTR_C:%.*]]) {
+; I64-NEXT:  [[ENTRY:.*]]:
+; I64-NEXT:    br label %[[OUTER_LOOP:.*]]
+; I64:       [[OUTER_LOOP_LOOPEXIT:.*]]:
+; I64-NEXT:    [[RESULT_LCSSA:%.*]] = phi double [ [[RESULT:%.*]], %[[INNER_LOOP:.*]] ]
+; I64-NEXT:    br label %[[OUTER_LOOP]]
+; I64:       [[OUTER_LOOP]]:
+; I64-NEXT:    [[ACCUM:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[RESULT_LCSSA]], %[[OUTER_LOOP_LOOPEXIT]] ]
+; I64-NEXT:    [[COND:%.*]] = call i1 @cond()
+; I64-NEXT:    br i1 [[COND]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
+; I64:       [[INNER_LOOP_PREHEADER]]:
+; I64-NEXT:    br label %[[INNER_LOOP]]
+; I64:       [[INNER_LOOP]]:
+; I64-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[INNER_LOOP]] ], [ 0, %[[INNER_LOOP_PREHEADER]] ]
+; I64-NEXT:    [[ACCUM_INNER:%.*]] = phi double [ [[MUL1:%.*]], %[[INNER_LOOP]] ], [ [[ACCUM]], %[[INNER_LOOP_PREHEADER]] ]
+; I64-NEXT:    [[TMP1:%.*]] = add i64 [[IV]], 1
+; I64-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[PTR_C]], i64 [[TMP1]]
+; I64-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[PTR_A]], i64 [[TMP1]]
+; I64-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP5]], align 8
+; I64-NEXT:    [[TMP9:%.*]] = getelementptr double, ptr [[PTR_B]], i64 [[TMP7]]
+; I64-NEXT:    [[TMP10:%.*]] = load double, ptr [[PTR_A]], align 8
+; I64-NEXT:    [[ADD1:%.*]] = fadd double [[TMP10]], 0.000000e+00
+; I64-NEXT:    [[GEP_C_OFFSET:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
+; I64-NEXT:    [[LOAD_C:%.*]] = load double, ptr [[GEP_C_OFFSET]], align 8
+; I64-NEXT:    [[MUL1]] = fmul double [[ADD1]], 0.000000e+00
+; I64-NEXT:    [[MUL2:%.*]] = fmul double [[LOAD_C]], 0.000000e+00
+; I64-NEXT:    [[ADD2:%.*]] = fadd double [[MUL2]], 0.000000e+00
+; I64-NEXT:    [[ADD3:%.*]] = fadd double [[ADD2]], 1.000000e+00
+; I64-NEXT:    [[TMP24:%.*]] = load double, ptr [[TMP9]], align 8
+; I64-NEXT:    [[DIV:%.*]] = fdiv double [[TMP24]], [[ADD3]]
+; I64-NEXT:    [[RESULT]] = fsub double [[ACCUM_INNER]], [[DIV]]
+; I64-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; I64-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1
+; I64-NEXT:    br i1 [[EXITCOND]], label %[[OUTER_LOOP_LOOPEXIT]], label %[[INNER_LOOP]]
+; I64:       [[EXIT]]:
+; I64-NEXT:    ret double [[ACCUM]]
+;
+; I32-LABEL: define double @test_load_used_by_other_load_scev_low_trip_count(
+; I32-SAME: ptr [[PTR_A:%.*]], ptr [[PTR_B:%.*]], ptr [[PTR_C:%.*]]) {
+; I32-NEXT:  [[ENTRY:.*]]:
+; I32-NEXT:    br label %[[OUTER_LOOP:.*]]
+; I32:       [[OUTER_LOOP]]:
+; I32-NEXT:    [[ACCUM:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[RESULT:%.*]], %[[INNER_LOOP:.*]] ]
+; I32-NEXT:    [[COND:%.*]] = call i1 @cond()
+; I32-NEXT:    br i1 [[COND]], label %[[INNER_LOOP]], label %[[EXIT:.*]]
+; I32:       [[INNER_LOOP]]:
+; I32-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[OUTER_LOOP]] ], [ [[IV_NEXT:%.*]], %[[INNER_LOOP]] ]
+; I32-NEXT:    [[ACCUM_INNER:%.*]] = phi double [ [[ACCUM]], %[[OUTER_LOOP]] ], [ [[MUL1:%.*]], %[[INNER_LOOP]] ]
+; I32-NEXT:    [[IDX_PLUS1:%.*]] = add i64 [[IV]], 1
+; I32-NEXT:    [[GEP_C:%.*]] = getelementptr i8, ptr [[PTR_C]], i64 [[IDX_PLUS1]]
+; I32-NEXT:    [[GEP_A_I64:%.*]] = getelementptr i64, ptr [[PTR_A]], i64 [[IDX_PLUS1]]
+; I32-NEXT:    [[LOAD_IDX:%.*]] = load i64, ptr [[GEP_A_I64]], align 8
+; I32-NEXT:    [[GEP_B:%.*]] = getelementptr double, ptr [[PTR_B]], i64 [[LOAD_IDX]]
+; I32-NEXT:    [[LOAD_A:%.*]] = load double, ptr [[PTR_A]], align 8
+; I32-NEXT:    [[ADD1:%.*]] = fadd double [[LOAD_A]], 0.000000e+00
+; I32-NEXT:    [[GEP_C_OFFSET:%.*]] = getelementptr i8, ptr [[GEP_C]], i64 8
+; I32-NEXT:    [[LOAD_C:%.*]] = load double, ptr [[GEP_C_OFFSET]], align 8
+; I32-NEXT:    [[MUL1]] = fmul double [[ADD1]], 0.000000e+00
+; I32-NEXT:    [[MUL2:%.*]] = fmul double [[LOAD_C]], 0.000000e+00
+; I32-NEXT:    [[ADD2:%.*]] = fadd double [[MUL2]], 0.000000e+00
+; I32-NEXT:    [[ADD3:%.*]] = fadd double [[ADD2]], 1.000000e+00
+; I32-NEXT:    [[LOAD_B:%.*]] = load double, ptr [[GEP_B]], align 8
+; I32-NEXT:    [[DIV:%.*]] = fdiv double [[LOAD_B]], [[ADD3]]
+; I32-NEXT:    [[RESULT]] = fsub double [[ACCUM_INNER]], [[DIV]]
+; I32-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; I32-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1
+; I32-NEXT:    br i1 [[EXITCOND]], label %[[OUTER_LOOP]], label %[[INNER_LOOP]]
+; I32:       [[EXIT]]:
+; I32-NEXT:    ret double [[ACCUM]]
+;
+entry:
+  br label %outer.loop
+
+outer.loop:
+  %accum = phi double [ 0.0, %entry ], [ %result, %inner.loop ]
+  %cond = call i1 @cond()
+  br i1 %cond, label %inner.loop, label %exit
+
+inner.loop:
+  %iv = phi i64 [ 0, %outer.loop ], [ %iv.next, %inner.loop ]
+  %accum.inner = phi double [ %accum, %outer.loop ], [ %mul1, %inner.loop ]
+  %idx.plus1 = add i64 %iv, 1
+  %gep.c = getelementptr i8, ptr %ptr.c, i64 %idx.plus1
+  %gep.a.i64 = getelementptr i64, ptr %ptr.a, i64 %idx.plus1
+  %load.idx = load i64, ptr %gep.a.i64, align 8
+  %gep.b = getelementptr double, ptr %ptr.b, i64 %load.idx
+  %load.a = load double, ptr %ptr.a, align 8
+  %add1 = fadd double %load.a, 0.000000e+00
+  %gep.c.offset = getelementptr i8, ptr %gep.c, i64 8
+  %load.c = load double, ptr %gep.c.offset, align 8
+  %mul1 = fmul double %add1, 0.000000e+00
+  %mul2 = fmul double %load.c, 0.000000e+00
+  %add2 = fadd double %mul2, 0.000000e+00
+  %add3 = fadd double %add2, 1.000000e+00
+  %load.b = load double, ptr %gep.b, align 8
+  %div = fdiv double %load.b, %add3
+  %result = fsub double %accum.inner, %div
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, 1
+  br i1 %exitcond, label %outer.loop, label %inner.loop
+
+exit:
+  ret double %accum
+}
+
 define void @loaded_address_used_by_load_through_blend(i64 %start, ptr noalias %src, ptr noalias %src.2, ptr noalias %dst) #0 {
 ; I64-LABEL: define void @loaded_address_used_by_load_through_blend(
 ; I64-SAME: i64 [[START:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[SRC_2:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {

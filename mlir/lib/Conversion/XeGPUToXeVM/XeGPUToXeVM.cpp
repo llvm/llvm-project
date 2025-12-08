@@ -50,11 +50,10 @@ static constexpr int32_t executionSize{16};
 
 // Offsets to individual fields of the 8xi32 layout nd tensor descriptor.
 enum class NdTdescOffset : uint32_t {
-  BasePtr = 0,       // Base pointer (i64)
-  BaseShapeW = 2,    // Base shape width (i32)
-  BaseShapeH = 3,    // Base shape height (i32)
-  TensorOffsetW = 4, // Tensor offset W (i32)
-  TensorOffsetH = 5  // Tensor offset H (i32)
+  BasePtr = 0,    // Base pointer (i64)
+  BaseShapeW = 2, // Base shape width (i32)
+  BaseShapeH = 3, // Base shape height (i32)
+  BasePitch = 4,  // Base pitch (i32)
 };
 
 static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
@@ -187,11 +186,10 @@ class CreateNdDescToXeVMPattern
     Value baseAddr;
     Value baseShapeW;
     Value baseShapeH;
-    Value offsetW;
-    Value offsetH;
 
     // Source can be a memref or a pointer (ui64, ui32, i64 or i32).
     SmallVector<OpFoldResult> mixedSizes = op.getMixedSizes();
+    SmallVector<OpFoldResult> mixedStrides = op.getMixedStrides();
     // Descriptor shape is expected to be 2D.
     int64_t rank = mixedSizes.size();
     auto sourceTy = source.getType();
@@ -224,12 +222,11 @@ class CreateNdDescToXeVMPattern
       val = getValueOrCreateCastToIndexLike(rewriter, loc, payloadElemTy, val);
       return val;
     };
-    // Offsets are not supported (0 is used).
-    offsetW = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 0);
-    offsetH = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 0);
     // Get shape values from op fold results.
     baseShapeW = createOffset(mixedSizes, 1);
     baseShapeH = createOffset(mixedSizes, 0);
+    // Get pitch value from op fold results.
+    Value basePitch = createOffset(mixedStrides, 0);
     // Populate payload.
     Value payLoadAsI64 =
         vector::BitCastOp::create(rewriter, loc, payloadI64Ty, payload);
@@ -243,12 +240,9 @@ class CreateNdDescToXeVMPattern
     payload =
         vector::InsertOp::create(rewriter, loc, baseShapeH, payload,
                                  static_cast<int>(NdTdescOffset::BaseShapeH));
-    payload = vector::InsertOp::create(
-        rewriter, loc, offsetW, payload,
-        static_cast<int>(NdTdescOffset::TensorOffsetW));
-    payload = vector::InsertOp::create(
-        rewriter, loc, offsetH, payload,
-        static_cast<int>(NdTdescOffset::TensorOffsetH));
+    payload =
+        vector::InsertOp::create(rewriter, loc, basePitch, payload,
+                                 static_cast<int>(NdTdescOffset::BasePitch));
     rewriter.replaceOp(op, payload);
     return success();
   }
@@ -345,6 +339,8 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
           rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BaseShapeW));
       Value baseShapeH = vector::ExtractOp::create(
           rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BaseShapeH));
+      Value basePitch = vector::ExtractOp::create(
+          rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BasePitch));
       // Offsets are provided by the op.
       // convert them to i32.
       Value offsetW =
@@ -363,6 +359,9 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
       // Compute width in bytes.
       Value baseShapeWInBytes =
           arith::MulIOp::create(rewriter, loc, baseShapeW, elemByteSize);
+      // Compute pitch in bytes.
+      Value basePitchBytes =
+          arith::MulIOp::create(rewriter, loc, basePitch, elemByteSize);
 
       if (wScaleFactor > 1) {
         // Scale offsetW, baseShapeWInBytes for sub byte emulation.
@@ -371,6 +370,8 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
             rewriter, loc, rewriter.getI32Type(), llvm::Log2_64(wScaleFactor));
         baseShapeWInBytes = arith::ShRSIOp::create(
             rewriter, loc, baseShapeWInBytes, wScaleFactorValLog2);
+        basePitchBytes = arith::ShRSIOp::create(rewriter, loc, basePitchBytes,
+                                                wScaleFactorValLog2);
         offsetW =
             arith::ShRSIOp::create(rewriter, loc, offsetW, wScaleFactorValLog2);
       }
@@ -398,7 +399,7 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
             translateStoreXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
         xevm::BlockStore2dOp::create(
             rewriter, loc, basePtrLLVM, baseShapeWInBytes, baseShapeH,
-            baseShapeWInBytes, offsetW, offsetH, elemBitSize, tileW, tileH, src,
+            basePitchBytes, offsetW, offsetH, elemBitSize, tileW, tileH, src,
             xevm::StoreCacheControlAttr::get(ctxt, storeCacheControl));
         rewriter.eraseOp(op);
       } else {
@@ -407,7 +408,7 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
         if constexpr (std::is_same_v<OpType, xegpu::PrefetchNdOp>) {
           xevm::BlockPrefetch2dOp::create(
               rewriter, loc, basePtrLLVM, baseShapeWInBytes, baseShapeH,
-              baseShapeWInBytes, offsetW, offsetH, elemBitSize, tileW, tileH,
+              basePitchBytes, offsetW, offsetH, elemBitSize, tileW, tileH,
               vblocks, xevm::LoadCacheControlAttr::get(ctxt, loadCacheControl));
           rewriter.eraseOp(op);
         } else {
@@ -422,8 +423,8 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
 
           Value resultFlatVec = xevm::BlockLoad2dOp::create(
               rewriter, loc, loadedTy, basePtrLLVM, baseShapeWInBytes,
-              baseShapeH, baseShapeWInBytes, offsetW, offsetH, elemBitSize,
-              tileW, tileH, vblocks, transpose, vnni,
+              baseShapeH, basePitchBytes, offsetW, offsetH, elemBitSize, tileW,
+              tileH, vblocks, transpose, vnni,
               xevm::LoadCacheControlAttr::get(ctxt, loadCacheControl));
           resultFlatVec = vector::BitCastOp::create(
               rewriter, loc,

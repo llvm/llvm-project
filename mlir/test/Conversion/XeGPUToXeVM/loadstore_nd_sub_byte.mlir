@@ -9,7 +9,6 @@ gpu.module @load_store_check {
         // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<4xi64>
         // CHECK: %[[C16_I32:.*]] = arith.constant 16 : i32
         // CHECK: %[[C128_I32:.*]] = arith.constant 128 : i32
-        // CHECK: %[[C0_I32:.*]] = arith.constant 0 : i32
         // CHECK: %[[SRCCE:.*]] = memref.memory_space_cast %[[ARG0]]
         // CHECK: %[[SRCINDEX:.*]] = memref.extract_aligned_pointer_as_index %[[SRCCE]]
         // CHECK: %[[SRCPTR64:.*]] = arith.index_castui %[[SRCINDEX]] : index to i64
@@ -23,11 +22,10 @@ gpu.module @load_store_check {
         // CHECK: %[[BITCAST1_SRC:.*]] = vector.bitcast %[[PAYLOAD_SRC]] : vector<4xi64> to vector<8xi32>
         // CHECK: %[[PAYLOAD1_SRC:.*]] = vector.insert %[[C128_I32]], %[[BITCAST1_SRC]] [2] : i32 into vector<8xi32>
         // CHECK: %[[PAYLOAD2_SRC:.*]] = vector.insert %[[C16_I32]], %[[PAYLOAD1_SRC]] [3] : i32 into vector<8xi32>
-        // CHECK: %[[PAYLOAD3_SRC:.*]] = vector.insert %[[C0_I32]], %[[PAYLOAD2_SRC]] [4] : i32 into vector<8xi32>
-        // CHECK: %[[PAYLOAD4_SRC:.*]] = vector.insert %[[C0_I32]], %[[PAYLOAD3_SRC]] [5] : i32 into vector<8xi32>
+        // CHECK: %[[PAYLOAD3_SRC:.*]] = vector.insert %[[C128_I32]], %[[PAYLOAD2_SRC]] [4] : i32 into vector<8xi32>
         %src_tdesc = xegpu.create_nd_tdesc %srcce : memref<16x128xi4> -> !xegpu.tensor_desc<8x64xi4>
 
-        // CHECK: %[[BITCAST2:.*]] = vector.bitcast %[[PAYLOAD4_SRC]] : vector<8xi32> to vector<4xi64>
+        // CHECK: %[[BITCAST2:.*]] = vector.bitcast %[[PAYLOAD3_SRC]] : vector<8xi32> to vector<4xi64>
         // CHECK: %[[SRCPTR64:.*]] = vector.extract %[[BITCAST2]][0] : i64 from vector<4xi64>
         // CHECK: %[[SRCLLVMPTR:.*]] = llvm.inttoptr %[[SRCPTR64]] : i64 to !llvm.ptr<1>
         // CHECK: %[[LOADED:.*]] = xevm.blockload2d %[[SRCLLVMPTR]], %[[C64_I32]],
@@ -42,11 +40,10 @@ gpu.module @load_store_check {
         // CHECK: %[[BITCAST1_DST:.*]] = vector.bitcast %[[PAYLOAD_DST]] : vector<4xi64> to vector<8xi32>
         // CHECK: %[[PAYLOAD1_DST:.*]] = vector.insert %[[C128_I32]], %[[BITCAST1_DST]] [2] : i32 into vector<8xi32>
         // CHECK: %[[PAYLOAD2_DST:.*]] = vector.insert %[[C16_I32]], %[[PAYLOAD1_DST]] [3] : i32 into vector<8xi32>
-        // CHECK: %[[PAYLOAD3_DST:.*]] = vector.insert %[[C0_I32]], %[[PAYLOAD2_DST]] [4] : i32 into vector<8xi32>
-        // CHECK: %[[PAYLOAD4_DST:.*]] = vector.insert %[[C0_I32]], %[[PAYLOAD3_DST]] [5] : i32 into vector<8xi32>
+        // CHECK: %[[PAYLOAD3_DST:.*]] = vector.insert %[[C128_I32]], %[[PAYLOAD2_DST]] [4] : i32 into vector<8xi32>
         %dst_tdesc = xegpu.create_nd_tdesc %dstte : memref<16x128xi4> -> !xegpu.tensor_desc<8x64xi4, #xegpu.block_tdesc_attr<memory_space = global>>
 
-        // CHECK: %[[BITCAST2_DST:.*]] = vector.bitcast %[[PAYLOAD4_DST]] : vector<8xi32> to vector<4xi64>
+        // CHECK: %[[BITCAST2_DST:.*]] = vector.bitcast %[[PAYLOAD3_DST]] : vector<8xi32> to vector<4xi64>
         // CHECK: %[[DSTPTR64:.*]] = vector.extract %[[BITCAST2_DST]][0] : i64 from vector<4xi64>
         // CHECK: %[[DSTLLVMPTR:.*]] = llvm.inttoptr %[[DSTPTR64]] : i64 to !llvm.ptr<1>
         // CHECK: xevm.blockstore2d %[[DSTLLVMPTR]], %[[C64_I32]], %[[C16_I32]],
@@ -63,7 +60,6 @@ gpu.module @load_store_check {
         // CHECK: %[[C16_I32:.*]] = arith.constant 16 : i32
         // CHECK: %[[C32_I32:.*]] = arith.constant 32 : i32
         // CHECK: %[[C64_I32:.*]] = arith.constant 64 : i32
-        // CHECK: %[[C0_I32:.*]] = arith.constant 0 : i32
         %srcce = memref.memory_space_cast %src : memref<64x128xi4, 1> to memref<64x128xi4>
         %dstte = memref.memory_space_cast %dst : memref<64x128xi4, 1> to memref<64x128xi4>
 
