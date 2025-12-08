@@ -61,6 +61,59 @@ llvm.func @kernel_func_workgroups()
   llvm.return
 }
 
+llvm.func @kernel_math_ops(%a: f32, %b: f16, %c: bf16) {
+  // CHECK-LABEL: kernel_math_ops
+  // CHECK: call float @llvm.amdgcn.tanh.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.tanh.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.tanh.bf16(bfloat %{{.*}})
+  %tanh0 = rocdl.tanh %a f32 -> f32
+  %tanh1 = rocdl.tanh %b f16 -> f16
+  %tanh2 = rocdl.tanh %c bf16 -> bf16
+
+  // CHECK: call float @llvm.amdgcn.sin.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.sin.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.sin.bf16(bfloat %{{.*}})
+  %sin0 = rocdl.sin %a f32 -> f32
+  %sin1 = rocdl.sin %b f16 -> f16
+  %sin2 = rocdl.sin %c bf16 -> bf16
+
+  // CHECK: call float @llvm.amdgcn.cos.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.cos.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.cos.bf16(bfloat %{{.*}})
+  %cos0 = rocdl.cos %a f32 -> f32
+  %cos1 = rocdl.cos %b f16 -> f16
+  %cos2 = rocdl.cos %c bf16 -> bf16
+
+  // CHECK: call float @llvm.amdgcn.rcp.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.rcp.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.rcp.bf16(bfloat %{{.*}})
+  %rcp0 = rocdl.rcp %a f32 -> f32
+  %rcp1 = rocdl.rcp %b f16 -> f16
+  %rcp2 = rocdl.rcp %c bf16 -> bf16
+
+  // CHECK: call float @llvm.amdgcn.exp2.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.exp2.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.exp2.bf16(bfloat %{{.*}})
+  %exp2_0 = rocdl.exp2 %a f32 -> f32
+  %exp2_1 = rocdl.exp2 %b f16 -> f16
+  %exp2_2 = rocdl.exp2 %c bf16 -> bf16
+
+  // CHECK: call float @llvm.amdgcn.log.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.log.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.log.bf16(bfloat %{{.*}})
+  %log0 = rocdl.log %a f32 -> f32
+  %log1 = rocdl.log %b f16 -> f16
+  %log2 = rocdl.log %c bf16 -> bf16
+
+  // CHECK: call float @llvm.amdgcn.sqrt.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.sqrt.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.sqrt.bf16(bfloat %{{.*}})
+  %sqrt0 = rocdl.sqrt %a f32 -> f32
+  %sqrt1 = rocdl.sqrt %b f16 -> f16
+  %sqrt2 = rocdl.sqrt %c bf16 -> bf16
+  llvm.return
+}
+
 llvm.func @known_block_sizes()
     attributes {rocdl.kernel,
       rocdl.flat_work_group_size = "128,128",
