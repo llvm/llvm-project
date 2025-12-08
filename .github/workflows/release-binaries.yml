@@ -261,7 +261,6 @@ jobs:
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
         mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
 
-
     - name: Build Windows
       id: build-windows
       if: runner.os == 'Windows'
@@ -312,8 +311,7 @@ jobs:
       - prepare
       - build-release-package
     if: >-
-      github.event_name != 'pull_request' &&
-      needs.prepare.outputs.upload == 'true'
+      github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     permissions:
       contents: write # For release uploads
@@ -334,6 +332,6 @@ jobs:
         uses: ./.github/workflows/upload-release-artifact
         with:
           artifact-id: ${{ needs.build-release-package.outputs.artifact-id }}
-          attestation-name: ${{ needs.prepare.outputs.release-binary-filename }}
+          attestation-name: ${{ runner.os }}-${{ runner.arch }}-release-binary-attestation
           digest: ${{ needs.build-release-package.outputs.digest }}
-          upload: true
+          upload: ${{ needs.prepare.outputs.upload }}
