@@ -717,7 +717,7 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
     // field. This is described in further detail in:
     // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#841extended-semantics-of-r_aarch64_relative
     if (addend < 0 || static_cast<uint64_t>(addend) >= sym.getSize())
-      isec.relocations.push_back({expr, type, offsetInSec, addend, &sym});
+      isec.addReloc({expr, type, offsetInSec, addend, &sym});
     return;
   }
 
@@ -728,12 +728,8 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   // don't store the addend values, so we must write it to the relocated
   // address.
   if (part.relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0) {
-    isec.addReloc({expr, type, offsetInSec, addend, &sym});
-    if (shard)
-      part.relrDyn->relocsVec[parallel::getThreadIndex()].push_back(
-          {&isec, isec.relocs().size() - 1});
-    else
-      part.relrDyn->relocs.push_back({&isec, isec.relocs().size() - 1});
+    part.relrDyn->addRelativeReloc<shard>(isec, offsetInSec, sym, addend, type,
+                                          expr);
     return;
   }
   part.relaDyn->addRelativeReloc<shard>(ctx.target->relativeRel, isec,
@@ -1005,18 +1001,17 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
         rel = ctx.target->relativeRel;
       std::lock_guard<std::mutex> lock(ctx.relocMutex);
       Partition &part = sec->getPartition(ctx);
-      if (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64) {
-        // For a preemptible symbol, we can't use a relative relocation. For an
-        // undefined symbol, we can't compute offset at link-time and use a
-        // relative relocation. Use a symbolic relocation instead.
-        if (sym.isPreemptible) {
-          part.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
-        } else if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0) {
+      // For a preemptible symbol, we can't use a relative relocation. For an
+      // undefined symbol, we can't compute offset at link-time and use a
+      // relative relocation. Use a symbolic relocation instead.
+      if (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64 &&
+          !sym.isPreemptible) {
+        if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0) {
           // When symbol values are determined in
           // finalizeAddressDependentContent, some .relr.auth.dyn relocations
           // may be moved to .rela.dyn.
-          sec->addReloc({expr, type, offset, addend, &sym});
-          part.relrAuthDyn->relocs.push_back({sec, sec->relocs().size() - 1});
+          part.relrAuthDyn->addRelativeReloc(*sec, offset, sym, addend, type,
+                                             expr);
         } else {
           part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset, false,
                                   sym, addend, R_ABS});
