@@ -10,6 +10,6 @@ define void @bar() {
 ; CHECK-NEXT:    addq $-1, (%rax)
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    retq
-  call void asm "addq $1,$0", "=*m,L,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) @out, i32 -1)
+  call void asm "addq $1,$0", "=*m,L,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) @out, i32 -1)
   ret void
 }
