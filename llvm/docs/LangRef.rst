@@ -20772,8 +20772,8 @@ Arguments:
 The first two operands are vectors with the same type. The start index is imm
 modulo the runtime number of elements in the source vector. For a fixed-width
 vector <N x eltty>, imm is an unsigned integer constant in the range
-0 <= imm <= N. For a scalable vector <vscale x N x eltty>, imm is an unsigned
-integer constant in the range 0 <= imm <= X where X=vscale_range_min * N.
+0 <= imm < N. For a scalable vector <vscale x N x eltty>, imm is an unsigned
+integer constant in the range 0 <= imm < X where X=vscale_range_min * N.
 
 Semantics:
 """"""""""

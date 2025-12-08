@@ -6577,12 +6577,20 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       if (Attrs.hasFnAttr(Attribute::VScaleRange))
         KnownMinNumElements *= Attrs.getFnAttrs().getVScaleRangeMin();
     }
-    Check(Idx <= KnownMinNumElements,
-          "The splice index exceeds the range [0, VL] where VL is the "
-          "known minimum number of elements in the vector. For scalable "
-          "vectors the minimum number of elements is determined from "
-          "vscale_range.",
-          &Call);
+    if (ID == Intrinsic::vector_splice_down)
+      Check(Idx < KnownMinNumElements,
+            "The splice index exceeds the range [0, VL-1] where VL is the "
+            "known minimum number of elements in the vector. For scalable "
+            "vectors the minimum number of elements is determined from "
+            "vscale_range.",
+            &Call);
+    else
+      Check(Idx <= KnownMinNumElements,
+            "The splice index exceeds the range [0, VL] where VL is the "
+            "known minimum number of elements in the vector. For scalable "
+            "vectors the minimum number of elements is determined from "
+            "vscale_range.",
+            &Call);
     break;
   }
   case Intrinsic::stepvector: {
