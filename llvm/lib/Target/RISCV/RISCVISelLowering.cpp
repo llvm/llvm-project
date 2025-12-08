@@ -25783,7 +25783,8 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
       return false;
     }
-    if (II->getIntrinsicID() == Intrinsic::vector_extract)
+    if (II->getIntrinsicID() == Intrinsic::vector_extract ||
+        II->getIntrinsicID() == Intrinsic::vector_insert)
       return false;
   }
 
