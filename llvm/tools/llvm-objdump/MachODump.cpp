@@ -383,7 +383,7 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   uint64_t Val = O->getPlainRelocationSymbolNum(RE);
 
   if (O->getAnyRelocationType(RE) == MachO::ARM64_RELOC_ADDEND &&
-      (O->getArch() == Triple::aarch64 || O->getArch() == Triple::aarch64_be)) {
+      Triple(O->getArchTriple()).isAArch64()) {
     Fmt << format("0x%0" PRIx64, Val);
     return;
   }
@@ -3142,7 +3142,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     op_info->AddSymbol.Value = value;
     return 1;
   }
-  if (Arch == Triple::aarch64) {
+  if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32) {
     if (Offset != 0 || InstSize != 4)
       return 0;
     if (info->O->getHeader().filetype != MachO::MH_OBJECT) {
@@ -3386,7 +3386,7 @@ static void method_reference(struct DisassembleInfo *info,
           if (method != nullptr) {
             if (Arch == Triple::x86_64)
               strcpy(method, "-[%rdi ");
-            else if (Arch == Triple::aarch64)
+            else if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32)
               strcpy(method, "-[x0 ");
             else
               strcpy(method, "-[r? ");
@@ -3406,7 +3406,7 @@ static void method_reference(struct DisassembleInfo *info,
         if (method != nullptr) {
           if (Arch == Triple::x86_64)
             strcpy(method, "-[[%rdi super] ");
-          else if (Arch == Triple::aarch64)
+          else if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32)
             strcpy(method, "-[[x0 super] ");
           else
             strcpy(method, "-[[r? super] ");
@@ -7677,7 +7677,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
             outs() << format("\t.byte 0x%02x #bad opcode\n",
                              *(Bytes.data() + Index) & 0xff);
             Size = 1; // skip exactly one illegible byte and move on.
-          } else if (Arch == Triple::aarch64 ||
+          } else if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32 ||
                      (Arch == Triple::arm && !IsThumb)) {
             uint32_t opcode = (*(Bytes.data() + Index) & 0xff) |
                               (*(Bytes.data() + Index + 1) & 0xff) << 8 |
@@ -7691,7 +7691,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                               (*(Bytes.data() + Index + 1) & 0xff) << 8;
             outs() << format("\t.short\t0x%04x\n", opcode);
             Size = 2;
-          } else{
+          } else {
             WithColor::warning(errs(), "llvm-objdump")
                 << "invalid instruction encoding\n";
             if (Size == 0)
