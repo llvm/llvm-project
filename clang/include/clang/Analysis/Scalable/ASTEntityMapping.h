@@ -32,11 +32,12 @@ namespace clang::ssaf {
 /// \return An EntityName if the declaration can be mapped, std::nullopt otherwise.
 std::optional<EntityName> getLocalEntityNameForDecl(const Decl* D);
 
-/// Maps a function return type to an EntityName.
+/// Maps return entity of a function to an EntityName.
+/// The returned name uniquely identifies the return value of function \param FD.
 ///
 /// \param FD The function declaration. Must not be null.
 ///
-/// \return An EntityName for the function's return type.
+/// \return An EntityName for the function's return entity.
 std::optional<EntityName> getLocalEntityNameForFunctionReturn(const FunctionDecl* FD);
 
 } // namespace clang::ssaf
