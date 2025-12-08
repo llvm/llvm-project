@@ -1266,14 +1266,14 @@ let Constraints = "$vdst = $src2",
 defm V_FMAC_F32 : VOP2Inst_VOPD <"v_fmac_f32", VOP_MAC_F32, 0x0, "v_fmac_f32">;
 } // End SubtargetPredicate = HasDLInsts
 
-let SubtargetPredicate = HasFmaLegacy32 in {
+let SubtargetPredicate = HasFmacLegacy32 in {
 
 let Constraints = "$vdst = $src2",
     isConvertibleToThreeAddress = 1,
     isCommutable = 1 in
 defm V_FMAC_LEGACY_F32 : VOP2Inst <"v_fmac_legacy_f32", VOP_MAC_LEGACY_F32>;
 
-} // End SubtargetPredicate = HasFmaLegacy32
+} // End SubtargetPredicate = HasFmacLegacy32
 
 let SubtargetPredicate = HasFmacF64Inst,
     Constraints = "$vdst = $src2",

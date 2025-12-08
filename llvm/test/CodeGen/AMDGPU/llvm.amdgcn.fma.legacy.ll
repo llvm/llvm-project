@@ -3,6 +3,8 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1030 < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX12 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX12 %s
 
 define float @v_fma(float %a, float %b, float %c)  {
 ; GFX10-LABEL: v_fma:
@@ -16,6 +18,16 @@ define float @v_fma(float %a, float %b, float %c)  {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_fma_dx9_zero_f32 v0, v0, v1, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_fma:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_fma_dx9_zero_f32 v0, v0, v1, v2
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fma = call float @llvm.amdgcn.fma.legacy(float %a, float %b, float %c)
   ret float %fma
 }
@@ -32,6 +44,16 @@ define float @v_fmac(float %a, float %b, float %c)  {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_fmac_dx9_zero_f32_e32 v0, v1, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_fmac:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_fma_dx9_zero_f32 v0, v1, v2, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fma = call float @llvm.amdgcn.fma.legacy(float %b, float %c, float %a)
   ret float %fma
 }
@@ -48,6 +70,16 @@ define float @v_fma_imm(float %a, float %c)  {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_fma_dx9_zero_f32 v0, 0x41200000, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_fma_imm:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_fma_dx9_zero_f32 v0, 0x41200000, v0, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fma = call float @llvm.amdgcn.fma.legacy(float %a, float 10.0, float %c)
   ret float %fma
 }
@@ -64,6 +96,16 @@ define float @v_fmac_imm(float %a, float %c)  {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_fmac_dx9_zero_f32_e32 v0, 0x41200000, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_fmac_imm:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_fma_dx9_zero_f32 v0, 0x41200000, v1, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fma = call float @llvm.amdgcn.fma.legacy(float 10.0, float %c, float %a)
   ret float %fma
 }
@@ -80,6 +122,16 @@ define float @v_fabs_fma(float %a, float %b, float %c)  {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_fma_dx9_zero_f32 v0, |v0|, v1, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_fabs_fma:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_fma_dx9_zero_f32 v0, |v0|, v1, v2
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fabs.a = call float @llvm.fabs.f32(float %a)
   %fma = call float @llvm.amdgcn.fma.legacy(float %fabs.a, float %b, float %c)
   ret float %fma
@@ -97,6 +149,16 @@ define float @v_fneg_fabs_fma(float %a, float %b, float %c)  {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_fma_dx9_zero_f32 v0, v0, -|v1|, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_fneg_fabs_fma:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_fma_dx9_zero_f32 v0, v0, -|v1|, v2
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fabs.b = call float @llvm.fabs.f32(float %b)
   %neg.fabs.b = fneg float %fabs.b
   %fma = call float @llvm.amdgcn.fma.legacy(float %a, float %neg.fabs.b, float %c)
@@ -115,6 +177,16 @@ define float @v_fneg_fma(float %a, float %b, float %c)  {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_fma_dx9_zero_f32 v0, v0, v1, -v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_fneg_fma:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_fma_dx9_zero_f32 v0, v0, v1, -v2
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %neg.c = fneg float %c
   %fma = call float @llvm.amdgcn.fma.legacy(float %a, float %b, float %neg.c)
   ret float %fma
@@ -132,6 +204,16 @@ define float @v_fma_const_const(float %a)  {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_fma_dx9_zero_f32 v0, v0, 2.0, -1.0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_fma_const_const:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_fma_dx9_zero_f32 v0, v0, 2.0, -1.0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fma = call float @llvm.amdgcn.fma.legacy(float %a, float 2.0, float -1.0)
   ret float %fma
 }
