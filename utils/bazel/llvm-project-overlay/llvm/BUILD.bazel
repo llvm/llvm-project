@@ -1530,18 +1530,6 @@ td_library(
     ]),
 )
 
-gentbl_cc_library(
-    name = "InstCombineTableGen",
-    strip_include_prefix = "lib/Target/AMDGPU",
-    tbl_outs = {"lib/Target/AMDGPU/InstCombineTables.inc": ["-gen-searchable-tables"]},
-    tblgen = ":llvm-tblgen",
-    td_file = "lib/Target/AMDGPU/InstCombineTables.td",
-    deps = [
-        ":AMDGPUTargetTdFiles",
-        ":CommonTargetTdFiles",
-    ],
-)
-
 cc_library(
     name = "InstCombine",
     srcs = glob([
@@ -2422,7 +2410,6 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
         "tbl_deps": [
-            ":InstCombineTableGen",
             ":amdgpu_isel_target_gen",
             ":r600_target_gen",
         ],
@@ -2765,6 +2752,12 @@ llvm_target_lib_list = [lib for lib in [
                     "lib/Target/Mips/MipsGenRegisterInfoMCDesc.inc",
                     "lib/Target/Mips/MipsGenRegisterInfoHeader.inc",
                     "lib/Target/Mips/MipsGenRegisterInfoTargetDesc.inc",
+                ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                [
+                    "lib/Target/Mips/MipsGenSDNodeInfo.inc",
                 ],
             ),
             (
