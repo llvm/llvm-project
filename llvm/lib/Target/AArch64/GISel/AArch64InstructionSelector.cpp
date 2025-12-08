@@ -3015,6 +3015,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         return false;
 
       // Generate a subreg copy.
+      if (RB.getID() == AArch64::GPRRegBankID && ValTy.getSizeInBits() < 32)
+        SubReg = 0;
       auto Copy = MIB.buildInstr(TargetOpcode::COPY, {MemTy}, {})
                       .addReg(ValReg, 0, SubReg)
                       .getReg(0);
