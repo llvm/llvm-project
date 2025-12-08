@@ -3303,7 +3303,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, AccessorCall) {
         }
       )cc");
 
-  // Calls nonconst method inbetween.
+  // Calls nonconst method in between.
   ExpectDiagnosticsFor(
       R"cc(
 #include "unchecked_statusor_access_test_defs.h"
@@ -3324,7 +3324,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, AccessorCall) {
         }
       )cc");
 
-  // Calls nonconst operator inbetween.
+  // Calls nonconst operator in between.
   ExpectDiagnosticsFor(
       R"cc(
 #include "unchecked_statusor_access_test_defs.h"
