@@ -1303,9 +1303,11 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
         ID,
         Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
                                    CGF.VoidPtrPtrTy),
-        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
+        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size()),
+        llvm::ConstantInt::get(CGF.Int32Ty, 0)};
+
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL___kmpc_parallel_51),
+                            CGM.getModule(), OMPRTL___kmpc_parallel_60),
                         Args);
   };
 
