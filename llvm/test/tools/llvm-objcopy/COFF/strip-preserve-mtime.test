@@ -1,0 +1,43 @@
+## Note: ls -l prints the modified timestamp
+
+## Preserve dates when stripping to an output file.
+# RUN: yaml2obj %s -o %t.1.o
+# RUN: touch -m -t 199705050555.55 %t.1.o
+# RUN: llvm-strip -p %t.1.o -o %t-preserved.1.o
+# RUN: ls -l %t-preserved.1.o | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
+# Check that the stripped output is in fact a valid object file.
+# RUN: llvm-readobj %t-preserved.1.o
+
+## Preserve dates available via objcopy interface as well.
+# RUN: yaml2obj %s -o %t.2.o
+# RUN: touch -m -t 199705050555.55 %t.2.o
+# RUN: llvm-objcopy -p %t.2.o %t-preserved.2.o
+# RUN: ls -l %t-preserved.2.o | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
+# RUN: llvm-readobj %t-preserved.2.o
+
+## Preserve dates when stripping in place.
+# RUN: yaml2obj %s -o %t.3.o
+# RUN: touch -m -t 199705050555.55 %t.3.o
+# RUN: llvm-strip -p %t.3.o
+# RUN: ls -l %t.3.o | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
+# RUN: llvm-readobj %t.3.o
+
+## Without -p set, don't preserve dates.
+# RUN: yaml2obj %s -o %t.4.o
+# RUN: touch -m -t 199705050555.55 %t.4.o
+# RUN: llvm-strip %t.4.o
+# RUN: ls -l %t.4.o | FileCheck %s --check-prefix=CHECK-NO-PRESERVE-MTIME
+# RUN: llvm-readobj %t.4.o
+
+# CHECK-PRESERVE-MTIME:        {{[[:space:]]1997}}
+# CHECK-NO-PRESERVE-MTIME-NOT: {{[[:space:]]1997}}
+
+!COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualSize:     20
+symbols:         []
+...
