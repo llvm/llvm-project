@@ -1,7 +1,5 @@
-#ifndef DEVTOOLS_CYMBAL_CLANG_TIDY_RUNTIME_UPSTREAM_FRAMEWORK_UNCHECKED_STATUSOR_ACCESS_H_
-#define DEVTOOLS_CYMBAL_CLANG_TIDY_RUNTIME_UPSTREAM_FRAMEWORK_UNCHECKED_STATUSOR_ACCESS_H_
-
-#include <optional>
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_UNCHECKEDSTATUSORACCESSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_UNCHECKEDSTATUSORACCESSCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -14,12 +12,12 @@ namespace clang::tidy::abseil {
 // For details on the dataflow analysis implemented in this check see:
 // http://google3/devtools/cymbal/nullability/statusor
 class UncheckedStatusOrAccessCheck : public ClangTidyCheck {
- public:
+public:
   using ClangTidyCheck::ClangTidyCheck;
-  void registerMatchers(ast_matchers::MatchFinder* Finder) override;
-  void check(const ast_matchers::MatchFinder::MatchResult& Result) override;
+  void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-}  // namespace clang::abseil
+} // namespace clang::tidy::abseil
 
-#endif  // DEVTOOLS_CYMBAL_CLANG_TIDY_RUNTIME_UPSTREAM_FRAMEWORK_UNCHECKED_STATUSOR_ACCESS_H_
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_UNCHECKEDSTATUSORACCESSCHECK_H

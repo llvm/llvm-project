@@ -70,7 +70,7 @@ public:
         "abseil-time-subtraction");
     CheckFactories.registerCheck<UpgradeDurationConversionsCheck>(
         "abseil-upgrade-duration-conversions");
-        CheckFactories.registerCheck<UncheckedStatusOrAccessCheck>(
+    CheckFactories.registerCheck<UncheckedStatusOrAccessCheck>(
         "abseil-unchecked-statusor-access");
   }
 };

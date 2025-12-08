@@ -18,25 +18,26 @@
 
 namespace clang::tidy::abseil {
 using ast_matchers::MatchFinder;
-using dataflow::statusor_model::UncheckedStatusOrAccessModel;
 using dataflow::statusor_model::UncheckedStatusOrAccessDiagnoser;
+using dataflow::statusor_model::UncheckedStatusOrAccessModel;
 
 static constexpr llvm::StringLiteral FuncID("fun");
 
 void UncheckedStatusOrAccessCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers;
-  if (!getLangOpts().CPlusPlus) return;
+  if (!getLangOpts().CPlusPlus)
+    return;
 
-  auto has_statusor_call_descendant =
+  auto HasStatusOrCallDescendant =
       hasDescendant(callExpr(callee(cxxMethodDecl(ofClass(hasAnyName(
           "absl::StatusOr", "absl::internal_statusor::OperatorBase"))))));
   Finder->addMatcher(functionDecl(unless(isExpansionInSystemHeader()),
-                                  hasBody(has_statusor_call_descendant))
+                                  hasBody(HasStatusOrCallDescendant))
                          .bind(FuncID),
                      this);
   Finder->addMatcher(
       cxxConstructorDecl(hasAnyConstructorInitializer(
-                             withInitializer(has_statusor_call_descendant)))
+                             withInitializer(HasStatusOrCallDescendant)))
           .bind(FuncID),
       this);
 }
@@ -51,10 +52,10 @@ void UncheckedStatusOrAccessCheck::check(
 
   UncheckedStatusOrAccessDiagnoser Diagnoser;
   if (llvm::Expected<llvm::SmallVector<SourceLocation>> Locs =
-          dataflow::diagnoseFunction<
-              UncheckedStatusOrAccessModel,
-              SourceLocation>(*FuncDecl, *Result.Context, Diagnoser))
-    for (const SourceLocation& Loc : *Locs)
+          dataflow::diagnoseFunction<UncheckedStatusOrAccessModel,
+                                     SourceLocation>(*FuncDecl, *Result.Context,
+                                                     Diagnoser))
+    for (const SourceLocation &Loc : *Locs)
       diag(Loc, "unchecked access to 'absl::StatusOr' value");
   else
     llvm::consumeError(Locs.takeError());
