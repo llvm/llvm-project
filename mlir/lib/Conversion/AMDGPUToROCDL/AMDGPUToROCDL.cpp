@@ -506,9 +506,15 @@ struct MemoryCounterWaitOpLowering
       if (std::optional<int> exp = adaptor.getExp())
         ROCDL::WaitExpcntOp::create(rewriter, loc, *exp);
 
+      if (std::optional<int> tensor = adaptor.getTensor())
+        ROCDL::WaitTensorcntOp::create(rewriter, loc, *tensor);
+
       rewriter.eraseOp(op);
       return success();
     }
+
+    if (adaptor.getTensor())
+      return op.emitOpError("unsupported chipset");
 
     auto getVal = [](Attribute attr) -> unsigned {
       if (attr)

@@ -906,7 +906,8 @@ def AMDGPU_MemoryCounterWaitOp :
       OptionalAttr<I32Attr>:$load,
       OptionalAttr<I32Attr>:$store,
       OptionalAttr<I32Attr>:$ds,
-      OptionalAttr<I32Attr>:$exp
+      OptionalAttr<I32Attr>:$exp,
+      OptionalAttr<I32Attr>:$tensor
     )>
   {
   let summary = "Wait for specified hardware counters";
@@ -919,7 +920,7 @@ def AMDGPU_MemoryCounterWaitOp :
     counters into one.
   }];
   let assemblyFormat = [{
-    oilist( `load` `(` $load `)` | `store` `(` $store `)` | `ds` `(` $ds `)` | `exp` `(` $exp `)` ) attr-dict
+    oilist( `load` `(` $load `)` | `store` `(` $store `)` | `ds` `(` $ds `)` | `exp` `(` $exp `)` | `tensor` `(` $tensor `)` ) attr-dict
   }];
 
   let hasCanonicalizer = 1;
