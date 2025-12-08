@@ -260,6 +260,7 @@ template <bool IsConst> struct LoopRange {
       : LoopRange(std::get<Block>(x.t)) {}
 
   size_t size() const { return items.size(); }
+  bool empty() const { return items.size() == 0; }
 
   struct iterator;
 
