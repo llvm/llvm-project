@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -75,11 +76,14 @@ PreservedAnalyses UnreachableBlockElimPass::run(Function &F,
 namespace {
 class UnreachableMachineBlockElim {
   MachineDominatorTree *MDT;
+  MachinePostDominatorTree *MPDT;
   MachineLoopInfo *MLI;
 
 public:
-  UnreachableMachineBlockElim(MachineDominatorTree *MDT, MachineLoopInfo *MLI)
-      : MDT(MDT), MLI(MLI) {}
+  UnreachableMachineBlockElim(MachineDominatorTree *MDT,
+                              MachinePostDominatorTree *MPDT,
+                              MachineLoopInfo *MLI)
+      : MDT(MDT), MPDT(MPDT), MLI(MLI) {}
   bool run(MachineFunction &MF);
 };
 
@@ -113,9 +117,10 @@ PreservedAnalyses
 UnreachableMachineBlockElimPass::run(MachineFunction &MF,
                                      MachineFunctionAnalysisManager &AM) {
   auto *MDT = AM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
+  auto *MPDT = AM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
   auto *MLI = AM.getCachedResult<MachineLoopAnalysis>(MF);
 
-  if (!UnreachableMachineBlockElim(MDT, MLI).run(MF))
+  if (!UnreachableMachineBlockElim(MDT, MPDT, MLI).run(MF))
     return PreservedAnalyses::all();
 
   return getMachineFunctionPassPreservedAnalyses()
@@ -127,12 +132,16 @@ bool UnreachableMachineBlockElimLegacy::runOnMachineFunction(
     MachineFunction &MF) {
   MachineDominatorTreeWrapperPass *MDTWrapper =
       getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  MachinePostDominatorTreeWrapperPass *MPDTWrapper =
+      getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>();
   MachineDominatorTree *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+  MachinePostDominatorTree *MPDT =
+      MPDTWrapper ? &MPDTWrapper->getPostDomTree() : nullptr;
   MachineLoopInfoWrapperPass *MLIWrapper =
       getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
   MachineLoopInfo *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
 
-  return UnreachableMachineBlockElim(MDT, MLI).run(MF);
+  return UnreachableMachineBlockElim(MDT, MPDT, MLI).run(MF);
 }
 
 bool UnreachableMachineBlockElim::run(MachineFunction &F) {
@@ -220,6 +229,9 @@ bool UnreachableMachineBlockElim::run(MachineFunction &F) {
   F.RenumberBlocks();
   if (MDT)
     MDT->updateBlockNumbers();
+
+  if (MPDT)
+    MPDT->updateBlockNumbers();
 
   return (!DeadBlocks.empty() || ModifiedPHI);
 }
