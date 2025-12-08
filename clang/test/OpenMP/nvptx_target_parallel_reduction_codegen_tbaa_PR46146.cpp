@@ -130,7 +130,7 @@ void test() {
 // CHECK1-NEXT:    store ptr [[IEND]], ptr [[TMP11]], align 8, !tbaa [[ANYPTR_TBAA16]]
 // CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [3 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 2
 // CHECK1-NEXT:    store ptr [[PARTIAL_SUM]], ptr [[TMP12]], align 8, !tbaa [[ANYPTR_TBAA16]]
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z17complex_reductionIfEvv_l16_omp_outlined_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z17complex_reductionIfEvv_l16_omp_outlined_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 3)
+// CHECK1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z17complex_reductionIfEvv_l16_omp_outlined_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z17complex_reductionIfEvv_l16_omp_outlined_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 3, i32 0)
 // CHECK1-NEXT:    br label %[[OMP_BODY_CONTINUE:.*]]
 // CHECK1:       [[OMP_BODY_CONTINUE]]:
 // CHECK1-NEXT:    br label %[[OMP_INNER_FOR_INC:.*]]
@@ -622,7 +622,7 @@ void test() {
 // CHECK1-NEXT:    store ptr [[IEND]], ptr [[TMP11]], align 8, !tbaa [[ANYPTR_TBAA16]]
 // CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [3 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 2
 // CHECK1-NEXT:    store ptr [[PARTIAL_SUM]], ptr [[TMP12]], align 8, !tbaa [[ANYPTR_TBAA16]]
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z17complex_reductionIdEvv_l16_omp_outlined_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z17complex_reductionIdEvv_l16_omp_outlined_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 3)
+// CHECK1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z17complex_reductionIdEvv_l16_omp_outlined_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z17complex_reductionIdEvv_l16_omp_outlined_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 3, i32 0)
 // CHECK1-NEXT:    br label %[[OMP_BODY_CONTINUE:.*]]
 // CHECK1:       [[OMP_BODY_CONTINUE]]:
 // CHECK1-NEXT:    br label %[[OMP_INNER_FOR_INC:.*]]
