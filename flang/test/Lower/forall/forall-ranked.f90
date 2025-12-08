@@ -68,7 +68,7 @@ subroutine test_forall_with_ranked_dimension
      integer :: arr(11)
   end type t
   type(t) :: a(10,10)
-  
+
   forall (i=1:5)
      a(i,:)%arr(i+4) = f(i)
   end forall

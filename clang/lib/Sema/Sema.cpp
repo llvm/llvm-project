@@ -1497,6 +1497,9 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   if (LangOpts.HLSL)
     HLSL().ActOnEndOfTranslationUnit(getASTContext().getTranslationUnitDecl());
+  if (LangOpts.OpenACC)
+    OpenACC().ActOnEndOfTranslationUnit(
+        getASTContext().getTranslationUnitDecl());
 
   // If there were errors, disable 'unused' warnings since they will mostly be
   // noise. Don't warn for a use from a module: either we should warn on all
@@ -2254,16 +2257,10 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
     }
 
     // Don't allow SVE types in functions without a SVE target.
-    if (Ty->isSVESizelessBuiltinType() && FD && !FD->getType().isNull()) {
+    if (Ty->isSVESizelessBuiltinType() && FD) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-      if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap)) {
-        if (!Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
-          Diag(Loc, diag::err_sve_vector_in_non_sve_target) << Ty;
-        else if (!IsArmStreamingFunction(FD,
-                                         /*IncludeLocallyStreaming=*/true))
-          Diag(Loc, diag::err_sve_vector_in_non_streaming_function) << Ty;
-      }
+      ARM().checkSVETypeSupport(Ty, Loc, FD, CallerFeatureMap);
     }
 
     if (auto *VT = Ty->getAs<VectorType>();

@@ -24,6 +24,10 @@
 
 using namespace llvm;
 
+SPIRVTargetLowering::SPIRVTargetLowering(const TargetMachine &TM,
+                                         const SPIRVSubtarget &ST)
+    : TargetLowering(TM, ST), STI(ST) {}
+
 // Returns true of the types logically match, as defined in
 // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpCopyLogical.
 static bool typesLogicallyMatch(const SPIRVType *Ty1, const SPIRVType *Ty2,
@@ -90,7 +94,7 @@ MVT SPIRVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
 }
 
 bool SPIRVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                             const CallInst &I,
+                                             const CallBase &I,
                                              MachineFunction &MF,
                                              unsigned Intrinsic) const {
   unsigned AlignIdx = 3;
@@ -606,8 +610,7 @@ bool SPIRVTargetLowering::insertLogicalCopyOnResult(
       createVirtualRegister(NewResultType, &GR, MRI, *I.getMF());
   Register NewTypeReg = GR.getSPIRVTypeID(NewResultType);
 
-  assert(std::distance(I.defs().begin(), I.defs().end()) == 1 &&
-         "Expected only one def");
+  assert(llvm::size(I.defs()) == 1 && "Expected only one def");
   MachineOperand &OldResult = *I.defs().begin();
   Register OldResultReg = OldResult.getReg();
   MachineOperand &OldType = *I.uses().begin();

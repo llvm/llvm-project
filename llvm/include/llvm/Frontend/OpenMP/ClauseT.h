@@ -50,7 +50,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
 #include <iterator>
 #include <optional>
 #include <tuple>
@@ -242,7 +241,7 @@ ENUM(MotionExpectation, Present);
 // V5.2: [15.9.1] `task-dependence-type` modifier
 ENUM(DependenceType, Depobj, In, Inout, Inoutset, Mutexinoutset, Out, Sink,
      Source);
-ENUM(Prescriptiveness, Strict, Fallback);
+ENUM(Prescriptiveness, Strict);
 
 template <typename I, typename E> //
 struct LoopIterationT {
@@ -592,10 +591,10 @@ struct DynamicAllocatorsT {
 template <typename T, typename I, typename E> //
 struct DynGroupprivateT {
   ENUM(AccessGroup, Cgroup);
-  using Prescriptiveness = type::Prescriptiveness;
+  ENUM(Fallback, Abort, Default_Mem, Null);
   using Size = E;
   using TupleTrait = std::true_type;
-  std::tuple<OPT(AccessGroup), OPT(Prescriptiveness), Size> t;
+  std::tuple<OPT(AccessGroup), OPT(Fallback), Size> t;
 };
 
 // V5.2: [5.8.4] `enter` clause
@@ -1308,7 +1307,7 @@ struct WriteT {
 };
 
 // V6: [6.4.7] Looprange clause
-template <typename T, typename I, typename E> struct LoopRangeT {
+template <typename T, typename I, typename E> struct LooprangeT {
   using Begin = E;
   using End = E;
 
@@ -1347,7 +1346,7 @@ using TupleClausesT =
                  DoacrossT<T, I, E>, DynGroupprivateT<T, I, E>, FromT<T, I, E>,
                  GrainsizeT<T, I, E>, IfT<T, I, E>, InitT<T, I, E>,
                  InReductionT<T, I, E>, LastprivateT<T, I, E>, LinearT<T, I, E>,
-                 LoopRangeT<T, I, E>, MapT<T, I, E>, NumTasksT<T, I, E>,
+                 LooprangeT<T, I, E>, MapT<T, I, E>, NumTasksT<T, I, E>,
                  OrderT<T, I, E>, ReductionT<T, I, E>, ScheduleT<T, I, E>,
                  TaskReductionT<T, I, E>, ToT<T, I, E>>;
 

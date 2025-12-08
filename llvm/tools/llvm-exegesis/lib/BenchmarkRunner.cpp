@@ -27,7 +27,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 #include <cmath>
 #include <memory>
 #include <string>

@@ -127,7 +127,8 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-NEXT:    ret i32 0
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@implicit_default.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@implicit_default.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -165,7 +166,8 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-NEXT:    ret ptr @implicit_default.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@explicit_default.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@explicit_default.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -203,7 +205,8 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-NEXT:    ret ptr @explicit_default.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@default_def_with_version_decls.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@default_def_with_version_decls.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
