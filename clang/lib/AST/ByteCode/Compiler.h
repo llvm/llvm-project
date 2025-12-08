@@ -223,6 +223,7 @@ public:
   bool VisitConvertVectorExpr(const ConvertVectorExpr *E);
   bool VisitShuffleVectorExpr(const ShuffleVectorExpr *E);
   bool VisitExtVectorElementExpr(const ExtVectorElementExpr *E);
+  bool VisitMatrixElementExpr(const MatrixElementExpr *E);
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
   bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
   bool VisitStmtExpr(const StmtExpr *E);

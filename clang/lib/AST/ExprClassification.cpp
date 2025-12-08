@@ -63,6 +63,7 @@ Cl Expr::ClassifyImpl(ASTContext &Ctx, SourceLocation *Loc) const {
   case Cl::CL_Void:
   case Cl::CL_AddressableVoid:
   case Cl::CL_DuplicateVectorComponents:
+  case Cl::CL_DuplicateMatrixComponents:
   case Cl::CL_MemberFunction:
   case Cl::CL_SubObjCPropertySetting:
   case Cl::CL_ClassTemporary:
@@ -371,6 +372,16 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     if (cast<ExtVectorElementExpr>(E)->isArrow())
       return Cl::CL_LValue;
     return ClassifyInternal(Ctx, cast<ExtVectorElementExpr>(E)->getBase());
+
+  // Matrix element access is an lvalue unless there are duplicates
+  // in the shuffle expression.
+  case Expr::MatrixElementExprClass:
+    if (cast<MatrixElementExpr>(E)->containsDuplicateElements())
+      return Cl::CL_DuplicateMatrixComponents;
+    // NOTE: MatrixElementExpr is currently only used by HLSL which does not
+    // have pointers so there is no isArrow() necessary or way to test
+    // Cl::CL_LValue
+    return ClassifyInternal(Ctx, cast<MatrixElementExpr>(E)->getBase());
 
     // Simply look at the actual default argument.
   case Expr::CXXDefaultArgExprClass:
@@ -738,6 +749,8 @@ Expr::LValueClassification Expr::ClassifyLValue(ASTContext &Ctx) const {
   case Cl::CL_Void: return LV_InvalidExpression;
   case Cl::CL_AddressableVoid: return LV_IncompleteVoidType;
   case Cl::CL_DuplicateVectorComponents: return LV_DuplicateVectorComponents;
+  case Cl::CL_DuplicateMatrixComponents:
+    return LV_DuplicateMatrixComponents;
   case Cl::CL_MemberFunction: return LV_MemberFunction;
   case Cl::CL_SubObjCPropertySetting: return LV_SubObjCPropertySetting;
   case Cl::CL_ClassTemporary: return LV_ClassTemporary;
@@ -759,6 +772,8 @@ Expr::isModifiableLvalue(ASTContext &Ctx, SourceLocation *Loc) const {
   case Cl::CL_Void: return MLV_InvalidExpression;
   case Cl::CL_AddressableVoid: return MLV_IncompleteVoidType;
   case Cl::CL_DuplicateVectorComponents: return MLV_DuplicateVectorComponents;
+  case Cl::CL_DuplicateMatrixComponents:
+    return MLV_DuplicateMatrixComponents;
   case Cl::CL_MemberFunction: return MLV_MemberFunction;
   case Cl::CL_SubObjCPropertySetting: return MLV_SubObjCPropertySetting;
   case Cl::CL_ClassTemporary: return MLV_ClassTemporary;

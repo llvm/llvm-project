@@ -25,6 +25,7 @@
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
@@ -3802,6 +3803,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case BinaryConditionalOperatorClass:
   case CompoundLiteralExprClass:
   case ExtVectorElementExprClass:
+  case MatrixElementExprClass:
   case DesignatedInitExprClass:
   case DesignatedInitUpdateExprClass:
   case ArrayInitLoopExprClass:
@@ -4422,7 +4424,14 @@ unsigned ExtVectorElementExpr::getNumElements() const {
   return 1;
 }
 
-/// containsDuplicateElements - Return true if any element access is repeated.
+unsigned MatrixElementExpr::getNumElements() const {
+  if (const ConstantMatrixType *MT = getType()->getAs<ConstantMatrixType>())
+    return MT->getNumElementsFlattened();
+  return 1;
+}
+
+/// containsDuplicateElements - Return true if any Vector element access is
+/// repeated.
 bool ExtVectorElementExpr::containsDuplicateElements() const {
   // FIXME: Refactor this code to an accessor on the AST node which returns the
   // "type" of component access, and share with code below and in Sema.
@@ -4440,6 +4449,68 @@ bool ExtVectorElementExpr::containsDuplicateElements() const {
     if (Comp.substr(i + 1).contains(Comp[i]))
         return true;
 
+  return false;
+}
+
+/// containsDuplicateElements - Return true if any Matrix element access is
+/// repeated.
+bool MatrixElementExpr::containsDuplicateElements() const {
+  StringRef Comp = Accessor->getName();
+  assert(!Comp.empty() && Comp[0] == '_' && "invalid matrix accessor");
+
+  // Get the matrix type so we know bounds.
+  const ConstantMatrixType *MT =
+      getBase()->getType()->getAs<ConstantMatrixType>();
+  assert(MT && "MatrixElementExpr base must be a matrix type");
+
+  unsigned Rows = MT->getNumRows();
+  unsigned Cols = MT->getNumColumns();
+  unsigned Max = Rows * Cols;
+
+  // Zero-indexed: _mRC  (4 chars per component)
+  // One-indexed: _RC    (3 chars per component)
+  bool IsZeroIndexed = false;
+  unsigned ChunkLen = 0;
+
+  if (Comp.size() >= 2 && Comp[0] == '_' && Comp[1] == 'm') {
+    IsZeroIndexed = true;
+    ChunkLen = 4;
+  } else {
+    IsZeroIndexed = false;
+    ChunkLen = 3;
+  }
+
+  assert(ChunkLen && "unrecognized matrix swizzle format");
+  assert(Comp.size() % ChunkLen == 0 &&
+         "matrix swizzle accessor has invalid length");
+
+  // Track visited elements using real matrix size.
+  SmallVector<bool, 16> Seen(Max, false);
+
+  for (unsigned I = 0, e = Comp.size(); I < e; I += ChunkLen) {
+    unsigned Row = 0, Col = 0;
+
+    if (IsZeroIndexed) {
+      // Pattern: _mRC
+      assert(Comp[I] == '_' && Comp[I + 1] == 'm');
+      Row = Comp[I + 2] - '0'; // 0..(Rows-1)
+      Col = Comp[I + 3] - '0';
+    } else {
+      // Pattern: _RC
+      assert(Comp[I] == '_');
+      Row = (Comp[I + 1] - '1'); // 1..Rows (ie same as 0..Rows-1)
+      Col = (Comp[I + 2] - '1');
+    }
+
+    // Bounds check (Sema should enforce correctness, but we assert anyway)
+    assert(Row < Rows && Col < Cols && "matrix swizzle index out of bounds");
+
+    unsigned Index = Row * Cols + Col;
+    if (Seen[Index])
+      return true;
+
+    Seen[Index] = true;
+  }
   return false;
 }
 
@@ -4472,6 +4543,59 @@ void ExtVectorElementExpr::getEncodedElementAccess(
     else
       Index = ExtVectorType::getAccessorIdx(Comp[i], isNumericAccessor);
 
+    Elts.push_back(Index);
+  }
+}
+
+void MatrixElementExpr::getEncodedElementAccess(
+    SmallVectorImpl<uint32_t> &Elts) const {
+  StringRef Comp = Accessor->getName();
+  assert(!Comp.empty() && Comp[0] == '_' && "invalid matrix accessor");
+
+  const ConstantMatrixType *MT =
+      getBase()->getType()->getAs<ConstantMatrixType>();
+  assert(MT && "MatrixElementExpr base must be a matrix type");
+
+  unsigned Rows = MT->getNumRows();
+  unsigned Cols = MT->getNumColumns();
+
+  // Zero-indexed: _mRC (4 chars per component: '_', 'm', row, col)
+  // One-indexed:  _RC  (3 chars per component: '_', row, col)
+  bool IsZeroIndexed = false;
+  unsigned ChunkLen = 0;
+
+  if (Comp.size() >= 2 && Comp[0] == '_' && Comp[1] == 'm') {
+    IsZeroIndexed = true;
+    ChunkLen = 4;
+  } else {
+    IsZeroIndexed = false;
+    ChunkLen = 3;
+  }
+
+  assert(ChunkLen != 0 && "unrecognized matrix swizzle format");
+  assert(Comp.size() % ChunkLen == 0 &&
+         "matrix swizzle accessor has invalid length");
+
+  for (unsigned i = 0, e = Comp.size(); i < e; i += ChunkLen) {
+    unsigned Row = 0, Col = 0;
+
+    if (IsZeroIndexed) {
+      // Pattern: _mRC
+      assert(Comp[i] == '_' && Comp[i + 1] == 'm' &&
+             "invalid zero-indexed matrix swizzle component");
+      Row = static_cast<unsigned>(Comp[i + 2] - '0'); // 0..Rows-1
+      Col = static_cast<unsigned>(Comp[i + 3] - '0'); // 0..Cols-1
+    } else {
+      // Pattern: _RC
+      assert(Comp[i] == '_' && "invalid one-indexed matrix swizzle component");
+      Row = static_cast<unsigned>(Comp[i + 1] - '1'); // 1..Rows -> 0..Rows-1
+      Col = static_cast<unsigned>(Comp[i + 2] - '1'); // 1..Cols -> 0..Cols-1
+    }
+
+    // Sema should have validated these, but assert here for sanity.
+    assert(Row < Rows && Col < Cols && "matrix swizzle index out of range");
+
+    unsigned Index = Row * Cols + Col;
     Elts.push_back(Index);
   }
 }

@@ -5051,6 +5051,205 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   return true;
 }
 
+QualType SemaHLSL::CheckMatrixComponent(Sema &S, QualType baseType,
+                                        ExprValueKind &VK, SourceLocation OpLoc,
+                                        const IdentifierInfo *CompName,
+                                        SourceLocation CompLoc) {
+  const auto *MT = baseType->getAs<ConstantMatrixType>();
+  StringRef AccessorName = CompName->getName();
+  assert(MT &&
+         "CheckMatrixComponent is intended to be used on ConstantMatrixType");
+  assert(!AccessorName.empty() && "Matrix Accessor must have a name");
+
+  unsigned Rows = MT->getNumRows();
+  unsigned Cols = MT->getNumColumns();
+  bool IsZeroBasedAccessor = false;
+  unsigned ChunkLen = 0;
+  if (AccessorName.size() < 2) {
+    const char Expected[] = "length 4 for zero based: \'_mRC\' or length 3 for "
+                            "one-based: \'_RC\' accessor";
+    S.Diag(OpLoc, diag::err_builtin_matrix_invalid_member)
+        << CompName->getName() << StringRef(Expected, sizeof(Expected) - 1)
+        << SourceRange(CompLoc);
+    return QualType();
+  }
+  if (AccessorName[0] == '_' && AccessorName[1] == 'm') {
+    IsZeroBasedAccessor = true; // zero-based: 00..33
+    ChunkLen = 4;               // zero-based: "_mRC"
+  } else if (AccessorName[0] == '_')
+    // one-based: 11..44
+    ChunkLen = 3; // one-based: "_RC"
+  else {
+    const char Expected[] =
+        "zero based: \'_mRC\' or one-based: \'_RC\' accessor";
+    S.Diag(OpLoc, diag::err_builtin_matrix_invalid_member)
+        << CompName->getName() << StringRef(Expected, sizeof(Expected) - 1)
+        << SourceRange(CompLoc);
+    return QualType();
+  }
+
+  if (IsZeroBasedAccessor && AccessorName.size() < 4) {
+    const char Expected[] = "zero based: \'_mRC\' accessor";
+    S.Diag(OpLoc, diag::err_builtin_matrix_invalid_member)
+        << CompName->getName() << StringRef(Expected, sizeof(Expected) - 1)
+        << SourceRange(CompLoc);
+    return QualType();
+  }
+
+  if (AccessorName.size() < 3) {
+    const char Expected[] = "one-based: \'_RC\' accessor";
+    S.Diag(OpLoc, diag::err_builtin_matrix_invalid_member)
+        << CompName->getName() << StringRef(Expected, sizeof(Expected) - 1)
+        << SourceRange(CompLoc);
+    return QualType();
+  }
+
+  auto isDigit = [](char c) { return c >= '0' && c <= '9'; };
+  auto isZeroBasedIndex = [](int i) { return i >= 0 && i <= 3; };
+  auto isOneBasedIndex = [](int i) { return i >= 1 && i <= 4; };
+
+  bool HasRepeated = false;
+  SmallVector<bool, 16> Seen(Rows * Cols, false);
+  unsigned NumComponents = 0;
+  const char *Begin = AccessorName.data();
+
+  for (unsigned I = 0, E = AccessorName.size(); I < E; I += ChunkLen) {
+    const char *Chunk = Begin + I;
+    char RowChar = 0, ColChar = 0;
+    if (IsZeroBasedAccessor) {
+      // Zero-based: "_mRC"
+      if (Chunk[0] != '_' || Chunk[1] != 'm') {
+        char Bad = (Chunk[0] != '_') ? Chunk[0] : Chunk[1];
+        const char Expected[] = "\'_m\' prefix";
+        S.Diag(OpLoc.getLocWithOffset(I + (Bad == Chunk[0] ? 1 : 2)),
+               diag::err_builtin_matrix_invalid_member)
+            << StringRef(&Bad, 1) << StringRef(Expected, sizeof(Expected) - 1)
+            << SourceRange(CompLoc);
+        return QualType();
+      }
+      RowChar = Chunk[2];
+      ColChar = Chunk[3];
+    } else {
+      // One-based: "_RC"
+      if (Chunk[0] != '_') {
+        const char Expected[] = "\'_\' prefix";
+        S.Diag(OpLoc.getLocWithOffset(I + 1),
+               diag::err_builtin_matrix_invalid_member)
+            << StringRef(&Chunk[0], 1)
+            << StringRef(Expected, sizeof(Expected) - 1)
+            << SourceRange(CompLoc);
+        return QualType();
+      }
+      RowChar = Chunk[1];
+      ColChar = Chunk[2];
+    }
+
+    // Must be digits.
+    bool isDigitsError = false;
+    if (!isDigit(RowChar)) {
+      const char Expected[] = "row as integer";
+      unsigned BadPos = IsZeroBasedAccessor ? 2 : 1;
+      S.Diag(OpLoc.getLocWithOffset(I + BadPos + 1),
+             diag::err_builtin_matrix_invalid_member)
+          << StringRef(&RowChar, 1) << StringRef(Expected, sizeof(Expected) - 1)
+          << SourceRange(CompLoc);
+      isDigitsError = true;
+    }
+
+    if (!isDigit(ColChar)) {
+      const char Expected[] = "column as integer";
+      unsigned BadPos = IsZeroBasedAccessor ? 3 : 2;
+      S.Diag(OpLoc.getLocWithOffset(I + BadPos + 1),
+             diag::err_builtin_matrix_invalid_member)
+          << StringRef(&ColChar, 1) << StringRef(Expected, sizeof(Expected) - 1)
+          << SourceRange(CompLoc);
+      isDigitsError = true;
+    }
+    if (isDigitsError)
+      return QualType();
+
+    unsigned Row = RowChar - '0';
+    unsigned Col = ColChar - '0';
+
+    bool HasIndexingError = false;
+    if (IsZeroBasedAccessor) {
+      // 0-based [0..3]
+      if (!isZeroBasedIndex(Row)) {
+        S.Diag(OpLoc, diag::err_hlsl_matrix_element_not_in_bounds)
+            << /*row*/ 0 << /*zero-based*/ 0 << SourceRange(CompLoc);
+        HasIndexingError = true;
+      }
+      if (!isZeroBasedIndex(Col)) {
+        S.Diag(OpLoc, diag::err_hlsl_matrix_element_not_in_bounds)
+            << /*col*/ 1 << /*zero-based*/ 0 << SourceRange(CompLoc);
+        HasIndexingError = true;
+      }
+    } else {
+      // 1-based [1..4]
+      if (!isOneBasedIndex(Row)) {
+        S.Diag(OpLoc, diag::err_hlsl_matrix_element_not_in_bounds)
+            << /*row*/ 0 << /*one-based*/ 1 << SourceRange(CompLoc);
+        HasIndexingError = true;
+      }
+      if (!isOneBasedIndex(Col)) {
+        S.Diag(OpLoc, diag::err_hlsl_matrix_element_not_in_bounds)
+            << /*col*/ 1 << /*one-based*/ 1 << SourceRange(CompLoc);
+        HasIndexingError = true;
+      }
+      // Convert to 0-based after range checking.
+      Row--;
+      Col--;
+    }
+
+    if (HasIndexingError)
+      return QualType();
+
+    // Note: matrix swizzle index is hard coded. That means Row and Col can
+    // potentially be larger than Rows and Cols if matrix size is less than
+    // the max index size.
+    bool HasBoundsError = false;
+    if (Row >= Rows) {
+      Diag(OpLoc, diag::err_hlsl_matrix_index_out_of_bounds)
+          << /*Row*/ 0 << Row << Rows << SourceRange(CompLoc);
+      HasBoundsError = true;
+    }
+    if (Col >= Cols) {
+      Diag(OpLoc, diag::err_hlsl_matrix_index_out_of_bounds)
+          << /*Col*/ 1 << Col << Cols << SourceRange(CompLoc);
+      HasBoundsError = true;
+    }
+    if (HasBoundsError)
+      return QualType();
+
+    unsigned FlatIndex = Row * Cols + Col;
+    if (Seen[FlatIndex])
+      HasRepeated = true;
+    Seen[FlatIndex] = true;
+    ++NumComponents;
+  }
+  if (NumComponents == 0 || NumComponents > 4) {
+    S.Diag(OpLoc, diag::err_hlsl_matrix_swizzle_invalid_length)
+        << NumComponents << SourceRange(CompLoc);
+    return QualType();
+  }
+
+  QualType ElemTy = MT->getElementType();
+  QualType VT = S.Context.getExtVectorType(ElemTy, NumComponents);
+  if (HasRepeated)
+    VK = VK_PRValue;
+
+  for (Sema::ExtVectorDeclsType::iterator
+           I = S.ExtVectorDecls.begin(S.getExternalSource()),
+           E = S.ExtVectorDecls.end();
+       I != E; ++I) {
+    if ((*I)->getUnderlyingType() == VT)
+      return S.Context.getTypedefType(ElaboratedTypeKeyword::None,
+                                      /*Qualifier=*/std::nullopt, *I);
+  }
+
+  return VT;
+}
+
 bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
   const HLSLVkConstantIdAttr *ConstIdAttr =
       VDecl->getAttr<HLSLVkConstantIdAttr>();
