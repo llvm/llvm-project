@@ -226,7 +226,7 @@ static void emitXATTR(raw_ostream &OS, StringRef Name,
 }
 
 static bool sameNameAsCSECT(MCSymbolGOFF *Sym) {
-  if (!Sym->isTemporary() && Sym->isDefined() && Sym->isInSection()) {
+  if (!Sym->isTemporary() && Sym->isDefined()) {
     MCSectionGOFF &ED = static_cast<MCSectionGOFF &>(Sym->getSection());
     return ED.isED() && Sym->getName() == ED.getParent()->getName();
   }
