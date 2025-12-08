@@ -108,7 +108,7 @@ public:
             SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {
             const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
-            if (Info && Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA)
+            if (Info && Info->Encoding == AMDGPU::MIMGEncoding::MIMGEncGfx10NSA)
               return HARDCLAUSE_ILLEGAL;
           }
           return HARDCLAUSE_VMEM;

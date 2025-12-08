@@ -1274,9 +1274,9 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
 
     // VSAMPLE insts that do not use vaddr3 behave the same as NSA forms.
     // VIMAGE insts other than BVH never use vaddr4.
-    IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA ||
-            Info->MIMGEncoding == AMDGPU::MIMGEncGfx11NSA ||
-            Info->MIMGEncoding == AMDGPU::MIMGEncGfx12;
+    IsNSA = Info->Encoding == AMDGPU::MIMGEncoding::MIMGEncGfx10NSA ||
+            Info->Encoding == AMDGPU::MIMGEncoding::MIMGEncGfx11NSA ||
+            Info->Encoding == AMDGPU::MIMGEncoding::MIMGEncGfx12;
     if (!IsNSA) {
       if (!IsVSample && AddrSize > 12)
         AddrSize = 16;
@@ -1306,8 +1306,8 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   if (DstSize == Info->VDataDwords && AddrSize == Info->VAddrDwords)
     return;
 
-  int NewOpcode =
-      AMDGPU::getMIMGOpcode(Info->BaseOpcode, Info->MIMGEncoding, DstSize, AddrSize);
+  int NewOpcode = AMDGPU::getMIMGOpcode(Info->BaseOpcode, Info->Encoding,
+                                        DstSize, AddrSize);
   if (NewOpcode == -1)
     return;
 

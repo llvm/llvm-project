@@ -296,13 +296,13 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) const {
   if (!Info)
     return;
 
-  uint8_t NewEncoding;
-  switch (Info->MIMGEncoding) {
-  case AMDGPU::MIMGEncGfx10NSA:
-    NewEncoding = AMDGPU::MIMGEncGfx10Default;
+  AMDGPU::MIMGEncoding NewEncoding;
+  switch (Info->Encoding) {
+  case AMDGPU::MIMGEncoding::MIMGEncGfx10NSA:
+    NewEncoding = AMDGPU::MIMGEncoding::MIMGEncGfx10Default;
     break;
-  case AMDGPU::MIMGEncGfx11NSA:
-    NewEncoding = AMDGPU::MIMGEncGfx11Default;
+  case AMDGPU::MIMGEncoding::MIMGEncGfx11NSA:
+    NewEncoding = AMDGPU::MIMGEncoding::MIMGEncGfx11Default;
     break;
   default:
     return;

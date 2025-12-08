@@ -28,8 +28,9 @@ def MIMGEncGfx11Default : MIMGEncoding;
 def MIMGEncGfx11NSA : MIMGEncoding;
 def MIMGEncGfx12 : MIMGEncoding;
 
-def MIMGEncoding : GenericEnum {
+def MIMGEncoding : GenericEnumClass {
   let FilterClass = "MIMGEncoding";
+  let Size = 8;
 }
 
 // Represent an ISA-level opcode, independent of the encoding and the
@@ -73,8 +74,9 @@ def MIMGBaseOpcodesTable : GenericTable {
   let PrimaryKeyName = "getMIMGBaseOpcodeInfo";
 }
 
-def MIMGDim : GenericEnum {
+def MIMGDim : GenericEnumClass {
   let FilterClass = "AMDGPUDimProps";
+  let Size = 8;
 }
 
 def MIMGDimInfoTable : GenericTable {
@@ -219,7 +221,7 @@ class MIMG <dag outs, string dns = "">
 
   Instruction Opcode = !cast<Instruction>(NAME);
   MIMGBaseOpcode BaseOpcode;
-  MIMGEncoding MIMGEncoding;
+  MIMGEncoding Encoding;
   bits<8> VDataDwords;
   bits<8> VAddrDwords;
 
@@ -240,12 +242,12 @@ class VSAMPLE <dag outs, string dns = ""> : MIMG<outs, dns> {
 def MIMGInfoTable : GenericTable {
   let FilterClass = "MIMG";
   let CppTypeName = "MIMGInfo";
-  let Fields = ["Opcode", "BaseOpcode", "MIMGEncoding", "VDataDwords",
+  let Fields = ["Opcode", "BaseOpcode", "Encoding", "VDataDwords",
                 "VAddrDwords", "VAddrOperands"];
   string TypeOf_BaseOpcode = "MIMGBaseOpcode";
-  string TypeOf_MIMGEncoding = "MIMGEncoding";
+  string TypeOf_Encoding = "MIMGEncoding";
 
-  let PrimaryKey = ["BaseOpcode", "MIMGEncoding", "VDataDwords", "VAddrDwords"];
+  let PrimaryKey = ["BaseOpcode", "Encoding", "VDataDwords", "VAddrDwords"];
   let PrimaryKeyName = "getMIMGOpcodeHelper";
 }
 
@@ -299,7 +301,7 @@ class MIMG_gfx6789<bits<8> op, dag outs, string dns = "">
   let SubtargetPredicate = isGFX6GFX7GFX8GFX9NotGFX90A;
   let AssemblerPredicate = isGFX6GFX7GFX8GFX9NotGFX90A;
 
-  let MIMGEncoding = MIMGEncGfx6;
+  let Encoding = MIMGEncGfx6;
   let VAddrOperands = 1;
 
   let d16 = !if(BaseOpcode.HasD16, ?, 0);
@@ -310,7 +312,7 @@ class MIMG_gfx90a<bits<8> op, dag outs, string dns = "">
   let SubtargetPredicate = isGFX90APlus;
   let AssemblerPredicate = isGFX90APlus;
 
-  let MIMGEncoding = MIMGEncGfx90a;
+  let Encoding = MIMGEncGfx90a;
   let VAddrOperands = 1;
 
   let d16 = !if(BaseOpcode.HasD16, ?, 0);
@@ -322,7 +324,7 @@ class MIMG_gfx10<int op, dag outs, string dns = "">
   let SubtargetPredicate = isGFX10Only;
   let AssemblerPredicate = isGFX10Only;
 
-  let MIMGEncoding = MIMGEncGfx10Default;
+  let Encoding = MIMGEncGfx10Default;
   let VAddrOperands = 1;
 
   let d16 = !if(BaseOpcode.HasD16, ?, 0);
@@ -336,7 +338,7 @@ class MIMG_nsa_gfx10<int op, dag outs, int num_addrs, string dns="">
   let SubtargetPredicate = isGFX10Only;
   let AssemblerPredicate = isGFX10Only;
 
-  let MIMGEncoding = MIMGEncGfx10NSA;
+  let Encoding = MIMGEncGfx10NSA;
   let VAddrOperands = num_addrs;
 
   MIMGNSAHelper nsah = MIMGNSAHelper<num_addrs>;
@@ -353,7 +355,7 @@ class MIMG_gfx11<int op, dag outs, string dns = "">
   let SubtargetPredicate = isGFX11Only;
   let AssemblerPredicate = isGFX11Only;
 
-  let MIMGEncoding = MIMGEncGfx11Default;
+  let Encoding = MIMGEncGfx11Default;
   let VAddrOperands = 1;
 
   let d16 = !if(BaseOpcode.HasD16, ?, 0);
@@ -369,7 +371,7 @@ class MIMG_nsa_gfx11<int op, dag outs, int num_addrs, string dns="",
   let SubtargetPredicate = isGFX11Only;
   let AssemblerPredicate = isGFX11Only;
 
-  let MIMGEncoding = MIMGEncGfx11NSA;
+  let Encoding = MIMGEncGfx11NSA;
   let VAddrOperands = num_addrs;
 
   NSAHelper nsah = !if(!empty(addr_types),
@@ -388,7 +390,7 @@ class VIMAGE_gfx12<int op, dag outs, int num_addrs, string dns="",
   let SubtargetPredicate = isGFX12Plus;
   let AssemblerPredicate = isGFX12Plus;
 
-  let MIMGEncoding = MIMGEncGfx12;
+  let Encoding = MIMGEncGfx12;
   let VAddrOperands = num_addrs;
 
   MIMGNSAHelper nsah = !if(!empty(addr_types),
@@ -410,7 +412,7 @@ class VSAMPLE_gfx12<int op, dag outs, int num_addrs, string dns="",
   let SubtargetPredicate = isGFX12Plus;
   let AssemblerPredicate = isGFX12Plus;
 
-  let MIMGEncoding = MIMGEncGfx12;
+  let Encoding = MIMGEncGfx12;
   let VAddrOperands = num_addrs;
 
   PartialNSAHelper nsah = PartialNSAHelper<num_addrs, 4, Addr3RC>;
@@ -911,14 +913,14 @@ class MIMG_Atomic_vi<mimgopc op, string asm, RegisterOperand data_rc,
                      RegisterClass addr_rc, bit noRtn = 0, bit enableDasm = 0>
   : MIMG_Atomic_gfx6789_base<op.VI, asm, data_rc, addr_rc, noRtn, !if(enableDasm, "GFX8", "")> {
   let AssemblerPredicate = isGFX8GFX9NotGFX90A;
-  let MIMGEncoding = MIMGEncGfx8;
+  let Encoding = MIMGEncGfx8;
 }
 
 class MIMG_Atomic_gfx90a<mimgopc op, string asm, RegisterOperand data_rc,
                          RegisterClass addr_rc, bit noRtn = 0, bit enableDasm = 0>
   : MIMG_Atomic_gfx90a_base<op.VI, asm, data_rc, addr_rc, noRtn, !if(enableDasm, "GFX90A", "")> {
   let AssemblerPredicate = isGFX90APlus;
-  let MIMGEncoding = MIMGEncGfx90a;
+  let Encoding = MIMGEncGfx90a;
 }
 
 class MIMG_Atomic_gfx10<mimgopc op, string opcode,

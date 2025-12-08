@@ -7485,17 +7485,19 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
        AMDGPU::MIMGBaseOpcode::IMAGE_BVH64_INTERSECT_RAY_a16}};
   int Opcode;
   if (UseNSA) {
-    Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                   IsGFX12Plus ? AMDGPU::MIMGEncGfx12
-                                   : IsGFX11   ? AMDGPU::MIMGEncGfx11NSA
-                                               : AMDGPU::MIMGEncGfx10NSA,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode =
+        AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
+                              IsGFX12Plus ? AMDGPU::MIMGEncoding::MIMGEncGfx12
+                              : IsGFX11 ? AMDGPU::MIMGEncoding::MIMGEncGfx11NSA
+                                        : AMDGPU::MIMGEncoding::MIMGEncGfx10NSA,
+                              NumVDataDwords, NumVAddrDwords);
   } else {
     assert(!IsGFX12Plus);
-    Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                   IsGFX11 ? AMDGPU::MIMGEncGfx11Default
-                                           : AMDGPU::MIMGEncGfx10Default,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode = AMDGPU::getMIMGOpcode(
+        BaseOpcodes[Is64][IsA16],
+        IsGFX11 ? AMDGPU::MIMGEncoding::MIMGEncGfx11Default
+                : AMDGPU::MIMGEncoding::MIMGEncGfx10Default,
+        NumVDataDwords, NumVAddrDwords);
   }
   assert(Opcode != -1);
 
@@ -7627,7 +7629,7 @@ bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
   int Opcode = AMDGPU::getMIMGOpcode(
       IsBVH8 ? AMDGPU::MIMGBaseOpcode::IMAGE_BVH8_INTERSECT_RAY
              : AMDGPU::MIMGBaseOpcode::IMAGE_BVH_DUAL_INTERSECT_RAY,
-      AMDGPU::MIMGEncGfx12, NumVDataDwords, NumVAddrDwords);
+      AMDGPU::MIMGEncoding::MIMGEncGfx12, NumVDataDwords, NumVAddrDwords);
   assert(Opcode != -1);
 
   auto RayExtentInstanceMaskVec = B.buildMergeLikeInstr(

@@ -9591,22 +9591,26 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   int Opcode = -1;
 
   if (IsGFX12Plus) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode =
+        AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncoding::MIMGEncGfx12,
+                              NumVDataDwords, NumVAddrDwords);
   } else if (IsGFX11Plus) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
-                                   UseNSA ? AMDGPU::MIMGEncGfx11NSA
-                                          : AMDGPU::MIMGEncGfx11Default,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode = AMDGPU::getMIMGOpcode(
+        IntrOpcode,
+        UseNSA ? AMDGPU::MIMGEncoding::MIMGEncGfx11NSA
+               : AMDGPU::MIMGEncoding::MIMGEncGfx11Default,
+        NumVDataDwords, NumVAddrDwords);
   } else if (IsGFX10Plus) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
-                                   UseNSA ? AMDGPU::MIMGEncGfx10NSA
-                                          : AMDGPU::MIMGEncGfx10Default,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode = AMDGPU::getMIMGOpcode(
+        IntrOpcode,
+        UseNSA ? AMDGPU::MIMGEncoding::MIMGEncGfx10NSA
+               : AMDGPU::MIMGEncoding::MIMGEncGfx10Default,
+        NumVDataDwords, NumVAddrDwords);
   } else {
     if (Subtarget->hasGFX90AInsts()) {
-      Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx90a,
-                                     NumVDataDwords, NumVAddrDwords);
+      Opcode =
+          AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncoding::MIMGEncGfx90a,
+                                NumVDataDwords, NumVAddrDwords);
       if (Opcode == -1) {
         DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
             DAG.getMachineFunction().getFunction(),
@@ -9627,11 +9631,13 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     }
     if (Opcode == -1 &&
         Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
-      Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx8,
-                                     NumVDataDwords, NumVAddrDwords);
+      Opcode =
+          AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncoding::MIMGEncGfx8,
+                                NumVDataDwords, NumVAddrDwords);
     if (Opcode == -1)
-      Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx6,
-                                     NumVDataDwords, NumVAddrDwords);
+      Opcode =
+          AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncoding::MIMGEncGfx6,
+                                NumVDataDwords, NumVAddrDwords);
   }
   if (Opcode == -1)
     return Op;
@@ -10724,7 +10730,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     int Opcode = AMDGPU::getMIMGOpcode(
         IsBVH8 ? AMDGPU::MIMGBaseOpcode::IMAGE_BVH8_INTERSECT_RAY
                : AMDGPU::MIMGBaseOpcode::IMAGE_BVH_DUAL_INTERSECT_RAY,
-        AMDGPU::MIMGEncGfx12, NumVDataDwords, NumVAddrDwords);
+        AMDGPU::MIMGEncoding::MIMGEncGfx12, NumVDataDwords, NumVAddrDwords);
     assert(Opcode != -1);
 
     SmallVector<SDValue, 7> Ops;
@@ -10781,17 +10787,19 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
          AMDGPU::MIMGBaseOpcode::IMAGE_BVH64_INTERSECT_RAY_a16}};
     int Opcode;
     if (UseNSA) {
-      Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                     IsGFX12Plus ? AMDGPU::MIMGEncGfx12
-                                     : IsGFX11   ? AMDGPU::MIMGEncGfx11NSA
-                                                 : AMDGPU::MIMGEncGfx10NSA,
-                                     NumVDataDwords, NumVAddrDwords);
+      Opcode = AMDGPU::getMIMGOpcode(
+          BaseOpcodes[Is64][IsA16],
+          IsGFX12Plus ? AMDGPU::MIMGEncoding::MIMGEncGfx12
+          : IsGFX11   ? AMDGPU::MIMGEncoding::MIMGEncGfx11NSA
+                      : AMDGPU::MIMGEncoding::MIMGEncGfx10NSA,
+          NumVDataDwords, NumVAddrDwords);
     } else {
       assert(!IsGFX12Plus);
-      Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                     IsGFX11 ? AMDGPU::MIMGEncGfx11Default
-                                             : AMDGPU::MIMGEncGfx10Default,
-                                     NumVDataDwords, NumVAddrDwords);
+      Opcode = AMDGPU::getMIMGOpcode(
+          BaseOpcodes[Is64][IsA16],
+          IsGFX11 ? AMDGPU::MIMGEncoding::MIMGEncGfx11Default
+                  : AMDGPU::MIMGEncoding::MIMGEncGfx10Default,
+          NumVDataDwords, NumVAddrDwords);
     }
     assert(Opcode != -1);
 
