@@ -310,8 +310,10 @@ static void registerCallbacks(PassBuilder &PB) {
   // TODO: In order to support multiple instances of the plugin with different
   // scripts, we will need an isolated interpreter session for each.
   std::string ScriptPath = findScript();
-  if (!Context->loadScript(ScriptPath))
+  if (!Context->loadScript(ScriptPath)) {
+    errs() << "Failed to load script for PyPass plugin: '" << ScriptPath << "\n";
     return;
+  }
 
   // Create one PyPass instance per entry-point
   if (Context->registerEP("PipelineStartEPCallback"))
