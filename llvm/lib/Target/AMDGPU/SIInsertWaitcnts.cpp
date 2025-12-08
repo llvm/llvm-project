@@ -1997,17 +1997,14 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
     unsigned Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Wait.VmVsrc, *ST);
     Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, Wait.VaVdst);
 
-    if (Enc != 0xffff) {
-      [[maybe_unused]] auto SWaitInst =
-          BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_DEPCTR))
-              .addImm(Enc);
+    [[maybe_unused]] auto SWaitInst =
+        BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_DEPCTR)).addImm(Enc);
 
-      Modified = true;
+    Modified = true;
 
-      LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
-                 if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
-                 dbgs() << "New Instr: " << *SWaitInst << '\n');
-    }
+    LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+               if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
+               dbgs() << "New Instr: " << *SWaitInst << '\n');
   }
 
   return Modified;
