@@ -6,6 +6,8 @@ void a();
 void b();
 void c();
 void x(int q);
+bool q(int q);
+[[noreturn]] void noreturn();
 
 // CHECK-LABEL: define {{.*}} void @f1()
 void f1() {
@@ -37,6 +39,7 @@ void f2() {
 
 // CHECK-LABEL: define {{.*}} void @f3(i1 {{.*}} %ret)
 void f3(bool ret) {
+  // CHECK: entry:
   // CHECK:   %ret.addr = alloca i8, align 1
   // CHECK:   %cleanup.dest.slot = alloca i32, align 4
   // CHECK:   %storedv = zext i1 %ret to i8
@@ -48,11 +51,15 @@ void f3(bool ret) {
   // CHECK:   store i32 1, ptr %cleanup.dest.slot, align 4
   // CHECK:   br label %cleanup
   // CHECK: if.end:
+  // CHECK:   %cleanup.dest.saved = load i32, ptr %cleanup.dest.slot, align 4
   // CHECK:   call void @x(i32 {{.*}} 1)
+  // CHECK:   store i32 %cleanup.dest.saved, ptr %cleanup.dest.slot, align 4
   // CHECK:   store i32 0, ptr %cleanup.dest.slot, align 4
   // CHECK:   br label %cleanup
   // CHECK: cleanup:
+  // CHECK:   %cleanup.dest.saved1 = load i32, ptr %cleanup.dest.slot, align 4
   // CHECK:   call void @x(i32 {{.*}} 2)
+  // CHECK:   store i32 %cleanup.dest.saved1, ptr %cleanup.dest.slot, align 4
   // CHECK:   %cleanup.dest = load i32, ptr %cleanup.dest.slot, align 4
   // CHECK:   switch i32 %cleanup.dest, label %unreachable [
   // CHECK:     i32 0, label %cleanup.cont
@@ -97,7 +104,9 @@ void ts_i() {
   // CHECK: entry:
   // CHECK:   %cleanup.dest.slot = alloca i32, align 4
   // CHECK:   store i32 2, ptr %cleanup.dest.slot, align 4
+  // CHECK:   %cleanup.dest.saved = load i32, ptr %cleanup.dest.slot, align 4
   // CHECK:   call void @x(i32 {{.*}} 42)
+  // CHECK:   store i32 %cleanup.dest.saved, ptr %cleanup.dest.slot, align 4
   // CHECK:   %cleanup.dest = load i32, ptr %cleanup.dest.slot, align 4
   // CHECK:   switch i32 %cleanup.dest, label %unreachable [
   // CHECK:     i32 2, label %b
@@ -324,7 +333,7 @@ int vla(int* p, int x) {
     // CHECK:   %cleanup.dest.slot = alloca i32, align 4
     // CHECK:   %saved_stack = alloca ptr, align 8
     // CHECK:   %__vla_expr0 = alloca i64, align 8
-    // CHECK:   %saved_stack2 = alloca ptr, align 8
+    // CHECK:   %saved_stack3 = alloca ptr, align 8
     // CHECK:   %__vla_expr1 = alloca i64, align 8
     // CHECK:   store ptr %p, ptr %p.addr, align 8
     // CHECK:   store i32 %x, ptr %x.addr, align 4
@@ -338,6 +347,7 @@ int vla(int* p, int x) {
     // CHECK: if.end:
     // CHECK:   store i32 7, ptr %retval, align 4
     // CHECK:   store i32 1, ptr %cleanup.dest.slot, align 4
+    // CHECK:   %cleanup.dest.saved = load i32, ptr %cleanup.dest.slot, align 4
     // CHECK:   %1 = load i32, ptr %x.addr, align 4
     // CHECK:   %2 = zext i32 %1 to i64
     // CHECK:   %3 = call ptr @llvm.stacksave.p0()
@@ -352,36 +362,39 @@ int vla(int* p, int x) {
     // CHECK:   store i32 %4, ptr %5, align 4
     // CHECK:   %6 = load ptr, ptr %saved_stack, align 8
     // CHECK:   call void @llvm.stackrestore.p0(ptr %6)
+    // CHECK:   store i32 %cleanup.dest.saved, ptr %cleanup.dest.slot, align 4
     // CHECK:   br label %cleanup
     // CHECK: cleanup:
+    // CHECK:   %cleanup.dest.saved2 = load i32, ptr %cleanup.dest.slot, align 4
     // CHECK:   %7 = load i32, ptr %x.addr, align 4
     // CHECK:   %8 = zext i32 %7 to i64
     // CHECK:   %9 = call ptr @llvm.stacksave.p0()
-    // CHECK:   store ptr %9, ptr %saved_stack2, align 8
-    // CHECK:   %vla3 = alloca i32, i64 %8, align 16
+    // CHECK:   store ptr %9, ptr %saved_stack3, align 8
+    // CHECK:   %vla4 = alloca i32, i64 %8, align 16
     // CHECK:   store i64 %8, ptr %__vla_expr1, align 8
-    // CHECK:   %arrayidx4 = getelementptr inbounds i32, ptr %vla3, i64 2
-    // CHECK:   store i32 3, ptr %arrayidx4, align 8
-    // CHECK:   %arrayidx5 = getelementptr inbounds i32, ptr %vla3, i64 2
-    // CHECK:   %10 = load i32, ptr %arrayidx5, align 8
+    // CHECK:   %arrayidx5 = getelementptr inbounds i32, ptr %vla4, i64 2
+    // CHECK:   store i32 3, ptr %arrayidx5, align 8
+    // CHECK:   %arrayidx6 = getelementptr inbounds i32, ptr %vla4, i64 2
+    // CHECK:   %10 = load i32, ptr %arrayidx6, align 8
     // CHECK:   %11 = load ptr, ptr %p.addr, align 8
     // CHECK:   store i32 %10, ptr %11, align 4
-    // CHECK:   %12 = load ptr, ptr %saved_stack2, align 8
+    // CHECK:   %12 = load ptr, ptr %saved_stack3, align 8
     // CHECK:   call void @llvm.stackrestore.p0(ptr %12)
+    // CHECK:   store i32 %cleanup.dest.saved2, ptr %cleanup.dest.slot, align 4
     // CHECK:   %13 = load i32, ptr %retval, align 4
     // CHECK:   ret i32 %13
-	defer {
-		int a[x];
-		a[2] = 3;
-		*p = a[2];
-	}
-	if (x < 5) { return 10; }
-	defer {
-		int b[x];
-		b[2] = 4;
-		*p = b[2];
-	}
-	return 7;
+    defer {
+        int a[x];
+        a[2] = 3;
+        *p = a[2];
+    }
+    if (x < 5) { return 10; }
+    defer {
+        int b[x];
+        b[2] = 4;
+        *p = b[2];
+    }
+    return 7;
 }
 
 [[noreturn]] void exit();
@@ -448,7 +461,9 @@ int main() {
 // CHECK-NEXT:   store i32 0, ptr %cleanup.dest.slot, align 4
 // CHECK-NEXT:   br label %cleanup
 // CHECK: cleanup:
+// CHECK-NEXT:   %cleanup.dest.saved = load i32, ptr %cleanup.dest.slot, align 4
 // CHECK-NEXT:   call void @x(i32 {{.*}} 1)
+// CHECK-NEXT:   store i32 %cleanup.dest.saved, ptr %cleanup.dest.slot, align 4
 // CHECK-NEXT:   %cleanup.dest = load i32, ptr %cleanup.dest.slot, align 4
 // CHECK-NEXT:   switch i32 %cleanup.dest, label %unreachable [
 // CHECK-NEXT:     i32 0, label %cleanup.cont
@@ -500,4 +515,138 @@ void stmt_expr() {
     _Defer x(5);
     6;
   }));
+}
+
+// CHECK-LABEL: define {{.*}} void @cleanup_no_insert_point()
+// CHECK: entry:
+// CHECK-NEXT:   %cleanup.dest.slot = alloca i32, align 4
+// CHECK-NEXT:   br label %while.cond
+// CHECK: while.cond:
+// CHECK-NEXT:   %call = call {{.*}} i1 @q(i32 {{.*}} 1)
+// CHECK-NEXT:   br i1 %call, label %while.body, label %while.end
+// CHECK: while.body:
+// CHECK-NEXT:   %call1 = call {{.*}} i1 @q(i32 {{.*}} 2)
+// CHECK-NEXT:   br i1 %call1, label %if.then, label %if.end
+// CHECK: if.then:
+// CHECK-NEXT:   store i32 2, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   br label %cleanup
+// CHECK: if.end:
+// CHECK-NEXT:   %call2 = call {{.*}} i1 @q(i32 {{.*}} 3)
+// CHECK-NEXT:   br i1 %call2, label %if.then3, label %if.end4
+// CHECK: if.then3:
+// CHECK-NEXT:   store i32 3, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   br label %cleanup
+// CHECK: if.end4:
+// CHECK-NEXT:   store i32 0, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   br label %cleanup
+// CHECK: cleanup:
+// CHECK-NEXT:   %cleanup.dest.saved = load i32, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   call void @noreturn()
+// CHECK-NEXT:   unreachable
+// CHECK: 0:
+// CHECK-NEXT:   %cleanup.dest = load i32, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   switch i32 %cleanup.dest, label %unreachable [
+// CHECK-NEXT:     i32 0, label %cleanup.cont
+// CHECK-NEXT:     i32 2, label %while.cond
+// CHECK-NEXT:     i32 3, label %while.end
+// CHECK-NEXT:   ]
+// CHECK: cleanup.cont:
+// CHECK-NEXT:   br label %while.cond
+// CHECK: while.end:
+// CHECK-NEXT:   ret void
+// CHECK: unreachable:
+// CHECK-NEXT:   unreachable
+void cleanup_no_insert_point() {
+  while (q(1)) {
+    _Defer {
+      noreturn();
+    };
+    if (q(2)) continue;
+    if (q(3)) break;
+  }
+}
+
+// CHECK-LABEL: define {{.*}} void @cleanup_nested()
+// CHECK: entry:
+// CHECK-NEXT:   %cleanup.dest.slot = alloca i32, align 4
+// CHECK-NEXT:   br label %while.cond
+// CHECK: while.cond:
+// CHECK-NEXT:   %call = call {{.*}} i1 @q(i32 {{.*}} 1)
+// CHECK-NEXT:   br i1 %call, label %while.body, label %while.end19
+// CHECK: while.body:
+// CHECK-NEXT:   %call1 = call {{.*}} i1 @q(i32 {{.*}} 6)
+// CHECK-NEXT:   br i1 %call1, label %if.then, label %if.end
+// CHECK: if.then:
+// CHECK-NEXT:   store i32 2, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   br label %cleanup
+// CHECK: if.end:
+// CHECK-NEXT:   %call2 = call {{.*}} i1 @q(i32 {{.*}} 7)
+// CHECK-NEXT:   br i1 %call2, label %if.then3, label %if.end4
+// CHECK: if.then3:
+// CHECK-NEXT:   store i32 3, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   br label %cleanup
+// CHECK: if.end4:
+// CHECK-NEXT:   store i32 0, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   br label %cleanup
+// CHECK: cleanup:
+// CHECK-NEXT:   %cleanup.dest.saved = load i32, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   br label %while.cond5
+// CHECK: while.cond5:
+// CHECK-NEXT:   %call6 = call {{.*}} i1 @q(i32 {{.*}} 2)
+// CHECK-NEXT:   br i1 %call6, label %while.body7, label %while.end
+// CHECK: while.body7:
+// CHECK-NEXT:   %call8 = call {{.*}} i1 @q(i32 {{.*}} 4)
+// CHECK-NEXT:   br i1 %call8, label %if.then9, label %if.end10
+// CHECK: if.then9:
+// CHECK-NEXT:   store i32 4, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   br label %cleanup14
+// CHECK: if.end10:
+// CHECK-NEXT:   %call11 = call {{.*}} i1 @q(i32 {{.*}} 5)
+// CHECK-NEXT:   br i1 %call11, label %if.then12, label %if.end13
+// CHECK: if.then12:
+// CHECK-NEXT:   store i32 5, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   br label %cleanup14
+// CHECK: if.end13:
+// CHECK-NEXT:   store i32 0, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   br label %cleanup14
+// CHECK: cleanup14:
+// CHECK-NEXT:   %cleanup.dest.saved15 = load i32, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   %call16 = call {{.*}} i1 @q(i32 {{.*}} 3)
+// CHECK-NEXT:   store i32 %cleanup.dest.saved15, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   %cleanup.dest = load i32, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   switch i32 %cleanup.dest, label %unreachable [
+// CHECK-NEXT:     i32 0, label %cleanup.cont
+// CHECK-NEXT:     i32 4, label %while.cond5
+// CHECK-NEXT:     i32 5, label %while.end
+// CHECK-NEXT:   ]
+// CHECK: cleanup.cont:
+// CHECK-NEXT:   br label %while.cond5
+// CHECK: while.end:
+// CHECK-NEXT:   store i32 %cleanup.dest.saved, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   %cleanup.dest17 = load i32, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   switch i32 %cleanup.dest17, label %unreachable [
+// CHECK-NEXT:     i32 0, label %cleanup.cont18
+// CHECK-NEXT:     i32 2, label %while.cond
+// CHECK-NEXT:     i32 3, label %while.end19
+// CHECK-NEXT:   ]
+// CHECK: cleanup.cont18:
+// CHECK-NEXT:   br label %while.cond
+// CHECK: while.end19:
+// CHECK-NEXT:   ret void
+// CHECK: unreachable:
+// CHECK-NEXT:   unreachable
+void cleanup_nested() {
+  while (q(1)) {
+    _Defer {
+      while (q(2)) {
+        _Defer {
+          q(3);
+        }
+        if (q(4)) continue;
+        if (q(5)) break;
+      }
+    };
+    if (q(6)) continue;
+    if (q(7)) break;
+  }
 }

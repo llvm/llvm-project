@@ -2060,15 +2060,23 @@ struct EmitDeferredStatement final : EHScopeStack::Cleanup {
     //      cleanup. The result is we just branch 'somewhere random'.
     //
     // The rest of the cleanup code simply isn't prepared to handle this case
-    // because there are no other cleanups that can push more cleanups, and
-    // thus, emitting any other cleanup cannot clobber the cleanup slot.
+    // because most other cleanups can't push more cleanups, and thus, emitting
+    // other cleanups generally cannot clobber the cleanup slot.
     //
-    // To prevent this from happening, simply force the allocation of a new
-    // cleanup slot for the body of the defer statement by temporarily clearing
-    // out any existing slot.
-    SaveAndRestore PreserveCleanupSlot{CGF.NormalCleanupDest,
-                                       RawAddress::invalid()};
+    // To prevent this from happening, save the current cleanup slot value and
+    // restore it after emitting the '_Defer' statement.
+    llvm::Value *SavedCleanupDest = nullptr;
+    if (CGF.NormalCleanupDest.isValid())
+      SavedCleanupDest =
+          CGF.Builder.CreateLoad(CGF.NormalCleanupDest, "cleanup.dest.saved");
+
     CGF.EmitStmt(Stmt.getBody());
+
+    if (SavedCleanupDest && CGF.HaveInsertPoint())
+      CGF.Builder.CreateStore(SavedCleanupDest, CGF.NormalCleanupDest);
+
+    // Cleanups must end with an insert point.
+    CGF.EnsureInsertPoint();
   }
 };
 } // namespace

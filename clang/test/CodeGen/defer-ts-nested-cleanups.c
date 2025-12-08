@@ -2,11 +2,6 @@
 
 // Test that cleanups emitted in a '_Defer' don't clobber the cleanup slot; we
 // test this using lifetime intrinsics, which are emitted starting at -O1.
-//
-// Note that the IR below contains fewer cleanup slots than one might intuitively
-// expect because some of them are optimised out (we just emit a direct branch
-// instead if the cleanup slot would only be written to once); the important part
-// is that we don't clobber a cleanup slot while executing its cleanup.
 
 void g();
 
@@ -29,6 +24,7 @@ void g();
 // CHECK-NEXT:   store i32 0, ptr %cleanup.dest.slot, align 4
 // CHECK-NEXT:   br label %cleanup
 // CHECK: cleanup:
+// CHECK-NEXT:   %cleanup.dest.saved = load i32, ptr %cleanup.dest.slot, align 4
 // CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %j)
 // CHECK-NEXT:   store i32 0, ptr %j, align 4
 // CHECK-NEXT:   br label %for.cond1
@@ -37,6 +33,7 @@ void g();
 // CHECK-NEXT:   %cmp2 = icmp ne i32 %1, 1
 // CHECK-NEXT:   br i1 %cmp2, label %for.body, label %for.cond.cleanup
 // CHECK: for.cond.cleanup:
+// CHECK-NEXT:   store i32 5, ptr %cleanup.dest.slot, align 4
 // CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr %j)
 // CHECK-NEXT:   br label %for.end
 // CHECK: for.body:
@@ -48,21 +45,22 @@ void g();
 // CHECK-NEXT:   store i32 %inc, ptr %j, align 4
 // CHECK-NEXT:   br label %for.cond1
 // CHECK: for.end:
+// CHECK-NEXT:   store i32 %cleanup.dest.saved, ptr %cleanup.dest.slot, align 4
 // CHECK-NEXT:   %cleanup.dest = load i32, ptr %cleanup.dest.slot, align 4
-// CHECK-NEXT:   switch i32 %cleanup.dest, label %cleanup7 [
+// CHECK-NEXT:   switch i32 %cleanup.dest, label %cleanup6 [
 // CHECK-NEXT:     i32 0, label %cleanup.cont
 // CHECK-NEXT:   ]
 // CHECK: cleanup.cont:
-// CHECK-NEXT:   br label %for.inc5
-// CHECK: for.inc5:
+// CHECK-NEXT:   br label %for.inc4
+// CHECK: for.inc4:
 // CHECK-NEXT:   %3 = load i32, ptr %i, align 4
-// CHECK-NEXT:   %inc6 = add nsw i32 %3, 1
-// CHECK-NEXT:   store i32 %inc6, ptr %i, align 4
+// CHECK-NEXT:   %inc5 = add nsw i32 %3, 1
+// CHECK-NEXT:   store i32 %inc5, ptr %i, align 4
 // CHECK-NEXT:   br label %for.cond
-// CHECK: cleanup7:
+// CHECK: cleanup6:
 // CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr %i)
-// CHECK-NEXT:   br label %for.end8
-// CHECK: for.end8:
+// CHECK-NEXT:   br label %for.end7
+// CHECK: for.end7:
 // CHECK-NEXT:   ret void
 void f1() {
   for (int i = 0;; i++) {
@@ -80,7 +78,6 @@ void f1() {
 // CHECK-NEXT:   %i = alloca i32, align 4
 // CHECK-NEXT:   %cleanup.dest.slot = alloca i32, align 4
 // CHECK-NEXT:   %j = alloca i32, align 4
-// CHECK-NEXT:   %cleanup.dest.slot4 = alloca i32, align 4
 // CHECK-NEXT:   %k = alloca i32, align 4
 // CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %i)
 // CHECK-NEXT:   store i32 0, ptr %i, align 4
@@ -96,20 +93,22 @@ void f1() {
 // CHECK-NEXT:   store i32 0, ptr %cleanup.dest.slot, align 4
 // CHECK-NEXT:   br label %cleanup
 // CHECK: cleanup:
+// CHECK-NEXT:   %cleanup.dest.saved = load i32, ptr %cleanup.dest.slot, align 4
 // CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %j)
 // CHECK-NEXT:   store i32 0, ptr %j, align 4
 // CHECK-NEXT:   br label %for.cond1
 // CHECK: for.cond1:
 // CHECK-NEXT:   %1 = load i32, ptr %j, align 4
 // CHECK-NEXT:   %cmp2 = icmp eq i32 %1, 1
-// CHECK-NEXT:   br i1 %cmp2, label %if.then3, label %if.end5
+// CHECK-NEXT:   br i1 %cmp2, label %if.then3, label %if.end4
 // CHECK: if.then3:
-// CHECK-NEXT:   store i32 5, ptr %cleanup.dest.slot4, align 4
-// CHECK-NEXT:   br label %cleanup6
-// CHECK: if.end5:
-// CHECK-NEXT:   store i32 0, ptr %cleanup.dest.slot4, align 4
-// CHECK-NEXT:   br label %cleanup6
-// CHECK: cleanup6:
+// CHECK-NEXT:   store i32 5, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   br label %cleanup5
+// CHECK: if.end4:
+// CHECK-NEXT:   store i32 0, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   br label %cleanup5
+// CHECK: cleanup5:
+// CHECK-NEXT:   %cleanup.dest.saved6 = load i32, ptr %cleanup.dest.slot, align 4
 // CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %k)
 // CHECK-NEXT:   store i32 0, ptr %k, align 4
 // CHECK-NEXT:   br label %for.cond7
@@ -118,6 +117,7 @@ void f1() {
 // CHECK-NEXT:   %cmp8 = icmp ne i32 %2, 1
 // CHECK-NEXT:   br i1 %cmp8, label %for.body, label %for.cond.cleanup
 // CHECK: for.cond.cleanup:
+// CHECK-NEXT:   store i32 8, ptr %cleanup.dest.slot, align 4
 // CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr %k)
 // CHECK-NEXT:   br label %for.end
 // CHECK: for.body:
@@ -129,36 +129,38 @@ void f1() {
 // CHECK-NEXT:   store i32 %inc, ptr %k, align 4
 // CHECK-NEXT:   br label %for.cond7
 // CHECK: for.end:
-// CHECK-NEXT:   %cleanup.dest = load i32, ptr %cleanup.dest.slot4, align 4
-// CHECK-NEXT:   switch i32 %cleanup.dest, label %cleanup13 [
+// CHECK-NEXT:   store i32 %cleanup.dest.saved6, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   %cleanup.dest = load i32, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   switch i32 %cleanup.dest, label %cleanup12 [
 // CHECK-NEXT:     i32 0, label %cleanup.cont
 // CHECK-NEXT:   ]
 // CHECK: cleanup.cont:
-// CHECK-NEXT:   br label %for.inc11
-// CHECK: for.inc11:
+// CHECK-NEXT:   br label %for.inc10
+// CHECK: for.inc10:
 // CHECK-NEXT:   %4 = load i32, ptr %j, align 4
-// CHECK-NEXT:   %inc12 = add nsw i32 %4, 1
-// CHECK-NEXT:   store i32 %inc12, ptr %j, align 4
+// CHECK-NEXT:   %inc11 = add nsw i32 %4, 1
+// CHECK-NEXT:   store i32 %inc11, ptr %j, align 4
 // CHECK-NEXT:   br label %for.cond1
-// CHECK: cleanup13:
+// CHECK: cleanup12:
 // CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr %j)
-// CHECK-NEXT:   br label %for.end14
-// CHECK: for.end14:
-// CHECK-NEXT:   %cleanup.dest15 = load i32, ptr %cleanup.dest.slot, align 4
-// CHECK-NEXT:   switch i32 %cleanup.dest15, label %cleanup19 [
-// CHECK-NEXT:     i32 0, label %cleanup.cont16
+// CHECK-NEXT:   br label %for.end13
+// CHECK: for.end13:
+// CHECK-NEXT:   store i32 %cleanup.dest.saved, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   %cleanup.dest14 = load i32, ptr %cleanup.dest.slot, align 4
+// CHECK-NEXT:   switch i32 %cleanup.dest14, label %cleanup18 [
+// CHECK-NEXT:     i32 0, label %cleanup.cont15
 // CHECK-NEXT:   ]
-// CHECK: cleanup.cont16:
-// CHECK-NEXT:   br label %for.inc17
-// CHECK: for.inc17:
+// CHECK: cleanup.cont15:
+// CHECK-NEXT:   br label %for.inc16
+// CHECK: for.inc16:
 // CHECK-NEXT:   %5 = load i32, ptr %i, align 4
-// CHECK-NEXT:   %inc18 = add nsw i32 %5, 1
-// CHECK-NEXT:   store i32 %inc18, ptr %i, align 4
+// CHECK-NEXT:   %inc17 = add nsw i32 %5, 1
+// CHECK-NEXT:   store i32 %inc17, ptr %i, align 4
 // CHECK-NEXT:   br label %for.cond
-// CHECK: cleanup19:
+// CHECK: cleanup18:
 // CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr %i)
-// CHECK-NEXT:   br label %for.end20
-// CHECK: for.end20:
+// CHECK-NEXT:   br label %for.end19
+// CHECK: for.end19:
 // CHECK-NEXT:   ret void
 void f2() {
   for (int i = 0;; i++) {
