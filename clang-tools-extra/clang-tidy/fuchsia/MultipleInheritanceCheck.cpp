@@ -17,113 +17,61 @@ namespace clang::tidy::fuchsia {
 
 namespace {
 AST_MATCHER(CXXRecordDecl, hasBases) {
-  if (Node.hasDefinition())
-    return Node.getNumBases() > 0;
-  return false;
+  return Node.hasDefinition() && Node.getNumBases() > 0;
 }
 } // namespace
 
-// Adds a node (by name) to the interface map, if it was not present in the map
-// previously.
-void MultipleInheritanceCheck::addNodeToInterfaceMap(const CXXRecordDecl *Node,
-                                                     bool IsInterface) {
-  assert(Node->getIdentifier());
-  const StringRef Name = Node->getIdentifier()->getName();
-  InterfaceMap.insert(std::make_pair(Name, IsInterface));
-}
+bool MultipleInheritanceCheck::isInterface(const CXXBaseSpecifier &Base) {
+  const CXXRecordDecl *const Node = Base.getType()->getAsCXXRecordDecl();
+  if (!Node)
+    return true;
 
-// Returns "true" if the boolean "isInterface" has been set to the
-// interface status of the current Node. Return "false" if the
-// interface status for the current node is not yet known.
-bool MultipleInheritanceCheck::getInterfaceStatus(const CXXRecordDecl *Node,
-                                                  bool &IsInterface) const {
-  assert(Node->getIdentifier());
-  const StringRef Name = Node->getIdentifier()->getName();
-  auto Pair = InterfaceMap.find(Name);
-  if (Pair == InterfaceMap.end())
-    return false;
-  IsInterface = Pair->second;
-  return true;
-}
-
-bool MultipleInheritanceCheck::isCurrentClassInterface(
-    const CXXRecordDecl *Node) const {
-  // Interfaces should have no fields.
-  if (!Node->field_empty())
-    return false;
-
-  // Interfaces should have exclusively pure methods.
-  return llvm::none_of(Node->methods(), [](const CXXMethodDecl *M) {
-    return M->isUserProvided() && !M->isPureVirtual() && !M->isStatic();
-  });
-}
-
-bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
-  if (!Node->getIdentifier())
-    return false;
+  assert(Node->isCompleteDefinition());
 
   // Short circuit the lookup if we have analyzed this record before.
-  bool PreviousIsInterfaceResult = false;
-  if (getInterfaceStatus(Node, PreviousIsInterfaceResult))
-    return PreviousIsInterfaceResult;
+  if (const auto CachedValue = InterfaceMap.find(Node);
+      CachedValue != InterfaceMap.end())
+    return CachedValue->second;
 
-  // To be an interface, all base classes must be interfaces as well.
-  for (const auto &I : Node->bases()) {
-    if (I.isVirtual())
-      continue;
-    const auto *Base = I.getType()->getAsCXXRecordDecl();
-    if (!Base)
-      continue;
-    assert(Base->isCompleteDefinition());
-    if (!isInterface(Base)) {
-      addNodeToInterfaceMap(Node, false);
-      return false;
-    }
-  }
+  // To be an interface, a class must have...
+  const bool CurrentClassIsInterface =
+      // ...no bases that aren't interfaces...
+      llvm::none_of(Node->bases(),
+                    [&](const CXXBaseSpecifier &I) {
+                      return !I.isVirtual() && !isInterface(I);
+                    }) &&
+      // ...no fields, and...
+      Node->field_empty() &&
+      // ...no methods that aren't pure virtual.
+      llvm::none_of(Node->methods(), [](const CXXMethodDecl *M) {
+        return M->isUserProvided() && !M->isPureVirtual() && !M->isStatic();
+      });
 
-  const bool CurrentClassIsInterface = isCurrentClassInterface(Node);
-  addNodeToInterfaceMap(Node, CurrentClassIsInterface);
+  InterfaceMap.try_emplace(Node, CurrentClassIsInterface);
   return CurrentClassIsInterface;
 }
 
 void MultipleInheritanceCheck::registerMatchers(MatchFinder *Finder) {
-  // Match declarations which have bases.
   Finder->addMatcher(cxxRecordDecl(hasBases(), isDefinition()).bind("decl"),
                      this);
 }
 
 void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
-  if (const auto *D = Result.Nodes.getNodeAs<CXXRecordDecl>("decl")) {
-    // Check against map to see if the class inherits from multiple
-    // concrete classes
-    unsigned NumConcrete = 0;
-    for (const auto &I : D->bases()) {
-      if (I.isVirtual())
-        continue;
-      const auto *Base = I.getType()->getAsCXXRecordDecl();
-      if (!Base)
-        continue;
-      assert(Base->isCompleteDefinition());
-      if (!isInterface(Base))
-        NumConcrete++;
-    }
+  const auto &D = *Result.Nodes.getNodeAs<CXXRecordDecl>("decl");
+  // Check to see if the class inherits from multiple concrete classes.
+  unsigned NumConcrete =
+      llvm::count_if(D.bases(), [&](const CXXBaseSpecifier &I) {
+        return !I.isVirtual() && !isInterface(I);
+      });
 
-    // Check virtual bases to see if there is more than one concrete
-    // non-virtual base.
-    for (const auto &V : D->vbases()) {
-      const auto *Base = V.getType()->getAsCXXRecordDecl();
-      if (!Base)
-        continue;
-      assert(Base->isCompleteDefinition());
-      if (!isInterface(Base))
-        NumConcrete++;
-    }
+  // Check virtual bases to see if there is more than one concrete
+  // non-virtual base.
+  NumConcrete += llvm::count_if(
+      D.vbases(), [&](const CXXBaseSpecifier &V) { return !isInterface(V); });
 
-    if (NumConcrete > 1) {
-      diag(D->getBeginLoc(), "inheriting multiple classes that aren't "
-                             "pure virtual is discouraged");
-    }
-  }
+  if (NumConcrete > 1)
+    diag(D.getBeginLoc(), "inheriting multiple classes that aren't "
+                          "pure virtual is discouraged");
 }
 
 } // namespace clang::tidy::fuchsia
