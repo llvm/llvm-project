@@ -163,6 +163,7 @@ bool UnreachableMachineBlockElim::run(MachineFunction &F) {
       // Update dominator and loop info.
       if (MLI) MLI->removeBlock(&BB);
       if (MDT && MDT->getNode(&BB)) MDT->eraseNode(&BB);
+      if (MPDT && MPDT->getNode(&BB)) MPDT->eraseNode(&BB);
 
       while (!BB.succ_empty()) {
         (*BB.succ_begin())->removePHIsIncomingValuesForPredecessor(BB);
