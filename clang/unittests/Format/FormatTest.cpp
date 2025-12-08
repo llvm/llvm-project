@@ -22391,10 +22391,16 @@ TEST_F(FormatTest, AlignArrayOfStructuresGithubIssues) {
   Style.TabWidth = 2;
   Style.ContinuationIndentWidth = 2;
   Style.UseTab = FormatStyle::UT_AlignWithSpaces;
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  Style.AlignAfterOpenBracket = true;
+  Style.BreakAfterOpenBracketBracedList = true;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakAfterOpenBracketIf = true;
+  Style.BreakBeforeCloseBracketBracedList = true;
+  Style.BreakBeforeCloseBracketFunction = true;
+  Style.BreakBeforeCloseBracketIf = true;
+  Style.BinPackArguments = false;
   Style.PointerAlignment = FormatStyle::PAS_Left;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
   Style.AlignOperands = FormatStyle::OAS_DontAlign;
   Style.BreakBeforeTernaryOperators = true;
   Style.BreakBeforeBraces = FormatStyle::BS_Attach;
@@ -22435,7 +22441,7 @@ TEST_F(FormatTest, AlignArrayOfStructuresGithubIssues) {
   Style = getLLVMStyle();
   Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
   Style.ColumnLimit = 0;
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   Style.IndentWidth = 4;
 
   verifyFormat("static const auto messages = Messages{\n"
@@ -22455,9 +22461,9 @@ TEST_F(FormatTest, AlignArrayOfStructuresGithubIssues) {
                "    },\n"
                "};\n"
                "static const Entries entry = {\n"
-               "    { \"\data\",   Code::X },\n"
-               "    { \"\data1\",  Code::Y },\n"
-               "    { \"\data12\", Code::Z },\n"
+               "    { \"data\",   Code::X },\n"
+               "    { \"data1\",  Code::Y },\n"
+               "    { \"data12\", Code::Z },\n"
                "};\n",
                Style);
 
@@ -22480,9 +22486,9 @@ TEST_F(FormatTest, AlignArrayOfStructuresGithubIssues) {
                "    },\n"
                "};\n"
                "static const Entries entry = {\n"
-               "    {   \"\data\", Code::X },\n"
-               "    {  \"\data1\", Code::Y },\n"
-               "    { \"\data12\", Code::Z },\n"
+               "    {   \"data\", Code::X },\n"
+               "    {  \"data1\", Code::Y },\n"
+               "    { \"data12\", Code::Z },\n"
                "};\n",
                Style);
 
@@ -22516,7 +22522,7 @@ TEST_F(FormatTest, AlignArrayOfStructuresGithubIssues) {
   Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
   Style.IndentWidth = 4;
   Style.SpaceBeforeCpp11BracedList = true;
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   Style.TabWidth = 4;
   Style.UseTab = FormatStyle::UT_ForContinuationAndIndentation;
 
@@ -22556,7 +22562,13 @@ TEST_F(FormatTest, AlignArrayOfStructuresGithubIssues) {
   // FIXED - https://github.com/llvm/llvm-project/issues/55485
   // Summary: Alignment with tabs is busted
   Style = getLLVMStyleWithColumns(120);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  Style.AlignAfterOpenBracket = true;
+  Style.BreakAfterOpenBracketBracedList = true;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakAfterOpenBracketIf = true;
+  Style.BreakBeforeCloseBracketBracedList = true;
+  Style.BreakBeforeCloseBracketFunction = true;
+  Style.BreakBeforeCloseBracketIf = true;
   Style.AlignArrayOfStructures = FormatStyle::AIAS_Right;
   Style.BinPackArguments = false;
   Style.ContinuationIndentWidth = 1;
@@ -22668,15 +22680,21 @@ TEST_F(FormatTest, AlignArrayOfStructuresGithubIssues) {
   Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   Style.PackConstructorInitializers = FormatStyle::PCIS_Never;
   Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  Style.AlignAfterOpenBracket = true;
+  Style.BreakAfterOpenBracketBracedList = true;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakAfterOpenBracketIf = true;
+  Style.BreakBeforeCloseBracketBracedList = true;
+  Style.BreakBeforeCloseBracketFunction = true;
+  Style.BreakBeforeCloseBracketIf = true;
   Style.ContinuationIndentWidth = 4;
-  Style.Cpp11BracedListStyle = true;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   Style.UseTab = FormatStyle::UT_Always;
 
   verifyFormat("struct test demo[] = {\n"
-               "\t{56, 23,\t\" hello \"},\n"
-               "\t{-1, 93463, \" world \"},\n"
-               "\t{7,\t 5,\t\t\" !!\"\t }\n"
+               "\t{ 56, 23,\t \" hello \" },\n"
+               "\t{ -1, 93463, \" world \" },\n"
+               "\t{ 7,  5,\t \" !!\"\t   }\n"
                "};\n",
                Style);
 
@@ -22687,7 +22705,13 @@ TEST_F(FormatTest, AlignArrayOfStructuresGithubIssues) {
   Style.BreakBeforeBraces = FormatStyle::BS_Allman;
   Style.IndentWidth = 4;
   Style.UseTab = FormatStyle::UT_Never;
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.AlignAfterOpenBracket = true;
+  Style.BreakAfterOpenBracketBracedList = true;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakAfterOpenBracketIf = true;
+  Style.BreakBeforeCloseBracketBracedList = false;
+  Style.BreakBeforeCloseBracketFunction = false;
+  Style.BreakBeforeCloseBracketIf = false;
   Style.BinPackArguments = false;
   Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   Style.ContinuationIndentWidth = 4;
@@ -22709,7 +22733,7 @@ TEST_F(FormatTest, AlignArrayOfStructuresGithubIssues) {
   // FIXED - https://github.com/llvm/llvm-project/issues/89721
   // Summary: Really long columns mess up alignment for subsequent columns
   Style = getLLVMStyleWithColumns(120);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  Style.AlignAfterOpenBracket = true;
   Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
   Style.AlignConsecutiveAssignments.Enabled = true;
   Style.BinPackArguments = false;
