@@ -873,7 +873,6 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
                 "-fat64 flag to force a 64-bit header and silence this "
                 "warning.",
                 FileOffset);
-            return EXIT_FAILURE;
           }
           FileOffset += stat->getSize();
         }

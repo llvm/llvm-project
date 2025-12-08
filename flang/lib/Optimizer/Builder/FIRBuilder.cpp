@@ -1671,6 +1671,26 @@ mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,
                            "numeric or logical type");
 }
 
+mlir::Value fir::factory::createOneValue(fir::FirOpBuilder &builder,
+                                         mlir::Location loc, mlir::Type type) {
+  mlir::Type i1 = builder.getIntegerType(1);
+  if (mlir::isa<fir::LogicalType>(type) || type == i1)
+    return builder.createConvert(loc, type, builder.createBool(loc, true));
+  if (fir::isa_integer(type))
+    return builder.createIntegerConstant(loc, type, 1);
+  if (fir::isa_real(type))
+    return builder.createRealOneConstant(loc, type);
+  if (fir::isa_complex(type)) {
+    fir::factory::Complex complexHelper(builder, loc);
+    mlir::Type partType = complexHelper.getComplexPartType(type);
+    mlir::Value realPart = builder.createRealOneConstant(loc, partType);
+    mlir::Value imagPart = builder.createRealZeroConstant(loc, partType);
+    return complexHelper.createComplex(type, realPart, imagPart);
+  }
+  fir::emitFatalError(loc, "internal: trying to generate one value of non "
+                           "numeric or logical type");
+}
+
 std::optional<std::int64_t>
 fir::factory::getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
                                    mlir::Value stride) {

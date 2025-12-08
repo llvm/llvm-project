@@ -191,7 +191,7 @@ jobs:
         with:
           name: workflow-args-windows
           path: |
-            comments-Windows-x86_64
+            comments-Windows-AMD64
 
   premerge-check-macos:
     name: MacOS Premerge Checks

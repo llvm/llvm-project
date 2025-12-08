@@ -7,21 +7,21 @@ define i32 @int_va_arg(i32 %a, ...) local_unnamed_addr  {
 ; CHECK-NEXT:    addi 11, 1, 28
 ; CHECK-NEXT:    stw 4, 28(1)
 ; CHECK-NEXT:    addi 4, 1, 32
-; CHECK-NEXT:    stw 6, 36(1)
+; CHECK-NEXT:    stw 5, 32(1)
 ; CHECK-NEXT:    stw 11, -4(1)
 ; CHECK-NEXT:    stw 11, -8(1)
 ; CHECK-NEXT:    stw 4, -4(1)
-; CHECK-NEXT:    lwz 6, 28(1)
+; CHECK-NEXT:    lwz 5, 28(1)
 ; CHECK-NEXT:    stw 4, -8(1)
-; CHECK-NEXT:    add 3, 6, 3
+; CHECK-NEXT:    add 3, 5, 3
 ; CHECK-NEXT:    lwz 4, 28(1)
 ; CHECK-NEXT:    slwi 4, 4, 1
-; CHECK-NEXT:    stw 7, 40(1)
+; CHECK-NEXT:    stw 6, 36(1)
 ; CHECK-NEXT:    add 3, 3, 4
+; CHECK-NEXT:    stw 7, 40(1)
 ; CHECK-NEXT:    stw 8, 44(1)
 ; CHECK-NEXT:    stw 9, 48(1)
 ; CHECK-NEXT:    stw 10, 52(1)
-; CHECK-NEXT:    stw 5, 32(1)
 ; CHECK-NEXT:    blr
 entry:
   %arg1 = alloca ptr, align 4

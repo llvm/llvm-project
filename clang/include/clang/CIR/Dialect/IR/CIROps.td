@@ -4756,6 +4756,27 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let llvmOp = llvmOpName;
 }
 
+def CIR_SqrtOp : CIR_UnaryFPToFPBuiltinOp<"sqrt", "SqrtOp"> {
+  let summary = "Floating-point square root operation";
+  
+  let description = [{
+    Computes the square root of a floating-point value or vector.
+
+    The input must be either:
+      • a floating-point scalar type, or
+      • a vector whose element type is floating-point.
+
+    The result type must match the input type exactly.
+
+    Examples:
+      // scalar
+      %r = cir.sqrt %x : !cir.fp64
+
+      // vector
+      %v = cir.sqrt %vec : !cir.vector<!cir.fp32 x 4>
+  }];
+}
+
 def CIR_ACosOp : CIR_UnaryFPToFPBuiltinOp<"acos", "ACosOp"> {
   let summary = "Computes the arcus cosine of the specified value";
   let description = [{

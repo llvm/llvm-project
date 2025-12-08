@@ -10895,15 +10895,14 @@ static SDValue combineShiftToMULH(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   // Combine to mulh if mulh is legal/custom for the narrow type on the target
   // or if it is a vector type then we could transform to an acceptable type and
   // rely on legalization to split/combine the result.
+  EVT TransformVT = NarrowVT;
   if (NarrowVT.isVector()) {
-    EVT TransformVT = TLI.getTypeToTransformTo(*DAG.getContext(), NarrowVT);
-    if (TransformVT.getVectorElementType() != NarrowVT.getVectorElementType() ||
-        !TLI.isOperationLegalOrCustom(MulhOpcode, TransformVT))
-      return SDValue();
-  } else {
-    if (!TLI.isOperationLegalOrCustom(MulhOpcode, NarrowVT))
+    TransformVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), NarrowVT);
+    if (TransformVT.getScalarType() != NarrowVT.getScalarType())
       return SDValue();
   }
+  if (!TLI.isOperationLegalOrCustom(MulhOpcode, TransformVT))
+    return SDValue();
 
   SDValue Result =
       DAG.getNode(MulhOpcode, DL, NarrowVT, LeftOp.getOperand(0), MulhRightOp);
