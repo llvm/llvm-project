@@ -35,6 +35,18 @@ llvm::convertStrToRoundingMode(StringRef RoundingArg) {
       .Default(std::nullopt);
 }
 
+std::optional<RoundingMode>
+llvm::convertBundleToRoundingMode(StringRef RoundingArg) {
+  return StringSwitch<std::optional<RoundingMode>>(RoundingArg)
+      .Case("dynamic", RoundingMode::Dynamic)
+      .Case("tonearest", RoundingMode::NearestTiesToEven)
+      .Case("tonearestaway", RoundingMode::NearestTiesToAway)
+      .Case("downward", RoundingMode::TowardNegative)
+      .Case("upward", RoundingMode::TowardPositive)
+      .Case("towardzero", RoundingMode::TowardZero)
+      .Default(std::nullopt);
+}
+
 std::optional<StringRef>
 llvm::convertRoundingModeToStr(RoundingMode UseRounding) {
   std::optional<StringRef> RoundingStr;
@@ -63,12 +75,41 @@ llvm::convertRoundingModeToStr(RoundingMode UseRounding) {
   return RoundingStr;
 }
 
+std::optional<StringRef>
+llvm::convertRoundingModeToBundle(RoundingMode UseRounding) {
+  switch (UseRounding) {
+  case RoundingMode::Dynamic:
+    return "dynamic";
+  case RoundingMode::NearestTiesToEven:
+    return "tonearest";
+  case RoundingMode::NearestTiesToAway:
+    return "tonearestaway";
+  case RoundingMode::TowardNegative:
+    return "downward";
+  case RoundingMode::TowardPositive:
+    return "upward";
+  case RoundingMode::TowardZero:
+    return "towardzero";
+  default:
+    return std::nullopt;
+  }
+}
+
 std::optional<fp::ExceptionBehavior>
 llvm::convertStrToExceptionBehavior(StringRef ExceptionArg) {
   return StringSwitch<std::optional<fp::ExceptionBehavior>>(ExceptionArg)
       .Case("fpexcept.ignore", fp::ebIgnore)
       .Case("fpexcept.maytrap", fp::ebMayTrap)
       .Case("fpexcept.strict", fp::ebStrict)
+      .Default(std::nullopt);
+}
+
+std::optional<fp::ExceptionBehavior>
+llvm::convertBundleToExceptionBehavior(StringRef ExceptionArg) {
+  return StringSwitch<std::optional<fp::ExceptionBehavior>>(ExceptionArg)
+      .Case("ignore", fp::ebIgnore)
+      .Case("maytrap", fp::ebMayTrap)
+      .Case("strict", fp::ebStrict)
       .Default(std::nullopt);
 }
 
@@ -89,8 +130,29 @@ llvm::convertExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept) {
   return ExceptStr;
 }
 
+std::optional<StringRef>
+llvm::convertExceptionBehaviorToBundle(fp::ExceptionBehavior UseExcept) {
+  switch (UseExcept) {
+  case fp::ebStrict:
+    return "strict";
+  case fp::ebIgnore:
+    return "ignore";
+  case fp::ebMayTrap:
+    return "maytrap";
+  }
+  return std::nullopt;
+}
+
 Intrinsic::ID llvm::getConstrainedIntrinsicID(const Instruction &Instr) {
   Intrinsic::ID IID = Intrinsic::not_intrinsic;
+
+  if (auto *CB = dyn_cast<CallBase>(&Instr)) {
+    // If the instruction is a call, do not convert it if it has
+    // floating-point operand bundles.
+    if (CB->hasFloatingPointOperandBundle())
+      return IID;
+  }
+
   switch (Instr.getOpcode()) {
   case Instruction::FCmp:
     // Unlike other instructions FCmp can be mapped to one of two intrinsic

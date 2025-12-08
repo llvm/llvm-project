@@ -635,6 +635,7 @@ private:
   bool visitStrNLenCall(const CallInst &I);
   bool visitUnaryFloatCall(const CallInst &I, unsigned Opcode);
   bool visitBinaryFloatCall(const CallInst &I, unsigned Opcode);
+  bool visitFPOperation(const CallInst &I, unsigned Opcode);
   void visitAtomicLoad(const LoadInst &I);
   void visitAtomicStore(const StoreInst &I);
   void visitLoadFromSwiftError(const LoadInst &I);

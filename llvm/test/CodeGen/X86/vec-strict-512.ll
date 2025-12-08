@@ -231,12 +231,30 @@ define <16 x float> @strict_vector_ftrunc_v16f32(<16 x float> %f) #0 {
   ret <16 x float> %res
 }
 
+define <16 x float> @strict_vector_ftrunc_v16f32ob(<16 x float> %f) #0 {
+; CHECK-LABEL: strict_vector_ftrunc_v16f32ob:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscaleps $11, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x float> @llvm.trunc.v16f32(<16 x float> %f) [ "fp.except"(metadata !"strict") ]
+  ret <16 x float> %res
+}
+
 define <8 x double> @strict_vector_ftrunc_v8f64(<8 x double> %f) #0 {
 ; CHECK-LABEL: strict_vector_ftrunc_v8f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrndscalepd $11, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <8 x double> @llvm.experimental.constrained.trunc.v8f64(<8 x double> %f, metadata !"fpexcept.strict") #0
+  ret <8 x double> %res
+}
+
+define <8 x double> @strict_vector_ftrunc_v8f64ob(<8 x double> %f) #0 {
+; CHECK-LABEL: strict_vector_ftrunc_v8f64ob:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscalepd $11, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <8 x double> @llvm.trunc.v8f64(<8 x double> %f) [ "fp.except"(metadata !"strict") ]
   ret <8 x double> %res
 }
 
@@ -270,6 +288,15 @@ define <16 x float> @strict_vector_fnearbyint_v16f32(<16 x float> %f) #0 {
   ret <16 x float> %res
 }
 
+define <16 x float> @strict_vector_fnearbyint_v16f32ob(<16 x float> %f) #0 {
+; CHECK-LABEL: strict_vector_fnearbyint_v16f32ob:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscaleps $12, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x float> @llvm.nearbyint.v16f32(<16 x float> %f) [ "fp.round"(metadata !"dynamic"), "fp.except"(metadata !"strict") ]
+  ret <16 x float> %res
+}
+
 define <8 x double> @strict_vector_fnearbyint_v8f64(<8 x double> %f) #0 {
 ; CHECK-LABEL: strict_vector_fnearbyint_v8f64:
 ; CHECK:       # %bb.0:
@@ -277,6 +304,15 @@ define <8 x double> @strict_vector_fnearbyint_v8f64(<8 x double> %f) #0 {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <8 x double> @llvm.experimental.constrained.nearbyint.v8f64(<8 x double> %f,
                              metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret <8 x double> %res
+}
+
+define <8 x double> @strict_vector_fnearbyint_v8f64ob(<8 x double> %f) #0 {
+; CHECK-LABEL: strict_vector_fnearbyint_v8f64ob:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscalepd $12, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %f) [ "fp.round"(metadata !"dynamic"), "fp.except"(metadata !"strict") ]
   ret <8 x double> %res
 }
 

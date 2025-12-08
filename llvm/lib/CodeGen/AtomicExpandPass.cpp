@@ -160,7 +160,7 @@ struct ReplacementIRBuilder
     SetInsertPoint(I);
     this->CollectMetadataToCopy(I, {LLVMContext::MD_pcsections});
     if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
-      this->setIsFPConstrained(true);
+      this->resetModeToStrictFP(true);
 
     MMRAMD = I->getMetadata(LLVMContext::MD_mmra);
   }
@@ -1727,7 +1727,7 @@ bool AtomicExpandImpl::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 bool llvm::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
                                     CreateCmpXchgInstFun CreateCmpXchg) {
   ReplacementIRBuilder Builder(AI, AI->getDataLayout());
-  Builder.setIsFPConstrained(
+  Builder.resetModeToStrictFP(
       AI->getFunction()->hasFnAttribute(Attribute::StrictFP));
 
   // FIXME: If FP exceptions are observable, we should force them off for the

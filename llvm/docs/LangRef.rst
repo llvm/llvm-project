@@ -3255,6 +3255,62 @@ value of its first argument instead of calling the specified function
 or intrinsic. This is achieved with ``PATCHINST`` relocations on the
 target instructions (see the AArch64 psABI for details).
 
+.. _ob_fp:
+
+Floating-point Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These operand bundles are used for calls that involve floating-point
+operations and interact with :ref:`floating-point environment <floatenv>` or
+depend on floating-point options, such as rounding mode, denormal modes, etc.
+
+An operand bundle tagged with "fp.round" contains information about the
+rounding mode used for the operation execution (the effective rounding mode).
+This mode is represented by a metadata string value and specifies the mode used
+for the operation evaluation. Possible values are:
+
+::
+
+    "towardzero"
+    "tonearest"
+    "upward"
+    "downward"
+    "tonearestaway"
+    "dynamic"
+
+Only one value may be specified. If the "fp.round" bundle is absent, and
+the operation depends on rounding mode, the default behavior is to use the value
+from a control register (dynamic rounding). In the specific case of
+:ref:`default floating-point environment <floatenv>`, the register is assumed to
+set rounding to nearest, ties to even.
+
+An operand bundle tagged with "fp.except" may be associated with operations
+that can raise floating-point exceptions. It contains a single metadata string
+value, which can have one of the following:
+
+::
+
+    "ignore"
+    "maytrap"
+    "strict"
+
+If the argument is "ignore", floating-point exceptions raised by the call are not
+intended to be observed. Optimization transformations may reorder such operations
+or omit them in some cases. For example, if the call result is unused, the call
+may be removed, even if it could raise exceptions. This is the only permitted value
+in the :ref:`default floating-point environment <floatenv>`.
+
+If the argument of "fp.except" is "strict", all transformations must preserve the
+floating-point exception semantics of the original code. Any exception that would
+have been raised by the original code must also be raised by the transformed code
+unless it can be proven unobservable. No new observable floating-point exceptions
+may be introduced. This value may only be used only in functions with
+``strictfp`` attribute.
+
+The value "maytrap" is almost same as "strict", but transformations are not
+required to preserve all exceptions that are implied by the original code. For
+example, exceptions may be potentially hidden by constant folding.
+
 .. _moduleasm:
 
 Module-Level Inline Assembly
@@ -4005,9 +4061,9 @@ round-to-nearest rounding mode, and subnormals are assumed to be preserved.
 Running LLVM code in an environment where these assumptions are not met
 typically leads to undefined behavior. The ``strictfp`` and ``denormal-fp-math``
 attributes as well as :ref:`Constrained Floating-Point Intrinsics
-<constrainedfp>` can be used to weaken LLVM's assumptions and ensure defined
-behavior in non-default floating-point environments; see their respective
-documentation for details.
+<constrainedfp>` or :ref:`floating-point operand bundles<ob_fp>` can be used to
+weaken LLVM's assumptions and ensure defined behavior in non-default
+floating-point environments; see their respective documentation for details.
 
 .. _floatnan:
 

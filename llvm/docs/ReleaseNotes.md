@@ -74,6 +74,9 @@ Changes to the LLVM IR
   format string function implementations from statically-linked libc's based on
   the requirements of each call. Currently only `float` is supported; this can
   keep floating point support out of printf if it can be proven unused.
+* Floating-point operand bundles have been added.
+* Calls to floating-point intrinsics can have operand bundles "fp.round" and
+  "fp.except", which specify effective rounding mode and exception behavior.
 
 Changes to LLVM infrastructure
 ------------------------------

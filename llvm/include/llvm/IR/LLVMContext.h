@@ -99,7 +99,9 @@ public:
     OB_convergencectrl = 9,        // "convergencectrl"
     OB_align = 10,                 // "align"
     OB_deactivation_symbol = 11,   // "deactivation-symbol"
-    OB_LastBundleID = OB_deactivation_symbol
+    OB_fp_round = 12,              // "fp.control"
+    OB_fp_except = 13,             // "fp.except"
+    OB_LastBundleID = OB_fp_except
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.

@@ -6901,9 +6901,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::exp10:
   case Intrinsic::floor:
   case Intrinsic::ceil:
-  case Intrinsic::trunc:
   case Intrinsic::rint:
-  case Intrinsic::nearbyint:
   case Intrinsic::round:
   case Intrinsic::roundeven:
   case Intrinsic::canonicalize: {
@@ -6925,9 +6923,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     case Intrinsic::exp10:        Opcode = ISD::FEXP10;        break;
     case Intrinsic::floor:        Opcode = ISD::FFLOOR;        break;
     case Intrinsic::ceil:         Opcode = ISD::FCEIL;         break;
-    case Intrinsic::trunc:        Opcode = ISD::FTRUNC;        break;
     case Intrinsic::rint:         Opcode = ISD::FRINT;         break;
-    case Intrinsic::nearbyint:    Opcode = ISD::FNEARBYINT;    break;
     case Intrinsic::round:        Opcode = ISD::FROUND;        break;
     case Intrinsic::roundeven:    Opcode = ISD::FROUNDEVEN;    break;
     case Intrinsic::canonicalize: Opcode = ISD::FCANONICALIZE; break;
@@ -7062,6 +7058,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 #include "llvm/IR/VPIntrinsics.def"
     visitVectorPredicationIntrinsic(cast<VPIntrinsic>(I));
     return;
+#define FUNCTION(NAME, DAGN)                                                   \
+  case Intrinsic::NAME:                                                        \
+    visitFPOperation(I, ISD::DAGN);                                            \
+    break;
+#include "llvm/IR/FloatingPointOps.def"
   case Intrinsic::fptrunc_round: {
     // Get the last argument, the metadata and convert it to an integer in the
     // call
@@ -9535,6 +9536,56 @@ bool SelectionDAGBuilder::visitBinaryFloatCall(const CallInst &I,
   SDValue Tmp1 = getValue(I.getArgOperand(1));
   EVT VT = Tmp0.getValueType();
   setValue(&I, DAG.getNode(Opcode, getCurSDLoc(), VT, Tmp0, Tmp1, Flags));
+  return true;
+}
+
+bool SelectionDAGBuilder::visitFPOperation(const CallInst &I, unsigned Opcode) {
+  // We already checked this call's prototype; verify it doesn't modify errno.
+  MemoryEffects ME = I.getMemoryEffects();
+  if (!ME.onlyAccessesInaccessibleMem())
+    return false;
+
+  SmallVector<SDValue, 4> Operands;
+  bool HasChain = ME.doesAccessInaccessibleMem();
+  if (HasChain)
+    Operands.push_back(getRoot());
+  for (auto &Arg : I.args())
+    Operands.push_back(getValue(Arg));
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType(), true);
+  SDVTList NodeVT;
+  if (HasChain)
+    NodeVT = DAG.getVTList(VT, MVT::Other);
+  else
+    NodeVT = DAG.getVTList(VT);
+
+  SDNodeFlags Flags;
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+    Flags.copyFMF(*FPOp);
+  fp::ExceptionBehavior EB = I.getExceptionBehavior();
+  if (EB == fp::ExceptionBehavior::ebIgnore)
+    Flags.setNoFPExcept(true);
+
+  // Temporary solution: use STRICT_* nodes.
+  if (HasChain)
+    switch (Opcode) {
+    default:
+      break;
+#define LEGACY_DAG(NAME, DAGN)                                                 \
+  case ISD::DAGN:                                                              \
+    Opcode = ISD::STRICT_##DAGN;                                               \
+    break;
+#include "llvm/IR/FloatingPointOps.def"
+    }
+
+  SDLoc sdl = getCurSDLoc();
+  SDValue Result = DAG.getNode(Opcode, sdl, NodeVT, Operands, Flags);
+  if (HasChain)
+    pushFPOpOutChain(Result, EB);
+
+  SDValue FPResult = Result.getValue(0);
+  setValue(&I, FPResult);
   return true;
 }
 

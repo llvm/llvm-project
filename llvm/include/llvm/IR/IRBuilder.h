@@ -153,8 +153,8 @@ protected:
   FastMathFlags FMF;
 
   bool IsFPConstrained = false;
-  fp::ExceptionBehavior DefaultConstrainedExcept = fp::ebStrict;
-  RoundingMode DefaultConstrainedRounding = RoundingMode::Dynamic;
+  fp::ExceptionBehavior DefaultConstrainedExcept = fp::ebIgnore;
+  RoundingMode DefaultConstrainedRounding = RoundingMode::NearestTiesToEven;
 
   ArrayRef<OperandBundleDef> DefaultOperandBundles;
 
@@ -349,6 +349,19 @@ public:
   /// floating point intrinsic calls. Fast math flags are unaffected
   /// by this setting.
   void setIsFPConstrained(bool IsCon) { IsFPConstrained = IsCon; }
+
+  /// Enable/Disable use of constrained floating point math and reset FP options
+  /// according to the selected mode.
+  void resetModeToStrictFP(bool IsCon) {
+    if (IsCon) {
+      setDefaultConstrainedRounding(RoundingMode::Dynamic);
+      setDefaultConstrainedExcept(fp::ebStrict);
+    } else {
+      setDefaultConstrainedRounding(RoundingMode::NearestTiesToEven);
+      setDefaultConstrainedExcept(fp::ebIgnore);
+    }
+    setIsFPConstrained(IsCon);
+  }
 
   /// Query for the use of constrained floating point math
   bool getIsFPConstrained() { return IsFPConstrained; }
@@ -999,6 +1012,16 @@ public:
                                      ArrayRef<Value *> Args,
                                      FMFSource FMFSource = {},
                                      const Twine &Name = "");
+
+  /// Create a call to intrinsic \p ID with \p Args, mangled using \p Types and
+  /// with operand bundles.
+  /// If \p FMFSource is provided, copy fast-math-flags from that instruction to
+  /// the intrinsic.
+  CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Type *> Types,
+                            ArrayRef<Value *> Args,
+                            ArrayRef<OperandBundleDef> OpBundles,
+                            Instruction *FMFSource = nullptr,
+                            const Twine &Name = "");
 
   /// Create a call to non-overloaded intrinsic \p ID with \p Args. If
   /// \p FMFSource is provided, copy fast-math-flags from that instruction to
@@ -2511,24 +2534,13 @@ public:
   CallInst *CreateCall(FunctionType *FTy, Value *Callee,
                        ArrayRef<Value *> Args = {}, const Twine &Name = "",
                        MDNode *FPMathTag = nullptr) {
-    CallInst *CI = CallInst::Create(FTy, Callee, Args, DefaultOperandBundles);
-    if (IsFPConstrained)
-      setConstrainedFPCallAttr(CI);
-    if (isa<FPMathOperator>(CI))
-      setFPAttrs(CI, FPMathTag, FMF);
-    return Insert(CI, Name);
+    return CreateCall(FTy, Callee, Args, DefaultOperandBundles, Name,
+                      FPMathTag);
   }
 
   CallInst *CreateCall(FunctionType *FTy, Value *Callee, ArrayRef<Value *> Args,
                        ArrayRef<OperandBundleDef> OpBundles,
-                       const Twine &Name = "", MDNode *FPMathTag = nullptr) {
-    CallInst *CI = CallInst::Create(FTy, Callee, Args, OpBundles);
-    if (IsFPConstrained)
-      setConstrainedFPCallAttr(CI);
-    if (isa<FPMathOperator>(CI))
-      setFPAttrs(CI, FPMathTag, FMF);
-    return Insert(CI, Name);
-  }
+                       const Twine &Name = "", MDNode *FPMathTag = nullptr);
 
   CallInst *CreateCall(FunctionCallee Callee, ArrayRef<Value *> Args = {},
                        const Twine &Name = "", MDNode *FPMathTag = nullptr) {
@@ -2767,6 +2779,22 @@ public:
   /// assumption on the provided pointer.
   LLVM_ABI CallInst *CreateDereferenceableAssumption(Value *PtrValue,
                                                      Value *SizeValue);
+
+  /// Create an operand bundle in the provided bundle set to represent the given
+  /// floating-point rounding mode.
+  ///
+  /// If the rounding mode is not defined, adds the default rounding mode,
+  /// stored in this builder object.
+  void createRoundingBundle(SmallVectorImpl<OperandBundleDef> &Bundles,
+                            RoundingMode RM);
+
+  /// Create an operand bundle in the provided bundle set to represent the given
+  /// floating-point exception behavior.
+  ///
+  /// If the exception behavior is not defined, adds the default behavior,
+  /// stored in this builder object.
+  void createExceptionBundle(SmallVectorImpl<OperandBundleDef> &Bundles,
+                             fp::ExceptionBehavior Except);
 };
 
 /// This provides a uniform API for creating instructions and inserting
