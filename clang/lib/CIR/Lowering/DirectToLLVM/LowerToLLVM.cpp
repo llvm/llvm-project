@@ -187,7 +187,7 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
 }
 
 mlir::LogicalResult CIRToLLVMSqrtOpLowering::matchAndRewrite(
-    cir::SqrtOp op, OpAdaptor adaptor, 
+    cir::SqrtOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
   rewriter.replaceOpWithNewOp<mlir::LLVM::SqrtOp>(op, resTy, adaptor.getSrc());
