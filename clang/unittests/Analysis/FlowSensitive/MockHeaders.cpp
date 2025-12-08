@@ -1358,6 +1358,8 @@ bool operator!=(const Status &lhs, const Status &rhs);
 Status OkStatus();
 Status InvalidArgumentError(const char *);
 
+}  // namespace absl
+
 #endif // STATUS_H
 )cc";
 
@@ -1369,6 +1371,8 @@ constexpr const char StatusOrDefsHeader[] = R"cc(
 #include "std_initializer_list.h"
 #include "std_type_traits.h"
 #include "std_utility.h"
+
+namespace absl {
 
 template <typename T> struct StatusOr;
 
