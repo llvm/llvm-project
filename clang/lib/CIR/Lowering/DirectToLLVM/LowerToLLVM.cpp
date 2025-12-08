@@ -202,6 +202,23 @@ mlir::LogicalResult CIRToLLVMExpOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMExp2OpLowering::matchAndRewrite(
+    cir::Exp2Op op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::Exp2Op>(op, resTy, adaptor.getSrc());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMFloorOpLowering::matchAndRewrite(
+    cir::FloorOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::FFloorOp>(op, resTy,
+                                                    adaptor.getSrc());
+  return mlir::success();
+}
+
 static mlir::Value getLLVMIntCast(mlir::ConversionPatternRewriter &rewriter,
                                   mlir::Value llvmSrc, mlir::Type llvmDstIntTy,
                                   bool isUnsigned, uint64_t cirSrcWidth,
@@ -232,7 +249,7 @@ public:
         .Case<cir::IntAttr, cir::FPAttr, cir::ConstComplexAttr,
               cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
               cir::ConstPtrAttr, cir::GlobalViewAttr, cir::TypeInfoAttr,
-              cir::VTableAttr, cir::ZeroAttr>(
+              cir::UndefAttr, cir::VTableAttr, cir::ZeroAttr>(
             [&](auto attrT) { return visitCirAttr(attrT); })
         .Default([&](auto attrT) { return mlir::Value(); });
   }
@@ -246,6 +263,7 @@ public:
   mlir::Value visitCirAttr(cir::ConstVectorAttr attr);
   mlir::Value visitCirAttr(cir::GlobalViewAttr attr);
   mlir::Value visitCirAttr(cir::TypeInfoAttr attr);
+  mlir::Value visitCirAttr(cir::UndefAttr attr);
   mlir::Value visitCirAttr(cir::VTableAttr attr);
   mlir::Value visitCirAttr(cir::ZeroAttr attr);
 
@@ -583,6 +601,13 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::TypeInfoAttr typeInfoAttr) {
   return result;
 }
 
+/// UndefAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::UndefAttr undefAttr) {
+  mlir::Location loc = parentOp->getLoc();
+  return mlir::LLVM::UndefOp::create(
+      rewriter, loc, converter->convertType(undefAttr.getType()));
+}
+
 // VTableAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::VTableAttr vtableArr) {
   mlir::Type llvmTy = converter->convertType(vtableArr.getType());
@@ -750,6 +775,15 @@ getLLVMMemOrder(std::optional<cir::MemOrder> memorder) {
   llvm_unreachable("unknown memory order");
 }
 
+static std::optional<llvm::StringRef>
+getLLVMSyncScope(std::optional<cir::SyncScopeKind> syncScope) {
+  if (syncScope.has_value())
+    return syncScope.value() == cir::SyncScopeKind::SingleThread
+               ? "singlethread"
+               : "";
+  return std::nullopt;
+}
+
 mlir::LogicalResult CIRToLLVMAtomicCmpXchgOpLowering::matchAndRewrite(
     cir::AtomicCmpXchgOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -823,6 +857,19 @@ mlir::LogicalResult CIRToLLVMAtomicClearOpLowering::matchAndRewrite(
       /*isNonTemporal=*/false, /*isInvariantGroup=*/false, llvmOrder);
 
   rewriter.replaceOp(op, store);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMAtomicFenceLowering::matchAndRewrite(
+    cir::AtomicFence op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(adaptor.getOrdering());
+
+  auto fence = mlir::LLVM::FenceOp::create(rewriter, op.getLoc(), llvmOrder);
+  fence.setSyncscope(getLLVMSyncScope(adaptor.getSyncscope()));
+
+  rewriter.replaceOp(op, fence);
+
   return mlir::success();
 }
 
@@ -1962,10 +2009,10 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
-  if (auto inlineKind = op.getInlineKind()) {
-    fn.setNoInline(inlineKind == cir::InlineKind::NoInline);
-    fn.setInlineHint(inlineKind == cir::InlineKind::InlineHint);
-    fn.setAlwaysInline(inlineKind == cir::InlineKind::AlwaysInline);
+  if (std::optional<cir::InlineKind> inlineKind = op.getInlineKind()) {
+    fn.setNoInline(*inlineKind == cir::InlineKind::NoInline);
+    fn.setInlineHint(*inlineKind == cir::InlineKind::InlineHint);
+    fn.setAlwaysInline(*inlineKind == cir::InlineKind::AlwaysInline);
   }
 
   fn.setVisibility_Attr(mlir::LLVM::VisibilityAttr::get(
@@ -2038,9 +2085,11 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
     cir::GlobalOp op, mlir::Attribute init,
     mlir::ConversionPatternRewriter &rewriter) const {
   // TODO: Generalize this handling when more types are needed here.
-  assert((isa<cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
-              cir::ConstPtrAttr, cir::ConstComplexAttr, cir::GlobalViewAttr,
-              cir::TypeInfoAttr, cir::VTableAttr, cir::ZeroAttr>(init)));
+  assert(
+      (isa<cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
+           cir::ConstPtrAttr, cir::ConstComplexAttr, cir::GlobalViewAttr,
+           cir::TypeInfoAttr, cir::UndefAttr, cir::VTableAttr, cir::ZeroAttr>(
+          init)));
 
   // TODO(cir): once LLVM's dialect has proper equivalent attributes this
   // should be updated. For now, we use a custom op to initialize globals
@@ -2098,8 +2147,8 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
     } else if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
                          cir::ConstRecordAttr, cir::ConstPtrAttr,
                          cir::ConstComplexAttr, cir::GlobalViewAttr,
-                         cir::TypeInfoAttr, cir::VTableAttr, cir::ZeroAttr>(
-                   init.value())) {
+                         cir::TypeInfoAttr, cir::UndefAttr, cir::VTableAttr,
+                         cir::ZeroAttr>(init.value())) {
       // TODO(cir): once LLVM's dialect has proper equivalent attributes this
       // should be updated. For now, we use a custom op to initialize globals
       // to the appropriate value.
@@ -3952,6 +4001,13 @@ mlir::LogicalResult CIRToLLVMGetBitfieldOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMIsConstantOpLowering::matchAndRewrite(
+    cir::IsConstantOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::IsConstantOp>(op, adaptor.getVal());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
     cir::InlineAsmOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -4034,6 +4090,18 @@ mlir::LogicalResult CIRToLLVMVAEndOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMVACopyOpLowering::matchAndRewrite(
+    cir::VACopyOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto opaquePtr = mlir::LLVM::LLVMPointerType::get(getContext());
+  auto dstList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
+                                               adaptor.getDstList());
+  auto srcList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
+                                               adaptor.getSrcList());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::VaCopyOp>(op, dstList, srcList);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMVAArgOpLowering::matchAndRewrite(
     cir::VAArgOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -4053,6 +4121,12 @@ mlir::LogicalResult CIRToLLVMVAArgOpLowering::matchAndRewrite(
 
 mlir::LogicalResult CIRToLLVMBlockAddressOpLowering::matchAndRewrite(
     cir::BlockAddressOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return mlir::failure();
+}
+
+mlir::LogicalResult CIRToLLVMIndirectBrOpLowering::matchAndRewrite(
+    cir::IndirectBrOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   return mlir::failure();
 }

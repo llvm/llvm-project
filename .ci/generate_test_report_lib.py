@@ -62,6 +62,18 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
         # aligned with the failure.
         failing_action = ninja_log[index].split("FAILED: ")[1]
         failure_log = []
+
+        # Parse the lines above the FAILED: string if the line does not come
+        # immediately after a progress indicator to ensure that we capture the
+        # entire failure message.
+        if not ninja_log[index - 1].startswith("["):
+            before_index = index - 1
+            while before_index > 0 and not ninja_log[before_index].startswith("["):
+                failure_log.append(ninja_log[before_index])
+                before_index = before_index - 1
+            failure_log.reverse()
+
+        # Parse the failure information, which comes after the FAILED: tag.
         while (
             index < len(ninja_log)
             and not ninja_log[index].startswith("[")
@@ -184,8 +196,8 @@ def generate_report(
         if return_code == 0:
             report.extend(
                 [
-                    "The build succeeded and no tests ran. This is expected in some "
-                    "build configurations."
+                    ":white_check_mark: The build succeeded and no tests ran. "
+                    "This is expected in some build configurations."
                 ]
             )
         else:
@@ -272,6 +284,10 @@ def generate_report(
                 ]
             )
             report.extend(_format_failures(ninja_failures, failure_explanations))
+    else:
+        report.extend(
+            ["", ":white_check_mark: The build succeeded and all tests passed."]
+        )
 
     if failures or return_code != 0:
         report.extend(["", UNRELATED_FAILURES_STR])

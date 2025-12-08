@@ -1415,6 +1415,18 @@ template <typename ContainerTy> auto make_second_range(ContainerTy &&c) {
       });
 }
 
+/// Return a range that conditionally reverses \p C. The collection is iterated
+/// in reverse if \p ShouldReverse is true (otherwise, it is iterated forwards).
+template <typename ContainerTy>
+[[nodiscard]] auto reverse_conditionally(ContainerTy &&C, bool ShouldReverse) {
+  using IterTy = detail::IterOfRange<ContainerTy>;
+  using ReferenceTy = typename std::iterator_traits<IterTy>::reference;
+  return map_range(zip_equal(reverse(C), C),
+                   [ShouldReverse](auto I) -> ReferenceTy {
+                     return ShouldReverse ? std::get<0>(I) : std::get<1>(I);
+                   });
+}
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <utility>
 //===----------------------------------------------------------------------===//
