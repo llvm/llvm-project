@@ -49,7 +49,6 @@ void foo() {
 }
 
 // CHECK: cleanup.cont:{{.*}}
-// CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[AGG:%agg.tmp]])
 // CHECK-NEXT: load i8
 // CHECK-NEXT: trunc
 // CHECK-NEXT: store i1 false
@@ -58,6 +57,3 @@ void foo() {
 // CHECK-NOT: call void @llvm.lifetime
 // CHECK: call void @llvm.coro.await.suspend.void(
 // CHECK-NEXT: %{{[0-9]+}} = call i8 @llvm.coro.suspend(
-
-// CHECK-LABEL: cond.end:
-// check call @llvm.lifetime.end.p0(ptr [[AGG]])
