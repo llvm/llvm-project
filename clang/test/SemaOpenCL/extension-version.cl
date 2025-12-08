@@ -331,6 +331,12 @@
 #endif
 #pragma OPENCL EXTENSION cl_khr_depth_images : enable
 
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 100)
+#ifndef cl_intel_bfloat16_conversion
+#error "Missing cl_intel_bfloat16_conversion define"
+#endif
+#endif
+
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
 #ifndef cl_intel_subgroups
 #error "Missing cl_intel_subgroups define"
