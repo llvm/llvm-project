@@ -48,9 +48,8 @@ std::optional<EntityName> getEntityName(const Decl* D) {
   }
 
   llvm::SmallString<128> USRBuf;
-  if (clang::index::generateUSRForDecl(USRDecl, USRBuf)) {
+  if (clang::index::generateUSRForDecl(USRDecl, USRBuf))
     return std::nullopt;
-  }
 
   if (USRBuf.empty())
     return std::nullopt;
