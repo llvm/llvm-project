@@ -186,7 +186,7 @@ public:
   }
 
   bool hasCLZLike() const {
-    return HasStdExtZbb || HasStdExtP || HasVendorXTHeadBb ||
+    return HasStdExtZbb || HasVendorXTHeadBb ||
            (HasVendorXCVbitmanip && !IsRV64);
   }
   bool hasCTZLike() const {
@@ -196,7 +196,7 @@ public:
     return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
   }
   bool hasREV8Like() const {
-    return HasStdExtZbb || HasStdExtZbkb || HasStdExtP || HasVendorXTHeadBb;
+    return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
   }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }

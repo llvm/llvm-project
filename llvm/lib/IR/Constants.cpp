@@ -960,8 +960,10 @@ ConstantInt *ConstantInt::get(LLVMContext &Context, ElementCount EC,
   return Slot.get();
 }
 
-Constant *ConstantInt::get(Type *Ty, uint64_t V, bool isSigned) {
-  Constant *C = get(cast<IntegerType>(Ty->getScalarType()), V, isSigned);
+Constant *ConstantInt::get(Type *Ty, uint64_t V, bool IsSigned,
+                           bool ImplicitTrunc) {
+  Constant *C =
+      get(cast<IntegerType>(Ty->getScalarType()), V, IsSigned, ImplicitTrunc);
 
   // For vectors, broadcast the value.
   if (VectorType *VTy = dyn_cast<VectorType>(Ty))
@@ -970,11 +972,10 @@ Constant *ConstantInt::get(Type *Ty, uint64_t V, bool isSigned) {
   return C;
 }
 
-ConstantInt *ConstantInt::get(IntegerType *Ty, uint64_t V, bool isSigned) {
-  // TODO: Avoid implicit trunc?
-  // See https://github.com/llvm/llvm-project/issues/112510.
+ConstantInt *ConstantInt::get(IntegerType *Ty, uint64_t V, bool IsSigned,
+                              bool ImplicitTrunc) {
   return get(Ty->getContext(),
-             APInt(Ty->getBitWidth(), V, isSigned, /*implicitTrunc=*/true));
+             APInt(Ty->getBitWidth(), V, IsSigned, ImplicitTrunc));
 }
 
 Constant *ConstantInt::get(Type *Ty, const APInt& V) {
