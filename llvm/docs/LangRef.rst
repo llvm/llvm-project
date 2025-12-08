@@ -21407,7 +21407,7 @@ This intrinsic is not supported on all targets. Some targets may not support
 all rounding modes.
 
 '``llvm.convert.to.arbitrary.fp``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -21446,20 +21446,53 @@ Arguments:
   accepted by :ref:`llvm.fptrunc.round <int_fptrunc_round>` (for example,
   ``"round.tonearest"`` or ``"round.towardzero"``).
 
+  The rounding mode is only consulted when ``value`` is not exactly representable in the target format.
+  If the value is exactly representable, all rounding modes produce the same result.
+
 ``saturation``
-  A compile-time constant boolean value (``i1``). When ``true``, values outside the
-  representable range of the target format are clamped to the minimum or maximum normal value.
-  When ``false``, no saturation is applied. This parameter must be an immediate constant.
+  A compile-time constant boolean value (``i1``). This parameter controls how overflow is handled
+  when values exceed the representable finite range of the target format:
+
+  - When ``true``: overflowing values are clamped to the minimum or maximum representable finite value
+    (saturating to the largest negative finite value or largest positive finite value).
+  - When ``false``: overflowing values are converted to infinity (preserving sign of the original value) if the
+    target format supports infinity, or return a poison value if infinity is not supported
+    by the target format.
+
+  This parameter must be an immediate constant.
 
 Semantics:
 """"""""""
 
 The intrinsic converts the native LLVM floating-point value to the arbitrary FP
 format specified by ``interpretation``, applying the requested rounding mode and
-saturation behavior. The result is returned as an integer (e.g., ``i8`` for FP8,
-``i6`` for FP6) containing the encoded arbitrary FP bits. When saturation is enabled,
-values that exceed the representable range are clamped to the minimum or maximum
-normal value of the target format.
+saturation behavior. The conversion is performed in two steps: first, the value is
+rounded according to the specified rounding mode to fit the target format's precision;
+then, if the rounded result exceeds the target format's representable range, saturation
+is applied according to the ``saturation`` parameter. The result is returned as an
+integer (e.g., ``i8`` for FP8, ``i6`` for FP6) containing the encoded arbitrary FP bits.
+
+**Handling of special values:**
+
+- **NaN**: If the input is NaN and the target format supports NaN, it is converted to a NaN
+  representation in the target format. The exact NaN payload and quiet/signaling status are
+  implementation-defined; implementations may preserve them when the target supports it.
+  If the target format does not support NaN, the intrinsic returns a poison value.
+- **Infinity**: If the input is +/-Inf:
+
+  - When ``saturation`` is ``false`` and the target format supports infinity, +/-Inf is preserved.
+  - When ``saturation`` is ``false`` and the target format does not support infinity (e.g., formats
+    with "FN" suffix), the intrinsic returns a poison value.
+  - When ``saturation`` is ``true``, +/-Inf is clamped to the maximum/minimum representable finite value.
+
+- **Overflow**: When a finite value exceeds the representable range:
+
+  - When ``saturation`` is ``true``, the value is clamped to the maximum/minimum representable finite value.
+  - When ``saturation`` is ``false`` and the target format supports infinity, the value becomes +/-Inf.
+  - When ``saturation`` is ``false`` and the target format does not support infinity, the intrinsic
+    returns a poison value.
+
+For FP6/FP4 interpretations, producers are expected to use ``saturation`` = ``true``; using ``saturation`` = ``false`` and generating NaN/Inf/overflowing values is undefined (poison).
 
 Example:
 """"""""
@@ -21477,7 +21510,7 @@ Example:
           metadata !"round.towardzero", i1 true)
 
 '``llvm.convert.from.arbitrary.fp``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -21485,8 +21518,7 @@ Syntax:
 ::
 
       declare <fNxM> @llvm.convert.from.arbitrary.fp.<fNxM>.<iNxM>(
-          <iNxM> <value>, metadata <interpretation>,
-          metadata <rounding mode>, i1 <saturation>)
+          <iNxM> <value>, metadata <interpretation>)
 
 Overview:
 """""""""
@@ -21510,24 +21542,20 @@ Arguments:
   - FP6 formats: ``"Float6E3M2FN"``, ``"Float6E2M3FN"``
   - FP4 formats: ``"Float4E2M1FN"``
 
-``rounding mode``
-  A metadata string specifying the rounding mode. The permitted strings match those
-  accepted by :ref:`llvm.fptrunc.round <int_fptrunc_round>` (for example,
-  ``"round.tonearest"`` or ``"round.towardzero"``).
-
-``saturation``
-  A compile-time constant boolean value (``i1``). When ``true``, values outside the
-  representable range of the target format are clamped to the minimum or maximum normal value.
-  When ``false``, no saturation is applied. This parameter must be an immediate constant.
-
 Semantics:
 """"""""""
 
 The intrinsic interprets the integer value as arbitrary FP bits according to
-``interpretation``, then converts to the native LLVM floating-point result type,
-applying the requested rounding mode and saturation behavior. When saturation is
-enabled, values that exceed the representable range of the target format are
-clamped to the minimum or maximum normal value.
+``interpretation``, then converts to the native LLVM floating-point result type.
+
+Conversions from arbitrary FP formats to native LLVM floating-point types are typically
+widening conversions (e.g., FP8 to FP16 or FP32), which are exact and require no rounding.
+Normal finite values are converted exactly. NaN values in the source format are converted to
+NaN in the target format. The exact NaN payload and quiet/signaling status are
+implementation-defined; implementations may preserve them when the target supports it.
+Infinity values are preserved as infinity. If a value exceeds the representable range of the
+target type (for example, converting ``Float8E8M0FNU`` with large exponents to ``half``),
+the result is converted to infinity with the appropriate sign.
 
 Example:
 """"""""
@@ -21536,13 +21564,11 @@ Example:
 
       ; Convert FP8 E4M3 bits to half
       %half_val = call half @llvm.convert.from.arbitrary.fp.f16.i8(
-          i8 %fp8bits, metadata !"Float8E4M3",
-          metadata !"round.tonearest", i1 false)
+          i8 %fp8bits, metadata !"Float8E4M3")
 
       ; Convert vector of FP8 E5M2 bits to float
       %vec_float = call <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i8(
-          <4 x i8> %fp8_values, metadata !"Float8E5M2",
-          metadata !"round.tonearest", i1 false)
+          <4 x i8> %fp8_values, metadata !"Float8E5M2")
 
 Convergence Intrinsics
 ----------------------

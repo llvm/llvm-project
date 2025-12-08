@@ -1104,8 +1104,8 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
   def int_convert_from_arbitrary_fp
       : DefaultAttrsIntrinsic<
             [ llvm_anyfloat_ty ],
-            [ llvm_anyint_ty, llvm_metadata_ty, llvm_metadata_ty, llvm_i1_ty ],
-            [ IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>> ]>;
+            [ llvm_anyint_ty, llvm_metadata_ty ],
+            [ IntrNoMem, IntrSpeculatable ]>;
 
   def int_canonicalize : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
                                    [IntrNoMem]>;

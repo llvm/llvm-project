@@ -284,6 +284,11 @@ namespace Intrinsic {
   /// N.
   LLVM_ABI Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor);
 
+  /// Returns true if the given string is a valid arbitrary floating-point
+  /// format interpretation for llvm.convert.to.arbitrary.fp and
+  /// llvm.convert.from.arbitrary.fp intrinsics.
+  LLVM_ABI bool isValidArbitraryFPFormat(StringRef Format);
+
   } // namespace Intrinsic
 
   } // namespace llvm
