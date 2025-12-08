@@ -185,7 +185,7 @@ def testStandardTypeCasts():
     try:
         tillegal = IntegerType(Type.parse("f32", ctx))
     except ValueError as e:
-        # CHECK: ValueError: Cannot cast type to IntegerType (from Type(f32))
+        # CHECK: ValueError: Cannot cast type to IntegerType (from F32Type(f32))
         print("ValueError:", e)
     else:
         print("Exception not produced")
@@ -302,7 +302,7 @@ def testComplexType():
         try:
             complex_invalid = ComplexType.get(index)
         except ValueError as e:
-            # CHECK: invalid 'Type(index)' and expected floating point or integer type.
+            # CHECK: Invalid element type for ComplexType: expected floating point or integer type.
             print(e)
         else:
             print("Exception not produced")
@@ -714,7 +714,8 @@ def testTypeIDs():
         # mlirTypeGetTypeID(self) for an instance.
         # CHECK: all equal
         for t1, t2 in types:
-            tid1, tid2 = t1.static_typeid, Type(t2).typeid
+            # TODO: remove the alternative once mlir_type_subclass transition is complete.
+            tid1, tid2 = t1.static_typeid if hasattr(t1, "static_typeid") else t1.get_static_typeid(), Type(t2).typeid
             assert tid1 == tid2 and hash(tid1) == hash(
                 tid2
             ), f"expected hash and value equality {t1} {t2}"
@@ -728,7 +729,9 @@ def testTypeIDs():
 
         # CHECK: all equal
         for t1, t2 in typeid_dict.items():
-            assert t1.static_typeid == t2.typeid and hash(t1.static_typeid) == hash(
+            # TODO: remove the alternative once mlir_type_subclass transition is complete.
+            tid1 = t1.static_typeid if hasattr(t1, "static_typeid") else t1.get_static_typeid()
+            assert tid1 == t2.typeid and hash(tid1) == hash(
                 t2.typeid
             ), f"expected hash and value equality {t1} {t2}"
         else:

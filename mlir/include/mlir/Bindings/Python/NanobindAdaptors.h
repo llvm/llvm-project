@@ -371,16 +371,22 @@ struct type_caster<MlirTypeID> {
     }
     return false;
   }
-  static handle from_cpp(MlirTypeID v, rv_policy,
-                         cleanup_list *cleanup) noexcept {
+
+  static handle
+  from_cpp_given_module(MlirTypeID v,
+                        const nanobind::module_ &module) noexcept {
     if (v.ptr == nullptr)
       return nanobind::none();
     nanobind::object capsule =
         nanobind::steal<nanobind::object>(mlirPythonTypeIDToCapsule(v));
-    return mlir::python::irModule()
-        .attr("TypeID")
+    return module.attr("TypeID")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
+  }
+
+  static handle from_cpp(MlirTypeID v, rv_policy,
+                         cleanup_list *cleanup) noexcept {
+    return from_cpp_given_module(v, mlir::python::irModule());
   };
 };
 
@@ -602,9 +608,12 @@ public:
   /// Subclasses by looking up the super-class dynamically.
   mlir_type_subclass(nanobind::handle scope, const char *typeClassName,
                      IsAFunctionTy isaFunction,
-                     GetTypeIDFunctionTy getTypeIDFunction = nullptr)
-      : mlir_type_subclass(scope, typeClassName, isaFunction,
-                           irModule().attr("Type"), getTypeIDFunction) {}
+                     GetTypeIDFunctionTy getTypeIDFunction = nullptr,
+                     const nanobind::module_ *mlirIrModule = nullptr)
+      : mlir_type_subclass(
+            scope, typeClassName, isaFunction,
+            (mlirIrModule != nullptr ? *mlirIrModule : irModule()).attr("Type"),
+            getTypeIDFunction, mlirIrModule) {}
 
   /// Subclasses with a provided mlir.ir.Type super-class. This must
   /// be used if the subclass is being defined in the same extension module
@@ -613,7 +622,8 @@ public:
   mlir_type_subclass(nanobind::handle scope, const char *typeClassName,
                      IsAFunctionTy isaFunction,
                      const nanobind::object &superCls,
-                     GetTypeIDFunctionTy getTypeIDFunction = nullptr)
+                     GetTypeIDFunctionTy getTypeIDFunction = nullptr,
+                     const nanobind::module_ *mlirIrModule = nullptr)
       : pure_subclass(scope, typeClassName, superCls) {
     // Casting constructor. Note that it is hard, if not impossible, to properly
     // call chain to parent `__init__` in nanobind due to its special handling
@@ -672,9 +682,18 @@ public:
           nanobind::sig("def get_static_typeid() -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID"))
           // clang-format on
       );
-      nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
-          .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(
-              getTypeIDFunction())(nanobind::cpp_function(
+
+      // Directly call the caster implementation given the "ir" module,
+      // otherwise it may trigger recursive import as the default caster
+      // attempts to import the "ir" module.
+      MlirTypeID typeID = getTypeIDFunction();
+      mlirIrModule = mlirIrModule ? mlirIrModule : &irModule();
+      nanobind::handle pyTypeID =
+          nanobind::detail::type_caster<MlirTypeID>::from_cpp_given_module(
+              typeID, *mlirIrModule);
+
+      mlirIrModule->attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(pyTypeID)(
+          nanobind::cpp_function(
               [thisClass = thisClass](const nanobind::object &mlirType) {
                 return thisClass(mlirType);
               }));
