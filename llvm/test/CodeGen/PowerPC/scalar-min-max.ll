@@ -5,6 +5,7 @@
 ; RUN: llc -mcpu=pwr8 -ppc-asm-full-reg-names -verify-machineinstrs \
 ; RUN:   -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s \
 ; RUN:   --check-prefix=P8
+
 define dso_local float @testfmax(float %a, float %b) local_unnamed_addr {
 ; P9-LABEL: testfmax:
 ; P9:       # %bb.0: # %entry
@@ -25,11 +26,6 @@ entry:
 }
 
 define double @testdmax(double %a, double %b) local_unnamed_addr {
-; CHECK-LABEL: testdmax:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsmaxdp f1, f1, f2
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testdmax:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xsmaxcdp f1, f1, f2
@@ -87,11 +83,6 @@ entry:
 }
 
 define dso_local float @testfmax_fast(float %a, float %b) local_unnamed_addr {
-; CHECK-LABEL: testfmax_fast:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsmaxdp f1, f1, f2
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testfmax_fast:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f2
@@ -107,11 +98,6 @@ entry:
   ret float %cond
 }
 define dso_local double @testdmax_fast(double %a, double %b) local_unnamed_addr {
-; CHECK-LABEL: testdmax_fast:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsmaxdp f1, f1, f2
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testdmax_fast:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f2
@@ -127,11 +113,6 @@ entry:
   ret double %cond
 }
 define dso_local float @testfmin_fast(float %a, float %b) local_unnamed_addr {
-; CHECK-LABEL: testfmin_fast:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsmindp f1, f1, f2
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testfmin_fast:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xsmindp f1, f1, f2
@@ -147,11 +128,6 @@ entry:
   ret float %cond
 }
 define dso_local double @testdmin_fast(double %a, double %b) local_unnamed_addr {
-; CHECK-LABEL: testdmin_fast:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsmindp f1, f1, f2
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testdmin_fast:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xsmindp f1, f1, f2
@@ -168,11 +144,6 @@ entry:
 }
 
 define float @testfminnum(float %a, float %b) {
-; CHECK-LABEL: testfminnum:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsmindp f1, f1, f2
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testfminnum:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xsmindp f1, f1, f2
@@ -188,11 +159,6 @@ entry:
 }
 
 define float @testfmaxnum(float %a, float %b) {
-; CHECK-LABEL: testfmaxnum:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsmaxdp f1, f1, f2
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testfmaxnum:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f2
@@ -208,11 +174,6 @@ entry:
 }
 
 define float @testfcanonicalize(float %a) {
-; CHECK-LABEL: testfcanonicalize:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsmaxdp f1, f1, f1
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testfcanonicalize:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f1
@@ -228,11 +189,6 @@ entry:
 }
 
 define double @testdminnum(double %a, double %b) {
-; CHECK-LABEL: testdminnum:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsmindp f1, f1, f2
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testdminnum:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xsmindp f1, f1, f2
@@ -248,11 +204,6 @@ entry:
 }
 
 define double @testdmaxnum(double %a, double %b) {
-; CHECK-LABEL: testdmaxnum:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsmaxdp f1, f1, f2
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testdmaxnum:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f2
@@ -268,11 +219,6 @@ entry:
 }
 
 define double @testdcanonicalize(double %a) {
-; CHECK-LABEL: testdcanonicalize:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsmaxdp f1, f1, f1
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testdcanonicalize:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f1
@@ -288,11 +234,6 @@ entry:
 }
 
 define <4 x float> @testfminnum_v4f32(<4 x float> %a, <4 x float> %b) {
-; CHECK-LABEL: testfminnum_v4f32:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvminsp vs34, vs34, vs35
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testfminnum_v4f32:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xvminsp vs34, vs34, vs35
@@ -308,11 +249,6 @@ entry:
 }
 
 define <4 x float> @testfmaxnum_v4f32(<4 x float> %a, <4 x float> %b) {
-; CHECK-LABEL: testfmaxnum_v4f32:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmaxsp vs34, vs34, vs35
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testfmaxnum_v4f32:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xvmaxsp vs34, vs34, vs35
@@ -328,11 +264,6 @@ entry:
 }
 
 define <4 x float> @testfcanonicalize_v4f32(<4 x float> %a) {
-; CHECK-LABEL: testfcanonicalize_v4f32:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmaxsp vs34, vs34, vs34
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testfcanonicalize_v4f32:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xvmaxsp vs34, vs34, vs34
@@ -348,11 +279,6 @@ entry:
 }
 
 define <2 x double> @testdminnum_v2f64(<2 x double> %a, <2 x double> %b) {
-; CHECK-LABEL: testdminnum_v2f64:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmindp vs34, vs34, vs35
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testdminnum_v2f64:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xvmindp vs34, vs34, vs35
@@ -368,11 +294,6 @@ entry:
 }
 
 define <2 x double> @testdmaxnum_v2f64(<2 x double> %a, <2 x double> %b) {
-; CHECK-LABEL: testdmaxnum_v2f64:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmaxdp vs34, vs34, vs35
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testdmaxnum_v2f64:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xvmaxdp vs34, vs34, vs35
@@ -388,11 +309,6 @@ entry:
 }
 
 define <2 x double> @testdcanonicalize_v2f64(<2 x double> %a) {
-; CHECK-LABEL: testdcanonicalize_v2f64:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvmaxdp vs34, vs34, vs34
-; CHECK-NEXT:    blr
-;
 ; NO-FAST-P9-LABEL: testdcanonicalize_v2f64:
 ; NO-FAST-P9:       # %bb.0: # %entry
 ; NO-FAST-P9-NEXT:    xvmaxdp vs34, vs34, vs34
