@@ -1,4 +1,5 @@
 #include "clang/CIR/Analysis/FallThroughWarning.h"
+#include "mlir/IR/OpDefinition.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
@@ -130,7 +131,6 @@ bool isPhonyReturn(cir::ReturnOp returnOp) {
 
   auto returnValue = returnOp.getInput()[0];
 
-  // Check if the return value comes from a load operation
   auto loadOp = returnValue.getDefiningOp<cir::LoadOp>();
   if (!loadOp)
     return false;
@@ -145,19 +145,23 @@ bool isPhonyReturn(cir::ReturnOp returnOp) {
   if (name != "__retval")
     return false;
 
-  // Check if the alloca has any stores to it (if not, it's uninitialized)
-  // We need to search for store operations that write to this alloca
+  // Check if there are ANY stores to __retval in the entire function.
+  // This is intentionally path-INsensitive - if there are stores on some
+  // paths, then this return is considered non-phony.
+  // The control flow analysis (hasLiveReturn + hasPlainEdge) will determine
+  // if all paths return properly.
   mlir::Value allocaResult = allocaOp.getResult();
 
   for (auto *user : allocaResult.getUsers()) {
     if (auto storeOp = dyn_cast<cir::StoreOp>(user)) {
-      // If there's a store to this alloca, it's not phony
-      // (assuming the store happens before the load in control flow)
-      return false;
+      if (storeOp.getAddr() == allocaResult) {
+        // There's a store to __retval somewhere - not a phony return
+        return false;
+      }
     }
   }
 
-  // No stores found to __retval alloca - this is a phony return
+  // No stores to __retval anywhere - this is a phony return (uninitialized)
   return true;
 }
 
@@ -190,8 +194,13 @@ void FallThroughWarningPass::checkFallThroughForFuncBody(
     const CheckFallThroughDiagnostics &cd) {
 
   auto *d = getDeclByName(s.getASTContext(), cfg.getName());
-  auto *body = d->getBody();
   assert(d && "we need non null decl");
+  auto *body = d->getBody();
+
+  // Functions without bodies (declarations only) don't need fall-through
+  // analysis
+  if (!body)
+    return;
 
   bool returnsVoid = false;
   bool hasNoReturn = false;

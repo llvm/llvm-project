@@ -5066,6 +5066,12 @@ bool CompilerInvocation::CreateFromArgsImpl(
       isCodeGenAction(Res.getFrontendOpts().ProgramAction))
     Diags.Report(diag::warn_drv_openacc_without_cir);
 
+  // Enable CIR Fallthrough analysis LangOpt if requested
+  for (const auto &Analysis : Res.getFrontendOpts().ClangIRAnalysisList) {
+    if (Analysis == "fallthrough")
+      LangOpts.CIRFallThroughAnalysis = true;
+  }
+
   // Set the triple of the host for OpenMP device compile.
   if (LangOpts.OpenMPIsTargetDevice)
     Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;

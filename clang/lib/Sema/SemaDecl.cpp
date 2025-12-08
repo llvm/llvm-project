@@ -16525,6 +16525,9 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
           FD->hasAttr<NakedAttr>())
         WP.disableCheckFallThrough();
 
+      if (getLangOpts().CIRFallThroughAnalysis)
+        WP.disableCheckFallThrough();
+
       // MSVC permits the use of pure specifier (=0) on function definition,
       // defined at class scope, warn about this non-standard construct.
       if (getLangOpts().MicrosoftExt && FD->isPureVirtual() &&
