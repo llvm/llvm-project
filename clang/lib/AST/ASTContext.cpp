@@ -10532,6 +10532,21 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
       Second->getVectorKind() != VectorKind::RVVFixedLengthMask_4)
     return true;
 
+  // In OpenCL, treat half and _Float16 vector types as compatible.
+  if (getLangOpts().OpenCL &&
+      First->getNumElements() == Second->getNumElements()) {
+    QualType FirstElt = First->getElementType();
+    QualType SecondElt = Second->getElementType();
+
+    if ((FirstElt->isFloat16Type() && SecondElt->isHalfType()) ||
+        (FirstElt->isHalfType() && SecondElt->isFloat16Type())) {
+      if (First->getVectorKind() != VectorKind::AltiVecPixel &&
+          First->getVectorKind() != VectorKind::AltiVecBool &&
+          Second->getVectorKind() != VectorKind::AltiVecPixel &&
+          Second->getVectorKind() != VectorKind::AltiVecBool)
+        return true;
+    }
+  }
   return false;
 }
 
