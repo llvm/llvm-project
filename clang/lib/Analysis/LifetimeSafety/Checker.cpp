@@ -55,14 +55,14 @@ private:
   const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
   LifetimeSafetyReporter *Reporter;
-  AnalysisDeclContext &AC;
+  ASTContext &AC;
 
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                   const LiveOriginsAnalysis &LiveOrigins, const FactManager &FM,
                   AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter)
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
-        Reporter(Reporter), AC(ADC) {
+        Reporter(Reporter), AC(ADC.getASTContext()) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -164,15 +164,15 @@ public:
   }
 
   void inferAnnotations() {
-    /// NOTE: This currently only adds the attribute to the function definition
-    /// being analyzed. For full inter-procedural inference to work reliably
-    /// (e.g., with out-of-order definitions), this attribute would also need to
-    /// be added to all other redeclarations of the function.
+    // FIXME: To maximise inference propagation, functions should be analyzed in
+    // post-order of the call graph, allowing inferred annotations to propagate
+    // through the call chain
+    // FIXME: Add the inferred attribute to all redeclarations of the function,
+    // not just the definition being analyzed.
     for (const auto &[ConstPVD, EscapeExpr] : AnnotationWarningsMap) {
       ParmVarDecl *PVD = const_cast<ParmVarDecl *>(ConstPVD);
-      ASTContext &Ctx = AC.getASTContext();
-      auto *Attr = LifetimeBoundAttr::CreateImplicit(Ctx, SourceLocation());
-      PVD->addAttr(Attr);
+      if (!PVD->hasAttr<LifetimeBoundAttr>())
+        PVD->addAttr(LifetimeBoundAttr::CreateImplicit(AC, PVD->getLocation()));
     }
   }
 };

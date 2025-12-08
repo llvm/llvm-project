@@ -93,6 +93,7 @@ void test_getView_on_temporary() {
 // Annotation Inference Test Cases
 //===----------------------------------------------------------------------===//
 
+namespace correct_order_inference {
 View return_view_by_func (View a) {    // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
   return return_view_directly(a);      // expected-note {{param returned here}}
 }
@@ -100,6 +101,33 @@ View return_view_by_func (View a) {    // expected-warning {{param should be mar
 MyObj* return_pointer_by_func (MyObj* a) {         // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
   return return_pointer_object(a);                 // expected-note {{param returned here}} 
 }
+} // correct_order_inference
+
+namespace incorrect_order_inference_view {
+View return_view_callee(View a);
+
+// FIXME: No lifetime annotation suggestion when functions are not present in the callee-before-caller pattern
+View return_view_caller(View a) {
+  return return_view_callee(a);
+}
+
+View return_view_callee(View a) {     // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return a;                           // expected-note {{param returned here}}
+}   
+} // incorrect_order_inference_view
+
+namespace incorrect_order_inference_object {
+View return_object_callee(View a);
+
+// FIXME: No lifetime annotation suggestion warning when functions are not present in the callee-before-caller pattern
+View return_object_caller(View a) {
+  return return_object_callee(a);
+}
+
+View return_object_callee(View a) {     // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return a;                           // expected-note {{param returned here}}
+}   
+} // incorrect_order_inference_object
 
 //===----------------------------------------------------------------------===//
 // Negative Test Cases
