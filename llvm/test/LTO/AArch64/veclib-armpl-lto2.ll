@@ -1,4 +1,3 @@
-; REQUIRES: aarch64-registered-target
 ; RUN: opt -module-summary %s -o %t.bc
 ; RUN: llvm-lto2 run -save-temps -o %t.o %t.bc \
 ; RUN:   -r=%t.bc,compute,px \

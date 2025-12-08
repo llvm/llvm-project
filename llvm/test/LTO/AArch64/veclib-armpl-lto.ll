@@ -1,4 +1,3 @@
-; REQUIRES: aarch64-registered-target
 ; RUN: llvm-as %s -o %t.bc
 ; RUN: llvm-lto -exported-symbol=compute -exported-symbol=armpl_vsinq_f64 -o %t.o %t.bc
 ; RUN: llvm-nm %t.o | FileCheck %s
