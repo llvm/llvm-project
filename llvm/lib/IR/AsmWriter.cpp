@@ -107,6 +107,11 @@ static cl::opt<bool> PreserveAssemblyUseListOrder(
     "preserve-ll-uselistorder", cl::Hidden, cl::init(false),
     cl::desc("Preserve use-list order when writing LLVM assembly."));
 
+static cl::opt<bool>
+    PrintSymbolicAddressSpace("print-sym-addr-space", cl::Hidden,
+                              cl::init(false),
+                              cl::desc("Print symbolic address space names"));
+
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
 
@@ -638,7 +643,9 @@ static void printAddressSpace(const Module *M, unsigned AS, raw_ostream &OS,
   if (AS == 0 && !ForcePrint)
     return;
   OS << Prefix << "addrspace(";
-  StringRef ASName = M ? M->getDataLayout().getAddressSpaceName(AS) : "";
+  StringRef ASName = PrintSymbolicAddressSpace && M
+                         ? M->getDataLayout().getAddressSpaceName(AS)
+                         : "";
   if (!ASName.empty())
     OS << "\"" << ASName << "\"";
   else
