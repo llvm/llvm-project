@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -Wno-experimental-lifetime-safety-suggestions -verify %s
 
 struct MyObj {
   int id;
@@ -550,6 +550,20 @@ const int& get_ref_to_local() {
     int a = 42;
     return a;         // expected-warning {{address of stack memory is returned later}}
                       // expected-note@-1 {{returned here}}
+}
+
+View inference_callee_return_identity(View a) {
+  return a;
+}
+
+View inference_caller_forwards_callee(View a) {
+  return inference_callee_return_identity(a);
+}
+
+View inference_top_level_return_stack_view() {
+  MyObj local_stack;
+  return inference_caller_forwards_callee(local_stack);     // expected-warning {{address of stack memory is returned later}}
+                                                            // expected-note@-1 {{returned here}}
 }
 
 //===----------------------------------------------------------------------===//

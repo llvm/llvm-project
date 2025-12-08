@@ -90,6 +90,18 @@ void test_getView_on_temporary() {
 }
 
 //===----------------------------------------------------------------------===//
+// Annotation Inference Test Cases
+//===----------------------------------------------------------------------===//
+
+View return_view_by_func (View a) {    // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return return_view_directly(a);      // expected-note {{param returned here}}
+}
+
+MyObj* return_pointer_by_func (MyObj* a) {         // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return return_pointer_object(a);                 // expected-note {{param returned here}} 
+}
+
+//===----------------------------------------------------------------------===//
 // Negative Test Cases
 //===----------------------------------------------------------------------===//
 

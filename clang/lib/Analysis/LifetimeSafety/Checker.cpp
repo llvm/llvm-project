@@ -55,13 +55,14 @@ private:
   const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
   LifetimeSafetyReporter *Reporter;
+  AnalysisDeclContext &AC;
 
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                   const LiveOriginsAnalysis &LiveOrigins, const FactManager &FM,
                   AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter)
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
-        Reporter(Reporter) {
+        Reporter(Reporter), AC(ADC) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -70,6 +71,7 @@ public:
           checkAnnotations(OEF);
     issuePendingWarnings();
     suggestAnnotations();
+    inferAnnotations();
   }
 
   /// Checks if an escaping origin holds a placeholder loan, indicating a
@@ -159,6 +161,19 @@ public:
       return;
     for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap)
       Reporter->suggestAnnotation(PVD, EscapeExpr);
+  }
+
+  void inferAnnotations() {
+    /// NOTE: This currently only adds the attribute to the function definition
+    /// being analyzed. For full inter-procedural inference to work reliably
+    /// (e.g., with out-of-order definitions), this attribute would also need to
+    /// be added to all other redeclarations of the function.
+    for (const auto &[ConstPVD, EscapeExpr] : AnnotationWarningsMap) {
+      ParmVarDecl *PVD = const_cast<ParmVarDecl *>(ConstPVD);
+      ASTContext &Ctx = AC.getASTContext();
+      auto *Attr = LifetimeBoundAttr::CreateImplicit(Ctx, SourceLocation());
+      PVD->addAttr(Attr);
+    }
   }
 };
 } // namespace
