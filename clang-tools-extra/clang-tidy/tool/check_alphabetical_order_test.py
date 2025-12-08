@@ -164,7 +164,7 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             )
 
             self.assertEqual(out, expected_out)
-            self.assertIn("not normalized", buf.getvalue())
+            self.assertIn("not alphabetically sorted", buf.getvalue())
 
     def test_process_release_notes_prioritizes_sorting_over_duplicates(self) -> None:
         # Sorting is incorrect and duplicates exist, should report ordering issues first.
@@ -201,7 +201,7 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
                 rc = _mod.process_release_notes(out_path, rn_doc)
             self.assertEqual(rc, 0)
             self.assertIn(
-                "Note: 'ReleaseNotes.rst' is not normalized; Please fix ordering first.",
+                "Entries in 'clang-tools-extra/docs/ReleaseNotes.rst' are not alphabetically sorted.",
                 buf.getvalue(),
             )
 
@@ -371,7 +371,14 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             out_doc = os.path.join(td, "out.rst")
             with open(in_doc, "w", encoding="utf-8") as f:
                 f.write(list_text)
-            rc = _mod.process_checks_list(out_doc, in_doc)
+            buf = io.StringIO()
+            with redirect_stderr(buf):
+                rc = _mod.process_checks_list(out_doc, in_doc)
+            self.assertEqual(rc, 0)
+            self.assertIn(
+                "Checks in 'clang-tools-extra/docs/clang-tidy/checks/list.rst' csv-table are not alphabetically sorted.",
+                buf.getvalue(),
+            )
             self.assertEqual(rc, 0)
             with open(out_doc, "r", encoding="utf-8") as f:
                 out = f.read()
