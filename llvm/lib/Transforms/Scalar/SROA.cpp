@@ -5203,7 +5203,8 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // Returns a tuple with the following elements:
   //   - PartitionType: The computed type for this partition.
   //   - IsIntegerWideningViable: True if integer widening promotion is used.
-  //   - VectorType: The vector type if vector promotion is used, otherwise nullptr.
+  //   - VectorType: The vector type if vector promotion is used, otherwise
+  //   nullptr.
   auto SelectPartitionTy = [&]() -> std::tuple<Type *, bool, VectorType *> {
     // First check if the partition is viable for vetor promotion.
     //
