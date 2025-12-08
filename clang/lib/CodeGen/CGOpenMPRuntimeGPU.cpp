@@ -924,7 +924,12 @@ void CGOpenMPRuntimeGPU::emitNumThreadsClause(
     OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
     SourceLocation SeverityLoc, const Expr *Message,
     SourceLocation MessageLoc) {
-  // Nothing to do.
+  if (Modifier == OMPC_NUMTHREADS_strict) {
+    if (SeverityLoc.isValid())
+      emitSeverityClause(Severity, SeverityLoc);
+    if (MessageLoc.isValid())
+      emitMessageClause(CGF, Message, MessageLoc);
+  }
 }
 
 void CGOpenMPRuntimeGPU::emitNumTeamsClause(CodeGenFunction &CGF,
