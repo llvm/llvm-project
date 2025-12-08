@@ -416,12 +416,131 @@ public:
   }
 };
 
+class MultiRed2dOp : public OpConversionPattern<vector::MultiDimReductionOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(vector::MultiDimReductionOp reductionOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (reductionOp.getReductionDims().size() != 2)
+      return rewriter.notifyMatchFailure(reductionOp,
+                                         "Expected 2D multi reduction");
+
+    auto layout = xegpu::getDistributeLayoutAttr(reductionOp.getResult());
+
+    auto dims = llvm::to_vector(reductionOp.getReductionDims());
+    auto [intraLaneDim, crossLaneDim] = getReductionDimOrder(dims, layout);
+    // Order does not matter
+    if (intraLaneDim == -1 || crossLaneDim == -1) {
+      intraLaneDim = dims[0];
+      crossLaneDim = dims[1];
+    }
+    auto loc = reductionOp.getLoc();
+    // XeGPU transforms expect vector types
+    auto sourceVecType = reductionOp.getSourceVectorType();
+    auto acc = reductionOp.getAcc();
+    bool scalarAcc = !isa<VectorType>(acc.getType());
+    if (scalarAcc)
+      acc = vector::FromElementsOp::create(
+          rewriter, loc, VectorType::get({1}, sourceVecType.getElementType()),
+          acc);
+
+    // Preserve layout in the intermediate reduction (apart from the reduced
+    // dim)
+    auto sourceSliceLayoutAttr = cast<xegpu::SliceAttr>(layout);
+    SmallVector<int64_t> sliceDims{
+        sourceSliceLayoutAttr.getDims().asArrayRef()};
+    auto foundIt = std::find(sliceDims.begin(), sliceDims.end(), crossLaneDim);
+    assert(foundIt != sliceDims.end() &&
+           "Expected to find reduction dim in slice dims");
+    sliceDims.erase(foundIt);
+    auto intraLaneLayout = xegpu::SliceAttr::get(
+        reductionOp.getContext(), sourceSliceLayoutAttr.getParent(),
+        DenseI64ArrayAttr::get(getContext(), sliceDims));
+
+    // First we do intra-lane reduction
+    SmallVector<int64_t> accShape(sourceVecType.getShape());
+    accShape.erase(accShape.begin() + intraLaneDim);
+    // Add a dim to the lower-dim user-supplied acc
+    Value firstRedAcc = acc;
+    if (firstRedAcc) {
+      firstRedAcc = vector::BroadcastOp::create(
+          rewriter, loc,
+          VectorType::get(accShape, sourceVecType.getElementType()), acc);
+      xegpu::setDistributeLayoutAttr(
+          llvm::dyn_cast<OpResult>(firstRedAcc),
+          cast<xegpu::DistributeLayoutAttr>(intraLaneLayout));
+    }
+    Value intraLaneReduced = vector::MultiDimReductionOp::create(
+        rewriter, loc, reductionOp.getKind(), reductionOp.getSource(),
+        firstRedAcc, ArrayRef<int64_t>(intraLaneDim));
+    xegpu::setDistributeLayoutAttr(
+        llvm::dyn_cast<OpResult>(intraLaneReduced),
+        cast<xegpu::DistributeLayoutAttr>(intraLaneLayout));
+
+    // For scalar results, add a unit dim where intra lane dim was
+    if (scalarAcc) {
+      SmallVector<int64_t> vecTypeWithUnitDim{sourceVecType.getShape()};
+      vecTypeWithUnitDim[intraLaneDim] = 1;
+      intraLaneReduced = vector::ShapeCastOp::create(
+          rewriter, loc,
+          VectorType::get(vecTypeWithUnitDim, sourceVecType.getElementType()),
+          intraLaneReduced);
+      // Layout matches last reduction
+      xegpu::setDistributeLayoutAttr(llvm::dyn_cast<OpResult>(intraLaneReduced),
+                                     layout);
+    } else
+      crossLaneDim -= static_cast<int64_t>(intraLaneDim < crossLaneDim);
+    // Do cross-lane reduction
+    Value crossLaneReduced = vector::MultiDimReductionOp::create(
+        rewriter, loc, reductionOp.getKind(), intraLaneReduced, acc,
+        ArrayRef<int64_t>(crossLaneDim));
+    xegpu::setDistributeLayoutAttr(llvm::dyn_cast<OpResult>(crossLaneReduced),
+                                   layout);
+
+    if (scalarAcc)
+      crossLaneReduced =
+          vector::ExtractOp::create(rewriter, loc, crossLaneReduced, 0);
+    assert(crossLaneReduced.getType() == reductionOp.getResult().getType() &&
+           "Type mismatch");
+    rewriter.replaceOp(reductionOp, crossLaneReduced);
+    return success();
+  }
+
+private:
+  std::pair<int64_t, int64_t>
+  getReductionDimOrder(ArrayRef<int64_t> reductionDims,
+                       xegpu::DistributeLayoutAttr layout) const {
+    assert(layout.isForSubgroup() && "Must know the lane layout");
+    assert(reductionDims.size() == 2 && "Expected 2D reduction");
+    int64_t intra, cross = -1;
+    xegpu::LayoutAttr layoutAttr = dyn_cast<xegpu::LayoutAttr>(layout);
+    if (auto layoutSliceAttr = dyn_cast<xegpu::SliceAttr>(layout)) {
+      while (dyn_cast<xegpu::SliceAttr>(layoutSliceAttr.getParent()))
+        layoutSliceAttr =
+            dyn_cast<xegpu::SliceAttr>(layoutSliceAttr.getParent());
+      layoutAttr = dyn_cast<xegpu::LayoutAttr>(layoutSliceAttr.getParent());
+    }
+    assert(layoutAttr);
+    SmallVector<int64_t> laneLayout = layoutAttr.getEffectiveLaneLayoutAsInt();
+
+    assert(laneLayout.size() && "Expected a non-empty layout");
+    // try to pick a dim that does not communicate
+    for (auto dim : reductionDims) {
+      if (laneLayout[dim] == 1)
+        intra = dim;
+      else
+        cross = dim;
+    }
+    return {intra, cross};
+  }
+};
+
 } // namespace
 
 void xegpu::populateXeGPUOptimizeBlockLoadsPatterns(
     RewritePatternSet &patterns) {
   patterns.add<XeGPUCreateNdDescOpPattern, XeGPULoadNdDescOpPattern,
-               VectorExtractOpPattern>(patterns.getContext());
+               VectorExtractOpPattern, MultiRed2dOp>(patterns.getContext());
 }
 
 namespace {
@@ -473,6 +592,17 @@ struct XeGPUOptimizeBlockLoadsPass final
           auto laneData = layout.getEffectiveLaneDataAsInt();
           return !canBeOptimizedForTranspose(laneLayout, laneData);
         });
+
+    target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
+        [=](Operation *op) -> bool {
+          auto layout = xegpu::getDistributeLayoutAttr(op->getResult(0));
+          if (!layout || !layout.isForSubgroup())
+            return true;
+          if (auto reductionOp = dyn_cast<vector::MultiDimReductionOp>(op))
+            return reductionOp.getReductionDims().size() != 2;
+          return true;
+        });
+
     converter.addConversion([](Type type) { return type; });
 
     target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect,
