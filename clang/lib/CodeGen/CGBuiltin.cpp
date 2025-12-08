@@ -2503,8 +2503,6 @@ RValue CodeGenFunction::emitRotate(const CallExpr *E, bool IsRotateRight) {
     // the divisor (2) would be misinterpreted as -2 in 2-bit signed arithmetic.
     llvm::Value *One = ConstantInt::get(ShiftTy, 1);
     ShiftAmt = Builder.CreateAnd(ShiftAmt, One);
-    if (ShiftTy != Ty)
-      ShiftAmt = Builder.CreateIntCast(ShiftAmt, Ty, false);
   } else {
     unsigned ShiftAmtBitWidth = ShiftTy->getIntegerBitWidth();
     bool ShiftAmtIsSigned = E->getArg(1)->getType()->isSignedIntegerType();
@@ -2530,11 +2528,11 @@ RValue CodeGenFunction::emitRotate(const CallExpr *E, bool IsRotateRight) {
     } else {
       ShiftAmt = Builder.CreateURem(ShiftAmt, Divisor);
     }
+  }
 
-    // Convert to the source type if needed
-    if (ShiftAmt->getType() != Ty) {
-      ShiftAmt = Builder.CreateIntCast(ShiftAmt, Ty, false);
-    }
+  // Convert to the source type if needed
+  if (ShiftAmt->getType() != Ty) {
+    ShiftAmt = Builder.CreateIntCast(ShiftAmt, Ty, false);
   }
 
   // Rotate is a special case of LLVM funnel shift - 1st 2 args are the same.
