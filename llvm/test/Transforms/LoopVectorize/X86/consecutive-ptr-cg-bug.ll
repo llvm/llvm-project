@@ -35,7 +35,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; This test was originally vectorized, but now SCEV is smart enough to prove
 ; that its trip count is 1, so it gets ignored by vectorizer.
 ; Function Attrs: uwtable
-define void @test_01(i1 %arg) {
+define void @test_01(ptr addrspace(1) %p, i1 %arg) {
   br label %.outer
 
 ; <label>:1:                                      ; preds = %2
@@ -57,8 +57,8 @@ define void @test_01(i1 %arg) {
   %8 = phi i32 [ %.ph2, %.outer ], [ %7, %6 ]
   %9 = add i32 %8, 2
   %10 = zext i32 %9 to i64
-  %11 = getelementptr inbounds i32, ptr addrspace(1) undef, i64 %10
-  %12 = ashr i32 undef, %4
+  %11 = getelementptr inbounds i32, ptr addrspace(1) %p, i64 %10
+  %12 = ashr i32 12, %4
   store i32 %12, ptr addrspace(1) %11, align 4
   %13 = add i32 %7, 1
   %14 = icmp sgt i32 %13, 61
@@ -74,7 +74,7 @@ define void @test_01(i1 %arg) {
 ; CHECK: store <4 x i32>
 
 ; Function Attrs: uwtable
-define void @test_02(i1 %arg) {
+define void @test_02(ptr addrspace(1) %p, i1 %arg) {
   br label %.outer
 
 ; <label>:1:                                      ; preds = %2
@@ -96,8 +96,8 @@ define void @test_02(i1 %arg) {
   %8 = phi i32 [ %.ph2, %.outer ], [ %7, %6 ]
   %9 = add i32 %8, 2
   %10 = zext i32 %9 to i64
-  %11 = getelementptr inbounds i32, ptr addrspace(1) undef, i64 %10
-  %12 = ashr i32 undef, %4
+  %11 = getelementptr inbounds i32, ptr addrspace(1) %p, i64 %10
+  %12 = ashr i32 12, %4
   store i32 %12, ptr addrspace(1) %11, align 4
   %13 = add i32 %7, 1
   %14 = icmp sgt i32 %13, 610

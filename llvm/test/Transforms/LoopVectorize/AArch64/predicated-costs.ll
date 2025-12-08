@@ -320,7 +320,7 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
 ; CHECK:       [[PRED_STORE_CONTINUE12]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP42:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP42]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -385,6 +385,59 @@ attributes #1 = { "target-cpu"="neoverse-v2" }
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
 !3 = !{!"llvm.loop.vectorize.enable", i1 true}
+
+; BFI computes if is taken 20 times, and loop 32 times. Make sure we round the
+; divisor up to 2 so that we don't vectorize the loop unprofitably.
+define void @round_scalar_pred_divisor(ptr %dst, double %x) {
+; CHECK-LABEL: define void @round_scalar_pred_divisor(
+; CHECK-SAME: ptr [[DST:%.*]], double [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = fcmp une double [[X]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[LATCH]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[IV]] to i32
+; CHECK-NEXT:    [[UITOFP:%.*]] = uitofp i32 [[TRUNC]] to double
+; CHECK-NEXT:    [[SIN:%.*]] = tail call double @llvm.sin.f64(double [[UITOFP]])
+; CHECK-NEXT:    [[FPTRUNC:%.*]] = fptrunc double [[SIN]] to float
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi float [ [[FPTRUNC]], %[[IF]] ], [ 0.000000e+00, %[[LOOP]] ]
+; CHECK-NEXT:    store float [[PHI]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 1024
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %c = fcmp une double %x, 0.0
+  br i1 %c, label %if, label %latch
+
+if:
+  %trunc = trunc i64 %iv to i32
+  %uitofp = uitofp i32 %trunc to double
+  %sin = tail call double @llvm.sin(double %uitofp)
+  %fptrunc = fptrunc double %sin to float
+  br label %latch
+
+latch:
+  %phi = phi float [ %fptrunc, %if ], [ 0.0, %loop ]
+  store float %phi, ptr %dst
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 1024
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}

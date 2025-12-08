@@ -139,18 +139,14 @@ public:
       iterator_range<const_filtered_symbol_iterator>;
 
   // Range that contains all symbols.
-  const_symbol_range symbols() const {
-    return {Symbols.begin(), Symbols.end()};
-  }
+  const_symbol_range symbols() const { return Symbols; }
 
   // Range that contains all defined and exported symbols.
   const_filtered_symbol_range exports() const {
     std::function<bool(const Symbol *)> fn = [](const Symbol *Symbol) {
       return !Symbol->isUndefined() && !Symbol->isReexported();
     };
-    return make_filter_range(
-        make_range<const_symbol_iterator>({Symbols.begin()}, {Symbols.end()}),
-        fn);
+    return make_filter_range(symbols(), fn);
   }
 
   // Range that contains all reexported symbols.
@@ -158,9 +154,7 @@ public:
     std::function<bool(const Symbol *)> fn = [](const Symbol *Symbol) {
       return Symbol->isReexported();
     };
-    return make_filter_range(
-        make_range<const_symbol_iterator>({Symbols.begin()}, {Symbols.end()}),
-        fn);
+    return make_filter_range(symbols(), fn);
   }
 
   // Range that contains all undefined and exported symbols.
@@ -168,9 +162,7 @@ public:
     std::function<bool(const Symbol *)> fn = [](const Symbol *Symbol) {
       return Symbol->isUndefined();
     };
-    return make_filter_range(
-        make_range<const_symbol_iterator>({Symbols.begin()}, {Symbols.end()}),
-        fn);
+    return make_filter_range(symbols(), fn);
   }
 
   LLVM_ABI bool operator==(const SymbolSet &O) const;

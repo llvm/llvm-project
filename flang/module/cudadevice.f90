@@ -1171,6 +1171,45 @@ implicit none
     integer(8), intent(inout) :: address
     integer(8), value :: val
     end function
+    attributes(device) pure integer(4) function atomicaddr2(address, val)
+      !dir$ ignore_tkr (rd) address, (d) val
+      real(2), dimension(2), intent(inout) :: address
+      real(2), dimension(2), intent(in) :: val
+    end function
+  end interface
+
+  interface atomicaddvector
+    attributes(device) pure function atomicaddvector_r2x2(address, val) result(z)
+      !dir$ ignore_tkr (rd) address, (d) val
+      real(2), dimension(2), intent(inout) :: address
+      real(2), dimension(2), intent(in) :: val
+      real(2), dimension(2) :: z
+    end function
+
+    attributes(device) pure function atomicaddvector_r4x2(address, val) result(z)
+      !dir$ ignore_tkr (rd) address, (d) val
+      real(4), dimension(2), intent(inout) :: address
+      real(4), dimension(2), intent(in) :: val
+      real(4), dimension(2) :: z
+    end function
+  end interface
+
+  interface atomicaddreal4x2
+    attributes(device) pure function atomicadd_r4x2(address, val) result(z)
+      !dir$ ignore_tkr (rd) address, (d) val
+      real(4), dimension(2), intent(inout) :: address
+      real(4), dimension(2), intent(in) :: val
+      real(4), dimension(2) :: z
+    end function
+  end interface
+
+  interface atomicaddreal4x4
+    attributes(device) pure function atomicadd_r4x4(address, val) result(z)
+      !dir$ ignore_tkr (rd) address, (d) val
+      real(4), dimension(4), intent(inout) :: address
+      real(4), dimension(4), intent(in) :: val
+      real(4), dimension(4) :: z
+    end function
   end interface
 
   interface atomicsub
@@ -1998,13 +2037,6 @@ implicit none
 
   ! TMA Operations
 
-  interface 
-    attributes(device) subroutine barrier_init(barrier, count)
-      integer(8), shared :: barrier
-      integer(4), value :: count
-    end subroutine
-  end interface
-
   interface barrier_arrive
     attributes(device) function barrier_arrive(barrier) result(token)
       integer(8), shared :: barrier
@@ -2014,6 +2046,28 @@ implicit none
       integer(8), shared :: barrier
       integer(4), value :: count
       integer(8) :: token
+    end function
+  end interface
+
+  interface 
+    attributes(device) subroutine barrier_init(barrier, count)
+      integer(8), shared :: barrier
+      integer(4), value :: count
+    end subroutine
+  end interface
+
+  interface
+    attributes(device) integer function barrier_try_wait(barrier, token)
+      integer(8), shared :: barrier
+      integer(8), value  :: token
+    end function
+  end interface
+  
+  interface
+    attributes(device) integer function barrier_try_wait_sleep(barrier, token, ns)
+      integer(8), shared :: barrier
+      integer(8), value  :: token
+      integer(4), value  :: ns
     end function
   end interface
 
@@ -2032,7 +2086,13 @@ implicit none
     end subroutine
   end interface
 
+  ! --------------------
+  ! Bulk load functions
+  ! --------------------
+
   ! Generic load, count is in bytes
+  ! -------------------------------
+
   interface
     attributes(device) subroutine tma_bulk_g2s(barrier, src, dst, nbytes)
       !dir$ ignore_tkr src, dst
@@ -2043,12 +2103,134 @@ implicit none
     end subroutine
   end interface
 
+  ! Load specific types, count is in elements
+  ! -----------------------------------------
+
+  interface tma_bulk_load
+    attributes(device) subroutine tma_bulk_ldc4(barrier, src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      integer(8), shared :: barrier
+      complex(4), device :: src(*)
+      complex(4), shared :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+
+    attributes(device) subroutine tma_bulk_ldc8(barrier, src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      integer(8), shared :: barrier
+      complex(8), device :: src(*)
+      complex(8), shared :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+  
+    attributes(device) subroutine tma_bulk_ldi4(barrier, src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      integer(8), shared :: barrier
+      integer(4), device :: src(*)
+      integer(4), shared :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+
+    attributes(device) subroutine tma_bulk_ldi8(barrier, src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      integer(8), shared :: barrier
+      integer(8), device :: src(*)
+      integer(8), shared :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+
+    attributes(device) subroutine tma_bulk_ldr2(barrier, src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      integer(8), shared :: barrier
+      real(2), device :: src(*)
+      real(2), shared :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+
+    attributes(device) subroutine tma_bulk_ldr4(barrier, src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      integer(8), shared :: barrier
+      real(4), device :: src(*)
+      real(4), shared :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+
+    attributes(device) subroutine tma_bulk_ldr8(barrier, src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      integer(8), shared :: barrier
+      real(8), device :: src(*)
+      real(8), shared :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+  end interface
+
+  ! --------------------
+  ! Bulk Store functions
+  ! --------------------
+
+  ! Generic store, count is in bytes
+  ! --------------------------------
+
   interface
     attributes(device) subroutine tma_bulk_s2g(src, dst, nbytes)
       !dir$ ignore_tkr src, dst
       integer(4), shared  :: src(*)
       integer(4), device  :: dst(*)
       integer(4), value   :: nbytes
+    end subroutine
+  end interface
+
+  ! Load specific types, count is in elements
+  ! -----------------------------------------
+
+  interface tma_bulk_store
+    attributes(device) subroutine tma_bulk_store_c4(src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      complex(4), shared :: src(*)
+      complex(4), device :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+
+    attributes(device) subroutine tma_bulk_store_c8(src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      complex(8), shared :: src(*)
+      complex(8), device :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+
+    attributes(device) subroutine tma_bulk_store_i4(src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      integer(4), shared :: src(*)
+      integer(4), device :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+
+    attributes(device) subroutine tma_bulk_store_i8(src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      integer(8), shared :: src(*)
+      integer(8), device :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+
+    attributes(device) subroutine tma_bulk_store_r2(src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      real(2), shared :: src(*)
+      real(2), device :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+
+    attributes(device) subroutine tma_bulk_store_r4(src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      real(4), shared :: src(*)
+      real(4), device :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+
+    attributes(device) subroutine tma_bulk_store_r8(src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      real(8), shared :: src(*)
+      real(8), device :: dst(*)
+      integer(4), value :: nelems
     end subroutine
   end interface
 

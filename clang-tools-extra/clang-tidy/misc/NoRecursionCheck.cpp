@@ -122,7 +122,7 @@ private:
     }
     // Set time!
     // Note that this must be after `populateSet()` might have been called.
-    bool SetInsertionSucceeded = Set.insert(V).second;
+    const bool SetInsertionSucceeded = Set.insert(V).second;
     (void)SetInsertionSucceeded;
     assert(SetInsertionSucceeded && "We did check that no such value existed");
     return true;
@@ -132,7 +132,7 @@ public:
   /// Insert a new element into the SmartSmallSetVector.
   /// \returns true if the element was inserted into the SmartSmallSetVector.
   bool insert(const T &X) {
-    bool Result = setInsert(X);
+    const bool Result = setInsert(X);
     if (Result)
       Vector.push_back(X);
     return Result;
@@ -200,8 +200,8 @@ void NoRecursionCheck::handleSCC(ArrayRef<CallGraphNode *> SCC) {
   assert(!SCC.empty() && "Empty SCC does not make sense.");
 
   // First of all, call out every strongly connected function.
-  for (CallGraphNode *N : SCC) {
-    FunctionDecl *D = N->getDefinition();
+  for (const CallGraphNode *N : SCC) {
+    const FunctionDecl *D = N->getDefinition();
     diag(D->getLocation(), "function %0 is within a recursive call chain") << D;
   }
 
@@ -224,7 +224,8 @@ void NoRecursionCheck::handleSCC(ArrayRef<CallGraphNode *> SCC) {
   assert(CyclicCallStack.size() >= 2 && "Cycle requires at least 2 frames");
 
   // Which function we decided to be the entry point that lead to the recursion?
-  FunctionDecl *CycleEntryFn = CyclicCallStack.front().Callee->getDefinition();
+  const FunctionDecl *CycleEntryFn =
+      CyclicCallStack.front().Callee->getDefinition();
   // And now, for ease of understanding, let's print the call sequence that
   // forms the cycle in question.
   diag(CycleEntryFn->getLocation(),
@@ -233,8 +234,8 @@ void NoRecursionCheck::handleSCC(ArrayRef<CallGraphNode *> SCC) {
       << CycleEntryFn;
   for (int CurFrame = 1, NumFrames = CyclicCallStack.size();
        CurFrame != NumFrames; ++CurFrame) {
-    CallGraphNode::CallRecord PrevNode = CyclicCallStack[CurFrame - 1];
-    CallGraphNode::CallRecord CurrNode = CyclicCallStack[CurFrame];
+    const CallGraphNode::CallRecord PrevNode = CyclicCallStack[CurFrame - 1];
+    const CallGraphNode::CallRecord CurrNode = CyclicCallStack[CurFrame];
 
     Decl *PrevDecl = PrevNode.Callee->getDecl();
     Decl *CurrDecl = CurrNode.Callee->getDecl();

@@ -147,8 +147,8 @@ llvm::Error ol_platform_impl_t::init() {
     if (llvm::Error Err = Plugin->initDevice(Id))
       return Err;
 
-    auto Device = &Plugin->getDevice(Id);
-    auto Info = Device->obtainInfoImpl();
+    GenericDeviceTy *Device = &Plugin->getDevice(Id);
+    llvm::Expected<InfoTreeNode> Info = Device->obtainInfo();
     if (llvm::Error Err = Info.takeError())
       return Err;
     Devices.emplace_back(std::make_unique<ol_device_impl_t>(Id, Device, *this,
@@ -467,6 +467,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   switch (PropName) {
   case OL_DEVICE_INFO_NAME:
   case OL_DEVICE_INFO_PRODUCT_NAME:
+  case OL_DEVICE_INFO_UID:
   case OL_DEVICE_INFO_VENDOR:
   case OL_DEVICE_INFO_DRIVER_VERSION: {
     // String values
@@ -492,6 +493,13 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
       return makeError(ErrorCode::BACKEND_FAILURE,
                        "plugin returned out of range device info");
     return Info.write(static_cast<uint32_t>(Value));
+  }
+
+  case OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE: {
+    if (!std::holds_alternative<uint64_t>(Entry->Value))
+      return makeError(ErrorCode::BACKEND_FAILURE,
+                       "plugin returned incorrect type");
+    return Info.write(std::get<uint64_t>(Entry->Value));
   }
 
   case OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION:
@@ -544,6 +552,8 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
     return Info.writeString("Virtual Host Device");
   case OL_DEVICE_INFO_PRODUCT_NAME:
     return Info.writeString("Virtual Host Device");
+  case OL_DEVICE_INFO_UID:
+    return Info.writeString(GenericPluginTy::getHostDeviceUid());
   case OL_DEVICE_INFO_VENDOR:
     return Info.writeString("Liboffload");
   case OL_DEVICE_INFO_DRIVER_VERSION:
@@ -587,6 +597,7 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
     return Info.write<uint32_t>(std::numeric_limits<uintptr_t>::digits);
   case OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE:
   case OL_DEVICE_INFO_GLOBAL_MEM_SIZE:
+  case OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE:
     return Info.write<uint64_t>(0);
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,

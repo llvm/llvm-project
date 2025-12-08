@@ -58,15 +58,13 @@ public:
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
       Register SourceRegister, bool IsKill, int FrameIndex,
-      const TargetRegisterClass *RegisterClass,
-      const TargetRegisterInfo *RegisterInfo, Register VReg,
+      const TargetRegisterClass *RegisterClass, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
       Register DestinationRegister, int FrameIndex,
-      const TargetRegisterClass *RegisterClass,
-      const TargetRegisterInfo *RegisterInfo, Register VReg,
+      const TargetRegisterClass *RegisterClass, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;

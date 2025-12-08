@@ -14,7 +14,7 @@
 @res = common global i32 0, align 4
 
 ; Function Attrs:
-define i64 @func() #0 {
+define i64 @func() {
 entry:
   ret i64 1
 }
@@ -27,7 +27,7 @@ entry:
   %2 = load volatile i32, ptr @g_x_u, align 4
   %3 = load volatile i32, ptr @g_z_u, align 4
   %4 = load volatile i32, ptr @g_m, align 4
-  %call = call i64 @func() #4
+  %call = call i64 @func()
   %conv = sext i32 %1 to i64
   %cmp = icmp ne i64 %call, %conv
   br i1 %cmp, label %if.end, label %lor.lhs.false
@@ -42,7 +42,7 @@ if.then:
   br label %cleanup
 
 if.end:
-  %call4 = call i64 @func() #4
+  %call4 = call i64 @func()
   %conv5 = zext i32 %3 to i64
   %cmp6 = icmp ne i64 %call4, %conv5
   br i1 %cmp6, label %if.end14, label %lor.lhs.false8
@@ -57,7 +57,7 @@ if.then13:
   br label %cleanup
 
 if.end14:
-  %call15 = call i64 @func() #4
+  %call15 = call i64 @func()
   %cmp17 = icmp ne i64 %call15, %conv
   br i1 %cmp17, label %if.end25, label %lor.lhs.false19
 
@@ -77,5 +77,3 @@ cleanup:
   %retval.0 = phi i32 [ 0, %if.end25 ], [ 1, %if.then24 ], [ 1, %if.then13 ], [ 1, %if.then ]
   ret i32 %retval.0
 }
-
-attributes #0 = { minsize noinline nounwind optsize uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

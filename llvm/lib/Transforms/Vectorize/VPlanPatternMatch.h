@@ -17,8 +17,7 @@
 
 #include "VPlan.h"
 
-namespace llvm {
-namespace VPlanPatternMatch {
+namespace llvm::VPlanPatternMatch {
 
 template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
@@ -27,6 +26,10 @@ template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
 template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
   auto *R = dyn_cast<VPRecipeBase>(U);
   return R && match(R, P);
+}
+
+template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
+  return P.match(static_cast<const VPRecipeBase *>(R));
 }
 
 template <typename Val, typename Pattern> struct VPMatchFunctor {
@@ -313,7 +316,8 @@ private:
     // Check for recipes that do not have opcodes.
     if constexpr (std::is_same_v<RecipeTy, VPScalarIVStepsRecipe> ||
                   std::is_same_v<RecipeTy, VPCanonicalIVPHIRecipe> ||
-                  std::is_same_v<RecipeTy, VPDerivedIVRecipe>)
+                  std::is_same_v<RecipeTy, VPDerivedIVRecipe> ||
+                  std::is_same_v<RecipeTy, VPVectorEndPointerRecipe>)
       return DefR;
     else
       return DefR && DefR->getOpcode() == Opcode;
@@ -383,9 +387,9 @@ m_EVL(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
-inline VPInstruction_match<VPInstruction::ExtractLastElement, Op0_t>
-m_ExtractLastElement(const Op0_t &Op0) {
-  return m_VPInstruction<VPInstruction::ExtractLastElement>(Op0);
+inline VPInstruction_match<VPInstruction::ExtractLastLane, Op0_t>
+m_ExtractLastLane(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExtractLastLane>(Op0);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -394,10 +398,30 @@ m_ExtractElement(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<Instruction::ExtractElement>(Op0, Op1);
 }
 
+template <typename Op0_t, typename Op1_t>
+inline VPInstruction_match<VPInstruction::ExtractLane, Op0_t, Op1_t>
+m_ExtractLane(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<VPInstruction::ExtractLane>(Op0, Op1);
+}
+
 template <typename Op0_t>
-inline VPInstruction_match<VPInstruction::ExtractLastLanePerPart, Op0_t>
-m_ExtractLastLanePerPart(const Op0_t &Op0) {
-  return m_VPInstruction<VPInstruction::ExtractLastLanePerPart>(Op0);
+inline VPInstruction_match<VPInstruction::ExtractLastPart, Op0_t>
+m_ExtractLastPart(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExtractLastPart>(Op0);
+}
+
+template <typename Op0_t>
+inline VPInstruction_match<
+    VPInstruction::ExtractLastLane,
+    VPInstruction_match<VPInstruction::ExtractLastPart, Op0_t>>
+m_ExtractLastLaneOfLastPart(const Op0_t &Op0) {
+  return m_ExtractLastLane(m_ExtractLastPart(Op0));
+}
+
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::ExtractPenultimateElement, Op0_t>
+m_ExtractPenultimateElement(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExtractPenultimateElement>(Op0);
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
@@ -416,6 +440,10 @@ m_BranchOnCount(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::BranchOnCount>(Op0, Op1);
 }
 
+inline VPInstruction_match<VPInstruction::AnyOf> m_AnyOf() {
+  return m_VPInstruction<VPInstruction::AnyOf>();
+}
+
 template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::AnyOf, Op0_t>
 m_AnyOf(const Op0_t &Op0) {
@@ -428,6 +456,16 @@ m_FirstActiveLane(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::FirstActiveLane>(Op0);
 }
 
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::LastActiveLane, Op0_t>
+m_LastActiveLane(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::LastActiveLane>(Op0);
+}
+
+inline VPInstruction_match<VPInstruction::StepVector> m_StepVector() {
+  return m_VPInstruction<VPInstruction::StepVector>();
+}
+
 template <unsigned Opcode, typename Op0_t>
 inline AllRecipe_match<Opcode, Op0_t> m_Unary(const Op0_t &Op0) {
   return AllRecipe_match<Opcode, Op0_t>(Op0);
@@ -436,6 +474,12 @@ inline AllRecipe_match<Opcode, Op0_t> m_Unary(const Op0_t &Op0) {
 template <typename Op0_t>
 inline AllRecipe_match<Instruction::Trunc, Op0_t> m_Trunc(const Op0_t &Op0) {
   return m_Unary<Instruction::Trunc, Op0_t>(Op0);
+}
+
+template <typename Op0_t>
+inline match_combine_or<AllRecipe_match<Instruction::Trunc, Op0_t>, Op0_t>
+m_TruncOrSelf(const Op0_t &Op0) {
+  return m_CombineOr(m_Trunc(Op0), Op0);
 }
 
 template <typename Op0_t>
@@ -471,6 +515,12 @@ template <unsigned Opcode, typename Op0_t, typename Op1_t>
 inline AllRecipe_commutative_match<Opcode, Op0_t, Op1_t>
 m_c_Binary(const Op0_t &Op0, const Op1_t &Op1) {
   return AllRecipe_commutative_match<Opcode, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::Add, Op0_t, Op1_t> m_Add(const Op0_t &Op0,
+                                                             const Op1_t &Op1) {
+  return m_Binary<Instruction::Add, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -686,6 +736,64 @@ m_DerivedIV(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return VPDerivedIV_match<Op0_t, Op1_t, Op2_t>({Op0, Op1, Op2});
 }
 
+template <typename Addr_t, typename Mask_t> struct Load_match {
+  Addr_t Addr;
+  Mask_t Mask;
+
+  Load_match(Addr_t Addr, Mask_t Mask) : Addr(Addr), Mask(Mask) {}
+
+  template <typename OpTy> bool match(const OpTy *V) const {
+    auto *Load = dyn_cast<VPWidenLoadRecipe>(V);
+    if (!Load || !Addr.match(Load->getAddr()) || !Load->isMasked() ||
+        !Mask.match(Load->getMask()))
+      return false;
+    return true;
+  }
+};
+
+/// Match a (possibly reversed) masked load.
+template <typename Addr_t, typename Mask_t>
+inline Load_match<Addr_t, Mask_t> m_MaskedLoad(const Addr_t &Addr,
+                                               const Mask_t &Mask) {
+  return Load_match<Addr_t, Mask_t>(Addr, Mask);
+}
+
+template <typename Addr_t, typename Val_t, typename Mask_t> struct Store_match {
+  Addr_t Addr;
+  Val_t Val;
+  Mask_t Mask;
+
+  Store_match(Addr_t Addr, Val_t Val, Mask_t Mask)
+      : Addr(Addr), Val(Val), Mask(Mask) {}
+
+  template <typename OpTy> bool match(const OpTy *V) const {
+    auto *Store = dyn_cast<VPWidenStoreRecipe>(V);
+    if (!Store || !Addr.match(Store->getAddr()) ||
+        !Val.match(Store->getStoredValue()) || !Store->isMasked() ||
+        !Mask.match(Store->getMask()))
+      return false;
+    return true;
+  }
+};
+
+/// Match a (possibly reversed) masked store.
+template <typename Addr_t, typename Val_t, typename Mask_t>
+inline Store_match<Addr_t, Val_t, Mask_t>
+m_MaskedStore(const Addr_t &Addr, const Val_t &Val, const Mask_t &Mask) {
+  return Store_match<Addr_t, Val_t, Mask_t>(Addr, Val, Mask);
+}
+
+template <typename Op0_t, typename Op1_t>
+using VectorEndPointerRecipe_match =
+    Recipe_match<std::tuple<Op0_t, Op1_t>, 0,
+                 /*Commutative*/ false, VPVectorEndPointerRecipe>;
+
+template <typename Op0_t, typename Op1_t>
+VectorEndPointerRecipe_match<Op0_t, Op1_t> m_VecEndPtr(const Op0_t &Op0,
+                                                       const Op1_t &Op1) {
+  return VectorEndPointerRecipe_match<Op0_t, Op1_t>(Op0, Op1);
+}
+
 /// Match a call argument at a given argument index.
 template <typename Opnd_t> struct Argument_match {
   /// Call argument index to match.
@@ -762,6 +870,11 @@ template <Intrinsic::ID IntrID> inline IntrinsicID_match m_Intrinsic() {
   return IntrinsicID_match(IntrID);
 }
 
+/// Match intrinsic calls with a runtime intrinsic ID.
+inline IntrinsicID_match m_Intrinsic(Intrinsic::ID IntrID) {
+  return IntrinsicID_match(IntrID);
+}
+
 template <Intrinsic::ID IntrID, typename T0>
 inline typename m_Intrinsic_Ty<T0>::Ty m_Intrinsic(const T0 &Op0) {
   return m_CombineAnd(m_Intrinsic<IntrID>(), m_Argument<0>(Op0));
@@ -809,7 +922,6 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
-} // namespace VPlanPatternMatch
-} // namespace llvm
+} // namespace llvm::VPlanPatternMatch
 
 #endif

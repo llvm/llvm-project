@@ -3363,16 +3363,15 @@ void MicrosoftRecordLayoutBuilder::computeVtorDispSet(
 /// position information.
 const ASTRecordLayout &
 ASTContext::getASTRecordLayout(const RecordDecl *D) const {
-  // These asserts test different things.  A record has a definition
-  // as soon as we begin to parse the definition.  That definition is
-  // not a complete definition (which is what isDefinition() tests)
-  // until we *finish* parsing the definition.
-
   if (D->hasExternalLexicalStorage() && !D->getDefinition())
     getExternalSource()->CompleteType(const_cast<RecordDecl*>(D));
   // Complete the redecl chain (if necessary).
   (void)D->getMostRecentDecl();
 
+  // These asserts test different things.  A record has a definition
+  // as soon as we begin to parse the definition.  That definition is
+  // not a complete definition (which is what isCompleteDefinition() tests)
+  // until we *finish* parsing the definition.
   D = D->getDefinition();
   assert(D && "Cannot get layout of forward declarations!");
   assert(!D->isInvalidDecl() && "Cannot get layout of invalid decl!");

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_MULTIPLE_INHERITANCE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_MULTIPLE_INHERITANCE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_MULTIPLEINHERITANCECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_MULTIPLEINHERITANCECHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -30,17 +30,14 @@ public:
   void onEndOfTranslationUnit() override { InterfaceMap.clear(); }
 
 private:
-  void addNodeToInterfaceMap(const CXXRecordDecl *Node, bool IsInterface);
-  bool getInterfaceStatus(const CXXRecordDecl *Node, bool &IsInterface) const;
-  bool isCurrentClassInterface(const CXXRecordDecl *Node) const;
-  bool isInterface(const CXXRecordDecl *Node);
+  bool isInterface(const CXXBaseSpecifier &Base);
 
   // Contains the identity of each named CXXRecord as an interface.  This is
   // used to memoize lookup speeds and improve performance from O(N^2) to O(N),
   // where N is the number of classes.
-  llvm::StringMap<bool> InterfaceMap;
+  llvm::DenseMap<const CXXRecordDecl *, bool> InterfaceMap;
 };
 
 } // namespace clang::tidy::fuchsia
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_MULTIPLE_INHERITANCE_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_MULTIPLEINHERITANCECHECK_H
