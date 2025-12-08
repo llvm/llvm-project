@@ -2875,39 +2875,6 @@ static bool interp__builtin_select_scalar(InterpState &S,
   return true;
 }
 
-static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
-                                  const CallExpr *Call) {
-  APSInt Mask = popToAPSInt(S, Call->getArg(2));
-  const Pointer &TrueVec = S.Stk.pop<Pointer>();
-  const Pointer &FalseVec = S.Stk.pop<Pointer>();
-  const Pointer &Dst = S.Stk.peek<Pointer>();
-
-  assert(FalseVec.getNumElems() == TrueVec.getNumElems());
-  assert(FalseVec.getNumElems() == Dst.getNumElems());
-  unsigned NumElems = FalseVec.getNumElems();
-  PrimType ElemT = FalseVec.getFieldDesc()->getPrimType();
-  PrimType DstElemT = Dst.getFieldDesc()->getPrimType();
-
-  for (unsigned I = 0; I != NumElems; ++I) {
-    bool MaskBit = Mask[I % 8];
-    if (ElemT == PT_Float) {
-      assert(DstElemT == PT_Float);
-      Dst.elem<Floating>(I) =
-          MaskBit ? TrueVec.elem<Floating>(I) : FalseVec.elem<Floating>(I);
-    } else {
-      assert(DstElemT == ElemT);
-      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
-        Dst.elem<T>(I) =
-            static_cast<T>(MaskBit ? TrueVec.elem<T>(I).toAPSInt()
-                                   : FalseVec.elem<T>(I).toAPSInt());
-      });
-    }
-  }
-  Dst.initializeAllElements();
-
-  return true;
-}
-
 static bool interp__builtin_ia32_test_op(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<bool(const APInt &A, const APInt &B)> Fn) {
@@ -4796,7 +4763,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pblendw256:
   case clang::X86::BI__builtin_ia32_pblendd128:
   case clang::X86::BI__builtin_ia32_pblendd256:
-    return interp__builtin_blend(S, OpPC, Call);
+    return interp__builtin_ia32_shuffle_generic(
+      S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+        // Bit index for mask.
+        unsigned MaskBit = (ShuffleMask >> (DstIdx % 8)) & 0x1;
+        unsigned SrcVecIdx = MaskBit ? 1 : 0;  // 1 = TrueVec, 0 = FalseVec
+        return std::pair<unsigned, int>{SrcVecIdx, static_cast<int>(DstIdx)};
+      });
+
+
 
   case clang::X86::BI__builtin_ia32_blendvpd:
   case clang::X86::BI__builtin_ia32_blendvpd256:
