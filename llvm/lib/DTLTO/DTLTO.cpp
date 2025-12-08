@@ -32,7 +32,6 @@
 
 using namespace llvm;
 
-
 namespace dtlto {
 
 // Writes the content of a memory buffer into a file.
