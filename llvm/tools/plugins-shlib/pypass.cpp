@@ -48,9 +48,7 @@ static std::string findScript() {
 
 struct PythonAPI {
   using Py_InitializeEx_t = void(int);
-  using Py_Initialize_t = void(void);
   using Py_FinalizeEx_t = int(void);
-  using Py_Finalize_t = void(void);
   using PyDict_GetItemString_t = void *(void *, const char *);
   using PyGILStateEnsure_t = int();
   using PyGILStateRelease_t = void(int);
@@ -67,9 +65,7 @@ struct PythonAPI {
 
   // pylifecycle.h
   Py_InitializeEx_t *Py_InitializeEx;
-  Py_Initialize_t *Py_Initialize;
   Py_FinalizeEx_t *Py_FinalizeEx;
-  Py_Finalize_t *Py_Finalize;
 
   // pythonrun.h
   PyRun_SimpleString_t *PyRun_SimpleString;
@@ -108,21 +104,13 @@ struct PythonAPI {
       return;
     if (!resolveSymbols())
       return;
-    if (Py_InitializeEx) {
-      Py_InitializeEx(0);
-    } else {
-      Py_Initialize();
-    }
+    Py_InitializeEx(0);
     Ready = true;
   }
 
   ~PythonAPI() {
     if (std::atomic_exchange(&Ready, false)) {
-      if (Py_FinalizeEx) {
-        Py_FinalizeEx();
-      } else {
-        Py_Finalize();
-      }
+      Py_FinalizeEx();
     }
   }
 
@@ -140,9 +128,7 @@ struct PythonAPI {
   bool resolveSymbols() {
     bool Success = true;
     Success &= resolve("Py_InitializeEx", &Py_InitializeEx);
-    Success &= resolve("Py_Initialize", &Py_Initialize);
     Success &= resolve("Py_FinalizeEx", &Py_FinalizeEx);
-    Success &= resolve("Py_Finalize", &Py_Finalize);
     Success &= resolve("PyGILState_Ensure", &PyGILState_Ensure);
     Success &= resolve("PyGILState_Release", &PyGILState_Release);
     Success &= resolve("PyRun_SimpleString", &PyRun_SimpleString);
