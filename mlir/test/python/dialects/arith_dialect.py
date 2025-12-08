@@ -54,10 +54,10 @@ def testArithValue():
         op = getattr(arith, f"{op}Op")
         return op(lhs, rhs).result
 
-    @register_value_caster(F16Type.static_typeid)
-    @register_value_caster(F32Type.static_typeid)
-    @register_value_caster(F64Type.static_typeid)
-    @register_value_caster(IntegerType.static_typeid)
+    @register_value_caster(F16Type.get_static_typeid())
+    @register_value_caster(F32Type.get_static_typeid())
+    @register_value_caster(F64Type.get_static_typeid())
+    @register_value_caster(IntegerType.get_static_typeid())
     class ArithValue(Value):
         def __init__(self, v):
             super().__init__(v)

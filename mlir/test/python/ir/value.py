@@ -361,7 +361,7 @@ def testValueCasters():
         def __str__(self):
             return super().__str__().replace(Value.__name__, NOPBlockArg.__name__)
 
-    @register_value_caster(IntegerType.static_typeid)
+    @register_value_caster(IntegerType.get_static_typeid())
     def cast_int(v) -> Value:
         print("in caster", v.__class__.__name__)
         if isinstance(v, OpResult):
@@ -425,7 +425,7 @@ def testValueCasters():
 
     try:
 
-        @register_value_caster(IntegerType.static_typeid)
+        @register_value_caster(IntegerType.get_static_typeid())
         def dont_cast_int_shouldnt_register(v):
             ...
 
@@ -433,7 +433,7 @@ def testValueCasters():
         # CHECK: Value caster is already registered: {{.*}}cast_int
         print(e)
 
-    @register_value_caster(IntegerType.static_typeid, replace=True)
+    @register_value_caster(IntegerType.get_static_typeid(), replace=True)
     def dont_cast_int(v) -> OpResult:
         assert isinstance(v, OpResult)
         print("don't cast", v.result_number, v)

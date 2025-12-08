@@ -145,6 +145,21 @@ NB_MODULE(_mlir, m) {
 
   // Define and populate IR submodule.
   auto irModule = m.def_submodule("ir", "MLIR IR Bindings");
+  irModule.def(
+      MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR,
+      [](MlirTypeID mlirTypeID, bool replace) -> nb::object {
+        return nb::cpp_function([mlirTypeID, replace](
+                                    nb::callable typeCaster) -> nb::object {
+          PyGlobals::get().registerTypeCaster(mlirTypeID, typeCaster, replace);
+          return typeCaster;
+        });
+      },
+      // clang-format off
+    nb::sig("def register_type_caster(typeid: _mlir.ir.TypeID, *, replace: bool = False) "
+                      "-> typing.Callable[[typing.Callable[[T], U]], typing.Callable[[T], U]]"),
+      // clang-format on
+      "typeid"_a, nb::kw_only(), "replace"_a = false,
+      "Register a type caster for casting MLIR types to custom user types.");
   populateIRCore(irModule);
   populateIRAffine(irModule);
   populateIRAttributes(irModule);
