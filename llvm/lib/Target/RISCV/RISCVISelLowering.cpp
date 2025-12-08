@@ -337,9 +337,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
 
-  if (!Subtarget.hasStdExtZbb() && !Subtarget.hasStdExtP() &&
-      !Subtarget.hasVendorXTHeadBb() && !Subtarget.hasVendorXqcibm() &&
-      !Subtarget.hasVendorXAndesPerf() &&
+  if (!Subtarget.hasStdExtZbb() && !Subtarget.hasVendorXTHeadBb() &&
+      !Subtarget.hasVendorXqcibm() && !Subtarget.hasVendorXAndesPerf() &&
       !(Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()))
     setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
 
@@ -412,7 +411,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
   }
 
-  if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtP() ||
+  if (Subtarget.hasStdExtZbb() ||
       (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
     setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, XLenVT,
                        Legal);
@@ -423,9 +422,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::CTTZ, XLenVT, Expand);
-    // If have a CLZW, but not CTZW, custom promote i32.
-    if (Subtarget.hasStdExtP() && Subtarget.is64Bit())
-      setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
   }
 
   if (!Subtarget.hasCPOPLike()) {
@@ -2585,9 +2581,7 @@ MVT RISCVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
       !Subtarget.hasStdExtZfhminOrZhinxmin())
     return MVT::f32;
 
-  MVT PartVT = TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
-
-  return PartVT;
+  return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
 
 unsigned
@@ -2611,15 +2605,6 @@ unsigned RISCVTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context
     return 1;
 
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
-}
-
-unsigned RISCVTargetLowering::getVectorTypeBreakdownForCallingConv(
-    LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
-    unsigned &NumIntermediates, MVT &RegisterVT) const {
-  unsigned NumRegs = TargetLowering::getVectorTypeBreakdownForCallingConv(
-      Context, CC, VT, IntermediateVT, NumIntermediates, RegisterVT);
-
-  return NumRegs;
 }
 
 // Changes the condition code and swaps operands if necessary, so the SetCC
@@ -15044,24 +15029,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
     bool IsCTZ =
         N->getOpcode() == ISD::CTTZ || N->getOpcode() == ISD::CTTZ_ZERO_UNDEF;
-
-    // Without Zbb, lower as 32 - clzw(~X & (X-1))
-    if (IsCTZ && !Subtarget.hasStdExtZbb()) {
-      assert(Subtarget.hasStdExtP());
-
-      NewOp0 = DAG.getFreeze(NewOp0);
-      SDValue Not = DAG.getNOT(DL, NewOp0, MVT::i64);
-      SDValue Minus1 = DAG.getNode(ISD::SUB, DL, MVT::i64, NewOp0,
-                                   DAG.getConstant(1, DL, MVT::i64));
-      SDValue And = DAG.getNode(ISD::AND, DL, MVT::i64, Not, Minus1);
-      SDValue CLZW = DAG.getNode(RISCVISD::CLZW, DL, MVT::i64, And);
-      SDValue Sub = DAG.getNode(ISD::SUB, DL, MVT::i64,
-                                DAG.getConstant(32, DL, MVT::i64), CLZW);
-      SDValue Res = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Sub,
-                                DAG.getValueType(MVT::i32));
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
-      return;
-    }
 
     unsigned Opc = IsCTZ ? RISCVISD::CTZW : RISCVISD::CLZW;
     SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp0);
