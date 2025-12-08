@@ -255,3 +255,17 @@ func.func @fuse_memory_counter_wait() {
   amdgpu.memory_counter_wait load(4) store(3) ds(2) exp(1)
   return
 }
+
+func.func private @use()
+
+// CHECK-LABEL fuse_memory_counter_wait_not_adjacent
+func.func @fuse_memory_counter_wait_not_adjacent() {
+  //      CHECK: amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
+  // CHECK-NEXT: call @use()
+  // CHECK-NEXT: amdgpu.memory_counter_wait load(4) store(3) ds(2) exp(1)
+  // CHECK-NEXT: return
+  amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
+  func.call @use() : () -> ()
+  amdgpu.memory_counter_wait load(4) store(3) ds(2) exp(1)
+  return
+}

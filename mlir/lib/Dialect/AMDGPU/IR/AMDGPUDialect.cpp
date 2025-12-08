@@ -604,7 +604,7 @@ namespace {
 /// Fuse adjacent memory counter wait ops, taking the minimum value of the
 /// counters.
 struct FuseMemoryCounterWaitOp final : OpRewritePattern<MemoryCounterWaitOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(MemoryCounterWaitOp op,
                                 PatternRewriter &rewriter) const override {
@@ -618,16 +618,18 @@ struct FuseMemoryCounterWaitOp final : OpRewritePattern<MemoryCounterWaitOp> {
     auto lhsVals = {op.getLoad(), op.getStore(), op.getDs(), op.getExp()};
     auto rhsVals = {next.getLoad(), next.getStore(), next.getDs(),
                     next.getExp()};
-    for (const auto &[setter, lhs, rhs] :
-         llvm::zip(setters, lhsVals, rhsVals)) {
-      if (lhs && rhs) {
-        (op.*setter)(std::min(*lhs, *rhs));
-      } else if (lhs) {
-        (op.*setter)(*lhs);
-      } else if (rhs) {
-        (op.*setter)(*rhs);
+    rewriter.modifyOpInPlace(op, [&] {
+      for (auto [setter, lhs, rhs] :
+           llvm::zip_equal(setters, lhsVals, rhsVals)) {
+        if (lhs && rhs) {
+          (op.*setter)(std::min(*lhs, *rhs));
+        } else if (lhs) {
+          (op.*setter)(*lhs);
+        } else if (rhs) {
+          (op.*setter)(*rhs);
+        }
       }
-    }
+    });
     rewriter.eraseOp(next);
     return success();
   }
