@@ -5,9 +5,9 @@ d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 breaks build of ROCmValidationSuite
 [C2y] Support WG14 N3457, the __COUNTER__ macro (#162662)
 ---
-breaks build of rocALUTION
-[VPlan] Use BlockFrequencyInfo in getPredBlockCostDivisor (#158690)
+complicated build, deferring
+[llvm][mlir][OpenMP] Support translation for linear clause in omp.wsloop
 ---
-conplicated merge
-[VPlan] Use BlockFrequencyInfo in getPredBlockCostDivisor (#158690)
+needs more work to land
+[Flang] Move builtin .mod generation into runtimes (Reapply #137828)
 ---
