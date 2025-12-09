@@ -97,9 +97,8 @@ static size_t writeDemangledTypeName(char *Buffer, size_t BufferSize,
       internal_snprintf(&Buffer[Written], BufferSize - Written, "%s", DName);
 
   // Print asterisks for indirection (C pointer notation).
-  for (size_t i = 0; i < Indirection; ++i) {
+  for (size_t i = 0; i < Indirection; ++i)
     Written += internal_snprintf(&Buffer[Written], BufferSize - Written, "*");
-  }
 
   return Written;
 }
