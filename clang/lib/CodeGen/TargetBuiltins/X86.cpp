@@ -630,12 +630,9 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
   // Calculate the index needed to access the correct field based on the
   // range. ABI_VALUE matches with compiler-rt/libgcc values.
   auto [Index, Value] = StringSwitch<std::pair<unsigned, unsigned>>(CPUStr)
-#define X86_VENDOR(ENUM, STRING, ABI_VALUE)                                    \
-  .Case(STRING, {0u, ABI_VALUE})
-#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE)                                     \
-  .Case(STR, {1u, ABI_VALUE})
-#define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE)                                  \
-  .Case(STR, {2u, ABI_VALUE})
+#define X86_VENDOR(ENUM, STRING, ABI_VALUE) .Case(STRING, {0u, ABI_VALUE})
+#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE) .Case(STR, {1u, ABI_VALUE})
+#define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE) .Case(STR, {2u, ABI_VALUE})
 #include "llvm/TargetParser/X86TargetParser.def"
                                .Default({0, 0});
   assert(Value != 0 && "Invalid CPUStr passed to CpuIs");
