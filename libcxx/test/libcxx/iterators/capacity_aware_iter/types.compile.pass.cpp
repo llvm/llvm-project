@@ -13,10 +13,11 @@
 
 // Nested types
 
-#include "test_iterators.h"
 #include <__iterator/capacity_aware_iterator.h>
 #include <iterator>
 #include <type_traits>
+
+#include "test_iterators.h"
 
 using It = contiguous_iterator<int*>;
 
