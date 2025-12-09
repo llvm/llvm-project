@@ -365,21 +365,27 @@ public:
           CreateOrCopyFnCall.insert(Inner);
       }
       return;
-    } else if (auto *UO = dyn_cast<UnaryOperator>(LHS)) {
-      auto OpCode = UO->getOpcode();
-      if (OpCode == UO_Deref) {
-        if (auto *DerefTarget = UO->getSubExpr()) {
-          DerefTarget = DerefTarget->IgnoreParenCasts();
-          auto *DRE = dyn_cast<DeclRefExpr>(DerefTarget);
-          if (auto *Decl = DRE->getDecl()) {
-            if (!isa<ParmVarDecl>(Decl) || !isCreateOrCopy(RHS))
-              return;
-            if (Decl->hasAttr<CFReturnsRetainedAttr>())
-              CreateOrCopyFnCall.insert(RHS);
-          }
-        }
-      }
     }
+    auto *UO = dyn_cast<UnaryOperator>(LHS);
+    if (!UO)
+      return;
+    auto OpCode = UO->getOpcode();
+    if (OpCode != UO_Deref)
+      return;
+    auto *DerefTarget = UO->getSubExpr();
+    if (!DerefTarget)
+      return;
+    DerefTarget = DerefTarget->IgnoreParenCasts();
+    auto *DRE = dyn_cast<DeclRefExpr>(DerefTarget);
+    if (!DRE)
+      return;
+    auto *Decl = DRE->getDecl();
+    if (!Decl)
+      return;
+    if (!isa<ParmVarDecl>(Decl) || !isCreateOrCopy(RHS))
+      return;
+    if (Decl->hasAttr<CFReturnsRetainedAttr>())
+      CreateOrCopyFnCall.insert(RHS);
   }
 
   void visitReturnStmt(const ReturnStmt *RS, const Decl *DeclWithIssue) const {
