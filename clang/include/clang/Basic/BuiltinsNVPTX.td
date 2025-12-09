@@ -23,6 +23,7 @@ class SM<string version, list<SMFeatures> newer_list> : SMFeatures {
 
 let Features = "sm_121a" in def SM_121a : SMFeatures;
 let Features = "sm_120a" in def SM_120a : SMFeatures;
+let Features = "sm_110a" in def SM_110a : SMFeatures;
 let Features = "sm_103a" in def SM_103a : SMFeatures;
 let Features = "sm_101a" in def SM_101a : SMFeatures;
 let Features = "sm_100a" in def SM_100a : SMFeatures;
@@ -30,12 +31,14 @@ let Features = "sm_90a" in def SM_90a : SMFeatures;
 
 def SM_121 : SM<"121", [SM_121a]>;
 def SM_120 : SM<"120", [SM_120a, SM_121]>;
-def SM_103 : SM<"103", [SM_103a, SM_120]>;
+def SM_110 : SM<"110", [SM_110a, SM_120]>;
+def SM_103 : SM<"103", [SM_103a, SM_110]>;
 def SM_101 : SM<"101", [SM_101a, SM_103]>;
 def SM_100 : SM<"100", [SM_100a, SM_101]>;
 def SM_90 : SM<"90", [SM_90a, SM_100]>;
 def SM_89 : SM<"89", [SM_90]>;
-def SM_87 : SM<"87", [SM_89]>;
+def SM_88 : SM<"88", [SM_89]>;
+def SM_87 : SM<"87", [SM_88]>;
 def SM_86 : SM<"86", [SM_87]>;
 def SM_80 : SM<"80", [SM_86]>;
 def SM_75 : SM<"75", [SM_80]>;
@@ -54,8 +57,9 @@ class PTX<string version, PTXFeatures newer> : PTXFeatures {
   let Features = !strconcat("ptx", version, "|", newer.Features);
 }
 
-let Features = "ptx88" in def PTX88 : PTXFeatures;
+let Features = "ptx90" in def PTX90 : PTXFeatures;
 
+def PTX88 : PTX<"88", PTX90>;
 def PTX87 : PTX<"87", PTX88>;
 def PTX86 : PTX<"86", PTX87>;
 def PTX85 : PTX<"85", PTX86>;

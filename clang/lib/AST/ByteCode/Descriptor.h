@@ -16,7 +16,6 @@
 #include "PrimType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
-#include <limits>
 
 namespace clang {
 namespace interp {
@@ -28,6 +27,7 @@ struct Descriptor;
 enum PrimType : uint8_t;
 
 using DeclTy = llvm::PointerUnion<const Decl *, const Expr *>;
+using InitMapPtr = std::optional<std::pair<bool, std::shared_ptr<InitMap>>>;
 
 /// Invoked whenever a block is created. The constructor method fills in the
 /// inline descriptors of all fields and array elements. It also initializes
@@ -146,7 +146,7 @@ public:
 
   /// Maximum number of bytes to be used for array elements.
   static constexpr unsigned MaxArrayElemBytes =
-      std::numeric_limits<decltype(AllocSize)>::max() - sizeof(InitMap *) -
+      std::numeric_limits<decltype(AllocSize)>::max() - sizeof(InitMapPtr) -
       align(std::max(*InlineDescMD, *GlobalMD));
 
   /// Pointer to the record, if block contains records.
@@ -278,7 +278,7 @@ public:
 };
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.
-struct alignas(alignof(uint64_t)) InitMap final {
+struct InitMap final {
 private:
   /// Type packing bits.
   using T = uint64_t;
@@ -289,33 +289,12 @@ public:
   /// Initializes the map with no fields set.
   explicit InitMap(unsigned N);
 
-  /// Checks if all elements have been initialized.
-  static bool allInitialized(const InitMap *IM) {
-    return reinterpret_cast<uintptr_t>(IM) ==
-           std::numeric_limits<uintptr_t>::max();
-  }
-
-  /// Marks all elements as initialized.
-  static void markAllInitialized(InitMap *&IMPtr) {
-    std::memset(&IMPtr, static_cast<int>(std::numeric_limits<uintptr_t>::max()),
-                sizeof(void *));
-  }
-
-  /// Returns the number of bytes needed to allocate the InitMap for
-  /// \param N elements.
-  static unsigned allocBytes(unsigned N) {
-    return align(sizeof(InitMap)) + (numFields(N) * sizeof(T));
-  }
-
 private:
   friend class Pointer;
 
   /// Returns a pointer to storage.
-  T *data() {
-    return reinterpret_cast<T *>(reinterpret_cast<std::byte *>(this) +
-                                 align(sizeof(InitMap)));
-  }
-  const T *data() const { return const_cast<InitMap *>(this)->data(); }
+  T *data() { return Data.get(); }
+  const T *data() const { return Data.get(); }
 
   /// Initializes an element. Returns true when object if fully initialized.
   bool initializeElement(unsigned I);
@@ -328,6 +307,7 @@ private:
   }
   /// Number of fields not initialized.
   unsigned UninitFields;
+  std::unique_ptr<T[]> Data;
 };
 
 } // namespace interp
