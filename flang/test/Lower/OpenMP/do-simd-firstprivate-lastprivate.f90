@@ -13,6 +13,7 @@ subroutine do_simd_first_last_same_var()
   ! CHECK:      omp.wsloop
   ! CHECK-SAME: private(@{{.*}}firstprivate{{.*}} %{{.*}} -> %[[FIRSTPRIV_A:.*]], @{{.*}}private{{.*}} %{{.*}} -> %[[PRIV_I:.*]] : !fir.ref<i32>, !fir.ref<i32>)
   ! CHECK-NEXT: omp.simd
+  ! CHECK-NOT: private
   ! CHECK-NEXT: omp.loop_nest (%[[IV:.*]]) : i32
   !$omp do simd firstprivate(a) lastprivate(a)
   do i = 1, 1
@@ -36,6 +37,7 @@ subroutine do_simd_last_first_reverse()
   ! CHECK:      omp.wsloop
   ! CHECK-SAME: private(@{{.*}}firstprivate{{.*}} %{{.*}} -> %[[FIRSTPRIV_A:.*]], @{{.*}}private{{.*}} %{{.*}} -> %[[PRIV_I:.*]] : !fir.ref<i32>, !fir.ref<i32>)
   ! CHECK-NEXT: omp.simd
+  ! CHECK-NOT: private
   !$omp do simd lastprivate(a) firstprivate(a)
   do i = 1, 1
     a = 20
@@ -55,6 +57,7 @@ subroutine do_simd_multiple_vars()
   ! CHECK:      omp.wsloop
   ! CHECK-SAME: private(@{{.*}}firstprivate{{.*}} %{{.*}} -> %{{.*}}, @{{.*}}firstprivate{{.*}} %{{.*}} -> %{{.*}}, @{{.*}}private{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>)
   ! CHECK-NEXT: omp.simd
+  ! CHECK-NOT: private
   !$omp do simd firstprivate(a, b) lastprivate(a) private(c)
   do i = 1, 5
     a = a + 1
@@ -74,6 +77,7 @@ subroutine issue_168306_reproducer()
   ! CHECK:      omp.wsloop
   ! CHECK-SAME: private(@{{.*}}firstprivate{{.*}} %{{.*}} -> %[[FIRSTPRIV_A:.*]], @{{.*}}private{{.*}} %{{.*}} -> %[[PRIV_I:.*]] : !fir.ref<i32>, !fir.ref<i32>)
   ! CHECK-NEXT: omp.simd
+  ! CHECK-NOT: private
   !$omp do simd lastprivate(a) firstprivate(a)
   do i = 1, 1
     ! Inside the loop, 'a' should start at 10 (from firstprivate)
