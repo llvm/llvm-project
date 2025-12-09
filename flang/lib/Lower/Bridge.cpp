@@ -3294,8 +3294,8 @@ private:
 
                 // TODO: Don't use default value, instead get the following
                 //       info from the directive
-                uint32_t isWrite{0}, localityHint{3}, isData{1};
-                fir::PrefetchOp::create(*builder, loc, memRef, isWrite,
+                uint32_t isRead{0}, localityHint{3}, isData{1};
+                fir::PrefetchOp::create(*builder, loc, memRef, isRead,
                                         localityHint, isData);
               }
             },
