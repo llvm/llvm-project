@@ -2010,7 +2010,11 @@ let Predicates = [HasComplxNum, HasNEON] in {
 // armv8 targets. Keeping the old HINT mnemonic when compiling without PA is
 // important for compatibility with other assemblers (e.g. GAS) when building
 // software compatible with both CPUs that do or don't implement PA.
-let Uses = [LR], Defs = [LR] in {
+//
+// Most of these instructions read API(A/B)Key_EL1, which is not modelled as a
+// register, and therefore must be modelled as a load instead. The AUT
+// instructions may trap if FPAC is enabled, which is also covered by mayLoad.
+let Uses = [LR], Defs = [LR], mayLoad = 1, hasSideEffects = 0 in {
   def PACIAZ   : SystemNoOperands<0b000, "hint\t#24">;
   def PACIBZ   : SystemNoOperands<0b010, "hint\t#26">;
   let isAuthenticated = 1 in {
@@ -2018,7 +2022,7 @@ let Uses = [LR], Defs = [LR] in {
     def AUTIBZ   : SystemNoOperands<0b110, "hint\t#30">;
   }
 }
-let Uses = [LR, SP], Defs = [LR] in {
+let Uses = [LR, SP], Defs = [LR], mayLoad = 1, hasSideEffects = 0 in {
   def PACIASP  : SystemNoOperands<0b001, "hint\t#25">;
   def PACIBSP  : SystemNoOperands<0b011, "hint\t#27">;
   let isAuthenticated = 1 in {
@@ -2026,7 +2030,7 @@ let Uses = [LR, SP], Defs = [LR] in {
     def AUTIBSP  : SystemNoOperands<0b111, "hint\t#31">;
   }
 }
-let Uses = [X16, X17], Defs = [X17], CRm = 0b0001 in {
+let Uses = [X16, X17], Defs = [X17], CRm = 0b0001, mayLoad = 1, hasSideEffects = 0 in {
   def PACIA1716  : SystemNoOperands<0b000, "hint\t#8">;
   def PACIB1716  : SystemNoOperands<0b010, "hint\t#10">;
   let isAuthenticated = 1 in {
@@ -2035,7 +2039,7 @@ let Uses = [X16, X17], Defs = [X17], CRm = 0b0001 in {
   }
 }
 
-let Uses = [LR], Defs = [LR], CRm = 0b0000 in {
+let Uses = [LR], Defs = [LR], CRm = 0b0000, hasSideEffects = 0 in {
   def XPACLRI   : SystemNoOperands<0b111, "hint\t#7">;
 }
 
@@ -2103,8 +2107,10 @@ let Predicates = [HasPAuth] in {
     def DZB  : SignAuthZero<prefix_z,  0b11, !strconcat(asm, "dzb"), op>;
   }
 
+  let mayLoad = 1, hasSideEffects = 0 in {
   defm PAC : SignAuth<0b000, 0b010, "pac", null_frag>;
   defm AUT : SignAuth<0b001, 0b011, "aut", null_frag>;
+  }
 
   def XPACI : ClearAuth<0, "xpaci">;
   def : Pat<(int_ptrauth_strip GPR64:$Rd, 0), (XPACI GPR64:$Rd)>;
@@ -2185,7 +2191,7 @@ let Predicates = [HasPAuth] in {
     let Defs = [X17];
   }
 
-  let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
+  let isReturn = 1, isTerminator = 1, isBarrier = 1, mayLoad = 1, hasSideEffects = 0 in {
     def RETAA   : AuthReturn<0b010, 0, "retaa">;
     def RETAB   : AuthReturn<0b010, 1, "retab">;
     def ERETAA  : AuthReturn<0b100, 0, "eretaa">;
@@ -2343,7 +2349,7 @@ let CRm = 0b0100 in {
 def : InstAlias<"pacm", (PACM), 0>;
 
 let Predicates = [HasPAuthLR] in {
-  let Defs = [LR], Uses = [LR, SP] in {
+  let Defs = [LR], Uses = [LR, SP], mayLoad = 1, hasSideEffects = 0 in {
     //                                opcode2, opcode,   asm
     def PACIASPPC : SignAuthFixedRegs<0b00001, 0b101000, "paciasppc">;
     def PACIBSPPC : SignAuthFixedRegs<0b00001, 0b101001, "pacibsppc">;
@@ -2356,7 +2362,7 @@ let Predicates = [HasPAuthLR] in {
     def AUTIASPPCr : SignAuthOneReg<0b00001, 0b100100, "autiasppcr">;
     def AUTIBSPPCr : SignAuthOneReg<0b00001, 0b100101, "autibsppcr">;
   }
-  let Defs = [X17], Uses = [X15, X16, X17] in {
+  let Defs = [X17], Uses = [X15, X16, X17], mayLoad = 1, hasSideEffects = 0 in {
     //                                  opcode2, opcode,   asm
     def PACIA171615 : SignAuthFixedRegs<0b00001, 0b100010, "pacia171615">;
     def PACIB171615 : SignAuthFixedRegs<0b00001, 0b100011, "pacib171615">;
@@ -2364,7 +2370,7 @@ let Predicates = [HasPAuthLR] in {
     def AUTIB171615 : SignAuthFixedRegs<0b00001, 0b101111, "autib171615">;
   }
 
-  let Uses = [LR, SP], isReturn = 1, isTerminator = 1, isBarrier = 1 in {
+  let Uses = [LR, SP], isReturn = 1, isTerminator = 1, isBarrier = 1, mayLoad = 1, hasSideEffects = 0 in {
     //                                   opc,   op2,     asm
     def RETAASPPCi : SignAuthReturnPCRel<0b000, 0b11111, "retaasppc">;
     def RETABSPPCi : SignAuthReturnPCRel<0b001, 0b11111, "retabsppc">;
@@ -3586,11 +3592,11 @@ def : Pat<(AArch64adrp texternalsym:$sym), (ADRP texternalsym:$sym)>;
 // Unconditional branch (register) instructions.
 //===----------------------------------------------------------------------===//
 
-let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
+let isReturn = 1, isTerminator = 1, isBarrier = 1, hasSideEffects = 0 in {
 def RET  : BranchReg<0b0010, "ret", []>;
 def DRPS : SpecialReturn<0b0101, "drps">;
 def ERET : SpecialReturn<0b0100, "eret">;
-} // isReturn = 1, isTerminator = 1, isBarrier = 1
+} // isReturn = 1, isTerminator = 1, isBarrier = 1, hasSideEffects = 0
 
 // Default to the LR register.
 def : InstAlias<"ret", (RET LR)>;
