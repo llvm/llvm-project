@@ -11528,7 +11528,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return SDValue(NewMI, 0);
   }
   case Intrinsic::amdgcn_s_wakeup_barrier: {
-    if (!Subtarget->hasWakeupBarrier())
+    if (!Subtarget->hasSWakeupBarrier())
       return SDValue();
     [[fallthrough]];
   }
