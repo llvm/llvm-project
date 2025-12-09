@@ -1,4 +1,5 @@
-# RUN: llc -verify-machineinstrs -mtriple=arm64-applie-ios7.0 -start-before=aarch64-lower-homogeneous-prolog-epilog -homogeneous-prolog-epilog %s
+# RUN: rm -rf %S/arm64-homogeneous-prolog-epilog-tail-call.s
+# RUN: llc -verify-machineinstrs -mtriple=arm64-applie-ios7.0 -start-before=aarch64-lower-homogeneous-prolog-epilog -homogeneous-prolog-epilog %s -o /dev/null
 #
 # This test ensures defined registers are preserved after lowering homogeneous
 # epilog into helper calls. Without the fix, the verifier would complain about
