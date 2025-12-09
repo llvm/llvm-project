@@ -373,38 +373,57 @@ static void addVPMetadata(Module &M, Instruction &I,
   if (!ClMemProfAttachCalleeGuids || CalleeGuids.empty())
     return;
 
+  // Prepare the vector of value data, initializing from any existing
+  // value-profile metadata present on the instruction so that we merge the
+  // new CalleeGuids into the existing entries.
+  SmallVector<InstrProfValueData, 8> VDs;
+  uint64_t TotalCount = 0;
+
   if (I.getMetadata(LLVMContext::MD_prof)) {
-    uint64_t Unused;
-    // TODO: When merging is implemented, increase this to a typical ICP value
-    // (e.g., 3-6) For now, we only need to check if existing data exists, so 1
-    // is sufficient
-    auto ExistingVD = getValueProfDataFromInst(I, IPVK_IndirectCallTarget,
-                                               /*MaxNumValueData=*/1, Unused);
-    // We don't know how to merge value profile data yet.
-    if (!ExistingVD.empty()) {
-      return;
+    // Read all existing entries so we can merge them. Use a large
+    // MaxNumValueData to retrieve all existing entries.
+    VDs = getValueProfDataFromInst(I, IPVK_IndirectCallTarget,
+                                   /*MaxNumValueData=*/UINT32_MAX, TotalCount);
+  }
+
+  // Save the original size for use later in detecting whether any were added.
+  auto OriginalSize = VDs.size();
+
+  // Initialize the set of existing guids with the original list.
+  DenseSet<uint64_t> ExistingValues;
+  ExistingValues.reserve(OriginalSize + CalleeGuids.size());
+  for (const auto &Entry : VDs)
+    ExistingValues.insert(Entry.Value);
+
+  // Merge CalleeGuids into list of existing VDs, by appending any that are not
+  // already included.
+  VDs.reserve(OriginalSize + CalleeGuids.size());
+  for (auto G : CalleeGuids) {
+    if (ExistingValues.insert(G).second) {
+      InstrProfValueData NewEntry;
+      NewEntry.Value = G;
+      // For MemProf, we don't have actual call counts, so we assign
+      // a weight of 1 to each potential target.
+      // TODO: Consider making this weight configurable or increasing it to
+      // improve effectiveness for ICP.
+      NewEntry.Count = 1;
+      TotalCount += NewEntry.Count;
+      VDs.push_back(NewEntry);
     }
   }
 
-  SmallVector<InstrProfValueData, 4> VDs;
-  uint64_t TotalCount = 0;
+  // Update the VP metadata if we added any new callee GUIDs to the list.
+  // No need to sort the updated VDs as all appended entries have the same count
+  // of 1, which is no larger than any existing entries. The incoming list of
+  // CalleeGuids should already be deterministic for a given profile.
+  assert(VDs.size() >= OriginalSize);
+  if (VDs.size() == OriginalSize)
+    return;
 
-  for (const GlobalValue::GUID CalleeGUID : CalleeGuids) {
-    InstrProfValueData VD;
-    VD.Value = CalleeGUID;
-    // For MemProf, we don't have actual call counts, so we assign
-    // a weight of 1 to each potential target.
-    // TODO: Consider making this weight configurable or increasing it to
-    // improve effectiveness for ICP.
-    VD.Count = 1;
-    VDs.push_back(VD);
-    TotalCount += VD.Count;
-  }
+  // First clear the existing !prof.
+  I.setMetadata(LLVMContext::MD_prof, nullptr);
 
-  if (!VDs.empty()) {
-    annotateValueSite(M, I, VDs, TotalCount, IPVK_IndirectCallTarget,
-                      VDs.size());
-  }
+  annotateValueSite(M, I, VDs, TotalCount, IPVK_IndirectCallTarget, VDs.size());
 }
 
 static void
