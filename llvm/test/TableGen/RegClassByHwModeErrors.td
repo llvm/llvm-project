@@ -1,12 +1,12 @@
 // RUN: rm -rf %t && split-file %s %t
 // RUN: not llvm-tblgen --gen-asm-matcher -I %p/../../include -I %t -I %S \
-// RUN:   %t/inst-alias-bad-reg.td -o /dev/null 2>&1 | FileCheck %t/inst-alias-bad-reg.td
+// RUN:   %t/inst-alias-bad-reg.td -o /dev/null 2>&1 | FileCheck %t/inst-alias-bad-reg.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen --gen-asm-matcher -I %p/../../include -I %t -I %S \
-// RUN:   %t/inst-alias-static-predicates.td -o /dev/null 2>&1 | FileCheck %t/inst-alias-static-predicates.td
+// RUN:   %t/inst-alias-static-predicates.td -o /dev/null 2>&1 | FileCheck %t/inst-alias-static-predicates.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen --gen-compress-inst-emitter -I %p/../../include -I %t -I %S \
-// RUN:   %t/compress-regclass-by-hwmode.td -o /dev/null 2>&1 | FileCheck %t/compress-regclass-by-hwmode.td
+// RUN:   %t/compress-regclass-by-hwmode.td -o /dev/null 2>&1 | FileCheck %t/compress-regclass-by-hwmode.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen --gen-compress-inst-emitter -I %p/../../include -I %t -I %S \
-// RUN:   %t/compress-regclass-by-hwmode-2.td -o /dev/null 2>&1 | FileCheck %t/compress-regclass-by-hwmode-2.td
+// RUN:   %t/compress-regclass-by-hwmode-2.td -o /dev/null 2>&1 | FileCheck %t/compress-regclass-by-hwmode-2.td --implicit-check-not="error:"
 
 //--- Common.td
 include "Common/RegClassByHwModeCommon.td"
