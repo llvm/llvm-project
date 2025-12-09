@@ -24,10 +24,10 @@ AST_MATCHER_P(CompoundStmt, hasFinalStmt, StatementMatcher, InnerMatcher) {
 
 } // namespace
 
-static const char *const RedundantReturnDiag =
+static constexpr StringRef RedundantReturnDiag =
     "redundant return statement at the end "
     "of a function with a void return type";
-static const char *const RedundantContinueDiag =
+static constexpr StringRef RedundantContinueDiag =
     "redundant continue statement at the "
     "end of loop statement";
 
