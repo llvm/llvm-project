@@ -99,7 +99,8 @@ enum ActionType {
   PrintAction,
   PrintCovPointsAction,
   StatsAction,
-  SymbolizeAction
+  SymbolizeAction,
+  UnionAction
 };
 
 static ActionType Action;
@@ -1101,6 +1102,48 @@ static void diffRawCoverage(const std::string &FileA, const std::string &FileB,
   RawCoverage::write(OutputFile, DiffCov, *HeaderA);
 }
 
+// Compute union of multiple coverage files and write to output file.
+static void unionRawCoverage(const std::vector<std::string> &InputFiles,
+                             const std::string &OutputFile) {
+  failIf(InputFiles.empty(), "union action requires at least one input file");
+
+  // Read the first file to get the header and initial coverage
+  auto UnionCov = RawCoverage::read(InputFiles[0]);
+  failIfError(UnionCov);
+
+  // Get header from first file
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+      MemoryBuffer::getFile(InputFiles[0]);
+  failIfError(BufOrErr);
+  const FileHeader *FirstHeader =
+      reinterpret_cast<const FileHeader *>(BufOrErr.get()->getBufferStart());
+  FileHeader Header = *FirstHeader;
+
+  for (size_t I = 1; I < InputFiles.size(); ++I) {
+    auto Cov = RawCoverage::read(InputFiles[I]);
+    failIfError(Cov);
+
+    // Check bitness of current file
+    ErrorOr<std::unique_ptr<MemoryBuffer>> CurBufOrErr =
+        MemoryBuffer::getFile(InputFiles[I]);
+    failIfError(CurBufOrErr);
+    const FileHeader *CurHeader = reinterpret_cast<const FileHeader *>(
+        CurBufOrErr.get()->getBufferStart());
+
+    if (CurHeader->Bitness != Header.Bitness) {
+      errs() << "WARNING: Input file has different bitness (File "
+             << InputFiles[I] << ": " << bitnessToString(CurHeader->Bitness)
+             << ", First file: " << bitnessToString(Header.Bitness)
+             << "). Using bitness from first file.\n";
+    }
+
+    UnionCov.get()->Addrs->insert(Cov.get()->Addrs->begin(),
+                                  Cov.get()->Addrs->end());
+  }
+
+  RawCoverage::write(OutputFile, *UnionCov.get(), Header);
+}
+
 static std::unique_ptr<SymbolizedCoverage>
 merge(const std::vector<std::unique_ptr<SymbolizedCoverage>> &Coverages) {
   if (Coverages.empty())
@@ -1239,6 +1282,9 @@ static void parseArgs(int Argc, char **Argv) {
         "  Depending on chosen action the tool expects different input files:\n"
         "    -print-coverage-pcs     - coverage-instrumented binary files\n"
         "    -print-coverage         - .sancov files\n"
+        "    -diff                   - two .sancov files & --output option\n"
+        "    -union                  - one or more .sancov files & --output "
+        "option\n"
         "    <other actions>         - .sancov files & corresponding binary "
         "files, .symcov files\n");
     std::exit(0);
@@ -1264,6 +1310,9 @@ static void parseArgs(int Argc, char **Argv) {
       break;
     case OPT_diff:
       Action = ActionType::DiffAction;
+      break;
+    case OPT_union_files:
+      Action = ActionType::UnionAction;
       break;
     case OPT_printCoveragePcs:
       Action = ActionType::PrintCovPointsAction;
@@ -1323,6 +1372,16 @@ int sancov_main(int Argc, char **Argv, const llvm::ToolContext &) {
     diffRawCoverage(ClInputFiles[0], ClInputFiles[1], ClOutputFile);
     return 0;
   }
+  if (Action == UnionAction) {
+    // -union requires at least 1 input file and an output file.
+    failIf(ClInputFiles.empty(),
+           "union action requires at least one input sancov file");
+    failIf(
+        ClOutputFile.empty(),
+        "union action requires --output option to specify output sancov file");
+    unionRawCoverage(ClInputFiles, ClOutputFile);
+    return 0;
+  }
   if (Action == PrintCovPointsAction) {
     // -print-coverage-points doesn't need coverage files.
     for (const std::string &ObjFile : ClInputFiles) {
@@ -1358,6 +1417,7 @@ int sancov_main(int Argc, char **Argv, const llvm::ToolContext &) {
               "use -symbolize & coverage-report-server.py instead\n";
     return 1;
   case DiffAction:
+  case UnionAction:
   case PrintAction:
   case PrintCovPointsAction:
     llvm_unreachable("unsupported action");
