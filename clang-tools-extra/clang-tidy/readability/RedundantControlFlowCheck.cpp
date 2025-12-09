@@ -38,7 +38,7 @@ static bool isLocationInMacroExpansion(const SourceManager &SM,
 
 void RedundantControlFlowCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      functionDecl(isDefinition(), returns(voidType()),
+      functionDecl(returns(voidType()),
                    hasBody(compoundStmt(hasFinalStmt(
                        returnStmt(unless(has(expr()))).bind("stmt"))))),
       this);
