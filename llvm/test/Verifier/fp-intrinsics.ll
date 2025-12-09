@@ -53,46 +53,46 @@ entry:
 
 ; Test multiple fp.round bundles.
 ; CHECK-NEXT: Multiple "fp.round" operand bundles
-; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.round"(metadata !"towardzero"), "fp.round"(metadata !"towardzero") ]
+; CHECK-NEXT:   %ftrunc = call double @llvm.nearbyint.f64(double %a) #{{[0-9]+}} [ "fp.round"(metadata !"towardzero"), "fp.round"(metadata !"towardzero") ]
 define double @f6(double %a) #0 {
 entry:
-  %ftrunc = call double @llvm.trunc.f64(double %a) #0 [ "fp.round"(metadata !"towardzero"), "fp.round"(metadata !"towardzero") ]
+  %ftrunc = call double @llvm.nearbyint.f64(double %a) #0 [ "fp.round"(metadata !"towardzero"), "fp.round"(metadata !"towardzero") ]
   ret double %ftrunc
 }
 
 ; Test fp.round bundle that has more than one rounding mode specification.
 ; CHECK-NEXT: Rounding mode is specified more that once
-; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.round"(metadata !"towardzero", metadata !"tonearest") ]
+; CHECK-NEXT:   %ftrunc = call double @llvm.nearbyint.f64(double %a) #{{[0-9]+}} [ "fp.round"(metadata !"towardzero", metadata !"tonearest") ]
 define double @f7(double %a) #0 {
 entry:
-  %ftrunc = call double @llvm.trunc.f64(double %a) #0 [ "fp.round"(metadata !"towardzero", metadata !"tonearest") ]
+  %ftrunc = call double @llvm.nearbyint.f64(double %a) #0 [ "fp.round"(metadata !"towardzero", metadata !"tonearest") ]
   ret double %ftrunc
 }
 
 ; Test fp.round bundle that has non-metadata operand.
 ; CHECK-NEXT: Value of a "fp.round" bundle operand must be a metadata
-; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.round"(i32 0) ]
+; CHECK-NEXT:   %ftrunc = call double @llvm.nearbyint.f64(double %a) #{{[0-9]+}} [ "fp.round"(i32 0) ]
 define double @f8(double %a) #0 {
 entry:
-  %ftrunc = call double @llvm.trunc.f64(double %a) #0 [ "fp.round"(i32 0) ]
+  %ftrunc = call double @llvm.nearbyint.f64(double %a) #0 [ "fp.round"(i32 0) ]
   ret double %ftrunc
 }
 
 ; Test fp.round bundle that has non-string operand.
 ; CHECK-NEXT: Value of a "fp.round" bundle operand must be a string
-; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.round"(metadata i64 3) ]
+; CHECK-NEXT:   %ftrunc = call double @llvm.nearbyint.f64(double %a) #{{[0-9]+}} [ "fp.round"(metadata i64 3) ]
 define double @f9(double %a) #0 {
 entry:
-  %ftrunc = call double @llvm.trunc.f64(double %a) #0 [ "fp.round"(metadata !{i64 3}) ]
+  %ftrunc = call double @llvm.nearbyint.f64(double %a) #0 [ "fp.round"(metadata !{i64 3}) ]
   ret double %ftrunc
 }
 
 ; Test fp.round bundle that specifies incorrect value.
 ; CHECK-NEXT: Unrecognized value in "fp.round" bundle operand
-; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.round"(metadata !"qqq") ]
+; CHECK-NEXT:   %ftrunc = call double @llvm.nearbyint.f64(double %a) #{{[0-9]+}} [ "fp.round"(metadata !"qqq") ]
 define double @f10(double %a) #0 {
 entry:
-  %ftrunc = call double @llvm.trunc.f64(double %a) #0 [ "fp.round"(metadata !"qqq") ]
+  %ftrunc = call double @llvm.nearbyint.f64(double %a) #0 [ "fp.round"(metadata !"qqq") ]
   ret double %ftrunc
 }
 
@@ -147,6 +147,15 @@ entry:
 define double @f16(double %a) {
 entry:
   %ftrunc = call double @llvm.trunc.f64(double %a) [ "fp.except"(metadata !"strict") ]
+  ret double %ftrunc
+}
+
+; Test fp.round bundle that was attached to a function that does not depend on rounding mode.
+; CHECK-NEXT: "fp.round" operand bundles cannot be specified on an intrinsic that does not depend on rounding mode
+; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.round"(metadata !"towardzero") ]
+define double @f17(double %a) #0 {
+entry:
+  %ftrunc = call double @llvm.trunc.f64(double %a) #0 [ "fp.round"(metadata !"towardzero") ]
   ret double %ftrunc
 }
 
