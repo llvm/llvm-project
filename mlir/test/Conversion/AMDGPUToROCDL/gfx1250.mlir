@@ -425,6 +425,42 @@ func.func @make_dma_descriptor_iterate(%base: !amdgpu.tdm_base<i32>, %idx : inde
 
 // -----
 
+// CHECK-LABEL: func @make_dma_descriptor_pad_enable
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[PAD_AMOUNT:.+]]: i32, %[[PAD_INTERVAL:.+]]: i32)
+func.func @make_dma_descriptor_pad_enable(%base: !amdgpu.tdm_base<i32>, %pad_amount: i32, %pad_interval: i32) -> !amdgpu.tdm_descriptor {
+
+  // CHECK-DAG: %[[DGROUP0:.+]] = builtin.unrealized_conversion_cast %[[BASE]]
+
+  // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32)
+  // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32)
+  // CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(2 : i32)
+  // CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(3 : i32)
+  // CHECK-DAG: %[[C4:.+]] = llvm.mlir.constant(4 : i32)
+  // CHECK-DAG: %[[C5:.+]] = llvm.mlir.constant(5 : i32)
+  // CHECK-DAG: %[[C6:.+]] = llvm.mlir.constant(6 : i32)
+  // CHECK-DAG: %[[C7:.+]] = llvm.mlir.constant(7 : i32)
+
+  // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(20 : i32)
+  // CHECK: %[[PAD_ENABLE:.+]] = llvm.shl %[[C1]], %[[SHIFT]]
+  // CHECK: %[[SGPR0:.+]] = llvm.or %[[SGPR0_BASE:.+]], %[[PAD_ENABLE]]
+
+  // CHECK: %[[PAD_INTERVAL_CTTZ:.+]] = "llvm.intr.cttz"(%[[PAD_INTERVAL]]) <{is_zero_poison = false}> : (i32) -> i32
+  // CHECK: %[[PAD_INTERVAL_M1:.+]] = llvm.sub %[[PAD_INTERVAL_CTTZ]], %[[C1]]
+  // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(22 : i32)
+  // CHECK: %[[PAD_INTERVAL:.+]] = llvm.shl %[[PAD_INTERVAL_M1]], %[[SHIFT]]
+  // CHECK: %[[SGPR0:.+]] = llvm.or %[[SGPR0_BASE:.+]], %[[PAD_INTERVAL]]
+
+  // CHECK: %[[PAD_AMOUNT_M1:.+]] = llvm.sub %[[PAD_AMOUNT]], %[[C1]]
+  // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(25 : i32)
+  // CHECK: %[[PAD_AMOUNT_SHIFTED:.+]] = llvm.shl %[[PAD_AMOUNT_M1]], %[[SHIFT]]
+  // CHECK: llvm.or %[[SGPR0:.+]], %[[PAD_AMOUNT_SHIFTED]]
+
+  %descriptor = amdgpu.make_dma_descriptor %base globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] padShared(%pad_amount every %pad_interval) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  func.return %descriptor : !amdgpu.tdm_descriptor
+}
+
+// -----
+
 // CHECK-LABEL: func @make_dma_descriptor
 // CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
 func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_descriptor {

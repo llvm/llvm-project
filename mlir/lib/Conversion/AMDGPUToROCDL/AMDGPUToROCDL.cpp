@@ -2456,8 +2456,8 @@ struct AMDGPUMakeDmaDescriptorLowering
     if (!op.getPadAmount())
       return sgpr0;
 
-    Value padAmount = adaptor.getPadAmount();
     // pre-condition: padAmount is a value between 1-128.
+    Value padAmount = adaptor.getPadAmount();
     padAmount = LLVM::SubOp::create(rewriter, loc, padAmount, consts[1]);
     // post-condition: padAmount is a value between 0-127.
     return setValueAtOffset(rewriter, loc, sgpr0, padAmount, 25);

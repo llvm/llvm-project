@@ -1298,8 +1298,8 @@ def AMDGPU_MakeDmaDescriptorOp :
     DenseI64ArrayAttr: $shared_static_sizes,
     Optional<I16>: $workgroup_mask,
     Optional<I1>: $early_timeout,
-    Optional<Index>: $pad_amount,
-    Optional<Index>: $pad_interval,
+    Optional<I32>: $pad_amount,
+    Optional<I32>: $pad_interval,
     Optional<AnyMemRef>: $atomic_barrier_address,
     Variadic<Index>: $atomic_barrier_indices,
     Optional<Index>: $global_increment,
@@ -1345,7 +1345,7 @@ def AMDGPU_MakeDmaDescriptorOp :
 
       // Example of moving a two dimension tensor to LDS where padding is applied after every integer.
       %base = amdgpu.make_dma_base %global[0, 0], %lds[0, 0] : memref<32x32xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
-      %descriptor = amdgpu.make_dma_descriptor %base globalSize [32, 32] globalStride [32, 1] sharedSize [64, 64] padding(%pad_amount pad_every %pad_interval) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+      %descriptor = amdgpu.make_dma_descriptor %base globalSize [32, 32] globalStride [32, 1] sharedSize [64, 64] padShared(%pad_amount every %pad_interval) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
       amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
      ```
   }];
