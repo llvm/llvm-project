@@ -57,6 +57,20 @@ define ptr @src_swap(i32 %arg0, ptr %arg1) {
   ret ptr %v3
 }
 
+define <2 x ptr> @src_splat(i32 %arg0, <2 x ptr> %arg1) {
+; CHECK-LABEL: @src_splat(
+; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[ARG0:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[V1]], i64 63252, i64 29452
+; CHECK-NEXT:    [[V3:%.*]] = getelementptr i8, <2 x ptr> [[ARG1:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret <2 x ptr> [[V3]]
+;
+  %v0 = getelementptr i8, <2 x ptr> %arg1, <2 x i64> splat (i64 8148)
+  %v1 = icmp sgt i32 %arg0, 3
+  %v2 = select i1 %v1, <2 x i64> splat (i64 55104), <2 x i64> splat (i64 21304)
+  %v3 = getelementptr i8, <2 x ptr> %v0, <2 x i64> %v2
+  ret <2 x ptr> %v3
+}
+
 ; Fail 1: Different GEP type
 define ptr @src_fail_different_type(i32 %arg0, ptr %arg1) {
 ; CHECK-LABEL: @src_fail_different_type(
