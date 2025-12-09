@@ -12,7 +12,10 @@ endmacro()
 # suite against it. This ensures that we run the test suite against a setup that matches
 # what we ship in production as closely as possible (in terms of file paths, rpaths, etc).
 set(LIBCXXABI_TESTING_INSTALL_PREFIX "${LIBCXXABI_BINARY_DIR}/test-suite-install")
-set(libcxxabi_test_suite_install_targets cxx-headers cxx cxx_experimental cxx-modules cxxabi-headers cxxabi)
+set(libcxxabi_test_suite_install_targets cxx-headers cxx cxx-modules cxxabi-headers cxxabi)
+if (TARGET cxx_experimental)
+  list(APPEND libcxxabi_test_suite_install_targets cxx_experimental)
+endif()
 if (LIBCXXABI_USE_LLVM_UNWINDER AND TARGET unwind)
   list(APPEND libcxxabi_test_suite_install_targets unwind-headers unwind)
 endif()
