@@ -19,42 +19,42 @@ void test2(const __global uint *p) {
 // expected-error@-3{{use of undeclared identifier 'intel_sub_group_block_prefetch_ui'}}
 #endif
 
-uchar test4(read_only image2d_t im, int2 i) {
+uchar test3(read_only image2d_t im, int2 i) {
   return intel_sub_group_block_read_uc(im, i);
 }
 #if !defined(cl_intel_subgroups_char)
 // expected-error@-3{{use of undeclared identifier 'intel_sub_group_block_read_uc'}}
 #endif
 
-ushort test5(const __local ushort* p) {
+ushort test4(const __local ushort* p) {
   return intel_sub_group_block_read_us(p);
 }
 #if !defined(cl_intel_subgroups_short)
 // expected-error@-3{{use of undeclared identifier 'intel_sub_group_block_read_us'}}
 #endif
 
-ulong test6(const __global ulong* p) {
+ulong test5(const __global ulong* p) {
   return intel_sub_group_block_read_ul(p);
 }
 #if !defined(cl_intel_subgroups_long)
 // expected-error@-3{{use of undeclared identifier 'intel_sub_group_block_read_ul'}}
 #endif
 
-ushort test7(float f) {
+ushort test6(float f) {
   return intel_convert_bfloat16_as_ushort(f);
 }
 #if !defined(cl_intel_bfloat16_conversions)
 // expected-error@-3{{use of undeclared identifier 'intel_convert_bfloat16_as_ushort'}}
 #endif
 
-uint test8(const __local uint* p) {
+uint test7(const __local uint* p) {
   return intel_sub_group_block_read(p);
 }
 #if !defined(cl_intel_subgroup_local_block_io)
 // expected-error@-3{{use of undeclared identifier 'intel_sub_group_block_read'}}
 #endif
 
-uchar test9(uchar slice_type, uchar qp) {
+uchar test8(uchar slice_type, uchar qp) {
   return intel_sub_group_avc_mce_get_default_inter_base_multi_reference_penalty(slice_type, qp);
 }
 #if !defined(cl_intel_device_side_avc_motion_estimation)
