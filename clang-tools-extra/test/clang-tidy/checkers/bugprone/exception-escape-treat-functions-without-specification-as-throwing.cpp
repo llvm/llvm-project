@@ -29,6 +29,16 @@ void calls_unknown() noexcept {
   extern_declared();
 }
 
+void calls_unknown_caught() noexcept {
+  // CHECK-MESSAGES-ALL-NOT: warning:
+  // CHECK-MESSAGES-UNDEFINED-NOT: warning:
+  // CHECK-MESSAGES-NONE-NOT: warning:
+  try {
+    extern_declared();
+  } catch(...) {
+  }
+}
+
 void definitely_nothrow() noexcept {}
 
 void calls_nothrow() noexcept {
