@@ -19,9 +19,9 @@
 
 #include "test_iterators.h"
 
-template<typename Iter>
-constexpr bool test(){
-  int arr[] = {1,2,3,4};
+template <typename Iter>
+constexpr bool test() {
+  int arr[]         = {1, 2, 3, 4};
   constexpr long sz = std::size(arr);
 
   using CapIter = std::__capacity_aware_iterator<Iter, decltype(arr), sz>;
@@ -85,7 +85,7 @@ constexpr bool test(){
   return true;
 }
 
-int main(int, char**){
+int main(int, char**) {
   assert(test<cpp20_random_access_iterator<int*>>());
   // static_assert(test<cpp20_random_access_iterator<int*>>());
 }
