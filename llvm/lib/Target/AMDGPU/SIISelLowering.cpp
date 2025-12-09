@@ -10610,6 +10610,21 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_struct_buffer_atomic_dec:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_dec:
     return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_DEC);
+  case Intrinsic::amdgcn_raw_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32:
+    return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_CSUB);
+  case Intrinsic::amdgcn_struct_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub_clamp_u32:
+    return lowerStructBufferAtomicIntrin(Op, DAG,
+                                         AMDGPUISD::BUFFER_ATOMIC_CSUB);
+  case Intrinsic::amdgcn_raw_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32:
+    return lowerRawBufferAtomicIntrin(Op, DAG,
+                                      AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
+  case Intrinsic::amdgcn_struct_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cond_sub_u32:
+    return lowerStructBufferAtomicIntrin(Op, DAG,
+                                         AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap: {
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(4), DAG);
