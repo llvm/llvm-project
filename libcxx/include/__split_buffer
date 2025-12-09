@@ -73,11 +73,12 @@ public:
   // Can't be defaulted due to _LIBCPP_COMPRESSED_PAIR not being an aggregate in C++03 and C++11.
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __split_buffer_pointer_layout()
 #if _LIBCPP_STD_VER >= 20
-      // Prevents Swift compiler's C++ importer from implicitly instantiating this ctor when it's not supported.
-      requires (!is_reference_v<allocator_type>)
+    // Prevents Swift compiler's C++ importer from implicitly instantiating this ctor when it's not supported.
+    requires (!is_reference_v<allocator_type>)
 #endif
-      : __back_cap_(nullptr) {}
-  
+      : __back_cap_(nullptr) {
+  }
+
   _LIBCPP_CONSTEXPR_SINCE_CXX20
   _LIBCPP_HIDE_FROM_ABI explicit __split_buffer_pointer_layout(const allocator_type& __alloc)
       : __back_cap_(nullptr), __alloc_(__alloc) {}
