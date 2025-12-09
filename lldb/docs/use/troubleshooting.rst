@@ -141,13 +141,13 @@ The output above shows us that this particular copy of LLDB has XML parsing
 
    ``readelf -d`` as used above only shows direct dependencies of the binary.
    Libraries loaded by a library will not be shown. An example of this is Python.
-   ``lldb`` loads ``liblldb`` and it is ``liblldb`` that requires ``libpython``.
+   ``lldb`` requires ``liblldb`` and it is ``liblldb`` that would require ``libpython``.
 
    The same ``readelf`` command can be used on ``liblldb`` to see if it does
    depend on Python.
 
    ``ldd`` will show you the full dependency tree of ``lldb`` but **do not**
-   use it unless you trust the ``lldb`` binary itself. As some versions of
-   ``ldd`` may execute the binary in the process of inspecting it.
+   use it unless you trust the ``lldb`` binary. As some versions of ``ldd`` may
+   execute the binary in the process of inspecting it.
 
-If you are on MacOS, use ``otool -l <path-to-lldb>``.
+On MacOS, use ``otool -l <path-to-lldb>``.
