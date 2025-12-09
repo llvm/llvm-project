@@ -121,3 +121,145 @@ define <2 x double> @shufflodector_pack_od_v2f64(<2 x double> %a, <2 x double> %
     %c = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 1, i32 3>
     ret <2 x double> %c
 }
+
+;; vpackev.b
+define <16 x i8> @shufflevector_pack_ev_v16i8_rotate(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: shufflevector_pack_ev_v16i8_rotate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI12_0)
+; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI12_0)
+; CHECK-NEXT:    vshuf.b $vr0, $vr1, $vr0, $vr2
+; CHECK-NEXT:    ret
+    %c = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30, i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22>
+    ret <16 x i8> %c
+}
+
+;; vpackev.h
+define <8 x i16> @shufflevector_pack_ev_v8i16_rotate(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: shufflevector_pack_ev_v8i16_rotate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI13_0)
+; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI13_0)
+; CHECK-NEXT:    vshuf.h $vr2, $vr1, $vr0
+; CHECK-NEXT:    vori.b $vr0, $vr2, 0
+; CHECK-NEXT:    ret
+    %c = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 4, i32 12, i32 6, i32 14, i32 0, i32 8, i32 2, i32 10>
+    ret <8 x i16> %c
+}
+
+;; vpackev.w
+define <4 x i32> @shufflevector_pack_ev_v4i32_rotate(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: shufflevector_pack_ev_v4i32_rotate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI14_0)
+; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI14_0)
+; CHECK-NEXT:    vshuf.w $vr2, $vr1, $vr0
+; CHECK-NEXT:    vori.b $vr0, $vr2, 0
+; CHECK-NEXT:    ret
+    %c = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 2, i32 6, i32 0, i32 4>
+    ret <4 x i32> %c
+}
+
+;; vpickev.d/vpackev.d/vilvl.d
+define <2 x i64> @shufflevector_pack_ev_v2i64_rotate(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: shufflevector_pack_ev_v2i64_rotate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpackev.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    ret
+    %c = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 2, i32 0>
+    ret <2 x i64> %c
+}
+
+;; vpackev.w
+define <4 x float> @shufflevector_pack_ev_v4f32_rotate(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: shufflevector_pack_ev_v4f32_rotate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI16_0)
+; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI16_0)
+; CHECK-NEXT:    vshuf.w $vr2, $vr1, $vr0
+; CHECK-NEXT:    vori.b $vr0, $vr2, 0
+; CHECK-NEXT:    ret
+    %c = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 2, i32 6, i32 0, i32 4>
+    ret <4 x float> %c
+}
+
+;; vpickev.d/vpackev.d/vilvl.d
+define <2 x double> @shufflevector_pack_ev_v2f64_rotate(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: shufflevector_pack_ev_v2f64_rotate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpackev.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    ret
+    %c = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 2, i32 0>
+    ret <2 x double> %c
+}
+
+;; vpackod.b
+define <16 x i8> @shufflevector_pack_od_v16i8_rotate(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: shufflevector_pack_od_v16i8_rotate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI18_0)
+; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI18_0)
+; CHECK-NEXT:    vshuf.b $vr0, $vr1, $vr0, $vr2
+; CHECK-NEXT:    ret
+    %c = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31, i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23>
+    ret <16 x i8> %c
+}
+
+;; vpackod.h
+define <8 x i16> @shufflevector_pack_od_v8i16_rotate(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: shufflevector_pack_od_v8i16_rotate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI19_0)
+; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI19_0)
+; CHECK-NEXT:    vshuf.h $vr2, $vr1, $vr0
+; CHECK-NEXT:    vori.b $vr0, $vr2, 0
+; CHECK-NEXT:    ret
+    %c = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 5, i32 13, i32 7, i32 15, i32 1, i32 9, i32 3, i32 11>
+    ret <8 x i16> %c
+}
+
+;; vpackod.w
+define <4 x i32> @shufflevector_pack_od_v4i32_rotate(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: shufflevector_pack_od_v4i32_rotate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI20_0)
+; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI20_0)
+; CHECK-NEXT:    vshuf.w $vr2, $vr1, $vr0
+; CHECK-NEXT:    vori.b $vr0, $vr2, 0
+; CHECK-NEXT:    ret
+    %c = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 3, i32 7, i32 1, i32 5>
+    ret <4 x i32> %c
+}
+
+;; vpickod.d/vpackod.d/vilvh.d
+define <2 x i64> @shufflodector_pack_od_v2i64_rotate(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: shufflodector_pack_od_v2i64_rotate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpackod.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    ret
+    %c = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 3, i32 1>
+    ret <2 x i64> %c
+}
+
+;; vpackod.w
+define <4 x float> @shufflodector_pack_od_v4f32_rotate(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: shufflodector_pack_od_v4f32_rotate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI22_0)
+; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI22_0)
+; CHECK-NEXT:    vshuf.w $vr2, $vr1, $vr0
+; CHECK-NEXT:    vori.b $vr0, $vr2, 0
+; CHECK-NEXT:    ret
+    %c = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 3, i32 7, i32 1, i32 5>
+    ret <4 x float> %c
+}
+
+;; vpickod.d/vpackod.d/vilvh.d
+define <2 x double> @shufflodector_pack_od_v2f64_rotate(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: shufflodector_pack_od_v2f64_rotate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpackod.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    ret
+    %c = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 3, i32 1>
+    ret <2 x double> %c
+}
