@@ -310,6 +310,13 @@ def CIR_AnyFloatOrVecOfFloatType
 }
 
 //===----------------------------------------------------------------------===//
+// Data member type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyDataMemberType : CIR_TypeBase<"::cir::DataMemberType",
+    "data member type">;
+
+//===----------------------------------------------------------------------===//
 // VPtr type predicates
 //===----------------------------------------------------------------------===//
 
@@ -322,7 +329,8 @@ def CIR_PtrToVPtr : CIR_PtrToType<CIR_AnyVPtrType>;
 //===----------------------------------------------------------------------===//
 
 defvar CIR_ScalarTypes = [
-    CIR_AnyBoolType, CIR_AnyIntType, CIR_AnyFloatType, CIR_AnyPtrType
+    CIR_AnyBoolType, CIR_AnyIntType, CIR_AnyFloatType, CIR_AnyPtrType,
+    CIR_AnyDataMemberType, CIR_AnyVPtrType
 ];
 
 def CIR_AnyScalarType : AnyTypeOf<CIR_ScalarTypes, "cir scalar type"> {
