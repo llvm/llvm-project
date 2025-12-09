@@ -59,4 +59,6 @@ constexpr bool test() {
 int main(int, char**) {
   assert(test<three_way_contiguous_iterator<Foo*>>());
   static_assert(test<three_way_contiguous_iterator<Foo*>>());
+
+  return 0;
 }

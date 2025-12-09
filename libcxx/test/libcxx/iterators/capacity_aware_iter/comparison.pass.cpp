@@ -87,5 +87,7 @@ constexpr bool test() {
 
 int main(int, char**) {
   assert(test<cpp20_random_access_iterator<int*>>());
-  // static_assert(test<cpp20_random_access_iterator<int*>>());
+  static_assert(test<cpp20_random_access_iterator<int*>>());
+
+  return 0;
 }

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_UPPER_BOUNDED_ITERATOR_H
-#define _LIBCPP___ITERATOR_UPPER_BOUNDED_ITERATOR_H
+#ifndef _LIBCPP_CAPACITY_AWARE_ITERATOR_H
+#define _LIBCPP_CAPACITY_AWARE_ITERATOR_H
 
 #include <__assert>
 #include <__compare/ordering.h>
@@ -201,4 +201,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ITERATOR_UPPER_BOUNDED_ITERATOR_H
+#endif // _LIBCPP_CAPACITY_AWARE_ITERATOR_H
