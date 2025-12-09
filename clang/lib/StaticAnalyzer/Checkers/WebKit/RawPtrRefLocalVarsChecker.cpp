@@ -433,6 +433,8 @@ public:
     RTC = RetainTypeChecker();
   }
   std::optional<bool> isUnsafePtr(const QualType T) const final {
+    if (T.hasStrongOrWeakObjCLifetime())
+      return false;
     return RTC->isUnretained(T);
   }
   bool isSafePtr(const CXXRecordDecl *Record) const final {

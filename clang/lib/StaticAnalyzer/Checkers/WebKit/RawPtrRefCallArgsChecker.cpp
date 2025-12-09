@@ -177,16 +177,11 @@ public:
     if (BR->getSourceManager().isInSystemHeader(E->getExprLoc()))
       return;
 
-    auto Selector = E->getSelector();
     if (auto *Receiver = E->getInstanceReceiver()) {
       std::optional<bool> IsUnsafe = isUnsafePtr(E->getReceiverType());
       if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Receiver)) {
-        if (auto *InnerMsg = dyn_cast<ObjCMessageExpr>(Receiver)) {
-          auto InnerSelector = InnerMsg->getSelector();
-          if (InnerSelector.getNameForSlot(0) == "alloc" &&
-              Selector.getNameForSlot(0).starts_with("init"))
-            return;
-        }
+        if (isAllocInit(E))
+          return;
         reportBugOnReceiver(Receiver, D);
       }
     }
