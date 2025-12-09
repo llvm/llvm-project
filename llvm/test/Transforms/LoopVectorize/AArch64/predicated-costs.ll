@@ -385,6 +385,108 @@ attributes #1 = { "target-cpu"="neoverse-v2" }
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
 !3 = !{!"llvm.loop.vectorize.enable", i1 true}
+
+; BFI computes if is taken 20 times, and loop 32 times. Make sure we round the
+; divisor up to 2 so that we don't vectorize the loop unprofitably.
+define void @round_scalar_pred_divisor(ptr %dst, double %x) {
+; CHECK-LABEL: define void @round_scalar_pred_divisor(
+; CHECK-SAME: ptr [[DST:%.*]], double [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = fcmp une double [[X]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[LATCH]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[IV]] to i32
+; CHECK-NEXT:    [[UITOFP:%.*]] = uitofp i32 [[TRUNC]] to double
+; CHECK-NEXT:    [[SIN:%.*]] = tail call double @llvm.sin.f64(double [[UITOFP]])
+; CHECK-NEXT:    [[FPTRUNC:%.*]] = fptrunc double [[SIN]] to float
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi float [ [[FPTRUNC]], %[[IF]] ], [ 0.000000e+00, %[[LOOP]] ]
+; CHECK-NEXT:    store float [[PHI]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 1024
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %c = fcmp une double %x, 0.0
+  br i1 %c, label %if, label %latch
+
+if:
+  %trunc = trunc i64 %iv to i32
+  %uitofp = uitofp i32 %trunc to double
+  %sin = tail call double @llvm.sin(double %uitofp)
+  %fptrunc = fptrunc double %sin to float
+  br label %latch
+
+latch:
+  %phi = phi float [ %fptrunc, %if ], [ 0.0, %loop ]
+  store float %phi, ptr %dst
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 1024
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; BFI computes the relative frequency of if.2 to the loop header to be extremely
+; low, so the discount in getPredBlockCostDivisor is high enough to not fit in
+; uint32_t. Make sure we return uint64_t which fits all possible BlockFrequency
+; values.
+define void @getPredBlockCostDivisor_truncate(i32 %0) {
+; CHECK-LABEL: define void @getPredBlockCostDivisor_truncate(
+; CHECK-SAME: i32 [[TMP0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[TMP0]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[ISNAN_1:%.*]] = fcmp uno double 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    br i1 [[ISNAN_1]], label %[[IF_1:.*]], label %[[LATCH]]
+; CHECK:       [[IF_1]]:
+; CHECK-NEXT:    [[ISNAN_2:%.*]] = fcmp uno double 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    br i1 [[ISNAN_2]], label %[[IF_2:.*]], label %[[LATCH]]
+; CHECK:       [[IF_2]]:
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 0
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %0, %entry ], [ %iv.next, %latch ]
+  %isnan.1 = fcmp uno double 0.000000e+00, 0.000000e+00
+  br i1 %isnan.1, label %if.1, label %latch
+
+if.1:
+  %isnan.2 = fcmp uno double 0.000000e+00, 0.000000e+00
+  br i1 %isnan.2, label %if.2, label %latch
+
+if.2:
+  br label %latch
+
+latch:
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv, 0
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}

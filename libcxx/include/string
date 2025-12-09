@@ -3851,46 +3851,52 @@ swap(basic_string<_CharT, _Traits, _Allocator>& __lhs, basic_string<_CharT, _Tra
   __lhs.swap(__rhs);
 }
 
-_LIBCPP_EXPORTED_FROM_ABI int stoi(const string& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI long stol(const string& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI unsigned long stoul(const string& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI long long stoll(const string& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI unsigned long long stoull(const string& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI int stoi(const string& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI unsigned long
+stoul(const string& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long stol(const string& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long long
+stoll(const string& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI unsigned long long
+stoull(const string& __str, size_t* __idx = nullptr, int __base = 10);
 
-_LIBCPP_EXPORTED_FROM_ABI float stof(const string& __str, size_t* __idx = nullptr);
-_LIBCPP_EXPORTED_FROM_ABI double stod(const string& __str, size_t* __idx = nullptr);
-_LIBCPP_EXPORTED_FROM_ABI long double stold(const string& __str, size_t* __idx = nullptr);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI float stof(const string& __str, size_t* __idx = nullptr);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI double stod(const string& __str, size_t* __idx = nullptr);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long double stold(const string& __str, size_t* __idx = nullptr);
 
-_LIBCPP_EXPORTED_FROM_ABI string to_string(int __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(long __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(long long __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long long __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(float __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(double __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(long double __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(int __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(float __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(double __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long double __val);
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-_LIBCPP_EXPORTED_FROM_ABI int stoi(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI long stol(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI unsigned long stoul(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI long long stoll(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI unsigned long long stoull(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI int stoi(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long stol(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI unsigned long
+stoul(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long long
+stoll(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI unsigned long long
+stoull(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 
-_LIBCPP_EXPORTED_FROM_ABI float stof(const wstring& __str, size_t* __idx = nullptr);
-_LIBCPP_EXPORTED_FROM_ABI double stod(const wstring& __str, size_t* __idx = nullptr);
-_LIBCPP_EXPORTED_FROM_ABI long double stold(const wstring& __str, size_t* __idx = nullptr);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI float stof(const wstring& __str, size_t* __idx = nullptr);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI double stod(const wstring& __str, size_t* __idx = nullptr);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long double stold(const wstring& __str, size_t* __idx = nullptr);
 
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(int __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long long __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long long __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(float __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(double __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long double __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(int __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(float __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(double __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long double __val);
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3899,7 +3905,7 @@ _LIBCPP_TEMPLATE_DATA_VIS const typename basic_string<_CharT, _Traits, _Allocato
 
 template <class _CharT, class _Allocator>
 struct __string_hash : public __unary_function<basic_string<_CharT, char_traits<_CharT>, _Allocator>, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t
   operator()(const basic_string<_CharT, char_traits<_CharT>, _Allocator>& __val) const _NOEXCEPT {
     return std::__do_string_hash(__val.data(), __val.data() + __val.size());
   }
@@ -3970,30 +3976,31 @@ erase_if(basic_string<_CharT, _Traits, _Allocator>& __str, _Predicate __pred) {
 // Literal suffixes for basic_string [basic.string.literals]
 inline namespace literals {
 inline namespace string_literals {
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<char>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<char>
 operator""s(const char* __str, size_t __len) {
   return basic_string<char>(__str, __len);
 }
 
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<wchar_t>
-operator""s(const wchar_t* __str, size_t __len) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<wchar_t> operator""s(const wchar_t* __str, size_t __len) {
   return basic_string<wchar_t>(__str, __len);
 }
 #    endif
 
 #    if _LIBCPP_HAS_CHAR8_T
-inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string<char8_t> operator""s(const char8_t* __str, size_t __len) {
+[[__nodiscard__]] inline
+    _LIBCPP_HIDE_FROM_ABI constexpr basic_string<char8_t> operator""s(const char8_t* __str, size_t __len) {
   return basic_string<char8_t>(__str, __len);
 }
 #    endif
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<char16_t>
-operator""s(const char16_t* __str, size_t __len) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<char16_t> operator""s(const char16_t* __str, size_t __len) {
   return basic_string<char16_t>(__str, __len);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<char32_t>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<char32_t>
 operator""s(const char32_t* __str, size_t __len) {
   return basic_string<char32_t>(__str, __len);
 }

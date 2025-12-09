@@ -22,7 +22,7 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; LA32-NEXT:    # kill: def $f0 killed $f0 killed $xr0
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl __powisf2
-; LA32-NEXT:    # kill: def $f0 killed $f0 def $vr0 def $xr0
+; LA32-NEXT:    # kill: def $f0 killed $f0 def $xr0
 ; LA32-NEXT:    vld $vr1, $sp, 48 # 16-byte Folded Reload
 ; LA32-NEXT:    vextrins.w $vr0, $vr1, 16
 ; LA32-NEXT:    xvst $xr0, $sp, 48 # 32-byte Folded Spill
@@ -56,7 +56,7 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; LA32-NEXT:    # kill: def $f0 killed $f0 killed $xr0
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl __powisf2
-; LA32-NEXT:    # kill: def $f0 killed $f0 def $vr0 def $xr0
+; LA32-NEXT:    # kill: def $f0 killed $f0 def $xr0
 ; LA32-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
 ; LA32-NEXT:    vextrins.w $vr0, $vr1, 16
 ; LA32-NEXT:    xvst $xr0, $sp, 16 # 32-byte Folded Spill
@@ -105,7 +105,7 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; LA64-NEXT:    move $a0, $fp
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__powisf2)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0 def $xr0
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $xr0
 ; LA64-NEXT:    vld $vr1, $sp, 48 # 16-byte Folded Reload
 ; LA64-NEXT:    vextrins.w $vr0, $vr1, 16
 ; LA64-NEXT:    xvst $xr0, $sp, 48 # 32-byte Folded Spill
@@ -143,7 +143,7 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; LA64-NEXT:    move $a0, $fp
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__powisf2)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0 def $xr0
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $xr0
 ; LA64-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
 ; LA64-NEXT:    vextrins.w $vr0, $vr1, 16
 ; LA64-NEXT:    xvst $xr0, $sp, 16 # 32-byte Folded Spill
@@ -198,7 +198,7 @@ define <4 x double> @powi_v4f64(<4 x double> %va, i32 %b) nounwind {
 ; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 killed $xr0
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl __powidf2
-; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0 def $xr0
+; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
 ; LA32-NEXT:    vld $vr1, $sp, 32 # 16-byte Folded Reload
 ; LA32-NEXT:    vextrins.d $vr0, $vr1, 16
 ; LA32-NEXT:    xvst $xr0, $sp, 32 # 32-byte Folded Spill
@@ -214,7 +214,7 @@ define <4 x double> @powi_v4f64(<4 x double> %va, i32 %b) nounwind {
 ; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 killed $xr0
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl __powidf2
-; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0 def $xr0
+; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
 ; LA32-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
 ; LA32-NEXT:    vextrins.d $vr0, $vr1, 16
 ; LA32-NEXT:    xvld $xr1, $sp, 32 # 32-byte Folded Reload
@@ -244,7 +244,7 @@ define <4 x double> @powi_v4f64(<4 x double> %va, i32 %b) nounwind {
 ; LA64-NEXT:    move $a0, $fp
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__powidf2)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0 def $xr0
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
 ; LA64-NEXT:    vld $vr1, $sp, 32 # 16-byte Folded Reload
 ; LA64-NEXT:    vextrins.d $vr0, $vr1, 16
 ; LA64-NEXT:    xvst $xr0, $sp, 32 # 32-byte Folded Spill
@@ -262,7 +262,7 @@ define <4 x double> @powi_v4f64(<4 x double> %va, i32 %b) nounwind {
 ; LA64-NEXT:    move $a0, $fp
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__powidf2)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0 def $xr0
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
 ; LA64-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
 ; LA64-NEXT:    vextrins.d $vr0, $vr1, 16
 ; LA64-NEXT:    xvld $xr1, $sp, 32 # 32-byte Folded Reload

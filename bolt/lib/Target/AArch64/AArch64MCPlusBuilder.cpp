@@ -1862,14 +1862,12 @@ public:
   }
 
   bool isNoop(const MCInst &Inst) const override {
-    return Inst.getOpcode() == AArch64::HINT &&
-           Inst.getOperand(0).getImm() == 0;
+    return Inst.getOpcode() == AArch64::NOP;
   }
 
   void createNoop(MCInst &Inst) const override {
-    Inst.setOpcode(AArch64::HINT);
+    Inst.setOpcode(AArch64::NOP);
     Inst.clear();
-    Inst.addOperand(MCOperand::createImm(0));
   }
 
   bool isTrap(const MCInst &Inst) const override {
@@ -2773,6 +2771,39 @@ public:
     std::vector<MCInst> Insts;
     createShortJmp(Insts, TgtSym, Ctx, /*IsTailCall*/ true);
     return Insts;
+  }
+
+  void createBTI(MCInst &Inst, bool CallTarget,
+                 bool JumpTarget) const override {
+    Inst.setOpcode(AArch64::HINT);
+    unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
+    Inst.addOperand(MCOperand::createImm(HintNum));
+  }
+
+  bool isBTILandingPad(MCInst &Inst, bool CallTarget,
+                       bool JumpTarget) const override {
+    unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
+    bool IsExplicitBTI =
+        Inst.getOpcode() == AArch64::HINT && Inst.getNumOperands() == 1 &&
+        Inst.getOperand(0).isImm() && Inst.getOperand(0).getImm() == HintNum;
+
+    bool IsImplicitBTI = HintNum == 34 && isImplicitBTIC(Inst);
+    return IsExplicitBTI || IsImplicitBTI;
+  }
+
+  bool isImplicitBTIC(MCInst &Inst) const override {
+    // PACI[AB]SP are always implicitly BTI C, independently of
+    // SCTLR_EL1.BT[01].
+    return Inst.getOpcode() == AArch64::PACIASP ||
+           Inst.getOpcode() == AArch64::PACIBSP;
+  }
+
+  void updateBTIVariant(MCInst &Inst, bool CallTarget,
+                        bool JumpTarget) const override {
+    assert(Inst.getOpcode() == AArch64::HINT && "Not a BTI instruction.");
+    unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createImm(HintNum));
   }
 
   InstructionListType materializeAddress(const MCSymbol *Target, MCContext *Ctx,

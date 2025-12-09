@@ -123,6 +123,12 @@ public:
     return true;
   }
 
+  size_t getSrcArgforCopyCtor(const CXXConstructorDecl *,
+                              FunctionArgList &args) const override {
+    assert(!args.empty() && "expected the arglist to not be empty!");
+    return args.size() - 1;
+  }
+
   void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) override;
 
   mlir::Value

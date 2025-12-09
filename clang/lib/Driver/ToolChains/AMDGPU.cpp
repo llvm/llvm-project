@@ -243,8 +243,15 @@ RocmInstallationDetector::getInstallationPathCandidates() {
 
     // Some versions of the rocm llvm package install to /opt/rocm/llvm/bin
     // Some versions of the aomp package install to /opt/rocm/aomp/bin
-    if (ParentName == "llvm" || ParentName.starts_with("aomp"))
+    if (ParentName == "llvm" || ParentName.starts_with("aomp")) {
       ParentDir = llvm::sys::path::parent_path(ParentDir);
+      ParentName = llvm::sys::path::filename(ParentDir);
+
+      // Some versions of the rocm llvm package install to
+      // /opt/rocm/lib/llvm/bin, so also back up if within the lib dir still
+      if (ParentName == "lib")
+        ParentDir = llvm::sys::path::parent_path(ParentDir);
+    }
 
     return Candidate(ParentDir.str(), /*StrictChecking=*/true);
   };
@@ -851,7 +858,8 @@ void AMDGPUToolChain::addClangTargetOptions(
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
-                         options::OPT_fvisibility_ms_compat)) {
+                         options::OPT_fvisibility_ms_compat) &&
+      !getDriver().IsFlangMode()) {
     CC1Args.push_back("-fvisibility=hidden");
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }

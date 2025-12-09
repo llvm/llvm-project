@@ -183,8 +183,6 @@ define double @loadfpimm18() {
   ret double 0x8010000000000000
 }
 
-declare double @llvm.minimum.f64(double, double)
-
 define double @fminm_d(double %a, double %b) nounwind {
 ; CHECK-LABEL: fminm_d:
 ; CHECK:       # %bb.0:
@@ -193,8 +191,6 @@ define double @fminm_d(double %a, double %b) nounwind {
   %1 = call double @llvm.minimum.f64(double %a, double %b)
   ret double %1
 }
-
-declare double @llvm.maximum.f64(double, double)
 
 define double @fmaxm_d(double %a, double %b) nounwind {
 ; CHECK-LABEL: fmaxm_d:
@@ -216,7 +212,6 @@ define double @fround_d_1(double %a) nounwind {
 
 declare double @round(double) nounwind readnone
 
-
 define double @fround_d_2(double %a) nounwind {
 ; CHECK-LABEL: fround_d_2:
 ; CHECK:       # %bb.0:
@@ -227,7 +222,6 @@ define double @fround_d_2(double %a) nounwind {
 }
 
 declare double @floor(double) nounwind readnone
-
 
 define double @fround_d_3(double %a) nounwind {
 ; CHECK-LABEL: fround_d_3:
@@ -240,7 +234,6 @@ define double @fround_d_3(double %a) nounwind {
 
 declare double @ceil(double) nounwind readnone
 
-
 define double @fround_d_4(double %a) nounwind {
 ; CHECK-LABEL: fround_d_4:
 ; CHECK:       # %bb.0:
@@ -252,17 +245,14 @@ define double @fround_d_4(double %a) nounwind {
 
 declare double @trunc(double) nounwind readnone
 
-
 define double @fround_d_5(double %a) nounwind {
 ; CHECK-LABEL: fround_d_5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fround.d fa0, fa0
 ; CHECK-NEXT:    ret
-  %call = tail call double @nearbyint(double %a) nounwind readnone
+  %call = tail call double @llvm.nearbyint.f64(double %a) nounwind readnone
   ret double %call
 }
-
-declare double @nearbyint(double) nounwind readnone
 
 define double @fround_d_6(double %a) nounwind {
 ; CHECK-LABEL: fround_d_6:
@@ -272,9 +262,6 @@ define double @fround_d_6(double %a) nounwind {
   %call = tail call double @llvm.roundeven.f64(double %a) nounwind readnone
   ret double %call
 }
-
-declare double @llvm.roundeven.f64(double) nounwind readnone
-
 
 define double @froundnx_d(double %a) nounwind {
 ; CHECK-LABEL: froundnx_d:
@@ -286,8 +273,6 @@ define double @froundnx_d(double %a) nounwind {
 }
 
 declare double @rint(double) nounwind readnone
-
-declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
 
 define i32 @fcmp_olt_q(double %a, double %b) nounwind strictfp {
 ; CHECK-LABEL: fcmp_olt_q:

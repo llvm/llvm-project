@@ -84,6 +84,8 @@ Potentially Breaking Changes
 - Downstream projects that previously linked only against ``clangDriver`` may
   now (also) need to link against the new ``clangOptions`` library, since
   options-related code has been moved out of the Driver into a separate library.
+- The ``clangFrontend`` library no longer depends on ``clangDriver``, which may
+  break downstream projects that relied on this transitive dependency.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -230,6 +232,8 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Added ``__scoped_atomic_uinc_wrap`` and ``__scoped_atomic_udec_wrap``.
+
 - Removed OpenCL header-only feature macros (previously unconditionally enabled
   on SPIR-V and only selectively disabled via ``-D__undef_<feature>``). All
   OpenCL extensions and features are now centralized in OpenCLExtensions.def,
@@ -339,6 +343,7 @@ Modified Compiler Flags
 -----------------------
 - The `-gkey-instructions` compiler flag is now enabled by default when DWARF is emitted for plain C/C++ and optimizations are enabled. (#GH149509)
 - The `-fconstexpr-steps` compiler flag now accepts value `0` to opt out of this limit. (#GH160440)
+- The `-fdevirtualize-speculatively` compiler flag is now supported to enable speculative devirtualization of virtual function calls, it's disabled by default. (#GH159685)
 
 Removed Compiler Flags
 -------------------------
@@ -355,6 +360,12 @@ Attribute Changes in Clang
 - New function attribute `malloc_span` is added. It has semantics similar to that of the `malloc`
   attribute, but `malloc_span` applies not to functions returning pointers, but to functions returning
   span-like structures (i.e. those that contain a pointer field and a size integer field or two pointers).
+
+- Added new attribute ``modular_format`` to allow dynamically selecting at link
+  time which aspects of a statically linked libc's printf (et al)
+  implementation are required. This can reduce code size without requiring e.g.
+  multilibs for printf features. Requires cooperation with the libc
+  implementation.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -392,6 +403,7 @@ Improvements to Clang's diagnostics
 - Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
+- Fix a false positive warning in ``-Wignored-qualifiers`` when the return type is undeduced. (#GH43054)
 
 - Clang now emits a diagnostic with the correct message in case of assigning to const reference captured in lambda. (#GH105647)
 
@@ -443,6 +455,19 @@ Improvements to Clang's diagnostics
 - A new warning ``-Wenum-compare-typo`` has been added to detect potential erroneous
   comparison operators when mixed with bitwise operators in enum value initializers.
   This can be locally disabled by explicitly casting the initializer value.
+- Clang now provides correct caret placement when attributes appear before
+  `enum class` (#GH163224).
+
+- A new warning ``-Wshadow-header`` has been added to detect when a header file
+  is found in multiple search directories (excluding system paths).
+
+- Clang now detects potential missing format and format_matches attributes on function,
+  Objective-C method and block declarations when calling format functions. It is part
+  of the format-nonliteral diagnostic (#GH60718)
+
+- Fixed a crash when enabling ``-fdiagnostics-format=sarif`` and the output 
+  carries messages like 'In file included from ...' or 'In module ...'.
+  Now the include/import locations are written into `sarif.run.result.relatedLocations`.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -513,6 +538,8 @@ Bug Fixes to Attribute Support
 - Fix handling of parameter indexes when an attribute is applied to a C++23 explicit object member function.
 - Fixed several false positives and false negatives in function effect (`nonblocking`) analysis. (#GH166078) (#GH166101) (#GH166110)
 - Fix ``cleanup`` attribute by delaying type checks until after the type is deduced. (#GH129631)
+- Fix a crash when instantiating a function template with ``constructor`` or ``destructor``
+  attributes without a priority argument. (#GH169072)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -556,6 +583,7 @@ Bug Fixes to C++ Support
 - Fix for clang incorrectly rejecting the default construction of a union with
   nontrivial member when another member has an initializer. (#GH81774)
 - Fixed a template depth issue when parsing lambdas inside a type constraint. (#GH162092)
+- Fix the support of zero-length arrays in SFINAE context. (#GH170040)
 - Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
 - Fix a crash when extracting unavailable member type from alias in template deduction. (#GH165560)
 - Fix incorrect diagnostics for lambdas with init-captures inside braced initializers. (#GH163498)
@@ -634,8 +662,28 @@ RISC-V Support
 - `__GCC_CONSTRUCTIVE_SIZE` and `__GCC_DESTRUCTIVE_SIZE` are changed to 64. These values are
   unstable according to `Clang's documentation <https://clang.llvm.org/docs/LanguageExtensions.html#gcc-destructive-size-and-gcc-constructive-size>`_.
 
+- DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the RISC-V platform.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now supports C++17 Class Template Argument Deduction (CTAD) in CUDA/HIP
+  device code by treating deduction guides as if they were ``__host__ __device__``.
+
+- Clang avoids ambiguous CTAD in CUDA/HIP by not synthesizing duplicate implicit
+  deduction guides when ``__host__`` and ``__device__`` constructors differ only
+  in CUDA target attributes (same signature and constraints).
+
+- Clang diagnoses CUDA/HIP deduction guides that are annotated as host-only,
+  device-only, or ``__global__`` as errors. Explicit ``__host__ __device__``
+  deduction guides remain accepted for now but are deprecated and will be
+  rejected in a future version of Clang; deduction guides do not participate
+  in code generation and are treated as implicitly host+device.
+
+- Clang preserves distinct implicit deduction guides for constructors that differ
+  by constraints, so constraint-based CTAD works in CUDA/HIP device code as in
+  standard C++.
 
 CUDA Support
 ^^^^^^^^^^^^
@@ -682,6 +730,7 @@ AST Matchers
 - Fixed detection of explicit parameter lists in ``LambdaExpr``. (#GH168452)
 - Added ``hasExplicitParameters`` for ``LambdaExpr`` as an output attribute to
   AST JSON dumps.
+- Add ``arrayTypeLoc`` matcher for matching ``ArrayTypeLoc``.
 
 clang-format
 ------------
@@ -699,6 +748,9 @@ clang-format
   ``AlignAfterOpenBracket`` option, and make ``AlignAfterOpenBracket`` a
   ``bool`` type.
 - Add ``AlignPPAndNotPP`` suboption to ``AlignTrailingComments``.
+- Rename ``(Binary|Decimal|Hex)MinDigits`` to ``...MinDigitsInsert`` and  add
+  ``(Binary|Decimal|Hex)MaxDigitsSeparator`` suboptions to
+  ``IntegerLiteralSeparator``.
 
 libclang
 --------
@@ -722,6 +774,8 @@ Crash and bug fixes
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 - Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
 - Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
+- Fixed a crash when parsing invalid nested name specifier sequences
+  containing a single colon. (#GH167905)
 
 Improvements
 ^^^^^^^^^^^^
@@ -759,6 +813,9 @@ OpenMP Support
 - Updated parsing and semantic analysis support for ``nowait`` clause to accept
   optional argument in OpenMP >= 60.
 - Added support for ``default`` clause on ``target`` directive.
+- Added parsing and semantic analysis support for ``need_device_ptr`` modifier
+  to accept an optional fallback argument (``fb_nullify`` or ``fb_preserve``)
+  with OpenMP >= 61.
 
 Improvements
 ^^^^^^^^^^^^

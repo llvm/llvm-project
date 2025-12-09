@@ -531,20 +531,40 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
 }
 
 MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
-                                                    BinaryFunction &BF) {
-  if (BF.isInConstantIsland(Address)) {
-    BF.setIgnored();
-    this->outs() << "BOLT-WARNING: ignoring entry point at address 0x"
-                 << Twine::utohexstr(Address)
-                 << " in constant island of function " << BF << '\n';
+                                                    BinaryFunction &Source,
+                                                    BinaryFunction &Target) {
+  const uint64_t Offset = Address - Target.getAddress();
+  assert(Offset < Target.getSize() &&
+         "Address should be inside the referenced function");
+
+  bool IsValid = true;
+  if (Source.NeedBranchValidation) {
+    if (Target.CurrentState == BinaryFunction::State::Disassembled &&
+        !Target.getInstructionAtOffset(Offset)) {
+      this->errs()
+          << "BOLT-WARNING: corrupted control flow detected in function "
+          << Source
+          << ": an external branch/call targets an invalid instruction "
+          << "in function " << Target << " at address 0x"
+          << Twine::utohexstr(Address) << "; ignoring both functions\n";
+      IsValid = false;
+    }
+    if (Target.isInConstantIsland(Address)) {
+      this->errs() << "BOLT-WARNING: ignoring entry point at address 0x"
+                   << Twine::utohexstr(Address)
+                   << " in constant island of function " << Target << '\n';
+      IsValid = false;
+    }
+  }
+
+  if (!IsValid) {
+    Source.NeedBranchValidation = false;
+    Source.setIgnored();
+    Target.setIgnored();
     return nullptr;
   }
 
-  const uint64_t Offset = Address - BF.getAddress();
-  assert(Offset < BF.getSize() &&
-         "Address should be inside the referenced function");
-
-  return Offset ? BF.addEntryPointAtOffset(Offset) : BF.getSymbol();
+  return Offset ? Target.addEntryPointAtOffset(Offset) : Target.getSymbol();
 }
 
 MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
@@ -1433,13 +1453,11 @@ void BinaryContext::processInterproceduralReferences() {
 
       // Create an extra entry point if needed. Can also render the target
       // function ignored if the reference is invalid.
-      handleExternalBranchTarget(Address, *TargetFunction);
+      handleExternalBranchTarget(Address, Function, *TargetFunction);
 
       continue;
     }
 
-    // Check if address falls in function padding space - this could be
-    // unmarked data in code. In this case adjust the padding space size.
     ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
     assert(Section && "cannot get section for referenced address");
 
@@ -1451,7 +1469,7 @@ void BinaryContext::processInterproceduralReferences() {
     if (SectionName == ".plt" || SectionName == ".plt.got")
       continue;
 
-    // Check if it is aarch64 veneer written at Address
+    // Check if it is aarch64 veneer written at Address.
     if (isAArch64() && handleAArch64Veneer(Address))
       continue;
 
@@ -1463,6 +1481,8 @@ void BinaryContext::processInterproceduralReferences() {
       exit(1);
     }
 
+    // Check if the address falls into the function padding space - this could
+    // be an unmarked data in code. In this case, adjust the padding space size.
     TargetFunction = getBinaryFunctionContainingAddress(Address,
                                                         /*CheckPastEnd=*/false,
                                                         /*UseMaxSize=*/true);
