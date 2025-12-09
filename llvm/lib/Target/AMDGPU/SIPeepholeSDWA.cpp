@@ -1459,30 +1459,30 @@ bool SIPeepholeSDWALegacy::runOnMachineFunction(MachineFunction &MF) {
 
 static bool isSrcDestFP16Bits(MachineInstr *MI, const SIInstrInfo *TII) {
   static const DenseSet<unsigned> FP16BitOpcodes = {
-      AMDGPU::V_CVT_F16_U16_e32,       AMDGPU::V_CVT_F16_U16_e64,
-      AMDGPU::V_CVT_F16_I16_e32,       AMDGPU::V_CVT_F16_I16_e64,
-      AMDGPU::V_RCP_F16_e64,           AMDGPU::V_RCP_F16_e32,
-      AMDGPU::V_RSQ_F16_e64,           AMDGPU::V_RSQ_F16_e32,
-      AMDGPU::V_SQRT_F16_e64,          AMDGPU::V_SQRT_F16_e32,
-      AMDGPU::V_LOG_F16_e64,           AMDGPU::V_LOG_F16_e32,
-      AMDGPU::V_EXP_F16_e64,           AMDGPU::V_EXP_F16_e32,
-      AMDGPU::V_SIN_F16_e64,           AMDGPU::V_SIN_F16_e32,
-      AMDGPU::V_COS_F16_e64,           AMDGPU::V_COS_F16_e32,
-      AMDGPU::V_FLOOR_F16_e64,         AMDGPU::V_FLOOR_F16_e32,
-      AMDGPU::V_CEIL_F16_e64,          AMDGPU::V_CEIL_F16_e32,
-      AMDGPU::V_TRUNC_F16_e64,         AMDGPU::V_TRUNC_F16_e32,
-      AMDGPU::V_RNDNE_F16_e64,         AMDGPU::V_RNDNE_F16_e32,
-      AMDGPU::V_FRACT_F16_e64,         AMDGPU::V_FRACT_F16_e32,
-      AMDGPU::V_FREXP_MANT_F16_e64,    AMDGPU::V_FREXP_MANT_F16_e32,
+      // VOP1 FP16 unary operations
+      AMDGPU::V_CVT_F16_U16_e32, AMDGPU::V_CVT_F16_U16_e64,
+      AMDGPU::V_CVT_F16_I16_e32, AMDGPU::V_CVT_F16_I16_e64,
+      AMDGPU::V_RCP_F16_e64, AMDGPU::V_RCP_F16_e32, AMDGPU::V_RSQ_F16_e64,
+      AMDGPU::V_RSQ_F16_e32, AMDGPU::V_SQRT_F16_e64, AMDGPU::V_SQRT_F16_e32,
+      AMDGPU::V_LOG_F16_e64, AMDGPU::V_LOG_F16_e32, AMDGPU::V_EXP_F16_e64,
+      AMDGPU::V_EXP_F16_e32, AMDGPU::V_SIN_F16_e64, AMDGPU::V_SIN_F16_e32,
+      AMDGPU::V_COS_F16_e64, AMDGPU::V_COS_F16_e32, AMDGPU::V_FLOOR_F16_e64,
+      AMDGPU::V_FLOOR_F16_e32, AMDGPU::V_CEIL_F16_e64, AMDGPU::V_CEIL_F16_e32,
+      AMDGPU::V_TRUNC_F16_e64, AMDGPU::V_TRUNC_F16_e32, AMDGPU::V_RNDNE_F16_e64,
+      AMDGPU::V_RNDNE_F16_e32, AMDGPU::V_FRACT_F16_e64, AMDGPU::V_FRACT_F16_e32,
+      AMDGPU::V_FREXP_MANT_F16_e64, AMDGPU::V_FREXP_MANT_F16_e32,
       AMDGPU::V_FREXP_EXP_I16_F16_e64, AMDGPU::V_FREXP_EXP_I16_F16_e32,
-      AMDGPU::V_LDEXP_F16_e64,         AMDGPU::V_LDEXP_F16_e32,
-      AMDGPU::V_ADD_F16_e64,           AMDGPU::V_ADD_F16_e32,
-      AMDGPU::V_SUB_F16_e64,           AMDGPU::V_SUB_F16_e32,
-      AMDGPU::V_SUBREV_F16_e64,        AMDGPU::V_SUBREV_F16_e32,
-      AMDGPU::V_MUL_F16_e64,           AMDGPU::V_MUL_F16_e32,
-      AMDGPU::V_MAX_F16_e64,           AMDGPU::V_MAX_F16_e32,
-      AMDGPU::V_MIN_F16_e64,           AMDGPU::V_MIN_F16_e32,
-      AMDGPU::V_MAD_F16_e64,           AMDGPU::V_FMA_F16_e64,
+      // VOP2 FP16 binary operations
+      AMDGPU::V_LDEXP_F16_e64, AMDGPU::V_LDEXP_F16_e32, AMDGPU::V_ADD_F16_e64,
+      AMDGPU::V_ADD_F16_e32, AMDGPU::V_SUB_F16_e64, AMDGPU::V_SUB_F16_e32,
+      AMDGPU::V_SUBREV_F16_e64, AMDGPU::V_SUBREV_F16_e32, AMDGPU::V_MUL_F16_e64,
+      AMDGPU::V_MUL_F16_e32, AMDGPU::V_MAX_F16_e64, AMDGPU::V_MAX_F16_e32,
+      AMDGPU::V_MIN_F16_e64, AMDGPU::V_MIN_F16_e32,
+      // VOP2 FP16 multiply-accumulate operations
+      AMDGPU::V_FMAC_F16_e64, AMDGPU::V_FMAC_F16_e32, AMDGPU::V_MAC_F16_e64,
+      AMDGPU::V_MAC_F16_e32,
+      // VOP3 FP16 ternary operations
+      AMDGPU::V_MAD_F16_e64, AMDGPU::V_FMA_F16_e64,
       AMDGPU::V_DIV_FIXUP_F16_e64};
 
   unsigned Opcode = MI->getOpcode();
@@ -1496,13 +1496,12 @@ static bool checkForRightSrcRootAccess(MachineInstr *Def0MI,
                                        MachineInstr *Def1MI,
                                        Register SrcRootReg,
                                        const SIInstrInfo *TII) {
-  // As if could, the Def1MI would have been sdwa-ed in order to access
-  // upper half, and Def0MI should not be as it accessing lower half.
+  // The intended scenario is that Def1MI already reads the upper half from
+  // SrcRootReg via SDWA-able instruction while Def0MI still consumes the lower
+  // half from SrcRootReg without the SDWA counterpart. Any other arrangement
+  // would imply violation of SrcRootReg usage.
   if (!TII->isSDWA(Def1MI->getOpcode()) || TII->isSDWA(Def0MI->getOpcode()))
     return false;
-
-  // Def1 should be writing into entire DWORD of dst, with unused part set
-  // to zero-pad.
   MachineOperand *Def1DstSel =
       TII->getNamedOperand(*Def1MI, AMDGPU::OpName::dst_sel);
   if (!Def1DstSel || Def1DstSel->getImm() != AMDGPU::SDWA::SdwaSel::DWORD)
@@ -1513,6 +1512,9 @@ static bool checkForRightSrcRootAccess(MachineInstr *Def0MI,
       Def1DstUnused->getImm() != AMDGPU::SDWA::DstUnused::UNUSED_PAD)
     return false;
 
+  // Helper to validate whether DefMI uses SrcRootReg as the specified source
+  // operand (SrcName), and if the corresponding SDWA selection operand
+  // (SrcSelName) matches the expected SdwaSel.
   const auto CheckSrcSel = [&](MachineInstr *DefMI, AMDGPU::OpName SrcName,
                                AMDGPU::OpName SrcSelName,
                                AMDGPU::SDWA::SdwaSel SdwaSel) -> bool {
