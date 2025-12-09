@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety-suggestions -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -Wexperimental-lifetime-safety-suggestions -verify %s
 
 struct MyObj {
   int id;
@@ -117,14 +117,14 @@ View return_view_callee(View a) {     // expected-warning {{param should be mark
 } // incorrect_order_inference_view
 
 namespace incorrect_order_inference_object {
-View return_object_callee(View a);
+MyObj* return_object_callee(MyObj* a);
 
 // FIXME: No lifetime annotation suggestion warning when functions are not present in the callee-before-caller pattern
-View return_object_caller(View a) {
+MyObj* return_object_caller(MyObj* a) {
   return return_object_callee(a);
 }
 
-View return_object_callee(View a) {     // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+MyObj* return_object_callee(MyObj* a) {     // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
   return a;                           // expected-note {{param returned here}}
 }   
 } // incorrect_order_inference_object

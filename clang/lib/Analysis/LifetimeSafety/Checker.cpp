@@ -55,14 +55,14 @@ private:
   const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
   LifetimeSafetyReporter *Reporter;
-  ASTContext &AC;
+  ASTContext &AST;
 
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                   const LiveOriginsAnalysis &LiveOrigins, const FactManager &FM,
                   AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter)
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
-        Reporter(Reporter), AC(ADC.getASTContext()) {
+        Reporter(Reporter), AST(ADC.getASTContext()) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -71,7 +71,11 @@ public:
           checkAnnotations(OEF);
     issuePendingWarnings();
     suggestAnnotations();
-    inferAnnotations();
+    //  Annotation inference is currently guarded by a frontend flag. In the
+    //  future, this might be replaced by a design that differentiates between
+    //  explicit and inferred findings with separate warning groups.
+    if (AST.getLangOpts().EnableLifetimeSafetyInference)
+      inferAnnotations();
   }
 
   /// Checks if an escaping origin holds a placeholder loan, indicating a
@@ -172,7 +176,8 @@ public:
     for (const auto &[ConstPVD, EscapeExpr] : AnnotationWarningsMap) {
       ParmVarDecl *PVD = const_cast<ParmVarDecl *>(ConstPVD);
       if (!PVD->hasAttr<LifetimeBoundAttr>())
-        PVD->addAttr(LifetimeBoundAttr::CreateImplicit(AC, PVD->getLocation()));
+        PVD->addAttr(
+            LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
     }
   }
 };
