@@ -18,7 +18,7 @@ entry:
   ret i32 0
 }
 
-attributes #0 = { "target-cpu"="generic" "target-features"="+armv7-a,+dsp,+neon,+vfp3,-thumb-mode" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { "target-cpu"="generic" "target-features"="+armv7-a,+dsp,+neon,+vfp3,-thumb-mode" "use-soft-float"="false" }
 attributes #1 = { "target-cpu"="arm7tdmi" "target-features"="+armv4t" "use-soft-float"="true" }
 
 

@@ -18,6 +18,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Compiler.h"
+#include <cstddef>
+#include <type_traits>
 
 namespace llvm {
 struct MDProfLabels {
@@ -147,6 +149,9 @@ LLVM_ABI bool extractProfTotalWeight(const Instruction &I,
 LLVM_ABI void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
                                bool IsExpected, bool ElideAllZero = false);
 
+/// Push the weights right to fit in uint32_t.
+LLVM_ABI SmallVector<uint32_t> fitWeights(ArrayRef<uint64_t> Weights);
+
 /// Variant of `setBranchWeights` where the `Weights` will be fit first to
 /// uint32_t by shifting right.
 LLVM_ABI void setFittedBranchWeights(Instruction &I, ArrayRef<uint64_t> Weights,
@@ -194,10 +199,11 @@ LLVM_ABI void setExplicitlyUnknownBranchWeights(Instruction &I,
 /// Like setExplicitlyUnknownBranchWeights(...), but only sets unknown branch
 /// weights in the new instruction if the parent function of the original
 /// instruction has an entry count. This is to not confuse users by injecting
-/// profile data into non-profiled functions.
-LLVM_ABI void setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I,
-                                                          Function &F,
-                                                          StringRef PassName);
+/// profile data into non-profiled functions. If \p F is nullptr, we will fetch
+/// the function from \p I.
+LLVM_ABI void
+setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I, StringRef PassName,
+                                            const Function *F = nullptr);
 
 /// Analogous to setExplicitlyUnknownBranchWeights, but for functions and their
 /// entry counts.
@@ -215,9 +221,13 @@ LLVM_ABI void scaleProfData(Instruction &I, uint64_t S, uint64_t T);
 /// branch weights B1 and B2, respectively. In both B1 and B2, the first
 /// position (index 0) is for the 'true' branch, and the second position (index
 /// 1) is for the 'false' branch.
+template <typename T1, typename T2,
+          typename = typename std::enable_if<
+              std::is_arithmetic_v<T1> && std::is_arithmetic_v<T2> &&
+              sizeof(T1) <= sizeof(uint64_t) && sizeof(T2) <= sizeof(uint64_t)>>
 inline SmallVector<uint64_t, 2>
-getDisjunctionWeights(const SmallVector<uint32_t, 2> &B1,
-                      const SmallVector<uint32_t, 2> &B2) {
+getDisjunctionWeights(const SmallVector<T1, 2> &B1,
+                      const SmallVector<T2, 2> &B2) {
   // For the first conditional branch, the probability the "true" case is taken
   // is p(b1) = B1[0] / (B1[0] + B1[1]). The "false" case's probability is
   // p(not b1) = B1[1] / (B1[0] + B1[1]).
@@ -234,8 +244,8 @@ getDisjunctionWeights(const SmallVector<uint32_t, 2> &B1,
   // the product of sums, the subtracted one cancels out).
   assert(B1.size() == 2);
   assert(B2.size() == 2);
-  auto FalseWeight = B1[1] * B2[1];
-  auto TrueWeight = B1[0] * B2[0] + B1[0] * B2[1] + B1[1] * B2[0];
+  uint64_t FalseWeight = B1[1] * B2[1];
+  uint64_t TrueWeight = B1[0] * (B2[0] + B2[1]) + B1[1] * B2[0];
   return {TrueWeight, FalseWeight};
 }
 } // namespace llvm

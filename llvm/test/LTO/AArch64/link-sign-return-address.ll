@@ -2,10 +2,10 @@
 ;; be mixed.
 ;
 ; RUN: llvm-as %s -o %t1.bc
-; RUN: llvm-as %p/TestInputs/foo.ll -o %t2.bc
-; RUN: llvm-as %p/TestInputs/fiz.ll -o %t3.bc
-; RUN: llvm-as %p/TestInputs/bar.ll -o %t4.bc
-; RUN: llvm-as %p/TestInputs/old.ll -o %t5.bc
+; RUN: llvm-as %p/Inputs/foo.ll -o %t2.bc
+; RUN: llvm-as %p/Inputs/fiz.ll -o %t3.bc
+; RUN: llvm-as %p/Inputs/bar.ll -o %t4.bc
+; RUN: llvm-as %p/Inputs/old.ll -o %t5.bc
 ; RUN: llvm-lto -exported-symbol main \
 ; RUN:          -exported-symbol foo_on \
 ; RUN:          -exported-symbol foo_off \

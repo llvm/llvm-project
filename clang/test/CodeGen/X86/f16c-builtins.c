@@ -46,6 +46,31 @@ __m128 test_mm_cvtph_ps(__m128i a) {
   return _mm_cvtph_ps(a);
 }
 
+// A value exactly halfway between 1.0 and the next representable FP16 number.
+// In binary, its significand ends in ...000, followed by a tie-bit 1.
+#define POS_HALFWAY (1.0f + 0.00048828125f) // 1.0 + 2^-11, a tie-breaking case
+
+//
+// _mm_cvtps_ph (128-bit, 4 floats -> 8 shorts, 4 are zero-padded)
+//
+// Test values: -2.5f, 1.123f, POS_HALFWAY
+TEST_CONSTEXPR(match_v8hi(
+  _mm_cvtps_ph(_mm_setr_ps(-2.5f, 1.123f, POS_HALFWAY, 0.0f), _MM_FROUND_TO_NEAREST_INT),
+  0xC100, 0x3C7E, 0x3C00, 0x0000, 0, 0, 0, 0
+));
+TEST_CONSTEXPR(match_v8hi(
+  _mm_cvtps_ph(_mm_setr_ps(-2.5f, 1.123f, POS_HALFWAY, 0.0f), _MM_FROUND_TO_NEG_INF),
+  0xC100, 0x3C7D, 0x3C00, 0x0000, 0, 0, 0, 0
+));
+TEST_CONSTEXPR(match_v8hi(
+  _mm_cvtps_ph(_mm_setr_ps(-2.5f, 1.123f, POS_HALFWAY, 0.0f), _MM_FROUND_TO_POS_INF),
+  0xC100, 0x3C7E, 0x3C01, 0x0000, 0, 0, 0, 0
+));
+TEST_CONSTEXPR(match_v8hi(
+  _mm_cvtps_ph(_mm_setr_ps(-2.5f, 1.123f, POS_HALFWAY, 0.0f), _MM_FROUND_TO_ZERO),
+  0xC100, 0x3C7D, 0x3C00, 0x0000, 0, 0, 0, 0
+));
+
 __m256 test_mm256_cvtph_ps(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtph_ps
   // CHECK: fpext <8 x half> %{{.*}} to <8 x float>
@@ -56,11 +81,43 @@ TEST_CONSTEXPR(match_m256(
     1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 0.5f, -2.0f, 0.0f
 ));
 
+//
+// _mm256_cvtps_ph (256-bit, 8 floats -> 8 shorts)
+//
+// Test values: -2.5f, 1.123f, POS_HALFWAY
+TEST_CONSTEXPR(match_v8hi(
+  _mm256_cvtps_ph(_mm256_setr_ps(-2.5f, 1.123f, POS_HALFWAY, 0.0f, -2.5f, 1.123f, POS_HALFWAY, 0.0f), _MM_FROUND_TO_NEAREST_INT),
+  0xC100, 0x3C7E, 0x3C00, 0x0000, 0xC100, 0x3C7E, 0x3C00, 0x0000
+));
+TEST_CONSTEXPR(match_v8hi(
+  _mm256_cvtps_ph(_mm256_setr_ps(-2.5f, 1.123f, POS_HALFWAY, 0.0f, -2.5f, 1.123f, POS_HALFWAY, 0.0f), _MM_FROUND_TO_NEG_INF),
+  0xC100, 0x3C7D, 0x3C00, 0x0000, 0xC100, 0x3C7D, 0x3C00, 0x0000
+));
+TEST_CONSTEXPR(match_v8hi(
+  _mm256_cvtps_ph(_mm256_setr_ps(-2.5f, 1.123f, POS_HALFWAY, 0.0f, -2.5f, 1.123f, POS_HALFWAY, 0.0f), _MM_FROUND_TO_POS_INF),
+  0xC100, 0x3C7E, 0x3C01, 0x0000, 0xC100, 0x3C7E, 0x3C01, 0x0000
+));
+TEST_CONSTEXPR(match_v8hi(
+  _mm256_cvtps_ph(_mm256_setr_ps(-2.5f, 1.123f, POS_HALFWAY, 0.0f, -2.5f, 1.123f, POS_HALFWAY, 0.0f), _MM_FROUND_TO_ZERO),
+  0xC100, 0x3C7D, 0x3C00, 0x0000, 0xC100, 0x3C7D, 0x3C00, 0x0000
+));
+
 __m128i test_mm_cvtps_ph(__m128 a) {
   // CHECK-LABEL: test_mm_cvtps_ph
   // CHECK: call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %{{.*}}, i32 0)
   return _mm_cvtps_ph(a, 0);
 }
+
+//
+// Tests for Exact Dynamic Rounding
+//
+// Test that dynamic rounding SUCCEEDS for exactly representable values.
+// We use _MM_FROUND_CUR_DIRECTION (value 4) to specify dynamic rounding.
+// Inputs: -2.5f, 0.125f, -16.0f are all exactly representable in FP16.
+TEST_CONSTEXPR(match_v8hi(
+  __builtin_ia32_vcvtps2ph256(_mm256_setr_ps(-2.5f, 0.125f, -16.0f, 0.0f, -2.5f, 0.125f, -16.0f, 0.0f), _MM_FROUND_CUR_DIRECTION),
+  0xC100, 0x3000, 0xCC00, 0x0000, 0xC100, 0x3000, 0xCC00, 0x0000
+));
 
 __m128i test_mm256_cvtps_ph(__m256 a) {
   // CHECK-LABEL: test_mm256_cvtps_ph

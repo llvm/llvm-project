@@ -29,6 +29,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/InferAlloc.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/StmtVisitor.h"
@@ -1273,194 +1274,39 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   EmitCheck(std::make_pair(Check, CheckKind), CheckHandler, StaticData, Index);
 }
 
-static bool
-typeContainsPointer(QualType T,
-                    llvm::SmallPtrSet<const RecordDecl *, 4> &VisitedRD,
-                    bool &IncompleteType) {
-  QualType CanonicalType = T.getCanonicalType();
-  if (CanonicalType->isPointerType())
-    return true; // base case
+llvm::MDNode *CodeGenFunction::buildAllocToken(QualType AllocType) {
+  auto ATMD = infer_alloc::getAllocTokenMetadata(AllocType, getContext());
+  if (!ATMD)
+    return nullptr;
 
-  // Look through typedef chain to check for special types.
-  for (QualType CurrentT = T; const auto *TT = CurrentT->getAs<TypedefType>();
-       CurrentT = TT->getDecl()->getUnderlyingType()) {
-    const IdentifierInfo *II = TT->getDecl()->getIdentifier();
-    // Special Case: Syntactically uintptr_t is not a pointer; semantically,
-    // however, very likely used as such. Therefore, classify uintptr_t as a
-    // pointer, too.
-    if (II && II->isStr("uintptr_t"))
-      return true;
-  }
+  llvm::MDBuilder MDB(getLLVMContext());
+  auto *TypeNameMD = MDB.createString(ATMD->TypeName);
+  auto *ContainsPtrC = Builder.getInt1(ATMD->ContainsPointer);
+  auto *ContainsPtrMD = MDB.createConstant(ContainsPtrC);
 
-  // The type is an array; check the element type.
-  if (const ArrayType *AT = dyn_cast<ArrayType>(CanonicalType))
-    return typeContainsPointer(AT->getElementType(), VisitedRD, IncompleteType);
-  // The type is a struct, class, or union.
-  if (const RecordDecl *RD = CanonicalType->getAsRecordDecl()) {
-    if (!RD->isCompleteDefinition()) {
-      IncompleteType = true;
-      return false;
-    }
-    if (!VisitedRD.insert(RD).second)
-      return false; // already visited
-    // Check all fields.
-    for (const FieldDecl *Field : RD->fields()) {
-      if (typeContainsPointer(Field->getType(), VisitedRD, IncompleteType))
-        return true;
-    }
-    // For C++ classes, also check base classes.
-    if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-      // Polymorphic types require a vptr.
-      if (CXXRD->isDynamicClass())
-        return true;
-      for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
-        if (typeContainsPointer(Base.getType(), VisitedRD, IncompleteType))
-          return true;
-      }
-    }
-  }
-  return false;
+  // Format: !{<type-name>, <contains-pointer>}
+  return llvm::MDNode::get(CGM.getLLVMContext(), {TypeNameMD, ContainsPtrMD});
 }
 
 void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
   assert(SanOpts.has(SanitizerKind::AllocToken) &&
          "Only needed with -fsanitize=alloc-token");
-
-  llvm::MDBuilder MDB(getLLVMContext());
-
-  // Get unique type name.
-  PrintingPolicy Policy(CGM.getContext().getLangOpts());
-  Policy.SuppressTagKeyword = true;
-  Policy.FullyQualifiedName = true;
-  SmallString<64> TypeName;
-  llvm::raw_svector_ostream TypeNameOS(TypeName);
-  AllocType.getCanonicalType().print(TypeNameOS, Policy);
-  auto *TypeNameMD = MDB.createString(TypeNameOS.str());
-
-  // Check if QualType contains a pointer. Implements a simple DFS to
-  // recursively check if a type contains a pointer type.
-  llvm::SmallPtrSet<const RecordDecl *, 4> VisitedRD;
-  bool IncompleteType = false;
-  const bool ContainsPtr =
-      typeContainsPointer(AllocType, VisitedRD, IncompleteType);
-  if (!ContainsPtr && IncompleteType)
-    return;
-  auto *ContainsPtrC = Builder.getInt1(ContainsPtr);
-  auto *ContainsPtrMD = MDB.createConstant(ContainsPtrC);
-
-  // Format: !{<type-name>, <contains-pointer>}
-  auto *MDN =
-      llvm::MDNode::get(CGM.getLLVMContext(), {TypeNameMD, ContainsPtrMD});
-  CB->setMetadata(llvm::LLVMContext::MD_alloc_token, MDN);
+  CB->setMetadata(llvm::LLVMContext::MD_alloc_token,
+                  buildAllocToken(AllocType));
 }
 
-namespace {
-/// Infer type from a simple sizeof expression.
-QualType inferTypeFromSizeofExpr(const Expr *E) {
-  const Expr *Arg = E->IgnoreParenImpCasts();
-  if (const auto *UET = dyn_cast<UnaryExprOrTypeTraitExpr>(Arg)) {
-    if (UET->getKind() == UETT_SizeOf) {
-      if (UET->isArgumentType())
-        return UET->getArgumentTypeInfo()->getType();
-      else
-        return UET->getArgumentExpr()->getType();
-    }
-  }
-  return QualType();
+llvm::MDNode *CodeGenFunction::buildAllocToken(const CallExpr *E) {
+  QualType AllocType = infer_alloc::inferPossibleType(E, getContext(), CurCast);
+  if (!AllocType.isNull())
+    return buildAllocToken(AllocType);
+  return nullptr;
 }
-
-/// Infer type from an arithmetic expression involving a sizeof. For example:
-///
-///   malloc(sizeof(MyType) + padding);  // infers 'MyType'
-///   malloc(sizeof(MyType) * 32);       // infers 'MyType'
-///   malloc(32 * sizeof(MyType));       // infers 'MyType'
-///   malloc(sizeof(MyType) << 1);       // infers 'MyType'
-///   ...
-///
-/// More complex arithmetic expressions are supported, but are a heuristic, e.g.
-/// when considering allocations for structs with flexible array members:
-///
-///   malloc(sizeof(HasFlexArray) + sizeof(int) * 32);  // infers 'HasFlexArray'
-///
-QualType inferPossibleTypeFromArithSizeofExpr(const Expr *E) {
-  const Expr *Arg = E->IgnoreParenImpCasts();
-  // The argument is a lone sizeof expression.
-  if (QualType T = inferTypeFromSizeofExpr(Arg); !T.isNull())
-    return T;
-  if (const auto *BO = dyn_cast<BinaryOperator>(Arg)) {
-    // Argument is an arithmetic expression. Cover common arithmetic patterns
-    // involving sizeof.
-    switch (BO->getOpcode()) {
-    case BO_Add:
-    case BO_Div:
-    case BO_Mul:
-    case BO_Shl:
-    case BO_Shr:
-    case BO_Sub:
-      if (QualType T = inferPossibleTypeFromArithSizeofExpr(BO->getLHS());
-          !T.isNull())
-        return T;
-      if (QualType T = inferPossibleTypeFromArithSizeofExpr(BO->getRHS());
-          !T.isNull())
-        return T;
-      break;
-    default:
-      break;
-    }
-  }
-  return QualType();
-}
-
-/// If the expression E is a reference to a variable, infer the type from a
-/// variable's initializer if it contains a sizeof. Beware, this is a heuristic
-/// and ignores if a variable is later reassigned. For example:
-///
-///   size_t my_size = sizeof(MyType);
-///   void *x = malloc(my_size);  // infers 'MyType'
-///
-QualType inferPossibleTypeFromVarInitSizeofExpr(const Expr *E) {
-  const Expr *Arg = E->IgnoreParenImpCasts();
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
-    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (const Expr *Init = VD->getInit())
-        return inferPossibleTypeFromArithSizeofExpr(Init);
-    }
-  }
-  return QualType();
-}
-
-/// Deduces the allocated type by checking if the allocation call's result
-/// is immediately used in a cast expression. For example:
-///
-///   MyType *x = (MyType *)malloc(4096);  // infers 'MyType'
-///
-QualType inferPossibleTypeFromCastExpr(const CallExpr *CallE,
-                                       const CastExpr *CastE) {
-  if (!CastE)
-    return QualType();
-  QualType PtrType = CastE->getType();
-  if (PtrType->isPointerType())
-    return PtrType->getPointeeType();
-  return QualType();
-}
-} // end anonymous namespace
 
 void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {
-  QualType AllocType;
-  // First check arguments.
-  for (const Expr *Arg : E->arguments()) {
-    AllocType = inferPossibleTypeFromArithSizeofExpr(Arg);
-    if (AllocType.isNull())
-      AllocType = inferPossibleTypeFromVarInitSizeofExpr(Arg);
-    if (!AllocType.isNull())
-      break;
-  }
-  // Then check later casts.
-  if (AllocType.isNull())
-    AllocType = inferPossibleTypeFromCastExpr(E, CurCast);
-  // Emit if we were able to infer the type.
-  if (!AllocType.isNull())
-    EmitAllocToken(CB, AllocType);
+  assert(SanOpts.has(SanitizerKind::AllocToken) &&
+         "Only needed with -fsanitize=alloc-token");
+  if (llvm::MDNode *MDN = buildAllocToken(E))
+    CB->setMetadata(llvm::LLVMContext::MD_alloc_token, MDN);
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::
@@ -2451,9 +2297,13 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
           CGM.getABIInfo().getOptimalVectorMemoryType(VecTy, getLangOpts());
       if (!ClangVecTy->isPackedVectorBoolType(getContext()) &&
           VecTy != NewVecTy) {
-        SmallVector<int, 16> Mask(NewVecTy->getNumElements(), -1);
+        SmallVector<int, 16> Mask(NewVecTy->getNumElements(),
+                                  VecTy->getNumElements());
         std::iota(Mask.begin(), Mask.begin() + VecTy->getNumElements(), 0);
-        Value = Builder.CreateShuffleVector(Value, Mask, "extractVec");
+        // Use undef instead of poison for the padding lanes, to make sure no
+        // padding bits are poisoned, which may break coercion.
+        Value = Builder.CreateShuffleVector(Value, llvm::UndefValue::get(VecTy),
+                                            Mask, "extractVec");
         SrcTy = NewVecTy;
       }
       if (Addr.getElementType() != SrcTy)
@@ -2725,6 +2575,32 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
                                              bool isInit) {
   if (!Dst.isSimple()) {
     if (Dst.isVectorElt()) {
+      if (getLangOpts().HLSL) {
+        // HLSL allows direct access to vector elements, so storing to
+        // individual elements of a vector through VectorElt is handled as
+        // separate store instructions.
+        Address DstAddr = Dst.getVectorAddress();
+        llvm::Type *DestAddrTy = DstAddr.getElementType();
+        llvm::Type *ElemTy = DestAddrTy->getScalarType();
+        CharUnits ElemAlign = CharUnits::fromQuantity(
+            CGM.getDataLayout().getPrefTypeAlign(ElemTy));
+
+        assert(ElemTy->getScalarSizeInBits() >= 8 &&
+               "vector element type must be at least byte-sized");
+
+        llvm::Value *Val = Src.getScalarVal();
+        if (Val->getType()->getPrimitiveSizeInBits() <
+            ElemTy->getScalarSizeInBits())
+          Val = Builder.CreateZExt(Val, ElemTy->getScalarType());
+
+        llvm::Value *Idx = Dst.getVectorIdx();
+        llvm::Value *Zero = llvm::ConstantInt::get(Int32Ty, 0);
+        Address DstElemAddr =
+            Builder.CreateGEP(DstAddr, {Zero, Idx}, DestAddrTy, ElemAlign);
+        Builder.CreateStore(Val, DstElemAddr, Dst.isVolatileQualified());
+        return;
+      }
+
       // Read/modify/write the vector, inserting the new element.
       llvm::Value *Vec = Builder.CreateLoad(Dst.getVectorAddress(),
                                             Dst.isVolatileQualified());
@@ -2951,18 +2827,49 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
                                                                LValue Dst) {
   llvm::Value *SrcVal = Src.getScalarVal();
   Address DstAddr = Dst.getExtVectorAddress();
+  const llvm::Constant *Elts = Dst.getExtVectorElts();
   if (DstAddr.getElementType()->getScalarSizeInBits() >
       SrcVal->getType()->getScalarSizeInBits())
     SrcVal = Builder.CreateZExt(
         SrcVal, convertTypeForLoadStore(Dst.getType(), SrcVal->getType()));
 
-  // HLSL allows storing to scalar values through ExtVector component LValues.
-  // To support this we need to handle the case where the destination address is
-  // a scalar.
-  if (!DstAddr.getElementType()->isVectorTy()) {
-    assert(!Dst.getType()->isVectorType() &&
-           "this should only occur for non-vector l-values");
-    Builder.CreateStore(SrcVal, DstAddr, Dst.isVolatileQualified());
+  if (getLangOpts().HLSL) {
+    llvm::Type *DestAddrTy = DstAddr.getElementType();
+    // HLSL allows storing to scalar values through ExtVector component LValues.
+    // To support this we need to handle the case where the destination address
+    // is a scalar.
+    if (!DestAddrTy->isVectorTy()) {
+      assert(!Dst.getType()->isVectorType() &&
+             "this should only occur for non-vector l-values");
+      Builder.CreateStore(SrcVal, DstAddr, Dst.isVolatileQualified());
+      return;
+    }
+
+    // HLSL allows direct access to vector elements, so storing to individual
+    // elements of a vector through ExtVector is handled as separate store
+    // instructions.
+    // If we are updating multiple elements, Dst and Src are vectors; for
+    // a single element update they are scalars.
+    const VectorType *VTy = Dst.getType()->getAs<VectorType>();
+    unsigned NumSrcElts = VTy ? VTy->getNumElements() : 1;
+    CharUnits ElemAlign = CharUnits::fromQuantity(
+        CGM.getDataLayout().getPrefTypeAlign(DestAddrTy->getScalarType()));
+    llvm::Value *Zero = llvm::ConstantInt::get(Int32Ty, 0);
+
+    for (unsigned I = 0; I != NumSrcElts; ++I) {
+      llvm::Value *Val = VTy ? Builder.CreateExtractElement(
+                                   SrcVal, llvm::ConstantInt::get(Int32Ty, I))
+                             : SrcVal;
+      unsigned FieldNo = getAccessedFieldNo(I, Elts);
+      Address DstElemAddr = Address::invalid();
+      if (FieldNo == 0)
+        DstElemAddr = DstAddr.withAlignment(ElemAlign);
+      else
+        DstElemAddr = Builder.CreateGEP(
+            DstAddr, {Zero, llvm::ConstantInt::get(Int32Ty, FieldNo)},
+            DestAddrTy, ElemAlign);
+      Builder.CreateStore(Val, DstElemAddr, Dst.isVolatileQualified());
+    }
     return;
   }
 
@@ -2970,7 +2877,6 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
   // value now.
   llvm::Value *Vec = Builder.CreateLoad(DstAddr, Dst.isVolatileQualified());
   llvm::Type *VecTy = Vec->getType();
-  const llvm::Constant *Elts = Dst.getExtVectorElts();
 
   if (const VectorType *VTy = Dst.getType()->getAs<VectorType>()) {
     unsigned NumSrcElts = VTy->getNumElements();
@@ -3939,6 +3845,8 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
   bool NeedsAbortSuffix =
       IsFatal && RecoverKind != CheckRecoverableKind::Unrecoverable;
   bool MinimalRuntime = CGF.CGM.getCodeGenOpts().SanitizeMinimalRuntime;
+  bool HandlerPreserveAllRegs =
+      CGF.CGM.getCodeGenOpts().SanitizeHandlerPreserveAllRegs;
   const SanitizerHandlerInfo &CheckInfo = SanitizerHandlers[CheckHandler];
   const StringRef CheckName = CheckInfo.Name;
   std::string FnName = "__ubsan_handle_" + CheckName.str();
@@ -3948,6 +3856,8 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
     FnName += "_minimal";
   if (NeedsAbortSuffix)
     FnName += "_abort";
+  if (HandlerPreserveAllRegs && !NeedsAbortSuffix)
+    FnName += "_preserve";
   bool MayReturn =
       !IsFatal || RecoverKind == CheckRecoverableKind::AlwaysRecoverable;
 
@@ -3968,6 +3878,10 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
             (CGF.CurCodeDecl && CGF.CurCodeDecl->hasAttr<OptimizeNoneAttr>());
   if (NoMerge)
     HandlerCall->addFnAttr(llvm::Attribute::NoMerge);
+  if (HandlerPreserveAllRegs && !NeedsAbortSuffix) {
+    // N.B. there is also a clang::CallingConv which is not what we want here.
+    HandlerCall->setCallingConv(llvm::CallingConv::PreserveAll);
+  }
   if (!MayReturn) {
     HandlerCall->setDoesNotReturn();
     CGF.Builder.CreateUnreachable();
@@ -4050,18 +3964,8 @@ void CodeGenFunction::EmitCheck(
 
   // Clear arguments for the MinimalRuntime handler.
   if (CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
-    switch (CheckHandler) {
-    case SanitizerHandler::TypeMismatch:
-      // Pass value pointer only. It adds minimal overhead.
-      StaticArgs = {};
-      assert(DynamicArgs.size() == 1);
-      break;
-    default:
-      // No arguments for other checks.
-      StaticArgs = {};
-      DynamicArgs = {};
-      break;
-    }
+    StaticArgs = {};
+    DynamicArgs = {};
   }
 
   // Handler functions take an i8* pointing to the (handler-specific) static
@@ -4791,11 +4695,17 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  LHS.getBaseInfo(), TBAAAccessInfo());
   }
 
-  // The HLSL runtime handle the subscript expression on global resource arrays.
-  if (getLangOpts().HLSL && (E->getType()->isHLSLResourceRecord() ||
-                             E->getType()->isHLSLResourceRecordArray())) {
-    std::optional<LValue> LV =
-        CGM.getHLSLRuntime().emitResourceArraySubscriptExpr(E, *this);
+  // The HLSL runtime handles subscript expressions on global resource arrays
+  // and objects with HLSL buffer layouts.
+  if (getLangOpts().HLSL) {
+    std::optional<LValue> LV;
+    if (E->getType()->isHLSLResourceRecord() ||
+        E->getType()->isHLSLResourceRecordArray()) {
+      LV = CGM.getHLSLRuntime().emitResourceArraySubscriptExpr(E, *this);
+    } else if (E->getType().getAddressSpace() == LangAS::hlsl_constant) {
+      LV = CGM.getHLSLRuntime().emitBufferArraySubscriptExpr(E, *this,
+                                                             EmitIdxAfterBase);
+    }
     if (LV.has_value())
       return *LV;
   }
@@ -5259,6 +5169,11 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
   if (DeclRefExpr *DRE = tryToConvertMemberExprToDeclRefExpr(*this, E)) {
     EmitIgnoredExpr(E->getBase());
     return EmitDeclRefLValue(DRE);
+  }
+  if (getLangOpts().HLSL &&
+      E->getType().getAddressSpace() == LangAS::hlsl_constant) {
+    // We have an HLSL buffer - emit using HLSL's layout rules.
+    return CGM.getHLSLRuntime().emitBufferMemberExpr(*this, E);
   }
 
   Expr *BaseExpr = E->getBase();
@@ -5883,6 +5798,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLArrayRValue:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
@@ -6441,8 +6357,15 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
 LValue CodeGenFunction::EmitHLSLArrayAssignLValue(const BinaryOperator *E) {
   // Don't emit an LValue for the RHS because it might not be an LValue
   LValue LHS = EmitLValue(E->getLHS());
+
+  // If the RHS is a global resource array, copy all individual resources
+  // into LHS.
+  if (E->getRHS()->getType()->isHLSLResourceRecordArray())
+    if (CGM.getHLSLRuntime().emitResourceArrayCopy(LHS, E->getRHS(), *this))
+      return LHS;
+
   // In C the RHS of an assignment operator is an RValue.
-  // EmitAggregateAssign takes anan LValue for the RHS. Instead we can call
+  // EmitAggregateAssign takes an LValue for the RHS. Instead we can call
   // EmitInitializationToLValue to emit an RValue into an LValue.
   EmitInitializationToLValue(E->getRHS(), LHS);
   return LHS;
@@ -6678,8 +6601,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       FD && DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()))
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
 
-  bool CFIUnchecked =
-      CalleeType->hasPointeeToToCFIUncheckedCalleeFunctionType();
+  bool CFIUnchecked = CalleeType->hasPointeeToCFIUncheckedCalleeFunctionType();
 
   // If we are checking indirect calls and this call is indirect, check that the
   // function pointer is a member of the bit set for the function type.
@@ -6782,16 +6704,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
                          E == MustTailCall, E->getExprLoc());
 
   if (auto *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-    // Generate function declaration DISuprogram in order to be used
-    // in debug info about call sites.
-    if (CGDebugInfo *DI = getDebugInfo()) {
-      FunctionArgList Args;
-      QualType ResTy = BuildFunctionArgList(CalleeDecl, Args);
-      DI->EmitFuncDeclForCallSite(LocalCallOrInvoke,
-                                  DI->getFunctionType(CalleeDecl, ResTy, Args),
-                                  CalleeDecl);
-    }
     if (CalleeDecl->hasAttr<RestrictAttr>() ||
+        CalleeDecl->hasAttr<MallocSpanAttr>() ||
         CalleeDecl->hasAttr<AllocSizeAttr>()) {
       // Function has 'malloc' (aka. 'restrict') or 'alloc_size' attribute.
       if (SanOpts.has(SanitizerKind::AllocToken)) {

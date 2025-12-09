@@ -330,3 +330,19 @@ if (FLANG_RT_INCLUDE_TESTS)
 else ()
   add_custom_target(check-flang-rt)
 endif()
+
+###################
+# Install headers #
+###################
+
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  add_llvm_install_targets(install-flang-rt-headers COMPONENT flang-rt-headers)
+
+  install(DIRECTORY include/flang-rt/runtime
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang-rt"
+    COMPONENT flang-rt-headers
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN ".git" EXCLUDE
+    PATTERN "CMakeFiles" EXCLUDE)
+endif()

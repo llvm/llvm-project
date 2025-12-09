@@ -21,7 +21,7 @@ template <typename T>
 class BitVectorTest : public ::testing::Test { };
 
 // Test both BitVector and SmallBitVector with the same suite of tests.
-typedef ::testing::Types<BitVector, SmallBitVector> BitVectorTestTypes;
+using BitVectorTestTypes = ::testing::Types<BitVector, SmallBitVector>;
 TYPED_TEST_SUITE(BitVectorTest, BitVectorTestTypes, );
 
 TYPED_TEST(BitVectorTest, TrivialOperation) {
@@ -857,7 +857,7 @@ TYPED_TEST(BitVectorTest, BinOps) {
   EXPECT_FALSE(B.anyCommon(A));
 }
 
-typedef std::vector<std::pair<int, int>> RangeList;
+using RangeList = std::vector<std::pair<int, int>>;
 
 template <typename VecType>
 static inline VecType createBitVector(uint32_t Size,

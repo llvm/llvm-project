@@ -34,8 +34,6 @@ unsigned FloatType::getFPMantissaWidth() {
 // ShapedType
 //===----------------------------------------------------------------------===//
 
-constexpr int64_t ShapedType::kDynamic;
-
 int64_t ShapedType::getNumElements(ArrayRef<int64_t> shape) {
   int64_t num = 1;
   for (int64_t dim : shape) {

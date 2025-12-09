@@ -34,7 +34,7 @@ public:
   StringRef getKey() const { return Key; }
 
   CacheKey(const CASID &ID);
-  CacheKey(const ObjectProxy &Proxy);
+  LLVM_ABI_FOR_TEST CacheKey(const ObjectProxy &Proxy);
   CacheKey(const ObjectStore &CAS, const ObjectRef &Ref);
 
 private:
@@ -75,6 +75,9 @@ public:
                    CanBeDistributed);
   }
 
+  /// Validate the ActionCache contents.
+  virtual Error validate() const = 0;
+
   virtual ~ActionCache() = default;
 
 protected:
@@ -95,7 +98,11 @@ private:
 };
 
 /// Create an action cache in memory.
-std::unique_ptr<ActionCache> createInMemoryActionCache();
+LLVM_ABI std::unique_ptr<ActionCache> createInMemoryActionCache();
+
+/// Create an action cache on disk.
+LLVM_ABI Expected<std::unique_ptr<ActionCache>>
+createOnDiskActionCache(StringRef Path);
 
 } // end namespace llvm::cas
 

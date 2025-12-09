@@ -14,7 +14,7 @@ def G : Flag<["-"], "G">, HelpText<"print data-in-code table">;
 def h : Flag<["-"], "h">, HelpText<"print mach header">;
 def I : Flag<["-"], "I">, HelpText<"print indirect symbol table">;
 def j : Flag<["-"], "j">, HelpText<"print opcode bytes">;
-def l : Flag<["-"], "l">, HelpText<"print load commnads">;
+def l : Flag<["-"], "l">, HelpText<"print load commands">;
 def L : Flag<["-"], "L">, HelpText<"print used shared libraries">;
 def mcpu_EQ : Joined<["-"], "mcpu=">, HelpText<"select cpu for disassembly">;
 def o : Flag<["-"], "o">, HelpText<"print Objective-C segment">;

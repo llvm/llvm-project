@@ -1336,22 +1336,25 @@ def pmax : PatFrags<(ops node:$lhs, node:$rhs), [
 ]>;
 defm PMAX : SIMDBinaryFP<pmax, "pmax", 235>;
 
+multiclass PMinMaxInt<Vec vec, NI baseMinInst, NI baseMaxInst> {
+  def : Pat<(vec.int_vt (vselect
+              (setolt (vec.vt (bitconvert V128:$rhs)),
+                      (vec.vt (bitconvert V128:$lhs))),
+              V128:$rhs, V128:$lhs)),
+            (baseMinInst $lhs, $rhs)>;
+  def : Pat<(vec.int_vt (vselect
+              (setolt (vec.vt (bitconvert V128:$lhs)),
+                      (vec.vt (bitconvert V128:$rhs))),
+              V128:$rhs, V128:$lhs)),
+            (baseMaxInst $lhs, $rhs)>;
+}
 // Also match the pmin/pmax cases where the operands are int vectors (but the
 // comparison is still a floating point comparison). This can happen when using
 // the wasm_simd128.h intrinsics because v128_t is an integer vector.
 foreach vec = [F32x4, F64x2, F16x8] in {
-defvar pmin = !cast<NI>("PMIN_"#vec);
-defvar pmax = !cast<NI>("PMAX_"#vec);
-def : Pat<(vec.int_vt (vselect
-            (setolt (vec.vt (bitconvert V128:$rhs)),
-                    (vec.vt (bitconvert V128:$lhs))),
-            V128:$rhs, V128:$lhs)),
-          (pmin $lhs, $rhs)>;
-def : Pat<(vec.int_vt (vselect
-            (setolt (vec.vt (bitconvert V128:$lhs)),
-                    (vec.vt (bitconvert V128:$rhs))),
-            V128:$rhs, V128:$lhs)),
-          (pmax $lhs, $rhs)>;
+  defvar pmin = !cast<NI>("PMIN_"#vec);
+  defvar pmax = !cast<NI>("PMAX_"#vec); 
+  defm : PMinMaxInt<vec, pmin, pmax>;
 }
 
 // And match the pmin/pmax LLVM intrinsics as well
@@ -1537,6 +1540,32 @@ def : Pat<(v4i32 (int_wasm_extadd_pairwise_signed (v8i16 V128:$in))),
           (extadd_pairwise_s_I32x4 V128:$in)>;
 def : Pat<(v8i16 (int_wasm_extadd_pairwise_signed (v16i8 V128:$in))),
           (extadd_pairwise_s_I16x8 V128:$in)>;
+
+multiclass ExtAddPairwiseShuffle<ValueType from_ty, ValueType to_ty, string suffix,
+                              int a0, int a1, int a2, int a3, int a4, int a5, int a6, int a7,
+                              int b0, int b1, int b2, int b3, int b4, int b5, int b6, int b7> {
+  foreach sign = ["s", "u"] in {
+    def : Pat<(to_ty (add
+                    (!cast<SDNode>("extend_low_"#sign) (from_ty (wasm_shuffle (from_ty V128:$vec), (from_ty srcvalue),
+                                  (i32 a0), (i32 a1), (i32 a2), (i32 a3),
+                                  (i32 a4), (i32 a5), (i32 a6), (i32 a7),
+                                  (i32 srcvalue), (i32 srcvalue), (i32 srcvalue), (i32 srcvalue),
+                                  (i32 srcvalue), (i32 srcvalue), (i32 srcvalue), (i32 srcvalue)))),
+                    (!cast<SDNode>("extend_low_"#sign) (from_ty (wasm_shuffle (from_ty V128:$vec), (from_ty srcvalue),
+                                  (i32 b0), (i32 b1), (i32 b2), (i32 b3),
+                                  (i32 b4), (i32 b5), (i32 b6), (i32 b7),
+                                  (i32 srcvalue), (i32 srcvalue), (i32 srcvalue), (i32 srcvalue),
+                                  (i32 srcvalue), (i32 srcvalue), (i32 srcvalue), (i32 srcvalue)))))),
+              (!cast<Instruction>("extadd_pairwise_"#sign#"_"#suffix) V128:$vec)>;
+  }
+}
+
+defm : ExtAddPairwiseShuffle<v8i16, v4i32, "I32x4",
+                         0, 1, 4, 5, 8, 9, 12, 13,
+                         2, 3, 6, 7, 10, 11, 14, 15>;
+defm : ExtAddPairwiseShuffle<v16i8, v8i16, "I16x8",
+                         0, 2, 4, 6, 8, 10, 12, 14,
+                         1, 3, 5, 7, 9, 11, 13, 15>;
 
 // f64x2 <-> f32x4 conversions
 def demote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
@@ -1756,6 +1785,15 @@ let Predicates = [HasRelaxedSIMD] in {
               (relaxed_max V128:$lhs, V128:$rhs)>;
     def : Pat<(vec.vt (fmaximumnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
               (relaxed_max V128:$lhs, V128:$rhs)>;
+
+    // Transform pmin/max-supposed patterns to relaxed min max
+    let AddedComplexity = 1 in {
+      def : Pat<(vec.vt (pmin (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+                (relaxed_min $lhs, $rhs)>;
+      def : Pat<(vec.vt (pmax (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+                (relaxed_max $lhs, $rhs)>;
+      defm : PMinMaxInt<vec, relaxed_min, relaxed_max>;
+    }
   }
 }
 

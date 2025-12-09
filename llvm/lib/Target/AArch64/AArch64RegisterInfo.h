@@ -46,7 +46,6 @@ public:
 
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
-  const MCPhysReg *getDarwinCalleeSavedRegs(const MachineFunction *MF) const;
   const MCPhysReg *
   getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
@@ -124,7 +123,7 @@ public:
 
   bool requiresVirtualBaseRegisters(const MachineFunction &MF) const override;
   bool hasBasePointer(const MachineFunction &MF) const;
-  unsigned getBaseRegister() const;
+  MCRegister getBaseRegister() const;
 
   bool isArgumentRegister(const MachineFunction &MF,
                           MCRegister Reg) const override;
@@ -154,7 +153,7 @@ public:
 
   bool shouldAnalyzePhysregInMachineLoopInfo(MCRegister R) const override;
 
-  virtual bool isIgnoredCVReg(MCRegister LLVMReg) const override;
+  bool isIgnoredCVReg(MCRegister LLVMReg) const override;
 };
 
 } // end namespace llvm

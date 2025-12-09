@@ -782,6 +782,10 @@ public:
   void AddLookupOffsets(const LookupBlockOffsets &Offsets,
                         RecordDataImpl &Record);
 
+  /// Emit a reference to a macro.
+  void AddMacroRef(MacroInfo *MI, const IdentifierInfo *Name,
+                   RecordDataImpl &Record);
+
   /// Emit a reference to a declaration.
   void AddDeclRef(const Decl *D, RecordDataImpl &Record);
   // Emit a reference to a declaration if the declaration was emitted.

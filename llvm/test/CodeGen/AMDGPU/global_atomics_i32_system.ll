@@ -10578,22 +10578,24 @@ define amdgpu_gfx void @global_atomic_udec_wrap_i32_noret_scalar(ptr addrspace(1
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
-; VI-NEXT:    flat_load_dword v3, v[0:1]
+; VI-NEXT:    flat_load_dword v1, v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    s_mov_b64 s[36:37], 0
 ; VI-NEXT:    v_mov_b32_e32 v4, s6
+; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:  .LBB148_1: ; %atomicrmw.start
 ; VI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_subrev_u32_e32 v2, vcc, 1, v3
-; VI-NEXT:    v_cmp_lt_u32_e64 s[34:35], s6, v3
+; VI-NEXT:    v_subrev_u32_e32 v0, vcc, 1, v1
+; VI-NEXT:    v_cmp_lt_u32_e64 s[34:35], s6, v1
 ; VI-NEXT:    s_or_b64 vcc, vcc, s[34:35]
-; VI-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
-; VI-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
+; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
+; VI-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; VI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; VI-NEXT:    v_mov_b32_e32 v3, v2
+; VI-NEXT:    v_mov_b32_e32 v1, v0
 ; VI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; VI-NEXT:    s_cbranch_execnz .LBB148_1
 ; VI-NEXT:  ; %bb.2: ; %atomicrmw.end

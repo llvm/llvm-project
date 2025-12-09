@@ -335,6 +335,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         self._proc.stdin.flush()
         return self.seq
 
+    @staticmethod
     def _handle_message(
         message: dict, debugger_state: DAPDebuggerState, logger: Logger
     ):
@@ -419,6 +420,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             request_seq = message["request_seq"]
             debugger_state.set_response(request_seq, message)
 
+    @staticmethod
     def _colorize_dap_message(message: dict) -> dict:
         colorized_message = copy.deepcopy(message)
         if colorized_message["type"] == "event":
@@ -432,6 +434,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             colorized_message["command"] = f"<y>{colorized_message['command']}</>"
         return colorized_message
 
+    @staticmethod
     def _read_dap_output(
         proc: subprocess.Popen,
         debugger_state: DAPDebuggerState,
@@ -454,6 +457,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 DAP._handle_message(message, debugger_state, logger)
                 buffer = rest[content_length:]
 
+    @staticmethod
     def _read_dap_err(proc: subprocess.Popen, logger: Logger):
         while True:
             err: bytes = proc.stderr.readline()
@@ -759,20 +763,27 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
 
         launch_request = self._get_launch_params(cmdline)
 
-        # For some reason, we *must* submit in the order launch->configurationDone, and then we will receive responses
-        # in the order configurationDone->launch.
-        self._flush_breakpoints()
+        # Per DAP protocol, the correct sequence is:
+        # 1. Send launch request
+        # 2. Wait for launch response and "initialized" event
+        # 3. Set breakpoints
+        # 4. Send configurationDone to start the process
         launch_req_id = self.send_message(self.make_request("launch", launch_request))
-        config_done_req_id = self.send_message(self.make_request("configurationDone"))
-        config_done_response = self._await_response(config_done_req_id)
-        assert config_done_response["success"], "Should simply receive an affirmative?"
         launch_response = self._await_response(launch_req_id)
         if not launch_response["success"]:
             raise DebuggerException(
                 f"failure launching debugger: \"{launch_response['body']['error']['format']}\""
             )
-        # We can't interact meaningfully with the process until we have the thread ID and confirmation that the process
-        # has finished launching.
+
+        # Set breakpoints after receiving launch response but before configurationDone.
+        self._flush_breakpoints()
+
+        # Send configurationDone to allow the process to start running.
+        config_done_req_id = self.send_message(self.make_request("configurationDone"))
+        config_done_response = self._await_response(config_done_req_id)
+        assert config_done_response["success"]
+
+        # Wait for the process to launch and obtain a thread ID.
         while self._debugger_state.thread is None or not self._debugger_state.launched:
             time.sleep(0.001)
 
@@ -930,10 +941,16 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             )
         )
         eval_response = self._await_response(eval_req_id)
+        result: str = ""
         if not eval_response["success"]:
-            result: str = eval_response["message"]
+            if eval_response["body"].get("error", None):
+                result = eval_response["body"]["error"]["format"]
+            elif eval_response["message"]:
+                result = eval_response["message"]
+            else:
+                result = "<unable to evaluate expression>"
         else:
-            result: str = eval_response["body"]["result"]
+            result = eval_response["body"]["result"]
         type_str = eval_response["body"].get("type")
 
         return self._evaluate_result_value(expression, result, type_str)

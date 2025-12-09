@@ -449,6 +449,9 @@ TEST_F(ConstantRangeTest, Trunc) {
   // trunc([7, 1), 3->2) = [3, 1)
   ConstantRange SevenOne(APInt(3, 7), APInt(3, 1));
   EXPECT_EQ(SevenOne.truncate(2), ConstantRange(APInt(2, 3), APInt(2, 1)));
+
+  ConstantRange Nop = Full.truncate(Full.getBitWidth());
+  EXPECT_EQ(Full, Nop);
 }
 
 TEST_F(ConstantRangeTest, TruncNuw) {
@@ -527,6 +530,9 @@ TEST_F(ConstantRangeTest, ZExt) {
   // zext([5, 0), 3->7) = [5, 8)
   ConstantRange FiveZero(APInt(3, 5), APInt(3, 0));
   EXPECT_EQ(FiveZero.zeroExtend(7), ConstantRange(APInt(7, 5), APInt(7, 8)));
+
+  ConstantRange Nop = Full.zeroExtend(Full.getBitWidth());
+  EXPECT_EQ(Full, Nop);
 }
 
 TEST_F(ConstantRangeTest, SExt) {
@@ -550,6 +556,9 @@ TEST_F(ConstantRangeTest, SExt) {
 
   EXPECT_EQ(ConstantRange(APInt(16, 0x0200), APInt(16, 0x8000)).signExtend(19),
             ConstantRange(APInt(19, 0x0200), APInt(19, 0x8000)));
+
+  ConstantRange Nop = Full.signExtend(Full.getBitWidth());
+  EXPECT_EQ(Full, Nop);
 }
 
 TEST_F(ConstantRangeTest, IntersectWith) {

@@ -25,6 +25,8 @@ void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
   // Propagate previously set flags
   if (MI->getAsmPrinterFlags() & SPIRV::ASM_PRINTER_WIDTH16)
     OutMI.setFlags(SPIRV::INST_PRINTER_WIDTH16);
+  if (MI->getAsmPrinterFlags() & SPIRV::ASM_PRINTER_WIDTH64)
+    OutMI.setFlags(SPIRV::INST_PRINTER_WIDTH64);
   const MachineFunction *MF = MI->getMF();
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);

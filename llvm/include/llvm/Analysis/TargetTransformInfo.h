@@ -123,6 +123,60 @@ struct HardwareLoopInfo {
   LLVM_ABI bool canAnalyze(LoopInfo &LI);
 };
 
+/// Information for memory intrinsic cost model.
+class MemIntrinsicCostAttributes {
+  /// Optional context instruction, if one exists, e.g. the
+  /// load/store to transform to the intrinsic.
+  const Instruction *I = nullptr;
+
+  /// Address in memory.
+  const Value *Ptr = nullptr;
+
+  /// Vector type of the data to be loaded or stored.
+  Type *DataTy = nullptr;
+
+  /// ID of the memory intrinsic.
+  Intrinsic::ID IID;
+
+  /// True when the memory access is predicated with a mask
+  /// that is not a compile-time constant.
+  bool VariableMask = true;
+
+  /// Address space of the pointer.
+  unsigned AddressSpace = 0;
+
+  /// Alignment of single element.
+  Align Alignment;
+
+public:
+  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
+                                      const Value *Ptr, bool VariableMask,
+                                      Align Alignment,
+                                      const Instruction *I = nullptr)
+      : I(I), Ptr(Ptr), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
+        Alignment(Alignment) {}
+
+  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
+                                      Align Alignment,
+                                      unsigned AddressSpace = 0)
+      : DataTy(DataTy), IID(Id), AddressSpace(AddressSpace),
+        Alignment(Alignment) {}
+
+  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
+                                      bool VariableMask, Align Alignment,
+                                      const Instruction *I = nullptr)
+      : I(I), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
+        Alignment(Alignment) {}
+
+  Intrinsic::ID getID() const { return IID; }
+  const Instruction *getInst() const { return I; }
+  const Value *getPointer() const { return Ptr; }
+  Type *getDataType() const { return DataTy; }
+  bool getVariableMask() const { return VariableMask; }
+  unsigned getAddressSpace() const { return AddressSpace; }
+  Align getAlignment() const { return Alignment; }
+};
+
 class IntrinsicCostAttributes {
   const IntrinsicInst *II = nullptr;
   Type *RetTy = nullptr;
@@ -227,6 +281,9 @@ public:
   /// Get the kind of extension that an instruction represents.
   LLVM_ABI static PartialReductionExtendKind
   getPartialReductionExtendKind(Instruction *I);
+  /// Get the kind of extension that a cast opcode represents.
+  LLVM_ABI static PartialReductionExtendKind
+  getPartialReductionExtendKind(Instruction::CastOps CastOpc);
 
   /// Construct a TTI object using a type implementing the \c Concept
   /// API below.
@@ -813,12 +870,20 @@ public:
   LLVM_ABI AddressingModeKind
   getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const;
 
+  /// Some targets only support masked load/store with a constant mask.
+  enum MaskKind {
+    VariableOrConstantMask,
+    ConstantMask,
+  };
+
   /// Return true if the target supports masked store.
-  LLVM_ABI bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                                   unsigned AddressSpace) const;
+  LLVM_ABI bool
+  isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddressSpace,
+                     MaskKind MaskKind = VariableOrConstantMask) const;
   /// Return true if the target supports masked load.
-  LLVM_ABI bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                                  unsigned AddressSpace) const;
+  LLVM_ABI bool
+  isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
+                    MaskKind MaskKind = VariableOrConstantMask) const;
 
   /// Return true if the target supports nontemporal store.
   LLVM_ABI bool isLegalNTStore(Type *DataType, Align Alignment) const;
@@ -942,6 +1007,10 @@ public:
   /// Return true if the input function which is cold at all call sites,
   ///  should use coldcc calling convention.
   LLVM_ABI bool useColdCCForColdCall(Function &F) const;
+
+  /// Return true if the input function is internal, should use fastcc calling
+  /// convention.
+  LLVM_ABI bool useFastCCForInternalCall(Function &F) const;
 
   LLVM_ABI bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
 
@@ -1551,52 +1620,6 @@ public:
       OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
       const Instruction *I = nullptr) const;
 
-  /// \return The cost of masked Load and Store instructions.
-  LLVM_ABI InstructionCost getMaskedMemoryOpCost(
-      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
-
-  /// \return The cost of Gather or Scatter operation
-  /// \p Opcode - is a type of memory access Load or Store
-  /// \p DataTy - a vector type of the data to be loaded or stored
-  /// \p Ptr - pointer [or vector of pointers] - address[es] in memory
-  /// \p VariableMask - true when the memory access is predicated with a mask
-  ///                   that is not a compile-time constant
-  /// \p Alignment - alignment of single element
-  /// \p I - the optional original context instruction, if one exists, e.g. the
-  ///        load/store to transform or the call to the gather/scatter intrinsic
-  LLVM_ABI InstructionCost getGatherScatterOpCost(
-      unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-      Align Alignment, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      const Instruction *I = nullptr) const;
-
-  /// \return The cost of Expand Load or Compress Store operation
-  /// \p Opcode - is a type of memory access Load or Store
-  /// \p Src - a vector type of the data to be loaded or stored
-  /// \p VariableMask - true when the memory access is predicated with a mask
-  ///                   that is not a compile-time constant
-  /// \p Alignment - alignment of single element
-  /// \p I - the optional original context instruction, if one exists, e.g. the
-  ///        load/store to transform or the call to the gather/scatter intrinsic
-  LLVM_ABI InstructionCost getExpandCompressMemoryOpCost(
-      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      const Instruction *I = nullptr) const;
-
-  /// \return The cost of strided memory operations.
-  /// \p Opcode - is a type of memory access Load or Store
-  /// \p DataTy - a vector type of the data to be loaded or stored
-  /// \p Ptr - pointer [or vector of pointers] - address[es] in memory
-  /// \p VariableMask - true when the memory access is predicated with a mask
-  ///                   that is not a compile-time constant
-  /// \p Alignment - alignment of single element
-  /// \p I - the optional original context instruction, if one exists, e.g. the
-  ///        load/store to transform or the call to the gather/scatter intrinsic
-  LLVM_ABI InstructionCost getStridedMemoryOpCost(
-      unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-      Align Alignment, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      const Instruction *I = nullptr) const;
-
   /// \return The cost of the interleaved memory operation.
   /// \p Opcode is the memory operation code
   /// \p VecTy is the vector type of the interleaved access.
@@ -1674,6 +1697,12 @@ public:
   /// 3. scalar instruction which is to be vectorized.
   LLVM_ABI InstructionCost getIntrinsicInstrCost(
       const IntrinsicCostAttributes &ICA, TTI::TargetCostKind CostKind) const;
+
+  /// \returns The cost of memory intrinsic instructions.
+  /// Used when IntrinsicInst is not materialized.
+  LLVM_ABI InstructionCost
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const;
 
   /// \returns The cost of Call instructions.
   LLVM_ABI InstructionCost getCallInstrCost(
@@ -1761,7 +1790,7 @@ public:
   /// \param Types List of types to check.
   LLVM_ABI bool areTypesABICompatible(const Function *Caller,
                                       const Function *Callee,
-                                      const ArrayRef<Type *> &Types) const;
+                                      ArrayRef<Type *> Types) const;
 
   /// The type of load/store indexing.
   enum MemIndexedMode {

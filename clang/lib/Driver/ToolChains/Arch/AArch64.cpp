@@ -9,7 +9,7 @@
 #include "AArch64.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/Host.h"
@@ -222,7 +222,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     // Default to 'A' profile if the architecture is not specified.
     success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions);
 
-  if (success && (A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)))
+  if (success && (A = Args.getLastArg(options::OPT_mtune_EQ)))
     success =
         getAArch64MicroArchFeaturesFromMtune(D, A->getValue(), Args, Features);
   else if (success && (A = Args.getLastArg(options::OPT_mcpu_EQ)))
@@ -464,27 +464,6 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
 
   if (Args.getLastArg(options::OPT_mno_bti_at_return_twice))
     Features.push_back("+no-bti-at-return-twice");
-}
-
-void aarch64::setPAuthABIInTriple(const Driver &D, const ArgList &Args,
-                                  llvm::Triple &Triple) {
-  Arg *ABIArg = Args.getLastArg(options::OPT_mabi_EQ);
-  bool HasPAuthABI =
-      ABIArg ? (StringRef(ABIArg->getValue()) == "pauthtest") : false;
-
-  switch (Triple.getEnvironment()) {
-  case llvm::Triple::UnknownEnvironment:
-    if (HasPAuthABI)
-      Triple.setEnvironment(llvm::Triple::PAuthTest);
-    break;
-  case llvm::Triple::PAuthTest:
-    break;
-  default:
-    if (HasPAuthABI)
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << ABIArg->getAsString(Args) << Triple.getTriple();
-    break;
-  }
 }
 
 /// Is the triple {aarch64.aarch64_be}-none-elf?

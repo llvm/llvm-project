@@ -2762,11 +2762,11 @@ def : InstRW<[V2Write_11c_18L01_18V01], (instregex "^ST4[BHWD]_IMM$")>;
 def : InstRW<[V2Write_11c_18L01_18S_18V01], (instregex "^ST4[BHWD]$")>;
 
 // Non temporal store, scalar + imm
-def : InstRW<[V2Write_2c_1L01_1V], (instregex "^STNT1[BHWD]_ZRI$")>;
+def : InstRW<[V2Write_2c_1L01_1V01], (instregex "^STNT1[BHWD]_ZRI$")>;
 
 // Non temporal store, scalar + scalar
-def : InstRW<[V2Write_2c_1L01_1S_1V], (instrs STNT1H_ZRR)>;
-def : InstRW<[V2Write_2c_1L01_1V], (instregex "^STNT1[BWD]_ZRR$")>;
+def : InstRW<[V2Write_2c_1L01_1S_1V01], (instrs STNT1H_ZRR)>;
+def : InstRW<[V2Write_2c_1L01_1V01], (instregex "^STNT1[BWD]_ZRR$")>;
 
 // Scatter non temporal store, vector + scalar 32-bit element size
 def : InstRW<[V2Write_4c_4L01_4V01], (instregex "^STNT1[BHW]_ZZR_S")>;

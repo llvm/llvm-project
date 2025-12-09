@@ -26,7 +26,9 @@
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Semantics/symbol.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -184,6 +186,23 @@ bool IsExtendedListItem(const Symbol &sym) {
   return IsVariableListItem(sym) || sym.IsSubprogram();
 }
 
+bool IsTypeParamInquiry(const Symbol &sym) {
+  return common::visit( //
+      common::visitors{
+          [&](const MiscDetails &d) {
+            return d.kind() == MiscDetails::Kind::KindParamInquiry ||
+                d.kind() == MiscDetails::Kind::LenParamInquiry;
+          },
+          [&](const TypeParamDetails &s) { return true; },
+          [&](auto &&) { return false; },
+      },
+      sym.details());
+}
+
+bool IsStructureComponent(const Symbol &sym) {
+  return sym.owner().kind() == Scope::Kind::DerivedType;
+}
+
 bool IsVarOrFunctionRef(const MaybeExpr &expr) {
   if (expr) {
     return evaluate::UnwrapProcedureRef(*expr) != nullptr ||
@@ -218,7 +237,7 @@ bool IsMapExitingType(parser::OmpMapType::Value type) {
   }
 }
 
-std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr) {
+MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr) {
   const parser::TypedExpr &typedExpr{parserExpr.typedExpr};
   // ForwardOwningPointer           typedExpr
   // `- GenericExprWrapper          ^.get()
@@ -477,33 +496,4 @@ bool IsPointerAssignment(const evaluate::Assignment &x) {
   return std::holds_alternative<evaluate::Assignment::BoundsSpec>(x.u) ||
       std::holds_alternative<evaluate::Assignment::BoundsRemapping>(x.u);
 }
-
-/// parser::Block is a list of executable constructs, parser::BlockConstruct
-/// is Fortran's BLOCK/ENDBLOCK construct.
-/// Strip the outermost BlockConstructs, return the reference to the Block
-/// in the executable part of the innermost of the stripped constructs.
-/// Specifically, if the given `block` has a single entry (it's a list), and
-/// the entry is a BlockConstruct, get the Block contained within. Repeat
-/// this step as many times as possible.
-const parser::Block &GetInnermostExecPart(const parser::Block &block) {
-  const parser::Block *iter{&block};
-  while (iter->size() == 1) {
-    const parser::ExecutionPartConstruct &ep{iter->front()};
-    if (auto *bc{GetFortranBlockConstruct(ep)}) {
-      iter = &std::get<parser::Block>(bc->t);
-    } else {
-      break;
-    }
-  }
-  return *iter;
-}
-
-bool IsStrictlyStructuredBlock(const parser::Block &block) {
-  if (block.size() == 1) {
-    return GetFortranBlockConstruct(block.front()) != nullptr;
-  } else {
-    return false;
-  }
-}
-
 } // namespace Fortran::semantics::omp

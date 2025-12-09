@@ -48,6 +48,8 @@ public:
   }
   Status DoDestroy() override { return {}; }
   void RefreshStateAfterStop() override {}
+  // Required by Target::ReadMemory() to call Process::ReadMemory()
+  bool IsAlive() override { return true; }
   size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                       Status &error) override {
     if (m_bytes_left == 0)
@@ -61,7 +63,7 @@ public:
       m_bytes_left -= size;
     }
 
-    memset(buf, 'B', num_bytes_to_write);
+    memset(buf, m_filler, num_bytes_to_write);
     return num_bytes_to_write;
   }
   bool DoUpdateThreadList(ThreadList &old_thread_list,
@@ -72,8 +74,10 @@ public:
 
   // Test-specific additions
   size_t m_bytes_left;
+  int m_filler = 'B';
   MemoryCache &GetMemoryCache() { return m_memory_cache; }
   void SetMaxReadSize(size_t size) { m_bytes_left = size; }
+  void SetFiller(int filler) { m_filler = filler; }
 };
 } // namespace
 
@@ -83,6 +87,18 @@ TargetSP CreateTarget(DebuggerSP &debugger_sp, ArchSpec &arch) {
   debugger_sp->GetTargetList().CreateTarget(
       *debugger_sp, "", arch, eLoadDependentsNo, platform_sp, target_sp);
   return target_sp;
+}
+
+static ProcessSP CreateProcess(lldb::TargetSP target_sp) {
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp = std::make_shared<DummyProcess>(target_sp, listener_sp);
+
+  struct TargetHack : public Target {
+    void SetProcess(ProcessSP process) { m_process_sp = process; }
+  };
+  static_cast<TargetHack *>(target_sp.get())->SetProcess(process_sp);
+
+  return process_sp;
 }
 
 TEST_F(MemoryTest, TesetMemoryCacheRead) {
@@ -96,8 +112,7 @@ TEST_F(MemoryTest, TesetMemoryCacheRead) {
   TargetSP target_sp = CreateTarget(debugger_sp, arch);
   ASSERT_TRUE(target_sp);
 
-  ListenerSP listener_sp(Listener::MakeListener("dummy"));
-  ProcessSP process_sp = std::make_shared<DummyProcess>(target_sp, listener_sp);
+  ProcessSP process_sp = CreateProcess(target_sp);
   ASSERT_TRUE(process_sp);
 
   DummyProcess *process = static_cast<DummyProcess *>(process_sp.get());
@@ -225,6 +240,58 @@ TEST_F(MemoryTest, TesetMemoryCacheRead) {
   ASSERT_TRUE(process->m_bytes_left == l2_cache_size); // Verify that we re-read
                                                        // instead of using an
                                                        // old cache
+}
+
+TEST_F(MemoryTest, TestReadInteger) {
+  ArchSpec arch("x86_64-apple-macosx-");
+
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ProcessSP process_sp = CreateProcess(target_sp);
+  ASSERT_TRUE(process_sp);
+
+  DummyProcess *process = static_cast<DummyProcess *>(process_sp.get());
+  Status error;
+
+  process->SetFiller(0xff);
+  process->SetMaxReadSize(256);
+  // The ReadSignedIntegerFromMemory() methods return int64_t. Check that they
+  // extend the sign correctly when reading 32-bit values.
+  EXPECT_EQ(-1,
+            target_sp->ReadSignedIntegerFromMemory(Address(0), 4, 0, error));
+  EXPECT_EQ(-1, process->ReadSignedIntegerFromMemory(0, 4, 0, error));
+  // Check reading 64-bit values as well.
+  EXPECT_EQ(-1,
+            target_sp->ReadSignedIntegerFromMemory(Address(0), 8, 0, error));
+  EXPECT_EQ(-1, process->ReadSignedIntegerFromMemory(0, 8, 0, error));
+
+  // ReadUnsignedIntegerFromMemory() should not extend the sign.
+  EXPECT_EQ(0xffffffffULL,
+            target_sp->ReadUnsignedIntegerFromMemory(Address(0), 4, 0, error));
+  EXPECT_EQ(0xffffffffULL,
+            process->ReadUnsignedIntegerFromMemory(0, 4, 0, error));
+  EXPECT_EQ(0xffffffffffffffffULL,
+            target_sp->ReadUnsignedIntegerFromMemory(Address(0), 8, 0, error));
+  EXPECT_EQ(0xffffffffffffffffULL,
+            process->ReadUnsignedIntegerFromMemory(0, 8, 0, error));
+
+  // Check reading positive values.
+  process->GetMemoryCache().Clear();
+  process->SetFiller(0x7f);
+  process->SetMaxReadSize(256);
+  EXPECT_EQ(0x7f7f7f7fLL,
+            target_sp->ReadSignedIntegerFromMemory(Address(0), 4, 0, error));
+  EXPECT_EQ(0x7f7f7f7fLL, process->ReadSignedIntegerFromMemory(0, 4, 0, error));
+  EXPECT_EQ(0x7f7f7f7f7f7f7f7fLL,
+            target_sp->ReadSignedIntegerFromMemory(Address(0), 8, 0, error));
+  EXPECT_EQ(0x7f7f7f7f7f7f7f7fLL,
+            process->ReadSignedIntegerFromMemory(0, 8, 0, error));
 }
 
 /// A process class that, when asked to read memory from some address X, returns

@@ -9,7 +9,7 @@
 #include "MipsLinux.h"
 #include "Arch/Mips.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -38,7 +38,7 @@ MipsLLVMToolChain::MipsLLVMToolChain(const Driver &D,
 
 void MipsLLVMToolChain::AddClangSystemIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   const Driver &D = getDriver();

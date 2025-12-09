@@ -183,7 +183,7 @@ class ScheduleMetrics {
   unsigned BubbleCycles;
 
 public:
-  ScheduleMetrics() {}
+  ScheduleMetrics() = default;
   ScheduleMetrics(unsigned L, unsigned BC)
       : ScheduleLength(L), BubbleCycles(BC) {}
   unsigned getLength() const { return ScheduleLength; }
@@ -217,7 +217,7 @@ class RegionPressureMap {
   bool IsLiveOut;
 
 public:
-  RegionPressureMap() {}
+  RegionPressureMap() = default;
   RegionPressureMap(GCNScheduleDAGMILive *GCNDAG, bool LiveOut)
       : DAG(GCNDAG), IsLiveOut(LiveOut) {}
   // Build the Instr->LiveReg and RegionIdx->Instr maps
@@ -417,6 +417,10 @@ class UnclusteredHighRPStage : public GCNSchedStage {
 private:
   // Save the initial occupancy before starting this stage.
   unsigned InitialOccupancy;
+  // Save the temporary target occupancy before starting this stage.
+  unsigned TempTargetOccupancy;
+  // Track whether any region was scheduled by this stage.
+  bool IsAnyRegionScheduled;
 
 public:
   bool initGCNSchedStage() override;

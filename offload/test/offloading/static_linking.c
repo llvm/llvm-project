@@ -14,7 +14,7 @@ int foo() {
 }
 #else
 #include <stdio.h>
-int foo();
+int foo(void);
 
 int main() {
   int x = foo();

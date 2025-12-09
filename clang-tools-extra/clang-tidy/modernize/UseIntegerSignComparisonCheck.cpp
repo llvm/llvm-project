@@ -146,7 +146,7 @@ void UseIntegerSignComparisonCheck::check(
     R3.setBegin(Lexer::getLocForEndOfToken(
         SubExprRHS->getEndLoc(), 0, *Result.SourceManager, getLangOpts()));
   }
-  DiagnosticBuilder Diag =
+  const DiagnosticBuilder Diag =
       diag(BinaryOp->getBeginLoc(),
            "comparison between 'signed' and 'unsigned' integers");
   StringRef CmpNamespace;

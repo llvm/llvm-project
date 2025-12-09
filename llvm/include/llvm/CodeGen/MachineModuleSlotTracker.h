@@ -37,7 +37,7 @@ public:
   MachineModuleSlotTracker(const MachineModuleInfo &MMI,
                            const MachineFunction *MF,
                            bool ShouldInitializeAllMetadata = true);
-  ~MachineModuleSlotTracker();
+  ~MachineModuleSlotTracker() override;
 
   void collectMachineMDNodes(MachineMDNodeListType &L) const;
 };
