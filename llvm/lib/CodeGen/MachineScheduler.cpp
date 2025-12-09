@@ -332,6 +332,7 @@ public:
     MachineDominatorTree &MDT;
     AAResults &AA;
     LiveIntervals &LIS;
+    MachineBlockFrequencyInfo &MBFI;
   };
 
   MachineSchedulerImpl() = default;
@@ -415,10 +416,12 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass);
 INITIALIZE_PASS_END(MachineSchedulerLegacy, DEBUG_TYPE,
                     "Machine Instruction Scheduler", false, false)
 
-MachineSchedulerLegacy::MachineSchedulerLegacy() : MachineFunctionPass(ID) {
+MachineSchedulerLegacy::MachineSchedulerLegacy()
+    : MachineFunctionPass(ID) {
   initializeMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
 }
 
@@ -432,6 +435,8 @@ void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
+  AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+  AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -555,6 +560,7 @@ bool MachineSchedulerImpl::run(MachineFunction &Func, const TargetMachine &TM,
   this->TM = &TM;
   AA = &Analyses.AA;
   LIS = &Analyses.LIS;
+  MBFI = &Analyses.MBFI;
 
   if (VerifyScheduling) {
     LLVM_DEBUG(LIS->dump());
@@ -660,8 +666,9 @@ bool MachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  auto &MBFI = getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   Impl.setLegacyPass(this);
-  return Impl.run(MF, TM, {MLI, MDT, AA, LIS});
+  return Impl.run(MF, TM, {MLI, MDT, AA, LIS, MBFI});
 }
 
 MachineSchedulerPass::MachineSchedulerPass(const TargetMachine *TM)
@@ -693,15 +700,18 @@ MachineSchedulerPass::run(MachineFunction &MF,
                   .getManager();
   auto &AA = FAM.getResult<AAManager>(MF.getFunction());
   auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+
   Impl->setMFAM(&MFAM);
-  bool Changed = Impl->run(MF, *TM, {MLI, MDT, AA, LIS});
+  bool Changed = Impl->run(MF, *TM, {MLI, MDT, AA, LIS, MBFI});
   if (!Changed)
     return PreservedAnalyses::all();
 
   return getMachineFunctionPassPreservedAnalyses()
       .preserveSet<CFGAnalyses>()
       .preserve<SlotIndexesAnalysis>()
-      .preserve<LiveIntervalsAnalysis>();
+      .preserve<LiveIntervalsAnalysis>()
+      .preserve<MachineBlockFrequencyAnalysis>();
 }
 
 bool PostMachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
