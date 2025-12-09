@@ -254,7 +254,7 @@ public:
 /// represents a value lvalue, this method emits the address of the lvalue,
 /// then loads the result into DestPtr.
 void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E) {
-  LValue LV = CGF.EmitLValue(E);
+  LValue LV = CGF.EmitCheckedLValue(E, CodeGenFunction::TCK_Load);
 
   // If the type of the l-value is atomic, then do an atomic load.
   if (LV.getType()->isAtomicType() || CGF.LValueIsSuitableForInlineAtomic(LV)) {
@@ -1328,7 +1328,7 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     return;
   }
 
-  LValue LHS = CGF.EmitLValue(E->getLHS());
+  LValue LHS = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
 
   // If we have an atomic type, evaluate into the destination and then
   // do an atomic copy.
@@ -2248,22 +2248,6 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
                                         AggValueSlot::Overlap_t MayOverlap,
                                         bool isVolatile) {
   assert(!Ty->isAnyComplexType() && "Shouldn't happen for complex");
-
-  // Sanitizer checks to verify source and destination pointers are
-  // non-null and properly aligned before copying.
-  // Without these checks, undefined behavior from invalid pointers goes undetected.
-  Address SrcAddr = Src.getAddress();
-  Address DestAddr = Dest.getAddress();
-
-  // Check source pointer for null and alignment violations
-  EmitTypeCheck(TCK_Load, SourceLocation(),
-                SrcAddr.emitRawPointer(*this), Ty, SrcAddr.getAlignment(),
-                SanitizerSet());
-
-  // Check destination pointer for null and alignment violations
-  EmitTypeCheck(TCK_Store, SourceLocation(),
-                DestAddr.emitRawPointer(*this), Ty, DestAddr.getAlignment(),
-                SanitizerSet());
 
   Address DestPtr = Dest.getAddress();
   Address SrcPtr = Src.getAddress();
