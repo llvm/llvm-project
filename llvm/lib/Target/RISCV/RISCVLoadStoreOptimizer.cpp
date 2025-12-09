@@ -185,13 +185,18 @@ bool RISCVLoadStoreOpt::tryConvertToLdStPair(
     if ((Opc != RISCV::LW && Opc != RISCV::SW) || Second->getOpcode() != Opc)
       return false;
 
+    auto FirstOp1 = First->getOperand(1);
+    auto SecondOp1 = Second->getOperand(1);
+    auto FirstOp2 = First->getOperand(2);
+    auto SecondOp2 = Second->getOperand(2);
+
     // Require simple reg+imm addressing for both.
-    if (!First->getOperand(1).isReg() || !Second->getOperand(1).isReg() ||
-        !First->getOperand(2).isImm() || !Second->getOperand(2).isImm())
+    if (!FirstOp1.isReg() || !SecondOp1.isReg() || !FirstOp2.isImm() ||
+        !SecondOp2.isImm())
       return false;
 
-    Register Base1 = First->getOperand(1).getReg();
-    Register Base2 = Second->getOperand(1).getReg();
+    Register Base1 = FirstOp1.getReg();
+    Register Base2 = SecondOp1.getReg();
 
     if (Base1 != Base2)
       return false;
@@ -199,15 +204,19 @@ bool RISCVLoadStoreOpt::tryConvertToLdStPair(
     if (MMOAlign < Align(4))
       return false;
 
-    int64_t Off1 = First->getOperand(2).getImm();
-    int64_t Off2 = Second->getOperand(2).getImm();
-    int64_t BaseOff = std::min(Off1, Off2);
+    auto FirstOp0 = First->getOperand(0);
+    auto SecondOp0 = Second->getOperand(0);
 
-    if (!isShiftedUInt<5, 2>(BaseOff) || std::abs(Off1 - Off2) != 4)
-      return false;
+    int64_t Off1 = FirstOp2.getImm();
+    int64_t Off2 = SecondOp2.getImm();
 
-    Register StartReg = First->getOperand(0).getReg();
-    Register NextReg = Second->getOperand(0).getReg();
+    if (Off2 < Off1) {
+      std::swap(FirstOp0, SecondOp0);
+      std::swap(Off1, Off2);
+    }
+
+    Register StartReg = FirstOp0.getReg();
+    Register NextReg = SecondOp0.getReg();
 
     if (StartReg == RISCV::X0 || NextReg == RISCV::X0)
       return false;
@@ -216,25 +225,29 @@ bool RISCVLoadStoreOpt::tryConvertToLdStPair(
     if (Opc == RISCV::LW && (StartReg == Base1 || NextReg == Base1))
       return false;
 
-    if (Off2 < Off1)
-      std::swap(StartReg, NextReg);
+    if (!isShiftedUInt<5, 2>(Off1) || (Off2 - Off1 != 4))
+      return false;
 
     if (NextReg != StartReg + 1)
       return false;
 
     unsigned XqciOpc = (Opc == RISCV::LW) ? RISCV::QC_LWMI : RISCV::QC_SWMI;
 
-    auto StartRegState = (Opc == RISCV::LW) ? RegState::Define : 0;
+    auto StartRegState = (Opc == RISCV::LW)
+                             ? RegState::Define
+                             : getKillRegState(FirstOp0.isKill());
     auto NextRegState =
-        (Opc == RISCV::LW) ? RegState::ImplicitDefine : RegState::Implicit;
+        (Opc == RISCV::LW)
+            ? RegState::ImplicitDefine
+            : (RegState::Implicit | getKillRegState(SecondOp0.isKill()));
 
     DebugLoc DL =
         First->getDebugLoc() ? First->getDebugLoc() : Second->getDebugLoc();
     MachineInstrBuilder MIB = BuildMI(*MF, DL, TII->get(XqciOpc));
     MIB.addReg(StartReg, StartRegState)
-        .addReg(Base1)
+        .addReg(Base1, getKillRegState(FirstOp1.isKill() || SecondOp1.isKill()))
         .addImm(2)
-        .addImm(BaseOff)
+        .addImm(Off1)
         .cloneMergedMemRefs({&*First, &*Second})
         .addReg(NextReg, NextRegState);
 

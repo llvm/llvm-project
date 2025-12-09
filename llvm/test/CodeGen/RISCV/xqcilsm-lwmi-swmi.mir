@@ -37,6 +37,7 @@ body: |
 
 ...
 ---
+# FIXME: Kill flags are not propagated correctly for the base register
 name: pair_two_lw_into_qc_lwmi_reversed
 tracksRegLiveness: false
 body: |
@@ -48,7 +49,7 @@ body: |
     ; CHECK-NEXT: $x12 = QC_LWMI $x10, 2, 0, implicit-def $x13 :: (load (s32))
     ; CHECK-NEXT: PseudoRET
     $x13 = LW $x10, 4 :: (load (s32))
-    $x12 = LW $x10, 0 :: (load (s32))
+    $x12 = LW killed $x10, 0 :: (load (s32))
     PseudoRET
 
 ...
@@ -61,7 +62,7 @@ body: |
     ; CHECK-LABEL: name: pair_two_sw_into_qc_swmi_reversed
     ; CHECK: liveins: $x10, $x12, $x13
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: QC_SWMI $x12, $x10, 2, 0, implicit $x13 :: (store (s32))
+    ; CHECK-NEXT: QC_SWMI killed $x12, $x10, 2, 0, implicit killed $x13 :: (store (s32))
     ; CHECK-NEXT: PseudoRET
     SW killed $x13, $x10, 4 :: (store (s32))
     SW killed $x12, $x10, 0 :: (store (s32))
@@ -111,7 +112,7 @@ body: |
     ; CHECK-LABEL: name: pair_two_sw_into_qc_swmi
     ; CHECK: liveins: $x10, $x12, $x13
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: QC_SWMI $x12, $x10, 2, 0, implicit $x13 :: (store (s32))
+    ; CHECK-NEXT: QC_SWMI killed $x12, $x10, 2, 0, implicit killed $x13 :: (store (s32))
     ; CHECK-NEXT: PseudoRET
     SW killed $x12, $x10, 0 :: (store (s32), align 4)
     SW killed $x13, $x10, 4 :: (store (s32), align 4)
@@ -136,6 +137,7 @@ body: |
 
 ...
 ---
+# FIXME: Kill flags are not propagated correctly for the base register
 name: pair_at_upper_boundary_lw
 tracksRegLiveness: false
 body: |
@@ -147,11 +149,12 @@ body: |
     ; CHECK-NEXT: $x12 = QC_LWMI $x10, 2, 124, implicit-def $x13 :: (load (s32))
     ; CHECK-NEXT: PseudoRET
     $x12 = LW $x10, 124 :: (load (s32), align 4)
-    $x13 = LW $x10, 128 :: (load (s32), align 4)
+    $x13 = LW killed $x10, 128 :: (load (s32), align 4)
     PseudoRET
 
 ...
 ---
+# FIXME: Kill flags are not propagated correctly for the base register
 name: pair_at_upper_boundary_sw
 tracksRegLiveness: false
 body: |
@@ -163,7 +166,7 @@ body: |
     ; CHECK-NEXT: QC_SWMI $x12, $x10, 2, 124, implicit $x13 :: (store (s32))
     ; CHECK-NEXT: PseudoRET
     SW $x12, $x10, 124 :: (store (s32), align 4)
-    SW $x13, $x10, 128 :: (store (s32), align 4)
+    SW $x13, killed $x10, 128 :: (store (s32), align 4)
     PseudoRET
 
 ...
@@ -253,6 +256,7 @@ body: |
 
 ...
 ---
+# FIXME: Kill flags are not propagated correctly for the base register
 name: pair_if_not_adjacent
 tracksRegLiveness: false
 body: |
@@ -266,7 +270,7 @@ body: |
     ; CHECK-NEXT: PseudoRET
     $x1 = LW $x10, 20 :: (load (s32), align 4)
     $x3 = ADDI $x1, 10
-    $x2 = LW $x10, 24 :: (load (s32), align 4)
+    $x2 = LW killed $x10, 24 :: (load (s32), align 4)
     PseudoRET
 
 ...
