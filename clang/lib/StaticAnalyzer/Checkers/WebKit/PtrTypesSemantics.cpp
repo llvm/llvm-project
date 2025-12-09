@@ -190,8 +190,8 @@ bool isStdOrWTFMove(const clang::FunctionDecl *F) {
   auto *Namespace = F->getParent();
   if (!Namespace)
     return false;
-  auto* TUDeck = Namespace->getParent();
-  if (!TUDeck || !isa<TranslationUnitDecl>(TUDeck))
+  auto *TUDeck = Namespace->getParent();
+  if (!isa_and_nonnull<TranslationUnitDecl>(TUDeck))
     return false;
   auto NsName = safeGetName(Namespace);
   return (NsName == "WTF" || NsName == "std") && FnName == "move";
