@@ -455,6 +455,8 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
 void ExceptionAnalyzer::ExceptionInfo::clear() {
   Behaviour = State::NotThrowing;
   ContainsUnknown = false;
+  UnknownFromMissingDefinition = false;
+  UnknownFromKnownUnannotated = false;
   ThrownExceptions.clear();
 }
 
