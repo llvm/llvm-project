@@ -57,16 +57,15 @@ private:
 };
 
 class FindTopLevelDeclConsumer : public clang::ASTConsumer {
-public:
+ public:
   explicit FindTopLevelDeclConsumer(bool *FoundTopLevelDecl)
       : FoundTopLevelDecl(FoundTopLevelDecl) {}
   bool HandleTopLevelDecl(clang::DeclGroupRef DeclGroup) override {
     *FoundTopLevelDecl = true;
     return true;
   }
-
-private:
-  bool *const FoundTopLevelDecl;
+ private:
+  bool * const FoundTopLevelDecl;
 };
 } // end namespace
 
@@ -81,27 +80,26 @@ TEST(runToolOnCode, FindsNoTopLevelDeclOnEmptyCode) {
 
 namespace {
 class FindClassDeclXConsumer : public clang::ASTConsumer {
-public:
+ public:
   FindClassDeclXConsumer(bool *FoundClassDeclX)
       : FoundClassDeclX(FoundClassDeclX) {}
   bool HandleTopLevelDecl(clang::DeclGroupRef GroupRef) override {
-    if (CXXRecordDecl *Record =
-            dyn_cast<clang::CXXRecordDecl>(*GroupRef.begin())) {
+    if (CXXRecordDecl* Record = dyn_cast<clang::CXXRecordDecl>(
+            *GroupRef.begin())) {
       if (Record->getName() == "X") {
         *FoundClassDeclX = true;
       }
     }
     return true;
   }
-
-private:
+ private:
   bool *FoundClassDeclX;
 };
 bool FindClassDeclX(ASTUnit *AST) {
   for (std::vector<Decl *>::iterator i = AST->top_level_begin(),
                                      e = AST->top_level_end();
        i != e; ++i) {
-    if (CXXRecordDecl *Record = dyn_cast<clang::CXXRecordDecl>(*i)) {
+    if (CXXRecordDecl* Record = dyn_cast<clang::CXXRecordDecl>(*i)) {
       if (Record->getName() == "X") {
         return true;
       }
@@ -566,14 +564,12 @@ TEST(runToolOnCode, TestSkipFunctionBody) {
       std::make_unique<SkipBodyAction>(),
       "struct skipMe { skipMe() : an_error() { more error } };", Args));
   EXPECT_TRUE(runToolOnCodeWithArgs(
-      std::make_unique<SkipBodyAction>(),
-      "struct skipMe { skipMe(); };"
-      "skipMe::skipMe() : an_error([](){;}) { more error }",
+      std::make_unique<SkipBodyAction>(), "struct skipMe { skipMe(); };"
+                          "skipMe::skipMe() : an_error([](){;}) { more error }",
       Args));
   EXPECT_TRUE(runToolOnCodeWithArgs(
-      std::make_unique<SkipBodyAction>(),
-      "struct skipMe { skipMe(); };"
-      "skipMe::skipMe() : an_error{[](){;}} { more error }",
+      std::make_unique<SkipBodyAction>(), "struct skipMe { skipMe(); };"
+                          "skipMe::skipMe() : an_error{[](){;}} { more error }",
       Args));
   EXPECT_TRUE(runToolOnCodeWithArgs(
       std::make_unique<SkipBodyAction>(),
@@ -581,12 +577,12 @@ TEST(runToolOnCode, TestSkipFunctionBody) {
       "skipMe::skipMe() : a<b<c>(e)>>(), f{}, g() { error }",
       Args));
   EXPECT_TRUE(runToolOnCodeWithArgs(
-      std::make_unique<SkipBodyAction>(),
-      "struct skipMe { skipMe() : bases()... { error } };", Args));
+      std::make_unique<SkipBodyAction>(), "struct skipMe { skipMe() : bases()... { error } };",
+      Args));
 
   EXPECT_FALSE(runToolOnCodeWithArgs(
-      std::make_unique<SkipBodyAction>(),
-      "struct skipMeNot { skipMeNot() : an_error() { } };", Args));
+      std::make_unique<SkipBodyAction>(), "struct skipMeNot { skipMeNot() : an_error() { } };",
+      Args));
   EXPECT_FALSE(runToolOnCodeWithArgs(std::make_unique<SkipBodyAction>(),
                                      "struct skipMeNot { skipMeNot(); };"
                                      "skipMeNot::skipMeNot() : an_error() { }",
@@ -608,10 +604,9 @@ TEST(runToolOnCode, TestSkipFunctionBody) {
       "void skipMe() try something;")); // don't crash while parsing
 
   // Template
-  EXPECT_TRUE(
-      runToolOnCode(std::make_unique<SkipBodyAction>(),
-                    "template<typename T> int skipMe() { an_error_here }"
-                    "int x = skipMe<int>();"));
+  EXPECT_TRUE(runToolOnCode(
+      std::make_unique<SkipBodyAction>(), "template<typename T> int skipMe() { an_error_here }"
+                          "int x = skipMe<int>();"));
   EXPECT_FALSE(runToolOnCodeWithArgs(
       std::make_unique<SkipBodyAction>(),
       "template<typename T> int skipMeNot() { an_error_here }", Args2));
@@ -632,8 +627,7 @@ TEST(runToolOnCodeWithArgs, TestNoDepFile) {
   Args.push_back(std::string(DepFilePath.str()));
   Args.push_back("-MF");
   Args.push_back(std::string(DepFilePath.str()));
-  EXPECT_TRUE(
-      runToolOnCodeWithArgs(std::make_unique<SkipBodyAction>(), "", Args));
+  EXPECT_TRUE(runToolOnCodeWithArgs(std::make_unique<SkipBodyAction>(), "", Args));
   EXPECT_FALSE(llvm::sys::fs::exists(DepFilePath.str()));
   EXPECT_FALSE(llvm::sys::fs::remove(DepFilePath.str()));
 }
@@ -691,11 +685,11 @@ TEST(ClangToolTest, ArgumentAdjusters) {
   bool Ran = false;
   ArgumentsAdjuster CheckSyntaxOnlyAdjuster =
       [&Found, &Ran](const CommandLineArguments &Args, StringRef /*unused*/) {
-        Ran = true;
-        if (llvm::is_contained(Args, "-fsyntax-only"))
-          Found = true;
-        return Args;
-      };
+    Ran = true;
+    if (llvm::is_contained(Args, "-fsyntax-only"))
+      Found = true;
+    return Args;
+  };
   Tool.appendArgumentsAdjuster(CheckSyntaxOnlyAdjuster);
   Tool.run(Action.get());
   EXPECT_TRUE(Ran);
@@ -799,10 +793,10 @@ TEST(ClangToolTest, StripDependencyFileAdjuster) {
 
   CommandLineArguments FinalArgs;
   ArgumentsAdjuster CheckFlagsAdjuster =
-      [&FinalArgs](const CommandLineArguments &Args, StringRef /*unused*/) {
-        FinalArgs = Args;
-        return Args;
-      };
+    [&FinalArgs](const CommandLineArguments &Args, StringRef /*unused*/) {
+      FinalArgs = Args;
+      return Args;
+    };
   Tool.clearArgumentsAdjusters();
   Tool.appendArgumentsAdjuster(getClangStripDependencyFileAdjuster());
   Tool.appendArgumentsAdjuster(CheckFlagsAdjuster);
@@ -1172,5 +1166,6 @@ TEST(ClangToolTest, ProgressReportMixed) {
       "[3/3] Processing file " + std::string(NativeFile3) + ".\n";
   EXPECT_EQ(Output, Expected);
 }
+
 } // end namespace tooling
 } // end namespace clang
