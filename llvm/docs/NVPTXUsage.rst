@@ -1286,7 +1286,7 @@ zero.
 The '``.relu``' modifier clamps the result to ``0`` if negative and ``NaN`` 
 results are flushed to canonical ``NaN``.
 The '``.oob``' modifier clamps the result to ``0`` if either of the operands is 
-an `OOB NaN` (defined under `Tensors <https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#tensors>`__) value.
+an ``OOB NaN`` (defined under `Tensors <https://docs.nvidia.com/cuda/parallel-thread-execution/#tensors>`__) value.
 
 Bit Manipulation Intrinsics
 ---------------------------
