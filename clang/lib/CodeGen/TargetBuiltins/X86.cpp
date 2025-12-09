@@ -76,7 +76,8 @@ static Value *getMaskVecValue(CodeGenFunction &CGF, Value *Mask,
 }
 
 // Emit rounding for the value X according to the rounding RoundingControl.
-static Value *emitX86Round(CodeGenFunction &CGF, Value *X, unsigned RoundingControl) {
+static Value *emitX86Round(CodeGenFunction &CGF, Value *X,
+                           unsigned RoundingControl) {
   unsigned roundingMask = 0b11;
   unsigned useMXCSRBit = 0b1000;
 
