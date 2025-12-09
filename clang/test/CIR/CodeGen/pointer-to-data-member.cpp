@@ -2,7 +2,7 @@
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -Wno-unused-value -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -Wno-unused-value -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
 struct Point {
@@ -29,7 +29,4 @@ auto test1() -> int Point::* {
 // LLVM:   ret i64 %[[RET]]
 
 // OGCG: define {{.*}} i64 @_Z5test1v()
-// OGCG:   %[[RETVAL:.*]] = alloca i64
-// OGCG:   store i64 4, ptr %[[RETVAL]]
-// OGCG:   %[[RET:.*]] = load i64, ptr %[[RETVAL]]
-// OGCG:   ret i64 %[[RET]]
+// OGCG:   ret i64 4
