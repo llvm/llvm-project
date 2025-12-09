@@ -6768,7 +6768,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     case CallingConv::AMDGPU_VS:
       break;
     default:
-      CheckFailed("Intrinsic can't be called from functions with this "
+      CheckFailed("Intrinsic cannot be called from functions with this "
                   "calling convention",
                   &Call);
       break;
