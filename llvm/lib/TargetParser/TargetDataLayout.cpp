@@ -555,9 +555,6 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
     return "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-"
            "f32:32-f64:64-n8:16:32:64-v48:16:16-v96:32:32-v192:64:64";
   case Triple::hexagon:
-    // Specify the vector alignment explicitly. For v512x1, the calculated
-    // alignment would be 512*alignment(i1), which is 512 bytes, instead of
-    // the required minimum of 64 bytes.
     return "e-m:e-p:32:32:32-a:0-n16:32-"
            "i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-"
            "v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048";
