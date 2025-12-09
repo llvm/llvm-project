@@ -42,6 +42,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 
@@ -643,6 +644,35 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       const unsigned NumLoadedElts = AccessSize / DL.getTypeStoreSize(VecEltTy);
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumLoadedElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
+
+      // If idx is dynamic, then sandwich load with bitcasts.
+      // ie. <64 x i8> -> <16 x i8>  instead do
+      //     <64 x i8> -> <4 x i128> -> i128 -> <16 x i8>
+      // Extracting subvector with dynamic index has very large expansion in
+      // the amdgpu backend. Limit to pow2 for UDiv.
+      if (!isa<ConstantInt>(Index) && SubVecTy->isIntOrIntVectorTy() &&
+          llvm::isPowerOf2_32(VectorTy->getNumElements()) &&
+          llvm::isPowerOf2_32(SubVecTy->getNumElements())) {
+        IntegerType *NewElemType = Builder.getIntNTy(
+            SubVecTy->getScalarSizeInBits() * SubVecTy->getNumElements());
+        const unsigned NewNumElts =
+            VectorTy->getNumElements() * VectorTy->getScalarSizeInBits() /
+              NewElemType->getScalarSizeInBits();
+        const unsigned IndexDivisor = VectorTy->getNumElements() / NewNumElts;
+        assert(VectorTy->getScalarSizeInBits() <
+            NewElemType->getScalarSizeInBits() &&
+            "New element type should be bigger");
+        assert(IndexDivisor > 0u && "Zero index divisor");
+        FixedVectorType *BitCastType =
+            FixedVectorType::get(NewElemType, NewNumElts);
+        Value *BCVal = Builder.CreateBitCast(CurVal, BitCastType);
+        Value *NewIdx = Builder.CreateUDiv(Index,
+            ConstantInt::get(Index->getType(), IndexDivisor));
+        Value *ExtVal = Builder.CreateExtractElement(BCVal, NewIdx);
+        Value *BCOut = Builder.CreateBitCast(ExtVal, SubVecTy);
+        Inst->replaceAllUsesWith(BCOut);
+        return nullptr;
+      }
 
       Value *SubVec = PoisonValue::get(SubVecTy);
       for (unsigned K = 0; K < NumLoadedElts; ++K) {
