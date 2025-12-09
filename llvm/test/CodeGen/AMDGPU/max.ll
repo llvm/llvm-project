@@ -1120,7 +1120,7 @@ define amdgpu_kernel void @test_umax_ugt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-NEXT:    v_mov_b32_e32 v1, s9
-; SI-NEXT:    v_cmp_gt_u64_e32 vcc, s[2:3], v[0:1]
+; SI-NEXT:    V_CMP_GT_U64 vcc, s[2:3], v[0:1]
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; SI-NEXT:    s_cselect_b32 s0, s3, s9
@@ -1174,7 +1174,7 @@ define amdgpu_kernel void @test_umax_uge_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-NEXT:    v_mov_b32_e32 v1, s9
-; SI-NEXT:    v_cmp_ge_u64_e32 vcc, s[2:3], v[0:1]
+; SI-NEXT:    V_CMP_GE_U64 vcc, s[2:3], v[0:1]
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; SI-NEXT:    s_cselect_b32 s0, s3, s9
@@ -1228,7 +1228,7 @@ define amdgpu_kernel void @test_imax_sgt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-NEXT:    v_mov_b32_e32 v1, s9
-; SI-NEXT:    v_cmp_gt_i64_e32 vcc, s[2:3], v[0:1]
+; SI-NEXT:    V_CMP_GT_I64 vcc, s[2:3], v[0:1]
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; SI-NEXT:    s_cselect_b32 s0, s3, s9
@@ -1282,7 +1282,7 @@ define amdgpu_kernel void @test_imax_sge_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-NEXT:    v_mov_b32_e32 v1, s9
-; SI-NEXT:    v_cmp_ge_i64_e32 vcc, s[2:3], v[0:1]
+; SI-NEXT:    V_CMP_GE_I64 vcc, s[2:3], v[0:1]
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; SI-NEXT:    s_cselect_b32 s0, s3, s9
