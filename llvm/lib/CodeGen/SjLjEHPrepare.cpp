@@ -139,7 +139,7 @@ void SjLjEHPrepareImpl::insertCallSiteStore(Instruction *I, int Number) {
       Builder.CreateGEP(FunctionContextTy, FuncCtx, Idxs, "call_site");
 
   // Insert a store of the call-site number
-  ConstantInt *CallSiteNoC = ConstantInt::get(DataTy, Number);
+  ConstantInt *CallSiteNoC = ConstantInt::getSigned(DataTy, Number);
   Builder.CreateStore(CallSiteNoC, CallSite, true /*volatile*/);
 }
 
