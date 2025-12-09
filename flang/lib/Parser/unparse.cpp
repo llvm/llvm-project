@@ -2818,6 +2818,7 @@ public:
   WALK_NESTED_ENUM(OmpTaskDependenceType, Value) // OMP task-dependence-type
   WALK_NESTED_ENUM(OmpScheduleClause, Kind) // OMP schedule-kind
   WALK_NESTED_ENUM(OmpSeverityClause, Severity) // OMP severity
+  WALK_NESTED_ENUM(OmpThreadsetClause, ThreadsetPolicy) // OMP threadset
   WALK_NESTED_ENUM(OmpAccessGroup, Value)
   WALK_NESTED_ENUM(OmpDeviceModifier, Value) // OMP device modifier
   WALK_NESTED_ENUM(
