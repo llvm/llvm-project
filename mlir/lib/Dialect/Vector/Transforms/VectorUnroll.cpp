@@ -1161,8 +1161,10 @@ struct UnrollConstantMaskPattern
            llvm::enumerate(constantMaskOp.getMaskDimSizes())) {
         // Calculate how many elements in this dimension should be masked
         // for this particular slice
-        int64_t adjustedMaskSize = std::max(originalMaskDim - offsets[i], 0L);
-        int64_t unrolledMaskDim = std::min(adjustedMaskSize, (*targetShape)[i]);
+        int64_t adjustedMaskSize =
+            std::max(originalMaskDim - offsets[i], static_cast<int64_t>(0));
+        int64_t unrolledMaskDim =
+            std::min(adjustedMaskSize, static_cast<int64_t>((*targetShape)[i]));
         unrolledMaskDims.push_back(unrolledMaskDim);
       }
 
