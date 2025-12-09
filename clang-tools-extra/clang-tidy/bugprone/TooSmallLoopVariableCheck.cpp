@@ -67,21 +67,21 @@ void TooSmallLoopVariableCheck::storeOptions(
 ///   LoopName: The entire for loop (as a ForStmt)
 ///
 void TooSmallLoopVariableCheck::registerMatchers(MatchFinder *Finder) {
-  StatementMatcher LoopVarMatcher =
+  const StatementMatcher LoopVarMatcher =
       expr(ignoringParenImpCasts(
                anyOf(declRefExpr(to(varDecl(hasType(isInteger())))),
                      memberExpr(member(fieldDecl(hasType(isInteger())))))))
           .bind(LoopVarName);
 
   // We need to catch only those comparisons which contain any integer cast.
-  StatementMatcher LoopVarConversionMatcher = traverse(
+  const StatementMatcher LoopVarConversionMatcher = traverse(
       TK_AsIs, implicitCastExpr(hasImplicitDestinationType(isInteger()),
                                 has(ignoringParenImpCasts(LoopVarMatcher)))
                    .bind(LoopVarCastName));
 
   // We are interested in only those cases when the loop bound is a variable
   // value (not const, enum, etc.).
-  StatementMatcher LoopBoundMatcher =
+  const StatementMatcher LoopBoundMatcher =
       expr(ignoringParenImpCasts(allOf(
                hasType(isInteger()), unless(integerLiteral()),
                unless(allOf(
@@ -94,7 +94,7 @@ void TooSmallLoopVariableCheck::registerMatchers(MatchFinder *Finder) {
 
   // We use the loop increment expression only to make sure we found the right
   // loop variable.
-  StatementMatcher IncrementMatcher =
+  const StatementMatcher IncrementMatcher =
       expr(ignoringParenImpCasts(hasType(isInteger()))).bind(LoopIncrementName);
 
   Finder->addMatcher(
@@ -121,14 +121,14 @@ static MagnitudeBits calcMagnitudeBits(const ASTContext &Context,
                                        const Expr *IntExpr) {
   assert(IntExprType->isIntegerType());
 
-  unsigned SignedBits = IntExprType->isUnsignedIntegerType() ? 0U : 1U;
+  const unsigned SignedBits = IntExprType->isUnsignedIntegerType() ? 0U : 1U;
 
   if (const auto *BitField = IntExpr->getSourceBitField()) {
-    unsigned BitFieldWidth = BitField->getBitWidthValue();
+    const unsigned BitFieldWidth = BitField->getBitWidthValue();
     return {BitFieldWidth - SignedBits, BitFieldWidth};
   }
 
-  unsigned IntWidth = Context.getIntWidth(IntExprType);
+  const unsigned IntWidth = Context.getIntWidth(IntExprType);
   return {IntWidth - SignedBits, 0U};
 }
 
@@ -143,18 +143,18 @@ calcUpperBoundMagnitudeBits(const ASTContext &Context, const Expr *UpperBound,
     const Expr *RHSE = BinOperator->getRHS()->IgnoreParenImpCasts();
     const Expr *LHSE = BinOperator->getLHS()->IgnoreParenImpCasts();
 
-    QualType RHSEType = RHSE->getType();
-    QualType LHSEType = LHSE->getType();
+    const QualType RHSEType = RHSE->getType();
+    const QualType LHSEType = LHSE->getType();
 
     if (!RHSEType->isIntegerType() || !LHSEType->isIntegerType())
       return {};
 
-    bool RHSEIsConstantValue = RHSEType->isEnumeralType() ||
-                               RHSEType.isConstQualified() ||
-                               isa<IntegerLiteral>(RHSE);
-    bool LHSEIsConstantValue = LHSEType->isEnumeralType() ||
-                               LHSEType.isConstQualified() ||
-                               isa<IntegerLiteral>(LHSE);
+    const bool RHSEIsConstantValue = RHSEType->isEnumeralType() ||
+                                     RHSEType.isConstQualified() ||
+                                     isa<IntegerLiteral>(RHSE);
+    const bool LHSEIsConstantValue = LHSEType->isEnumeralType() ||
+                                     LHSEType.isConstQualified() ||
+                                     isa<IntegerLiteral>(LHSE);
 
     // Avoid false positives produced by two constant values.
     if (RHSEIsConstantValue && LHSEIsConstantValue)
@@ -193,7 +193,7 @@ void TooSmallLoopVariableCheck::check(const MatchFinder::MatchResult &Result) {
   if (LoopVar->getType() != LoopIncrement->getType())
     return;
 
-  ASTContext &Context = *Result.Context;
+  const ASTContext &Context = *Result.Context;
 
   const QualType LoopVarType = LoopVar->getType();
   const MagnitudeBits LoopVarMagnitudeBits =

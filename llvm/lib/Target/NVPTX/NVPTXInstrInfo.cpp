@@ -26,7 +26,7 @@ using namespace llvm;
 void NVPTXInstrInfo::anchor() {}
 
 NVPTXInstrInfo::NVPTXInstrInfo(const NVPTXSubtarget &STI)
-    : NVPTXGenInstrInfo(STI), RegInfo() {}
+    : NVPTXGenInstrInfo(STI, RegInfo), RegInfo() {}
 
 void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,

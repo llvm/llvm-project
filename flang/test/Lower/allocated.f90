@@ -15,4 +15,3 @@ subroutine allocated_test(scalar, array)
     ! CHECK: cmpi ne, %[[addrToInt1]], %c0{{.*}}
     print *, allocated(array)
   end subroutine
-  

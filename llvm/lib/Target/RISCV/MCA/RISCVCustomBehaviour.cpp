@@ -68,7 +68,7 @@ const llvm::StringRef RISCVSEWInstrument::DESC_NAME = "RISCV-SEW";
 bool RISCVSEWInstrument::isDataValid(llvm::StringRef Data) {
   // Return true if not one of the valid SEW strings
   return StringSwitch<bool>(Data)
-      .Cases("E8", "E16", "E32", "E64", true)
+      .Cases({"E8", "E16", "E32", "E64"}, true)
       .Default(false);
 }
 

@@ -1125,6 +1125,33 @@ void SwitchInst::setDefaultDest(BasicBlock *DefaultCase) {
   cast<llvm::SwitchInst>(Val)->setDefaultDest(
       cast<llvm::BasicBlock>(DefaultCase->Val));
 }
+
+template <typename LLVMCaseItT, typename BlockT, typename ConstT>
+ConstT *
+SwitchInst::CaseHandleImpl<LLVMCaseItT, BlockT, ConstT>::getCaseValue() const {
+  const auto &LLVMCaseHandle = *LLVMCaseIt;
+  auto *LLVMC = Ctx.getValue(LLVMCaseHandle.getCaseValue());
+  return cast<ConstT>(LLVMC);
+}
+
+template <typename LLVMCaseItT, typename BlockT, typename ConstT>
+BlockT *
+SwitchInst::CaseHandleImpl<LLVMCaseItT, BlockT, ConstT>::getCaseSuccessor()
+    const {
+  const auto &LLVMCaseHandle = *LLVMCaseIt;
+  auto *LLVMBB = LLVMCaseHandle.getCaseSuccessor();
+  return cast<BlockT>(Ctx.getValue(LLVMBB));
+}
+
+template class SwitchInst::CaseHandleImpl<llvm::SwitchInst::CaseIt, BasicBlock,
+                                          ConstantInt>;
+template class SwitchInst::CaseItImpl<llvm::SwitchInst::CaseIt, BasicBlock,
+                                      ConstantInt>;
+template class SwitchInst::CaseHandleImpl<llvm::SwitchInst::ConstCaseIt,
+                                          const BasicBlock, const ConstantInt>;
+template class SwitchInst::CaseItImpl<llvm::SwitchInst::ConstCaseIt,
+                                      const BasicBlock, const ConstantInt>;
+
 ConstantInt *SwitchInst::findCaseDest(BasicBlock *BB) {
   auto *LLVMC = cast<llvm::SwitchInst>(Val)->findCaseDest(
       cast<llvm::BasicBlock>(BB->Val));

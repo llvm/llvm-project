@@ -1053,76 +1053,25 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp2)
 float4 exp2(float4);
 
 //===----------------------------------------------------------------------===//
-// firstbithigh builtins
+// f16tof32 builtins
 //===----------------------------------------------------------------------===//
 
-/// \fn T firstbithigh(T Val)
-/// \brief Returns the location of the first set bit starting from the highest
-/// order bit and working downward, per component.
-/// \param Val the input value.
+/// \fn float f16tof32(uint x)
+/// \brief Returns the half value stored in the low 16 bits of the uint arg
+/// converted to a float.
+/// \param x The uint containing two half values.
+///
+/// The float value of the half value found in the low 16 bits of the \a xi
+/// parameter.
 
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint firstbithigh(int16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint2 firstbithigh(int16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint3 firstbithigh(int16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint4 firstbithigh(int16_t4);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint firstbithigh(uint16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint2 firstbithigh(uint16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint3 firstbithigh(uint16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint4 firstbithigh(uint16_t4);
-#endif
-
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint firstbithigh(int);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint2 firstbithigh(int2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint3 firstbithigh(int3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint4 firstbithigh(int4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint firstbithigh(uint);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint2 firstbithigh(uint2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint3 firstbithigh(uint3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint4 firstbithigh(uint4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint firstbithigh(int64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint2 firstbithigh(int64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint3 firstbithigh(int64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint4 firstbithigh(int64_t4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint firstbithigh(uint64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint2 firstbithigh(uint64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint3 firstbithigh(uint64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
-uint4 firstbithigh(uint64_t4);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
+float f16tof32(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
+float2 f16tof32(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
+float3 f16tof32(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
+float4 f16tof32(uint4);
 
 //===----------------------------------------------------------------------===//
 // firstbitlow builtins
@@ -2090,9 +2039,17 @@ T select(bool, T, T);
 /// \param FalseVals The vector values are chosen from when conditions are
 /// false.
 
-template <typename T, int Sz>
+template <typename T>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, vector<T, Sz>);
+vector<T, 2> select(vector<bool, 2>, vector<T, 2>, vector<T, 2>);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, 3> select(vector<bool, 3>, vector<T, 3>, vector<T, 3>);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, 4> select(vector<bool, 4>, vector<T, 4>, vector<T, 4>);
 
 /// \fn vector<T,Sz> select(vector<bool,Sz> Conds, T TrueVal,
 ///                         vector<T,Sz> FalseVals)
@@ -2102,9 +2059,17 @@ vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, vector<T, Sz>);
 /// \param FalseVals The vector values are chosen from when conditions are
 /// false.
 
-template <typename T, int Sz>
+template <typename T>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, Sz> select(vector<bool, Sz>, T, vector<T, Sz>);
+vector<T, 2> select(vector<bool, 2>, T, vector<T, 2>);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, 3> select(vector<bool, 3>, T, vector<T, 3>);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, 4> select(vector<bool, 4>, T, vector<T, 4>);
 
 /// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals,
 ///                         T FalseVal)
@@ -2113,9 +2078,17 @@ vector<T, Sz> select(vector<bool, Sz>, T, vector<T, Sz>);
 /// \param TrueVals The vector values are chosen from when conditions are true.
 /// \param FalseVal The scalar value to splat from when conditions are false.
 
-template <typename T, int Sz>
+template <typename T>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, T);
+vector<T, 2> select(vector<bool, 2>, vector<T, 2>, T);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, 3> select(vector<bool, 3>, vector<T, 3>, T);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, 4> select(vector<bool, 4>, vector<T, 4>, T);
 
 /// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals,
 ///                         T FalseVal)
@@ -2124,10 +2097,20 @@ vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, T);
 /// \param TrueVal The scalar value to splat from when conditions are true.
 /// \param FalseVal The scalar value to splat from when conditions are false.
 
-template <typename T, int Sz>
+template <typename T>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-__detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, Sz>> select(
-    vector<bool, Sz>, T, T);
+__detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, 2>> select(
+    vector<bool, 2>, T, T);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+__detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, 3>> select(
+    vector<bool, 3>, T, T);
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+__detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, 4>> select(
+    vector<bool, 4>, T, T);
 
 //===----------------------------------------------------------------------===//
 // sin builtins
@@ -2598,6 +2581,129 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
 __attribute__((convergent)) double4 WaveActiveMax(double4);
 
 //===----------------------------------------------------------------------===//
+// WaveActiveMin builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) half WaveActiveMin(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) half2 WaveActiveMin(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) half3 WaveActiveMin(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) half4 WaveActiveMin(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int16_t WaveActiveMin(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int16_t2 WaveActiveMin(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int16_t3 WaveActiveMin(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int16_t4 WaveActiveMin(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint16_t WaveActiveMin(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint16_t2 WaveActiveMin(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint16_t3 WaveActiveMin(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint16_t4 WaveActiveMin(uint16_t4);
+#endif
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int WaveActiveMin(int);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int2 WaveActiveMin(int2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int3 WaveActiveMin(int3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int4 WaveActiveMin(int4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint WaveActiveMin(uint);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint2 WaveActiveMin(uint2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint3 WaveActiveMin(uint3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint4 WaveActiveMin(uint4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int64_t WaveActiveMin(int64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int64_t2 WaveActiveMin(int64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int64_t3 WaveActiveMin(int64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int64_t4 WaveActiveMin(int64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint64_t WaveActiveMin(uint64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint64_t2 WaveActiveMin(uint64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint64_t3 WaveActiveMin(uint64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint64_t4 WaveActiveMin(uint64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) float WaveActiveMin(float);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) float2 WaveActiveMin(float2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) float3 WaveActiveMin(float3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) float4 WaveActiveMin(float4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) double WaveActiveMin(double);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) double2 WaveActiveMin(double2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) double3 WaveActiveMin(double3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) double4 WaveActiveMin(double4);
+
+//===----------------------------------------------------------------------===//
 // WaveActiveSum builtins
 //===----------------------------------------------------------------------===//
 
@@ -2839,6 +2945,74 @@ float4 radians(float4);
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_group_memory_barrier_with_group_sync)
 __attribute__((convergent)) void GroupMemoryBarrierWithGroupSync(void);
+
+//===----------------------------------------------------------------------===//
+// ddx_coarse builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T ddx_coarse(T value)
+/// \brief Computes a low precision partial derivative with respect to the
+/// screen-space x-coordinate.
+/// \param value The input value.
+///
+/// The return value is a floating point scalar or vector containing the low
+/// prevision partial derivative of the input value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+half ddx_coarse(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+half2 ddx_coarse(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+half3 ddx_coarse(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+half4 ddx_coarse(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+float ddx_coarse(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+float2 ddx_coarse(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+float3 ddx_coarse(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddx_coarse)
+float4 ddx_coarse(float4);
+
+//===----------------------------------------------------------------------===//
+// ddy_coarse builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T ddy_coarse(T value)
+/// \brief Computes a low precision partial derivative with respect to the
+/// screen-space y-coordinate.
+/// \param value The input value.
+///
+/// The return value is a floating point scalar or vector containing the low
+/// prevision partial derivative of the input value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+half ddy_coarse(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+half2 ddy_coarse(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+half3 ddy_coarse(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+half4 ddy_coarse(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+float ddy_coarse(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+float2 ddy_coarse(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+float3 ddy_coarse(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_ddy_coarse)
+float4 ddy_coarse(float4);
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_ALIAS_INTRINSICS_H_

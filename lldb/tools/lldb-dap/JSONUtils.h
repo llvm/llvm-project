@@ -10,7 +10,7 @@
 #define LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 
 #include "DAPForward.h"
-#include "Protocol/ProtocolTypes.h"
+#include "Protocol/ProtocolRequests.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBType.h"
@@ -28,7 +28,7 @@
 
 namespace lldb_dap {
 
-/// Emplace a StringRef in a json::Object after enusring that the
+/// Emplace a StringRef in a json::Object after ensuring that the
 /// string is valid UTF8. If not, first call llvm::json::fixUTF8
 /// before emplacing.
 ///
@@ -351,7 +351,7 @@ struct VariableDescription {
                       std::optional<std::string> custom_name = {});
 
   /// Returns a description of the value appropriate for the specified context.
-  std::string GetResult(llvm::StringRef context);
+  std::string GetResult(protocol::EvaluateContext context);
 };
 
 /// Does the given variable have an associated value location?

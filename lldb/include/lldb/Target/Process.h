@@ -127,10 +127,7 @@ class ProcessAttachInfo : public ProcessInstanceInfo {
 public:
   ProcessAttachInfo() = default;
 
-  ProcessAttachInfo(const ProcessLaunchInfo &launch_info)
-      : m_resume_count(0), m_wait_for_launch(false), m_ignore_existing(true),
-        m_continue_once_attached(false), m_detach_on_error(true),
-        m_async(false) {
+  ProcessAttachInfo(const ProcessLaunchInfo &launch_info) {
     ProcessInfo::operator=(launch_info);
     SetProcessPluginName(launch_info.GetProcessPluginName());
     SetResumeCount(launch_info.GetResumeCount());
@@ -1571,6 +1568,28 @@ public:
   virtual size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                             Status &error);
 
+  /// Read from multiple memory ranges and write the results into buffer.
+  /// This calls ReadMemoryFromInferior multiple times, once per range,
+  /// bypassing the read cache. Process implementations that can perform this
+  /// operation more efficiently should override this.
+  ///
+  /// \param[in] ranges
+  ///     A collection of ranges (base address + size) to read from.
+  ///
+  /// \param[out] buffer
+  ///     A buffer where the read memory will be written to. It must be at least
+  ///     as long as the sum of the sizes of each range.
+  ///
+  /// \return
+  ///     A vector of MutableArrayRef, where each MutableArrayRef is a slice of
+  ///     the input buffer into which the memory contents were copied. The size
+  ///     of the slice indicates how many bytes were read successfully. Partial
+  ///     reads are always performed from the start of the requested range,
+  ///     never from the middle or end.
+  virtual llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                   llvm::MutableArrayRef<uint8_t> buffer);
+
   /// Read of memory from a process.
   ///
   /// This function has the same semantics of ReadMemory except that it
@@ -2515,6 +2534,28 @@ void PruneThreadPlans();
 
   void CalculateExecutionContext(ExecutionContext &exe_ctx) override;
 
+  /// Associates a file descriptor with the process' STDIO handling
+  /// and configures an asynchronous reading of that descriptor.
+  ///
+  /// This method installs a ConnectionFileDescriptor for the passed file
+  /// descriptor and starts a dedicated read thread. If the read thread starts
+  /// successfully, the method also ensures that an IOHandlerProcessSTDIO is
+  /// created to manage user input to the process.
+  ///
+  /// The descriptor's ownership is transferred to the underlying
+  /// ConnectionFileDescriptor.
+  ///
+  /// When data is successfully read from the file descriptor, it is stored in
+  /// m_stdout_data. There is no differentiation between stdout and stderr.
+  ///
+  /// \param[in] fd
+  ///     The file descriptor to use for process STDIO communication. It's
+  ///     assumed to be valid and will be managed by the newly created
+  ///     connection.
+  ///
+  /// \see lldb_private::Process::STDIOReadThreadBytesReceived()
+  /// \see lldb_private::IOHandlerProcessSTDIO
+  /// \see lldb_private::ConnectionFileDescriptor
   void SetSTDIOFileDescriptor(int file_descriptor);
 
   // Add a permanent region of memory that should never be read or written to.

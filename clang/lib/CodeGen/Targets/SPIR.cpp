@@ -9,6 +9,11 @@
 #include "ABIInfoImpl.h"
 #include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
+#include "clang/Basic/LangOptions.h"
+#include "llvm/IR/DerivedTypes.h"
+
+#include <stdint.h>
+#include <utility>
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -33,9 +38,43 @@ public:
   void computeInfo(CGFunctionInfo &FI) const override;
 
 private:
+  ABIArgInfo classifyKernelArgumentType(QualType Ty) const;
+};
+
+class AMDGCNSPIRVABIInfo : public SPIRVABIInfo {
+  // TODO: this should be unified / shared with AMDGPU, ideally we'd like to
+  //       re-use AMDGPUABIInfo eventually, rather than duplicate.
+  static constexpr unsigned MaxNumRegsForArgsRet = 16; // 16 32-bit registers
+  mutable unsigned NumRegsLeft = 0;
+
+  unsigned numRegsForType(QualType Ty) const;
+
+  bool isHomogeneousAggregateBaseType(QualType Ty) const override {
+    return true;
+  }
+  bool isHomogeneousAggregateSmallEnough(const Type *Base,
+                                         uint64_t Members) const override {
+    uint32_t NumRegs = (getContext().getTypeSize(Base) + 31) / 32;
+
+    // Homogeneous Aggregates may occupy at most 16 registers.
+    return Members * NumRegs <= MaxNumRegsForArgsRet;
+  }
+
+  // Coerce HIP scalar pointer arguments from generic pointers to global ones.
+  llvm::Type *coerceKernelArgumentType(llvm::Type *Ty, unsigned FromAS,
+                                       unsigned ToAS) const;
+
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyKernelArgumentType(QualType Ty) const;
   ABIArgInfo classifyArgumentType(QualType Ty) const;
+
+public:
+  AMDGCNSPIRVABIInfo(CodeGenTypes &CGT) : SPIRVABIInfo(CGT) {}
+  void computeInfo(CGFunctionInfo &FI) const override;
+
+  llvm::FixedVectorType *
+  getOptimalVectorMemoryType(llvm::FixedVectorType *Ty,
+                             const LangOptions &LangOpt) const override;
 };
 } // end anonymous namespace
 namespace {
@@ -53,9 +92,22 @@ public:
 
   unsigned getDeviceKernelCallingConv() const override;
   llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const override;
-  llvm::Type *
-  getHLSLType(CodeGenModule &CGM, const Type *Ty,
-              const SmallVector<int32_t> *Packoffsets = nullptr) const override;
+  llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *Ty,
+                          const CGHLSLOffsetInfo &OffsetInfo) const override;
+
+  llvm::Type *getHLSLPadding(CodeGenModule &CGM,
+                             CharUnits NumBytes) const override {
+    unsigned Size = NumBytes.getQuantity();
+    return llvm::TargetExtType::get(CGM.getLLVMContext(), "spirv.Padding", {},
+                                    {Size});
+  }
+
+  bool isHLSLPadding(llvm::Type *Ty) const override {
+    if (auto *TET = dyn_cast<llvm::TargetExtType>(Ty))
+      return TET->getName() == "spirv.Padding";
+    return false;
+  }
+
   llvm::Type *getSPIRVImageTypeFromHLSLResource(
       const HLSLAttributedResourceType::Attributes &attributes,
       QualType SampledType, CodeGenModule &CGM) const;
@@ -68,7 +120,10 @@ public:
 class SPIRVTargetCodeGenInfo : public CommonSPIRTargetCodeGenInfo {
 public:
   SPIRVTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
-      : CommonSPIRTargetCodeGenInfo(std::make_unique<SPIRVABIInfo>(CGT)) {}
+      : CommonSPIRTargetCodeGenInfo(
+            (CGT.getTarget().getTriple().getVendor() == llvm::Triple::AMD)
+                ? std::make_unique<AMDGCNSPIRVABIInfo>(CGT)
+                : std::make_unique<SPIRVABIInfo>(CGT)) {}
   void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override;
@@ -93,6 +148,8 @@ inline StringRef mapClangSyncScopeToLLVM(SyncScope Scope) {
   case SyncScope::OpenCLSubGroup:
   case SyncScope::WavefrontScope:
     return "subgroup";
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
   case SyncScope::WorkgroupScope:
@@ -115,25 +172,6 @@ void CommonSPIRABIInfo::setCCs() {
   RuntimeCC = llvm::CallingConv::SPIR_FUNC;
 }
 
-ABIArgInfo SPIRVABIInfo::classifyReturnType(QualType RetTy) const {
-  if (getTarget().getTriple().getVendor() != llvm::Triple::AMD)
-    return DefaultABIInfo::classifyReturnType(RetTy);
-  if (!isAggregateTypeForABI(RetTy) || getRecordArgABI(RetTy, getCXXABI()))
-    return DefaultABIInfo::classifyReturnType(RetTy);
-
-  if (const auto *RD = RetTy->getAsRecordDecl();
-      RD && RD->hasFlexibleArrayMember())
-    return DefaultABIInfo::classifyReturnType(RetTy);
-
-  // TODO: The AMDGPU ABI is non-trivial to represent in SPIR-V; in order to
-  // avoid encoding various architecture specific bits here we return everything
-  // as direct to retain type info for things like aggregates, for later perusal
-  // when translating back to LLVM/lowering in the BE. This is also why we
-  // disable flattening as the outcomes can mismatch between SPIR-V and AMDGPU.
-  // This will be revisited / optimised in the future.
-  return ABIArgInfo::getDirect(CGT.ConvertType(RetTy), 0u, nullptr, false);
-}
-
 ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
   if (getContext().getLangOpts().isTargetDevice()) {
     // Coerce pointer arguments with default address space to CrossWorkGroup
@@ -150,18 +188,6 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
     }
 
     if (isAggregateTypeForABI(Ty)) {
-      if (getTarget().getTriple().getVendor() == llvm::Triple::AMD)
-        // TODO: The AMDGPU kernel ABI passes aggregates byref, which is not
-        // currently expressible in SPIR-V; SPIR-V passes aggregates byval,
-        // which the AMDGPU kernel ABI does not allow. Passing aggregates as
-        // direct works around this impedance mismatch, as it retains type info
-        // and can be correctly handled, post reverse-translation, by the AMDGPU
-        // BE, which has to support this CC for legacy OpenCL purposes. It can
-        // be brittle and does lead to performance degradation in certain
-        // pathological cases. This will be revisited / optimised in the future,
-        // once a way to deal with the byref/byval impedance mismatch is
-        // identified.
-        return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
       // Force copying aggregate type in kernel arguments by value when
       // compiling CUDA targeting SPIR-V. This is required for the object
       // copied to be valid on the device.
@@ -174,25 +200,6 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
     }
   }
   return classifyArgumentType(Ty);
-}
-
-ABIArgInfo SPIRVABIInfo::classifyArgumentType(QualType Ty) const {
-  if (getTarget().getTriple().getVendor() != llvm::Triple::AMD)
-    return DefaultABIInfo::classifyArgumentType(Ty);
-  if (!isAggregateTypeForABI(Ty))
-    return DefaultABIInfo::classifyArgumentType(Ty);
-
-  // Records with non-trivial destructors/copy-constructors should not be
-  // passed by value.
-  if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                   RAA == CGCXXABI::RAA_DirectInMemory);
-
-  if (const auto *RD = Ty->getAsRecordDecl();
-      RD && RD->hasFlexibleArrayMember())
-    return DefaultABIInfo::classifyArgumentType(Ty);
-
-  return ABIArgInfo::getDirect(CGT.ConvertType(Ty), 0u, nullptr, false);
 }
 
 void SPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
@@ -212,13 +219,221 @@ void SPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 }
 
+unsigned AMDGCNSPIRVABIInfo::numRegsForType(QualType Ty) const {
+  // This duplicates the AMDGPUABI computation.
+  unsigned NumRegs = 0;
+
+  if (const VectorType *VT = Ty->getAs<VectorType>()) {
+    // Compute from the number of elements. The reported size is based on the
+    // in-memory size, which includes the padding 4th element for 3-vectors.
+    QualType EltTy = VT->getElementType();
+    unsigned EltSize = getContext().getTypeSize(EltTy);
+
+    // 16-bit element vectors should be passed as packed.
+    if (EltSize == 16)
+      return (VT->getNumElements() + 1) / 2;
+
+    unsigned EltNumRegs = (EltSize + 31) / 32;
+    return EltNumRegs * VT->getNumElements();
+  }
+
+  if (const auto *RD = Ty->getAsRecordDecl()) {
+    assert(!RD->hasFlexibleArrayMember());
+
+    for (const FieldDecl *Field : RD->fields()) {
+      QualType FieldTy = Field->getType();
+      NumRegs += numRegsForType(FieldTy);
+    }
+
+    return NumRegs;
+  }
+
+  return (getContext().getTypeSize(Ty) + 31) / 32;
+}
+
+llvm::Type *AMDGCNSPIRVABIInfo::coerceKernelArgumentType(llvm::Type *Ty,
+                                                         unsigned FromAS,
+                                                         unsigned ToAS) const {
+  // Single value types.
+  auto *PtrTy = llvm::dyn_cast<llvm::PointerType>(Ty);
+  if (PtrTy && PtrTy->getAddressSpace() == FromAS)
+    return llvm::PointerType::get(Ty->getContext(), ToAS);
+  return Ty;
+}
+
+ABIArgInfo AMDGCNSPIRVABIInfo::classifyReturnType(QualType RetTy) const {
+  if (!isAggregateTypeForABI(RetTy) || getRecordArgABI(RetTy, getCXXABI()))
+    return DefaultABIInfo::classifyReturnType(RetTy);
+
+  // Ignore empty structs/unions.
+  if (isEmptyRecord(getContext(), RetTy, true))
+    return ABIArgInfo::getIgnore();
+
+  // Lower single-element structs to just return a regular value.
+  if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
+    return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
+
+  if (const auto *RD = RetTy->getAsRecordDecl();
+      RD && RD->hasFlexibleArrayMember())
+    return DefaultABIInfo::classifyReturnType(RetTy);
+
+  // Pack aggregates <= 4 bytes into single VGPR or pair.
+  uint64_t Size = getContext().getTypeSize(RetTy);
+  if (Size <= 16)
+    return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
+
+  if (Size <= 32)
+    return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
+
+  // TODO: This carried over from AMDGPU oddity, we retain it to
+  //       ensure consistency, but it might be reasonable to return Int64.
+  if (Size <= 64) {
+    llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
+    return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
+  }
+
+  if (numRegsForType(RetTy) <= MaxNumRegsForArgsRet)
+    return ABIArgInfo::getDirect();
+  return DefaultABIInfo::classifyReturnType(RetTy);
+}
+
+/// For kernels all parameters are really passed in a special buffer. It doesn't
+/// make sense to pass anything byval, so everything must be direct.
+ABIArgInfo AMDGCNSPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  // TODO: Can we omit empty structs?
+
+  if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
+    Ty = QualType(SeltTy, 0);
+
+  llvm::Type *OrigLTy = CGT.ConvertType(Ty);
+  llvm::Type *LTy = OrigLTy;
+  if (getContext().getLangOpts().isTargetDevice()) {
+    LTy = coerceKernelArgumentType(
+        OrigLTy, /*FromAS=*/getContext().getTargetAddressSpace(LangAS::Default),
+        /*ToAS=*/getContext().getTargetAddressSpace(LangAS::opencl_global));
+  }
+
+  // FIXME: This doesn't apply the optimization of coercing pointers in structs
+  // to global address space when using byref. This would require implementing a
+  // new kind of coercion of the in-memory type when for indirect arguments.
+  if (LTy == OrigLTy && isAggregateTypeForABI(Ty)) {
+    return ABIArgInfo::getIndirectAliased(
+        getContext().getTypeAlignInChars(Ty),
+        getContext().getTargetAddressSpace(LangAS::opencl_constant),
+        false /*Realign*/, nullptr /*Padding*/);
+  }
+
+  // TODO: inhibiting flattening is an AMDGPU workaround for Clover, which might
+  //       be vestigial and should be revisited.
+  return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
+}
+
+ABIArgInfo AMDGCNSPIRVABIInfo::classifyArgumentType(QualType Ty) const {
+  assert(NumRegsLeft <= MaxNumRegsForArgsRet && "register estimate underflow");
+
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  // TODO: support for variadics.
+
+  if (!isAggregateTypeForABI(Ty)) {
+    ABIArgInfo ArgInfo = DefaultABIInfo::classifyArgumentType(Ty);
+    if (!ArgInfo.isIndirect()) {
+      unsigned NumRegs = numRegsForType(Ty);
+      NumRegsLeft -= std::min(NumRegs, NumRegsLeft);
+    }
+
+    return ArgInfo;
+  }
+
+  // Records with non-trivial destructors/copy-constructors should not be
+  // passed by value.
+  if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
+
+  // Ignore empty structs/unions.
+  if (isEmptyRecord(getContext(), Ty, true))
+    return ABIArgInfo::getIgnore();
+
+  // Lower single-element structs to just pass a regular value. TODO: We
+  // could do reasonable-size multiple-element structs too, using getExpand(),
+  // though watch out for things like bitfields.
+  if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
+    return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
+
+  if (const auto *RD = Ty->getAsRecordDecl();
+      RD && RD->hasFlexibleArrayMember())
+    return DefaultABIInfo::classifyArgumentType(Ty);
+
+  uint64_t Size = getContext().getTypeSize(Ty);
+  if (Size <= 64) {
+    // Pack aggregates <= 8 bytes into single VGPR or pair.
+    unsigned NumRegs = (Size + 31) / 32;
+    NumRegsLeft -= std::min(NumRegsLeft, NumRegs);
+
+    if (Size <= 16)
+      return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
+
+    if (Size <= 32)
+      return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
+
+    // TODO: This is an AMDGPU oddity, and might be vestigial, we retain it to
+    //       ensure consistency, but it should be revisited.
+    llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
+    return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
+  }
+
+  if (NumRegsLeft > 0) {
+    unsigned NumRegs = numRegsForType(Ty);
+    if (NumRegsLeft >= NumRegs) {
+      NumRegsLeft -= NumRegs;
+      return ABIArgInfo::getDirect();
+    }
+  }
+
+  // Use pass-by-reference in stead of pass-by-value for struct arguments in
+  // function ABI.
+  return ABIArgInfo::getIndirectAliased(
+      getContext().getTypeAlignInChars(Ty),
+      getContext().getTargetAddressSpace(LangAS::opencl_private));
+}
+
+void AMDGCNSPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
+  llvm::CallingConv::ID CC = FI.getCallingConvention();
+
+  if (!getCXXABI().classifyReturnType(FI))
+    FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+
+  NumRegsLeft = MaxNumRegsForArgsRet;
+  for (auto &I : FI.arguments()) {
+    if (CC == llvm::CallingConv::SPIR_KERNEL)
+      I.info = classifyKernelArgumentType(I.type);
+    else
+      I.info = classifyArgumentType(I.type);
+  }
+}
+
+llvm::FixedVectorType *AMDGCNSPIRVABIInfo::getOptimalVectorMemoryType(
+    llvm::FixedVectorType *Ty, const LangOptions &LangOpt) const {
+  // AMDGPU has legal instructions for 96-bit so 3x32 can be supported.
+  if (Ty->getNumElements() == 3 && getDataLayout().getTypeSizeInBits(Ty) == 96)
+    return Ty;
+  return DefaultABIInfo::getOptimalVectorMemoryType(Ty, LangOpt);
+}
+
 namespace clang {
 namespace CodeGen {
 void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI) {
-  if (CGM.getTarget().getTriple().isSPIRV())
-    SPIRVABIInfo(CGM.getTypes()).computeInfo(FI);
-  else
+  if (CGM.getTarget().getTriple().isSPIRV()) {
+    if (CGM.getTarget().getTriple().getVendor() == llvm::Triple::AMD)
+      AMDGCNSPIRVABIInfo(CGM.getTypes()).computeInfo(FI);
+    else
+      SPIRVABIInfo(CGM.getTypes()).computeInfo(FI);
+  } else {
     CommonSPIRABIInfo(CGM.getTypes()).computeInfo(FI);
+  }
 }
 }
 }
@@ -256,7 +471,16 @@ CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
   LangAS AS = QT->getUnqualifiedDesugaredType()->isNullPtrType()
                   ? LangAS::Default
                   : QT->getPointeeType().getAddressSpace();
-  if (AS == LangAS::Default || AS == LangAS::opencl_generic)
+  unsigned ASAsInt = static_cast<unsigned>(AS);
+  unsigned FirstTargetASAsInt =
+      static_cast<unsigned>(LangAS::FirstTargetAddressSpace);
+  unsigned CodeSectionINTELAS = FirstTargetASAsInt + 9;
+  // As per SPV_INTEL_function_pointers, it is illegal to addrspacecast
+  // function pointers to/from the generic AS.
+  bool IsFunctionPtrAS =
+      CGM.getTriple().isSPIRV() && ASAsInt == CodeSectionINTELAS;
+  if (AS == LangAS::Default || AS == LangAS::opencl_generic ||
+      AS == LangAS::opencl_constant || IsFunctionPtrAS)
     return llvm::ConstantPointerNull::get(PT);
 
   auto &Ctx = CGM.getContext();
@@ -290,19 +514,20 @@ SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
 
 void SPIRVTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-  if (!M.getLangOpts().HIP ||
-      M.getTarget().getTriple().getVendor() != llvm::Triple::AMD)
-    return;
   if (GV->isDeclaration())
     return;
 
-  auto F = dyn_cast<llvm::Function>(GV);
-  if (!F)
-    return;
-
-  auto FD = dyn_cast_or_null<FunctionDecl>(D);
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD)
     return;
+
+  llvm::Function *F = dyn_cast<llvm::Function>(GV);
+  assert(F && "Expected GlobalValue to be a Function");
+
+  if (!M.getLangOpts().HIP ||
+      M.getTarget().getTriple().getVendor() != llvm::Triple::AMD)
+    return;
+
   if (!FD->hasAttr<CUDAGlobalAttr>())
     return;
 
@@ -485,7 +710,7 @@ static llvm::Type *getInlineSpirvType(CodeGenModule &CGM,
 
 llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
     CodeGenModule &CGM, const Type *Ty,
-    const SmallVector<int32_t> *Packoffsets) const {
+    const CGHLSLOffsetInfo &OffsetInfo) const {
   llvm::LLVMContext &Ctx = CGM.getLLVMContext();
 
   if (auto *SpirvType = dyn_cast<HLSLInlineSpirvType>(Ty))
@@ -531,10 +756,9 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
     if (ContainedTy.isNull() || !ContainedTy->isStructureType())
       return nullptr;
 
-    llvm::Type *BufferLayoutTy =
-        HLSLBufferLayoutBuilder(CGM, "spirv.Layout")
-            .createLayoutType(ContainedTy->castAsCanonical<RecordType>(),
-                              Packoffsets);
+    llvm::StructType *BufferLayoutTy =
+        HLSLBufferLayoutBuilder(CGM).layOutStruct(
+            ContainedTy->getAsCanonical<RecordType>(), OffsetInfo);
     uint32_t StorageClass = /* Uniform storage class */ 2;
     return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer", {BufferLayoutTy},
                                     {StorageClass, false});

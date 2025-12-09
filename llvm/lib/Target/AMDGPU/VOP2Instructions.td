@@ -971,7 +971,7 @@ defm V_MBCNT_HI_U32_B32 : VOP2Inst <"v_mbcnt_hi_u32_b32", VOP_I32_I32_I32, int_a
 } // End IsNeverUniform = 1
 defm V_LDEXP_F32 : VOP2Inst <"v_ldexp_f32", VOP_F32_F32_I32, any_fldexp>;
 
-let ReadsModeReg = 0, mayRaiseFPException = 0 in {
+let ReadsModeReg = 0, mayRaiseFPException = 0, SubtargetPredicate = HasCvtPkNormVOP2Insts in {
 defm V_CVT_PKNORM_I16_F32 : VOP2Inst <"v_cvt_pknorm_i16_f32", VOP_V2I16_F32_F32, AMDGPUpknorm_i16_f32>;
 defm V_CVT_PKNORM_U16_F32 : VOP2Inst <"v_cvt_pknorm_u16_f32", VOP_V2I16_F32_F32, AMDGPUpknorm_u16_f32>;
 }
@@ -1266,14 +1266,14 @@ let Constraints = "$vdst = $src2",
 defm V_FMAC_F32 : VOP2Inst_VOPD <"v_fmac_f32", VOP_MAC_F32, 0x0, "v_fmac_f32">;
 } // End SubtargetPredicate = HasDLInsts
 
-let SubtargetPredicate = HasFmaLegacy32 in {
+let SubtargetPredicate = HasFmacLegacy32 in {
 
 let Constraints = "$vdst = $src2",
     isConvertibleToThreeAddress = 1,
     isCommutable = 1 in
 defm V_FMAC_LEGACY_F32 : VOP2Inst <"v_fmac_legacy_f32", VOP_MAC_LEGACY_F32>;
 
-} // End SubtargetPredicate = HasFmaLegacy32
+} // End SubtargetPredicate = HasFmacLegacy32
 
 let SubtargetPredicate = HasFmacF64Inst,
     Constraints = "$vdst = $src2",

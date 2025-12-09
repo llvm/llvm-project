@@ -255,6 +255,20 @@ TEST(ELFTest, getELFRelocationTypeNameForLoongArch) {
             getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_CALL36));
 }
 
+TEST(ELFTest, getRISCVVendorRelocationTypeName) {
+  EXPECT_EQ("R_RISCV_QC_ABS20_U",
+            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM192, "QUALCOMM"));
+  EXPECT_EQ("R_RISCV_QC_E_BRANCH",
+            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM193, "QUALCOMM"));
+  EXPECT_EQ("R_RISCV_QC_E_32",
+            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM194, "QUALCOMM"));
+  EXPECT_EQ("R_RISCV_QC_E_CALL_PLT",
+            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM195, "QUALCOMM"));
+
+  EXPECT_EQ("R_RISCV_NDS_BRANCH_10",
+            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM241, "ANDES"));
+}
+
 TEST(ELFTest, getELFRelativeRelocationType) {
   EXPECT_EQ(ELF::R_VE_RELATIVE, getELFRelativeRelocationType(EM_VE));
   EXPECT_EQ(ELF::R_LARCH_RELATIVE, getELFRelativeRelocationType(EM_LOONGARCH));

@@ -921,11 +921,20 @@ __mmask8 test_mm_movepi32_mask(__m128i __A) {
   return _mm_movepi32_mask(__A); 
 }
 
+TEST_CONSTEXPR(_mm512_movepi16_mask(
+    ((__m512i)(__v32hi){0, 1, short(32768), 3, 4, 5, 6, 7,
+                        8, 9, 10, 11, 12, 13, 14, 15,
+                        16, 17, 18, 19, 20, 21, 22, 23,
+                        24, 25, 26, 27, 28, 29, 30, short(32768)})
+) == (__mmask32)0x80000004);
+
 __mmask8 test_mm256_movepi32_mask(__m256i __A) {
   // CHECK-LABEL: test_mm256_movepi32_mask
   // CHECK: [[CMP:%.*]] = icmp slt <8 x i32> %{{.*}}, zeroinitializer
   return _mm256_movepi32_mask(__A); 
 }
+
+TEST_CONSTEXPR(_mm256_movepi32_mask(((__m256i)(__v8si){0, 1, -1, 3, 4, 5, 6, -2147483648})) == (__mmask8)0x84);
 
 __m128i test_mm_movm_epi32(__mmask8 __A) {
   // CHECK-LABEL: test_mm_movm_epi32
@@ -965,6 +974,8 @@ __mmask8 test_mm_movepi64_mask(__m128i __A) {
   return _mm_movepi64_mask(__A); 
 }
 
+TEST_CONSTEXPR(_mm_movepi64_mask(((__m128i)(__v2di){0, -1})) == (__mmask8)0x02);
+
 __mmask8 test_mm256_movepi64_mask(__m256i __A) {
   // CHECK-LABEL: test_mm256_movepi64_mask
   // CHECK: [[CMP:%.*]] = icmp slt <4 x i64> %{{.*}}, zeroinitializer
@@ -972,6 +983,7 @@ __mmask8 test_mm256_movepi64_mask(__m256i __A) {
   return _mm256_movepi64_mask(__A); 
 }
 
+TEST_CONSTEXPR(_mm256_movepi64_mask(((__m256i)(__v4di){0, 1, -1, 3})) == (__mmask8)0x04);
 
 __m256 test_mm256_broadcast_f32x2(__m128 __A) {
   // CHECK-LABEL: test_mm256_broadcast_f32x2
@@ -1101,6 +1113,7 @@ __m128d test_mm256_extractf64x2_pd(__m256d __A) {
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> poison, <2 x i32> <i32 2, i32 3>
   return _mm256_extractf64x2_pd(__A, 1); 
 }
+TEST_CONSTEXPR(match_m128d(_mm256_extractf64x2_pd(((__m256d){0.0,1.0,2.0,3.0}), 1), 2.0, 3.0));
 
 __m128d test_mm256_mask_extractf64x2_pd(__m128d __W, __mmask8 __U, __m256d __A) {
   // CHECK-LABEL: test_mm256_mask_extractf64x2_pd
@@ -1108,6 +1121,7 @@ __m128d test_mm256_mask_extractf64x2_pd(__m128d __W, __mmask8 __U, __m256d __A) 
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm256_mask_extractf64x2_pd(__W, __U, __A, 1); 
 }
+TEST_CONSTEXPR(match_m128d(_mm256_mask_extractf64x2_pd((((__m128d){100.0, 101.0})), (__mmask8)0x1, (((__m256d){0.0,1.0,2.0,3.0})),1), 2.0, 101.0));
 
 __m128d test_mm256_maskz_extractf64x2_pd(__mmask8 __U, __m256d __A) {
   // CHECK-LABEL: test_mm256_maskz_extractf64x2_pd
@@ -1115,12 +1129,14 @@ __m128d test_mm256_maskz_extractf64x2_pd(__mmask8 __U, __m256d __A) {
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm256_maskz_extractf64x2_pd(__U, __A, 1); 
 }
+TEST_CONSTEXPR(match_m128d(_mm256_maskz_extractf64x2_pd((__mmask8)0x2,(((__m256d){0.0,1.0,2.0,3.0})),1), 0.0, 3.0));
 
 __m128i test_mm256_extracti64x2_epi64(__m256i __A) {
   // CHECK-LABEL: test_mm256_extracti64x2_epi64
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> poison, <2 x i32> <i32 2, i32 3>
   return _mm256_extracti64x2_epi64(__A, 1); 
 }
+TEST_CONSTEXPR(match_m128i(_mm256_extracti64x2_epi64(((__m256i){0ULL,1ULL,2ULL,3ULL}), 1), 2ULL, 3ULL));
 
 __m128i test_mm256_mask_extracti64x2_epi64(__m128i __W, __mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_mask_extracti64x2_epi64
@@ -1128,6 +1144,7 @@ __m128i test_mm256_mask_extracti64x2_epi64(__m128i __W, __mmask8 __U, __m256i __
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm256_mask_extracti64x2_epi64(__W, __U, __A, 1); 
 }
+TEST_CONSTEXPR(match_m128i(_mm256_mask_extracti64x2_epi64((((__m128i){100ULL, 101ULL})), (__mmask8)0x1, (((__m256i){0ULL,1ULL,2ULL,3ULL})), 1), 2ULL, 101ULL));
 
 __m128i test_mm256_maskz_extracti64x2_epi64(__mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_maskz_extracti64x2_epi64
@@ -1135,6 +1152,7 @@ __m128i test_mm256_maskz_extracti64x2_epi64(__mmask8 __U, __m256i __A) {
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm256_maskz_extracti64x2_epi64(__U, __A, 1); 
 }
+TEST_CONSTEXPR(match_m128i(_mm256_maskz_extracti64x2_epi64((__mmask8)0x2, (((__m256i){0ULL,1ULL,2ULL,3ULL})),1), 0ULL, 3ULL));
 
 __m256d test_mm256_insertf64x2(__m256d __A, __m128d __B) {
   // CHECK-LABEL: test_mm256_insertf64x2

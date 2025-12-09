@@ -134,9 +134,9 @@ define <8 x i32> @reverse_v8i32(<8 x i32> %a) #0 {
 ; CHECK-FASTISEL-LABEL: reverse_v8i32:
 ; CHECK-FASTISEL:       // %bb.0:
 ; CHECK-FASTISEL-NEXT:    sub sp, sp, #16
-; CHECK-FASTISEL-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; CHECK-FASTISEL-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-FASTISEL-NEXT:    mov v1.16b, v0.16b
-; CHECK-FASTISEL-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-FASTISEL-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-FASTISEL-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-FASTISEL-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-FASTISEL-NEXT:    rev64 v1.4s, v1.4s
@@ -165,12 +165,12 @@ define <16 x float> @reverse_v16f32(<16 x float> %a) #0 {
 ; CHECK-FASTISEL-LABEL: reverse_v16f32:
 ; CHECK-FASTISEL:       // %bb.0:
 ; CHECK-FASTISEL-NEXT:    sub sp, sp, #32
-; CHECK-FASTISEL-NEXT:    str q3, [sp, #16] // 16-byte Folded Spill
-; CHECK-FASTISEL-NEXT:    str q2, [sp] // 16-byte Folded Spill
+; CHECK-FASTISEL-NEXT:    str q3, [sp, #16] // 16-byte Spill
+; CHECK-FASTISEL-NEXT:    str q2, [sp] // 16-byte Spill
 ; CHECK-FASTISEL-NEXT:    mov v2.16b, v1.16b
-; CHECK-FASTISEL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-FASTISEL-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-FASTISEL-NEXT:    mov v3.16b, v0.16b
-; CHECK-FASTISEL-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-FASTISEL-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-FASTISEL-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-FASTISEL-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-FASTISEL-NEXT:    rev64 v1.4s, v1.4s

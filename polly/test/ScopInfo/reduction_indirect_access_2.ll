@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-scops -disable-output -polly-allow-nonaffine < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output -polly-allow-nonaffine < %s | FileCheck %s
 ;
 ; Validate that the accesses to INDICES[i] is not part of a reduction.
 ;

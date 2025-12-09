@@ -67,8 +67,6 @@
 #define LLVM_SUPPORT_JOBSERVER_H
 
 #include "llvm/ADT/StringRef.h"
-#include <memory>
-#include <string>
 
 namespace llvm {
 
@@ -151,10 +149,10 @@ public:
   /// Returns the singleton instance of the JobserverClient.
   /// The instance is created on the first call to this function.
   /// Returns a nullptr if no jobserver is configured or an error occurs.
-  static JobserverClient *getInstance();
+  LLVM_ABI_FOR_TEST static JobserverClient *getInstance();
 
   /// Resets the singleton instance. For testing purposes only.
-  static void resetForTesting();
+  LLVM_ABI_FOR_TEST static void resetForTesting();
 };
 
 } // end namespace llvm

@@ -96,7 +96,7 @@ bool isInMacro(const ast_matchers::MatchFinder::MatchResult &Result,
                const Expr *E);
 
 AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
-                     DurationConversionFunction) {
+                     durationConversionFunction) {
   using namespace clang::ast_matchers;
   return functionDecl(
       hasAnyName("::absl::ToDoubleHours", "::absl::ToDoubleMinutes",
@@ -108,7 +108,7 @@ AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
 }
 
 AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
-                     DurationFactoryFunction) {
+                     durationFactoryFunction) {
   using namespace clang::ast_matchers;
   return functionDecl(hasAnyName("::absl::Nanoseconds", "::absl::Microseconds",
                                  "::absl::Milliseconds", "::absl::Seconds",
@@ -116,7 +116,7 @@ AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
 }
 
 AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
-                     TimeConversionFunction) {
+                     timeConversionFunction) {
   using namespace clang::ast_matchers;
   return functionDecl(hasAnyName(
       "::absl::ToUnixHours", "::absl::ToUnixMinutes", "::absl::ToUnixSeconds",
@@ -125,12 +125,12 @@ AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
 
 AST_MATCHER_FUNCTION_P(ast_matchers::internal::Matcher<Stmt>,
                        comparisonOperatorWithCallee,
-                       ast_matchers::internal::Matcher<Decl>, funcDecl) {
+                       ast_matchers::internal::Matcher<Decl>, FuncDecl) {
   using namespace clang::ast_matchers;
   return binaryOperator(
       anyOf(hasOperatorName(">"), hasOperatorName(">="), hasOperatorName("=="),
             hasOperatorName("<="), hasOperatorName("<")),
-      hasEitherOperand(ignoringImpCasts(callExpr(callee(funcDecl)))));
+      hasEitherOperand(ignoringImpCasts(callExpr(callee(FuncDecl)))));
 }
 
 } // namespace clang::tidy::abseil

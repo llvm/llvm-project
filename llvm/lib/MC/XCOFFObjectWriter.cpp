@@ -184,7 +184,7 @@ struct CsectSectionEntry : public SectionEntry {
       Group->clear();
   }
 
-  virtual ~CsectSectionEntry() = default;
+  ~CsectSectionEntry() override = default;
 };
 
 struct DwarfSectionEntry : public SectionEntry {
@@ -220,7 +220,7 @@ struct DwarfSectionEntry : public SectionEntry {
 
   DwarfSectionEntry(DwarfSectionEntry &&s) = default;
 
-  virtual ~DwarfSectionEntry() = default;
+  ~DwarfSectionEntry() override = default;
 };
 
 struct ExceptionTableEntry {
@@ -249,7 +249,7 @@ struct ExceptionSectionEntry : public SectionEntry {
     memcpy(Name, N.data(), N.size());
   }
 
-  virtual ~ExceptionSectionEntry() = default;
+  ~ExceptionSectionEntry() override = default;
 };
 
 struct CInfoSymInfo {
@@ -276,7 +276,7 @@ struct CInfoSymSectionEntry : public SectionEntry {
   std::unique_ptr<CInfoSymInfo> Entry;
 
   CInfoSymSectionEntry(StringRef N, int32_t Flags) : SectionEntry(N, Flags) {}
-  virtual ~CInfoSymSectionEntry() = default;
+  ~CInfoSymSectionEntry() override = default;
   void addEntry(std::unique_ptr<CInfoSymInfo> NewEntry) {
     Entry = std::move(NewEntry);
     Entry->Offset = sizeof(uint32_t);

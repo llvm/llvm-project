@@ -1276,6 +1276,34 @@ llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @ucmp
+llvm.func @ucmp(%a: i32, %b: i32) -> i2 {
+  // CHECK: call i2 @llvm.ucmp.i2.i32
+  %r = llvm.intr.ucmp(%a, %b) : (i32, i32) -> i2
+  llvm.return %r : i2
+}
+
+// CHECK-LABEL: @vector_ucmp
+llvm.func @vector_ucmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i32> {
+  // CHECK: call <4 x i32> @llvm.ucmp.v4i32.v4i32
+  %0 = llvm.intr.ucmp(%a, %b) : (vector<4 x i32>, vector<4 x i32>) -> vector<4 x i32>
+  llvm.return %0 : vector<4 x i32>
+}
+
+// CHECK-LABEL: @scmp
+llvm.func @scmp(%a: i32, %b: i32) -> i2 {
+  // CHECK: call i2 @llvm.scmp.i2.i32
+  %r = llvm.intr.scmp(%a, %b) : (i32, i32) -> i2
+  llvm.return %r : i2
+}
+
+// CHECK-LABEL: @vector_scmp
+llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i32> {
+  // CHECK: call <4 x i32> @llvm.scmp.v4i32.v4i32
+  %0 = llvm.intr.scmp(%a, %b) : (vector<4 x i32>, vector<4 x i32>) -> vector<4 x i32>
+  llvm.return %0 : vector<4 x i32>
+}
+
 // Check that intrinsics are declared with appropriate types.
 // CHECK-DAG: declare float @llvm.fma.f32(float, float, float)
 // CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
@@ -1308,7 +1336,7 @@ llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
 // CHECK-DAG: declare float @llvm.cos.f32(float)
 // CHECK-DAG: declare <8 x float> @llvm.cos.v8f32(<8 x float>) #0
 // CHECK-DAG: declare { float, float } @llvm.sincos.f32(float)
-// CHECK-DAG: declare { <8 x float>, <8 x float> } @llvm.sincos.v8f32(<8 x float>) #0
+// CHECK-DAG: declare { <8 x float>, <8 x float> } @llvm.sincos.v8f32(<8 x float>)
 // CHECK-DAG: declare float @llvm.copysign.f32(float, float)
 // CHECK-DAG: declare float @llvm.rint.f32(float)
 // CHECK-DAG: declare double @llvm.rint.f64(double)
@@ -1464,3 +1492,7 @@ llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
 // CHECK-DAG: declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(<4 x float>, metadata, metadata)
 // CHECK-DAG: declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
 // CHECK-DAG: declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float>, metadata)
+// CHECK-DAG: declare range(i2 -1, -2) i2 @llvm.ucmp.i2.i32(i32, i32)
+// CHECK-DAG: declare range(i32 -1, 2) <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32>, <4 x i32>)
+// CHECK-DAG: declare range(i2 -1, -2) i2 @llvm.scmp.i2.i32(i32, i32)
+// CHECK-DAG: declare range(i32 -1, 2) <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32>, <4 x i32>)

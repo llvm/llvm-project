@@ -44,10 +44,10 @@ private:
   std::map<const FieldDecl *, IdDependencyRecord> IdDepFieldsMap;
   /// Returns an IdDependencyRecord if the Expression contains an ID-dependent
   /// variable, returns a nullptr otherwise.
-  IdDependencyRecord *hasIdDepVar(const Expr *Expression);
+  const IdDependencyRecord *hasIdDepVar(const Expr *Expression);
   /// Returns an IdDependencyRecord if the Expression contains an ID-dependent
   /// field, returns a nullptr otherwise.
-  IdDependencyRecord *hasIdDepField(const Expr *Expression);
+  const IdDependencyRecord *hasIdDepField(const Expr *Expression);
   /// Stores the location an ID-dependent variable is created from a call to
   /// an ID function in IdDepVarsMap.
   void saveIdDepVar(const Stmt *Statement, const VarDecl *Variable);

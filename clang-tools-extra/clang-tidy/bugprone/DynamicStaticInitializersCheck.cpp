@@ -43,7 +43,7 @@ void DynamicStaticInitializersCheck::registerMatchers(MatchFinder *Finder) {
 void DynamicStaticInitializersCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var");
-  SourceLocation Loc = Var->getLocation();
+  const SourceLocation Loc = Var->getLocation();
   if (!Loc.isValid() || !utils::isPresumedLocInHeaderFile(
                             Loc, *Result.SourceManager, HeaderFileExtensions))
     return;

@@ -148,7 +148,7 @@ define void @non_samebd0(ptr %A) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i64 %i.013, ptr %arrayidx12, align 8 --> Dst: store i64 %i.013, ptr %arrayidx12, align 8
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i64 %i.013, ptr %arrayidx12, align 8 --> Dst: store i64 %l17.04, ptr %arrayidx24, align 8
-; CHECK-NEXT:    da analyze - output [-4 -3]!
+; CHECK-NEXT:    da analyze - output [> *]!
 ; CHECK-NEXT:  Src: store i64 %l17.04, ptr %arrayidx24, align 8 --> Dst: store i64 %l17.04, ptr %arrayidx24, align 8
 ; CHECK-NEXT:    da analyze - none!
 ;

@@ -37,6 +37,9 @@ add_dependencies(lldb
 if(DEFINED LLDB_PYTHON_DLL_RELATIVE_PATH)
   target_compile_definitions(lldb PRIVATE LLDB_PYTHON_DLL_RELATIVE_PATH="${LLDB_PYTHON_DLL_RELATIVE_PATH}")
 endif()
+if(DEFINED LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME)
+  target_compile_definitions(lldb PRIVATE LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME="${LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME}")
+endif()
 
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.

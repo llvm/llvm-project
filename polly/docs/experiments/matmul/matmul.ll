@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @.str.1 = private unnamed_addr constant [2 x i8] c"\0A\00", align 1
 
 ; Function Attrs: noinline nounwind uwtable
-define dso_local void @init_array() #0 {
+define dso_local void @init_array() {
 entry:
   %i = alloca i32, align 4
   %j = alloca i32, align 4
@@ -88,7 +88,7 @@ for.end19:                                        ; preds = %for.cond
 }
 
 ; Function Attrs: noinline nounwind uwtable
-define dso_local void @print_array() #0 {
+define dso_local void @print_array() {
 entry:
   %i = alloca i32, align 4
   %j = alloca i32, align 4
@@ -154,10 +154,10 @@ for.end12:                                        ; preds = %for.cond
   ret void
 }
 
-declare dso_local i32 @fprintf(%struct._IO_FILE*, i8*, ...) #1
+declare dso_local i32 @fprintf(%struct._IO_FILE*, i8*, ...)
 
 ; Function Attrs: noinline nounwind uwtable
-define dso_local i32 @main() #0 {
+define dso_local i32 @main() {
 entry:
   %retval = alloca i32, align 4
   %i = alloca i32, align 4
@@ -260,9 +260,6 @@ for.inc28:                                        ; preds = %for.end27
 for.end30:                                        ; preds = %for.cond
   ret i32 0
 }
-
-attributes #0 = { noinline nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

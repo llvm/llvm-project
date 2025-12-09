@@ -114,6 +114,9 @@ struct CodeGenIntrinsic {
   // True if the intrinsic is marked as strictfp.
   bool isStrictFP = false;
 
+  // True if the intrinsic is marked as IntrNoCreateUndefOrPoison.
+  bool isNoCreateUndefOrPoison = false;
+
   enum ArgAttrKind {
     NoCapture,
     NoAlias,
@@ -149,6 +152,22 @@ struct CodeGenIntrinsic {
   void addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V = 0,
                        uint64_t V2 = 0);
 
+  /// Structure to store pretty print and argument information.
+  struct PrettyPrintArgInfo {
+    unsigned ArgIdx;
+    StringRef ArgName;
+    StringRef FuncName;
+
+    PrettyPrintArgInfo(unsigned Idx, StringRef Name, StringRef Func)
+        : ArgIdx(Idx), ArgName(Name), FuncName(Func) {}
+  };
+
+  /// Vector that stores ArgInfo (ArgIndex, ArgName, FunctionName).
+  SmallVector<PrettyPrintArgInfo> PrettyPrintFunctions;
+
+  void addPrettyPrintFunction(unsigned ArgIdx, StringRef ArgName,
+                              StringRef FuncName);
+
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
 
   /// Goes through all IntrProperties that have IsDefault value set and sets
@@ -166,6 +185,8 @@ struct CodeGenIntrinsic {
   bool isParamAPointer(unsigned ParamIdx) const;
 
   bool isParamImmArg(unsigned ParamIdx) const;
+
+  llvm::IRMemLocation getValueAsIRMemLocation(const Record *R) const;
 
   CodeGenIntrinsic(const Record *R, const CodeGenIntrinsicContext &Ctx);
 };

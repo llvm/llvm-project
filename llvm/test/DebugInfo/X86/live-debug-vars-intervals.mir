@@ -91,7 +91,7 @@
   !10 = !{!11}
   !11 = !DILocalVariable(name: "x", arg: 1, scope: !6, file: !1, line: 3, type: !9)
   !12 = !DILocation(line: 3, column: 12, scope: !6)
-  !13 = distinct !DISubprogram(name: "f2", scope: !1, file: !1, line: 20, type: !7, scopeLine: 20, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !10)
+  !13 = distinct !DISubprogram(name: "f2", scope: !1, file: !1, line: 20, type: !7, scopeLine: 20, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !{!14})
   !14 = !DILocalVariable(name: "x", arg: 1, scope: !13, file: !1, line: 21, type: !9)
   !15 = !DILocation(line: 23, column: 12, scope: !13)
 

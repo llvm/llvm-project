@@ -850,7 +850,10 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     return;
   }
   case APValue::AddrLabelDiff:
-    OS << "AddrLabelDiff <todo>";
+    OS << "AddrLabelDiff ";
+    OS << "&&" << Value.getAddrLabelDiffLHS()->getLabel()->getName();
+    OS << " - ";
+    OS << "&&" << Value.getAddrLabelDiffRHS()->getLabel()->getName();
     return;
   }
   llvm_unreachable("Unknown APValue kind!");

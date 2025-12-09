@@ -12,8 +12,9 @@
 
 // UNSUPPORTED: c++03
 
-#include <deque>
 #include <cassert>
+#include <deque>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "MoveOnly.h"

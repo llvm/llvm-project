@@ -162,8 +162,7 @@ if(APPLE)
     CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
-    PARENT_TARGET profile
-    EXTENSIONS ON)
+    PARENT_TARGET profile)
 else()
   add_compiler_rt_runtime(clang_rt.profile
     STATIC
@@ -171,6 +170,5 @@ else()
     CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
-    PARENT_TARGET profile
-    EXTENSIONS ON)
+    PARENT_TARGET profile)
 endif()

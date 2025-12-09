@@ -781,9 +781,25 @@ struct LibcFunNamePrefixSuffixParser {
   }
 };
 
+// Constant fold a conditional expression 'cond ? A : B' to
+// - 'A', if 'cond' has constant true value;
+// - 'B', if 'cond' has constant false value.
+static const Expr *tryConstantFoldConditionalExpr(const Expr *E,
+                                                  const ASTContext &Ctx) {
+  // FIXME: more places can use this function
+  if (const auto *CE = dyn_cast<ConditionalOperator>(E)) {
+    bool CondEval;
+
+    if (CE->getCond()->EvaluateAsBooleanCondition(CondEval, Ctx))
+      return CondEval ? CE->getLHS() : CE->getRHS();
+  }
+  return E;
+}
+
 // A pointer type expression is known to be null-terminated, if it has the
 // form: E.c_str(), for any expression E of `std::string` type.
-static bool isNullTermPointer(const Expr *Ptr) {
+static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
+  Ptr = tryConstantFoldConditionalExpr(Ptr, Ctx);
   if (isa<clang::StringLiteral>(Ptr->IgnoreParenImpCasts()))
     return true;
   if (isa<PredefinedExpr>(Ptr->IgnoreParenImpCasts()))
@@ -874,7 +890,7 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
 
       const Expr *Arg = Call->getArg(ArgIdx);
 
-      if (isNullTermPointer(Arg))
+      if (isNullTermPointer(Arg, Ctx))
         // If Arg is a null-terminated pointer, it is safe anyway.
         return true; // continue parsing
 
@@ -922,8 +938,8 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
   // (including the format argument) is unsafe pointer.
   return llvm::any_of(
       llvm::make_range(Call->arg_begin() + FmtArgIdx, Call->arg_end()),
-      [&UnsafeArg](const Expr *Arg) -> bool {
-        if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg)) {
+      [&UnsafeArg, &Ctx](const Expr *Arg) -> bool {
+        if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg, Ctx)) {
           UnsafeArg = Arg;
           return true;
         }
@@ -1175,7 +1191,7 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
   // We don't really recognize this "normal" printf, the only thing we
   // can do is to require all pointers to be null-terminated:
   for (const auto *Arg : Node.arguments())
-    if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg)) {
+    if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg, Ctx)) {
       Result.addNode(Tag, DynTypedNode::create(*Arg));
       return true;
     }

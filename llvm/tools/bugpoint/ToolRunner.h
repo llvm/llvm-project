@@ -105,7 +105,7 @@ public:
   createCustomExecutor(const char *Argv0, std::string &Message,
                        const std::string &ExecCommandLine);
 
-  virtual ~AbstractInterpreter() {}
+  virtual ~AbstractInterpreter() = default;
 
   /// compileProgram - Compile the specified program from bitcode to executable
   /// code.  This does not produce any output, it is only used when debugging

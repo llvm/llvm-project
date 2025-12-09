@@ -725,3 +725,18 @@ TEST(IntegerRelationTest, addLocalModulo) {
     EXPECT_TRUE(rel.containsPointNoLocal({x, x % 32}));
   }
 }
+
+TEST(IntegerRelationTest, simplify) {
+  IntegerRelation rel =
+      parseRelationFromSet("(x, y, z): (2*x + y - 4*z - 3 == 0, "
+                           "3*x - y - 3*z + 2 == 0, x + 3*y - 5*z - 8 == 0,"
+                           "x - y + z >= 0)",
+                           2);
+  IntegerRelation copy = rel;
+  rel.simplify();
+
+  EXPECT_TRUE(rel.isEqual(copy));
+  // The third equality is redundant and should be removed.
+  // It can be obtained from 2 times the first equality minus the second.
+  EXPECT_TRUE(rel.getNumEqualities() == 2);
+}
