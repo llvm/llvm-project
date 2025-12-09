@@ -27,11 +27,7 @@ AST_MATCHER(Stmt, isMacroExpansion) {
   return SM.isMacroBodyExpansion(Loc) || SM.isMacroArgExpansion(Loc);
 }
 
-AST_MATCHER(Stmt, isC) {
-  const auto &LO = Finder->getASTContext().getLangOpts();
-  return !LO.CPlusPlus && !LO.ObjC && !LO.OpenCL && !LO.CUDA && !LO.HIP &&
-         !LO.HLSL;
-}
+AST_MATCHER(Stmt, isC) { return Finder->getASTContext().getLangOpts().C99; }
 
 // Preserve same name as AST_MATCHER(isNULLMacroExpansion)
 // NOLINTNEXTLINE(llvm-prefer-static-over-anonymous-namespace)
