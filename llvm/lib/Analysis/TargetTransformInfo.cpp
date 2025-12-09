@@ -889,10 +889,10 @@ InstructionCost TargetTransformInfo::getPartialReductionCost(
     unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
     ElementCount VF, PartialReductionExtendKind OpAExtend,
     PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-    TTI::TargetCostKind CostKind) const {
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
   return TTIImpl->getPartialReductionCost(Opcode, InputTypeA, InputTypeB,
                                           AccumType, VF, OpAExtend, OpBExtend,
-                                          BinOp, CostKind);
+                                          BinOp, CostKind, FMF);
 }
 
 unsigned TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF) const {

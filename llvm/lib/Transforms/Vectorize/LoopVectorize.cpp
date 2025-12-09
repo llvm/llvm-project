@@ -6285,7 +6285,33 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     }
     [[fallthrough]];
   }
-  case Instruction::FAdd:
+  case Instruction::FAdd: {
+    // Skip this when falling through from Add/Sub.
+    if (I->getOpcode() == Instruction::FAdd) {
+      Value *Op0 = I->getOperand(0);
+      Value *Op1 = I->getOperand(1);
+      if (Op0 && Op1) {
+        Instruction *Mul = dyn_cast<Instruction>(Op0);
+        if (Mul && Mul->getOpcode() == Instruction::FMul) {
+          Value *MulOp0 = Mul->getOperand(0);
+          Value *MulOp1 = Mul->getOperand(1);
+          if (isa<Instruction>(MulOp0) && isa<Instruction>(MulOp1)) {
+            auto Cost = TTI.getPartialReductionCost(
+                I->getOpcode(), MulOp0->getType(), MulOp1->getType(),
+                VectorTy->getScalarType(), VF,
+                TTI.getPartialReductionExtendKind(
+                    dyn_cast<Instruction>(MulOp0)),
+                TTI.getPartialReductionExtendKind(
+                    dyn_cast<Instruction>(MulOp1)),
+                Mul->getOpcode(), CostKind, I->getFastMathFlags());
+            if (Cost.isValid())
+              return Cost;
+          }
+        }
+      }
+    }
+    [[fallthrough]];
+  }
   case Instruction::FSub:
   case Instruction::Mul:
   case Instruction::FMul:
@@ -8207,10 +8233,13 @@ bool VPRecipeBuilder::getScaledReductions(
 
   if (LoopVectorizationPlanner::getDecisionAndClampRange(
           [&](ElementCount VF) {
+            std::optional<FastMathFlags> FMF = std::nullopt;
+            if (Update->getOpcode() == Instruction::FAdd)
+              FMF = Update->getFastMathFlags();
             InstructionCost Cost = TTI->getPartialReductionCost(
                 Update->getOpcode(), ExtOpTypes[0], ExtOpTypes[1],
                 PHI->getType(), VF, ExtKinds[0], ExtKinds[1], BinOpc,
-                CM.CostKind);
+                CM.CostKind, FMF);
             return Cost.isValid();
           },
           Range)) {
@@ -8295,7 +8324,7 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
 
   auto *ReductionI = Reduction->getUnderlyingInstr();
   if (Reduction->getOpcode() == Instruction::FAdd &&
-      !ReductionI->hasAllowReassoc())
+      (!ReductionI->hasAllowReassoc() || !ReductionI->hasAllowContract()))
     return nullptr;
   if (Reduction->getOpcode() == Instruction::Sub) {
     SmallVector<VPValue *, 2> Ops;
@@ -8313,7 +8342,10 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
   return new VPReductionRecipe(
       Reduction->getOpcode() == Instruction::FAdd ? RecurKind::FAdd
                                                   : RecurKind::Add,
-      FastMathFlags(), ReductionI, Accumulator, BinOp, Cond,
+      Reduction->getOpcode() == Instruction::FAdd
+          ? Reduction->getFastMathFlags()
+          : FastMathFlags(),
+      ReductionI, Accumulator, BinOp, Cond,
       RdxUnordered{/*VFScaleFactor=*/ScaleFactor}, ReductionI->getDebugLoc());
 }
 

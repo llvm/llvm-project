@@ -4061,7 +4061,8 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
             // here from LoopVectorize.cpp.
             ExtRedCost = Ctx.TTI.getPartialReductionCost(
                 Opcode, SrcTy, nullptr, RedTy, VF, ExtKind,
-                llvm::TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind);
+                llvm::TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
+                std::nullopt);
           } else {
             ExtRedCost = Ctx.TTI.getExtendedReductionCost(
                 Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
@@ -4125,7 +4126,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                 Ext1 ? TargetTransformInfo::getPartialReductionExtendKind(
                            Ext1->getOpcode())
                      : TargetTransformInfo::PR_None,
-                Mul->getOpcode(), CostKind);
+                Mul->getOpcode(), CostKind, std::nullopt);
           } else {
             // Only partial reductions support mixed extends at the moment.
             if (Ext0 && Ext1 && Ext0->getOpcode() != Ext1->getOpcode())

@@ -5838,7 +5838,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
     ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
     TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-    TTI::TargetCostKind CostKind) const {
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
   InstructionCost Invalid = InstructionCost::getInvalid();
 
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -5851,6 +5851,12 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   if ((Opcode != Instruction::Add && Opcode != Instruction::Sub &&
        Opcode != Instruction::FAdd) ||
       OpAExtend == TTI::PR_None)
+    return Invalid;
+
+  // Floating-point partial reductions are invalid if `reassoc` and `contract`
+  // are not allowed.
+  if (Opcode == Instruction::FAdd &&
+      (!FMF->allowReassoc() || !FMF->allowContract()))
     return Invalid;
 
   assert((BinOp || (OpBExtend == TTI::PR_None && !InputTypeB)) &&
@@ -5870,6 +5876,9 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   unsigned Ratio =
       AccumType->getScalarSizeInBits() / InputTypeA->getScalarSizeInBits();
   if (VF.getKnownMinValue() <= Ratio)
+    return Invalid;
+
+  if (Opcode == Instruction::FAdd && Ratio <= 1)
     return Invalid;
 
   VectorType *InputVectorType = VectorType::get(InputTypeA, VF);

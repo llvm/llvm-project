@@ -1448,7 +1448,7 @@ public:
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
       ElementCount VF, PartialReductionExtendKind OpAExtend,
       PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-      TTI::TargetCostKind CostKind) const;
+      TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const;
 
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
