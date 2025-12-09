@@ -88,10 +88,8 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
 
   for (unsigned I = 0u; I < NoAliasArgs.size(); ++I) {
     const Argument *Arg = NoAliasArgs[I];
-    std::string Name(F.getName());
-    Name += std::string(": argument ") + std::to_string(I);
-    MDNode *NewScope = MDB.createAnonymousAliasScope(NewDomain, Name);
-    NewScopes.insert(std::make_pair(Arg, NewScope));
+    MDNode *NewScope = MDB.createAnonymousAliasScope(NewDomain, Arg->getName());
+    NewScopes.insert({Arg, NewScope});
   }
 
   // Iterate over all instructions.
@@ -100,7 +98,7 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
     // If instruction accesses memory, collect its pointer arguments.
     Instruction *I = &(*Inst);
     SmallVector<InterestingMemoryOperand, 2u> MemOps;
-    llvm::AMDGPU::getInterestingMemoryOperands(*F.getParent(), I, MemOps);
+    AMDGPU::getInterestingMemoryOperands(*F.getParent(), I, MemOps);
 
     if (MemOps.empty())
       continue;
@@ -121,7 +119,7 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
     bool UsesAliasingPtr = false;
 
     for (const Value *Val : ObjSet) {
-      if (isa<ConstantData>(Val) || isa<UndefValue>(Val))
+      if (isa<ConstantData>(Val))
         continue;
 
       if (const Argument *Arg = dyn_cast<Argument>(Val)) {
