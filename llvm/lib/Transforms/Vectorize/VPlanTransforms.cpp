@@ -3003,17 +3003,19 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         TypeInfo.inferScalarType(LoadR), {}, {}, DL);
   }
 
-  if (auto *MI = dyn_cast<VPWidenMemIntrinsicRecipe>(&CurRecipe))
-    if (MI->getVectorIntrinsicID() == Intrinsic::experimental_vp_strided_load &&
-        match(MI->getMask(), m_RemoveMask(HeaderMask, Mask))) {
-      VPWidenMemIntrinsicRecipe *NewMI = MI->clone();
-      if (Mask)
-        NewMI->setMask(Mask);
-      else
-        NewMI->setMask(Plan->getTrue());
-      NewMI->setOperand(3, &EVL);
-      return NewMI;
-    }
+  VPValue *Stride;
+  if (match(&CurRecipe, m_Intrinsic<Intrinsic::experimental_vp_strided_load>(
+                            m_VPValue(Addr), m_VPValue(Stride),
+                            m_RemoveMask(HeaderMask, Mask),
+                            m_VPInstruction<Instruction::Trunc>(
+                                m_Specific(&Plan->getVF()))))) {
+    auto *I = cast<VPWidenIntrinsicRecipe>(&CurRecipe);
+    if (!Mask)
+      Mask = Plan->getTrue();
+    return new VPWidenMemIntrinsicRecipe(
+        *cast<LoadInst>(I->getUnderlyingInstr()), {Addr, Stride, Mask, &EVL},
+        *I, I->getDebugLoc());
+  }
 
   if (auto *StridedL = dyn_cast<VPWidenStridedLoadRecipe>(&CurRecipe))
     if (StridedL->isMasked() &&
