@@ -127,10 +127,9 @@ TEST_F(OpenACCUtilsTilingTest, tileACCLoopsSingleLoop) {
   // Collect nested loops and verify
   auto nestedLoops = collectNestedLoops(tiledLoop);
   EXPECT_EQ(nestedLoops.size(), 1u);
-  if (!nestedLoops.empty()) {
-    // The element loop should have 1 IV
+  // The element loop should have 1 IV
+  if (!nestedLoops.empty())
     EXPECT_EQ(nestedLoops[0].getBody().getNumArguments(), 1u);
-  }
 }
 
 TEST_F(OpenACCUtilsTilingTest, tileACCLoopsNestedLoops) {
@@ -204,9 +203,8 @@ TEST_F(OpenACCUtilsTilingTest, tileACCLoopsNestedLoops) {
   // Collect all nested loops and verify each has 1 IV
   auto nestedLoops = collectNestedLoops(tiledLoop);
   EXPECT_EQ(nestedLoops.size(), 3u);
-  for (auto loop : nestedLoops) {
+  for (auto loop : nestedLoops)
     EXPECT_EQ(loop.getBody().getNumArguments(), 1u);
-  }
 }
 
 //===----------------------------------------------------------------------===//
