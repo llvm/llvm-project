@@ -1999,8 +1999,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     // If we have SVE, we can use SVE logic for legal NEON vectors in the lowest
     // bits of the SVE register.
-    for (auto VT : {MVT::v2i32, MVT::v2i64, MVT::v2f32, MVT::v2f64, MVT::v4i16,
-                    MVT::v4i32, MVT::v4f32})
+    for (auto VT : {MVT::v2i32, MVT::v2i64, MVT::v2f32, MVT::v2f64, MVT::v4i32,
+                    MVT::v4f32})
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
 
     for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
@@ -7482,6 +7482,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
 
   // Get legal type for compact instruction
   EVT ContainerVT = getSVEContainerType(VT);
+  assert(ContainerVT == MVT::nxv4i32 || ContainerVT == MVT::nxv2i64);
 
   // Convert to a packed 32/64-bit SVE vector of the same element count as VT.
   Vec = convertToSVEContainerType(DL, Vec, ContainerVT, DAG);
