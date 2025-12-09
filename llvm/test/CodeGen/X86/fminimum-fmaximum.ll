@@ -1819,170 +1819,162 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ;
 ; AVX512-LABEL: test_fmaximum_v4f16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    pushq %rbp
-; AVX512-NEXT:    pushq %r15
-; AVX512-NEXT:    pushq %r14
-; AVX512-NEXT:    pushq %r13
-; AVX512-NEXT:    pushq %r12
-; AVX512-NEXT:    pushq %rbx
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
+; AVX512-NEXT:    vpsrld $16, %xmm1, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512-NEXT:    xorl %eax, %eax
-; AVX512-NEXT:    vucomiss %xmm2, %xmm3
+; AVX512-NEXT:    vucomiss %xmm2, %xmm2
 ; AVX512-NEXT:    movl $65535, %ecx # imm = 0xFFFF
 ; AVX512-NEXT:    movl $0, %edx
 ; AVX512-NEXT:    cmovpl %ecx, %edx
-; AVX512-NEXT:    movl $0, %edi
-; AVX512-NEXT:    cmoval %ecx, %edi
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512-NEXT:    vucomiss %xmm2, %xmm3
+; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm3
+; AVX512-NEXT:    vucomiss %xmm3, %xmm3
 ; AVX512-NEXT:    movl $0, %esi
 ; AVX512-NEXT:    cmovpl %ecx, %esi
-; AVX512-NEXT:    movl $0, %r9d
-; AVX512-NEXT:    cmoval %ecx, %r9d
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512-NEXT:    vucomiss %xmm2, %xmm3
-; AVX512-NEXT:    movl $0, %r8d
-; AVX512-NEXT:    cmovpl %ecx, %r8d
-; AVX512-NEXT:    movl $0, %r11d
-; AVX512-NEXT:    cmoval %ecx, %r11d
-; AVX512-NEXT:    vpsrlq $48, %xmm1, %xmm2
-; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512-NEXT:    vpsrlq $48, %xmm0, %xmm3
-; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512-NEXT:    vucomiss %xmm2, %xmm3
-; AVX512-NEXT:    movl $0, %r10d
-; AVX512-NEXT:    cmovpl %ecx, %r10d
-; AVX512-NEXT:    movl $0, %ebp
-; AVX512-NEXT:    cmoval %ecx, %ebp
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512-NEXT:    vucomiss %xmm2, %xmm3
-; AVX512-NEXT:    movl $0, %ebx
-; AVX512-NEXT:    cmovpl %ecx, %ebx
-; AVX512-NEXT:    movl $0, %r14d
-; AVX512-NEXT:    cmoval %ecx, %r14d
-; AVX512-NEXT:    vpsrld $16, %xmm1, %xmm2
-; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm3
-; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512-NEXT:    vucomiss %xmm2, %xmm3
-; AVX512-NEXT:    movl $0, %r15d
-; AVX512-NEXT:    cmovpl %ecx, %r15d
-; AVX512-NEXT:    movl $0, %r12d
-; AVX512-NEXT:    cmoval %ecx, %r12d
-; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm2
-; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm3
-; AVX512-NEXT:    vucomiss %xmm2, %xmm3
-; AVX512-NEXT:    movl $0, %r13d
-; AVX512-NEXT:    cmoval %ecx, %r13d
-; AVX512-NEXT:    vmovd %r13d, %xmm2
-; AVX512-NEXT:    vpinsrw $1, %r12d, %xmm2, %xmm2
-; AVX512-NEXT:    vpinsrw $2, %r14d, %xmm2, %xmm2
-; AVX512-NEXT:    vpinsrw $3, %ebp, %xmm2, %xmm2
-; AVX512-NEXT:    vpinsrw $4, %r11d, %xmm2, %xmm2
-; AVX512-NEXT:    vpinsrw $5, %r9d, %xmm2, %xmm2
-; AVX512-NEXT:    vpinsrw $6, %edi, %xmm2, %xmm2
-; AVX512-NEXT:    movl $0, %edi
-; AVX512-NEXT:    cmovpl %ecx, %edi
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512-NEXT:    vmovd %esi, %xmm4
+; AVX512-NEXT:    vpinsrw $1, %edx, %xmm4, %xmm5
+; AVX512-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
 ; AVX512-NEXT:    vcvtph2ps %xmm4, %xmm4
-; AVX512-NEXT:    vucomiss %xmm3, %xmm4
-; AVX512-NEXT:    movl $0, %r9d
-; AVX512-NEXT:    cmoval %ecx, %r9d
-; AVX512-NEXT:    vpinsrw $7, %r9d, %xmm2, %xmm2
-; AVX512-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm2
-; AVX512-NEXT:    vmovd %edi, %xmm3
-; AVX512-NEXT:    vpinsrw $1, %r15d, %xmm3, %xmm3
-; AVX512-NEXT:    vpinsrw $2, %ebx, %xmm3, %xmm3
-; AVX512-NEXT:    vpinsrw $3, %r10d, %xmm3, %xmm3
-; AVX512-NEXT:    vpinsrw $4, %r8d, %xmm3, %xmm3
-; AVX512-NEXT:    vpinsrw $5, %esi, %xmm3, %xmm3
-; AVX512-NEXT:    vpinsrw $6, %edx, %xmm3, %xmm3
+; AVX512-NEXT:    vucomiss %xmm4, %xmm4
 ; AVX512-NEXT:    movl $0, %edx
 ; AVX512-NEXT:    cmovpl %ecx, %edx
-; AVX512-NEXT:    vpinsrw $7, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vpbroadcastw {{.*#+}} xmm4 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; AVX512-NEXT:    vpblendvb %xmm3, %xmm4, %xmm2, %xmm2
-; AVX512-NEXT:    vpsrld $16, %xmm2, %xmm3
+; AVX512-NEXT:    vpinsrw $2, %edx, %xmm5, %xmm5
+; AVX512-NEXT:    vpsrlq $48, %xmm1, %xmm6
+; AVX512-NEXT:    vcvtph2ps %xmm6, %xmm6
+; AVX512-NEXT:    vucomiss %xmm6, %xmm6
+; AVX512-NEXT:    movl $0, %edx
+; AVX512-NEXT:    cmovpl %ecx, %edx
+; AVX512-NEXT:    vpinsrw $3, %edx, %xmm5, %xmm5
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm7 = xmm1[1,0]
+; AVX512-NEXT:    vcvtph2ps %xmm7, %xmm8
+; AVX512-NEXT:    vucomiss %xmm8, %xmm8
+; AVX512-NEXT:    movl $0, %edx
+; AVX512-NEXT:    cmovpl %ecx, %edx
+; AVX512-NEXT:    vpinsrw $4, %edx, %xmm5, %xmm5
+; AVX512-NEXT:    vpsrldq {{.*#+}} xmm7 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512-NEXT:    vcvtph2ps %xmm7, %xmm7
+; AVX512-NEXT:    vucomiss %xmm7, %xmm7
+; AVX512-NEXT:    movl $0, %edx
+; AVX512-NEXT:    cmovpl %ecx, %edx
+; AVX512-NEXT:    vpinsrw $5, %edx, %xmm5, %xmm5
+; AVX512-NEXT:    vshufps {{.*#+}} xmm9 = xmm1[3,3,3,3]
+; AVX512-NEXT:    vcvtph2ps %xmm9, %xmm9
+; AVX512-NEXT:    vucomiss %xmm9, %xmm9
+; AVX512-NEXT:    movl $0, %edx
+; AVX512-NEXT:    cmovpl %ecx, %edx
+; AVX512-NEXT:    vpinsrw $6, %edx, %xmm5, %xmm5
+; AVX512-NEXT:    vpsrldq {{.*#+}} xmm10 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512-NEXT:    vcvtph2ps %xmm10, %xmm10
+; AVX512-NEXT:    vucomiss %xmm10, %xmm10
+; AVX512-NEXT:    movl $0, %edx
+; AVX512-NEXT:    cmovpl %ecx, %edx
+; AVX512-NEXT:    vpinsrw $7, %edx, %xmm5, %xmm5
+; AVX512-NEXT:    vpblendvb %xmm5, %xmm1, %xmm0, %xmm5
+; AVX512-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm5[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-NEXT:    vucomiss %xmm0, %xmm10
+; AVX512-NEXT:    setb %dl
+; AVX512-NEXT:    kmovw %edx, %k1
+; AVX512-NEXT:    vmovss %xmm0, %xmm10, %xmm10 {%k1}
+; AVX512-NEXT:    vcvtps2ph $4, %xmm10, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm5[3,3,3,3]
+; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512-NEXT:    vucomiss %xmm1, %xmm9
+; AVX512-NEXT:    setb %dl
+; AVX512-NEXT:    kmovw %edx, %k1
+; AVX512-NEXT:    vmovss %xmm1, %xmm9, %xmm9 {%k1}
+; AVX512-NEXT:    vcvtps2ph $4, %xmm9, %xmm1
+; AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm9 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; AVX512-NEXT:    vpsrldq {{.*#+}} xmm10 = xmm5[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512-NEXT:    vcvtph2ps %xmm10, %xmm10
+; AVX512-NEXT:    vucomiss %xmm10, %xmm7
+; AVX512-NEXT:    setb %dl
+; AVX512-NEXT:    kmovw %edx, %k1
+; AVX512-NEXT:    vmovss %xmm10, %xmm7, %xmm7 {%k1}
+; AVX512-NEXT:    vcvtps2ph $4, %xmm7, %xmm7
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm10 = xmm5[2,3,0,1]
+; AVX512-NEXT:    vcvtph2ps %xmm10, %xmm10
+; AVX512-NEXT:    vucomiss %xmm10, %xmm8
+; AVX512-NEXT:    setb %dl
+; AVX512-NEXT:    kmovw %edx, %k1
+; AVX512-NEXT:    vmovss %xmm10, %xmm8, %xmm8 {%k1}
+; AVX512-NEXT:    vcvtps2ph $4, %xmm8, %xmm8
+; AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm10 = xmm8[0],xmm7[0],xmm8[1],xmm7[1],xmm8[2],xmm7[2],xmm8[3],xmm7[3]
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm10[0],xmm9[0],xmm10[1],xmm9[1]
+; AVX512-NEXT:    vpsrlq $48, %xmm5, %xmm10
+; AVX512-NEXT:    vcvtph2ps %xmm10, %xmm10
+; AVX512-NEXT:    vucomiss %xmm10, %xmm6
+; AVX512-NEXT:    setb %dl
+; AVX512-NEXT:    kmovw %edx, %k1
+; AVX512-NEXT:    vmovss %xmm10, %xmm6, %xmm6 {%k1}
+; AVX512-NEXT:    vcvtps2ph $4, %xmm6, %xmm6
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm10 = xmm5[1,1,3,3]
+; AVX512-NEXT:    vcvtph2ps %xmm10, %xmm10
+; AVX512-NEXT:    vucomiss %xmm10, %xmm4
+; AVX512-NEXT:    setb %dl
+; AVX512-NEXT:    kmovw %edx, %k1
+; AVX512-NEXT:    vmovss %xmm10, %xmm4, %xmm4 {%k1}
+; AVX512-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
+; AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm10 = xmm4[0],xmm6[0],xmm4[1],xmm6[1],xmm4[2],xmm6[2],xmm4[3],xmm6[3]
+; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm11
+; AVX512-NEXT:    vucomiss %xmm11, %xmm3
+; AVX512-NEXT:    setb %dl
+; AVX512-NEXT:    kmovw %edx, %k1
+; AVX512-NEXT:    vmovss %xmm11, %xmm3, %xmm3 {%k1}
+; AVX512-NEXT:    vcvtps2ph $4, %xmm3, %xmm11
+; AVX512-NEXT:    vpsrld $16, %xmm5, %xmm3
 ; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX512-NEXT:    vucomiss %xmm4, %xmm3
-; AVX512-NEXT:    movl $65535, %edx # imm = 0xFFFF
-; AVX512-NEXT:    cmovnel %eax, %edx
-; AVX512-NEXT:    cmovpl %eax, %edx
-; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm3
-; AVX512-NEXT:    vucomiss %xmm4, %xmm3
-; AVX512-NEXT:    movl $65535, %esi # imm = 0xFFFF
-; AVX512-NEXT:    cmovnel %eax, %esi
-; AVX512-NEXT:    cmovpl %eax, %esi
-; AVX512-NEXT:    vmovd %esi, %xmm3
-; AVX512-NEXT:    vpinsrw $1, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[1,1,3,3]
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vucomiss %xmm4, %xmm5
-; AVX512-NEXT:    movl $65535, %edx # imm = 0xFFFF
-; AVX512-NEXT:    cmovnel %eax, %edx
-; AVX512-NEXT:    cmovpl %eax, %edx
-; AVX512-NEXT:    vpinsrw $2, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vpsrlq $48, %xmm2, %xmm5
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vucomiss %xmm4, %xmm5
-; AVX512-NEXT:    movl $65535, %edx # imm = 0xFFFF
-; AVX512-NEXT:    cmovnel %eax, %edx
-; AVX512-NEXT:    cmovpl %eax, %edx
-; AVX512-NEXT:    vpinsrw $3, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,0,1]
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vucomiss %xmm4, %xmm5
-; AVX512-NEXT:    movl $65535, %edx # imm = 0xFFFF
-; AVX512-NEXT:    cmovnel %eax, %edx
-; AVX512-NEXT:    cmovpl %eax, %edx
-; AVX512-NEXT:    vpinsrw $4, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm2[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vucomiss %xmm4, %xmm5
-; AVX512-NEXT:    movl $65535, %edx # imm = 0xFFFF
-; AVX512-NEXT:    cmovnel %eax, %edx
-; AVX512-NEXT:    cmovpl %eax, %edx
-; AVX512-NEXT:    vpinsrw $5, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[3,3,3,3]
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vucomiss %xmm4, %xmm5
-; AVX512-NEXT:    movl $65535, %edx # imm = 0xFFFF
-; AVX512-NEXT:    cmovnel %eax, %edx
-; AVX512-NEXT:    cmovpl %eax, %edx
-; AVX512-NEXT:    vpinsrw $6, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm2[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vucomiss %xmm4, %xmm5
-; AVX512-NEXT:    cmovnel %eax, %ecx
-; AVX512-NEXT:    cmovpl %eax, %ecx
-; AVX512-NEXT:    vpinsrw $7, %ecx, %xmm3, %xmm3
-; AVX512-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX512-NEXT:    vpcmpeqw %xmm4, %xmm0, %xmm5
-; AVX512-NEXT:    vpblendvb %xmm5, %xmm0, %xmm2, %xmm0
-; AVX512-NEXT:    vpcmpeqw %xmm4, %xmm1, %xmm4
-; AVX512-NEXT:    vpblendvb %xmm4, %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpblendvb %xmm3, %xmm0, %xmm2, %xmm0
-; AVX512-NEXT:    popq %rbx
-; AVX512-NEXT:    popq %r12
-; AVX512-NEXT:    popq %r13
-; AVX512-NEXT:    popq %r14
-; AVX512-NEXT:    popq %r15
-; AVX512-NEXT:    popq %rbp
+; AVX512-NEXT:    vucomiss %xmm3, %xmm2
+; AVX512-NEXT:    setb %dl
+; AVX512-NEXT:    kmovw %edx, %k1
+; AVX512-NEXT:    vmovss %xmm3, %xmm2, %xmm2 {%k1}
+; AVX512-NEXT:    vcvtps2ph $4, %xmm2, %xmm12
+; AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm11[0],xmm12[0],xmm11[1],xmm12[1],xmm11[2],xmm12[2],xmm11[3],xmm12[3]
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm10[0],xmm2[1],xmm10[1]
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm9[0]
+; AVX512-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    vpcmpgtw %xmm5, %xmm3, %xmm3
+; AVX512-NEXT:    vpblendvb %xmm3, %xmm2, %xmm5, %xmm3
+; AVX512-NEXT:    vcvtph2ps %xmm12, %xmm5
+; AVX512-NEXT:    vpxor %xmm9, %xmm9, %xmm9
+; AVX512-NEXT:    vucomiss %xmm9, %xmm5
+; AVX512-NEXT:    movl $0, %edx
+; AVX512-NEXT:    cmovel %ecx, %edx
+; AVX512-NEXT:    vcvtph2ps %xmm11, %xmm5
+; AVX512-NEXT:    vucomiss %xmm9, %xmm5
+; AVX512-NEXT:    movl $0, %esi
+; AVX512-NEXT:    cmovel %ecx, %esi
+; AVX512-NEXT:    vmovd %esi, %xmm5
+; AVX512-NEXT:    vpinsrw $1, %edx, %xmm5, %xmm5
+; AVX512-NEXT:    vcvtph2ps %xmm4, %xmm4
+; AVX512-NEXT:    vucomiss %xmm9, %xmm4
+; AVX512-NEXT:    movl $0, %edx
+; AVX512-NEXT:    cmovel %ecx, %edx
+; AVX512-NEXT:    vpinsrw $2, %edx, %xmm5, %xmm4
+; AVX512-NEXT:    vcvtph2ps %xmm6, %xmm5
+; AVX512-NEXT:    vucomiss %xmm9, %xmm5
+; AVX512-NEXT:    movl $0, %edx
+; AVX512-NEXT:    cmovel %ecx, %edx
+; AVX512-NEXT:    vpinsrw $3, %edx, %xmm4, %xmm4
+; AVX512-NEXT:    vcvtph2ps %xmm8, %xmm5
+; AVX512-NEXT:    vucomiss %xmm9, %xmm5
+; AVX512-NEXT:    movl $0, %edx
+; AVX512-NEXT:    cmovel %ecx, %edx
+; AVX512-NEXT:    vpinsrw $4, %edx, %xmm4, %xmm4
+; AVX512-NEXT:    vcvtph2ps %xmm7, %xmm5
+; AVX512-NEXT:    vucomiss %xmm9, %xmm5
+; AVX512-NEXT:    movl $0, %edx
+; AVX512-NEXT:    cmovel %ecx, %edx
+; AVX512-NEXT:    vpinsrw $5, %edx, %xmm4, %xmm4
+; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512-NEXT:    vucomiss %xmm9, %xmm1
+; AVX512-NEXT:    movl $0, %edx
+; AVX512-NEXT:    cmovel %ecx, %edx
+; AVX512-NEXT:    vpinsrw $6, %edx, %xmm4, %xmm1
+; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-NEXT:    vucomiss %xmm9, %xmm0
+; AVX512-NEXT:    cmovel %ecx, %eax
+; AVX512-NEXT:    vpinsrw $7, %eax, %xmm1, %xmm0
+; AVX512-NEXT:    vpblendvb %xmm0, %xmm3, %xmm2, %xmm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX10_2-LABEL: test_fmaximum_v4f16:

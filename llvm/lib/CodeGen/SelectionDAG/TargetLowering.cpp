@@ -8729,7 +8729,7 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   return SDValue();
 }
 
-static SDValue determineFloatSign(SDValue N, SelectionDAG &DAG, bool Postive) {
+static SDValue determineFloatSign(SDValue N, SelectionDAG &DAG, bool Positive) {
   SDLoc DL(N);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT VT = N->getValueType(0);
@@ -8748,7 +8748,7 @@ static SDValue determineFloatSign(SDValue N, SelectionDAG &DAG, bool Postive) {
   SDValue IntN = DAG.getNode(ISD::BITCAST, DL, IntVT, NTrunc);
 
   return DAG.getSetCC(DL, CCVT, IntN, DAG.getConstant(0, DL, IntVT),
-                      Postive ? ISD::SETGE : ISD::SETLT);
+                      Positive ? ISD::SETGE : ISD::SETLT);
 }
 
 SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
@@ -8799,6 +8799,9 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
     MinMax = DAG.getNode(MinMaxOpc, DL, VT, LHS, RHS, Flags);
     IsZeroOrdered = true;
   } else {
+    if (VT.isVector() && !isOperationLegalOrCustom(ISD::VSELECT, VT))
+      return DAG.UnrollVectorOp(N);
+
     if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(RHS))
       LHS = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, RHS, RHS, ISD::SETUO),
                           RHS, LHS, Flags);
