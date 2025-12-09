@@ -1,0 +1,427 @@
+#include "cstddef.h"
+
+namespace std {
+
+template <typename T, T V>
+struct integral_constant {
+  static constexpr T value = V;
+};
+
+using true_type = integral_constant<bool, true>;
+using false_type = integral_constant<bool, false>;
+
+template< class T > struct remove_reference      {typedef T type;};
+template< class T > struct remove_reference<T&>  {typedef T type;};
+template< class T > struct remove_reference<T&&> {typedef T type;};
+
+template <class T>
+  using remove_reference_t = typename remove_reference<T>::type;
+
+template <class T>
+struct remove_extent {
+  typedef T type;
+};
+
+template <class T>
+struct remove_extent<T[]> {
+  typedef T type;
+};
+
+template <class T, size_t N>
+struct remove_extent<T[N]> {
+  typedef T type;
+};
+
+template <class T>
+struct is_array : false_type {};
+
+template <class T>
+struct is_array<T[]> : true_type {};
+
+template <class T, size_t N>
+struct is_array<T[N]> : true_type {};
+
+template <class>
+struct is_function : false_type {};
+
+template <class Ret, class... Args>
+struct is_function<Ret(Args...)> : true_type {};
+
+namespace detail {
+
+template <class T>
+struct type_identity {
+  using type = T;
+};  // or use type_identity (since C++20)
+
+template <class T>
+auto try_add_pointer(int) -> type_identity<typename remove_reference<T>::type*>;
+template <class T>
+auto try_add_pointer(...) -> type_identity<T>;
+
+}  // namespace detail
+
+template <class T>
+struct add_pointer : decltype(detail::try_add_pointer<T>(0)) {};
+
+template <bool B, class T, class F>
+struct conditional {
+  typedef T type;
+};
+
+template <class T, class F>
+struct conditional<false, T, F> {
+  typedef F type;
+};
+
+template <class T>
+struct remove_cv {
+  typedef T type;
+};
+template <class T>
+struct remove_cv<const T> {
+  typedef T type;
+};
+template <class T>
+struct remove_cv<volatile T> {
+  typedef T type;
+};
+template <class T>
+struct remove_cv<const volatile T> {
+  typedef T type;
+};
+
+template <class T>
+using remove_cv_t = typename remove_cv<T>::type;
+
+template <class T>
+struct decay {
+ private:
+  typedef typename remove_reference<T>::type U;
+
+ public:
+  typedef typename conditional<
+      is_array<U>::value, typename remove_extent<U>::type*,
+      typename conditional<is_function<U>::value, typename add_pointer<U>::type,
+                           typename remove_cv<U>::type>::type>::type type;
+};
+
+template <bool B, class T = void>
+struct enable_if {};
+
+template <class T>
+struct enable_if<true, T> {
+  typedef T type;
+};
+
+template <bool B, class T = void>
+using enable_if_t = typename enable_if<B, T>::type;
+
+template <class T, class U>
+struct is_same : false_type {};
+
+template <class T>
+struct is_same<T, T> : true_type {};
+
+template <class T>
+struct is_void : is_same<void, typename remove_cv<T>::type> {};
+
+namespace detail {
+
+template <class T>
+auto try_add_lvalue_reference(int) -> type_identity<T&>;
+template <class T>
+auto try_add_lvalue_reference(...) -> type_identity<T>;
+
+template <class T>
+auto try_add_rvalue_reference(int) -> type_identity<T&&>;
+template <class T>
+auto try_add_rvalue_reference(...) -> type_identity<T>;
+
+}  // namespace detail
+
+template <class T>
+struct add_lvalue_reference : decltype(detail::try_add_lvalue_reference<T>(0)) {
+};
+
+template <class T>
+struct add_rvalue_reference : decltype(detail::try_add_rvalue_reference<T>(0)) {
+};
+
+template <class T>
+typename add_rvalue_reference<T>::type declval() noexcept;
+
+namespace detail {
+
+template <class T>
+auto test_returnable(int)
+    -> decltype(void(static_cast<T (*)()>(nullptr)), true_type{});
+template <class>
+auto test_returnable(...) -> false_type;
+
+template <class From, class To>
+auto test_implicitly_convertible(int)
+    -> decltype(void(declval<void (&)(To)>()(declval<From>())), true_type{});
+template <class, class>
+auto test_implicitly_convertible(...) -> false_type;
+
+}  // namespace detail
+
+template <class From, class To>
+struct is_convertible
+    : integral_constant<bool,
+                        (decltype(detail::test_returnable<To>(0))::value &&
+                         decltype(detail::test_implicitly_convertible<From, To>(
+                             0))::value) ||
+                            (is_void<From>::value && is_void<To>::value)> {};
+
+template <class From, class To>
+inline constexpr bool is_convertible_v = is_convertible<From, To>::value;
+
+template <class...>
+using void_t = void;
+
+template <class, class T, class... Args>
+struct is_constructible_ : false_type {};
+
+template <class T, class... Args>
+struct is_constructible_<void_t<decltype(T(declval<Args>()...))>, T, Args...>
+    : true_type {};
+
+template <class T, class... Args>
+using is_constructible = is_constructible_<void_t<>, T, Args...>;
+
+template <class T, class... Args>
+inline constexpr bool is_constructible_v = is_constructible<T, Args...>::value;
+
+template <class _Tp>
+struct __uncvref {
+  typedef typename remove_cv<typename remove_reference<_Tp>::type>::type type;
+};
+
+template <class _Tp>
+using __uncvref_t = typename __uncvref<_Tp>::type;
+
+template <bool _Val>
+using _BoolConstant = integral_constant<bool, _Val>;
+
+template <class _Tp, class _Up>
+using _IsSame = _BoolConstant<__is_same(_Tp, _Up)>;
+
+template <class _Tp, class _Up>
+using _IsNotSame = _BoolConstant<!__is_same(_Tp, _Up)>;
+
+template <bool>
+struct _MetaBase;
+template <>
+struct _MetaBase<true> {
+  template <class _Tp, class _Up>
+  using _SelectImpl = _Tp;
+  template <template <class...> class _FirstFn, template <class...> class,
+            class... _Args>
+  using _SelectApplyImpl = _FirstFn<_Args...>;
+  template <class _First, class...>
+  using _FirstImpl = _First;
+  template <class, class _Second, class...>
+  using _SecondImpl = _Second;
+  template <class _Result, class _First, class... _Rest>
+  using _OrImpl =
+      typename _MetaBase<_First::value != true && sizeof...(_Rest) != 0>::
+          template _OrImpl<_First, _Rest...>;
+};
+
+template <>
+struct _MetaBase<false> {
+  template <class _Tp, class _Up>
+  using _SelectImpl = _Up;
+  template <template <class...> class, template <class...> class _SecondFn,
+            class... _Args>
+  using _SelectApplyImpl = _SecondFn<_Args...>;
+  template <class _Result, class...>
+  using _OrImpl = _Result;
+};
+
+template <bool _Cond, class _IfRes, class _ElseRes>
+using _If = typename _MetaBase<_Cond>::template _SelectImpl<_IfRes, _ElseRes>;
+
+template <class... _Rest>
+using _Or = typename _MetaBase<sizeof...(_Rest) !=
+                               0>::template _OrImpl<false_type, _Rest...>;
+
+template <bool _Bp, class _Tp = void>
+using __enable_if_t = typename enable_if<_Bp, _Tp>::type;
+
+template <class...>
+using __expand_to_true = true_type;
+template <class... _Pred>
+__expand_to_true<__enable_if_t<_Pred::value>...> __and_helper(int);
+template <class...>
+false_type __and_helper(...);
+template <class... _Pred>
+using _And = decltype(__and_helper<_Pred...>(0));
+
+template <class _Pred>
+struct _Not : _BoolConstant<!_Pred::value> {};
+
+struct __check_tuple_constructor_fail {
+  static constexpr bool __enable_explicit_default() { return false; }
+  static constexpr bool __enable_implicit_default() { return false; }
+  template <class...>
+  static constexpr bool __enable_explicit() {
+    return false;
+  }
+  template <class...>
+  static constexpr bool __enable_implicit() {
+    return false;
+  }
+};
+
+template <typename, typename _Tp>
+struct __select_2nd {
+  typedef _Tp type;
+};
+template <class _Tp, class _Arg>
+typename __select_2nd<decltype((declval<_Tp>() = declval<_Arg>())),
+                      true_type>::type
+__is_assignable_test(int);
+template <class, class>
+false_type __is_assignable_test(...);
+template <class _Tp, class _Arg,
+          bool = is_void<_Tp>::value || is_void<_Arg>::value>
+struct __is_assignable_imp
+    : public decltype((__is_assignable_test<_Tp, _Arg>(0))) {};
+template <class _Tp, class _Arg>
+struct __is_assignable_imp<_Tp, _Arg, true> : public false_type {};
+template <class _Tp, class _Arg>
+struct is_assignable : public __is_assignable_imp<_Tp, _Arg> {};
+
+template <class _Tp>
+struct __libcpp_is_integral : public false_type {};
+template <>
+struct __libcpp_is_integral<bool> : public true_type {};
+template <>
+struct __libcpp_is_integral<char> : public true_type {};
+template <>
+struct __libcpp_is_integral<signed char> : public true_type {};
+template <>
+struct __libcpp_is_integral<unsigned char> : public true_type {};
+template <>
+struct __libcpp_is_integral<wchar_t> : public true_type {};
+template <>
+struct __libcpp_is_integral<short> : public true_type {};  // NOLINT
+template <>
+struct __libcpp_is_integral<unsigned short> : public true_type {};  // NOLINT
+template <>
+struct __libcpp_is_integral<int> : public true_type {};
+template <>
+struct __libcpp_is_integral<unsigned int> : public true_type {};
+template <>
+struct __libcpp_is_integral<long> : public true_type {};  // NOLINT
+template <>
+struct __libcpp_is_integral<unsigned long> : public true_type {};  // NOLINT
+template <>
+struct __libcpp_is_integral<long long> : public true_type {};  // NOLINT
+template <>                                                    // NOLINTNEXTLINE
+struct __libcpp_is_integral<unsigned long long> : public true_type {};
+template <class _Tp>
+struct is_integral
+    : public __libcpp_is_integral<typename remove_cv<_Tp>::type> {};
+
+template <class _Tp>
+struct __libcpp_is_floating_point : public false_type {};
+template <>
+struct __libcpp_is_floating_point<float> : public true_type {};
+template <>
+struct __libcpp_is_floating_point<double> : public true_type {};
+template <>
+struct __libcpp_is_floating_point<long double> : public true_type {};
+template <class _Tp>
+struct is_floating_point
+    : public __libcpp_is_floating_point<typename remove_cv<_Tp>::type> {};
+
+template <class _Tp>
+struct is_arithmetic
+    : public integral_constant<bool, is_integral<_Tp>::value ||
+                                         is_floating_point<_Tp>::value> {};
+
+template <class _Tp>
+struct __libcpp_is_pointer : public false_type {};
+template <class _Tp>
+struct __libcpp_is_pointer<_Tp*> : public true_type {};
+template <class _Tp>
+struct is_pointer : public __libcpp_is_pointer<typename remove_cv<_Tp>::type> {
+};
+
+template <class _Tp>
+struct __libcpp_is_member_pointer : public false_type {};
+template <class _Tp, class _Up>
+struct __libcpp_is_member_pointer<_Tp _Up::*> : public true_type {};
+template <class _Tp>
+struct is_member_pointer
+    : public __libcpp_is_member_pointer<typename remove_cv<_Tp>::type> {};
+
+template <class _Tp>
+struct __libcpp_union : public false_type {};
+template <class _Tp>
+struct is_union : public __libcpp_union<typename remove_cv<_Tp>::type> {};
+
+template <class T>
+struct is_reference : false_type {};
+template <class T>
+struct is_reference<T&> : true_type {};
+template <class T>
+struct is_reference<T&&> : true_type {};
+
+template <class T>
+inline constexpr bool is_reference_v = is_reference<T>::value;
+
+struct __two {
+  char __lx[2];
+};
+
+namespace __is_class_imp {
+template <class _Tp>
+char __test(int _Tp::*);
+template <class _Tp>
+__two __test(...);
+}  // namespace __is_class_imp
+template <class _Tp>
+struct is_class
+    : public integral_constant<bool,
+                               sizeof(__is_class_imp::__test<_Tp>(0)) == 1 &&
+                                   !is_union<_Tp>::value> {};
+
+template <class _Tp>
+struct __is_nullptr_t_impl : public false_type {};
+template <>
+struct __is_nullptr_t_impl<nullptr_t> : public true_type {};
+template <class _Tp>
+struct __is_nullptr_t
+    : public __is_nullptr_t_impl<typename remove_cv<_Tp>::type> {};
+template <class _Tp>
+struct is_null_pointer
+    : public __is_nullptr_t_impl<typename remove_cv<_Tp>::type> {};
+
+template <class _Tp>
+struct is_enum
+    : public integral_constant<
+          bool, !is_void<_Tp>::value && !is_integral<_Tp>::value &&
+                    !is_floating_point<_Tp>::value && !is_array<_Tp>::value &&
+                    !is_pointer<_Tp>::value && !is_reference<_Tp>::value &&
+                    !is_member_pointer<_Tp>::value && !is_union<_Tp>::value &&
+                    !is_class<_Tp>::value && !is_function<_Tp>::value> {};
+
+template <class _Tp>
+struct is_scalar
+    : public integral_constant<
+          bool, is_arithmetic<_Tp>::value || is_member_pointer<_Tp>::value ||
+                    is_pointer<_Tp>::value || __is_nullptr_t<_Tp>::value ||
+                    is_enum<_Tp>::value> {};
+template <>
+struct is_scalar<nullptr_t> : public true_type {};
+
+struct in_place_t {};
+
+constexpr in_place_t in_place;
+
+} // namespace std
