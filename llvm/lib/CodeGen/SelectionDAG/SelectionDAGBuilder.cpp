@@ -9687,41 +9687,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         if (visitUnaryFloatCall(I, ISD::FSQRT))
           return;
         break;
-      case LibFunc_floor:
-      case LibFunc_floorf:
-      case LibFunc_floorl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitUnaryFloatCall(I, ISD::FFLOOR))
-          return;
-        break;
-      case LibFunc_ceil:
-      case LibFunc_ceilf:
-      case LibFunc_ceill:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitUnaryFloatCall(I, ISD::FCEIL))
-          return;
-        break;
-      case LibFunc_rint:
-      case LibFunc_rintf:
-      case LibFunc_rintl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitUnaryFloatCall(I, ISD::FRINT))
-          return;
-        break;
-      case LibFunc_round:
-      case LibFunc_roundf:
-      case LibFunc_roundl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitUnaryFloatCall(I, ISD::FROUND))
-          return;
-        break;
-      case LibFunc_trunc:
-      case LibFunc_truncf:
-      case LibFunc_truncl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitUnaryFloatCall(I, ISD::FTRUNC))
-          return;
-        break;
       case LibFunc_log2:
       case LibFunc_log2f:
       case LibFunc_log2l:
