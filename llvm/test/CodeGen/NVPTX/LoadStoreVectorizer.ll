@@ -50,7 +50,6 @@ define half @fh(ptr %p) {
 ; ENABLED-EMPTY:
 ; ENABLED-NEXT:  // %bb.0:
 ; ENABLED-NEXT:    ld.param.b64 %rd1, [fh_param_0];
-; ENABLED-NEXT:    .pragma "used_bytes_mask 0x3ff";
 ; ENABLED-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; ENABLED-NEXT:    { .reg .b16 tmp; mov.b32 {%rs1, tmp}, %r3; }
 ; ENABLED-NEXT:    mov.b32 {%rs2, %rs3}, %r2;
