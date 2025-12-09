@@ -177,14 +177,10 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
   // complex cases, including pointers/references, template specializations,
   // etc.
   PrintingPolicy Copy(PP);
-  if (!QT.isNull() && !QT.hasQualifiers() &&
-      PP.SuppressTagKeyword ==
-          llvm::to_underlying(
-              PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames)) {
+  if (!QT.isNull() && !QT.hasQualifiers() && PP.SuppressTagKeyword) {
     if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr());
         TT && TT->isCanonicalUnqualified()) {
-      Copy.SuppressTagKeyword =
-          llvm::to_underlying(PrintingPolicy::SuppressTagKeywordMode::All);
+      Copy.SuppressTagKeywordInAnonymousTagNames = true;
       OS << TT->getDecl()->getKindName() << " ";
     }
   }

@@ -762,10 +762,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     PrettyCallbacks PrettyCB(Context.getLangOpts());
     Policy.Callbacks = &PrettyCB;
     if (IK == PredefinedIdentKind::Function && ForceElaboratedPrinting)
-      Policy.SuppressTagKeyword = llvm::to_underlying(
-          LO.MSVCCompat
-              ? PrintingPolicy::SuppressTagKeywordMode::None
-              : PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames);
+      Policy.SuppressTagKeyword = !LO.MSVCCompat;
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);
 

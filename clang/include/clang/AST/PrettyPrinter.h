@@ -57,14 +57,11 @@ public:
 /// It is very frequently copied.
 struct PrintingPolicy {
   enum class SuppressInlineNamespaceMode : uint8_t { None, Redundant, All };
-  enum class SuppressTagKeywordMode : uint8_t { None, InElaboratedNames };
 
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
-        SuppressTagKeyword(llvm::to_underlying(
-            LO.CPlusPlus ? SuppressTagKeywordMode::InElaboratedNames
-                         : SuppressTagKeywordMode::None)),
+        SuppressTagKeyword(LO.CPlusPlus),
         SuppressTagKeywordInAnonymousTagNames(false),
         IncludeTagDefinition(false), SuppressScope(false),
         SuppressUnwrittenScope(false),
@@ -93,8 +90,7 @@ struct PrintingPolicy {
   /// construct). This should not be used if a real LangOptions object is
   /// available.
   void adjustForCPlusPlus() {
-    SuppressTagKeyword =
-        llvm::to_underlying(SuppressTagKeywordMode::InElaboratedNames);
+    SuppressTagKeyword = true;
     Bool = true;
     UseVoidForZeroParams = false;
   }
@@ -127,7 +123,7 @@ struct PrintingPolicy {
   /// \code
   /// struct Geometry::Point;
   /// \endcode
-  LLVM_PREFERRED_TYPE(SuppressTagKeywordMode)
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressTagKeyword : 1;
   unsigned SuppressTagKeywordInAnonymousTagNames : 1;
 

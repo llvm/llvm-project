@@ -656,8 +656,7 @@ static void printQualifier(llvm::raw_ostream &Out, const LangOptions &LangOpts,
                            NestedNameSpecifier NNS) {
   // FIXME: Encode the qualifier, don't just print it.
   PrintingPolicy PO(LangOpts);
-  PO.SuppressTagKeyword = llvm::to_underlying(
-      PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames);
+  PO.SuppressTagKeyword = true;
   PO.SuppressUnwrittenScope = true;
   PO.ConstantArraySizeAsWritten = false;
   PO.AnonymousTagLocations = false;

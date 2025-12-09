@@ -35,8 +35,7 @@ bool MatchesAnyListedTypeNameMatcher::matches(
   PrintingPolicyWithSuppressedTag.PrintAsCanonical = CanonicalTypes;
   PrintingPolicyWithSuppressedTag.FullyQualifiedName = true;
   PrintingPolicyWithSuppressedTag.SuppressScope = false;
-  PrintingPolicyWithSuppressedTag.SuppressTagKeyword = llvm::to_underlying(
-      PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames);
+  PrintingPolicyWithSuppressedTag.SuppressTagKeyword = true;
   PrintingPolicyWithSuppressedTag.SuppressUnwrittenScope = true;
   std::string TypeName =
       Node.getUnqualifiedType().getAsString(PrintingPolicyWithSuppressedTag);

@@ -184,8 +184,7 @@ infer_alloc::getAllocTokenMetadata(QualType T, const ASTContext &Ctx) {
 
   // Get unique type name.
   PrintingPolicy Policy(Ctx.getLangOpts());
-  Policy.SuppressTagKeyword = llvm::to_underlying(
-      PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames);
+  Policy.SuppressTagKeyword = true;
   Policy.FullyQualifiedName = true;
   llvm::raw_svector_ostream TypeNameOS(ATMD.TypeName);
   T.getCanonicalType().print(TypeNameOS, Policy);

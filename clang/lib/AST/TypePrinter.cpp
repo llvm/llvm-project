@@ -92,21 +92,19 @@ public:
 
 class ElaboratedTypePolicyRAII {
   PrintingPolicy &Policy;
-  PrintingPolicy::SuppressTagKeywordMode SuppressTagKeyword;
+  bool SuppressTagKeyword;
   bool SuppressScope;
 
 public:
   explicit ElaboratedTypePolicyRAII(PrintingPolicy &Policy) : Policy(Policy) {
-    SuppressTagKeyword = static_cast<PrintingPolicy::SuppressTagKeywordMode>(
-        Policy.SuppressTagKeyword);
+    SuppressTagKeyword = Policy.SuppressTagKeyword;
     SuppressScope = Policy.SuppressScope;
-    Policy.SuppressTagKeyword = llvm::to_underlying(
-        PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames);
+    Policy.SuppressTagKeyword = true;
     Policy.SuppressScope = true;
   }
 
   ~ElaboratedTypePolicyRAII() {
-    Policy.SuppressTagKeyword = llvm::to_underlying(SuppressTagKeyword);
+    Policy.SuppressTagKeyword = SuppressTagKeyword;
     Policy.SuppressScope = SuppressScope;
   }
 };
@@ -1522,9 +1520,7 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
 
   bool PrintedKindDecoration = false;
   if (T->isCanonicalUnqualified()) {
-    if (Policy.SuppressTagKeyword ==
-            llvm::to_underlying(PrintingPolicy::SuppressTagKeywordMode::None) &&
-        !D->getTypedefNameForAnonDecl()) {
+    if (!Policy.SuppressTagKeyword && !D->getTypedefNameForAnonDecl()) {
       PrintedKindDecoration = true;
       OS << D->getKindName();
       OS << ' ';
