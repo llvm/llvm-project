@@ -8729,6 +8729,28 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   return SDValue();
 }
 
+static SDValue determineFloatSign(SDValue N, SelectionDAG &DAG, bool Postive) {
+  SDLoc DL(N);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = N->getValueType(0);
+  EVT IntVT = VT.changeTypeToInteger();
+  SDValue NTrunc = N;
+  if (!TLI.isTypeLegal(IntVT)) {
+    EVT FloatVT = VT.changeElementType(MVT::f32);
+    IntVT = VT.changeElementType(MVT::i32);
+    NTrunc = DAG.getNode(ISD::FP_ROUND, DL, FloatVT, N,
+                         DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+  }
+  EVT CCVT =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IntVT);
+
+  // FIXME: how to support 16bit/8bit targets?
+  SDValue IntN = DAG.getNode(ISD::BITCAST, DL, IntVT, NTrunc);
+
+  return DAG.getSetCC(DL, CCVT, IntN, DAG.getConstant(0, DL, IntVT),
+                      Postive ? ISD::SETGE : ISD::SETLT);
+}
+
 SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
                                                 SelectionDAG &DAG) const {
   if (SDValue Expanded = expandVectorNaryOpBySplitting(N, DAG))
@@ -8742,57 +8764,61 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   bool IsMax = Opc == ISD::FMAXIMUM;
   SDNodeFlags Flags = N->getFlags();
+  bool LHSNotZero = DAG.isKnownNeverZeroFloat(LHS);
+  bool RHSNotZero = DAG.isKnownNeverZeroFloat(RHS);
 
   // First, implement comparison not propagating NaN. If no native fmin or fmax
   // available, use plain select with setcc instead.
   SDValue MinMax;
-  unsigned CompOpcIeee = IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
-  unsigned CompOpc = IsMax ? ISD::FMAXNUM : ISD::FMINNUM;
+  unsigned MinMaxOpcIeee = IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
+  unsigned MinMaxOpcNum = IsMax ? ISD::FMAXNUM : ISD::FMINNUM;
+  unsigned MinMaxOpcNum2019 = IsMax ? ISD::FMAXIMUMNUM : ISD::FMINIMUMNUM;
+  unsigned MinMaxOpc = 0;
 
-  bool MinMaxMustRespectOrderedZero = false;
+  bool IsZeroOrdered = false;
 
-  if (isOperationLegalOrCustom(CompOpcIeee, VT)) {
-    MinMax = DAG.getNode(CompOpcIeee, DL, VT, LHS, RHS, Flags);
-    MinMaxMustRespectOrderedZero = true;
-  } else if (isOperationLegalOrCustom(CompOpc, VT)) {
-    MinMax = DAG.getNode(CompOpc, DL, VT, LHS, RHS, Flags);
-    MinMaxMustRespectOrderedZero = true;
+  if (isOperationLegal(MinMaxOpcIeee, VT))
+    MinMaxOpc = MinMaxOpcIeee;
+  else if (isOperationLegal(MinMaxOpcNum, VT))
+    MinMaxOpc = MinMaxOpcNum;
+  else if (isOperationLegal(MinMaxOpcNum2019, VT))
+    MinMaxOpc = MinMaxOpcNum2019;
+  else if (isOperationCustom(MinMaxOpcIeee, VT))
+    MinMaxOpc = MinMaxOpcIeee;
+  else if (isOperationCustom(MinMaxOpcNum, VT))
+    MinMaxOpc = MinMaxOpcNum;
+  else if (isOperationCustom(MinMaxOpcNum2019, VT))
+    MinMaxOpc = MinMaxOpcNum2019;
+  if (MinMaxOpc) {
+    if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(RHS))
+      LHS = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, RHS, RHS, ISD::SETUO),
+                          RHS, LHS, Flags);
+    if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(LHS))
+      RHS = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, LHS, LHS, ISD::SETUO),
+                          LHS, RHS, Flags);
+    MinMax = DAG.getNode(MinMaxOpc, DL, VT, LHS, RHS, Flags);
+    IsZeroOrdered = true;
   } else {
-    if (VT.isVector() && !isOperationLegalOrCustom(ISD::VSELECT, VT))
-      return DAG.UnrollVectorOp(N);
-
-    // NaN (if exists) will be propagated later, so orderness doesn't matter.
-    SDValue Compare =
-        DAG.getSetCC(DL, CCVT, LHS, RHS, IsMax ? ISD::SETOGT : ISD::SETOLT);
-    MinMax = DAG.getSelect(DL, VT, Compare, LHS, RHS, Flags);
+    if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(RHS))
+      LHS = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, RHS, RHS, ISD::SETUO),
+                          RHS, LHS, Flags);
+    MinMax = DAG.getSelectCC(DL, LHS, RHS, LHS, RHS,
+                             IsMax ? ISD::SETUGT : ISD::SETULT);
   }
 
-  // Propagate any NaN of both operands
-  if (!N->getFlags().hasNoNaNs() &&
-      (!DAG.isKnownNeverNaN(RHS) || !DAG.isKnownNeverNaN(LHS))) {
-    ConstantFP *FPNaN = ConstantFP::get(*DAG.getContext(),
-                                        APFloat::getNaN(VT.getFltSemantics()));
-    MinMax = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, LHS, RHS, ISD::SETUO),
-                           DAG.getConstantFP(*FPNaN, DL, VT), MinMax, Flags);
-  }
+  // TODO: We need quiet sNaN if strictfp.
 
   // fminimum/fmaximum requires -0.0 less than +0.0
-  if (!MinMaxMustRespectOrderedZero && !N->getFlags().hasNoSignedZeros() &&
-      !DAG.isKnownNeverZeroFloat(RHS) && !DAG.isKnownNeverZeroFloat(LHS)) {
-    SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
-                                  DAG.getConstantFP(0.0, DL, VT), ISD::SETOEQ);
-    SDValue TestZero =
-        DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
-    SDValue LCmp = DAG.getSelect(
-        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHS, TestZero), LHS,
-        MinMax, Flags);
-    SDValue RCmp = DAG.getSelect(
-        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, RHS, TestZero), RHS,
-        LCmp, Flags);
-    MinMax = DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
+  if (IsZeroOrdered || Flags.hasNoSignedZeros() || LHSNotZero || RHSNotZero) {
+    return MinMax;
   }
+  SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
+                                DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
 
-  return MinMax;
+  SDValue RetZero =
+      DAG.getSelect(DL, VT, determineFloatSign(LHS, DAG, IsMax ? true : false),
+                    LHS, MinMax, Flags);
+  return DAG.getSelect(DL, VT, IsZero, RetZero, MinMax, Flags);
 }
 
 SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
