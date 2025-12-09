@@ -2837,7 +2837,8 @@ struct AMDGPUMakeDmaDescriptorLowering
                                         ArrayRef<Value> consts) const {
     constexpr int32_t dim = 4;
     constexpr int32_t offset = 48;
-    return setTensorDimX(op, adaptor, rewriter, loc, sgpr1, sgpr2, consts, dim, offset);
+    return setTensorDimX(op, adaptor, rewriter, loc, sgpr1, sgpr2, consts, dim,
+                         offset);
   }
 
   Value setTileDim4(MakeDmaDescriptorOp op, OpAdaptor adaptor,
