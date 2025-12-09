@@ -5218,7 +5218,8 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     // If the vector element type is a floating-point type, we prefer vector
     // promotion.
     if (VecTy && VecTy->getElementType()->isFloatingPointTy()) {
-      // If the vector has one element we prefer to promote via the element type.
+      // If the vector has one element we prefer to promote via the element
+      // type.
       if (VecTy->getElementCount().getFixedValue() == 1)
         return {VecTy->getElementType(), false, nullptr};
       return {VecTy, false, VecTy};
@@ -5226,7 +5227,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
 
     // Check if there is a common type that all slices of the partition use that
     // spans the partition.
-    auto [CommonUseTy, LargestIntTy] = findCommonType(P.begin(), P.end(), P.endOffset());
+    auto [CommonUseTy, LargestIntTy] =
         findCommonType(P.begin(), P.end(), P.endOffset());
     if (CommonUseTy) {
       TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy);
