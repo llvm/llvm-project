@@ -5096,11 +5096,9 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
   return {ID, args};
 }
 
-static LogicalResult
-verifyTcgen05MMABlockScaleOp(NVVM::Tcgen05MMACollectorOp collectorOp,
-                             NVVM::MMABlockScaleKind kind,
-                             NVVM::Tcgen05MMABlockScale blockScale,
-                             Location loc) {
+static LogicalResult verifyTcgen05MMABlockScaleOp(
+    NVVM::Tcgen05MMACollectorOp collectorOp, NVVM::MMABlockScaleKind kind,
+    NVVM::Tcgen05MMABlockScale blockScale, Location loc) {
 
   if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT &&
       kind == MMABlockScaleKind::MXF4NVF4)
