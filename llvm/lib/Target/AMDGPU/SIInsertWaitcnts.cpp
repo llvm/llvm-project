@@ -1540,7 +1540,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
         BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
     Modified = true;
 
-    LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+    LLVM_DEBUG(dbgs() << "PreGFX12::createNewWaitcnt\n";
                if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                dbgs() << "New Instr: " << *SWaitInst << '\n');
   }
@@ -1554,7 +1554,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
             .addImm(Wait.StoreCnt);
     Modified = true;
 
-    LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+    LLVM_DEBUG(dbgs() << "PreGFX12::createNewWaitcnt\n";
                if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                dbgs() << "New Instr: " << *SWaitInst << '\n');
   }
@@ -1821,7 +1821,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
     if (SWaitInst) {
       Modified = true;
 
-      LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+      LLVM_DEBUG(dbgs() << "GFX12Plus::createNewWaitcnt\n";
                  if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                  dbgs() << "New Instr: " << *SWaitInst << '\n');
     }
@@ -1841,7 +1841,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
 
     Modified = true;
 
-    LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+    LLVM_DEBUG(dbgs() << "GFX12Plus::createNewWaitcnt\n";
                if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                dbgs() << "New Instr: " << *SWaitInst << '\n');
   }
