@@ -11200,9 +11200,9 @@ def err_ppc_invalid_use_mma_type : Error<
 def err_ppc_invalid_test_data_class_type : Error<
   "expected a 'float', 'double' or '__float128' for the first argument">;
 def err_ppc_bcd_invalid_vector_type : Error<
-  "the first argument must be of type '<16 x unsigned char>'">;
+  "argument %0 must be of type %1">;
 def err_ppc_bcd_invalid_integer_type : Error<
-  "the %select{invalid|second|third}0 argument must be an integer type">;
+  "argument %0 must be of %1">;
 def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;
 def err_x86_builtin_invalid_scale : Error<

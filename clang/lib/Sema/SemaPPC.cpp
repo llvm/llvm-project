@@ -118,7 +118,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
                                              VectorKind::AltiVecVector);
 
-    // Arg0 must be <16 x unsigned char>
+    // Arg0 must be vector unsigned char
     if (!Context.hasSameType(Arg0Type, VecType))
       return SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
                           diag::err_ppc_bcd_invalid_vector_type)
@@ -145,7 +145,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
                                              VectorKind::AltiVecVector);
 
-    // Arg0 must be <16 x unsigned char>
+    // Arg0 must be vector unsigned char
     if (!Context.hasSameType(Arg0Type, VecType))
       return SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
                           diag::err_ppc_bcd_invalid_vector_type)
