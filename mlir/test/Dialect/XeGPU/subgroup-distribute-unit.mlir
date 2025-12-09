@@ -753,6 +753,14 @@ gpu.func @vector_extract_strided_slice_unsopported_source(%laneid: index) {
   gpu.return
 }
 
+// CHECK-LABEL:  gpu.func @vector_extract_strided_slice_partial_offsets
+// CHECK-NEXT:      %[[W:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> (vector<8x1xf32>, vector<24x1xf32>) {
+// CHECK-NEXT:        %[[S:.*]] = "some_def"() : () -> vector<24x16xf32>
+// CHECK:             gpu.yield %{{.*}}, %[[S]] : vector<8x16xf32>, vector<24x16xf32>
+// CHECK-NEXT:      }
+// CHECK-NEXT:      %[[T1:.*]] = vector.extract_strided_slice %[[W]]#1
+// CHECK-SAME:        {offsets = [8, 0], sizes = [8, 1], strides = [1, 1]} : vector<24x1xf32> to vector<8x1xf32>
+// CHECK-NEXT:      "some_use"(%[[T1]]) : (vector<8x1xf32>) -> ()
 gpu.func @vector_extract_strided_slice_partial_offsets(%laneid: index) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<8x1xf32>) {
     %0 = "some_def"() : () -> (vector<24x16xf32>)
