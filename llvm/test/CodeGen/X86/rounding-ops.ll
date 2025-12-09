@@ -60,11 +60,9 @@ define float @test3(float %x) nounwind  {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %call = tail call float @nearbyintf(float %x) nounwind readnone
+  %call = tail call float @llvm.nearbyint.f32(float %x) nounwind readnone
   ret float %call
 }
-
-declare float @nearbyintf(float) nounwind readnone
 
 define double @test4(double %x) nounwind  {
 ; CHECK-SSE-LABEL: test4:
@@ -81,11 +79,9 @@ define double @test4(double %x) nounwind  {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundsd $12, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %call = tail call double @nearbyint(double %x) nounwind readnone
+  %call = tail call double @llvm.nearbyint.f64(double %x) nounwind readnone
   ret double %call
 }
-
-declare double @nearbyint(double) nounwind readnone
 
 define float @test5(float %x) nounwind  {
 ; CHECK-SSE-LABEL: test5:
