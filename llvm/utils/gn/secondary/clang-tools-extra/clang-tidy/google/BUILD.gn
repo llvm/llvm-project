@@ -12,7 +12,6 @@ static_library("google") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "AvoidCStyleCastsCheck.cpp",
     "AvoidNSObjectNewCheck.cpp",
     "AvoidThrowingObjCExceptionCheck.cpp",
     "AvoidUnderscoreInGoogletestNameCheck.cpp",

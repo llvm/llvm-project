@@ -11,6 +11,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "AvoidBindCheck.h"
 #include "AvoidCArraysCheck.h"
+#include "AvoidCStyleCastCheck.h"
 #include "AvoidSetjmpLongjmpCheck.h"
 #include "AvoidVariadicFunctionsCheck.h"
 #include "ConcatNestedNamespacesCheck.h"
@@ -65,6 +66,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidBindCheck>("modernize-avoid-bind");
     CheckFactories.registerCheck<AvoidCArraysCheck>("modernize-avoid-c-arrays");
+    CheckFactories.registerCheck<AvoidCStyleCastCheck>(
+        "modernize-avoid-c-style-cast");
     CheckFactories.registerCheck<AvoidSetjmpLongjmpCheck>(
         "modernize-avoid-setjmp-longjmp");
     CheckFactories.registerCheck<AvoidVariadicFunctionsCheck>(

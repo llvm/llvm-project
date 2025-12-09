@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AvoidCStyleCastsCheck.h"
+#include "AvoidCStyleCastCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -14,10 +14,9 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::google::readability {
+namespace clang::tidy::modernize {
 
-void AvoidCStyleCastsCheck::registerMatchers(
-    ast_matchers::MatchFinder *Finder) {
+void AvoidCStyleCastCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   Finder->addMatcher(
       cStyleCastExpr(
           // Filter out (EnumType)IntegerLiteral construct, which is generated
@@ -113,7 +112,7 @@ static bool sameTypeAsWritten(QualType X, QualType Y) {
   }
 }
 
-void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
+void AvoidCStyleCastCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CastExpr = Result.Nodes.getNodeAs<ExplicitCastExpr>("cast");
 
   // Ignore casts in macros.
@@ -288,4 +287,4 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << "static_cast/const_cast/reinterpret_cast";
 }
 
-} // namespace clang::tidy::google::readability
+} // namespace clang::tidy::modernize

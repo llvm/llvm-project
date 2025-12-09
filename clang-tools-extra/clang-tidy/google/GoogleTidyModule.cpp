@@ -9,10 +9,10 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "../modernize/AvoidCStyleCastCheck.h"
 #include "../readability/BracesAroundStatementsCheck.h"
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
-#include "AvoidCStyleCastsCheck.h"
 #include "AvoidNSObjectNewCheck.h"
 #include "AvoidThrowingObjCExceptionCheck.h"
 #include "AvoidUnderscoreInGoogletestNameCheck.h"
@@ -67,7 +67,7 @@ public:
     CheckFactories
         .registerCheck<readability::AvoidUnderscoreInGoogletestNameCheck>(
             "google-readability-avoid-underscore-in-googletest-name");
-    CheckFactories.registerCheck<readability::AvoidCStyleCastsCheck>(
+    CheckFactories.registerCheck<modernize::AvoidCStyleCastCheck>(
         "google-readability-casting");
     CheckFactories.registerCheck<readability::TodoCommentCheck>(
         "google-readability-todo");
