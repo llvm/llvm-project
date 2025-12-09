@@ -1827,12 +1827,8 @@ public:
     // profile info.
     CostTooHigh =
         LAI.getNumRuntimePointerChecks() > VectorizeMemoryCheckThreshold;
-    if (CostTooHigh) {
-      // Mark runtime checks as never succeeding when they exceed the threshold.
-      MemRuntimeCheckCond = ConstantInt::getTrue(L->getHeader()->getContext());
-      SCEVCheckCond = ConstantInt::getTrue(L->getHeader()->getContext());
+    if (CostTooHigh)
       return;
-    }
 
     BasicBlock *LoopHeader = L->getHeader();
     BasicBlock *Preheader = L->getLoopPreheader();
