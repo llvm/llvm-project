@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_asinpi.h>
-#include <clc/opencl/math/asinpi.h>
 
 #define __CLC_FUNCTION asinpi
 #define __CLC_BODY <clc/shared/unary_def.inc>

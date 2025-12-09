@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/relational/isinf.h>
 #include <clc/relational/clc_isinf.h>
 
 #define __CLC_FUNCTION isinf

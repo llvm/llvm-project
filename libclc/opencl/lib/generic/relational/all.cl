@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/relational/all.h>
 #include <clc/relational/clc_all.h>
 
 #define __CLC_ALL_ID(TYPE) _CLC_OVERLOAD _CLC_DEF int all(TYPE v)

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/misc/clc_shuffle2.h>
-#include <clc/opencl/misc/shuffle2.h>
 
 #define __CLC_FUNCTION shuffle2
 

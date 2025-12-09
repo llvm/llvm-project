@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/common/clc_radians.h>
-#include <clc/opencl/common/radians.h>
 
 #define __CLC_FUNCTION radians
 #define __CLC_BODY <clc/shared/unary_def.inc>

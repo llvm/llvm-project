@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_native_exp10.h>
-#include <clc/opencl/math/native_exp10.h>
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION native_exp10
