@@ -31,11 +31,6 @@ static constexpr StringRef RedundantContinueDiag =
     "redundant continue statement at the "
     "end of loop statement";
 
-static bool isLocationInMacroExpansion(const SourceManager &SM,
-                                       SourceLocation Loc) {
-  return SM.isMacroBodyExpansion(Loc) || SM.isMacroArgExpansion(Loc);
-}
-
 void RedundantControlFlowCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       functionDecl(returns(voidType()),
@@ -53,7 +48,7 @@ void RedundantControlFlowCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceRange StmtRange = RedundantStmt.getSourceRange();
   const SourceManager &SM = *Result.SourceManager;
 
-  if (isLocationInMacroExpansion(SM, StmtRange.getBegin()))
+  if (StmtRange.getBegin().isMacroID())
     return;
 
   const auto RemovedRange = CharSourceRange::getCharRange(
