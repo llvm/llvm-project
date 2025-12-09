@@ -120,7 +120,8 @@ public:
         if (Dists.find(R) == Dists.end()) {
           SmallVector<SortedRecords::iterator, 4> ToErase;
 
-          for (SortedRecords::iterator It = Dists.begin(); It != Dists.end(); ++It) {
+          for (SortedRecords::iterator It = Dists.begin(); It != Dists.end();
+               ++It) {
             const Record &D = *It;
 
             // Check if existing use covers the new use
@@ -345,8 +346,8 @@ private:
                           StringRef Indent = "      ") const {
     bool Any = false;
     for (const auto &[VReg, Recs] : D) {
-      Any |= printSortedRecords(Recs, VReg, SnapshotOffset, EdgeWeight,
-                                O, Indent);
+      Any |=
+          printSortedRecords(Recs, VReg, SnapshotOffset, EdgeWeight, O, Indent);
     }
     return Any;
   }

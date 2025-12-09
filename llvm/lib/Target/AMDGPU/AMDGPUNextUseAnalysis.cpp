@@ -77,7 +77,8 @@ void NextUseResult::init(const MachineFunction &MF) {
   for (const MachineLoop *L : LI->getLoopsInPreorder()) {
     SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock *>> Exiting;
     L->getExitEdges(Exiting);
-    for (const std::pair<MachineBasicBlock *, MachineBasicBlock *> &P : Exiting) {
+    for (const std::pair<MachineBasicBlock *, MachineBasicBlock *> &P :
+         Exiting) {
       LoopExits[P.first->getNumber()] = P.second->getNumber();
     }
   }
@@ -100,7 +101,8 @@ void NextUseResult::analyze(const MachineFunction &MF) {
       unsigned Offset = 0;
       unsigned MBBNum = MBB->getNumber();
       VRegDistances Curr, Prev;
-      DenseMap<unsigned, VRegDistances>::iterator PrevIt = UpwardNextUses.find(MBBNum);
+      DenseMap<unsigned, VRegDistances>::iterator PrevIt =
+          UpwardNextUses.find(MBBNum);
       if (PrevIt != UpwardNextUses.end()) {
         Prev = PrevIt->second;
       }
@@ -125,7 +127,8 @@ void NextUseResult::analyze(const MachineFunction &MF) {
 
         // Check if the edge from MBB to Succ goes out of the Loop
         int64_t EdgeWeight = 0;
-        DenseMap<unsigned, unsigned>::iterator LoopExitIt = LoopExits.find(MBB->getNumber());
+        DenseMap<unsigned, unsigned>::iterator LoopExitIt =
+            LoopExits.find(MBB->getNumber());
         if (LoopExitIt != LoopExits.end()) {
           if (SuccNum == LoopExitIt->second)
             EdgeWeight = LoopTag;
@@ -219,7 +222,8 @@ void NextUseResult::analyze(const MachineFunction &MF) {
       LLVM_DEBUG({
         dbgs() << "\nFinal distances for " << printMBBReference(*MBB) << "\n";
         printVregDistances(Curr, Offset);
-        dbgs() << "\nPrevious distances for " << printMBBReference(*MBB) << "\n";
+        dbgs() << "\nPrevious distances for " << printMBBReference(*MBB)
+               << "\n";
         printVregDistances(Prev, Offset);
         dbgs() << "\nUsed in block:\n";
         dumpUsedInBlock();
@@ -275,13 +279,16 @@ void NextUseResult::getFromSortedRecords(
 }
 
 // Helper to collect subreg uses from sorted records
-static void collectSubregUses(const NextUseResult::VRegDistances::SortedRecords &Dists,
-                              const VRegMaskPair &VMP,
-                              SmallVectorImpl<VRegMaskPair> &Result) {
-  LLVM_DEBUG({ dbgs() << "Mask : [" << PrintLaneMask(VMP.getLaneMask()) << "]\n"; });
+static void
+collectSubregUses(const NextUseResult::VRegDistances::SortedRecords &Dists,
+                  const VRegMaskPair &VMP,
+                  SmallVectorImpl<VRegMaskPair> &Result) {
+  LLVM_DEBUG(
+      { dbgs() << "Mask : [" << PrintLaneMask(VMP.getLaneMask()) << "]\n"; });
   for (const NextUseResult::VRegDistances::Record &P : reverse(Dists)) {
     LaneBitmask UseMask = P.first;
-    LLVM_DEBUG({ dbgs() << "Used mask : [" << PrintLaneMask(UseMask) << "]\n"; });
+    LLVM_DEBUG(
+        { dbgs() << "Used mask : [" << PrintLaneMask(UseMask) << "]\n"; });
     if ((UseMask & VMP.getLaneMask()) == UseMask) {
       Result.push_back({VMP.getVReg(), UseMask});
     }
@@ -297,7 +304,8 @@ NextUseResult::getSortedSubregUses(const MachineBasicBlock::iterator I,
   DenseMap<unsigned, NextUseInfo>::iterator MBBIt = NextUseMap.find(MBBNum);
   if (MBBIt == NextUseMap.end())
     return Result;
-  DenseMap<const MachineInstr *, VRegDistances>::iterator InstrIt = MBBIt->second.InstrDist.find(&*I);
+  DenseMap<const MachineInstr *, VRegDistances>::iterator InstrIt =
+      MBBIt->second.InstrDist.find(&*I);
   if (InstrIt == MBBIt->second.InstrDist.end())
     return Result;
   VRegDistances::iterator VRegIt = InstrIt->second.find(VMP.getVReg());
@@ -342,7 +350,8 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
   unsigned MBBNum = MBB->getNumber();
   DenseMap<unsigned, NextUseInfo>::iterator MBBIt = NextUseMap.find(MBBNum);
   if (MBBIt != NextUseMap.end()) {
-    DenseMap<const MachineInstr *, VRegDistances>::iterator InstrIt = MBBIt->second.InstrDist.find(&*I);
+    DenseMap<const MachineInstr *, VRegDistances>::iterator InstrIt =
+        MBBIt->second.InstrDist.find(&*I);
     if (InstrIt != MBBIt->second.InstrDist.end()) {
       VRegDistances::iterator VRegIt = InstrIt->second.find(VMP.getVReg());
       if (VRegIt != InstrIt->second.end()) {
@@ -436,7 +445,8 @@ void NextUseResult::dumpAllNextUseDistances(const MachineFunction &MF) {
     const NextUseInfo &Info = NextUseMap.at(MBBNum);
 
     // Per-instruction dump (materialized with per-MI snapshot offset).
-    for (MachineBasicBlock::const_iterator II = MBB.begin(), IE = MBB.end(); II != IE; ++II) {
+    for (MachineBasicBlock::const_iterator II = MBB.begin(), IE = MBB.end();
+         II != IE; ++II) {
       const MachineInstr &MI = *II;
 
       LLVM_DEBUG(dbgs() << "  Instr: ");
@@ -445,7 +455,8 @@ void NextUseResult::dumpAllNextUseDistances(const MachineFunction &MF) {
       LLVM_DEBUG(dbgs() << "\n");
 
       LLVM_DEBUG(dbgs() << "    Next-use distances:\n");
-      DenseMap<const MachineInstr *, VRegDistances>::const_iterator InstrIt = Info.InstrDist.find(&MI);
+      DenseMap<const MachineInstr *, VRegDistances>::const_iterator InstrIt =
+          Info.InstrDist.find(&MI);
       if (InstrIt != Info.InstrDist.end()) {
         const VRegDistances &Dists = InstrIt->second;
         const unsigned SnapOff = Info.InstrOffset.lookup(&MI); // 0 if absent
