@@ -1930,7 +1930,8 @@ bool BinaryFunction::validateInternalBranches() {
       BC.errs() << "BOLT-WARNING: corrupted control flow detected in function "
                 << *this << ": an internal branch/call targets an invalid "
                 << "instruction at address 0x"
-                << Twine::utohexstr(getAddress() + Offset) << "\n";
+                << Twine::utohexstr(getAddress() + Offset)
+                << ", ignoring this function\n";
       setIgnored();
       return false;
     }
