@@ -100,17 +100,17 @@ struct PythonAPI {
   PyTuple_New_t *PyTuple_New;
 
 private:
-  PythonAPI() : Ready(false) {
+  PythonAPI() : Valid(false) {
     if (!loadDylib(findPython()))
       return;
     if (!resolveSymbols())
       return;
     Py_InitializeEx(0);
-    Ready = true;
+    Valid = true;
   }
 
   ~PythonAPI() {
-    if (std::atomic_exchange(&Ready, false)) {
+    if (std::atomic_exchange(&Valid, false)) {
       Py_FinalizeEx();
     }
   }
@@ -153,7 +153,7 @@ public:
     return Success;
   }
 
-  bool isReady() const { return Ready; }
+  bool isValid() const { return Valid; }
 
   bool loadScript(const std::string &ScriptPath) const {
     std::string LoadCmd;
@@ -210,7 +210,7 @@ public:
 
 private:
   sys::DynamicLibrary Dylib;
-  std::atomic<bool> Ready;
+  std::atomic<bool> Valid;
 
   template <typename FnTy> bool resolve(const char *Name, FnTy **Var) {
     assert(Dylib.isValid() && "dlopen shared library first");
@@ -227,12 +227,9 @@ private:
 
 class PyPassContext {
 public:
-  PyPassContext() : PyAPI(PythonAPI::instance()) {}
+  PyPassContext(const PythonAPI &PyAPI) : PyAPI(PyAPI) {}
 
   bool loadScript(const std::string &Path) {
-    if (!PyAPI.isReady())
-      return false;
-
     // Make relative paths resolve naturally in import statements
     std::string Dir = std::filesystem::path(Path).parent_path().u8string();
     if (!PyAPI.addImportSearchPath(Dir))
@@ -303,15 +300,21 @@ struct PyPass : PassInfoMixin<PyPass> {
 };
 
 static void registerCallbacks(PassBuilder &PB) {
+  // Python API is initialized once and shared across all threads
+  const PythonAPI &PyAPI = PythonAPI::instance();
+  if (!PyAPI.isValid())
+    return;
+
   // Context is shared across all entry-points in this pipeline
-  auto Context = std::make_shared<PyPassContext>();
+  auto Context = std::make_shared<PyPassContext>(PyAPI);
 
   // All entry-point callbacks are forwarded to the same script
   // TODO: In order to support multiple instances of the plugin with different
   // scripts, we will need an isolated interpreter session for each.
   std::string ScriptPath = findScript();
   if (!Context->loadScript(ScriptPath)) {
-    errs() << "Failed to load script for PyPass plugin: '" << ScriptPath << "\n";
+    errs() << "Failed to load script for PyPass plugin: '" << ScriptPath
+           << "\n";
     return;
   }
 
