@@ -58,9 +58,8 @@ protected:
   // Helper to collect all nested acc.loop ops in order
   SmallVector<acc::LoopOp> collectNestedLoops(acc::LoopOp loop) {
     SmallVector<acc::LoopOp> loops;
-    loop.getBody().walk([&](acc::LoopOp nestedLoop) {
-      loops.push_back(nestedLoop);
-    });
+    loop.getBody().walk(
+        [&](acc::LoopOp nestedLoop) { loops.push_back(nestedLoop); });
     return loops;
   }
 
@@ -109,7 +108,8 @@ TEST_F(OpenACCUtilsTilingTest, tileACCLoopsSingleLoop) {
   SmallVector<acc::LoopOp> loopsToTile = {loopOp};
   SmallVector<Value> tileSizes = {tileSize};
 
-  acc::LoopOp tiledLoop = tileACCLoops(loopsToTile, tileSizes, /*defaultTileSize=*/128, rewriter);
+  acc::LoopOp tiledLoop =
+      tileACCLoops(loopsToTile, tileSizes, /*defaultTileSize=*/128, rewriter);
 
   // Verify the tiled loop was created
   EXPECT_TRUE(tiledLoop != nullptr);
@@ -185,7 +185,8 @@ TEST_F(OpenACCUtilsTilingTest, tileACCLoopsNestedLoops) {
   SmallVector<acc::LoopOp> loopsToTile = {outerLoop, innerLoop};
   SmallVector<Value> tileSizes = {tileSize1, tileSize2};
 
-  acc::LoopOp tiledLoop = tileACCLoops(loopsToTile, tileSizes, /*defaultTileSize=*/128, rewriter);
+  acc::LoopOp tiledLoop =
+      tileACCLoops(loopsToTile, tileSizes, /*defaultTileSize=*/128, rewriter);
 
   // Verify the tiled loop nest was created
   EXPECT_TRUE(tiledLoop != nullptr);
@@ -317,8 +318,8 @@ TEST_F(OpenACCUtilsTilingTest, uncollapseLoopsThreeLevels) {
       arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(1));
 
   // Create a collapsed loop with 3 IVs
-  acc::LoopOp collapsedLoop = createLoopOp(b, {lb1, lb2, lb3}, {ub1, ub2, ub3},
-                                           {step1, step2, step3});
+  acc::LoopOp collapsedLoop =
+      createLoopOp(b, {lb1, lb2, lb3}, {ub1, ub2, ub3}, {step1, step2, step3});
 
   // Set collapse(2)
   collapsedLoop.setCollapseForDeviceTypes(&context, {acc::DeviceType::None},
