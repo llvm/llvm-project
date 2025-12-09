@@ -1761,11 +1761,10 @@ bool TargetLowering::SimplifyDemandedBits(
          ((CC == ISD::SETLE || CC == ISD::SETGT) &&
           isAllOnesOrAllOnesSplat(Op1)))) {
       KnownBits KnownOp0;
-      bool Changed = false;
       if (SimplifyDemandedBits(
               Op0, APInt::getSignMask(Op0.getScalarValueSizeInBits()),
               DemandedElts, KnownOp0, TLO, Depth + 1))
-        Changed = true;
+        return true;
       // If (1) we only need the sign-bit, (2) the setcc operands are the same
       // width as the setcc result, and (3) the result of a setcc conforms to 0
       // or -1, we may be able to bypass the setcc.
@@ -1779,12 +1778,11 @@ bool TargetLowering::SimplifyDemandedBits(
           SDLoc DL(Op);
           EVT VT = Op0.getValueType();
           SDValue NotOp0 = TLO.DAG.getNOT(DL, Op0, VT);
-          Changed |= TLO.CombineTo(Op, NotOp0);
+          return TLO.CombineTo(Op, NotOp0);
         } else {
-          Changed |= TLO.CombineTo(Op, Op0);
+          return TLO.CombineTo(Op, Op0);
         }
       }
-      return Changed;
     }
     if (getBooleanContents(Op0.getValueType()) ==
             TargetLowering::ZeroOrOneBooleanContent &&
