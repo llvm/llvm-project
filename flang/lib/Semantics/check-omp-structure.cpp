@@ -2800,7 +2800,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPCancelConstruct &) {
 void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
   const parser::OmpBeginDirective &beginSpec{x.BeginDir()};
   const std::optional<parser::OmpEndDirective> &endSpec{x.EndDir()};
-  PushContextAndClauseSets(beginSpec.DirName().source, beginSpec.DirName().v);
+  PushContextAndClauseSets(beginSpec.DirName().source, beginSpec.DirId());
 
   const auto &block{std::get<parser::Block>(x.t)};
   CheckNoBranching(
