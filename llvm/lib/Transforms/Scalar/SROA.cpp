@@ -5217,12 +5217,12 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
         isVectorPromotionViable(P, DL, AI.getFunction()->getVScaleValue());
     // If the vector element type is a floating-point type, we prefer vector
     // promotion.
-    if (VecTy && VecTy->getElementType()->isFloatingPointTy())
+    if (VecTy && VecTy->getElementType()->isFloatingPointTy() && VecTy->getElementCount().getFixedValue() > 1)
       return {VecTy, false, VecTy};
 
     // Check if there is a common type that all slices of the partition use that
     // spans the partition.
-    auto CommonUseTy = findCommonType(P.begin(), P.end(), P.endOffset());
+    auto [CommonUseTy, LargestIntTy] = findCommonType(P.begin(), P.end(), P.endOffset());
         findCommonType(P.begin(), P.end(), P.endOffset());
     if (CommonUseTy) {
       TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy);
