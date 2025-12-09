@@ -21,7 +21,6 @@
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
-#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
@@ -353,9 +352,9 @@ static void registerEPCallbacks(PassBuilder &PB) {
 
 bool llvm::runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
-    ToolOutputFile *Out, ToolOutputFile *ThinLTOLinkOut,
-    ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
-    ArrayRef<PassPlugin> PassPlugins,
+    RTLIB::RuntimeLibcallsInfo &RTLCI, ToolOutputFile *Out,
+    ToolOutputFile *ThinLTOLinkOut, ToolOutputFile *OptRemarkFile,
+    StringRef PassPipeline, ArrayRef<PassPlugin> PassPlugins,
     ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks,
     OutputKind OK, VerifierKind VK, bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
@@ -411,24 +410,14 @@ bool llvm::runPassPipeline(
       P->CSAction = PGOOptions::CSIRUse;
     }
   }
+  if (TM)
+    TM->setPGOOption(P);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-
-  if (TM) {
-    TM->setPGOOption(P);
-
-    MAM.registerPass([&] {
-      const TargetOptions &Options = TM->Options;
-      return RuntimeLibraryAnalysis(M.getTargetTriple(), Options.ExceptionModel,
-                                    Options.FloatABIType, Options.EABIVersion,
-                                    Options.MCOptions.ABIName, Options.VecLib);
-    });
-
-    MAM.registerPass([&] { return LibcallLoweringModuleAnalysis(); });
-  }
+  MAM.registerPass([&] { return RuntimeLibraryAnalysis(std::move(RTLCI)); });
 
   PassInstrumentationCallbacks PIC;
   PrintPassOptions PrintPassOpts;

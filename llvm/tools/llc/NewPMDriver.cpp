@@ -14,10 +14,8 @@
 
 #include "NewPMDriver.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -138,16 +136,6 @@ int llvm::compileModuleWithNewPM(
   SI.registerCallbacks(PIC, &MAM);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
-
-  MAM.registerPass([&] {
-    const TargetOptions &Options = Target->Options;
-    return RuntimeLibraryAnalysis(
-        M->getTargetTriple(), Target->Options.ExceptionModel,
-        Target->Options.FloatABIType, Target->Options.EABIVersion,
-        Options.MCOptions.ABIName, Target->Options.VecLib);
-  });
-  MAM.registerPass([&] { return LibcallLoweringModuleAnalysis(); });
-
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
   ModulePassManager MPM;

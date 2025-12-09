@@ -22,12 +22,7 @@ public:
   RuntimeLibraryAnalysis() = default;
   RuntimeLibraryAnalysis(RTLIB::RuntimeLibcallsInfo &&BaselineInfoImpl)
       : LibcallsInfo(std::move(BaselineInfoImpl)) {}
-  RuntimeLibraryAnalysis(
-      const Triple &TT,
-      ExceptionHandling ExceptionModel = ExceptionHandling::None,
-      FloatABI::ABIType FloatABI = FloatABI::Default,
-      EABI EABIVersion = EABI::Default, StringRef ABIName = "",
-      VectorLibrary VecLib = VectorLibrary::NoLibrary);
+  explicit RuntimeLibraryAnalysis(const Triple &T) : LibcallsInfo(T) {}
 
   RTLIB::RuntimeLibcallsInfo run(const Module &M, ModuleAnalysisManager &);
 
@@ -45,19 +40,12 @@ class LLVM_ABI RuntimeLibraryInfoWrapper : public ImmutablePass {
 public:
   static char ID;
   RuntimeLibraryInfoWrapper();
-  RuntimeLibraryInfoWrapper(
-      const Triple &TT,
-      ExceptionHandling ExceptionModel = ExceptionHandling::None,
-      FloatABI::ABIType FloatABI = FloatABI::Default,
-      EABI EABIVersion = EABI::Default, StringRef ABIName = "",
-      VectorLibrary VecLib = VectorLibrary::NoLibrary);
+  explicit RuntimeLibraryInfoWrapper(const Triple &T);
+  explicit RuntimeLibraryInfoWrapper(const RTLIB::RuntimeLibcallsInfo &RTLCI);
 
   const RTLIB::RuntimeLibcallsInfo &getRTLCI(const Module &M) {
-    if (!RTLCI) {
-      ModuleAnalysisManager DummyMAM;
-      RTLCI = RTLA.run(M, DummyMAM);
-    }
-
+    ModuleAnalysisManager DummyMAM;
+    RTLCI = RTLA.run(M, DummyMAM);
     return *RTLCI;
   }
 
