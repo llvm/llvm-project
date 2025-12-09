@@ -9,6 +9,26 @@ macro(pythonize_bool var)
 endmacro()
 
 set(LIBUNWIND_TESTING_INSTALL_PREFIX "${LIBUNWIND_BINARY_DIR}/test-suite-install")
+add_custom_target(libunwind-install-cxx-for-testing
+                    DEPENDS cxx-headers
+                            cxx
+                            cxx_experimental
+                            cxx-modules
+                    COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBUNWIND_TESTING_INSTALL_PREFIX}"
+                    COMMAND "${CMAKE_COMMAND}"
+                            -DCMAKE_INSTALL_COMPONENT=cxx-headers
+                            -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
+                            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+                    COMMAND "${CMAKE_COMMAND}"
+                            -DCMAKE_INSTALL_COMPONENT=cxx-modules
+                            -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
+                            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+                    COMMAND "${CMAKE_COMMAND}"
+                            -DCMAKE_INSTALL_COMPONENT=cxx
+                            -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
+                            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+add_dependencies(unwind-test-depends libunwind-install-cxx-for-testing)
+
 add_custom_target(libunwind-install-unwind-for-testing
   DEPENDS unwind-headers
           unwind
@@ -21,6 +41,7 @@ add_custom_target(libunwind-install-unwind-for-testing
           -DCMAKE_INSTALL_COMPONENT=unwind
           -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
           -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+add_dependencies(unwind-test-depends libunwind-install-unwind-for-testing)
 
 pythonize_bool(LIBUNWIND_ENABLE_CET)
 pythonize_bool(LIBUNWIND_ENABLE_GCS)
@@ -62,4 +83,4 @@ configure_lit_site_cfg(
 
 add_lit_testsuite(check-unwind "Running libunwind tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS libunwind-install-unwind-for-testing)
+  DEPENDS unwind-test-depends)
