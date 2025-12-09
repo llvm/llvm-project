@@ -705,7 +705,7 @@ int main()
 // CHECK-NEXT:    store ptr [[TMP4]], ptr [[TMP34]], align 8
 // CHECK-NEXT:    [[TMP35:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP36:%.*]] = load i32, ptr [[TMP35]], align 4
-// CHECK-NEXT:    call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP36]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 7)
+// CHECK-NEXT:    call void @__kmpc_parallel_60(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP36]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 7, i32 0)
 // CHECK-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK:       omp.inner.for.inc:
 // CHECK-NEXT:    [[TMP37:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -788,7 +788,7 @@ int main()
 // CHECK-NEXT:    store ptr [[TMP4]], ptr [[TMP68]], align 8
 // CHECK-NEXT:    [[TMP69:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP70:%.*]] = load i32, ptr [[TMP69]], align 4
-// CHECK-NEXT:    call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP70]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined.1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined.1_wrapper, ptr [[CAPTURED_VARS_ADDRS34_ASCAST]], i64 7)
+// CHECK-NEXT:    call void @__kmpc_parallel_60(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP70]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined.1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined.1_wrapper, ptr [[CAPTURED_VARS_ADDRS34_ASCAST]], i64 7, i32 0)
 // CHECK-NEXT:    br label [[OMP_INNER_FOR_INC35:%.*]]
 // CHECK:       omp.inner.for.inc35:
 // CHECK-NEXT:    [[TMP71:%.*]] = load i32, ptr [[DOTOMP_IV10_ASCAST]], align 4

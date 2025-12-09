@@ -497,6 +497,7 @@ __OMP_RTL(__kmpc_target_init, false, Int32, KernelEnvironmentPtr, KernelLaunchEn
 __OMP_RTL(__kmpc_target_deinit, false, Void,)
 __OMP_RTL(__kmpc_specialized_kernel_init, false, Void,)
 __OMP_RTL(__kmpc_kernel_prepare_parallel, false, Void, VoidPtr)
+__OMP_RTL(__kmpc_parallel_spmd, false, Void, IdentPtr, Int32, VoidPtr, VoidPtrPtr, SizeTy)
 __OMP_RTL(__kmpc_parallel_60, false, Void, IdentPtr, Int32, Int32, Int32, Int32,
           FuncPtrTy, FuncPtrTy, VoidPtrPtr, SizeTy, Int32)
 __OMP_RTL(__kmpc_for_static_loop_4, false, Void, IdentPtr, VoidPtr, VoidPtr, Int32, Int32, Int32, Int8)
@@ -1354,6 +1355,10 @@ __OMP_RTL_ATTRS(__kmpc_task_allow_completion_event, DefaultAttrs,
 __OMP_RTL_ATTRS(__kmpc_target_init, AttributeSet(), SExt,
                 ParamAttrs(AttributeSet()))
 __OMP_RTL_ATTRS(__kmpc_target_deinit, AttributeSet(), AttributeSet(),
+                ParamAttrs())
+__OMP_RTL_ATTRS(__kmpc_specialized_kernel_init, AttributeSet(), AttributeSet(),
+                ParamAttrs())
+__OMP_RTL_ATTRS(__kmpc_parallel_spmd, AlwaysInlineAttrs, AttributeSet(),
                 ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_parallel_60, AlwaysInlineAttrs, AttributeSet(),
                 ParamAttrs(AttributeSet(), SExt, SExt, SExt, SExt,

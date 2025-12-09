@@ -170,7 +170,7 @@ define internal void @spmd_helper() #1 {
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @leaf() #[[ATTR8:[0-9]+]]
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]]) #[[ATTR4:[0-9]+]]
-; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB2]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper.ID, ptr [[CAPTURED_VARS_ADDRS]], i64 0, i32 0)
+; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB2]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0, i32 0)
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    ret void
 ;
 entry:
