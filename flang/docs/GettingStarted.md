@@ -86,6 +86,15 @@ cmake \
 ninja
 ```
 
+```{note}
+  Contributions to Flang are expected not to produce any new compiler warnings.
+  This is enforced by post-commit buildbots. To do the same locally, add
+  `-DFLANG_ENABLE_WERROR=ON` to the above `cmake` command.
+
+  Only Clang builds are checked for this, so we do not recommend using this
+  option with GCC as there will be preexisting warnings.
+```
+
 On Darwin, to make flang able to link binaries with the default sysroot without
 having to specify additional flags, use the `DEFAULT_SYSROOT` CMake flag, e.g.
 `-DDEFAULT_SYSROOT="$(xcrun --show-sdk-path)"`.
@@ -152,6 +161,15 @@ cmake \
   ..
 
 ninja
+```
+
+```{note}
+  Contributions to Flang are expected not to produce any new compiler warnings.
+  This is enforced by post-commit buildbots. To do the same locally, add
+  `-DFLANG_ENABLE_WERROR=ON` to the above `cmake` command.
+
+  Only Clang builds are checked for this, so we do not recommend using this
+  option with GCC as there will be preexisting warnings.
 ```
 
 To run the flang tests on this build, execute the command in the `flang/build`
