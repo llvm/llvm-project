@@ -1043,8 +1043,9 @@ static bool PrintObjectViaPointer(Stream &strm, ValueObject &object,
     return false;
 
   StringRef mangled_type_name = object.GetMangledTypeName();
-  // Swift's APIs that accept mangled names require the "$s" prefix removed.
+  // Swift APIs that receive mangled names require the prefix removed.
   mangled_type_name.consume_front("$s");
+  mangled_type_name.consume_front("$e"); // Embedded Swift prefix
 
   std::string expr_string =
       llvm::formatv(
