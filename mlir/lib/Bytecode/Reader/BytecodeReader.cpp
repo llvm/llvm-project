@@ -831,6 +831,23 @@ namespace {
 /// This class provides support for reading attribute and type entries from the
 /// bytecode. Attribute and Type entries are read lazily on demand, so we use
 /// this reader to manage when to actually parse them from the bytecode.
+///
+/// The parsing of attributes & types are generally recursive, this can lead to
+/// stack overflows for deeply nested structures, so we track a few extra pieces
+/// of information to avoid this:
+///
+/// - `depth`: The current depth while parsing nested attributes. We defer on
+///   parsing deeply nested attributes to avoid potential stack overflows. The
+///   deferred parsing is achieved by reporting a failure when parsing a nested
+///   attribute/type and registering the index of the encountered attribute/type
+///   in the deferred parsing worklist. Hence, a failure with deffered entry
+///   does not constitute a failure, it also requires that folks return on
+///   first failure rather than attempting additional parses.
+/// - `deferredWorklist`: A list of attribute/type indices that we could not
+///   parse due to hitting the depth limit. The worklist is used to capture the
+///   indices of attributes/types that need to be parsed/reparsed when we hit
+///   the depth limit. This enables moving the tracking of what needs to be
+///   parsed to the heap.
 class AttrTypeReader {
   /// This class represents a single attribute or type entry.
   template <typename T>
@@ -1310,9 +1327,9 @@ T AttrTypeReader::resolveEntry(SmallVectorImpl<Entry<T>> &entries, size_t index,
     return {};
   }
 
-  // Fast path: Try direct parsing without worklist overhead.
-  // This handles the common case where there are no deferred dependencies.
-  deferredWorklist.clear();
+  // Fast path: Try direct parsing without worklist overhead. This handles the
+  // common case where there are no deferred dependencies.
+  assert(deferredWorklist.empty());
   T result;
   if (succeeded(readEntry(entries, index, result, entryType, depth))) {
     assert(deferredWorklist.empty());
@@ -1323,7 +1340,7 @@ T AttrTypeReader::resolveEntry(SmallVectorImpl<Entry<T>> &entries, size_t index,
     return T();
   }
 
-  // Slow path: Use worklist to handle deferred dependencies.  Use a deque to
+  // Slow path: Use worklist to handle deferred dependencies. Use a deque to
   // iteratively resolve entries with dependencies.
   // - Pop from front to process
   // - Push new dependencies to front (depth-first)
