@@ -60,6 +60,9 @@ static llvm::cl::opt<unsigned> localAllocsThreshold(
     llvm::cl::desc("If present, stops generating TBAA tags for accesses of "
                    "local allocations after N accesses in a module"));
 
+// Defined in AliasAnalysis.cpp
+extern llvm::cl::opt<bool> supportCrayPointers;
+
 namespace {
 
 // Return the size and alignment (in bytes) for the given type.
@@ -688,7 +691,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
 
   mlir::LLVM::TBAATagAttr tag;
   // Cray pointer/pointee is a special case. These might alias with any data.
-  if (source.isCrayPointerOrPointee()) {
+  if (supportCrayPointers && source.isCrayPointerOrPointee()) {
     LLVM_DEBUG(llvm::dbgs().indent(2)
                << "Found reference to Cray pointer/pointee at " << *op << "\n");
     mlir::LLVM::TBAATypeDescriptorAttr anyDataDesc =

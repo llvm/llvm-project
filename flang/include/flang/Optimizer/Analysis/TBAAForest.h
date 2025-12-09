@@ -96,7 +96,7 @@ struct TBAATree {
   //   "any access"
   //   |
   //   |- "descriptor member"
-  //   |- "any data access" <--- Cray pointer/pointee accesses
+  //   |- "any data access"
   //      |
   //      |- "dummy arg data"
   //        |

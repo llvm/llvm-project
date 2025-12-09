@@ -1,4 +1,4 @@
-// RUN: fir-opt --fir-add-alias-tags %s | FileCheck %s
+// RUN: fir-opt -funsafe-cray-pointers --fir-add-alias-tags %s | FileCheck %s
 
 // Fortran source:
 // subroutine test()
