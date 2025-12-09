@@ -2505,8 +2505,11 @@ struct AMDGPUMakeDmaDescriptorLowering
     if (auto attr = dyn_cast<Attribute>(tensorDimXOpFoldResult))
       tensorDimX =
           createI32Constant(rewriter, loc, cast<IntegerAttr>(attr).getInt());
-    else
+    else {
+      IntegerType i32 = rewriter.getI32Type();
       tensorDimX = cast<Value>(tensorDimXOpFoldResult);
+      tensorDimX = LLVM::TruncOp::create(rewriter, loc, i32, tensorDimX);
+    }
 
     sgpr1 = setValueAtOffset(rewriter, loc, sgpr1, tensorDimX, offset);
 
@@ -2548,8 +2551,11 @@ struct AMDGPUMakeDmaDescriptorLowering
     if (auto attr = dyn_cast<Attribute>(tileDimXOpFoldResult))
       tileDimX =
           createI32Constant(rewriter, loc, cast<IntegerAttr>(attr).getInt());
-    else
+    else {
+      IntegerType i32 = rewriter.getI32Type();
       tileDimX = cast<Value>(tileDimXOpFoldResult);
+      tileDimX = LLVM::TruncOp::create(rewriter, loc, i32, tileDimX);
+    }
 
     return setValueAtOffset(rewriter, loc, sgpr, tileDimX, offset);
   }
@@ -2685,8 +2691,12 @@ struct AMDGPUMakeDmaDescriptorLowering
     if (auto attr = dyn_cast<Attribute>(tensorDimXOpFoldResult))
       tensorDimX =
           createI32Constant(rewriter, loc, cast<IntegerAttr>(attr).getInt());
-    else
+    else {
+      IntegerType i32 = rewriter.getI32Type();
       tensorDimX = cast<Value>(tensorDimXOpFoldResult);
+      tensorDimX = LLVM::TruncOp::create(rewriter, loc, i32, tensorDimX);
+    }
+
     return setValueAtOffset(rewriter, loc, sgpr0, tensorDimX, offset);
   }
 
