@@ -546,7 +546,7 @@ MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
           << Source
           << ": an external branch/call targets an invalid instruction "
           << "in function " << Target << " at address 0x"
-          << Twine::utohexstr(Address) << ", ignoring both functions\n";
+          << Twine::utohexstr(Address) << "; ignoring both functions\n";
       IsValid = false;
     }
     if (Target.isInConstantIsland(Address)) {

@@ -1931,7 +1931,7 @@ bool BinaryFunction::validateInternalBranches() {
                 << *this << ": an internal branch/call targets an invalid "
                 << "instruction at address 0x"
                 << Twine::utohexstr(getAddress() + Offset)
-                << ", ignoring this function\n";
+                << "; ignoring this function\n";
       setIgnored();
       return false;
     }
