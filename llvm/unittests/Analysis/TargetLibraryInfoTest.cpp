@@ -706,7 +706,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
 TEST_F(TargetLibraryInfoTest, IsErrnoGlobal) {
   using TLII = TargetLibraryInfoImpl;
 
-  // Errno is defined as a function call on the following OSes / environments.
+  // Errno is defined as a function call on the following environments.
   EXPECT_TRUE(TLII(Triple("arm64-apple-macosx")).isErrnoFunctionCall());
   EXPECT_TRUE(TLII(Triple("arm--linux-androideabi")).isErrnoFunctionCall());
   EXPECT_TRUE(

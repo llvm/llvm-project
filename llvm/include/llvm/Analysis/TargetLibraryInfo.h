@@ -605,7 +605,7 @@ public:
     return this->isFunctionVectorizable(F);
   }
 
-  /// Returns whether `errno` is defined as a function call on known OSes /
+  /// Returns whether `errno` is defined as a function call on known
   /// environments.
   bool isErrnoFunctionCall() const { return Impl->isErrnoFunctionCall(); }
 };
