@@ -400,8 +400,13 @@ mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
 }
 
 mlir::Value ComplexExprEmitter::VisitStmtExpr(const StmtExpr *e) {
-  cgf.cgm.errorNYI(e->getExprLoc(), "ComplexExprEmitter VisitExpr");
-  return {};
+  CIRGenFunction::StmtExprEvaluation eval(cgf);
+  Address retAlloca =
+      cgf.createMemTemp(e->getType(), cgf.getLoc(e->getSourceRange()));
+  (void)cgf.emitCompoundStmt(*e->getSubStmt(), &retAlloca);
+  assert(retAlloca.isValid() && "Expected complex return value");
+  return emitLoadOfLValue(cgf.makeAddrLValue(retAlloca, e->getType()),
+                          e->getExprLoc());
 }
 
 mlir::Value ComplexExprEmitter::emitComplexToComplexCast(mlir::Value val,
