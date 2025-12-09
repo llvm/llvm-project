@@ -1032,7 +1032,7 @@ void llvm::printMIR(raw_ostream &OS, MachineModuleInfo *MMI,
         [&](const Function &F) {
           return &FAM->getResult<MachineFunctionAnalysis>(
                          const_cast<Function &>(F))
-                        .getMF();
+                      .getMF();
         },
         MF);
   }
