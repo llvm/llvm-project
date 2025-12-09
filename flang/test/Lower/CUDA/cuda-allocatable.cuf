@@ -227,6 +227,14 @@ end
 ! CHECK: %[[FLASE_CONV:.*]] = fir.convert %[[FALSE]] : (i1) -> !fir.logical<4>
 ! CHECK: fir.store %[[FLASE_CONV]] to %[[PLOG_DECL]]#0 : !fir.ref<!fir.logical<4>>
 
+subroutine devicepointer()
+  integer, device, pointer :: i(:)
+  allocate(i(10))
+end
+
+! CHECK-LABEL: func.func @_QPdevicepointer()
+! CHECK: cuf.allocate{{.*}}pointer
+
 subroutine cuda_component()
   use globals
   type(t1), pointer, dimension(:) :: d

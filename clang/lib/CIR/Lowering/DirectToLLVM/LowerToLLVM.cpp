@@ -186,6 +186,14 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMSqrtOpLowering::matchAndRewrite(
+    cir::SqrtOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::SqrtOp>(op, resTy, adaptor.getSrc());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMCosOpLowering::matchAndRewrite(
     cir::CosOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -775,6 +783,15 @@ getLLVMMemOrder(std::optional<cir::MemOrder> memorder) {
   llvm_unreachable("unknown memory order");
 }
 
+static std::optional<llvm::StringRef>
+getLLVMSyncScope(std::optional<cir::SyncScopeKind> syncScope) {
+  if (syncScope.has_value())
+    return syncScope.value() == cir::SyncScopeKind::SingleThread
+               ? "singlethread"
+               : "";
+  return std::nullopt;
+}
+
 mlir::LogicalResult CIRToLLVMAtomicCmpXchgOpLowering::matchAndRewrite(
     cir::AtomicCmpXchgOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -848,6 +865,19 @@ mlir::LogicalResult CIRToLLVMAtomicClearOpLowering::matchAndRewrite(
       /*isNonTemporal=*/false, /*isInvariantGroup=*/false, llvmOrder);
 
   rewriter.replaceOp(op, store);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMAtomicFenceLowering::matchAndRewrite(
+    cir::AtomicFence op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(adaptor.getOrdering());
+
+  auto fence = mlir::LLVM::FenceOp::create(rewriter, op.getLoc(), llvmOrder);
+  fence.setSyncscope(getLLVMSyncScope(adaptor.getSyncscope()));
+
+  rewriter.replaceOp(op, fence);
+
   return mlir::success();
 }
 
@@ -1993,9 +2023,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     fn.setAlwaysInline(*inlineKind == cir::InlineKind::AlwaysInline);
   }
 
-  fn.setVisibility_Attr(mlir::LLVM::VisibilityAttr::get(
-      getContext(), lowerCIRVisibilityToLLVMVisibility(
-                        op.getGlobalVisibilityAttr().getValue())));
+  fn.setVisibility_(
+      lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility()));
 
   rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
   if (failed(rewriter.convertRegionTypes(&fn.getBody(), *typeConverter,
@@ -2139,14 +2168,13 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
     }
   }
 
-  // Rewrite op.
+  mlir::LLVM::Visibility visibility =
+      lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility());
   mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
   auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
       op, llvmType, isConst, linkage, symbol, init.value_or(mlir::Attribute()),
       alignment, addrSpace, isDsoLocal, isThreadLocal, comdatAttr, attributes);
-  newOp.setVisibility_Attr(mlir::LLVM::VisibilityAttr::get(
-      getContext(), lowerCIRVisibilityToLLVMVisibility(
-                        op.getGlobalVisibilityAttr().getValue())));
+  newOp.setVisibility_(visibility);
 
   return mlir::success();
 }
@@ -4099,6 +4127,12 @@ mlir::LogicalResult CIRToLLVMVAArgOpLowering::matchAndRewrite(
 
 mlir::LogicalResult CIRToLLVMBlockAddressOpLowering::matchAndRewrite(
     cir::BlockAddressOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return mlir::failure();
+}
+
+mlir::LogicalResult CIRToLLVMIndirectBrOpLowering::matchAndRewrite(
+    cir::IndirectBrOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   return mlir::failure();
 }

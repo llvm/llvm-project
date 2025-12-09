@@ -1493,6 +1493,55 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
 }
 
 //===----------------------------------------------------------------------===//
+// IndirectBrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_IndirectBrOp : CIR_Op<"indirect_br", [
+  DeclareOpInterfaceMethods<BranchOpInterface>,
+  SameVariadicOperandSize, Terminator, Pure
+]> {
+  let summary = "Indirect branch";
+  let description = [{
+    The `cir.indirectbr` operation represents an indirect branch to one of
+    several possible successor blocks. The target block is computed from
+    the value of the given address operand.
+
+    This operation is typically generated when handling constructs like
+    the GCC extension `&&label` combined with an indirect `goto *ptr;`.
+
+    The `poison` attribute is used to mark an `indirectbr` that was created
+    but is known to be invalid, for instance when a label address was
+    taken but no indirect branch was ever emitted.
+
+    Example:
+
+    ```mlir
+      %0 = cir.block_address <@A, "A"> : !cir.ptr<!void>
+      cir.indirectbr %0 poison : <!void>, [
+      ^bb1
+      ]
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VoidPtrType:$addr,
+    UnitAttr:$poison,
+    VariadicOfVariadic<AnyType, "operand_segments">:$succ_operands,
+    DenseI32ArrayAttr:$operand_segments
+    );
+
+  let successors = (successor VariadicSuccessor<AnySuccessor>:$successors);
+  let assemblyFormat = [{
+    $addr ( `poison` $poison^ )? `:` qualified(type($addr)) `,`
+    custom<IndirectBrOpSucessors>(ref(type($addr)),
+                                  $successors,
+                                  $succ_operands,
+                                  type($succ_operands))
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Common loop op definitions
 //===----------------------------------------------------------------------===//
 
@@ -4707,6 +4756,27 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let llvmOp = llvmOpName;
 }
 
+def CIR_SqrtOp : CIR_UnaryFPToFPBuiltinOp<"sqrt", "SqrtOp"> {
+  let summary = "Floating-point square root operation";
+  
+  let description = [{
+    Computes the square root of a floating-point value or vector.
+
+    The input must be either:
+      • a floating-point scalar type, or
+      • a vector whose element type is floating-point.
+
+    The result type must match the input type exactly.
+
+    Examples:
+      // scalar
+      %r = cir.sqrt %x : !cir.fp64
+
+      // vector
+      %v = cir.sqrt %vec : !cir.vector<!cir.fp32 x 4>
+  }];
+}
+
 def CIR_ACosOp : CIR_UnaryFPToFPBuiltinOp<"acos", "ACosOp"> {
   let summary = "Computes the arcus cosine of the specified value";
   let description = [{
@@ -5135,6 +5205,34 @@ def CIR_TryOp : CIR_Op<"try",[
 }
 
 //===----------------------------------------------------------------------===//
+// CatchParamOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"cir::TryOp">]> {
+  let summary = "Represents the catch clause formal parameter";
+  let description = [{
+    The `cir.catch_param` is used to retrieves the exception object inside
+    the handler regions of `cir.try`.
+
+    This operation is used only before the CFG flatterning pass.
+
+    Example:
+
+    ```mlir
+    %exception = cir.catch_param : !cir.ptr<!void>
+    ```
+  }];
+
+  let results = (outs Optional<CIR_AnyType>:$param);
+  let assemblyFormat = [{
+    (`:` qualified(type($param))^)?
+    attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // Exception related: EhInflightOp
 //===----------------------------------------------------------------------===//
 
@@ -5186,6 +5284,11 @@ def CIR_AtomicFetchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Nand", 5, "nand">,
     I32EnumAttrCase<"Max", 6, "max">,
     I32EnumAttrCase<"Min", 7, "min">
+]>;
+
+def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
+  I32EnumAttrCase<"SingleThread", 0, "single_thread">,
+  I32EnumAttrCase<"System", 1, "system">
 ]>;
 
 def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
@@ -5408,6 +5511,36 @@ def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
     $mem_order $ptr
     (`volatile` $is_volatile^)?
     `:` qualified(type($ptr)) attr-dict
+  }];
+}
+
+def CIR_AtomicFence : CIR_Op<"atomic.fence"> {
+  let summary = "Atomic thread fence";
+  let description = [{
+    C/C++ Atomic thread fence synchronization primitive. Implements the builtin
+    `__atomic_thread_fence` which enforces memory ordering constraints across
+    threads within the specified synchronization scope.
+
+    This handles all variations including:
+      - `__atomic_thread_fence`
+      - `__atomic_signal_fence`
+      - `__c11_atomic_thread_fence`
+      - `__c11_atomic_signal_fence`
+
+    Example:
+    ```mlir
+      cir.atomic.fence syncscope(system) seq_cst
+      cir.atomic.fence syncscope(single_thread) seq_cst
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_MemOrder, "memory order">:$ordering,
+    OptionalAttr<CIR_SyncScopeKind>:$syncscope
+  );
+
+  let assemblyFormat = [{
+    (`syncscope` `(` $syncscope^ `)`)? $ordering attr-dict
   }];
 }
 

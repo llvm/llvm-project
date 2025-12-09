@@ -72,6 +72,11 @@ NonTrivial test_nrvo() {
 // CIR:   cir.call @_Z10maybeThrowv() : () -> ()
 // CIR:   %[[TRUE:.*]] = cir.const #true
 // CIR:   cir.store{{.*}} %[[TRUE]], %[[NRVO_FLAG]]
+// CIR:   %[[NRVO_FLAG_VAL:.*]] = cir.load{{.*}} %[[NRVO_FLAG]]
+// CIR:   %[[NOT_NRVO_VAL:.*]] = cir.unary(not, %[[NRVO_FLAG_VAL]])
+// CIR:   cir.if %[[NOT_NRVO_VAL]] {
+// CIR:     cir.call @_ZN10NonTrivialD1Ev(%[[RESULT]])
+// CIR:   }
 // CIR:   %[[RET:.*]] = cir.load %[[RESULT]]
 // CIR:   cir.return %[[RET]]
 
@@ -81,6 +86,14 @@ NonTrivial test_nrvo() {
 // LLVM:   store i8 0, ptr %[[NRVO_FLAG]]
 // LLVM:   call void @_Z10maybeThrowv()
 // LLVM:   store i8 1, ptr %[[NRVO_FLAG]]
+// LLVM:   %[[NRVO_VAL:.*]] = load i8, ptr %[[NRVO_FLAG]]
+// LLVM:   %[[NRVO_VAL_TRUNC:.*]] = trunc i8 %[[NRVO_VAL]] to i1
+// LLVM:   %[[NOT_NRVO_VAL:.*]] = xor i1 %[[NRVO_VAL_TRUNC]], true
+// LLVM:   br i1 %[[NOT_NRVO_VAL]], label %[[NRVO_UNUSED:.*]], label %[[NRVO_USED:.*]]
+// LLVM: [[NRVO_UNUSED]]:
+// LLVM:   call void @_ZN10NonTrivialD1Ev(ptr %[[RESULT]])
+// LLVM:   br label %[[NRVO_USED]]
+// LLVM: [[NRVO_USED]]:
 // LLVM:   %[[RET:.*]] = load %struct.NonTrivial, ptr %[[RESULT]]
 // LLVM:   ret %struct.NonTrivial %[[RET]]
 
