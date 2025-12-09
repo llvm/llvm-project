@@ -29,6 +29,34 @@ define ptr @src_nuw(i32 %arg0, ptr %arg1) {
   ret ptr %v3
 }
 
+define ptr @src_inbounds_nuw(i32 %arg0, ptr %arg1) {
+; CHECK-LABEL: @src_inbounds_nuw(
+; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[ARG0:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[V1]], i64 63252, i64 29452
+; CHECK-NEXT:    [[V3:%.*]] = getelementptr nuw i8, ptr [[ARG1:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[V3]]
+;
+  %v0 = getelementptr inbounds nuw i8, ptr %arg1, i64 8148
+  %v1 = icmp sgt i32 %arg0, 3
+  %v2 = select i1 %v1, i64 55104, i64 21304
+  %v3 = getelementptr nuw i8, ptr %v0, i64 %v2
+  ret ptr %v3
+}
+
+define ptr @src_swap(i32 %arg0, ptr %arg1) {
+; CHECK-LABEL: @src_swap(
+; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[ARG0:%.*]], 3
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V1]], i64 63252, i64 29452
+; CHECK-NEXT:    [[V0:%.*]] = getelementptr i8, ptr [[ARG1:%.*]], i64 [[V2]]
+; CHECK-NEXT:    ret ptr [[V0]]
+;
+  %v1 = icmp sgt i32 %arg0, 3
+  %v2 = select i1 %v1, i64 55104, i64 21304
+  %v0 = getelementptr i8, ptr %arg1, i64 %v2
+  %v3 = getelementptr i8, ptr %v0, i64 8148
+  ret ptr %v3
+}
+
 ; Fail 1: Different GEP type
 define ptr @src_fail_different_type(i32 %arg0, ptr %arg1) {
 ; CHECK-LABEL: @src_fail_different_type(
@@ -61,13 +89,13 @@ define ptr @src_fail_no_constant_idx(i32 %arg0, ptr %arg1, i64 %arg2) {
   ret ptr %v3
 }
 
-; Fail 2: Multiple use
+; Fail 3: Multiple use of select
 define ptr @src_fail_select_multiple_use(i32 %arg0, ptr %arg1, ptr %arg2) {
 ; CHECK-LABEL: @src_fail_select_multiple_use(
+; CHECK-NEXT:    [[V0:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG1:%.*]], i64 8148
 ; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[ARG0:%.*]], 3
 ; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V1]], i64 55104, i64 21304
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[V1]], i64 63252, i64 29452
-; CHECK-NEXT:    [[V3:%.*]] = getelementptr i8, ptr [[ARG1:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[V3:%.*]] = getelementptr i8, ptr [[V0]], i64 [[V2]]
 ; CHECK-NEXT:    [[V4:%.*]] = getelementptr i8, ptr [[ARG2:%.*]], i64 [[V2]]
 ; CHECK-NEXT:    store ptr [[V3]], ptr [[V4]], align 8
 ; CHECK-NEXT:    ret ptr [[V3]]
@@ -81,3 +109,54 @@ define ptr @src_fail_select_multiple_use(i32 %arg0, ptr %arg1, ptr %arg2) {
   ret ptr %v3
 }
 
+; Fail 4: Multiple use of source GEP
+define ptr @src_fail_source_gep_multiple_use(i32 %arg0, ptr %arg1, ptr %arg2) {
+; CHECK-LABEL: @src_fail_source_gep_multiple_use(
+; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[ARG0:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[V1]], i64 63252, i64 29452
+; CHECK-NEXT:    [[V3:%.*]] = getelementptr i8, ptr [[ARG1:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[V4:%.*]] = getelementptr i8, ptr [[ARG1]], i64 8248
+; CHECK-NEXT:    store ptr [[V3]], ptr [[V4]], align 8
+; CHECK-NEXT:    ret ptr [[V3]]
+;
+  %v0 = getelementptr inbounds nuw i8, ptr %arg1, i64 8148
+  %v1 = icmp sgt i32 %arg0, 3
+  %v2 = select i1 %v1, i64 55104, i64 21304
+  %v3 = getelementptr i8, ptr %v0, i64 %v2
+  %v4 = getelementptr i8, ptr %v0, i64 100
+  store ptr %v3, ptr %v4, align 8
+  ret ptr %v3
+}
+
+; TODO: constant vector index
+
+define <2 x ptr> @fail_vector_const_vector_select(i32 %arg0, <2 x ptr> %arg1) {
+; CHECK-LABEL: @fail_vector_const_vector_select(
+; CHECK-NEXT:    [[V0:%.*]] = getelementptr i8, <2 x ptr> [[ARG1:%.*]], <2 x i64> <i64 8148, i64 8848>
+; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[ARG0:%.*]], 3
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V1]], <2 x i64> <i64 55104, i64 56654>, <2 x i64> <i64 21304, i64 21224>
+; CHECK-NEXT:    [[V3:%.*]] = getelementptr i8, <2 x ptr> [[V0]], <2 x i64> [[V2]]
+; CHECK-NEXT:    ret <2 x ptr> [[V3]]
+;
+  %v0 = getelementptr i8, <2 x ptr> %arg1, <2 x i64> <i64 8148, i64 8848>
+  %v1 = icmp sgt i32 %arg0, 3
+  %v2 = select i1 %v1, <2 x i64> <i64 55104, i64 56654>, <2 x i64> <i64 21304, i64 21224>
+  %v3 = getelementptr i8, <2 x ptr> %v0, <2 x i64> %v2
+  ret <2 x ptr> %v3
+}
+
+
+define <2 x ptr> @fail_scalar_const_vector_select(i32 %arg0, <2 x ptr> %arg1) {
+; CHECK-LABEL: @fail_scalar_const_vector_select(
+; CHECK-NEXT:    [[V0:%.*]] = getelementptr i8, <2 x ptr> [[ARG1:%.*]], i64 8148
+; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[ARG0:%.*]], 3
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V1]], <2 x i64> <i64 55104, i64 56654>, <2 x i64> <i64 21304, i64 21224>
+; CHECK-NEXT:    [[V3:%.*]] = getelementptr i8, <2 x ptr> [[V0]], <2 x i64> [[V2]]
+; CHECK-NEXT:    ret <2 x ptr> [[V3]]
+;
+  %v0 = getelementptr i8, <2 x ptr> %arg1, i64 8148
+  %v1 = icmp sgt i32 %arg0, 3
+  %v2 = select i1 %v1, <2 x i64> <i64 55104, i64 56654>, <2 x i64> <i64 21304, i64 21224>
+  %v3 = getelementptr i8, <2 x ptr> %v0, <2 x i64> %v2
+  ret <2 x ptr> %v3
+}
