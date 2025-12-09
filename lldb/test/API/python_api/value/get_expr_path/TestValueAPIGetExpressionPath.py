@@ -38,7 +38,8 @@ class ValueAPIGetExpressionPath(TestBase):
         self.assertEqual(frame.FindVariable("bar").get_expr_path(), "bar")
         for j in range(3):
             self.assertEqual(
-                frame.FindVariable("bar").GetChildAtIndex(j).get_expr_path(), f"(*bar)[{j}]"
+                frame.FindVariable("bar").GetChildAtIndex(j).get_expr_path(),
+                f"(*bar)[{j}]",
             )
             for k in range(4):
                 self.assertEqual(
