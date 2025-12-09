@@ -251,7 +251,7 @@ public:
     FEM_UnsetOnCommandLine = 3
   };
 
-  enum MatrixMemoryLayout : unsigned {
+  enum class MatrixMemoryLayout : unsigned {
     // Use column-major layout for matrices
     MatrixColMajor = 0,
     // Use row-major layout for matrices

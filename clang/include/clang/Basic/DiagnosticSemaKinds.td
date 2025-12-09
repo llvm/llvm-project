@@ -13042,7 +13042,7 @@ def err_builtin_trivially_relocate_invalid_arg_type: Error <
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
 def err_builtin_matrix_major_order_disabled: Error<
-  "matrix %select{row|column}0 major %select{load|store}1 is disabled. Pass -fmatrix-memory-layout=%select{row|column}0-major to enable it">;
+  "matrix %select{row|column}0 major %select{load|store}1 is not supported with -fmatrix-memory-layout=%select{row|column}0-major. Pass -fmatrix-memory-layout=%select{row|column}0-major to enable it">;
 def err_matrix_index_not_integer: Error<
   "matrix %select{row|column}0 index is not an integer">;
 def err_matrix_index_outside_range: Error<
