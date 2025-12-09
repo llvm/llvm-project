@@ -211,7 +211,7 @@ __m128d test_mm_mask_expand_pd(__m128d __W, __mmask8 __U, __m128d __A) {
 
   // OGCG-LABEL: test_mm_mask_expand_pd
   // OGCG: %[[BC:.*]] = bitcast i8 %{{.*}} to <8 x i1>
-  // OGCG: %[[SHUF:.*]] = shufflevector <8 x i1> %[[BC2]], <8 x i1> %[[BC2]], <2 x i32> <i32 0, i32 1>
+  // OGCG: %[[SHUF:.*]] = shufflevector <8 x i1> %[[BC]], <8 x i1> %[[BC]], <2 x i32> <i32 0, i32 1>
 
   return _mm_mask_expand_pd(__W,__U,__A);
 }
@@ -227,7 +227,7 @@ __m128d test_mm_maskz_expand_pd(__mmask8 __U, __m128d __A) {
 
   // OGCG-LABEL: test_mm_maskz_expand_pd
   // OGCG: %[[BC:.*]] = bitcast i8 %{{.*}} to <8 x i1>
-  // OGCG: %[[SHUF:.*]] = shufflevector <8 x i1> %[[BC2]], <8 x i1> %[[BC2]], <2 x i32> <i32 0, i32 1>
+  // OGCG: %[[SHUF:.*]] = shufflevector <8 x i1> %[[BC]], <8 x i1> %[[BC]], <2 x i32> <i32 0, i32 1>
 
   return _mm_maskz_expand_pd(__U,__A);
 }
