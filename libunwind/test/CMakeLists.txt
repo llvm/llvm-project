@@ -8,56 +8,22 @@ macro(pythonize_bool var)
   endif()
 endmacro()
 
+# Install targets required to run libunwind tests into a temporary location.
+#
+# This ensures that we run the tests against the final installed products, which
+# is closer to what we actually ship than the contents of the build tree.
 set(LIBUNWIND_TESTING_INSTALL_PREFIX "${LIBUNWIND_BINARY_DIR}/test-suite-install")
+set(libunwind_test_suite_install_targets unwind-headers unwind)
 if ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
-  add_custom_target(libunwind-install-cxx-for-testing
-                      DEPENDS cxx-headers
-                              cxx
-                              cxx_experimental
-                              cxx-modules
-                      COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBUNWIND_TESTING_INSTALL_PREFIX}"
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxx-headers
-                              -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxx-modules
-                              -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxx
-                              -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
-  add_dependencies(unwind-test-depends libunwind-install-cxx-for-testing)
-
-  add_custom_target(libunwind-install-cxxabi-for-testing
-                      DEPENDS cxxabi-headers
-                              cxxabi
-                      COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBUNWIND_TESTING_INSTALL_PREFIX}"
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxxabi-headers
-                              -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxxabi
-                              -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
-  add_dependencies(unwind-test-depends libunwind-install-cxxabi-for-testing)
+  list(APPEND libunwind_test_suite_install_targets cxx-headers cxx cxx_experimental cxx-modules cxxabi-headers cxxabi)
 endif()
-
-add_custom_target(libunwind-install-unwind-for-testing
-  DEPENDS unwind-headers
-          unwind
-  COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBUNWIND_TESTING_INSTALL_PREFIX}"
-  COMMAND "${CMAKE_COMMAND}"
-          -DCMAKE_INSTALL_COMPONENT=unwind-headers
-          -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
-          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-  COMMAND "${CMAKE_COMMAND}"
-          -DCMAKE_INSTALL_COMPONENT=unwind
-          -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
-          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
-add_dependencies(unwind-test-depends libunwind-install-unwind-for-testing)
+foreach(target IN LISTS libunwind_test_suite_install_targets)
+  add_custom_target(libunwind-test-suite-install-${target} DEPENDS "${target}"
+                    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}"
+                                               --prefix "${LIBUNWIND_TESTING_INSTALL_PREFIX}"
+                                               --component "${target}")
+  add_dependencies(unwind-test-depends libunwind-test-suite-install-${target})
+endforeach()
 
 pythonize_bool(LIBUNWIND_ENABLE_CET)
 pythonize_bool(LIBUNWIND_ENABLE_GCS)
