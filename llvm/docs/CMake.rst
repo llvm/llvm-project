@@ -1200,3 +1200,14 @@ Windows
   When compiling with clang-cl, CMake may use ``llvm-mt`` as the Manifest Tool
   when available. ```llvm-mt``` is only present when libxml2 is found at build-time.
   To ensure using Microsoft's Manifest Tool set `CMAKE_MT=mt`.
+
+Apple/OSX
+---------
+
+**CMAKE_OSX_SYSROOT**:STRING
+  When compiling for OSX, in order for the test suite to find libSystem to link
+  dylib tests you'll need to run CMake with ```xcrun --show-sdk-path``` as the
+  string to pass in so that the testsuite can find your os libraries.
+
+  This will show up as ```ld: library not found for -lSystem``` when running
+  tests.

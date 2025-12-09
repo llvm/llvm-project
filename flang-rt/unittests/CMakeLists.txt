@@ -22,12 +22,8 @@ if (CMAKE_CROSSCOMPILING)
   return ()
 endif ()
 
-if (NOT TARGET llvm_gtest)
-  message(WARNING "Flang-RT unittests disabled due to GTest being unavailable; "
-                  "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
-  return ()
-endif ()
-
+# Make the targets default_gtest and default_gtest_main available.
+build_gtest()
 
 add_dependencies(flang-rt-test-depends
   FlangRTUnitTests
@@ -53,9 +49,8 @@ function(add_flangrt_unittest_offload_properties target)
   # FIXME: replace 'native' in --offload-arch option with the list
   #        of targets that Fortran Runtime was built for.
   if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
-    set_target_properties(${target}
-      PROPERTIES LINK_OPTIONS
-      "-fopenmp;--offload-arch=native"
+    set_property(TARGET ${target} APPEND
+      PROPERTY LINK_OPTIONS -fopenmp --offload-arch=native
       )
   endif()
 endfunction()

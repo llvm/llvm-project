@@ -325,10 +325,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   for (auto *a : args.filtered(clang::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
 
-  opts.Reciprocals = clang::driver::tools::parseMRecipOption(diags, args);
+  opts.Reciprocals = clang::parseMRecipOption(diags, args);
 
-  opts.PreferVectorWidth =
-      clang::driver::tools::parseMPreferVectorWidthOption(diags, args);
+  opts.PreferVectorWidth = clang::parseMPreferVectorWidthOption(diags, args);
 
   // -fembed-offload-object option
   for (auto *a : args.filtered(clang::options::OPT_fembed_offload_object_EQ))
@@ -885,16 +884,6 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   return diags.getNumErrors() == numErrorsBefore;
 }
 
-// Generate the path to look for intrinsic modules
-static std::string getIntrinsicDir(const char *argv) {
-  // TODO: Find a system independent API
-  llvm::SmallString<128> driverPath;
-  driverPath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
-  llvm::sys::path::remove_filename(driverPath);
-  driverPath.append("/../include/flang/");
-  return std::string(driverPath);
-}
-
 // Generate the path to look for OpenMP headers
 static std::string getOpenMPHeadersDir(const char *argv) {
   llvm::SmallString<128> includePath;
@@ -1403,11 +1392,18 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.ReciprocalMath = true;
     opts.ApproxFunc = true;
     opts.NoSignedZeros = true;
+    opts.FastRealMod = true;
     opts.setFPContractMode(Fortran::common::LangOptions::FPM_Fast);
   }
 
-  if (args.hasArg(clang::options::OPT_fno_fast_real_mod))
-    opts.NoFastRealMod = true;
+  if (llvm::opt::Arg *arg =
+          args.getLastArg(clang::options::OPT_ffast_real_mod,
+                          clang::options::OPT_fno_fast_real_mod)) {
+    if (arg->getOption().matches(clang::options::OPT_ffast_real_mod))
+      opts.FastRealMod = true;
+    if (arg->getOption().matches(clang::options::OPT_fno_fast_real_mod))
+      opts.FastRealMod = false;
+  }
 
   return true;
 }
@@ -1560,6 +1556,14 @@ bool CompilerInvocation::createFromArgs(
           << argString << nearest;
     success = false;
   }
+
+  // User-specified or default resource dir
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_resource_dir))
+    invoc.resourceDir = a->getValue();
+  else
+    invoc.resourceDir = clang::GetResourcesPath(
+        llvm::sys::fs::getMainExecutable(argv0, nullptr));
 
   // -flang-experimental-hlfir
   if (args.hasArg(clang::options::OPT_flang_experimental_hlfir) ||
@@ -1827,9 +1831,11 @@ void CompilerInvocation::setFortranOpts() {
       preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 
-  //  Add the default intrinsic module directory
-  fortranOptions.intrinsicModuleDirectories.emplace_back(
-      getIntrinsicDir(getArgv0()));
+  // Add the ordered list of -fintrinsic-modules-path
+  fortranOptions.intrinsicModuleDirectories.insert(
+      fortranOptions.intrinsicModuleDirectories.end(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 
   // Add the directory supplied through -J/-module-dir to the list of search
   // directories

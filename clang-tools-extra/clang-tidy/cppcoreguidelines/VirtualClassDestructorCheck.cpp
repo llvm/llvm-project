@@ -167,7 +167,6 @@ static FixItHint changePrivateDestructorVisibilityTo(
 
 void VirtualClassDestructorCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   const auto *MatchedClassOrStruct =
       Result.Nodes.getNodeAs<CXXRecordDecl>("ProblematicClassOrStruct");
 

@@ -468,13 +468,17 @@ TargetTransformInfo::getPreferredAddressingMode(const Loop *L,
 }
 
 bool TargetTransformInfo::isLegalMaskedStore(Type *DataType, Align Alignment,
-                                             unsigned AddressSpace) const {
-  return TTIImpl->isLegalMaskedStore(DataType, Alignment, AddressSpace);
+                                             unsigned AddressSpace,
+                                             TTI::MaskKind MaskKind) const {
+  return TTIImpl->isLegalMaskedStore(DataType, Alignment, AddressSpace,
+                                     MaskKind);
 }
 
 bool TargetTransformInfo::isLegalMaskedLoad(Type *DataType, Align Alignment,
-                                            unsigned AddressSpace) const {
-  return TTIImpl->isLegalMaskedLoad(DataType, Alignment, AddressSpace);
+                                            unsigned AddressSpace,
+                                            TTI::MaskKind MaskKind) const {
+  return TTIImpl->isLegalMaskedLoad(DataType, Alignment, AddressSpace,
+                                    MaskKind);
 }
 
 bool TargetTransformInfo::isLegalNTStore(Type *DataType,
@@ -607,6 +611,10 @@ bool TargetTransformInfo::shouldBuildRelLookupTables() const {
 
 bool TargetTransformInfo::useColdCCForColdCall(Function &F) const {
   return TTIImpl->useColdCCForColdCall(F);
+}
+
+bool TargetTransformInfo::useFastCCForInternalCall(Function &F) const {
+  return TTIImpl->useFastCCForInternalCall(F);
 }
 
 bool TargetTransformInfo::isTargetIntrinsicTriviallyScalarizable(
@@ -1182,43 +1190,6 @@ InstructionCost TargetTransformInfo::getMemoryOpCost(
   return Cost;
 }
 
-InstructionCost TargetTransformInfo::getMaskedMemoryOpCost(
-    unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
-    TTI::TargetCostKind CostKind) const {
-  InstructionCost Cost = TTIImpl->getMaskedMemoryOpCost(Opcode, Src, Alignment,
-                                                        AddressSpace, CostKind);
-  assert(Cost >= 0 && "TTI should not produce negative costs!");
-  return Cost;
-}
-
-InstructionCost TargetTransformInfo::getGatherScatterOpCost(
-    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
-  InstructionCost Cost = TTIImpl->getGatherScatterOpCost(
-      Opcode, DataTy, Ptr, VariableMask, Alignment, CostKind, I);
-  assert((!Cost.isValid() || Cost >= 0) &&
-         "TTI should not produce negative costs!");
-  return Cost;
-}
-
-InstructionCost TargetTransformInfo::getExpandCompressMemoryOpCost(
-    unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
-    TTI::TargetCostKind CostKind, const Instruction *I) const {
-  InstructionCost Cost = TTIImpl->getExpandCompressMemoryOpCost(
-      Opcode, DataTy, VariableMask, Alignment, CostKind, I);
-  assert(Cost >= 0 && "TTI should not produce negative costs!");
-  return Cost;
-}
-
-InstructionCost TargetTransformInfo::getStridedMemoryOpCost(
-    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
-  InstructionCost Cost = TTIImpl->getStridedMemoryOpCost(
-      Opcode, DataTy, Ptr, VariableMask, Alignment, CostKind, I);
-  assert(Cost >= 0 && "TTI should not produce negative costs!");
-  return Cost;
-}
-
 InstructionCost TargetTransformInfo::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -1234,6 +1205,14 @@ InstructionCost
 TargetTransformInfo::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                            TTI::TargetCostKind CostKind) const {
   InstructionCost Cost = TTIImpl->getIntrinsicInstrCost(ICA, CostKind);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
+InstructionCost TargetTransformInfo::getMemIntrinsicInstrCost(
+    const MemIntrinsicCostAttributes &MICA,
+    TTI::TargetCostKind CostKind) const {
+  InstructionCost Cost = TTIImpl->getMemIntrinsicInstrCost(MICA, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1453,6 +1432,10 @@ bool TargetTransformInfo::hasArmWideBranch(bool Thumb) const {
 
 APInt TargetTransformInfo::getFeatureMask(const Function &F) const {
   return TTIImpl->getFeatureMask(F);
+}
+
+APInt TargetTransformInfo::getPriorityMask(const Function &F) const {
+  return TTIImpl->getPriorityMask(F);
 }
 
 bool TargetTransformInfo::isMultiversionedFunction(const Function &F) const {

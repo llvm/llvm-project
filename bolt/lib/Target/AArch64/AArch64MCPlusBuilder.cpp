@@ -313,6 +313,33 @@ public:
            Inst.getOpcode() == AArch64::RETABSPPCr;
   }
 
+  void createMatchingAuth(const MCInst &AuthAndRet, MCInst &Auth) override {
+    Auth.clear();
+    Auth.setOperands(AuthAndRet.getOperands());
+    switch (AuthAndRet.getOpcode()) {
+    case AArch64::RETAA:
+      Auth.setOpcode(AArch64::AUTIASP);
+      break;
+    case AArch64::RETAB:
+      Auth.setOpcode(AArch64::AUTIBSP);
+      break;
+    case AArch64::RETAASPPCi:
+      Auth.setOpcode(AArch64::AUTIASPPCi);
+      break;
+    case AArch64::RETABSPPCi:
+      Auth.setOpcode(AArch64::AUTIBSPPCi);
+      break;
+    case AArch64::RETAASPPCr:
+      Auth.setOpcode(AArch64::AUTIASPPCr);
+      break;
+    case AArch64::RETABSPPCr:
+      Auth.setOpcode(AArch64::AUTIBSPPCr);
+      break;
+    default:
+      llvm_unreachable("Unhandled fused pauth-and-return instruction");
+    }
+  }
+
   std::optional<MCPhysReg> getSignedReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::PACIA:
@@ -1835,14 +1862,12 @@ public:
   }
 
   bool isNoop(const MCInst &Inst) const override {
-    return Inst.getOpcode() == AArch64::HINT &&
-           Inst.getOperand(0).getImm() == 0;
+    return Inst.getOpcode() == AArch64::NOP;
   }
 
   void createNoop(MCInst &Inst) const override {
-    Inst.setOpcode(AArch64::HINT);
+    Inst.setOpcode(AArch64::NOP);
     Inst.clear();
-    Inst.addOperand(MCOperand::createImm(0));
   }
 
   bool isTrap(const MCInst &Inst) const override {
@@ -2746,6 +2771,39 @@ public:
     std::vector<MCInst> Insts;
     createShortJmp(Insts, TgtSym, Ctx, /*IsTailCall*/ true);
     return Insts;
+  }
+
+  void createBTI(MCInst &Inst, bool CallTarget,
+                 bool JumpTarget) const override {
+    Inst.setOpcode(AArch64::HINT);
+    unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
+    Inst.addOperand(MCOperand::createImm(HintNum));
+  }
+
+  bool isBTILandingPad(MCInst &Inst, bool CallTarget,
+                       bool JumpTarget) const override {
+    unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
+    bool IsExplicitBTI =
+        Inst.getOpcode() == AArch64::HINT && Inst.getNumOperands() == 1 &&
+        Inst.getOperand(0).isImm() && Inst.getOperand(0).getImm() == HintNum;
+
+    bool IsImplicitBTI = HintNum == 34 && isImplicitBTIC(Inst);
+    return IsExplicitBTI || IsImplicitBTI;
+  }
+
+  bool isImplicitBTIC(MCInst &Inst) const override {
+    // PACI[AB]SP are always implicitly BTI C, independently of
+    // SCTLR_EL1.BT[01].
+    return Inst.getOpcode() == AArch64::PACIASP ||
+           Inst.getOpcode() == AArch64::PACIBSP;
+  }
+
+  void updateBTIVariant(MCInst &Inst, bool CallTarget,
+                        bool JumpTarget) const override {
+    assert(Inst.getOpcode() == AArch64::HINT && "Not a BTI instruction.");
+    unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createImm(HintNum));
   }
 
   InstructionListType materializeAddress(const MCSymbol *Target, MCContext *Ctx,

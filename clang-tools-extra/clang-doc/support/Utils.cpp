@@ -33,8 +33,20 @@ void getMustacheHtmlFiles(StringRef AssetsPath,
   assert(!AssetsPath.empty());
   assert(sys::fs::is_directory(AssetsPath));
 
-  SmallString<128> DefaultStylesheet =
-      appendPathPosix(AssetsPath, "clang-doc-mustache.css");
+  // TODO: Allow users to override default templates with their own. We would
+  // similarly have to check if a template file already exists in CDCtx.
+  if (CDCtx.UserStylesheets.empty()) {
+    SmallString<128> DefaultStylesheet =
+        appendPathPosix(AssetsPath, "clang-doc-mustache.css");
+    CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
+                                 DefaultStylesheet.c_str());
+  }
+
+  if (CDCtx.JsScripts.empty()) {
+    SmallString<128> IndexJS = appendPathPosix(AssetsPath, "mustache-index.js");
+    CDCtx.JsScripts.insert(CDCtx.JsScripts.begin(), IndexJS.c_str());
+  }
+
   SmallString<128> NamespaceTemplate =
       appendPathPosix(AssetsPath, "namespace-template.mustache");
   SmallString<128> ClassTemplate =
@@ -45,11 +57,7 @@ void getMustacheHtmlFiles(StringRef AssetsPath,
       appendPathPosix(AssetsPath, "function-template.mustache");
   SmallString<128> CommentTemplate =
       appendPathPosix(AssetsPath, "comment-template.mustache");
-  SmallString<128> IndexJS = appendPathPosix(AssetsPath, "mustache-index.js");
 
-  CDCtx.JsScripts.insert(CDCtx.JsScripts.begin(), IndexJS.c_str());
-  CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
-                               DefaultStylesheet.c_str());
   CDCtx.MustacheTemplates.insert(
       {"namespace-template", NamespaceTemplate.c_str()});
   CDCtx.MustacheTemplates.insert({"class-template", ClassTemplate.c_str()});

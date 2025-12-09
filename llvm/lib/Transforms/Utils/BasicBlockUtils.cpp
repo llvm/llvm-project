@@ -92,6 +92,15 @@ emptyAndDetachBlock(BasicBlock *BB,
          "applying corresponding DTU updates.");
 }
 
+bool llvm::HasLoopOrEntryConvergenceToken(const BasicBlock *BB) {
+  for (const Instruction &I : *BB) {
+    const ConvergenceControlInst *CCI = dyn_cast<ConvergenceControlInst>(&I);
+    if (CCI && (CCI->isLoop() || CCI->isEntry()))
+      return true;
+  }
+  return false;
+}
+
 void llvm::detachDeadBlocks(ArrayRef<BasicBlock *> BBs,
                             SmallVectorImpl<DominatorTree::UpdateType> *Updates,
                             bool KeepOneInputPHIs) {
@@ -258,6 +267,13 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   for (PHINode &PN : BB->phis())
     if (llvm::is_contained(PN.incoming_values(), &PN))
       return false;
+
+  // Don't break if both the basic block and the predecessor contain loop or
+  // entry convergent intrinsics, since there may only be one convergence token
+  // per block.
+  if (HasLoopOrEntryConvergenceToken(BB) &&
+      HasLoopOrEntryConvergenceToken(PredBB))
+    return false;
 
   LLVM_DEBUG(dbgs() << "Merging: " << BB->getName() << " into "
                     << PredBB->getName() << "\n");
@@ -739,9 +755,11 @@ BasicBlock *llvm::SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ,
   updateCycleLoopInfo<CycleInfo, Cycle>(CI, CallBrBlock, CallBrTarget, Succ);
   if (DTU) {
     DTU->applyUpdates({{DominatorTree::Insert, CallBrBlock, CallBrTarget}});
-    if (DTU->getDomTree().dominates(CallBrBlock, Succ))
-      DTU->applyUpdates({{DominatorTree::Delete, CallBrBlock, Succ},
-                         {DominatorTree::Insert, CallBrTarget, Succ}});
+    if (DTU->getDomTree().dominates(CallBrBlock, Succ)) {
+      if (!is_contained(successors(CallBrBlock), Succ))
+        DTU->applyUpdates({{DominatorTree::Delete, CallBrBlock, Succ}});
+      DTU->applyUpdates({{DominatorTree::Insert, CallBrTarget, Succ}});
+    }
   }
 
   return CallBrTarget;

@@ -8,7 +8,7 @@ end
 ! CHECK-LABEL:   func.func @_QPsubstring_0(
 ! CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>> {fir.bindc_name = "c"}) {
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsubstring_0Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsubstring_0Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK:           %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.ptr<!fir.char<1,?>>
 ! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
@@ -41,7 +41,7 @@ end
 ! CHECK-LABEL:   func.func @_QPsubstring_1(
 ! CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>> {fir.bindc_name = "c"}) {
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsubstring_1Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsubstring_1Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK:           %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.ptr<!fir.char<1,?>>
 ! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
@@ -74,7 +74,7 @@ end
 ! CHECK-LABEL:   func.func @_QPsubstring_2(
 ! CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>> {fir.bindc_name = "c"}) {
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsubstring_2Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsubstring_2Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK:           %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.ptr<!fir.char<1,?>>
 ! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
@@ -98,7 +98,7 @@ end
 ! CHECK-LABEL:   func.func @_QPsubstring_4(
 ! CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>> {fir.bindc_name = "c"}) {
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsubstring_4Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsubstring_4Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK:           %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.ptr<!fir.char<1,?>>
 ! CHECK:           omp.task depend(taskdependout -> %[[VAL_3]] : !fir.ptr<!fir.char<1,?>>) {

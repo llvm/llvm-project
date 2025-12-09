@@ -1,0 +1,9 @@
+# RUN: split-file %s %t
+# RUN: echo baz > %t/split-both.out
+# RUN: diff %t/split-both.expected %t/split-both.out
+
+#--- split-both.expected
+FOO
+#--- split-both.out
+BAR
+

@@ -452,13 +452,6 @@ Expected<DataRecordHandle> DataRecordHandle::createWithError(
     return Mem.takeError();
 }
 
-DataRecordHandle
-DataRecordHandle::create(function_ref<char *(size_t Size)> Alloc,
-                         const Input &I) {
-  Layout L(I);
-  return constructImpl(Alloc(L.getTotalSize()), I, L);
-}
-
 ObjectHandle ObjectHandle::fromFileOffset(FileOffset Offset) {
   // Store the file offset as it is.
   assert(!(Offset.get() & 0x1));
@@ -619,10 +612,6 @@ bool TrieRecord::compare_exchange_strong(Data &Existing, Data New) {
     return true;
   Existing = unpack(ExistingPacked);
   return false;
-}
-
-DataRecordHandle DataRecordHandle::construct(char *Mem, const Input &I) {
-  return constructImpl(Mem, I, Layout(I));
 }
 
 Expected<DataRecordHandle>
@@ -938,8 +927,7 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
       // Check offset is a postive value, and large enough to hold the
       // header for the data record.
       if (D.Offset.get() <= 0 ||
-          (uint64_t)D.Offset.get() + sizeof(DataRecordHandle::Header) >=
-              DataPool.size())
+          D.Offset.get() + sizeof(DataRecordHandle::Header) >= DataPool.size())
         return formatError("datapool record out of bound");
       break;
     case TrieRecord::StorageKind::Standalone:
@@ -1661,9 +1649,8 @@ Error OnDiskGraphDB::importFullTree(ObjectID PrimaryID,
     if (!Node)
       return;
     auto Refs = UpstreamDB->getObjectRefs(*Node);
-    CursorStack.push_back({*Node,
-                           (size_t)std::distance(Refs.begin(), Refs.end()),
-                           Refs.begin(), Refs.end()});
+    CursorStack.push_back(
+        {*Node, (size_t)llvm::size(Refs), Refs.begin(), Refs.end()});
   };
 
   enqueueNode(PrimaryID, UpstreamNode);
@@ -1723,7 +1710,7 @@ Error OnDiskGraphDB::importSingleNode(ObjectID PrimaryID,
   auto Data = UpstreamDB->getObjectData(UpstreamNode);
   auto UpstreamRefs = UpstreamDB->getObjectRefs(UpstreamNode);
   SmallVector<ObjectID, 64> Refs;
-  Refs.reserve(std::distance(UpstreamRefs.begin(), UpstreamRefs.end()));
+  Refs.reserve(llvm::size(UpstreamRefs));
   for (ObjectID UpstreamRef : UpstreamRefs) {
     auto Ref = getReference(UpstreamDB->getDigest(UpstreamRef));
     if (LLVM_UNLIKELY(!Ref))

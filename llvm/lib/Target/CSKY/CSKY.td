@@ -671,6 +671,8 @@ def : CK860V<"ck860fv", NoSchedModel,
 // Define the CSKY target.
 //===----------------------------------------------------------------------===//
 
+defm : RemapAllTargetPseudoPointerOperands<GPR>;
+
 def CSKYInstrInfo : InstrInfo;
 
 

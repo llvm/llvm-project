@@ -1277,7 +1277,7 @@ public:
 
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in \p Root. All potential patterns are
-  /// returned in the \p Pattern vector. Pattern should be sorted in priority
+  /// returned in the \p Patterns vector. Patterns should be sorted in priority
   /// order since the pattern evaluator stops checking as soon as it finds a
   /// faster sequence.
   /// \param Root - Instruction that could be combined with one of its operands
@@ -1379,7 +1379,7 @@ public:
   /// has to decide whether the actual replacement is beneficial or not.
   /// \param Root - Instruction that could be combined with one of its operands
   /// \param Pattern - Combination pattern for Root
-  /// \param InsInstrs - Vector of new instructions that implement P
+  /// \param InsInstrs - Vector of new instructions that implement Pattern
   /// \param DelInstrs - Old instructions, including Root, that could be
   /// replaced by InsInstr
   /// \param InstIdxForVirtReg - map of virtual register to instruction in
@@ -1762,6 +1762,17 @@ public:
   /// Return true if it's safe to move a machine
   /// instruction that defines the specified register class.
   virtual bool isSafeToMoveRegClassDefs(const TargetRegisterClass *RC) const {
+    return true;
+  }
+
+  /// Return true if it's safe to move a machine instruction.
+  /// This allows the backend to prevent certain special instruction
+  /// sequences from being broken by instruction motion in optimization
+  /// passes.
+  /// By default, this returns true for every instruction.
+  virtual bool isSafeToMove(const MachineInstr &MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const {
     return true;
   }
 

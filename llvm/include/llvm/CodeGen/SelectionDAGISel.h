@@ -58,9 +58,7 @@ public:
   AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
   SSPLayoutInfo *SP = nullptr;
-#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
-  TargetTransformInfo *TTI = nullptr;
-#endif
+  const TargetTransformInfo *TTI = nullptr;
   CodeGenOptLevel OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
@@ -153,6 +151,7 @@ public:
     OPC_RecordChild7,
     OPC_RecordMemRef,
     OPC_CaptureGlueInput,
+    OPC_CaptureDeactivationSymbol,
     OPC_MoveChild,
     OPC_MoveChild0,
     OPC_MoveChild1,

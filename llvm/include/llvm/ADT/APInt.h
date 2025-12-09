@@ -2440,6 +2440,27 @@ LLVM_ABI APInt fshl(const APInt &Hi, const APInt &Lo, const APInt &Shift);
 /// (4) fshr(i8 255, i8 0, i8 9)  = fshr(i8 255, i8 0, i8 1) // 9 % 8
 LLVM_ABI APInt fshr(const APInt &Hi, const APInt &Lo, const APInt &Shift);
 
+/// Perform a carry-less multiply, also known as XOR multiplication, and return
+/// low-bits. All arguments and result have the same bitwidth.
+///
+/// Examples:
+/// (1) clmul(i4 1, i4 2)   = 2
+/// (2) clmul(i4 5, i4 6)   = 14
+/// (3) clmul(i4 -4, i4 2)  = -8
+/// (4) clmul(i4 -4, i4 -5) = 4
+LLVM_ABI APInt clmul(const APInt &LHS, const APInt &RHS);
+
+/// Perform a reversed carry-less multiply.
+///
+/// clmulr(a, b) = bitreverse(clmul(bitreverse(a), bitreverse(b)))
+LLVM_ABI APInt clmulr(const APInt &LHS, const APInt &RHS);
+
+/// Perform a carry-less multiply, and return high-bits. All arguments and
+/// result have the same bitwidth.
+///
+/// clmulh(a, b) = clmulr(a, b) >> 1
+LLVM_ABI APInt clmulh(const APInt &LHS, const APInt &RHS);
+
 } // namespace APIntOps
 
 // See friend declaration above. This additional declaration is required in

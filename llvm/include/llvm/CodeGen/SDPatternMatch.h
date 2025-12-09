@@ -155,9 +155,76 @@ struct Opcode_match {
   }
 };
 
+// === Patterns combinators ===
+template <typename... Preds> struct And {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    return true;
+  }
+};
+
+template <typename Pred, typename... Preds>
+struct And<Pred, Preds...> : And<Preds...> {
+  Pred P;
+  And(const Pred &p, const Preds &...preds) : And<Preds...>(preds...), P(p) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return P.match(Ctx, N) && And<Preds...>::match(Ctx, N);
+  }
+};
+
+template <typename... Preds> struct Or {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    return false;
+  }
+};
+
+template <typename Pred, typename... Preds>
+struct Or<Pred, Preds...> : Or<Preds...> {
+  Pred P;
+  Or(const Pred &p, const Preds &...preds) : Or<Preds...>(preds...), P(p) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return P.match(Ctx, N) || Or<Preds...>::match(Ctx, N);
+  }
+};
+
+template <typename Pred> struct Not {
+  Pred P;
+
+  explicit Not(const Pred &P) : P(P) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return !P.match(Ctx, N);
+  }
+};
+// Explicit deduction guide.
+template <typename Pred> Not(const Pred &P) -> Not<Pred>;
+
+/// Match if the inner pattern does NOT match.
+template <typename Pred> inline Not<Pred> m_Unless(const Pred &P) {
+  return Not{P};
+}
+
+template <typename... Preds> And<Preds...> m_AllOf(const Preds &...preds) {
+  return And<Preds...>(preds...);
+}
+
+template <typename... Preds> Or<Preds...> m_AnyOf(const Preds &...preds) {
+  return Or<Preds...>(preds...);
+}
+
+template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
+  return m_Unless(m_AnyOf(preds...));
+}
+
 inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
 
-inline Opcode_match m_Undef() { return Opcode_match(ISD::UNDEF); }
+inline auto m_Undef() {
+  return m_AnyOf(Opcode_match(ISD::UNDEF), Opcode_match(ISD::POISON));
+}
 
 inline Opcode_match m_Poison() { return Opcode_match(ISD::POISON); }
 
@@ -371,71 +438,6 @@ template <typename Pattern> inline auto m_LegalType(const Pattern &P) {
                           return TLI.isTypeLegal(N.getValueType());
                         },
                         P};
-}
-
-// === Patterns combinators ===
-template <typename... Preds> struct And {
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
-    return true;
-  }
-};
-
-template <typename Pred, typename... Preds>
-struct And<Pred, Preds...> : And<Preds...> {
-  Pred P;
-  And(const Pred &p, const Preds &...preds) : And<Preds...>(preds...), P(p) {}
-
-  template <typename MatchContext>
-  bool match(const MatchContext &Ctx, SDValue N) {
-    return P.match(Ctx, N) && And<Preds...>::match(Ctx, N);
-  }
-};
-
-template <typename... Preds> struct Or {
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
-    return false;
-  }
-};
-
-template <typename Pred, typename... Preds>
-struct Or<Pred, Preds...> : Or<Preds...> {
-  Pred P;
-  Or(const Pred &p, const Preds &...preds) : Or<Preds...>(preds...), P(p) {}
-
-  template <typename MatchContext>
-  bool match(const MatchContext &Ctx, SDValue N) {
-    return P.match(Ctx, N) || Or<Preds...>::match(Ctx, N);
-  }
-};
-
-template <typename Pred> struct Not {
-  Pred P;
-
-  explicit Not(const Pred &P) : P(P) {}
-
-  template <typename MatchContext>
-  bool match(const MatchContext &Ctx, SDValue N) {
-    return !P.match(Ctx, N);
-  }
-};
-// Explicit deduction guide.
-template <typename Pred> Not(const Pred &P) -> Not<Pred>;
-
-/// Match if the inner pattern does NOT match.
-template <typename Pred> inline Not<Pred> m_Unless(const Pred &P) {
-  return Not{P};
-}
-
-template <typename... Preds> And<Preds...> m_AllOf(const Preds &...preds) {
-  return And<Preds...>(preds...);
-}
-
-template <typename... Preds> Or<Preds...> m_AnyOf(const Preds &...preds) {
-  return Or<Preds...>(preds...);
-}
-
-template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
-  return m_Unless(m_AnyOf(preds...));
 }
 
 // === Generic node matching ===
@@ -903,6 +905,11 @@ template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_Srl(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::SRL, L, R);
 }
+template <typename LHS, typename RHS>
+inline auto m_ExactSr(const LHS &L, const RHS &R) {
+  return m_AnyOf(BinaryOpc_match<LHS, RHS>(ISD::SRA, L, R, SDNodeFlags::Exact),
+                 BinaryOpc_match<LHS, RHS>(ISD::SRL, L, R, SDNodeFlags::Exact));
+}
 
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_Rotl(const LHS &L, const RHS &R) {
@@ -1144,6 +1151,28 @@ inline SpecificInt_match m_SpecificInt(uint64_t V) {
   return SpecificInt_match(APInt(64, V));
 }
 
+struct SpecificFP_match {
+  APFloat Val;
+
+  explicit SpecificFP_match(APFloat V) : Val(V) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue V) {
+    if (const auto *CFP = dyn_cast<ConstantFPSDNode>(V.getNode()))
+      return CFP->isExactlyValue(Val);
+    if (ConstantFPSDNode *C = isConstOrConstSplatFP(V, /*AllowUndefs=*/true))
+      return C->getValueAPF().compare(Val) == APFloat::cmpEqual;
+    return false;
+  }
+};
+
+/// Match a specific float constant.
+inline SpecificFP_match m_SpecificFP(APFloat V) { return SpecificFP_match(V); }
+
+inline SpecificFP_match m_SpecificFP(double V) {
+  return SpecificFP_match(APFloat(V));
+}
+
 struct Zero_match {
   bool AllowUndefs;
 
@@ -1286,19 +1315,12 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
     if (Leaves.size() != NumPatterns)
       return false;
 
-    // Matches[I][J] == true iff sd_context_match(Leaves[I], Ctx,
-    // std::get<J>(Patterns)) == true
-    std::array<SmallBitVector, NumPatterns> Matches;
-    for (size_t I = 0; I != NumPatterns; I++) {
-      std::apply(
-          [&](auto &...P) {
-            (Matches[I].push_back(sd_context_match(Leaves[I], Ctx, P)), ...);
-          },
-          Patterns);
-    }
-
     SmallBitVector Used(NumPatterns);
-    return reassociatableMatchHelper(Matches, Used);
+    return std::apply(
+        [&](auto &...P) -> bool {
+          return reassociatableMatchHelper(Ctx, Leaves, Used, P...);
+        },
+        Patterns);
   }
 
   void collectLeaves(SDValue V, SmallVector<SDValue> &Leaves) {
@@ -1310,20 +1332,28 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
     }
   }
 
+  // Searchs for a matching leaf for every sub-pattern.
+  template <typename MatchContext, typename PatternHd, typename... PatternTl>
   [[nodiscard]] inline bool
-  reassociatableMatchHelper(ArrayRef<SmallBitVector> Matches,
-                            SmallBitVector &Used, size_t Curr = 0) {
-    if (Curr == Matches.size())
-      return true;
-    for (size_t Match = 0, N = Matches[Curr].size(); Match < N; Match++) {
-      if (!Matches[Curr][Match] || Used[Match])
+  reassociatableMatchHelper(const MatchContext &Ctx, ArrayRef<SDValue> Leaves,
+                            SmallBitVector &Used, PatternHd &HeadPattern,
+                            PatternTl &...TailPatterns) {
+    for (size_t Match = 0, N = Used.size(); Match < N; Match++) {
+      if (Used[Match] || !(sd_context_match(Leaves[Match], Ctx, HeadPattern)))
         continue;
       Used[Match] = true;
-      if (reassociatableMatchHelper(Matches, Used, Curr + 1))
+      if (reassociatableMatchHelper(Ctx, Leaves, Used, TailPatterns...))
         return true;
       Used[Match] = false;
     }
     return false;
+  }
+
+  template <typename MatchContext>
+  [[nodiscard]] inline bool reassociatableMatchHelper(const MatchContext &Ctx,
+                                                      ArrayRef<SDValue> Leaves,
+                                                      SmallBitVector &Used) {
+    return true;
   }
 };
 

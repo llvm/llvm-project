@@ -151,14 +151,14 @@ struct UnsafeQualTypeDenseMapInfo {
 };
 
 /// An ID number that refers to a macro in an AST file.
-using MacroID = uint32_t;
+using MacroID = uint64_t;
 
 /// A global ID number that refers to a macro in an AST file.
-using GlobalMacroID = uint32_t;
+using GlobalMacroID = uint64_t;
 
 /// A local to a module ID number that refers to a macro in an
 /// AST file.
-using LocalMacroID = uint32_t;
+using LocalMacroID = uint64_t;
 
 /// The number of predefined macro IDs.
 const unsigned int NUM_PREDEF_MACRO_IDS = 1;
@@ -179,7 +179,7 @@ using CXXCtorInitializersID = uint32_t;
 
 /// An ID number that refers to an entity in the detailed
 /// preprocessing record.
-using PreprocessedEntityID = uint32_t;
+using PreprocessedEntityID = uint64_t;
 
 /// An ID number that refers to a submodule in a module file.
 using SubmoduleID = uint32_t;

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -S -polly-vectorizer=stripmine -passes=polly-opt-isl -polly-debug -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -S -polly-vectorizer=stripmine '-passes=polly-custom<opt-isl>' -polly-debug -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 define void @ham(ptr %arg, ptr %arg1, i32 %arg2, i32 %arg3, ptr %arg4, i32 %arg5, i32 %arg6) {

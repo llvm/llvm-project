@@ -26,7 +26,6 @@ public:
                 lldb::ScriptedFrameInterfaceSP interface_sp,
                 lldb::user_id_t frame_idx, lldb::addr_t pc,
                 SymbolContext &sym_ctx, lldb::RegisterContextSP reg_ctx_sp,
-                std::shared_ptr<DynamicRegisterInfo> reg_info_sp,
                 StructuredData::GenericSP script_object_sp = nullptr);
 
   ~ScriptedFrame() override;
@@ -62,9 +61,19 @@ public:
   const char *GetFunctionName() override;
   const char *GetDisplayFunctionName() override;
 
+  lldb::RegisterContextSP GetRegisterContext() override;
+
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || StackFrame::isA(ClassID);
+  }
+  static bool classof(const StackFrame *obj) { return obj->isA(&ID); }
+
 private:
   void CheckInterpreterAndScriptObject() const;
   lldb::ScriptedFrameInterfaceSP GetInterface() const;
+  static llvm::Expected<lldb::RegisterContextSP>
+  CreateRegisterContext(ScriptedFrameInterface &interface, Thread &thread,
+                        lldb::user_id_t frame_id);
 
   ScriptedFrame(const ScriptedFrame &) = delete;
   const ScriptedFrame &operator=(const ScriptedFrame &) = delete;
@@ -73,7 +82,8 @@ private:
 
   lldb::ScriptedFrameInterfaceSP m_scripted_frame_interface_sp;
   lldb_private::StructuredData::GenericSP m_script_object_sp;
-  std::shared_ptr<DynamicRegisterInfo> m_register_info_sp;
+
+  static char ID;
 };
 
 } // namespace lldb_private

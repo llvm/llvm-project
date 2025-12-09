@@ -70,6 +70,12 @@ OPTIONS
 
  Print statistics.
 
+.. option:: --save-stats, --save-stats=cwd, --save-stats=obj
+
+ Save LLVM statistics to a file in the current directory
+ (:option:`--save-stats`/"--save-stats=cwd") or the directory
+ of the output file ("--save-stats=obj") in JSON format.
+
 .. option:: -time-passes
 
  Record the amount of time needed for each pass and print it to standard

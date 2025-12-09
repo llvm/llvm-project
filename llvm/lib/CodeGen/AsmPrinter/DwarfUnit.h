@@ -216,6 +216,9 @@ public:
   void addBlock(DIE &Die, dwarf::Attribute Attribute, dwarf::Form Form,
                 DIEBlock *Block);
 
+  /// Add an expression as block data.
+  void addBlock(DIE &Die, dwarf::Attribute Attribute, const DIExpression *Expr);
+
   /// Add location information to specified debug information entry.
   void addSourceLine(DIE &Die, unsigned Line, unsigned Column,
                      const DIFile *File);

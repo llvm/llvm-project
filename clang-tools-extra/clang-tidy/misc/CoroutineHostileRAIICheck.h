@@ -46,6 +46,9 @@ private:
   // List of fully qualified awaitable types which are considered safe to
   // co_await.
   std::vector<StringRef> AllowedAwaitablesList;
+  // List of callees whose return values are considered safe to directly
+  // co_await.
+  std::vector<StringRef> AllowedCallees;
 };
 
 } // namespace clang::tidy::misc

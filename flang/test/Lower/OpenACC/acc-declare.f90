@@ -57,7 +57,7 @@ module acc_declare
 
 ! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_present(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"})
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} {acc.declare = #acc.declare<dataClause =  acc_present>, uniq_name = "_QMacc_declareFacc_declare_presentEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {acc.declare = #acc.declare<dataClause =  acc_present>, uniq_name = "_QMacc_declareFacc_declare_presentEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %[[PRESENT:.*]] = acc.present varPtr(%[[DECL]]#0 : !fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
 ! CHECK: %[[TOKEN:.*]] = acc.declare_enter dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (i32)
@@ -115,7 +115,7 @@ module acc_declare
 
 ! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_deviceptr(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}) {
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} {acc.declare = #acc.declare<dataClause =  acc_deviceptr>, uniq_name = "_QMacc_declareFacc_declare_deviceptrEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {acc.declare = #acc.declare<dataClause =  acc_deviceptr>, uniq_name = "_QMacc_declareFacc_declare_deviceptrEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %[[DEVICEPTR:.*]] = acc.deviceptr varPtr(%[[DECL]]#0 : !fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
 ! CHECK: acc.declare_enter dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (i32)
@@ -131,7 +131,7 @@ module acc_declare
 
 ! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_link(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"})
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} {acc.declare = #acc.declare<dataClause =  acc_declare_link>, uniq_name = "_QMacc_declareFacc_declare_linkEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {acc.declare = #acc.declare<dataClause =  acc_declare_link>, uniq_name = "_QMacc_declareFacc_declare_linkEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %[[LINK:.*]] = acc.declare_link varPtr(%[[DECL]]#0 : !fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
 ! CHECK: acc.declare_enter dataOperands(%[[LINK]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (i32)
@@ -147,7 +147,7 @@ module acc_declare
 
 ! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_device_resident(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"})
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} {acc.declare = #acc.declare<dataClause =  acc_declare_device_resident>, uniq_name = "_QMacc_declareFacc_declare_device_residentEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {acc.declare = #acc.declare<dataClause =  acc_declare_device_resident>, uniq_name = "_QMacc_declareFacc_declare_device_residentEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %[[DEVICERES:.*]] = acc.declare_device_resident varPtr(%[[DECL]]#0 : !fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
 ! CHECK: %[[TOKEN:.*]] = acc.declare_enter dataOperands(%[[DEVICERES]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (i32)
@@ -274,8 +274,8 @@ module acc_declare
 
 ! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_multiple_directive(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "b"}) {
-! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} {acc.declare = #acc.declare<dataClause =  acc_copy>, uniq_name = "_QMacc_declareFacc_declare_multiple_directiveEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
-! CHECK: %[[DECL_B:.*]]:2 = hlfir.declare %[[ARG1]](%{{.*}}) dummy_scope %{{[0-9]+}} {acc.declare = #acc.declare<dataClause =  acc_copyout>, uniq_name = "_QMacc_declareFacc_declare_multiple_directiveEb"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
+! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {acc.declare = #acc.declare<dataClause =  acc_copy>, uniq_name = "_QMacc_declareFacc_declare_multiple_directiveEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
+! CHECK: %[[DECL_B:.*]]:2 = hlfir.declare %[[ARG1]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {acc.declare = #acc.declare<dataClause =  acc_copyout>, uniq_name = "_QMacc_declareFacc_declare_multiple_directiveEb"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[DECL_A]]#0 : !fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>> {dataClause = #acc<data_clause acc_copy>, name = "a"}
 ! CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[DECL_B]]#0 : !fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>> {dataClause = #acc<data_clause acc_copyout>, name = "b"}
 ! CHECK: acc.declare_enter dataOperands(%[[COPYIN]], %[[CREATE]] : !fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
@@ -296,7 +296,7 @@ module acc_declare
 
 ! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_array_section(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}) {
-! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {acc.declare = #acc.declare<dataClause = acc_copy>, uniq_name = "_QMacc_declareFacc_declare_array_sectionEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {acc.declare = #acc.declare<dataClause = acc_copy>, uniq_name = "_QMacc_declareFacc_declare_array_sectionEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CHECK: %[[COPYIN:.*]] = acc.copyin var(%[[DECL_A]]#0 : !fir.box<!fir.array<?xi32>>) bounds(%{{.*}}) -> !fir.box<!fir.array<?xi32>> {dataClause = #acc<data_clause acc_copy>, name = "a(1:10)"}
 ! CHECK: acc.declare_enter dataOperands(%[[COPYIN]] : !fir.box<!fir.array<?xi32>>)
 

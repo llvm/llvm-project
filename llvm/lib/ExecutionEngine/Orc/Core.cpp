@@ -713,12 +713,7 @@ JITDylib::defineMaterializing(MaterializationResponsibility &FromMR,
     std::vector<NonOwningSymbolStringPtr> AddedSyms;
     std::vector<NonOwningSymbolStringPtr> RejectedWeakDefs;
 
-    for (auto SFItr = SymbolFlags.begin(), SFEnd = SymbolFlags.end();
-         SFItr != SFEnd; ++SFItr) {
-
-      auto &Name = SFItr->first;
-      auto &Flags = SFItr->second;
-
+    for (auto &[Name, Flags] : SymbolFlags) {
       auto EntryItr = Symbols.find(Name);
 
       // If the entry already exists...

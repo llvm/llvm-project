@@ -269,11 +269,12 @@ body:            |
     S_ENDPGM 0
 ...
 
-# GCN-LABEL: name: no_hazard_lds_branch_flat
+# GCN-LABEL: name: hazard_lds_branch_flat
 # GCN:      bb.1:
+# GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
 # GCN-NEXT: FLAT_LOAD_DWORD
 ---
-name:            no_hazard_lds_branch_flat
+name:            hazard_lds_branch_flat
 body:            |
   bb.0:
     successors: %bb.1

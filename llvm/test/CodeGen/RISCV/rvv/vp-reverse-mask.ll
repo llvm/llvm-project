@@ -304,10 +304,3 @@ define <vscale x 64 x i1> @test_vp_reverse_nxv64i1(<vscale x 64 x i1> %src, i32 
   ret <vscale x 64 x i1> %dst
 }
 
-declare <vscale x 1 x i1> @llvm.experimental.vp.reverse.nxv1i1(<vscale x 1 x i1>,<vscale x 1 x i1>,i32)
-declare <vscale x 2 x i1> @llvm.experimental.vp.reverse.nxv2i1(<vscale x 2 x i1>,<vscale x 2 x i1>,i32)
-declare <vscale x 4 x i1> @llvm.experimental.vp.reverse.nxv4i1(<vscale x 4 x i1>,<vscale x 4 x i1>,i32)
-declare <vscale x 8 x i1> @llvm.experimental.vp.reverse.nxv8i1(<vscale x 8 x i1>,<vscale x 8 x i1>,i32)
-declare <vscale x 16 x i1> @llvm.experimental.vp.reverse.nxv16i1(<vscale x 16 x i1>,<vscale x 16 x i1>,i32)
-declare <vscale x 32 x i1> @llvm.experimental.vp.reverse.nxv32i1(<vscale x 32 x i1>,<vscale x 32 x i1>,i32)
-declare <vscale x 64 x i1> @llvm.experimental.vp.reverse.nxv64i1(<vscale x 64 x i1>,<vscale x 64 x i1>,i32)

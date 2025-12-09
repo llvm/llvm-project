@@ -8,6 +8,7 @@
 
 #include "lldb/Host/File.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
@@ -35,7 +36,7 @@ TEST(File, GetWaitableHandleFileno) {
   FILE *stream = fdopen(fd, "r");
   ASSERT_TRUE(stream);
 
-  NativeFile file(stream, true);
+  NativeFile file(stream, File::eOpenOptionReadWrite, true);
 #ifdef _WIN32
   EXPECT_EQ(file.GetWaitableHandle(), (HANDLE)_get_osfhandle(fd));
 #else
@@ -66,4 +67,23 @@ TEST(File, GetStreamFromDescriptor) {
 #else
   EXPECT_EQ(file.GetWaitableHandle(), (file_t)fd);
 #endif
+}
+
+TEST(File, ReadOnlyModeNotWritable) {
+  const auto *Info = testing::UnitTest::GetInstance()->current_test_info();
+  llvm::SmallString<128> name;
+  int fd;
+  llvm::sys::fs::createTemporaryFile(llvm::Twine(Info->test_case_name()) + "-" +
+                                         Info->name(),
+                                     "test", fd, name);
+
+  llvm::FileRemover remover(name);
+  ASSERT_GE(fd, 0);
+
+  NativeFile file(fd, File::eOpenOptionReadOnly, true);
+  ASSERT_TRUE(file.IsValid());
+  llvm::StringLiteral buf = "Hello World";
+  size_t bytes_written = buf.size();
+  Status error = file.Write(buf.data(), bytes_written);
+  EXPECT_EQ(error.Fail(), true);
 }

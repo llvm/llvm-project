@@ -2091,4 +2091,21 @@ TEST(ExprMutationAnalyzerTest, PointeeMutatedByPointerToMemberOperator) {
   EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
 }
 
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByPassAsPointerToPointer) {
+  {
+    const std::string Code = "void f(int**); void g() { int* ip; f(&ip); }";
+    auto AST = buildASTFromCode(Code);
+    auto Results =
+        match(withEnclosingCompound(declRefTo("ip")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = "void f(void**); void g() { void* ip; f(&ip); }";
+    auto AST = buildASTFromCode(Code);
+    auto Results =
+        match(withEnclosingCompound(declRefTo("ip")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
 } // namespace clang

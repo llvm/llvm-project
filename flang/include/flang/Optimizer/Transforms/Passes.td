@@ -81,10 +81,13 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
   let description = [{
     Convert FIR structured control flow ops to SCF dialect.
   }];
-  let constructor = "::fir::createFIRToSCFPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::scf::SCFDialect"
   ];
+  let options = [Option<"parallelUnordered", "parallel-unordered", "bool",
+                        /*default=*/"false",
+                        "Allow converting a fir.do_loop with the `unordered` "
+                        "attribute to scf.parallel (experimental).">];
 }
 
 def AnnotateConstantOperands : Pass<"annotate-constant"> {
@@ -467,11 +470,19 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
   ];
 }
 
+def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
+  let summary = "Convert allocation related CUF operations to runtime calls";
+  let dependentDialects = ["fir::FIROpsDialect"];
+}
+
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::gpu::GPUDialect", "mlir::DLTIDialect"
   ];
+  let options = [Option<"allocationConversion", "allocation-conversion", "bool",
+                        /*default=*/"true",
+                        "Convert allocation related operation with this pass">];
 }
 
 def CUFDeviceGlobal :

@@ -21,7 +21,6 @@
 
 #include <atomic>
 #include <shared_mutex>
-#include <unordered_map>
 
 namespace llvm {
 namespace orc {
