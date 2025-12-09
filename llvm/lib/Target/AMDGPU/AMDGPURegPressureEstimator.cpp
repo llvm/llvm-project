@@ -19,6 +19,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -36,7 +37,7 @@ namespace {
 // Returns VGPR cost in half-registers (16-bit units).
 // Returns 0 for SGPRs, constants, uniform values, and i1 types.
 static unsigned getVgprCost(Value *V, const DataLayout &DL,
-                            const UniformityInfo &UA) {
+                            const UniformityInfo &UA, bool UseRealTrue16) {
   if (!V)
     return 0;
 
@@ -51,11 +52,11 @@ static unsigned getVgprCost(Value *V, const DataLayout &DL,
   if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
     unsigned AS = PtrTy->getAddressSpace();
     switch (AS) {
-    case 7:
+    case AMDGPUAS::BUFFER_FAT_POINTER:
       return 2; // offset
-    case 8:
+    case AMDGPUAS::BUFFER_RESOURCE:
       return 0;
-    case 9:
+    case AMDGPUAS::BUFFER_STRIDED_POINTER:
       return 4; // offset + index
     default:
       unsigned BitWidth = DL.getPointerSizeInBits(AS);
@@ -67,8 +68,9 @@ static unsigned getVgprCost(Value *V, const DataLayout &DL,
   if (Ty->isIntegerTy())
     return ((BitWidth + 31) / 32) * 2;
 
-  // Assuming RealTrue16 on
-  return (BitWidth + 15) / 16;
+  if (UseRealTrue16)
+    return (BitWidth + 15) / 16;
+  return ((BitWidth + 31) / 32) * 2;
 }
 
 // Caches block-to-block reachability queries to avoid redundant BFS traversals.
@@ -86,7 +88,7 @@ public:
   ReachabilityCache(DominatorTree &DT, PostDominatorTree *PDT)
       : PDT(PDT), DT(DT) {}
 
-  template <typename RPOTType> void initRPO(RPOTType &RPOT) {
+  void initRPO(ReversePostOrderTraversal<Function *> &RPOT) {
     unsigned Idx = 0;
     for (auto *BB : RPOT)
       RPOIndex[BB] = Idx++;
@@ -173,19 +175,23 @@ private:
   }
 };
 
-static bool isValueDead(Value *V, Instruction *I, ReachabilityCache &Cache) {
+// Checks if a value becomes dead after a specific instruction.
+// Returns true if V has no uses reachable from AfterInst, meaning V's
+// live range ends at AfterInst and can be removed from the pressure tracking.
+static bool isValueDead(Value *V, Instruction *AfterInst,
+                        ReachabilityCache &Cache) {
   for (User *U : V->users()) {
     Instruction *UseInst = dyn_cast<Instruction>(U);
     if (!UseInst)
       continue;
 
-    if (UseInst == I)
+    if (UseInst == AfterInst)
       continue;
 
-    if (Cache.DT.dominates(UseInst, I))
+    if (Cache.DT.dominates(UseInst, AfterInst))
       continue;
 
-    if (Cache.isReachable(I, UseInst))
+    if (Cache.isReachable(AfterInst, UseInst))
       return false;
   }
 
@@ -205,18 +211,39 @@ private:
   DenseSet<Value *> GlobalDeadSet;
   ReachabilityCache ReachCache;
   unsigned MaxPressureHalfRegs = 0;
+  bool UseRealTrue16;
 
 public:
   AMDGPURegPressureEstimator(Function &F, DominatorTree &DT,
                              PostDominatorTree *PDT, const UniformityInfo &UA)
       : F(F), DT(DT), PDT(PDT), UA(UA), DL(F.getParent()->getDataLayout()),
-        ReachCache(DT, PDT) {}
+        ReachCache(DT, PDT) {
+    // Check if real-true16 feature is enabled for this function.
+    Attribute FSAttr = F.getFnAttribute("target-features");
+    UseRealTrue16 = FSAttr.isValid() &&
+                    FSAttr.getValueAsString().contains("+real-true16");
+  }
 
   unsigned getMaxVGPRs() const { return (MaxPressureHalfRegs + 1) / 2; }
 
   void analyze() {
     LLVM_DEBUG(dbgs() << "Analyzing function: " << F.getName() << "\n");
 
+    // Main algorithm: Forward dataflow analysis in reverse post-order (RPO)
+    //
+    // RPO traversal ensures that:
+    // 1. Each block is visited after all its predecessors (except back edges)
+    // 2. Loop headers are visited before loop bodies
+    // 3. This allows accurate propagation of live value information
+    //
+    // For each basic block, we:
+    // 1. Merge live-in states from all predecessors
+    // 2. Process instructions sequentially, tracking:
+    //    - New values becoming live (instruction results)
+    //    - Values becoming dead (last use detected)
+    //    - Special handling for insert/extract operations
+    // 3. Record live-out state for use by successors
+    // 4. Track maximum pressure seen at any program point
     DenseMap<BasicBlock *, DenseMap<Value *, unsigned>> BlockExitStates;
 
     ReversePostOrderTraversal<Function *> RPOT(&F);
@@ -227,7 +254,7 @@ public:
     for (Argument &Arg : F.args()) {
       if (Arg.use_empty())
         continue;
-      unsigned Cost = getVgprCost(&Arg, DL, UA);
+      unsigned Cost = getVgprCost(&Arg, DL, UA, UseRealTrue16);
       if (Cost > 0)
         EntryLiveMap[&Arg] = Cost;
     }
@@ -290,6 +317,24 @@ private:
       if (I.isDebugOrPseudoInst())
         continue;
 
+      // Process instruction result: determine if it creates a new live VGPR value
+      //
+      // Three cases with different pressure impacts:
+      //
+      // Case 1: Insert operations (insertelement, insertvalue)
+      //   - Conservative approach: assume both aggregate and inserted value are live
+      //   - Pressure increase = aggregate_cost + inserted_value_cost
+      //   - Rationale: Without dataflow, we can't track which vector lanes are live
+      //
+      // Case 2: Extract operations (extractelement, extractvalue)
+      //   - Extract creates a new live value (extract_cost)
+      //   - Source aggregate cost can be reduced by extract_cost
+      //   - Handles partial liveness of vectors/aggregates
+      //   - Only applies if source is a tracked VGPR value
+      //
+      // Case 3: Other operations
+      //   - Result becomes live only if it has at least one live VGPR operand
+      //   - This prevents counting operations on uniform/constant values
       if (!I.getType()->isVoidTy() && !I.use_empty()) {
         if (isa<InsertElementInst>(&I) || isa<InsertValueInst>(&I)) {
           Value *Aggregate = nullptr;
@@ -320,7 +365,7 @@ private:
 
           bool IsSourceVGPR = Source && CurrentLiveMap.count(Source);
 
-          unsigned ExtractCost = getVgprCost(&I, DL, UA);
+          unsigned ExtractCost = getVgprCost(&I, DL, UA, UseRealTrue16);
 
           if (ExtractCost > 0 && IsSourceVGPR) {
             CurrentLiveMap[&I] = ExtractCost;
@@ -351,7 +396,7 @@ private:
           }
 
           if (HasLiveVgprOperand) {
-            unsigned Cost = getVgprCost(&I, DL, UA);
+            unsigned Cost = getVgprCost(&I, DL, UA, UseRealTrue16);
 
             if (Cost > 0) {
               CurrentLiveMap[&I] = Cost;
@@ -361,6 +406,7 @@ private:
         }
       }
 
+      // Kill dead values: check if any operand's last use is at this instruction
       for (Use &Op : I.operands()) {
         Value *V = Op.get();
         if (isa<Constant>(V) || isa<BasicBlock>(V))
@@ -396,17 +442,17 @@ private:
   }
 };
 
-} // end anonymous namespace
-
-namespace llvm {
-
-unsigned computeMaxVGPRPressure(Function &F, DominatorTree &DT,
-                                PostDominatorTree *PDT,
-                                const UniformityInfo &UA) {
-  ::AMDGPURegPressureEstimator Estimator(F, DT, PDT, UA);
+static unsigned computeMaxVGPRPressure(Function &F, DominatorTree &DT,
+                                       PostDominatorTree *PDT,
+                                       const UniformityInfo &UA) {
+  AMDGPURegPressureEstimator Estimator(F, DT, PDT, UA);
   Estimator.analyze();
   return Estimator.getMaxVGPRs();
 }
+
+} // end anonymous namespace
+
+namespace llvm {
 
 AnalysisKey AMDGPURegPressureEstimatorAnalysis::Key;
 
