@@ -382,6 +382,21 @@ func.func @broadcast_scalar_extsi_scalable(%a : i8) -> vector<2x[4]xi32> {
   return %r : vector<2x[4]xi32>
 }
 
+// -----
+
+// CHECK-LABEL: func.func @negative_broadcast_cast_non_vector_result
+// CHECK-SAME: (%[[ARG:.*]]: i64)
+// CHECK: %[[BCAST:.*]] = vector.broadcast %[[ARG]] : i64 to vector<26x7xi64>
+// CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[BCAST]] : vector<26x7xi64> to !llvm.array<26 x vector<7xi64>>
+// CHECK: return %[[CAST]] : !llvm.array<26 x vector<7xi64>>
+/// This test ensures that the `ReorderCastOpsOnBroadcast` pattern does not
+/// attempt to reorder a cast operation that produces a non-vector result type.
+func.func @negative_broadcast_cast_non_vector_result(%arg0: i64) -> !llvm.array<26 x vector<7xi64>> {
+  %0 = vector.broadcast %arg0 : i64 to vector<26x7xi64>
+  %1 = builtin.unrealized_conversion_cast %0 : vector<26x7xi64> to !llvm.array<26 x vector<7xi64>>
+  return %1 : !llvm.array<26 x vector<7xi64>>
+}
+
 //===----------------------------------------------------------------------===//
 // [Pattern: ReorderElementwiseOpsOnTranspose]
 //===----------------------------------------------------------------------===//
@@ -849,21 +864,4 @@ func.func @negative_store_no_single_use(%arg0: memref<?xf32>, %arg1: index, %arg
   %0 = vector.broadcast %arg2 : f32 to vector<1xf32>
   vector.store %0, %arg0[%arg1] : memref<?xf32>, vector<1xf32>
   return %0 : vector<1xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func.func @broadcast_cast_non_vector_result
-// CHECK-SAME: (%[[ARG:.*]]: i64)
-// CHECK: %[[BCAST:.*]] = vector.broadcast %[[ARG]] : i64 to vector<26x7xi64>
-// CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[BCAST]] : vector<26x7xi64> to !llvm.array<26 x vector<7xi64>>
-// CHECK: return %[[CAST]] : !llvm.array<26 x vector<7xi64>>
-/// This test ensures that the `ReorderCastOpsOnBroadcast` pattern does not
-/// attempt to reorder a cast operation that produces a non-vector result type.
-/// Previously, this would crash because the pattern assumed the result was a
-/// vector type when creating the new inner broadcast.
-func.func @broadcast_cast_non_vector_result(%arg0: i64) -> !llvm.array<26 x vector<7xi64>> {
-  %0 = vector.broadcast %arg0 : i64 to vector<26x7xi64>
-  %1 = builtin.unrealized_conversion_cast %0 : vector<26x7xi64> to !llvm.array<26 x vector<7xi64>>
-  return %1 : !llvm.array<26 x vector<7xi64>>
 }
