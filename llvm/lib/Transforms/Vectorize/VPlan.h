@@ -2073,10 +2073,6 @@ protected:
 class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
-  bool isIndexLoopInvariant(unsigned I) const {
-    return getOperand(I + 1)->isDefinedOutsideLoopRegions();
-  }
-
 public:
   VPWidenGEPRecipe(GetElementPtrInst *GEP, ArrayRef<VPValue *> Operands,
                    const VPIRFlags &Flags = {},
@@ -2106,17 +2102,8 @@ public:
     return getOperand(0)->isDefinedOutsideLoopRegions();
   }
 
-  std::optional<unsigned> getUniqueVariantIndex() const {
-    std::optional<unsigned> VarIdx;
-    for (unsigned I = 0, E = getNumOperands() - 1; I < E; ++I) {
-      if (isIndexLoopInvariant(I))
-        continue;
-
-      if (VarIdx)
-        return std::nullopt;
-      VarIdx = I;
-    }
-    return VarIdx;
+  bool isIndexLoopInvariant(unsigned I) const {
+    return getOperand(I + 1)->isDefinedOutsideLoopRegions();
   }
 
   /// Returns the element type for the first \p I indices of this recipe.

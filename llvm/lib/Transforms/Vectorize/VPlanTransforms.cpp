@@ -6034,17 +6034,25 @@ determineBaseAndStride(VPWidenGEPRecipe *WidenGEP) {
     return {nullptr, nullptr, nullptr};
 
   // Find the only one variant index.
-  std::optional<unsigned> VarIndex = WidenGEP->getUniqueVariantIndex();
-  if (!VarIndex)
+  unsigned VarOp = 0;
+  for (unsigned I = 1, E = WidenGEP->getNumOperands(); I < E; ++I) {
+    if (WidenGEP->isIndexLoopInvariant(I - 1))
+      continue;
+
+    if (VarOp != 0)
+      return {nullptr, nullptr, nullptr};
+    VarOp = I;
+  }
+
+  if (!VarOp)
     return {nullptr, nullptr, nullptr};
 
-  Type *ElementTy = WidenGEP->getIndexedType(*VarIndex);
+  Type *ElementTy = WidenGEP->getIndexedType(VarOp - 1);
   assert(!ElementTy->isScalableTy() && !ElementTy->isVectorTy() &&
          "Unexpected indexed type");
   if (ElementTy->isStructTy())
     return {nullptr, nullptr, nullptr};
 
-  unsigned VarOp = *VarIndex + 1;
   VPValue *IndexVPV = WidenGEP->getOperand(VarOp);
   auto [Start, Stride] = matchStridedStart(IndexVPV);
   if (!Start)
