@@ -6050,8 +6050,9 @@ determineBaseAndStride(VPWidenGEPRecipe *WidenGEP) {
     return {nullptr, nullptr, nullptr};
 
   Type *ElementTy = WidenGEP->getIndexedType(*VarIndex);
-  if (ElementTy->isScalableTy() || ElementTy->isStructTy() ||
-      ElementTy->isVectorTy())
+  assert(!ElementTy->isScalableTy() && !ElementTy->isVectorTy() &&
+         "Unexpected indexed type");
+  if (ElementTy->isStructTy())
     return {nullptr, nullptr, nullptr};
 
   unsigned VarOp = *VarIndex + 1;
