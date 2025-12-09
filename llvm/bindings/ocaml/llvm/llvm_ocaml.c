@@ -1165,12 +1165,6 @@ value llvm_const_nsw_neg(value Value) {
 }
 
 /* llvalue -> llvalue */
-value llvm_const_nuw_neg(value Value) {
-  LLVMValueRef NegValue = LLVMConstNUWNeg(Value_val(Value));
-  return to_val(NegValue);
-}
-
-/* llvalue -> llvalue */
 value llvm_const_not(value Value) {
   LLVMValueRef NotValue = LLVMConstNot(Value_val(Value));
   return to_val(NotValue);
