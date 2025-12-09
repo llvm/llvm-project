@@ -43,37 +43,38 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
   if (!HeaderOrErr)
     return HeaderOrErr.takeError();
   const OffloadBinary::Header *Header = *HeaderOrErr;
-
-  switch (Header->Version) {
-  case 1: {
-    uint64_t Offset = 0;
-    // There could be multiple offloading binaries stored at this section.
-    while (Offset < Contents.getBuffer().size()) {
-      std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBuffer(
-          Contents.getBuffer().drop_front(Offset), "",
-          /*RequiresNullTerminator*/ false);
-      if (!isAddrAligned(Align(OffloadBinary::getAlignment()),
-                         Buffer->getBufferStart()))
-        Buffer = MemoryBuffer::getMemBufferCopy(Buffer->getBuffer(),
-                                                Buffer->getBufferIdentifier());
-      auto BinaryOrErr = OffloadBinary::createV1(*Buffer);
+  // THINKING IS IN PROGRESS BELOW. NOT READY FOR COMMENTS/REVIEW.
+  uint64_t Offset = 0;
+  // There could be multiple offloading binaries stored at this section.
+  while (Offset < Contents.getBuffer().size()) {
+    Buffer =
+        MemoryBuffer::getMemBuffer(Contents.getBuffer().drop_front(Offset), "",
+                                   /*RequiresNullTerminator*/ false);
+    if (!isAddrAligned(Align(OffloadBinary::getAlignment()),
+                       Buffer->getBufferStart()))
+      Buffer = MemoryBuffer::getMemBufferCopy(Buffer->getBuffer(),
+                                              Buffer->getBufferIdentifier());
+    if (Header->Version == 1) {
+      auto BinaryOrErr = OffloadBinary::create(*Buffer);
       if (!BinaryOrErr)
         return BinaryOrErr.takeError();
       OffloadBinary &Binary = **BinaryOrErr;
-      // Create a new owned binary with a copy of the original memory.
-      std::unique_ptr<MemoryBuffer> BufferCopy = MemoryBuffer::getMemBufferCopy(
+
+      // Create a new binary with a buffer containing only the current binary.
+      Buffer = MemoryBuffer::getMemBuffer(
           Binary.getData().take_front(Binary.getSize()),
           Contents.getBufferIdentifier());
-      auto NewBinaryOrErr = OffloadBinary::createV1(*BufferCopy);
+      auto NewBinaryOrErr = OffloadBinary::create(*Buffer);
       if (!NewBinaryOrErr)
         return NewBinaryOrErr.takeError();
-      Binaries.emplace_back(std::move(*NewBinaryOrErr), std::move(BufferCopy));
-      Offset += Binary.getSize();
-    }
-  } break;
-  case 2: {
+      Binaries.emplace_back(std::move(*NewBinaryOrErr), std::move(Buffer));
 
-  } break;
+      Offset += Binary.getSize();
+      continue;
+    }
+    // Create new memory buffer containing only the current binary
+    Buffer = MemoryBuffer::getMemBuffer(Buffer->getBuffer().take_front(Header->Size),
+                                        Contents.getBufferIdentifier());
   }
 
   return Error::success();
