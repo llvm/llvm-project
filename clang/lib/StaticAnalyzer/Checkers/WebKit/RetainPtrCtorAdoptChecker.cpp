@@ -355,15 +355,37 @@ public:
   void visitBinaryOperator(const BinaryOperator *BO) const {
     if (!BO->isAssignmentOp())
       return;
-    if (!isa<ObjCIvarRefExpr>(BO->getLHS()))
-      return;
+    auto *LHS = BO->getLHS();
     auto *RHS = BO->getRHS()->IgnoreParenCasts();
-    const Expr *Inner = nullptr;
-    if (isAllocInit(RHS, &Inner)) {
-      CreateOrCopyFnCall.insert(RHS);
-      if (Inner)
-        CreateOrCopyFnCall.insert(Inner);
+    if (isa<ObjCIvarRefExpr>(LHS)) {
+      const Expr *Inner = nullptr;
+      if (isAllocInit(RHS, &Inner)) {
+        CreateOrCopyFnCall.insert(RHS);
+        if (Inner)
+          CreateOrCopyFnCall.insert(Inner);
+      }
+      return;
     }
+    auto *UO = dyn_cast<UnaryOperator>(LHS);
+    if (!UO)
+      return;
+    auto OpCode = UO->getOpcode();
+    if (OpCode != UO_Deref)
+      return;
+    auto *DerefTarget = UO->getSubExpr();
+    if (!DerefTarget)
+      return;
+    DerefTarget = DerefTarget->IgnoreParenCasts();
+    auto *DRE = dyn_cast<DeclRefExpr>(DerefTarget);
+    if (!DRE)
+      return;
+    auto *Decl = DRE->getDecl();
+    if (!Decl)
+      return;
+    if (!isa<ParmVarDecl>(Decl) || !isCreateOrCopy(RHS))
+      return;
+    if (Decl->hasAttr<CFReturnsRetainedAttr>())
+      CreateOrCopyFnCall.insert(RHS);
   }
 
   void visitReturnStmt(const ReturnStmt *RS, const Decl *DeclWithIssue) const {
