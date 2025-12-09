@@ -2802,7 +2802,10 @@ void RISCVTTIImpl::getUnrollingPreferences(
       // Both auto-vectorized loops and the scalar remainder have the
       // isvectorized attribute, so differentiate between them by the presence
       // of vector instructions.
-      if (IsVectorized && I.getType()->isVectorTy())
+      if (IsVectorized && (I.getType()->isVectorTy() ||
+                           llvm::any_of(I.operand_values(), [](Value *V) {
+                             return V->getType()->isVectorTy();
+                           })))
         return;
 
       if (isa<CallInst>(I) || isa<InvokeInst>(I)) {

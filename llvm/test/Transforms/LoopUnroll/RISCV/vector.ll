@@ -670,104 +670,23 @@ exit:
 }
 
 define void @vector_operands(ptr %p, i64 %n) {
-; CHECK-LABEL: define void @vector_operands(
-; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i64, ptr [[P]], i64 [[EVL_BASED_IV]]
-; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[ADDR]], <vscale x 2 x i1> splat (i1 true), i32 [[VL]])
-; CHECK-NEXT:    [[VL_ZEXT:%.*]] = zext i32 [[VL]] to i64
-; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[VL_ZEXT]], [[EVL_BASED_IV]]
-; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[VL_ZEXT]]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP0]], label %[[EXIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP2]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
-;
-; SIFIVE-LABEL: define void @vector_operands(
-; SIFIVE-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SIFIVE-NEXT:  [[ENTRY:.*]]:
-; SIFIVE-NEXT:    br label %[[VECTOR_BODY:.*]]
-; SIFIVE:       [[VECTOR_BODY]]:
-; SIFIVE-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_EVL_NEXT_7:%.*]], %[[VECTOR_BODY_7:.*]] ]
-; SIFIVE-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[AVL_NEXT_7:%.*]], %[[VECTOR_BODY_7]] ]
-; SIFIVE-NEXT:    [[VL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; SIFIVE-NEXT:    [[ADDR:%.*]] = getelementptr i64, ptr [[P]], i64 [[EVL_BASED_IV]]
-; SIFIVE-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[ADDR]], <vscale x 2 x i1> splat (i1 true), i32 [[VL]])
-; SIFIVE-NEXT:    [[VL_ZEXT:%.*]] = zext i32 [[VL]] to i64
-; SIFIVE-NEXT:    [[INDEX_EVL_NEXT:%.*]] = add nuw i64 [[VL_ZEXT]], [[EVL_BASED_IV]]
-; SIFIVE-NEXT:    [[AVL_NEXT:%.*]] = sub nuw i64 [[AVL]], [[VL_ZEXT]]
-; SIFIVE-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; SIFIVE-NEXT:    br i1 [[TMP0]], label %[[EXIT:.*]], label %[[VECTOR_BODY_1:.*]], !llvm.loop [[LOOP2]]
-; SIFIVE:       [[VECTOR_BODY_1]]:
-; SIFIVE-NEXT:    [[VL_1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL_NEXT]], i32 2, i1 true)
-; SIFIVE-NEXT:    [[ADDR_1:%.*]] = getelementptr i64, ptr [[P]], i64 [[INDEX_EVL_NEXT]]
-; SIFIVE-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[ADDR_1]], <vscale x 2 x i1> splat (i1 true), i32 [[VL_1]])
-; SIFIVE-NEXT:    [[VL_ZEXT_1:%.*]] = zext i32 [[VL_1]] to i64
-; SIFIVE-NEXT:    [[INDEX_EVL_NEXT_1:%.*]] = add nuw i64 [[VL_ZEXT_1]], [[INDEX_EVL_NEXT]]
-; SIFIVE-NEXT:    [[AVL_NEXT_1:%.*]] = sub nuw i64 [[AVL_NEXT]], [[VL_ZEXT_1]]
-; SIFIVE-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[AVL_NEXT_1]], 0
-; SIFIVE-NEXT:    br i1 [[TMP1]], label %[[EXIT]], label %[[VECTOR_BODY_2:.*]], !llvm.loop [[LOOP2]]
-; SIFIVE:       [[VECTOR_BODY_2]]:
-; SIFIVE-NEXT:    [[VL_2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL_NEXT_1]], i32 2, i1 true)
-; SIFIVE-NEXT:    [[ADDR_2:%.*]] = getelementptr i64, ptr [[P]], i64 [[INDEX_EVL_NEXT_1]]
-; SIFIVE-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[ADDR_2]], <vscale x 2 x i1> splat (i1 true), i32 [[VL_2]])
-; SIFIVE-NEXT:    [[VL_ZEXT_2:%.*]] = zext i32 [[VL_2]] to i64
-; SIFIVE-NEXT:    [[INDEX_EVL_NEXT_2:%.*]] = add nuw i64 [[VL_ZEXT_2]], [[INDEX_EVL_NEXT_1]]
-; SIFIVE-NEXT:    [[AVL_NEXT_2:%.*]] = sub nuw i64 [[AVL_NEXT_1]], [[VL_ZEXT_2]]
-; SIFIVE-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[AVL_NEXT_2]], 0
-; SIFIVE-NEXT:    br i1 [[TMP2]], label %[[EXIT]], label %[[VECTOR_BODY_3:.*]], !llvm.loop [[LOOP2]]
-; SIFIVE:       [[VECTOR_BODY_3]]:
-; SIFIVE-NEXT:    [[VL_3:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL_NEXT_2]], i32 2, i1 true)
-; SIFIVE-NEXT:    [[ADDR_3:%.*]] = getelementptr i64, ptr [[P]], i64 [[INDEX_EVL_NEXT_2]]
-; SIFIVE-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[ADDR_3]], <vscale x 2 x i1> splat (i1 true), i32 [[VL_3]])
-; SIFIVE-NEXT:    [[VL_ZEXT_3:%.*]] = zext i32 [[VL_3]] to i64
-; SIFIVE-NEXT:    [[INDEX_EVL_NEXT_3:%.*]] = add nuw i64 [[VL_ZEXT_3]], [[INDEX_EVL_NEXT_2]]
-; SIFIVE-NEXT:    [[AVL_NEXT_3:%.*]] = sub nuw i64 [[AVL_NEXT_2]], [[VL_ZEXT_3]]
-; SIFIVE-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[AVL_NEXT_3]], 0
-; SIFIVE-NEXT:    br i1 [[TMP3]], label %[[EXIT]], label %[[VECTOR_BODY_4:.*]], !llvm.loop [[LOOP2]]
-; SIFIVE:       [[VECTOR_BODY_4]]:
-; SIFIVE-NEXT:    [[VL_4:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL_NEXT_3]], i32 2, i1 true)
-; SIFIVE-NEXT:    [[ADDR_4:%.*]] = getelementptr i64, ptr [[P]], i64 [[INDEX_EVL_NEXT_3]]
-; SIFIVE-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[ADDR_4]], <vscale x 2 x i1> splat (i1 true), i32 [[VL_4]])
-; SIFIVE-NEXT:    [[VL_ZEXT_4:%.*]] = zext i32 [[VL_4]] to i64
-; SIFIVE-NEXT:    [[INDEX_EVL_NEXT_4:%.*]] = add nuw i64 [[VL_ZEXT_4]], [[INDEX_EVL_NEXT_3]]
-; SIFIVE-NEXT:    [[AVL_NEXT_4:%.*]] = sub nuw i64 [[AVL_NEXT_3]], [[VL_ZEXT_4]]
-; SIFIVE-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[AVL_NEXT_4]], 0
-; SIFIVE-NEXT:    br i1 [[TMP4]], label %[[EXIT]], label %[[VECTOR_BODY_5:.*]], !llvm.loop [[LOOP2]]
-; SIFIVE:       [[VECTOR_BODY_5]]:
-; SIFIVE-NEXT:    [[VL_5:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL_NEXT_4]], i32 2, i1 true)
-; SIFIVE-NEXT:    [[ADDR_5:%.*]] = getelementptr i64, ptr [[P]], i64 [[INDEX_EVL_NEXT_4]]
-; SIFIVE-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[ADDR_5]], <vscale x 2 x i1> splat (i1 true), i32 [[VL_5]])
-; SIFIVE-NEXT:    [[VL_ZEXT_5:%.*]] = zext i32 [[VL_5]] to i64
-; SIFIVE-NEXT:    [[INDEX_EVL_NEXT_5:%.*]] = add nuw i64 [[VL_ZEXT_5]], [[INDEX_EVL_NEXT_4]]
-; SIFIVE-NEXT:    [[AVL_NEXT_5:%.*]] = sub nuw i64 [[AVL_NEXT_4]], [[VL_ZEXT_5]]
-; SIFIVE-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[AVL_NEXT_5]], 0
-; SIFIVE-NEXT:    br i1 [[TMP5]], label %[[EXIT]], label %[[VECTOR_BODY_6:.*]], !llvm.loop [[LOOP2]]
-; SIFIVE:       [[VECTOR_BODY_6]]:
-; SIFIVE-NEXT:    [[VL_6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL_NEXT_5]], i32 2, i1 true)
-; SIFIVE-NEXT:    [[ADDR_6:%.*]] = getelementptr i64, ptr [[P]], i64 [[INDEX_EVL_NEXT_5]]
-; SIFIVE-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[ADDR_6]], <vscale x 2 x i1> splat (i1 true), i32 [[VL_6]])
-; SIFIVE-NEXT:    [[VL_ZEXT_6:%.*]] = zext i32 [[VL_6]] to i64
-; SIFIVE-NEXT:    [[INDEX_EVL_NEXT_6:%.*]] = add nuw i64 [[VL_ZEXT_6]], [[INDEX_EVL_NEXT_5]]
-; SIFIVE-NEXT:    [[AVL_NEXT_6:%.*]] = sub nuw i64 [[AVL_NEXT_5]], [[VL_ZEXT_6]]
-; SIFIVE-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[AVL_NEXT_6]], 0
-; SIFIVE-NEXT:    br i1 [[TMP6]], label %[[EXIT]], label %[[VECTOR_BODY_7]], !llvm.loop [[LOOP2]]
-; SIFIVE:       [[VECTOR_BODY_7]]:
-; SIFIVE-NEXT:    [[VL_7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL_NEXT_6]], i32 2, i1 true)
-; SIFIVE-NEXT:    [[ADDR_7:%.*]] = getelementptr i64, ptr [[P]], i64 [[INDEX_EVL_NEXT_6]]
-; SIFIVE-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[ADDR_7]], <vscale x 2 x i1> splat (i1 true), i32 [[VL_7]])
-; SIFIVE-NEXT:    [[VL_ZEXT_7:%.*]] = zext i32 [[VL_7]] to i64
-; SIFIVE-NEXT:    [[INDEX_EVL_NEXT_7]] = add nuw i64 [[VL_ZEXT_7]], [[INDEX_EVL_NEXT_6]]
-; SIFIVE-NEXT:    [[AVL_NEXT_7]] = sub nuw i64 [[AVL_NEXT_6]], [[VL_ZEXT_7]]
-; SIFIVE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[AVL_NEXT_7]], 0
-; SIFIVE-NEXT:    br i1 [[TMP7]], label %[[EXIT]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP2]]
-; SIFIVE:       [[EXIT]]:
-; SIFIVE-NEXT:    ret void
+; COMMON-LABEL: define void @vector_operands(
+; COMMON-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:  [[ENTRY:.*]]:
+; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COMMON:       [[VECTOR_BODY]]:
+; COMMON-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMMON-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMMON-NEXT:    [[VL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; COMMON-NEXT:    [[ADDR:%.*]] = getelementptr i64, ptr [[P]], i64 [[EVL_BASED_IV]]
+; COMMON-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> zeroinitializer, ptr align 8 [[ADDR]], <vscale x 2 x i1> splat (i1 true), i32 [[VL]])
+; COMMON-NEXT:    [[VL_ZEXT:%.*]] = zext i32 [[VL]] to i64
+; COMMON-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[VL_ZEXT]], [[EVL_BASED_IV]]
+; COMMON-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[VL_ZEXT]]
+; COMMON-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; COMMON-NEXT:    br i1 [[TMP0]], label %[[EXIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; COMMON:       [[EXIT]]:
+; COMMON-NEXT:    ret void
 ;
 entry:
   br label %vector.body
