@@ -9590,34 +9590,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         if (visitUnaryFloatCall(I, ISD::FABS))
           return;
         break;
-      case LibFunc_fmin:
-      case LibFunc_fminf:
-      case LibFunc_fminl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitBinaryFloatCall(I, ISD::FMINNUM))
-          return;
-        break;
-      case LibFunc_fmax:
-      case LibFunc_fmaxf:
-      case LibFunc_fmaxl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitBinaryFloatCall(I, ISD::FMAXNUM))
-          return;
-        break;
-      case LibFunc_fminimum_num:
-      case LibFunc_fminimum_numf:
-      case LibFunc_fminimum_numl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitBinaryFloatCall(I, ISD::FMINIMUMNUM))
-          return;
-        break;
-      case LibFunc_fmaximum_num:
-      case LibFunc_fmaximum_numf:
-      case LibFunc_fmaximum_numl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitBinaryFloatCall(I, ISD::FMAXIMUMNUM))
-          return;
-        break;
       case LibFunc_sin:
       case LibFunc_sinf:
       case LibFunc_sinl:
