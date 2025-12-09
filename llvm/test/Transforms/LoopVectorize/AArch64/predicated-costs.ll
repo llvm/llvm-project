@@ -438,6 +438,55 @@ exit:
   ret void
 }
 
+; BFI computes the relative frequency of if.2 to the loop header to be extremely
+; low, so the discount in getPredBlockCostDivisor is high enough to not fit in
+; uint32_t. Make sure we return uint64_t which fits all possible BlockFrequency
+; values.
+define void @getPredBlockCostDivisor_truncate(i32 %0) {
+; CHECK-LABEL: define void @getPredBlockCostDivisor_truncate(
+; CHECK-SAME: i32 [[TMP0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[TMP0]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[ISNAN_1:%.*]] = fcmp uno double 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    br i1 [[ISNAN_1]], label %[[IF_1:.*]], label %[[LATCH]]
+; CHECK:       [[IF_1]]:
+; CHECK-NEXT:    [[ISNAN_2:%.*]] = fcmp uno double 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    br i1 [[ISNAN_2]], label %[[IF_2:.*]], label %[[LATCH]]
+; CHECK:       [[IF_2]]:
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 0
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %0, %entry ], [ %iv.next, %latch ]
+  %isnan.1 = fcmp uno double 0.000000e+00, 0.000000e+00
+  br i1 %isnan.1, label %if.1, label %latch
+
+if.1:
+  %isnan.2 = fcmp uno double 0.000000e+00, 0.000000e+00
+  br i1 %isnan.2, label %if.2, label %latch
+
+if.2:
+  br label %latch
+
+latch:
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv, 0
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
