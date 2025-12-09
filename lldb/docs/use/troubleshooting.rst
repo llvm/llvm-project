@@ -98,8 +98,8 @@ for any source file and line breakpoints that the IDE set using:
 
    (lldb) breakpoint list --verbose
 
-How Do I Find Out Which Features My Version Of LLDB Has?
---------------------------------------------------------
+How Do I Find Out Which Features My Copy Of LLDB Has?
+-----------------------------------------------------
 
 Some features such as XML parsing are optional and must be enabled when LLDB is
 built. To check which features your copy of LLDB has enabled, use the ``version``
