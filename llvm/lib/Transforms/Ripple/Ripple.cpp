@@ -212,15 +212,18 @@ IntrinsicInst *intrinsicWithId(Instruction *I,
  *
  * @param From Starting point of traversal.
  * @param To End point of traversal.
+ * @param SkipBBs BasicBlocks that must be ignored during the traversal process.
  * @return SetVector<BasicBlock *>
  *
  * \note 'To' must postdominate 'From'.
  */
 SetVector<BasicBlock *>
 allBasicBlocksFromToBFS(BasicBlock *From, BasicBlock *To,
+                        const DenseSet<BasicBlock *> &SkipBBs,
                         PostDominatorTreeAnalysis::Result &PDomTree) {
   assert(From != To);
   assert(PDomTree.dominates(To, From));
+  assert(!(SkipBBs.contains(To) || SkipBBs.contains(From)));
 
   std::queue<BasicBlock *> ToProcess;
   SetVector<BasicBlock *> Visited;
@@ -232,7 +235,7 @@ allBasicBlocksFromToBFS(BasicBlock *From, BasicBlock *To,
     if (BB == To)
       continue;
     for (auto *SI : successors(BB)) {
-      if (!Visited.contains(SI)) {
+      if (!Visited.contains(SI) && !SkipBBs.contains(SI)) {
         ToProcess.push(SI);
       }
     }
@@ -5028,8 +5031,11 @@ void Ripple::ifConvert() {
       // <https://doi.org/10.1007/978-3-642-28652-0_1>)
       auto [LoopIncTarget, LoopCleanupTarget] =
           getIncrementAndCleanupTargets(BranchingBB, BranchPostDom, domTree);
-      auto LoopIncBBs =
-          allBasicBlocksFromToBFS(LoopIncTarget, BranchingBB, postdomTree);
+      auto LoopCleanupBBs =
+          allBasicBlocksFromTo(LoopCleanupTarget, BranchPostDom);
+      LoopCleanupBBs.insert(LoopCleanupTarget);
+      auto LoopIncBBs = allBasicBlocksFromToBFS(LoopIncTarget, BranchingBB,
+                                                LoopCleanupBBs, postdomTree);
 
       Value *LoopIncMask = nullptr;
       if (auto *Branch = dyn_cast<CondBrInst>(BranchOrSwitch)) {
@@ -7617,20 +7623,6 @@ Error Ripple::checkVectorBranch(Instruction *BranchOrSwitch) {
         HasErrors = true;
       }
     }
-
-    auto diagnoseUnsupportedVectorization = [&]() {
-      std::string ErrMsg;
-      llvm::raw_string_ostream RSO(ErrMsg);
-      RSO << "unsupported vectorization of vector "
-          << (isa<CondBrInst>(BranchOrSwitch) ? "branch" : "switch")
-          << " when it applies to a non single-entry-single-exit (SESE) "
-             "region or simple vector loops (one exit)";
-      RSO.flush();
-      DiagnosticInfoRippleWithLoc DI(
-          DS_Error, F, sanitizeRippleLocation(BranchOrSwitch), ErrMsg);
-      F.getContext().diagnose(DI);
-    };
-
     for (auto *IncomingBB : predecessors(BB)) {
       bool ComingFromInBetween = BBsInBetween.contains(IncomingBB);
       bool ComingFromBranchBB = IncomingBB == BBWithVectorSw;
@@ -7641,7 +7633,18 @@ Error Ripple::checkVectorBranch(Instruction *BranchOrSwitch) {
                                        domTree)) ||
           BB->hasAddressTaken()) {
         HasErrors = true;
-        diagnoseUnsupportedVectorization();
+        // Show that it's a problem related to if-conversion of the branch
+        // instruction
+        std::string ErrMsg;
+        llvm::raw_string_ostream RSO(ErrMsg);
+        RSO << "ripple cannot vectorize the vector "
+            << (isa<CondBrInst>(BranchOrSwitch) ? "branch" : "switch")
+            << " because it applies to a non single-entry-single-exit (SESE) "
+               "region";
+        RSO.flush();
+        DiagnosticInfoRippleWithLoc DI(
+            DS_Error, F, sanitizeRippleLocation(BranchOrSwitch), ErrMsg);
+        F.getContext().diagnose(DI);
       }
       if (!(ComingFromInBetween || ComingFromBranchBB ||
             hasTrivialLoopLikeBackEdge(BBWithVectorSw, BranchPostDom,
@@ -7701,15 +7704,6 @@ Error Ripple::checkVectorBranch(Instruction *BranchOrSwitch) {
             F.getContext().diagnose(DI);
           }
         }
-      }
-    }
-    for (auto *SuccBB : successors(BB)) {
-      // Detect loop in the sub-graph back to the vector branch (not a SESE
-      // region)
-      if (SuccBB == BBWithVectorSw &&
-          !hasTrivialLoopLikeBackEdge(BBWithVectorSw, BranchPostDom, domTree)) {
-        HasErrors = true;
-        diagnoseUnsupportedVectorization();
       }
     }
   }
