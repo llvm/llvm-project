@@ -493,10 +493,6 @@ Interpreter::Visit(const MemberOfNode *node) {
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const ArraySubscriptNode *node) {
-  auto base_or_err = Evaluate(node->GetBase());
-  if (!base_or_err)
-    return base_or_err;
-  lldb::ValueObjectSP base = *base_or_err;
   auto idx_or_err = EvaluateAndDereference(node->GetIndex());
   if (!idx_or_err)
     return idx_or_err;
@@ -511,10 +507,14 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
   uint64_t child_idx = idx->GetValueAsUnsigned(0);
   lldb::ValueObjectSP child_valobj_sp;
 
-  bool is_incomplete_array = false;
+  auto base_or_err = Evaluate(node->GetBase());
+  if (!base_or_err)
+    return base_or_err;
+  lldb::ValueObjectSP base = *base_or_err;
+
   CompilerType base_type = base->GetCompilerType().GetNonReferenceType();
   base->GetExpressionPath(var_expr_path_strm);
-
+  bool is_incomplete_array = false;
   if (base_type.IsPointerType()) {
     bool is_objc_pointer = true;
 
@@ -649,10 +649,6 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BitFieldExtractionNode *node) {
-  auto base_or_err = EvaluateAndDereference(node->GetBase());
-  if (!base_or_err)
-    return base_or_err;
-  lldb::ValueObjectSP base = *base_or_err;
   auto first_idx_or_err = EvaluateAndDereference(node->GetFirstIndex());
   if (!first_idx_or_err)
     return first_idx_or_err;
@@ -679,6 +675,10 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
   if (first_index > last_index)
     std::swap(first_index, last_index);
 
+  auto base_or_err = EvaluateAndDereference(node->GetBase());
+  if (!base_or_err)
+    return base_or_err;
+  lldb::ValueObjectSP base = *base_or_err;
   lldb::ValueObjectSP child_valobj_sp =
       base->GetSyntheticBitFieldChild(first_index, last_index, true);
   if (!child_valobj_sp) {
