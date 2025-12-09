@@ -173,6 +173,18 @@ extern char &AMDGPUReserveWWMRegsLegacyID;
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
 
+void initializeAMDGPURegPressureEstimatorWrapperPassPass(PassRegistry &);
+extern char &AMDGPURegPressureEstimatorWrapperPassID;
+
+void initializeRegPressureBaselineMeasurementPassPass(PassRegistry &);
+extern char &RegPressureBaselineMeasurementPassID;
+
+void initializeRegPressureVerificationPassPass(PassRegistry &);
+extern char &RegPressureVerificationPassID;
+
+void initializeAMDGPURegPressureGuardLegacyPassPass(PassRegistry &);
+extern char &AMDGPURegPressureGuardLegacyPassID;
+
 void initializeGCNDPPCombineLegacyPass(PassRegistry &);
 extern char &GCNDPPCombineLegacyID;
 
