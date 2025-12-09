@@ -99,7 +99,6 @@ getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
   for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
     if (i < distributionStart)
       continue;
-
     // Check if the dimension can be distributed evenly.
     if (dim % effectiveLaneLayout[i - distributionStart] != 0)
       return failure();
