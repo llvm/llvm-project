@@ -19,9 +19,6 @@ declare double @trunc(double) readonly
 declare float @rintf(float) readonly
 declare double @rint(double) readonly
 
-declare float @nearbyintf(float) readonly
-declare double @nearbyint(double) readonly
-
 define float @fabs_f(float %v) {
 ; CHECK-LABEL: fabs_f:
 ; CHECK:       ; %bb.0:
@@ -90,7 +87,7 @@ define float @nearbyint_f(float %v) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    frinti s0, s0
 ; CHECK-NEXT:    ret
-  %r = call float @nearbyintf(float %v)
+  %r = call float @llvm.nearbyint.f32(float %v)
   ret float %r
 }
 
@@ -162,7 +159,7 @@ define double @nearbyint_d(double %v) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    frinti d0, d0
 ; CHECK-NEXT:    ret
-  %r = call double @nearbyint(double %v)
+  %r = call double @llvm.nearbyint.f64(double %v)
   ret double %r
 }
 

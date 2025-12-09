@@ -252,12 +252,23 @@ static bool hasPossibleIncompatibleOps(const Function *F,
   return false;
 }
 
-APInt AArch64TTIImpl::getFeatureMask(const Function &F) const {
+static void extractAttrFeatures(const Function &F, const AArch64TTIImpl *TTI,
+                                SmallVectorImpl<StringRef> &Features) {
   StringRef AttributeStr =
-      isMultiversionedFunction(F) ? "fmv-features" : "target-features";
+      TTI->isMultiversionedFunction(F) ? "fmv-features" : "target-features";
   StringRef FeatureStr = F.getFnAttribute(AttributeStr).getValueAsString();
-  SmallVector<StringRef, 8> Features;
   FeatureStr.split(Features, ",");
+}
+
+APInt AArch64TTIImpl::getFeatureMask(const Function &F) const {
+  SmallVector<StringRef, 8> Features;
+  extractAttrFeatures(F, this, Features);
+  return AArch64::getCpuSupportsMask(Features);
+}
+
+APInt AArch64TTIImpl::getPriorityMask(const Function &F) const {
+  SmallVector<StringRef, 8> Features;
+  extractAttrFeatures(F, this, Features);
   return AArch64::getFMVPriority(Features);
 }
 
@@ -5333,20 +5344,11 @@ void AArch64TTIImpl::getUnrollingPreferences(
   }
 
   // Apply subtarget-specific unrolling preferences.
-  switch (ST->getProcFamily()) {
-  case AArch64Subtarget::AppleA14:
-  case AArch64Subtarget::AppleA15:
-  case AArch64Subtarget::AppleA16:
-  case AArch64Subtarget::AppleM4:
+  if (ST->isAppleMLike())
     getAppleRuntimeUnrollPreferences(L, SE, UP, *this);
-    break;
-  case AArch64Subtarget::Falkor:
-    if (EnableFalkorHWPFUnrollFix)
-      getFalkorUnrollingPreferences(L, SE, UP);
-    break;
-  default:
-    break;
-  }
+  else if (ST->getProcFamily() == AArch64Subtarget::Falkor &&
+           EnableFalkorHWPFUnrollFix)
+    getFalkorUnrollingPreferences(L, SE, UP);
 
   // If this is a small, multi-exit loop similar to something like std::find,
   // then there is typically a performance improvement achieved by unrolling.
