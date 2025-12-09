@@ -139,6 +139,11 @@ public:
     return {};
   }
 
+  mlir::Value VisitConstantExpr(ConstantExpr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: constant expr");
+    return {};
+  }
+
   mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {
     return Visit(e->getSelectedExpr());
   }
