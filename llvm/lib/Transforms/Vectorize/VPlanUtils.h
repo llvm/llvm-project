@@ -12,6 +12,7 @@
 #include "VPlan.h"
 
 namespace llvm {
+class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
 } // namespace llvm
@@ -35,7 +36,8 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
-const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
+const SCEV *getSCEVExprForVPValue(const VPValue *V, ScalarEvolution &SE,
+                                  const Loop *L = nullptr);
 
 /// Returns true if \p VPV is a single scalar, either because it produces the
 /// same value for all lanes or only has its first lane used.
@@ -97,6 +99,12 @@ bool isUniformAcrossVFsAndUFs(VPValue *V);
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
 VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
+
+/// Return a MemoryLocation for \p R with noalias metadata populated from
+/// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
+/// the location is conservatively set to nullptr.
+std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
+
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//

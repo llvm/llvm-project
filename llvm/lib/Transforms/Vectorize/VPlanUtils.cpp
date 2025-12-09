@@ -10,6 +10,7 @@
 #include "VPlanCFG.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 using namespace llvm;
@@ -72,14 +73,73 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
          IsWideCanonicalIV(A) && B == Plan.getOrCreateBackedgeTakenCount();
 }
 
-const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
-  if (V->isLiveIn())
-    return SE.getSCEV(V->getLiveInIRValue());
+const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
+                                           ScalarEvolution &SE, const Loop *L) {
+  if (V->isLiveIn()) {
+    if (Value *LiveIn = V->getLiveInIRValue())
+      return SE.getSCEV(LiveIn);
+    return SE.getCouldNotCompute();
+  }
 
   // TODO: Support constructing SCEVs for more recipes as needed.
   return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())
       .Case<VPExpandSCEVRecipe>(
           [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
+      .Case<VPCanonicalIVPHIRecipe>([&SE, L](const VPCanonicalIVPHIRecipe *R) {
+        if (!L)
+          return SE.getCouldNotCompute();
+        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
+                                SCEV::FlagAnyWrap);
+      })
+      .Case<VPWidenIntOrFpInductionRecipe>(
+          [&SE, L](const VPWidenIntOrFpInductionRecipe *R) {
+            const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), SE, L);
+            if (!L || isa<SCEVCouldNotCompute>(Step))
+              return SE.getCouldNotCompute();
+            const SCEV *Start =
+                getSCEVExprForVPValue(R->getStartValue(), SE, L);
+            return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+          })
+      .Case<VPDerivedIVRecipe>([&SE, L](const VPDerivedIVRecipe *R) {
+        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), SE, L);
+        const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), SE, L);
+        if (any_of(ArrayRef({Start, IV, Scale}), IsaPred<SCEVCouldNotCompute>))
+          return SE.getCouldNotCompute();
+
+        return SE.getAddExpr(SE.getTruncateOrSignExtend(Start, IV->getType()),
+                             SE.getMulExpr(IV, SE.getTruncateOrSignExtend(
+                                                   Scale, IV->getType())));
+      })
+      .Case<VPScalarIVStepsRecipe>([&SE, L](const VPScalarIVStepsRecipe *R) {
+        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), SE, L);
+        if (isa<SCEVCouldNotCompute>(IV) || isa<SCEVCouldNotCompute>(Step) ||
+            !Step->isOne())
+          return SE.getCouldNotCompute();
+        return SE.getMulExpr(SE.getTruncateOrSignExtend(IV, Step->getType()),
+                             Step);
+      })
+      .Case<VPReplicateRecipe>([&SE, L](const VPReplicateRecipe *R) {
+        if (R->getOpcode() != Instruction::GetElementPtr)
+          return SE.getCouldNotCompute();
+
+        const SCEV *Base = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        if (isa<SCEVCouldNotCompute>(Base))
+          return SE.getCouldNotCompute();
+
+        SmallVector<const SCEV *> IndexExprs;
+        for (VPValue *Index : drop_begin(R->operands())) {
+          const SCEV *IndexExpr = getSCEVExprForVPValue(Index, SE, L);
+          if (isa<SCEVCouldNotCompute>(IndexExpr))
+            return SE.getCouldNotCompute();
+          IndexExprs.push_back(IndexExpr);
+        }
+
+        auto *GEP = cast<GEPOperator>(R->getUnderlyingInstr());
+        return SE.getGEPExpr(const_cast<GEPOperator *>(GEP), IndexExprs);
+      })
       .Default([&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
 }
 
@@ -134,4 +194,21 @@ VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
     return VPBlockUtils::isHeader(VPB, VPDT);
   });
   return I == DepthFirst.end() ? nullptr : cast<VPBasicBlock>(*I);
+}
+
+std::optional<MemoryLocation>
+vputils::getMemoryLocation(const VPRecipeBase &R) {
+  return TypeSwitch<const VPRecipeBase *, std::optional<MemoryLocation>>(&R)
+      .Case<VPWidenMemoryRecipe, VPInterleaveRecipe, VPReplicateRecipe>(
+          [](auto *S) {
+            MemoryLocation Loc;
+            // Populate noalias metadata from VPIRMetadata.
+            if (MDNode *NoAliasMD = S->getMetadata(LLVMContext::MD_noalias))
+              Loc.AATags.NoAlias = NoAliasMD;
+            if (MDNode *AliasScopeMD =
+                    S->getMetadata(LLVMContext::MD_alias_scope))
+              Loc.AATags.Scope = AliasScopeMD;
+            return Loc;
+          })
+      .Default([](auto *) { return std::nullopt; });
 }
