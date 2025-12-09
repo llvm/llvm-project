@@ -472,7 +472,7 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
   EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::B).addImm(8));
 
   for (int8_t I = 0; I < NoopsInSledCount; I++)
-    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::NOP));
 
   OutStreamer->emitLabel(Target);
   recordSled(CurSled, MI, Kind, 2);
@@ -1697,7 +1697,7 @@ void AArch64AsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
 
   // Emit nops.
   for (unsigned i = 0; i < NumNOPBytes; i += 4)
-    EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
+    EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::NOP));
 }
 
 // Lower a patchpoint of the form:
@@ -1731,7 +1731,7 @@ void AArch64AsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
   assert((NumBytes - EncodedBytes) % 4 == 0 &&
          "Invalid number of NOP bytes requested!");
   for (unsigned i = EncodedBytes; i < NumBytes; i += 4)
-    EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
+    EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::NOP));
 }
 
 void AArch64AsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
@@ -1740,7 +1740,7 @@ void AArch64AsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
   if (unsigned PatchBytes = SOpers.getNumPatchBytes()) {
     assert(PatchBytes % 4 == 0 && "Invalid number of NOP bytes requested!");
     for (unsigned i = 0; i < PatchBytes; i += 4)
-      EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
+      EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::NOP));
   } else {
     // Lower call target and choose correct opcode
     const MachineOperand &CallTarget = SOpers.getCallTarget();
@@ -2122,7 +2122,7 @@ bool AArch64AsmPrinter::emitDeactivationSymbolRelocation(Value *DS) {
 
   if (isa<GlobalAlias>(DS)) {
     // Just emit the nop directly.
-    EmitToStreamer(MCInstBuilder(AArch64::HINT).addImm(0));
+    EmitToStreamer(MCInstBuilder(AArch64::NOP));
     return true;
   }
   MCSymbol *Dot = OutContext.createTempSymbol();
