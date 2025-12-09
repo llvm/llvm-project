@@ -794,6 +794,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Legal);
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f64, Legal);
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f32, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
     setOperationAction(ISD::FCANONICALIZE, MVT::f64, Legal);
     setOperationAction(ISD::FCANONICALIZE, MVT::f32, Legal);
   }
@@ -828,8 +832,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       }
 
       if (Subtarget.hasVSX()) {
+        setOperationAction(ISD::FMAXNUM_IEEE, VT, Legal);
+        setOperationAction(ISD::FMINNUM_IEEE, VT, Legal);
         setOperationAction(ISD::FMAXNUM, VT, Legal);
         setOperationAction(ISD::FMINNUM, VT, Legal);
+        setOperationAction(ISD::FCANONICALIZE, VT, Legal);
       }
 
       // Vector instructions introduced in P8
@@ -1054,17 +1061,17 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       // so we can only code-gen them with fpexcept.ignore.
       setOperationAction(ISD::STRICT_FNEARBYINT, MVT::f64, Custom);
       setOperationAction(ISD::STRICT_FNEARBYINT, MVT::f32, Custom);
+      setOperationAction(ISD::STRICT_FNEARBYINT, MVT::v2f64, Custom);
+      setOperationAction(ISD::STRICT_FNEARBYINT, MVT::v4f32, Custom);
 
       setOperationAction(ISD::FFLOOR, MVT::v2f64, Legal);
       setOperationAction(ISD::FCEIL, MVT::v2f64, Legal);
       setOperationAction(ISD::FTRUNC, MVT::v2f64, Legal);
-      setOperationAction(ISD::FNEARBYINT, MVT::v2f64, Legal);
       setOperationAction(ISD::FRINT, MVT::v2f64, Legal);
       setOperationAction(ISD::FROUND, MVT::v2f64, Legal);
       setOperationAction(ISD::FROUND, MVT::f64, Legal);
       setOperationAction(ISD::FRINT, MVT::f64, Legal);
 
-      setOperationAction(ISD::FNEARBYINT, MVT::v4f32, Legal);
       setOperationAction(ISD::FRINT, MVT::v4f32, Legal);
       setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
       setOperationAction(ISD::FROUND, MVT::f32, Legal);
@@ -7385,9 +7392,27 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
   FuncInfo->setMinReservedArea(CallerReservedArea);
 
   if (isVarArg) {
-    FuncInfo->setVarArgsFrameIndex(
-        MFI.CreateFixedObject(PtrByteSize, CCInfo.getStackSize(), true));
-    SDValue FIN = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(), PtrVT);
+    int VAListIndex = 0;
+    // If any of the optional arguments are passed in register then the fixed
+    // stack object we spill into is not immutable. Create a fixed stack object
+    // that overlaps the remainder of the parameter save area.
+    if (CCInfo.getStackSize() < (LinkageSize + MinParameterSaveArea)) {
+      unsigned FixedStackSize =
+          LinkageSize + MinParameterSaveArea - CCInfo.getStackSize();
+      VAListIndex =
+          MFI.CreateFixedObject(FixedStackSize, CCInfo.getStackSize(),
+                                /* IsImmutable */ false, /* IsAliased */ true);
+    } else {
+      // All the arguments passed through ellipses are on the stack. Create a
+      // dummy fixed stack object the same size as a pointer since we don't
+      // know the actual size.
+      VAListIndex =
+          MFI.CreateFixedObject(PtrByteSize, CCInfo.getStackSize(),
+                                /* IsImmutable */ true, /* IsAliased */ true);
+    }
+
+    FuncInfo->setVarArgsFrameIndex(VAListIndex);
+    SDValue FIN = DAG.getFrameIndex(VAListIndex, PtrVT);
 
     static const MCPhysReg GPR_32[] = {PPC::R3, PPC::R4, PPC::R5, PPC::R6,
                                        PPC::R7, PPC::R8, PPC::R9, PPC::R10};
@@ -7399,17 +7424,19 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     // The fixed integer arguments of a variadic function are stored to the
     // VarArgsFrameIndex on the stack so that they may be loaded by
     // dereferencing the result of va_next.
-    for (unsigned GPRIndex =
-             (CCInfo.getStackSize() - LinkageSize) / PtrByteSize;
-         GPRIndex < NumGPArgRegs; ++GPRIndex) {
+    for (unsigned
+             GPRIndex = (CCInfo.getStackSize() - LinkageSize) / PtrByteSize,
+             Offset = 0;
+         GPRIndex < NumGPArgRegs; ++GPRIndex, Offset += PtrByteSize) {
 
       const Register VReg =
           IsPPC64 ? MF.addLiveIn(GPR_64[GPRIndex], &PPC::G8RCRegClass)
                   : MF.addLiveIn(GPR_32[GPRIndex], &PPC::GPRCRegClass);
 
       SDValue Val = DAG.getCopyFromReg(Chain, dl, VReg, PtrVT);
-      SDValue Store =
-          DAG.getStore(Val.getValue(1), dl, Val, FIN, MachinePointerInfo());
+      MachinePointerInfo MPI =
+          MachinePointerInfo::getFixedStack(MF, VAListIndex, Offset);
+      SDValue Store = DAG.getStore(Val.getValue(1), dl, Val, FIN, MPI);
       MemOps.push_back(Store);
       // Increment the address for the next argument to store.
       SDValue PtrOff = DAG.getConstant(PtrByteSize, dl, PtrVT);

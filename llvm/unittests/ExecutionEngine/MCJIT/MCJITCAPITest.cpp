@@ -147,6 +147,7 @@ protected:
     didCallAllocateCodeSection = false;
     didAllocateCompactUnwindSection = false;
     didCallYield = false;
+    Context = LLVMContextCreate();
     Module = nullptr;
     Function = nullptr;
     Engine = nullptr;
@@ -158,21 +159,24 @@ protected:
       LLVMDisposeExecutionEngine(Engine);
     else if (Module)
       LLVMDisposeModule(Module);
+    LLVMContextDispose(Context);
   }
 
   void buildSimpleFunction() {
-    Module = LLVMModuleCreateWithName("simple_module");
+    Module = LLVMModuleCreateWithNameInContext("simple_module", Context);
 
     LLVMSetTarget(Module, HostTripleName.c_str());
 
+    LLVMTypeRef Int32Ty = LLVMInt32TypeInContext(Context);
     Function = LLVMAddFunction(Module, "simple_function",
-                               LLVMFunctionType(LLVMInt32Type(), nullptr,0, 0));
+                               LLVMFunctionType(Int32Ty, nullptr, 0, 0));
     LLVMSetFunctionCallConv(Function, LLVMCCallConv);
 
-    LLVMBasicBlockRef entry = LLVMAppendBasicBlock(Function, "entry");
-    LLVMBuilderRef builder = LLVMCreateBuilder();
+    LLVMBasicBlockRef entry =
+        LLVMAppendBasicBlockInContext(Context, Function, "entry");
+    LLVMBuilderRef builder = LLVMCreateBuilderInContext(Context);
     LLVMPositionBuilderAtEnd(builder, entry);
-    LLVMBuildRet(builder, LLVMConstInt(LLVMInt32Type(), 42, 0));
+    LLVMBuildRet(builder, LLVMConstInt(Int32Ty, 42, 0));
 
     LLVMVerifyModule(Module, LLVMAbortProcessAction, &Error);
     LLVMDisposeMessage(Error);
@@ -181,29 +185,31 @@ protected:
   }
 
   void buildFunctionThatUsesStackmap() {
-    Module = LLVMModuleCreateWithName("simple_module");
+    Module = LLVMModuleCreateWithNameInContext("simple_module", Context);
 
     LLVMSetTarget(Module, HostTripleName.c_str());
 
-    LLVMTypeRef stackmapParamTypes[] = { LLVMInt64Type(), LLVMInt32Type() };
-    LLVMTypeRef stackmapTy =
-        LLVMFunctionType(LLVMVoidType(), stackmapParamTypes, 2, 1);
+    LLVMTypeRef Int64Ty = LLVMInt64TypeInContext(Context);
+    LLVMTypeRef Int32Ty = LLVMInt32TypeInContext(Context);
+    LLVMTypeRef VoidTy = LLVMVoidTypeInContext(Context);
+    LLVMTypeRef stackmapParamTypes[] = {Int64Ty, Int32Ty};
+    LLVMTypeRef stackmapTy = LLVMFunctionType(VoidTy, stackmapParamTypes, 2, 1);
     LLVMValueRef stackmap = LLVMAddFunction(
       Module, "llvm.experimental.stackmap", stackmapTy);
     LLVMSetLinkage(stackmap, LLVMExternalLinkage);
 
     Function = LLVMAddFunction(Module, "simple_function",
-                              LLVMFunctionType(LLVMInt32Type(), nullptr, 0, 0));
+                               LLVMFunctionType(Int32Ty, nullptr, 0, 0));
 
-    LLVMBasicBlockRef entry = LLVMAppendBasicBlock(Function, "entry");
-    LLVMBuilderRef builder = LLVMCreateBuilder();
+    LLVMBasicBlockRef entry =
+        LLVMAppendBasicBlockInContext(Context, Function, "entry");
+    LLVMBuilderRef builder = LLVMCreateBuilderInContext(Context);
     LLVMPositionBuilderAtEnd(builder, entry);
-    LLVMValueRef stackmapArgs[] = {
-      LLVMConstInt(LLVMInt64Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), 5, 0),
-      LLVMConstInt(LLVMInt32Type(), 42, 0)
-    };
+    LLVMValueRef stackmapArgs[] = {LLVMConstInt(Int64Ty, 0, 0),
+                                   LLVMConstInt(Int32Ty, 5, 0),
+                                   LLVMConstInt(Int32Ty, 42, 0)};
     LLVMBuildCall2(builder, stackmapTy, stackmap, stackmapArgs, 3, "");
-    LLVMBuildRet(builder, LLVMConstInt(LLVMInt32Type(), 42, 0));
+    LLVMBuildRet(builder, LLVMConstInt(Int32Ty, 42, 0));
 
     LLVMVerifyModule(Module, LLVMAbortProcessAction, &Error);
     LLVMDisposeMessage(Error);
@@ -212,51 +218,56 @@ protected:
   }
 
   void buildModuleWithCodeAndData() {
-    Module = LLVMModuleCreateWithName("simple_module");
+    Module = LLVMModuleCreateWithNameInContext("simple_module", Context);
 
     LLVMSetTarget(Module, HostTripleName.c_str());
 
+    LLVMTypeRef Int32Ty = LLVMInt32TypeInContext(Context);
+    LLVMTypeRef VoidTy = LLVMVoidTypeInContext(Context);
+
     // build a global int32 variable initialized to 42.
-    LLVMValueRef GlobalVar = LLVMAddGlobal(Module, LLVMInt32Type(), "intVal");
-    LLVMSetInitializer(GlobalVar, LLVMConstInt(LLVMInt32Type(), 42, 0));
+    LLVMValueRef GlobalVar = LLVMAddGlobal(Module, Int32Ty, "intVal");
+    LLVMSetInitializer(GlobalVar, LLVMConstInt(Int32Ty, 42, 0));
 
     {
-        Function = LLVMAddFunction(Module, "getGlobal",
-                              LLVMFunctionType(LLVMInt32Type(), nullptr, 0, 0));
-        LLVMSetFunctionCallConv(Function, LLVMCCallConv);
+      Function = LLVMAddFunction(Module, "getGlobal",
+                                 LLVMFunctionType(Int32Ty, nullptr, 0, 0));
+      LLVMSetFunctionCallConv(Function, LLVMCCallConv);
 
-        LLVMBasicBlockRef Entry = LLVMAppendBasicBlock(Function, "entry");
-        LLVMBuilderRef Builder = LLVMCreateBuilder();
-        LLVMPositionBuilderAtEnd(Builder, Entry);
+      LLVMBasicBlockRef Entry =
+          LLVMAppendBasicBlockInContext(Context, Function, "entry");
+      LLVMBuilderRef Builder = LLVMCreateBuilderInContext(Context);
+      LLVMPositionBuilderAtEnd(Builder, Entry);
 
-        LLVMValueRef IntVal =
-            LLVMBuildLoad2(Builder, LLVMInt32Type(), GlobalVar, "intVal");
-        LLVMBuildRet(Builder, IntVal);
+      LLVMValueRef IntVal =
+          LLVMBuildLoad2(Builder, Int32Ty, GlobalVar, "intVal");
+      LLVMBuildRet(Builder, IntVal);
 
-        LLVMVerifyModule(Module, LLVMAbortProcessAction, &Error);
-        LLVMDisposeMessage(Error);
+      LLVMVerifyModule(Module, LLVMAbortProcessAction, &Error);
+      LLVMDisposeMessage(Error);
 
-        LLVMDisposeBuilder(Builder);
+      LLVMDisposeBuilder(Builder);
     }
 
     {
-        LLVMTypeRef ParamTypes[] = { LLVMInt32Type() };
-        Function2 = LLVMAddFunction(
-          Module, "setGlobal", LLVMFunctionType(LLVMVoidType(), ParamTypes, 1, 0));
-        LLVMSetFunctionCallConv(Function2, LLVMCCallConv);
+      LLVMTypeRef ParamTypes[] = {Int32Ty};
+      Function2 = LLVMAddFunction(Module, "setGlobal",
+                                  LLVMFunctionType(VoidTy, ParamTypes, 1, 0));
+      LLVMSetFunctionCallConv(Function2, LLVMCCallConv);
 
-        LLVMBasicBlockRef Entry = LLVMAppendBasicBlock(Function2, "entry");
-        LLVMBuilderRef Builder = LLVMCreateBuilder();
-        LLVMPositionBuilderAtEnd(Builder, Entry);
+      LLVMBasicBlockRef Entry =
+          LLVMAppendBasicBlockInContext(Context, Function2, "entry");
+      LLVMBuilderRef Builder = LLVMCreateBuilderInContext(Context);
+      LLVMPositionBuilderAtEnd(Builder, Entry);
 
-        LLVMValueRef Arg = LLVMGetParam(Function2, 0);
-        LLVMBuildStore(Builder, Arg, GlobalVar);
-        LLVMBuildRetVoid(Builder);
+      LLVMValueRef Arg = LLVMGetParam(Function2, 0);
+      LLVMBuildStore(Builder, Arg, GlobalVar);
+      LLVMBuildRetVoid(Builder);
 
-        LLVMVerifyModule(Module, LLVMAbortProcessAction, &Error);
-        LLVMDisposeMessage(Error);
+      LLVMVerifyModule(Module, LLVMAbortProcessAction, &Error);
+      LLVMDisposeMessage(Error);
 
-        LLVMDisposeBuilder(Builder);
+      LLVMDisposeBuilder(Builder);
     }
   }
 
@@ -309,6 +320,7 @@ protected:
     LLVMDisposePassBuilderOptions(Options);
   }
 
+  LLVMContextRef Context;
   LLVMModuleRef Module;
   LLVMValueRef Function;
   LLVMValueRef Function2;
@@ -335,10 +347,11 @@ TEST_F(MCJITCAPITest, simple_function) {
 TEST_F(MCJITCAPITest, gva) {
   SKIP_UNSUPPORTED_PLATFORM;
 
-  Module = LLVMModuleCreateWithName("simple_module");
+  Module = LLVMModuleCreateWithNameInContext("simple_module", Context);
   LLVMSetTarget(Module, HostTripleName.c_str());
-  LLVMValueRef GlobalVar = LLVMAddGlobal(Module, LLVMInt32Type(), "simple_value");
-  LLVMSetInitializer(GlobalVar, LLVMConstInt(LLVMInt32Type(), 42, 0));
+  LLVMTypeRef Int32Ty = LLVMInt32TypeInContext(Context);
+  LLVMValueRef GlobalVar = LLVMAddGlobal(Module, Int32Ty, "simple_value");
+  LLVMSetInitializer(GlobalVar, LLVMConstInt(Int32Ty, 42, 0));
 
   buildMCJITOptions();
   buildMCJITEngine();
@@ -451,8 +464,7 @@ TEST_F(MCJITCAPITest, yield) {
   buildSimpleFunction();
   buildMCJITOptions();
   buildMCJITEngine();
-  LLVMContextRef C = LLVMGetGlobalContext();
-  LLVMContextSetYieldCallback(C, yield, nullptr);
+  LLVMContextSetYieldCallback(Context, yield, nullptr);
   buildAndRunPasses();
 
   auto *functionPointer = reinterpret_cast<int (*)()>(
@@ -469,14 +481,16 @@ static int localTestFunc() {
 TEST_F(MCJITCAPITest, addGlobalMapping) {
   SKIP_UNSUPPORTED_PLATFORM;
 
-  Module = LLVMModuleCreateWithName("testModule");
+  Module = LLVMModuleCreateWithNameInContext("testModule", Context);
   LLVMSetTarget(Module, HostTripleName.c_str());
-  LLVMTypeRef FunctionType = LLVMFunctionType(LLVMInt32Type(), nullptr, 0, 0);
+  LLVMTypeRef Int32Ty = LLVMInt32TypeInContext(Context);
+  LLVMTypeRef FunctionType = LLVMFunctionType(Int32Ty, nullptr, 0, 0);
   LLVMValueRef MappedFn = LLVMAddFunction(Module, "mapped_fn", FunctionType);
 
   Function = LLVMAddFunction(Module, "test_fn", FunctionType);
-  LLVMBasicBlockRef Entry = LLVMAppendBasicBlock(Function, "");
-  LLVMBuilderRef Builder = LLVMCreateBuilder();
+  LLVMBasicBlockRef Entry =
+      LLVMAppendBasicBlockInContext(Context, Function, "");
+  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(Context);
   LLVMPositionBuilderAtEnd(Builder, Entry);
   LLVMValueRef RetVal =
       LLVMBuildCall2(Builder, FunctionType, MappedFn, nullptr, 0, "");
