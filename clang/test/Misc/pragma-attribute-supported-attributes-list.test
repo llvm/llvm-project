@@ -111,6 +111,7 @@
 // CHECK-NEXT: Mips16 (SubjectMatchRule_function)
 // CHECK-NEXT: MipsLongCall (SubjectMatchRule_function)
 // CHECK-NEXT: MipsShortCall (SubjectMatchRule_function)
+// CHECK-NEXT: ModularFormat (SubjectMatchRule_function)
 // CHECK-NEXT: NSConsumed (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: NSConsumesSelf (SubjectMatchRule_objc_method)
 // CHECK-NEXT: NSErrorDomain (SubjectMatchRule_enum)

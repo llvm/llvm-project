@@ -75,11 +75,6 @@ tablegen("AMDGPUGenSDNodeInfo") {
   td_file = "AMDGPU.td"
 }
 
-tablegen("InstCombineTables") {
-  visibility = [ ":LLVMAMDGPUCodeGen" ]
-  args = [ "-gen-searchable-tables" ]
-}
-
 tablegen("R600GenCallingConv") {
   visibility = [ ":LLVMAMDGPUCodeGen" ]
   args = [ "-gen-callingconv" ]
@@ -110,7 +105,6 @@ static_library("LLVMAMDGPUCodeGen") {
     ":AMDGPUGenRegBankGICombiner",
     ":AMDGPUGenRegisterBank",
     ":AMDGPUGenSDNodeInfo",
-    ":InstCombineTables",
     ":R600GenCallingConv",
     ":R600GenDAGISel",
     ":R600GenDFAPacketizer",
