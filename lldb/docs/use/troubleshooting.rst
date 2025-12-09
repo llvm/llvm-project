@@ -113,8 +113,8 @@ command from within LLDB:
    This feature was added in LLDB 22. If you are using an earlier version, you
    can use one of the methods below.
 
-If your LLDB has Python enabled, you can also use this command to print the
-same information:
+If your LLDB has a scripting langauge enabled, you can also use this command to
+print the same information:
 
 ::
 
