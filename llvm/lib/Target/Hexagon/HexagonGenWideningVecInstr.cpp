@@ -117,9 +117,9 @@ private:
                              bool IsResSigned);
   bool genVAvg(Instruction *Inst);
   bool checkConstantVector(Value *OP, int64_t &SplatVal, bool IsOPZExt);
-  void updateMPYConst(Intrinsic::ID IntId, int64_t &SplatVal, bool IsOPZExt,
+  void updateMPYConst(Intrinsic::ID IntId, int64_t SplatVal, bool IsOPZExt,
                       Value *&OP, IRBuilder<> &IRB);
-  void packConstant(Intrinsic::ID IntId, int64_t &SplatVal, Value *&OP,
+  void packConstant(Intrinsic::ID IntId, int64_t SplatVal, Value *&OP,
                     IRBuilder<> &IRB);
 };
 
@@ -484,9 +484,8 @@ bool HexagonGenWideningVecInstr::checkConstantVector(Value *OP,
 }
 
 void HexagonGenWideningVecInstr::updateMPYConst(Intrinsic::ID IntId,
-                                                int64_t &SplatVal,
-                                                bool IsOPZExt, Value *&OP,
-                                                IRBuilder<> &IRB) {
+                                                int64_t SplatVal, bool IsOPZExt,
+                                                Value *&OP, IRBuilder<> &IRB) {
   if ((IntId == Intrinsic::hexagon_vmpy_uu ||
        IntId == Intrinsic::hexagon_vmpy_us ||
        IntId == Intrinsic::hexagon_vmpy_su ||
@@ -506,7 +505,7 @@ void HexagonGenWideningVecInstr::updateMPYConst(Intrinsic::ID IntId,
 }
 
 void HexagonGenWideningVecInstr::packConstant(Intrinsic::ID IntId,
-                                              int64_t &SplatVal, Value *&OP,
+                                              int64_t SplatVal, Value *&OP,
                                               IRBuilder<> &IRB) {
   uint32_t Val32 = static_cast<uint32_t>(SplatVal);
   if (IntId == Intrinsic::hexagon_vmpy_ub_ub) {
