@@ -156,11 +156,22 @@ private:
                 const Entry *TheEntry)
       : Binary(Binary::ID_Offload, Source), Buffer(Source.getBufferStart()),
         TheHeader(TheHeader), TheEntry(TheEntry) {
+    if (TheHeader->Version == 1) {
+      const StringEntryV1 *StringMapBegin =
+          reinterpret_cast<const StringEntryV1 *>(
+              &Buffer[TheEntry->StringOffset]);
+      for (uint64_t I = 0, E = TheEntry->NumStrings; I != E; ++I) {
+        StringRef Key = &Buffer[StringMapBegin[I].KeyOffset];
+        StringData[Key] = &Buffer[StringMapBegin[I].ValueOffset];
+      }
+      return;
+    }
     const StringEntry *StringMapBegin =
         reinterpret_cast<const StringEntry *>(&Buffer[TheEntry->StringOffset]);
     for (uint64_t I = 0, E = TheEntry->NumStrings; I != E; ++I) {
       StringRef Key = &Buffer[StringMapBegin[I].KeyOffset];
-      StringData[Key] = StringRef(&Buffer[StringMapBegin[I].ValueOffset], StringMapBegin[I].ValueSize);
+      StringData[Key] = StringRef(&Buffer[StringMapBegin[I].ValueOffset],
+                                  StringMapBegin[I].ValueSize);
     }
   }
 
