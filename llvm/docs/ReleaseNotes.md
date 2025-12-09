@@ -253,6 +253,10 @@ Changes to LLDB
   LLVM's PDB and CodeView support. You can switch back to the DIA reader with
   `settings set plugin.symbol-file.pdb.reader dia`. Note that support for the
   DIA reader will be removed in a future version of LLDB.
+* A `--verbose` option was added to the `version` command. When `--verbose` is used,
+  LLDB's build configuration is included in the command's output. This includes
+  all the supported targets, along with the presence of (or lack of) optional
+  features like XML parsing.
 
 Changes to BOLT
 ---------------------------------
