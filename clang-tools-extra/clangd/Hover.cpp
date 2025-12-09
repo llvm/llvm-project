@@ -178,7 +178,7 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
   // etc.
   PrintingPolicy Copy(PP);
   if (!QT.isNull() && !QT.hasQualifiers() &&
-      PP.SuppressTagKeyword >=
+      PP.SuppressTagKeyword ==
           llvm::to_underlying(
               PrintingPolicy::SuppressTagKeywordMode::InElaboratedNames)) {
     if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr());
