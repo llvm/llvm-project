@@ -719,6 +719,22 @@ func.func @self_copy(%m1: memref<?xf32>) {
 
 // -----
 
+func.func @practically_self_copy() {
+  %alloc = memref.alloc() : memref<1x8x384x384xui8>
+  %subview = memref.subview %alloc[0, 0, 0, 0] [1, 1, 384, 384] [1, 1, 1, 1] : memref<1x8x384x384xui8> to memref<1x1x384x384xui8, strided<[1179648, 147456, 384, 1]>>
+  %collapse_shape = memref.collapse_shape %subview [[0, 1], [2], [3]] : memref<1x1x384x384xui8, strided<[1179648, 147456, 384, 1]>> into memref<1x384x384xui8, strided<[1179648, 384, 1]>>
+  "my.op"(%collapse_shape) : (memref<1x384x384xui8, strided<[1179648, 384, 1]>>) -> ()
+  %expand_shape = memref.expand_shape %collapse_shape [[0, 1], [2], [3]] output_shape [1, 1, 384, 384] : memref<1x384x384xui8, strided<[1179648, 384, 1]>> into memref<1x1x384x384xui8, strided<[1179648, 1179648, 384, 1]>>
+  %cast = memref.cast %subview : memref<1x1x384x384xui8, strided<[1179648, 147456, 384, 1]>> to memref<1x1x384x384xui8, affine_map<(d0, d1, d2, d3) -> (d0 * 1179648 + d1 * 147456 + d2 * 384 + d3)>>
+  memref.copy %expand_shape, %subview : memref<1x1x384x384xui8, strided<[1179648, 1179648, 384, 1]>> to memref<1x1x384x384xui8, strided<[1179648, 147456, 384, 1]>>
+  return
+}
+
+// CHECK-LABEL: func @practically_self_copy
+//   CHECK-NOT:   memref.copy
+
+// -----
+
 // CHECK-LABEL: func @empty_copy
 //  CHECK-NEXT:   return
 func.func @empty_copy(%m1: memref<0x10xf32>, %m2: memref<?x10xf32>) {

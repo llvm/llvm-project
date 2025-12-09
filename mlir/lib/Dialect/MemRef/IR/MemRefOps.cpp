@@ -812,9 +812,22 @@ namespace {
 struct FoldSelfCopy : public OpRewritePattern<CopyOp> {
   using OpRewritePattern<CopyOp>::OpRewritePattern;
 
+  // Given a value, traverse through CastOp, CollapseShapeOp and ExpandShapeOp
+  // to get the root value. The root and the original value have the same data.
+  // Thus operations like SubViewOp are not considered here.
+  static Value getRoot(Value v) {
+    while (auto *definingOp = v.getDefiningOp()) {
+      if (!isa<CastOp, CollapseShapeOp, ExpandShapeOp>(definingOp))
+        return v;
+      v = definingOp->getOperand(0);
+    }
+    return v;
+  }
   LogicalResult matchAndRewrite(CopyOp copyOp,
                                 PatternRewriter &rewriter) const override {
-    if (copyOp.getSource() != copyOp.getTarget())
+    Value sourceData = getRoot(copyOp.getSource());
+    Value targetData = getRoot(copyOp.getTarget());
+    if (sourceData != targetData)
       return failure();
 
     rewriter.eraseOp(copyOp);
