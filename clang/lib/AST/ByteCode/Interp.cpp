@@ -2318,7 +2318,7 @@ bool FinishInitGlobal(InterpState &S, CodePtr OpPC) {
 
   finishGlobalRecurse(S, Ptr);
   if (Ptr.canBeInitialized()) {
-    Ptr.initialize(S);
+    Ptr.initialize();
     Ptr.activate();
   }
 

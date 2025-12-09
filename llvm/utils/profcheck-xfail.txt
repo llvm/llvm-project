@@ -490,8 +490,6 @@ Transforms/LowerSwitch/do-not-handle-impossible-values.ll
 Transforms/LowerSwitch/feature.ll
 Transforms/LowerSwitch/fold-popular-case-to-unreachable-default.ll
 Transforms/LowerSwitch/pr59316.ll
-Transforms/LowerTypeTests/import.ll
-Transforms/LowerTypeTests/simple.ll
 Transforms/MergeFunc/2011-02-08-RemoveEqual.ll
 Transforms/MergeFunc/apply_function_attributes.ll
 Transforms/MergeFunc/call-and-invoke-with-ranges-attr.ll

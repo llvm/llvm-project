@@ -48,6 +48,7 @@ enum class CudaVersion {
   CUDA_126,
   CUDA_128,
   CUDA_129,
+  CUDA_130,
   FULLY_SUPPORTED = CUDA_128,
   PARTIALLY_SUPPORTED =
       CUDA_129, // Partially supported. Proceed with a warning.

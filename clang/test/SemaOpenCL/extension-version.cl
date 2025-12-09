@@ -331,6 +331,12 @@
 #endif
 #pragma OPENCL EXTENSION cl_khr_depth_images : enable
 
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 100)
+#ifndef cl_intel_bfloat16_conversion
+#error "Missing cl_intel_bfloat16_conversion define"
+#endif
+#endif
+
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
 #ifndef cl_intel_subgroups
 #error "Missing cl_intel_subgroups define"
@@ -341,6 +347,24 @@
 #pragma OPENCL EXTENSION cl_intel_subgroups : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
+#ifndef cl_intel_subgroups_char
+#error "Missing cl_intel_subgroups_char define"
+#endif
+#else
+// expected-warning@+2{{unsupported OpenCL extension 'cl_intel_subgroups_char' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cl_intel_subgroups_char : enable
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
+#ifndef cl_intel_subgroups_long
+#error "Missing cl_intel_subgroups_long define"
+#endif
+#else
+// expected-warning@+2{{unsupported OpenCL extension 'cl_intel_subgroups_long' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cl_intel_subgroups_long : enable
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
 #ifndef cl_intel_subgroups_short
 #error "Missing cl_intel_subgroups_short define"
 #endif
@@ -348,6 +372,18 @@
 // expected-warning@+2{{unsupported OpenCL extension 'cl_intel_subgroups_short' - ignoring}}
 #endif
 #pragma OPENCL EXTENSION cl_intel_subgroups_short : enable
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
+#ifndef cl_intel_subgroup_buffer_prefetch
+#error "Missing cl_intel_subgroup_buffer_prefetch define"
+#endif
+#endif
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
+#ifndef cl_intel_subgroup_local_block_io
+#error "Missing cl_intel_subgroup_local_block_io define"
+#endif
+#endif
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
 #ifndef cl_intel_device_side_avc_motion_estimation

@@ -127,9 +127,7 @@ EVAL_EXPR(43, varfloat && constfloat) // both-error {{not an integer constant ex
 EVAL_EXPR(45, ((char*)-1) + 1 == 0 ? 1 : -1)
 EVAL_EXPR(46, ((char*)-1) + 1 < (char*) -1 ? 1 : -1)
 EVAL_EXPR(47, &x < &x + 1 ? 1 : -1)
-#if 0
 EVAL_EXPR(48, &x != &x - 1 ? 1 : -1)
-#endif
 EVAL_EXPR(49, &x < &x - 100 ? 1 : -1) // ref-error {{not an integer constant expression}}
 
 extern struct Test50S Test50;
