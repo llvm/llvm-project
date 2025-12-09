@@ -21,6 +21,9 @@
 // std::basic_string::data is const in C++03
 // UNSUPPORTED: c++03
 
+// The protocol checked by this test is specific to Clang and compiler-rt
+// UNSUPPORTED: gcc
+
 #include <deque>
 #include <string>
 #include <vector>
