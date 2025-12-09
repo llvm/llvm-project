@@ -33,6 +33,11 @@ public:
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
+  void ConstructJobForPicolibc(Compilation &C, const JobAction &JA,
+                               const InputInfo &Output,
+                               const InputInfoList &Inputs,
+                               const llvm::opt::ArgList &TCArgs,
+                               const char *LinkingOutput) const;
 };
 
 class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
@@ -78,6 +83,9 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
+  void AddClangCXXStdlibIncludeArgs(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
   void addLibStdCxxIncludePaths(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;

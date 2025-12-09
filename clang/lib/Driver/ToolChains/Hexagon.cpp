@@ -13,6 +13,7 @@
 #include "clang/Driver/InputInfo.h"
 #include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -273,6 +274,97 @@ void hexagon::Linker::RenderExtraToolArgs(const JobAction &JA,
                                           ArgStringList &CmdArgs) const {
 }
 
+static void constructHexagonPicolibcLinkArgs(
+    Compilation &C, const JobAction &JA,
+    const toolchains::HexagonToolChain &HTC, const InputInfo &Output,
+    const InputInfoList &Inputs, const ArgList &Args, ArgStringList &CmdArgs,
+    const char *LinkingOutput) {
+  const Driver &D = HTC.getDriver();
+  bool IsShared = Args.hasArg(options::OPT_shared);
+  bool IncStdLib = !Args.hasArg(options::OPT_nostdlib);
+  bool IncStartFiles = !Args.hasArg(options::OPT_nostartfiles);
+  bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
+  StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
+  // Use G0 for Picolibc
+  bool UseG0 = true;
+  auto OsType = HTC.getOS();
+
+  CmdArgs.push_back("--eh-frame-hdr");
+  // Propagate arch flags to the linker when not using LLD, to match
+  // upstream Hexagon driver behavior validated by tests.
+  bool UseLLD = false;
+  const char *LinkerPath = Args.MakeArgString(HTC.GetLinkerPath(&UseLLD));
+  UseLLD = UseLLD ||
+           llvm::sys::path::filename(LinkerPath).ends_with("ld.lld") ||
+           llvm::sys::path::stem(LinkerPath).ends_with("ld.lld");
+  if (!UseLLD) {
+    CmdArgs.push_back("-march=hexagon");
+    CmdArgs.push_back(Args.MakeArgString("-mcpu=hexagon" + CpuVer));
+  }
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(Output.getFilename());
+
+  // Inputs
+  Args.addAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
+                            options::OPT_t, options::OPT_u_Group});
+  AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
+
+  //----------------------------------------------------------------------------
+  // Start Files
+  //----------------------------------------------------------------------------
+  const std::string MCpuSuffix = "/" + CpuVer.str();
+  const std::string MCpuG0Suffix = MCpuSuffix + "/G0";
+  const std::string RootDir =
+      HTC.getHexagonTargetDir(D.Dir, D.PrefixDirs) + "/";
+  std::string NormalizedTriple =
+      HTC.getTriple().normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
+  const std::string StartSubDir =
+      NormalizedTriple + "/lib" + (UseG0 ? MCpuG0Suffix : MCpuSuffix);
+
+  if (IncStdLib && IncStartFiles) {
+    if (!IsShared) {
+      if (OsType == "none" || OsType == "unknown") {
+        std::string Crt0 = RootDir + StartSubDir + "/crt0-semihost.o";
+        CmdArgs.push_back(Args.MakeArgString(Crt0));
+      }
+    }
+  }
+
+  //----------------------------------------------------------------------------
+  // Library Search Paths
+  //----------------------------------------------------------------------------
+  const ToolChain::path_list &LibPaths = HTC.getFilePaths();
+  for (const auto &LibPath : LibPaths)
+    CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + LibPath));
+  //----------------------------------------------------------------------------
+  // Libraries
+  //----------------------------------------------------------------------------
+  if (IncStdLib && IncDefLibs) {
+    if (D.CCCIsCXX()) {
+      if (HTC.ShouldLinkCXXStdlib(Args))
+        HTC.AddCXXStdlibLibArgs(Args, CmdArgs);
+      CmdArgs.push_back("-lm");
+    }
+
+    CmdArgs.push_back("--start-group");
+
+    if (!IsShared) {
+      // add OS libraries to link
+      std::vector<std::string> OsLibs{};
+      if (OsType == "none" || OsType == "unknown") {
+        OsLibs.push_back("semihost");
+      }
+      for (StringRef Lib : OsLibs)
+        CmdArgs.push_back(Args.MakeArgString("-l" + Lib));
+      if (!Args.hasArg(options::OPT_nolibc))
+        CmdArgs.push_back("-lc");
+    }
+    // Force compiler-rt for Picolibc
+    CmdArgs.push_back("-lclang_rt.builtins");
+    CmdArgs.push_back("--end-group");
+  }
+}
+
 static void
 constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
                          const toolchains::HexagonToolChain &HTC,
@@ -437,8 +529,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString(Crt0));
     }
     std::string Init = UseShared
-          ? Find(RootDir, StartSubDir + "/pic", "/initS.o")
-          : Find(RootDir, StartSubDir, "/init.o");
+                           ? Find(RootDir, StartSubDir + "/pic", "/initS.o")
+                           : Find(RootDir, StartSubDir, "/init.o");
     CmdArgs.push_back(Args.MakeArgString(Init));
   }
 
@@ -500,8 +592,12 @@ void hexagon::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   auto &HTC = static_cast<const toolchains::HexagonToolChain&>(getToolChain());
 
   ArgStringList CmdArgs;
-  constructHexagonLinkArgs(C, JA, HTC, Output, Inputs, Args, CmdArgs,
-                           LinkingOutput);
+  if (HTC.getTriple().isPicolibc())
+    constructHexagonPicolibcLinkArgs(C, JA, HTC, Output, Inputs, Args, CmdArgs,
+                                     LinkingOutput);
+  else
+    constructHexagonLinkArgs(C, JA, HTC, Output, Inputs, Args, CmdArgs,
+                             LinkingOutput);
 
   const char *Exec = Args.MakeArgString(HTC.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this,
@@ -583,16 +679,38 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
     HasG0 = *G == 0;
 
   const std::string CpuVer = GetTargetCPUVersion(Args).str();
-  for (auto &Dir : RootDirs) {
-    std::string LibDir = Dir + "/hexagon/lib";
-    std::string LibDirCpu = LibDir + '/' + CpuVer;
+  // Special-case Picolibc baremetal layout:
+  //   <install>/../target/<normalized-triple>/lib/<vXX>/G0[/pic]
+  if (getTriple().isPicolibc()) {
+    std::string SubDir = '/' + CpuVer;
+    // Force G0 for Picolibc
+    HasG0 = true;
     if (HasG0) {
       if (HasPIC)
-        LibPaths.push_back(LibDirCpu + "/G0/pic");
-      LibPaths.push_back(LibDirCpu + "/G0");
+        SubDir += "/G0/pic";
+      else
+        SubDir += "/G0";
     }
-    LibPaths.push_back(LibDirCpu);
-    LibPaths.push_back(LibDir);
+    if (getTriple().getOS() != llvm::Triple::Linux) {
+      for (auto &Dir : RootDirs) {
+        auto NormalizedTriple = getTriple().normalize();
+        std::string LibDir = Dir + '/' + NormalizedTriple + "/lib";
+        LibPaths.push_back(LibDir + SubDir);
+      }
+    }
+    return;
+  } else {
+    for (auto &Dir : RootDirs) {
+      std::string LibDir = Dir + "/hexagon/lib";
+      std::string LibDirCpu = LibDir + '/' + CpuVer;
+      if (HasG0) {
+        if (HasPIC)
+          LibPaths.push_back(LibDirCpu + "/G0/pic");
+        LibPaths.push_back(LibDirCpu + "/G0");
+      }
+      LibPaths.push_back(LibDirCpu);
+      LibPaths.push_back(LibDir);
+    }
   }
 }
 
@@ -637,7 +755,9 @@ void HexagonToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
     if (Args.hasArg(options::OPT_fexperimental_library))
       CmdArgs.push_back("-lc++experimental");
     CmdArgs.push_back("-lc++abi");
-    if (UNW != ToolChain::UNW_None)
+    // For Picolibc baremetal, always link libunwind with libc++ regardless of
+    // -unwindlib setting; libunwind is the only supported unwinding library.
+    if (UNW != ToolChain::UNW_None || getTriple().isPicolibc())
       CmdArgs.push_back("-lunwind");
     break;
 
@@ -711,6 +831,16 @@ void HexagonToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   const Driver &D = getDriver();
   SmallString<128> ResourceDirInclude(D.ResourceDir);
+  // Picolibc baremetal headers live under the normalized triple tree.
+  if (getTriple().isPicolibc()) {
+    if (DriverArgs.hasArg(options::OPT_nostdlibinc))
+      return;
+    std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
+    std::string Target = getTriple().normalize();
+    addExternCSystemInclude(DriverArgs, CC1Args,
+                            TargetDir + "/" + Target + "/include");
+    return;
+  }
   if (!IsELF) {
     llvm::sys::path::append(ResourceDirInclude, "include");
     if (!DriverArgs.hasArg(options::OPT_nobuiltininc) &&
@@ -769,11 +899,39 @@ void HexagonToolChain::addLibStdCxxIncludePaths(
                            DriverArgs, CC1Args);
 }
 
+void HexagonToolChain::AddClangCXXStdlibIncludeArgs(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx))
+    return;
+  // For Picolibc baremetal, add libc++ headers via extern C system include
+  // from the normalized triple tree to match driver tests.
+  const Driver &D = getDriver();
+  if (getTriple().isPicolibc() && getTriple().getOS() != llvm::Triple::Linux) {
+    StringRef InstallDir = D.Dir;
+    addExternCSystemInclude(DriverArgs, CC1Args,
+                            InstallDir + "/../target/" +
+                                getTriple().normalize() + "/include/c++/v1");
+    return;
+  }
+  // Otherwise delegate to the chosen C++ stdlib include path helper.
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx:
+    addLibCxxIncludePaths(DriverArgs, CC1Args);
+    break;
+  case ToolChain::CST_Libstdcxx:
+    addLibStdCxxIncludePaths(DriverArgs, CC1Args);
+    break;
+    llvm_unreachable("Unexpected C++ stdlib type");
+  }
+}
+
 ToolChain::CXXStdlibType
 HexagonToolChain::GetCXXStdlibType(const ArgList &Args) const {
   Arg *A = Args.getLastArg(options::OPT_stdlib_EQ);
   if (!A) {
-    if (getTriple().isMusl())
+    if (getTriple().isMusl() || getTriple().isPicolibc())
       return ToolChain::CST_Libcxx;
     else
       return ToolChain::CST_Libstdcxx;
