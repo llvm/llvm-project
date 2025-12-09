@@ -111,14 +111,23 @@ command from within LLDB:
 
 .. note::
    This feature was added in LLDB 22. If you are using an earlier version, you
-   can use the method below.
+   can use one of the methods below.
 
-Alternatively, you can check the shared library dependencies of LLDB. For example
-on Linux you can use the following command:
+If your LLDB has Python enabled, you can also use this command to print the
+same information:
 
 ::
 
-   $ readelf -d lldb | grep NEEDED
+   (lldb) script lldb.debugger.GetBuildConfiguration()
+
+This command will fail if Python was not enabled. In that case, you can instead
+check the shared library dependencies of LLDB.
+
+For example on Linux you can use the following command:
+
+::
+
+   $ readelf -d <path-to-lldb> | grep NEEDED
    0x0000000000000001 (NEEDED)             Shared library: [liblldb.so.22.0git]
    0x0000000000000001 (NEEDED)             Shared library: [libxml2.so.2]
    0x0000000000000001 (NEEDED)             Shared library: [libedit.so.2]
@@ -127,3 +136,5 @@ on Linux you can use the following command:
 
 The output above shows us that this particular copy of LLDB has XML parsing
 (``libxml2``) and editline (``libedit``) enabled.
+
+If you are on MacOS, use ``otool -l <path-to-lldb>``.
