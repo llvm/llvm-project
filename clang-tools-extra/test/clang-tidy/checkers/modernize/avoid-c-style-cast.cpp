@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s google-readability-casting %t -- -- -fexceptions
+// RUN: %check_clang_tidy -std=c++11-or-later %s modernize-avoid-c-style-cast %t -- -- -fexceptions
 
 bool g() { return false; }
 
@@ -8,14 +8,14 @@ struct Y : public X {};
 
 void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
   const char *cpc2 = (const char*)cpc;
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: redundant cast to the same type [google-readability-casting]
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: redundant cast to the same type [modernize-avoid-c-style-cast]
   // CHECK-FIXES: const char *cpc2 = cpc;
 
   typedef const char *Typedef1;
   typedef const char *Typedef2;
   Typedef1 t1;
   (Typedef2)t1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: C-style casts are discouraged; use static_cast (if needed, the cast may be redundant) [google-readability-casting]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: C-style casts are discouraged; use static_cast (if needed, the cast may be redundant) [modernize-avoid-c-style-cast]
   // CHECK-FIXES: static_cast<Typedef2>(t1);
   (const char*)t1;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: {{.*}}; use static_cast (if needed
@@ -28,7 +28,7 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
   // CHECK-FIXES: t1;
 
   char *pc = (char*)cpc;
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: C-style casts are discouraged; use const_cast [google-readability-casting]
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: C-style casts are discouraged; use const_cast [modernize-avoid-c-style-cast]
   // CHECK-FIXES: char *pc = const_cast<char*>(cpc);
   typedef char Char;
   Char *pChar = (Char*)pc;

@@ -911,29 +911,18 @@ void PEIImpl::calculateFrameObjectOffsets(MachineFunction &MF) {
   Align MaxAlign = MFI.getMaxAlign();
   // First assign frame offsets to stack objects that are used to spill
   // callee saved registers.
-  if (StackGrowsDown) {
-    for (int FI = MFI.getObjectIndexBegin(); FI < MFI.getObjectIndexEnd();
-         FI++) {
-      // Only allocate objects on the default stack.
-      if (!MFI.isCalleeSavedObjectIndex(FI) ||
-          MFI.getStackID(FI) != TargetStackID::Default)
-        continue;
-      // TODO: should we be using MFI.isDeadObjectIndex(FI) here?
-      AdjustStackOffset(MFI, FI, StackGrowsDown, Offset, MaxAlign);
-    }
-  } else {
-    for (int FI = MFI.getObjectIndexEnd() - 1; FI >= MFI.getObjectIndexBegin();
-         FI--) {
-      // Only allocate objects on the default stack.
-      if (!MFI.isCalleeSavedObjectIndex(FI) ||
-          MFI.getStackID(FI) != TargetStackID::Default)
-        continue;
+  auto AllFIs = seq(MFI.getObjectIndexBegin(), MFI.getObjectIndexEnd());
+  for (int FI : reverse_conditionally(AllFIs, /*Reverse=*/!StackGrowsDown)) {
+    // Only allocate objects on the default stack.
+    if (!MFI.isCalleeSavedObjectIndex(FI) ||
+        MFI.getStackID(FI) != TargetStackID::Default)
+      continue;
 
-      if (MFI.isDeadObjectIndex(FI))
-        continue;
+    // TODO: should this just be if (MFI.isDeadObjectIndex(FI))
+    if (!StackGrowsDown && MFI.isDeadObjectIndex(FI))
+      continue;
 
-      AdjustStackOffset(MFI, FI, StackGrowsDown, Offset, MaxAlign);
-    }
+    AdjustStackOffset(MFI, FI, StackGrowsDown, Offset, MaxAlign);
   }
 
   assert(MaxAlign == MFI.getMaxAlign() &&
