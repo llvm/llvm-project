@@ -217,7 +217,8 @@ public:
   bool loadScript(const std::string &Path) const {
     if (!importModule("runpy"))
       return false;
-    if (!evaluate("globals().update(runpy.run_path('" + Path + "'))", PyGlobals))
+    if (!evaluate("globals().update(runpy.run_path('" + Path + "'))",
+                  PyGlobals))
       return false;
     if (!PyDict_GetItemString(PyGlobals, "run")) {
       errs() << "Script defines no run() function: " << Path << "\n";
