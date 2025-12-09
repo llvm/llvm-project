@@ -754,6 +754,19 @@ class MSBuiltin<string name> {
   string MSBuiltinName = name;
 }
 
+/// Utility class for intrinsics that
+/// 1. Don't touch memory or any hidden state
+/// 2. Can be freely speculated, and
+/// 3. Will not create undef or poison on defined inputs.
+class PureTotalIntrinsic<list<LLVMType> ret_types,
+                list<LLVMType> param_types = [],
+                list<IntrinsicProperty> intr_properties = [],
+                string name = "",
+                list<SDNodeProperty> sd_properties = []>
+                : DefaultAttrsIntrinsic<ret_types, param_types,
+                            intr_properties # [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison],
+                            name, sd_properties>;
+
 #ifndef TEST_INTRINSICS_SUPPRESS_DEFS
 
 //===--------------- Variable Argument Handling Intrinsics ----------------===//
@@ -1940,8 +1953,7 @@ def int_fake_use : DefaultAttrsIntrinsic<[], [llvm_vararg_ty],
 // Intrinsic to mask out bits of a pointer.
 // First argument must be pointer or vector of pointer. This is checked by the
 // verifier.
-def int_ptrmask: DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_anyint_ty],
-                           [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]>;
+def int_ptrmask: PureTotalIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_anyint_ty]>;
 
 // Intrinsic to wrap a thread local variable.
 def int_threadlocal_address : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [LLVMMatchType<0>],
