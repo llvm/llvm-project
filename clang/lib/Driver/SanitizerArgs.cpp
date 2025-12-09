@@ -617,8 +617,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     } else if (Arg->getOption().matches(
                    options::OPT_fsanitize_ignore_for_ubsan_feature_EQ)) {
       Arg->claim();
-      SanitizerMask Suppress = parseArgValues(D, Arg, DiagnoseErrors);
-      IgnoreForUbsanFeature |= expandSanitizerGroups(Suppress);
+      IgnoreForUbsanFeature |=
+          expandSanitizerGroups(parseArgValues(D, Arg, DiagnoseErrors));
     }
   }
 
@@ -742,22 +742,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // -fsanitize=address. Perhaps it should print an error, or perhaps
   // -f(-no)sanitize=leak should change whether leak detection is enabled by
   // default in ASan?
-
-  // Error if a non-UBSan sanitizer is passed to
-  // `-fsanitize-ignore-for-ubsan-feature=`.
-  //
-  // `shift` is a `SANITIZER_GROUP()`, and so is expanded into its constituents
-  // by `expandSanitizerGroups()` above, though the physical bit is not included
-  // in `SanitizerKind::Undefined`.
-  const SanitizerMask not_ubsan_mask =
-      IgnoreForUbsanFeature &
-      ~(SanitizerKind::Undefined | SanitizerKind::ShiftGroup);
-  if (not_ubsan_mask && DiagnoseErrors) {
-    SanitizerSet not_ubsan;
-    not_ubsan.set(not_ubsan_mask);
-    D.Diag(clang::diag::err_drv_not_a_ubsan_sanitizer) << toString(not_ubsan);
-  }
-  IgnoreForUbsanFeature &= SanitizerKind::Undefined;
 
   // Parse -f(no-)?sanitize-recover flags.
   SanitizerMask RecoverableKinds = parseSanitizeArgs(

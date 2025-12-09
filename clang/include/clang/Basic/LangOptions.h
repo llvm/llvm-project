@@ -443,7 +443,7 @@ public:
   bool SanitizeCoverage = false;
   /// Set of enabled (undefined behavior) sanitizers that do not cause
   /// `__has_feature(undefined_behavior_sanitizer)` to evaluate true.
-  SanitizerSet UBSanFeatureSuppressedSanitize;
+  SanitizerSet UBSanFeatureIgnoredSanitize;
 
   /// Paths to files specifying which objects
   /// (files, functions, variables) should not be instrumented.

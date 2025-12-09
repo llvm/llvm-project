@@ -3694,7 +3694,7 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
       GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
     for (StringRef Sanitizer :
-         serializeSanitizerKinds(Opts.UBSanFeatureSuppressedSanitize))
+         serializeSanitizerKinds(Opts.UBSanFeatureIgnoredSanitize))
       GenerateArg(Consumer, OPT_fsanitize_ignore_for_ubsan_feature_EQ,
                   Sanitizer);
 
@@ -3897,7 +3897,7 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
     GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
   for (StringRef Sanitizer :
-       serializeSanitizerKinds(Opts.UBSanFeatureSuppressedSanitize))
+       serializeSanitizerKinds(Opts.UBSanFeatureIgnoredSanitize))
     GenerateArg(Consumer, OPT_fsanitize_ignore_for_ubsan_feature_EQ, Sanitizer);
 
   // Conflating '-fsanitize-system-ignorelist' and '-fsanitize-ignorelist'.
@@ -3983,7 +3983,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     parseSanitizerKinds(
         "-fsanitize-ignore-for-ubsan-feature=",
         Args.getAllArgValues(OPT_fsanitize_ignore_for_ubsan_feature_EQ), Diags,
-        Opts.UBSanFeatureSuppressedSanitize);
+        Opts.UBSanFeatureIgnoredSanitize);
 
     return Diags.getNumErrors() == NumErrorsBefore;
   }
@@ -4404,7 +4404,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   parseSanitizerKinds(
       "-fsanitize-ignore-for-ubsan-feature=",
       Args.getAllArgValues(OPT_fsanitize_ignore_for_ubsan_feature_EQ), Diags,
-      Opts.UBSanFeatureSuppressedSanitize);
+      Opts.UBSanFeatureIgnoredSanitize);
   Opts.NoSanitizeFiles = Args.getAllArgValues(OPT_fsanitize_ignorelist_EQ);
   std::vector<std::string> systemIgnorelists =
       Args.getAllArgValues(OPT_fsanitize_system_ignorelist_EQ);
