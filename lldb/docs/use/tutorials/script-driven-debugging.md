@@ -172,7 +172,7 @@ At this point we are ready to use the DFS function to see if the word "Romeo"
 is in our tree or not. To actually use it in LLDB on our dictionary program,
 you would do something like this:
 
-```c++
+```
 $ lldb
 (lldb) process attach -n "dictionary"
 Architecture set to: x86_64.
@@ -423,7 +423,7 @@ Enter your Python command(s). Type 'DONE' to end.
 >     print "Here is the problem. Going right, should go left!"
 > DONE
 ```
-```c++
+```
 (lldb) continue
 Process 696 resuming
 Here is the problem. Going right, should go left!

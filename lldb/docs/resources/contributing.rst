@@ -90,19 +90,19 @@ dependency graph manageable, we still have some rules to govern these
 relationships:
 
 * All dependencies between plugins of the same kind must flow in the same
-  direction (if plugin `A1` depends on plugin `B1`, then `B2` must not depend on
-  `A2`)
+  direction (if plugin ``A1`` depends on plugin ``B1``, then ``B2`` must not depend on
+  ``A2``)
 * Dependency graph of plugin kinds must not contain loops (dependencies like
-  `A1->B1`, `B2->C2` and `C3->A3` are forbidden because they induce a cycle in
+  ``A1->B1``, ``B2->C2`` and ``C3->A3`` are forbidden because they induce a cycle in
   the plugin kind graph even though the plugins themselves are acyclical)
 
 
 The first of these rules is checked via CMake scripts (using the
-`LLDB_ACCEPTABLE_PLUGIN_DEPENDENCIES` property). Dependencies in this category
+``LLDB_ACCEPTABLE_PLUGIN_DEPENDENCIES`` property). Dependencies in this category
 are expected and permitted (subject to other constraints such as that dependency
 making sense for the particular pair of plugins). Unfortunately, due to historic
 reasons, not all plugin dependencies follow this rule, which is why we have
-another category called `LLDB_TOLERATED_PLUGIN_DEPENDENCIES`. New dependencies
+another category called ``LLDB_TOLERATED_PLUGIN_DEPENDENCIES``. New dependencies
 are forbidden (even though they are accepted by CMake) and existing ones should
 be removed wherever possible.
 

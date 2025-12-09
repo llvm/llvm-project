@@ -413,7 +413,7 @@ you may want a `pofoo` X command, that equates po [ModifyString(X)
 capitalizedString]. The following debugger interaction shows how to achieve
 that goal:
 
-```python3
+```
 (lldb) script
 Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.
 >>> def pofoo_funct(debugger, command, result, internal_dict):
