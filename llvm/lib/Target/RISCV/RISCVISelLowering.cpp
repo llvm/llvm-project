@@ -25278,7 +25278,9 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
   }
 
   if ((ValueVT.isScalableVector() || ValueVT.isFixedLengthVector()) &&
-      PartVT.isScalableVector()) {
+      PartVT.isScalableVector() &&
+      !(ValueVT.isScalableVector() &&
+        ValueVT.getVectorElementCount() == PartVT.getVectorElementCount())) {
     if (ValueVT.isFixedLengthVector()) {
       ValueVT = getContainerForFixedLengthVector(ValueVT.getSimpleVT());
       Val = convertToScalableVector(ValueVT, Val, DAG, Subtarget);
@@ -25353,7 +25355,9 @@ SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
   }
 
   if ((ValueVT.isScalableVector() || ValueVT.isFixedLengthVector()) &&
-      PartVT.isScalableVector()) {
+      PartVT.isScalableVector() &&
+      !(ValueVT.isScalableVector() &&
+        ValueVT.getVectorElementCount() == PartVT.getVectorElementCount())) {
     LLVMContext &Context = *DAG.getContext();
     SDValue Val = Parts[0];
     EVT ValueEltVT = ValueVT.getVectorElementType();
