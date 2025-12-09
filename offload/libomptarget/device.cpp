@@ -38,6 +38,7 @@ using namespace llvm::omp::target::ompt;
 #endif
 
 using namespace llvm::omp::target::plugin;
+using namespace llvm::omp::target::debug;
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
@@ -48,7 +49,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   void *Event = getEvent();
   bool NeedNewEvent = Event == nullptr;
   if (NeedNewEvent && Device.createEvent(&Event) != OFFLOAD_SUCCESS) {
-    REPORT("Failed to create event\n");
+    REPORT() << "Failed to create event";
     return OFFLOAD_FAIL;
   }
 
@@ -56,7 +57,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   // know if the target support event. But if a target doesn't,
   // recordEvent should always return success.
   if (Device.recordEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
-    REPORT("Failed to set dependence on event " DPxMOD "\n", DPxPTR(Event));
+    REPORT() << "Failed to set dependence on event " << Event;
     return OFFLOAD_FAIL;
   }
 
@@ -315,21 +316,21 @@ int32_t DeviceTy::dataFence(AsyncInfoTy &AsyncInfo) {
 }
 
 int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
-  DP("Notifying about new mapping: HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
-     DPxPTR(HstPtr), Size);
+  ODBG(ODT_Mapping) << "Notifying about new mapping: HstPtr=" << HstPtr
+                    << ", Size=" << Size;
 
   if (RTL->data_notify_mapped(RTLDeviceID, HstPtr, Size)) {
-    REPORT("Notifying about data mapping failed.\n");
+    REPORT() << "Notifying about data mapping failed.";
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
-  DP("Notifying about an unmapping: HstPtr=" DPxMOD "\n", DPxPTR(HstPtr));
+  ODBG(ODT_Mapping) << "Notifying about an unmapping: HstPtr=" << HstPtr;
 
   if (RTL->data_notify_unmapped(RTLDeviceID, HstPtr)) {
-    REPORT("Notifying about data unmapping failed.\n");
+    REPORT() << "Notifying about data unmapping failed.";
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;

@@ -25,21 +25,32 @@ static std::unique_ptr<Generator> getHTMLGenerator() {
   return std::move(G.get());
 }
 
-static ClangDocContext
-getClangDocContext(std::vector<std::string> UserStylesheets = {},
-                   StringRef RepositoryUrl = "",
-                   StringRef RepositoryLinePrefix = "", StringRef Base = "") {
-  ClangDocContext CDCtx{
-      {},   "test-project", {}, {}, {}, RepositoryUrl, RepositoryLinePrefix,
-      Base, UserStylesheets};
-  CDCtx.UserStylesheets.insert(
-      CDCtx.UserStylesheets.begin(),
-      "../share/clang/clang-doc-default-stylesheet.css");
-  CDCtx.JsScripts.emplace_back("index.js");
-  return CDCtx;
-}
+class HTMLGeneratorTest : public ClangDocContextTest {
+protected:
+  ClangDocContext
+  getClangDocContext(std::vector<std::string> UserStylesheets = {},
+                     StringRef RepositoryUrl = "",
+                     StringRef RepositoryLinePrefix = "", StringRef Base = "") {
+    ClangDocContext CDCtx{nullptr,
+                          "test-project",
+                          false,
+                          "",
+                          "",
+                          RepositoryUrl,
+                          RepositoryLinePrefix,
+                          Base,
+                          UserStylesheets,
+                          Diags,
+                          false};
+    CDCtx.UserStylesheets.insert(
+        CDCtx.UserStylesheets.begin(),
+        "../share/clang/clang-doc-default-stylesheet.css");
+    CDCtx.JsScripts.emplace_back("index.js");
+    return CDCtx;
+  }
+};
 
-TEST(HTMLGeneratorTest, emitNamespaceHTML) {
+TEST_F(HTMLGeneratorTest, emitNamespaceHTML) {
   NamespaceInfo I;
   I.Name = "Namespace";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -150,7 +161,7 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(HTMLGeneratorTest, emitRecordHTML) {
+TEST_F(HTMLGeneratorTest, emitRecordHTML) {
   RecordInfo I;
   I.Name = "r";
   I.Path = "X/Y/Z";
@@ -278,7 +289,7 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(HTMLGeneratorTest, emitFunctionHTML) {
+TEST_F(HTMLGeneratorTest, emitFunctionHTML) {
   FunctionInfo I;
   I.Name = "f";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -338,7 +349,7 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(HTMLGeneratorTest, emitEnumHTML) {
+TEST_F(HTMLGeneratorTest, emitEnumHTML) {
   EnumInfo I;
   I.Name = "e";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -397,7 +408,7 @@ TEST(HTMLGeneratorTest, emitEnumHTML) {
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(HTMLGeneratorTest, emitCommentHTML) {
+TEST_F(HTMLGeneratorTest, emitCommentHTML) {
   FunctionInfo I;
   I.Name = "f";
   I.DefLoc = Location(10, 10, "test.cpp", true);

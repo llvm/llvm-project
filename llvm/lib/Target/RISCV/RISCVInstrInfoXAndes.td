@@ -912,7 +912,7 @@ defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU",
 // Pseudo-instructions for SFB (Short Forward Branch)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasShortForwardBranchOpt], hasSideEffects = 0,
+let Predicates = [HasShortForwardBranchIALU], hasSideEffects = 0,
     mayLoad = 0, mayStore = 0, Size = 8, Constraints = "$dst = $falsev" in {
 def PseudoCCNDS_BFOS : Pseudo<(outs GPR:$dst),
                               (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,

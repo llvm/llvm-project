@@ -68,24 +68,6 @@ using namespace cir;
 // General CIR parsing / printing
 //===----------------------------------------------------------------------===//
 
-Attribute CIRDialect::parseAttribute(DialectAsmParser &parser,
-                                     Type type) const {
-  llvm::SMLoc typeLoc = parser.getCurrentLocation();
-  llvm::StringRef mnemonic;
-  Attribute genAttr;
-  OptionalParseResult parseResult =
-      generatedAttributeParser(parser, &mnemonic, type, genAttr);
-  if (parseResult.has_value())
-    return genAttr;
-  parser.emitError(typeLoc, "unknown attribute in CIR dialect");
-  return Attribute();
-}
-
-void CIRDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
-  if (failed(generatedAttributePrinter(attr, os)))
-    llvm_unreachable("unexpected CIR type kind");
-}
-
 static void printRecordMembers(mlir::AsmPrinter &printer,
                                mlir::ArrayAttr members) {
   printer << '{';

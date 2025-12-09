@@ -923,7 +923,11 @@ struct NVGPUMBarrierArriveExpectTxLowering
                        adaptor.getMbarId(), rewriter);
     Value txcount = truncToI32(b, adaptor.getTxcount());
     rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxOp>(
-        op, barrier, txcount, adaptor.getPredicate());
+        op, Type{},       // return-value is optional and is void by default
+        barrier, txcount, // barrier and txcount
+        NVVM::MemScopeKind::CTA, // default scope is CTA
+        false,                   // relaxed-semantics is false
+        adaptor.getPredicate());
     return success();
   }
 };

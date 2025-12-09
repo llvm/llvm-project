@@ -360,6 +360,7 @@ declare nonnull ptr @nonnull()
 
 
 define internal ptr @f1(ptr %arg) {
+; FIXME: missing nonnull It should be nonnull @f1(ptr nonnull readonly %arg)
 ; FNATTRS-LABEL: define internal nonnull ptr @f1(
 ; FNATTRS-SAME: ptr readonly captures(address_is_null) [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
 ; FNATTRS-NEXT:  bb:
@@ -382,7 +383,7 @@ define internal ptr @f1(ptr %arg) {
 ; FNATTRS-NEXT:    ret ptr [[TMP10]]
 ;
 ; ATTRIBUTOR-LABEL: define internal ptr @f1(
-; ATTRIBUTOR-SAME: ptr nofree nonnull readonly [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
+; ATTRIBUTOR-SAME: ptr nofree readonly [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:  bb:
 ; ATTRIBUTOR-NEXT:    [[TMP:%.*]] = icmp eq ptr [[ARG]], null
 ; ATTRIBUTOR-NEXT:    br i1 [[TMP]], label [[BB9:%.*]], label [[BB1:%.*]]

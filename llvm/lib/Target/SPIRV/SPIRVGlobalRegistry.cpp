@@ -155,7 +155,7 @@ unsigned SPIRVGlobalRegistry::adjustOpTypeIntWidth(unsigned Width) const {
     report_fatal_error("Unsupported integer width!");
   const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(CurMF->getSubtarget());
   if (ST.canUseExtension(
-          SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers) ||
+          SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers) ||
       ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4))
     return Width;
   if (Width <= 8)
@@ -183,11 +183,11 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
           .addImm(SPIRV::Capability::Int4TypeINTEL);
     } else if ((!isPowerOf2_32(Width) || Width < 8) &&
                ST.canUseExtension(
-                   SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers)) {
+                   SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers)) {
       MIRBuilder.buildInstr(SPIRV::OpExtension)
-          .addImm(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers);
+          .addImm(SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers);
       MIRBuilder.buildInstr(SPIRV::OpCapability)
-          .addImm(SPIRV::Capability::ArbitraryPrecisionIntegersINTEL);
+          .addImm(SPIRV::Capability::ArbitraryPrecisionIntegersALTERA);
     }
     return MIRBuilder.buildInstr(SPIRV::OpTypeInt)
         .addDef(createTypeVReg(MIRBuilder))
@@ -883,10 +883,12 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
           .addUse(NumElementsVReg);
     });
   } else {
-    assert(ST.isShader() && "Runtime arrays are not allowed in non-shader "
-                            "SPIR-V modules.");
-    if (!ST.isShader())
+    if (!ST.isShader()) {
+      llvm::reportFatalUsageError(
+          "Runtime arrays are not allowed in non-shader "
+          "SPIR-V modules");
       return nullptr;
+    }
     ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
       return MIRBuilder.buildInstr(SPIRV::OpTypeRuntimeArray)
           .addDef(createTypeVReg(MIRBuilder))

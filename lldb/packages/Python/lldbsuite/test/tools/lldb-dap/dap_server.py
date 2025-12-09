@@ -391,7 +391,7 @@ class DebugCommunication(object):
         with self._recv_condition:
             for packet in self._recv_packets:
                 if packet and ("seq" not in packet or packet["seq"] == 0):
-                    warnings.warn(
+                    raise ValueError(
                         f"received a malformed packet, expected 'seq != 0' for {packet!r}"
                     )
                 # Handle events that may modify any stateful properties of
@@ -1265,16 +1265,18 @@ class DebugCommunication(object):
         return response
 
     def request_dataBreakpointInfo(
-        self, variablesReference, name, frameIndex=0, threadId=None
+        self, variablesReference, name, size=None, frameIndex=0, threadId=None
     ):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:
             return []
-        args_dict = {
-            "variablesReference": variablesReference,
-            "name": name,
-            "frameId": stackFrame["id"],
-        }
+        args_dict = {"name": name}
+        if size is None:
+            args_dict["variablesReference"] = variablesReference
+            args_dict["frameId"] = stackFrame["id"]
+        else:
+            args_dict["asAddress"] = True
+            args_dict["bytes"] = size
         command_dict = {
             "command": "dataBreakpointInfo",
             "type": "request",
