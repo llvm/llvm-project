@@ -137,4 +137,13 @@ For example on Linux you can use the following command:
 The output above shows us that this particular copy of LLDB has XML parsing
 (``libxml2``) and editline (``libedit``) enabled.
 
+.. note::
+
+   ``readelf -d`` as used above only shows direct dependencies of the binary.
+   Libraries loaded by a library will not be shown. An example of this is Python.
+   ``lldb`` loads ``liblldb`` and it is ``liblldb`` that requires ``libpython``.
+
+   The same ``readelf`` command can be used on ``liblldb`` to see if it does
+   depend on Python.
+
 If you are on MacOS, use ``otool -l <path-to-lldb>``.
