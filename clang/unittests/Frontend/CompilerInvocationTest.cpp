@@ -739,7 +739,7 @@ TEST_F(CommandLineTest, ConditionalParsingIfHLSLFlagPresent) {
 
   ASSERT_EQ(Invocation.getLangOpts().MaxMatrixDimension, 4u);
   ASSERT_EQ(Invocation.getLangOpts().getDefaultMatrixMemoryLayout(),
-            LangOptions::MatrixColMajor);
+            LangOptions::MatrixMemoryLayout::MatrixColMajor);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 }
@@ -749,7 +749,7 @@ TEST_F(CommandLineTest, ConditionalParsingHLSLRowMajor) {
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
   ASSERT_EQ(Invocation.getLangOpts().getDefaultMatrixMemoryLayout(),
-            LangOptions::MatrixRowMajor);
+            LangOptions::MatrixMemoryLayout::MatrixRowMajor);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 }
@@ -761,7 +761,7 @@ TEST_F(CommandLineTest, ConditionalParsingIfHLSLFlagNotPresent) {
 
   ASSERT_EQ(Invocation.getLangOpts().MaxMatrixDimension, 1048575u);
   ASSERT_EQ(Invocation.getLangOpts().getDefaultMatrixMemoryLayout(),
-            LangOptions::MatrixColMajor);
+            LangOptions::MatrixMemoryLayout::MatrixColMajor);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 }
@@ -772,7 +772,7 @@ TEST_F(CommandLineTest, ConditionalParsingClangRowMajor) {
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_EQ(Invocation.getLangOpts().getDefaultMatrixMemoryLayout(),
-            LangOptions::MatrixRowMajor);
+            LangOptions::MatrixMemoryLayout::MatrixRowMajor);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 }
@@ -783,7 +783,7 @@ TEST_F(CommandLineTest, ConditionalParsingIgnoreRowMajorIfMatrixNotEnabled) {
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_EQ(Invocation.getLangOpts().getDefaultMatrixMemoryLayout(),
-            LangOptions::MatrixColMajor);
+            LangOptions::MatrixMemoryLayout::MatrixColMajor);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 }

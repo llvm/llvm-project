@@ -3953,9 +3953,11 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   }
   // Generate args for matrix types.
   if (Opts.MatrixTypes) {
-    if (Opts.DefaultMatrixMemoryLayout == LangOptions::MatrixColMajor)
+    if (Opts.getDefaultMatrixMemoryLayout() ==
+        LangOptions::MatrixMemoryLayout::MatrixColMajor)
       GenerateArg(Consumer, OPT_fmatrix_memory_layout_EQ, "column-major");
-    if (Opts.DefaultMatrixMemoryLayout == LangOptions::MatrixRowMajor)
+    if (Opts.getDefaultMatrixMemoryLayout() ==
+        LangOptions::MatrixMemoryLayout::MatrixRowMajor)
       GenerateArg(Consumer, OPT_fmatrix_memory_layout_EQ, "row-major");
   }
 }

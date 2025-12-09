@@ -16512,7 +16512,7 @@ ExprResult Sema::BuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
   }
 
   if (getLangOpts().getDefaultMatrixMemoryLayout() !=
-      LangOptions::MatrixColMajor) {
+      LangOptions::MatrixMemoryLayout::MatrixColMajor) {
     Diag(TheCall->getBeginLoc(), diag::err_builtin_matrix_major_order_disabled)
         << /*column*/ 1 << /*load*/ 0;
     return ExprError();
@@ -16636,7 +16636,7 @@ ExprResult Sema::BuiltinMatrixColumnMajorStore(CallExpr *TheCall,
   }
 
   if (getLangOpts().getDefaultMatrixMemoryLayout() !=
-      LangOptions::MatrixColMajor) {
+      LangOptions::MatrixMemoryLayout::MatrixColMajor) {
     Diag(TheCall->getBeginLoc(), diag::err_builtin_matrix_major_order_disabled)
         << /*column*/ 1 << /*store*/ 1;
     return ExprError();
