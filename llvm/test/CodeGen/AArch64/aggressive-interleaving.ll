@@ -43,14 +43,12 @@ define void @test_interleave_reduction(i32*** %arg, double** %arg1) {
 ; A320-NEXT:    [[VEC_PHI:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
 ; A320-NEXT:    [[VEC_PHI5:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP23:%.*]], %[[VECTOR_BODY]] ]
 ; A320-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
-; A320-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; A320-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 4
-; A320-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[TPM27]], i64 [[TMP6]]
+; A320-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[TPM27]], i64 [[OFFSET_IDX]]
 ; A320-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[TPM27]], i64 [[TMP7]]
 ; A320-NEXT:    [[OFFSET_IDX7:%.*]] = mul i64 [[INDEX]], 8
-; A320-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX7]], 0
 ; A320-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX7]], 8
-; A320-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[TPM32]], i64 [[TMP8]]
+; A320-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[TPM32]], i64 [[OFFSET_IDX7]]
 ; A320-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[TPM32]], i64 [[TMP9]]
 ; A320-NEXT:    [[TMP10:%.*]] = load double, ptr [[NEXT_GEP8]], align 8
 ; A320-NEXT:    [[TMP11:%.*]] = load double, ptr [[NEXT_GEP9]], align 8
@@ -75,12 +73,12 @@ define void @test_interleave_reduction(i32*** %arg, double** %arg1) {
 ; A320-NEXT:    br i1 [[CMP_N]], label %[[EXIT_INNER:.*]], label %[[SCALAR_PH]]
 ; A320:       [[SCALAR_PH]]:
 ; A320-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[TPM27]], %[[OUTER]] ]
-; A320-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi ptr [ [[IND_END3]], %[[MIDDLE_BLOCK]] ], [ [[TPM32]], %[[OUTER]] ]
+; A320-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi ptr [ [[IND_END3]], %[[MIDDLE_BLOCK]] ], [ [[TPM32]], %[[OUTER]] ]
 ; A320-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[OUTER]] ]
 ; A320-NEXT:    br label %[[INNER:.*]]
 ; A320:       [[INNER]]:
 ; A320-NEXT:    [[PHI_PTR_I32:%.*]] = phi ptr [ [[NEXT_I32:%.*]], %[[INNER]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; A320-NEXT:    [[PHI_PTR_F64:%.*]] = phi ptr [ [[NEXT_F64:%.*]], %[[INNER]] ], [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ]
+; A320-NEXT:    [[PHI_PTR_F64:%.*]] = phi ptr [ [[NEXT_F64:%.*]], %[[INNER]] ], [ [[BC_RESUME_VAL8]], %[[SCALAR_PH]] ]
 ; A320-NEXT:    [[PHI_ACC:%.*]] = phi double [ [[TPM50:%.*]], %[[INNER]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
 ; A320-NEXT:    [[TPM44:%.*]] = load double, ptr [[PHI_PTR_F64]], align 8
 ; A320-NEXT:    [[TPM45:%.*]] = load i32, ptr [[PHI_PTR_I32]], align 4
@@ -148,39 +146,38 @@ exit.inner:                                       ; preds = %inner
 
 define double @sum_reduction(double* nocapture readonly %a, i64 %n) {
 ; A320-LABEL: define double @sum_reduction(
-; A320-SAME: ptr nocapture readonly [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; A320-SAME: ptr readonly captures(none) [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; A320-NEXT:  [[ENTRY:.*]]:
 ; A320-NEXT:    [[CMP0:%.*]] = icmp eq i64 [[N]], 0
 ; A320-NEXT:    br i1 [[CMP0]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
 ; A320:       [[LOOP_PREHEADER]]:
-; A320-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; A320-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; A320-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; A320:       [[VECTOR_PH]]:
-; A320-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; A320-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; A320-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; A320-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; A320:       [[VECTOR_BODY]]:
-; A320-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; A320-NEXT:    [[VEC_PHI:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; A320-NEXT:    [[VEC_PHI1:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; A320-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; A320-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; A320-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP0]]
+; A320-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; A320-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; A320-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; A320-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP1]]
-; A320-NEXT:    [[TMP4:%.*]] = load double, ptr [[TMP2]], align 8
-; A320-NEXT:    [[TMP5:%.*]] = load double, ptr [[TMP3]], align 8
-; A320-NEXT:    [[TMP6]] = fadd fast double [[VEC_PHI]], [[TMP4]]
-; A320-NEXT:    [[TMP7]] = fadd fast double [[VEC_PHI1]], [[TMP5]]
-; A320-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; A320-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 2
+; A320-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
+; A320-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x double>, ptr [[TMP6]], align 8
+; A320-NEXT:    [[TMP2]] = fadd fast <2 x double> [[VEC_PHI]], [[WIDE_LOAD]]
+; A320-NEXT:    [[TMP4]] = fadd fast <2 x double> [[VEC_PHI1]], [[WIDE_LOAD2]]
+; A320-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP1]], 4
 ; A320-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; A320-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; A320:       [[MIDDLE_BLOCK]]:
-; A320-NEXT:    [[BIN_RDX:%.*]] = fadd fast double [[TMP7]], [[TMP6]]
+; A320-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP2]]
+; A320-NEXT:    [[TMP5:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[BIN_RDX]])
 ; A320-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; A320-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; A320:       [[SCALAR_PH]]:
 ; A320-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; A320-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[LOOP_PREHEADER]] ]
+; A320-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[LOOP_PREHEADER]] ]
 ; A320-NEXT:    br label %[[LOOP:.*]]
 ; A320:       [[LOOP]]:
 ; A320-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -192,7 +189,7 @@ define double @sum_reduction(double* nocapture readonly %a, i64 %n) {
 ; A320-NEXT:    [[COND:%.*]] = icmp ult i64 [[IV_NEXT]], [[N]]
 ; A320-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !llvm.loop [[LOOP5:![0-9]+]]
 ; A320:       [[EXIT_LOOPEXIT]]:
-; A320-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi double [ [[SUM_NEXT]], %[[LOOP]] ], [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ]
+; A320-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi double [ [[SUM_NEXT]], %[[LOOP]] ], [ [[TMP5]], %[[MIDDLE_BLOCK]] ]
 ; A320-NEXT:    br label %[[EXIT]]
 ; A320:       [[EXIT]]:
 ; A320-NEXT:    [[RES:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[SUM_NEXT_LCSSA]], %[[EXIT_LOOPEXIT]] ]
@@ -230,45 +227,44 @@ exit:
 
 define double @dot_product(double* nocapture readonly %a, double* nocapture readonly %b, i64 %n) {
 ; A320-LABEL: define double @dot_product(
-; A320-SAME: ptr nocapture readonly [[A:%.*]], ptr nocapture readonly [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; A320-SAME: ptr readonly captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; A320-NEXT:  [[ENTRY:.*]]:
 ; A320-NEXT:    [[CMP0:%.*]] = icmp eq i64 [[N]], 0
 ; A320-NEXT:    br i1 [[CMP0]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
 ; A320:       [[LOOP_PREHEADER]]:
-; A320-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; A320-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; A320-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; A320:       [[VECTOR_PH]]:
-; A320-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; A320-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; A320-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; A320-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; A320:       [[VECTOR_BODY]]:
-; A320-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; A320-NEXT:    [[VEC_PHI:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
-; A320-NEXT:    [[VEC_PHI1:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
-; A320-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; A320-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; A320-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP0]]
+; A320-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; A320-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; A320-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; A320-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP1]]
-; A320-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP0]]
 ; A320-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP1]]
-; A320-NEXT:    [[TMP6:%.*]] = load double, ptr [[TMP2]], align 8
-; A320-NEXT:    [[TMP7:%.*]] = load double, ptr [[TMP3]], align 8
-; A320-NEXT:    [[TMP8:%.*]] = load double, ptr [[TMP4]], align 8
-; A320-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP5]], align 8
-; A320-NEXT:    [[TMP10:%.*]] = fmul fast double [[TMP6]], [[TMP8]]
-; A320-NEXT:    [[TMP11:%.*]] = fmul fast double [[TMP7]], [[TMP9]]
-; A320-NEXT:    [[TMP12]] = fadd fast double [[VEC_PHI]], [[TMP10]]
-; A320-NEXT:    [[TMP13]] = fadd fast double [[VEC_PHI1]], [[TMP11]]
-; A320-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; A320-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 2
+; A320-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
+; A320-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
+; A320-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i64 2
+; A320-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
+; A320-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x double>, ptr [[TMP8]], align 8
+; A320-NEXT:    [[TMP4:%.*]] = fmul fast <2 x double> [[WIDE_LOAD]], [[WIDE_LOAD3]]
+; A320-NEXT:    [[TMP10:%.*]] = fmul fast <2 x double> [[WIDE_LOAD2]], [[WIDE_LOAD4]]
+; A320-NEXT:    [[TMP6]] = fadd fast <2 x double> [[VEC_PHI]], [[TMP4]]
+; A320-NEXT:    [[TMP7]] = fadd fast <2 x double> [[VEC_PHI1]], [[TMP10]]
+; A320-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP1]], 4
 ; A320-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; A320-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; A320:       [[MIDDLE_BLOCK]]:
-; A320-NEXT:    [[BIN_RDX:%.*]] = fadd fast double [[TMP13]], [[TMP12]]
+; A320-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[TMP7]], [[TMP6]]
+; A320-NEXT:    [[TMP9:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[BIN_RDX]])
 ; A320-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; A320-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; A320:       [[SCALAR_PH]]:
 ; A320-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; A320-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[LOOP_PREHEADER]] ]
+; A320-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[LOOP_PREHEADER]] ]
 ; A320-NEXT:    br label %[[LOOP:.*]]
 ; A320:       [[LOOP]]:
 ; A320-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -283,7 +279,7 @@ define double @dot_product(double* nocapture readonly %a, double* nocapture read
 ; A320-NEXT:    [[COND:%.*]] = icmp ult i64 [[IV_NEXT]], [[N]]
 ; A320-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]]
 ; A320:       [[EXIT_LOOPEXIT]]:
-; A320-NEXT:    [[ACC_NEXT_LCSSA:%.*]] = phi double [ [[ACC_NEXT]], %[[LOOP]] ], [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ]
+; A320-NEXT:    [[ACC_NEXT_LCSSA:%.*]] = phi double [ [[ACC_NEXT]], %[[LOOP]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
 ; A320-NEXT:    br label %[[EXIT]]
 ; A320:       [[EXIT]]:
 ; A320-NEXT:    [[RES:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[ACC_NEXT_LCSSA]], %[[EXIT_LOOPEXIT]] ]
@@ -322,7 +318,7 @@ exit:
 ; A320: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; A320: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
 ; A320: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; A320: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; A320: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ; A320: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; A320: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
+; A320: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
 ;.
