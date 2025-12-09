@@ -934,9 +934,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   bool hasSALUFloat = ST->hasSALUFloatInsts();
 
-  addRulesForGOpcs(
-      {G_FADD, G_FSUB, G_FMUL, G_STRICT_FADD, G_STRICT_FSUB, G_STRICT_FMUL},
-      Standard)
+  addRulesForGOpcs({G_FADD, G_FMUL, G_STRICT_FADD, G_STRICT_FMUL}, Standard)
       .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUFloat)
       .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSALUFloat)
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
@@ -949,6 +947,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, ScalarizeToS16},
            hasSALUFloat)
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
+
+  addRulesForGOpcs({G_FSUB}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUFloat)
+      .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSALUFloat)
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasSALUFloat)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasSALUFloat)
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
   // FNEG and FABS are either folded as source modifiers or can be selected as
   // bitwise XOR and AND with Mask. XOR and AND are available on SALU but for
