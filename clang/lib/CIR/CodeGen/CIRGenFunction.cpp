@@ -16,6 +16,7 @@
 #include "CIRGenCall.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -439,14 +440,18 @@ static mlir::Value emitArgumentDemotion(CIRGenFunction &cgf, const VarDecl *var,
   if (mlir::isa<cir::IntType>(ty))
     return cgf.getBuilder().CIRBaseBuilderTy::createIntCast(value, ty);
 
-  return cgf.getBuilder().CIRBaseBuilderTy::createCast(cir::CastKind::floating,
-                                                       value, ty);
+  return cgf.getBuilder().createFloatingCast(value, ty);
 }
 
 void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
                                         mlir::Block *entryBB,
                                         const FunctionDecl *fd,
                                         SourceLocation bodyBeginLoc) {
+  // Naked functions don't have prologues.
+  if (fd && fd->hasAttr<NakedAttr>()) {
+    cgm.errorNYI(bodyBeginLoc, "naked function decl");
+  }
+
   // Declare all the function arguments in the symbol table.
   for (const auto nameValue : llvm::zip(args, entryBB->getArguments())) {
     const VarDecl *paramVar = std::get<0>(nameValue);
