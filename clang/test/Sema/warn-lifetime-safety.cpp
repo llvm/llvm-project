@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -Wexperimental-lifetime-safety -Wno-dangling -Wno-experimental-lifetime-safety-suggestions -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -Wno-experimental-lifetime-safety-suggestions -verify %s
 
 struct MyObj {
   int id;
@@ -551,58 +551,6 @@ const int& get_ref_to_local() {
     return a;         // expected-warning {{address of stack memory is returned later}}
                       // expected-note@-1 {{returned here}}
 }
-
-namespace simple_annotation_inference {
-View inference_callee_return_identity(View a) {
-  return a;
-}
-
-View inference_caller_forwards_callee(View a) {
-  return inference_callee_return_identity(a);
-}
-
-View inference_top_level_return_stack_view() {
-  MyObj local_stack;
-  return inference_caller_forwards_callee(local_stack);     // expected-warning {{address of stack memory is returned later}}
-                                                            // expected-note@-1 {{returned here}}
-}
-} // simple_annotation_inference
-
-namespace inference_in_order_with_redecls {
-View inference_callee_return_identity(View a);
-View inference_callee_return_identity(View a) {
-  return a;
-}
-
-View inference_caller_forwards_callee(View a);
-View inference_caller_forwards_callee(View a) {
-  return inference_callee_return_identity(a);
-}
-  
-View inference_top_level_return_stack_view() {
-  MyObj local_stack;
-  return inference_caller_forwards_callee(local_stack);     // expected-warning {{address of stack memory is returned later}}
-                                                            // expected-note@-1 {{returned here}}
-}
-} // namespace inference_in_order_with_redecls
-
-namespace inference_with_templates {
-template<typename T>
-T* template_identity(T* a) {
-  return a;
-}
-
-template<typename T>
-T* template_caller(T* a) {
-  return template_identity(a);
-}
-
-// FIXME: Fails to detect UAR as template instantiations are deferred to the end of the Translation Unit.
-MyObj* test_template_inference_with_stack() {
-  MyObj local_stack;
-  return template_caller(&local_stack);                                              
-}
-} // inference_with_templates
 
 //===----------------------------------------------------------------------===//
 // Use-After-Scope & Use-After-Return (Return-Stack-Address) Combined

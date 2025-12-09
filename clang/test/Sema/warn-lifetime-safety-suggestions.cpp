@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -Wexperimental-lifetime-safety-suggestions -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -Wexperimental-lifetime-safety-suggestions -Wexperimental-lifetime-safety -verify %s
 
 struct MyObj {
   int id;
@@ -101,7 +101,7 @@ View return_view_by_func (View a) {    // expected-warning {{param should be mar
 MyObj* return_pointer_by_func (MyObj* a) {         // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
   return return_pointer_object(a);                 // expected-note {{param returned here}} 
 }
-} // correct_order_inference
+} // namespace correct_order_inference
 
 namespace incorrect_order_inference_view {
 View return_view_callee(View a);
@@ -114,7 +114,7 @@ View return_view_caller(View a) {
 View return_view_callee(View a) {     // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
   return a;                           // expected-note {{param returned here}}
 }   
-} // incorrect_order_inference_view
+} // namespace incorrect_order_inference_view
 
 namespace incorrect_order_inference_object {
 MyObj* return_object_callee(MyObj* a);
@@ -124,10 +124,62 @@ MyObj* return_object_caller(MyObj* a) {
   return return_object_callee(a);
 }
 
-MyObj* return_object_callee(MyObj* a) {     // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
-  return a;                           // expected-note {{param returned here}}
+MyObj* return_object_callee(MyObj* a) {      // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return a;                                  // expected-note {{param returned here}}
 }   
-} // incorrect_order_inference_object
+} // namespace incorrect_order_inference_object
+
+namespace simple_annotation_inference {
+View inference_callee_return_identity(View a) { // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return a;                                     // expected-note {{param returned here}}
+}
+
+View inference_caller_forwards_callee(View a) { // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return inference_callee_return_identity(a);   // expected-note {{param returned here}}
+}
+
+View inference_top_level_return_stack_view() {
+  MyObj local_stack;
+  return inference_caller_forwards_callee(local_stack);     // expected-warning {{address of stack memory is returned later}}
+                                                            // expected-note@-1 {{returned here}}
+}
+} // namespace simple_annotation_inference
+
+namespace inference_in_order_with_redecls {
+View inference_callee_return_identity(View a);
+View inference_callee_return_identity(View a) {   // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return a;                                       // expected-note {{param returned here}}
+}
+
+View inference_caller_forwards_callee(View a);
+View inference_caller_forwards_callee(View a) {   // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return inference_callee_return_identity(a);     // expected-note {{param returned here}}
+}
+  
+View inference_top_level_return_stack_view() {
+  MyObj local_stack;
+  return inference_caller_forwards_callee(local_stack);     // expected-warning {{address of stack memory is returned later}}
+                                                            // expected-note@-1 {{returned here}}
+}
+} // namespace inference_in_order_with_redecls
+
+namespace inference_with_templates {
+template<typename T>  
+T* template_identity(T* a) {            // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  return a;                             // expected-note {{param returned here}}
+}
+
+template<typename T>
+T* template_caller(T* a) {
+  return template_identity(a);          // expected-note {{in instantiation of function template specialization 'inference_with_templates::template_identity<MyObj>' requested here}}
+}
+
+// FIXME: Fails to detect UAR as template instantiations are deferred to the end of the Translation Unit.
+MyObj* test_template_inference_with_stack() {
+  MyObj local_stack;
+  return template_caller(&local_stack); // expected-note {{in instantiation of function template specialization 'inference_with_templates::template_caller<MyObj>' requested here}}                                              
+}
+} // namespace inference_with_templates
 
 //===----------------------------------------------------------------------===//
 // Negative Test Cases
