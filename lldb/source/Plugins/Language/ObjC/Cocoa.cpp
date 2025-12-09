@@ -1256,9 +1256,11 @@ bool lldb_private::formatters::ObjCSELSummaryProvider(
 // this call gives the POSIX equivalent of the Cocoa epoch
 time_t lldb_private::formatters::GetOSXEpoch() {
   static time_t epoch = 0;
+#ifndef _AIX
   if (!epoch) {
-#if !defined(_WIN32) && !defined(_AIX)
+#ifndef _WIN32
     tzset();
+#endif
     tm tm_epoch;
     tm_epoch.tm_sec = 0;
     tm_epoch.tm_hour = 0;
@@ -1267,11 +1269,15 @@ time_t lldb_private::formatters::GetOSXEpoch() {
     tm_epoch.tm_mday = 1;
     tm_epoch.tm_year = 2001 - 1900;
     tm_epoch.tm_isdst = -1;
+#ifdef _WIN32
+    epoch = _mkgmtime(&tm_epoch);
+#else
     tm_epoch.tm_gmtoff = 0;
     tm_epoch.tm_zone = nullptr;
     epoch = timegm(&tm_epoch);
 #endif
   }
+#endif
   return epoch;
 }
 
