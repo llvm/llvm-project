@@ -905,18 +905,22 @@ InstructionCost PPCTTIImpl::getInterleavedMemoryOpCost(
 InstructionCost
 PPCTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                   TTI::TargetCostKind CostKind) const {
-/*
+  if (!VPIntrinsic::isVPIntrinsic(ICA.getID()))
+    return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+
   if (ICA.getID() == Intrinsic::vp_load) {
-    MemIntrinsicCostAttributes MICA(Intrinsic::masked_load, ICA.getReturnType(), Align(1), 0);
+    MemIntrinsicCostAttributes MICA(Intrinsic::masked_load, ICA.getReturnType(),
+                                    Align(1), 0);
     return getMaskedMemoryOpCost(MICA, CostKind);
   }
+
   if (ICA.getID() == Intrinsic::vp_store) {
-    Type *Ty = ICA.getArgTypes()[0];
-    MemIntrinsicCostAttributes MICA(Intrinsic::masked_store, ICA.getArgTypes()[0], Align(1), 0);
+    MemIntrinsicCostAttributes MICA(Intrinsic::masked_store,
+                                    ICA.getArgTypes()[0], Align(1), 0);
     return getMaskedMemoryOpCost(MICA, CostKind);
   }
-*/
-  return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+
+  return InstructionCost::getInvalid();
 }
 
 bool PPCTTIImpl::areInlineCompatible(const Function *Caller,
