@@ -209,18 +209,17 @@ have extra sections with `bolt` in their name.
 
 You can use `readelf` to find these:
 ```
-$ llvm-readelf -S <your-binary> | grep bolt
+$ readelf -S <your-binary> | grep bolt
   [11] .bolt.org.eh_frame PROGBITS <...>
 <...>
   [39] .note.bolt_info   NOTE <...>
 ```
 The note can be displayed with:
 ```
-$ llvm-readelf -n <your-binary>
-<...>
-Displaying notes found in: .note.bolt_info
+$ readelf -p .note.bolt_info <your-binary>
+String dump of section '.note.bolt_info':
   <...>
-    Version: BOLT revision: <...>
+  [    10]  BOLT revision: <...>
 ```
 
 ## License
