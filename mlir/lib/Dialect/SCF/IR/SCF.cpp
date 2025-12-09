@@ -3744,9 +3744,9 @@ struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
         (ifOp.elseBlock() && !ifOp.elseBlock()->without_terminator().empty()))
       return failure();
 
-    assert(ifOp->use_empty() || (llvm::all_equal(ifOp->getUsers()) &&
-                                 *ifOp->user_begin() == conditionOp) &&
-                                    "ifOp has unexpected uses");
+    assert((ifOp->use_empty() || (llvm::all_equal(ifOp->getUsers()) &&
+                                  *ifOp->user_begin() == conditionOp)) &&
+           "ifOp has unexpected uses");
 
     Location loc = op.getLoc();
 

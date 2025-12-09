@@ -12945,6 +12945,12 @@ def warn_target_clone_duplicate_options
 def warn_target_clone_no_impact_options
     : Warning<"version list contains entries that don't impact code generation">,
       InGroup<FunctionMultiVersioning>;
+def warn_version_priority_out_of_range
+    : Warning<"version priority '%0' is outside the allowed range [1-255]; ignoring priority">,
+      InGroup<FunctionMultiVersioning>;
+def warn_invalid_default_version_priority
+    : Warning<"priority of default version cannot be overridden; ignoring priority">,
+      InGroup<FunctionMultiVersioning>;
 
 // three-way comparison operator diagnostics
 def err_implied_comparison_category_type_not_found : Error<

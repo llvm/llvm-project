@@ -3997,31 +3997,33 @@ LLVMGetPreviousDbgRecord(LLVMDbgRecordRef DbgRecord);
  *
  * @see llvm::DbgRecord::getDebugLoc()
  */
-LLVMMetadataRef LLVMDbgRecordGetDebugLoc(LLVMDbgRecordRef Rec);
+LLVM_C_ABI LLVMMetadataRef LLVMDbgRecordGetDebugLoc(LLVMDbgRecordRef Rec);
 
-LLVMDbgRecordKind LLVMDbgRecordGetKind(LLVMDbgRecordRef Rec);
+LLVM_C_ABI LLVMDbgRecordKind LLVMDbgRecordGetKind(LLVMDbgRecordRef Rec);
 
 /**
  * Get the value of the DbgVariableRecord.
  *
  * @see llvm::DbgVariableRecord::getValue()
  */
-LLVMValueRef LLVMDbgVariableRecordGetValue(LLVMDbgRecordRef Rec,
-                                           unsigned OpIdx);
+LLVM_C_ABI LLVMValueRef LLVMDbgVariableRecordGetValue(LLVMDbgRecordRef Rec,
+                                                      unsigned OpIdx);
 
 /**
  * Get the debug info variable of the DbgVariableRecord.
  *
  * @see llvm::DbgVariableRecord::getVariable()
  */
-LLVMMetadataRef LLVMDbgVariableRecordGetVariable(LLVMDbgRecordRef Rec);
+LLVM_C_ABI LLVMMetadataRef
+LLVMDbgVariableRecordGetVariable(LLVMDbgRecordRef Rec);
 
 /**
  * Get the debug info expression of the DbgVariableRecord.
  *
  * @see llvm::DbgVariableRecord::getExpression()
  */
-LLVMMetadataRef LLVMDbgVariableRecordGetExpression(LLVMDbgRecordRef Rec);
+LLVM_C_ABI LLVMMetadataRef
+LLVMDbgVariableRecordGetExpression(LLVMDbgRecordRef Rec);
 
 /**
  * @defgroup LLVMCCoreValueInstructionCall Call Sites and Invocations

@@ -3445,19 +3445,20 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
 static void handleTargetVersionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Param;
   SourceLocation Loc;
+  SmallString<64> NewParam;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Param, &Loc))
     return;
 
   if (S.Context.getTargetInfo().getTriple().isAArch64()) {
-    if (S.ARM().checkTargetVersionAttr(Param, Loc))
+    if (S.ARM().checkTargetVersionAttr(Param, Loc, NewParam))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isRISCV()) {
-    if (S.RISCV().checkTargetVersionAttr(Param, Loc))
+    if (S.RISCV().checkTargetVersionAttr(Param, Loc, NewParam))
       return;
   }
 
   TargetVersionAttr *NewAttr =
-      ::new (S.Context) TargetVersionAttr(S.Context, AL, Param);
+      ::new (S.Context) TargetVersionAttr(S.Context, AL, NewParam);
   D->addAttr(NewAttr);
 }
 

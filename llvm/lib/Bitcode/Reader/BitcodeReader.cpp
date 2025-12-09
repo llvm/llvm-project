@@ -3302,7 +3302,7 @@ Error BitcodeReader::parseConstants() {
     case bitc::CST_CODE_INTEGER:   // INTEGER: [intval]
       if (!CurTy->isIntOrIntVectorTy() || Record.empty())
         return error("Invalid integer const record");
-      V = ConstantInt::get(CurTy, decodeSignRotatedValue(Record[0]));
+      V = ConstantInt::getSigned(CurTy, decodeSignRotatedValue(Record[0]));
       break;
     case bitc::CST_CODE_WIDE_INTEGER: {// WIDE_INTEGER: [n x intval]
       if (!CurTy->isIntOrIntVectorTy() || Record.empty())

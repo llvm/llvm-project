@@ -1975,8 +1975,12 @@ public:
   LLVM_ABI bool hasArmWideBranch(bool Thumb) const;
 
   /// Returns a bitmask constructed from the target-features or fmv-features
-  /// metadata of a function.
+  /// metadata of a function corresponding to its Arch Extensions.
   LLVM_ABI APInt getFeatureMask(const Function &F) const;
+
+  /// Returns a bitmask constructed from the target-features or fmv-features
+  /// metadata of a function corresponding to its FMV priority.
+  LLVM_ABI APInt getPriorityMask(const Function &F) const;
 
   /// Returns true if this is an instance of a function with multiple versions.
   LLVM_ABI bool isMultiversionedFunction(const Function &F) const;

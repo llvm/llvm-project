@@ -33,14 +33,14 @@ It's important to restrict the recognizer to the libc library (which is
 `libsystem_kernel.dylib` on macOS) to avoid matching functions with the same name
 in other modules:
 
-```c++
+```
 (lldb) command script import .../fd_recognizer.py
 (lldb) frame recognizer add -l fd_recognizer.LibcFdRecognizer -n read -s libsystem_kernel.dylib
 ```
 
 When the program is stopped at the beginning of the 'read' function in libc, we can view the recognizer arguments in 'frame variable':
 
-```c++
+```
 (lldb) b read
 (lldb) r
 Process 1234 stopped
