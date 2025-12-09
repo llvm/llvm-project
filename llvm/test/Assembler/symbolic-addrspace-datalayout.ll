@@ -1,9 +1,9 @@
 ;; Check support for printing and parsing of address space names specified in
 ;; the datalayout.
 ; RUN: split-file %s %t --leading-lines
-; RUN: llvm-as < %t/num-to-sym.ll | llvm-dis --print-sym-addr-space=true  | FileCheck %t/num-to-sym.ll
-; RUN: llvm-as < %t/sym-to-sym.ll | llvm-dis --print-sym-addr-space=true  | FileCheck %t/sym-to-sym.ll
-; RUN: llvm-as < %t/sym-to-num.ll | llvm-dis --print-sym-addr-space=false | FileCheck %t/sym-to-num.ll
+; RUN: llvm-as < %t/num-to-sym.ll | llvm-dis --print-addrspace-name=true  | FileCheck %t/num-to-sym.ll
+; RUN: llvm-as < %t/sym-to-sym.ll | llvm-dis --print-addrspace-name=true  | FileCheck %t/sym-to-sym.ll
+; RUN: llvm-as < %t/sym-to-num.ll | llvm-dis --print-addrspace-name=false | FileCheck %t/sym-to-num.ll
 ; RUN: not llvm-as < %t/invalid-name.ll 2>&1 | FileCheck %t/invalid-name.ll
 
 ;--- num-to-sym.ll
