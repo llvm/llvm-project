@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // Check that libc++ honors when __SANITIZER_DISABLE_CONTAINER_OVERFLOW__ is set
 // and disables the container overflow checks.
 //
@@ -19,6 +17,9 @@
 
 // MSAN, TSAN and ASAN are mutually exclusive
 // UNSUPPORTED: msan, tsan
+
+// std::basic_string::data is const in C++03
+// UNSUPPORTED: c++03
 
 #include <deque>
 #include <string>
