@@ -2760,10 +2760,8 @@ struct ConvertAMDGPUToROCDLPass
           Type i32 = IntegerType::get(type.getContext(), 32);
           Type v4i32 = converter.convertType(VectorType::get(4, i32));
           Type v8i32 = converter.convertType(VectorType::get(8, i32));
-          result.push_back(v4i32);
-          result.push_back(v8i32);
-          result.push_back(v4i32);
-          result.push_back(v4i32);
+          llvm::append_range(result,
+                             ArrayRef<Type>{v4i32, v8i32, v4i32, v4i32});
           return success();
         });
 
