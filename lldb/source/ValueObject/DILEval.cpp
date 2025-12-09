@@ -25,11 +25,9 @@ lldb::ValueObjectSP
 GetDynamicOrSyntheticValue(lldb::ValueObjectSP in_valobj_sp,
                            lldb::DynamicValueType use_dynamic,
                            bool use_synthetic) {
-  Status error;
-  if (!in_valobj_sp) {
-    error = Status("invalid value object");
+  if (!in_valobj_sp)
     return in_valobj_sp;
-  }
+
   lldb::ValueObjectSP value_sp = in_valobj_sp;
   Target *target = value_sp->GetTargetSP().get();
   // If this ValueObject holds an error, then it is valuable for that.
@@ -50,9 +48,6 @@ GetDynamicOrSyntheticValue(lldb::ValueObjectSP in_valobj_sp,
     if (synthetic_sp)
       value_sp = synthetic_sp;
   }
-
-  if (!value_sp)
-    error = Status("invalid value object");
 
   return value_sp;
 }
@@ -778,10 +773,11 @@ Interpreter::Visit(const BooleanLiteralNode *node) {
 
 llvm::Expected<CompilerType>
 Interpreter::VerifyCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
-                            CompilerType target_type, CastPromoKind &promo_kind,
-                            CastKind &cast_kind, int location) {
+                            CompilerType target_type,
+                            CastPromotionKind &promo_kind, CastKind &cast_kind,
+                            int location) {
 
-  promo_kind = CastPromoKind::eNone;
+  promo_kind = CastPromotionKind::eNone;
   if (op_type.IsReferenceType())
     op_type = op_type.GetNonReferenceType();
   if (target_type.IsScalarType()) {
@@ -813,10 +809,8 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
       uint64_t type_byte_size = 0;
       uint64_t rhs_type_byte_size = 0;
       if (auto temp = target_type.GetByteSize(m_exe_ctx_scope.get()))
-        // type_byte_size = temp.value();
         type_byte_size = *temp;
       if (auto temp = op_type.GetByteSize(m_exe_ctx_scope.get()))
-        // rhs_type_byte_size = temp.value();
         rhs_type_byte_size = *temp;
       if (!target_type.IsBoolean() && type_byte_size < rhs_type_byte_size) {
         std::string errMsg = llvm::formatv(
@@ -836,8 +830,11 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
           m_expr, std::move(errMsg), location,
           op_type.TypeDescription().length());
     }
-    promo_kind = CastPromoKind::eArithmetic;
-  } else if (target_type.IsEnumerationType()) {
+    promo_kind = CastPromotionKind::eArithmetic;
+    return target_type;
+  }
+
+  if (target_type.IsEnumerationType()) {
     // Cast to enum type.
     if (!op_type.IsScalarType() && !op_type.IsEnumerationType()) {
       std::string errMsg = llvm::formatv("Cast from {0} to {1} is not allowed",
@@ -849,8 +846,10 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
           op_type.TypeDescription().length());
     }
     cast_kind = CastKind::eEnumeration;
+    return target_type;
+  }
 
-  } else if (target_type.IsPointerType()) {
+  if (target_type.IsPointerType()) {
     if (!op_type.IsInteger() && !op_type.IsEnumerationType() &&
         !op_type.IsArrayType() && !op_type.IsPointerType() &&
         !op_type.IsNullPtrType()) {
@@ -862,9 +861,11 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
           m_expr, std::move(errMsg), location,
           op_type.TypeDescription().length());
     }
-    promo_kind = CastPromoKind::ePointer;
+    promo_kind = CastPromotionKind::ePointer;
+    return target_type;
+  }
 
-  } else if (target_type.IsNullPtrType()) {
+  if (target_type.IsNullPtrType()) {
     // Cast to nullptr type.
     bool is_signed;
     if (!target_type.IsNullPtrType() &&
@@ -880,21 +881,21 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
           op_type.TypeDescription().length());
     }
     cast_kind = CastKind::eNullptr;
-
-  } else if (target_type.IsReferenceType()) {
-    // Cast to a reference type.
-    cast_kind = CastKind::eReference;
-  } else {
-    // Unsupported cast.
-    std::string errMsg =
-        llvm::formatv("casting of {0} to {1} is not implemented yet",
-                      op_type.TypeDescription(), target_type.TypeDescription());
-    return llvm::make_error<DILDiagnosticError>(
-        m_expr, std::move(errMsg), location,
-        op_type.TypeDescription().length());
+    return target_type;
   }
 
-  return target_type;
+  if (target_type.IsReferenceType()) {
+    // Cast to a reference type.
+    cast_kind = CastKind::eReference;
+    return target_type;
+  }
+
+  // Unsupported cast.
+  std::string errMsg =
+      llvm::formatv("casting of {0} to {1} is not implemented yet",
+                    op_type.TypeDescription(), target_type.TypeDescription());
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr, std::move(errMsg), location, op_type.TypeDescription().length());
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
@@ -905,7 +906,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
   lldb::ValueObjectSP operand = *operand_or_err;
   CompilerType op_type = operand->GetCompilerType();
   CastKind cast_kind = CastKind::eNone;
-  CastPromoKind promo_kind = CastPromoKind::eNone;
+  CastPromotionKind promo_kind = CastPromotionKind::eNone;
 
   auto type_or_err = VerifyCastType(operand, op_type, node->GetType(),
                                     promo_kind, cast_kind, node->GetLocation());
@@ -958,7 +959,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
   }
   case CastKind::eNone: {
     switch (promo_kind) {
-    case CastPromoKind::eArithmetic: {
+    case CastPromotionKind::eArithmetic: {
       if (target_type.GetCanonicalType().GetBasicTypeEnumeration() ==
           lldb::eBasicTypeInvalid) {
         std::string errMsg = "invalid ast: target type should be a basic type.";
@@ -980,7 +981,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
                                                   node->GetLocation());
     }
-    case CastPromoKind::ePointer: {
+    case CastPromotionKind::ePointer: {
       if (!target_type.IsPointerType()) {
         std::string errMsg = "invalid ast: target type should be a pointer";
         return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
@@ -997,7 +998,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
                                                        target_type,
                                                        /* do_deref */ false);
     }
-    case CastPromoKind::eNone: {
+    case CastPromotionKind::eNone: {
       return lldb::ValueObjectSP();
     }
     } // switch promo_kind

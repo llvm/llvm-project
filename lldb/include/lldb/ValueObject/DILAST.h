@@ -47,7 +47,7 @@ enum class CastKind {
 };
 
 /// Promotions allowed for type casts in DIL.
-enum CastPromoKind {
+enum CastPromotionKind {
   eArithmetic,
   ePointer,
   eNone,
