@@ -4888,8 +4888,8 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
 
   // fold (mul (add x, c1), c2) -> (add (mul x, c2), c1*c2)
   if (sd_context_match(N0, Matcher, m_Opc(ISD::ADD)) &&
-      DAG.isConstantIntBuildVectorOrConstantInt(N1) &&
-      DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1)) &&
+      isConstantOrConstantVector(N1) &&
+      isConstantOrConstantVector(N0.getOperand(1)) &&
       isMulAddWithConstProfitable(N, N0, N1))
     return Matcher.getNode(
         ISD::ADD, DL, VT,
@@ -10895,15 +10895,14 @@ static SDValue combineShiftToMULH(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   // Combine to mulh if mulh is legal/custom for the narrow type on the target
   // or if it is a vector type then we could transform to an acceptable type and
   // rely on legalization to split/combine the result.
+  EVT TransformVT = NarrowVT;
   if (NarrowVT.isVector()) {
-    EVT TransformVT = TLI.getTypeToTransformTo(*DAG.getContext(), NarrowVT);
-    if (TransformVT.getVectorElementType() != NarrowVT.getVectorElementType() ||
-        !TLI.isOperationLegalOrCustom(MulhOpcode, TransformVT))
-      return SDValue();
-  } else {
-    if (!TLI.isOperationLegalOrCustom(MulhOpcode, NarrowVT))
+    TransformVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), NarrowVT);
+    if (TransformVT.getScalarType() != NarrowVT.getScalarType())
       return SDValue();
   }
+  if (!TLI.isOperationLegalOrCustom(MulhOpcode, TransformVT))
+    return SDValue();
 
   SDValue Result =
       DAG.getNode(MulhOpcode, DL, NarrowVT, LeftOp.getOperand(0), MulhRightOp);
