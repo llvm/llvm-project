@@ -160,7 +160,8 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 #define HANDLER_RECOVER(name, kind)                                            \
   INTERFACE void __ubsan_handle_##name##_minimal() {                           \
     __ubsan_report_error(kind, GET_CALLER_PC());                               \
-  }
+  }                                                                            \
+  HANDLER_PRESERVE(name, kind)
 
 #define HANDLER_NORECOVER(name, kind)                                          \
   INTERFACE void __ubsan_handle_##name##_minimal_abort() {                     \
@@ -171,8 +172,7 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 
 #define HANDLER(name, kind)                                                    \
   HANDLER_RECOVER(name, kind)                                                  \
-  HANDLER_NORECOVER(name, kind)                                                \
-  HANDLER_PRESERVE(name, kind)
+  HANDLER_NORECOVER(name, kind)
 
 HANDLER(type_mismatch, "type-mismatch")
 HANDLER(alignment_assumption, "alignment-assumption")

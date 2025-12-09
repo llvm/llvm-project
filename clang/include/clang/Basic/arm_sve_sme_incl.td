@@ -214,7 +214,7 @@ def IsZExtReturn                    : FlagType<0x00080000>; // Return value is s
 def IsOverloadNone                  : FlagType<0x00100000>; // Intrinsic does not take any overloaded types.
 def IsOverloadWhileOrMultiVecCvt    : FlagType<0x00200000>; // Use {default type, typeof(operand1)} as overloaded types.
 def IsOverloadWhileRW               : FlagType<0x00400000>; // Use {pred(default type), typeof(operand0)} as overloaded types.
-def IsOverloadCvt                   : FlagType<0x00800000>; // Use {typeof(operand0), typeof(last operand)} as overloaded types.
+def IsOverloadFirstandLast          : FlagType<0x00800000>; // Use {typeof(operand0), typeof(last operand)} as overloaded types.
 def OverloadKindMask                : FlagType<0x00E00000>; // When the masked values are all '0', the default type is used as overload type.
 def IsByteIndexed                   : FlagType<0x01000000>;
 def IsAppendSVALL                   : FlagType<0x02000000>; // Appends SV_ALL as the last operand.

@@ -126,7 +126,23 @@ public:
   /// the pointers are supposed to be uniqued, should be fine. Revisit this if
   /// it ends up taking too much memory.
   llvm::DenseMap<const clang::FieldDecl *, llvm::StringRef> lambdaFieldToName;
-
+  /// Map BlockAddrInfoAttr (function name, label name) to the corresponding CIR
+  /// LabelOp. This provides the main lookup table used to resolve block
+  /// addresses into their label operations.
+  llvm::DenseMap<cir::BlockAddrInfoAttr, cir::LabelOp> blockAddressInfoToLabel;
+  /// Map CIR BlockAddressOps directly to their resolved LabelOps.
+  /// Used once a block address has been successfully lowered to a label.
+  llvm::MapVector<cir::BlockAddressOp, cir::LabelOp> blockAddressToLabel;
+  /// Track CIR BlockAddressOps that cannot be resolved immediately
+  /// because their LabelOp has not yet been emitted. These entries
+  /// are solved later once the corresponding label is available.
+  llvm::DenseSet<cir::BlockAddressOp> unresolvedBlockAddressToLabel;
+  cir::LabelOp lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo);
+  void mapBlockAddress(cir::BlockAddrInfoAttr blockInfo, cir::LabelOp label);
+  void mapUnresolvedBlockAddress(cir::BlockAddressOp op);
+  void mapResolvedBlockAddress(cir::BlockAddressOp op, cir::LabelOp);
+  void updateResolvedBlockAddress(cir::BlockAddressOp op,
+                                  cir::LabelOp newLabel);
   /// Tell the consumer that this variable has been instantiated.
   void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 
@@ -461,6 +477,12 @@ public:
                                             OpenACCModifierKind modifiers,
                                             bool structured, bool implicit,
                                             bool requiresDtor);
+  // Each of the acc.routine operations must have a unique name, so we just use
+  // an integer counter.  This is how Flang does it, so it seems reasonable.
+  unsigned routineCounter = 0;
+  void emitOpenACCRoutineDecl(const clang::FunctionDecl *funcDecl,
+                              cir::FuncOp func, SourceLocation pragmaLoc,
+                              ArrayRef<const OpenACCClause *> clauses);
 
   // C++ related functions.
   void emitDeclContext(const DeclContext *dc);
@@ -474,6 +496,8 @@ public:
   /// Return a null constant appropriate for zero-initializing a base class with
   /// the given type. This is usually, but not always, an LLVM null constant.
   mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
+
+  mlir::Value emitMemberPointerConstant(const UnaryOperator *e);
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
 
