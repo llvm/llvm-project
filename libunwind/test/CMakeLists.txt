@@ -29,6 +29,20 @@ if ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
                               -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
   add_dependencies(unwind-test-depends libunwind-install-cxx-for-testing)
+
+  add_custom_target(libunwind-install-cxxabi-for-testing
+                      DEPENDS cxxabi-headers
+                              cxxabi
+                      COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBUNWIND_TESTING_INSTALL_PREFIX}"
+                      COMMAND "${CMAKE_COMMAND}"
+                              -DCMAKE_INSTALL_COMPONENT=cxxabi-headers
+                              -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
+                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+                      COMMAND "${CMAKE_COMMAND}"
+                              -DCMAKE_INSTALL_COMPONENT=cxxabi
+                              -DCMAKE_INSTALL_PREFIX="${LIBUNWIND_TESTING_INSTALL_PREFIX}"
+                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  add_dependencies(unwind-test-depends libunwind-install-cxxabi-for-testing)
 endif()
 
 add_custom_target(libunwind-install-unwind-for-testing
