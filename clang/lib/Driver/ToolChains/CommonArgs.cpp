@@ -3638,7 +3638,7 @@ void tools::setComplexRange(const Driver &D, StringRef NewOpt,
   Range = NewRange;
 }
 
-void tools::constructLlvmLinkCommand(Compilation &C, const Tool &T,
+void tools::constructLLVMLinkCommand(Compilation &C, const Tool &T,
                                      const JobAction &JA,
                                      const InputInfoList &JobInputs,
                                      const ArgStringList &LinkerInputs,

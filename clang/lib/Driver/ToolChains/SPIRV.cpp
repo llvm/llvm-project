@@ -81,7 +81,7 @@ void SPIRV::constructLLVMLinkCommand(Compilation &C, const Tool &T,
   for (auto Input : Inputs)
     LlvmLinkArgs.push_back(Input.getFilename());
 
-  tools::constructLlvmLinkCommand(C, T, JA, Inputs, LlvmLinkArgs, Output, Args);
+  tools::constructLLVMLinkCommand(C, T, JA, Inputs, LlvmLinkArgs, Output, Args);
 
   const char *LlvmLink =
       C.getArgs().MakeArgString(T.getToolChain().GetProgramPath("llvm-link"));

@@ -69,7 +69,7 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
       "generic"; // SPIR-V is generic, no specific target ID like -mcpu
   tools::AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkArgs, Arch,
                                     Target, /*IsBitCodeSDL=*/true);
-  tools::constructLlvmLinkCommand(C, *this, JA, Inputs, LinkArgs, Output, Args,
+  tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkArgs, Output, Args,
                                   TempFile);
 
   // Post-link HIP lowering.

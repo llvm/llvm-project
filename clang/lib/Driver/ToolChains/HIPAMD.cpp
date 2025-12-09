@@ -33,7 +33,7 @@ using namespace llvm::opt;
 #define NULL_FILE "/dev/null"
 #endif
 
-void AMDGCN::Linker::constructLlvmLinkCommand(
+void AMDGCN::Linker::constructLLVMLinkCommand(
     Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
     const InputInfo &Output, const llvm::opt::ArgList &Args) const {
 
@@ -47,7 +47,7 @@ void AMDGCN::Linker::constructLlvmLinkCommand(
   auto TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
   AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkerInputs, "amdgcn",
                              TargetID, /*IsBitCodeSDL=*/true);
-  tools::constructLlvmLinkCommand(C, *this, JA, Inputs, LinkerInputs, Output,
+  tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkerInputs, Output,
                                   Args);
 }
 
@@ -163,7 +163,7 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
   const char *LinkedBCFilePath = HIP::getTempFile(C, LinkedBCFilePrefix, "bc");
   InputInfo LinkedBCFile(&JA, LinkedBCFilePath, Output.getBaseInput());
 
-  constructLlvmLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
+  constructLLVMLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
 
   // Emit SPIR-V binary.
   llvm::opt::ArgStringList TrArgs{
@@ -195,7 +195,7 @@ void AMDGCN::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                           Args, *this);
 
   if (JA.getType() == types::TY_LLVM_BC)
-    return constructLlvmLinkCommand(C, JA, Inputs, Output, Args);
+    return constructLLVMLinkCommand(C, JA, Inputs, Output, Args);
 
   if (getToolChain().getEffectiveTriple().isSPIRV())
     return constructLinkAndEmitSpirvCommand(C, JA, Inputs, Output, Args);
