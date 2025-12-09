@@ -4271,7 +4271,6 @@ void fir::StoreOp::getEffects(
 mlir::ParseResult fir::PrefetchOp::parse(mlir::OpAsmParser &parser,
                                          mlir::OperationState &result) {
   mlir::OpAsmParser::UnresolvedOperand memref;
-  // mlir::Type type = parser.getBuilder().getIntegerType(64);
   if (parser.parseOperand(memref))
     return mlir::failure();
 
@@ -4294,14 +4293,12 @@ mlir::ParseResult fir::PrefetchOp::parse(mlir::OpAsmParser &parser,
     if (parser.parseKeyword(&kw))
       return mlir::failure();
     if (kw == "instruction") {
-      llvm::errs() << "intruc\n";
       result.addAttribute("cacheType", parser.getBuilder().getBoolAttr(false));
     } else if (kw == "data") {
-      llvm::errs() << "data\n";
       result.addAttribute("cacheType", parser.getBuilder().getUnitAttr());
     } else
       return parser.emitError(parser.getCurrentLocation(),
-                              "Expected either read or write keyword");
+                              "Expected either intruction or data keyword");
 
     if (parser.parseComma())
       return mlir::failure();
