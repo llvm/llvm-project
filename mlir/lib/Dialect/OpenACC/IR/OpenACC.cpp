@@ -354,7 +354,6 @@ mlir::ArrayAttr addDeviceTypeAffectedOperandHelper(
                                             argCollection, segments);
 }
 } // namespace
-
 //===----------------------------------------------------------------------===//
 // OpenACC operations
 //===----------------------------------------------------------------------===//
@@ -387,6 +386,24 @@ void OpenACCDialect::initialize() {
   memref::GetGlobalOp::attachInterface<MemrefAddressOfGlobalModel>(
       *getContext());
   memref::GlobalOp::attachInterface<MemrefGlobalVariableModel>(*getContext());
+}
+
+//===----------------------------------------------------------------------===//
+// RegionBranchOpInterface for acc.kernels
+//===----------------------------------------------------------------------===//
+
+void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
+                                    SmallVectorImpl<RegionSuccessor> &regions) {
+  // If the predecessor is the kernels op, branch into the body.
+  if (point.isParent()) {
+    regions.push_back(RegionSuccessor(&getRegion()));
+    return;
+  }
+
+  // Otherwise, the region branches back to the parent operation. KernelsOp
+  // does not produce results, so forward an empty result range.
+  regions.push_back(
+      RegionSuccessor(getOperation(), getOperation()->getResults()));
 }
 
 //===----------------------------------------------------------------------===//
