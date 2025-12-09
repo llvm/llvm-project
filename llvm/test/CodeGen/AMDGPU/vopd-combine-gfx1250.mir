@@ -4481,3 +4481,23 @@ body: |
       $vgpr3 = V_MOV_B32_e32 0, implicit $exec
       $vgpr0 = V_ADD_F32_e64_dpp $vgpr0, 0, $vgpr2, 0, $vgpr1, 0, 1, 1, 15, 15, 1, implicit $mode, implicit $exec
 ...
+
+---
+name: vopd_no_combine_fmamk_src1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; SCHED-LABEL: name: vopd_no_combine_fmamk_src1
+    ; SCHED: $vgpr142 = V_FMAMK_F32 $vgpr377, 1069066811, $vgpr142, implicit $mode, implicit $exec
+    ; SCHED-NEXT: $vgpr145 = V_FMAC_F32_e32 1069066811, $vgpr366, $vgpr145, implicit $mode, implicit $exec
+    ;
+    ; PAIR-LABEL: name: vopd_no_combine_fmamk_src1
+    ; PAIR: $vgpr142, $vgpr145 = V_DUAL_FMAMK_F32_X_FMAC_F32_e32_gfx1250 $vgpr377, 1069066811, $vgpr142, 1069066811, $vgpr366, $vgpr145, implicit $mode, implicit $exec, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    ;
+    ; LOWER-LABEL: name: vopd_no_combine_fmamk_src1
+    ; LOWER: S_SET_VGPR_MSB 5, implicit-def $mode
+    ; LOWER-NEXT: $vgpr142, $vgpr145 = V_DUAL_FMAMK_F32_X_FMAC_F32_e32_gfx1250 $vgpr377, 1069066811, $vgpr142, 1069066811, $vgpr366, $vgpr145, implicit $mode, implicit $exec, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    ; LOWER-NEXT: S_SET_VGPR_MSB 1280, implicit-def $mode
+    $vgpr142 = V_FMAMK_F32 $vgpr377, 1069066811, $vgpr142, implicit $mode, implicit $exec
+    $vgpr145 = V_FMAC_F32_e32 1069066811, $vgpr366, $vgpr145, implicit $mode, implicit $exec
+...

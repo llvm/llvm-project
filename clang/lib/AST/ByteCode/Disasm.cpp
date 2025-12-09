@@ -455,7 +455,7 @@ LLVM_DUMP_METHOD void Descriptor::dumpFull(unsigned Offset,
     OS.indent(Spaces) << "Elements: " << getNumElems() << '\n';
     OS.indent(Spaces) << "Element type: " << primTypeToString(getPrimType())
                       << '\n';
-    unsigned FO = Offset + sizeof(InitMapPtr);
+    unsigned FO = Offset + sizeof(InitMap *);
     for (unsigned I = 0; I != getNumElems(); ++I) {
       OS.indent(Spaces) << "Element " << I << " offset: " << FO << '\n';
       FO += getElemSize();
@@ -519,8 +519,14 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
     OS << " (" << F->getName() << ")";
   }
   OS << "\n";
-  OS.indent(Spaces) << "This: " << getThis() << "\n";
-  OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
+  if (hasThisPointer())
+    OS.indent(Spaces) << "This: " << getThis() << "\n";
+  else
+    OS.indent(Spaces) << "This: -\n";
+  if (Func && Func->hasRVO())
+    OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
+  else
+    OS.indent(Spaces) << "RVO: -\n";
   OS.indent(Spaces) << "Depth: " << Depth << "\n";
   OS.indent(Spaces) << "ArgSize: " << ArgSize << "\n";
   OS.indent(Spaces) << "Args: " << (void *)Args << "\n";

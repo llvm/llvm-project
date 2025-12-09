@@ -49,7 +49,7 @@ extern "C" {
 /// The recommended strategy is to call `setArmVectorLength` only from functions
 /// that do not access SVE registers, either by themselves or by inlining other
 /// functions.
-static void setArmVectorLength(std::string_view helper_name, int option,
+static void setArmVectorLength(std::string_view helperName, int option,
                                uint32_t bits) {
 #if defined(__linux__) && defined(__aarch64__)
   if (bits < 128 || bits > 2048 || !llvm::isPowerOf2_32(bits)) {
@@ -63,7 +63,7 @@ static void setArmVectorLength(std::string_view helper_name, int option,
     abort();
   }
 #else
-  std::cerr << "[error] " << helper_name << " is unsupported" << std::endl;
+  std::cerr << "[error] " << helperName << " is unsupported" << std::endl;
   abort();
 #endif
 }

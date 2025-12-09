@@ -92,7 +92,7 @@ emptyAndDetachBlock(BasicBlock *BB,
          "applying corresponding DTU updates.");
 }
 
-static bool HasLoopOrEntryConvergenceToken(const BasicBlock *BB) {
+bool llvm::HasLoopOrEntryConvergenceToken(const BasicBlock *BB) {
   for (const Instruction &I : *BB) {
     const ConvergenceControlInst *CCI = dyn_cast<ConvergenceControlInst>(&I);
     if (CCI && (CCI->isLoop() || CCI->isEntry()))
@@ -755,9 +755,11 @@ BasicBlock *llvm::SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ,
   updateCycleLoopInfo<CycleInfo, Cycle>(CI, CallBrBlock, CallBrTarget, Succ);
   if (DTU) {
     DTU->applyUpdates({{DominatorTree::Insert, CallBrBlock, CallBrTarget}});
-    if (DTU->getDomTree().dominates(CallBrBlock, Succ))
-      DTU->applyUpdates({{DominatorTree::Delete, CallBrBlock, Succ},
-                         {DominatorTree::Insert, CallBrTarget, Succ}});
+    if (DTU->getDomTree().dominates(CallBrBlock, Succ)) {
+      if (!is_contained(successors(CallBrBlock), Succ))
+        DTU->applyUpdates({{DominatorTree::Delete, CallBrBlock, Succ}});
+      DTU->applyUpdates({{DominatorTree::Insert, CallBrTarget, Succ}});
+    }
   }
 
   return CallBrTarget;

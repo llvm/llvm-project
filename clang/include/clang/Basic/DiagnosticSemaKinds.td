@@ -2769,6 +2769,14 @@ def err_deduction_guide_name_not_class_template : Error<
   "cannot specify deduction guide for "
   "%select{<error>|function template|variable template|alias template|"
   "template template parameter|concept|dependent template name}0 %1">;
+def err_deduction_guide_target_attr : Error<
+  "in CUDA/HIP, deduction guides may only be annotated with "
+  "'__host__ __device__'; '__host__'-only, '__device__'-only, or "
+  "'__global__' deduction guides are not allowed">;
+def warn_deduction_guide_target_attr_deprecated : Warning<
+  "use of CUDA/HIP target attributes on deduction guides is deprecated; "
+  "they will be rejected in a future version of Clang">,
+  InGroup<DeprecatedAttributes>;
 def err_deduction_guide_wrong_scope : Error<
   "deduction guide must be declared in the same scope as template %q0">;
 def err_deduction_guide_defines_function : Error<
@@ -3496,6 +3504,10 @@ def err_format_attribute_result_not : Error<"function does not return %0">;
 def err_format_attribute_implicit_this_format_string : Error<
   "format attribute cannot specify the implicit this argument as the format "
   "string">;
+def warn_missing_format_attribute : Warning<
+  "diagnostic behavior may be improved by adding the '%0' attribute to the "
+  "declaration of %1">,
+  InGroup<MissingFormatAttribute>, DefaultIgnore;
 def err_callback_attribute_no_callee : Error<
   "'callback' attribute specifies no callback callee">;
 def err_callback_attribute_invalid_callee : Error<
@@ -7021,8 +7033,9 @@ def warn_counted_by_attr_elt_type_unknown_size :
   InGroup<BoundsSafetyCountedByEltTyUnknownSize>;
 
 // __builtin_counted_by_ref diagnostics:
-def err_builtin_counted_by_ref_must_be_flex_array_member : Error<
-  "'__builtin_counted_by_ref' argument must reference a flexible array member">;
+def err_builtin_counted_by_ref_invalid_arg
+    : Error<"'__builtin_counted_by_ref' argument must reference a member with "
+            "the 'counted_by' attribute">;
 def err_builtin_counted_by_ref_has_side_effects : Error<
   "'__builtin_counted_by_ref' argument cannot have side-effects">;
 
@@ -8671,7 +8684,7 @@ def err_conditional_vector_has_void : Error<
 def err_conditional_vector_operand_type
     : Error<"enumeration type %0 is not allowed in a vector conditional">;
 def err_conditional_vector_cond_result_mismatch
-    : Error<"cannot mix vectors and extended vectors in a vector conditional">;
+    : Error<"cannot mix vectors and %select{sizeless|extended}0 vectors in a vector conditional">;
 def err_conditional_vector_mismatched
     : Error<"vector operands to the vector conditional must be the same type "
             "%diff{($ and $)|}0,1}">;
@@ -10782,6 +10795,13 @@ def warn_lifetime_safety_return_stack_addr_strict
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
+
+def warn_lifetime_safety_suggest_lifetimebound
+    : Warning<"param should be marked [[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetySuggestions>,
+      DefaultIgnore;
+
+def note_lifetime_safety_suggestion_returned_here : Note<"param returned here">;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -13537,21 +13557,19 @@ def err_acc_clause_after_device_type
 def err_acc_clause_cannot_combine
     : Error<"OpenACC clause '%0' may not appear on the same construct as a "
             "'%1' clause on a '%2' construct">;
-def err_acc_clause_routine_cannot_combine_before_device_type
-    : Error<"OpenACC clause '%0' after 'device_type' clause on a 'routine' "
-              "conflicts with the '%1' clause before the first 'device_type'">;
-def err_acc_clause_routine_cannot_combine_same_device_type
-    : Error<"OpenACC clause '%0' on a 'routine' directive conflicts with the "
-            "'%1' clause applying to the same 'device_type'">;
+def err_acc_clause_cannot_combine_before_device_type
+    : Error<
+          "OpenACC clause '%1' after 'device_type' clause on a '%0' construct "
+          "conflicts with the '%2' clause before the first 'device_type'">;
+def err_acc_clause_cannot_combine_same_device_type
+    : Error<"OpenACC clause '%1' cannot combine with previous '%2' clause"
+            "%select{| in the same 'device_type' region}3 on a '%0' directive">;
+def err_acc_clause_conflicts_prev_dev_type
+    : Error<"OpenACC '%0' clause applies to 'device_type' '%1', which "
+            "conflicts with previous '%2' clause">;
 def err_acc_clause_routine_one_of_in_region
     : Error<"OpenACC 'routine' construct must have at least one 'gang', 'seq', "
             "'vector', or 'worker' clause that applies to each 'device_type'">;
-def err_acc_clause_since_last_device_type
-    : Error<"OpenACC '%0' clause cannot appear more than once%select{| in a "
-            "'device_type' region}2 on a '%1' directive">;
-def err_acc_clause_conflicts_prev_dev_type
-    : Error<"OpenACC '%0' clause applies to 'device_type' '%1', which "
-            "conflicts with previous '%0' clause">;
 
 def err_acc_reduction_num_gangs_conflict
     : Error<"OpenACC '%1' clause %select{|with more than 1 argument }0may not "

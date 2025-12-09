@@ -3158,6 +3158,10 @@ def PPCSystemLibrary
            has__stack_smash_handler,
            has___guard_local,
            AvailableIf<__ssp_canary_word, isAIX>,
+           AvailableIf<vec_calloc, isAIX>,
+           AvailableIf<vec_malloc, isAIX>,
+           AvailableIf<vec_realloc, isAIX>,
+           AvailableIf<vec_free, isAIX>,
            AvailableIf<__stack_chk_fail, isNotOSOpenBSD>,
            AvailableIf<__stack_chk_guard, isNotOSAIXAndNotOSOpenBSD>)>;
 
