@@ -1,7 +1,6 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-vulkan %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-DAG: OpName %[[#test_int32_double_conversion:]] "test_int32_double_conversion"
 ; CHECK-DAG: %[[#int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#v4i32:]] = OpTypeVector %[[#int]] 4
 ; CHECK-DAG: %[[#double:]] = OpTypeFloat 64
@@ -139,7 +138,7 @@ entry:
 }
 
 define spir_func void @test_int32_double_conversion() {
-; CHECK: %[[#test_int32_double_conversion]] = OpFunction
+; CHECK: OpFunction
 entry:
   ; CHECK: %[[#LOAD:]] = OpLoad %[[#v4f64]] %[[#global_double]]
   ; CHECK: %[[#VEC_SHUF1:]] = OpVectorShuffle %{{[a-zA-Z0-9_]+}} %[[#LOAD]] %{{[a-zA-Z0-9_]+}} 0 1
@@ -183,6 +182,31 @@ entry:
   ; CHECK: %[[#CONSTRUCT7:]] = OpCompositeConstruct %[[#v4f64]] %[[#BITCAST3]] %[[#BITCAST4]] %[[#BITCAST5]] %[[#BITCAST6]]
   ; CHECK: OpStore %[[#global_double]] %[[#CONSTRUCT7]] Aligned 32
   store <8 x i32> %3, ptr addrspace(10) @G_4_double
+  ret void
+}
+
+; CHECK: OpFunction
+define spir_func void @test_double_to_int_implicit_conversion() {
+entry:
+
+; CHECK: %[[#LOAD_V4F64:]] = OpLoad %[[#V4F64_TYPE:]] %[[#GLOBAL_DOUBLE_VAR:]] Aligned 32
+; CHECK: %[[#VEC_SHUF_01:]] = OpVectorShuffle %[[#V2F64_TYPE:]] %[[#LOAD_V4F64]] %[[#UNDEF_V2F64:]] 0 1
+; CHECK: %[[#VEC_SHUF_23:]] = OpVectorShuffle %[[#V2F64_TYPE:]] %[[#LOAD_V4F64]] %[[#UNDEF_V2F64]] 2 3
+; CHECK: %[[#BITCAST_V4I32_01:]] = OpBitcast %[[#V4I32_TYPE:]] %[[#VEC_SHUF_01]]
+; CHECK: %[[#BITCAST_V4I32_23:]] = OpBitcast %[[#V4I32_TYPE]] %[[#VEC_SHUF_23]]
+  %0 = load <8 x i32>, ptr addrspace(10) @G_4_double, align 64
+
+; CHECK: %[[#VEC_SHUF_0_0:]] = OpVectorShuffle %[[#V2I32_TYPE:]] %[[#BITCAST_V4I32_01]] %[[#UNDEF_V2I32:]] 0 1
+; CHECK: %[[#VEC_SHUF_0_1:]] = OpVectorShuffle %[[#V2I32_TYPE]] %[[#BITCAST_V4I32_01]] %[[#UNDEF_V2I32]] 2 3
+; CHECK: %[[#VEC_SHUF_1_0:]] = OpVectorShuffle %[[#V2I32_TYPE]] %[[#BITCAST_V4I32_23]] %[[#UNDEF_V2I32]] 0 1
+; CHECK: %[[#VEC_SHUF_1_1:]] = OpVectorShuffle %[[#V2I32_TYPE]] %[[#BITCAST_V4I32_23]] %[[#UNDEF_V2I32]] 2 3
+; CHECK: %[[#BITCAST_DOUBLE_0_0:]] = OpBitcast %[[#DOUBLE_TYPE:]] %[[#VEC_SHUF_0_0]]
+; CHECK: %[[#BITCAST_DOUBLE_0_1:]] = OpBitcast %[[#DOUBLE_TYPE]] %[[#VEC_SHUF_0_1]]
+; CHECK: %[[#BITCAST_DOUBLE_1_0:]] = OpBitcast %[[#DOUBLE_TYPE]] %[[#VEC_SHUF_1_0]]
+; CHECK: %[[#BITCAST_DOUBLE_1_1:]] = OpBitcast %[[#DOUBLE_TYPE]] %[[#VEC_SHUF_1_1]]
+; CHECK: %[[#COMPOSITE_CONSTRUCT:]] = OpCompositeConstruct %[[#V4F64_TYPE]] %[[#BITCAST_DOUBLE_0_0]] %[[#BITCAST_DOUBLE_0_1]] %[[#BITCAST_DOUBLE_1_0]] %[[#BITCAST_DOUBLE_1_1]]
+; CHECK: OpStore %[[#GLOBAL_DOUBLE_VAR]] %[[#COMPOSITE_CONSTRUCT]] Aligned 64
+  store <8 x i32> %0, ptr addrspace(10) @G_4_double, align 64
   ret void
 }
 
