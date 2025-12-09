@@ -97,3 +97,33 @@ for any source file and line breakpoints that the IDE set using:
 ::
 
    (lldb) breakpoint list --verbose
+
+How Do I Find Out What Features My Version Of LLDB Has?
+-------------------------------------------------------
+
+Some features such as XML parsing are optional and must be enabled when LLDB is
+built. To check which features your copy of LLDB has enabled, use the ``version``
+command from within LLDB:
+
+::
+
+   (lldb) version -v
+
+.. note::
+   This feature was added in LLDB 22. If you are using an earlier version, you
+   can use the method below.
+
+Alternatively, you can check the shared library dependencies of LLDB. For example
+on Linux you can use the following command:
+
+::
+
+   $ readelf -d ./bin/lldb | grep NEEDED
+   0x0000000000000001 (NEEDED)             Shared library: [liblldb.so.22.0git]
+   0x0000000000000001 (NEEDED)             Shared library: [libxml2.so.2]
+   0x0000000000000001 (NEEDED)             Shared library: [libedit.so.2]
+   <...>
+   0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+
+The output above shows us that this particular copy of LLDB has XML parsing
+(``libxml2``) and editline (``libedit``) enabled.
