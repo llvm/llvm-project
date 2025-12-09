@@ -960,6 +960,13 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       }
     }
     const EmitNodeMatcherCommon *EN = cast<EmitNodeMatcherCommon>(N);
+    bool SupportsDeactivationSymbol =
+        EN->getInstruction().TheDef->getValueAsBit(
+            "supportsDeactivationSymbol");
+    if (SupportsDeactivationSymbol) {
+      OS << "OPC_CaptureDeactivationSymbol,\n";
+      OS.indent(FullIndexWidth + Indent);
+    }
     bool IsEmitNode = isa<EmitNodeMatcher>(EN);
     OS << (IsEmitNode ? "OPC_EmitNode" : "OPC_MorphNodeTo");
     bool CompressVTs = EN->getNumVTs() < 3;
@@ -1052,8 +1059,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       OS << '\n';
     }
 
-    return 4 + !CompressVTs + !CompressNodeInfo + NumTypeBytes +
-           NumOperandBytes + NumCoveredBytes;
+    return 4 + SupportsDeactivationSymbol + !CompressVTs + !CompressNodeInfo +
+           NumTypeBytes + NumOperandBytes + NumCoveredBytes;
   }
   case Matcher::CompleteMatch: {
     const CompleteMatchMatcher *CM = cast<CompleteMatchMatcher>(N);

@@ -65,8 +65,6 @@ void acc_compute(int parmVar) {
   // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN2]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_copy>, name = "parmVar"} loc
   // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCAL1]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_copy>, name = "localVar1"} loc
 
-  // TODO: OpenACC: Represent alwaysin/alwaysout/always correctly. For now,
-  // these do nothing to the IR.
 #pragma acc parallel copy(alwaysin: localVar1) copy(alwaysout: localVar2) copy(always: localVar3)
   ;
   // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCAL1]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_copy>, modifiers = #acc<data_clause_modifier alwaysin>, name = "localVar1"} loc

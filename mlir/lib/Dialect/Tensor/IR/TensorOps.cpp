@@ -2291,9 +2291,9 @@ void ExtractSliceOp::getAsmResultNames(
 /// An extract_slice result type can be inferred, when it is not
 /// rank-reduced, from the source type and the static representation of
 /// offsets, sizes and strides. Special sentinels encode the dynamic case.
-RankedTensorType ExtractSliceOp::inferResultType(
-    RankedTensorType sourceTensorType, ArrayRef<int64_t> staticOffsets,
-    ArrayRef<int64_t> staticSizes, ArrayRef<int64_t> staticStrides) {
+RankedTensorType
+ExtractSliceOp::inferResultType(RankedTensorType sourceTensorType,
+                                ArrayRef<int64_t> staticSizes) {
   // An extract_slice op may specify only a leading subset of offset/sizes/
   // strides in which case we complete with offset=0, sizes from memref type
   // and strides=1.
@@ -2305,11 +2305,12 @@ RankedTensorType ExtractSliceOp::inferResultType(
 }
 
 // TODO: This uses neither offsets nor strides!
-RankedTensorType ExtractSliceOp::inferResultType(
-    RankedTensorType sourceTensorType, ArrayRef<OpFoldResult> offsets,
-    ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides) {
+RankedTensorType
+ExtractSliceOp::inferResultType(RankedTensorType sourceTensorType,
+                                ArrayRef<OpFoldResult> sizes) {
   SmallVector<int64_t> staticSizes;
   std::tie(staticSizes, std::ignore) = decomposeMixedValues(sizes);
+
   assert(static_cast<int64_t>(staticSizes.size()) ==
              sourceTensorType.getRank() &&
          "unexpected staticSizes not equal to rank of source");
@@ -2327,11 +2328,10 @@ RankedTensorType ExtractSliceOp::inferResultType(
 /// To disambiguate, this function always drops the first 1 sizes occurrences.
 RankedTensorType ExtractSliceOp::inferCanonicalRankReducedResultType(
     unsigned desiredResultRank, RankedTensorType sourceRankedTensorType,
-    ArrayRef<int64_t> offsets, ArrayRef<int64_t> sizes,
-    ArrayRef<int64_t> strides) {
+    ArrayRef<int64_t> sizes) {
   // Type inferred in the absence of rank-reducing behavior.
   auto inferredType = llvm::cast<RankedTensorType>(
-      inferResultType(sourceRankedTensorType, offsets, sizes, strides));
+      inferResultType(sourceRankedTensorType, sizes));
   int rankDiff = inferredType.getRank() - desiredResultRank;
   if (rankDiff > 0) {
     auto shape = inferredType.getShape();
@@ -2350,16 +2350,12 @@ RankedTensorType ExtractSliceOp::inferCanonicalRankReducedResultType(
 
 RankedTensorType ExtractSliceOp::inferCanonicalRankReducedResultType(
     unsigned desiredResultRank, RankedTensorType sourceRankedTensorType,
-    ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
-    ArrayRef<OpFoldResult> strides) {
-  SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
-  SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+    ArrayRef<OpFoldResult> sizes) {
+  SmallVector<int64_t> staticSizes;
+  SmallVector<Value> dynamicSizes;
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
-  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
   return ExtractSliceOp::inferCanonicalRankReducedResultType(
-      desiredResultRank, sourceRankedTensorType, staticOffsets, staticSizes,
-      staticStrides);
+      desiredResultRank, sourceRankedTensorType, staticSizes);
 }
 
 /// Build an ExtractSliceOp with mixed static and dynamic entries and custom
@@ -2378,8 +2374,8 @@ void ExtractSliceOp::build(OpBuilder &b, OperationState &result,
   auto sourceRankedTensorType = llvm::cast<RankedTensorType>(source.getType());
   // Structuring implementation this way avoids duplication between builders.
   if (!resultType) {
-    resultType = llvm::cast<RankedTensorType>(ExtractSliceOp::inferResultType(
-        sourceRankedTensorType, staticOffsets, staticSizes, staticStrides));
+    resultType = llvm::cast<RankedTensorType>(
+        ExtractSliceOp::inferResultType(sourceRankedTensorType, staticSizes));
   }
   result.addAttributes(attrs);
   build(b, result, resultType, source, dynamicOffsets, dynamicSizes,
@@ -2449,13 +2445,26 @@ static LogicalResult produceSliceErrorMsg(SliceVerificationResult result,
   }
 }
 
+/// Build an ExtractSliceOp with mixed static and dynamic sizes, inferred
+/// result type, offsets set to 0 and strides set to 1.
+void ExtractSliceOp::build(OpBuilder &b, OperationState &result,
+                           RankedTensorType resultType, Value source,
+                           ArrayRef<OpFoldResult> sizes,
+                           ArrayRef<NamedAttribute> attrs) {
+  Attribute zeroIdxAttr = b.getIndexAttr(0);
+  Attribute oneIdxAttr = b.getIndexAttr(1);
+  SmallVector<OpFoldResult> readStrides(sizes.size(), oneIdxAttr);
+  SmallVector<OpFoldResult> readOffsets(sizes.size(), zeroIdxAttr);
+  build(b, result, resultType, source, readOffsets, sizes, readStrides, attrs);
+}
+
 /// Verifier for ExtractSliceOp.
 LogicalResult ExtractSliceOp::verify() {
   RankedTensorType sourceType = getSourceType();
 
   // Verify result type against inferred type.
-  RankedTensorType expectedType = ExtractSliceOp::inferResultType(
-      sourceType, getMixedOffsets(), getMixedSizes(), getMixedStrides());
+  RankedTensorType expectedType =
+      ExtractSliceOp::inferResultType(sourceType, getMixedSizes());
   SliceVerificationResult result = isRankReducedType(expectedType, getType());
   if (result != SliceVerificationResult::Success)
     return produceSliceErrorMsg(result, *this, expectedType);
@@ -2695,8 +2704,7 @@ struct SliceReturnTypeCanonicalizer {
                               ArrayRef<OpFoldResult> mixedSizes,
                               ArrayRef<OpFoldResult> mixedStrides) {
     return ExtractSliceOp::inferCanonicalRankReducedResultType(
-        op.getType().getRank(), op.getSourceType(), mixedOffsets, mixedSizes,
-        mixedStrides);
+        op.getType().getRank(), op.getSourceType(), mixedSizes);
   }
 };
 
@@ -2837,8 +2845,8 @@ static SliceVerificationResult verifyInsertSliceOp(
     ArrayRef<int64_t> staticStrides, RankedTensorType *expectedType = nullptr) {
   // insert_slice is the inverse of extract_slice, use the same type
   // inference.
-  RankedTensorType expected = ExtractSliceOp::inferResultType(
-      dstType, staticOffsets, staticSizes, staticStrides);
+  RankedTensorType expected =
+      ExtractSliceOp::inferResultType(dstType, staticSizes);
   if (expectedType)
     *expectedType = expected;
   return isRankReducedType(expected, srcType);
@@ -2966,7 +2974,7 @@ public:
     // Create the new op in canonical form.
     auto sourceType = ExtractSliceOp::inferCanonicalRankReducedResultType(
         insertSliceOp.getSourceType().getRank(), insertSliceOp.getDestType(),
-        mixedOffsets, mixedSizes, mixedStrides);
+        mixedSizes);
     Value toInsert = insertSliceOp.getSource();
     if (sourceType != insertSliceOp.getSourceType()) {
       OpBuilder::InsertionGuard g(rewriter);
@@ -3892,6 +3900,18 @@ void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
   SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
       llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
   build(b, result, source, dest, offsetValues, sizeValues, strideValues);
+}
+
+// Build an InsertSliceOp with mixed static and dynamic sizes, offsets set
+// to 0, strides set to 1 and inferred result type.
+void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
+                          Value dest, ArrayRef<OpFoldResult> sizes,
+                          ArrayRef<NamedAttribute> attrs) {
+  Attribute zeroIdxAttr = b.getIndexAttr(0);
+  Attribute oneIdxAttr = b.getIndexAttr(1);
+  SmallVector<OpFoldResult> writeStrides(sizes.size(), oneIdxAttr);
+  SmallVector<OpFoldResult> writeOffsets(sizes.size(), zeroIdxAttr);
+  build(b, result, source, dest, writeOffsets, sizes, writeStrides, attrs);
 }
 
 LogicalResult ParallelInsertSliceOp::verify() {

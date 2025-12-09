@@ -8,6 +8,7 @@
 // RUN: sed -e 's/.*"\(.*libclang_rt.ubsan_minimal_osx_dynamic.dylib\)".*/\1/' | \
 // RUN: tr -d '\n' > %t.dylib_path1
 // RUN: nm -jgU %{readfile:%t.dylib_path1} | grep "^___ubsan_handle" \
+// RUN:  | grep -vE "_minimal_preserve" \
 // RUN:  | sed 's/_minimal//g' \
 // RUN:  > %t.minimal.symlist
 //

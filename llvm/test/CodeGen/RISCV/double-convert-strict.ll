@@ -56,7 +56,6 @@ define float @fcvt_s_d(double %a) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %1
 }
-declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 
 define double @fcvt_d_s(float %a) nounwind strictfp {
 ; CHECKIFD-LABEL: fcvt_d_s:
@@ -94,7 +93,6 @@ define double @fcvt_d_s(float %a) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.fpext.f64.f32(float %a, metadata !"fpexcept.strict")
   ret double %1
 }
-declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
 
 define i32 @fcvt_w_d(double %a) nounwind strictfp {
 ; CHECKIFD-LABEL: fcvt_w_d:
@@ -132,7 +130,6 @@ define i32 @fcvt_w_d(double %a) nounwind strictfp {
   %1 = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %a, metadata !"fpexcept.strict")
   ret i32 %1
 }
-declare i32 @llvm.experimental.constrained.fptosi.i32.f64(double, metadata)
 
 ; For RV64D, fcvt.lu.d is semantically equivalent to fcvt.wu.d in this case
 ; because fptosi will produce poison if the result doesn't fit into an i32.
@@ -172,7 +169,6 @@ define i32 @fcvt_wu_d(double %a) nounwind strictfp {
   %1 = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %a, metadata !"fpexcept.strict")
   ret i32 %1
 }
-declare i32 @llvm.experimental.constrained.fptoui.i32.f64(double, metadata)
 
 ; Test where the fptoui has multiple uses, one of which causes a sext to be
 ; inserted on RV64.
@@ -262,7 +258,6 @@ define double @fcvt_d_w(i32 %a) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
-declare double @llvm.experimental.constrained.sitofp.f64.i32(i32, metadata, metadata)
 
 define double @fcvt_d_w_load(ptr %p) nounwind strictfp {
 ; CHECKIFD-LABEL: fcvt_d_w_load:
@@ -344,7 +339,6 @@ define double @fcvt_d_wu(i32 %a) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
-declare double @llvm.experimental.constrained.uitofp.f64.i32(i32, metadata, metadata)
 
 define double @fcvt_d_wu_load(ptr %p) nounwind strictfp {
 ; CHECKIFD-LABEL: fcvt_d_wu_load:
@@ -438,7 +432,6 @@ define i64 @fcvt_l_d(double %a) nounwind strictfp {
   %1 = call i64 @llvm.experimental.constrained.fptosi.i64.f64(double %a, metadata !"fpexcept.strict")
   ret i64 %1
 }
-declare i64 @llvm.experimental.constrained.fptosi.i64.f64(double, metadata)
 
 define i64 @fcvt_lu_d(double %a) nounwind strictfp {
 ; RV32IFD-LABEL: fcvt_lu_d:
@@ -489,7 +482,6 @@ define i64 @fcvt_lu_d(double %a) nounwind strictfp {
   %1 = call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %a, metadata !"fpexcept.strict")
   ret i64 %1
 }
-declare i64 @llvm.experimental.constrained.fptoui.i64.f64(double, metadata)
 
 define double @fcvt_d_l(i64 %a) nounwind strictfp {
 ; RV32IFD-LABEL: fcvt_d_l:
@@ -540,7 +532,6 @@ define double @fcvt_d_l(i64 %a) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
-declare double @llvm.experimental.constrained.sitofp.f64.i64(i64, metadata, metadata)
 
 define double @fcvt_d_lu(i64 %a) nounwind strictfp {
 ; RV32IFD-LABEL: fcvt_d_lu:
@@ -591,7 +582,6 @@ define double @fcvt_d_lu(i64 %a) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
-declare double @llvm.experimental.constrained.uitofp.f64.i64(i64, metadata, metadata)
 
 define double @fcvt_d_w_i8(i8 signext %a) nounwind strictfp {
 ; CHECKIFD-LABEL: fcvt_d_w_i8:
@@ -629,7 +619,6 @@ define double @fcvt_d_w_i8(i8 signext %a) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.sitofp.f64.i8(i8 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
-declare double @llvm.experimental.constrained.sitofp.f64.i8(i8, metadata, metadata)
 
 define double @fcvt_d_wu_i8(i8 zeroext %a) nounwind strictfp {
 ; CHECKIFD-LABEL: fcvt_d_wu_i8:
@@ -667,7 +656,6 @@ define double @fcvt_d_wu_i8(i8 zeroext %a) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.uitofp.f64.i8(i8 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
-declare double @llvm.experimental.constrained.uitofp.f64.i8(i8, metadata, metadata)
 
 define double @fcvt_d_w_i16(i16 signext %a) nounwind strictfp {
 ; CHECKIFD-LABEL: fcvt_d_w_i16:
@@ -705,7 +693,6 @@ define double @fcvt_d_w_i16(i16 signext %a) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.sitofp.f64.i16(i16 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
-declare double @llvm.experimental.constrained.sitofp.f64.i16(i16, metadata, metadata)
 
 define double @fcvt_d_wu_i16(i16 zeroext %a) nounwind strictfp {
 ; CHECKIFD-LABEL: fcvt_d_wu_i16:
@@ -743,7 +730,6 @@ define double @fcvt_d_wu_i16(i16 zeroext %a) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.uitofp.f64.i16(i16 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
-declare double @llvm.experimental.constrained.uitofp.f64.i16(i16, metadata, metadata)
 
 ; Make sure we select W version of addi on RV64.
 define signext i32 @fcvt_d_w_demanded_bits(i32 signext %0, ptr %1) nounwind strictfp {

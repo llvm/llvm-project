@@ -41,47 +41,39 @@ define void @test(ptr %p1, ptr %p2) nounwind {
 ; CHECK-NEXT:    xxswapd 61, 63
 ; CHECK-NEXT:    bl roundeven
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxswapd 56, 1
 ; CHECK-NEXT:    xxlor 1, 59, 59
 ; CHECK-NEXT:    bl roundeven
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxswapd 0, 1
 ; CHECK-NEXT:    xxlor 1, 60, 60
 ; CHECK-NEXT:    xxmrgld 59, 0, 56
 ; CHECK-NEXT:    bl roundeven
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxswapd 60, 1
 ; CHECK-NEXT:    xxlor 1, 62, 62
 ; CHECK-NEXT:    bl roundeven
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxswapd 0, 1
 ; CHECK-NEXT:    xxlor 1, 61, 61
 ; CHECK-NEXT:    xxmrgld 62, 0, 60
 ; CHECK-NEXT:    bl roundeven
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxswapd 61, 1
 ; CHECK-NEXT:    xxlor 1, 63, 63
 ; CHECK-NEXT:    bl roundeven
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxswapd 0, 1
 ; CHECK-NEXT:    xxlor 1, 57, 57
 ; CHECK-NEXT:    xxmrgld 63, 0, 61
 ; CHECK-NEXT:    bl roundeven
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxswapd 61, 1
 ; CHECK-NEXT:    xxlor 1, 58, 58
 ; CHECK-NEXT:    bl roundeven
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    li 3, 160
 ; CHECK-NEXT:    stxvd2x 63, 30, 29
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxswapd 0, 1
 ; CHECK-NEXT:    stxvd2x 62, 30, 28
 ; CHECK-NEXT:    stxvd2x 59, 30, 27

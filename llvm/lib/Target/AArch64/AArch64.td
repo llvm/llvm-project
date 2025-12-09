@@ -40,6 +40,8 @@ include "AArch64SchedPredExynos.td"
 include "AArch64SchedPredNeoverse.td"
 include "AArch64Combine.td"
 
+defm : RemapAllTargetPseudoPointerOperands<GPR64sp>;
+
 def AArch64InstrInfo : InstrInfo;
 
 //===----------------------------------------------------------------------===//

@@ -13,6 +13,11 @@
 #include <stack>
 
 void test() {
-  std::stack<int> stack;
-  stack.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stack<int> st;
+  const std::stack<int> cst;
+
+  st.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  st.size();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  st.top();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cst.top();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
