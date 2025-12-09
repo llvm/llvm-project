@@ -140,8 +140,13 @@ OPENCL_EXTENSION(cl_amd_media_ops, true, 100)
 OPENCL_EXTENSION(cl_amd_media_ops2, true, 100)
 
 // Intel OpenCL extensions
+OPENCL_EXTENSION(cl_intel_bfloat16_conversion, false, 100)
 OPENCL_EXTENSION(cl_intel_subgroups, true, 120)
+OPENCL_EXTENSION(cl_intel_subgroups_char, true, 120)
+OPENCL_EXTENSION(cl_intel_subgroups_long, true, 120)
 OPENCL_EXTENSION(cl_intel_subgroups_short, true, 120)
+OPENCL_EXTENSION(cl_intel_subgroup_buffer_prefetch, false, 120)
+OPENCL_EXTENSION(cl_intel_subgroup_local_block_io, false, 120)
 OPENCL_EXTENSION(cl_intel_device_side_avc_motion_estimation, true, 120)
 
 // OpenCL C 3.0 features (6.2.1. Features)
