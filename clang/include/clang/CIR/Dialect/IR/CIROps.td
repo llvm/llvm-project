@@ -2078,6 +2078,13 @@ def CIR_GlobalLinkageKind : CIR_I32EnumAttr<
 // properties of a global variable will be added over time as more of ClangIR
 // is upstreamed.
 
+def CIR_TLSModel : CIR_I32EnumAttr<"TLS_Model", "TLS model", [
+  I32EnumAttrCase<"GeneralDynamic", 0, "tls_dyn">,
+  I32EnumAttrCase<"LocalDynamic", 1, "tls_local_dyn">,
+  I32EnumAttrCase<"InitialExec", 2, "tls_init_exec">,
+  I32EnumAttrCase<"LocalExec", 3, "tls_local_exec">
+]>;
+
 def CIR_GlobalOp : CIR_Op<"global", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
@@ -2106,6 +2113,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
                        CIR_GlobalLinkageKind:$linkage,
+                       OptionalAttr<CIR_TLSModel>:$tls_model,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$comdat,
                        UnitAttr:$constant,
@@ -2121,6 +2129,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`constant` $constant^)?
     $linkage
     (`comdat` $comdat^)?
+    ($tls_model^)?
     (`dso_local` $dso_local^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
@@ -2184,16 +2193,22 @@ def CIR_GetGlobalOp : CIR_Op<"get_global", [
     undefined. The resulting type must always be a `!cir.ptr<...>` type with the
     same address space as the global variable.
 
+    Addresses of thread local globals can only be retrieved if this operation
+    is marked `thread_local`, which indicates the address isn't constant.
+
     Example:
     ```mlir
     %x = cir.get_global @gv : !cir.ptr<i32>
+    ...
+    %y = cir.get_global thread_local @tls_gv : !cir.ptr<i32>
     ```
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$name);
+  let arguments = (ins FlatSymbolRefAttr:$name, UnitAttr:$tls);
   let results = (outs Res<CIR_PointerType, "", []>:$addr);
 
   let assemblyFormat = [{
+    (`thread_local` $tls^)?
     $name `:` qualified(type($addr)) attr-dict
   }];
 }
@@ -4754,6 +4769,27 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let assemblyFormat = "$src `:` type($src) attr-dict";
 
   let llvmOp = llvmOpName;
+}
+
+def CIR_SqrtOp : CIR_UnaryFPToFPBuiltinOp<"sqrt", "SqrtOp"> {
+  let summary = "Floating-point square root operation";
+  
+  let description = [{
+    Computes the square root of a floating-point value or vector.
+
+    The input must be either:
+      • a floating-point scalar type, or
+      • a vector whose element type is floating-point.
+
+    The result type must match the input type exactly.
+
+    Examples:
+      // scalar
+      %r = cir.sqrt %x : !cir.fp64
+
+      // vector
+      %v = cir.sqrt %vec : !cir.vector<!cir.fp32 x 4>
+  }];
 }
 
 def CIR_ACosOp : CIR_UnaryFPToFPBuiltinOp<"acos", "ACosOp"> {
