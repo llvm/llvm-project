@@ -124,10 +124,13 @@ set_target_properties(mlir-doc PROPERTIES FOLDER "MLIR/Docs")
 
 # Only enable execution engine if the native target is available.
 if(${LLVM_NATIVE_ARCH} IN_LIST LLVM_TARGETS_TO_BUILD)
-  set(MLIR_ENABLE_EXECUTION_ENGINE 1)
+  set(MLIR_ENABLE_EXECUTION_ENGINE_default 1)
 else()
-  set(MLIR_ENABLE_EXECUTION_ENGINE 0)
+  set(MLIR_ENABLE_EXECUTION_ENGINE_default 0)
 endif()
+option(MLIR_ENABLE_EXECUTION_ENGINE
+       "Enable building the MLIR Execution Engine."
+       ${MLIR_ENABLE_EXECUTION_ENGINE_default})
 
 # Build the ROCm conversions and run according tests if the AMDGPU backend
 # is available.
