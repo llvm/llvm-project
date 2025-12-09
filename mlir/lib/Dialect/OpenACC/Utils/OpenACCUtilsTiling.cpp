@@ -137,10 +137,9 @@ mlir::acc::tileACCLoops(llvm::SmallVector<mlir::acc::LoopOp> &tileLoops,
   // Resolve unknown tile sizes (tile(*) represented as -1)
   llvm::SmallVector<mlir::Value> resolvedTileSizes;
   rewriter.setInsertionPoint(outerLoop);
-  for (mlir::Value tileSize : tileSizes) {
+  for (mlir::Value tileSize : tileSizes)
     resolvedTileSizes.push_back(
         resolveUnknownTileSize(tileSize, defaultTileSize, rewriter, loc));
-  }
 
   mlir::acc::LoopOp innerLoop = tileLoops[tileLoops.size() - 1];
   llvm::SmallVector<mlir::Value, 3> origIVs;
