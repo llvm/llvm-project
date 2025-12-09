@@ -204,13 +204,11 @@ static std::optional<std::vector<std::string>> getFirstCC1CommandLine(
   const auto IsClangCmd = [](const driver::Command &Cmd) {
     return StringRef(Cmd.getCreator().getName()) == "clang";
   };
-  const auto CC1CommandLineRange = llvm::map_range(
-      llvm::make_filter_range(Compilation->getJobs(), IsClangCmd),
-      buildCC1CommandLine);
 
-  if (CC1CommandLineRange.empty())
-    return std::nullopt;
-  return *CC1CommandLineRange.begin();
+  const auto &Jobs = Compilation->getJobs();
+  if (const auto It = llvm::find_if(Jobs, IsClangCmd); It != Jobs.end())
+    return buildCC1CommandLine(*It);
+  return std::nullopt;
 }
 
 static llvm::Error makeErrorFromDiagnosticsOS(
