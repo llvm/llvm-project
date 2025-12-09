@@ -202,6 +202,27 @@ $ merge-fdata *.fdata > combined.fdata
 Use `combined.fdata` for **Step 3** above to generate a universally optimized
 binary.
 
+## Identifying a Binary Modified By BOLT
+
+A binary that has been modified by BOLT will include a `bolt_info` note and may
+have extra sections with `bolt` in their name.
+
+You can use `readelf` to find these:
+```
+$ llvm-readelf -S <your-binary> | grep bolt
+  [11] .bolt.org.eh_frame PROGBITS <...>
+<...>
+  [39] .note.bolt_info   NOTE <...>
+```
+The note can be displayed with:
+```
+$ llvm-readelf -n <your-binary>
+<...>
+Displaying notes found in: .note.bolt_info
+  <...>
+    Version: BOLT revision: <...>
+```
+
 ## License
 
 BOLT is licensed under the [Apache License v2.0 with LLVM Exceptions](./LICENSE.TXT).
