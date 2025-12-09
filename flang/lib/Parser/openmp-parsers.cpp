@@ -1920,7 +1920,7 @@ struct OmpLoopConstructParser {
     auto loopItem{LoopNestParser{} || ompLoopConstruct};
 
     if (auto &&begin{OmpBeginDirectiveParser(dirs_).Parse(state)}) {
-      auto loopDir{begin->DirName().v};
+      auto loopDir{begin->DirId()};
       auto assoc{llvm::omp::getDirectiveAssociation(loopDir)};
       if (assoc == llvm::omp::Association::LoopNest) {
         if (auto &&item{attempt(loopItem).Parse(state)}) {

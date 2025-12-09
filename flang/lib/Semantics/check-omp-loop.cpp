@@ -271,7 +271,7 @@ void OmpStructureChecker::CheckNestedBlock(const parser::OpenMPLoopConstruct &x,
     } else if (parser::Unwrap<parser::DoConstruct>(stmt)) {
       ++nestedCount;
     } else if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(stmt)}) {
-      if (!IsLoopTransforming(omp->BeginDir().DirName().v)) {
+      if (!IsLoopTransforming(omp->BeginDir().DirId())) {
         context_.Say(omp->source,
             "Only loop-transforming OpenMP constructs are allowed inside OpenMP loop constructs"_err_en_US);
       }
@@ -324,7 +324,7 @@ void OmpStructureChecker::CheckFullUnroll(
   // since it won't contain a loop.
   if (const parser::OpenMPLoopConstruct *nested{x.GetNestedConstruct()}) {
     auto &nestedSpec{nested->BeginDir()};
-    if (nestedSpec.DirName().v == llvm::omp::Directive::OMPD_unroll) {
+    if (nestedSpec.DirId() == llvm::omp::Directive::OMPD_unroll) {
       bool isPartial{
           llvm::any_of(nestedSpec.Clauses().v, [](const parser::OmpClause &c) {
             return c.Id() == llvm::omp::Clause::OMPC_partial;
