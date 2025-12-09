@@ -216,7 +216,7 @@ public:
 
   bool GetSwiftAutoImportFrameworks() const;
 
-  bool GetSwiftUseNewPrintObject() const;
+  bool GetSwiftUseContextFreePrintObject() const;
 
   bool GetEnableAutoImportClangModules() const;
 

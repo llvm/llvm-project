@@ -37,9 +37,9 @@ let Definition = "target_experimental" in {
   def SwiftCacheTaskPointerLocation: Property<"swift-cache-task-pointer-location", "Boolean">,
     DefaultTrue,
     Desc<"Enables caching of task pointers inside the swift tasks plugin">;
-  def SwiftUseNewPrintObject: Property<"swift-use-new-po", "Boolean">,
+  def SwiftUseContextFreePrintObject: Property<"swift-use-context-free-po", "Boolean">,
     DefaultFalse,
-    Desc<"If true, use the new Swift po implementation.">;
+    Desc<"If true, use the context-free po implementation for Swift.">;
   def UseDIL : Property<"use-DIL", "Boolean">,
     Global, DefaultTrue,
     Desc<"If true, use the DIL implementation for frame variable evaluation.">;

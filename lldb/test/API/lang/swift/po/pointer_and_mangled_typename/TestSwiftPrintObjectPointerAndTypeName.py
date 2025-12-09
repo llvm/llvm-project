@@ -9,7 +9,7 @@ class TestCase(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.build()
-        self.runCmd("settings set target.experimental.swift-use-new-po true")
+        self.runCmd("settings set target.experimental.swift-use-context-free-po true")
 
         self.log = self.getBuildArtifact("expr.log")
         self.runCmd(f"log enable lldb expr -f {self.log}")
