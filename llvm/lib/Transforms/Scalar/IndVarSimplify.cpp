@@ -2099,7 +2099,7 @@ bool IndVarSimplify::rewritePtrIncrementWithOffsettAddressing(
     return IR.CreateZExt(V, IntegerType::get(V->getContext(), TargetWidth));
   };
 
-  IRBuilder<> Builder(L->getHeader()->getFirstNonPHI());
+  IRBuilder<> Builder(&*L->getHeader()->getFirstInsertionPt());
   for (auto *PHI : LoopPhis) {
     if (!IsPtrToOffsetAddressingCandidate(PHI))
       continue;
