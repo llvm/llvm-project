@@ -952,6 +952,7 @@ def skipUnlessHasCallSiteInfo(func):
 
     return skipTestIfFn(is_compiler_clang_with_call_site_info)(func)
 
+
 def skipUnlessCompilerIsClang(func):
     """Decorate the item to skip test unless the compiler is clang."""
 
@@ -963,6 +964,7 @@ def skipUnlessCompilerIsClang(func):
         return None
 
     return skipTestIfFn(is_compiler_clang)(func)
+
 
 def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
