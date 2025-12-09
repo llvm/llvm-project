@@ -13,6 +13,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace clang;
@@ -367,7 +368,7 @@ dependencies::createDiagOptions(ArrayRef<std::string> CommandLine) {
   return DiagOpts;
 }
 
-DignosticsEngineWithDiagOpts::DignosticsEngineWithDiagOpts(
+DiagnosticsEngineWithDiagOpts::DiagnosticsEngineWithDiagOpts(
     ArrayRef<std::string> CommandLine,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS, DiagnosticConsumer &DC) {
   std::vector<const char *> CCommandLine(CommandLine.size(), nullptr);
@@ -713,38 +714,31 @@ bool DependencyScanningAction::runInvocation(
   return Result;
 }
 
-bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
-  if (DC) {
-    DiagConsumer = DC;
-  } else {
-    DiagPrinterWithOS =
-        std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
-    DiagConsumer = &DiagPrinterWithOS->DiagPrinter;
+bool CompilerInstanceWithContext::initialize(
+    std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
+    IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
+  assert(DiagEngineWithDiagOpts && "Valid diagnostics engine required!");
+  DiagEngineWithCmdAndOpts = std::move(DiagEngineWithDiagOpts);
+  DiagConsumer = DiagEngineWithCmdAndOpts->DiagEngine->getClient();
+
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = Worker.DepFS;
+  if (OverlayFS) {
+#ifndef NDEBUG
+    bool SawDepFS = false;
+    OverlayFS->visit([&](llvm::vfs::FileSystem &VFS) {
+      SawDepFS |= &VFS == Worker.DepFS.get();
+    });
+    assert(SawDepFS && "OverlayFS not based on DepFS");
+#endif
+    FS = std::move(OverlayFS);
   }
 
-  std::tie(OverlayFS, CommandLine) = initVFSForByNameScanning(
-      Worker.DepFS, CommandLine, CWD, "ScanningByName");
+  // Reset what might have been modified in the previous worker invocation.
+  FS->setCurrentWorkingDirectory(CWD);
 
-  DiagEngineWithCmdAndOpts = std::make_unique<DignosticsEngineWithDiagOpts>(
-      CommandLine, OverlayFS, *DiagConsumer);
-
-  std::tie(Driver, Compilation) = buildCompilation(
-      CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS, Alloc);
-
-  if (!Compilation)
-    return false;
-
-  assert(Compilation->getJobs().size() &&
-         "Must have a job list of non-zero size");
-  const driver::Command &Command = *(Compilation->getJobs().begin());
-  const auto &CommandArgs = Command.getArguments();
-  assert(!CommandArgs.empty() && "Cannot have a command with 0 args");
-  assert(StringRef(CommandArgs[0]) == "-cc1" && "Requires a cc1 job.");
-  OriginalInvocation = std::make_unique<CompilerInvocation>();
-
-  if (!CompilerInvocation::CreateFromArgs(*OriginalInvocation, CommandArgs,
-                                          *DiagEngineWithCmdAndOpts->DiagEngine,
-                                          Command.getExecutable())) {
+  OriginalInvocation = createCompilerInvocation(
+      CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine);
+  if (!OriginalInvocation) {
     DiagEngineWithCmdAndOpts->DiagEngine->Report(
         diag::err_fe_expected_compiler_job)
         << llvm::join(CommandLine, " ");
@@ -763,7 +757,7 @@ bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
   auto &CI = *CIPtr;
 
   if (!initializeScanCompilerInstance(
-          CI, OverlayFS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
+          CI, FS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
           Worker.Service, Worker.DepFS))
     return false;
 
@@ -875,12 +869,4 @@ bool CompilerInstanceWithContext::computeDependencies(
 bool CompilerInstanceWithContext::finalize() {
   DiagConsumer->finish();
   return true;
-}
-
-llvm::Error CompilerInstanceWithContext::handleReturnStatus(bool Success) {
-  assert(DiagPrinterWithOS && "Must use the default DiagnosticConsumer.");
-  return Success ? llvm::Error::success()
-                 : llvm::make_error<llvm::StringError>(
-                       DiagPrinterWithOS->DiagnosticsOS.str(),
-                       llvm::inconvertibleErrorCode());
 }
