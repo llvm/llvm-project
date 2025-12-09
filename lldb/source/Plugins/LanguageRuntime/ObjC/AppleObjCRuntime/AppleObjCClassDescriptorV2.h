@@ -133,9 +133,6 @@ private:
     lldb::addr_t m_properties_ptr;
     lldb::addr_t m_protocols_ptr;
 
-    ObjCLanguageRuntime::ObjCISA m_firstSubclass;
-    ObjCLanguageRuntime::ObjCISA m_nextSiblingClass;
-
     bool Read(Process *process, lldb::addr_t addr);
   };
 
