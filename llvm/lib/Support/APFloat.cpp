@@ -6178,7 +6178,7 @@ APFloat exp(const APFloat &X, RoundingMode rounding_mode) {
         X.convertToFloat(), getFEnvRoundingMode(rounding_mode));
     return APFloat(result);
   }
-  assert(false && "Unsupported floating-point semantics");
+  llvm_unreachable("Unsupported floating-point semantics");
 }
 
 APFloat::Storage::~Storage() {
