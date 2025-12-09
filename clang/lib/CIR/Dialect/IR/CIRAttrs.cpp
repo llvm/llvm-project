@@ -270,6 +270,38 @@ ConstComplexAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// DataMemberAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       cir::DataMemberType ty,
+                       std::optional<unsigned> memberIndex) {
+  // DataMemberAttr without a given index represents a null value.
+  if (!memberIndex.has_value())
+    return success();
+
+  cir::RecordType recTy = ty.getClassTy();
+  if (recTy.isIncomplete())
+    return emitError()
+           << "incomplete 'cir.record' cannot be used to build a non-null "
+              "data member pointer";
+
+  unsigned memberIndexValue = memberIndex.value();
+  if (memberIndexValue >= recTy.getNumElements())
+    return emitError()
+           << "member index of a #cir.data_member attribute is out of range";
+
+  mlir::Type memberTy = recTy.getMembers()[memberIndexValue];
+  if (memberTy != ty.getMemberTy())
+    return emitError()
+           << "member type of a #cir.data_member attribute must match the "
+              "attribute type";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CIR ConstArrayAttr
 //===----------------------------------------------------------------------===//
 

@@ -1562,10 +1562,6 @@ multiclass FlatAtomicNoRtnPatBase <string base_inst_name, string node, ValueType
   }
 }
 
-multiclass FlatAtomicNoRtnPatWithAddrSpace<string inst, string node, string addrSpaceSuffix,
-                                           ValueType vt> :
-  FlatAtomicNoRtnPatBase<inst, node # "_noret_" # addrSpaceSuffix, vt, vt>;
-
 multiclass FlatAtomicNoRtnPat <string inst, string node, ValueType vt,
                           ValueType data_vt = vt, bit isIntr = 0> :
   FlatAtomicNoRtnPatBase<inst, node # "_noret" # !if(isIntr, "", "_"#vt), vt, data_vt>;
@@ -1589,10 +1585,6 @@ multiclass FlatAtomicRtnPatBase <string inst_name, string node, ValueType vt,
     let OtherPredicates = inst_saddr.OtherPredicates;
   }
 }
-
-multiclass FlatAtomicRtnPatWithAddrSpace<string inst, string intr, string addrSpaceSuffix,
-                                         ValueType vt> :
-  FlatAtomicRtnPatBase<inst, intr # "_" # addrSpaceSuffix, vt, vt>;
 
 multiclass FlatAtomicRtnPat <string inst, string node, ValueType vt,
                              ValueType data_vt = vt, bit isIntr = 0> :
@@ -2188,9 +2180,6 @@ let SubtargetPredicate = HasAtomicCondSubClampFlatInsts in {
 
 defm : FlatStorePats <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
 defm : FlatStorePats <FLAT_STORE_SHORT, store_flat, i16>;
-
-defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
-defm : FlatAtomicNoRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
 
 let OtherPredicates = [HasD16LoadStore] in {
 defm : FlatStorePats <FLAT_STORE_SHORT_D16_HI, truncstorei16_hi16_flat, i32>;

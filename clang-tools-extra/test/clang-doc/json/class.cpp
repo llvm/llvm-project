@@ -47,9 +47,6 @@ protected:
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
 // CHECK-NEXT:            "TextComment": " It has some nice methods and fields."
-// CHECK-NEXT:          },
-// CHECK-NEXT:          {
-// CHECK-NEXT:            "TextComment": ""
 // CHECK-NEXT:          }
 // CHECK:         "DocumentationFileName": "_ZTV7MyClass",
 // CHECK:         "Enums": [

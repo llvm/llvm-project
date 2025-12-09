@@ -731,11 +731,8 @@ public:
   }
 
   mlir::Value VisitUnaryAddrOf(const UnaryOperator *e) {
-    if (llvm::isa<MemberPointerType>(e->getType())) {
-      cgf.cgm.errorNYI(e->getSourceRange(), "Address of member pointer");
-      return builder.getNullPtr(cgf.convertType(e->getType()),
-                                cgf.getLoc(e->getExprLoc()));
-    }
+    if (llvm::isa<MemberPointerType>(e->getType()))
+      return cgf.cgm.emitMemberPointerConstant(e);
 
     return cgf.emitLValue(e->getSubExpr()).getPointer();
   }

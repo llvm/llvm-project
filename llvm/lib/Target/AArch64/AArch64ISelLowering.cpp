@@ -14965,9 +14965,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
     return DAG.getNode(Opc, DL, V1.getValueType(), V1, V2);
   }
-  if (isTRNMask(ShuffleMask, NumElts, WhichResult)) {
+  if (isTRNMask(ShuffleMask, NumElts, WhichResult, OperandOrder)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
-    return DAG.getNode(Opc, DL, V1.getValueType(), V1, V2);
+    return DAG.getNode(Opc, DL, V1.getValueType(), OperandOrder == 0 ? V1 : V2,
+                       OperandOrder == 0 ? V2 : V1);
   }
 
   if (isZIP_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
@@ -16679,7 +16680,7 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
           isREVMask(M, EltSize, NumElts, 16) ||
           isEXTMask(M, VT, DummyBool, DummyUnsigned) ||
           isSingletonEXTMask(M, VT, DummyUnsigned) ||
-          isTRNMask(M, NumElts, DummyUnsigned) ||
+          isTRNMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
           isUZPMask(M, NumElts, DummyUnsigned) ||
           isZIPMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
           isTRN_v_undef_Mask(M, VT, DummyUnsigned) ||
@@ -31798,10 +31799,13 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
                     OperandOrder == 0 ? Op1 : Op2,
                     OperandOrder == 0 ? Op2 : Op1));
 
-  if (isTRNMask(ShuffleMask, VT.getVectorNumElements(), WhichResult)) {
+  if (isTRNMask(ShuffleMask, VT.getVectorNumElements(), WhichResult,
+                OperandOrder)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
-    return convertFromScalableVector(
-        DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op2));
+    SDValue TRN =
+        DAG.getNode(Opc, DL, ContainerVT, OperandOrder == 0 ? Op1 : Op2,
+                    OperandOrder == 0 ? Op2 : Op1);
+    return convertFromScalableVector(DAG, VT, TRN);
   }
 
   if (isZIP_v_undef_Mask(ShuffleMask, VT, WhichResult) && WhichResult == 0)

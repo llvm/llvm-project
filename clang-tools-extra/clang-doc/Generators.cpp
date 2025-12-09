@@ -243,8 +243,6 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
 [[maybe_unused]] static int YAMLGeneratorAnchorDest = YAMLGeneratorAnchorSource;
 [[maybe_unused]] static int MDGeneratorAnchorDest = MDGeneratorAnchorSource;
 [[maybe_unused]] static int HTMLGeneratorAnchorDest = HTMLGeneratorAnchorSource;
-[[maybe_unused]] static int MHTMLGeneratorAnchorDest =
-    MHTMLGeneratorAnchorSource;
 [[maybe_unused]] static int JSONGeneratorAnchorDest = JSONGeneratorAnchorSource;
 } // namespace doc
 } // namespace clang

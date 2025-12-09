@@ -60,6 +60,7 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
 
   Code << "class " << PatternName
        << " : public mlir::OpConversionPattern<cir::" << OpName << "> {\n";
+  Code << "  [[maybe_unused]] cir::LowerModule *lowerMod;\n";
   Code << "  [[maybe_unused]] mlir::DataLayout const &dataLayout;\n";
   Code << "\n";
 
@@ -69,10 +70,12 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
 
   Code << "  " << PatternName
        << "(mlir::TypeConverter const "
-          "&typeConverter, mlir::MLIRContext *context, mlir::DataLayout const "
+          "&typeConverter, mlir::MLIRContext *context, "
+          "cir::LowerModule *lowerMod, mlir::DataLayout const "
           "&dataLayout)\n";
   Code << "    : OpConversionPattern<cir::" << OpName
-       << ">(typeConverter, context), dataLayout(dataLayout)";
+       << ">(typeConverter, context), lowerMod(lowerMod), "
+          "dataLayout(dataLayout)";
   if (IsRecursive) {
     Code << " {\n";
     Code << "    setHasBoundedRewriteRecursion();\n";

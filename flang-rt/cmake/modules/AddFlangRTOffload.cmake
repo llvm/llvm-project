@@ -88,16 +88,16 @@ macro(enable_omp_offload_compilation name files)
         "${FLANG_RT_DEVICE_ARCHITECTURES}"
         )
 
-      set(OMP_COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:C,CXX>:
+      set(OMP_COMPILE_OPTIONS
         -fopenmp
         -fvisibility=hidden
         -fopenmp-cuda-mode
         --offload-arch=${compile_for_architectures}
         # Force LTO for the device part.
         -foffload-lto
-        >)
-      set_property(SOURCE ${files} APPEND
-        PROPERTY COMPILE_DEFINITIONS ${OMP_COMPILE_OPTIONS}
+        )
+      set_source_files_properties(${files} PROPERTIES COMPILE_OPTIONS
+        "${OMP_COMPILE_OPTIONS}"
         )
       target_link_options(${name}.static PUBLIC ${OMP_COMPILE_OPTIONS})
 
@@ -105,13 +105,6 @@ macro(enable_omp_offload_compilation name files)
       set_source_files_properties(${files}
         PROPERTIES COMPILE_DEFINITIONS OMP_OFFLOAD_BUILD
         )
-
-     # If building flang-rt together with libomp, ensure that libomp is built
-     # first and found because -fopenmp will try to link it.
-     if (TARGET omp)
-       add_dependencies(${name} omp)
-       target_link_options(${name}.static PUBLIC "-L$<TARGET_FILE_DIR:omp>")
-     endif ()
     else()
       message(FATAL_ERROR
         "Flang-rt build with OpenMP offload is not supported for these compilers:\n"
