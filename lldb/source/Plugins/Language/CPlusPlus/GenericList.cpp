@@ -203,6 +203,16 @@ private:
   ValueObject *m_tail = nullptr;
 };
 
+/// Gets the (forward-)list element type from the head node instead of the
+/// template arguments. This is needed with PDB as it doesn't have info about
+/// the template arguments.
+CompilerType GetMsvcStlElementTypeFromHead(ValueObject &head) {
+  auto val_sp = head.GetChildMemberWithName("_Myval");
+  if (val_sp)
+    return val_sp->GetCompilerType();
+  return CompilerType();
+}
+
 } // end anonymous namespace
 
 template <StlType Stl>
@@ -530,6 +540,10 @@ lldb::ChildCacheState MsvcStlForwardListFrontEnd::Update() {
           m_backend.GetChildAtNamePath({"_Mypair", "_Myval2", "_Myhead"}))
     m_head = head_sp.get();
 
+  // With PDB, we can't get the element type from the template arguments
+  if (!m_element_type && m_head)
+    m_element_type = GetMsvcStlElementTypeFromHead(*m_head);
+
   return ChildCacheState::eRefetch;
 }
 
@@ -605,6 +619,10 @@ lldb::ChildCacheState MsvcStlListFrontEnd::Update() {
 
   m_head = first.get();
   m_tail = last.get();
+
+  // With PDB, we can't get the element type from the template arguments
+  if (!m_element_type && m_head)
+    m_element_type = GetMsvcStlElementTypeFromHead(*m_head);
 
   return lldb::ChildCacheState::eRefetch;
 }
