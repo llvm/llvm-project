@@ -378,6 +378,8 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case MuslWALI:
     return "muslwali";
   case Simulator: return "simulator";
+  case Picolibc:
+    return "picolibc";
   case Pixel: return "pixel";
   case Vertex: return "vertex";
   case Geometry: return "geometry";
@@ -747,6 +749,7 @@ static Triple::OSType parseOS(StringRef OSName) {
 
 static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
   return StringSwitch<Triple::EnvironmentType>(EnvironmentName)
+      .StartsWith("picolibc", Triple::Picolibc)
       .StartsWith("eabihf", Triple::EABIHF)
       .StartsWith("eabi", Triple::EABI)
       .StartsWith("gnuabin32", Triple::GNUABIN32)
