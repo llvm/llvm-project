@@ -85,8 +85,8 @@ private:
   template <typename _Tp, class>
   friend struct __optional_iterator;
 
-  template <class _It, class _C, size_t _M>
-  friend auto __make_capacity_aware_iterator(_It __iter);
+  template <class _It, class _Container2, size_t _ContainerMaxElems2>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr auto __make_capacity_aware_iterator(_It __iter);
 
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr _Iter base() const noexcept { return __iter_; }
@@ -154,7 +154,7 @@ public:
     if constexpr (three_way_comparable_with<_Iter, _Iter, strong_ordering>) {
       return __x.__iter_ <=> __y.__iter_;
     } else {
-      if (__x.__iter_ < __x.__iter_) {
+      if (__x.__iter_ < __y.__iter_) {
         return strong_ordering::less;
       } else if (__x.__iter_ == __y.__iter_) {
         return strong_ordering::equal;
@@ -179,7 +179,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
   operator-(const __capacity_aware_iterator& __i, difference_type __n) {
-    return __i.__iter_ + __n;
+    auto __tmp = __i;
+    __tmp -= __n;
+    return __tmp;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
@@ -188,9 +190,9 @@ public:
   }
 };
 
-template <class _It, class _C, size_t _M>
-auto __make_capacity_aware_iterator(_It __iter) {
-  return __capacity_aware_iterator<_It, _C, _M>(__iter);
+template <class _It, class _Container2, size_t _ContainerMaxElems2>
+_LIBCPP_HIDE_FROM_ABI constexpr auto __make_capacity_aware_iterator(_It __iter) {
+  return __capacity_aware_iterator<_It, _Container2, _ContainerMaxElems2>(__iter);
 }
 
 _LIBCPP_END_NAMESPACE_STD
