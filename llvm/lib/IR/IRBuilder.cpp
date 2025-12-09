@@ -129,33 +129,55 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
         // If the builder specifies non-default floating-point options, add
         // corresponding operand bundle unless a bundle with such tag is already
         // present.
-        bool NeedRounding;
-        bool NeedExceptions;
+        bool AddRounding;
+        bool AddExceptions;
         if (IsFPConstrained) {
-          NeedRounding = DefaultConstrainedRounding != RoundingMode::Dynamic;
-          NeedExceptions = DefaultConstrainedExcept != fp::ebStrict;
+          AddRounding = DefaultConstrainedRounding != RoundingMode::Dynamic;
+          AddExceptions = DefaultConstrainedExcept != fp::ebStrict;
         } else {
-          NeedRounding =
+          AddRounding =
               DefaultConstrainedRounding != RoundingMode::NearestTiesToEven;
-          NeedExceptions = false;
+          AddExceptions = false;
           assert(DefaultConstrainedExcept == fp::ebIgnore &&
                  "FP exception in default mode must be ignored");
         }
-        // Options specified by bundles have higher precedence.
+
+        // Options specified by bundle arguments have higher precedence. Some FP
+        // operations do not depend on rounding mode, do not add "fp.round"
+        // to them.
+        bool NoRoundingMode = !IntrinsicInst::dependsOnRoundingMode(ID);
+        bool RoundingModeIsSpecified = false;
         for (const auto &Bundle : OpBundles) {
-          if (NeedRounding && Bundle.getTag() == "fp.round")
-            NeedRounding = false;
-          if (NeedExceptions && Bundle.getTag() == "fp.except")
-            NeedExceptions = false;
+          if (!RoundingModeIsSpecified)
+            RoundingModeIsSpecified = Bundle.getTag() == "fp.round";
+          if (AddRounding && RoundingModeIsSpecified)
+            AddRounding = false;
+          if (AddExceptions && Bundle.getTag() == "fp.except")
+            AddExceptions = false;
         }
-        if (NeedRounding || NeedExceptions) {
-          ActualBundles.append(OpBundles.begin(), OpBundles.end());
-          if (NeedRounding)
+
+        if (AddRounding && NoRoundingMode)
+          AddRounding = false;
+        if (!OpBundles.empty()) {
+          if (RoundingModeIsSpecified && NoRoundingMode) {
+            std::copy_if(OpBundles.begin(), OpBundles.end(),
+                         std::back_inserter(ActualBundles),
+                         [](const OperandBundleDef &Bundle) {
+                           return Bundle.getTag() != "fp.round";
+                         });
+          } else {
+            ActualBundles.append(OpBundles.begin(), OpBundles.end());
+          }
+          ActualBundlesRef = ActualBundles;
+        }
+        if (AddRounding || AddExceptions) {
+          if (AddRounding)
             createRoundingBundle(ActualBundles, DefaultConstrainedRounding);
-          if (NeedExceptions)
+          if (AddExceptions)
             createExceptionBundle(ActualBundles, DefaultConstrainedExcept);
           ActualBundlesRef = ActualBundles;
         }
+
         if (IsFPConstrained) {
           // Due to potential setting FP exception bits, in modes other than
           // the default, the memory effects must include read/write access

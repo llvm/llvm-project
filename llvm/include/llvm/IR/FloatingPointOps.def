@@ -13,18 +13,19 @@
 // Describes floating-point operation.
 // Arguments of the entries are:
 // N - intrinsic function name,
+// R - true if the operation depends on rounding mode
 // D - DAG node corresponding to the intrinsic.
 #ifndef FUNCTION
-#define FUNCTION(N,D)
+#define FUNCTION(N,R,D)
 #endif
 
 // Describes floating-point operation, which lowers to STRICT_* nodes in DAG.
 #ifndef LEGACY_DAG
-#define LEGACY_DAG(N,D) FUNCTION(N,D)
+#define LEGACY_DAG(N,R,D) FUNCTION(N,R,D)
 #endif
 
-LEGACY_DAG(nearbyint,                        FNEARBYINT)
-LEGACY_DAG(trunc,                            FTRUNC)
+LEGACY_DAG(nearbyint,                     1, FNEARBYINT)
+LEGACY_DAG(trunc,                         0, FTRUNC)
 
 #undef FUNCTION
 #undef LEGACY_DAG

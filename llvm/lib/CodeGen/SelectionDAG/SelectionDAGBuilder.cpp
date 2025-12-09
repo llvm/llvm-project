@@ -7021,7 +7021,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 #include "llvm/IR/VPIntrinsics.def"
     visitVectorPredicationIntrinsic(cast<VPIntrinsic>(I));
     return;
-#define FUNCTION(NAME, DAGN)                                                   \
+#define FUNCTION(NAME, RM, DAGN)                                               \
   case Intrinsic::NAME:                                                        \
     visitFPOperation(I, ISD::DAGN);                                            \
     break;
@@ -9535,7 +9535,7 @@ bool SelectionDAGBuilder::visitFPOperation(const CallInst &I, unsigned Opcode) {
     switch (Opcode) {
     default:
       break;
-#define LEGACY_DAG(NAME, DAGN)                                                 \
+#define LEGACY_DAG(NAME, RM, DAGN)                                             \
   case ISD::DAGN:                                                              \
     Opcode = ISD::STRICT_##DAGN;                                               \
     break;

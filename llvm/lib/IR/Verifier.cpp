@@ -3962,7 +3962,8 @@ void Verifier::visitCallBase(CallBase &Call) {
           "Return type cannot be x86_amx for indirect call!");
   }
 
-  if (Intrinsic::ID ID = Call.getIntrinsicID())
+  Intrinsic::ID ID = Call.getIntrinsicID();
+  if (ID)
     visitIntrinsicCall(ID, Call);
 
   // Verify that a callsite has at most one "deopt", at most one "funclet", at
@@ -4038,6 +4039,10 @@ void Verifier::visitCallBase(CallBase &Call) {
       verifyAttachedCallBundle(Call, BU);
     } else if (Tag == LLVMContext::OB_fp_round) {
       Check(!FoundFpeRoundBundle, "Multiple \"fp.round\" operand bundles",
+            Call);
+      Check(IntrinsicInst::dependsOnRoundingMode(ID),
+            "\"fp.round\" operand bundles cannot be specified on an intrinsic "
+            "that does not depend on rounding mode",
             Call);
       bool FoundRoundingMode = false;
       for (auto &U : BU.Inputs) {

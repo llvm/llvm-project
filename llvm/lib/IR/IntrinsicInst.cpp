@@ -68,9 +68,20 @@ bool IntrinsicInst::mayLowerToFunctionCall(Intrinsic::ID IID) {
 
 bool IntrinsicInst::isFloatingPointOperation(Intrinsic::ID IID) {
   switch (IID) {
-#define FUNCTION(NAME, D) case Intrinsic::NAME:
+#define FUNCTION(NAME, R, D) case Intrinsic::NAME:
 #include "llvm/IR/FloatingPointOps.def"
     return true;
+  default:
+    return false;
+  }
+}
+
+bool IntrinsicInst::dependsOnRoundingMode(Intrinsic::ID IID) {
+  switch (IID) {
+#define FUNCTION(NAME, R, D)                                                   \
+  case Intrinsic::NAME:                                                        \
+    return R;
+#include "llvm/IR/FloatingPointOps.def"
   default:
     return false;
   }

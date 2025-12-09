@@ -137,6 +137,10 @@ public:
   /// instructions ordering.
   static bool isFloatingPointOperation(Intrinsic::ID IID);
 
+  /// Check if \p ID represents a function that may access FP environment and
+  /// depends on rounding mode.
+  static bool dependsOnRoundingMode(Intrinsic::ID IID);
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const CallInst *I) {
     auto *F = dyn_cast_or_null<Function>(I->getCalledOperand());
