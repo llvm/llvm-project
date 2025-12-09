@@ -192,15 +192,15 @@ define i32 @may_alias_errno_nobuiltin(float %f) "no-builtins" {
 ; CHECK-LABEL: define i32 @may_alias_errno_nobuiltin(
 ; CHECK-SAME: float [[F:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    store i32 42, ptr @internal_g, align 4
+; CHECK-NEXT:    store i32 42, ptr @external_g, align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call float @sinf(float [[F]])
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr @internal_g, align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr @external_g, align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:
-  store i32 42, ptr @internal_g, align 4
+  store i32 42, ptr @external_g, align 4
   %call = call float @sinf(float %f)
-  %v = load i32, ptr @internal_g, align 4
+  %v = load i32, ptr @external_g, align 4
   ret i32 %v
 }
 

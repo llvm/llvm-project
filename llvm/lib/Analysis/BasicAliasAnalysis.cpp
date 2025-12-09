@@ -1001,10 +1001,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
 
   // Refine accesses to errno memory.
   if ((ErrnoMR | Result) != Result) {
-    // Do not make any assumptions about errno on freestanding environments.
-    bool IsFreestanding = Call->getFunction()->hasFnAttribute("no-builtins");
-    if (IsFreestanding ||
-        AAQI.AAR.aliasErrno(Loc, Call->getModule()) != AliasResult::NoAlias) {
+    if (AAQI.AAR.aliasErrno(Loc, Call) != AliasResult::NoAlias) {
       // Exclusion conditions do not hold, this memory location may alias errno.
       Result |= ErrnoMR;
     }
@@ -1865,7 +1862,7 @@ AliasResult BasicAAResult::aliasCheckRecursive(
 }
 
 AliasResult BasicAAResult::aliasErrno(const MemoryLocation &Loc,
-                                      const Module *M) {
+                                      const CallBase *Call) {
   // There cannot be any alias with errno if the given memory location is an
   // identified function-local object, or the size of the memory access is
   // larger than the integer size.
@@ -1883,8 +1880,10 @@ AliasResult BasicAAResult::aliasErrno(const MemoryLocation &Loc,
       return AliasResult::NoAlias;
 
     // Neither can errno alias globals where environments define it as a
-    // function call.
-    if (TLI.isErrnoFunctionCall())
+    // function call, unless targeting freestanding environments, for which we
+    // do not make any assumptions.
+    bool IsFreestanding = Call->getFunction()->hasFnAttribute("no-builtins");
+    if (!IsFreestanding && TLI.isErrnoFunctionCall())
       return AliasResult::NoAlias;
   }
 
