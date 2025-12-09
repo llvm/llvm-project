@@ -75,14 +75,13 @@ static Value *getMaskVecValue(CodeGenFunction &CGF, Value *Mask,
   return MaskVec;
 }
 
-static Value *emitX86Round(CodeGenFunction &CGF, Value *X, unsigned M) {
-  unsigned RoundingMask = 0b11;
-  unsigned UpdatePEBit = 0b100;
-  unsigned UseMXCSRBit = 0b1000;
+// Emit rounding for the value X according to the rounding RoundingControl.
+static Value *emitX86Round(CodeGenFunction &CGF, Value *X, unsigned RoundingControl) {
+  unsigned roundingMask = 0b11;
+  unsigned useMXCSRBit = 0b1000;
 
-  unsigned roundingMode = M & RoundingMask;
-  bool updatePE = M & UpdatePEBit;
-  bool useMXCSR = M & UseMXCSRBit;
+  unsigned roundingMode = RoundingControl & roundingMask;
+  bool useMXCSR = RoundingControl & useMXCSRBit;
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
   LLVMContext &Ctx = CGF.CGM.getLLVMContext();
@@ -90,10 +89,8 @@ static Value *emitX86Round(CodeGenFunction &CGF, Value *X, unsigned M) {
   if (useMXCSR) {
     ID = Intrinsic::experimental_constrained_nearbyint;
 
-    auto PE_metatadata = updatePE ? "fpexcept.strict" : "fpexcept.ignore";
-
     Value *ExceptMode =
-        MetadataAsValue::get(Ctx, MDString::get(Ctx, PE_metatadata));
+        MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore"));
 
     Value *RoundingMode =
         MetadataAsValue::get(Ctx, MDString::get(Ctx, "rounding.dynamic"));
@@ -102,32 +99,6 @@ static Value *emitX86Round(CodeGenFunction &CGF, Value *X, unsigned M) {
     return CGF.Builder.CreateCall(F, {X, ExceptMode, RoundingMode});
   }
 
-  if (updatePE) {
-    switch (roundingMode) {
-    case 0b00:
-      ID = Intrinsic::experimental_constrained_roundeven;
-      break;
-    case 0b01:
-      ID = Intrinsic::experimental_constrained_floor;
-      break;
-    case 0b10:
-      ID = Intrinsic::experimental_constrained_ceil;
-      break;
-    case 0b11:
-      ID = Intrinsic::experimental_constrained_trunc;
-      break;
-    default:
-      llvm_unreachable("Invalid rounding mode");
-    }
-
-    Value *ExceptMode =
-        MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.strict"));
-
-    Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
-    return CGF.Builder.CreateCall(F, {X, ExceptMode});
-  }
-
-  // Otherwise we can use the standard ops
   switch (roundingMode) {
   case 0b00:
     ID = Intrinsic::roundeven;

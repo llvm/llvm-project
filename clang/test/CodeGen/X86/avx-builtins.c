@@ -1511,13 +1511,13 @@ __m256 test_mm256_rcp_ps(__m256 A) {
 
 __m256d test_mm256_round_pd(__m256d x) {
   // CHECK-LABEL: test_mm256_round_pd
-  // CHECK: %{{.*}} = call <4 x double> @llvm.experimental.constrained.roundeven.v4f64(<4 x double> %{{.*}}, metadata !"fpexcept.strict")
+  // CHECK: %{{.*}} = call <4 x double> @llvm.roundeven.v4f64(<4 x double> %{{.*}})
   return _mm256_round_pd(x, 4);
 }
 
 __m256 test_mm256_round_ps(__m256 x) {
   // CHECK-LABEL: test_mm256_round_ps
-  // CHECK: %{{.*}} = call <8 x float> @llvm.experimental.constrained.roundeven.v8f32(<8 x float> %{{.*}}, metadata !"fpexcept.strict") 
+  // CHECK: %{{.*}} = call <8 x float> @llvm.roundeven.v8f32(<8 x float> %{{.*}}) 
   return _mm256_round_ps(x, 4);
 }
 
