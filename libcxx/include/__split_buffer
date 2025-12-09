@@ -30,9 +30,7 @@
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#if _LIBCPP_STD_VER >= 20
-#  include <__type_traits/is_reference.h>
-#endif
+#include <__type_traits/is_reference.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_destructible.h>
 #include <__type_traits/is_trivially_relocatable.h>
@@ -73,8 +71,8 @@ public:
   // Can't be defaulted due to _LIBCPP_COMPRESSED_PAIR not being an aggregate in C++03 and C++11.
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __split_buffer_pointer_layout()
 #if _LIBCPP_STD_VER >= 20
-    // Prevents Swift compiler's C++ importer from implicitly instantiating this ctor when it's not supported.
-    requires (!is_reference_v<allocator_type>)
+      // Prevents Swift compiler's C++ importer from implicitly instantiating this ctor when it's not supported.
+    requires(!is_reference_v<allocator_type>)
 #endif
       : __back_cap_(nullptr) {
   }
