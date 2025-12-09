@@ -128,10 +128,10 @@ public:
             if ((R.first & D.first) == R.first) {
               // Existing use covers new use - keep if existing is closer
               if (isCloserOrEqual(D.second, R.second)) {
-                // Existing use is closer or equal → reject new use
+                // Existing use is closer or equal -> reject new use
                 return false;
               }
-              // Existing use is further → continue (might replace it)
+              // Existing use is further -> continue (might replace it)
             }
 
             // Check if new use covers existing use
@@ -141,7 +141,7 @@ public:
                 // New use is closer -> mark existing for removal
                 ToErase.push_back(It);
               } else {
-                // New use is further → reject it
+                // New use is further -> reject it
                 return false;
               }
             }
@@ -286,8 +286,9 @@ private:
     }
   };
 
-  // Materializer for spiller use: applies three-tier ranking system
-  unsigned materializeForRank(int64_t Stored, unsigned SnapshotOffset) const;
+  /// Convert stored distance to spiller ranking. See .cpp for documentation.
+  unsigned materializeForSpillRanking(int64_t StoredDistance,
+                                      unsigned SnapshotOffset) const;
 
   // Materializer for printing: returns PrintDist structure
   PrintDist materializeForPrint(int64_t Stored, unsigned SnapshotOffset) const {
