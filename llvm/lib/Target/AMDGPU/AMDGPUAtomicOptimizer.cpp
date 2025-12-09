@@ -589,7 +589,7 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   // return the next active lane
   auto *Mask = B.CreateShl(ConstantInt::get(WaveTy, 1), FF1);
 
-  auto *InverseMask = B.CreateXor(Mask, ConstantInt::get(WaveTy, -1));
+  auto *InverseMask = B.CreateXor(Mask, ConstantInt::getAllOnesValue(WaveTy));
   auto *NewActiveBits = B.CreateAnd(ActiveBits, InverseMask);
   ActiveBits->addIncoming(NewActiveBits, ComputeLoop);
 

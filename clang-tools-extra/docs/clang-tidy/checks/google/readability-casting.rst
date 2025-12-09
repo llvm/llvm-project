@@ -10,3 +10,5 @@ for more information.
 Finds usages of C-style casts.
 
 https://google.github.io/styleguide/cppguide.html#Casting
+
+Corresponding cpplint.py check name: `readability/casting`.

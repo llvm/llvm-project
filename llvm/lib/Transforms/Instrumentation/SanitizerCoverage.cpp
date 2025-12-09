@@ -1226,7 +1226,7 @@ void ModuleSanitizerCoverage::createFunctionControlFlow(Function &F) {
         if (CB->isIndirectCall()) {
           // TODO(navidem): handle indirect calls, for now mark its existence.
           CFs.push_back((Constant *)IRB.CreateIntToPtr(
-              ConstantInt::get(IntptrTy, -1), PtrTy));
+              ConstantInt::getAllOnesValue(IntptrTy), PtrTy));
         } else {
           auto CalledF = CB->getCalledFunction();
           if (CalledF && !CalledF->isIntrinsic())

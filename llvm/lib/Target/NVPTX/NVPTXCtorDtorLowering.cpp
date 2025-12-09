@@ -147,10 +147,11 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
     auto *ValuePtr = IRB.CreateGEP(PointerType::get(C, 0), BeginVal,
                                    ArrayRef<Value *>({Offset}));
     EndVal = BeginVal;
-    BeginVal = IRB.CreateInBoundsGEP(
-        PointerType::get(C, 0), ValuePtr,
-        ArrayRef<Value *>(ConstantInt::get(IntegerType::getInt64Ty(C), -1)),
-        "start");
+    BeginVal =
+        IRB.CreateInBoundsGEP(PointerType::get(C, 0), ValuePtr,
+                              ArrayRef<Value *>(ConstantInt::getAllOnesValue(
+                                  IntegerType::getInt64Ty(C))),
+                              "start");
   }
   IRB.CreateCondBr(
       IRB.CreateCmp(IsCtor ? ICmpInst::ICMP_NE : ICmpInst::ICMP_UGE, BeginVal,
