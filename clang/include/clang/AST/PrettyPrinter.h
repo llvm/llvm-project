@@ -61,8 +61,7 @@ struct PrintingPolicy {
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
-        SuppressTagKeyword(LO.CPlusPlus),
-        SuppressTagKeywordInAnonymousTagNames(false),
+        SuppressTagKeyword(LO.CPlusPlus), SuppressTagKeywordInAnonNames(false),
         IncludeTagDefinition(false), SuppressScope(false),
         SuppressUnwrittenScope(false),
         SuppressInlineNamespace(
@@ -133,7 +132,7 @@ struct PrintingPolicy {
   /// * \c (unnamed) as opposed to (unnamed enum)
   ///
   LLVM_PREFERRED_TYPE(bool)
-  unsigned SuppressTagKeywordInAnonymousTagNames : 1;
+  unsigned SuppressTagKeywordInAnonNames : 1;
 
   /// When true, include the body of a tag definition.
   ///

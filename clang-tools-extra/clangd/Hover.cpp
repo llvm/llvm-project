@@ -180,7 +180,7 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
   if (!QT.isNull() && !QT.hasQualifiers() && PP.SuppressTagKeyword) {
     if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr());
         TT && TT->isCanonicalUnqualified()) {
-      Copy.SuppressTagKeywordInAnonymousTagNames = true;
+      Copy.SuppressTagKeywordInAnonNames = true;
       OS << TT->getDecl()->getKindName() << " ";
     }
   }

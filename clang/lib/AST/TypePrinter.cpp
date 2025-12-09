@@ -1549,7 +1549,7 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
 
     // Suppress the redundant tag keyword if we just printed one.
     if (PrintedKindDecoration) {
-      Copy.SuppressTagKeywordInAnonymousTagNames = true;
+      Copy.SuppressTagKeywordInAnonNames = true;
       Copy.SuppressTagKeyword = true;
     }
 
