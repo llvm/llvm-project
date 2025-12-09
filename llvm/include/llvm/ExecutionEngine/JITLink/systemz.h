@@ -814,8 +814,6 @@ public:
   static StringRef getSectionName() { return "$__GOT"; }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
-    if (E.getTarget().isDefined())
-      return false;
     Edge::Kind KindToSet = Edge::Invalid;
     switch (E.getKind()) {
     case systemz::RequestGOTAndTransformToDelta12FromGOT:
