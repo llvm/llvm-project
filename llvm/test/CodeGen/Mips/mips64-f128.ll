@@ -1736,11 +1736,9 @@ define fp128 @libcall1_nearbyintl() {
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   %0 = load fp128, ptr @gld0, align 16
-  %call = tail call fp128 @nearbyintl(fp128 %0) nounwind readnone
+  %call = tail call fp128 @llvm.nearbyint.f128(fp128 %0) nounwind readnone
   ret fp128 %call
 }
-
-declare fp128 @nearbyintl(fp128) #1
 
 define fp128 @libcall1_floorl() {
 ; C_CC_FMT-LABEL: libcall1_floorl:

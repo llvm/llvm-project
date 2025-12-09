@@ -990,7 +990,6 @@ private:
                           bool SplitSETCC = false);
   void SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_ScalarOp(SDNode *N, SDValue &Lo, SDValue &Hi);
-  void SplitVecRes_VP_SPLAT(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_STEP_VECTOR(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VECTOR_REVERSE(SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -1143,7 +1142,6 @@ private:
   SDValue WidenVecOp_MGATHER(SDNode* N, unsigned OpNo);
   SDValue WidenVecOp_MSCATTER(SDNode* N, unsigned OpNo);
   SDValue WidenVecOp_VP_SCATTER(SDNode* N, unsigned OpNo);
-  SDValue WidenVecOp_VP_SPLAT(SDNode *N, unsigned OpNo);
   SDValue WidenVecOp_SETCC(SDNode* N);
   SDValue WidenVecOp_STRICT_FSETCC(SDNode* N);
   SDValue WidenVecOp_VSELECT(SDNode *N);

@@ -250,11 +250,9 @@ define double @fround_d_5(double %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fround.d fa0, fa0
 ; CHECK-NEXT:    ret
-  %call = tail call double @nearbyint(double %a) nounwind readnone
+  %call = tail call double @llvm.nearbyint.f64(double %a) nounwind readnone
   ret double %call
 }
-
-declare double @nearbyint(double) nounwind readnone
 
 define double @fround_d_6(double %a) nounwind {
 ; CHECK-LABEL: fround_d_6:

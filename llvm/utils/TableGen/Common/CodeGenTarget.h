@@ -131,7 +131,8 @@ public:
     return RegAltNameIndices;
   }
 
-  const CodeGenRegisterClass &getRegisterClass(const Record *R) const;
+  const CodeGenRegisterClass &getRegisterClass(const Record *R,
+                                               ArrayRef<SMLoc> Loc = {}) const;
 
   /// Convenience wrapper to avoid hardcoding the name of RegClassByHwMode
   /// everywhere. This is here instead of CodeGenRegBank to avoid the fatal
