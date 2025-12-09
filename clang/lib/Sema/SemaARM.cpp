@@ -1617,6 +1617,7 @@ bool SemaARM::checkTargetVersionAttr(const StringRef Param,
   using namespace DiagAttrParams;
 
   auto [LHS, RHS] = Param.split(';');
+  RHS = RHS.trim();
   bool IsDefault = false;
   llvm::SmallVector<StringRef, 8> Features;
   LHS.split(Features, '+');
@@ -1662,6 +1663,7 @@ bool SemaARM::checkTargetClonesAttr(
     const SourceLocation &Loc = Locs[I];
 
     auto [LHS, RHS] = Param.split(';');
+    RHS = RHS.trim();
     bool HasPriority = !RHS.empty() && RHS.consume_front("priority=");
 
     if (LHS.empty())

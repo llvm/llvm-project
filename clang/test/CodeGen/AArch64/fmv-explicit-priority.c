@@ -4,7 +4,7 @@
 __attribute__((target_version("lse;priority=30"))) int foo(void) { return 1; }
 __attribute__((target_version("sve2;priority=20"))) int foo(void) { return 2; }
 __attribute__((target_version("sve;priority=10"))) int foo(void) { return 3; }
-__attribute__((target_version( "default"))) int foo(void) { return 0; }
+__attribute__((target_version("default"))) int foo(void) { return 0; }
 
 __attribute__((target_clones("lse+sve2;priority=3", "lse;priority=2", "sve;priority=1", "default")))
 int fmv_caller(void) { return foo(); }

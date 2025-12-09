@@ -118,6 +118,8 @@ int __attribute__((target_version("aes"))) unspec_args_implicit_default_first() 
 // expected-note@+1 {{function multiversioning caused by this declaration}}
 int __attribute__((target_version("default"))) unspec_args_implicit_default_first() { return 0; }
 
+int __attribute__((target_version("aes + sve2 ; priority=100"))) priority_whitespace(void) { return 0; }
+
 //expected-warning@+1 {{unsupported 'priority=10' in the 'target_version' attribute string; 'target_version' attribute ignored}}
 int __attribute__((target_version("priority=10;aes"))) priority_before_features(void) { return 0; }
 

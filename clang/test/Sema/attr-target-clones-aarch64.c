@@ -81,6 +81,8 @@ int __attribute__((target_clones("sve2-sha3+ssbs", "sm4"))) mv_after_use(void) {
 // expected-error@+1 {{'main' cannot be a multiversioned function}}
 int __attribute__((target_clones("i8mm"))) main() { return 1; }
 
+int __attribute__((target_clones("aes + sve2 ; priority=100", "default"))) priority_whitespace(void) { return 0; }
+
 //expected-warning@+2 {{unsupported 'priority=10' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
 //expected-warning@+1 {{version list contains entries that don't impact code generation}}
 int __attribute__((target_clones("priority=10;aes", "default"))) priority_before_features(void) { return 0; }
