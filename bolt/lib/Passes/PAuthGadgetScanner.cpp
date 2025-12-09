@@ -398,7 +398,7 @@ protected:
 
   // Returns all registers that can be treated as if they are written by an
   // authentication instruction.
-  SmallVector<MCPhysReg> getRegsMadeSafeToDeref(const MCInst &Point,
+  SmallVector<MCPhysReg> getRegsMadeSafeToDeref(MCInstReference Point,
                                                 const SrcState &Cur) const {
     SmallVector<MCPhysReg> Regs;
 
@@ -444,7 +444,7 @@ protected:
   }
 
   // Returns all registers made trusted by this instruction.
-  SmallVector<MCPhysReg> getRegsMadeTrusted(const MCInst &Point,
+  SmallVector<MCPhysReg> getRegsMadeTrusted(MCInstReference Point,
                                             const SrcState &Cur) const {
     assert(!AuthTrapsOnFailure && "Use getRegsMadeSafeToDeref instead");
     SmallVector<MCPhysReg> Regs;
@@ -476,14 +476,15 @@ protected:
     return Regs;
   }
 
-  SrcState computeNext(const MCInst &Point, const SrcState &Cur) {
-    if (BC.MIB->isCFI(Point))
+  SrcState computeNext(MCInstReference Point, const SrcState &Cur) {
+    const MCInst &Inst = Point;
+    if (BC.MIB->isCFI(Inst))
       return Cur;
 
     SrcStatePrinter P(BC);
     LLVM_DEBUG({
       dbgs() << "  SrcSafetyAnalysis::ComputeNext(";
-      BC.InstPrinter->printInst(&Point, 0, "", *BC.STI, dbgs());
+      BC.InstPrinter->printInst(&Inst, 0, "", *BC.STI, dbgs());
       dbgs() << ", ";
       P.print(dbgs(), Cur);
       dbgs() << ")\n";
@@ -519,7 +520,7 @@ protected:
     // need to track that for:
     for (MCPhysReg Reg : RegsToTrackInstsFor.getRegisters())
       if (Clobbered[Reg])
-        lastWritingInsts(Next, Reg) = {&Point};
+        lastWritingInsts(Next, Reg) = {&Inst};
 
     // After accounting for clobbered registers in general, override the state
     // according to authentication and other *special cases* of clobbering.
@@ -749,8 +750,9 @@ public:
   void run() override {
     const SrcState DefaultState = computePessimisticState(BF);
     SrcState S = createEntryState();
-    for (auto &I : BF.instrs()) {
-      MCInst &Inst = I.second;
+    for (auto I = BF.instrs().begin(), E = BF.instrs().end(); I != E; ++I) {
+      MCInstReference Point(BF, I);
+      MCInst &Inst = I->second;
       if (BC.MIB->isCFI(Inst))
         continue;
 
@@ -758,7 +760,7 @@ public:
       // can be jumped-to, thus conservatively resetting S. As an exception,
       // let's ignore any labels at the beginning of the function, as at least
       // one label is expected there.
-      if (BF.hasLabelAt(I.first) && &Inst != &BF.instrs().begin()->second) {
+      if (BF.hasLabelAt(I->first) && &Inst != &BF.instrs().begin()->second) {
         LLVM_DEBUG({
           traceInst(BC, "Due to label, resetting the state before", Inst);
         });
@@ -769,7 +771,7 @@ public:
       setState(Inst, S);
 
       // Compute the state after this instruction executes.
-      S = computeNext(Inst, S);
+      S = computeNext(Point, S);
     }
   }
 
@@ -1057,7 +1059,7 @@ protected:
     return Regs;
   }
 
-  DstState computeNext(const MCInst &Point, const DstState &Cur) {
+  DstState computeNext(MCInst &Point, const DstState &Cur) {
     if (BC.MIB->isCFI(Point))
       return Cur;
 
