@@ -5493,7 +5493,7 @@ def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
   }];
 }
 
-def CIR_AtomicFence : CIR_Op<"atomic.fence"> {
+def CIR_AtomicFenceOp : CIR_Op<"atomic.fence"> {
   let summary = "Atomic thread fence";
   let description = [{
     C/C++ Atomic thread fence synchronization primitive. Implements the builtin

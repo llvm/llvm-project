@@ -860,8 +860,8 @@ mlir::LogicalResult CIRToLLVMAtomicClearOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMAtomicFenceLowering::matchAndRewrite(
-    cir::AtomicFence op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMAtomicFenceOpLowering::matchAndRewrite(
+    cir::AtomicFenceOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(adaptor.getOrdering());
 

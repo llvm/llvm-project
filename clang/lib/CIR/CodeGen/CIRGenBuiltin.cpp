@@ -60,9 +60,9 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
   return RValue::get(result);
 }
 
-static mlir::Value makeAtomicFenceValue(CIRGenFunction &cgf,
-                                        const CallExpr *expr,
-                                        cir::SyncScopeKind syncScope) {
+static mlir::Value makeAtomicFenceOpValue(CIRGenFunction &cgf,
+                                          const CallExpr *expr,
+                                          cir::SyncScopeKind syncScope) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Value orderingVal = cgf.emitScalarExpr(expr->getArg(0));
 
@@ -80,7 +80,7 @@ static mlir::Value makeAtomicFenceValue(CIRGenFunction &cgf,
 
   auto ordering = static_cast<cir::MemOrder>(constOrderingAttr.getUInt());
 
-  cir::AtomicFence::create(
+  cir::AtomicFenceOp::create(
       builder, cgf.getLoc(expr->getSourceRange()), ordering,
       cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
 
@@ -1012,10 +1012,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__atomic_thread_fence:
     return RValue::get(
-        makeAtomicFenceValue(*this, e, cir::SyncScopeKind::System));
+        makeAtomicFenceOpValue(*this, e, cir::SyncScopeKind::System));
   case Builtin::BI__atomic_signal_fence:
     return RValue::get(
-        makeAtomicFenceValue(*this, e, cir::SyncScopeKind::SingleThread));
+        makeAtomicFenceOpValue(*this, e, cir::SyncScopeKind::SingleThread));
   case Builtin::BI__c11_atomic_thread_fence:
   case Builtin::BI__c11_atomic_signal_fence:
   case Builtin::BI__scoped_atomic_thread_fence:
