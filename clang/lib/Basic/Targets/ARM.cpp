@@ -39,36 +39,12 @@ void ARMTargetInfo::setABIAAPCS() {
 
   ZeroLengthBitfieldBoundary = 0;
 
-  // Thumb1 add sp, #imm requires the immediate value be multiple of 4,
-  // so set preferred for small types to 32.
-  if (T.isOSBinFormatMachO()) {
-    resetDataLayout(BigEndian
-                        ? "E-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-                        : "e-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64",
-                    "_");
-  } else if (T.isOSWindows()) {
-    assert(!BigEndian && "Windows on ARM does not support big endian");
-    resetDataLayout("e"
-                    "-m:w"
-                    "-p:32:32"
-                    "-Fi8"
-                    "-i64:64"
-                    "-v128:64:128"
-                    "-a:0:32"
-                    "-n32"
-                    "-S64");
-  } else {
-    resetDataLayout(BigEndian
-                        ? "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-                        : "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
-  }
+  resetDataLayout();
 
   // FIXME: Enumerated types are variable width in straight AAPCS.
 }
 
 void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
-  const llvm::Triple &T = getTriple();
-
   IsAAPCS = false;
 
   if (IsAAPCS16)
@@ -89,20 +65,7 @@ void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
   /// gcc.
   ZeroLengthBitfieldBoundary = 32;
 
-  if (T.isOSBinFormatMachO() && IsAAPCS16) {
-    assert(!BigEndian && "AAPCS16 does not support big-endian");
-    resetDataLayout("e-m:o-p:32:32-Fi8-i64:64-a:0:32-n32-S128", "_");
-  } else if (T.isOSBinFormatMachO())
-    resetDataLayout(
-        BigEndian
-            ? "E-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
-            : "e-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32",
-        "_");
-  else
-    resetDataLayout(
-        BigEndian
-            ? "E-m:e-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
-            : "e-m:e-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32");
+  resetDataLayout();
 
   // FIXME: Override "preferred align" for double and long long.
 }
@@ -1545,7 +1508,7 @@ CygwinARMTargetInfo::CygwinARMTargetInfo(const llvm::Triple &Triple,
   this->WCharType = TargetInfo::UnsignedShort;
   TLSSupported = false;
   DoubleAlign = LongLongAlign = 64;
-  resetDataLayout("e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
+  resetDataLayout();
 }
 
 void CygwinARMTargetInfo::getTargetDefines(const LangOptions &Opts,
