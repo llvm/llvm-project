@@ -96,7 +96,7 @@ variable.
 
 **CMAKE_Fortran_COMPILER** = <Fortran compiler name>
   Specify the Fortran compiler. This option is only needed when
-  **RUNTIMES_FLANG_MODULES_ENABLED** is ``ON``.  So typically, a Fortran
+  **LIBOMP_FORTRAN_MODULES** is ``ON`` (see below).  So typically, a Fortran
   compiler is not needed during the build.
 
 **CMAKE_ASM_MASM_COMPILER** = ``ml|ml64``
@@ -165,6 +165,9 @@ Options for ``libomp``
   .. note::
 
     Static libraries are not supported on Windows*.
+
+**LIBOMP_FORTRAN_MODULES** = ``OFF|ON``
+  Create the Fortran modules (requires Fortran compiler).
 
 macOS* Fat Libraries
 """"""""""""""""""""
@@ -340,7 +343,7 @@ Advanced Builds with Various Options
 
   .. code-block:: console
 
-    $ cmake -DCMAKE_C_COMPILER=icc -DCMAKE_CXX_COMPILER=icpc -DCMAKE_Fortran_COMPILER=ifort -DRUNTIMES_FLANG_MODULES_ENABLED=on ..
+    $ cmake -DCMAKE_C_COMPILER=icc -DCMAKE_CXX_COMPILER=icpc -DCMAKE_Fortran_COMPILER=ifort -DLIBOMP_FORTRAN_MODULES=on ..
 
 - Have CMake find the C/C++ compiler and specify additional flags for the
   preprocessor and C++ compiler.

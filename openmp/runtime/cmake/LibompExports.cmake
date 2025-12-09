@@ -56,21 +56,21 @@ set(LIBOMP_EXPORTS_LIB_DIR "${LIBOMP_EXPORTS_DIR}/${libomp_platform}${libomp_suf
 # Put headers in exports/ directory post build
 add_custom_command(TARGET omp POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_CMN_DIR}
-  COMMAND ${CMAKE_COMMAND} -E copy ${LIBOMP_HEADERS_INTDIR}/omp.h ${LIBOMP_EXPORTS_CMN_DIR}
-  COMMAND ${CMAKE_COMMAND} -E copy ${LIBOMP_HEADERS_INTDIR}/ompx.h ${LIBOMP_EXPORTS_CMN_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy omp.h ${LIBOMP_EXPORTS_CMN_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy ompx.h ${LIBOMP_EXPORTS_CMN_DIR}
 )
 if(${LIBOMP_OMPT_SUPPORT})
   add_custom_command(TARGET omp POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy omp-tools.h ${LIBOMP_EXPORTS_CMN_DIR}
   )
 endif()
-if(RUNTIMES_FLANG_MODULES_ENABLED)
+if(${LIBOMP_FORTRAN_MODULES})
   # We cannot attach a POST_BUILD command to libomp-mod, so instead attach it
   # to omp and ensure that libomp-mod is built before by adding a dependency
   add_custom_command(TARGET omp POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_MOD_DIR}
-    COMMAND ${CMAKE_COMMAND} -E copy ${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib.mod ${LIBOMP_EXPORTS_MOD_DIR}
-    COMMAND ${CMAKE_COMMAND} -E copy ${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib_kinds.mod ${LIBOMP_EXPORTS_MOD_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy omp_lib.mod ${LIBOMP_EXPORTS_MOD_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy omp_lib_kinds.mod ${LIBOMP_EXPORTS_MOD_DIR}
   )
   add_dependencies(omp libomp-mod)
   add_custom_command(TARGET omp POST_BUILD

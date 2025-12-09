@@ -633,7 +633,10 @@ DeclarationFragmentsBuilder::getFragmentsForParam(const ParmVarDecl *Param) {
                 DeclarationFragments::FragmentKind::InternalParam);
   } else {
     Fragments.append(std::move(TypeFragments));
-    if (!T->isAnyPointerType() && !T->isBlockPointerType())
+    // If the type is a type alias, append the space
+    // even if the underlying type is a pointer type.
+    if (T->isTypedefNameType() ||
+        (!T->isAnyPointerType() && !T->isBlockPointerType()))
       Fragments.appendSpace();
     Fragments
         .append(Param->getName(),

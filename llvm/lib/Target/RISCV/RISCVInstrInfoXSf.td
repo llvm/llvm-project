@@ -935,7 +935,7 @@ let Predicates = [HasVendorXSfcease] in {
     let rd = 0b00000;
     let rs1 = 0b00000;
     let rs2 = 0b00101;
-}
+  }
 }
 
 let Predicates = [HasVendorXSfvfbfexp16e] in {

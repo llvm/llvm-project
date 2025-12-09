@@ -11,7 +11,6 @@
 module cooperative_groups
 
 use, intrinsic :: __fortran_builtins, only: c_devptr => __builtin_c_devptr
-use :: cudadevice ! implicit dependency, made explicit for CMake
 
 implicit none
 
