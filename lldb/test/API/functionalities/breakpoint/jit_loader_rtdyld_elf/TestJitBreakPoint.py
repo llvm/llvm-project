@@ -6,50 +6,39 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
-import shutil
-
 
 class TestJitBreakpoint(TestBase):
-    def setUp(self):
-        TestBase.setUp(self)
-        self.ll = self.getBuildArtifact("jitbp.ll")
-
     @skipUnlessArch("x86_64")
+    @skipUnlessCompilerIsClang
     @expectedFailureAll(oslist=["windows"])
     def test_jit_breakpoints(self):
         self.build()
+        self.ll = self.getBuildArtifact("jitbp.ll")
         self.do_test("--jit-kind=mcjit")
         self.do_test("--jit-linker=rtdyld")
 
     def do_test(self, jit_flag: str):
-        self.dbg.SetAsync(False)
+        import shutil
 
-        self.dbg.HandleCommand("settings set plugin.jit-loader.gdb.enable on")
+        self.runCmd("settings set plugin.jit-loader.gdb.enable on")
 
-        lldb_dir = os.path.dirname(lldbtest_config.lldbExec)
-        lli_path = shutil.which("lli", path=lldb_dir)
-        self.assertTrue(os.path.exists(lli_path), "lli not found")
-        target = self.dbg.CreateTarget(lli_path)
-        self.assertTrue(target.IsValid())
+        self.runCmd("target create lli", CURRENT_EXECUTABLE_SET)
 
-        bp = target.BreakpointCreateByName("jitbp")
-        self.assertTrue(bp.IsValid())
-        self.assertEqual(bp.GetNumLocations(), 0, "Expected a pending breakpoint")
+        line = line_number("jitbp.cpp", "int jitbp()")
+        lldbutil.run_break_set_by_file_and_line(
+            self, "jitbp.cpp", line, num_expected_locations=0
+        )
 
-        launch_info = target.GetLaunchInfo()
-        launch_info.SetArguments([jit_flag, self.ll], True)
+        self.runCmd(f"run {jit_flag} {self.ll}", RUN_SUCCEEDED)
 
-        error = lldb.SBError()
-        process = target.Launch(launch_info, error)
-        self.assertTrue(process.IsValid())
-        self.assertTrue(error.Success(), error.GetCString())
-
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
-
-        thread = process.GetSelectedThread()
-        frame = thread.GetSelectedFrame()
-        self.assertIn("jitbp", frame.GetFunctionName())
-
-        self.assertGreaterEqual(
-            bp.GetNumLocations(), 1, "Breakpoint must be resolved after JIT loads code"
+        # The stop reason of the thread should be breakpoint.
+        # And it should break at jitbp.cpp:1.
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=[
+                "stopped",
+                "jitbp.cpp:%d" % line,
+                "stop reason = breakpoint",
+            ],
         )
