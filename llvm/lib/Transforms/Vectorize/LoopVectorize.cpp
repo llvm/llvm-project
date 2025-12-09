@@ -7669,7 +7669,10 @@ createWidenInductionRecipes(VPInstruction *PhiR,
          "step must be loop invariant");
 
   VPValue *Start = PhiR->getOperand(0);
-  assert(Plan.getLiveIn(IndDesc.getStartValue()) == Start &&
+  assert((Plan.getLiveIn(IndDesc.getStartValue()) == Start ||
+          (SE.isSCEVable(IndDesc.getStartValue()->getType()) &&
+           SE.getSCEV(IndDesc.getStartValue()) ==
+               vputils::getSCEVExprForVPValue(Start, SE))) &&
          "Start VPValue must match IndDesc's start value");
 
   // It is always safe to copy over the NoWrap and FastMath flags. In

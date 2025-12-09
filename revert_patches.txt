@@ -8,3 +8,6 @@ breaks build of ROCmValidationSuite
 breaks build of rocALUTION
 [VPlan] Use BlockFrequencyInfo in getPredBlockCostDivisor (#158690)
 ---
+conplicated merge
+[VPlan] Use BlockFrequencyInfo in getPredBlockCostDivisor (#158690)
+---
