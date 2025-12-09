@@ -204,13 +204,10 @@ TEST_P(MCPlusBuilderTester, AArch64_insertBTI_empty) {
   BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
   std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
   MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
-#ifndef NDEBUG
-  ASSERT_DEATH(BC->MIB->insertBTI(*BB, CallInst),
-               "insertBTI should only be called on non-empty BasicBlocks");
-#else
   BC->MIB->insertBTI(*BB, CallInst);
-  ASSERT(BB->size() == 0);
-#endif
+  // Check that BTI c is added to the empty block.
+  auto II = BB->begin();
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
 }
 TEST_P(MCPlusBuilderTester, AArch64_insertBTI_0) {
   if (GetParam() != Triple::aarch64)
