@@ -1240,7 +1240,7 @@ public:
   /// Note that if a block wasn't originally predicated but was predicated due
   /// to tail folding, the divisor will still be 1 because it will execute for
   /// every iteration of the loop header.
-  inline unsigned
+  inline uint64_t
   getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
                           const BasicBlock *BB);
 
@@ -2893,7 +2893,7 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   }
 }
 
-unsigned LoopVectorizationCostModel::getPredBlockCostDivisor(
+uint64_t LoopVectorizationCostModel::getPredBlockCostDivisor(
     TargetTransformInfo::TargetCostKind CostKind, const BasicBlock *BB) {
   if (CostKind == TTI::TCK_CodeSize)
     return 1;
@@ -3701,7 +3701,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   bool ContainsScalableVF = MaxFactors.ScalableVF.isNonZero();
   setTailFoldingStyles(ContainsScalableVF, UserIC);
   if (foldTailByMasking()) {
-    if (getTailFoldingStyle() == TailFoldingStyle::DataWithEVL) {
+    if (foldTailWithEVL()) {
       LLVM_DEBUG(
           dbgs()
           << "LV: tail is folded with EVL, forcing unroll factor to be 1. Will "

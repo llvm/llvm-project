@@ -183,11 +183,9 @@ define float @fround_s_5(float %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fround.s fa0, fa0
 ; CHECK-NEXT:    ret
-  %call = tail call float @nearbyintf(float %a) nounwind readnone
+  %call = tail call float @llvm.nearbyint.f32(float %a) nounwind readnone
   ret float %call
 }
-
-declare float @nearbyintf(float) nounwind readnone
 
 define float @fround_s_6(float %a) nounwind {
 ; CHECK-LABEL: fround_s_6:

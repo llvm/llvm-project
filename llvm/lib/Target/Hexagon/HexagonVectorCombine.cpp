@@ -3156,7 +3156,7 @@ auto HexagonVectorCombine::getNullValue(Type *Ty) const -> Constant * {
 
 auto HexagonVectorCombine::getFullValue(Type *Ty) const -> Constant * {
   assert(Ty->isIntOrIntVectorTy());
-  auto Minus1 = ConstantInt::get(Ty->getScalarType(), -1);
+  auto Minus1 = ConstantInt::getAllOnesValue(Ty->getScalarType());
   if (auto *VecTy = dyn_cast<VectorType>(Ty))
     return ConstantVector::getSplat(VecTy->getElementCount(), Minus1);
   return Minus1;
