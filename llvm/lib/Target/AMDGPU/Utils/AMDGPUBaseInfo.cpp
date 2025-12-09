@@ -1715,23 +1715,23 @@ bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
 raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait) {
   ListSeparator LS;
   if (Wait.LoadCnt != ~0u)
-    OS << LS << " LoadCnt: " << Wait.LoadCnt;
+    OS << LS << "LoadCnt: " << Wait.LoadCnt;
   if (Wait.ExpCnt != ~0u)
-    OS << LS << " ExpCnt: " << Wait.ExpCnt;
+    OS << LS << "ExpCnt: " << Wait.ExpCnt;
   if (Wait.DsCnt != ~0u)
-    OS << LS << " DsCnt: " << Wait.DsCnt;
+    OS << LS << "DsCnt: " << Wait.DsCnt;
   if (Wait.StoreCnt != ~0u)
-    OS << LS << " StoreCnt: " << Wait.StoreCnt;
+    OS << LS << "StoreCnt: " << Wait.StoreCnt;
   if (Wait.SampleCnt != ~0u)
-    OS << LS << " SampleCnt: " << Wait.SampleCnt;
+    OS << LS << "SampleCnt: " << Wait.SampleCnt;
   if (Wait.BvhCnt != ~0u)
-    OS << LS << " BvhCnt: " << Wait.BvhCnt;
+    OS << LS << "BvhCnt: " << Wait.BvhCnt;
   if (Wait.KmCnt != ~0u)
-    OS << LS << " KmCnt: " << Wait.KmCnt;
+    OS << LS << "KmCnt: " << Wait.KmCnt;
   if (Wait.XCnt != ~0u)
-    OS << LS << " XCnt: " << Wait.XCnt;
+    OS << LS << "XCnt: " << Wait.XCnt;
   if (LS.unused())
-    OS << " none";
+    OS << "none";
   OS << '\n';
   return OS;
 }
