@@ -273,13 +273,13 @@ define void @freeze_dominated_uses_catchswitch(i1 %c, i32 %x) personality ptr @_
 ; CHECK-NEXT:            to label %[[CLEANUP]] unwind label %[[CATCH_DISPATCH]]
 ; CHECK:       [[CATCH_DISPATCH]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[IF_THEN]] ], [ [[X]], %[[IF_ELSE]] ]
-; CHECK-NEXT:    [[CS:%.*]] = catchswitch within none [label %[[CATCH:.*]], label %catch2] unwind to caller
+; CHECK-NEXT:    [[CS:%.*]] = catchswitch within none [label %[[CATCH:.*]], label %[[CATCH2:.*]]] unwind to caller
 ; CHECK:       [[CATCH]]:
 ; CHECK-NEXT:    [[CP:%.*]] = catchpad within [[CS]] [ptr null, i32 64, ptr null]
 ; CHECK-NEXT:    [[PHI_FREEZE:%.*]] = freeze i32 [[PHI]]
 ; CHECK-NEXT:    call void @use_i32(i32 [[PHI_FREEZE]]) [ "funclet"(token [[CP]]) ]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[CATCH2:.*:]]
+; CHECK:       [[CATCH2]]:
 ; CHECK-NEXT:    [[CP2:%.*]] = catchpad within [[CS]] [ptr null, i32 64, ptr null]
 ; CHECK-NEXT:    call void @use_i32(i32 [[PHI]]) [ "funclet"(token [[CP2]]) ]
 ; CHECK-NEXT:    unreachable
