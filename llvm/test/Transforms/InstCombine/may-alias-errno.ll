@@ -186,6 +186,24 @@ entry:
   ret i32 %v
 }
 
+; Do not make any assumptions when may be targeting freestanding
+; environments (which implies nobuiltin).
+define i32 @may_alias_errno_nobuiltin(float %f) "no-builtins" {
+; CHECK-LABEL: define i32 @may_alias_errno_nobuiltin(
+; CHECK-SAME: float [[F:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    store i32 42, ptr @internal_g, align 4
+; CHECK-NEXT:    [[CALL:%.*]] = call float @sinf(float [[F]])
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr @internal_g, align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+entry:
+  store i32 42, ptr @internal_g, align 4
+  %call = call float @sinf(float %f)
+  %v = load i32, ptr @internal_g, align 4
+  ret i32 %v
+}
+
 declare float @sinf(float) memory(errnomem: write)
 declare float @read_errno(ptr) memory(argmem: write, errnomem: read)
 declare void @escape(ptr %p)

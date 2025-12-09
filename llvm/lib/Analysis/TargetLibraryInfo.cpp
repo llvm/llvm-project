@@ -906,22 +906,13 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
 }
 
 static bool initializeIsErrnoFunctionCall(const Triple &T) {
-  // Cannot do any assumptions on errno as far as freestanding / baremetal
-  // environments are concerned.
-  bool IsDarwinOS = T.isOSDarwin();
-  if (T.getOSName() == "none" || T.getEnvironmentName() == "none" ||
-      (!IsDarwinOS && T.getEnvironment() == Triple::UnknownEnvironment))
-    return false;
-
   // Assume errno is implemented as a function call on the following
-  // OSes / environments.
+  // known environments.
   // TODO: Could refine them.
-  bool IsKnownOS = IsDarwinOS || T.isOSFreeBSD();
-  bool IsKnownEnvironment = T.isAndroid() || T.isGNUEnvironment() ||
-                            T.isMusl() || T.getEnvironment() == Triple::LLVM ||
-                            T.getEnvironment() == Triple::Mlibc ||
-                            T.getEnvironment() == Triple::MSVC;
-  return IsKnownOS || IsKnownEnvironment;
+  return T.isOSDarwin() || T.isAndroid() || T.isGNUEnvironment() ||
+         T.isMusl() || T.getEnvironment() == Triple::LLVM ||
+         T.getEnvironment() == Triple::Mlibc ||
+         T.getEnvironment() == Triple::MSVC;
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T,

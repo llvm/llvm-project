@@ -1001,7 +1001,10 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
 
   // Refine accesses to errno memory.
   if ((ErrnoMR | Result) != Result) {
-    if (AAQI.AAR.aliasErrno(Loc, Call->getModule()) != AliasResult::NoAlias) {
+    // Do not make any assumptions about errno on freestanding environments.
+    bool IsFreestanding = Call->getFunction()->hasFnAttribute("no-builtins");
+    if (IsFreestanding ||
+        AAQI.AAR.aliasErrno(Loc, Call->getModule()) != AliasResult::NoAlias) {
       // Exclusion conditions do not hold, this memory location may alias errno.
       Result |= ErrnoMR;
     }
