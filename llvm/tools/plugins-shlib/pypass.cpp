@@ -48,17 +48,23 @@ static std::string findScript() {
 
 struct PythonAPI {
   using Py_InitializeEx_t = void(int);
-  using Py_FinalizeEx_t = int(void);
+  using Py_FinalizeEx_t = int();
+  using Py_DecRef_t = void(void *);
+  using Py_IncRef_t = void(void *);
   using PyDict_GetItemString_t = void *(void *, const char *);
+  using PyDict_New_t = void *();
+  using PyDict_SetItemString_t = int(void *, const char *, void *);
+  using PyErr_Print_t = void();
   using PyGILStateEnsure_t = int();
   using PyGILStateRelease_t = void(int);
   using PyImport_AddModule_t = void *(const char *);
+  using PyImport_ImportModule_t = void *(const char *);
   using PyLong_FromVoidPtr_t = void *(void *);
   using PyUnicode_FromString_t = void *(const char *);
   using PyModule_GetDict_t = void *(void *);
   using PyObject_CallObject_t = void *(void *, void *);
+  using PyObject_GetAttrString_t = void *(void *, const char *);
   using PyObject_IsTrue_t = int(void *);
-  using PyRun_SimpleString_t = int(const char *);
   using PyTuple_SetItem_t = int(void *, long, void *);
   using PyTuple_New_t = void *(long);
   using PyTypeObject_t = void *;
@@ -67,24 +73,30 @@ struct PythonAPI {
   Py_InitializeEx_t *Py_InitializeEx;
   Py_FinalizeEx_t *Py_FinalizeEx;
 
-  // pythonrun.h
-  PyRun_SimpleString_t *PyRun_SimpleString;
-
   // pystate.h
   PyGILStateEnsure_t *PyGILState_Ensure;
   PyGILStateRelease_t *PyGILState_Release;
 
+  // pythonrun.h
+  PyErr_Print_t *PyErr_Print;
+
   // import.h
   PyImport_AddModule_t *PyImport_AddModule;
+  PyImport_ImportModule_t *PyImport_ImportModule;
 
   // object.h
   PyObject_IsTrue_t *PyObject_IsTrue;
+  PyObject_GetAttrString_t *PyObject_GetAttrString;
+  Py_IncRef_t *Py_IncRef;
+  Py_DecRef_t *Py_DecRef;
 
   // moduleobject.h
   PyModule_GetDict_t *PyModule_GetDict;
 
   // dictobject.h
   PyDict_GetItemString_t *PyDict_GetItemString;
+  PyDict_SetItemString_t *PyDict_SetItemString;
+  PyDict_New_t *PyDict_New;
 
   // abstract.h
   PyObject_CallObject_t *PyObject_CallObject;
@@ -99,6 +111,9 @@ struct PythonAPI {
   PyTuple_SetItem_t *PyTuple_SetItem;
   PyTuple_New_t *PyTuple_New;
 
+  void *PyGlobals;
+  void *PyBuiltins;
+
 private:
   PythonAPI() : Valid(false) {
     if (!loadDylib(findPython()))
@@ -106,21 +121,17 @@ private:
     if (!resolveSymbols())
       return;
     Py_InitializeEx(0);
+    PyBuiltins = PyImport_ImportModule("builtins");
+    PyGlobals = PyModule_GetDict(PyImport_AddModule("__main__"));
     Valid = true;
   }
 
   ~PythonAPI() {
     if (std::atomic_exchange(&Valid, false)) {
+      Py_DecRef(PyBuiltins);
+      Py_DecRef(PyGlobals);
       Py_FinalizeEx();
     }
-  }
-
-public:
-  // Python interface is initialized on first access and it is shared across all
-  // threads. It can be used like a state-less thread-safe object.
-  static const PythonAPI &instance() {
-    static const PythonAPI PyAPI;
-    return PyAPI;
   }
 
   bool loadDylib(std::string Path) {
@@ -136,15 +147,21 @@ public:
 
   bool resolveSymbols() {
     bool Success = true;
+    Success &= resolve("_Py_IncRef", &Py_IncRef);
+    Success &= resolve("_Py_DecRef", &Py_DecRef);
     Success &= resolve("Py_InitializeEx", &Py_InitializeEx);
     Success &= resolve("Py_FinalizeEx", &Py_FinalizeEx);
+    Success &= resolve("PyErr_Print", &PyErr_Print);
     Success &= resolve("PyGILState_Ensure", &PyGILState_Ensure);
     Success &= resolve("PyGILState_Release", &PyGILState_Release);
-    Success &= resolve("PyRun_SimpleString", &PyRun_SimpleString);
     Success &= resolve("PyImport_AddModule", &PyImport_AddModule);
+    Success &= resolve("PyImport_ImportModule", &PyImport_ImportModule);
     Success &= resolve("PyModule_GetDict", &PyModule_GetDict);
     Success &= resolve("PyDict_GetItemString", &PyDict_GetItemString);
+    Success &= resolve("PyDict_SetItemString", &PyDict_SetItemString);
+    Success &= resolve("PyDict_New", &PyDict_New);
     Success &= resolve("PyObject_CallObject", &PyObject_CallObject);
+    Success &= resolve("PyObject_GetAttrString", &PyObject_GetAttrString);
     Success &= resolve("PyObject_IsTrue", &PyObject_IsTrue);
     Success &= resolve("PyLong_FromVoidPtr", &PyLong_FromVoidPtr);
     Success &= resolve("PyUnicode_FromString", &PyUnicode_FromString);
@@ -153,55 +170,83 @@ public:
     return Success;
   }
 
-  bool isValid() const { return Valid; }
-
-  bool loadScript(const std::string &ScriptPath) const {
-    std::string LoadCmd;
-    raw_string_ostream(LoadCmd)
-        << "import runpy\n"
-        << "globals().update(runpy.run_path('" << ScriptPath << "'))";
-
-    if (PyRun_SimpleString(LoadCmd.c_str()) != 0) {
-      errs() << "Failed to load script: " << ScriptPath << "\n";
+  bool importModule(const char *Name) const {
+    void *Mod = PyImport_ImportModule(Name);
+    if (!Mod) {
+      PyErr_Print();
       return false;
     }
-
+    PyDict_SetItemString(PyGlobals, Name, Mod);
+    Py_DecRef(Mod);
     return true;
   }
 
-  bool addImportSearchPath(std::string Path) const {
-    std::string LoadCmd;
-    raw_string_ostream(LoadCmd) << "import sys\n"
-                                << "sys.path.append('" << Path << "')";
+  bool evaluate(std::string Code, void *Globals) const {
+    void *Exec = PyObject_GetAttrString(PyBuiltins, "exec");
+    void *Args = PyTuple_New(2);
+    if (!Args)
+      return false;
+    if (PyTuple_SetItem(Args, 0, PyUnicode_FromString(Code.c_str())))
+      return false;
+    Py_IncRef(Globals);
+    if (PyTuple_SetItem(Args, 1, Globals))
+      return false;
+
     // Interpreter is not thread-safe
     auto GIL = make_scope_exit(
         [this, Lock = PyGILState_Ensure()]() { PyGILState_Release(Lock); });
-    if (PyRun_SimpleString(LoadCmd.c_str()) != 0) {
-      errs() << "Failed to add import search path: " << Path << "\n";
+    void *Result = PyObject_CallObject(Exec, Args);
+    Py_DecRef(Args);
+
+    if (Result == nullptr) {
+      PyErr_Print();
       return false;
     }
 
     return true;
   }
 
-  void *addModule(const char *Name) const {
-    void *Mod = PyImport_AddModule(Name);
-    return PyModule_GetDict(Mod);
+public:
+  static const PythonAPI &instance() {
+    static const PythonAPI PyAPI;
+    return PyAPI;
   }
 
-  // Very simple interface to execute a Python function
-  bool invoke(void *Mod, const char *Name, void *Args = nullptr) const {
-    // If the function doesn't exist, we assume no
-    void *Fn = PyDict_GetItemString(Mod, Name);
-    if (!Fn)
+  bool isValid() const { return Valid; }
+
+  bool loadScript(const std::string &Path) const {
+    if (!importModule("runpy"))
       return false;
+    if (!evaluate("globals().update(runpy.run_path('" + Path + "'))", PyGlobals))
+      return false;
+    if (!PyDict_GetItemString(PyGlobals, "run")) {
+      errs() << "Script defines no run() function: " << Path << "\n";
+      return false;
+    }
+    return true;
+  }
+
+  bool addImportSearchPath(const std::string &Path) const {
+    if (!importModule("sys"))
+      return false;
+    return evaluate("sys.path.append('" + Path + "')", PyGlobals);
+  }
+
+  void *getFunction(std::string Name) const {
+    return PyDict_GetItemString(PyGlobals, Name.c_str());
+  }
+
+  // Run Python function with boolean result
+  bool invoke(void *Fn, void *Args = nullptr) const {
     // Interpreter is not thread-safe
     auto GIL = make_scope_exit(
         [this, Lock = PyGILState_Ensure()]() { PyGILState_Release(Lock); });
     // If we get no result, there was an error in Python
     void *Result = PyObject_CallObject(Fn, Args);
+    if (Args)
+      Py_DecRef(Args);
     if (!Result) {
-      errs() << "PyPassContext error: " << Name << "() failed\n";
+      errs() << "PyPassContext error: invoke failed\n";
       return false;
     }
     // If the result is truthy, then it's a yes
@@ -232,23 +277,19 @@ public:
   bool loadScript(const std::string &Path) {
     // Make relative paths resolve naturally in import statements
     std::string Dir = std::filesystem::path(Path).parent_path().u8string();
-    if (!PyAPI.addImportSearchPath(Dir))
+    if (!PyAPI.addImportSearchPath(Dir)) {
+      errs() << "Failed to add import search path: " << Dir << "\n";
       return false;
+    }
 
-    if (!PyAPI.loadScript(Path))
-      return false;
-
-    PyGlobals = PyAPI.addModule("__main__");
-    PyBuiltins = PyAPI.addModule("builtins");
-    if (!PyGlobals || !PyBuiltins)
-      return false;
-
-    return PyAPI.PyDict_GetItemString(PyGlobals, "run");
+    return PyAPI.loadScript(Path);
   }
 
   bool registerEP(std::string Name) {
-    std::string EP = "register" + Name;
-    return PyAPI.invoke(PyGlobals, EP.c_str());
+    // Default is no, if the function is not defined
+    if (void *Fn = PyAPI.getFunction("register" + Name))
+      return PyAPI.invoke(Fn);
+    return false;
   }
 
   bool run(void *Entity, void *Ctx, const char *Stage) {
@@ -265,13 +306,13 @@ public:
     // TODO: Should we expose PyPassContext and/or arguments from specific
     // entry-points like OptLevel, ThinOrFullLTOPhase or InnerPipeline?
 
-    return PyAPI.invoke(PyGlobals, "run", Args);
+    void *RunFn = PyAPI.getFunction("run");
+    assert(RunFn && "Checked on load");
+    return PyAPI.invoke(RunFn, Args);
   }
 
 private:
   const PythonAPI &PyAPI;
-  void *PyGlobals;
-  void *PyBuiltins;
 };
 
 struct PyPass : PassInfoMixin<PyPass> {
