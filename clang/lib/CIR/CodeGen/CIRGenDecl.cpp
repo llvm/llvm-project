@@ -454,7 +454,8 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   if (supportsCOMDAT() && gv.isWeakForLinker())
     gv.setComdat(true);
 
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  if (d.getTLSKind())
+    errorNYI(d.getSourceRange(), "getOrCreateStaticVarDecl: TLS");
 
   setGVProperties(gv, &d);
 
