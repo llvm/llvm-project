@@ -1,6 +1,7 @@
 // Check that cray pointers might alias with everything.
 
-// RUN: fir-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -mlir-disable-threading 2>&1 | FileCheck %s
+// RUN: fir-opt %s -funsafe-cray-pointers -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -mlir-disable-threading 2>&1 | FileCheck %s
+// RUN: fir-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -mlir-disable-threading 2>&1 | FileCheck --check-prefix=DEFAULT %s
 
 // Fortran source:
 // subroutine test()
@@ -22,6 +23,22 @@
 // CHECK-DAG: p#1 <-> a#1: MayAlias
 // CHECK-DAG: b#0 <-> a#1: MayAlias
 // CHECK-DAG: b#1 <-> a#1: MayAlias
+
+// By default, alias analysis assumes that cray pointers do not alias with
+// non-target data. See flang/docs/Aliasing.md.
+// DEFAULT-LABEL: Testing : "_QPtest"
+// DEFAULT-DAG: p#0 <-> b#0: NoAlias
+// DEFAULT-DAG: p#1 <-> b#0: NoAlias
+// DEFAULT-DAG: p#0 <-> b#1: NoAlias
+// DEFAULT-DAG: p#1 <-> b#1: NoAlias
+// DEFAULT-DAG: p#0 <-> a#0: NoAlias
+// DEFAULT-DAG: p#1 <-> a#0: NoAlias
+// DEFAULT-DAG: b#0 <-> a#0: NoAlias
+// DEFAULT-DAG: b#1 <-> a#0: NoAlias
+// DEFAULT-DAG: p#0 <-> a#1: NoAlias
+// DEFAULT-DAG: p#1 <-> a#1: NoAlias
+// DEFAULT-DAG: b#0 <-> a#1: NoAlias
+// DEFAULT-DAG: b#1 <-> a#1: NoAlias
 
 func.func @_QPtest() {
   %0 = fir.alloca !fir.box<!fir.ptr<f32>>

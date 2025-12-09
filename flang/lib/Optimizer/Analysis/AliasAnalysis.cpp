@@ -21,11 +21,17 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
 
 #define DEBUG_TYPE "fir-alias-analysis"
+
+llvm::cl::opt<bool> supportCrayPointers(
+    "funsafe-cray-pointers",
+    llvm::cl::desc("Support Cray POINTERs that ALIAS with non-TARGET data"),
+    llvm::cl::init(false));
 
 // Inspect for value-scoped Allocate effects and determine whether
 // 'candidate' is a new allocation. Returns SourceKind::Allocate if a
@@ -241,9 +247,12 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   }
 
   // Cray pointers/pointees can alias with anything via LOC.
-  if (lhsSrc.isCrayPointerOrPointee() || rhsSrc.isCrayPointerOrPointee()) {
-    LLVM_DEBUG(llvm::dbgs() << "  aliasing because of Cray pointer/pointee\n");
-    return AliasResult::MayAlias;
+  if (supportCrayPointers) {
+    if (lhsSrc.isCrayPointerOrPointee() || rhsSrc.isCrayPointerOrPointee()) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "  aliasing because of Cray pointer/pointee\n");
+      return AliasResult::MayAlias;
+    }
   }
 
   if (lhsSrc.kind == rhsSrc.kind) {
