@@ -371,7 +371,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fabs_value_f32(ptr addrspace(1
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
   %load = load float, ptr addrspace(1) %gep, align 4
-  %v0 = fadd float %load, 0.0
+  %v0 = fadd float %load, 1.0
   %v = tail call float @llvm.fabs.f32(float %v0)
   %canonicalized = tail call float @llvm.canonicalize.f32(float %v)
   store float %canonicalized, ptr addrspace(1) %gep, align 4
