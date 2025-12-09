@@ -2100,8 +2100,8 @@ bool IndVarSimplify::rewritePtrIncrementWithOffsettAddressing(
     return true;
   };
 
-  auto AdjustWidth = [&](Value *V, IRBuilder<> &IR,
-                         unsigned TargetWidth, bool IsSigned) -> Value * {
+  auto AdjustWidth = [&](Value *V, IRBuilder<> &IR, unsigned TargetWidth,
+                         bool IsSigned) -> Value * {
     if (V->getType()->getIntegerBitWidth() == TargetWidth)
       return V;
     if (IsSigned)
