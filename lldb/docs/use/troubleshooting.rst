@@ -146,4 +146,8 @@ The output above shows us that this particular copy of LLDB has XML parsing
    The same ``readelf`` command can be used on ``liblldb`` to see if it does
    depend on Python.
 
+   ``ldd`` will show you the full dependency tree of ``lldb`` but **do not**
+   use it unless you trust the ``lldb`` binary itself. As some versions of
+   ``ldd`` may execute the binary in the process of inspecting it.
+
 If you are on MacOS, use ``otool -l <path-to-lldb>``.
