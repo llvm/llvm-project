@@ -968,8 +968,17 @@ def target_page_size():
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
         )
+        # UNIX (except WASI) and Windows can use mmap.PAGESIZE,
+        # attempt to use os.sysconf for other targets.
         out, err = proc.communicate(
-            b'import os; print(os.sysconf("SC_PAGESIZE") if hasattr(os, "sysconf") else "")'
+            b"""
+try:
+    from mmap import PAGESIZE
+    print(PAGESIZE)
+except ImportError:
+    from os import sysconf
+    print(sysconf("SC_PAGESIZE"))
+"""
         )
         return int(out)
     except:
