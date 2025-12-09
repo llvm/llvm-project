@@ -7,22 +7,34 @@
 
 void test_xsave(void *p, unsigned long long m) {
   // CIR-LABEL: test_xsave
-  // CIR: cir.const #cir.int<32> : !s64i
-  // CIR: cir.shift(right, {{.*}} : !u64i, {{.*}} : !s64i) -> !u64i
-  // CIR: cir.cast integral %{{.*}} : !u64i -> !s32i
-  // CIR: cir.cast integral %{{.*}} : !u64i -> !s32i
-  // CIR: cir.call_llvm_intrinsic "x86.xsave"
+  // CIR: [[P:%.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  // CIR: [[M:%.*]] = cir.load {{.*}} : !cir.ptr<!u64i>, !u64i
+  // CIR: [[CONST:%.*]] = cir.const #cir.int<32> : !s64i
+  // CIR: [[SHIFT:%.*]] = cir.shift(right, [[M]] : !u64i, [[CONST]] : !s64i) -> !u64i
+  // CIR: [[CAST1:%.*]] = cir.cast integral [[SHIFT]] : !u64i -> !s32i
+  // CIR: [[CAST2:%.*]] = cir.cast integral [[M]] : !u64i -> !s32i
+  // CIR: cir.call_llvm_intrinsic "x86.xsave" [[P]], [[CAST1]], [[CAST2]]
 
   // LLVM-LABEL: test_xsave
-  // LLVM: lshr i64 {{.*}}, 32
-  // LLVM: trunc i64 {{.*}} to i32
-  // LLVM: trunc i64 {{.*}} to i32
-  // LLVM: call void @llvm.x86.xsave(ptr {{.*}}, i32 {{.*}}, i32 {{.*}})
+  // LLVM: [[LP:%.*]] = load ptr, ptr
+  // LLVM: [[LM:%.*]] = load i64, ptr
+  // LLVM: [[LSHIFT:%.*]] = lshr i64 [[LM]], 32
+  // LLVM: [[LCAST1:%.*]] = trunc i64 [[LSHIFT]] to i32
+  // LLVM: [[LCAST2:%.*]] = trunc i64 [[LM]] to i32
+  // LLVM: call void @llvm.x86.xsave(ptr [[LP]], i32 [[LCAST1]], i32 [[LCAST2]])
 
   // OGCG-LABEL: test_xsave
-  // OGCG: call void @llvm.x86.xsave
+  // OGCG: [[OP:%.*]] = load ptr, ptr
+  // OGCG: [[OM:%.*]] = load i64, ptr
+  // OGCG: [[OSHIFT:%.*]] = lshr i64 [[OM]], 32
+  // OGCG: [[OCAST1:%.*]] = trunc i64 [[OSHIFT]] to i32
+  // OGCG: [[OCAST2:%.*]] = trunc i64 [[OM]] to i32
+  // OGCG: call void @llvm.x86.xsave(ptr [[OP]], i32 [[OCAST1]], i32 [[OCAST2]])
   __builtin_ia32_xsave(p, m);
 }
+
+// The following tests use the same pattern as test_xsave (load, shift, cast, cast, intrinsic call).
+// Only the intrinsic name differs, so we just check the intrinsic call.
 
 void test_xsave64(void *p, unsigned long long m) {
   // CIR-LABEL: test_xsave64
