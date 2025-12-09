@@ -354,6 +354,7 @@ mlir::ArrayAttr addDeviceTypeAffectedOperandHelper(
                                             argCollection, segments);
 }
 } // namespace
+
 //===----------------------------------------------------------------------===//
 // OpenACC operations
 //===----------------------------------------------------------------------===//
