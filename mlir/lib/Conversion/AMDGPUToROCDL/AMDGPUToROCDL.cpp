@@ -2720,8 +2720,7 @@ struct AMDGPUMakeDmaDescriptorLowering
                             Value sgpr1, ArrayRef<Value> consts,
                             int64_t offset) const {
     Value ldsAddrIncrement = adaptor.getLdsIncrement();
-    return truncateAndSetValueAtOffset(rewriter, loc, sgpr1, ldsAddrIncrement,
-                                       offset);
+    return setValueAtOffset(rewriter, loc, sgpr1, ldsAddrIncrement, offset);
   }
 
   std::pair<Value, Value>

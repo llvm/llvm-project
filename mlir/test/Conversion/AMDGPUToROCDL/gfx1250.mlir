@@ -378,8 +378,8 @@ func.func @make_dma_descriptor_atomic_barrier(%base: !amdgpu.tdm_base<i32>, %bar
 // -----
 
 // CHECK-LABEL: func @make_dma_descriptor_iterate
-// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[IDX:.+]]: index)
-func.func @make_dma_descriptor_iterate(%base: !amdgpu.tdm_base<i32>, %idx : index) -> !amdgpu.tdm_descriptor {
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[IDX:.+]]: index, %[[I32:.+]]: i32)
+func.func @make_dma_descriptor_iterate(%base: !amdgpu.tdm_base<i32>, %idx : index, %i32: i32) -> !amdgpu.tdm_descriptor {
   // CHECK-DAG: %[[DGROUP0:.+]] = builtin.unrealized_conversion_cast %[[BASE]]
   // CHECK-DAG: %[[INDEX:.+]] = builtin.unrealized_conversion_cast %[[IDX]] : index to i64
 
@@ -398,9 +398,8 @@ func.func @make_dma_descriptor_iterate(%base: !amdgpu.tdm_base<i32>, %idx : inde
   // CHECK: %[[V8I32:.+]] = llvm.mlir.poison : vector<8xi32>
   // CHECK: %[[DGROUP1_0:.+]] = llvm.insertelement %[[SGPR0]], %[[V8I32]][%[[C0]] : i32]
 
-  // CHECK: %[[SGPR1:.+]] = llvm.trunc %[[INDEX]] : i64 to i32
-
   // CHECK: %[[SGPR2:.+]] = llvm.trunc %[[INDEX]] : i64 to i32
+
   // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(32 : i64) : i64
   // CHECK: %[[GLOBAL_ADDR_INC_HIGH:.+]] = llvm.lshr %[[INDEX]], %[[SHIFT]]
   // CHECK: %[[GLOBAL_ADDR_INC_HIGH_2:.+]] = llvm.trunc %[[GLOBAL_ADDR_INC_HIGH]] : i64 to i32
@@ -415,11 +414,11 @@ func.func @make_dma_descriptor_iterate(%base: !amdgpu.tdm_base<i32>, %idx : inde
 
   // CHECK: %[[V4I32:.+]] = llvm.mlir.poison : vector<4xi32>
   // CHECK: %[[DGROUP2_0:.+]] = llvm.insertelement %[[C0]], %[[V4I32]][%[[C0]]
-  // CHECK: %[[DGROUP2_1:.+]] = llvm.insertelement %[[SGPR1]], %[[DGROUP2_0]][%[[C1]]
+  // CHECK: %[[DGROUP2_1:.+]] = llvm.insertelement %[[I32]], %[[DGROUP2_0]][%[[C1]]
   // CHECK: %[[DGROUP2_2:.+]] = llvm.insertelement %[[SGPR2]], %[[DGROUP2_1]][%[[C2]]
   // CHECK: %[[DGROUP2:.+]] = llvm.insertelement %[[SGPR3]], %[[DGROUP2_2]][%[[C3]]
 
-  %descriptor = amdgpu.make_dma_descriptor %base globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] iterate %idx, %idx, %idx : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  %descriptor = amdgpu.make_dma_descriptor %base globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] iterate %idx, %i32, %idx : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
   func.return %descriptor : !amdgpu.tdm_descriptor
 }
 

@@ -1303,7 +1303,7 @@ def AMDGPU_MakeDmaDescriptorOp :
     Optional<AnyMemRef>: $atomic_barrier_address,
     Variadic<Index>: $atomic_barrier_indices,
     Optional<Index>: $global_increment,
-    Optional<Index>: $lds_increment,
+    Optional<I32>: $lds_increment,
     Optional<Index>: $iteration_count)>,
   Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
 

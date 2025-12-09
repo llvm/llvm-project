@@ -767,8 +767,8 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: i16, %tim
         globalStride [64, 1]
         // CHECK-SAME: sharedSize [64, 64]
         sharedSize [64, 64]
-        // CHECK-SAME: iterate %[[IDX]], %[[IDX]], %[[IDX]]
-        iterate %idx, %idx, %idx
+        // CHECK-SAME: iterate %[[IDX]], %[[I32]], %[[IDX]]
+        iterate %idx, %i32, %idx
         : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
   func.return
