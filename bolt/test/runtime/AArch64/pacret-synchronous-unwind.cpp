@@ -14,10 +14,12 @@
 
 // Number of functions with .cfi-negate-ra-state in the binary is
 // platform-dependent.
-// CHECK: PointerAuthCFIAnalyzer ran on {{[0-9]+}} functions.
-// CHECK: Ignored {{[0-9]}} functions ({{[0-9.]+}}%) because of CFI inconsistencies
-// CHECK-NEXT: BOLT-WARNING: PointerAuthCFIAnalyzer only supports asynchronous
-// CHECK-SAME: unwind tables. For C compilers, see -fasynchronous-unwind-tables.
+// CHECK: BOLT-INFO: PointerAuthCFIAnalyzer ran on {{[0-9]+}} functions.
+// CHECK-SAME: Ignored {{[0-9]}} functions ({{[0-9.]+}}%) because of CFI
+// CHECK-SAME: inconsistencies
+// CHECK-NEXT: BOLT-WARNING: PointerAuthCFIAnalyzer only supports
+// CHECK-SAME: asynchronous unwind tables. For C compilers, see
+// CHECK-SAME: -fasynchronous-unwind-tables.
 
 #include <cstdio>
 #include <stdexcept>
