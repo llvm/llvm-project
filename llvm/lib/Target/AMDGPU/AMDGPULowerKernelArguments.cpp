@@ -69,10 +69,10 @@ static BasicBlock::iterator getInsertPt(BasicBlock &BB) {
   return InsPt;
 }
 
-static void addAliasScopeMetadata(Function &F, DataLayout const &DL,
+static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
                                   DominatorTree &DT) {
   // Collect noalias arguments.
-  SmallVector<Argument const *, 4u> NoAliasArgs;
+  SmallVector<const Argument *, 4u> NoAliasArgs;
 
   for (Argument &Arg : F.args())
     if (Arg.hasNoAliasAttr() && !Arg.use_empty())
@@ -83,11 +83,11 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL,
 
   // Add alias scopes for each noalias argument.
   MDBuilder MDB(F.getContext());
-  DenseMap<Argument const *, MDNode *> NewScopes;
+  DenseMap<const Argument *, MDNode *> NewScopes;
   MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain(F.getName());
 
   for (unsigned I = 0u; I < NoAliasArgs.size(); ++I) {
-    Argument const *Arg = NoAliasArgs[I];
+    const Argument *Arg = NoAliasArgs[I];
     std::string Name(F.getName());
     Name += std::string(": argument ") + std::to_string(I);
     MDNode *NewScope = MDB.createAnonymousAliasScope(NewDomain, Name);
@@ -107,11 +107,11 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL,
 
     // Collect underlying objects of pointer arguments.
     SmallVector<Metadata *, 4u> Scopes;
-    SmallPtrSet<Value const *, 4u> ObjSet;
+    SmallPtrSet<const Value *, 4u> ObjSet;
     SmallVector<Metadata *, 4u> NoAliases;
 
     for (InterestingMemoryOperand &MO : MemOps) {
-      SmallVector<Value const *, 4u> Objects;
+      SmallVector<const Value *, 4u> Objects;
       getUnderlyingObjects(MO.getPtr(), Objects);
       ObjSet.insert_range(Objects);
     }
@@ -140,7 +140,7 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL,
       continue;
 
     // Collect noalias scopes for instruction.
-    for (Argument const *Arg : NoAliasArgs) {
+    for (const Argument *Arg : NoAliasArgs) {
       if (ObjSet.contains(Arg))
         continue;
 
@@ -160,7 +160,7 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL,
 
     // Collect scopes for alias.scope metadata.
     if (!UsesAliasingPtr)
-      for (Argument const *Arg : NoAliasArgs) {
+      for (const Argument *Arg : NoAliasArgs) {
         if (ObjSet.count(Arg))
           Scopes.push_back(NewScopes[Arg]);
       }
