@@ -455,8 +455,8 @@ define i32 @reduce_sum_4xi32_reduce_order(<4 x i32> %v) {
 ; RV64-NEXT:    vmv.x.s a2, v9
 ; RV64-NEXT:    vmv.x.s a3, v8
 ; RV64-NEXT:    add a1, a1, a2
-; RV64-NEXT:    add a0, a0, a3
-; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    addw a0, a0, a3
 ; RV64-NEXT:    ret
   %e0 = extractelement <4 x i32> %v, i32 0
   %e1 = extractelement <4 x i32> %v, i32 1

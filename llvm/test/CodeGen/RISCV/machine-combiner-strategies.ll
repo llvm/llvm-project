@@ -51,7 +51,7 @@ define i32 @test_local_strategy(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32
 ; CHECK_LOCAL_SIFIVE_U74-NEXT:    ret
 ; CHECK_LOCAL_SIFIVE_U74-NEXT:  .LBB0_2: # %b1
 ; CHECK_LOCAL_SIFIVE_U74-NEXT:    add a3, a3, a4
-; CHECK_LOCAL_SIFIVE_U74-NEXT:    add a0, a0, a5
+; CHECK_LOCAL_SIFIVE_U74-NEXT:    add a3, a3, a5
 ; CHECK_LOCAL_SIFIVE_U74-NEXT:    addw a0, a0, a3
 ; CHECK_LOCAL_SIFIVE_U74-NEXT:    ret
 ;

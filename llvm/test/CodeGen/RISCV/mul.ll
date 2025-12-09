@@ -1080,15 +1080,15 @@ define i32 @muli32_m65(i32 %a) nounwind {
 ; RV64I-LABEL: muli32_m65:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a0, 6
-; RV64I-NEXT:    neg a0, a0
-; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    negw a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_m65:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    slli a1, a0, 6
-; RV64IM-NEXT:    neg a0, a0
-; RV64IM-NEXT:    subw a0, a0, a1
+; RV64IM-NEXT:    add a0, a1, a0
+; RV64IM-NEXT:    negw a0, a0
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, -65
   ret i32 %1

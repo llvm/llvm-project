@@ -404,7 +404,6 @@ public:
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
   void addFastRegAlloc() override;
-  bool addILPOpts() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
@@ -597,8 +596,9 @@ void RISCVPassConfig::addMachineSSAOptimization() {
 
   if (TM->getTargetTriple().isRISCV64()) {
     addPass(createRISCVOptWInstrsPass());
-    addILPOpts();
   }
+  if (EnableMachineCombiner)
+    addPass(&MachineCombinerID);
 }
 
 void RISCVPassConfig::addPreRegAlloc() {
@@ -630,13 +630,6 @@ void RISCVPassConfig::addPostRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRedundantCopyElimination)
     addPass(createRISCVRedundantCopyEliminationPass());
-}
-
-bool RISCVPassConfig::addILPOpts() {
-  if (EnableMachineCombiner)
-    addPass(&MachineCombinerID);
-
-  return true;
 }
 
 void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {

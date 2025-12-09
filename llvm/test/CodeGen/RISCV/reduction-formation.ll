@@ -24,7 +24,7 @@ define i32 @reduce_sum_4xi32(<4 x i32> %v) {
 ; RV64-NEXT:    lw a3, 16(a0)
 ; RV64-NEXT:    lw a0, 24(a0)
 ; RV64-NEXT:    add a1, a1, a2
-; RV64-NEXT:    add a0, a3, a0
+; RV64-NEXT:    add a1, a1, a3
 ; RV64-NEXT:    addw a0, a1, a0
 ; RV64-NEXT:    ret
   %e0 = extractelement <4 x i32> %v, i32 0
