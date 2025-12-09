@@ -5217,8 +5217,12 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
         isVectorPromotionViable(P, DL, AI.getFunction()->getVScaleValue());
     // If the vector element type is a floating-point type, we prefer vector
     // promotion.
-    if (VecTy && VecTy->getElementType()->isFloatingPointTy() && VecTy->getElementCount().getFixedValue() > 1)
+    if (VecTy && VecTy->getElementType()->isFloatingPointTy()) {
+      // If the vector has one element we prefer to promote via the element type.
+      if (VecTy->getElementCount().getFixedValue() == 1)
+        return {VecTy->getElementType(), false, nullptr};
       return {VecTy, false, VecTy};
+    }
 
     // Check if there is a common type that all slices of the partition use that
     // spans the partition.
