@@ -2355,12 +2355,6 @@ value llvm_build_nsw_neg(value X, value Name, value B) {
 }
 
 /* llvalue -> string -> llbuilder -> llvalue */
-value llvm_build_nuw_neg(value X, value Name, value B) {
-  return to_val(
-      LLVMBuildNUWNeg(Builder_val(B), Value_val(X), String_val(Name)));
-}
-
-/* llvalue -> string -> llbuilder -> llvalue */
 value llvm_build_fneg(value X, value Name, value B) {
   return to_val(LLVMBuildFNeg(Builder_val(B), Value_val(X), String_val(Name)));
 }

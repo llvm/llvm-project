@@ -2207,13 +2207,6 @@ val build_neg : llvalue -> string -> llbuilder -> llvalue
     See the method [llvm::LLVMBuilder::CreateNeg]. *)
 val build_nsw_neg : llvalue -> string -> llbuilder -> llvalue
 
-(** [build_nuw_neg x name b] creates a
-    [%name = nuw sub 0, %x]
-    instruction at the position specified by the instruction builder [b].
-    [-0.0] is used for floating point types to compute the correct sign.
-    See the method [llvm::LLVMBuilder::CreateNeg]. *)
-val build_nuw_neg : llvalue -> string -> llbuilder -> llvalue
-
 (** [build_fneg x name b] creates a
     [%name = fsub 0, %x]
     instruction at the position specified by the instruction builder [b].

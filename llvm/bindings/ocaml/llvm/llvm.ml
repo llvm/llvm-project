@@ -1263,8 +1263,6 @@ external build_neg : llvalue -> string -> llbuilder -> llvalue
                    = "llvm_build_neg"
 external build_nsw_neg : llvalue -> string -> llbuilder -> llvalue
                        = "llvm_build_nsw_neg"
-external build_nuw_neg : llvalue -> string -> llbuilder -> llvalue
-                       = "llvm_build_nuw_neg"
 external build_fneg : llvalue -> string -> llbuilder -> llvalue
                     = "llvm_build_fneg"
 external build_not : llvalue -> string -> llbuilder -> llvalue
