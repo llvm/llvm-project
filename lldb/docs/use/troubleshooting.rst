@@ -120,8 +120,8 @@ same information:
 
    (lldb) script lldb.debugger.GetBuildConfiguration()
 
-This command will fail if Python was not enabled. In that case, you can instead
-check the shared library dependencies of LLDB.
+This command will fail if no scripting langauge is enabled. In that case, you
+can instead check the shared library dependencies of LLDB.
 
 For example on Linux you can use the following command:
 
