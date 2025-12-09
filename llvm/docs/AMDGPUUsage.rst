@@ -6655,7 +6655,7 @@ Threads can synchronize execution by performing barrier operations on barrier *o
   barrier *object* ``BO``, then all of the following is true:
 
   * ``S`` cannot be empty. :sup:`WIP`
-  * The elements of ``S`` are all ordered by a continuous interval of *barrier-modification-order<BO>*.
+  * The elements of ``S`` all exist in a continuous interval of *barrier-modification-order<BO>*.
   * Let ``A`` be the first operation of ``S`` in *barrier-modification-order<BO>*, then the *signal count* of ``BO``
     is zero before ``A`` is performed.
   * Let ``B`` be the last operation of ``S`` in *barrier-modification-order<BO>*, then the *signal count* and
@@ -6687,14 +6687,10 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 
 * *Barrier-executes-before* is consistent with *program-order*.
 
-*Barrier-executes-before* represents the order in which barrier operations will complete by relating operations
-from different threads together.
+*Barrier-executes-before* represents the order in which barrier operations will complete by relating the
+dynamic instances of operations from different threads together.
 For example, if ``A -> B`` in *barrier-executes-before*, then the execution of ``A`` must complete
-before the execution of ``B`` can complete.
-
-When a barrier *signal* ``S`` *barrier-executes-before* a barrier *wait* ``W``, ``S`` executes before ``W``
-**as-if** ``S`` is *program-ordered* before ``W``. Thus, all *dynamic instances* *program-ordered* before ``S``
-are known to have been executed before the *dynamic instances* *program-ordered* after ``W``.
+before the execution of ``B`` can complete..
 
   .. note::
 
@@ -6745,10 +6741,7 @@ The hardware will instead perform them automatically under certain conditions.
 * Barrier *init*:
 
   * The hardware automatically initializes *workgroup barrier objects* when a workgroup is launched:
-    The *expected count* of the barrier object is set to the number of waves in the workgroup
-  * The number of waves in the workgroup is not known until all waves of the workgroup have launched.
-    Thus, the *expected count* of *workgrou barrier object* can never be equal to its *signal count*
-    until all wavefronts of the workgroup launched.
+    The *expected count* of the barrier object is set to the number of waves in the workgroup.
 
 * Barrier *join*:
 
@@ -6758,6 +6751,8 @@ The hardware will instead perform them automatically under certain conditions.
 
   * When a thread ends, it automatically *leaves* any *workgroup barrier object* it had previously *joined*.
 
+Additionally, no barrier *wait* operation on a *workgroup barrier object* can complete before all waves of
+the workgroup have launched.
 
 Informational Notes
 +++++++++++++++++++
