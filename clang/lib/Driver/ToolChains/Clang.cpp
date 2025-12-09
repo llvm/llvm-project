@@ -4097,7 +4097,8 @@ static void RenderObjCOptions(const ToolChain &TC, const Driver &D,
   }
 
   // Forward -fobjc-expose-direct-methods to cc1
-  if (Args.hasArg(options::OPT_fobjc_expose_direct_methods))
+  if (Args.hasFlag(options::OPT_fobjc_expose_direct_methods,
+                   options::OPT_fno_objc_expose_direct_methods, false))
     CmdArgs.push_back("-fobjc-expose-direct-methods");
 
   // When ObjectiveC legacy runtime is in effect on MacOSX, turn on the option

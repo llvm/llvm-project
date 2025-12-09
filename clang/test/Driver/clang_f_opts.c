@@ -599,6 +599,14 @@
 // CHECK_DISABLE_DIRECT: -fobjc-disable-direct-methods-for-testing
 // CHECK_NO_DISABLE_DIRECT-NOT: -fobjc-disable-direct-methods-for-testing
 
+// RUN: %clang -### -xobjective-c -fobjc-expose-direct-methods %s 2>&1 | FileCheck -check-prefix=CHECK_EXPOSE_DIRECT %s
+// RUN: %clang -### -xobjective-c -fno-objc-expose-direct-methods %s 2>&1 | FileCheck -check-prefix=CHECK_NO_EXPOSE_DIRECT %s
+// RUN: %clang -### -xobjective-c -fobjc-expose-direct-methods -fno-objc-expose-direct-methods %s 2>&1 | FileCheck -check-prefix=CHECK_NO_EXPOSE_DIRECT %s
+// RUN: %clang -### -xobjective-c -fno-objc-expose-direct-methods -fobjc-expose-direct-methods %s 2>&1 | FileCheck -check-prefix=CHECK_EXPOSE_DIRECT %s
+// RUN: %clang -### -xobjective-c %s 2>&1 | FileCheck -check-prefix=CHECK_NO_EXPOSE_DIRECT %s
+// CHECK_EXPOSE_DIRECT: "-fobjc-expose-direct-methods"
+// CHECK_NO_EXPOSE_DIRECT-NOT: -fobjc-expose-direct-methods
+
 // RUN: %clang -### -S -fjmc --target=x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN,CHECK_NOJMC %s
 // RUN: %clang -### -S -fjmc --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefixes=CHECK_JMC_WARN,CHECK_NOJMC %s
 // RUN: %clang -### -S -fjmc -g --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK_JMC %s
