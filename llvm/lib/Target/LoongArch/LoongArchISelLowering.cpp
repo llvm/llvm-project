@@ -2210,6 +2210,22 @@ static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     return Result;
   if (SDValue NewShuffle = widenShuffleMask(DL, Mask, VT, V1, V2, DAG))
     return NewShuffle;
+
+  SmallVector<int, 32> NewMask(Mask.begin(), Mask.end());
+  std::rotate(NewMask.begin(), NewMask.begin() + NewMask.size() / 2,
+              NewMask.end());
+  if ((Result = lowerVECTOR_SHUFFLE_VPACKEV(DL, NewMask, VT, V1, V2, DAG)) ||
+      (Result = lowerVECTOR_SHUFFLE_VPACKOD(DL, NewMask, VT, V1, V2, DAG)) ||
+      (Result = lowerVECTOR_SHUFFLE_VILVH(DL, NewMask, VT, V1, V2, DAG)) ||
+      (Result = lowerVECTOR_SHUFFLE_VILVL(DL, NewMask, VT, V1, V2, DAG)) ||
+      (Result = lowerVECTOR_SHUFFLE_VPICKEV(DL, NewMask, VT, V1, V2, DAG)) ||
+      (Result = lowerVECTOR_SHUFFLE_VPICKOD(DL, NewMask, VT, V1, V2, DAG))) {
+    Result =
+        DAG.getVectorShuffle(MVT::v2i64, DL, DAG.getBitcast(MVT::v2i64, Result),
+                             DAG.getUNDEF(MVT::v2i64), {1, 0});
+    return DAG.getBitcast(VT, Result);
+  }
+
   if ((Result =
            lowerVECTOR_SHUFFLE_VSHUF(DL, Mask, VT, V1, V2, DAG, Subtarget)))
     return Result;
