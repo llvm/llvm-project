@@ -1100,7 +1100,7 @@ struct ConvertXeGPUToXeVMPass
         Value addr;
         Value offset;
         if (succeeded(memrefTy.getStridesAndOffset(intStrides, intOffsets)) &&
-            !ShapedType::isDynamic(intOffsets)) {
+            ShapedType::isStatic(intOffsets)) {
           addr = memref::ExtractAlignedPointerAsIndexOp::create(builder, loc,
                                                                 input);
           offset = arith::ConstantOp::create(builder, loc,
