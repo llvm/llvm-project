@@ -338,12 +338,12 @@ public:
       Opts["__opencl_c_atomic_order_seq_cst"] = true;
       Opts["__opencl_c_atomic_scope_device"] = true;
       Opts["__opencl_c_atomic_scope_all_devices"] = true;
-      Opts["__opencl_c_pipes"] = true;
       Opts["__opencl_c_work_group_collective_functions"] = true;
 
       if (hasFlatSupport()) {
         Opts["__opencl_c_generic_address_space"] = true;
         Opts["__opencl_c_device_enqueue"] = true;
+        Opts["__opencl_c_pipes"] = true;
       }
     }
   }
