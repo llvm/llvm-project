@@ -19,7 +19,7 @@ class RegexpBreakCommandTestCase(TestBase):
         """Test _regexp-break-add command."""
         self.build()
         self.regexp_break_command("_regexp-break-add")
-        
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -71,14 +71,9 @@ class RegexpBreakCommandTestCase(TestBase):
         exe_filename = exe_spec.basename
         cmd = f"{cmd_name} {exe_filename}`main"
         print(f"About to run: '{cmd}'")
-        break_results = lldbutil.run_break_set_command(
-            self, cmd 
-        )
+        break_results = lldbutil.run_break_set_command(self, cmd)
         lldbutil.check_breakpoint_result(
-            self,
-            break_results,
-            symbol_name="main",
-            num_locations=1
+            self, break_results, symbol_name="main", num_locations=1
         )
 
         self.runCmd("run", RUN_SUCCEEDED)

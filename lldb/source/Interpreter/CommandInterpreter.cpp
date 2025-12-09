@@ -318,7 +318,7 @@ void CommandInterpreter::Initialize() {
 
   // At this point, I'm leaving "b" command aliased to "_regexp-break".  There's
   // a catch-all regexp in the command that takes any unrecognized input and
-  // runs it as `break set <input>` and switching the command to break add 
+  // runs it as `break set <input>` and switching the command to break add
   // would change that behavior.  People who want to use the break add for the
   // "b" alias can do so in their .lldbinit.
   cmd_obj_sp = GetCommandSPExact("_regexp-break");
@@ -615,7 +615,7 @@ void CommandInterpreter::LoadCommandDictionary() {
       {"^[\"']?(.*[^[:space:]\"'])[\"']?[[:space:]]*$",
        "breakpoint set --name '%1'"}};
   // clang-format on
-  
+
   size_t num_regexes = std::size(break_regexes);
 
   std::unique_ptr<CommandObjectRegexCommand> break_regex_cmd_up(
@@ -741,8 +741,8 @@ void CommandInterpreter::LoadCommandDictionary() {
   if (break_add_regex_cmd_up) {
     bool success = true;
     for (size_t i = 0; i < num_add_regexes; i++) {
-      success = break_add_regex_cmd_up->AddRegexCommand(break_add_regexes[i][0],
-                                                    break_add_regexes[i][1]);
+      success = break_add_regex_cmd_up->AddRegexCommand(
+          break_add_regexes[i][0], break_add_regexes[i][1]);
       if (!success)
         break;
     }
