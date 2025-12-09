@@ -134,8 +134,8 @@ public:
 
     // Update argument shapes in the entry block
     Block &entryBlock = func.getBody().front();
+    const SmallVector<Type> argTypes(entryBlock.getArgumentTypes());
     for (const auto &[argIdx, shape] : argsParsed) {
-      SmallVector<Type> argTypes(entryBlock.getArgumentTypes());
       FailureOr<Type> newTensorType =
           getUpdatedTensorType(argIdx, argTypes, shape);
       if (failed(newTensorType))
@@ -145,11 +145,9 @@ public:
     }
 
     // Get new func argument types
-    FunctionType oldFunctionType = func.getFunctionType();
-    ArrayRef<Type> oldInputTypes = oldFunctionType.getInputs();
-    const size_t numInputs = oldInputTypes.size();
+    const FunctionType oldFunctionType = func.getFunctionType();
+    const ArrayRef<Type> oldInputTypes = oldFunctionType.getInputs();
     SmallVector<Type> newInputs(oldInputTypes.begin(), oldInputTypes.end());
-    newInputs.reserve(numInputs);
     for (const auto &[argIdx, shape] : argsParsed) {
       FailureOr<Type> newTensorType =
           getUpdatedTensorType(argIdx, oldInputTypes, shape);
@@ -161,13 +159,13 @@ public:
 
     // Update function signature
     Block &lastBlock = func.getBody().back();
-    Operation *terminator = lastBlock.getTerminator();
+    const Operation *terminator = lastBlock.getTerminator();
     SmallVector<Type> newResults;
     if (auto returnOp = dyn_cast_or_null<func::ReturnOp>(terminator)) {
-      auto types = returnOp.getOperandTypes();
+      const auto types = returnOp.getOperandTypes();
       newResults.assign(types.begin(), types.end());
     } else {
-      auto types = oldFunctionType.getResults();
+      const auto types = oldFunctionType.getResults();
       newResults.assign(types.begin(), types.end());
     }
     const FunctionType newFunctionType =
