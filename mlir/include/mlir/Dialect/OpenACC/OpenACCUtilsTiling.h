@@ -63,7 +63,7 @@ uncollapseLoops(mlir::acc::LoopOp origLoop, unsigned tileCount,
 ///  }
 /// \endcode
 ///
-/// Unknown tile sizes (represented as -1 in OpenACC for `tile(*)`) are
+/// Unknown tile sizes (represented as -1 in acc dialect for `tile(*)`) are
 /// resolved to the provided default tile size.
 ///
 /// \param tileLoops The loops to tile (outermost first).
