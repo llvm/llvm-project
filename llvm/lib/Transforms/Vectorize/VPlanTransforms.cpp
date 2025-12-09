@@ -194,8 +194,9 @@ public:
   /// because it's in the exclude set or because no-alias can be proven via
   /// SCEV.
   bool shouldSkip(VPRecipeBase &R) const {
-       auto *Store = dyn_cast<VPReplicateRecipe>(&R);
-       return ExcludeRecipes.contains(&R) || (Store && isNoAliasViaDistance(Store, &GroupLeader));
+    auto *Store = dyn_cast<VPReplicateRecipe>(&R);
+    return ExcludeRecipes.contains(&R) ||
+           (Store && isNoAliasViaDistance(Store, &GroupLeader));
   }
 };
 
@@ -205,9 +206,10 @@ public:
 /// checked (for load hoisting). Otherwise recipes that both read and write
 /// memory are checked, and SCEV is used to prove no-alias between the group
 /// leader and other replicate recipes (for store sinking).
-static bool canHoistOrSinkWithNoAliasCheck(
-    const MemoryLocation &MemLoc, VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
-    std::optional<SinkStoreInfo> SinkInfo = {}) {
+static bool
+canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
+                               VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
+                               std::optional<SinkStoreInfo> SinkInfo = {}) {
   bool CheckReads = SinkInfo.has_value();
   if (!MemLoc.AATags.Scope)
     return false;
