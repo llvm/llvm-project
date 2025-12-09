@@ -895,10 +895,6 @@ def warn_sizeof_pointer_type_memaccess : Warning<
   "argument to 'sizeof' in %0 call is the same pointer type %1 as the "
   "%select{destination|source}2; expected %3 or an explicit length">,
   InGroup<SizeofPointerMemaccess>;
-def warn_sizeof_pointer_dest_type_memacess : Warning<
-  "argument to 'sizeof' in %0 call is the same expression as the "
-  "destination; did you mean to put an explicit length?">,
-  InGroup<SizeofPointerMemaccess>;
 def warn_strlcpycat_wrong_size : Warning<
   "size argument in %0 call appears to be size of the source; "
   "expected the size of the destination">,

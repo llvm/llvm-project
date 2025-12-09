@@ -1139,37 +1139,6 @@ static bool ProcessFormatStringLiteral(const Expr *FormatExpr,
   return false;
 }
 
-static const UnaryExprOrTypeTraitExpr *getAsSizeOfExpr(const Expr *E) {
-  if (const auto *Unary = dyn_cast<UnaryExprOrTypeTraitExpr>(E))
-    if (Unary->getKind() == UETT_SizeOf)
-      return Unary;
-  return nullptr;
-}
-
-/// If E is a sizeof expression, returns its argument expression,
-/// otherwise returns NULL.
-static const Expr *getSizeOfExprArg(const Expr *E) {
-  if (const UnaryExprOrTypeTraitExpr *SizeOf = getAsSizeOfExpr(E))
-    if (!SizeOf->isArgumentType())
-      return SizeOf->getArgumentExpr()->IgnoreParenImpCasts();
-  return nullptr;
-}
-
-/// If E is a sizeof expression, returns its argument type.
-static QualType getSizeOfArgType(const Expr *E) {
-  if (const UnaryExprOrTypeTraitExpr *SizeOf = getAsSizeOfExpr(E))
-    return SizeOf->getTypeOfArgument();
-  return QualType();
-}
-
-/// Check if two expressions refer to the same declaration.
-static bool referToTheSameDecl(const Expr *E1, const Expr *E2) {
-  if (const DeclRefExpr *D1 = dyn_cast_or_null<DeclRefExpr>(E1))
-    if (const DeclRefExpr *D2 = dyn_cast_or_null<DeclRefExpr>(E2))
-      return D1->getDecl() == D2->getDecl();
-  return false;
-}
-
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                                CallExpr *TheCall) {
   if (TheCall->isValueDependent() || TheCall->isTypeDependent() ||
@@ -1480,17 +1449,11 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       }
     }
     DestinationSize = ComputeSizeArgument(0);
-    const Expr *SizeOfArg = TheCall->getArg(1)->IgnoreParenImpCasts();
+    const Expr *LenArg = TheCall->getArg(1)->IgnoreParenImpCasts();
     const Expr *Dest = TheCall->getArg(0)->IgnoreParenImpCasts();
-    const Expr *SizeOfArgExpr = getSizeOfExprArg(SizeOfArg);
-    const QualType SizeOfArgType = getSizeOfArgType(SizeOfArg);
-    const Type *ExprType = SizeOfArgType.getTypePtrOrNull();
-    if (ExprType && ExprType->isPointerType() &&
-        referToTheSameDecl(SizeOfArgExpr, Dest)) {
-      DiagRuntimeBehavior(SizeOfArg->getExprLoc(), Dest,
-                          PDiag(diag::warn_sizeof_pointer_dest_type_memacess)
-                              << FD->getNameInfo().getName());
-    }
+    llvm::FoldingSetNodeID SizeOfArgID;
+    IdentifierInfo *FnInfo = FD->getIdentifier();
+    CheckSizeOfExpression(LenArg, Dest, SizeOfArgID, FnInfo);
   }
   }
 
@@ -10021,6 +9984,29 @@ static const CXXRecordDecl *getContainedDynamicClass(QualType T,
   return nullptr;
 }
 
+static const UnaryExprOrTypeTraitExpr *getAsSizeOfExpr(const Expr *E) {
+  if (const auto *Unary = dyn_cast<UnaryExprOrTypeTraitExpr>(E))
+    if (Unary->getKind() == UETT_SizeOf)
+      return Unary;
+  return nullptr;
+}
+
+/// If E is a sizeof expression, returns its argument expression,
+/// otherwise returns NULL.
+static const Expr *getSizeOfExprArg(const Expr *E) {
+  if (const UnaryExprOrTypeTraitExpr *SizeOf = getAsSizeOfExpr(E))
+    if (!SizeOf->isArgumentType())
+      return SizeOf->getArgumentExpr()->IgnoreParenImpCasts();
+  return nullptr;
+}
+
+/// If E is a sizeof expression, returns its argument type.
+static QualType getSizeOfArgType(const Expr *E) {
+  if (const UnaryExprOrTypeTraitExpr *SizeOf = getAsSizeOfExpr(E))
+    return SizeOf->getTypeOfArgument();
+  return QualType();
+}
+
 namespace {
 
 struct SearchNonTrivialToInitializeField
@@ -10257,60 +10243,8 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
       // actually comparing the expressions for equality. Because computing the
       // expression IDs can be expensive, we only do this if the diagnostic is
       // enabled.
-      if (SizeOfArg &&
-          !Diags.isIgnored(diag::warn_sizeof_pointer_expr_memaccess,
-                           SizeOfArg->getExprLoc())) {
-        // We only compute IDs for expressions if the warning is enabled, and
-        // cache the sizeof arg's ID.
-        if (SizeOfArgID == llvm::FoldingSetNodeID())
-          SizeOfArg->Profile(SizeOfArgID, Context, true);
-        llvm::FoldingSetNodeID DestID;
-        Dest->Profile(DestID, Context, true);
-        if (DestID == SizeOfArgID) {
-          // TODO: For strncpy() and friends, this could suggest sizeof(dst)
-          //       over sizeof(src) as well.
-          unsigned ActionIdx = 0; // Default is to suggest dereferencing.
-          StringRef ReadableName = FnName->getName();
-
-          if (const UnaryOperator *UnaryOp = dyn_cast<UnaryOperator>(Dest))
-            if (UnaryOp->getOpcode() == UO_AddrOf)
-              ActionIdx = 1; // If its an address-of operator, just remove it.
-          if (!PointeeTy->isIncompleteType() &&
-              (Context.getTypeSize(PointeeTy) == Context.getCharWidth()))
-            ActionIdx = 2; // If the pointee's size is sizeof(char),
-                           // suggest an explicit length.
-
-          // If the function is defined as a builtin macro, do not show macro
-          // expansion.
-          SourceLocation SL = SizeOfArg->getExprLoc();
-          SourceRange DSR = Dest->getSourceRange();
-          SourceRange SSR = SizeOfArg->getSourceRange();
-          SourceManager &SM = getSourceManager();
-
-          if (SM.isMacroArgExpansion(SL)) {
-            ReadableName = Lexer::getImmediateMacroName(SL, SM, LangOpts);
-            SL = SM.getSpellingLoc(SL);
-            DSR = SourceRange(SM.getSpellingLoc(DSR.getBegin()),
-                             SM.getSpellingLoc(DSR.getEnd()));
-            SSR = SourceRange(SM.getSpellingLoc(SSR.getBegin()),
-                             SM.getSpellingLoc(SSR.getEnd()));
-          }
-
-          DiagRuntimeBehavior(SL, SizeOfArg,
-                              PDiag(diag::warn_sizeof_pointer_expr_memaccess)
-                                << ReadableName
-                                << PointeeTy
-                                << DestTy
-                                << DSR
-                                << SSR);
-          DiagRuntimeBehavior(SL, SizeOfArg,
-                         PDiag(diag::warn_sizeof_pointer_expr_memaccess_note)
-                                << ActionIdx
-                                << SSR);
-
-          break;
-        }
-      }
+      if (CheckSizeOfExpression(LenExpr, Dest, SizeOfArgID, FnName))
+        break;
 
       // Also check for cases where the sizeof argument is the exact same
       // type as the memory argument, and where it points to a user-defined
@@ -10411,6 +10345,71 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
         << FixItHint::CreateInsertion(ArgRange.getBegin(), "(void*)"));
     break;
   }
+}
+
+bool Sema::CheckSizeOfExpression(const Expr *LenExpr, const Expr *Dest,
+                                 llvm::FoldingSetNodeID SizeOfArgID,
+                                 IdentifierInfo *FnName) {
+  const Expr *SizeOfArg = getSizeOfExprArg(LenExpr);
+  QualType DestTy = Dest->getType();
+  QualType PointeeTy;
+  if (const PointerType *DestPtrTy = DestTy->getAs<PointerType>()) {
+    PointeeTy = DestPtrTy->getPointeeType();
+
+    // Catch "memset(p, 0, sizeof(p))" -- needs to be sizeof(*p). Do this by
+    // actually comparing the expressions for equality. Because computing the
+    // expression IDs can be expensive, we only do this if the diagnostic is
+    // enabled.
+    if (SizeOfArg && !Diags.isIgnored(diag::warn_sizeof_pointer_expr_memaccess,
+                                      SizeOfArg->getExprLoc())) {
+      // We only compute IDs for expressions if the warning is enabled, and
+      // cache the sizeof arg's ID.
+      if (SizeOfArgID == llvm::FoldingSetNodeID())
+        SizeOfArg->Profile(SizeOfArgID, Context, true);
+      llvm::FoldingSetNodeID DestID;
+      Dest->Profile(DestID, Context, true);
+      if (DestID == SizeOfArgID) {
+        // TODO: For strncpy() and friends, this could suggest sizeof(dst)
+        //       over sizeof(src) as well.
+        unsigned ActionIdx = 0; // Default is to suggest dereferencing.
+        StringRef ReadableName = FnName->getName();
+
+        if (const UnaryOperator *UnaryOp = dyn_cast<UnaryOperator>(Dest))
+          if (UnaryOp->getOpcode() == UO_AddrOf)
+            ActionIdx = 1; // If its an address-of operator, just remove it.
+        if (!PointeeTy->isIncompleteType() &&
+            (Context.getTypeSize(PointeeTy) == Context.getCharWidth()))
+          ActionIdx = 2; // If the pointee's size is sizeof(char),
+                         // suggest an explicit length.
+
+        // If the function is defined as a builtin macro, do not show macro
+        // expansion.
+        SourceLocation SL = SizeOfArg->getExprLoc();
+        SourceRange DSR = Dest->getSourceRange();
+        SourceRange SSR = SizeOfArg->getSourceRange();
+        SourceManager &SM = getSourceManager();
+
+        if (SM.isMacroArgExpansion(SL)) {
+          ReadableName = Lexer::getImmediateMacroName(SL, SM, LangOpts);
+          SL = SM.getSpellingLoc(SL);
+          DSR = SourceRange(SM.getSpellingLoc(DSR.getBegin()),
+                            SM.getSpellingLoc(DSR.getEnd()));
+          SSR = SourceRange(SM.getSpellingLoc(SSR.getBegin()),
+                            SM.getSpellingLoc(SSR.getEnd()));
+        }
+
+        DiagRuntimeBehavior(SL, SizeOfArg,
+                            PDiag(diag::warn_sizeof_pointer_expr_memaccess)
+                                << ReadableName << PointeeTy << DestTy << DSR
+                                << SSR);
+        DiagRuntimeBehavior(SL, SizeOfArg,
+                            PDiag(diag::warn_sizeof_pointer_expr_memaccess_note)
+                                << ActionIdx << SSR);
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 // A little helper routine: ignore addition and subtraction of integer literals.
@@ -10516,6 +10515,14 @@ void Sema::CheckStrlcpycatArguments(const CallExpr *Call,
   Diag(OriginalSizeArg->getBeginLoc(), diag::note_strlcpycat_wrong_size)
       << FixItHint::CreateReplacement(OriginalSizeArg->getSourceRange(),
                                       OS.str());
+}
+
+/// Check if two expressions refer to the same declaration.
+static bool referToTheSameDecl(const Expr *E1, const Expr *E2) {
+  if (const DeclRefExpr *D1 = dyn_cast_or_null<DeclRefExpr>(E1))
+    if (const DeclRefExpr *D2 = dyn_cast_or_null<DeclRefExpr>(E2))
+      return D1->getDecl() == D2->getDecl();
+  return false;
 }
 
 static const Expr *getStrlenExprArg(const Expr *E) {

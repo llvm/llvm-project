@@ -195,5 +195,5 @@ extern "C" void* malloc(unsigned size);
 void check_prints(){
     char* a = (char*) malloc(20);
     const char* b = "Hello World";
-    snprintf(a, sizeof(a), "%s", b); // expected-warning{{argument to 'sizeof' in 'snprintf' call is the same expression as the destination; did you mean to put an explicit length?}}
+    snprintf(a, sizeof(a), "%s", b); // expected-warning{{'snprintf' call operates on objects of type 'char' while the size is based on a different type 'char *'}} expected-note {{did you mean to provide an explicit length?}}
 }
