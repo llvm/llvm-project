@@ -632,33 +632,31 @@ std::optional<SmallVector<char, 0>> NVPTXSerializer::compileToBinaryNVPTX(
   RETURN_ON_NVPTXCOMPILER_ERROR(
       nvPTXCompilerGetCompiledProgram(compiler, (void *)binary.data()));
 
+  // Lambda to fetch info log; returns empty vector on failure or no log.
+  auto fetchInfoLog = [&]() -> SmallVector<char> {
+    size_t size = 0;
+    if (nvPTXCompilerGetInfoLogSize(compiler, &size) != NVPTXCOMPILE_SUCCESS ||
+        size == 0)
+      return {};
+    SmallVector<char> log(size + 1, 0);
+    if (nvPTXCompilerGetInfoLog(compiler, log.data()) != NVPTXCOMPILE_SUCCESS)
+      return {};
+    return log;
+  };
+
   if (binaryCompilerDiagnosticCallback) {
-    RETURN_ON_NVPTXCOMPILER_ERROR(
-        nvPTXCompilerGetInfoLogSize(compiler, &logSize));
-    if (logSize != 0) {
-      SmallVector<char> log(logSize + 1, 0);
-      RETURN_ON_NVPTXCOMPILER_ERROR(
-          nvPTXCompilerGetInfoLog(compiler, log.data()));
-      StringRef logRef(log.data(), log.size());
-      binaryCompilerDiagnosticCallback(logRef);
-    }
+    if (auto log = fetchInfoLog(); !log.empty())
+      binaryCompilerDiagnosticCallback(StringRef(log.data(), log.size()));
   }
 
-// Dump the log of the compiler, helpful if the verbose flag was passed.
 #define DEBUG_TYPE "serialize-to-binary"
   LLVM_DEBUG({
-    RETURN_ON_NVPTXCOMPILER_ERROR(
-        nvPTXCompilerGetInfoLogSize(compiler, &logSize));
-    if (logSize != 0) {
-      SmallVector<char> log(logSize + 1, 0);
-      RETURN_ON_NVPTXCOMPILER_ERROR(
-          nvPTXCompilerGetInfoLog(compiler, log.data()));
+    if (auto log = fetchInfoLog(); !log.empty())
       LDBG() << "NVPTX compiler invocation for module: "
              << getOperation().getNameAttr()
              << "\nArguments: " << llvm::interleaved(cmdOpts.second, " ")
              << "\nOutput\n"
              << log.data();
-    }
   });
 #undef DEBUG_TYPE
   RETURN_ON_NVPTXCOMPILER_ERROR(nvPTXCompilerDestroy(&compiler));
