@@ -1955,8 +1955,8 @@ bool RewriteMFMAFormStage::initHeuristics(
     DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
     SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
   // Prepare for the heuristics
-  for (auto &MBB : MF) {
-    for (auto &MI : MBB) {
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
       if (!isRewriteCandidate(&MI))
         continue;
 
@@ -1964,7 +1964,6 @@ bool RewriteMFMAFormStage::initHeuristics(
       assert(ReplacementOp != -1);
 
       RewriteCands.push_back({&MI, MI.getOpcode()});
-      MI.setDesc(TII->get(ReplacementOp));
 
       MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
       if (Src2->isReg()) {
@@ -1975,7 +1974,7 @@ bool RewriteMFMAFormStage::initHeuristics(
         // insert a copy.
         for (SlotIndex RDIdx : Src2ReachingDefs) {
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
-          if (!TII->isMAI(*RD))
+          if (!isRewriteCandidate(RD))
             CopyForDef.insert(RD);
         }
       }
@@ -2026,14 +2025,10 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
     const DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
     const SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
-  MachineBranchProbabilityInfo MBPI;
-  MachineBlockFrequencyInfo MBFI;
-
-  MBFI.calculate(MF, MBPI, *DAG.MLI);
+  MachineBlockFrequencyInfo *MBFI = DAG.MBFI;
   int64_t BestSpillCost = 0;
   int64_t Cost = 0;
-
-  uint64_t EntryFreq = MBFI.getEntryFreq().getFrequency();
+  uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
 
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
     if (!RegionsWithExcessArchVGPR[Region])
@@ -2109,26 +2104,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     }
   }
 
-  Cost += CopyCost;
-
-  // Reset to the vgpr form. We must do rewriting after copy-insertion, as some
-  // defs of the register may require VGPR.
-  for (auto [MI, OriginalOpcode] : RewriteCands) {
-    assert(TII->isMAI(*MI));
-    const TargetRegisterClass *AGPRRC =
-        DAG.MRI.getRegClass(MI->getOperand(0).getReg());
-    const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(AGPRRC);
-
-    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-    assert(Src2);
-
-    if (Src2->isReg())
-      DAG.MRI.setRegClass(Src2->getReg(), VGPRRC);
-    DAG.MRI.setRegClass(MI->getOperand(0).getReg(), VGPRRC);
-    MI->setDesc(TII->get(OriginalOpcode));
-  }
-
-  return Cost;
+  return Cost + CopyCost;
 }
 
 bool RewriteMFMAFormStage::rewrite(
