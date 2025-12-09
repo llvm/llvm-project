@@ -272,21 +272,18 @@ void BaseRequestHandler::PrintWelcomeMessage() const {
 
   // Trying to provide a brief but helpful welcome message for users to better
   // understand how the debug console repl works.
-  OS << "To get started with the lldb-dap debug console try ";
-
+  OS << "To get started with the debug console try ";
   switch (dap.repl_mode) {
   case ReplMode::Auto:
-    OS << "\"<variable>\", \"<lldb-cmd>\" or \"help [<cmd-name>]\" for more "
+    OS << "\"<variable>\", \"<lldb-cmd>\" or \"help [<lldb-cmd>]\" for more "
           "information.\r\n";
-    OS << "Use '" << dap.configuration.commandEscapePrefix
-       << "' to prefix commands that may conflict with local variables.\r\n";
     break;
   case ReplMode::Command:
-    OS << "\"<lldb-cmd>\" or \"help [<cmd-name>]\" for more information.\r\n";
+    OS << "\"<lldb-cmd>\" or \"help [<lldb-cmd>]\" for more information.\r\n";
     break;
   case ReplMode::Variable:
     OS << "\"<variable>\" or \"" << dap.configuration.commandEscapePrefix
-       << "help [<cmd-name>]\" for more information.\r\n";
+       << "help [<lldb-cmd>]\" for more information.\r\n";
     break;
   }
 
