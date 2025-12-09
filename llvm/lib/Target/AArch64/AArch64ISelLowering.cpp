@@ -4561,7 +4561,8 @@ static SDValue lowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG,
 }
 
 static SDValue lowerIntNeonIntrinsic(SDValue Op, unsigned Opcode,
-                                     SelectionDAG &DAG) {
+                                     SelectionDAG &DAG,
+                                     bool IsLastInt = false) {
   SDLoc DL(Op);
   auto getFloatVT = [](EVT VT) {
     assert((VT == MVT::i32 || VT == MVT::i64) && "Unexpected VT");
@@ -4570,11 +4571,18 @@ static SDValue lowerIntNeonIntrinsic(SDValue Op, unsigned Opcode,
   auto bitcastToFloat = [&](SDValue Val) {
     return DAG.getBitcast(getFloatVT(Val.getValueType()), Val);
   };
-  SmallVector<SDValue, 2> NewOps;
-  NewOps.reserve(Op.getNumOperands() - 1);
 
-  for (unsigned I = 1, E = Op.getNumOperands(); I < E; ++I)
+  const unsigned NumOps = Op.getNumOperands();
+  const unsigned LastOpIdx = NumOps - 1;
+  SmallVector<SDValue, 2> NewOps;
+  NewOps.reserve(NumOps - 1);
+
+  // Skip first operand as it is intrinsic ID.
+  for (unsigned I = 1, E = LastOpIdx; I < E; ++I)
     NewOps.push_back(bitcastToFloat(Op.getOperand(I)));
+  SDValue LastOp = IsLastInt ? Op.getOperand(LastOpIdx)
+                             : bitcastToFloat(Op.getOperand(LastOpIdx));
+  NewOps.push_back(LastOp);
   EVT OrigVT = Op.getValueType();
   SDValue OpNode = DAG.getNode(Opcode, DL, getFloatVT(OrigVT), NewOps);
   return DAG.getBitcast(OrigVT, OpNode);
@@ -6390,42 +6398,42 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                          DAG.getNode(AArch64ISD::VASHR, DL,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQSHRN, DAG, true);
   case Intrinsic::aarch64_neon_sqshrun:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::TRUNCATE_SSAT_U, DL, Op.getValueType(),
                          DAG.getNode(AArch64ISD::VASHR, DL,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQSHRUN, DAG, true);
   case Intrinsic::aarch64_neon_uqshrn:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::TRUNCATE_USAT_U, DL, Op.getValueType(),
                          DAG.getNode(AArch64ISD::VLSHR, DL,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::UQSHRN, DAG, true);
   case Intrinsic::aarch64_neon_sqrshrn:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::TRUNCATE_SSAT_S, DL, Op.getValueType(),
                          DAG.getNode(AArch64ISD::SRSHR_I, DL,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQRSHRN, DAG, true);
   case Intrinsic::aarch64_neon_sqrshrun:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::TRUNCATE_SSAT_U, DL, Op.getValueType(),
                          DAG.getNode(AArch64ISD::SRSHR_I, DL,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQRSHRUN, DAG, true);
   case Intrinsic::aarch64_neon_uqrshrn:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::TRUNCATE_USAT_U, DL, Op.getValueType(),
                          DAG.getNode(AArch64ISD::URSHR_I, DL,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::UQRSHRN, DAG, true);
   case Intrinsic::aarch64_neon_sqrshl:
     if (Op.getValueType().isVector())
       return SDValue();

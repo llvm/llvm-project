@@ -10177,7 +10177,7 @@ multiclass SIMDScalarRShiftBHS<bit U, bits<5> opc, string asm,
 
   def s : BaseSIMDScalarShift<U, opc, {0,1,?,?,?,?,?},
                               FPR32, FPR64, vecshiftR32, asm,
-    [(set (i32 FPR32:$Rd), (OpNode (i64 FPR64:$Rn), vecshiftR32:$imm))]> {
+    [(set (f32 FPR32:$Rd), (OpNode (f64 FPR64:$Rn), vecshiftR32:$imm))]> {
     let Inst{20-16} = imm{4-0};
   }
 }
