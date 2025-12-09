@@ -23,7 +23,6 @@ target_link_libraries(tco PRIVATE
   FIROpenMPSupport
   FlangOpenMPTransforms
   FortranSupport
-  FortranLower
   MIFDialect
 )
 
