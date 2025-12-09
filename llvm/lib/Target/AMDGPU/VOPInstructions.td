@@ -73,6 +73,15 @@ class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
   bit IsTrue16 = P.IsTrue16;
   VOPProfile Pfl = P;
 
+  // True if destination is FP16 and all sources are 16-bit (FP16, BF16, or INT16).
+  // Used for V_PACK_B32_F16 optimization in SIPeepholeSDWA Pass.
+  bit IsSrcDestFP16 = !and(
+    !eq(P.DstVT, f16),
+    !or(!eq(P.Src0VT, untyped), !eq(P.Src0VT.Size, 16)),
+    !or(!eq(P.Src1VT, untyped), !eq(P.Src1VT.Size, 16)),
+    !or(!eq(P.Src2VT, untyped), !eq(P.Src2VT.Size, 16))
+  );
+
   string AsmOperands;
 }
 
@@ -2277,4 +2286,13 @@ def VOPTrue16Table : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getTrue16OpcodeHelper";
+}
+
+def VOPSrcDestFP16Table : GenericTable {
+  let FilterClass = "VOP_Pseudo";
+  let CppTypeName = "VOPSrcDestFP16Info";
+  let Fields = ["Opcode", "IsSrcDestFP16"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getSrcDestFP16OpcodeHelper";
 }

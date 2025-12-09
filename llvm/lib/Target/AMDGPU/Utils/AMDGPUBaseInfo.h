@@ -987,6 +987,9 @@ LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY
+bool isSrcDestFP16Inst(unsigned Opc);
+
+LLVM_READONLY
 FPType getFPDstSelType(unsigned Opc);
 
 LLVM_READONLY

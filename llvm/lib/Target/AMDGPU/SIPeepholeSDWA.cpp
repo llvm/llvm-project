@@ -23,6 +23,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1457,39 +1458,14 @@ bool SIPeepholeSDWALegacy::runOnMachineFunction(MachineFunction &MF) {
   return SIPeepholeSDWA().run(MF);
 }
 
+/// Returns true if the instruction has FP16 destination and all 16-bit sources.
+/// This is TableGen-generated via VOPSrcDestFP16Table in VOPInstructions.td.
 static bool isSrcDestFP16Bits(MachineInstr *MI, const SIInstrInfo *TII) {
-  static const DenseSet<unsigned> FP16BitOpcodes = {
-      // VOP1 FP16 unary operations
-      AMDGPU::V_CVT_F16_U16_e32, AMDGPU::V_CVT_F16_U16_e64,
-      AMDGPU::V_CVT_F16_I16_e32, AMDGPU::V_CVT_F16_I16_e64,
-      AMDGPU::V_RCP_F16_e64, AMDGPU::V_RCP_F16_e32, AMDGPU::V_RSQ_F16_e64,
-      AMDGPU::V_RSQ_F16_e32, AMDGPU::V_SQRT_F16_e64, AMDGPU::V_SQRT_F16_e32,
-      AMDGPU::V_LOG_F16_e64, AMDGPU::V_LOG_F16_e32, AMDGPU::V_EXP_F16_e64,
-      AMDGPU::V_EXP_F16_e32, AMDGPU::V_SIN_F16_e64, AMDGPU::V_SIN_F16_e32,
-      AMDGPU::V_COS_F16_e64, AMDGPU::V_COS_F16_e32, AMDGPU::V_FLOOR_F16_e64,
-      AMDGPU::V_FLOOR_F16_e32, AMDGPU::V_CEIL_F16_e64, AMDGPU::V_CEIL_F16_e32,
-      AMDGPU::V_TRUNC_F16_e64, AMDGPU::V_TRUNC_F16_e32, AMDGPU::V_RNDNE_F16_e64,
-      AMDGPU::V_RNDNE_F16_e32, AMDGPU::V_FRACT_F16_e64, AMDGPU::V_FRACT_F16_e32,
-      AMDGPU::V_FREXP_MANT_F16_e64, AMDGPU::V_FREXP_MANT_F16_e32,
-      AMDGPU::V_FREXP_EXP_I16_F16_e64, AMDGPU::V_FREXP_EXP_I16_F16_e32,
-      // VOP2 FP16 binary operations
-      AMDGPU::V_LDEXP_F16_e64, AMDGPU::V_LDEXP_F16_e32, AMDGPU::V_ADD_F16_e64,
-      AMDGPU::V_ADD_F16_e32, AMDGPU::V_SUB_F16_e64, AMDGPU::V_SUB_F16_e32,
-      AMDGPU::V_SUBREV_F16_e64, AMDGPU::V_SUBREV_F16_e32, AMDGPU::V_MUL_F16_e64,
-      AMDGPU::V_MUL_F16_e32, AMDGPU::V_MAX_F16_e64, AMDGPU::V_MAX_F16_e32,
-      AMDGPU::V_MIN_F16_e64, AMDGPU::V_MIN_F16_e32,
-      // VOP2 FP16 multiply-accumulate operations
-      AMDGPU::V_FMAC_F16_e64, AMDGPU::V_FMAC_F16_e32, AMDGPU::V_MAC_F16_e64,
-      AMDGPU::V_MAC_F16_e32,
-      // VOP3 FP16 ternary operations
-      AMDGPU::V_MAD_F16_e64, AMDGPU::V_FMA_F16_e64,
-      AMDGPU::V_DIV_FIXUP_F16_e64};
-
   unsigned Opcode = MI->getOpcode();
   if (TII->isSDWA(Opcode))
     Opcode = AMDGPU::getBasicFromSDWAOp(Opcode);
 
-  return FP16BitOpcodes.contains(Opcode);
+  return AMDGPU::isSrcDestFP16Inst(Opcode);
 }
 
 static bool checkForRightSrcRootAccess(MachineInstr *Def0MI,

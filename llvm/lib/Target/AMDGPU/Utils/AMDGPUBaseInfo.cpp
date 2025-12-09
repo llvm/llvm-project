@@ -410,6 +410,14 @@ struct VOPTrue16Info {
   bool IsTrue16;
 };
 
+struct VOPSrcDestFP16Info {
+  uint16_t Opcode;
+  bool IsSrcDestFP16;
+};
+
+#define GET_VOPSrcDestFP16Table_DECL
+#define GET_VOPSrcDestFP16Table_IMPL
+
 #define GET_FP4FP8DstByteSelTable_DECL
 #define GET_FP4FP8DstByteSelTable_IMPL
 
@@ -766,6 +774,11 @@ unsigned getTemporalHintType(const MCInstrDesc TID) {
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
   return Info && Info->IsTrue16;
+}
+
+bool isSrcDestFP16Inst(unsigned Opc) {
+  const VOPSrcDestFP16Info *Info = getSrcDestFP16OpcodeHelper(Opc);
+  return Info && Info->IsSrcDestFP16;
 }
 
 FPType getFPDstSelType(unsigned Opc) {
