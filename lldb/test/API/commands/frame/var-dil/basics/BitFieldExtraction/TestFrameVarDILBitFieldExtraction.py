@@ -58,3 +58,8 @@ class TestFrameVarDILBitFieldExtraction(TestBase):
             error=True,
             substrs=["bit index is not an integer"],
         )
+        self.expect(
+            "frame var 'value[2.0-1]'",
+            error=True,
+            substrs=["bit index is not an integer"],
+        )
