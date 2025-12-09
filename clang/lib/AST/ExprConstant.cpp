@@ -14348,6 +14348,73 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(R, E);
   }
 
+  case clang::X86::BI__builtin_ia32_minps:
+  case clang::X86::BI__builtin_ia32_minpd:
+  case clang::X86::BI__builtin_ia32_maxpd:
+  case clang::X86::BI__builtin_ia32_maxps:
+  case clang::X86::BI__builtin_ia32_minps256:
+  case clang::X86::BI__builtin_ia32_maxps256:
+  case clang::X86::BI__builtin_ia32_minpd256:
+  case clang::X86::BI__builtin_ia32_maxpd256:
+  case clang::X86::BI__builtin_ia32_minps512:
+  case clang::X86::BI__builtin_ia32_maxps512:
+  case clang::X86::BI__builtin_ia32_minpd512:
+  case clang::X86::BI__builtin_ia32_maxpd512:
+  case clang::X86::BI__builtin_ia32_minph128:
+  case clang::X86::BI__builtin_ia32_maxph128:
+  case clang::X86::BI__builtin_ia32_minph256:
+  case clang::X86::BI__builtin_ia32_maxph256:
+  case clang::X86::BI__builtin_ia32_minph512:
+  case clang::X86::BI__builtin_ia32_maxph512: {
+
+    APValue AVec, BVec;
+    if (!EvaluateAsRValue(Info, E->getArg(0), AVec) ||
+        !EvaluateAsRValue(Info, E->getArg(1), BVec))
+      return false;
+
+    assert(AVec.isVector() && BVec.isVector());
+    assert(AVec.getVectorLength() == BVec.getVectorLength());
+
+    bool IsMin;
+    switch (E->getBuiltinCallee()) {
+    case clang::X86::BI__builtin_ia32_minps:
+    case clang::X86::BI__builtin_ia32_minpd:
+    case clang::X86::BI__builtin_ia32_minps256:
+    case clang::X86::BI__builtin_ia32_minpd256:
+    case clang::X86::BI__builtin_ia32_minps512:
+    case clang::X86::BI__builtin_ia32_minpd512:
+    case clang::X86::BI__builtin_ia32_minph128:
+    case clang::X86::BI__builtin_ia32_minph256:
+    case clang::X86::BI__builtin_ia32_minph512:
+      IsMin = true;
+      break;
+    default:
+      IsMin = false;
+    }
+    const auto *DstVTy = E->getType()->castAs<VectorType>();
+    unsigned NumDstElems = DstVTy->getNumElements();
+    SmallVector<APValue, 16> ResultElems;
+    ResultElems.reserve(NumDstElems);
+
+    for (unsigned EltIdx = 0; EltIdx != NumDstElems; ++EltIdx) {
+      const APFloat &EltA = AVec.getVectorElt(EltIdx).getFloat();
+      const APFloat &EltB = BVec.getVectorElt(EltIdx).getFloat();
+      if (EltA.isZero() && EltB.isZero()) {
+        ResultElems.push_back(BVec.getVectorElt(EltIdx));
+      } else {
+        if (EltA.isNaN() || EltA.isInfinity() || EltA.isDenormal() ||
+            EltB.isNaN() || EltB.isInfinity() || EltB.isDenormal())
+          return false;
+        if (IsMin)
+          ResultElems.push_back(APValue(llvm::minimum(EltA, EltB)));
+        else
+          ResultElems.push_back(APValue(llvm::maximum(EltA, EltB)));
+      }
+    }
+
+    return Success(APValue(ResultElems.data(), ResultElems.size()), E);
+  }
+
   case clang::X86::BI__builtin_ia32_vcvtps2ph:
   case clang::X86::BI__builtin_ia32_vcvtps2ph256: {
     APValue SrcVec;
