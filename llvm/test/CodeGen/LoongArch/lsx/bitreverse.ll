@@ -9,8 +9,7 @@ declare <16 x i8> @llvm.bitreverse.v16i8(<16 x i8>)
 define <16 x i8> @test_bitreverse_v16i8(<16 x i8> %a) nounwind {
 ; LA32-LABEL: test_bitreverse_v16i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    vandi.b $vr1, $vr0, 15
-; LA32-NEXT:    vslli.b $vr1, $vr1, 4
+; LA32-NEXT:    vslli.b $vr1, $vr0, 4
 ; LA32-NEXT:    vsrli.b $vr0, $vr0, 4
 ; LA32-NEXT:    vandi.b $vr0, $vr0, 15
 ; LA32-NEXT:    vor.v $vr0, $vr0, $vr1
@@ -116,8 +115,7 @@ define <2 x i64> @test_bitreverse_v2i64(<2 x i64> %a) nounwind {
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
 ; LA32-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI3_0)
 ; LA32-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
-; LA32-NEXT:    vandi.b $vr1, $vr0, 15
-; LA32-NEXT:    vslli.b $vr1, $vr1, 4
+; LA32-NEXT:    vslli.b $vr1, $vr0, 4
 ; LA32-NEXT:    vsrli.b $vr0, $vr0, 4
 ; LA32-NEXT:    vandi.b $vr0, $vr0, 15
 ; LA32-NEXT:    vor.v $vr0, $vr0, $vr1

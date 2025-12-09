@@ -182,7 +182,6 @@ define i2 @vmsk_sgt_v2i8(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 56
-; CHECK-NEXT:    vsrai.d $vr0, $vr0, 56
 ; CHECK-NEXT:    vmskltz.d $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -198,7 +197,6 @@ define i2 @vmsk_sgt_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 48
-; CHECK-NEXT:    vsrai.d $vr0, $vr0, 48
 ; CHECK-NEXT:    vmskltz.d $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -213,7 +211,6 @@ define i2 @vmsk_sgt_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-NEXT:    vslt.w $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 16
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 32
-; CHECK-NEXT:    vsrai.d $vr0, $vr0, 32
 ; CHECK-NEXT:    vmskltz.d $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -253,7 +250,6 @@ define i4 @vmsk_sgt_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.w $vr0, $vr0, 24
-; CHECK-NEXT:    vsrai.w $vr0, $vr0, 24
 ; CHECK-NEXT:    vmskltz.w $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -268,7 +264,6 @@ define i4 @vmsk_sgt_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-NEXT:    vslt.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.w $vr0, $vr0, 16
-; CHECK-NEXT:    vsrai.w $vr0, $vr0, 16
 ; CHECK-NEXT:    vmskltz.w $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -307,7 +302,6 @@ define i8 @vmsk_sgt_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-NEXT:    vslt.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.h $vr0, $vr0, 8
-; CHECK-NEXT:    vsrai.h $vr0, $vr0, 8
 ; CHECK-NEXT:    vmskltz.h $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -350,7 +344,6 @@ define i2 @vmsk_sgt_and_sgt_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8>
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 56
-; CHECK-NEXT:    vsrai.d $vr0, $vr0, 56
 ; CHECK-NEXT:    vmskltz.d $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -370,7 +363,6 @@ define i2 @vmsk_sgt_and_sgt_v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 48
-; CHECK-NEXT:    vsrai.d $vr0, $vr0, 48
 ; CHECK-NEXT:    vmskltz.d $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -389,7 +381,6 @@ define i2 @vmsk_sgt_and_sgt_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 16
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 32
-; CHECK-NEXT:    vsrai.d $vr0, $vr0, 32
 ; CHECK-NEXT:    vmskltz.d $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -441,7 +432,6 @@ define i4 @vmsk_sgt_and_sgt_v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8>
 ; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.w $vr0, $vr0, 24
-; CHECK-NEXT:    vsrai.w $vr0, $vr0, 24
 ; CHECK-NEXT:    vmskltz.w $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -460,7 +450,6 @@ define i4 @vmsk_sgt_and_sgt_v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.w $vr0, $vr0, 16
-; CHECK-NEXT:    vsrai.w $vr0, $vr0, 16
 ; CHECK-NEXT:    vmskltz.w $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -511,7 +500,6 @@ define i8 @vmsk_sgt_and_sgt_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8>
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.h $vr0, $vr0, 8
-; CHECK-NEXT:    vsrai.h $vr0, $vr0, 8
 ; CHECK-NEXT:    vmskltz.h $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -609,7 +597,6 @@ define i4 @vmsk_eq_allzeros_v4i8(<4 x i8> %a) {
 ; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vslli.w $vr0, $vr0, 24
-; CHECK-NEXT:    vsrai.w $vr0, $vr0, 24
 ; CHECK-NEXT:    vmskltz.w $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret

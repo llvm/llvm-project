@@ -54,13 +54,22 @@ entry:
 }
 
 define void @vavg_d(ptr %res, ptr %a, ptr %b) nounwind {
-; CHECK-LABEL: vavg_d:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vavg.d $vr0, $vr0, $vr1
-; CHECK-NEXT:    vst $vr0, $a0, 0
-; CHECK-NEXT:    ret
+; LA32-LABEL: vavg_d:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    vld $vr0, $a1, 0
+; LA32-NEXT:    vld $vr1, $a2, 0
+; LA32-NEXT:    vadd.d $vr0, $vr0, $vr1
+; LA32-NEXT:    vsrai.d $vr0, $vr0, 1
+; LA32-NEXT:    vst $vr0, $a0, 0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: vavg_d:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    vld $vr0, $a1, 0
+; LA64-NEXT:    vld $vr1, $a2, 0
+; LA64-NEXT:    vavg.d $vr0, $vr0, $vr1
+; LA64-NEXT:    vst $vr0, $a0, 0
+; LA64-NEXT:    ret
 entry:
   %va = load <2 x i64>, ptr %a
   %vb = load <2 x i64>, ptr %b
@@ -198,8 +207,8 @@ define void @vavgr_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
 ; LA32-NEXT:    vadd.d $vr0, $vr0, $vr1
-; LA32-NEXT:    vrepli.d $vr1, 1
-; LA32-NEXT:    vavg.d $vr0, $vr0, $vr1
+; LA32-NEXT:    vaddi.du $vr0, $vr0, 1
+; LA32-NEXT:    vsrai.d $vr0, $vr0, 1
 ; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret
 ;

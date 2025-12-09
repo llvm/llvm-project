@@ -338,7 +338,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::MUL, ISD::SDIV, ISD::SREM, ISD::UDIV, ISD::UREM},
                          VT, Legal);
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
-      setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Custom);
+      setOperationAction({ISD::SHL, ISD::SRA}, VT, Legal);
       setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
       setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Legal);
       setCondCodeAction(
@@ -354,6 +354,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::USUBSAT, VT, Legal);
       setOperationAction(ISD::ROTL, VT, Custom);
       setOperationAction(ISD::ROTR, VT, Custom);
+      setOperationAction(ISD::SRL, VT, Custom);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -427,7 +428,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::MUL, ISD::SDIV, ISD::SREM, ISD::UDIV, ISD::UREM},
                          VT, Legal);
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
-      setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
+      setOperationAction({ISD::SHL, ISD::SRA}, VT, Legal);
       setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
       setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Legal);
       setCondCodeAction(
@@ -444,6 +445,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
       setOperationAction(ISD::ROTL, VT, Custom);
       setOperationAction(ISD::ROTR, VT, Custom);
+      setOperationAction(ISD::SRL, VT, Custom);
     }
     for (MVT VT : {MVT::v32i8, MVT::v16i16, MVT::v8i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -618,10 +620,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerVECREDUCE(Op, DAG);
   case ISD::ConstantFP:
     return lowerConstantFP(Op, DAG);
-  case ISD::SRA:
   case ISD::SRL:
-  case ISD::SHL:
-    return lowerVectorSRA_SRL_SHL(Op, DAG);
+    return lowerVectorSRL(Op, DAG);
   }
   return SDValue();
 }
@@ -646,8 +646,7 @@ static bool getVShiftAmt(SDValue Op, unsigned ElementBits, int64_t &Amt) {
   return true;
 }
 
-SDValue
-LoongArchTargetLowering::lowerVectorSRA_SRL_SHL(SDValue Op,
+SDValue LoongArchTargetLowering::lowerVectorSRL(SDValue Op,
                                                 SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
@@ -658,26 +657,13 @@ LoongArchTargetLowering::lowerVectorSRA_SRL_SHL(SDValue Op,
   unsigned EltSize = VT.getScalarSizeInBits();
   MVT GRLenVT = Subtarget.getGRLenVT();
 
-  switch (Op.getOpcode()) {
-  case ISD::SHL:
+  if (Op.getOpcode() == ISD::SRL) {
     if (getVShiftAmt(Op.getOperand(1), EltSize, Amt) && Amt >= 0 &&
         Amt < EltSize)
-      return DAG.getNode(LoongArchISD::VSLLI, DL, VT, Op.getOperand(0),
+      return DAG.getNode(LoongArchISD::VSRLI, DL, VT, Op.getOperand(0),
                          DAG.getConstant(Amt, DL, GRLenVT));
-    return DAG.getNode(LoongArchISD::VSLL, DL, VT, Op.getOperand(0),
+    return DAG.getNode(LoongArchISD::VSRL, DL, VT, Op.getOperand(0),
                        Op.getOperand(1));
-  case ISD::SRA:
-  case ISD::SRL:
-    if (getVShiftAmt(Op.getOperand(1), EltSize, Amt) && Amt >= 0 &&
-        Amt < EltSize) {
-      unsigned Opc = (Op.getOpcode() == ISD::SRA) ? LoongArchISD::VSRAI
-                                                  : LoongArchISD::VSRLI;
-      return DAG.getNode(Opc, DL, VT, Op.getOperand(0),
-                         DAG.getConstant(Amt, DL, GRLenVT));
-    }
-    unsigned Opc =
-        (Op.getOpcode() == ISD::SRA) ? LoongArchISD::VSRA : LoongArchISD::VSRL;
-    return DAG.getNode(Opc, DL, VT, Op.getOperand(0), Op.getOperand(1));
   }
 
   llvm_unreachable("unexpected shift opcode");

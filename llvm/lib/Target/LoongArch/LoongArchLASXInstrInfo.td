@@ -1332,18 +1332,6 @@ multiclass PairInsertExtractPatV4<ValueType vecty, ValueType elemty> {
   }
 }
 
-multiclass XVAvgPat<SDPatternOperator OpNode, string Inst, ValueType vt> {
-  def : Pat<(OpNode (vt (add vt:$vj, vt:$vk)), (vt (vsplat_imm_eq_1))),
-            (!cast<LAInst>(Inst) vt:$vj, vt:$vk)>;
-}
-
-multiclass XVAvgrPat<SDPatternOperator OpNode, string Inst, ValueType vt> {
-  def : Pat<(OpNode (vt (add (vt (add vt:$vj, vt:$vk)),
-                             (vt (vsplat_imm_eq_1)))),
-                    (vt (vsplat_imm_eq_1))),
-            (!cast<LAInst>(Inst) vt:$vj, vt:$vk)>;
-}
-
 let Predicates = [HasExtLASX] in {
 
 // XVADD_{B/H/W/D}
@@ -1449,9 +1437,8 @@ defm : PatShiftXrSplatUimm<shl, "XVSLLI">;
 defm : PatShiftXrUimm<loongarch_vslli, "XVSLLI">;
 
 // XVSRL[I]_{B/H/W/D}
-defm : PatXrXr<srl, "XVSRL">;
-defm : PatShiftXrXr<srl, "XVSRL">;
-defm : PatShiftXrSplatUimm<srl, "XVSRLI">;
+defm : PatXrXr<loongarch_vsrl, "XVSRL">;
+defm : PatShiftXrXr<loongarch_vsrl, "XVSRL">;
 defm : PatShiftXrUimm<loongarch_vsrli, "XVSRLI">;
 
 // XVSRA[I]_{B/H/W/D}
@@ -2053,22 +2040,22 @@ def : Pat<(v4i32(fp_to_uint v4f64:$vj)),
               sub_128)>;
 
 // XVAVG_{B/H/W/D/BU/HU/WU/DU}, XVAVGR_{B/H/W/D/BU/HU/WU/DU}
-defm : XVAvgPat<sra, "XVAVG_B", v32i8>;
-defm : XVAvgPat<sra, "XVAVG_H", v16i16>;
-defm : XVAvgPat<sra, "XVAVG_W", v8i32>;
-defm : XVAvgPat<sra, "XVAVG_D", v4i64>;
-defm : XVAvgPat<srl, "XVAVG_BU", v32i8>;
-defm : XVAvgPat<srl, "XVAVG_HU", v16i16>;
-defm : XVAvgPat<srl, "XVAVG_WU", v8i32>;
-defm : XVAvgPat<srl, "XVAVG_DU", v4i64>;
-defm : XVAvgrPat<sra, "XVAVGR_B", v32i8>;
-defm : XVAvgrPat<sra, "XVAVGR_H", v16i16>;
-defm : XVAvgrPat<sra, "XVAVGR_W", v8i32>;
-defm : XVAvgrPat<sra, "XVAVGR_D", v4i64>;
-defm : XVAvgrPat<srl, "XVAVGR_BU", v32i8>;
-defm : XVAvgrPat<srl, "XVAVGR_HU", v16i16>;
-defm : XVAvgrPat<srl, "XVAVGR_WU", v8i32>;
-defm : XVAvgrPat<srl, "XVAVGR_DU", v4i64>;
+defm : VAvgPat<sra, "XVAVG_B", v32i8>;
+defm : VAvgPat<sra, "XVAVG_H", v16i16>;
+defm : VAvgPat<sra, "XVAVG_W", v8i32>;
+defm : VAvgPat<sra, "XVAVG_D", v4i64>;
+defm : VAvgIPat<loongarch_vsrli, "XVAVG_BU", v32i8>;
+defm : VAvgIPat<loongarch_vsrli, "XVAVG_HU", v16i16>;
+defm : VAvgIPat<loongarch_vsrli, "XVAVG_WU", v8i32>;
+defm : VAvgIPat<loongarch_vsrli, "XVAVG_DU", v4i64>;
+defm : VAvgrPat<sra, "XVAVGR_B", v32i8>;
+defm : VAvgrPat<sra, "XVAVGR_H", v16i16>;
+defm : VAvgrPat<sra, "XVAVGR_W", v8i32>;
+defm : VAvgrPat<sra, "XVAVGR_D", v4i64>;
+defm : VAvgrIPat<loongarch_vsrli, "XVAVGR_BU", v32i8>;
+defm : VAvgrIPat<loongarch_vsrli, "XVAVGR_HU", v16i16>;
+defm : VAvgrIPat<loongarch_vsrli, "XVAVGR_WU", v8i32>;
+defm : VAvgrIPat<loongarch_vsrli, "XVAVGR_DU", v4i64>;
 
 // abs
 def : Pat<(abs v32i8:$xj), (XVSIGNCOV_B v32i8:$xj, v32i8:$xj)>;
