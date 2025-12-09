@@ -3453,7 +3453,8 @@ SDValue NVPTXTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
 }
 
 static std::pair<MemSDNode *, uint32_t>
-convertMLOADToLoadWithUsedBytesMask(MemSDNode *N, SelectionDAG &DAG) {
+convertMLOADToLoadWithUsedBytesMask(MemSDNode *N, SelectionDAG &DAG,
+                                    const NVPTXSubtarget &STI) {
   SDValue Chain = N->getOperand(0);
   SDValue BasePtr = N->getOperand(1);
   SDValue Mask = N->getOperand(3);
@@ -3495,6 +3496,11 @@ convertMLOADToLoadWithUsedBytesMask(MemSDNode *N, SelectionDAG &DAG) {
   MemSDNode *NewLD = cast<MemSDNode>(
       DAG.getLoad(ResVT, DL, Chain, BasePtr, N->getMemOperand()).getNode());
 
+  // If our subtarget does not support the used bytes mask pragma, "drop" the
+  // mask by setting it to UINT32_MAX
+  if (!STI.hasUsedBytesMaskPragma())
+    UsedBytesMask = UINT32_MAX;
+
   return {NewLD, UsedBytesMask};
 }
 
@@ -3531,7 +3537,8 @@ replaceLoadVector(SDNode *N, SelectionDAG &DAG, const NVPTXSubtarget &STI) {
   // If we have a masked load, convert it to a normal load now
   std::optional<uint32_t> UsedBytesMask = std::nullopt;
   if (LD->getOpcode() == ISD::MLOAD)
-    std::tie(LD, UsedBytesMask) = convertMLOADToLoadWithUsedBytesMask(LD, DAG);
+    std::tie(LD, UsedBytesMask) =
+        convertMLOADToLoadWithUsedBytesMask(LD, DAG, STI);
 
   // Since LoadV2 is a target node, we cannot rely on DAG type legalization.
   // Therefore, we must ensure the type is legal.  For i1 and i8, we set the
@@ -3667,8 +3674,8 @@ SDValue NVPTXTargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
   // them here.
   EVT VT = Op.getValueType();
   if (NVPTX::isPackedVectorTy(VT)) {
-    auto Result =
-        convertMLOADToLoadWithUsedBytesMask(cast<MemSDNode>(Op.getNode()), DAG);
+    auto Result = convertMLOADToLoadWithUsedBytesMask(
+        cast<MemSDNode>(Op.getNode()), DAG, STI);
     MemSDNode *LD = std::get<0>(Result);
     uint32_t UsedBytesMask = std::get<1>(Result);
 
