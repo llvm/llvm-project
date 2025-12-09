@@ -17,14 +17,11 @@ set(libunwind_test_suite_install_targets unwind-headers unwind)
 if ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
   list(APPEND libunwind_test_suite_install_targets cxx-headers cxx cxx_experimental cxx-modules cxxabi-headers cxxabi)
 endif()
-# Run installation targets serially to avoid race conditions between install targets
-set_property(GLOBAL PROPERTY JOB_POOLS libunwind-test-install-pool=1 APPEND)
 foreach(target IN LISTS libunwind_test_suite_install_targets)
   add_custom_target(libunwind-test-suite-install-${target} DEPENDS "${target}"
                     COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}"
                                                --prefix "${LIBUNWIND_TESTING_INSTALL_PREFIX}"
-                                               --component "${target}"
-                    JOB_POOL libunwind-test-install-pool)
+                                               --component "${target}")
   add_dependencies(unwind-test-depends libunwind-test-suite-install-${target})
 endforeach()
 
