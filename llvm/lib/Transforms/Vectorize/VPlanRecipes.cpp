@@ -71,10 +71,9 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return !cast<VPWidenCallRecipe>(this)
                 ->getCalledScalarFunction()
                 ->onlyReadsMemory();
+  case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
-  case VPWidenMemIntrinsicSC:
-    return cast<VPWidenMemIntrinsicRecipe>(this)->mayWriteToMemory();
   case VPActiveLaneMaskPHISC:
   case VPCanonicalIVPHISC:
   case VPBranchOnMaskSC:
@@ -127,10 +126,9 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return !cast<VPWidenCallRecipe>(this)
                 ->getCalledScalarFunction()
                 ->onlyWritesMemory();
+  case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
-  case VPWidenMemIntrinsicSC:
-    return cast<VPWidenMemIntrinsicRecipe>(this)->mayReadFromMemory();
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
@@ -186,10 +184,9 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     Function *Fn = cast<VPWidenCallRecipe>(this)->getCalledScalarFunction();
     return mayWriteToMemory() || !Fn->doesNotThrow() || !Fn->willReturn();
   }
+  case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayHaveSideEffects();
-  case VPWidenMemIntrinsicSC:
-    return cast<VPWidenMemIntrinsicRecipe>(this)->mayHaveSideEffects();
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
@@ -1851,9 +1848,7 @@ void VPWidenCallRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
-  assert(State.VF.isVector() && "not widening");
-
+CallInst *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
   SmallVector<Type *, 2> TysForDecl;
   // Add return type if intrinsic is overloaded on it.
   if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
@@ -1889,7 +1884,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   assert(VectorF &&
          "Can't retrieve vector intrinsic or vector-predication intrinsics.");
 
-  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
+  auto *CI = dyn_cast_or_null<CallInst>(getUnderlyingValue());
   SmallVector<OperandBundleDef, 1> OpBundles;
   if (CI)
     CI->getOperandBundlesAsDefs(OpBundles);
@@ -1899,6 +1894,12 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   applyFlags(*V);
   applyMetadata(*V);
 
+  return V;
+}
+
+void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
+  assert(State.VF.isVector() && "not widening");
+  CallInst *V = createVectorCall(State);
   if (!V->getType()->isVoidTy())
     State.set(this, V);
 }
@@ -1989,10 +1990,11 @@ void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 unsigned VPWidenMemIntrinsicRecipe::getMemoryPointerParamPos() const {
-  if (auto Pos = VPIntrinsic::getMemoryPointerParamPos(VectorIntrinsicID))
+  Intrinsic::ID IID = getVectorIntrinsicID();
+  if (auto Pos = VPIntrinsic::getMemoryPointerParamPos(IID))
     return *Pos;
 
-  switch (VectorIntrinsicID) {
+  switch (IID) {
   case Intrinsic::masked_load:
   case Intrinsic::masked_gather:
   case Intrinsic::masked_expandload:
@@ -2007,10 +2009,11 @@ unsigned VPWidenMemIntrinsicRecipe::getMemoryPointerParamPos() const {
 }
 
 unsigned VPWidenMemIntrinsicRecipe::getMaskParamPos() const {
-  if (auto Pos = VPIntrinsic::getMaskParamPos(VectorIntrinsicID))
+  Intrinsic::ID IID = getVectorIntrinsicID();
+  if (auto Pos = VPIntrinsic::getMaskParamPos(IID))
     return *Pos;
 
-  switch (VectorIntrinsicID) {
+  switch (IID) {
   case Intrinsic::masked_load:
   case Intrinsic::masked_gather:
   case Intrinsic::masked_expandload:
@@ -2026,86 +2029,27 @@ unsigned VPWidenMemIntrinsicRecipe::getMaskParamPos() const {
 
 void VPWidenMemIntrinsicRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
-
-  SmallVector<Type *, 2> TysForDecl;
-  // Add return type if intrinsic is overloaded on it.
-  if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1, State.TTI))
-    TysForDecl.push_back(VectorType::get(getResultType(), State.VF));
-  SmallVector<Value *, 4> Args;
-  for (const auto &I : enumerate(operands())) {
-    // Some intrinsics have a scalar argument - don't replace it with a
-    // vector.
-    Value *Arg;
-    if (isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index(),
-                                           State.TTI))
-      Arg = State.get(I.value(), VPLane(0));
-    else
-      Arg = State.get(I.value(), usesFirstLaneOnly(I.value()));
-    if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index(),
-                                               State.TTI))
-      TysForDecl.push_back(Arg->getType());
-    Args.push_back(Arg);
-  }
-
-  // Use vector version of the intrinsic.
-  Module *M = State.Builder.GetInsertBlock()->getModule();
-  Function *VectorF =
-      Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
-  assert(VectorF &&
-         "Can't retrieve vector intrinsic or vector-predication intrinsics.");
-
-  CallInst *MemI = State.Builder.CreateCall(VectorF, Args);
+  CallInst *MemI = createVectorCall(State);
   MemI->addParamAttr(
       getMemoryPointerParamPos(),
       Attribute::getWithAlignment(MemI->getContext(), Alignment));
-  applyMetadata(*MemI);
 
   if (!MemI->getType()->isVoidTy())
-    State.set(getVPSingleValue(), MemI);
+    State.set(this, MemI);
 }
 
 InstructionCost
 VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
                                        VPCostContext &Ctx) const {
-  Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
-  const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
+  const Instruction *Ingredient = getUnderlyingInstr();
+  Type *Ty = toVectorTy(getLoadStoreType(Ingredient), VF);
+  const Value *Ptr = getLoadStorePointerOperand(Ingredient);
   return Ctx.TTI.getMemIntrinsicInstrCost(
-      MemIntrinsicCostAttributes(VectorIntrinsicID, Ty, Ptr,
+      MemIntrinsicCostAttributes(getVectorIntrinsicID(), Ty, Ptr,
                                  match(getMask(), m_True()), Alignment,
-                                 &Ingredient),
+                                 Ingredient),
       Ctx.CostKind);
 }
-
-// Copy from VPWidenIntrinsicRecipe::usesFirstLaneOnly.
-bool VPWidenMemIntrinsicRecipe::usesFirstLaneOnly(const VPValue *Op) const {
-  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  return all_of(enumerate(operands()), [this, &Op](const auto &X) {
-    auto [Idx, V] = X;
-    return V != Op || isVectorIntrinsicWithScalarOpAtArg(getVectorIntrinsicID(),
-                                                         Idx, nullptr);
-  });
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPWidenMemIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
-                                            VPSlotTracker &SlotTracker) const {
-  O << Indent << "WIDEN-MEM-INTRINSIC ";
-  if (ResultTy->isVoidTy()) {
-    O << "void ";
-  } else {
-    getVPSingleValue()->printAsOperand(O, SlotTracker);
-    O << " = ";
-  }
-
-  O << "call ";
-  O << getIntrinsicName() << "(";
-
-  interleaveComma(operands(), O, [&O, &SlotTracker](VPValue *Op) {
-    Op->printAsOperand(O, SlotTracker);
-  });
-  O << ")";
-}
-#endif
 
 void VPHistogramRecipe::execute(VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
