@@ -6007,15 +6007,13 @@ static std::pair<VPValue *, VPValue *> matchStridedStart(VPValue *CurIndex) {
   if (!Start)
     return {nullptr, nullptr};
 
+  VPBuilder Builder(WidenR);
   SmallVector<VPValue *> StartOps(WidenR->operands());
   StartOps[VarIdx] = Start;
-  auto *StartR = new VPReplicateRecipe(WidenR->getUnderlyingInstr(), StartOps,
-                                       /*IsUniform*/ true, /*Mask*/ nullptr,
-                                       /*Flags*/ *WidenR, /*Metadata*/ *WidenR,
-                                       WidenR->getDebugLoc());
-  StartR->insertBefore(WidenR);
-
-  VPBuilder Builder(WidenR);
+  auto *StartR = Builder.createOverflowingOp(
+      Opcode, StartOps,
+      {WidenR->hasNoUnsignedWrap(), WidenR->hasNoSignedWrap()},
+      WidenR->getDebugLoc());
   unsigned InvIdx = VarIdx == 0 ? 1 : 0;
   auto *StrideR =
       Builder.createOverflowingOp(Opcode, {Stride, WidenR->getOperand(InvIdx)});
