@@ -58,7 +58,8 @@ public:
       function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
       function_ref<void(llvm::Module &)> linkedLlvmIRCallback = {},
       function_ref<void(llvm::Module &)> optimizedLlvmIRCallback = {},
-      function_ref<void(StringRef)> isaCallback = {});
+      function_ref<void(StringRef)> isaCallback = {},
+      function_ref<void(StringRef)> binaryCompilerDiagnosticCallback = {});
 
   /// Returns the typeID.
   TypeID getTypeID() const;
@@ -111,6 +112,9 @@ public:
   /// for example PTX assembly.
   function_ref<void(StringRef)> getISACallback() const;
 
+  /// Returns the callback invoked with the compilation target for the device.
+  function_ref<void(StringRef)> getbinaryCompilerDiagnosticCallback() const;
+
   /// Returns the default compilation target: `CompilationTarget::Fatbin`.
   static CompilationTarget getDefaultCompilationTarget();
 
@@ -130,7 +134,8 @@ protected:
       function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
       function_ref<void(llvm::Module &)> linkedLlvmIRCallback = {},
       function_ref<void(llvm::Module &)> optimizedLlvmIRCallback = {},
-      function_ref<void(StringRef)> isaCallback = {});
+      function_ref<void(StringRef)> isaCallback = {},
+      function_ref<void(StringRef)> binaryCompilerDiagnosticCallback = {});
 
   /// Path to the target toolkit.
   std::string toolkitPath;
@@ -166,6 +171,9 @@ protected:
   /// Callback invoked with the target ISA for the device,
   /// for example PTX assembly.
   function_ref<void(StringRef)> isaCallback;
+
+  /// Callback invoked with the compilation target for the device.
+  function_ref<void(StringRef)> binaryCompilerDiagnosticCallback;
 
 private:
   TypeID typeID;

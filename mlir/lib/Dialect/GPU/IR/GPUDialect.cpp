@@ -2655,12 +2655,13 @@ TargetOptions::TargetOptions(
     function_ref<void(llvm::Module &)> initialLlvmIRCallback,
     function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
     function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
-    function_ref<void(StringRef)> isaCallback)
+    function_ref<void(StringRef)> isaCallback,
+    function_ref<void(StringRef)> binaryCompilerDiagnosticCallback)
     : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, librariesToLink,
                     cmdOptions, elfSection, compilationTarget,
                     getSymbolTableCallback, initialLlvmIRCallback,
-                    linkedLlvmIRCallback, optimizedLlvmIRCallback,
-                    isaCallback) {}
+                    linkedLlvmIRCallback, optimizedLlvmIRCallback, isaCallback,
+                    binaryCompilerDiagnosticCallback) {}
 
 TargetOptions::TargetOptions(
     TypeID typeID, StringRef toolkitPath, ArrayRef<Attribute> librariesToLink,
@@ -2670,7 +2671,8 @@ TargetOptions::TargetOptions(
     function_ref<void(llvm::Module &)> initialLlvmIRCallback,
     function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
     function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
-    function_ref<void(StringRef)> isaCallback)
+    function_ref<void(StringRef)> isaCallback,
+    function_ref<void(StringRef)> binaryCompilerDiagnosticCallback)
     : toolkitPath(toolkitPath.str()), librariesToLink(librariesToLink),
       cmdOptions(cmdOptions.str()), elfSection(elfSection.str()),
       compilationTarget(compilationTarget),
@@ -2678,7 +2680,9 @@ TargetOptions::TargetOptions(
       initialLlvmIRCallback(initialLlvmIRCallback),
       linkedLlvmIRCallback(linkedLlvmIRCallback),
       optimizedLlvmIRCallback(optimizedLlvmIRCallback),
-      isaCallback(isaCallback), typeID(typeID) {}
+      isaCallback(isaCallback),
+      binaryCompilerDiagnosticCallback(binaryCompilerDiagnosticCallback),
+      typeID(typeID) {}
 
 TypeID TargetOptions::getTypeID() const { return typeID; }
 
@@ -2713,6 +2717,11 @@ TargetOptions::getOptimizedLlvmIRCallback() const {
 
 function_ref<void(StringRef)> TargetOptions::getISACallback() const {
   return isaCallback;
+}
+
+function_ref<void(StringRef)>
+TargetOptions::getbinaryCompilerDiagnosticCallback() const {
+  return binaryCompilerDiagnosticCallback;
 }
 
 CompilationTarget TargetOptions::getCompilationTarget() const {
