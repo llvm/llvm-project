@@ -2389,21 +2389,19 @@ struct AMDGPUMakeDmaDescriptorLowering
   Value setDataSize(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr0, ArrayRef<Value> consts) const {
-    // Compute data_size.
     unsigned elementTypeWidthInBits = op.getElementTypeWidth();
     assert(
         llvm::is_contained<unsigned>({8, 16, 32, 64}, elementTypeWidthInBits) &&
         "expected type width to be 8, 16, 32, or 64.");
-    int64_t dataSize = llvm::Log2_32(elementTypeWidthInBits / 8);
-    Value size = createI32Constant(rewriter, loc, dataSize);
+    int64_t idx = llvm::Log2_32(elementTypeWidthInBits / 8);
+    Value size = consts[idx];
     return setValueAtOffset(rewriter, loc, sgpr0, size, 16);
   }
 
   Value setAtomicBarrier(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          Value sgpr0, ArrayRef<Value> consts) const {
-    bool atomic_barrier_enable = adaptor.getAtomicBarrierAddress() != nullptr;
-    if (!atomic_barrier_enable)
+    if (!adaptor.getAtomicBarrierAddress())
       return sgpr0;
 
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 18);
@@ -2412,19 +2410,16 @@ struct AMDGPUMakeDmaDescriptorLowering
   Value setIterateEnable(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          Value sgpr0, ArrayRef<Value> consts) const {
-    bool iterate_enable = adaptor.getGlobalIncrement() != nullptr;
-    if (!iterate_enable)
+    if (!adaptor.getGlobalIncrement())
       return sgpr0;
 
-    // TODO: In future PR, add other required fields for iteration.
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 19);
   }
 
   Value setPadEnable(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                      ConversionPatternRewriter &rewriter, Location loc,
                      Value sgpr0, ArrayRef<Value> consts) const {
-    bool pad_enable = op.getPadAmount() != nullptr;
-    if (!pad_enable)
+    if (!op.getPadAmount())
       return sgpr0;
 
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 20);
@@ -2442,8 +2437,7 @@ struct AMDGPUMakeDmaDescriptorLowering
   Value setPadInterval(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                        ConversionPatternRewriter &rewriter, Location loc,
                        Value sgpr0, ArrayRef<Value> consts) const {
-    bool pad_enable = op.getPadAmount() != nullptr;
-    if (!pad_enable)
+    if (!op.getPadAmount())
       return sgpr0;
 
     IntegerType i32 = rewriter.getI32Type();
@@ -2459,8 +2453,7 @@ struct AMDGPUMakeDmaDescriptorLowering
   Value setPadAmount(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                      ConversionPatternRewriter &rewriter, Location loc,
                      Value sgpr0, ArrayRef<Value> consts) const {
-    bool pad_enable = op.getPadAmount() != nullptr;
-    if (!pad_enable)
+    if (!op.getPadAmount())
       return sgpr0;
 
     Value padAmount = adaptor.getPadAmount();
@@ -2474,8 +2467,7 @@ struct AMDGPUMakeDmaDescriptorLowering
                                 ConversionPatternRewriter &rewriter,
                                 Location loc, Value sgpr1,
                                 ArrayRef<Value> consts) const {
-    bool atomic_barrier_enable = adaptor.getAtomicBarrierAddress() != nullptr;
-    if (!atomic_barrier_enable)
+    if (!adaptor.getAtomicBarrierAddress())
       return sgpr1;
 
     Value atomicBarrierAddress = adaptor.getAtomicBarrierAddress();
@@ -2516,9 +2508,10 @@ struct AMDGPUMakeDmaDescriptorLowering
     else
       tensorDimX = cast<Value>(tensorDimXOpFoldResult);
 
+    sgpr1 = setValueAtOffset(rewriter, loc, sgpr1, tensorDimX, offset);
+
     Value c16 = createI32Constant(rewriter, loc, 16);
     Value tensorDimXHigh = LLVM::LShrOp::create(rewriter, loc, tensorDimX, c16);
-    sgpr1 = setValueAtOffset(rewriter, loc, sgpr1, tensorDimX, offset);
     sgpr2 = setValueAtOffset(rewriter, loc, sgpr2, tensorDimXHigh, offset + 16);
     return {sgpr1, sgpr2};
   }
@@ -2605,6 +2598,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     IntegerType i32 = rewriter.getI32Type();
     Value tensorDimXStrideLow =
         LLVM::TruncOp::create(rewriter, loc, i32, tensorDimXStride);
+    sgprY = setValueAtOffset(rewriter, loc, sgprY, tensorDimXStrideLow, offset);
 
     int64_t shift = (offset % 32) == 0 ? 32 : offset % 32;
     Value shiftVal = createI64Constant(rewriter, loc, shift);
@@ -2612,8 +2606,6 @@ struct AMDGPUMakeDmaDescriptorLowering
         LLVM::LShrOp::create(rewriter, loc, tensorDimXStride, shiftVal);
     tensorDimXStrideHigh =
         LLVM::TruncOp::create(rewriter, loc, i32, tensorDimXStrideHigh);
-
-    sgprY = setValueAtOffset(rewriter, loc, sgprY, tensorDimXStrideLow, offset);
     sgprZ = setValueAtOffset(rewriter, loc, sgprZ, tensorDimXStrideHigh,
                              offset + shift);
     return {sgprY, sgprZ};
