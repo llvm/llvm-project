@@ -2,23 +2,37 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from ...dialects import irdl as _irdl
-from .._ods_common import (
-    _cext as _ods_cext,
-    segmented_accessor as _ods_segmented_accessor,
-)
-from . import Variadicity
 from typing import Dict, List, Union, Callable, Tuple
 from dataclasses import dataclass
-from inspect import Parameter as _Parameter, Signature as _Signature
-from types import SimpleNamespace as _SimpleNameSpace
+from inspect import Parameter, Signature
+from types import SimpleNamespace
+from abc import ABC, abstractmethod
+from contextlib import nullcontext
+from ...dialects import irdl
+from .._ods_common import _cext, segmented_accessor
+from . import Variadicity
 
-_ods_ir = _ods_cext.ir
+ir = _cext.ir
+
+__all__ = [
+    "Variadicity",
+    "Is",
+    "AnyOf",
+    "AllOf",
+    "Any",
+    "BaseName",
+    "BaseRef",
+    "Operand",
+    "Result",
+    "Attribute",
+    "Dialect",
+]
 
 
-class ConstraintExpr:
-    def _lower(self, ctx: "ConstraintLoweringContext") -> _ods_ir.Value:
-        raise NotImplementedError()
+class ConstraintExpr(ABC):
+    @abstractmethod
+    def _lower(self, ctx: "ConstraintLoweringContext") -> ir.Value:
+        pass
 
     def __or__(self, other: "ConstraintExpr") -> "ConstraintExpr":
         return AnyOf(self, other)
@@ -30,9 +44,9 @@ class ConstraintExpr:
 class ConstraintLoweringContext:
     def __init__(self):
         # Cache so that the same ConstraintExpr instance reuses its SSA value.
-        self._cache: Dict[int, _ods_ir.Value] = {}
+        self._cache: Dict[int, ir.Value] = {}
 
-    def lower(self, expr: ConstraintExpr) -> _ods_ir.Value:
+    def lower(self, expr: ConstraintExpr) -> ir.Value:
         key = id(expr)
         if key in self._cache:
             return self._cache[key]
@@ -42,74 +56,70 @@ class ConstraintLoweringContext:
 
 
 class Is(ConstraintExpr):
-    def __init__(self, attr: _ods_ir.Attribute):
-        self.attr = attr
+    def __init__(self, val: Union[ir.Attribute, ir.Type]):
+        self.val = val
 
-    def _lower(self, ctx: ConstraintLoweringContext) -> _ods_ir.Value:
-        return _irdl.is_(self.attr)
-
-
-class IsType(Is):
-    def __init__(self, typ: _ods_ir.Type):
-        super().__init__(_ods_ir.TypeAttr.get(typ))
+    def _lower(self, ctx: ConstraintLoweringContext) -> ir.Value:
+        return irdl.is_(
+            ir.TypeAttr.get(self.val) if isinstance(self.val, ir.Type) else self.val
+        )
 
 
 class AnyOf(ConstraintExpr):
     def __init__(self, *exprs: ConstraintExpr):
         self.exprs = exprs
 
-    def _lower(self, ctx: ConstraintLoweringContext) -> _ods_ir.Value:
-        return _irdl.any_of(ctx.lower(expr) for expr in self.exprs)
+    def _lower(self, ctx: ConstraintLoweringContext) -> ir.Value:
+        return irdl.any_of(ctx.lower(expr) for expr in self.exprs)
 
 
 class AllOf(ConstraintExpr):
     def __init__(self, *exprs: ConstraintExpr):
         self.exprs = exprs
 
-    def _lower(self, ctx: ConstraintLoweringContext) -> _ods_ir.Value:
-        return _irdl.all_of(ctx.lower(expr) for expr in self.exprs)
+    def _lower(self, ctx: ConstraintLoweringContext) -> ir.Value:
+        return irdl.all_of(ctx.lower(expr) for expr in self.exprs)
 
 
 class Any(ConstraintExpr):
-    def _lower(self, ctx: ConstraintLoweringContext) -> _ods_ir.Value:
-        return _irdl.any()
+    def _lower(self, ctx: ConstraintLoweringContext) -> ir.Value:
+        return irdl.any()
 
 
 class BaseName(ConstraintExpr):
     def __init__(self, name: str):
         self.name = name
 
-    def _lower(self, ctx: ConstraintLoweringContext) -> _ods_ir.Value:
-        return _irdl.base(base_name=self.name)
+    def _lower(self, ctx: ConstraintLoweringContext) -> ir.Value:
+        return irdl.base(base_name=self.name)
 
 
 class BaseRef(ConstraintExpr):
     def __init__(self, ref):
         self.ref = ref
 
-    def _lower(self, ctx: ConstraintLoweringContext) -> _ods_ir.Value:
-        return _irdl.base(base_ref=self.ref)
+    def _lower(self, ctx: ConstraintLoweringContext) -> ir.Value:
+        return irdl.base(base_ref=self.ref)
 
 
-class _FieldDef:
-    def __set_name__(self, owner, name: str):
-        self.name = name
+class FieldDef:
+    pass
 
 
 @dataclass
-class Operand(_FieldDef):
+class Operand(FieldDef):
     constraint: ConstraintExpr
     variadicity: Variadicity = Variadicity.single
 
 
 @dataclass
-class Result(_FieldDef):
+class Result(FieldDef):
     constraint: ConstraintExpr
     variadicity: Variadicity = Variadicity.single
 
 
 @dataclass
-class Attribute(_FieldDef):
+class Attribute(FieldDef):
     constraint: ConstraintExpr
 
     def __post_init__(self):
@@ -118,43 +128,57 @@ class Attribute(_FieldDef):
         self.variadicity = Variadicity.single
 
 
-@dataclass
-class Operation:
-    dialect_name: str
-    name: str
-    # We store operands and attributes into one list to maintain relative orders
-    # among them for generating OpView class.
-    fields: List[Union[Operand, Attribute, Result]]
+def partition_fields(
+    fields: List[FieldDef],
+) -> Tuple[List[Operand], List[Attribute], List[Result]]:
+    operands = [i for i in fields if isinstance(i, Operand)]
+    attrs = [i for i in fields if isinstance(i, Attribute)]
+    results = [i for i in fields if isinstance(i, Result)]
+    return operands, attrs, results
 
-    def _partition_fields(self) -> Tuple[List[Operand], List[Attribute], List[Result]]:
-        operands = [i for i in self.fields if isinstance(i, Operand)]
-        attrs = [i for i in self.fields if isinstance(i, Attribute)]
-        results = [i for i in self.fields if isinstance(i, Result)]
-        return operands, attrs, results
 
-    def _emit(self) -> None:
-        ctx = ConstraintLoweringContext()
-        operands, attrs, results = self._partition_fields()
+def normalize_value_range(
+    value_range: Union[ir.OpOperandList, ir.OpResultList],
+    variadicity: Variadicity,
+):
+    if variadicity == Variadicity.single:
+        return value_range[0]
+    if variadicity == Variadicity.optional:
+        return value_range[0] if len(value_range) > 0 else None
+    return value_range
 
-        op = _irdl.operation_(self.name)
-        with _ods_ir.InsertionPoint(op.body):
-            if operands:
-                _irdl.operands_(
-                    [ctx.lower(i.constraint) for i in operands],
-                    [i.name for i in operands],
-                    [i.variadicity for i in operands],
-                )
-            if attrs:
-                _irdl.attributes_(
-                    [ctx.lower(i.constraint) for i in attrs],
-                    [i.name for i in attrs],
-                )
-            if results:
-                _irdl.results_(
-                    [ctx.lower(i.constraint) for i in results],
-                    [i.name for i in results],
-                    [i.variadicity for i in results],
-                )
+
+class Operation(ir.OpView):
+    @classmethod
+    def __init_subclass__(cls, *, name=None, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        # for subclasses without "name" parameter,
+        # just treat them as normal classes
+        if not name:
+            return
+
+        op_name = name
+        cls._op_name = op_name
+        dialect_name = cls._dialect_name
+        dialect_obj = cls._dialect_obj
+
+        fields = []
+        cls._fields = fields
+
+        for key, value in cls.__dict__.items():
+            if isinstance(value, FieldDef):
+                setattr(value, "name", key)
+                fields.append(value)
+
+        cls._generate_class_attributes(dialect_name, op_name, fields)
+        cls._generate_init_method(fields)
+        operands, attrs, results = partition_fields(fields)
+        cls._generate_attr_properties(attrs)
+        cls._generate_operand_properties(operands)
+        cls._generate_result_properties(results)
+
+        dialect_obj.operations.append(cls)
 
     @staticmethod
     def _variadicity_to_segment(variadicity: Variadicity) -> int:
@@ -175,185 +199,184 @@ class Operation:
             ]
         return None
 
-    def _generate_init_params(self) -> List[_Parameter]:
+    @staticmethod
+    def _generate_init_signature(fields: List[FieldDef]) -> Signature:
         # results are placed at the beginning of the parameter list,
         # but operands and attributes can appear in any relative order.
-        args = [i for i in self.fields if isinstance(i, Result)] + [
-            i for i in self.fields if not isinstance(i, Result)
+        args = [i for i in fields if isinstance(i, Result)] + [
+            i for i in fields if not isinstance(i, Result)
         ]
         positional_args = [
             i.name for i in args if i.variadicity != Variadicity.optional
         ]
         optional_args = [i.name for i in args if i.variadicity == Variadicity.optional]
 
-        params = [_Parameter("self", _Parameter.POSITIONAL_ONLY)]
+        params = [Parameter("self", Parameter.POSITIONAL_ONLY)]
         for i in positional_args:
-            params.append(_Parameter(i, _Parameter.POSITIONAL_OR_KEYWORD))
+            params.append(Parameter(i, Parameter.POSITIONAL_OR_KEYWORD))
         for i in optional_args:
-            params.append(_Parameter(i, _Parameter.KEYWORD_ONLY, default=None))
-        params.append(_Parameter("loc", _Parameter.KEYWORD_ONLY, default=None))
-        params.append(_Parameter("ip", _Parameter.KEYWORD_ONLY, default=None))
+            params.append(Parameter(i, Parameter.KEYWORD_ONLY, default=None))
+        params.append(Parameter("loc", Parameter.KEYWORD_ONLY, default=None))
+        params.append(Parameter("ip", Parameter.KEYWORD_ONLY, default=None))
 
-        return params
+        return Signature(params)
 
-    def _make_op_view_and_builder(self) -> Tuple[type, Callable]:
-        operands, attrs, results = self._partition_fields()
+    @classmethod
+    def _generate_init_method(cls, fields):
+        init_sig = cls._generate_init_signature(fields)
+        operands, attrs, results = partition_fields(fields)
 
-        operand_segments = Operation._generate_segments(operands)
-        result_segments = Operation._generate_segments(results)
+        def __init__(*args, **kwargs):
+            bound = init_sig.bind(*args, **kwargs)
+            bound.apply_defaults()
+            args = bound.arguments
 
-        params = self._generate_init_params()
-        init_sig = _Signature(params)
-        op = self
+            _operands = [args[operand.name] for operand in operands]
+            _results = [args[result.name] for result in results]
+            _attributes = dict(
+                (attr.name, args[attr.name])
+                for attr in attrs
+                if args[attr.name] is not None
+            )
+            _regions = None
+            _ods_successors = None
+            self = args["self"]
+            super(Operation, self).__init__(
+                self.OPERATION_NAME,
+                self._ODS_REGIONS,
+                self._ODS_OPERAND_SEGMENTS,
+                self._ODS_RESULT_SEGMENTS,
+                attributes=_attributes,
+                results=_results,
+                operands=_operands,
+                successors=_ods_successors,
+                regions=_regions,
+                loc=args["loc"],
+                ip=args["ip"],
+            )
 
-        class _OpView(_ods_ir.OpView):
-            OPERATION_NAME = f"{op.dialect_name}.{op.name}"
-            _ODS_REGIONS = (0, True)
-            _ODS_OPERAND_SEGMENTS = operand_segments
-            _ODS_RESULT_SEGMENTS = result_segments
+        __init__.__signature__ = init_sig
+        cls.__init__ = __init__
 
-            def __init__(*args, **kwargs):
-                bound = init_sig.bind(*args, **kwargs)
-                bound.apply_defaults()
-                args = bound.arguments
+    @classmethod
+    def _generate_class_attributes(cls, dialect_name, op_name, fields):
+        operands, attrs, results = partition_fields(fields)
 
-                _operands = [args[operand.name] for operand in operands]
-                _results = [args[result.name] for result in results]
-                _attributes = dict(
-                    (attr.name, args[attr.name])
-                    for attr in attrs
-                    if args[attr.name] is not None
-                )
-                _regions = None
-                _ods_successors = None
-                self = args["self"]
-                super(_OpView, self).__init__(
-                    self.OPERATION_NAME,
-                    self._ODS_REGIONS,
-                    self._ODS_OPERAND_SEGMENTS,
-                    self._ODS_RESULT_SEGMENTS,
-                    attributes=_attributes,
-                    results=_results,
-                    operands=_operands,
-                    successors=_ods_successors,
-                    regions=_regions,
-                    loc=args["loc"],
-                    ip=args["ip"],
-                )
+        operand_segments = cls._generate_segments(operands)
+        result_segments = cls._generate_segments(results)
 
-            __init__.__signature__ = init_sig
+        cls.OPERATION_NAME = f"{dialect_name}.{op_name}"
+        cls._ODS_REGIONS = (0, True)
+        cls._ODS_OPERAND_SEGMENTS = operand_segments
+        cls._ODS_RESULT_SEGMENTS = result_segments
 
+    @classmethod
+    def _generate_attr_properties(cls, attrs):
         for attr in attrs:
             setattr(
-                _OpView,
+                cls,
                 attr.name,
                 property(lambda self, name=attr.name: self.attributes[name]),
             )
 
-        def value_range_getter(
-            value_range: Union[_ods_ir.OpOperandList, _ods_ir.OpResultList],
-            variadicity: Variadicity,
-        ):
-            if variadicity == Variadicity.single:
-                return value_range[0]
-            if variadicity == Variadicity.optional:
-                return value_range[0] if len(value_range) > 0 else None
-            return value_range
-
+    @classmethod
+    def _generate_operand_properties(cls, operands):
         for i, operand in enumerate(operands):
-            if operand_segments:
+            if cls._ODS_OPERAND_SEGMENTS:
 
                 def getter(self, i=i, operand=operand):
-                    operand_range = _ods_segmented_accessor(
+                    operand_range = segmented_accessor(
                         self.operation.operands,
                         self.operation.attributes["operandSegmentSizes"],
                         i,
                     )
-                    return value_range_getter(operand_range, operand.variadicity)
+                    return normalize_value_range(operand_range, operand.variadicity)
 
-                setattr(_OpView, operand.name, property(getter))
+                setattr(cls, operand.name, property(getter))
             else:
-                setattr(
-                    _OpView, operand.name, property(lambda self, i=i: self.operands[i])
-                )
+                setattr(cls, operand.name, property(lambda self, i=i: self.operands[i]))
+
+    @classmethod
+    def _generate_result_properties(cls, results):
         for i, result in enumerate(results):
-            if result_segments:
+            if cls._ODS_RESULT_SEGMENTS:
 
                 def getter(self, i=i, result=result):
-                    result_range = _ods_segmented_accessor(
+                    result_range = segmented_accessor(
                         self.operation.results,
                         self.operation.attributes["resultSegmentSizes"],
                         i,
                     )
-                    return value_range_getter(result_range, result.variadicity)
+                    return normalize_value_range(result_range, result.variadicity)
 
-                setattr(_OpView, result.name, property(getter))
+                setattr(cls, result.name, property(getter))
             else:
-                setattr(
-                    _OpView, result.name, property(lambda self, i=i: self.results[i])
+                setattr(cls, result.name, property(lambda self, i=i: self.results[i]))
+
+    @classmethod
+    def _emit_operation(cls) -> None:
+        ctx = ConstraintLoweringContext()
+        operands, attrs, results = partition_fields(cls._fields)
+
+        op = irdl.operation_(cls._op_name)
+        with ir.InsertionPoint(op.body):
+            if operands:
+                irdl.operands_(
+                    [ctx.lower(i.constraint) for i in operands],
+                    [i.name for i in operands],
+                    [i.variadicity for i in operands],
                 )
-
-        def _builder(*args, **kwargs) -> _OpView:
-            return _OpView(*args, **kwargs)
-
-        _builder.__signature__ = _Signature(params[1:])
-
-        return _OpView, _builder
+            if attrs:
+                irdl.attributes_(
+                    [ctx.lower(i.constraint) for i in attrs],
+                    [i.name for i in attrs],
+                )
+            if results:
+                irdl.results_(
+                    [ctx.lower(i.constraint) for i in results],
+                    [i.name for i in results],
+                    [i.variadicity for i in results],
+                )
 
 
 class Dialect:
     def __init__(self, name: str):
         self.name = name
-        self.operations: List[Operation] = []
-        self.namespace = _SimpleNameSpace()
+        self.operations = []
+        self.Operation = type(
+            "Operation",
+            (Operation,),
+            {"_dialect_obj": self, "_dialect_name": name},
+        )
 
-    def _emit(self) -> None:
-        d = _irdl.dialect(self.name)
-        with _ods_ir.InsertionPoint(d.body):
+    def _emit_dialect(self) -> None:
+        d = irdl.dialect(self.name)
+        with ir.InsertionPoint(d.body):
             for op in self.operations:
-                op._emit()
+                op._emit_operation()
 
-    def _make_module(self) -> _ods_ir.Module:
-        with _ods_ir.Location.unknown():
-            m = _ods_ir.Module.create()
-            with _ods_ir.InsertionPoint(m.body):
-                self._emit()
+    def _emit_module(self) -> ir.Module:
+        m = ir.Module.create()
+        with ir.InsertionPoint(m.body):
+            self._emit_dialect()
+
         return m
 
     def _make_dialect_class(self) -> type:
-        class _Dialect(_ods_ir.Dialect):
-            DIALECT_NAMESPACE = self.name
+        return type("Dialect", (ir.Dialect,), {"DIALECT_NAMESPACE": self.name})
 
-        return _Dialect
+    def load(self) -> None:
+        if hasattr(self, "mlir_module"):
+            raise RuntimeError(f"Dialect {self.name} is already loaded.")
 
-    def load(self) -> _SimpleNameSpace:
-        _irdl.load_dialects(self._make_module())
+        mlir_module = self._emit_module()
+        irdl.load_dialects(mlir_module)
+
         dialect_class = self._make_dialect_class()
-        _ods_cext.register_dialect(dialect_class)
-        for op in self.operations:
-            _ods_cext.register_operation(dialect_class)(op.op_view)
-        return self.namespace
+        _cext.register_dialect(dialect_class)
 
-    @staticmethod
-    def _op_name_to_python_id(name: str) -> str:
-        return name.replace(".", "_").replace("$", "_")
+        # for op in self.operations:
+        # _cext.register_operation(dialect_class)(op)
 
-    def op(self, name: str) -> Callable[[type], type]:
-        def decorator(cls: type) -> type:
-            fields = [
-                field for field in cls.__dict__.values() if isinstance(field, _FieldDef)
-            ]
-            op_def = Operation(self.name, name, fields)
-
-            op_view, builder = op_def._make_op_view_and_builder()
-            op_view.__name__ = cls.__name__
-            setattr(op_def, "op_view", op_view)
-            setattr(op_def, "builder", builder)
-            self.operations.append(op_def)
-
-            self.namespace.__dict__[cls.__name__] = op_view
-            self.namespace.__dict__[Dialect._op_name_to_python_id(name)] = builder
-
-            return cls
-
-        return decorator
+        self.mlir_module = mlir_module
+        self.dialect_class = dialect_class

@@ -17,15 +17,13 @@ def run(f):
 def testMyInt():
     myint = irdsl.Dialect("myint")
     iattr = irdsl.BaseName("#builtin.integer")
-    i32 = irdsl.IsType(IntegerType.get_signless(32))
+    i32 = irdsl.Is(IntegerType.get_signless(32))
 
-    @myint.op("constant")
-    class ConstantOp:
+    class ConstantOp(myint.Operation, name="constant"):
         value = irdsl.Attribute(iattr)
         cst = irdsl.Result(i32)
 
-    @myint.op("add")
-    class AddOp:
+    class AddOp(myint.Operation, name="add"):
         lhs = irdsl.Operand(i32)
         rhs = irdsl.Operand(i32)
         res = irdsl.Result(i32)
@@ -43,21 +41,22 @@ def testMyInt():
     # CHECK:     irdl.results(res: %0)
     # CHECK:   }
     # CHECK: }
-    print(myint._make_module())
-    myint = myint.load()
+    with Location.unknown():
+        myint.load()
+    print(myint.mlir_module)
 
-    # CHECK: ['ConstantOp', 'constant', 'AddOp', 'add']
-    print([i for i in myint.__dict__.keys()])
+    # CHECK: ['constant', 'add']
+    print([i._op_name for i in myint.operations])
 
     i32 = IntegerType.get_signless(32)
     with Location.unknown():
         module = Module.create()
         with InsertionPoint(module.body):
-            two = myint.constant(i32, IntegerAttr.get(i32, 2))
-            three = myint.constant(i32, IntegerAttr.get(i32, 3))
-            add1 = myint.add(i32, two, three)
-            add2 = myint.add(i32, add1, two)
-            add3 = myint.add(i32, add2, three)
+            two = ConstantOp(i32, IntegerAttr.get(i32, 2))
+            three = ConstantOp(i32, IntegerAttr.get(i32, 3))
+            add1 = AddOp(i32, two, three)
+            add2 = AddOp(i32, add1, two)
+            add3 = AddOp(i32, add2, three)
 
     # CHECK: %0 = "myint.constant"() {value = 2 : i32} : () -> i32
     # CHECK: %1 = "myint.constant"() {value = 3 : i32} : () -> i32
@@ -85,25 +84,24 @@ def testMyInt():
     print(two.value)
     # CHECK: Value(%0
     print(two.cst)
-    # CHECK: (res, lhs, rhs, *, loc=None, ip=None)
-    print(myint.add.__signature__)
-    # CHECK: (cst, value, *, loc=None, ip=None)
-    print(myint.constant.__signature__)
+    # CHECK: (self, /, res, lhs, rhs, *, loc=None, ip=None)
+    print(AddOp.__init__.__signature__)
+    # CHECK: (self, /, cst, value, *, loc=None, ip=None)
+    print(ConstantOp.__init__.__signature__)
 
 
 @run
 def testIRDSL():
     test = irdsl.Dialect("irdsl_test")
-    i32 = irdsl.IsType(IntegerType.get_signless(32))
-    i64 = irdsl.IsType(IntegerType.get_signless(64))
+    i32 = irdsl.Is(IntegerType.get_signless(32))
+    i64 = irdsl.Is(IntegerType.get_signless(64))
     i32or64 = i32 | i64
     any = irdsl.Any()
-    f32 = irdsl.IsType(F32Type.get())
+    f32 = irdsl.Is(F32Type.get())
     iattr = irdsl.BaseName("#builtin.integer")
     fattr = irdsl.BaseName("#builtin.float")
 
-    @test.op("constraint")
-    class ConstraintOp:
+    class ConstraintOp(test.Operation, name="constraint"):
         a = irdsl.Operand(i32or64)
         b = irdsl.Operand(any)
         c = irdsl.Operand(f32 | i32)
@@ -111,21 +109,18 @@ def testIRDSL():
         x = irdsl.Attribute(iattr)
         y = irdsl.Attribute(fattr)
 
-    @test.op("optional")
-    class OptionalOp:
+    class OptionalOp(test.Operation, name="optional"):
         a = irdsl.Operand(i32)
         b = irdsl.Operand(i32, irdsl.Variadicity.optional)
         out1 = irdsl.Result(i32)
         out2 = irdsl.Result(i32, irdsl.Variadicity.optional)
         out3 = irdsl.Result(i32)
 
-    @test.op("optional2")
-    class Optional2Op:
+    class Optional2Op(test.Operation, name="optional2"):
         a = irdsl.Operand(i32, irdsl.Variadicity.optional)
         b = irdsl.Result(i32, irdsl.Variadicity.optional)
 
-    @test.op("variadic")
-    class VariadicOp:
+    class VariadicOp(test.Operation, name="variadic"):
         a = irdsl.Operand(i32)
         b = irdsl.Operand(i32, irdsl.Variadicity.optional)
         c = irdsl.Operand(i32, irdsl.Variadicity.variadic)
@@ -134,13 +129,11 @@ def testIRDSL():
         out3 = irdsl.Result(i32, irdsl.Variadicity.optional)
         out4 = irdsl.Result(i32)
 
-    @test.op("variadic2")
-    class Variadic2Op:
+    class Variadic2Op(test.Operation, name="variadic2"):
         a = irdsl.Operand(i32, irdsl.Variadicity.variadic)
         b = irdsl.Result(i32, irdsl.Variadicity.variadic)
 
-    @test.op("mixed")
-    class MixedOp:
+    class MixedOp(test.Operation, name="mixed"):
         out = irdsl.Result(i32)
         in1 = irdsl.Operand(i32)
         in2 = irdsl.Attribute(iattr)
@@ -189,34 +182,33 @@ def testIRDSL():
     # CHECK:     irdl.results(out: %0)
     # CHECK:   }
     # CHECK: }
-    print(test._make_module())
-    test = test.load()
+    with Location.unknown():
+        test.load()
+    print(test.mlir_module)
 
-    # CHECK: (a, b, c, d, x, y, *, loc=None, ip=None)
-    print(test.constraint.__signature__)
-    # CHECK: (out1, out3, a, *, out2=None, b=None, loc=None, ip=None)
-    print(test.optional.__signature__)
-    # CHECK: (*, b=None, a=None, loc=None, ip=None)
-    print(test.optional2.__signature__)
-    # CHECK: (out1, out2, out4, a, c, *, out3=None, b=None, loc=None, ip=None)
-    print(test.variadic.__signature__)
-    # CHECK: (b, a, *, loc=None, ip=None)
-    print(test.variadic2.__signature__)
-    # CHECK: (out, in1, in2, in4, in5, *, in3=None, loc=None, ip=None)
-    print(test.mixed.__signature__)
+    # CHECK: (self, /, a, b, c, d, x, y, *, loc=None, ip=None)
+    print(ConstraintOp.__init__.__signature__)
+    # CHECK: (self, /, out1, out3, a, *, out2=None, b=None, loc=None, ip=None)
+    print(OptionalOp.__init__.__signature__)
+    # CHECK: (self, /, *, b=None, a=None, loc=None, ip=None)
+    print(Optional2Op.__init__.__signature__)
+    # CHECK: (self, /, out1, out2, out4, a, c, *, out3=None, b=None, loc=None, ip=None)
+    print(VariadicOp.__init__.__signature__)
+    # CHECK: (self, /, b, a, *, loc=None, ip=None)
+    print(Variadic2Op.__init__.__signature__)
+    # CHECK: (self, /, out, in1, in2, in4, in5, *, in3=None, loc=None, ip=None)
+    print(MixedOp.__init__.__signature__)
 
     # CHECK: None None
-    print(
-        test.ConstraintOp._ODS_OPERAND_SEGMENTS, test.ConstraintOp._ODS_RESULT_SEGMENTS
-    )
+    print(ConstraintOp._ODS_OPERAND_SEGMENTS, ConstraintOp._ODS_RESULT_SEGMENTS)
     # CHECK: [1, 0] [1, 0, 1]
-    print(test.OptionalOp._ODS_OPERAND_SEGMENTS, test.OptionalOp._ODS_RESULT_SEGMENTS)
+    print(OptionalOp._ODS_OPERAND_SEGMENTS, OptionalOp._ODS_RESULT_SEGMENTS)
     # CHECK: [0] [0]
-    print(test.Optional2Op._ODS_OPERAND_SEGMENTS, test.Optional2Op._ODS_RESULT_SEGMENTS)
+    print(Optional2Op._ODS_OPERAND_SEGMENTS, Optional2Op._ODS_RESULT_SEGMENTS)
     # CHECK: [1, 0, -1] [-1, -1, 0, 1]
-    print(test.VariadicOp._ODS_OPERAND_SEGMENTS, test.VariadicOp._ODS_RESULT_SEGMENTS)
+    print(VariadicOp._ODS_OPERAND_SEGMENTS, VariadicOp._ODS_RESULT_SEGMENTS)
     # CHECK: [-1] [-1]
-    print(test.Variadic2Op._ODS_OPERAND_SEGMENTS, test.Variadic2Op._ODS_RESULT_SEGMENTS)
+    print(Variadic2Op._ODS_OPERAND_SEGMENTS, Variadic2Op._ODS_RESULT_SEGMENTS)
 
     i32 = IntegerType.get_signless(32)
     i64 = IntegerType.get_signless(64)
@@ -232,42 +224,42 @@ def testIRDSL():
             fone = arith.constant(f32, 1.2)
 
             # CHECK: "irdsl_test.constraint"(%c1_i32, %c1_i32, %cst, %c1_i32) {x = 2 : i32, y = 2.300000e+00 : f32} : (i32, i32, f32, i32) -> ()
-            c1 = test.constraint(ione, ione, fone, ione, iattr, fattr)
+            c1 = ConstraintOp(ione, ione, fone, ione, iattr, fattr)
             # CHECK: "irdsl_test.constraint"(%c1_i32, %cst, %cst, %cst) {x = 2 : i32, y = 2.300000e+00 : f32} : (i32, f32, f32, f32) -> ()
-            test.constraint(ione, fone, fone, fone, iattr, fattr)
+            ConstraintOp(ione, fone, fone, fone, iattr, fattr)
             # CHECK: irdsl_test.constraint"(%c1_i32, %cst, %c1_i32, %cst) {x = 2 : i32, y = 2.300000e+00 : f32} : (i32, f32, i32, f32) -> ()
-            test.constraint(ione, fone, ione, fone, iattr, fattr)
+            ConstraintOp(ione, fone, ione, fone, iattr, fattr)
 
             # CHECK: %0:2 = "irdsl_test.optional"(%c1_i32) {operandSegmentSizes = array<i32: 1, 0>, resultSegmentSizes = array<i32: 1, 0, 1>} : (i32) -> (i32, i32)
-            o1 = test.optional(i32, i32, ione)
+            o1 = OptionalOp(i32, i32, ione)
             # CHECK: %1:3 = "irdsl_test.optional"(%c1_i32, %c1_i32) {operandSegmentSizes = array<i32: 1, 1>, resultSegmentSizes = array<i32: 1, 1, 1>} : (i32, i32) -> (i32, i32, i32)
-            o2 = test.optional(i32, i32, ione, out2=i32, b=ione)
+            o2 = OptionalOp(i32, i32, ione, out2=i32, b=ione)
             # CHECK: irdsl_test.optional2"() {operandSegmentSizes = array<i32: 0>, resultSegmentSizes = array<i32: 0>} : () -> ()
-            o3 = test.optional2()
+            o3 = Optional2Op()
             # CHECK: %2 = "irdsl_test.optional2"() {operandSegmentSizes = array<i32: 0>, resultSegmentSizes = array<i32: 1>} : () -> i32
-            o4 = test.optional2(b=i32)
+            o4 = Optional2Op(b=i32)
             # CHECK: "irdsl_test.optional2"(%c1_i32) {operandSegmentSizes = array<i32: 1>, resultSegmentSizes = array<i32: 0>} : (i32) -> ()
-            o5 = test.optional2(a=ione)
+            o5 = Optional2Op(a=ione)
             # CHECK: %3 = "irdsl_test.optional2"(%c1_i32) {operandSegmentSizes = array<i32: 1>, resultSegmentSizes = array<i32: 1>} : (i32) -> i32
-            o6 = test.optional2(b=i32, a=ione)
+            o6 = Optional2Op(b=i32, a=ione)
 
             # CHECK: %4:4 = "irdsl_test.variadic"(%c1_i32, %c1_i32, %c1_i32) {operandSegmentSizes = array<i32: 1, 0, 2>, resultSegmentSizes = array<i32: 1, 2, 0, 1>} : (i32, i32, i32) -> (i32, i32, i32, i32)
-            v1 = test.variadic([i32], [i32, i32], i32, ione, [ione, ione])
+            v1 = VariadicOp([i32], [i32, i32], i32, ione, [ione, ione])
             # CHECK: %5:5 = "irdsl_test.variadic"(%c1_i32, %c1_i32, %c1_i32) {operandSegmentSizes = array<i32: 1, 1, 1>, resultSegmentSizes = array<i32: 1, 2, 1, 1>} : (i32, i32, i32) -> (i32, i32, i32, i32, i32)
-            v2 = test.variadic([i32], [i32, i32], i32, ione, [ione], out3=i32, b=ione)
+            v2 = VariadicOp([i32], [i32, i32], i32, ione, [ione], out3=i32, b=ione)
             # CHECK: %6:4 = "irdsl_test.variadic"(%c1_i32) {operandSegmentSizes = array<i32: 1, 0, 0>, resultSegmentSizes = array<i32: 2, 1, 0, 1>} : (i32) -> (i32, i32, i32, i32)
-            v3 = test.variadic([i32, i32], [i32], i32, ione, [])
+            v3 = VariadicOp([i32, i32], [i32], i32, ione, [])
             # CHECK: "irdsl_test.variadic2"() {operandSegmentSizes = array<i32: 0>, resultSegmentSizes = array<i32: 0>} : () -> ()
-            v4 = test.variadic2([], [])
+            v4 = Variadic2Op([], [])
             # CHECK: "irdsl_test.variadic2"(%c1_i32, %c1_i32, %c1_i32) {operandSegmentSizes = array<i32: 3>, resultSegmentSizes = array<i32: 0>} : (i32, i32, i32) -> ()
-            v5 = test.variadic2([], [ione, ione, ione])
+            v5 = Variadic2Op([], [ione, ione, ione])
             # CHECK: %7:2 = "irdsl_test.variadic2"(%c1_i32) {operandSegmentSizes = array<i32: 1>, resultSegmentSizes = array<i32: 2>} : (i32) -> (i32, i32)
-            v6 = test.variadic2([i32, i32], [ione])
+            v6 = Variadic2Op([i32, i32], [ione])
 
             # CHECK: %8 = "irdsl_test.mixed"(%c1_i32, %c1_i32) {in2 = 2 : i32, in4 = 2 : i32, operandSegmentSizes = array<i32: 1, 0, 1>} : (i32, i32) -> i32
-            m1 = test.mixed(i32, ione, iattr, iattr, ione)
+            m1 = MixedOp(i32, ione, iattr, iattr, ione)
             # CHECK: %9 = "irdsl_test.mixed"(%c1_i32, %c1_i32, %c1_i32) {in2 = 2 : i32, in4 = 2 : i32, operandSegmentSizes = array<i32: 1, 1, 1>} : (i32, i32, i32) -> i32
-            m2 = test.mixed(i32, ione, iattr, iattr, ione, in3=ione)
+            m2 = MixedOp(i32, ione, iattr, iattr, ione, in3=ione)
 
     print(module)
     assert module.operation.verify()
