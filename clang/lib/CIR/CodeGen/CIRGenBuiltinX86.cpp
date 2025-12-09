@@ -20,6 +20,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -162,7 +163,7 @@ static mlir::Value getBoolMaskVecValue(CIRGenBuilderTy &builder,
   mlir::Value maskVec = builder.createBitcast(mask, maskTy);
 
   if (numElems < 8) {
-    SmallVector<mlir::Attribute, 4> indices;
+    SmallVector<mlir::Attribute> indices;
     indices.reserve(numElems);
     mlir::Type i32Ty = builder.getSInt32Ty();
     for (auto i : llvm::seq<unsigned>(0, numElems))
@@ -176,8 +177,9 @@ static mlir::Value getBoolMaskVecValue(CIRGenBuilderTy &builder,
 static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
                                  mlir::Value mask, mlir::Value op0,
                                  mlir::Value op1) {
+  auto constOp = mlir::dyn_cast_or_null<cir::ConstantOp>(mask.getDefiningOp());
   // If the mask is all ones just return first argument.
-  if (cir::ConstantOp::isAllOnesValue(mask))
+  if (constOp && constOp.isAllOnesValue())
     return op0;
 
   mask = getBoolMaskVecValue(builder, loc, mask,
@@ -937,9 +939,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     int64_t indices[16];
     std::iota(indices, indices + numElts, index);
 
-    mlir::Value zero = builder.getNullValue(ops[0].getType(), loc);
-    mlir::Value res =
-        builder.createVecShuffle(loc, ops[0], zero, ArrayRef(indices, numElts));
+    mlir::Value poison =
+        builder.getConstant(loc, cir::PoisonAttr::get(ops[0].getType()));
+    mlir::Value res = builder.createVecShuffle(loc, ops[0], poison,
+                                               ArrayRef(indices, numElts));
     if (ops.size() == 4)
       res = emitX86Select(builder, loc, ops[3], res, ops[2]);
 

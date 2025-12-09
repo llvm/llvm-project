@@ -425,23 +425,18 @@ def CIR_ConstantOp : CIR_Op<"const", [
         return boolAttr.getValue();
       llvm_unreachable("Expected a BoolAttr in ConstantOp");
     }
-    static bool isAllOnesValue(mlir::Value value) {
-      auto constOp = mlir::dyn_cast_or_null<cir::ConstantOp>(value.getDefiningOp());
-      if (!constOp)
-        return false;
-
+    bool isAllOnesValue() {
       // Check for -1 integers
-      if (auto intAttr = constOp.getValueAttr<cir::IntAttr>())
+      if (auto intAttr = getValueAttr<cir::IntAttr>())
         return intAttr.getValue().isAllOnes();
 
       // Check for FP which are bitcasted from -1 integers
-      if (auto fpAttr = constOp.getValueAttr<cir::FPAttr>())
+      if (auto fpAttr = getValueAttr<cir::FPAttr>())
         return fpAttr.getValue().bitcastToAPInt().isAllOnes();
 
-
       // Check for constant vectors with splat values
-      if (cir::VectorType v = mlir::dyn_cast<cir::VectorType>(constOp.getType()))
-        if (auto vecAttr = constOp.getValueAttr<mlir::DenseElementsAttr>())
+      if (cir::VectorType v = mlir::dyn_cast<cir::VectorType>(getType()))
+        if (auto vecAttr = getValueAttr<mlir::DenseElementsAttr>())
           if (vecAttr.isSplat()) {
             auto splatAttr = vecAttr.getSplatValue<mlir::Attribute>();
             if (auto splatInt = mlir::dyn_cast<cir::IntAttr>(splatAttr)) {
@@ -1896,10 +1891,16 @@ def CIR_SelectOp : CIR_Op<"select", [
   let summary = "Yield one of two values based on a boolean value";
   let description = [{
     The `cir.select` operation takes three operands. The first operand
-    `condition` is either a boolean value of type `!cir.bool` or a boolean vector of type `!cir.bool`. 
-    The second and the third operand can be of any CIR types, but their types must be the same. If the
-    first operand is `true`, the operation yields its second operand. Otherwise,
-    the operation yields its third operand.
+    `condition` is either a boolean value of type `!cir.bool` or a boolean
+    vector of type `!cir.bool`.  The second and the third operand can be of
+    any CIR types, but their types must be the same. If the first operand 
+    is `true`, the operation yields its second operand. Otherwise, the
+    operation yields its third operand.
+
+    In the case where the first operand is a boolean vector, then the second 
+    and third operand needs to also be of some vectors of the same type to
+    each other and that the number of elements of all three operands needs to 
+    be the same as well.
 
     Example:
 
