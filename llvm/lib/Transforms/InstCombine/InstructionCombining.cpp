@@ -5084,8 +5084,9 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
     auto *U = Worklist.pop_back_val();
     Value *V = U->get();
     if (!CanPushFreeze(V)) {
-      // If we can't push through the original instruction, abort the transform.
-      if (U == OrigUse)
+      // If we can't push through the original instruction or a PHI, abort the
+      // transform.
+      if (U == OrigUse || isa<PHINode>(V))
         return nullptr;
 
       auto *UserI = cast<Instruction>(U->getUser());
