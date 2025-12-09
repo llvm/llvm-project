@@ -972,13 +972,13 @@ Being more specific, in case of exceptions, LLDB might assume that the given
 object has no children or it might skip printing some children, as they are
 printed one by one.
 
-[1] The `max_children` argument is optional (since lldb 3.8.0) and indicates the
+[1] The ``max_children`` argument is optional (since lldb 3.8.0) and indicates the
 maximum number of children that lldb is interested in (at this moment). If the
 computation of the number of children is expensive (for example, requires
 traversing a linked list to determine its size) your implementation may return
-`max_children` rather than the actual number. If the computation is cheap (e.g., the
+``max_children`` rather than the actual number. If the computation is cheap (e.g., the
 number is stored as a field of the object), then you can always return the true
-number of children (that is, ignore the `max_children` argument).
+number of children (that is, ignore the ``max_children`` argument).
 
 [2] This method is optional. Also, a boolean value must be returned (since lldb
 3.1.0). If ``False`` is returned, then whenever the process reaches a new stop,
