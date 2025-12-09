@@ -18,6 +18,9 @@ constexpr int fully_constexpr() {
 constexpr int i = fully_constexpr();
 int use_i = i;
 
+const int j = (__builtin_assume_dereferenceable((int*)0x1234, 4), 200);
+int use_j = j;
+
 void test_nullptr() {
   __builtin_assume_dereferenceable(nullptr, 0);
 }
@@ -31,7 +34,12 @@ void test_function_ptr() {
   __builtin_assume_dereferenceable((void*)&test_zero_size, 8);
 }
 
+void test_integral_ptr() {
+  __builtin_assume_dereferenceable((int*)0x1234, 4);
+}
+
 // CHECK: @use_i = global i32 100
+// CHECK: @use_j = global i32 0
 //
 // CHECK: @{{_Z[0-9]+}}test_nullptrv
 // CHECK: call void @llvm.assume(i1 true) [ "dereferenceable"(ptr null, i64 0) ]
@@ -41,6 +49,9 @@ void test_function_ptr() {
 //
 // CHECK: @{{_Z[0-9]+}}test_function_ptrv
 // CHECK: call void @llvm.assume(i1 true) [ "dereferenceable"(ptr @{{_Z[0-9]+}}test_zero_sizev, i64 8) ]
+//
+// CHECK: @{{_Z[0-9]+}}test_integral_ptrv
+// CHECK: call void @llvm.assume(i1 true) [ "dereferenceable"(ptr inttoptr (i64 4660 to ptr), i64 4) ]
 //
 // CHECK: __cxx_global_var_init
 // CHECK: call void @llvm.assume(i1 true) [ "dereferenceable"(ptr getelementptr inbounds (i8, ptr @b, i64 1), i64 3) ]
