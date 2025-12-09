@@ -750,6 +750,20 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimpleGPU) {
   EXPECT_TRUE(
       isa<GlobalVariable>(Parallel60CI->getArgOperand(0)->stripPointerCasts()));
   EXPECT_EQ(Parallel60CI, Usr);
+
+  ASSERT_TRUE(isa<CallInst>(WrapperUsr));
+  CallInst *OutlinedCI = dyn_cast<CallInst>(WrapperUsr);
+  ASSERT_NE(OutlinedCI, nullptr);
+  EXPECT_EQ(OutlinedCI->getCalledFunction(), OutlinedFn);
+
+  Function *WrapperFn = OutlinedCI->getFunction();
+  EXPECT_TRUE(WrapperFn->hasInternalLinkage());
+  EXPECT_EQ(WrapperFn->arg_size(), 2U);
+  EXPECT_EQ(WrapperFn->getArg(0)->getType(),
+            IntegerType::getInt16Ty(M->getContext()));
+  EXPECT_EQ(WrapperFn->getArg(1)->getType(),
+            IntegerType::getInt32Ty(M->getContext()));
+
   M->setDataLayout(oldDLStr);
 }
 
