@@ -877,7 +877,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
   // Write Result to ResultPtr and put Overflow on the stack.
   assignInteger(S, ResultPtr, ResultT, Result);
   if (ResultPtr.canBeInitialized())
-    ResultPtr.initialize(S);
+    ResultPtr.initialize();
 
   assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
@@ -934,7 +934,7 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
   assignInteger(S, CarryOutPtr, CarryOutT, CarryOut);
-  CarryOutPtr.initialize(S);
+  CarryOutPtr.initialize();
 
   assert(Call->getType() == Call->getArg(0)->getType());
   pushInteger(S, Result, Call->getType());
@@ -1743,7 +1743,7 @@ static bool interp__builtin_elementwise_countzeroes(InterpState &S,
       } else {
         Dst.atIndex(I).deref<T>() = T::from(EltVal.countLeadingZeros());
       }
-      Dst.atIndex(I).initialize(S);
+      Dst.atIndex(I).initialize();
     });
   }
 
@@ -1960,7 +1960,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   // Now, read both pointers to a buffer and compare those.
   BitcastBuffer BufferA(
       Bits(ASTCtx.getTypeSize(ElemTypeA) * PtrA.getNumElems()));
-  readPointerToBuffer(S, S.getContext(), PtrA, BufferA, false);
+  readPointerToBuffer(S.getContext(), PtrA, BufferA, false);
   // FIXME: The swapping here is UNDOING something we do when reading the
   // data into the buffer.
   if (ASTCtx.getTargetInfo().isBigEndian())
@@ -1968,7 +1968,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
 
   BitcastBuffer BufferB(
       Bits(ASTCtx.getTypeSize(ElemTypeB) * PtrB.getNumElems()));
-  readPointerToBuffer(S, S.getContext(), PtrB, BufferB, false);
+  readPointerToBuffer(S.getContext(), PtrB, BufferB, false);
   // FIXME: The swapping here is UNDOING something we do when reading the
   // data into the buffer.
   if (ASTCtx.getTargetInfo().isBigEndian())
@@ -5667,7 +5667,7 @@ bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
 
   INT_TYPE_SWITCH(FieldT,
                   FieldPtr.deref<T>() = T::from(IntValue.getSExtValue()));
-  FieldPtr.initialize(S);
+  FieldPtr.initialize();
   return true;
 }
 
@@ -5723,7 +5723,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
       TYPE_SWITCH(*FT, {
         DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
         if (Src.atField(F.Offset).isInitialized())
-          DestField.initialize(S);
+          DestField.initialize();
         if (Activate)
           DestField.activate();
       });
@@ -5761,7 +5761,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
       return false;
   }
 
-  Dest.initialize(S);
+  Dest.initialize();
   return true;
 }
 
@@ -5782,7 +5782,7 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
       Pointer DestElem = Dest.atIndex(I);
       TYPE_SWITCH(ET, {
         DestElem.deref<T>() = Src.elem<T>(I);
-        DestElem.initialize(S);
+        DestElem.initialize();
       });
     }
     return true;
