@@ -37,6 +37,8 @@ add_llvm_target(HexagonCodeGen
   HexagonGenMemAbsolute.cpp
   HexagonGenMux.cpp
   HexagonGenPredicate.cpp
+  HexagonGenWideningVecFloatInstr.cpp
+  HexagonGenWideningVecInstr.cpp
   HexagonHardwareLoops.cpp
   HexagonHazardRecognizer.cpp
   HexagonInstrInfo.cpp
@@ -53,6 +55,7 @@ add_llvm_target(HexagonCodeGen
   HexagonNewValueJump.cpp
   HexagonOptAddrMode.cpp
   HexagonOptimizeSZextends.cpp
+  HexagonOptShuffleVector.cpp
   HexagonPeephole.cpp
   HexagonQFPOptimizer.cpp
   HexagonRDFOpt.cpp

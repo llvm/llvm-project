@@ -28,6 +28,7 @@ if (LLDB_ENABLE_PYTHON AND SPHINX_FOUND)
     add_custom_target(lldb-python-doc-package
       COMMAND "${CMAKE_COMMAND}" -E copy "${lldb_bindings_dir}/lldb.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/__init__.py"
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/lldb/plugins"
+      COMMAND "${CMAKE_COMMAND}" -E copy "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_frame_provider.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/plugins/"
       COMMAND "${CMAKE_COMMAND}" -E copy "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_process.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/plugins/"
       COMMAND "${CMAKE_COMMAND}" -E copy "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_platform.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/plugins/"
       COMMAND "${CMAKE_COMMAND}" -E copy "${LLDB_SOURCE_DIR}/examples/python/templates/operating_system.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/plugins/"
