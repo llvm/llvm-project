@@ -954,7 +954,8 @@ public:
   clang::QualType buildFunctionArgList(clang::GlobalDecl gd,
                                        FunctionArgList &args);
 
-  /// Emit the function prologue: declare function arguments in the symbol table.
+  /// Emit the function prologue: declare function arguments in the symbol
+  /// table.
   void emitFunctionProlog(const FunctionArgList &args, mlir::Block *entryBB,
                           const FunctionDecl *fd, SourceLocation bodyBeginLoc);
 
