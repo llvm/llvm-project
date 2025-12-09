@@ -58,7 +58,7 @@ struct ThowingIter {
   }
   friend constexpr bool operator==(ThowingIter, ThowingIter) = default;
 
-  friend constexpr T&& iter_move(const ThowingIter& it) noexcept(NoThrow) { return std::move(*it.p); }
+  friend constexpr decltype(auto) iter_move(const ThowingIter& it) noexcept(NoThrow) { return std::move(*it.p); }
 };
 
 struct Range : std::ranges::view_base {
@@ -100,8 +100,30 @@ constexpr bool test() {
     using Iter  = decltype(cv.begin());
     using CIter = decltype(std::as_const(cv).begin());
 
-    static_assert(noexcept(std::ranges::iter_move(std::declval<Iter&>())));
-    static_assert(noexcept(std::ranges::iter_move(std::declval<CIter&>())));
+    static_assert(noexcept(std::ranges::iter_move(std::declval<Iter>())));
+    static_assert(noexcept(std::ranges::iter_move(std::declval<CIter>())));
+
+    auto it = cv.begin();
+    (void)std::ranges::iter_move(it);
+  }
+
+
+  {
+    // All underlying iter_move are noexcept
+    // underlying ranges have different
+    // => concat iter_move has noexcept(true)
+    using Iter_NoThrow     = ThowingIter<Ref, true>;
+    using Sentinel_NoThrow = sentinel_wrapper<Iter_NoThrow>;
+    using View_NoThrow     = MiniView<Iter_NoThrow, Sentinel_NoThrow>;
+    View_NoThrow v1(Iter_NoThrow(ref_buf), Sentinel_NoThrow(Iter_NoThrow(ref_buf + 1)));
+    View_NoThrow v2(Iter_NoThrow(ref_buf), Sentinel_NoThrow(Iter_NoThrow(ref_buf + 1)));
+
+    auto cv     = std::views::concat(v1, v2);
+    using Iter  = decltype(cv.begin());
+    using CIter = decltype(std::as_const(cv).begin());
+
+    static_assert(noexcept(std::ranges::iter_move(std::declval<Iter>())));
+    static_assert(noexcept(std::ranges::iter_move(std::declval<CIter>())));
 
     auto it = cv.begin();
     (void)std::ranges::iter_move(it);
@@ -123,8 +145,8 @@ constexpr bool test() {
     using Iter  = decltype(cv.begin());
     using CIter = decltype(std::as_const(cv).begin());
 
-    static_assert(!noexcept(std::ranges::iter_move(std::declval<Iter&>())));
-    static_assert(!noexcept(std::ranges::iter_move(std::declval<CIter&>())));
+    static_assert(!noexcept(std::ranges::iter_move(std::declval<Iter>())));
+    static_assert(!noexcept(std::ranges::iter_move(std::declval<CIter>())));
 
     auto it = cv.begin();
     (void)std::ranges::iter_move(it);
@@ -147,8 +169,8 @@ constexpr bool test() {
     using Iter  = decltype(cv.begin());
     using CIter = decltype(std::as_const(cv).begin());
 
-    static_assert(!noexcept(std::ranges::iter_move(std::declval<Iter&>())));
-    static_assert(!noexcept(std::ranges::iter_move(std::declval<CIter&>())));
+    static_assert(!noexcept(std::ranges::iter_move(std::declval<Iter>())));
+    static_assert(!noexcept(std::ranges::iter_move(std::declval<CIter>())));
 
     auto it = cv.begin();
     (void)std::ranges::iter_move(it);
@@ -171,8 +193,8 @@ constexpr bool test() {
     using Iter  = decltype(cv.begin());
     using CIter = decltype(std::as_const(cv).begin());
 
-    static_assert(noexcept(std::ranges::iter_move(std::declval<Iter&>())));
-    static_assert(noexcept(std::ranges::iter_move(std::declval<CIter&>())));
+    static_assert(noexcept(std::ranges::iter_move(std::declval<Iter>())));
+    static_assert(noexcept(std::ranges::iter_move(std::declval<CIter>())));
 
     auto it = cv.begin();
     (void)std::ranges::iter_move(it);
@@ -196,8 +218,8 @@ constexpr bool test() {
     using Iter  = decltype(cv.begin());
     using CIter = decltype(std::as_const(cv).begin());
 
-    static_assert(!noexcept(std::ranges::iter_move(std::declval<Iter&>())));
-    static_assert(!noexcept(std::ranges::iter_move(std::declval<CIter&>())));
+    static_assert(!noexcept(std::ranges::iter_move(std::declval<Iter>())));
+    static_assert(!noexcept(std::ranges::iter_move(std::declval<CIter>())));
 
     auto it = cv.begin();
     (void)std::ranges::iter_move(it);
