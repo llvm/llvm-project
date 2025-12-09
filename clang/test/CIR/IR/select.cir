@@ -13,4 +13,9 @@ module {
     %0 = cir.select if %arg0 then %arg1 else %arg2 : (!cir.vector<8 x !cir.bool>, !s32i, !s32i) -> !s32i
     cir.return %0 : !s32i
   }
+
+  cir.func @select_int_valid(%arg0 : !cir.bool, %arg1 : !cir.vector<8 x !s32i>, %arg2 : !cir.vector<8 x !s32i>) -> !cir.vector<8 x !s32i> {
+    %0 = cir.select if %arg0 then %arg1 else %arg2 : (!cir.bool, !cir.vector<8 x !s32i>, !cir.vector<8 x !s32i>) -> !cir.vector<8 x !s32i>
+    cir.return %0 : !cir.vector<8 x !s32i>
+  }
 }
