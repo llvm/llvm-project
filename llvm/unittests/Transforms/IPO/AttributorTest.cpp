@@ -17,7 +17,6 @@
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 #include "gtest/gtest.h"
-#include <memory>
 
 namespace llvm {
 
@@ -78,17 +77,17 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
   const char *ModuleString = R"(
     @x = external global i32
     define void @func4() {
-      store i32 0, i32* @x
+      store i32 0, ptr @x
       ret void
     }
 
     define internal void @func3() {
-      store i32 0, i32* @x
+      store i32 0, ptr @x
       ret void
     }
 
     define internal void @func8() {
-      store i32 0, i32* @x
+      store i32 0, ptr @x
       ret void
     }
 
@@ -105,7 +104,7 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
     }
 
     declare void @unknown()
-    define internal void @func5(void ()* %ptr) {
+    define internal void @func5(ptr %ptr) {
     entry:
       call void %ptr()
       call void @unknown()
@@ -114,8 +113,8 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
 
     define void @func6() {
     entry:
-      store i32 0, i32* @x
-      call void @func5(void ()* @func3)
+      store i32 0, ptr @x
+      call void @func5(ptr @func3)
       ret void
     }
 

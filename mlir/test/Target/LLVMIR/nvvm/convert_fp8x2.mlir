@@ -100,3 +100,37 @@ llvm.func @convert_bf16x2_to_f8x2_vector_return(%src : vector<2xbf16>) {
   %res2 = nvvm.convert.bf16x2.to.f8x2 %src {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<satfinite>} : vector<2xbf16> -> vector<2xi8> (f8E8M0FNU)
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: @convert_f8x2_to_f16x2
+llvm.func @convert_f8x2_to_f16x2_e4m3(%src : vector<2xi8>) {
+  // CHECK: %[[res1:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x half> @llvm.nvvm.e4m3x2.to.f16x2.rn(i16 %[[res1]])
+  %res1 = nvvm.convert.f8x2.to.f16x2 %src : vector<2xi8> (f8E4M3FN)-> vector<2xf16>
+  // CHECK: %[[res2:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x half> @llvm.nvvm.e4m3x2.to.f16x2.rn.relu(i16 %[[res2]])
+  %res2 = nvvm.convert.f8x2.to.f16x2 %src {relu = true} : vector<2xi8> (f8E4M3FN)-> vector<2xf16>
+  llvm.return
+}
+
+// CHECK-LABEL: @convert_f8x2_to_f16x2_e5m2
+llvm.func @convert_f8x2_to_f16x2_e5m2(%src : vector<2xi8>) {
+  // CHECK: %[[res1:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x half> @llvm.nvvm.e5m2x2.to.f16x2.rn(i16 %[[res1]])
+  %res1 = nvvm.convert.f8x2.to.f16x2 %src : vector<2xi8> (f8E5M2)-> vector<2xf16>
+  // CHECK: %[[res2:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x half> @llvm.nvvm.e5m2x2.to.f16x2.rn.relu(i16 %[[res2]])
+  %res2 = nvvm.convert.f8x2.to.f16x2 %src {relu = true} : vector<2xi8> (f8E5M2)-> vector<2xf16>
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @convert_f8x2_to_bf16x2_ue8m0
+llvm.func @convert_f8x2_to_bf16x2_ue8m0(%src : vector<2xi8>) {
+  // CHECK: %[[res1:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 %[[res1]])
+  %res1 = nvvm.convert.f8x2.to.bf16x2 %src : vector<2xi8> (f8E8M0FNU)-> vector<2xbf16>
+  llvm.return
+}

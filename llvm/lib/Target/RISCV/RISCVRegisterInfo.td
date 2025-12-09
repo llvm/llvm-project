@@ -222,6 +222,14 @@ def XLenFVT : ValueTypeByHwMode<[RV64],
                                 [f64]>;
 def XLenPairFVT : ValueTypeByHwMode<[RV32],
                                     [f64]>;
+
+// P extension
+def XLenVecI8VT : ValueTypeByHwMode<[RV32, RV64],
+                                    [v4i8, v8i8]>;
+def XLenVecI16VT : ValueTypeByHwMode<[RV32,  RV64],
+                                     [v2i16, v4i16]>;
+def XLenVecI32VT : ValueTypeByHwMode<[RV64],
+                                     [v2i32]>;
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
@@ -238,7 +246,9 @@ class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
 }
 
 class GPRRegisterClass<dag regList>
-    : RISCVRegisterClass<[XLenVT, XLenFVT], 32, regList> {
+    : RISCVRegisterClass<[XLenVT, XLenFVT,
+                          // P extension packed vector types:
+                          XLenVecI8VT, XLenVecI16VT, XLenVecI32VT], 32, regList> {
   let RegInfos = XLenRI;
 }
 
@@ -803,6 +813,7 @@ def VMV0 : VReg<VMaskVTs, (add V0), 1>;
 
 // The register class is added for inline assembly for vector mask types.
 def VM : VReg<VMaskVTs, (add VR), 1>;
+def VMNoV0 : VReg<VMaskVTs, (sub VR, V0), 1>;
 
 defvar VTupM1N2VTs = [riscv_nxv8i8x2, riscv_nxv4i8x2, riscv_nxv2i8x2, riscv_nxv1i8x2];
 defvar VTupM1N3VTs = [riscv_nxv8i8x3, riscv_nxv4i8x3, riscv_nxv2i8x3, riscv_nxv1i8x3];

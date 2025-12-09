@@ -33,6 +33,11 @@ struct SVEFrameSizes {
   } PPR, ZPR;
 };
 
+struct SVEStackAllocations {
+  StackOffset BeforePPRs, AfterPPRs, AfterZPRs;
+  StackOffset totalSize() const { return BeforePPRs + AfterPPRs + AfterZPRs; }
+};
+
 class AArch64PrologueEpilogueCommon {
 public:
   AArch64PrologueEpilogueCommon(MachineFunction &MF, MachineBasicBlock &MBB,
@@ -66,6 +71,7 @@ protected:
   bool shouldCombineCSRLocalStackBump(uint64_t StackBumpBytes) const;
 
   SVEFrameSizes getSVEStackFrameSizes() const;
+  SVEStackAllocations getSVEStackAllocations(SVEFrameSizes const &);
 
   MachineFunction &MF;
   MachineBasicBlock &MBB;
@@ -173,6 +179,10 @@ public:
 
 private:
   bool shouldCombineCSRLocalStackBump(uint64_t StackBumpBytes) const;
+
+  /// A helper for moving the SP to a negative offset from the FP, without
+  /// deallocating any stack in the range FP to FP + Offset.
+  void moveSPBelowFP(MachineBasicBlock::iterator MBBI, StackOffset Offset);
 
   void emitSwiftAsyncContextFramePointer(MachineBasicBlock::iterator MBBI,
                                          const DebugLoc &DL) const;

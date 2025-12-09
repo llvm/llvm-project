@@ -1,8 +1,13 @@
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN,CI %s
-; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
-; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN,CI %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN,CI %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
 
 ; Make sure to run a GPU with the SGPR allocation bug.
 

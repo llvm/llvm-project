@@ -12,7 +12,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
@@ -143,7 +143,8 @@ void HIPSPVToolChain::addClangTargetOptions(
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
-                         options::OPT_fvisibility_ms_compat))
+                         options::OPT_fvisibility_ms_compat) &&
+      !getDriver().IsFlangMode())
     CC1Args.append(
         {"-fvisibility=hidden", "-fapply-global-visibility-to-externs"});
 
@@ -211,7 +212,7 @@ HIPSPVToolChain::getDeviceLibs(
   // Find device libraries in --hip-device-lib-path and HIP_DEVICE_LIB_PATH.
   auto HipDeviceLibPathArgs = DriverArgs.getAllArgValues(
       // --hip-device-lib-path is alias to this option.
-      clang::driver::options::OPT_rocm_device_lib_path_EQ);
+      options::OPT_rocm_device_lib_path_EQ);
   for (auto Path : HipDeviceLibPathArgs)
     LibraryPaths.push_back(DriverArgs.MakeArgString(Path));
 

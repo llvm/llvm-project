@@ -15,6 +15,7 @@
 //   c. NDD (EVEX) -> non-NDD (legacy)
 //   d. NF_ND (EVEX) -> NF (EVEX)
 //   e. NonNF (EVEX) -> NF (EVEX)
+//   f. SETZUCCm (EVEX) -> SETCCm (legacy)
 //
 // Compression a, b and c can always reduce code size, with some exceptions
 // such as promoted 16-bit CRC32 which is as long as the legacy version.
@@ -216,14 +217,15 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
   //  memory form: broadcast
   //
   // APX:
-  //  MAP4: NDD
+  //  MAP4: NDD, ZU
   //
   // For AVX512 cases, EVEX prefix is needed in order to carry this information
   // thus preventing the transformation to VEX encoding.
   bool IsND = X86II::hasNewDataDest(TSFlags);
-  if (TSFlags & X86II::EVEX_B && !IsND)
-    return false;
   unsigned Opc = MI.getOpcode();
+  bool IsSetZUCCm = Opc == X86::SETZUCCm;
+  if (TSFlags & X86II::EVEX_B && !IsND && !IsSetZUCCm)
+    return false;
   // MOVBE*rr is special because it has semantic of NDD but not set EVEX_B.
   bool IsNDLike = IsND || Opc == X86::MOVBE32rr || Opc == X86::MOVBE64rr;
   bool IsRedundantNDD = IsNDLike ? IsRedundantNewDataDest(Opc) : false;
@@ -272,7 +274,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
       const MachineOperand &Src2 = MI.getOperand(2);
       bool Is32BitReg = Opc == X86::ADD32ri_ND || Opc == X86::ADD32rr_ND;
       const MCInstrDesc &NewDesc =
-          ST.getInstrInfo()->get(Is32BitReg ? X86::LEA32r : X86::LEA64r);
+          ST.getInstrInfo()->get(Is32BitReg ? X86::LEA64_32r : X86::LEA64r);
       if (Is32BitReg)
         Src1 = getX86SubSuperRegister(Src1, 64);
       MachineInstrBuilder MIB = BuildMI(MBB, MI, MI.getDebugLoc(), NewDesc, Dst)
@@ -339,7 +341,7 @@ bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
   }
 #endif
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  if (!ST.hasAVX512() && !ST.hasEGPR() && !ST.hasNDD())
+  if (!ST.hasAVX512() && !ST.hasEGPR() && !ST.hasNDD() && !ST.hasZU())
     return false;
 
   bool Changed = false;

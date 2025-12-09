@@ -101,14 +101,17 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   else if (ACE)
     CE = ACE;
 
-  SourceRange SrcRange = CE->getSourceRange();
+  const SourceRange SrcRange = CE->getSourceRange();
 
   std::string ReplacementText{
       Lexer::getSourceText(CharSourceRange::getTokenRange(SrcRange),
                            *Result.SourceManager, getLangOpts())};
 
-  if (!isa<DeclRefExpr, ArraySubscriptExpr, CXXOperatorCallExpr, CallExpr,
-           MemberExpr>(CE))
+  const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(CE);
+  const bool NeedsParens =
+      OpCall ? (OpCall->getOperator() != OO_Subscript)
+             : !isa<DeclRefExpr, MemberExpr, ArraySubscriptExpr, CallExpr>(CE);
+  if (NeedsParens)
     ReplacementText = "(" + ReplacementText + ")";
 
   if (CE->getType()->isPointerType())
@@ -116,7 +119,7 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   else
     ReplacementText += ".data()";
 
-  FixItHint Hint =
+  const FixItHint Hint =
       FixItHint::CreateReplacement(UO->getSourceRange(), ReplacementText);
   diag(UO->getBeginLoc(),
        "'data' should be used for accessing the data pointer instead of taking "

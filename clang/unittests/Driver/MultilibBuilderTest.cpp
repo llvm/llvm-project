@@ -61,7 +61,7 @@ TEST(MultilibBuilderTest, Construction3) {
       MultilibBuilder().flag("-f1").flag("-f2").flag("-f3", /*Disallow=*/true);
   for (const std::string &A : M.flags()) {
     ASSERT_TRUE(llvm::StringSwitch<bool>(A)
-                    .Cases("-f1", "-f2", "!f3", true)
+                    .Cases({"-f1", "-f2", "!f3"}, true)
                     .Default(false));
   }
 }

@@ -600,7 +600,6 @@ entry:
 ; ------------------------------------------------------------------------
 ; A few partially aligned cases
 
-
 define void @memmove16_align4(ptr nocapture %dest, ptr nocapture %src) nounwind {
 ; RV32-BOTH-LABEL: memmove16_align4:
 ; RV32-BOTH:       # %bb.0: # %entry
@@ -667,4 +666,3 @@ entry:
   ret i32 0
 }
 
-declare void @llvm.memmove.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind

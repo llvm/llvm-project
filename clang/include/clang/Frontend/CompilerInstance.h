@@ -460,7 +460,7 @@ public:
     FileMgr.resetWithoutRelease();
   }
 
-  /// Replace the current file manager and virtual file system.
+  /// Replace the current file manager.
   void setFileManager(IntrusiveRefCntPtr<FileManager> Value);
 
   /// @}
@@ -944,6 +944,12 @@ public:
 
   void addDependencyCollector(std::shared_ptr<DependencyCollector> Listener) {
     DependencyCollectors.push_back(std::move(Listener));
+  }
+
+  void clearDependencyCollectors() { DependencyCollectors.clear(); }
+
+  std::vector<std::shared_ptr<DependencyCollector>> &getDependencyCollectors() {
+    return DependencyCollectors;
   }
 
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);

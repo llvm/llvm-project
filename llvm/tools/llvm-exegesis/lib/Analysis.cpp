@@ -446,7 +446,7 @@ void Analysis::printClusterRawHtml(const BenchmarkClustering::ClusterId &Id,
 
 } // namespace exegesis
 
-static constexpr const char kHtmlHead[] = R"(
+static constexpr char kHtmlHead[] = R"(
 <head>
 <title>llvm-exegesis Analysis Results</title>
 <style>

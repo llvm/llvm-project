@@ -1141,7 +1141,6 @@ OperandType RecognizableInstr::typeFromString(StringRef Str, bool hasREX_W,
           .Case("vz64mem", TYPE_MVSIBZ)
           .Case("BNDR", TYPE_BNDR)
           .Case("TILE", TYPE_TMM)
-          .Case("TILEPair", TYPE_TMM_PAIR)
           .Default(TYPE_NONE);
   // clang-format on
 

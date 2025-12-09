@@ -244,6 +244,112 @@ def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
 
 // -----
 
+def SPIRV_SwitchOp : SPIRV_Op<"Switch",
+    [AttrSizedOperandSegments, InFunctionScope,
+     DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+     Pure, Terminator]> {
+  let summary = [{
+    Multi-way branch to one of the operand label <id>.
+  }];
+
+  let description = [{
+    Selector must have a type of OpTypeInt. Selector is compared for equality to
+    the Target literals.
+
+    Default must be the <id> of a label. If Selector does not equal any of the
+    Target literals, control flow branches to the Default label <id>.
+
+    Target must be alternating scalar integer literals and the <id> of a label.
+    If Selector equals a literal, control flow branches to the following label
+    <id>. It is invalid for any two literal to be equal to each other. If Selector
+    does not equal any literal, control flow branches to the Default label <id>.
+    Each literal is interpreted with the type of Selector: The bit width of
+    Selector’s type is the width of each literal’s type. If this width is not a
+    multiple of 32-bits and the OpTypeInt Signedness is set to 1, the literal values
+    are interpreted as being sign extended.
+
+    If Selector is an OpUndef, behavior is undefined.
+
+    This instruction must be the last instruction in a block.
+
+    #### Example:
+
+    ```mlir
+    spirv.Switch %selector : si32, [
+      default: ^bb1(%a : i32),
+      0: ^bb1(%b : i32),
+      1: ^bb3(%c : i32)
+    ]
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Integer:$selector,
+    Variadic<AnyType>:$defaultOperands,
+    VariadicOfVariadic<AnyType, "case_operand_segments">:$targetOperands,
+    OptionalAttr<AnyIntElementsAttr>:$literals,
+    DenseI32ArrayAttr:$case_operand_segments
+  );
+
+  let results = (outs);
+
+  let successors = (successor AnySuccessor:$defaultTarget,
+                              VariadicSuccessor<AnySuccessor>:$targets);
+
+  let builders = [
+    OpBuilder<(ins "Value":$selector,
+      "Block *":$defaultTarget,
+      "ValueRange":$defaultOperands,
+      CArg<"ArrayRef<APInt>", "{}">:$literals,
+      CArg<"BlockRange", "{}">:$targets,
+      CArg<"ArrayRef<ValueRange>", "{}">:$targetOperands)>,
+    OpBuilder<(ins "Value":$selector,
+      "Block *":$defaultTarget,
+      "ValueRange":$defaultOperands,
+      CArg<"ArrayRef<int32_t>", "{}">:$literals,
+      CArg<"BlockRange", "{}">:$targets,
+      CArg<"ArrayRef<ValueRange>", "{}">:$targetOperands)>,
+    OpBuilder<(ins "Value":$selector,
+      "Block *":$defaultTarget,
+      "ValueRange":$defaultOperands,
+      CArg<"DenseIntElementsAttr", "{}">:$literals,
+      CArg<"BlockRange", "{}">:$targets,
+      CArg<"ArrayRef<ValueRange>", "{}">:$targetOperands)>
+  ];
+
+  let assemblyFormat = [{
+    $selector `:` type($selector) `,` `[` `\n`
+      custom<SwitchOpCases>(ref(type($selector)),$defaultTarget,
+                            $defaultOperands,
+                            type($defaultOperands),
+                            $literals,
+                            $targets,
+                            $targetOperands,
+                            type($targetOperands))
+   `]`
+    attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Return the operands for the target block at the given index.
+    OperandRange getTargetOperands(unsigned index) {
+      return getTargetOperands()[index];
+    }
+
+    /// Return a mutable range of operands for the target block at the
+    /// given index.
+    MutableOperandRange getTargetOperandsMutable(unsigned index) {
+      return getTargetOperandsMutable()[index];
+    }
+  }];
+
+  let autogenSerialization = 0;
+  let hasVerifier = 1;
+}
+
+
+// -----
+
 def SPIRV_KillOp : SPIRV_Op<"Kill", [Terminator]> {
   let summary = [{
     Deprecated (use OpTerminateInvocation or OpDemoteToHelperInvocation).

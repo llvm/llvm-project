@@ -1,0 +1,10 @@
+
+module test_config {
+  module test_macros { textual header "test_macros.h" }
+}
+
+module test {
+  module double_move_tracker    { header "double_move_tracker.h" }
+  module test_allocator         { header "test_allocator.h" }
+  module type_algorithms        { header "type_algorithms.h" }
+}

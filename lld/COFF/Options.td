@@ -71,6 +71,7 @@ def noimplib : F<"noimplib">,
 def lib : F<"lib">,
     HelpText<"Act like lib.exe; must be first argument if present">;
 def libpath : P<"libpath", "Additional library search path">;
+def link : F<"link">, HelpText<"Ignored for compatibility">;
 def linkrepro : Joined<["/", "-", "/?", "-?"], "linkrepro:">,
     MetaVarName<"directory">,
     HelpText<"Write repro.tar containing inputs and command to reproduce link">;
@@ -291,6 +292,9 @@ def thinlto_distributor_arg : P<"thinlto-distributor-arg",
   "Arguments to pass to the ThinLTO distributor">;
 def thinlto_remote_compiler : P<"thinlto-remote-compiler",
   "Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
+  "compilations">;
+def thinlto_remote_compiler_prepend_arg : P<"thinlto-remote-compiler-prepend-arg",
+  "Compiler prepend arguments for the ThinLTO distributor to pass for ThinLTO backend "
   "compilations">;
 def thinlto_remote_compiler_arg : P<"thinlto-remote-compiler-arg",
   "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "

@@ -838,9 +838,10 @@ def S_CBRANCH_G_FORK : SOP2_Pseudo <
   let SubtargetPredicate = isGFX6GFX7GFX8GFX9;
 }
 
-let Defs = [SCC] in {
-def S_ABSDIFF_I32 : SOP2_32 <"s_absdiff_i32">;
-} // End Defs = [SCC]
+let isCommutable = 1, Defs = [SCC] in
+def S_ABSDIFF_I32 : SOP2_32 <"s_absdiff_i32",
+  [(set i32:$sdst, (UniformUnaryFrag<abs> (sub_oneuse i32:$src0, i32:$src1)))]
+>;
 
 let SubtargetPredicate = isGFX8GFX9 in {
   def S_RFE_RESTORE_B64 : SOP2_Pseudo <

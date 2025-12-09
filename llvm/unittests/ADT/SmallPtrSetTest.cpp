@@ -57,7 +57,7 @@ TEST(SmallPtrSetTest, GrowthTest) {
 
 
   SmallPtrSet<int *, 4> s;
-  typedef SmallPtrSet<int *, 4>::iterator iter;
+  using iter = SmallPtrSet<int *, 4>::iterator;
 
   s.insert(&buf[0]);
   s.insert(&buf[1]);

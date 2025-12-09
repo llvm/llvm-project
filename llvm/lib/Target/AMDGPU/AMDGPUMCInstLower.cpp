@@ -229,7 +229,8 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     OutMI.addOperand(Src);
     return;
   } else if (Opcode == AMDGPU::SI_TCRETURN ||
-             Opcode == AMDGPU::SI_TCRETURN_GFX) {
+             Opcode == AMDGPU::SI_TCRETURN_GFX ||
+             Opcode == AMDGPU::SI_TCRETURN_CHAIN) {
     // TODO: How to use branch immediate and avoid register+add?
     Opcode = AMDGPU::S_SETPC_B64;
   } else if (AMDGPU::getT16D16Helper(Opcode)) {
@@ -243,7 +244,7 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
 
   int MCOpcode = TII->pseudoToMCOpcode(Opcode);
   if (MCOpcode == -1) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
+    LLVMContext &C = MI->getMF()->getFunction().getContext();
     C.emitError("AMDGPUMCInstLower::lower - Pseudo instruction doesn't have "
                 "a target-specific version: " + Twine(MI->getOpcode()));
   }
@@ -332,7 +333,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   StringRef Err;
   if (!STI.getInstrInfo()->verifyInstruction(*MI, Err)) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
+    LLVMContext &C = MI->getMF()->getFunction().getContext();
     C.emitError("Illegal instruction detected: " + Err);
     MI->print(errs());
   }
@@ -412,7 +413,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
                              *OutStreamer);
 
     if (isVerbose() && MI->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
-      unsigned V = MI->getOperand(0).getImm();
+      unsigned V = MI->getOperand(0).getImm() & 0xff;
       OutStreamer->AddComment(
           " msbs: dst=" + Twine(V >> 6) + " src0=" + Twine(V & 3) +
           " src1=" + Twine((V >> 2) & 3) + " src2=" + Twine((V >> 4) & 3));

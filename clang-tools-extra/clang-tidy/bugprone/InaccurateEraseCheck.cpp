@@ -43,7 +43,7 @@ void InaccurateEraseCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (!Loc.isMacroID() && EndExpr) {
     const auto *AlgCall = Result.Nodes.getNodeAs<CallExpr>("alg");
-    std::string ReplacementText = std::string(Lexer::getSourceText(
+    const std::string ReplacementText = std::string(Lexer::getSourceText(
         CharSourceRange::getTokenRange(EndExpr->getSourceRange()),
         *Result.SourceManager, getLangOpts()));
     const SourceLocation EndLoc = Lexer::getLocForEndOfToken(

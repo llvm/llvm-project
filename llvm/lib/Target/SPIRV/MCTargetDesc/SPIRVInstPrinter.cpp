@@ -50,6 +50,14 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   unsigned IsBitwidth16 = MI->getFlags() & SPIRV::INST_PRINTER_WIDTH16;
   const unsigned NumVarOps = MI->getNumOperands() - StartIndex;
 
+  if (MI->getOpcode() == SPIRV::OpConstantI && NumVarOps > 2) {
+    // SPV_ALTERA_arbitrary_precision_integers allows for integer widths greater
+    // than 64, which will be encoded via multiple operands.
+    for (unsigned I = StartIndex; I != MI->getNumOperands(); ++I)
+      O << ' ' << MI->getOperand(I).getImm();
+    return;
+  }
+
   assert((NumVarOps == 1 || NumVarOps == 2) &&
          "Unsupported number of bits for literal variable");
 
@@ -166,6 +174,36 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           printSymbolicOperand<OperandCategory::MemoryOperandOperand>(
               MI, FirstVariableIndex, OS);
           printRemainingVariableOps(MI, FirstVariableIndex + 1, OS);
+          break;
+        case SPIRV::OpSwitch:
+          if (MI->getFlags() & SPIRV::INST_PRINTER_WIDTH64) {
+            // In binary format 64-bit types are split into two 32-bit operands,
+            // but in text format combine these into a single 64-bit value as
+            // this is what tools such as spirv-as require.
+            const unsigned NumOps = MI->getNumOperands();
+            for (unsigned OpIdx = NumFixedOps; OpIdx < NumOps;) {
+              if (OpIdx + 1 >= NumOps || !MI->getOperand(OpIdx).isImm() ||
+                  !MI->getOperand(OpIdx + 1).isImm()) {
+                llvm_unreachable("Unexpected OpSwitch operands");
+                continue;
+              }
+              OS << ' ';
+              uint64_t LowBits = MI->getOperand(OpIdx).getImm();
+              uint64_t HighBits = MI->getOperand(OpIdx + 1).getImm();
+              uint64_t CombinedValue = (HighBits << 32) | LowBits;
+              OS << formatImm(CombinedValue);
+              OpIdx += 2;
+
+              // Next should be the label
+              if (OpIdx < NumOps) {
+                OS << ' ';
+                printOperand(MI, OpIdx, OS);
+                OpIdx++;
+              }
+            }
+          } else {
+            printRemainingVariableOps(MI, NumFixedOps, OS);
+          }
           break;
         case SPIRV::OpImageSampleImplicitLod:
         case SPIRV::OpImageSampleDrefImplicitLod:

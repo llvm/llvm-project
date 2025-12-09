@@ -680,6 +680,22 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
     if (mlir::ArrayAttr resAttrs = call.getResAttrsAttr())
       llvmCall.setResAttrsAttr(resAttrs);
 
+    if (auto inlineAttr = call.getInlineAttrAttr()) {
+      llvmCall->removeAttr("inline_attr");
+      if (inlineAttr.getValue() == fir::FortranInlineEnum::no_inline) {
+        llvmCall.setNoInlineAttr(rewriter.getUnitAttr());
+      } else if (inlineAttr.getValue() == fir::FortranInlineEnum::inline_hint) {
+        llvmCall.setInlineHintAttr(rewriter.getUnitAttr());
+      } else if (inlineAttr.getValue() ==
+                 fir::FortranInlineEnum::always_inline) {
+        llvmCall.setAlwaysInlineAttr(rewriter.getUnitAttr());
+      }
+    }
+
+    if (std::optional<mlir::ArrayAttr> optionalAccessGroups =
+            call.getAccessGroups())
+      llvmCall.setAccessGroups(*optionalAccessGroups);
+
     if (memAttr)
       llvmCall.setMemoryEffectsAttr(
           mlir::cast<mlir::LLVM::MemoryEffectsAttr>(memAttr));
@@ -1151,7 +1167,7 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
     mlir::Value size = genTypeSizeInBytes(loc, ity, rewriter, llvmObjectTy);
     if (auto scaleSize =
             fir::genAllocationScaleSize(loc, heap.getInType(), ity, rewriter))
-      size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
+      size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size, scaleSize);
     for (mlir::Value opnd : adaptor.getOperands())
       size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size,
                                        integerCast(loc, rewriter, ity, opnd));
@@ -3390,6 +3406,9 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
         loadOp.setTBAATags(*optionalTag);
       else
         attachTBAATag(loadOp, load.getType(), load.getType(), nullptr);
+      if (std::optional<mlir::ArrayAttr> optionalAccessGroups =
+              load.getAccessGroups())
+        loadOp.setAccessGroups(*optionalAccessGroups);
       rewriter.replaceOp(load, loadOp.getResult());
     }
     return mlir::success();
@@ -3720,6 +3739,10 @@ struct StoreOpConversion : public fir::FIROpConversion<fir::StoreOp> {
 
       if (store.getNontemporal())
         storeOp.setNontemporal(true);
+
+      if (std::optional<mlir::ArrayAttr> optionalAccessGroups =
+              store.getAccessGroups())
+        storeOp.setAccessGroups(*optionalAccessGroups);
 
       newOp = storeOp;
     }

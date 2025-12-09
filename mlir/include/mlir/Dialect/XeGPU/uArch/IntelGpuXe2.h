@@ -23,8 +23,6 @@
 #include <map>
 #include <string>
 
-#define DEBUG_TYPE "xegpu-uarch"
-
 using namespace mlir;
 using namespace mlir::xegpu::uArch;
 
@@ -33,21 +31,156 @@ namespace xegpu {
 namespace uArch {
 
 struct Xe2Plus : public uArch {
+  Xe2Plus(StringRef archName, StringRef archDescription,
+          llvm::ArrayRef<const Instruction *> instructionRegistry,
+          const XeCoreInfo &xeCore)
+      : uArch(archName, archDescription, instructionRegistry), xeCore(xeCore) {}
+  int getSubgroupSize() const override { return 16; }
+  unsigned getGeneralPackedFormatBitSize() const override { return 32; }
+
+protected:
   XeCoreInfo xeCore;
-  Xe2Plus(const std::string &archName, const std::string &archDescription,
-          const XeCoreInfo &xeCore,
-          const std::map<RegisterFileType, RegisterFileInfo> &regInfo = {},
-          const llvm::SmallVector<CacheInfo, 4> &cacheInfo = {},
-          const std::map<InstructionKind, std::shared_ptr<Instruction>>
-              &instrs = {})
-      : uArch(archName, archDescription, regInfo, cacheInfo, instrs),
-        xeCore(xeCore) {}
 };
 
-// struct to represent DPAS instruction
-struct DPASInstruction : public Instruction, public MMAInstructionInterface {
-  DPASInstruction()
-      : Instruction(InstructionKind::DPAS, InstructionScope::Subgroup) {}
+//===----------------------------------------------------------------------===//
+// uArch instructions
+//===----------------------------------------------------------------------===//
+struct Subgroup2DBlockStoreInstruction : public Instruction {
+  Subgroup2DBlockStoreInstruction()
+      : Instruction(InstructionKind::Subgroup2DBlockStore,
+                    InstructionScope::Subgroup) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::Subgroup2DBlockStore;
+  }
+  // Source :
+  // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_2d_block_io.html#_add_a_new_section_5_2_x_cl_intel_subgroup_2d_block_io
+  std::optional<
+      std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
+  getBlockWidthHeightCount(Type elemTy) const {
+    const static int kHeight[] = {1, 2, 4, 8};
+    const static int kWidth16[] = {16};
+    const static int kWidth32[] = {16};
+    const static int kCount[] = {1};
+    const int elemByteSize = elemTy.getIntOrFloatBitWidth() / 8;
+    if (elemByteSize == 1)
+      return std::make_tuple(llvm::ArrayRef<int>(kWidth32),
+                             llvm::ArrayRef<int>(kHeight),
+                             llvm::ArrayRef<int>(kCount));
+    else if (elemByteSize == 2 || elemByteSize == 4)
+      return std::make_tuple(llvm::ArrayRef<int>(kWidth16),
+                             llvm::ArrayRef<int>(kHeight),
+                             llvm::ArrayRef<int>(kCount));
+    return std::nullopt;
+  }
+
+  int32_t getPackedFormatBitSize() const { return 16; }
+};
+
+struct Subgroup2DBlockLoadInstruction : public Instruction {
+  Subgroup2DBlockLoadInstruction()
+      : Instruction(InstructionKind::Subgroup2DBlockLoad,
+                    InstructionScope::Subgroup) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::Subgroup2DBlockLoad;
+  }
+
+  // Source :
+  // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_2d_block_io.html#_add_a_new_section_5_2_x_cl_intel_subgroup_2d_block_io
+  std::optional<
+      std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
+  getBlockWidthHeightCount(Type elemTy, bool hasTransform, bool hasTranspose,
+                           bool upConv = false) const {
+    static const int kHeightAtLeast1[] = {1, 2, 4, 8, 16, 32};
+    static const int kHeightAtLeast8[] = {8, 16, 32};
+    static const int kHeightAtLeast16[] = {16, 32};
+    static const int kHeightAtLeast32[] = {32};
+
+    static const int kWidth32[] = {32};
+    static const int kWidth16[] = {16};
+    static const int kWidth8[] = {8};
+
+    static const int32_t kCount1[] = {1};
+    static const int32_t kCount2[] = {1, 2};
+    static const int32_t kCount4[] = {1, 2, 4};
+    static const int32_t kCount4Only[] = {4};
+    // (elemBytes, transform, transpose, upConvert)
+    using Key = std::tuple<int, uint8_t, uint8_t, uint8_t>;
+    // (widths, heights, counts)
+    using Value = std::tuple<llvm::ArrayRef<int32_t>, llvm::ArrayRef<int32_t>,
+                             llvm::ArrayRef<int32_t>>;
+    static const llvm::DenseMap<Key, Value> kMap = {
+        {{1, false, false, false}, {kWidth32, kHeightAtLeast1, kCount2}},
+        {{1, false, false, true}, {kWidth16, kHeightAtLeast8, kCount4Only}},
+        {{2, false, false, false}, {kWidth16, kHeightAtLeast1, kCount2}},
+        {{4, false, false, false}, {kWidth16, kHeightAtLeast1, kCount1}},
+        // Block Loads with Transform:
+        {{1, true, false, false}, {kWidth16, kHeightAtLeast32, kCount4}},
+        {{2, true, false, false}, {kWidth16, kHeightAtLeast16, kCount2}},
+        // Block Loads with Transpose:
+        {{4, false, true, false}, {kWidth8, kHeightAtLeast16, kCount1}},
+    };
+    const int elemByteSize = elemTy.getIntOrFloatBitWidth() / 8;
+    auto it = kMap.find({elemByteSize, hasTransform, hasTranspose, upConv});
+    if (it != kMap.end())
+      return it->second;
+    return std::nullopt;
+  }
+
+  int32_t getPackedFormatBitSize() const { return 16; }
+};
+
+struct Subgroup2DBlockPrefetchInstruction : public Instruction {
+  Subgroup2DBlockPrefetchInstruction()
+      : Instruction(InstructionKind::Subgroup2DBlockPrefetch,
+                    InstructionScope::Subgroup) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::Subgroup2DBlockPrefetch;
+  }
+  // Source :
+  // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_buffer_prefetch.html#_add_a_new_section_6_15_x_sub_group_prefetch_functions
+  std::optional<
+      std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
+  getBlockWidthHeightCount(Type elemTy) const {
+    static const int kHeightAtLeast1[] = {1, 2, 4, 8, 16, 32};
+
+    static const int kWidth32[] = {32};
+    static const int kWidth16[] = {16};
+
+    static const int32_t kCount1[] = {1};
+    static const int32_t kCount2[] = {1, 2};
+    // elemBytes
+    using Key = int;
+    // (widths, heights, counts)
+    using Value = std::tuple<llvm::ArrayRef<int32_t>, llvm::ArrayRef<int32_t>,
+                             llvm::ArrayRef<int32_t>>;
+    static const llvm::DenseMap<Key, Value> kMap = {
+        {1, {kWidth32, kHeightAtLeast1, kCount2}},
+        {2, {kWidth16, kHeightAtLeast1, kCount2}},
+        {4, {kWidth16, kHeightAtLeast1, kCount1}},
+    };
+    const int elemByteSize = elemTy.getIntOrFloatBitWidth() / 8;
+    auto it = kMap.find(elemByteSize);
+    if (it != kMap.end())
+      return it->second;
+    return std::nullopt;
+  }
+  int32_t getPackedFormatBitSize() const { return 16; }
+};
+
+struct SubgroupMatrixMultiplyAcc : public Instruction,
+                                   public MMAInstructionInterface {
+  SubgroupMatrixMultiplyAcc(unsigned packedFormatBitSizeA,
+                            unsigned packedFormatBitSizeB)
+      : Instruction(InstructionKind::SubgroupMatrixMultiplyAcc,
+                    InstructionScope::Subgroup),
+        packedFormatBitSizeA(packedFormatBitSizeA),
+        packedFormatBitSizeB(packedFormatBitSizeB) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() ==
+           InstructionKind::SubgroupMatrixMultiplyAcc;
+  }
+  // Source:
+  // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_matrix_multiply_accumulate.html
 
   // Override all virtuals from MatrixOpInterface
   virtual llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>
@@ -67,84 +200,93 @@ struct DPASInstruction : public Instruction, public MMAInstructionInterface {
                         std::pair<uint32_t, uint32_t> CShape,
                         std::pair<uint32_t, uint32_t> DShape, Type AType,
                         Type BType, Type CType, Type DType) override;
-  virtual llvm::SmallVector<uint32_t, 8> getSupportedM(Type type) override;
-  virtual llvm::SmallVector<uint32_t, 8> getSupportedK(Type type) override;
-  virtual llvm::SmallVector<uint32_t, 8> getSupportedN(Type type) override;
+  virtual llvm::SmallVector<uint32_t, 8>
+  getSupportedM(Type type) const override;
+  virtual llvm::SmallVector<uint32_t, 8>
+  getSupportedK(Type type) const override;
+  virtual llvm::SmallVector<uint32_t, 8>
+  getSupportedN(Type type) const override;
+
+  unsigned getPackedFormatBitSizeA() const { return packedFormatBitSizeA; }
+  unsigned getPackedFormatBitSizeB() const { return packedFormatBitSizeB; }
+
+protected:
+  const unsigned packedFormatBitSizeA;
+  const unsigned packedFormatBitSizeB;
 };
 
-struct PVCuArch : public Xe2Plus {
-  // Maintaines ownership of the instructions owned by PVUarch
-  llvm::SmallVector<std::shared_ptr<Instruction>, 8> owned_instructions;
+//===----------------------------------------------------------------------===//
+// uArch instances
+//===----------------------------------------------------------------------===//
+
+struct PVCuArch final : public Xe2Plus {
+  static llvm::ArrayRef<const Instruction *> getInstructionRegistryArr() {
+    static const SubgroupMatrixMultiplyAcc dpasInst{16, 32};
+    static const Subgroup2DBlockLoadInstruction loadNdInst;
+    static const Subgroup2DBlockStoreInstruction storeNdInst;
+    static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
+    static const Instruction *arr[] = {&dpasInst, &loadNdInst, &storeNdInst,
+                                       &prefetchNdInst};
+    return arr;
+  }
+
   PVCuArch()
       : Xe2Plus("pvc",                        // archName
                 "Ponte Vecchio Architecture", // archDescription
-                XeCoreInfo(8, SharedMemory(512 * 1024, 4), 8, 8), // xeCore
-                {/* registerFileInfo */}, // Optional: empty
-                {/* cacheInfo */},        // Optional: empty
-                {/* instructions */}      // Optional: empty
-        ) {
-    // Intialize register file info
-    // GRF
-    this->registerFileInfo.emplace(
-        RegisterFileType::GRF,
-        RegisterFileInfo(
-            64 * 1024,                                          // size in bits
-            {RegisterFileMode::Small, RegisterFileMode::Large}, // GRF modes
-            {128, 256} // registers per thread per mode
-            ));
-    // Initialize cache info
-    // L1 cache, XeCore level
-    this->cacheInfo.push_back(
-        CacheInfo(512 * 1024, 64, CacheHierarchyLevel::L1));
-    // L2 cache, XeStack level
-    this->cacheInfo.push_back(
-        CacheInfo(512 * 1024, 64, CacheHierarchyLevel::L2));
-
-    // Add the instructions-
-    auto dpas = std::make_shared<DPASInstruction>();
-    instructions.emplace(dpas->getInstructionKind(), dpas);
-    owned_instructions.push_back(dpas);
+                getInstructionRegistryArr(),
+                XeCoreInfo(8, SharedMemory(512 * 1024, 4), 8, 8) // xeCore
+        ) {}
+  static const uArch *getInstance() {
+    static const PVCuArch instance;
+    return reinterpret_cast<const uArch *>(&instance);
   }
 };
 
 struct BMGuArch : public Xe2Plus {
-  // Maintaines ownership of the instructions owned by PVUarch
-  llvm::SmallVector<std::shared_ptr<Instruction>, 8> owned_instructions;
+  static llvm::ArrayRef<const Instruction *> getInstructionRegistryArr() {
+    static const SubgroupMatrixMultiplyAcc dpasInst{16, 32};
+    static const Subgroup2DBlockLoadInstruction loadNdInst;
+    static const Subgroup2DBlockStoreInstruction storeNdInst;
+    static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
+    static const Instruction *arr[] = {&dpasInst, &loadNdInst, &storeNdInst,
+                                       &prefetchNdInst};
+    return arr;
+  }
+
   BMGuArch()
       : Xe2Plus("bmg",                     // archName
                 "Battlemage Architecture", // archDescription
-                XeCoreInfo(8, SharedMemory(256 * 1024, 4), 8, 8), // xeCore
-                {/* registerFileInfo */}, // Optional: empty
-                {/* cacheInfo */},        // Optional: empty
-                {/* instructions */}      // Optional: empty
-        ) {
-    // Intialize register file info
-    // GRF
-    this->registerFileInfo[RegisterFileType::GRF] = RegisterFileInfo(
-        64 * 1024,                                          // size in bits
-        {RegisterFileMode::Small, RegisterFileMode::Large}, // GRF modes
-        {128, 256} // registers per thread per mode
-    );
-    // Initialize cache info
-    // L1 cache, XeCore level
-    this->cacheInfo.push_back(
-        CacheInfo(256 * 1024, 64, CacheHierarchyLevel::L1));
-    // L2 cache, XeStack level
-    this->cacheInfo.push_back(
-        CacheInfo(18 * 1024 * 1024, 256, CacheHierarchyLevel::L2));
-
-    // Add the instructions
-    auto dpas = std::make_shared<DPASInstruction>();
-    instructions.emplace(dpas->getInstructionKind(), dpas);
-    owned_instructions.push_back(dpas);
+                getInstructionRegistryArr(),
+                XeCoreInfo(8, SharedMemory(256 * 1024, 4), 8, 8) // xeCore
+        ) {}
+  static const uArch *getInstance() {
+    static const BMGuArch instance;
+    return reinterpret_cast<const uArch *>(&instance);
   }
 };
+
+inline const uArch *getUArch(llvm::StringRef archName) {
+  if (archName.equals_insensitive("pvc"))
+    return PVCuArch::getInstance();
+  else if (archName.equals_insensitive("bmg"))
+    return BMGuArch::getInstance();
+  else
+    llvm_unreachable("No matching uArch found");
+
+  return nullptr;
+}
+
 } // namespace uArch
 } // namespace xegpu
 } // namespace mlir
 
+//===----------------------------------------------------------------------===//
+// Instruction implementations
+//===----------------------------------------------------------------------===//
+
 inline llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>
-DPASInstruction::getSupportedShapes(Type dataType, MMAOpndKind matrixType) {
+SubgroupMatrixMultiplyAcc::getSupportedShapes(Type dataType,
+                                              MMAOpndKind matrixType) {
   auto combineVectors = [](const llvm::SmallVector<uint32_t, 8> &a,
                            const llvm::SmallVector<uint32_t, 8> &b)
       -> llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16> {
@@ -180,8 +322,8 @@ DPASInstruction::getSupportedShapes(Type dataType, MMAOpndKind matrixType) {
 }
 
 inline llvm::SmallVector<Type, 8>
-DPASInstruction::getSupportedTypes(MLIRContext &context,
-                                   MMAOpndKind matrixType) {
+SubgroupMatrixMultiplyAcc::getSupportedTypes(MLIRContext &context,
+                                             MMAOpndKind matrixType) {
   Type bf16Type = BFloat16Type::get(&context);
   Type f16Type = Float16Type::get(&context);
   Type tf32Type = FloatTF32Type::get(&context);
@@ -200,8 +342,10 @@ DPASInstruction::getSupportedTypes(MLIRContext &context,
   return {};
 }
 
-inline bool DPASInstruction::checkSupportedTypes(Type AType, Type BType,
-                                                 Type CType, Type DType) {
+inline bool SubgroupMatrixMultiplyAcc::checkSupportedTypes(Type AType,
+                                                           Type BType,
+                                                           Type CType,
+                                                           Type DType) {
   if (AType.isF16() || BType.isF16()) {
     if (AType != BType || (CType && (!CType.isF32() && !CType.isF16())) ||
         (!DType.isF32() && !DType.isF16())) {
@@ -231,7 +375,7 @@ inline bool DPASInstruction::checkSupportedTypes(Type AType, Type BType,
   return true;
 }
 
-inline bool DPASInstruction::checkSupportedShapesAndTypes(
+inline bool SubgroupMatrixMultiplyAcc::checkSupportedShapesAndTypes(
     std::pair<uint32_t, uint32_t> AShape, std::pair<uint32_t, uint32_t> BShape,
     std::pair<uint32_t, uint32_t> CShape, std::pair<uint32_t, uint32_t> DShape,
     Type AType, Type BType, Type CType, Type DType) {
@@ -246,23 +390,21 @@ inline bool DPASInstruction::checkSupportedShapesAndTypes(
          checkSupportedTypes(AType, BType, CType, DType);
 }
 
-inline bool DPASInstruction::validate(std::pair<uint32_t, uint32_t> AShape,
-                                      std::pair<uint32_t, uint32_t> BShape,
-                                      std::pair<uint32_t, uint32_t> CShape,
-                                      std::pair<uint32_t, uint32_t> DShape,
-                                      Type AType, Type BType, Type CType,
-                                      Type DType) {
+inline bool SubgroupMatrixMultiplyAcc::validate(
+    std::pair<uint32_t, uint32_t> AShape, std::pair<uint32_t, uint32_t> BShape,
+    std::pair<uint32_t, uint32_t> CShape, std::pair<uint32_t, uint32_t> DShape,
+    Type AType, Type BType, Type CType, Type DType) {
   return checkSupportedShapesAndTypes(AShape, BShape, CShape, DShape, AType,
                                       BType, CType, DType);
 }
 
 inline llvm::SmallVector<uint32_t, 8>
-DPASInstruction::getSupportedM(Type type) {
+SubgroupMatrixMultiplyAcc::getSupportedM(Type type) const {
   return {1, 2, 3, 4, 5, 6, 7, 8};
 }
 
 inline llvm::SmallVector<uint32_t, 8>
-DPASInstruction::getSupportedK(Type type) {
+SubgroupMatrixMultiplyAcc::getSupportedK(Type type) const {
   // assert if data type is not int or float type
   assert(type.isIntOrFloat() && "Matrix type must be int or float");
   auto bitWidth = type.getIntOrFloatBitWidth();
@@ -290,7 +432,7 @@ DPASInstruction::getSupportedK(Type type) {
 }
 
 inline llvm::SmallVector<uint32_t, 8>
-DPASInstruction::getSupportedN(Type type) {
+SubgroupMatrixMultiplyAcc::getSupportedN(Type type) const {
   return {16};
 }
 

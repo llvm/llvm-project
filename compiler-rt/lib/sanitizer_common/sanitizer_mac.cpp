@@ -103,6 +103,8 @@ extern "C" {
     natural_t *nesting_depth,
     vm_region_recurse_info_t info,
     mach_msg_type_number_t *infoCnt);
+
+  extern const void* _dyld_get_shared_cache_range(size_t* length);
 }
 
 #  if !SANITIZER_GO
@@ -960,7 +962,17 @@ static void DisableMmapExcGuardExceptions() {
       RTLD_DEFAULT, "task_set_exc_guard_behavior");
   if (set_behavior == nullptr) return;
   const task_exc_guard_behavior_t task_exc_guard_none = 0;
-  set_behavior(mach_task_self(), task_exc_guard_none);
+  kern_return_t res = set_behavior(mach_task_self(), task_exc_guard_none);
+  if (res != KERN_SUCCESS) {
+    Report(
+        "WARN: task_set_exc_guard_behavior returned %d (%s), "
+        "mmap may fail unexpectedly.\n",
+        res, mach_error_string(res));
+    if (res == KERN_DENIED)
+      Report(
+          "HINT: Check that task_set_exc_guard_behavior is allowed by "
+          "sandbox.\n");
+  }
 }
 
 static void VerifyInterceptorsWorking();
@@ -1393,15 +1405,27 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
   return 0;
 }
 
-// Returns true if the address is definitely mapped, and false if it is not
-// mapped or could not be determined.
-bool IsAddressInMappedRegion(uptr addr) {
+// This function (when used during initialization when there is
+// only a single thread), can be used to verify that a range
+// of memory hasn't already been mapped, and won't be mapped
+// later in the shared cache.
+//
+// If the syscall mach_vm_region_recurse fails (due to sandbox),
+// we assume that the memory is not mapped so that execution can continue.
+//
+// NOTE: range_end is inclusive
+//
+// WARNING: This function must NOT allocate memory, since it is
+// used in InitializeShadowMemory between where we search for
+// space for shadow and where we actually allocate it.
+bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
   mach_vm_size_t vmsize = 0;
   natural_t depth = 0;
   vm_region_submap_short_info_data_64_t vminfo;
   mach_msg_type_number_t count = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64;
-  mach_vm_address_t address = addr;
+  mach_vm_address_t address = range_start;
 
+  // First, check if the range is already mapped.
   kern_return_t kr =
       mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
                              (vm_region_info_t)&vminfo, &count);
@@ -1413,7 +1437,24 @@ bool IsAddressInMappedRegion(uptr addr) {
     Report("HINT: Is mach_vm_region_recurse allowed by sandbox?\n");
   }
 
-  return (kr == KERN_SUCCESS && addr >= address && addr < address + vmsize);
+  if (kr == KERN_SUCCESS && !IntervalsAreSeparate(address, address + vmsize - 1,
+                                                  range_start, range_end)) {
+    // Overlaps with already-mapped memory
+    return false;
+  }
+
+  size_t cacheLength;
+  uptr cacheStart = (uptr)_dyld_get_shared_cache_range(&cacheLength);
+
+  if (cacheStart &&
+      !IntervalsAreSeparate(cacheStart, cacheStart + cacheLength - 1,
+                            range_start, range_end)) {
+    // Overlaps with shared cache region
+    return false;
+  }
+
+  // We believe this address is available.
+  return true;
 }
 
 // FIXME implement on this platform.

@@ -31,7 +31,6 @@
 #include <cinttypes>
 #include <cstdint>
 #include <string>
-#include <utility>
 
 using namespace llvm;
 using namespace dwarf;
@@ -127,6 +126,25 @@ prettyLanguageVersionString(const DWARFAttribute &AttrValue,
 
   return llvm::dwarf::LanguageDescription(
       static_cast<SourceLanguageName>(*LName), *LVersion);
+}
+
+static llvm::Expected<llvm::StringRef>
+getApplePropertyName(const DWARFDie &PropDIE) {
+  if (!PropDIE)
+    return llvm::createStringError("invalid DIE");
+
+  if (PropDIE.getTag() != DW_TAG_APPLE_property)
+    return llvm::createStringError("not referencing a DW_TAG_APPLE_property");
+
+  auto PropNameForm = PropDIE.find(DW_AT_APPLE_property_name);
+  if (!PropNameForm)
+    return "";
+
+  auto NameOrErr = PropNameForm->getAsCString();
+  if (!NameOrErr)
+    return NameOrErr.takeError();
+
+  return *NameOrErr;
 }
 
 static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
@@ -233,6 +251,15 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
             Die.getAttributeValueAsReferencedDie(FormValue).getName(
                 DINameKind::LinkageName))
       OS << Space << "\"" << Name << '\"';
+  } else if (Attr == DW_AT_APPLE_property) {
+    auto PropDIE = Die.getAttributeValueAsReferencedDie(FormValue);
+    if (auto PropNameOrErr = getApplePropertyName(PropDIE))
+      OS << Space << "\"" << *PropNameOrErr << '\"';
+    else
+      DumpOpts.RecoverableErrorHandler(createStringError(
+          errc::invalid_argument,
+          llvm::formatv("decoding DW_AT_APPLE_property_name: {}",
+                        toString(PropNameOrErr.takeError()))));
   } else if (Attr == DW_AT_type || Attr == DW_AT_containing_type) {
     DWARFDie D = resolveReferencedType(Die, FormValue);
     if (D && !D.isNULL()) {
@@ -676,7 +703,9 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
           DIDumpOptions ChildDumpOpts = DumpOpts;
           ChildDumpOpts.ShowParents = false;
           while (Child) {
-            Child.dump(OS, Indent + 2, ChildDumpOpts);
+            if (DumpOpts.FilterChildTag.empty() ||
+                llvm::is_contained(DumpOpts.FilterChildTag, Child.getTag()))
+              Child.dump(OS, Indent + 2, ChildDumpOpts);
             Child = Child.getSibling();
           }
         }

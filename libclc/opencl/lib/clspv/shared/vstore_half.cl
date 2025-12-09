@@ -6,15 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <clc/clc_as_type.h>
 #include <clc/float/definitions.h>
-#include <clc/opencl/as_type.h>
-#include <clc/opencl/math/copysign.h>
-#include <clc/opencl/math/fabs.h>
-#include <clc/opencl/math/nextafter.h>
-#include <clc/opencl/relational/isinf.h>
-#include <clc/opencl/relational/isnan.h>
-#include <clc/opencl/shared/min.h>
-#include <clc/opencl/shared/vstore.h>
+#include <clc/opencl/opencl-base.h>
 
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 
@@ -60,7 +54,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rtz(float x) {
   if (fabs(x) > 65504.0f && !isinf(x))
     return copysign(65504.0f, x);
 
-  const int exp = (as_uint(x) >> 23 & 0xff) - 127;
+  const int exp = (__clc_as_uint(x) >> 23 & 0xff) - 127;
   /* Manage range rounded to +- zero explicitely */
   if (exp < -24)
     return copysign(0.0f, x);
@@ -71,7 +65,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rtz(float x) {
   if (exp < -14)
     mask <<= min(-(exp + 14), 10);
 
-  return as_float(as_uint(x) & mask);
+  return __clc_as_float(__clc_as_uint(x) & mask);
 }
 
 _CLC_DEF _CLC_OVERLOAD float __clc_rti(float x) {
@@ -80,10 +74,10 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rti(float x) {
     return x;
 
   const float inf = copysign(INFINITY, x);
-  uint ux = as_uint(x);
+  uint ux = __clc_as_uint(x);
 
   /* Manage +- infinity explicitely */
-  if (as_float(ux & 0x7fffffff) > 0x1.ffcp+15f) {
+  if (__clc_as_float(ux & 0x7fffffff) > 0x1.ffcp+15f) {
     return inf;
   }
   /* Manage +- zero explicitely */
@@ -91,7 +85,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rti(float x) {
     return copysign(0.0f, x);
   }
 
-  const int exp = (as_uint(x) >> 23 & 0xff) - 127;
+  const int exp = (__clc_as_uint(x) >> 23 & 0xff) - 127;
   /* Manage range rounded to smallest half denormal explicitely */
   if (exp < -24) {
     return copysign(0x1.0p-24f, x);
@@ -104,19 +98,19 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rti(float x) {
     mask = (1 << (13 + min(-(exp + 14), 10))) - 1;
   }
 
-  const float next = nextafter(as_float(ux | mask), inf);
-  return ((ux & mask) == 0) ? as_float(ux) : next;
+  const float next = nextafter(__clc_as_float(ux | mask), inf);
+  return ((ux & mask) == 0) ? __clc_as_float(ux) : next;
 }
 _CLC_DEF _CLC_OVERLOAD float __clc_rtn(float x) {
-  return ((as_uint(x) & 0x80000000) == 0) ? __clc_rtz(x) : __clc_rti(x);
+  return ((__clc_as_uint(x) & 0x80000000) == 0) ? __clc_rtz(x) : __clc_rti(x);
 }
 _CLC_DEF _CLC_OVERLOAD float __clc_rtp(float x) {
-  return ((as_uint(x) & 0x80000000) == 0) ? __clc_rti(x) : __clc_rtz(x);
+  return ((__clc_as_uint(x) & 0x80000000) == 0) ? __clc_rti(x) : __clc_rtz(x);
 }
 _CLC_DEF _CLC_OVERLOAD float __clc_rte(float x) {
   /* Mantisa + implicit bit */
-  const uint mantissa = (as_uint(x) & 0x7fffff) | (1u << 23);
-  const int exp = (as_uint(x) >> 23 & 0xff) - 127;
+  const uint mantissa = (__clc_as_uint(x) & 0x7fffff) | (1u << 23);
+  const int exp = (__clc_as_uint(x) >> 23 & 0xff) - 127;
   int shift = 13;
   if (exp < -14) {
     /* The default assumes lower 13 bits are rounded,

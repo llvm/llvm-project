@@ -428,7 +428,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   // signed 16bit range.
   if ((Kind == ARM::fixup_arm_movw_lo16 || Kind == ARM::fixup_arm_movt_hi16 ||
        Kind == ARM::fixup_t2_movw_lo16 || Kind == ARM::fixup_t2_movt_hi16) &&
-      (Addend < minIntN(16) || Addend > maxIntN(16))) {
+      !IsResolved && (Addend < minIntN(16) || Addend > maxIntN(16))) {
     Ctx.reportError(Fixup.getLoc(), "Relocation Not In Range");
     return 0;
   }
@@ -1238,7 +1238,7 @@ uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
   // Verify standard frame (lr/r7) was used.
   if (CFARegister != ARM::R7) {
     DEBUG_WITH_TYPE("compact-unwind", llvm::dbgs() << "frame register is "
-                                                   << CFARegister
+                                                   << CFARegister.id()
                                                    << " instead of r7\n");
     return CU::UNWIND_ARM_MODE_DWARF;
   }

@@ -1,6 +1,6 @@
-; RUN: opt -S -dxil-prepare < %s | FileCheck %s
+; RUN: opt -S -dxil-translate-metadata < %s | FileCheck %s
 
-; Ensures that dxil-prepare will remove the llvm.errno.tbaa metadata
+; Ensures that dxil-translate-metadata will remove the llvm.errno.tbaa metadata
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
@@ -10,7 +10,6 @@ entry:
 }
 
 ; CHECK-NOT: !llvm.errno.tbaa
-; CHECK-NOT: {{^!}}
 
 !llvm.errno.tbaa = !{!0}
 

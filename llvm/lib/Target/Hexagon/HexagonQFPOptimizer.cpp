@@ -58,7 +58,7 @@
 // are PHI inst.
 //
 //===----------------------------------------------------------------------===//
-#include <unordered_set>
+
 #define HEXAGON_QFP_OPTIMIZER "QFP optimizer pass"
 
 #include "Hexagon.h"
@@ -77,7 +77,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
-#include <vector>
 
 #define DEBUG_TYPE "hexagon-qfp-optimizer"
 
@@ -86,6 +85,9 @@ using namespace llvm;
 cl::opt<bool>
     DisableQFOptimizer("disable-qfp-opt", cl::init(false),
                        cl::desc("Disable optimization of Qfloat operations."));
+cl::opt<bool> DisableQFOptForMul(
+    "disable-qfp-opt-mul", cl::init(true),
+    cl::desc("Disable optimization of Qfloat operations for multiply."));
 
 namespace {
 const std::map<unsigned short, unsigned short> QFPInstMap{
@@ -101,18 +103,16 @@ const std::map<unsigned short, unsigned short> QFPInstMap{
     {Hexagon::V6_vmpy_qf16_mix_hf, Hexagon::V6_vmpy_qf16},
     {Hexagon::V6_vmpy_qf32_hf, Hexagon::V6_vmpy_qf32_mix_hf},
     {Hexagon::V6_vmpy_qf32_mix_hf, Hexagon::V6_vmpy_qf32_qf16},
-    {Hexagon::V6_vmpy_qf32_sf, Hexagon::V6_vmpy_qf32}};
+    {Hexagon::V6_vmpy_qf32_sf, Hexagon::V6_vmpy_qf32},
+    {Hexagon::V6_vilog2_sf, Hexagon::V6_vilog2_qf32},
+    {Hexagon::V6_vilog2_hf, Hexagon::V6_vilog2_qf16},
+    {Hexagon::V6_vabs_qf32_sf, Hexagon::V6_vabs_qf32_qf32},
+    {Hexagon::V6_vabs_qf16_hf, Hexagon::V6_vabs_qf16_qf16},
+    {Hexagon::V6_vneg_qf32_sf, Hexagon::V6_vneg_qf32_qf32},
+    {Hexagon::V6_vneg_qf16_hf, Hexagon::V6_vneg_qf16_qf16}};
 } // namespace
 
-namespace llvm {
-
-FunctionPass *createHexagonQFPOptimizer();
-void initializeHexagonQFPOptimizerPass(PassRegistry &);
-
-} // namespace llvm
-
 namespace {
-
 struct HexagonQFPOptimizer : public MachineFunctionPass {
 public:
   static char ID;
@@ -122,6 +122,10 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   bool optimizeQfp(MachineInstr *MI, MachineBasicBlock *MBB);
+
+  bool optimizeQfpTwoOp(MachineInstr *MI, MachineBasicBlock *MBB);
+
+  bool optimizeQfpOneOp(MachineInstr *MI, MachineBasicBlock *MBB);
 
   StringRef getPassName() const override { return HEXAGON_QFP_OPTIMIZER; }
 
@@ -149,19 +153,69 @@ FunctionPass *llvm::createHexagonQFPOptimizer() {
 bool HexagonQFPOptimizer::optimizeQfp(MachineInstr *MI,
                                       MachineBasicBlock *MBB) {
 
-  // Early exit:
-  // - if instruction is invalid or has too few operands (QFP ops need 2 sources
-  // + 1 dest),
-  // - or does not have a transformation mapping.
-  if (MI->getNumOperands() < 3)
+  if (MI->getNumOperands() == 2)
+    return optimizeQfpOneOp(MI, MBB);
+  else if (MI->getNumOperands() == 3)
+    return optimizeQfpTwoOp(MI, MBB);
+  else
     return false;
+}
+
+bool HexagonQFPOptimizer::optimizeQfpOneOp(MachineInstr *MI,
+                                           MachineBasicBlock *MBB) {
+
+  unsigned Op0F = 0;
+  auto It = QFPInstMap.find(MI->getOpcode());
+  if (It == QFPInstMap.end())
+    return false;
+
+  unsigned short InstTy = It->second;
+  // Get the reachind defs of MI
+  MachineInstr *DefMI = MRI->getVRegDef(MI->getOperand(1).getReg());
+  MachineOperand &Res = MI->getOperand(0);
+  if (!Res.isReg())
+    return false;
+
+  LLVM_DEBUG(dbgs() << "\n[Reaching Defs of operands]: "; DefMI->dump());
+  MachineInstr *ReachDefDef = nullptr;
+
+  // Get the reaching def of the reaching def to check for W reg def
+  if (DefMI->getNumOperands() > 1 && DefMI->getOperand(1).isReg() &&
+      DefMI->getOperand(1).getReg().isVirtual())
+    ReachDefDef = MRI->getVRegDef(DefMI->getOperand(1).getReg());
+  unsigned ReachDefOp = DefMI->getOpcode();
+  MachineInstrBuilder MIB;
+
+  // Check if the reaching def is a conversion
+  if (ReachDefOp == Hexagon::V6_vconv_sf_qf32 ||
+      ReachDefOp == Hexagon::V6_vconv_hf_qf16) {
+
+    // Return if the reaching def of reaching def is W type
+    if (ReachDefDef && MRI->getRegClass(ReachDefDef->getOperand(0).getReg()) ==
+                           &Hexagon::HvxWRRegClass)
+      return false;
+
+    // Analyze the use operands of the conversion to get their KILL status
+    MachineOperand &SrcOp = DefMI->getOperand(1);
+    Op0F = getKillRegState(SrcOp.isKill());
+    SrcOp.setIsKill(false);
+    MIB = BuildMI(*MBB, MI, MI->getDebugLoc(), HII->get(InstTy), Res.getReg())
+              .addReg(SrcOp.getReg(), Op0F, SrcOp.getSubReg());
+    LLVM_DEBUG(dbgs() << "\n[Inserting]: "; MIB.getInstr()->dump());
+    return true;
+  }
+  return false;
+}
+
+bool HexagonQFPOptimizer::optimizeQfpTwoOp(MachineInstr *MI,
+                                           MachineBasicBlock *MBB) {
+
+  unsigned Op0F = 0;
+  unsigned Op1F = 0;
   auto It = QFPInstMap.find(MI->getOpcode());
   if (It == QFPInstMap.end())
     return false;
   unsigned short InstTy = It->second;
-
-  unsigned Op0F = 0;
-  unsigned Op1F = 0;
   // Get the reaching defs of MI, DefMI1 and DefMI2
   MachineInstr *DefMI1 = nullptr;
   MachineInstr *DefMI2 = nullptr;
@@ -174,6 +228,9 @@ bool HexagonQFPOptimizer::optimizeQfp(MachineInstr *MI,
     return false;
 
   MachineOperand &Res = MI->getOperand(0);
+  if (!Res.isReg())
+    return false;
+
   MachineInstr *Inst1 = nullptr;
   MachineInstr *Inst2 = nullptr;
   LLVM_DEBUG(dbgs() << "\n[Reaching Defs of operands]: "; DefMI1->dump();
@@ -192,7 +249,8 @@ bool HexagonQFPOptimizer::optimizeQfp(MachineInstr *MI,
   unsigned Def2OP = DefMI2->getOpcode();
 
   MachineInstrBuilder MIB;
-  // Case 1: Both reaching defs of MI are qf to sf/hf conversions
+
+  // Check if the both the reaching defs of MI are qf to sf/hf conversions
   if ((Def1OP == Hexagon::V6_vconv_sf_qf32 &&
        Def2OP == Hexagon::V6_vconv_sf_qf32) ||
       (Def1OP == Hexagon::V6_vconv_hf_qf16 &&
@@ -233,7 +291,7 @@ bool HexagonQFPOptimizer::optimizeQfp(MachineInstr *MI,
     LLVM_DEBUG(dbgs() << "\n[Inserting]: "; MIB.getInstr()->dump());
     return true;
 
-    // Case 2: Left operand is conversion to sf/hf
+    // Check if left operand's reaching def is a conversion to sf/hf
   } else if (((Def1OP == Hexagon::V6_vconv_sf_qf32 &&
                Def2OP != Hexagon::V6_vconv_sf_qf32) ||
               (Def1OP == Hexagon::V6_vconv_hf_qf16 &&
@@ -257,7 +315,7 @@ bool HexagonQFPOptimizer::optimizeQfp(MachineInstr *MI,
     LLVM_DEBUG(dbgs() << "\n[Inserting]: "; MIB.getInstr()->dump());
     return true;
 
-    // Case 2: Left operand is conversion to sf/hf
+    // Check if right operand's reaching def is a conversion to sf/hf
   } else if (((Def1OP != Hexagon::V6_vconv_sf_qf32 &&
                Def2OP == Hexagon::V6_vconv_sf_qf32) ||
               (Def1OP != Hexagon::V6_vconv_hf_qf16 &&
@@ -265,13 +323,6 @@ bool HexagonQFPOptimizer::optimizeQfp(MachineInstr *MI,
              !DefMI1->isPHI() &&
              (MI->getOpcode() != Hexagon::V6_vmpy_qf32_sf)) {
     // The second operand of original instruction is converted.
-    // In "mix" instructions, "qf" operand is always the first operand.
-
-    // Caveat: vsub is not commutative w.r.t operands.
-    if (InstTy == Hexagon::V6_vsub_qf16_mix ||
-        InstTy == Hexagon::V6_vsub_qf32_mix)
-      return false;
-
     if (Inst2 && MRI->getRegClass(Inst2->getOperand(0).getReg()) ==
                      &Hexagon::HvxWRRegClass)
       return false;
@@ -282,10 +333,26 @@ bool HexagonQFPOptimizer::optimizeQfp(MachineInstr *MI,
     Op1F = getKillRegState(Src2.isKill());
     Src2.setIsKill(false);
     Op0F = getKillRegState(Src1.isKill());
-    MIB = BuildMI(*MBB, MI, MI->getDebugLoc(), HII->get(InstTy), Res.getReg())
-              .addReg(Src2.getReg(), Op1F,
-                      Src2.getSubReg()) // Notice the operands are flipped.
-              .addReg(Src1.getReg(), Op0F, Src1.getSubReg());
+    if (InstTy == Hexagon::V6_vsub_qf16_mix ||
+        InstTy == Hexagon::V6_vsub_qf32_mix) {
+      if (!HST->useHVXV81Ops())
+        // vsub_(hf|sf)_mix insts are only avlbl on hvx81+
+        return false;
+      // vsub is not commutative w.r.t. operands -> treat it as a special case
+      // to choose the correct mix instruction.
+      if (Def2OP == Hexagon::V6_vconv_sf_qf32)
+        InstTy = Hexagon::V6_vsub_sf_mix;
+      else if (Def2OP == Hexagon::V6_vconv_hf_qf16)
+        InstTy = Hexagon::V6_vsub_hf_mix;
+      MIB = BuildMI(*MBB, MI, MI->getDebugLoc(), HII->get(InstTy), Res.getReg())
+                .addReg(Src1.getReg(), Op0F, Src1.getSubReg())
+                .addReg(Src2.getReg(), Op1F, Src2.getSubReg());
+    } else {
+      MIB = BuildMI(*MBB, MI, MI->getDebugLoc(), HII->get(InstTy), Res.getReg())
+                .addReg(Src2.getReg(), Op1F,
+                        Src2.getSubReg()) // Notice the operands are flipped.
+                .addReg(Src1.getReg(), Op0F, Src1.getSubReg());
+    }
     LLVM_DEBUG(dbgs() << "\n[Inserting]: "; MIB.getInstr()->dump());
     return true;
   }
@@ -316,15 +383,18 @@ bool HexagonQFPOptimizer::runOnMachineFunction(MachineFunction &MF) {
     while (MII != MBBI->instr_end()) {
       MachineInstr *MI = &*MII;
       ++MII; // As MI might be removed.
-
-      if (QFPInstMap.count(MI->getOpcode()) &&
-          MI->getOpcode() != Hexagon::V6_vconv_sf_qf32 &&
-          MI->getOpcode() != Hexagon::V6_vconv_hf_qf16) {
-        LLVM_DEBUG(dbgs() << "\n###Analyzing for removal: "; MI->dump());
-        if (optimizeQfp(MI, MBB)) {
-          MI->eraseFromParent();
-          LLVM_DEBUG(dbgs() << "\t....Removing....");
-          Changed = true;
+      if (QFPInstMap.count(MI->getOpcode())) {
+        auto OpC = MI->getOpcode();
+        if (DisableQFOptForMul && HII->isQFPMul(MI))
+          continue;
+        if (OpC != Hexagon::V6_vconv_sf_qf32 &&
+            OpC != Hexagon::V6_vconv_hf_qf16) {
+          LLVM_DEBUG(dbgs() << "\n###Analyzing for removal: "; MI->dump());
+          if (optimizeQfp(MI, MBB)) {
+            MI->eraseFromParent();
+            LLVM_DEBUG(dbgs() << "\t....Removing....");
+            Changed = true;
+          }
         }
       }
     }

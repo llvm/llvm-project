@@ -48,16 +48,15 @@
 // avoided when invoking the `jumpto()` function. To do this, we use inline
 // assemblies to "goto" the `jumpto()` for these architectures.
 #if !defined(_LIBUNWIND_USE_CET) && !defined(_LIBUNWIND_USE_GCS)
-#define __unw_phase2_resume(cursor, fn)                                        \
+#define __unw_phase2_resume(cursor, payload)                                   \
   do {                                                                         \
-    (void)fn;                                                                  \
-    __unw_resume((cursor));                                                    \
+    __unw_resume_with_frames_walked((cursor), (payload));                      \
   } while (0)
 #elif defined(_LIBUNWIND_TARGET_I386)
 #define __shstk_step_size (4)
-#define __unw_phase2_resume(cursor, fn)                                        \
+#define __unw_phase2_resume(cursor, payload)                                   \
   do {                                                                         \
-    _LIBUNWIND_POP_SHSTK_SSP((fn));                                            \
+    _LIBUNWIND_POP_SHSTK_SSP((payload));                                       \
     void *shstkRegContext = __libunwind_shstk_get_registers((cursor));         \
     void *shstkJumpAddress = __libunwind_shstk_get_jump_target();              \
     __asm__ volatile("push %%edi\n\t"                                          \
@@ -67,9 +66,9 @@
   } while (0)
 #elif defined(_LIBUNWIND_TARGET_X86_64)
 #define __shstk_step_size (8)
-#define __unw_phase2_resume(cursor, fn)                                        \
+#define __unw_phase2_resume(cursor, payload)                                   \
   do {                                                                         \
-    _LIBUNWIND_POP_SHSTK_SSP((fn));                                            \
+    _LIBUNWIND_POP_SHSTK_SSP((payload));                                       \
     void *shstkRegContext = __libunwind_shstk_get_registers((cursor));         \
     void *shstkJumpAddress = __libunwind_shstk_get_jump_target();              \
     __asm__ volatile("jmpq *%%rdx\n\t" ::"D"(shstkRegContext),                 \
@@ -77,16 +76,17 @@
   } while (0)
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
 #define __shstk_step_size (8)
-#define __unw_phase2_resume(cursor, fn)                                        \
+#define __unw_phase2_resume(cursor, payload)                                   \
   do {                                                                         \
-    _LIBUNWIND_POP_SHSTK_SSP((fn));                                            \
+    _LIBUNWIND_POP_SHSTK_SSP((payload));                                       \
     void *shstkRegContext = __libunwind_shstk_get_registers((cursor));         \
     void *shstkJumpAddress = __libunwind_shstk_get_jump_target();              \
     __asm__ volatile("mov x0, %0\n\t"                                          \
+                     "mov x1, #0\n\t"                                         \
                      "br %1\n\t"                                               \
                      :                                                         \
                      : "r"(shstkRegContext), "r"(shstkJumpAddress)             \
-                     : "x0");                                                  \
+                     : "x0", "x1");                                            \
   } while (0)
 #endif
 
@@ -205,6 +205,8 @@ extern int __unw_step_stage2(unw_cursor_t *);
 #if defined(_LIBUNWIND_USE_GCS)
 // Enable the GCS target feature to permit gcspop instructions to be used.
 __attribute__((target("+gcs")))
+#else
+_LIBUNWIND_TRACE_NO_INLINE
 #endif
 static _Unwind_Reason_Code
 unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor,
@@ -349,6 +351,8 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor,
 #if defined(_LIBUNWIND_USE_GCS)
 // Enable the GCS target feature to permit gcspop instructions to be used.
 __attribute__((target("+gcs")))
+#else
+_LIBUNWIND_TRACE_NO_INLINE
 #endif
 static _Unwind_Reason_Code
 unwind_phase2_forced(unw_context_t *uc, unw_cursor_t *cursor,

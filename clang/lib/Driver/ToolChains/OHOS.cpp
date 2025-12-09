@@ -12,8 +12,8 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/FileSystem.h"
@@ -174,7 +174,7 @@ OHOS::OHOS(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 
 ToolChain::RuntimeLibType OHOS::GetRuntimeLibType(
     const ArgList &Args) const {
-  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_rtlib_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_rtlib_EQ)) {
     StringRef Value = A->getValue();
     if (Value != "compiler-rt")
       getDriver().Diag(clang::diag::err_drv_invalid_rtlib_name)

@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <memory_resource>
 #include <random>
 #include <string>
 #include <ranges>
@@ -33,6 +34,9 @@ struct adapt_operations {
 
   // using InsertionResult = ...;
   // static Container::iterator get_iterator(InsertionResult const&);
+
+  // template <class Allocator>
+  // using rebind_alloc = ...;
 };
 
 template <class Container>
@@ -99,6 +103,61 @@ void associative_container_benchmarks(std::string container) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
         reinterpret_cast<Container*>(c + i)->~Container();
       }
+      st.ResumeTiming();
+    }
+  });
+
+  bench("ctor(const&, alloc)", [=](auto& st) {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Container src(in.begin(), in.end());
+    ScratchSpace c[BatchSize];
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        new (c + i) Container(src, std::allocator<typename Container::value_type>());
+        benchmark::DoNotOptimize(c + i);
+        benchmark::ClobberMemory();
+      }
+
+      st.PauseTiming();
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        reinterpret_cast<Container*>(c + i)->~Container();
+      }
+      st.ResumeTiming();
+    }
+  });
+
+  bench("ctor(&&, different allocs)", [=](auto& st) {
+    using PMRContainer = adapt_operations<Container>::template rebind_alloc<
+        std::pmr::polymorphic_allocator<typename Container::value_type>>;
+
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    std::pmr::monotonic_buffer_resource rs(size * 64 * BatchSize); // 64 bytes should be enough per node
+    std::vector<PMRContainer> srcs;
+    srcs.reserve(BatchSize);
+    for (size_t i = 0; i != BatchSize; ++i)
+      srcs.emplace_back(&rs).insert(in.begin(), in.end());
+    alignas(PMRContainer) char c[BatchSize * sizeof(PMRContainer)];
+
+    std::pmr::monotonic_buffer_resource rs2(size * 64 * BatchSize); // 64 bytes should be enough per node
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        new (c + i * sizeof(PMRContainer)) PMRContainer(std::move(srcs[i]), &rs2);
+        benchmark::DoNotOptimize(c + i);
+        benchmark::ClobberMemory();
+      }
+
+      st.PauseTiming();
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        reinterpret_cast<PMRContainer*>(c + i * sizeof(PMRContainer))->~PMRContainer();
+      }
+      rs2.release();
+      srcs.clear();
+      for (size_t i = 0; i != BatchSize; ++i)
+        srcs.emplace_back(&rs).insert(in.begin(), in.end());
+
       st.ResumeTiming();
     }
   });

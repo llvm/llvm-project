@@ -53,7 +53,7 @@ static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
     cgf.emitScalarInit(init, cgf.getLoc(varDecl->getLocation()), lv, false);
     break;
   case cir::TEK_Complex:
-    cgf.cgm.errorNYI(varDecl->getSourceRange(), "complex global initializer");
+    cgf.emitComplexExprIntoLValue(init, lv, /*isInit=*/true);
     break;
   case cir::TEK_Aggregate:
     assert(!cir::MissingFeatures::aggValueSlotGC());
@@ -135,15 +135,27 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     // call right here.
     auto gd = GlobalDecl(dtor, Dtor_Complete);
     fnOp = cgm.getAddrAndTypeOfCXXStructor(gd).second;
-    cgf.getBuilder().createCallOp(
-        cgf.getLoc(vd->getSourceRange()),
-        mlir::FlatSymbolRefAttr::get(fnOp.getSymNameAttr()),
-        mlir::ValueRange{cgm.getAddrOfGlobalVar(vd)});
+    builder.createCallOp(cgf.getLoc(vd->getSourceRange()),
+                         mlir::FlatSymbolRefAttr::get(fnOp.getSymNameAttr()),
+                         mlir::ValueRange{cgm.getAddrOfGlobalVar(vd)});
+    assert(fnOp && "expected cir.func");
+    // TODO(cir): This doesn't do anything but check for unhandled conditions.
+    // What it is meant to do should really be happening in LoweringPrepare.
+    cgm.getCXXABI().registerGlobalDtor(vd, fnOp, nullptr);
   } else {
-    cgm.errorNYI(vd->getSourceRange(), "array destructor");
+    // Otherwise, a custom destroyed is needed. Classic codegen creates a helper
+    // function here and emits the destroy into the helper function, which is
+    // called from __cxa_atexit.
+    // In CIR, we just emit the destroy into the dtor region. It will be moved
+    // into a separate function during the LoweringPrepare pass.
+    // FIXME(cir): We should create a new operation here to explicitly get the
+    // address of the global into whose dtor region we are emiiting the destroy.
+    // The same applies to code above where it is calling getAddrOfGlobalVar.
+    mlir::Value globalVal = builder.createGetGlobal(addr);
+    CharUnits alignment = cgf.getContext().getDeclAlign(vd);
+    Address globalAddr{globalVal, cgf.convertTypeForMem(type), alignment};
+    cgf.emitDestroy(globalAddr, type, cgf.getDestroyer(dtorKind));
   }
-  assert(fnOp && "expected cir.func");
-  cgm.getCXXABI().registerGlobalDtor(vd, fnOp, nullptr);
 
   builder.setInsertionPointToEnd(block);
   if (block->empty()) {
@@ -151,7 +163,7 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     // Don't confuse lexical cleanup.
     builder.clearInsertionPoint();
   } else {
-    builder.create<cir::YieldOp>(addr.getLoc());
+    cir::YieldOp::create(builder, addr.getLoc());
   }
 }
 

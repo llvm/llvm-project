@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWING_CONVERSIONS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWING_CONVERSIONS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWINGCONVERSIONSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWINGCONVERSIONSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -41,7 +41,7 @@ private:
   void diagNarrowIntegerConstantToSignedInt(SourceLocation SourceLoc,
                                             const Expr &Lhs, const Expr &Rhs,
                                             const llvm::APSInt &Value,
-                                            const uint64_t HexBits);
+                                            uint64_t HexBits);
 
   void diagNarrowConstant(SourceLocation SourceLoc, const Expr &Lhs,
                           const Expr &Rhs);
@@ -108,4 +108,4 @@ private:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWING_CONVERSIONS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWINGCONVERSIONSCHECK_H
