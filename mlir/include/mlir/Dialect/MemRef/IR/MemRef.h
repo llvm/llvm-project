@@ -50,8 +50,9 @@ namespace memref {
 
 /// This is a common utility used for patterns of the form
 /// "someop(memref.cast) -> someop". It folds the source of any memref.cast
-/// into the root operation directly.
-LogicalResult foldMemRefCast(Operation *op, Value inner = nullptr);
+/// into the root operation directly. Operands in `ignoredOperands` are excluded
+/// from folding.
+LogicalResult foldMemRefCast(Operation *op, ValueRange ignoredOperands = {});
 
 /// Return an unranked/ranked tensor type for the given unranked/ranked memref
 /// type.

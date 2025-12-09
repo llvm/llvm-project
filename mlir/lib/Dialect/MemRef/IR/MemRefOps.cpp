@@ -41,12 +41,14 @@ Operation *MemRefDialect::materializeConstant(OpBuilder &builder,
 
 /// This is a common class used for patterns of the form
 /// "someop(memrefcast) -> someop".  It folds the source of any memref.cast
-/// into the root operation directly.
-LogicalResult mlir::memref::foldMemRefCast(Operation *op, Value inner) {
+/// into the root operation directly. Operands in `ignoredOperands` are excluded
+/// from folding.
+LogicalResult mlir::memref::foldMemRefCast(Operation *op,
+                                           ValueRange ignoredOperands) {
   bool folded = false;
   for (OpOperand &operand : op->getOpOperands()) {
     auto cast = operand.get().getDefiningOp<CastOp>();
-    if (cast && operand.get() != inner &&
+    if (cast && !llvm::is_contained(ignoredOperands, operand.get()) &&
         !llvm::isa<UnrankedMemRefType>(cast.getOperand().getType())) {
       operand.set(cast.getOperand());
       folded = true;
