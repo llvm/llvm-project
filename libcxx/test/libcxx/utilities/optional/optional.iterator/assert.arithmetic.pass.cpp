@@ -24,23 +24,26 @@ int main(int, char**) {
 
     TEST_LIBCPP_ASSERT_FAILURE(
         i += 2,
-        "__capacity_aware_iterator::operator+=: Attempting to advance iterator past its container's possible range");
+        "__capacity_aware_iterator::operator+=: Attempting to move iterator past its container's possible range");
 
     TEST_LIBCPP_ASSERT_FAILURE(
-        i += -2, "__capacity_aware_iterator::operator+=: Attempting to rewind iterator past its container's start");
+        i += -2,
+        "__capacity_aware_iterator::operator+=: Attempting to move iterator past its container's possible range");
 
     TEST_LIBCPP_ASSERT_FAILURE(
-        i -= 2, "__capacity_aware_iterator::operator-=: Attempting to rewind iterator before its container's start");
+        i -= 2,
+        "__capacity_aware_iterator::operator-=: Attempting to move iterator past its container's possible range");
 
     TEST_LIBCPP_ASSERT_FAILURE(
         i -= -2,
-        "__capacity_aware_iterator::operator+=: Attempting to advance iterator past its container's possible range");
+        "__capacity_aware_iterator::operator-=: Attempting to move iterator past its container's possible range");
 
     TEST_LIBCPP_ASSERT_FAILURE(
         i[2],
         "__capacity_aware_iterator::operator[]: Attempting to index iterator past its container's possible range");
 
     TEST_LIBCPP_ASSERT_FAILURE(
-        i[-2], "__capacity_aware_iterator::operator[]: Attempting to index iterator before its container's start");
+        i[-2],
+        "__capacity_aware_iterator::operator[]: Attempting to index iterator past its container's possible range");
   }
 }
