@@ -50,20 +50,17 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter,
   Value srcOperation;
   SmallVector<OpFoldResult> indexVals;
 
-  if (auto transferRead =
-          prodOp.getDefiningOp<mlir::vector::TransferReadOp>()) {
-    srcOperation = transferRead.getOperand(0);
-    SmallVector<OpFoldResult> indexValues(transferRead.getIndices().begin(),
-                                          transferRead.getIndices().end());
-    indexVals = indexValues;
-  }
+  Operation *defOp = prodOp.getDefiningOp();
+  if (!defOp)
+    return failure();
 
-  if (auto load = prodOp.getDefiningOp<mlir::vector::LoadOp>()) {
-    srcOperation = load.getOperand(0);
-    SmallVector<OpFoldResult> indexValues(load.getIndices().begin(),
-                                          load.getIndices().end());
-    indexVals = indexValues;
-  }
+  llvm::TypeSwitch<Operation *>(defOp)
+      .Case<mlir::vector::TransferReadOp, mlir::vector::LoadOp>(
+          [&](auto readOp) {
+            srcOperation = readOp.getOperand(0);
+            indexVals = SmallVector<OpFoldResult>(readOp.getIndices().begin(),
+                                                  readOp.getIndices().end());
+          });
 
   if (!srcOperation)
     return failure();
@@ -75,14 +72,20 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter,
   llvm::SmallVector<OpFoldResult> strides;
   llvm::SmallVector<OpFoldResult> sizes;
 
-  for (unsigned int i = 0; i < indexVals.size(); i++) {
+  auto nonVNNIDimSize = indexVals.size() - 1;
+  // Create the size and stride offsets.
+  for (unsigned int i = 0; i < nonVNNIDimSize; i++) {
     strides.push_back(rewriter.getIndexAttr(1));
     sizes.push_back(rewriter.getIndexAttr(1));
   }
 
-  sizes[indexVals.size() - 1] = rewriter.getIndexAttr(vnniDim);
+  strides.push_back(rewriter.getIndexAttr(1));
+  sizes.push_back(rewriter.getIndexAttr(vnniDim));
+
+  // update the unit/nonUnit Dim size eiither it is A(LHS) or B(RHS).
   sizes[indexVals.size() - mnDimIndx] = rewriter.getIndexAttr(mnDim);
 
+  // for unitDim, first broadcast odd element, so index is set to C1.
   if (mnDim == 1) {
     indexVals[indexVals.size() - 1] = rewriter.getIndexAttr(1);
   }
@@ -91,6 +94,11 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter,
                                            indexVals, sizes, strides);
   subviews.push_back(subview);
 
+  // For unit-dims, two subviews should be created for the odd and even
+  // indexed BF16 element because x86vector.avx.bcst_to_f32.packed op
+  // loads and broadcast the first BF16 element into packed F32. It
+  // cannot distinguish between even and odd BF16 elements within a
+  // packed pair.
   if (mnDim == 1) {
     indexVals[indexVals.size() - 1] = rewriter.getIndexAttr(0);
     sizes[indexVals.size() - 1] = rewriter.getIndexAttr(1);
@@ -193,8 +201,6 @@ struct VectorContractBF16ToFMA
 
     // Lower vector.contract to FMAs with help of BF16 packed ops.
     auto loc = contractOp.getLoc();
-    llvm::SmallVector<mlir::memref::SubViewOp> unitDimSubview;
-    llvm::SmallVector<mlir::memref::SubViewOp> nonUnitDimSubview;
 
     // create the unit-dimension LHS or RHS subview and the
     // corresponding non-unit dimension LHS or RHS subview on the other-side.
@@ -202,30 +208,40 @@ struct VectorContractBF16ToFMA
     // vector<1x8x2xbf16>, we create two subview for the LHS and one subview
     // for the RHS. In the opposite case (non-unit dimension on the LHS), we
     // do vice-versa.
-    if ((nonUnitDimRhs.size() - 1) > 0) {
-      auto unitSubview = getSubviewFromVectorInput(
-          loc, rewriter, contractOp.getLhs(), 1, 1, 2);
-      auto nonUnitSubview = getSubviewFromVectorInput(
-          loc, rewriter, contractOp.getRhs(), nonUnitDimRhs.front(), 2, 2);
-      if (failed(unitSubview) || failed(nonUnitSubview))
-        return rewriter.notifyMatchFailure(
-            contractOp, " The input source is not MemRef Type.");
+    bool rhsHasMultipleNonUnitDims = (nonUnitDimRhs.size() - 1) > 0;
+    // Select which operand is "unit" and which is "non-unit".
+    Value unitSrc =
+        rhsHasMultipleNonUnitDims ? contractOp.getLhs() : contractOp.getRhs();
+    Value nonUnitSrc =
+        rhsHasMultipleNonUnitDims ? contractOp.getRhs() : contractOp.getLhs();
 
-      unitDimSubview = *unitSubview;
-      nonUnitDimSubview = *nonUnitSubview;
+    // mnDim index differs depending on the orientation.
+    int unitMnDim = rhsHasMultipleNonUnitDims ? 2 : 2;    // same for both
+    int nonUnitMnDim = rhsHasMultipleNonUnitDims ? 2 : 3; // A or B
 
-    } else {
-      auto nonUnitSubview = getSubviewFromVectorInput(
-          loc, rewriter, contractOp.getLhs(), nonUnitDimRhs.front(), 2, 3);
-      auto unitSubview = getSubviewFromVectorInput(
-          loc, rewriter, contractOp.getRhs(), 1, 1, 2);
-      if (failed(unitSubview) || failed(nonUnitSubview))
-        return rewriter.notifyMatchFailure(
-            contractOp, " The input source is not MemRef Type.");
+    // VNNI factor: always 1 for unit dims, 2 for non-unit dims.
+    int unitVnni = 1;
+    int nonUnitVnni = 2;
 
-      unitDimSubview = *unitSubview;
-      nonUnitDimSubview = *nonUnitSubview;
-    }
+    // Non-unit dim size.
+    int nonUnitSize = nonUnitDimRhs.front();
+
+    // Build subviews.
+    auto unitSubview = getSubviewFromVectorInput(
+        loc, rewriter, unitSrc, /*size=*/1, unitVnni, unitMnDim);
+
+    auto nonUnitSubview = getSubviewFromVectorInput(loc, rewriter, nonUnitSrc,
+                                                    /*size=*/nonUnitSize,
+                                                    nonUnitVnni, nonUnitMnDim);
+
+    // Check failures once.
+    if (failed(unitSubview) || failed(nonUnitSubview))
+      return rewriter.notifyMatchFailure(
+          contractOp, "The input source is not MemRef Type.");
+
+    llvm::SmallVector<mlir::memref::SubViewOp> unitDimSubview = *unitSubview;
+    llvm::SmallVector<mlir::memref::SubViewOp> nonUnitDimSubview =
+        *nonUnitSubview;
 
     auto castAcc = vector::ShapeCastOp::create(
         rewriter, loc,

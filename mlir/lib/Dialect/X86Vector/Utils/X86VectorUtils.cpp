@@ -66,7 +66,7 @@ bool mlir::x86vector::isInVnniLayout(Operation *op,
   // The input matrix dimensions layout must match the following:
   //   - matrix A - [...][K/vnniFactor][vnniFactor]
   //   - matrix B - [...][K/vnniFactor][N][vnniFactor]
-  auto maybeIters = inferIteratorsFromOutMap(indexingMaps[2]);
+  auto maybeIters = inferIteratorsFromOutMap(indexingMaps[2] /* outs */);
   if (failed(maybeIters))
     return false;
   SmallVector<mlir::utils::IteratorType> iteratorTypes = *maybeIters;
