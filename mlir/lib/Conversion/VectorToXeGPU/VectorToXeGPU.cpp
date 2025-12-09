@@ -135,7 +135,6 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
         rewriter, loc, rewriter.getI64Type(), baseAddrIndex.getResult());
     // Strided metadata only provides 1D offset but create_nd_desc op expect
     // offset match the rank of source memref. Add leading zeros if rank > 1.
-    srcTy.getRank();
     SmallVector<OpFoldResult> fullOffsets;
     for (unsigned i = 0; i < srcTy.getRank() - 1; ++i) {
       fullOffsets.push_back(rewriter.getI64IntegerAttr(0));
