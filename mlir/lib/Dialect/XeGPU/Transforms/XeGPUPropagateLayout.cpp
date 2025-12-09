@@ -611,12 +611,8 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
   }
 
   SetVector<int64_t> broadcastUnitDims = broadcast.computeBroadcastedUnitDims();
-  if (broadcastUnitDims.size() != 1) {
-    broadcast.emitWarning("Expecting source type to be nD vector only with "
-                          "one broadcasted dimension.");
-    return;
-  }
-  // Propagate the result layout to the source operand.
+  resultLayout = cast<xegpu::DistributeLayoutAttr>(resultLayout.get())
+                     .setUnitDimData(broadcastUnitDims);
   propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
 }
 

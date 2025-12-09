@@ -223,6 +223,14 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
     InterfaceMethod<"Derive a new layout by dropping InstData",
                     "xegpu::DistributeLayoutAttr",
                     "dropInstData">,
+    InterfaceMethod<"Derive a new layout with sg_data, inst_data and lane_data set to 1 for the specified unit dims",
+                    "xegpu::DistributeLayoutAttr",
+                    "setUnitDimData",
+                    /*args=*/(ins "const llvm::SetVector<int64_t>": $unitDims)>,
+    InterfaceMethod<"Derive a new layout with sg_lane and lane_layout set to 1 for the specified unit dims",
+                    "xegpu::DistributeLayoutAttr",
+                    "setUnitDimLayout",
+                    /*args=*/(ins "const llvm::SetVector<int64_t>": $unitDims)>,
     InterfaceMethod<[{Delinearizes a linear ID into its multidimensional
                       indices based on the effective layout level.}],
                     "FailureOr<SmallVector<Value>>",
@@ -492,6 +500,12 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
       return {};
     }
 
+    //set the layout for the sepcified unit dims: sg_data, inst_data and lane_data to 1
+    DistributeLayoutAttr setUnitDimData(SetVector<int64_t> unitDims);
+
+    //set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
+    DistributeLayoutAttr setUnitDimLayout(SetVector<int64_t> unitDims);
+
     /// Delinearizes a linear ID into its multidimensional indices
     /// based on the effective level of the layout.
     FailureOr<SmallVector<Value>>
@@ -656,6 +670,12 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
         return nullptr;
       return SliceAttr::get(getContext(), parent, attr.getDims());
     }
+
+    //set the layout for the sepcified unit dims: sg_data, inst_data and lane_data to 1
+    DistributeLayoutAttr setUnitDimData(SetVector<int64_t> unitDims);
+
+    //set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
+    DistributeLayoutAttr setUnitDimLayout(SetVector<int64_t> unitDims);
 
     /// flatten a nested SliceAttr, e.g., for 2-level nested SliceAttr
     /// #xegpu.slice<#xegpu.slice<#xegpu.layout<sg_layout = [4, 8, 12]>, dims = [0]>, dims = [0]>

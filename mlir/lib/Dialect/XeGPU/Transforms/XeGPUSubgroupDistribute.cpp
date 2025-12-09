@@ -80,8 +80,7 @@ static constexpr unsigned highPatternBenefit = 2;
 /// | 2x32x16               | [1, 16]     | 2x32x1                   |
 static FailureOr<VectorType>
 getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
-                                VectorType originalType,
-                                bool allowUnitDim = false) {
+                                VectorType originalType) {
   if (!layout)
     return failure();
   assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
@@ -100,10 +99,6 @@ getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
   for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
     if (i < distributionStart)
       continue;
-    if (allowUnitDim && dim == 1) {
-      distributedShape[i] = dim;
-      continue;
-    }
     // Check if the dimension can be distributed evenly.
     if (dim % effectiveLaneLayout[i - distributionStart] != 0)
       return failure();
@@ -1439,7 +1434,7 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
 ///
 /// 2) Broadcast a same-rank vector with identical layouts for source and
 /// target:
-///    The source vector must have unit dimensions, and lane_layout must be unit
+///    The source vector must have unit dimensions, and lane_data must be unit
 ///    size for those unit dims. This always lowers to a no-op.
 ///
 /// 3) Broadcast a scalar with no layout: This always lowers to a broadcast from
@@ -1511,39 +1506,61 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
     VectorType sourceType = dyn_cast<VectorType>(broadcastOp.getSourceType());
     VectorType destType =
         dyn_cast<VectorType>(broadcastOp.getResult().getType());
+
     xegpu::DistributeLayoutAttr sourceLayout =
         xegpu::getDistributeLayoutAttr(broadcastOp->getOpOperand(0));
     xegpu::DistributeLayoutAttr resultLayout =
         xegpu::getDistributeLayoutAttr(broadcastOp.getResult());
+
+    FailureOr<VectorType> sourceDistType;
+    Type sourceElemOrDistType;
     if (sourceType) {
-      assert(resultLayout && "Broadcast result must have layout attribute.");
-      bool isSliceOf = sourceLayout.isSliceOf(resultLayout);
-      bool isEqualTo = sourceLayout.isEqualTo(resultLayout);
 
-      if (!isSliceOf && !isEqualTo) {
-        return rewriter.notifyMatchFailure(
-            warpOp, "Broadcast input layout must be either a slice of or equal "
-                    "to result layout.");
+      // Case 1 and 2: source is a vector type.
+      int64_t rankDiff = destType.getRank() - sourceType.getRank();
+      if (rankDiff > 0) {
+        // Case 1: source is lower-rank than result.
+        bool isSliceOf = sourceLayout.isSliceOf(resultLayout);
+        if (!isSliceOf)
+          return rewriter.notifyMatchFailure(
+              warpOp,
+              "Broadcast input layout must be a slice of result layout.");
       }
-    }
+      // case 2: source and result have same rank
+      if (rankDiff == 0) {
+        SetVector<int64_t> broadcastUnitDims =
+            broadcastOp.computeBroadcastedUnitDims();
+        resultLayout = resultLayout.setUnitDimData(broadcastUnitDims);
+        bool isEqualTo = sourceLayout.isEqualTo(resultLayout);
+        if (!isEqualTo)
+          return rewriter.notifyMatchFailure(
+              warpOp, "For same-rank broadcast, source must be identical to "
+                      "adjusted result layouts with unit dims.");
+        sourceLayout = sourceLayout.setUnitDimLayout(broadcastUnitDims);
+      }
 
-    FailureOr<VectorType> sourceDistType = getDistVecTypeBasedOnLaneLayout(
-        sourceLayout, sourceType, /*allowUnitDim=*/true);
+      sourceDistType =
+          getDistVecTypeBasedOnLaneLayout(sourceLayout, sourceType);
+      if (failed(sourceDistType)) {
+        return rewriter.notifyMatchFailure(
+            warpOp, "Failed to distribute the source vector type.");
+      }
+      sourceElemOrDistType = sourceDistType.value();
+
+    } else {
+      // Case 3: source is a scalar type.
+      if (sourceLayout) {
+        return rewriter.notifyMatchFailure(
+            warpOp, "Broadcast from scalar must not have a layout attribute.");
+      }
+      sourceElemOrDistType = broadcastOp.getSourceType();
+    }
     FailureOr<VectorType> destDistType =
         getDistVecTypeBasedOnLaneLayout(resultLayout, destType);
-    if ((sourceType != nullptr) && (failed(sourceDistType))) {
-      return rewriter.notifyMatchFailure(
-          warpOp, "Failed to distribute the source vector type.");
-    }
-    if (failed(destDistType))
+    if (failed(destDistType)) {
       return rewriter.notifyMatchFailure(
           warpOp, "Failed to distribute the dest vector type.");
-
-    Type sourceElemOrDistType;
-    if (sourceType)
-      sourceElemOrDistType = sourceDistType.value();
-    else
-      sourceElemOrDistType = broadcastOp.getSourceType();
+    }
 
     SmallVector<size_t> newRetIndices;
     auto newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
@@ -1555,7 +1572,6 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
     Value newBroadcast = distributedSource;
 
     if (sourceElemOrDistType != destDistType.value()) {
-      // generate broadcast op outside warp op to have correct type
       rewriter.setInsertionPointAfter(newWarpOp);
       newBroadcast =
           vector::BroadcastOp::create(rewriter, newWarpOp.getLoc(),
