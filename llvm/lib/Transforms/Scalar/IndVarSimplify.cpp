@@ -164,7 +164,7 @@ class IndVarSimplify {
 
   bool sinkUnusedInvariants(Loop *L);
 
-  bool rewritePtrIncrementWithOffsettAddressing(
+  bool rewritePtrIncrementWithOffsetAddressing(
       Loop *L, SmallVectorImpl<WeakTrackingVH> &DeadInsts);
 
 public:
@@ -2042,11 +2042,14 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   return Changed;
 }
 
-bool IndVarSimplify::rewritePtrIncrementWithOffsettAddressing(
+bool IndVarSimplify::rewritePtrIncrementWithOffsetAddressing(
     Loop *L, SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   SmallVector<PHINode *, 8> LoopPhis(
       llvm::make_pointer_range(L->getHeader()->phis()));
   bool Changed = false;
+
+  if (!L->getLatchCmpInst())
+    return false;
 
   auto IsPtrToOffsetAddressingCandidate = [&](PHINode *PHI) -> bool {
     if (PHI->user_empty())
@@ -2055,7 +2058,6 @@ bool IndVarSimplify::rewritePtrIncrementWithOffsettAddressing(
     if (PHI->hasConstantValue())
       return false;
 
-    // TODO: is this necessary.
     if (L->getCanonicalInductionVariable() == PHI)
       return false;
 
@@ -2107,8 +2109,6 @@ bool IndVarSimplify::rewritePtrIncrementWithOffsettAddressing(
     Value *CanonicalIV = L->getCanonicalInductionVariable();
     if (!CanonicalIV)
       continue;
-    if (!L->getLatchCmpInst())
-      return false;
 
     Value *Op0 = PHI->getIncomingValue(0);
     Value *Op1 = PHI->getIncomingValue(1);
@@ -2141,7 +2141,7 @@ bool IndVarSimplify::rewritePtrIncrementWithOffsettAddressing(
                                     InvariantIncomingVal, ArrayRef(Mul));
       PHI->replaceAllUsesWith(NewGEP);
       DeadInsts.emplace_back(PHI);
-      Changed |= true;
+      Changed = true;
     }
   }
   return Changed;
@@ -2225,7 +2225,7 @@ bool IndVarSimplify::run(Loop *L) {
   }
 
   // Try to rewrite ptr increments with ptr offset addressing
-  Changed |= rewritePtrIncrementWithOffsettAddressing(L, DeadInsts);
+  Changed |= rewritePtrIncrementWithOffsetAddressing(L, DeadInsts);
 
   // If we have a trip count expression, rewrite the loop's exit condition
   // using it.
