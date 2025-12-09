@@ -538,6 +538,15 @@ static cl::opt<bool> EnableUniformIntrinsicCombine(
     cl::desc("Enable/Disable the Uniform Intrinsic Combine Pass"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> OptNextUseAnalysis("enable-next-use-analysis",
+                                        cl::desc("Enable next-use analysis"),
+                                        cl::init(true), cl::Hidden);
+
+static cl::opt<bool>
+    OptEarlyRegisterSpilling("enable-early-register-spilling",
+                             cl::desc("Enabl early register spilling"),
+                             cl::init(true), cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -570,6 +579,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
   initializeSIOptimizeVGPRLiveRangeLegacyPass(*PR);
+  initializeAMDGPUNextUseAnalysisPassPass(*PR);
+  initializeAMDGPUEarlyRegisterSpillingPass(*PR);
   initializeSILoadStoreOptimizerLegacyPass(*PR);
   initializeAMDGPUCtorDtorLoweringLegacyPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
@@ -1601,6 +1612,12 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // we should fix it and enable the verifier.
   if (OptVGPRLiveRange)
     insertPass(&LiveVariablesID, &SIOptimizeVGPRLiveRangeLegacyID);
+
+  if (OptNextUseAnalysis)
+    insertPass(&LiveVariablesID, &AMDGPUNextUseAnalysisID);
+
+  if (OptEarlyRegisterSpilling)
+    insertPass(&LiveVariablesID, &AMDGPUEarlyRegisterSpillingID);
 
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
