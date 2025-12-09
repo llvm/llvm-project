@@ -2723,9 +2723,9 @@ struct AMDGPUTensorLoadStoreOpLowering
 
     ValueRange desc = adaptor.getDesc();
     uint32_t temporalHint = static_cast<uint32_t>(op.getTemporalHint());
-    bool isVolatile = !static_cast<bool>(op.getIsVolatile());
+    bool nonVolatile = !static_cast<bool>(op.getIsVolatile());
     uint32_t cacheScope = static_cast<uint32_t>(op.getCacheScope());
-    int32_t cachePolicy = cacheScope | temporalHint << 2 | isVolatile << 5;
+    int32_t cachePolicy = cacheScope | temporalHint << 2 | nonVolatile << 5;
 
     rewriter.replaceOpWithNewOp<TargetOp>(op, desc[0], desc[1], desc[2],
                                           desc[3], cachePolicy,
