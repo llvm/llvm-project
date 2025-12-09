@@ -374,6 +374,9 @@ struct MissingFeatures {
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }
+
+  // Maybe only needed for Windows exception handling
+  static bool currentFuncletPad() { return false; }
 };
 
 } // namespace cir
