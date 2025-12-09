@@ -7,13 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantStringInitCheck.h"
-#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include <optional>
 
 using namespace clang::ast_matchers;
-using namespace clang::tidy::matchers;
 
 namespace clang::tidy::readability {
 

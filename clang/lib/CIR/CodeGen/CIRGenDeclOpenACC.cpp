@@ -355,6 +355,27 @@ public:
                         curValue.getZExtValue());
     }
   }
+
+  void VisitDeviceTypeClause(const OpenACCDeviceTypeClause &clause) {
+    lastDeviceTypeValues.clear();
+
+    for (const DeviceTypeArgument &arg : clause.getArchitectures())
+      lastDeviceTypeValues.push_back(decodeDeviceType(arg.getIdentifierInfo()));
+  }
+
+  void VisitBindClause(const OpenACCBindClause &clause) {
+    if (clause.isStringArgument()) {
+      mlir::StringAttr value =
+          builder.getStringAttr(clause.getStringArgument()->getString());
+
+      routineOp.addBindStrName(builder.getContext(), lastDeviceTypeValues,
+                               value);
+    } else {
+      assert(clause.isIdentifierArgument());
+      cgm.errorNYI(clause.getSourceRange(),
+                   "Bind with an identifier argument is not yet supported");
+    }
+  }
 };
 } // namespace
 

@@ -1544,7 +1544,6 @@ let hasSideEffects = 1, isCodeGenOnly = 1, isTerminator = 1, isBarrier = 1 in {
 //===----------------------------------------------------------------------===//
 
 def HINT : HintI<"hint">;
-def : InstAlias<"nop",  (HINT 0b000)>;
 def : InstAlias<"yield",(HINT 0b001)>;
 def : InstAlias<"wfe",  (HINT 0b010)>;
 def : InstAlias<"wfi",  (HINT 0b011)>;
@@ -1553,6 +1552,11 @@ def : InstAlias<"sevl", (HINT 0b101)>;
 def : InstAlias<"dgh",  (HINT 0b110)>;
 def : InstAlias<"esb",  (HINT 0b10000)>, Requires<[HasRAS]>;
 def : InstAlias<"csdb", (HINT 20)>;
+
+let CRm = 0b0000, hasSideEffects = 0 in
+def NOP : SystemNoOperands<0b000, "hint\t#0">;
+
+def : InstAlias<"nop", (NOP)>;
 
 let Predicates = [HasPCDPHINT] in {
     def STSHH: STSHHI;

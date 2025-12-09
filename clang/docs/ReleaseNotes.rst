@@ -343,6 +343,7 @@ Modified Compiler Flags
 -----------------------
 - The `-gkey-instructions` compiler flag is now enabled by default when DWARF is emitted for plain C/C++ and optimizations are enabled. (#GH149509)
 - The `-fconstexpr-steps` compiler flag now accepts value `0` to opt out of this limit. (#GH160440)
+- The `-fdevirtualize-speculatively` compiler flag is now supported to enable speculative devirtualization of virtual function calls, it's disabled by default. (#GH159685)
 
 Removed Compiler Flags
 -------------------------
@@ -463,6 +464,10 @@ Improvements to Clang's diagnostics
 - Clang now detects potential missing format and format_matches attributes on function,
   Objective-C method and block declarations when calling format functions. It is part
   of the format-nonliteral diagnostic (#GH60718)
+
+- Fixed a crash when enabling ``-fdiagnostics-format=sarif`` and the output 
+  carries messages like 'In file included from ...' or 'In module ...'.
+  Now the include/import locations are written into `sarif.run.result.relatedLocations`.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -662,6 +667,23 @@ RISC-V Support
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now supports C++17 Class Template Argument Deduction (CTAD) in CUDA/HIP
+  device code by treating deduction guides as if they were ``__host__ __device__``.
+
+- Clang avoids ambiguous CTAD in CUDA/HIP by not synthesizing duplicate implicit
+  deduction guides when ``__host__`` and ``__device__`` constructors differ only
+  in CUDA target attributes (same signature and constraints).
+
+- Clang diagnoses CUDA/HIP deduction guides that are annotated as host-only,
+  device-only, or ``__global__`` as errors. Explicit ``__host__ __device__``
+  deduction guides remain accepted for now but are deprecated and will be
+  rejected in a future version of Clang; deduction guides do not participate
+  in code generation and are treated as implicitly host+device.
+
+- Clang preserves distinct implicit deduction guides for constructors that differ
+  by constraints, so constraint-based CTAD works in CUDA/HIP device code as in
+  standard C++.
 
 CUDA Support
 ^^^^^^^^^^^^

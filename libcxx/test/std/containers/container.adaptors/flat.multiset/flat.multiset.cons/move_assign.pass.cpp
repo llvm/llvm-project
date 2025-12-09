@@ -156,7 +156,7 @@ void test_move_assign_no_except() {
   // This tests a conforming extension
 
   {
-    using C = std::flat_multiset<int, int>;
+    using C [[maybe_unused]] = std::flat_multiset<int, int>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
   }
   {
@@ -168,16 +168,17 @@ void test_move_assign_no_except() {
     static_assert(!std::is_nothrow_move_assignable_v<C>);
   }
   {
-    using C = std::flat_multiset<MoveOnly, std::less<MoveOnly>, std::vector<MoveOnly, other_allocator<MoveOnly>>>;
+    using C [[maybe_unused]] =
+        std::flat_multiset<MoveOnly, std::less<MoveOnly>, std::vector<MoveOnly, other_allocator<MoveOnly>>>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
   }
   {
-    using C = std::flat_multiset<int, std::less<int>, std::vector<int, other_allocator<int>>>;
+    using C [[maybe_unused]] = std::flat_multiset<int, std::less<int>, std::vector<int, other_allocator<int>>>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
   }
   {
     // Test with a comparator that throws on move-assignment.
-    using C = std::flat_multiset<int, MoveThrowsComp>;
+    using C [[maybe_unused]] = std::flat_multiset<int, MoveThrowsComp>;
     LIBCPP_STATIC_ASSERT(!std::is_nothrow_move_assignable_v<C>);
   }
   {
