@@ -19863,7 +19863,31 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.Zero = IsVORR ? (KnownLHS.Zero & ~Imm) : (KnownLHS.Zero | Imm);
     break;
   }
+  case ARMISD::VMOVIMM:
+  case ARMISD::VMVNIMM: {
+    unsigned Encoded = Op.getConstantOperandVal(0);
+    unsigned DecEltBits = 0;
+    uint64_t DecodedVal = ARM_AM::decodeVMOVModImm(Encoded, DecEltBits);
+
+    unsigned EltBits = Op.getScalarValueSizeInBits();
+    if (EltBits != DecEltBits)
+      break;
+
+    APInt Imm(DecEltBits, DecodedVal);
+
+    if (Op.getOpcode() == ARMISD::VMVNIMM)
+      Imm.flipAllBits();
+
+    Known = KnownBits::makeConstant(Imm);
+    break;
   }
+  }
+}
+
+bool ARMTargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
+  return Op.getOpcode() == ARMISD::VMOVIMM ||
+         Op.getOpcode() == ARMISD::VMVNIMM ||
+         TargetLowering::isTargetCanonicalConstantNode(Op);
 }
 
 bool ARMTargetLowering::targetShrinkDemandedConstant(

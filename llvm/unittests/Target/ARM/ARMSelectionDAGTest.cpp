@@ -194,4 +194,36 @@ TEST_F(ARMSelectionDAGTest, computeKnownBits_VBICIMM_cmode2_lhs_ones) {
   EXPECT_EQ(Known.Zero, APInt(32, 0x0000AA00));
 }
 
+/// VMOVIMM: Move immediate to vector register.
+/// cmode=0x0 puts imm8 in byte0 => per-lane constant = 0x000000AA.
+TEST_F(ARMSelectionDAGTest, computeKnownBits_VMOVIMM) {
+  SDLoc DL;
+  EVT VT = MVT::v4i32;
+
+  SDValue EncSD =
+      DAG->getTargetConstant(ARM_AM::createVMOVModImm(0x0, 0xAA), DL, MVT::i32);
+  SDValue Op = DAG->getNode(ARMISD::VMOVIMM, DL, VT, EncSD);
+
+  APInt DemandedElts = APInt::getAllOnes(4);
+  KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
+  EXPECT_EQ(Known.One, APInt(32, 0x000000AA));
+  EXPECT_EQ(Known.Zero, APInt(32, 0xFFFFFF55));
+}
+
+/// VMVNIMM: Move NOT immediate to vector register.
+/// cmode=0x0 puts imm8 in byte0 => decoded = 0x000000AA, result = ~0x000000AA.
+TEST_F(ARMSelectionDAGTest, computeKnownBits_VMVNIMM) {
+  SDLoc DL;
+  EVT VT = MVT::v4i32;
+
+  SDValue EncSD =
+      DAG->getTargetConstant(ARM_AM::createVMOVModImm(0x0, 0xAA), DL, MVT::i32);
+  SDValue Op = DAG->getNode(ARMISD::VMVNIMM, DL, VT, EncSD);
+
+  APInt DemandedElts = APInt::getAllOnes(4);
+  KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
+  EXPECT_EQ(Known.One, APInt(32, 0xFFFFFF55));
+  EXPECT_EQ(Known.Zero, APInt(32, 0x000000AA));
+}
+
 } // end namespace llvm
