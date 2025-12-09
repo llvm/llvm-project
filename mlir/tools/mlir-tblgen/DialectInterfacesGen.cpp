@@ -91,6 +91,8 @@ static void emitInterfaceMethodDoc(const InterfaceMethod &method,
                                    raw_ostream &os, StringRef prefix = "") {
   if (std::optional<StringRef> description = method.getDescription())
     tblgen::emitDescriptionComment(*description, os, prefix);
+  else
+    os << "\n";
 }
 
 static void emitInterfaceMethodsDef(const DialectInterface &interface,

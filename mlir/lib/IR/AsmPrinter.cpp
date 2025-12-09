@@ -129,7 +129,7 @@ void OpAsmPrinter::printFunctionalType(Operation *op) {
 #include "mlir/IR/OpAsmTypeInterface.cpp.inc"
 
 LogicalResult
-OpAsmDialectInterface::parseResource(AsmParsedResourceEntry &entry) const {
+OpAsmDialectInterface::parseResource(::mlir::AsmParsedResourceEntry &entry) const {
   return entry.emitError() << "unknown 'resource' key '" << entry.getKey()
                            << "' for dialect '" << getDialect()->getNamespace()
                            << "'";
