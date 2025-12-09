@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::tblgen;
@@ -49,6 +50,16 @@ StringRef InterfaceMethod::getUniqueName() const { return uniqueName; }
 // Return if this method is static.
 bool InterfaceMethod::isStatic() const {
   return def->isSubClassOf("StaticInterfaceMethod");
+}
+
+// Return if the method is a pure virtual one.
+bool InterfaceMethod::isPureVirtual() const {
+  return def->isSubClassOf("PureVirtualInterfaceMethod");
+}
+
+// Return if the method is only a declaration.
+bool InterfaceMethod::isDeclaration() const {
+  return def->isSubClassOf("InterfaceMethodDeclaration");
 }
 
 // Return the body for this method if it has one.
@@ -215,4 +226,17 @@ bool TypeInterface::classof(const Interface *interface) {
 
 bool DialectInterface::classof(const Interface *interface) {
   return interface->getDef().isSubClassOf("DialectInterface");
+}
+
+// Return the interfaces extra class declaration code.
+SmallVector<std::pair<StringRef, StringRef>>
+DialectInterface::getAliasDeclarations() const {
+  SmallVector<std::pair<StringRef, StringRef>, 1> aliasDeclarations;
+
+  for (auto &aliasDef : getDef().getValueAsListOfDefs("aliasDeclarations")) {
+    auto alias = aliasDef->getValueAsString("name");
+    auto typeId = aliasDef->getValueAsString("aliased");
+    aliasDeclarations.push_back(std::make_pair(alias, typeId));
+  }
+  return aliasDeclarations;
 }

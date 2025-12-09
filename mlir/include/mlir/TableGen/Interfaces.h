@@ -46,6 +46,12 @@ public:
   // Return if this method is static.
   bool isStatic() const;
 
+  // Return if the method is a pure virtual one.
+  bool isPureVirtual() const;
+
+  // Return if the method is only a declaration.
+  bool isDeclaration() const;
+
   // Return the body for this method if it has one.
   std::optional<StringRef> getBody() const;
 
@@ -160,6 +166,9 @@ struct TypeInterface : public Interface {
 // An interface that is registered to a Dialect.
 struct DialectInterface : public Interface {
   using Interface::Interface;
+
+  // Return alias declarations
+  SmallVector<std::pair<StringRef, StringRef>> getAliasDeclarations() const;
 
   static bool classof(const Interface *interface);
 };
