@@ -174,11 +174,22 @@ public:
 
   mlir::Value VisitAddrLabelExpr(const AddrLabelExpr *e) {
     auto func = cast<cir::FuncOp>(cgf.curFn);
-    auto blockInfoAttr = cir::BlockAddrInfoAttr::get(
+    cir::BlockAddrInfoAttr blockInfoAttr = cir::BlockAddrInfoAttr::get(
         &cgf.getMLIRContext(), func.getSymName(), e->getLabel()->getName());
-    return cir::BlockAddressOp::create(builder, cgf.getLoc(e->getSourceRange()),
-                                       cgf.convertType(e->getType()),
-                                       blockInfoAttr);
+    cir::BlockAddressOp blockAddressOp = cir::BlockAddressOp::create(
+        builder, cgf.getLoc(e->getSourceRange()), cgf.convertType(e->getType()),
+        blockInfoAttr);
+    cir::LabelOp resolvedLabel = cgf.cgm.lookupBlockAddressInfo(blockInfoAttr);
+    if (!resolvedLabel) {
+      cgf.cgm.mapUnresolvedBlockAddress(blockAddressOp);
+      // Still add the op to maintain insertion order it will be resolved in
+      // resolveBlockAddresses
+      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, nullptr);
+    } else {
+      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, resolvedLabel);
+    }
+    cgf.instantiateIndirectGotoBlock();
+    return blockAddressOp;
   }
 
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *e) {
@@ -2344,25 +2355,30 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
         } else {
           // C99 6.5.3.4p2: If the argument is an expression of type
           // VLA, it is evaluated.
-          cgf.getCIRGenModule().errorNYI(
-              e->getSourceRange(),
-              "sizeof operator for VariableArrayType & evaluateExtent "
-              "ignoredExpr",
-              e->getStmtClassName());
-          return {};
+          cgf.emitIgnoredExpr(e->getArgumentExpr());
         }
 
         // For _Countof, we just want to return the size of a single dimension.
         if (kind == UETT_CountOf)
           return cgf.getVLAElements1D(vat).numElts;
 
-        cgf.getCIRGenModule().errorNYI(
-            e->getSourceRange(),
-            "sizeof operator for VariableArrayType & evaluateExtent",
-            e->getStmtClassName());
-        return builder.getConstant(
-            loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
-                                   -llvm::APSInt(llvm::APInt(64, 1), true)));
+        // For sizeof and __datasizeof, we need to scale the number of elements
+        // by the size of the array element type.
+        CIRGenFunction::VlaSizePair vlaSize = cgf.getVLASize(vat);
+        mlir::Value numElts = vlaSize.numElts;
+
+        // Scale the number of non-VLA elements by the non-VLA element size.
+        CharUnits eltSize = cgf.getContext().getTypeSizeInChars(vlaSize.type);
+        if (!eltSize.isOne()) {
+          mlir::Location loc = cgf.getLoc(e->getSourceRange());
+          mlir::Value eltSizeValue =
+              builder.getConstAPInt(numElts.getLoc(), numElts.getType(),
+                                    cgf.cgm.getSize(eltSize).getValue());
+          return builder.createMul(loc, eltSizeValue, numElts,
+                                   cir::OverflowBehavior::NoUnsignedWrap);
+        }
+
+        return numElts;
       }
     }
   } else if (e->getKind() == UETT_OpenMPRequiredSimdAlign) {

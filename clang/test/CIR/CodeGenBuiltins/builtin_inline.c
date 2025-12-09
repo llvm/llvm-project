@@ -20,7 +20,7 @@ void *test_inline_builtin_memcpy(void *a, const void *b, size_t c) {
   return memcpy(a, b, c);
 }
 
-// CIR: cir.func internal private{{.*}}@memcpy.inline({{.*}}) -> !cir.ptr<!void> inline(always)
+// CIR: cir.func always_inline internal private{{.*}}@memcpy.inline({{.*}}) -> !cir.ptr<!void>
 
 // CIR-LABEL: @test_inline_builtin_memcpy(
 // CIR:         cir.call @memcpy.inline(

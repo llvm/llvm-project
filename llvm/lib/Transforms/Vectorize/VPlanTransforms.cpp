@@ -139,35 +139,51 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
   return true;
 }
 
-// Check if a load can be hoisted by verifying it doesn't alias with any stores
-// in blocks between FirstBB and LastBB using scoped noalias metadata.
-static bool canHoistLoadWithNoAliasCheck(VPReplicateRecipe *Load,
-                                         VPBasicBlock *FirstBB,
-                                         VPBasicBlock *LastBB) {
-  // Get the load's memory location and check if it aliases with any stores
-  // using scoped noalias metadata.
-  auto LoadLoc = vputils::getMemoryLocation(*Load);
-  if (!LoadLoc || !LoadLoc->AATags.Scope)
+// Check if a memory operation doesn't alias with memory operations in blocks
+// between FirstBB and LastBB using scoped noalias metadata.
+// For load hoisting, we only check writes in one direction.
+// For store sinking, we check both reads and writes bidirectionally.
+static bool canHoistOrSinkWithNoAliasCheck(
+    const MemoryLocation &MemLoc, VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
+    bool CheckReads,
+    const SmallPtrSetImpl<VPRecipeBase *> *ExcludeRecipes = nullptr) {
+  if (!MemLoc.AATags.Scope)
     return false;
 
-  const AAMDNodes &LoadAA = LoadLoc->AATags;
+  const AAMDNodes &MemAA = MemLoc.AATags;
+
   for (VPBlockBase *Block = FirstBB; Block;
        Block = Block->getSingleSuccessor()) {
-    // This function assumes a simple linear chain of blocks. If there are
-    // multiple successors, we would need more complex analysis.
     assert(Block->getNumSuccessors() <= 1 &&
            "Expected at most one successor in block chain");
     auto *VPBB = cast<VPBasicBlock>(Block);
     for (VPRecipeBase &R : *VPBB) {
-      if (R.mayWriteToMemory()) {
-        auto Loc = vputils::getMemoryLocation(R);
-        // Bail out if we can't get the location or if the scoped noalias
-        // metadata indicates potential aliasing.
-        if (!Loc || ScopedNoAliasAAResult::mayAliasInScopes(
-                        LoadAA.Scope, Loc->AATags.NoAlias))
-          return false;
-      }
+      if (ExcludeRecipes && ExcludeRecipes->contains(&R))
+        continue;
+
+      // Skip recipes that don't need checking.
+      if (!R.mayWriteToMemory() && !(CheckReads && R.mayReadFromMemory()))
+        continue;
+
+      auto Loc = vputils::getMemoryLocation(R);
+      if (!Loc)
+        // Conservatively assume aliasing for memory operations without
+        // location.
+        return false;
+
+      // For reads, check if they don't alias in the reverse direction and
+      // skip if so.
+      if (CheckReads && R.mayReadFromMemory() &&
+          !ScopedNoAliasAAResult::mayAliasInScopes(Loc->AATags.Scope,
+                                                   MemAA.NoAlias))
+        continue;
+
+      // Check if the memory operations may alias in the forward direction.
+      if (ScopedNoAliasAAResult::mayAliasInScopes(MemAA.Scope,
+                                                  Loc->AATags.NoAlias))
+        return false;
     }
+
     if (Block == LastBB)
       break;
   }
@@ -794,12 +810,19 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
         WideIV->getDebugLoc(), Builder);
 
     // Update scalar users of IV to use Step instead.
-    if (!HasOnlyVectorVFs)
+    if (!HasOnlyVectorVFs) {
+      assert(!Plan.hasScalableVF() &&
+             "plans containing a scalar VF cannot also include scalable VFs");
       WideIV->replaceAllUsesWith(Steps);
-    else
-      WideIV->replaceUsesWithIf(Steps, [WideIV](VPUser &U, unsigned) {
-        return U.usesScalars(WideIV);
-      });
+    } else {
+      bool HasScalableVF = Plan.hasScalableVF();
+      WideIV->replaceUsesWithIf(Steps,
+                                [WideIV, HasScalableVF](VPUser &U, unsigned) {
+                                  if (HasScalableVF)
+                                    return U.usesFirstLaneOnly(WideIV);
+                                  return U.usesScalars(WideIV);
+                                });
+    }
   }
 }
 
@@ -923,7 +946,7 @@ static VPValue *optimizeLatchExitInductionUser(
     VPlan &Plan, VPTypeAnalysis &TypeInfo, VPBlockBase *PredVPBB, VPValue *Op,
     DenseMap<VPValue *, VPValue *> &EndValues, ScalarEvolution &SE) {
   VPValue *Incoming;
-  if (!match(Op, m_ExtractLastElement(m_VPValue(Incoming))))
+  if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
     return nullptr;
 
   auto *WideIV = getOptimizableIVOf(Incoming, SE);
@@ -944,7 +967,8 @@ static VPValue *optimizeLatchExitInductionUser(
   VPValue *Step = WideIV->getStepValue();
   Type *ScalarTy = TypeInfo.inferScalarType(WideIV);
   if (ScalarTy->isIntegerTy())
-    return B.createNaryOp(Instruction::Sub, {EndValue, Step}, {}, "ind.escape");
+    return B.createNaryOp(Instruction::Sub, {EndValue, Step},
+                          DebugLoc::getUnknown(), "ind.escape");
   if (ScalarTy->isPointerTy()) {
     Type *StepTy = TypeInfo.inferScalarType(Step);
     auto *Zero = Plan.getConstantInt(StepTy, 0);
@@ -1361,9 +1385,8 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // Look through ExtractLastElement (BuildVector ....).
-  if (match(Def, m_CombineOr(m_ExtractLastElement(m_BuildVector()),
-                             m_ExtractLastLanePerPart(m_BuildVector())))) {
+  // Look through ExtractLastLane (BuildVector ....).
+  if (match(Def, m_ExtractLastLane(m_BuildVector()))) {
     auto *BuildVector = cast<VPInstruction>(Def->getOperand(0));
     Def->replaceAllUsesWith(
         BuildVector->getOperand(BuildVector->getNumOperands() - 1));
@@ -1451,15 +1474,12 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  if (match(Def,
-            m_CombineOr(m_ExtractLastElement(m_Broadcast(m_VPValue(A))),
-                        m_ExtractLastLanePerPart(m_Broadcast(m_VPValue(A)))))) {
+  if (match(Def, m_ExtractLastLane(m_Broadcast(m_VPValue(A))))) {
     Def->replaceAllUsesWith(A);
     return;
   }
 
-  if (match(Def, m_CombineOr(m_ExtractLastElement(m_VPValue(A)),
-                             m_ExtractLastLanePerPart(m_VPValue(A)))) &&
+  if (match(Def, m_ExtractLastLane(m_VPValue(A))) &&
       ((isa<VPInstruction>(A) && vputils::isSingleScalar(A)) ||
        (isa<VPReplicateRecipe>(A) &&
         cast<VPReplicateRecipe>(A)->isSingleScalar())) &&
@@ -1468,11 +1488,8 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(A);
   }
 
-  if (Plan->getUF() == 1 &&
-      match(Def, m_ExtractLastLanePerPart(m_VPValue(A)))) {
-    return Def->replaceAllUsesWith(
-        Builder.createNaryOp(VPInstruction::ExtractLastElement, {A}));
-  }
+  if (Plan->getUF() == 1 && match(Def, m_ExtractLastPart(m_VPValue(A))))
+    return Def->replaceAllUsesWith(A);
 }
 
 void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
@@ -1512,13 +1529,14 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
             true /*IsSingleScalar*/, nullptr /*Mask*/, *RepR /*Flags*/,
             *RepR /*Metadata*/, RepR->getDebugLoc());
         Clone->insertBefore(RepOrWidenR);
-        unsigned ExtractOpc =
-            vputils::isUniformAcrossVFsAndUFs(RepR->getOperand(1))
-                ? VPInstruction::ExtractLastElement
-                : VPInstruction::ExtractLastLanePerPart;
-        auto *Ext = new VPInstruction(ExtractOpc, {Clone->getOperand(0)});
-        Ext->insertBefore(Clone);
-        Clone->setOperand(0, Ext);
+        VPBuilder Builder(Clone);
+        VPValue *ExtractOp = Clone->getOperand(0);
+        if (vputils::isUniformAcrossVFsAndUFs(RepR->getOperand(1)))
+          ExtractOp =
+              Builder.createNaryOp(VPInstruction::ExtractLastPart, ExtractOp);
+        ExtractOp =
+            Builder.createNaryOp(VPInstruction::ExtractLastLane, ExtractOp);
+        Clone->setOperand(0, ExtractOp);
         RepR->eraseFromParent();
         continue;
       }
@@ -1536,8 +1554,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
                   [RepOrWidenR](const VPUser *U) {
                     if (auto *VPI = dyn_cast<VPInstruction>(U)) {
                       unsigned Opcode = VPI->getOpcode();
-                      if (Opcode == VPInstruction::ExtractLastElement ||
-                          Opcode == VPInstruction::ExtractLastLanePerPart ||
+                      if (Opcode == VPInstruction::ExtractLastLane ||
+                          Opcode == VPInstruction::ExtractLastPart ||
                           Opcode == VPInstruction::ExtractPenultimateElement)
                         return true;
                     }
@@ -2125,8 +2143,13 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
       if (Op == FOR)
         return false;
 
-      if (auto *R = NeedsHoisting(Op))
+      if (auto *R = NeedsHoisting(Op)) {
+        // Bail out if the recipe defines multiple values.
+        // TODO: Hoisting such recipes requires additional handling.
+        if (R->getNumDefinedValues() != 1)
+          return false;
         HoistCandidates.push_back(R);
+      }
     }
   }
 
@@ -2208,7 +2231,8 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
           B.createNaryOp(VPInstruction::ExtractLane,
                          {PenultimateIndex, FOR->getBackedgeValue()});
       VPValue *LastPrevIter =
-          B.createNaryOp(VPInstruction::ExtractLastElement, FOR);
+          B.createNaryOp(VPInstruction::ExtractLastLane, FOR);
+
       VPValue *Cmp = B.createICmp(CmpInst::ICMP_EQ, LastActiveLane, Zero);
       VPValue *Sel = B.createSelect(Cmp, LastPrevIter, PenultimateLastIter);
       cast<VPInstruction>(U)->replaceAllUsesWith(Sel);
@@ -3739,19 +3763,19 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
     unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
     if (ExitIRI->getNumOperands() != 1) {
       // The first of two operands corresponds to the latch exit, via MiddleVPBB
-      // predecessor. Extract its last lane.
-      ExitIRI->extractLastLaneOfFirstOperand(MiddleBuilder);
+      // predecessor. Extract its final lane.
+      ExitIRI->extractLastLaneOfLastPartOfFirstOperand(MiddleBuilder);
     }
 
     VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
     if (!IncomingFromEarlyExit->isLiveIn()) {
       // Update the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
-          VPInstruction::FirstActiveLane, {CondToEarlyExit}, nullptr,
-          "first.active.lane");
+          VPInstruction::FirstActiveLane, {CondToEarlyExit},
+          DebugLoc::getUnknown(), "first.active.lane");
       IncomingFromEarlyExit = EarlyExitB.createNaryOp(
           VPInstruction::ExtractLane, {FirstActiveLane, IncomingFromEarlyExit},
-          nullptr, "early.exit.value");
+          DebugLoc::getUnknown(), "early.exit.value");
       ExitIRI->setOperand(EarlyExitIdx, IncomingFromEarlyExit);
     }
   }
@@ -4128,119 +4152,217 @@ void VPlanTransforms::hoistInvariantLoads(VPlan &Plan) {
   }
 }
 
-// Returns the intersection of metadata from a group of loads.
-static VPIRMetadata getCommonLoadMetadata(ArrayRef<VPReplicateRecipe *> Loads) {
-  VPIRMetadata CommonMetadata = *Loads.front();
-  for (VPReplicateRecipe *Load : drop_begin(Loads))
-    CommonMetadata.intersect(*Load);
+// Collect common metadata from a group of replicate recipes by intersecting
+// metadata from all recipes in the group.
+static VPIRMetadata getCommonMetadata(ArrayRef<VPReplicateRecipe *> Recipes) {
+  VPIRMetadata CommonMetadata = *Recipes.front();
+  for (VPReplicateRecipe *Recipe : drop_begin(Recipes))
+    CommonMetadata.intersect(*Recipe);
   return CommonMetadata;
 }
 
-void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
-                                           const Loop *L) {
+template <unsigned Opcode>
+static SmallVector<SmallVector<VPReplicateRecipe *, 4>>
+collectComplementaryPredicatedMemOps(VPlan &Plan, ScalarEvolution &SE,
+                                     const Loop *L) {
+  static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
+                "Only Load and Store opcodes supported");
+  constexpr bool IsLoad = (Opcode == Instruction::Load);
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPTypeAnalysis TypeInfo(Plan);
-  VPDominatorTree VPDT(Plan);
 
-  // Group predicated loads by their address SCEV.
-  DenseMap<const SCEV *, SmallVector<VPReplicateRecipe *>> LoadsByAddress;
+  // Group predicated operations by their address SCEV.
+  DenseMap<const SCEV *, SmallVector<VPReplicateRecipe *>> RecipesByAddress;
   for (VPBlockBase *Block : vp_depth_first_shallow(LoopRegion->getEntry())) {
     auto *VPBB = cast<VPBasicBlock>(Block);
     for (VPRecipeBase &R : *VPBB) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR || RepR->getOpcode() != Instruction::Load ||
-          !RepR->isPredicated())
+      if (!RepR || RepR->getOpcode() != Opcode || !RepR->isPredicated())
         continue;
 
-      VPValue *Addr = RepR->getOperand(0);
+      // For loads, operand 0 is address; for stores, operand 1 is address.
+      VPValue *Addr = RepR->getOperand(IsLoad ? 0 : 1);
       const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, SE, L);
       if (!isa<SCEVCouldNotCompute>(AddrSCEV))
-        LoadsByAddress[AddrSCEV].push_back(RepR);
+        RecipesByAddress[AddrSCEV].push_back(RepR);
     }
   }
 
-  // For each address, collect loads with complementary masks, sort by
-  // dominance, and use the earliest load.
-  for (auto &[Addr, Loads] : LoadsByAddress) {
-    if (Loads.size() < 2)
+  // For each address, collect operations with the same or complementary masks.
+  SmallVector<SmallVector<VPReplicateRecipe *, 4>> AllGroups;
+  auto GetLoadStoreValueType = [&](VPReplicateRecipe *Recipe) {
+    return TypeInfo.inferScalarType(IsLoad ? Recipe : Recipe->getOperand(0));
+  };
+  for (auto &[Addr, Recipes] : RecipesByAddress) {
+    if (Recipes.size() < 2)
       continue;
 
-    // Collect groups of loads with complementary masks.
-    SmallVector<SmallVector<VPReplicateRecipe *, 4>> LoadGroups;
-    for (VPReplicateRecipe *&LoadI : Loads) {
-      if (!LoadI)
+    // Collect groups with the same or complementary masks.
+    for (VPReplicateRecipe *&RecipeI : Recipes) {
+      if (!RecipeI)
         continue;
 
-      VPValue *MaskI = LoadI->getMask();
-      Type *TypeI = TypeInfo.inferScalarType(LoadI);
+      VPValue *MaskI = RecipeI->getMask();
+      Type *TypeI = GetLoadStoreValueType(RecipeI);
       SmallVector<VPReplicateRecipe *, 4> Group;
-      Group.push_back(LoadI);
-      LoadI = nullptr;
+      Group.push_back(RecipeI);
+      RecipeI = nullptr;
 
-      // Find all loads with the same type.
-      for (VPReplicateRecipe *&LoadJ : Loads) {
-        if (!LoadJ)
+      // Find all operations with the same or complementary masks.
+      bool HasComplementaryMask = false;
+      for (VPReplicateRecipe *&RecipeJ : Recipes) {
+        if (!RecipeJ)
           continue;
 
-        Type *TypeJ = TypeInfo.inferScalarType(LoadJ);
+        VPValue *MaskJ = RecipeJ->getMask();
+        Type *TypeJ = GetLoadStoreValueType(RecipeJ);
         if (TypeI == TypeJ) {
-          Group.push_back(LoadJ);
-          LoadJ = nullptr;
+          // Check if any operation in the group has a complementary mask with
+          // another, that is M1 == NOT(M2) or M2 == NOT(M1).
+          HasComplementaryMask |= match(MaskI, m_Not(m_Specific(MaskJ))) ||
+                                  match(MaskJ, m_Not(m_Specific(MaskI)));
+          Group.push_back(RecipeJ);
+          RecipeJ = nullptr;
         }
       }
 
-      // Check if any load in the group has a complementary mask with another,
-      // that is M1 == NOT(M2) or M2 == NOT(M1).
-      bool HasComplementaryMask =
-          any_of(drop_begin(Group), [MaskI](VPReplicateRecipe *Load) {
-            VPValue *MaskJ = Load->getMask();
-            return match(MaskI, m_Not(m_Specific(MaskJ))) ||
-                   match(MaskJ, m_Not(m_Specific(MaskI)));
-          });
-
-      if (HasComplementaryMask)
-        LoadGroups.push_back(std::move(Group));
-    }
-
-    // For each group, check memory dependencies and hoist the earliest load.
-    for (auto &Group : LoadGroups) {
-      // Sort loads by dominance order, with earliest (most dominating) first.
-      sort(Group, [&VPDT](VPReplicateRecipe *A, VPReplicateRecipe *B) {
-        return VPDT.properlyDominates(A, B);
-      });
-
-      VPReplicateRecipe *EarliestLoad = Group.front();
-      VPBasicBlock *FirstBB = EarliestLoad->getParent();
-      VPBasicBlock *LastBB = Group.back()->getParent();
-
-      // Check that the load doesn't alias with stores between first and last.
-      if (!canHoistLoadWithNoAliasCheck(EarliestLoad, FirstBB, LastBB))
-        continue;
-
-      // Find the load with minimum alignment to use.
-      auto *LoadWithMinAlign =
-          *min_element(Group, [](VPReplicateRecipe *A, VPReplicateRecipe *B) {
-            return cast<LoadInst>(A->getUnderlyingInstr())->getAlign() <
-                   cast<LoadInst>(B->getUnderlyingInstr())->getAlign();
-          });
-
-      // Collect common metadata from all loads in the group.
-      VPIRMetadata CommonMetadata = getCommonLoadMetadata(Group);
-
-      // Create an unpredicated load with minimum alignment using the earliest
-      // dominating address and common metadata.
-      auto *UnpredicatedLoad = new VPReplicateRecipe(
-          LoadWithMinAlign->getUnderlyingInstr(), EarliestLoad->getOperand(0),
-          /*IsSingleScalar=*/false, /*Mask=*/nullptr, /*Flags=*/{},
-          CommonMetadata);
-      UnpredicatedLoad->insertBefore(EarliestLoad);
-
-      // Replace all loads in the group with the unpredicated load.
-      for (VPReplicateRecipe *Load : Group) {
-        Load->replaceAllUsesWith(UnpredicatedLoad);
-        Load->eraseFromParent();
+      if (HasComplementaryMask) {
+        assert(Group.size() >= 2 && "must have at least 2 entries");
+        AllGroups.push_back(std::move(Group));
       }
     }
+  }
+
+  return AllGroups;
+}
+
+// Find the recipe with minimum alignment in the group.
+template <typename InstType>
+static VPReplicateRecipe *
+findRecipeWithMinAlign(ArrayRef<VPReplicateRecipe *> Group) {
+  return *min_element(Group, [](VPReplicateRecipe *A, VPReplicateRecipe *B) {
+    return cast<InstType>(A->getUnderlyingInstr())->getAlign() <
+           cast<InstType>(B->getUnderlyingInstr())->getAlign();
+  });
+}
+
+void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
+                                           const Loop *L) {
+  auto Groups =
+      collectComplementaryPredicatedMemOps<Instruction::Load>(Plan, SE, L);
+  if (Groups.empty())
+    return;
+
+  VPDominatorTree VPDT(Plan);
+
+  // Process each group of loads.
+  for (auto &Group : Groups) {
+    // Sort loads by dominance order, with earliest (most dominating) first.
+    sort(Group, [&VPDT](VPReplicateRecipe *A, VPReplicateRecipe *B) {
+      return VPDT.properlyDominates(A, B);
+    });
+
+    // Try to use the earliest (most dominating) load to replace all others.
+    VPReplicateRecipe *EarliestLoad = Group[0];
+    VPBasicBlock *FirstBB = EarliestLoad->getParent();
+    VPBasicBlock *LastBB = Group.back()->getParent();
+
+    // Check that the load doesn't alias with stores between first and last.
+    auto LoadLoc = vputils::getMemoryLocation(*EarliestLoad);
+    if (!LoadLoc || !canHoistOrSinkWithNoAliasCheck(*LoadLoc, FirstBB, LastBB,
+                                                    /*CheckReads=*/false))
+      continue;
+
+    // Collect common metadata from all loads in the group.
+    VPIRMetadata CommonMetadata = getCommonMetadata(Group);
+
+    // Find the load with minimum alignment to use.
+    auto *LoadWithMinAlign = findRecipeWithMinAlign<LoadInst>(Group);
+
+    // Create an unpredicated version of the earliest load with common
+    // metadata.
+    auto *UnpredicatedLoad = new VPReplicateRecipe(
+        LoadWithMinAlign->getUnderlyingInstr(), {EarliestLoad->getOperand(0)},
+        /*IsSingleScalar=*/false, /*Mask=*/nullptr, *EarliestLoad,
+        CommonMetadata);
+
+    UnpredicatedLoad->insertBefore(EarliestLoad);
+
+    // Replace all loads in the group with the unpredicated load.
+    for (VPReplicateRecipe *Load : Group) {
+      Load->replaceAllUsesWith(UnpredicatedLoad);
+      Load->eraseFromParent();
+    }
+  }
+}
+
+static bool
+canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink) {
+  auto StoreLoc = vputils::getMemoryLocation(*StoresToSink.front());
+  if (!StoreLoc || !StoreLoc->AATags.Scope)
+    return false;
+
+  // When sinking a group of stores, all members of the group alias each other.
+  // Skip them during the alias checks.
+  SmallPtrSet<VPRecipeBase *, 4> StoresToSinkSet(StoresToSink.begin(),
+                                                 StoresToSink.end());
+
+  VPBasicBlock *FirstBB = StoresToSink.front()->getParent();
+  VPBasicBlock *LastBB = StoresToSink.back()->getParent();
+  return canHoistOrSinkWithNoAliasCheck(*StoreLoc, FirstBB, LastBB,
+                                        /*CheckReads=*/true, &StoresToSinkSet);
+}
+
+void VPlanTransforms::sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
+                                           const Loop *L) {
+  auto Groups =
+      collectComplementaryPredicatedMemOps<Instruction::Store>(Plan, SE, L);
+  if (Groups.empty())
+    return;
+
+  VPDominatorTree VPDT(Plan);
+
+  for (auto &Group : Groups) {
+    sort(Group, [&VPDT](VPReplicateRecipe *A, VPReplicateRecipe *B) {
+      return VPDT.properlyDominates(A, B);
+    });
+
+    if (!canSinkStoreWithNoAliasCheck(Group))
+      continue;
+
+    // Use the last (most dominated) store's location for the unconditional
+    // store.
+    VPReplicateRecipe *LastStore = Group.back();
+    VPBasicBlock *InsertBB = LastStore->getParent();
+
+    // Collect common alias metadata from all stores in the group.
+    VPIRMetadata CommonMetadata = getCommonMetadata(Group);
+
+    // Build select chain for stored values.
+    VPValue *SelectedValue = Group[0]->getOperand(0);
+    VPBuilder Builder(InsertBB, LastStore->getIterator());
+
+    for (unsigned I = 1; I < Group.size(); ++I) {
+      VPValue *Mask = Group[I]->getMask();
+      VPValue *Value = Group[I]->getOperand(0);
+      SelectedValue = Builder.createSelect(Mask, Value, SelectedValue,
+                                           Group[I]->getDebugLoc());
+    }
+
+    // Find the store with minimum alignment to use.
+    auto *StoreWithMinAlign = findRecipeWithMinAlign<StoreInst>(Group);
+
+    // Create unconditional store with selected value and common metadata.
+    auto *UnpredicatedStore =
+        new VPReplicateRecipe(StoreWithMinAlign->getUnderlyingInstr(),
+                              {SelectedValue, LastStore->getOperand(1)},
+                              /*IsSingleScalar=*/false,
+                              /*Mask=*/nullptr, *LastStore, CommonMetadata);
+    UnpredicatedStore->insertBefore(*InsertBB, LastStore->getIterator());
+
+    // Remove all predicated stores from the group.
+    for (VPReplicateRecipe *Store : Group)
+      Store->eraseFromParent();
   }
 }
 
@@ -4471,7 +4593,8 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   VF.replaceAllUsesWith(RuntimeVF);
 
   VPValue *UF = Plan.getConstantInt(TCTy, Plan.getUF());
-  VPValue *MulByUF = Builder.createNaryOp(Instruction::Mul, {RuntimeVF, UF});
+  VPValue *MulByUF = Builder.createOverflowingOp(
+      Instruction::Mul, {RuntimeVF, UF}, {true, false});
   VFxUF.replaceAllUsesWith(MulByUF);
 }
 
@@ -4759,7 +4882,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   if (VF.isScalable()) {
     VPValue *VScale = PHBuilder.createElementCount(
         VectorLoop->getCanonicalIVType(), ElementCount::getScalable(1));
-    VPValue *VScaleUF = PHBuilder.createNaryOp(Instruction::Mul, {VScale, UF});
+    VPValue *VScaleUF = PHBuilder.createOverflowingOp(
+        Instruction::Mul, {VScale, UF}, {true, false});
     Inc->setOperand(1, VScaleUF);
     Plan.getVF().replaceAllUsesWith(VScale);
   } else {
@@ -4867,10 +4991,13 @@ void VPlanTransforms::updateScalarResumePhis(
     auto *ResumeFromVectorLoop = VectorPhiR->getBackedgeValue();
     assert(VectorRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
            "Cannot handle loops with uncountable early exits");
-    if (IsFOR)
+    if (IsFOR) {
+      auto *ExtractPart = MiddleBuilder.createNaryOp(
+          VPInstruction::ExtractLastPart, ResumeFromVectorLoop);
       ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractLastElement, {ResumeFromVectorLoop}, {},
+          VPInstruction::ExtractLastLane, ExtractPart, DebugLoc::getUnknown(),
           "vector.recur.extract");
+    }
     ResumePhiR->setName(IsFOR ? "scalar.recur.init" : "bc.merge.rdx");
     ResumePhiR->setOperand(0, ResumeFromVectorLoop);
   }
@@ -4966,10 +5093,11 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
     // Now update VPIRInstructions modeling LCSSA phis in the exit block.
     // Extract the penultimate value of the recurrence and use it as operand for
     // the VPIRInstruction modeling the phi.
-    for (VPUser *U : FOR->users()) {
-      using namespace llvm::VPlanPatternMatch;
-      if (!match(U, m_ExtractLastElement(m_Specific(FOR))))
+    for (VPRecipeBase &R : make_early_inc_range(
+             make_range(MiddleVPBB->getFirstNonPhi(), MiddleVPBB->end()))) {
+      if (!match(&R, m_ExtractLastLaneOfLastPart(m_Specific(FOR))))
         continue;
+
       // For VF vscale x 1, if vscale = 1, we are unable to extract the
       // penultimate value of the recurrence. Instead we rely on the existing
       // extract of the last element from the result of
@@ -4979,9 +5107,9 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
                                                              Range))
         return;
       VPValue *PenultimateElement = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractPenultimateElement, {FOR->getBackedgeValue()},
-          {}, "vector.recur.extract.for.phi");
-      cast<VPInstruction>(U)->replaceAllUsesWith(PenultimateElement);
+          VPInstruction::ExtractPenultimateElement, FOR->getBackedgeValue(), {},
+          "vector.recur.extract.for.phi");
+      cast<VPInstruction>(&R)->replaceAllUsesWith(PenultimateElement);
     }
   }
 }

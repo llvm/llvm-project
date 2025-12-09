@@ -74,7 +74,7 @@ entry:
 ; CHECK: vrintr.f32
 define float @test9(float %a) {
 entry:
-  %call = call float @nearbyintf(float %a) nounwind readnone
+  %call = call float @llvm.nearbyint.f32(float %a) nounwind readnone
   ret float %call
 }
 
@@ -83,7 +83,7 @@ entry:
 ; DP: vrintr.f64
 define double @test10(double %a) {
 entry:
-  %call = call double @nearbyint(double %a) nounwind readnone
+  %call = call double @llvm.nearbyint.f64(double %a) nounwind readnone
   ret double %call
 }
 
@@ -128,8 +128,6 @@ declare float @roundf(float) nounwind readnone
 declare double @round(double) nounwind readnone
 declare float @truncf(float) nounwind readnone
 declare double @trunc(double) nounwind readnone
-declare float @nearbyintf(float) nounwind readnone
-declare double @nearbyint(double) nounwind readnone
 declare float @rintf(float) nounwind readnone
 declare double @rint(double) nounwind readnone
 declare float @llvm.roundeven.f32(float)

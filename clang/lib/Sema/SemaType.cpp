@@ -2259,6 +2259,8 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
              isSFINAEContext() ? diag::err_typecheck_zero_array_size
                                : diag::ext_typecheck_zero_array_size)
             << 0 << ArraySize->getSourceRange();
+        if (isSFINAEContext())
+          return QualType();
       }
 
       // Is the array too large?
@@ -3796,8 +3798,10 @@ static CallingConv getCCForDeclaratorChunk(
       }
     }
   }
+
   for (const ParsedAttr &AL : llvm::concat<ParsedAttr>(
-           D.getDeclSpec().getAttributes(), D.getAttributes())) {
+           D.getDeclSpec().getAttributes(), D.getAttributes(),
+           D.getDeclarationAttributes())) {
     if (AL.getKind() == ParsedAttr::AT_DeviceKernel) {
       CC = CC_DeviceKernel;
       break;

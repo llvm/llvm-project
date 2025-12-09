@@ -780,7 +780,7 @@ func.func @negative_extract_load_scalable(%arg0: memref<?xf32>, %arg1: index) ->
 }
 
 //-----------------------------------------------------------------------------
-// [Pattern: StoreOpFromSplatOrBroadcast]
+// [Pattern: StoreOpFromBroadcast]
 //-----------------------------------------------------------------------------
 
 // CHECK-LABEL: @store_splat

@@ -5210,6 +5210,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Incompatible_Pointer_Conversion:
   case ICK_HLSL_Array_RValue:
   case ICK_HLSL_Vector_Truncation:
+  case ICK_HLSL_Matrix_Truncation:
   case ICK_HLSL_Vector_Splat:
     llvm_unreachable("Improper second standard conversion");
   }
@@ -5217,12 +5218,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   if (SCS.Dimension != ICK_Identity) {
     // If SCS.Element is not ICK_Identity the To and From types must be HLSL
     // vectors or matrices.
-
-    // TODO: Support HLSL matrices.
-    assert((!From->getType()->isMatrixType() && !ToType->isMatrixType()) &&
-           "Dimension conversion for matrix types is not implemented yet.");
-    assert((ToType->isVectorType() || ToType->isBuiltinType()) &&
-           "Dimension conversion output must be vector or scalar type.");
+    assert(
+        (ToType->isVectorType() || ToType->isConstantMatrixType() ||
+         ToType->isBuiltinType()) &&
+        "Dimension conversion output must be vector, matrix, or scalar type.");
     switch (SCS.Dimension) {
     case ICK_HLSL_Vector_Splat: {
       // Vector splat from any arithmetic type to a vector.
@@ -5246,6 +5245,17 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                From->getValueKind())
                  .get();
 
+      break;
+    }
+    case ICK_HLSL_Matrix_Truncation: {
+      auto *FromMat = From->getType()->castAs<ConstantMatrixType>();
+      QualType TruncTy = FromMat->getElementType();
+      if (auto *ToMat = ToType->getAs<ConstantMatrixType>())
+        TruncTy = Context.getConstantMatrixType(TruncTy, ToMat->getNumRows(),
+                                                ToMat->getNumColumns());
+      From = ImpCastExprToType(From, TruncTy, CK_HLSLMatrixTruncation,
+                               From->getValueKind())
+                 .get();
       break;
     }
     case ICK_Identity:
@@ -5693,8 +5703,10 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
   QualType LHSType = LHS.get()->getType();
   QualType RHSType = RHS.get()->getType();
 
-  bool LHSIsVector = LHSType->isVectorType() || LHSType->isSizelessVectorType();
-  bool RHSIsVector = RHSType->isVectorType() || RHSType->isSizelessVectorType();
+  bool LHSSizelessVector = LHSType->isSizelessVectorType();
+  bool RHSSizelessVector = RHSType->isSizelessVectorType();
+  bool LHSIsVector = LHSType->isVectorType() || LHSSizelessVector;
+  bool RHSIsVector = RHSType->isVectorType() || RHSSizelessVector;
 
   auto GetVectorInfo =
       [&](QualType Type) -> std::pair<QualType, llvm::ElementCount> {
@@ -5712,7 +5724,7 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
   if (LHSIsVector && RHSIsVector) {
     if (CondType->isExtVectorType() != LHSType->isExtVectorType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_cond_result_mismatch)
-          << /*isExtVector*/ CondType->isExtVectorType();
+          << /*isExtVectorNotSizeless=*/1;
       return {};
     }
 
@@ -5724,7 +5736,13 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
     }
     ResultType = Context.getCommonSugaredType(LHSType, RHSType);
   } else if (LHSIsVector || RHSIsVector) {
-    if (CondType->isSizelessVectorType())
+    bool ResultSizeless = LHSSizelessVector || RHSSizelessVector;
+    if (ResultSizeless != CondType->isSizelessVectorType()) {
+      Diag(QuestionLoc, diag::err_conditional_vector_cond_result_mismatch)
+          << /*isExtVectorNotSizeless=*/0;
+      return {};
+    }
+    if (ResultSizeless)
       ResultType = CheckSizelessVectorOperands(LHS, RHS, QuestionLoc,
                                                /*IsCompAssign*/ false,
                                                ArithConvKind::Conditional);

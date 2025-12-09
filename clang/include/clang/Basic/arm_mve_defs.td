@@ -589,6 +589,10 @@ def fsub: strictFPAlt<fsub_node,
                       IRInt<"vsub", [Vector]>>;
 def fmul: strictFPAlt<fmul_node,
                       IRInt<"vmul", [Vector]>>;
+def fminnm : strictFPAlt<IRIntBase<"minnum", [Vector]>,
+                         IRInt<"vminnm", [Vector]>>;
+def fmaxnm : strictFPAlt<IRIntBase<"maxnum", [Vector]>,
+                         IRInt<"vmaxnm", [Vector]>>;
 
 // -----------------------------------------------------------------------------
 // Convenience lists of parameter types. 'T' is just a container record, so you
