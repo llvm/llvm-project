@@ -2207,14 +2207,14 @@ AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,
   if ((VFSStatus.has_value() && *VFSStatus) ||
       (!VFSStatus.has_value() && ActionInfo->ShouldUseVFS)) {
     if (env::shouldEmitVerboseLogs()) {
-      LogS << "    File System: VFS\n";
+      LogS << "\t File System: VFS\n";
     }
     UseVFS = true;
     InMemoryFS = new vfs::InMemoryFileSystem;
     OverlayFS->pushOverlay(InMemoryFS);
   } else {
     if (env::shouldEmitVerboseLogs()) {
-      LogS << "    File System: Real\n";
+      LogS << "\t File System: Real\n";
     }
   }
 }
