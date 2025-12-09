@@ -24,7 +24,7 @@ int amdgcn_device_isa_selected() {
 
 // CHECK: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}amdgcn_device_isa_selected
 // CHECK: user_code.entry:
-// CHECK: call void @__kmpc_parallel_51
+// CHECK: call void @__kmpc_parallel_60
 // CHECK-NOT: call i32 @__kmpc_single
 // CHECK: ret void
 
@@ -47,7 +47,7 @@ int amdgcn_device_isa_not_selected() {
 // CHECK: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}amdgcn_device_isa_not_selected
 // CHECK: user_code.entry:
 // CHECK: call i32 @__kmpc_single
-// CHECK-NOT: call void @__kmpc_parallel_51
+// CHECK-NOT: call void @__kmpc_parallel_60
 // CHECK: ret void
 
 #endif

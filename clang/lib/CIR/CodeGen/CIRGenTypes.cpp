@@ -482,6 +482,21 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::MemberPointer: {
+    const auto *mpt = cast<MemberPointerType>(ty);
+
+    mlir::Type memberTy = convertType(mpt->getPointeeType());
+    auto clsTy = mlir::cast<cir::RecordType>(
+        convertType(QualType(mpt->getQualifier().getAsType(), 0)));
+    if (mpt->isMemberDataPointer()) {
+      resultType = cir::DataMemberType::get(memberTy, clsTy);
+    } else {
+      assert(!cir::MissingFeatures::methodType());
+      cgm.errorNYI(SourceLocation(), "MethodType");
+    }
+    break;
+  }
+
   case Type::FunctionNoProto:
   case Type::FunctionProto:
     resultType = convertFunctionTypeInternal(type);

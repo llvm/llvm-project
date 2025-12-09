@@ -832,6 +832,38 @@ TEST_F(SelectionDAGPatternMatchTest, matchReassociatableOp) {
   EXPECT_FALSE(sd_match(ADDS0123, m_ReassociatableAdd(m_Value(), m_Value(),
                                                       m_Value(), m_Value())));
 
+  // (Op0 + Op1) + Op0 binds correctly, allowing commutation on leaf nodes
+  SDValue ADD010 = DAG->getNode(ISD::ADD, DL, Int32VT, ADD01, Op0);
+  SDValue A, B;
+  EXPECT_TRUE(sd_match(
+      ADD010, m_ReassociatableAdd(m_Value(A), m_Value(B), m_Deferred(A))));
+  EXPECT_EQ(Op0, A);
+  EXPECT_EQ(Op1, B);
+
+  A.setNode(nullptr);
+  B.setNode(nullptr);
+  EXPECT_TRUE(sd_match(
+      ADD010, m_ReassociatableAdd(m_Value(A), m_Value(B), m_Deferred(B))));
+  EXPECT_EQ(Op0, B);
+  EXPECT_EQ(Op1, A);
+
+  A.setNode(nullptr);
+  B.setNode(nullptr);
+  EXPECT_TRUE(sd_match(
+      ADD010, m_ReassociatableAdd(m_Value(A), m_Deferred(A), m_Value(B))));
+  EXPECT_EQ(Op0, A);
+  EXPECT_EQ(Op1, B);
+
+  A.setNode(nullptr);
+  B.setNode(nullptr);
+  EXPECT_FALSE(sd_match(
+      ADD010, m_ReassociatableAdd(m_Value(A), m_Deferred(A), m_Deferred(A))));
+
+  A.setNode(nullptr);
+  B.setNode(nullptr);
+  EXPECT_FALSE(sd_match(
+      ADD010, m_ReassociatableAdd(m_Value(A), m_Deferred(B), m_Value(B))));
+
   // (Op0 * Op1) * (Op2 * Op3)
   SDValue MUL01 = DAG->getNode(ISD::MUL, DL, Int32VT, Op0, Op1);
   SDValue MUL23 = DAG->getNode(ISD::MUL, DL, Int32VT, Op2, Op3);

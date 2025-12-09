@@ -792,7 +792,7 @@ FailureOr<Operation *> MmaSyncBuilder::buildMmaSync(LinalgOp linalgOp) {
   if (failed(maybeInfo))
     return failure();
 
-  MmaSyncInfo info = *maybeInfo;
+  const MmaSyncInfo &info = *maybeInfo;
   auto [lhsIndexFn, rhsIndexFn, resIndexFn] = info.indexFns;
   auto [lhsShape, rhsShape, resShape] = info.vectorShapes;
   Value lhs = buildMmaSyncMemRefLoadOperand(b, loc, laneId, lhsMemRef,
