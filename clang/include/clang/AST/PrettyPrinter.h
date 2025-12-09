@@ -125,6 +125,14 @@ struct PrintingPolicy {
   /// \endcode
   LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressTagKeyword : 1;
+
+  /// Whether type printing should skip printing the tag keyword
+  /// of anonymous entities. E.g.,
+  ///
+  /// * \c (anonymous) as opopsed to (anonymous struct)
+  /// * \c (unnamed) as opposed to (unnamed enum)
+  ///
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressTagKeywordInAnonymousTagNames : 1;
 
   /// When true, include the body of a tag definition.
