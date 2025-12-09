@@ -2271,6 +2271,28 @@ OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
 
   return {};
 }
+LogicalResult cir::SelectOp::verify() {
+  // INFO: No need to check if trueTy == falseTy here, it's verified by
+  // the AllTypesMatch trait already.
+  // We can go straight into getting the vector type.
+
+  auto condVecTy =
+      mlir::dyn_cast<cir::VectorType>(this->getCondition().getType());
+  auto trueVecTy =
+      mlir::dyn_cast<cir::VectorType>(this->getTrueValue().getType());
+  auto falseVecTy =
+      mlir::dyn_cast<cir::VectorType>(this->getFalseValue().getType());
+
+  if (condVecTy && (!trueVecTy || !falseVecTy)) {
+    // INFO: No need to check for size of vector here, it's verified by
+    // the AllTypesMatch trait already
+    return emitOpError()
+           << "second and third operand must both be of the same "
+              "vector type when"
+              " the conditional operand is of vector boolean type";
+  }
+  return mlir::success();
+}
 
 //===----------------------------------------------------------------------===//
 // ShiftOp

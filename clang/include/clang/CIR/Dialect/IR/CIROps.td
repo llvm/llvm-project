@@ -1930,6 +1930,7 @@ def CIR_SelectOp : CIR_Op<"select", [
   }];
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
