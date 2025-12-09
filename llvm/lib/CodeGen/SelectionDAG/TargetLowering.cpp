@@ -1779,9 +1779,8 @@ bool TargetLowering::SimplifyDemandedBits(
           EVT VT = Op0.getValueType();
           SDValue NotOp0 = TLO.DAG.getNOT(DL, Op0, VT);
           return TLO.CombineTo(Op, NotOp0);
-        } else {
-          return TLO.CombineTo(Op, Op0);
         }
+        return TLO.CombineTo(Op, Op0);
       }
     }
     if (getBooleanContents(Op0.getValueType()) ==
