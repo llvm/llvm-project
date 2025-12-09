@@ -140,7 +140,6 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
   case PPC::BI__builtin_ppc_bcdsetsign: {
 
-    ASTContext &Context = SemaRef.Context;
     QualType Arg0Type = TheCall->getArg(0)->getType();
     QualType Arg1Type = TheCall->getArg(1)->getType();
 
@@ -159,7 +158,6 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   case PPC::BI__builtin_ppc_bcdshiftround:
   case PPC::BI__builtin_ppc_bcdtruncate: {
 
-    ASTContext &Context = SemaRef.Context;
     QualType Arg0Type = TheCall->getArg(0)->getType();
     QualType Arg1Type = TheCall->getArg(1)->getType();
     QualType Arg2Type = TheCall->getArg(2)->getType();
