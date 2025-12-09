@@ -31,7 +31,7 @@ class GCNSchedStage;
 
 enum class GCNSchedStageID : unsigned {
   OccInitialSchedule = 0,
-  RewriteSchedule = 1,
+  RewriteMFMAForm = 1,
   UnclusteredHighRPReschedule = 2,
   ClusteredLowOccupancyReschedule = 3,
   PreRARematerialize = 4,
@@ -243,7 +243,7 @@ using RegionBoundaries =
 class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class GCNSchedStage;
   friend class OccInitialScheduleStage;
-  friend class RewriteScheduleStage;
+  friend class RewriteMFMAFormStage;
   friend class UnclusteredHighRPStage;
   friend class ClusteredLowOccStage;
   friend class PreRARematStage;
@@ -418,7 +418,7 @@ public:
       : GCNSchedStage(StageID, DAG) {}
 };
 
-class RewriteScheduleStage : public GCNSchedStage {
+class RewriteMFMAFormStage : public GCNSchedStage {
 private:
   // Record regions with excess archvgpr register pressure over the physical
   // register limit. Register pressure in these regions usually will result in
@@ -467,7 +467,7 @@ private:
 public:
   bool initGCNSchedStage() override;
 
-  RewriteScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+  RewriteMFMAFormStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
 };
 

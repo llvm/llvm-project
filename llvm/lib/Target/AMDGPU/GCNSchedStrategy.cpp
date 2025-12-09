@@ -691,7 +691,7 @@ GCNMaxOccupancySchedStrategy::GCNMaxOccupancySchedStrategy(
     const MachineSchedContext *C, bool IsLegacyScheduler)
     : GCNSchedStrategy(C) {
   SchedStages.push_back(GCNSchedStageID::OccInitialSchedule);
-  SchedStages.push_back(GCNSchedStageID::RewriteSchedule);
+  SchedStages.push_back(GCNSchedStageID::RewriteMFMAForm);
   SchedStages.push_back(GCNSchedStageID::UnclusteredHighRPReschedule);
   SchedStages.push_back(GCNSchedStageID::ClusteredLowOccupancyReschedule);
   SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
@@ -948,8 +948,8 @@ GCNScheduleDAGMILive::createSchedStage(GCNSchedStageID SchedStageID) {
   switch (SchedStageID) {
   case GCNSchedStageID::OccInitialSchedule:
     return std::make_unique<OccInitialScheduleStage>(SchedStageID, *this);
-  case GCNSchedStageID::RewriteSchedule:
-    return std::make_unique<RewriteScheduleStage>(SchedStageID, *this);
+  case GCNSchedStageID::RewriteMFMAForm:
+    return std::make_unique<RewriteMFMAFormStage>(SchedStageID, *this);
   case GCNSchedStageID::UnclusteredHighRPReschedule:
     return std::make_unique<UnclusteredHighRPStage>(SchedStageID, *this);
   case GCNSchedStageID::ClusteredLowOccupancyReschedule:
@@ -1187,7 +1187,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const GCNSchedStageID &StageID) {
   case GCNSchedStageID::OccInitialSchedule:
     OS << "Max Occupancy Initial Schedule";
     break;
-  case GCNSchedStageID::RewriteSchedule:
+  case GCNSchedStageID::RewriteMFMAForm:
     OS << "Instruction Rewriting Reschedule";
     break;
   case GCNSchedStageID::UnclusteredHighRPReschedule:
@@ -1223,10 +1223,9 @@ bool GCNSchedStage::initGCNSchedStage() {
   return true;
 }
 
-void RewriteScheduleStage::findReachingDefs(
+void RewriteMFMAFormStage::findReachingDefs(
     MachineOperand &UseMO, LiveIntervals *LIS,
     SmallVectorImpl<SlotIndex> &DefIdxs) {
-  assert(UseMO.isReg());
   MachineInstr *UseMI = UseMO.getParent();
   LiveInterval &UseLI = LIS->getInterval(UseMO.getReg());
   VNInfo *VNI = UseLI.getVNInfoAt(LIS->getInstructionIndex(*UseMI));
@@ -1239,7 +1238,6 @@ void RewriteScheduleStage::findReachingDefs(
 
   SmallPtrSet<MachineBasicBlock *, 8> Visited;
   SmallVector<MachineBasicBlock *, 8> Worklist;
-
   Visited.insert(UseMI->getParent());
 
   // Mark the predecessor blocks for traversal
@@ -1270,11 +1268,11 @@ void RewriteScheduleStage::findReachingDefs(
   }
 }
 
-void RewriteScheduleStage::findReachingUses(
+void RewriteMFMAFormStage::findReachingUses(
     MachineInstr *DefMI, LiveIntervals *LIS,
     SmallVectorImpl<MachineOperand *> &ReachingUses) {
   SlotIndex DefIdx = LIS->getInstructionIndex(*DefMI);
-  for (auto &UseMO :
+  for (MachineOperand &UseMO :
        DAG.MRI.use_nodbg_operands(DefMI->getOperand(0).getReg())) {
     SmallVector<SlotIndex, 8> ReachingDefIndexes;
     findReachingDefs(UseMO, LIS, ReachingDefIndexes);
@@ -1288,7 +1286,7 @@ void RewriteScheduleStage::findReachingUses(
   }
 }
 
-bool RewriteScheduleStage::initGCNSchedStage() {
+bool RewriteMFMAFormStage::initGCNSchedStage() {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (!ST.hasGFX90AInsts() || MFI.getMinWavesPerEU() > 1)
     return false;
@@ -1945,14 +1943,14 @@ void GCNSchedStage::revertScheduling() {
   DAG.Regions[RegionIdx] = std::pair(DAG.RegionBegin, DAG.RegionEnd);
 }
 
-bool RewriteScheduleStage::isRewriteCandidate(MachineInstr *MI) const {
+bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
 
   if (!static_cast<const SIInstrInfo *>(DAG.TII)->isMAI(*MI))
     return false;
   return AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode()) != -1;
 }
 
-bool RewriteScheduleStage::initHeuristics(
+bool RewriteMFMAFormStage::initHeuristics(
     std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
     DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
     SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
@@ -2024,7 +2022,7 @@ bool RewriteScheduleStage::initHeuristics(
   return true;
 }
 
-int64_t RewriteScheduleStage::getRewriteCost(
+int64_t RewriteMFMAFormStage::getRewriteCost(
     const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
     const DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
     const SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
@@ -2133,7 +2131,7 @@ int64_t RewriteScheduleStage::getRewriteCost(
   return Cost;
 }
 
-bool RewriteScheduleStage::rewrite(
+bool RewriteMFMAFormStage::rewrite(
     const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands) {
   DenseMap<MachineInstr *, unsigned> FirstMIToRegion;
   DenseMap<MachineInstr *, unsigned> LastMIToRegion;
