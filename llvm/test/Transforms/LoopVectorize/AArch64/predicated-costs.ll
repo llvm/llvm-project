@@ -444,16 +444,14 @@ exit:
 ; values.
 define void @getPredBlockCostDivisor_truncate(i32 %0, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: define void @getPredBlockCostDivisor_truncate(
-; CHECK-SAME: i32 [[TMP0:%.*]]) {
+; CHECK-SAME: i32 [[TMP0:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[TMP0]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; CHECK-NEXT:    [[ISNAN_1:%.*]] = fcmp uno double 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    br i1 [[ISNAN_1]], label %[[IF_1:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 [[C1]], label %[[IF_1:.*]], label %[[LATCH]], !prof [[PROF15:![0-9]+]]
 ; CHECK:       [[IF_1]]:
-; CHECK-NEXT:    [[ISNAN_2:%.*]] = fcmp uno double 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    br i1 [[ISNAN_2]], label %[[IF_2:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 [[C2]], label %[[IF_2:.*]], label %[[LATCH]], !prof [[PROF15]]
 ; CHECK:       [[IF_2]]:
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
@@ -503,4 +501,5 @@ exit:
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META9]], [[META10]]}
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META10]], [[META11]]}
 ; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META11]], [[META10]]}
+; CHECK: [[PROF15]] = !{!"branch_weights", i32 0, i32 1}
 ;.
