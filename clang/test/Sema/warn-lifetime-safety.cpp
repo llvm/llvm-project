@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -Wno-experimental-lifetime-safety-suggestions -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify %s
 
 struct MyObj {
   int id;
