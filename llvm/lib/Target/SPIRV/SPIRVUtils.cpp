@@ -171,6 +171,13 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     // Asm Printer needs this info to print 64-bit operands correctly
     MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH64);
     return;
+  } else if (Bitwidth <= 128) {
+    uint32_t LowBits = Imm.getRawData()[0] & 0xffffffff;
+    uint32_t MidBits0 = (Imm.getRawData()[0] >> 32) & 0xffffffff;
+    uint32_t MidBits1 = Imm.getRawData()[1] & 0xffffffff;
+    uint32_t HighBits = (Imm.getRawData()[1] >> 32) & 0xffffffff;
+    MIB.addImm(LowBits).addImm(MidBits0).addImm(MidBits1).addImm(HighBits);
+    return;
   }
   report_fatal_error("Unsupported constant bitwidth");
 }
