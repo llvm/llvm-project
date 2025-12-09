@@ -1459,9 +1459,10 @@ class MachineSchedulerPass : public PassInfoMixin<MachineSchedulerPass> {
   // analysis.
   std::unique_ptr<impl_detail::MachineSchedulerImpl> Impl;
   const TargetMachine *TM;
+  bool UseMBFI;
 
 public:
-  LLVM_ABI MachineSchedulerPass(const TargetMachine *TM);
+  LLVM_ABI MachineSchedulerPass(const TargetMachine *TM, bool UMBFI = false);
   LLVM_ABI MachineSchedulerPass(MachineSchedulerPass &&Other);
   LLVM_ABI ~MachineSchedulerPass();
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,

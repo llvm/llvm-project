@@ -382,9 +382,10 @@ namespace {
 /// MachineScheduler runs after coalescing and before register allocation.
 class MachineSchedulerLegacy : public MachineFunctionPass {
   MachineSchedulerImpl Impl;
+  bool UseMBFI;
 
 public:
-  MachineSchedulerLegacy();
+  MachineSchedulerLegacy(bool UMBFI = false);
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction&) override;
 
@@ -420,7 +421,9 @@ INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass);
 INITIALIZE_PASS_END(MachineSchedulerLegacy, DEBUG_TYPE,
                     "Machine Instruction Scheduler", false, false)
 
-MachineSchedulerLegacy::MachineSchedulerLegacy() : MachineFunctionPass(ID) {
+MachineSchedulerLegacy::MachineSchedulerLegacy(bool UMBFI)
+    : MachineFunctionPass(ID) {
+  UseMBFI = UMBFI;
   initializeMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
 }
 
@@ -669,8 +672,8 @@ bool MachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
   return Impl.run(MF, TM, {MLI, MDT, AA, LIS, MBFI});
 }
 
-MachineSchedulerPass::MachineSchedulerPass(const TargetMachine *TM)
-    : Impl(std::make_unique<MachineSchedulerImpl>()), TM(TM) {}
+MachineSchedulerPass::MachineSchedulerPass(const TargetMachine *TM, bool UMBFI)
+    : Impl(std::make_unique<MachineSchedulerImpl>()), TM(TM), UseMBFI(UMBFI) {}
 MachineSchedulerPass::~MachineSchedulerPass() = default;
 MachineSchedulerPass::MachineSchedulerPass(MachineSchedulerPass &&Other) =
     default;
