@@ -3473,7 +3473,7 @@ void AsmPrinter::emitXXStructorList(const DataLayout &DL, const Constant *List,
   if (!TM.Options.UseInitArray)
     std::reverse(Structors.begin(), Structors.end());
 
-  const Align Align = DL.getPointerPrefAlignment();
+  const Align Align = DL.getPointerPrefAlignment(DL.getProgramAddressSpace());
   for (Structor &S : Structors) {
     const TargetLoweringObjectFile &Obj = getObjFileLowering();
     const MCSymbol *KeySym = nullptr;
