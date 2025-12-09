@@ -166,11 +166,12 @@ class SinkStoreInfo {
     if (!match(SE.getMinusSCEV(SCEVA, SCEVB), m_scev_APInt(Distance)))
       return false;
 
-    const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+    const DataLayout &DL = SE.getDataLayout();
     Type *TyA = TypeInfo.inferScalarType(A->getOperand(0));
     uint64_t SizeA = DL.getTypeStoreSize(TyA);
     Type *TyB = TypeInfo.inferScalarType(B->getOperand(0));
     uint64_t SizeB = DL.getTypeStoreSize(TyB);
+
     // Use the maximum store size to ensure no overlap from either direction.
     // Currently only handles fixed sizes, as it is only used for
     // replicating VPReplicateRecipes.
@@ -193,11 +194,8 @@ public:
   /// because it's in the exclude set or because no-alias can be proven via
   /// SCEV.
   bool shouldSkip(VPRecipeBase &R) const {
-    if (ExcludeRecipes.contains(&R))
-      return true;
-    if (auto *Store = dyn_cast<VPReplicateRecipe>(&R))
-      return isNoAliasViaDistance(Store, &GroupLeader);
-    return false;
+       auto *Store = dyn_cast<VPReplicateRecipe>(&R);
+       return ExcludeRecipes.contains(&R) || (Store && isNoAliasViaDistance(Store, &GroupLeader));
   }
 };
 
@@ -209,7 +207,7 @@ public:
 /// leader and other replicate recipes (for store sinking).
 static bool canHoistOrSinkWithNoAliasCheck(
     const MemoryLocation &MemLoc, VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
-    std::optional<SinkStoreInfo> SinkInfo = std::nullopt) {
+    std::optional<SinkStoreInfo> SinkInfo = {}) {
   bool CheckReads = SinkInfo.has_value();
   if (!MemLoc.AATags.Scope)
     return false;
@@ -4378,8 +4376,8 @@ canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink,
 
   VPBasicBlock *FirstBB = StoresToSink.front()->getParent();
   VPBasicBlock *LastBB = StoresToSink.back()->getParent();
-  SinkStoreInfo Info(StoresToSinkSet, *StoresToSink[0], SE, L, TypeInfo);
-  return canHoistOrSinkWithNoAliasCheck(*StoreLoc, FirstBB, LastBB, Info);
+  SinkStoreInfo SinkInfo(StoresToSinkSet, *StoresToSink[0], SE, L, TypeInfo);
+  return canHoistOrSinkWithNoAliasCheck(*StoreLoc, FirstBB, LastBB, SinkInfo);
 }
 
 void VPlanTransforms::sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
