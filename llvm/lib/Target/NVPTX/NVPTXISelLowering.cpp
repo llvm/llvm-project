@@ -6850,7 +6850,7 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
   }
 }
 
-static std::optional<unsigned> getF16SubOpc(Intrinsic::ID AddIntrinsicID) {
+static unsigned getF16SubOpc(Intrinsic::ID AddIntrinsicID) {
   switch (AddIntrinsicID) {
   default:
     break;
@@ -6862,7 +6862,6 @@ static std::optional<unsigned> getF16SubOpc(Intrinsic::ID AddIntrinsicID) {
     return NVPTXISD::SUB_RN_FTZ_SAT;
   }
   llvm_unreachable("Invalid F16 add intrinsic");
-  return std::nullopt;
 }
 
 static SDValue combineF16AddWithNeg(SDNode *N, SelectionDAG &DAG,
@@ -6872,7 +6871,7 @@ static SDValue combineF16AddWithNeg(SDNode *N, SelectionDAG &DAG,
 
   SDValue SubOp1, SubOp2;
 
-  if(Op1.getOpcode() == ISD::FNEG) {
+  if (Op1.getOpcode() == ISD::FNEG) {
     SubOp1 = Op2;
     SubOp2 = Op1.getOperand(0);
   } else if (Op2.getOpcode() == ISD::FNEG) {
@@ -6882,27 +6881,24 @@ static SDValue combineF16AddWithNeg(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   }
 
-  std::optional<unsigned> SubOpc = getF16SubOpc(AddIntrinsicID);
-  if (!SubOpc)
-    return SDValue();
-
   SDLoc DL(N);
-  return DAG.getNode(*SubOpc, DL, N->getValueType(0), SubOp1, SubOp2);
+  return DAG.getNode(getF16SubOpc(AddIntrinsicID), DL, N->getValueType(0),
+                     SubOp1, SubOp2);
 }
 
 static SDValue combineIntrinsicWOChain(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const NVPTXSubtarget &STI) {
-  unsigned IntID = N->getConstantOperandVal(0);
+  unsigned IID = N->getConstantOperandVal(0);
 
-  switch (IntID) {
+  switch (IID) {
   default:
     break;
   case Intrinsic::nvvm_add_rn_sat_f16:
   case Intrinsic::nvvm_add_rn_ftz_sat_f16:
   case Intrinsic::nvvm_add_rn_sat_v2f16:
   case Intrinsic::nvvm_add_rn_ftz_sat_v2f16:
-    return combineF16AddWithNeg(N, DCI.DAG, IntID);
+    return combineF16AddWithNeg(N, DCI.DAG, IID);
   }
   return SDValue();
 }
