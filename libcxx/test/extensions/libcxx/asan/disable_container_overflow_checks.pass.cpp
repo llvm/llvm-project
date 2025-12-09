@@ -13,7 +13,7 @@
 //
 // ADDITIONAL_COMPILE_FLAGS: -fsanitize=address -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__
 
-// When libc++ is build with ASAN instrumentation, we can't turn off the ASAN checks,
+// When libc++ is built with ASAN instrumentation, we can't turn off the ASAN checks,
 // and that is diagnosed as an error.
 // UNSUPPORTED: libcpp-instrumented-with-asan
 
