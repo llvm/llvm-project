@@ -667,18 +667,18 @@ MMATypes MmaOp::resultPtxType() {
 
 void MmaOp::print(OpAsmPrinter &p) {
   SmallVector<Type, 4> regTypes;
-  struct OperandFragment {
+  struct MMAOperandFragment {
     StringRef operandName;
     StringRef ptxTypeAttr;
     SmallVector<Value, 4> regs;
-    explicit OperandFragment(StringRef name, StringRef ptxTypeName)
+    explicit MMAOperandFragment(StringRef name, StringRef ptxTypeName)
         : operandName(name), ptxTypeAttr(ptxTypeName) {}
   };
 
-  std::array<OperandFragment, 3> frags{
-      OperandFragment("A", getMultiplicandAPtxTypeAttrName()),
-      OperandFragment("B", getMultiplicandBPtxTypeAttrName()),
-      OperandFragment("C", "")};
+  std::array<MMAOperandFragment, 3> frags{
+      MMAOperandFragment("A", getMultiplicandAPtxTypeAttrName()),
+      MMAOperandFragment("B", getMultiplicandBPtxTypeAttrName()),
+      MMAOperandFragment("C", "")};
   SmallVector<StringRef, 4> ignoreAttrNames{
       mlir::NVVM::MmaOp::getOperandSegmentSizeAttr()};
 
@@ -699,7 +699,7 @@ void MmaOp::print(OpAsmPrinter &p) {
       ignoreAttrNames.push_back(frag.ptxTypeAttr);
   }
 
-  auto printMmaOperand = [&](const OperandFragment &frag) -> void {
+  auto printMmaOperand = [&](const MMAOperandFragment &frag) -> void {
     p << " " << frag.operandName;
     p << "[";
     p.printOperands(frag.regs);
@@ -780,20 +780,20 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
 //   attr-dict : (type($operandA[0]), type($operandB[0]), type($operandC[0]))
 //     `->` type($res)
 ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
-  struct OperandFragment {
+  struct MMAOperandFragment {
     std::optional<MMATypes> elemtype;
     SmallVector<OpAsmParser::UnresolvedOperand, 4> regs;
     SmallVector<Type> regTypes;
   };
 
   Builder &builder = parser.getBuilder();
-  std::array<OperandFragment, 4> frags;
+  std::array<MMAOperandFragment, 4> frags;
 
   NamedAttrList namedAttributes;
 
   // A helper to parse the operand segments.
   auto parseMmaOperand = [&](StringRef operandName,
-                             OperandFragment &frag) -> LogicalResult {
+                             MMAOperandFragment &frag) -> LogicalResult {
     if (parser.parseKeyword(operandName).failed())
       return failure();
     if (parser
@@ -1120,19 +1120,19 @@ MmaSpOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
 
 void MmaSpOp::print(OpAsmPrinter &p) {
   SmallVector<Type, 4> regTypes;
-  struct OperandFragment {
+  struct MMAOperandFragment {
     StringRef operandName;
     StringRef ptxTypeAttr;
     SmallVector<Value, 4> regs;
-    explicit OperandFragment(StringRef name, StringRef ptxTypeName)
+    explicit MMAOperandFragment(StringRef name, StringRef ptxTypeName)
         : operandName(name), ptxTypeAttr(ptxTypeName) {}
   };
 
-  std::array<OperandFragment, 5> frags{
-      OperandFragment("A", getMultiplicandAPtxTypeAttrName()),
-      OperandFragment("B", getMultiplicandBPtxTypeAttrName()),
-      OperandFragment("C", ""), OperandFragment("sparseMetadata", ""),
-      OperandFragment("selector", "")};
+  std::array<MMAOperandFragment, 5> frags{
+      MMAOperandFragment("A", getMultiplicandAPtxTypeAttrName()),
+      MMAOperandFragment("B", getMultiplicandBPtxTypeAttrName()),
+      MMAOperandFragment("C", ""), MMAOperandFragment("sparseMetadata", ""),
+      MMAOperandFragment("selector", "")};
   SmallVector<StringRef, 4> ignoreAttrNames{
       mlir::NVVM::MmaSpOp::getOperandSegmentSizeAttr()};
 
@@ -1158,7 +1158,7 @@ void MmaSpOp::print(OpAsmPrinter &p) {
   frags[3].regs.push_back(getSparseMetadata());
   frags[4].regs.push_back(getSparsitySelector());
 
-  auto printMmaSpOperand = [&](const OperandFragment &frag) -> void {
+  auto printMmaSpOperand = [&](const MMAOperandFragment &frag) -> void {
     p << " " << frag.operandName;
     p << "[";
     p.printOperands(frag.regs);
@@ -1223,20 +1223,20 @@ void MmaSpOp::build(
 }
 
 ParseResult MmaSpOp::parse(OpAsmParser &parser, OperationState &result) {
-  struct OperandFragment {
+  struct MMAOperandFragment {
     std::optional<MMATypes> elemtype;
     SmallVector<OpAsmParser::UnresolvedOperand, 4> regs;
     SmallVector<Type> regTypes;
   };
 
   Builder &builder = parser.getBuilder();
-  std::array<OperandFragment, 6> frags; // A, B, C, sparseMetadata, selector
+  std::array<MMAOperandFragment, 6> frags; // A, B, C, sparseMetadata, selector
 
   NamedAttrList namedAttributes;
 
   // A helper to parse the operand segments.
   auto parseMmaSpOperand = [&](StringRef operandName,
-                               OperandFragment &frag) -> LogicalResult {
+                               MMAOperandFragment &frag) -> LogicalResult {
     if (parser.parseKeyword(operandName).failed())
       return failure();
     if (parser
@@ -1565,11 +1565,11 @@ LogicalResult MmaSpOp::verify() {
 
 namespace {
 // Shared structure for MMA operand fragments (A, B, C)
-struct OperandFragment {
+struct MMAOperandFragment {
   StringRef operandName;
   StringRef ptxTypeAttr;
   SmallVector<Value, 4> regs;
-  explicit OperandFragment(StringRef name, StringRef ptxTypeName)
+  explicit MMAOperandFragment(StringRef name, StringRef ptxTypeName)
       : operandName(name), ptxTypeAttr(ptxTypeName) {}
 };
 
@@ -1596,7 +1596,7 @@ parseMmaOperand(OpAsmParser &parser, StringRef operandName,
 // Helper to process operand fragments and determine which attributes can be
 // inferred
 template <typename Op>
-void processOperandFragments(Op &op, std::array<OperandFragment, 3> &frags,
+void processOperandFragments(Op &op, std::array<MMAOperandFragment, 3> &frags,
                              SmallVectorImpl<Type> &regTypes,
                              SmallVectorImpl<StringRef> &ignoreAttrNames) {
   for (unsigned fragIdx = 0; fragIdx < frags.size(); fragIdx++) {
@@ -1703,10 +1703,10 @@ MMATypes inferPtxTypeFromResult(OpTy op) {
 
 void MmaBlockScaleOp::print(OpAsmPrinter &p) {
   SmallVector<Type, 4> regTypes;
-  std::array<OperandFragment, 3> frags{
-      OperandFragment("A", getMultiplicandAPtxTypeAttrName()),
-      OperandFragment("B", getMultiplicandBPtxTypeAttrName()),
-      OperandFragment("C", "")};
+  std::array<MMAOperandFragment, 3> frags{
+      MMAOperandFragment("A", getMultiplicandAPtxTypeAttrName()),
+      MMAOperandFragment("B", getMultiplicandBPtxTypeAttrName()),
+      MMAOperandFragment("C", "")};
   SmallVector<StringRef, 4> ignoreAttrNames{
       mlir::NVVM::MmaBlockScaleOp::getOperandSegmentSizeAttr()};
 
@@ -1915,8 +1915,9 @@ LogicalResult MmaBlockScaleOp::verify() {
              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3)))
         result = emitOpError("unsupported ScaleVecSize and BlockScaleFormat "
                              "attributes for mma.m16n8k64.mxf4nvf4");
-    } else
+    } else {
       result = emitOpError("unsupported Kind attribute for mma.m16n8k64");
+    }
   } else if (m == 16 && n == 8 && k == 32) {
     if (!(getKind() == NVVM::MMABlockScaleKind::MXF8F6F4 &&
           getScaleVecSize() == NVVM::ScaleVecSize::X1 &&
@@ -1924,8 +1925,9 @@ LogicalResult MmaBlockScaleOp::verify() {
       result =
           emitOpError("unsupported Kind, ScaleVecSize and BlockScaleFormat "
                       "attributes for mma.m16n8k32");
-  } else
+  } else {
     result = emitOpError("unsupported Geom for mma with block scaling");
+  }
   return result;
 }
 
@@ -1935,10 +1937,10 @@ LogicalResult MmaBlockScaleOp::verify() {
 
 void MmaSpBlockScaleOp::print(OpAsmPrinter &p) {
   SmallVector<Type, 4> regTypes;
-  std::array<OperandFragment, 3> frags{
-      OperandFragment("A", getMultiplicandAPtxTypeAttrName()),
-      OperandFragment("B", getMultiplicandBPtxTypeAttrName()),
-      OperandFragment("C", "")};
+  std::array<MMAOperandFragment, 3> frags{
+      MMAOperandFragment("A", getMultiplicandAPtxTypeAttrName()),
+      MMAOperandFragment("B", getMultiplicandBPtxTypeAttrName()),
+      MMAOperandFragment("C", "")};
   SmallVector<StringRef, 4> ignoreAttrNames{
       mlir::NVVM::MmaSpBlockScaleOp::getOperandSegmentSizeAttr()};
 
@@ -2189,8 +2191,9 @@ LogicalResult MmaSpBlockScaleOp::verify() {
              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3)))
         result = emitOpError("unsupported ScaleVecSize and BlockScaleFormat "
                              "attributes for mma.m16n8k128.mxf4nvf4");
-    } else
+    } else {
       result = emitOpError("unsupported Kind attribute for mma.m16n8k128");
+    }
   } else if (m == 16 && n == 8 && k == 64) {
     if (!(getKind() == NVVM::MMABlockScaleKind::MXF8F6F4 &&
           getScaleVecSize() == NVVM::ScaleVecSize::X1 &&
@@ -2198,8 +2201,9 @@ LogicalResult MmaSpBlockScaleOp::verify() {
       result =
           emitOpError("unsupported Kind, ScaleVecSize and BlockScaleFormat "
                       "attributes for mma.m16n8k64");
-  } else
+  } else {
     result = emitOpError("unsupported Geom for sparse mma with block scaling");
+  }
   return result;
 }
 
@@ -5046,7 +5050,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
   llvm::Intrinsic::ID ID = [&]() {
-    if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF8F6F4) {
+    if (kind == NVVM::MMABlockScaleKind::MXF8F6F4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale
@@ -5059,7 +5063,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32;
       }
-    } else if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF4) {
+    } else if (kind == NVVM::MMABlockScaleKind::MXF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor
                    ? llvm::Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale
@@ -5070,7 +5074,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
                          : llvm::Intrinsic::
                                nvvm_tcgen05_mma_shared_mxf4_block_scale_block32;
       }
-    } else if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF4NVF4) {
+    } else if (kind == NVVM::MMABlockScaleKind::MXF4NVF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
         return isATensor
                    ? llvm::Intrinsic::
@@ -5094,16 +5098,16 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
 
 static LogicalResult
 verifyTcgen05MMABlockScaleOp(NVVM::Tcgen05MMACollectorOp collectorOp,
-                             NVVM::Tcgen05MMABlockScaleKind kind,
+                             NVVM::MMABlockScaleKind kind,
                              NVVM::Tcgen05MMABlockScale blockScale,
                              Location loc) {
 
   if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT &&
-      kind == Tcgen05MMABlockScaleKind::MXF4NVF4)
+      kind == MMABlockScaleKind::MXF4NVF4)
     return emitError(loc, "mxf4nvf4 requires block scale attribute");
 
   if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK16 &&
-      kind != Tcgen05MMABlockScaleKind::MXF4NVF4)
+      kind != MMABlockScaleKind::MXF4NVF4)
     return emitError(loc,
                      llvm::formatv("{} kind does not support block16 attribute",
                                    stringifyEnum(kind)));
@@ -5146,7 +5150,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
   llvm::Intrinsic::ID ID = [&]() {
-    if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF8F6F4) {
+    if (kind == NVVM::MMABlockScaleKind::MXF8F6F4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale
@@ -5159,7 +5163,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale_block32;
       }
-    } else if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF4) {
+    } else if (kind == NVVM::MMABlockScaleKind::MXF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale
@@ -5172,7 +5176,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_sp_shared_mxf4_block_scale_block32;
       }
-    } else if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF4NVF4) {
+    } else if (kind == NVVM::MMABlockScaleKind::MXF4NVF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
         return isATensor
                    ? llvm::Intrinsic::
