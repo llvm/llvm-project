@@ -189,6 +189,10 @@ struct MissingFeatures {
   static bool globalCtorLexOrder() { return false; }
   static bool globalCtorAssociatedData() { return false; }
 
+  // LowerModule handling
+  static bool lowerModuleCodeGenOpts() { return false; }
+  static bool lowerModuleLangOpts() { return false; }
+
   // Misc
   static bool aarch64SIMDIntrinsics() { return false; }
   static bool aarch64SMEIntrinsics() { return false; }
@@ -292,6 +296,7 @@ struct MissingFeatures {
   static bool lowerModeOptLevel() { return false; }
   static bool loweringPrepareX86CXXABI() { return false; }
   static bool loweringPrepareAArch64XXABI() { return false; }
+  static bool makeTripleAlwaysPresent() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
   static bool mergeAllConstants() { return false; }
   static bool metaDataNode() { return false; }

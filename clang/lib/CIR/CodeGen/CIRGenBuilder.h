@@ -189,6 +189,11 @@ public:
     return getType<cir::RecordType>(nameAttr, kind);
   }
 
+  cir::DataMemberAttr getDataMemberAttr(cir::DataMemberType ty,
+                                        unsigned memberIndex) {
+    return cir::DataMemberAttr::get(ty, memberIndex);
+  }
+
   // Return true if the value is a null constant such as null pointer, (+0.0)
   // for floating-point or zero initializer
   bool isNullValue(mlir::Attribute attr) const {

@@ -497,6 +497,8 @@ public:
   /// the given type. This is usually, but not always, an LLVM null constant.
   mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
 
+  mlir::Value emitMemberPointerConstant(const UnaryOperator *e);
+
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
 
   void emitTentativeDefinition(const VarDecl *d);
