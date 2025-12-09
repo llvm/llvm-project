@@ -3152,6 +3152,11 @@ LogicalResult ParallelOp::verify() {
     return emitOpError() << "expects number of results: " << resultsSize
                          << " to be the same as number of initial values: "
                          << initValsSize;
+  if (reduceOp.getNumOperands() != initValsSize)
+    return emitOpError() << "expects number of operands in the terminator: "
+                         << reduceOp.getNumOperands()
+                         << " to be the same as number of initial values: "
+                         << initValsSize;
 
   // Check that the types of the results and reductions are the same.
   for (int64_t i = 0; i < static_cast<int64_t>(reductionsSize); ++i) {
