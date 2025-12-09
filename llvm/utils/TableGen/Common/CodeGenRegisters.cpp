@@ -1316,11 +1316,19 @@ CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
   return {&RegClasses.back(), true};
 }
 
-CodeGenRegisterClass *CodeGenRegBank::getRegClass(const Record *Def) const {
+CodeGenRegisterClass *CodeGenRegBank::getRegClass(const Record *Def,
+                                                  ArrayRef<SMLoc> Loc) const {
+  assert(Def->isSubClassOf("RegisterClassLike"));
   if (CodeGenRegisterClass *RC = Def2RC.lookup(Def))
     return RC;
 
-  PrintFatalError(Def->getLoc(), "Not a known RegisterClass!");
+  ArrayRef<SMLoc> DiagLoc = Loc.empty() ? Def->getLoc() : Loc;
+  // TODO: Ideally we should update the API to allow resolving HwMode.
+  if (Def->isSubClassOf("RegClassByHwMode"))
+    PrintError(DiagLoc, "cannot resolve HwMode for " + Def->getName());
+  else
+    PrintError(DiagLoc, Def->getName() + " is not a known RegisterClass!");
+  PrintFatalNote(Def->getLoc(), Def->getName() + " defined here");
 }
 
 CodeGenSubRegIndex *
