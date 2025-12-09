@@ -416,7 +416,7 @@ protected:
   void AddRemoteRegisters(std::vector<DynamicRegisterInfo::Register> &registers,
                           const ArchSpec &arch_to_use);
   // Query remote GDBServer for register information
-  bool GetGDBServerRegisterInfo(ArchSpec &arch);
+  llvm::Error GetGDBServerRegisterInfo(ArchSpec &arch);
 
   lldb::ModuleSP LoadModuleAtAddress(const FileSpec &file,
                                      lldb::addr_t link_map,

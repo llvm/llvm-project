@@ -798,10 +798,13 @@ private:
     // Keep return type the same as a standard AllocatableAllocate call.
     mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
 
+    bool doubleDescriptors = Fortran::lower::hasDoubleDescriptor(box.getAddr());
     return cuf::AllocateOp::create(
                builder, loc, retTy, box.getAddr(), errmsg, stream, pinned,
                source, cudaAttr,
-               errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
+               errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr,
+               doubleDescriptors ? builder.getUnitAttr() : nullptr,
+               box.isPointer() ? builder.getUnitAttr() : nullptr)
         .getResult();
   }
 
@@ -865,11 +868,14 @@ static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
           ? nullptr
           : errorManager.errMsgAddr;
 
-  // Keep return type the same as a standard AllocatableAllocate call.
+  // Keep return type the same as a standard AllocatableDeallocate call.
   mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
+  bool doubleDescriptors = Fortran::lower::hasDoubleDescriptor(box.getAddr());
   return cuf::DeallocateOp::create(
              builder, loc, retTy, box.getAddr(), errmsg, cudaAttr,
-             errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
+             errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr,
+             doubleDescriptors ? builder.getUnitAttr() : nullptr,
+             box.isPointer() ? builder.getUnitAttr() : nullptr)
       .getResult();
 }
 
