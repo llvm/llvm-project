@@ -641,8 +641,9 @@ Status SwiftExpressionSourceCode::GetText(
       if (auto process_sp = exe_ctx.GetProcessSP()) {
         os_vers << getAvailabilityName(triple) << " ";
         if (options.GetDisableAvailability()) {
-          // Disable availability by setting the OS version to 9999, the
-          // placeholder number used for future OS versions.
+          // Disable availability by setting the OS version to 9999. This
+          // placeholder OS version used for future OS versions when building
+          // the Swift standard library locally.
           os_vers << "9999";
         } else {
           auto platform = target->GetPlatform();
