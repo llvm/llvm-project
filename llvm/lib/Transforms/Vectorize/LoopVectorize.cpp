@@ -3701,7 +3701,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   bool ContainsScalableVF = MaxFactors.ScalableVF.isNonZero();
   setTailFoldingStyles(ContainsScalableVF, UserIC);
   if (foldTailByMasking()) {
-    if (getTailFoldingStyle() == TailFoldingStyle::DataWithEVL) {
+    if (foldTailWithEVL()) {
       LLVM_DEBUG(
           dbgs()
           << "LV: tail is folded with EVL, forcing unroll factor to be 1. Will "
