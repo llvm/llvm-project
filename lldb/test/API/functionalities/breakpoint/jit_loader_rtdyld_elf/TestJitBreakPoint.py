@@ -21,9 +21,9 @@ class TestJitBreakpoint(TestBase):
         self.runCmd("settings set plugin.jit-loader.gdb.enable on")
 
         clang_path = self.findBuiltClang()
-        self.assertIs(clang_path, "built clang could not be found")
+        self.assertTrue(clang_path, "built clang could not be found")
         lli_path = os.path.join(os.path.dirname(clang_path), "lli")
-        self.assertIs(lldbutil.is_exe(lli_path), f"'{lli_path}' is not an executable")
+        self.assertTrue(lldbutil.is_exe(lli_path), f"'{lli_path}' is not an executable")
         self.runCmd(f"target create {lli_path}", CURRENT_EXECUTABLE_SET)
 
         line = line_number("jitbp.cpp", "int jitbp()")
