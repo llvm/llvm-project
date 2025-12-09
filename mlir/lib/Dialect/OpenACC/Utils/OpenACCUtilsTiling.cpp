@@ -23,11 +23,10 @@ static mlir::Value resolveUnknownTileSize(mlir::Value tileSize,
                                           mlir::RewriterBase &rewriter,
                                           mlir::Location loc) {
   auto constVal = mlir::getConstantIntValue(tileSize);
-  if (constVal && *constVal < 0) {
+  if (constVal && *constVal < 0)
     return mlir::arith::ConstantOp::create(
         rewriter, loc, rewriter.getI32Type(),
         rewriter.getI32IntegerAttr(defaultTileSize));
-  }
   return tileSize;
 }
 
