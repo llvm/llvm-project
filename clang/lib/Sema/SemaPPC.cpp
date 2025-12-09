@@ -111,10 +111,10 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
                                            VectorKind::AltiVecVector);
   // Lambda 1: verify vector type
   auto VerifyVectorType = [&](QualType ArgTy, SourceLocation Loc,
-                            unsigned ArgIndex) -> bool {
+                              unsigned ArgIndex) -> bool {
     if (!Context.hasSameType(ArgTy, VecType)) {
       Diag(Loc, diag::err_ppc_bcd_invalid_vector_type)
-        << ArgIndex << VecType << ArgTy;
+          << ArgIndex << VecType << ArgTy;
       return true;
     }
     return false;
@@ -122,10 +122,10 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
 
   // Lambda 2: verify integer type
   auto VerifyIntType = [&](QualType ArgTy, SourceLocation Loc,
-                          unsigned ArgIndex) -> bool {
+                           unsigned ArgIndex) -> bool {
     if (!ArgTy->isIntegerType()) {
       Diag(Loc, diag::err_ppc_bcd_invalid_integer_type)
-        << ArgIndex << "integer type" << ArgTy;
+          << ArgIndex << "integer type" << ArgTy;
       return true;
     }
     return false;
@@ -146,7 +146,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
 
     // Arg0 must be vector unsigned char
     if (VerifyVectorType(Arg0Type, TheCall->getArg(0)->getBeginLoc(), 0))
-    return true; // error already emitted
+      return true;
 
     // Arg1 must be integer type
     if (VerifyIntType(Arg1Type, TheCall->getArg(1)->getBeginLoc(), 1))
