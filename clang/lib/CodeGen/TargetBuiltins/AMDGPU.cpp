@@ -343,23 +343,6 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
     SSID = getLLVMContext().getOrInsertSyncScopeID(SSN);
 }
 
-llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
-                                                          unsigned Idx,
-                                                          const CallExpr *E) {
-  llvm::Value *Arg = nullptr;
-  if ((ICEArguments & (1 << Idx)) == 0) {
-    Arg = EmitScalarExpr(E->getArg(Idx));
-  } else {
-    // If this is required to be a constant, constant fold it so that we
-    // know that the generated intrinsic gets a ConstantInt.
-    std::optional<llvm::APSInt> Result =
-        E->getArg(Idx)->getIntegerConstantExpr(getContext());
-    assert(Result && "Expected argument to be a constant");
-    Arg = llvm::ConstantInt::get(getLLVMContext(), *Result);
-  }
-  return Arg;
-}
-
 void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                                      const CallExpr *E) {
   constexpr const char *Tag = "amdgpu-synchronize-as";
@@ -390,18 +373,26 @@ static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_add_u32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_add_u64:
     return Intrinsic::amdgcn_wave_reduce_add;
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_fadd_f32:
+    return Intrinsic::amdgcn_wave_reduce_fadd;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_u32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_u64:
     return Intrinsic::amdgcn_wave_reduce_sub;
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_fsub_f32:
+    return Intrinsic::amdgcn_wave_reduce_fsub;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i64:
     return Intrinsic::amdgcn_wave_reduce_min;
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_fmin_f32:
+    return Intrinsic::amdgcn_wave_reduce_fmin;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_u32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_u64:
     return Intrinsic::amdgcn_wave_reduce_umin;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i64:
     return Intrinsic::amdgcn_wave_reduce_max;
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_fmax_f32:
+    return Intrinsic::amdgcn_wave_reduce_fmax;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_u32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_u64:
     return Intrinsic::amdgcn_wave_reduce_umax;
@@ -423,11 +414,15 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   llvm::SyncScope::ID SSID;
   switch (BuiltinID) {
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_add_u32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_fadd_f32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_u32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_fsub_f32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_min_u32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_fmin_f32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_max_u32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_fmax_f32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_and_b32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_or_b32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_xor_b32:

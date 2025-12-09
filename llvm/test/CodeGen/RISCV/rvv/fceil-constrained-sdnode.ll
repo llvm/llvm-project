@@ -26,7 +26,6 @@ define <vscale x 1 x half> @ceil_nxv1f16(<vscale x 1 x half> %x) strictfp {
   %a = call <vscale x 1 x half> @llvm.experimental.constrained.ceil.nxv1f16(<vscale x 1 x half> %x, metadata !"fpexcept.strict")
   ret <vscale x 1 x half> %a
 }
-declare <vscale x 1 x half> @llvm.experimental.constrained.ceil.nxv1f16(<vscale x 1 x half>, metadata)
 
 define <vscale x 2 x half> @ceil_nxv2f16(<vscale x 2 x half> %x) strictfp {
 ; CHECK-LABEL: ceil_nxv2f16:
@@ -50,7 +49,6 @@ define <vscale x 2 x half> @ceil_nxv2f16(<vscale x 2 x half> %x) strictfp {
   %a = call <vscale x 2 x half> @llvm.experimental.constrained.ceil.nxv2f16(<vscale x 2 x half> %x, metadata !"fpexcept.strict")
   ret <vscale x 2 x half> %a
 }
-declare <vscale x 2 x half> @llvm.experimental.constrained.ceil.nxv2f16(<vscale x 2 x half>, metadata)
 
 define <vscale x 4 x half> @ceil_nxv4f16(<vscale x 4 x half> %x) strictfp {
 ; CHECK-LABEL: ceil_nxv4f16:
@@ -74,7 +72,6 @@ define <vscale x 4 x half> @ceil_nxv4f16(<vscale x 4 x half> %x) strictfp {
   %a = call <vscale x 4 x half> @llvm.experimental.constrained.ceil.nxv4f16(<vscale x 4 x half> %x, metadata !"fpexcept.strict")
   ret <vscale x 4 x half> %a
 }
-declare <vscale x 4 x half> @llvm.experimental.constrained.ceil.nxv4f16(<vscale x 4 x half>, metadata)
 
 define <vscale x 8 x half> @ceil_nxv8f16(<vscale x 8 x half> %x) strictfp {
 ; CHECK-LABEL: ceil_nxv8f16:
@@ -98,7 +95,6 @@ define <vscale x 8 x half> @ceil_nxv8f16(<vscale x 8 x half> %x) strictfp {
   %a = call <vscale x 8 x half> @llvm.experimental.constrained.ceil.nxv8f16(<vscale x 8 x half> %x, metadata !"fpexcept.strict")
   ret <vscale x 8 x half> %a
 }
-declare <vscale x 8 x half> @llvm.experimental.constrained.ceil.nxv8f16(<vscale x 8 x half>, metadata)
 
 define <vscale x 16 x half> @ceil_nxv16f16(<vscale x 16 x half> %x) strictfp {
 ; CHECK-LABEL: ceil_nxv16f16:
@@ -122,7 +118,6 @@ define <vscale x 16 x half> @ceil_nxv16f16(<vscale x 16 x half> %x) strictfp {
   %a = call <vscale x 16 x half> @llvm.experimental.constrained.ceil.nxv16f16(<vscale x 16 x half> %x, metadata !"fpexcept.strict")
   ret <vscale x 16 x half> %a
 }
-declare <vscale x 16 x half> @llvm.experimental.constrained.ceil.nxv16f16(<vscale x 16 x half>, metadata)
 
 define <vscale x 32 x half> @ceil_nxv32f16(<vscale x 32 x half> %x) strictfp {
 ; CHECK-LABEL: ceil_nxv32f16:
@@ -146,7 +141,6 @@ define <vscale x 32 x half> @ceil_nxv32f16(<vscale x 32 x half> %x) strictfp {
   %a = call <vscale x 32 x half> @llvm.experimental.constrained.ceil.nxv32f16(<vscale x 32 x half> %x, metadata !"fpexcept.strict")
   ret <vscale x 32 x half> %a
 }
-declare <vscale x 32 x half> @llvm.experimental.constrained.ceil.nxv32f16(<vscale x 32 x half>, metadata)
 
 define <vscale x 1 x float> @ceil_nxv1f32(<vscale x 1 x float> %x) strictfp {
 ; CHECK-LABEL: ceil_nxv1f32:
@@ -169,7 +163,6 @@ define <vscale x 1 x float> @ceil_nxv1f32(<vscale x 1 x float> %x) strictfp {
   %a = call <vscale x 1 x float> @llvm.experimental.constrained.ceil.nxv1f32(<vscale x 1 x float> %x, metadata !"fpexcept.strict")
   ret <vscale x 1 x float> %a
 }
-declare <vscale x 1 x float> @llvm.experimental.constrained.ceil.nxv1f32(<vscale x 1 x float>, metadata)
 
 define <vscale x 2 x float> @ceil_nxv2f32(<vscale x 2 x float> %x) strictfp {
 ; CHECK-LABEL: ceil_nxv2f32:
@@ -192,7 +185,6 @@ define <vscale x 2 x float> @ceil_nxv2f32(<vscale x 2 x float> %x) strictfp {
   %a = call <vscale x 2 x float> @llvm.experimental.constrained.ceil.nxv2f32(<vscale x 2 x float> %x, metadata !"fpexcept.strict")
   ret <vscale x 2 x float> %a
 }
-declare <vscale x 2 x float> @llvm.experimental.constrained.ceil.nxv2f32(<vscale x 2 x float>, metadata)
 
 define <vscale x 4 x float> @ceil_nxv4f32(<vscale x 4 x float> %x) strictfp {
 ; CHECK-LABEL: ceil_nxv4f32:
@@ -215,7 +207,6 @@ define <vscale x 4 x float> @ceil_nxv4f32(<vscale x 4 x float> %x) strictfp {
   %a = call <vscale x 4 x float> @llvm.experimental.constrained.ceil.nxv4f32(<vscale x 4 x float> %x, metadata !"fpexcept.strict")
   ret <vscale x 4 x float> %a
 }
-declare <vscale x 4 x float> @llvm.experimental.constrained.ceil.nxv4f32(<vscale x 4 x float>, metadata)
 
 define <vscale x 8 x float> @ceil_nxv8f32(<vscale x 8 x float> %x) strictfp {
 ; CHECK-LABEL: ceil_nxv8f32:
@@ -238,7 +229,6 @@ define <vscale x 8 x float> @ceil_nxv8f32(<vscale x 8 x float> %x) strictfp {
   %a = call <vscale x 8 x float> @llvm.experimental.constrained.ceil.nxv8f32(<vscale x 8 x float> %x, metadata !"fpexcept.strict")
   ret <vscale x 8 x float> %a
 }
-declare <vscale x 8 x float> @llvm.experimental.constrained.ceil.nxv8f32(<vscale x 8 x float>, metadata)
 
 define <vscale x 16 x float> @ceil_nxv16f32(<vscale x 16 x float> %x) strictfp {
 ; CHECK-LABEL: ceil_nxv16f32:
@@ -261,7 +251,6 @@ define <vscale x 16 x float> @ceil_nxv16f32(<vscale x 16 x float> %x) strictfp {
   %a = call <vscale x 16 x float> @llvm.experimental.constrained.ceil.nxv16f32(<vscale x 16 x float> %x, metadata !"fpexcept.strict")
   ret <vscale x 16 x float> %a
 }
-declare <vscale x 16 x float> @llvm.experimental.constrained.ceil.nxv16f32(<vscale x 16 x float>, metadata)
 
 define <vscale x 1 x double> @ceil_nxv1f64(<vscale x 1 x double> %x) strictfp {
 ; RV32-LABEL: ceil_nxv1f64:
@@ -303,7 +292,6 @@ define <vscale x 1 x double> @ceil_nxv1f64(<vscale x 1 x double> %x) strictfp {
   %a = call <vscale x 1 x double> @llvm.experimental.constrained.ceil.nxv1f64(<vscale x 1 x double> %x, metadata !"fpexcept.strict")
   ret <vscale x 1 x double> %a
 }
-declare <vscale x 1 x double> @llvm.experimental.constrained.ceil.nxv1f64(<vscale x 1 x double>, metadata)
 
 define <vscale x 2 x double> @ceil_nxv2f64(<vscale x 2 x double> %x) strictfp {
 ; RV32-LABEL: ceil_nxv2f64:
@@ -345,7 +333,6 @@ define <vscale x 2 x double> @ceil_nxv2f64(<vscale x 2 x double> %x) strictfp {
   %a = call <vscale x 2 x double> @llvm.experimental.constrained.ceil.nxv2f64(<vscale x 2 x double> %x, metadata !"fpexcept.strict")
   ret <vscale x 2 x double> %a
 }
-declare <vscale x 2 x double> @llvm.experimental.constrained.ceil.nxv2f64(<vscale x 2 x double>, metadata)
 
 define <vscale x 4 x double> @ceil_nxv4f64(<vscale x 4 x double> %x) strictfp {
 ; RV32-LABEL: ceil_nxv4f64:
@@ -387,7 +374,6 @@ define <vscale x 4 x double> @ceil_nxv4f64(<vscale x 4 x double> %x) strictfp {
   %a = call <vscale x 4 x double> @llvm.experimental.constrained.ceil.nxv4f64(<vscale x 4 x double> %x, metadata !"fpexcept.strict")
   ret <vscale x 4 x double> %a
 }
-declare <vscale x 4 x double> @llvm.experimental.constrained.ceil.nxv4f64(<vscale x 4 x double>, metadata)
 
 define <vscale x 8 x double> @ceil_nxv8f64(<vscale x 8 x double> %x) strictfp {
 ; RV32-LABEL: ceil_nxv8f64:
@@ -429,4 +415,3 @@ define <vscale x 8 x double> @ceil_nxv8f64(<vscale x 8 x double> %x) strictfp {
   %a = call <vscale x 8 x double> @llvm.experimental.constrained.ceil.nxv8f64(<vscale x 8 x double> %x, metadata !"fpexcept.strict")
   ret <vscale x 8 x double> %a
 }
-declare <vscale x 8 x double> @llvm.experimental.constrained.ceil.nxv8f64(<vscale x 8 x double>, metadata)

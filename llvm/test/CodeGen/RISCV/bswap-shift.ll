@@ -8,10 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zbkb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=RV64ZB
 
-declare i16 @llvm.bswap.i16(i16)
-declare i32 @llvm.bswap.i32(i32)
-declare i64 @llvm.bswap.i64(i64)
-
 define i16 @test_bswap_srli_7_bswap_i16(i16 %a) nounwind {
 ; RV32ZB-LABEL: test_bswap_srli_7_bswap_i16:
 ; RV32ZB:       # %bb.0:

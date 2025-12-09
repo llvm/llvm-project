@@ -139,6 +139,7 @@ private:
   bool foldShuffleOfSelects(Instruction &I);
   bool foldShuffleOfCastops(Instruction &I);
   bool foldShuffleOfShuffles(Instruction &I);
+  bool foldPermuteOfIntrinsic(Instruction &I);
   bool foldShuffleOfIntrinsics(Instruction &I);
   bool foldShuffleToIdentity(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
@@ -2924,8 +2925,9 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
       auto *ArgTy = FixedVectorType::get(VecTy->getElementType(),
                                          ShuffleDstTy->getNumElements());
       NewArgsTy.push_back(ArgTy);
-      NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
-                                    ArgTy, VecTy, OldMask, CostKind);
+      NewCost += TTI.getShuffleCost(
+          TargetTransformInfo::SK_PermuteTwoSrc, ArgTy, VecTy, OldMask,
+          CostKind, 0, nullptr, {II0->getArgOperand(I), II1->getArgOperand(I)});
     }
   }
   IntrinsicCostAttributes NewAttr(IID, ShuffleDstTy, NewArgsTy);
@@ -2955,6 +2957,83 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
     NewInst->copyIRFlags(II0);
     NewInst->andIRFlags(II1);
   }
+
+  replaceValue(I, *NewIntrinsic);
+  return true;
+}
+
+/// Try to convert
+/// "shuffle (intrinsic), (poison/undef)" into "intrinsic (shuffle)".
+bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
+  Value *V0;
+  ArrayRef<int> Mask;
+  if (!match(&I, m_Shuffle(m_OneUse(m_Value(V0)), m_Undef(), m_Mask(Mask))))
+    return false;
+
+  auto *II0 = dyn_cast<IntrinsicInst>(V0);
+  if (!II0)
+    return false;
+
+  auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
+  auto *IntrinsicSrcTy = dyn_cast<FixedVectorType>(II0->getType());
+  if (!ShuffleDstTy || !IntrinsicSrcTy)
+    return false;
+
+  // Validate it's a pure permute, mask should only reference the first vector
+  unsigned NumSrcElts = IntrinsicSrcTy->getNumElements();
+  if (any_of(Mask, [NumSrcElts](int M) { return M >= (int)NumSrcElts; }))
+    return false;
+
+  Intrinsic::ID IID = II0->getIntrinsicID();
+  if (!isTriviallyVectorizable(IID))
+    return false;
+
+  // Cost analysis
+  InstructionCost OldCost =
+      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0), CostKind) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleDstTy,
+                         IntrinsicSrcTy, Mask, CostKind, 0, nullptr, {V0}, &I);
+
+  SmallVector<Type *> NewArgsTy;
+  InstructionCost NewCost = 0;
+  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I) {
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
+      NewArgsTy.push_back(II0->getArgOperand(I)->getType());
+    } else {
+      auto *VecTy = cast<FixedVectorType>(II0->getArgOperand(I)->getType());
+      auto *ArgTy = FixedVectorType::get(VecTy->getElementType(),
+                                         ShuffleDstTy->getNumElements());
+      NewArgsTy.push_back(ArgTy);
+      NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
+                                    ArgTy, VecTy, Mask, CostKind, 0, nullptr,
+                                    {II0->getArgOperand(I)});
+    }
+  }
+  IntrinsicCostAttributes NewAttr(IID, ShuffleDstTy, NewArgsTy);
+  NewCost += TTI.getIntrinsicInstrCost(NewAttr, CostKind);
+
+  LLVM_DEBUG(dbgs() << "Found a permute of intrinsic: " << I << "\n  OldCost: "
+                    << OldCost << " vs NewCost: " << NewCost << "\n");
+
+  if (NewCost > OldCost)
+    return false;
+
+  // Transform
+  SmallVector<Value *> NewArgs;
+  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I) {
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
+      NewArgs.push_back(II0->getArgOperand(I));
+    } else {
+      Value *Shuf = Builder.CreateShuffleVector(II0->getArgOperand(I), Mask);
+      NewArgs.push_back(Shuf);
+      Worklist.pushValue(Shuf);
+    }
+  }
+
+  Value *NewIntrinsic = Builder.CreateIntrinsic(ShuffleDstTy, IID, NewArgs);
+
+  if (auto *NewInst = dyn_cast<Instruction>(NewIntrinsic))
+    NewInst->copyIRFlags(II0);
 
   replaceValue(I, *NewIntrinsic);
   return true;
@@ -4717,6 +4796,8 @@ bool VectorCombine::run() {
         if (foldShuffleOfCastops(I))
           return true;
         if (foldShuffleOfShuffles(I))
+          return true;
+        if (foldPermuteOfIntrinsic(I))
           return true;
         if (foldShuffleOfIntrinsics(I))
           return true;

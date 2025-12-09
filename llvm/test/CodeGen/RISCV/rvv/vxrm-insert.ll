@@ -5,17 +5,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,RV64
 
-declare <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-  <vscale x 1 x i8>,
-  <vscale x 1 x i8>,
-  <vscale x 1 x i8>,
-  iXLen, iXLen);
-declare <vscale x 1 x i8> @llvm.riscv.vasub.nxv1i8.nxv1i8(
-  <vscale x 1 x i8>,
-  <vscale x 1 x i8>,
-  <vscale x 1 x i8>,
-  iXLen, iXLen);
-
 ; Test same rounding mode in one block.
 define <vscale x 1 x i8> @test1(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vscale x 1 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: test1:
@@ -416,10 +405,6 @@ for.body:
 for.end:
   ret void
 }
-
-declare iXLen @llvm.riscv.vsetvli.iXLen(iXLen, iXLen immarg, iXLen immarg)
-declare <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8>, ptr nocapture, iXLen)
-declare void @llvm.riscv.vse.nxv1i8.iXLen(<vscale x 1 x i8>, ptr nocapture, iXLen)
 
 ; Test loop with dominating vxrm write. Make sure there is no write in the loop.
 define void @test11(ptr nocapture %ptr_dest, ptr nocapture readonly %ptr_op1, ptr nocapture readonly %ptr_op2, iXLen %n) {

@@ -1623,6 +1623,10 @@ public:
     return hasKernargPreload() && !GFX1250Insts;
   }
 
+  bool hasCondSubInsts() const { return GFX12Insts; }
+
+  bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(this);
@@ -1868,12 +1872,21 @@ public:
     return GFX1250Insts && getGeneration() == GFX12;
   }
 
+  // src_flat_scratch_hi cannot be used as a source in SALU producing a 64-bit
+  // result.
+  bool hasFlatScratchHiInB64InstHazard() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
+
   /// \returns true if the subtarget supports clusters of workgroups.
   bool hasClusters() const { return HasClusters; }
 
-  /// \returns true if the subtarget requires a wait for xcnt before atomic
-  /// flat/global stores & rmw.
-  bool requiresWaitXCntBeforeAtomicStores() const { return GFX1250Insts; }
+  /// \returns true if the subtarget requires a wait for xcnt before VMEM
+  /// accesses that must never be repeated in the event of a page fault/re-try.
+  /// Atomic stores/rmw and all volatile accesses fall under this criteria.
+  bool requiresWaitXCntForSingleAccessInstructions() const {
+    return GFX1250Insts;
+  }
 
   /// \returns the number of significant bits in the immediate field of the
   /// S_NOP instruction.
