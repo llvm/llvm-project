@@ -51,6 +51,14 @@ public:
   lowerGetRuntimeMember(cir::GetRuntimeMemberOp op, mlir::Type loweredResultTy,
                         mlir::Value loweredAddr, mlir::Value loweredMember,
                         mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerBaseDataMember(cir::BaseDataMemberOp op,
+                                  mlir::Value loweredSrc,
+                                  mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerDerivedDataMember(cir::DerivedDataMemberOp op,
+                                     mlir::Value loweredSrc,
+                                     mlir::OpBuilder &builder) const override;
 };
 
 } // namespace
@@ -131,6 +139,49 @@ mlir::Operation *LowerItaniumCXXABI::lowerGetRuntimeMember(
       builder, op.getLoc(), bytePtrTy, objectBytesPtr, loweredMember);
   return cir::CastOp::create(builder, op.getLoc(), op.getType(),
                              cir::CastKind::bitcast, memberBytesPtr);
+}
+
+static mlir::Value lowerDataMemberCast(mlir::Operation *op,
+                                       mlir::Value loweredSrc,
+                                       std::int64_t offset,
+                                       bool isDerivedToBase,
+                                       mlir::OpBuilder &builder) {
+  if (offset == 0)
+    return loweredSrc;
+  mlir::Location loc = op->getLoc();
+  mlir::Type ty = loweredSrc.getType();
+
+  auto nullValue = mlir::LLVM::ConstantOp::create(
+      builder, loc, ty, mlir::IntegerAttr::get(ty, -1));
+
+  auto isNull = mlir::LLVM::ICmpOp::create(
+      builder, loc, mlir::LLVM::ICmpPredicate::eq, loweredSrc, nullValue);
+
+  auto offsetValue = mlir::LLVM::ConstantOp::create(
+      builder, loc, ty, mlir::IntegerAttr::get(ty, offset));
+  mlir::Value adjustedPtr;
+  if (isDerivedToBase)
+    adjustedPtr = mlir::LLVM::SubOp::create(builder, loc, loweredSrc, offsetValue, mlir::LLVM::IntegerOverflowFlags::nsw);
+  else
+    adjustedPtr = mlir::LLVM::AddOp::create(builder, loc, loweredSrc, offsetValue, mlir::LLVM::IntegerOverflowFlags::nsw);
+
+  return mlir::LLVM::SelectOp::create(builder, loc, isNull, loweredSrc, adjustedPtr);
+}
+
+mlir::Value
+LowerItaniumCXXABI::lowerBaseDataMember(cir::BaseDataMemberOp op,
+                                        mlir::Value loweredSrc,
+                                        mlir::OpBuilder &builder) const {
+  return lowerDataMemberCast(op, loweredSrc, op.getOffset().getSExtValue(),
+                             /*isDerivedToBase=*/true, builder);
+}
+
+mlir::Value
+LowerItaniumCXXABI::lowerDerivedDataMember(cir::DerivedDataMemberOp op,
+                                           mlir::Value loweredSrc,
+                                           mlir::OpBuilder &builder) const {
+  return lowerDataMemberCast(op, loweredSrc, op.getOffset().getSExtValue(),
+                             /*isDerivedToBase=*/false, builder);
 }
 
 } // namespace cir
