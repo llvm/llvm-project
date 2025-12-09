@@ -4107,7 +4107,7 @@ void SelectionDAGBuilder::visitBitCast(const User &I) {
   // constant integer as an opaque constant.
   else if(ConstantInt *C = dyn_cast<ConstantInt>(I.getOperand(0)))
     setValue(&I, DAG.getConstant(C->getValue(), dl, DestVT, /*isTarget=*/false,
-                                 /*isOpaque*/true));
+                                 /*isOpaque*/false));
   else
     setValue(&I, N);            // noop cast.
 }

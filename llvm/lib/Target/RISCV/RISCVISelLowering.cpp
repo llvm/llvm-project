@@ -9797,7 +9797,17 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       // Efficient only if the constant and its negation fit into `ADDI`
       // Prefer Add/Sub over Xor since can be compressed for small immediates
       if (isInt<12>(RawConstVal)) {
-        SDValue SubOp = DAG.getNode(ISD::SUB, DL, VT, RegV, ConstVal);
+        SDValue SubOp;
+        using namespace llvm::SDPatternMatch;
+        SDValue ShAmt;
+        if (sd_match(RegV, m_OneUse(m_Not(m_OneUse(m_Shl(m_AllOnes(), m_Value(ShAmt))))))) {
+          SDValue One = DAG.getConstant(1, DL, VT);
+          SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, One, ShAmt);
+          SDValue SubAmt = DAG.getConstant(1 + RawConstVal, DL, VT);
+          SubOp = DAG.getNode(ISD::SUB, DL, VT, Shl, SubAmt);
+        } else {
+          SubOp = DAG.getNode(ISD::SUB, DL, VT, RegV, ConstVal);
+        }
         SDValue CMOV =
             DAG.getNode(IsCZERO_NEZ ? RISCVISD::CZERO_NEZ : RISCVISD::CZERO_EQZ,
                         DL, VT, SubOp, CondV);
