@@ -215,8 +215,9 @@ multiclass VPatBinaryFPSDNode_VV_VF<SDPatternOperator vop, string instruction_na
 }
 
 multiclass VPatBinaryFPSDNode_VV_VF_RM<SDPatternOperator vop, string instruction_name,
-                                       bit isSEWAware = 0, bit supportBF16 = 0> {
-  foreach vti = !if(supportBF16, AllFloatAndBF16Vectors, AllFloatVectors) in {
+                                       list<VTypeInfo> vtilist = AllFloatVectors,
+                                       bit isSEWAware = 0> {
+  foreach vti = vtilist in {
     let Predicates = GetVTypePredicates<vti>.Predicates in {
       def : VPatBinarySDNode_VV_RM<vop, instruction_name #
                                             !if(!eq(vti.Scalar, bf16), "_ALT", ""),
@@ -249,8 +250,9 @@ multiclass VPatBinaryFPSDNode_R_VF<SDPatternOperator vop, string instruction_nam
 }
 
 multiclass VPatBinaryFPSDNode_R_VF_RM<SDPatternOperator vop, string instruction_name,
-                                   bit isSEWAware = 0, bit supportBF16 = 0> {
-  foreach fvti = !if(supportBF16, AllFloatAndBF16Vectors, AllFloatVectors) in
+                                      list<VTypeInfo> vtilist = AllFloatVectors,
+                                      bit isSEWAware = 0> {
+  foreach fvti = vtilist in
     let Predicates = GetVTypePredicates<fvti>.Predicates in
     def : Pat<(fvti.Vector (vop (fvti.Vector (SplatFPOp fvti.Scalar:$rs2)),
                                 (fvti.Vector fvti.RegClass:$rs1))),
@@ -1209,20 +1211,20 @@ foreach mti = AllMasks in {
 // 13. Vector Floating-Point Instructions
 
 // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
-defm : VPatBinaryFPSDNode_VV_VF_RM<any_fadd, "PseudoVFADD", isSEWAware=1,
-                                   supportBF16=1>;
-defm : VPatBinaryFPSDNode_VV_VF_RM<any_fsub, "PseudoVFSUB", isSEWAware=1,
-                                   supportBF16=1>;
-defm : VPatBinaryFPSDNode_R_VF_RM<any_fsub, "PseudoVFRSUB", isSEWAware=1,
-                                  supportBF16=1>;
+defm : VPatBinaryFPSDNode_VV_VF_RM<any_fadd, "PseudoVFADD", AllFloatAndBF16Vectors,
+                                   isSEWAware=1>;
+defm : VPatBinaryFPSDNode_VV_VF_RM<any_fsub, "PseudoVFSUB", AllFloatAndBF16Vectors,
+                                   isSEWAware=1>;
+defm : VPatBinaryFPSDNode_R_VF_RM<any_fsub, "PseudoVFRSUB", AllFloatAndBF16Vectors,
+                                  isSEWAware=1>;
 
 // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
 defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF_RM<fadd, "PseudoVFWADD">;
 defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF_RM<fsub, "PseudoVFWSUB">;
 
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
-defm : VPatBinaryFPSDNode_VV_VF_RM<any_fmul, "PseudoVFMUL", isSEWAware=1,
-                                   supportBF16=1>;
+defm : VPatBinaryFPSDNode_VV_VF_RM<any_fmul, "PseudoVFMUL", AllFloatAndBF16Vectors,
+                                   isSEWAware=1>;
 defm : VPatBinaryFPSDNode_VV_VF_RM<any_fdiv, "PseudoVFDIV", isSEWAware=1>;
 defm : VPatBinaryFPSDNode_R_VF_RM<any_fdiv, "PseudoVFRDIV", isSEWAware=1>;
 
