@@ -6,26 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "UnnamedNamespaceInHeaderCheck.h"
+#include "AnonymousNamespaceInHeaderCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::google::build {
+namespace clang::tidy::misc {
 
-UnnamedNamespaceInHeaderCheck::UnnamedNamespaceInHeaderCheck(
+AnonymousNamespaceInHeaderCheck::AnonymousNamespaceInHeaderCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
 
-void UnnamedNamespaceInHeaderCheck::registerMatchers(
+void AnonymousNamespaceInHeaderCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
   Finder->addMatcher(namespaceDecl(isAnonymous()).bind("anonymousNamespace"),
                      this);
 }
 
-void UnnamedNamespaceInHeaderCheck::check(
+void AnonymousNamespaceInHeaderCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *N = Result.Nodes.getNodeAs<NamespaceDecl>("anonymousNamespace");
   const SourceLocation Loc = N->getBeginLoc();
@@ -37,4 +37,4 @@ void UnnamedNamespaceInHeaderCheck::check(
     diag(Loc, "do not use unnamed namespaces in header files");
 }
 
-} // namespace clang::tidy::google::build
+} // namespace clang::tidy::misc
