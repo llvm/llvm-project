@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_log2.h>
-#include <clc/opencl/math/log2.h>
 
 #define __CLC_FUNCTION log2
 #define __CLC_BODY <clc/shared/unary_def.inc>

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/integer/clc_sub_sat.h>
-#include <clc/opencl/integer/sub_sat.h>
 
 #define __CLC_FUNCTION sub_sat
 #define __CLC_BODY <clc/shared/binary_def.inc>

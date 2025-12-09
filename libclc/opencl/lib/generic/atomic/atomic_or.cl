@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/atomic/clc_atomic_fetch_or.h>
-#include <clc/opencl/atomic/atomic_or.h>
 
 #define __CLC_IMPL(TYPE, AS)                                                   \
   _CLC_OVERLOAD _CLC_DEF TYPE atomic_or(volatile AS TYPE *p, TYPE val) {       \

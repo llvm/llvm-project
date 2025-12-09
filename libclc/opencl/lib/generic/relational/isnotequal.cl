@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/relational/isnotequal.h>
 #include <clc/relational/clc_isnotequal.h>
 
 #define __CLC_FUNCTION isnotequal

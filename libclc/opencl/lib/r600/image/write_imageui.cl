@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/image/image.h>
+#include <clc/opencl/opencl-base.h>
 
 _CLC_DECL void __clc_write_imageui_2d(image2d_t image, int2 coord, uint4 color);
 

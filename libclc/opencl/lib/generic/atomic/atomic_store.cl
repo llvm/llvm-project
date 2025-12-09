@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/atomic/clc_atomic_store.h>
-#include <clc/opencl/atomic/atomic_store.h>
 #include <clc/opencl/utils.h>
 
 #define __CLC_FUNCTION atomic_store

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/relational/select.h>
 #include <clc/relational/clc_select.h>
 #include <clc/utils.h>
 

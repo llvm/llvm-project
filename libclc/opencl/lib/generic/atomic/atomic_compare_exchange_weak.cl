@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/atomic/clc_atomic_compare_exchange.h>
-#include <clc/opencl/atomic/atomic_compare_exchange_weak.h>
 #include <clc/opencl/utils.h>
 
 #define __CLC_FUNCTION atomic_compare_exchange_weak
