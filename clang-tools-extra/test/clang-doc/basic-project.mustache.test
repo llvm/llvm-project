@@ -1,7 +1,7 @@
 // RUN: rm -rf %t && mkdir -p %t/docs %t/build
 // RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
 
-// RUN: clang-doc --format=mustache --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
+// RUN: clang-doc --format=html --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
 // RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV5Shape.html -check-prefix=HTML-SHAPE
 // RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV10Calculator.html -check-prefix=HTML-CALC
 // RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV9Rectangle.html -check-prefix=HTML-RECTANGLE
