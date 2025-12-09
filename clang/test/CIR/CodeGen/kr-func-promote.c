@@ -23,7 +23,7 @@ void foo(x) short x; {}
 // OGCG:   %[[X:.*]] = trunc i32 %0 to i16
 // OGCG:   store i16 %[[X]], ptr %[[X_PTR]], align 2
 
-// CIR: cir.func no_proto dso_local @bar(%arg0: !cir.double
+// CIR: cir.func{{.*}}no_proto dso_local @bar(%arg0: !cir.double
 // CIR:   %0 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f", init]
 // CIR:   %1 = cir.cast floating %arg0 : !cir.double -> !cir.float
 // CIR:   cir.store %1, %0 : !cir.float, !cir.ptr<!cir.float>
