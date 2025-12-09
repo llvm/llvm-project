@@ -913,7 +913,7 @@ std::string SwiftLanguageRuntime::GetObjectDescriptionExpr_Copy(
 }
 
 static llvm::Expected<ValueObjectSP>
-runObjectDescription(ValueObject &object, std::string &expr_string,
+RunObjectDescription(ValueObject &object, std::string &expr_string,
                      Process &process, bool disable_availability = false) {
   Log *log(GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions));
   ValueObjectSP result_sp;
@@ -958,18 +958,7 @@ runObjectDescription(ValueObject &object, std::string &expr_string,
   return result_sp;
 }
 
-static llvm::Error dumpString(ValueObjectSP result_sp, Stream &strm);
-
-llvm::Error SwiftLanguageRuntime::RunObjectDescriptionExpr(
-    ValueObject &object, std::string &expr_string, Stream &strm) {
-  auto result_or_err = runObjectDescription(object, expr_string, GetProcess());
-  if (!result_or_err)
-    return result_or_err.takeError();
-
-  return dumpString(*result_or_err, strm);
-}
-
-static llvm::Error dumpString(ValueObjectSP result_sp, Stream &strm) {
+static llvm::Error DumpString(ValueObjectSP result_sp, Stream &strm) {
   Log *log(GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions));
   formatters::StringPrinter::ReadStringAndDumpToStreamOptions dump_options;
   dump_options.SetEscapeNonPrintables(false);
@@ -990,6 +979,15 @@ static llvm::Error dumpString(ValueObjectSP result_sp, Stream &strm) {
       "[RunObjectDescriptionExpr] expression generated invalid string data");
 
   return llvm::createStringError("expression produced unprintable string");
+}
+
+llvm::Error SwiftLanguageRuntime::RunObjectDescriptionExpr(
+    ValueObject &object, std::string &expr_string, Stream &strm) {
+  auto result_or_err = RunObjectDescription(object, expr_string, GetProcess());
+  if (!result_or_err)
+    return result_or_err.takeError();
+
+  return DumpString(*result_or_err, strm);
 }
 
 static bool IsVariable(ValueObject &object) {
@@ -1021,7 +1019,7 @@ static bool IsSwiftReferenceType(ValueObject &object) {
   return false;
 }
 
-static bool printObjectViaPointer(Stream &strm, ValueObject &object,
+static bool PrintObjectViaPointer(Stream &strm, ValueObject &object,
                                   Process &process) {
   Log *log = GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions);
 
@@ -1055,7 +1053,7 @@ static bool printObjectViaPointer(Stream &strm, ValueObject &object,
           addr, mangled_type_name)
           .str();
 
-  auto result_or_err = runObjectDescription(object, expr_string, process, true);
+  auto result_or_err = RunObjectDescription(object, expr_string, process, true);
   if (!result_or_err) {
     LLDB_LOG_ERROR(log, result_or_err.takeError(),
                    "stringForPrintObject(_:mangledTypeName:) failed: {0}");
@@ -1068,7 +1066,7 @@ static bool printObjectViaPointer(Stream &strm, ValueObject &object,
   auto description_sp = result_sp->GetChildAtIndex(1);
 
   StreamString dump_stream;
-  auto err = dumpString(description_sp, dump_stream);
+  auto err = DumpString(description_sp, dump_stream);
   if (err) {
     LLDB_LOG_ERROR(log, std::move(err),
                    "decoding result of "
@@ -1094,8 +1092,8 @@ llvm::Error SwiftLanguageRuntime::GetObjectDescription(Stream &str,
   if (object.IsUninitializedReference())
     return llvm::createStringError("<uninitialized>");
 
-  if (GetProcess().GetTarget().GetSwiftUseNewPrintObject())
-    if (printObjectViaPointer(str, object, GetProcess()))
+  if (GetProcess().GetTarget().GetSwiftUseContextFreePrintObject())
+    if (PrintObjectViaPointer(str, object, GetProcess()))
       return llvm::Error::success();
 
   std::string expr_string;

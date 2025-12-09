@@ -4705,14 +4705,14 @@ bool TargetProperties::GetSwiftAutoImportFrameworks() const {
       idx, g_target_properties[idx].default_uint_value != 0);
 }
 
-bool TargetProperties::GetSwiftUseNewPrintObject() const {
+bool TargetProperties::GetSwiftUseContextFreePrintObject() const {
   const Property *exp_property =
       m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
     return exp_values
-        ->GetPropertyAtIndexAs<bool>(ePropertySwiftUseNewPrintObject)
+        ->GetPropertyAtIndexAs<bool>(ePropertySwiftUseContextFreePrintObject)
         .value_or(false);
   return false;
 }
