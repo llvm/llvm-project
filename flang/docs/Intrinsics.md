@@ -981,6 +981,25 @@ program test_etime
 end program test_etime
 ```
 
+### Non-Standard Intrinsics: ABORT
+
+#### Description
+`ABORT()` terminates the program execution. If backtrace support is available, prints a backtrace.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine
+- **Syntax:** `CALL ABORT()`
+
+#### Example
+```Fortran
+program call_abort
+  print *, "Aborting..."
+  call abort()
+end
+```
+
 ### Non-Standard Intrinsics: EXIT
 
 #### Description
