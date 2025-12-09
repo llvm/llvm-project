@@ -544,7 +544,7 @@ MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
       this->outs()
           << "BOLT-WARNING: corrupted control flow detected in function "
           << Source
-          << ", an external branch/call targets an invalid instruction "
+          << ": an external branch/call targets an invalid instruction "
           << "at address 0x" << Twine::utohexstr(Address) << '\n';
       IsValid = false;
     }

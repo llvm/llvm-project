@@ -7,8 +7,8 @@
 # RUN: %clang %cflags -pie -Wl,-q %t/main.o -o main.exe
 # RUN: llvm-bolt %t/main.exe -o %t/main.exe.bolt -lite=0 2>&1 | FileCheck %s --check-prefix=CHECK-TARGETS
 
-# CHECK-TARGETS: BOLT-WARNING: corrupted control flow detected in function external_corrupt, an external branch/call targets an invalid instruction at address 0x{{[0-9a-f]+}}
-# CHECK-TARGETS: BOLT-WARNING: corrupted control flow detected in function internal_corrupt, an internal branch/call targets an invalid instruction at address 0x{{[0-9a-f]+}}
+# CHECK-TARGETS: BOLT-WARNING: corrupted control flow detected in function external_corrupt: an external branch/call targets an invalid instruction at address 0x{{[0-9a-f]+}}
+# CHECK-TARGETS: BOLT-WARNING: corrupted control flow detected in function internal_corrupt: an internal branch/call targets an invalid instruction at address 0x{{[0-9a-f]+}}
 
 
 .globl	internal_corrupt
