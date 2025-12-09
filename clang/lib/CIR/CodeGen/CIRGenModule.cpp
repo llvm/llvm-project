@@ -1977,9 +1977,8 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) const {
   auto tlm = GetDefaultCIRTLSModel();
 
   // Override the TLS model if it is explicitly specified.
-  if (d.getAttr<TLSModelAttr>()) {
+  if (d.getAttr<TLSModelAttr>())
     llvm_unreachable("NYI");
-  }
 
   auto global = dyn_cast<cir::GlobalOp>(op);
   assert(global && "NYI for other operations");
