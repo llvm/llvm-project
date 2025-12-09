@@ -442,7 +442,7 @@ exit:
 ; low, so the discount in getPredBlockCostDivisor is high enough to not fit in
 ; uint32_t. Make sure we return uint64_t which fits all possible BlockFrequency
 ; values.
-define void @getPredBlockCostDivisor_truncate(i32 %0) {
+define void @getPredBlockCostDivisor_truncate(i32 %0, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: define void @getPredBlockCostDivisor_truncate(
 ; CHECK-SAME: i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -468,12 +468,10 @@ entry:
 
 loop:
   %iv = phi i32 [ %0, %entry ], [ %iv.next, %latch ]
-  %isnan.1 = fcmp uno double 0.000000e+00, 0.000000e+00
-  br i1 %isnan.1, label %if.1, label %latch
+  br i1 %c1, label %if.1, label %latch, !prof !4
 
 if.1:
-  %isnan.2 = fcmp uno double 0.000000e+00, 0.000000e+00
-  br i1 %isnan.2, label %if.2, label %latch
+  br i1 %c2, label %if.2, label %latch, !prof !4
 
 if.2:
   br label %latch
@@ -486,6 +484,8 @@ latch:
 exit:
   ret void
 }
+
+!4 = !{!"branch_weights", i32 0, i32 1}
 
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
