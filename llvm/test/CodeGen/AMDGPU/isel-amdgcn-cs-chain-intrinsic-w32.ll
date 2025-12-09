@@ -287,7 +287,7 @@ define amdgpu_es void @es_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; GISEL-GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
   ; GISEL-GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; GISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-  ; GISEL-GFX11-NEXT:   [[COPY10:%[0-9]+]]:ccr_sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX11-NEXT:   [[COPY10:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
   ; GISEL-GFX11-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY10]], @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   ;
   ; GISEL-GFX10-LABEL: name: es_to_chain
@@ -319,7 +319,7 @@ define amdgpu_es void @es_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; GISEL-GFX10-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
   ; GISEL-GFX10-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; GISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-  ; GISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:ccr_sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
   ; GISEL-GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY11]], @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_sgpr49_sgpr50_sgpr51
   ;
   ; DAGISEL-GFX11-LABEL: name: es_to_chain
@@ -335,7 +335,7 @@ define amdgpu_es void @es_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; DAGISEL-GFX11-NEXT:   [[COPY6:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
-  ; DAGISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+  ; DAGISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
   ; DAGISEL-GFX11-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; DAGISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; DAGISEL-GFX11-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
@@ -364,7 +364,7 @@ define amdgpu_es void @es_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; DAGISEL-GFX10-NEXT:   [[COPY6:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; DAGISEL-GFX10-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
-  ; DAGISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+  ; DAGISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
   ; DAGISEL-GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; DAGISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; DAGISEL-GFX10-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
@@ -413,7 +413,7 @@ define amdgpu_gs void @gs_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; GISEL-GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
   ; GISEL-GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; GISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-  ; GISEL-GFX11-NEXT:   [[COPY10:%[0-9]+]]:ccr_sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX11-NEXT:   [[COPY10:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
   ; GISEL-GFX11-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY10]], @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   ;
   ; GISEL-GFX10-LABEL: name: gs_to_chain
@@ -445,7 +445,7 @@ define amdgpu_gs void @gs_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; GISEL-GFX10-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
   ; GISEL-GFX10-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; GISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-  ; GISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:ccr_sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
   ; GISEL-GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY11]], @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_sgpr49_sgpr50_sgpr51
   ;
   ; DAGISEL-GFX11-LABEL: name: gs_to_chain
@@ -461,7 +461,7 @@ define amdgpu_gs void @gs_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; DAGISEL-GFX11-NEXT:   [[COPY6:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
-  ; DAGISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+  ; DAGISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
   ; DAGISEL-GFX11-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; DAGISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; DAGISEL-GFX11-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
@@ -490,7 +490,7 @@ define amdgpu_gs void @gs_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; DAGISEL-GFX10-NEXT:   [[COPY6:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; DAGISEL-GFX10-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
-  ; DAGISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+  ; DAGISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
   ; DAGISEL-GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; DAGISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; DAGISEL-GFX10-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
@@ -539,7 +539,7 @@ define amdgpu_hs void @hs_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; GISEL-GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
   ; GISEL-GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; GISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-  ; GISEL-GFX11-NEXT:   [[COPY10:%[0-9]+]]:ccr_sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX11-NEXT:   [[COPY10:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
   ; GISEL-GFX11-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY10]], @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   ;
   ; GISEL-GFX10-LABEL: name: hs_to_chain
@@ -571,7 +571,7 @@ define amdgpu_hs void @hs_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; GISEL-GFX10-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
   ; GISEL-GFX10-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; GISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-  ; GISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:ccr_sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
   ; GISEL-GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY11]], @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_sgpr49_sgpr50_sgpr51
   ;
   ; DAGISEL-GFX11-LABEL: name: hs_to_chain
@@ -587,7 +587,7 @@ define amdgpu_hs void @hs_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; DAGISEL-GFX11-NEXT:   [[COPY6:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
-  ; DAGISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+  ; DAGISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
   ; DAGISEL-GFX11-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; DAGISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; DAGISEL-GFX11-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
@@ -616,7 +616,7 @@ define amdgpu_hs void @hs_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; DAGISEL-GFX10-NEXT:   [[COPY6:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; DAGISEL-GFX10-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
-  ; DAGISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+  ; DAGISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
   ; DAGISEL-GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; DAGISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; DAGISEL-GFX10-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
@@ -665,7 +665,7 @@ define amdgpu_ls void @ls_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; GISEL-GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
   ; GISEL-GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; GISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-  ; GISEL-GFX11-NEXT:   [[COPY10:%[0-9]+]]:ccr_sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX11-NEXT:   [[COPY10:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
   ; GISEL-GFX11-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY10]], @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   ;
   ; GISEL-GFX10-LABEL: name: ls_to_chain
@@ -697,7 +697,7 @@ define amdgpu_ls void @ls_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; GISEL-GFX10-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
   ; GISEL-GFX10-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; GISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-  ; GISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:ccr_sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
   ; GISEL-GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY11]], @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_sgpr49_sgpr50_sgpr51
   ;
   ; DAGISEL-GFX11-LABEL: name: ls_to_chain
@@ -713,7 +713,7 @@ define amdgpu_ls void @ls_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; DAGISEL-GFX11-NEXT:   [[COPY6:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
-  ; DAGISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+  ; DAGISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
   ; DAGISEL-GFX11-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; DAGISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; DAGISEL-GFX11-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
@@ -742,7 +742,7 @@ define amdgpu_ls void @ls_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; DAGISEL-GFX10-NEXT:   [[COPY6:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; DAGISEL-GFX10-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
-  ; DAGISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+  ; DAGISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
   ; DAGISEL-GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; DAGISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; DAGISEL-GFX10-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
@@ -791,7 +791,7 @@ define amdgpu_vs void @vs_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; GISEL-GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
   ; GISEL-GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; GISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-  ; GISEL-GFX11-NEXT:   [[COPY10:%[0-9]+]]:ccr_sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX11-NEXT:   [[COPY10:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
   ; GISEL-GFX11-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY10]], @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   ;
   ; GISEL-GFX10-LABEL: name: vs_to_chain
@@ -823,7 +823,7 @@ define amdgpu_vs void @vs_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; GISEL-GFX10-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
   ; GISEL-GFX10-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; GISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-  ; GISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:ccr_sgpr_64 = COPY [[REG_SEQUENCE]]
+  ; GISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:sgpr_64 = COPY [[REG_SEQUENCE]]
   ; GISEL-GFX10-NEXT:   SI_CS_CHAIN_TC_W32 [[COPY11]], @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr48_sgpr49_sgpr50_sgpr51
   ;
   ; DAGISEL-GFX11-LABEL: name: vs_to_chain
@@ -839,7 +839,7 @@ define amdgpu_vs void @vs_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; DAGISEL-GFX11-NEXT:   [[COPY6:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
-  ; DAGISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+  ; DAGISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
   ; DAGISEL-GFX11-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; DAGISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; DAGISEL-GFX11-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
@@ -868,7 +868,7 @@ define amdgpu_vs void @vs_to_chain(<3 x i32> inreg %sgpr, { i32, ptr addrspace(5
   ; DAGISEL-GFX10-NEXT:   [[COPY6:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; DAGISEL-GFX10-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
-  ; DAGISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+  ; DAGISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
   ; DAGISEL-GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; DAGISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; DAGISEL-GFX10-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
