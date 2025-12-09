@@ -3708,7 +3708,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
           for (uint32_t i = 0; i < num_matches; ++i) {
             error_msg.Printf("\t%s\n", matches.GetStringAtIndex(i));
           }
-          result.AppendRawError(error_msg.GetString());
+          result.AppendError(error_msg.GetString());
         }
       } else {
         // We didn't have only one match, otherwise we wouldn't get here.
