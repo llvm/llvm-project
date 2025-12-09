@@ -136,7 +136,7 @@ class Andes45GetCyclesOnePerElement<string mx, int sew> {
   );
 }
 
-class Andes45GetLatecyDiv<int sew> {
+class Andes45GetLatencyDiv<int sew> {
   int c = !cond(
     !eq(sew, 8) : 12,
     !eq(sew, 16) : 20,
@@ -858,7 +858,7 @@ foreach mx = SchedMxList in {
 
 foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
-    defvar Latency = Andes45GetLatecyDiv<sew>.c;
+    defvar Latency = Andes45GetLatencyDiv<sew>.c;
     defvar Cycles = Andes45GetCyclesDiv<mx, sew>.c;
     defvar IsWorstCase = Andes45IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
     let Latency = Latency, ReleaseAtCycles = [Cycles] in {
