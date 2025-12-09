@@ -360,7 +360,7 @@ def fir_PrefetchOp : fir_Op<"prefetch", []> {
 
     ```
       %a = ... -> !fir.ref<i32>
-      fir.prefetch %a {cacheType, localityHint = 3 : i32} : !fir.ref<i32>
+      fir.prefetch %a {read, data, localityHint = 3 : i32} : !fir.ref<i32>
       // ...
       fir.load %a : !fir.ref<i32> // use the prefetched value
     ```
@@ -381,7 +381,7 @@ def fir_PrefetchOp : fir_Op<"prefetch", []> {
        ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<3>]> : $localityHint,
        UnitAttr : $cacheType);
 
-  let assemblyFormat = "$memref attr-dict `:` type(operands)";
+  let hasCustomAssemblyFormat = 1;
 }
 
 def fir_CopyOp : fir_Op<"copy", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
