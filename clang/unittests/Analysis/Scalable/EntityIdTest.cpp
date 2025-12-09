@@ -37,20 +37,29 @@ TEST(EntityIdTest, LessThan) {
 
   EntityName Entity1("c:@F@aaa", "", {});
   EntityName Entity2("c:@F@bbb", "", {});
-  EntityName Entity3("c:@F@ccc", "", {});
 
   EntityId Id1 = Table.createEntityId(Entity1);
   EntityId Id2 = Table.createEntityId(Entity2);
-  EntityId Id3 = Table.createEntityId(Entity3);
 
   EXPECT_TRUE(Id1 < Id2 || Id2 < Id1);
-  EXPECT_TRUE(Id1 < Id3 || Id3 < Id1);
-  EXPECT_TRUE(Id2 < Id3 || Id3 < Id2);
+}
 
-  // Transitivity: if a < b and b < c, then a < c
-  if (Id1 < Id2 && Id2 < Id3) {
-    EXPECT_TRUE(Id1 < Id3);
-  }
+TEST(EntityIdTest, Transitivity) {
+  EntityIdTable Table;
+
+  EntityName Entity1("c:@F@xxx", "", {});
+  EntityName Entity2("c:@F@yyy", "", {});
+  EntityName Entity3("c:@F@zzz", "", {});
+
+  EntityId Ids[3] = {
+    Table.createEntityId(Entity1),
+    Table.createEntityId(Entity2),
+    Table.createEntityId(Entity3)
+  };
+
+  std::sort(Ids, Ids + 3);
+
+  EXPECT_TRUE(Ids[0] < Ids[1] && Ids[1] < Ids[2]);
 }
 
 } // namespace
