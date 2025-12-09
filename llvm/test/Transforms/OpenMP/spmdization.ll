@@ -107,45 +107,38 @@
 ;.
 ; AMDGPU: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; AMDGPU: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU: @__omp_offloading_fd02_2044372e_sequential_loop_l5_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @__omp_offloading_fd02_2044372e_sequential_loop_l5_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; AMDGPU: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ; AMDGPU: @x_shared = internal addrspace(3) global [4 x i8] poison, align 4
 ; AMDGPU: @x_shared.1 = internal addrspace(3) global [4 x i8] poison, align 4
-; AMDGPU: @__omp_outlined__9_wrapper.ID = private constant i8 undef
 ;.
 ; NVPTX: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; NVPTX: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX: @__omp_offloading_fd02_2044372e_sequential_loop_l5_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @__omp_offloading_fd02_2044372e_sequential_loop_l5_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; NVPTX: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ; NVPTX: @x_shared = internal addrspace(3) global [4 x i8] poison, align 4
 ; NVPTX: @x_shared1 = internal addrspace(3) global [4 x i8] poison, align 4
-; NVPTX: @__omp_outlined__9_wrapper.ID = private constant i8 undef
 ;.
 ; AMDGPU-DISABLED1: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; AMDGPU-DISABLED1: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_l5_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU-DISABLED1: @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU-DISABLED1: @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_l5_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU-DISABLED1: @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU-DISABLED1: @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; AMDGPU-DISABLED1: @x_shared = internal addrspace(3) global [4 x i8] poison, align 4
 ; AMDGPU-DISABLED1: @x_shared.1 = internal addrspace(3) global [4 x i8] poison, align 4
-; AMDGPU-DISABLED1: @__omp_outlined__1_wrapper.ID = private constant i8 undef
-; AMDGPU-DISABLED1: @__omp_outlined__3_wrapper.ID = private constant i8 undef
-; AMDGPU-DISABLED1: @__omp_outlined__5_wrapper.ID = private constant i8 undef
-; AMDGPU-DISABLED1: @__omp_outlined__7_wrapper.ID = private constant i8 undef
-; AMDGPU-DISABLED1: @__omp_outlined__9_wrapper.ID = private constant i8 undef
 ;.
 ; AMDGPU-DISABLED2: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; AMDGPU-DISABLED2: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
@@ -160,19 +153,14 @@
 ;.
 ; NVPTX-DISABLED1: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; NVPTX-DISABLED1: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_l5_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX-DISABLED1: @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX-DISABLED1: @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_l5_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX-DISABLED1: @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX-DISABLED1: @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX-DISABLED1: @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; NVPTX-DISABLED1: @x_shared = internal addrspace(3) global [4 x i8] poison, align 4
 ; NVPTX-DISABLED1: @x_shared1 = internal addrspace(3) global [4 x i8] poison, align 4
-; NVPTX-DISABLED1: @__omp_outlined__1_wrapper.ID = private constant i8 undef
-; NVPTX-DISABLED1: @__omp_outlined__3_wrapper.ID = private constant i8 undef
-; NVPTX-DISABLED1: @__omp_outlined__5_wrapper.ID = private constant i8 undef
-; NVPTX-DISABLED1: @__omp_outlined__7_wrapper.ID = private constant i8 undef
-; NVPTX-DISABLED1: @__omp_outlined__9_wrapper.ID = private constant i8 undef
 ;.
 ; NVPTX-DISABLED2: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; NVPTX-DISABLED2: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
@@ -262,45 +250,11 @@ define internal void @__omp_offloading_fd02_2044372e_sequential_loop_l5__debug()
 ; AMDGPU-DISABLED1-LABEL: define internal void @__omp_offloading_fd02_2044372e_sequential_loop_l5__debug(
 ; AMDGPU-DISABLED1-SAME: ) #[[ATTR1:[0-9]+]] {
 ; AMDGPU-DISABLED1-NEXT:  [[ENTRY:.*:]]
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; AMDGPU-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTTHREADID_TEMP__CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
 ; AMDGPU-DISABLED1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_sequential_loop_l5_kernel_environment, ptr null)
-; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; AMDGPU-DISABLED1:       [[IS_WORKER_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; AMDGPU-DISABLED1-NEXT:    ret void
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    br i1 true, label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__omp_outlined__1_wrapper(i16 0, i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1]]:
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; AMDGPU-DISABLED1:       [[THREAD_USER_CODE_CHECK]]:
 ; AMDGPU-DISABLED1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; AMDGPU-DISABLED1:       [[COMMON_RET]]:
@@ -334,44 +288,11 @@ define internal void @__omp_offloading_fd02_2044372e_sequential_loop_l5__debug()
 ; NVPTX-DISABLED1-LABEL: define internal void @__omp_offloading_fd02_2044372e_sequential_loop_l5__debug(
 ; NVPTX-DISABLED1-SAME: ) #[[ATTR1:[0-9]+]] {
 ; NVPTX-DISABLED1-NEXT:  [[ENTRY:.*:]]
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP__CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_sequential_loop_l5_kernel_environment, ptr null)
-; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; NVPTX-DISABLED1:       [[IS_WORKER_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; NVPTX-DISABLED1-NEXT:    ret void
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    br i1 true, label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE]]:
-; NVPTX-DISABLED1-NEXT:    call void @__omp_outlined__1_wrapper(i16 0, i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1]]:
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; NVPTX-DISABLED1:       [[THREAD_USER_CODE_CHECK]]:
 ; NVPTX-DISABLED1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX-DISABLED1-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; NVPTX-DISABLED1:       [[COMMON_RET]]:
@@ -440,7 +361,7 @@ define internal void @__omp_outlined__(ptr noalias %.global_tid., ptr noalias %.
 ; AMDGPU:       [[FOR_BODY]]:
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; AMDGPU-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; AMDGPU-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
 ;
@@ -460,7 +381,7 @@ define internal void @__omp_outlined__(ptr noalias %.global_tid., ptr noalias %.
 ; NVPTX:       [[FOR_BODY]]:
 ; NVPTX-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; NVPTX-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
 ;
@@ -480,7 +401,7 @@ define internal void @__omp_outlined__(ptr noalias %.global_tid., ptr noalias %.
 ; AMDGPU-DISABLED1:       [[FOR_BODY]]:
 ; AMDGPU-DISABLED1-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; AMDGPU-DISABLED1-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-DISABLED1-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
 ;
@@ -500,7 +421,7 @@ define internal void @__omp_outlined__(ptr noalias %.global_tid., ptr noalias %.
 ; AMDGPU-DISABLED2:       [[FOR_BODY]]:
 ; AMDGPU-DISABLED2-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-DISABLED2-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; AMDGPU-DISABLED2-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-DISABLED2-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
 ;
@@ -520,7 +441,7 @@ define internal void @__omp_outlined__(ptr noalias %.global_tid., ptr noalias %.
 ; NVPTX-DISABLED1:       [[FOR_BODY]]:
 ; NVPTX-DISABLED1-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; NVPTX-DISABLED1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; NVPTX-DISABLED1-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-DISABLED1-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
 ;
@@ -540,7 +461,7 @@ define internal void @__omp_outlined__(ptr noalias %.global_tid., ptr noalias %.
 ; NVPTX-DISABLED2:       [[FOR_BODY]]:
 ; NVPTX-DISABLED2-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-DISABLED2-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-DISABLED2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; NVPTX-DISABLED2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; NVPTX-DISABLED2-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-DISABLED2-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
 ;
@@ -560,7 +481,7 @@ for.cond.cleanup:                                 ; preds = %for.cond
 
 for.body:                                         ; preds = %for.cond
   %0 = load i32, ptr %.global_tid., align 4, !tbaa !12
-  call void @__kmpc_parallel_60(ptr @1, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr %captured_vars_addrs.cast, i64 0, i32 0)
+  call void @__kmpc_parallel_51(ptr @1, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr %captured_vars_addrs.cast, i64 0)
   %inc = add nsw i32 %i.0, 1
   br label %for.cond, !llvm.loop !16
 }
@@ -744,45 +665,11 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; AMDGPU-DISABLED1-LABEL: define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20(
 ; AMDGPU-DISABLED1-SAME: ) #[[ATTR0]] {
 ; AMDGPU-DISABLED1-NEXT:  [[ENTRY:.*:]]
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; AMDGPU-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTTHREADID_TEMP__CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
 ; AMDGPU-DISABLED1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20_kernel_environment, ptr null)
-; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; AMDGPU-DISABLED1:       [[IS_WORKER_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; AMDGPU-DISABLED1-NEXT:    ret void
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    br i1 true, label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__omp_outlined__3_wrapper(i16 0, i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1]]:
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; AMDGPU-DISABLED1:       [[THREAD_USER_CODE_CHECK]]:
 ; AMDGPU-DISABLED1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; AMDGPU-DISABLED1:       [[COMMON_RET]]:
@@ -816,44 +703,11 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; NVPTX-DISABLED1-LABEL: define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20(
 ; NVPTX-DISABLED1-SAME: ) #[[ATTR0]] {
 ; NVPTX-DISABLED1-NEXT:  [[ENTRY:.*:]]
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP__CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_sequential_loop_to_stack_var_l20_kernel_environment, ptr null)
-; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; NVPTX-DISABLED1:       [[IS_WORKER_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; NVPTX-DISABLED1-NEXT:    ret void
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    br i1 true, label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE]]:
-; NVPTX-DISABLED1-NEXT:    call void @__omp_outlined__3_wrapper(i16 0, i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1]]:
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; NVPTX-DISABLED1:       [[THREAD_USER_CODE_CHECK]]:
 ; NVPTX-DISABLED1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX-DISABLED1-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; NVPTX-DISABLED1:       [[COMMON_RET]]:
@@ -925,7 +779,7 @@ define internal void @__omp_outlined__2(ptr noalias %.global_tid., ptr noalias %
 ; AMDGPU:       [[FOR_BODY]]:
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; AMDGPU-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; AMDGPU-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
 ;
@@ -947,7 +801,7 @@ define internal void @__omp_outlined__2(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX:       [[FOR_BODY]]:
 ; NVPTX-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; NVPTX-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
 ;
@@ -970,7 +824,7 @@ define internal void @__omp_outlined__2(ptr noalias %.global_tid., ptr noalias %
 ; AMDGPU-DISABLED1:       [[FOR_BODY]]:
 ; AMDGPU-DISABLED1-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; AMDGPU-DISABLED1-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-DISABLED1-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
 ;
@@ -993,7 +847,7 @@ define internal void @__omp_outlined__2(ptr noalias %.global_tid., ptr noalias %
 ; AMDGPU-DISABLED2:       [[FOR_BODY]]:
 ; AMDGPU-DISABLED2-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-DISABLED2-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; AMDGPU-DISABLED2-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-DISABLED2-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
 ;
@@ -1015,7 +869,7 @@ define internal void @__omp_outlined__2(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX-DISABLED1:       [[FOR_BODY]]:
 ; NVPTX-DISABLED1-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; NVPTX-DISABLED1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; NVPTX-DISABLED1-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-DISABLED1-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
 ;
@@ -1037,7 +891,7 @@ define internal void @__omp_outlined__2(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX-DISABLED2:       [[FOR_BODY]]:
 ; NVPTX-DISABLED2-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-DISABLED2-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-DISABLED2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; NVPTX-DISABLED2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; NVPTX-DISABLED2-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-DISABLED2-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
 ;
@@ -1060,7 +914,7 @@ for.cond.cleanup:                                 ; preds = %for.cond
 
 for.body:                                         ; preds = %for.cond
   %0 = load i32, ptr %.global_tid., align 4, !tbaa !12
-  call void @__kmpc_parallel_60(ptr @1, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr %captured_vars_addrs.cast, i64 0, i32 0)
+  call void @__kmpc_parallel_51(ptr @1, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr %captured_vars_addrs.cast, i64 0)
   %inc = add nsw i32 %i.0, 1
   br label %for.cond, !llvm.loop !19
 }
@@ -1244,45 +1098,11 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; AMDGPU-DISABLED1-LABEL: define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35(
 ; AMDGPU-DISABLED1-SAME: ) #[[ATTR0]] {
 ; AMDGPU-DISABLED1-NEXT:  [[ENTRY:.*:]]
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; AMDGPU-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTTHREADID_TEMP__CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
 ; AMDGPU-DISABLED1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35_kernel_environment, ptr null)
-; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; AMDGPU-DISABLED1:       [[IS_WORKER_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; AMDGPU-DISABLED1-NEXT:    ret void
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    br i1 true, label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__omp_outlined__5_wrapper(i16 0, i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1]]:
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; AMDGPU-DISABLED1:       [[THREAD_USER_CODE_CHECK]]:
 ; AMDGPU-DISABLED1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; AMDGPU-DISABLED1:       [[COMMON_RET]]:
@@ -1316,44 +1136,11 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; NVPTX-DISABLED1-LABEL: define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35(
 ; NVPTX-DISABLED1-SAME: ) #[[ATTR0]] {
 ; NVPTX-DISABLED1-NEXT:  [[ENTRY:.*:]]
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP__CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_l35_kernel_environment, ptr null)
-; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; NVPTX-DISABLED1:       [[IS_WORKER_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; NVPTX-DISABLED1-NEXT:    ret void
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    br i1 true, label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE]]:
-; NVPTX-DISABLED1-NEXT:    call void @__omp_outlined__5_wrapper(i16 0, i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1]]:
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; NVPTX-DISABLED1:       [[THREAD_USER_CODE_CHECK]]:
 ; NVPTX-DISABLED1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX-DISABLED1-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; NVPTX-DISABLED1:       [[COMMON_RET]]:
@@ -1423,7 +1210,7 @@ define internal void @__omp_outlined__4(ptr noalias %.global_tid., ptr noalias %
 ; AMDGPU-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20:![0-9]+]]
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; AMDGPU-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1)
 ; AMDGPU-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP22:![0-9]+]]
 ;
@@ -1444,7 +1231,7 @@ define internal void @__omp_outlined__4(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20:![0-9]+]]
 ; NVPTX-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1)
 ; NVPTX-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP22:![0-9]+]]
 ;
@@ -1465,7 +1252,7 @@ define internal void @__omp_outlined__4(ptr noalias %.global_tid., ptr noalias %
 ; AMDGPU-DISABLED1-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20:![0-9]+]]
 ; AMDGPU-DISABLED1-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1)
 ; AMDGPU-DISABLED1-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-DISABLED1-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP22:![0-9]+]]
 ;
@@ -1486,7 +1273,7 @@ define internal void @__omp_outlined__4(ptr noalias %.global_tid., ptr noalias %
 ; AMDGPU-DISABLED2-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20:![0-9]+]]
 ; AMDGPU-DISABLED2-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-DISABLED2-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1)
 ; AMDGPU-DISABLED2-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-DISABLED2-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP22:![0-9]+]]
 ;
@@ -1507,7 +1294,7 @@ define internal void @__omp_outlined__4(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX-DISABLED1-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20:![0-9]+]]
 ; NVPTX-DISABLED1-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; NVPTX-DISABLED1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1)
 ; NVPTX-DISABLED1-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-DISABLED1-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP22:![0-9]+]]
 ;
@@ -1528,7 +1315,7 @@ define internal void @__omp_outlined__4(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX-DISABLED2-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20:![0-9]+]]
 ; NVPTX-DISABLED2-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-DISABLED2-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-DISABLED2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; NVPTX-DISABLED2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1)
 ; NVPTX-DISABLED2-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-DISABLED2-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP22:![0-9]+]]
 ;
@@ -1551,7 +1338,7 @@ for.cond.cleanup:                                 ; preds = %for.cond
 for.body:                                         ; preds = %for.cond
   store ptr %x, ptr %captured_vars_addrs.cast, align 8, !tbaa !20
   %0 = load i32, ptr %.global_tid., align 4, !tbaa !12
-  call void @__kmpc_parallel_60(ptr @1, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr %captured_vars_addrs.cast, i64 1, i32 0)
+  call void @__kmpc_parallel_51(ptr @1, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr %captured_vars_addrs.cast, i64 1)
   %inc = add nsw i32 %i.0, 1
   br label %for.cond, !llvm.loop !22
 }
@@ -1770,45 +1557,11 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; AMDGPU-DISABLED1-LABEL: define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50(
 ; AMDGPU-DISABLED1-SAME: ) #[[ATTR0]] {
 ; AMDGPU-DISABLED1-NEXT:  [[ENTRY:.*:]]
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; AMDGPU-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTTHREADID_TEMP__CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
 ; AMDGPU-DISABLED1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50_kernel_environment, ptr null)
-; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; AMDGPU-DISABLED1:       [[IS_WORKER_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; AMDGPU-DISABLED1-NEXT:    ret void
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    br i1 true, label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__omp_outlined__7_wrapper(i16 0, i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1]]:
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; AMDGPU-DISABLED1:       [[THREAD_USER_CODE_CHECK]]:
 ; AMDGPU-DISABLED1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; AMDGPU-DISABLED1:       [[COMMON_RET]]:
@@ -1842,44 +1595,11 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; NVPTX-DISABLED1-LABEL: define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50(
 ; NVPTX-DISABLED1-SAME: ) #[[ATTR0]] {
 ; NVPTX-DISABLED1-NEXT:  [[ENTRY:.*:]]
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP__CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_sequential_loop_to_shared_var_guarded_l50_kernel_environment, ptr null)
-; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; NVPTX-DISABLED1:       [[IS_WORKER_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; NVPTX-DISABLED1-NEXT:    ret void
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    br i1 true, label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE]]:
-; NVPTX-DISABLED1-NEXT:    call void @__omp_outlined__7_wrapper(i16 0, i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1]]:
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; NVPTX-DISABLED1:       [[THREAD_USER_CODE_CHECK]]:
 ; NVPTX-DISABLED1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX-DISABLED1-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; NVPTX-DISABLED1:       [[COMMON_RET]]:
@@ -1963,7 +1683,7 @@ define internal void @__omp_outlined__6(ptr noalias %.global_tid., ptr noalias %
 ; AMDGPU-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared.1 to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20]]
 ; AMDGPU-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[TMP2]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; AMDGPU-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1)
 ; AMDGPU-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP23:![0-9]+]]
 ;
@@ -1998,7 +1718,7 @@ define internal void @__omp_outlined__6(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared1 to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20]]
 ; NVPTX-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[TMP2]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1)
 ; NVPTX-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP23:![0-9]+]]
 ;
@@ -2020,7 +1740,7 @@ define internal void @__omp_outlined__6(ptr noalias %.global_tid., ptr noalias %
 ; AMDGPU-DISABLED1-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared.1 to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20]]
 ; AMDGPU-DISABLED1-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1)
 ; AMDGPU-DISABLED1-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-DISABLED1-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP23:![0-9]+]]
 ;
@@ -2042,7 +1762,7 @@ define internal void @__omp_outlined__6(ptr noalias %.global_tid., ptr noalias %
 ; AMDGPU-DISABLED2-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared.1 to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20]]
 ; AMDGPU-DISABLED2-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-DISABLED2-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1)
 ; AMDGPU-DISABLED2-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-DISABLED2-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP23:![0-9]+]]
 ;
@@ -2064,7 +1784,7 @@ define internal void @__omp_outlined__6(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX-DISABLED1-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared1 to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20]]
 ; NVPTX-DISABLED1-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; NVPTX-DISABLED1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1)
 ; NVPTX-DISABLED1-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-DISABLED1-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP23:![0-9]+]]
 ;
@@ -2086,7 +1806,7 @@ define internal void @__omp_outlined__6(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX-DISABLED2-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared1 to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20]]
 ; NVPTX-DISABLED2-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-DISABLED2-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-DISABLED2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; NVPTX-DISABLED2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1)
 ; NVPTX-DISABLED2-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-DISABLED2-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP23:![0-9]+]]
 ;
@@ -2110,7 +1830,7 @@ for.cond.cleanup:                                 ; preds = %for.cond
 for.body:                                         ; preds = %for.cond
   store ptr %x, ptr %captured_vars_addrs.cast, align 8, !tbaa !20
   %0 = load i32, ptr %.global_tid., align 4, !tbaa !12
-  call void @__kmpc_parallel_60(ptr @1, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr %captured_vars_addrs.cast, i64 1, i32 0)
+  call void @__kmpc_parallel_51(ptr @1, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr %captured_vars_addrs.cast, i64 1)
   %inc = add nsw i32 %i.0, 1
   br label %for.cond, !llvm.loop !23
 }
@@ -2291,41 +2011,11 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_targe
 ; AMDGPU-LABEL: define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65(
 ; AMDGPU-SAME: ) #[[ATTR0]] {
 ; AMDGPU-NEXT:  [[ENTRY:.*:]]
-; AMDGPU-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-NEXT:    [[DOTTHREADID_TEMP__CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65_kernel_environment, ptr null)
-; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; AMDGPU:       [[IS_WORKER_CHECK]]:
-; AMDGPU-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; AMDGPU-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; AMDGPU:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; AMDGPU-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; AMDGPU-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; AMDGPU-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
-; AMDGPU-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; AMDGPU-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; AMDGPU:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; AMDGPU-NEXT:    ret void
-; AMDGPU:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; AMDGPU-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; AMDGPU:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE]]:
-; AMDGPU-NEXT:    call void [[WORKER_WORK_FN]](i16 0, i32 [[TMP0]])
-; AMDGPU-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; AMDGPU:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; AMDGPU-NEXT:    call void @__kmpc_kernel_end_parallel()
-; AMDGPU-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; AMDGPU:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; AMDGPU-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; AMDGPU:       [[THREAD_USER_CODE_CHECK]]:
 ; AMDGPU-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; AMDGPU:       [[COMMON_RET]]:
@@ -2339,40 +2029,11 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_targe
 ; NVPTX-LABEL: define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65(
 ; NVPTX-SAME: ) #[[ATTR0]] {
 ; NVPTX-NEXT:  [[ENTRY:.*:]]
-; NVPTX-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; NVPTX-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-NEXT:    [[DOTTHREADID_TEMP__CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
 ; NVPTX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65_kernel_environment, ptr null)
-; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; NVPTX:       [[IS_WORKER_CHECK]]:
-; NVPTX-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; NVPTX-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; NVPTX:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; NVPTX-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
-; NVPTX-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
-; NVPTX-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; NVPTX-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; NVPTX:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; NVPTX-NEXT:    ret void
-; NVPTX:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; NVPTX-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; NVPTX:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE]]:
-; NVPTX-NEXT:    call void [[WORKER_WORK_FN]](i16 0, i32 [[TMP0]])
-; NVPTX-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; NVPTX:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; NVPTX-NEXT:    call void @__kmpc_kernel_end_parallel()
-; NVPTX-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; NVPTX:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; NVPTX-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; NVPTX:       [[THREAD_USER_CODE_CHECK]]:
 ; NVPTX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; NVPTX:       [[COMMON_RET]]:
@@ -2386,41 +2047,11 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_targe
 ; AMDGPU-DISABLED1-LABEL: define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65(
 ; AMDGPU-DISABLED1-SAME: ) #[[ATTR0]] {
 ; AMDGPU-DISABLED1-NEXT:  [[ENTRY:.*:]]
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; AMDGPU-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[DOTTHREADID_TEMP__CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
 ; AMDGPU-DISABLED1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65_kernel_environment, ptr null)
-; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; AMDGPU-DISABLED1:       [[IS_WORKER_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; AMDGPU-DISABLED1-NEXT:    ret void
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE]]:
-; AMDGPU-DISABLED1-NEXT:    call void [[WORKER_WORK_FN]](i16 0, i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; AMDGPU-DISABLED1:       [[THREAD_USER_CODE_CHECK]]:
 ; AMDGPU-DISABLED1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; AMDGPU-DISABLED1:       [[COMMON_RET]]:
@@ -2452,40 +2083,11 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_targe
 ; NVPTX-DISABLED1-LABEL: define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65(
 ; NVPTX-DISABLED1-SAME: ) #[[ATTR0]] {
 ; NVPTX-DISABLED1-NEXT:  [[ENTRY:.*:]]
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTZERO_ADDR_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[DOTTHREADID_TEMP__CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_do_not_spmdize_target_l65_kernel_environment, ptr null)
-; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; NVPTX-DISABLED1:       [[IS_WORKER_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; NVPTX-DISABLED1-NEXT:    ret void
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE]]:
-; NVPTX-DISABLED1-NEXT:    call void [[WORKER_WORK_FN]](i16 0, i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; NVPTX-DISABLED1:       [[THREAD_USER_CODE_CHECK]]:
 ; NVPTX-DISABLED1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX-DISABLED1-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; NVPTX-DISABLED1:       [[COMMON_RET]]:
@@ -2582,45 +2184,9 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; AMDGPU-LABEL: define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74(
 ; AMDGPU-SAME: ) #[[ATTR0]] {
 ; AMDGPU-NEXT:  [[ENTRY:.*:]]
-; AMDGPU-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment, ptr null)
-; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; AMDGPU:       [[IS_WORKER_CHECK]]:
-; AMDGPU-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; AMDGPU-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; AMDGPU:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; AMDGPU-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; AMDGPU-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; AMDGPU-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
-; AMDGPU-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; AMDGPU-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; AMDGPU:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; AMDGPU-NEXT:    ret void
-; AMDGPU:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; AMDGPU-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; AMDGPU:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK]]:
-; AMDGPU-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], @__omp_outlined__9_wrapper.ID
-; AMDGPU-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:.*]]
-; AMDGPU:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE]]:
-; AMDGPU-NEXT:    call void @__omp_outlined__9_wrapper(i16 0, i32 [[TMP0]])
-; AMDGPU-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; AMDGPU:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE]]:
-; AMDGPU-NEXT:    call void [[WORKER_WORK_FN]](i16 0, i32 [[TMP0]])
-; AMDGPU-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
-; AMDGPU:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; AMDGPU-NEXT:    call void @__kmpc_kernel_end_parallel()
-; AMDGPU-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; AMDGPU:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; AMDGPU-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; AMDGPU:       [[THREAD_USER_CODE_CHECK]]:
 ; AMDGPU-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; AMDGPU:       [[COMMON_RET]]:
@@ -2629,51 +2195,16 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; AMDGPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR4]]
 ; AMDGPU-NEXT:    [[TMP2:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i64 40, i64 0, ptr @"_omp_task_entry$") #[[ATTR4]]
 ; AMDGPU-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP1]], ptr [[TMP2]]) #[[ATTR4]]
-; AMDGPU-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__9, ptr @__omp_outlined__9_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; AMDGPU-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__9, ptr @__omp_outlined__9_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; AMDGPU-NEXT:    call void @__kmpc_target_deinit()
 ; AMDGPU-NEXT:    br label %[[COMMON_RET]]
 ;
 ; NVPTX-LABEL: define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74(
 ; NVPTX-SAME: ) #[[ATTR0]] {
 ; NVPTX-NEXT:  [[ENTRY:.*:]]
-; NVPTX-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
 ; NVPTX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment, ptr null)
-; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; NVPTX:       [[IS_WORKER_CHECK]]:
-; NVPTX-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; NVPTX-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; NVPTX:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; NVPTX-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
-; NVPTX-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
-; NVPTX-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; NVPTX-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; NVPTX:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; NVPTX-NEXT:    ret void
-; NVPTX:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; NVPTX-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; NVPTX:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK]]:
-; NVPTX-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], @__omp_outlined__9_wrapper.ID
-; NVPTX-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:.*]]
-; NVPTX:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE]]:
-; NVPTX-NEXT:    call void @__omp_outlined__9_wrapper(i16 0, i32 [[TMP0]])
-; NVPTX-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; NVPTX:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE]]:
-; NVPTX-NEXT:    call void [[WORKER_WORK_FN]](i16 0, i32 [[TMP0]])
-; NVPTX-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
-; NVPTX:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; NVPTX-NEXT:    call void @__kmpc_kernel_end_parallel()
-; NVPTX-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; NVPTX:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; NVPTX-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; NVPTX:       [[THREAD_USER_CODE_CHECK]]:
 ; NVPTX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; NVPTX:       [[COMMON_RET]]:
@@ -2682,52 +2213,16 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; NVPTX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR4]]
 ; NVPTX-NEXT:    [[TMP2:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i64 40, i64 0, ptr @"_omp_task_entry$") #[[ATTR4]]
 ; NVPTX-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP1]], ptr [[TMP2]]) #[[ATTR4]]
-; NVPTX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__9, ptr @__omp_outlined__9_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__9, ptr @__omp_outlined__9_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; NVPTX-NEXT:    call void @__kmpc_target_deinit()
 ; NVPTX-NEXT:    br label %[[COMMON_RET]]
 ;
 ; AMDGPU-DISABLED1-LABEL: define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74(
 ; AMDGPU-DISABLED1-SAME: ) #[[ATTR0]] {
 ; AMDGPU-DISABLED1-NEXT:  [[ENTRY:.*:]]
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-DISABLED1-NEXT:    [[CAPTURED_VARS_ADDRS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
 ; AMDGPU-DISABLED1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment, ptr null)
-; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; AMDGPU-DISABLED1:       [[IS_WORKER_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR_GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[WORKER_WORK_FN_ADDR]] to ptr
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR_GENERIC]])
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR_GENERIC]], align 8
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; AMDGPU-DISABLED1-NEXT:    ret void
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], @__omp_outlined__9_wrapper.ID
-; AMDGPU-DISABLED1-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__omp_outlined__9_wrapper(i16 0, i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE]]:
-; AMDGPU-DISABLED1-NEXT:    call void [[WORKER_WORK_FN]](i16 0, i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; AMDGPU-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; AMDGPU-DISABLED1:       [[THREAD_USER_CODE_CHECK]]:
 ; AMDGPU-DISABLED1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; AMDGPU-DISABLED1:       [[COMMON_RET]]:
@@ -2736,7 +2231,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; AMDGPU-DISABLED1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR4]]
 ; AMDGPU-DISABLED1-NEXT:    [[TMP2:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i64 40, i64 0, ptr @"_omp_task_entry$") #[[ATTR4]]
 ; AMDGPU-DISABLED1-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP1]], ptr [[TMP2]]) #[[ATTR4]]
-; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__9, ptr @__omp_outlined__9_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__9, ptr @__omp_outlined__9_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; AMDGPU-DISABLED1-NEXT:    call void @__kmpc_target_deinit()
 ; AMDGPU-DISABLED1-NEXT:    br label %[[COMMON_RET]]
 ;
@@ -2754,51 +2249,16 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; AMDGPU-DISABLED2-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR4]]
 ; AMDGPU-DISABLED2-NEXT:    [[TMP2:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i64 40, i64 0, ptr @"_omp_task_entry$") #[[ATTR4]]
 ; AMDGPU-DISABLED2-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP1]], ptr [[TMP2]]) #[[ATTR4]]
-; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__9, ptr @__omp_outlined__9_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__9, ptr @__omp_outlined__9_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; AMDGPU-DISABLED2-NEXT:    call void @__kmpc_target_deinit()
 ; AMDGPU-DISABLED2-NEXT:    br label %[[COMMON_RET]]
 ;
 ; NVPTX-DISABLED1-LABEL: define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74(
 ; NVPTX-DISABLED1-SAME: ) #[[ATTR0]] {
 ; NVPTX-DISABLED1-NEXT:  [[ENTRY:.*:]]
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-DISABLED1-NEXT:    [[CAPTURED_VARS_ADDRS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
 ; NVPTX-DISABLED1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment, ptr null)
-; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
-; NVPTX-DISABLED1:       [[IS_WORKER_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
-; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
-; NVPTX-DISABLED1-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
-; NVPTX-DISABLED1-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_DONE]], label %[[WORKER_STATE_MACHINE_FINISHED]], label %[[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_FINISHED]]:
-; NVPTX-DISABLED1-NEXT:    ret void
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:.*]], label %[[WORKER_STATE_MACHINE_DONE_BARRIER:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], @__omp_outlined__9_wrapper.ID
-; NVPTX-DISABLED1-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:.*]], label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE]]:
-; NVPTX-DISABLED1-NEXT:    call void @__omp_outlined__9_wrapper(i16 0, i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END:.*]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE]]:
-; NVPTX-DISABLED1-NEXT:    call void [[WORKER_WORK_FN]](i16 0, i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_kernel_end_parallel()
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_DONE_BARRIER]]:
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
-; NVPTX-DISABLED1-NEXT:    br label %[[WORKER_STATE_MACHINE_BEGIN]]
-; NVPTX-DISABLED1:       [[THREAD_USER_CODE_CHECK]]:
 ; NVPTX-DISABLED1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX-DISABLED1-NEXT:    br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[COMMON_RET:.*]]
 ; NVPTX-DISABLED1:       [[COMMON_RET]]:
@@ -2807,7 +2267,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; NVPTX-DISABLED1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR4]]
 ; NVPTX-DISABLED1-NEXT:    [[TMP2:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i64 40, i64 0, ptr @"_omp_task_entry$") #[[ATTR4]]
 ; NVPTX-DISABLED1-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP1]], ptr [[TMP2]]) #[[ATTR4]]
-; NVPTX-DISABLED1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__9, ptr @__omp_outlined__9_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; NVPTX-DISABLED1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__9, ptr @__omp_outlined__9_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; NVPTX-DISABLED1-NEXT:    call void @__kmpc_target_deinit()
 ; NVPTX-DISABLED1-NEXT:    br label %[[COMMON_RET]]
 ;
@@ -2825,7 +2285,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; NVPTX-DISABLED2-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR4]]
 ; NVPTX-DISABLED2-NEXT:    [[TMP2:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i64 40, i64 0, ptr @"_omp_task_entry$") #[[ATTR4]]
 ; NVPTX-DISABLED2-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP1]], ptr [[TMP2]]) #[[ATTR4]]
-; NVPTX-DISABLED2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__9, ptr @__omp_outlined__9_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; NVPTX-DISABLED2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__9, ptr @__omp_outlined__9_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0)
 ; NVPTX-DISABLED2-NEXT:    call void @__kmpc_target_deinit()
 ; NVPTX-DISABLED2-NEXT:    br label %[[COMMON_RET]]
 ;
@@ -2843,7 +2303,7 @@ user_code.entry:                                  ; preds = %entry
   %1 = call i32 @__kmpc_global_thread_num(ptr @1)
   %2 = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %1, i32 1, i64 40, i64 0, ptr @"_omp_task_entry$")
   %3 = call i32 @__kmpc_omp_task(ptr @1, i32 %1, ptr %2)
-  call void @__kmpc_parallel_60(ptr @1, i32 %1, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__9, ptr @__omp_outlined__9_wrapper, ptr %captured_vars_addrs.cast, i64 0, i32 0)
+  call void @__kmpc_parallel_51(ptr @1, i32 %1, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__9, ptr @__omp_outlined__9_wrapper, ptr %captured_vars_addrs.cast, i64 0)
   call void @__kmpc_target_deinit()
   br label %common.ret
 }
@@ -2955,7 +2415,7 @@ define weak i32 @__kmpc_target_init(ptr %0, ptr %1) {
 declare void @__kmpc_get_shared_variables(ptr)
 
 ; Function Attrs: alwaysinline
-declare void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32) #9
+declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64) #9
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(ptr captures(none)) #8
@@ -3186,7 +2646,6 @@ attributes #9 = { alwaysinline }
 ; AMDGPU-DISABLED1: attributes #[[ATTR8]] = { convergent }
 ; AMDGPU-DISABLED1: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; AMDGPU-DISABLED1: attributes #[[ATTR10:[0-9]+]] = { alwaysinline }
-; AMDGPU-DISABLED1: attributes #[[ATTR11:[0-9]+]] = { convergent nounwind }
 ;.
 ; AMDGPU-DISABLED2: attributes #[[ATTR0]] = { alwaysinline convergent norecurse nounwind "kernel" }
 ; AMDGPU-DISABLED2: attributes #[[ATTR1]] = { norecurse }
@@ -3211,7 +2670,6 @@ attributes #9 = { alwaysinline }
 ; NVPTX-DISABLED1: attributes #[[ATTR8]] = { convergent }
 ; NVPTX-DISABLED1: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; NVPTX-DISABLED1: attributes #[[ATTR10:[0-9]+]] = { alwaysinline }
-; NVPTX-DISABLED1: attributes #[[ATTR11:[0-9]+]] = { convergent nounwind }
 ;.
 ; NVPTX-DISABLED2: attributes #[[ATTR0]] = { alwaysinline convergent norecurse nounwind "kernel" }
 ; NVPTX-DISABLED2: attributes #[[ATTR1]] = { norecurse }
