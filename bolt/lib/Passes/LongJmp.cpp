@@ -507,8 +507,8 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
     if (TargetFunction && !TargetFunction->hasCFG()) {
       auto FirstII = TargetFunction->instrs().begin();
       MCInst FirstInst = FirstII->second;
-      if (BC.MIB->isBTIVariantCoveringCall(FirstInst,
-                                           *StubBB.getLastNonPseudoInstr()))
+      if (BC.MIB->isCallCoveredByBTI(*StubBB.getLastNonPseudoInstr(),
+                                     FirstInst))
         return;
       BC.errs()
           << "BOLT-ERROR: Cannot add BTI landing pad to function without CFG: "
