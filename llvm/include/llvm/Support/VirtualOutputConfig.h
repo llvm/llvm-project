@@ -34,7 +34,7 @@ struct EmptyBaseClass {};
 /// configuration flag is either \c true or \c false.
 struct OutputConfig : detail::EmptyBaseClass {
 public:
-  void print(raw_ostream &OS) const;
+  LLVM_ABI_FOR_TEST void print(raw_ostream &OS) const;
   void dump() const;
 
 #define HANDLE_OUTPUT_CONFIG_FLAG(NAME, DEFAULT)                               \
@@ -59,7 +59,7 @@ public:
   /// Updates Text and CRLF flags based on \a sys::fs::OF_Text and \a
   /// sys::fs::OF_CRLF in \p Flags. Rejects CRLF without Text (calling
   /// \a setBinary()).
-  OutputConfig &setOpenFlags(const sys::fs::OpenFlags &Flags);
+  LLVM_ABI_FOR_TEST OutputConfig &setOpenFlags(const sys::fs::OpenFlags &Flags);
 
   constexpr OutputConfig()
       : EmptyBaseClass()
@@ -84,7 +84,8 @@ private:
 
 } // namespace vfs
 
-raw_ostream &operator<<(raw_ostream &OS, vfs::OutputConfig Config);
+LLVM_ABI_FOR_TEST raw_ostream &operator<<(raw_ostream &OS,
+                                          vfs::OutputConfig Config);
 
 } // namespace llvm
 

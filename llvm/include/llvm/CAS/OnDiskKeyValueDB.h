@@ -28,11 +28,13 @@ public:
   ///
   /// \returns the value associated with the \p Key. It may be different than
   /// \p Value if another value is already associated with this key.
-  Expected<ArrayRef<char>> put(ArrayRef<uint8_t> Key, ArrayRef<char> Value);
+  LLVM_ABI_FOR_TEST Expected<ArrayRef<char>> put(ArrayRef<uint8_t> Key,
+                                                 ArrayRef<char> Value);
 
   /// \returns the value associated with the \p Key, or \p std::nullopt if the
   /// key does not exist.
-  Expected<std::optional<ArrayRef<char>>> get(ArrayRef<uint8_t> Key);
+  LLVM_ABI_FOR_TEST Expected<std::optional<ArrayRef<char>>>
+  get(ArrayRef<uint8_t> Key);
 
   /// \returns Total size of stored data.
   size_t getStorageSize() const {
@@ -55,13 +57,13 @@ public:
   /// \param KeySize Size for the key hash bytes.
   /// \param ValueName Identifier name for the values.
   /// \param ValueSize Size for the value bytes.
-  static Expected<std::unique_ptr<OnDiskKeyValueDB>>
+  LLVM_ABI_FOR_TEST static Expected<std::unique_ptr<OnDiskKeyValueDB>>
   open(StringRef Path, StringRef HashName, unsigned KeySize,
        StringRef ValueName, size_t ValueSize,
        std::shared_ptr<OnDiskCASLogger> Logger = nullptr);
 
   using CheckValueT = function_ref<Error(FileOffset Offset, ArrayRef<char>)>;
-  Error validate(CheckValueT CheckValue) const;
+  LLVM_ABI_FOR_TEST Error validate(CheckValueT CheckValue) const;
 
 private:
   OnDiskKeyValueDB(size_t ValueSize, OnDiskHashMappedTrie Cache)

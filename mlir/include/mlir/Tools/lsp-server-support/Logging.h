@@ -26,7 +26,7 @@ public:
   enum class Level { Debug, Info, Error };
 
   /// Set the severity level of the logger.
-  static void setLogLevel(Level logLevel);
+  LLVM_ABI_FOR_TEST static void setLogLevel(Level logLevel);
 
   /// Initiate a log message at various severity levels. These should be called
   /// after a call to `initialize`.
@@ -50,8 +50,8 @@ private:
   static Logger &get();
 
   /// Start a log message with the given severity level.
-  static void log(Level logLevel, const char *fmt,
-                  const llvm::formatv_object_base &message);
+  LLVM_ABI_FOR_TEST static void log(Level logLevel, const char *fmt,
+                                    const llvm::formatv_object_base &message);
 
   /// The minimum logging level. Messages with lower level are ignored.
   Level logLevel = Level::Error;
