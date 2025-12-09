@@ -171,15 +171,6 @@ protected:
              /*SkipDebugLoc=*/true, /*AddNewLine=*/false);
   }
 
-  inline unsigned getSubRegIndexForLaneMask(LaneBitmask Mask,
-                                            const SIRegisterInfo *TRI) {
-    for (unsigned Idx = 1; Idx < TRI->getNumSubRegIndices(); ++Idx) {
-      if (TRI->getSubRegIndexLaneMask(Idx) == Mask)
-        return Idx;
-    }
-    return AMDGPU::NoRegister;
-  }
-
   // Helper function to map sub-register names to LaneBitmask values using LLVM
   // API. SubRegName may be empty for full register.
   LaneBitmask getSubRegLaneMask(StringRef SubRegName, Register VReg,
@@ -421,33 +412,18 @@ class NextUseAnalysisParameterizedTest
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(NextUseAnalysisParameterizedTest);
 
 std::string getTestDirectory() {
-  // First try environment variable
+  // Allow environment variable override
   const char *TestDirEnv = std::getenv("AMDGPU_NUA_TEST_DIR");
   if (TestDirEnv) {
     return std::string(TestDirEnv);
   }
 
-  // Try to find relative to unit test binary
-  // Unit tests are typically in build/unittests/Target/AMDGPU/
-  // Source tests are in llvm/test/CodeGen/AMDGPU/NextUseAnalysis/
-  std::filesystem::path CurrentPath = std::filesystem::current_path();
-
-  // Look for the source tree from build directory
-  std::vector<std::string> PossiblePaths = {
-      "../../llvm/test/CodeGen/AMDGPU/NextUseAnalysis", // From build/Debug or
-                                                        // build/Release
-      "../../../llvm/test/CodeGen/AMDGPU/NextUseAnalysis",
-      "../../../../llvm/test/CodeGen/AMDGPU/NextUseAnalysis",
-      "../../../../../llvm/test/CodeGen/AMDGPU/NextUseAnalysis"};
-
-  for (const auto &Path : PossiblePaths) {
-    std::filesystem::path TestPath = CurrentPath / Path;
-    if (std::filesystem::exists(TestPath)) {
-      return TestPath.string();
-    }
-  }
-
-  return ""; // Not found
+  // Use CMake-defined path (set via LLVM_MAIN_SRC_DIR in CMakeLists.txt)
+#ifdef AMDGPU_NUA_TEST_DIR
+  return AMDGPU_NUA_TEST_DIR;
+#else
+  return "";
+#endif
 }
 
 // Generate test parameters from available .mir files
@@ -552,7 +528,7 @@ TEST_P(NextUseAnalysisParameterizedTest, ProcessMirFile) {
           EXPECT_EQ(ActualDistance, ExpectedDistance)
               << "Distance mismatch for register "
               << printReg(VMP.getVReg(), TRI,
-                          getSubRegIndexForLaneMask(VMP.getLaneMask(), TRI),
+                          TRI->getSubRegIndexForLaneMask(VMP.getLaneMask()),
                           MRI)
               << " in instruction: " << StringRef(InstrBuf).substr(0, 50)
               << "..."

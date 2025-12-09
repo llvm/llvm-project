@@ -28,6 +28,8 @@
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 
+using namespace llvm;
+
 class VRegMaskPairSet;
 
 class VRegMaskPair {
@@ -63,7 +65,7 @@ public:
     LaneBitmask Mask = MRI->getMaxLaneMaskForVReg(VReg);
     if (LaneMask == Mask)
       return AMDGPU::NoRegister;
-    return getSubRegIndexForLaneMask(LaneMask, TRI);
+    return TRI->getSubRegIndexForLaneMask(LaneMask);
   }
 
   const TargetRegisterClass *getRegClass(const MachineRegisterInfo *MRI,
@@ -71,7 +73,7 @@ public:
     const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VReg);
     LaneBitmask Mask = MRI->getMaxLaneMaskForVReg(VReg);
     if (LaneMask != Mask) {
-      unsigned SubRegIdx = getSubRegIndexForLaneMask(LaneMask, TRI);
+      unsigned SubRegIdx = TRI->getSubRegIndexForLaneMask(LaneMask);
       return TRI->getSubRegisterClass(RC, SubRegIdx);
     }
     return RC;

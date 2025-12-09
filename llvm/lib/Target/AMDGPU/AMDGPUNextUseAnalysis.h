@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 
-#include "AMDGPUSSARAUtils.h"
 #include "GCNSubtarget.h"
 #include "SIRegisterInfo.h"
 #include "VRegMaskPair.h"
@@ -314,7 +313,7 @@ private:
       O << Indent << "Vreg: ";
       const LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(VReg);
       if (UseMask != FullMask) {
-        const unsigned SubRegIdx = getSubRegIndexForLaneMask(UseMask, TRI);
+        const unsigned SubRegIdx = TRI->getSubRegIndexForLaneMask(UseMask);
         O << printReg(VReg, TRI, SubRegIdx, MRI);
       } else {
         O << printReg(VReg, TRI);
