@@ -52,7 +52,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() +
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_Z4foo1v.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_Z4foo1v.resolver(
+// CHECK-SAME: ) #[[ATTR_RESOLVER:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -83,7 +84,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() +
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_Z4foo2v.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_Z4foo2v.resolver(
+// CHECK-SAME: ) #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -115,7 +117,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() +
 // CHECK-NEXT:    ret i32 3
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_Z4foo3v.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_Z4foo3v.resolver(
+// CHECK-SAME: ) #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -140,7 +143,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() +
 // CHECK-NEXT:    ret i32 4
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_Z4foo4v.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_Z4foo4v.resolver(
+// CHECK-SAME: ) #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -159,7 +163,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() +
 // CHECK-NEXT:    ret i32 5
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_Z4foo5v.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_Z4foo5v.resolver(
+// CHECK-SAME: ) #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    ret ptr @_Z4foo5v.default
@@ -177,7 +182,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() +
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_Z4foo6v.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_Z4foo6v.resolver(
+// CHECK-SAME: ) #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -214,7 +220,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() +
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_Z4foo7v.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_Z4foo7v.resolver(
+// CHECK-SAME: ) #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -265,7 +272,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() +
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_Z4foo8v.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_Z4foo8v.resolver(
+// CHECK-SAME: ) #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -316,7 +324,8 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() +
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_Z4foo9v.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_Z4foo9v.resolver(
+// CHECK-SAME: ) #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
@@ -367,6 +376,7 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() +
 //
 //.
 // CHECK: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+i,+m,+zmmul" }
+// CHECK: attributes #[[ATTR_RESOLVER]] = { disable_sanitizer_instrumentation }
 // CHECK: attributes #[[ATTR1]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+i,+m,+zbb,+zmmul" }
 // CHECK: attributes #[[ATTR2]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+c,+i,+m,+zbb,+zca,+zmmul" }
 // CHECK: attributes #[[ATTR3]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+d,+f,+i,+m,+v,+zbb,+zicsr,+zmmul,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b" }

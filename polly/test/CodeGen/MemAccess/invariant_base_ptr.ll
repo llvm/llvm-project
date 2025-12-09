@@ -1,6 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,polly-codegen' \
-; RUN:   -polly-invariant-load-hoisting -S \
-; RUN:   2>&1 < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -polly-invariant-load-hoisting -S 2>&1 < %s | FileCheck %s
 
 ; Setting new access functions where the base pointer of the array that is newly
 ; accessed is only loaded within the scop itself caused incorrect code to be

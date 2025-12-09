@@ -795,6 +795,8 @@ include "X86Schedule.td"
 include "X86InstrInfo.td"
 include "X86SchedPredicates.td"
 
+defm : RemapAllTargetPseudoPointerOperands<x86_ptr_rc>;
+
 def X86InstrInfo : InstrInfo;
 
 //===----------------------------------------------------------------------===//
@@ -1334,8 +1336,18 @@ def ProcessorFeatures {
     !listremove(ARLSFeatures, [FeatureWIDEKL]);
 
   // Novalake
+  list<SubtargetFeature> NVLAdditionalFeatures = [FeatureAVX10_2,
+                                                  FeatureMOVRS,
+                                                  FeatureEGPR,
+                                                  FeaturePush2Pop2,
+                                                  FeaturePPX,
+                                                  FeatureNF,
+                                                  FeatureNDD,
+                                                  FeatureZU,
+                                                  FeatureCCMP,
+                                                  FeaturePREFETCHI];
   list<SubtargetFeature> NVLFeatures =
-      !listconcat(PTLFeatures, [FeaturePREFETCHI]);
+      !listconcat(PTLFeatures, NVLAdditionalFeatures);
 
   // Clearwaterforest
   list<SubtargetFeature> CWFAdditionalFeatures = [FeaturePREFETCHI,

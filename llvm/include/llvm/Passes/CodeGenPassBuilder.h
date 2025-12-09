@@ -128,7 +128,6 @@
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
 #include <cassert>
-#include <type_traits>
 #include <utility>
 
 namespace llvm {

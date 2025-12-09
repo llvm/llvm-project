@@ -40,6 +40,17 @@ struct PoisonOpLowering final : OpConversionPattern<ub::PoisonOp> {
   }
 };
 
+struct UnreachableOpLowering final : OpConversionPattern<ub::UnreachableOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(ub::UnreachableOp op, OpAdaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<spirv::UnreachableOp>(op);
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -75,5 +86,6 @@ struct UBToSPIRVConversionPass final
 
 void mlir::ub::populateUBToSPIRVConversionPatterns(
     const SPIRVTypeConverter &converter, RewritePatternSet &patterns) {
-  patterns.add<PoisonOpLowering>(converter, patterns.getContext());
+  patterns.add<PoisonOpLowering, UnreachableOpLowering>(converter,
+                                                        patterns.getContext());
 }

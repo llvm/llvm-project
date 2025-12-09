@@ -10,8 +10,11 @@
 #define MLIR_DIALECT_OPENACC_OPENACCUTILS_H_
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
+class DominanceInfo;
+class PostDominanceInfo;
 namespace acc {
 
 /// Used to obtain the enclosing compute construct operation that contains
@@ -51,6 +54,32 @@ std::string getRecipeName(mlir::acc::RecipeKind kind, mlir::Type type);
 // the base `struct` from an operation that only accesses a field or the
 // base `array` from an operation that only accesses a subarray.
 mlir::Value getBaseEntity(mlir::Value val);
+
+/// Check if a symbol use is valid for use in an OpenACC region.
+/// This includes looking for various attributes such as `acc.routine_info`
+/// and `acc.declare` attributes.
+/// \param user The operation using the symbol
+/// \param symbol The symbol reference being used
+/// \param definingOpPtr Optional output parameter to receive the defining op
+/// \return true if the symbol use is valid, false otherwise
+bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
+                      mlir::Operation **definingOpPtr = nullptr);
+
+/// Collects all data clauses that dominate the compute construct.
+/// This includes data clauses from:
+/// - The compute construct itself
+/// - Enclosing data constructs
+/// - Applicable declare directives (those that dominate and post-dominate)
+/// This is used to determine if a variable is already covered by an existing
+/// data clause.
+/// \param computeConstructOp The compute construct operation
+/// \param domInfo Dominance information
+/// \param postDomInfo Post-dominance information
+/// \return Vector of data clause values that dominate the compute construct
+llvm::SmallVector<mlir::Value>
+getDominatingDataClauses(mlir::Operation *computeConstructOp,
+                         mlir::DominanceInfo &domInfo,
+                         mlir::PostDominanceInfo &postDomInfo);
 
 } // namespace acc
 } // namespace mlir

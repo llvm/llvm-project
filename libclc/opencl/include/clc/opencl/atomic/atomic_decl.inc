@@ -25,32 +25,105 @@
 
 #define __CLC_ATOMIC_GENTYPE __CLC_XCONCAT(atomic_, __CLC_GENTYPE)
 
+#define __CLC_FUNCTION_EXPLICIT __CLC_XCONCAT(__CLC_FUNCTION, _explicit)
+
 #ifdef __CLC_NO_VALUE_ARG
-#define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
+#define __CLC_DECL_ATOMIC(ADDRSPACE)                                           \
+  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION_EXPLICIT(               \
+      volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, memory_order Order,        \
+      memory_scope Scope);
+#elif defined(__CLC_RETURN_VOID)
+#define __CLC_DECL_ATOMIC(ADDRSPACE)                                           \
+  _CLC_OVERLOAD _CLC_DECL void __CLC_FUNCTION_EXPLICIT(                        \
+      volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value,       \
+      memory_order Order, memory_scope Scope);
+#elif defined(__CLC_COMPARE_EXCHANGE)
+#define __CLC_DECL_ATOMIC(ADDRSPACE)                                           \
+  _CLC_OVERLOAD _CLC_DECL bool __CLC_FUNCTION_EXPLICIT(                        \
+      volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr,                            \
+      ADDRSPACE __CLC_GENTYPE *Expected, __CLC_GENTYPE Desired,                \
+      memory_order Order, memory_scope Scope);
+#else
+#define __CLC_DECL_ATOMIC(ADDRSPACE)                                           \
+  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION_EXPLICIT(               \
+      volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value,       \
+      memory_order Order, memory_scope Scope);
+#endif
+
+__CLC_DECL_ATOMIC(global)
+__CLC_DECL_ATOMIC(local)
+#if _CLC_GENERIC_AS_SUPPORTED
+__CLC_DECL_ATOMIC()
+#endif
+
+#undef __CLC_DECL_ATOMIC
+
+#if defined(__opencl_c_atomic_scope_device)
+
+#ifdef __CLC_NO_VALUE_ARG
+#define __CLC_DECL_ATOMIC(ADDRSPACE)                                           \
+  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION_EXPLICIT(               \
+      volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, memory_order Order);
+#elif defined(__CLC_RETURN_VOID)
+#define __CLC_DECL_ATOMIC(ADDRSPACE)                                           \
+  _CLC_OVERLOAD _CLC_DECL void __CLC_FUNCTION_EXPLICIT(                        \
+      volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value,       \
+      memory_order Order);
+#elif defined(__CLC_COMPARE_EXCHANGE)
+#define __CLC_DECL_ATOMIC(ADDRSPACE)                                           \
+  _CLC_OVERLOAD _CLC_DECL bool __CLC_FUNCTION_EXPLICIT(                        \
+      volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr,                            \
+      ADDRSPACE __CLC_GENTYPE *Expected, __CLC_GENTYPE Desired,                \
+      memory_order Success, memory_order Failure);
+#else
+#define __CLC_DECL_ATOMIC(ADDRSPACE)                                           \
+  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION_EXPLICIT(               \
+      volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value,       \
+      memory_order Order);
+#endif
+
+__CLC_DECL_ATOMIC(global)
+__CLC_DECL_ATOMIC(local)
+#if _CLC_GENERIC_AS_SUPPORTED
+__CLC_DECL_ATOMIC()
+#endif
+
+#undef __CLC_DECL_ATOMIC
+
+#endif // defined(__opencl_c_atomic_scope_device)
+
+#if defined(__opencl_c_atomic_order_seq_cst) &&                                \
+    defined(__opencl_c_atomic_scope_device)
+
+#ifdef __CLC_NO_VALUE_ARG
+#define __CLC_DECL_ATOMIC(ADDRSPACE)                                           \
   _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(                        \
       volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr);
 #elif defined(__CLC_RETURN_VOID)
-#define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
+#define __CLC_DECL_ATOMIC(ADDRSPACE)                                           \
   _CLC_OVERLOAD _CLC_DECL void __CLC_FUNCTION(                                 \
       volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value);
 #elif defined(__CLC_COMPARE_EXCHANGE)
-#define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
-  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(                        \
+#define __CLC_DECL_ATOMIC(ADDRSPACE)                                           \
+  _CLC_OVERLOAD _CLC_DECL bool __CLC_FUNCTION(                                 \
       volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr,                            \
       ADDRSPACE __CLC_GENTYPE *Expected, __CLC_GENTYPE Desired);
 #else
-#define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
+#define __CLC_DECL_ATOMIC(ADDRSPACE)                                           \
   _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(                        \
       volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value);
 #endif
 
-__CLC_DEFINE_ATOMIC(global)
-__CLC_DEFINE_ATOMIC(local)
+__CLC_DECL_ATOMIC(global)
+__CLC_DECL_ATOMIC(local)
 #if _CLC_GENERIC_AS_SUPPORTED
-__CLC_DEFINE_ATOMIC()
+__CLC_DECL_ATOMIC()
 #endif
 
-#undef __CLC_DEFINE_ATOMIC
+#undef __CLC_DECL_ATOMIC
+
+#endif // defined(__opencl_c_atomic_order_seq_cst) &&
+       // defined(__opencl_c_atomic_scope_device)
 
 #endif // __CLC_HAVE_FP_ATOMIC || __CLC_HAVE_INT_ATOMIC
 

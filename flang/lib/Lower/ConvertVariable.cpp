@@ -1946,12 +1946,15 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
       return;
     }
     mlir::Value dummyScope;
-    if (converter.isRegisteredDummySymbol(sym))
+    unsigned argNo = 0;
+    if (converter.isRegisteredDummySymbol(sym)) {
       dummyScope = converter.dummyArgsScopeValue();
+      argNo = converter.getDummyArgPosition(sym);
+    }
     auto [storage, storageOffset] = converter.getSymbolStorage(sym);
     auto newBase = hlfir::DeclareOp::create(
         builder, loc, base, name, shapeOrShift, lenParams, dummyScope, storage,
-        storageOffset, attributes, dataAttr);
+        storageOffset, attributes, dataAttr, argNo);
     symMap.addVariableDefinition(sym, newBase, force);
     return;
   }
@@ -2004,15 +2007,17 @@ void Fortran::lower::genDeclareSymbol(
                                                         sym.GetUltimate());
     auto name = converter.mangleName(sym);
     mlir::Value dummyScope;
+    unsigned argNo = 0;
     fir::ExtendedValue base = exv;
     if (converter.isRegisteredDummySymbol(sym)) {
       base = genPackArray(converter, sym, exv);
       dummyScope = converter.dummyArgsScopeValue();
+      argNo = converter.getDummyArgPosition(sym);
     }
     auto [storage, storageOffset] = converter.getSymbolStorage(sym);
     hlfir::EntityWithAttributes declare =
         hlfir::genDeclare(loc, builder, base, name, attributes, dummyScope,
-                          storage, storageOffset, dataAttr);
+                          storage, storageOffset, dataAttr, argNo);
     symMap.addVariableDefinition(sym, declare.getIfVariableInterface(), force);
     return;
   }

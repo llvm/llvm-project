@@ -15,6 +15,9 @@
 ; CHECK: OpGenericCastToPtr
 ; CHECK: OpPtrEqual
 
+@G_b1 = global i1 0
+@G_b2 = global i1 0
+
 define spir_kernel void @foo(ptr addrspace(3) align 4 %_arg_local, ptr addrspace(1) align 4 %_arg_global) {
 entry:
   %p1 = getelementptr inbounds i32, ptr addrspace(1) %_arg_global, i64 0
@@ -24,9 +27,12 @@ entry:
   %p4 = addrspacecast ptr addrspace(1) %p3 to ptr addrspace(4)
   %p5 = tail call spir_func ptr addrspace(3) @_Z40__spirv_GenericCastToPtrExplicit_ToLocalPvi(ptr addrspace(4) %p4, i32 4)
   %b1 = icmp eq ptr addrspace(3) %p5, null
+  store i1 %b1, ptr @G_b1
   %p6 = getelementptr inbounds i32, ptr addrspace(3) %p5, i64 0
   %p7 = tail call spir_func ptr addrspace(3) @_Z40__spirv_GenericCastToPtrExplicit_ToLocalPvi(ptr addrspace(4) %p4, i32 4)
   %b2 = icmp eq ptr addrspace(3) %p7, null
+  store i1 %b2, ptr @G_b2
+  store ptr addrspace(3) %p6, ptr addrspace(3) %p2
   ret void
 }
 

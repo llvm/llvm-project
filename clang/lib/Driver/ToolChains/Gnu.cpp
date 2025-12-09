@@ -20,9 +20,9 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/MultilibBuilder.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/ArgList.h"
@@ -2058,7 +2058,7 @@ Generic_GCC::GCCVersion Generic_GCC::GCCVersion::Parse(StringRef VersionText) {
 
 static llvm::StringRef getGCCToolchainDir(const ArgList &Args,
                                           llvm::StringRef SysRoot) {
-  const Arg *A = Args.getLastArg(clang::driver::options::OPT_gcc_toolchain);
+  const Arg *A = Args.getLastArg(options::OPT_gcc_toolchain);
   if (A)
     return A->getValue();
 
@@ -2111,8 +2111,7 @@ void Generic_GCC::GCCInstallationDetector::init(
                            CandidateBiarchTripleAliases);
 
   // If --gcc-install-dir= is specified, skip filesystem detection.
-  if (const Arg *A =
-          Args.getLastArg(clang::driver::options::OPT_gcc_install_dir_EQ);
+  if (const Arg *A = Args.getLastArg(options::OPT_gcc_install_dir_EQ);
       A && A->getValue()[0]) {
     StringRef InstallDir = A->getValue();
     if (!ScanGCCForMultilibs(TargetTriple, Args, InstallDir, false)) {
@@ -2135,8 +2134,7 @@ void Generic_GCC::GCCInstallationDetector::init(
 
   // If --gcc-triple is specified use this instead of trying to
   // auto-detect a triple.
-  if (const Arg *A =
-          Args.getLastArg(clang::driver::options::OPT_gcc_triple_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_gcc_triple_EQ)) {
     StringRef GCCTriple = A->getValue();
     CandidateTripleAliases.clear();
     CandidateTripleAliases.push_back(GCCTriple);

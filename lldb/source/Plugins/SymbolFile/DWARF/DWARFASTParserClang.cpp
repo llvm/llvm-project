@@ -623,6 +623,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
     switch (tag) {
     case DW_TAG_typedef:
+    case DW_TAG_template_alias:
     case DW_TAG_base_type:
     case DW_TAG_pointer_type:
     case DW_TAG_reference_type:
@@ -748,7 +749,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
   TypeSP type_sp;
   CompilerType clang_type;
 
-  if (tag == DW_TAG_typedef) {
+  if (tag == DW_TAG_typedef || tag == DW_TAG_template_alias) {
     // DeclContext will be populated when the clang type is materialized in
     // Type::ResolveCompilerType.
     PrepareContextToReceiveMembers(
@@ -836,6 +837,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     encoding_data_type = Type::eEncodingIsRValueReferenceUID;
     break;
   case DW_TAG_typedef:
+  case DW_TAG_template_alias:
     encoding_data_type = Type::eEncodingIsTypedefUID;
     break;
   case DW_TAG_const_type:
@@ -1705,8 +1707,11 @@ void DWARFASTParserClang::GetUniqueTypeNameAndDeclaration(
   // For C++, we rely solely upon the one definition rule that says
   // only one thing can exist at a given decl context. We ignore the
   // file and line that things are declared on.
-  if (!die.IsValid() || !Language::LanguageIsCPlusPlus(language) ||
-      unique_typename.IsEmpty())
+  // FIXME: Rust pretends to be C++ for now, so use C++ name qualification rules
+  if (!Language::LanguageIsCPlusPlus(language) &&
+      language != lldb::eLanguageTypeRust)
+    return;
+  if (!die.IsValid() || unique_typename.IsEmpty())
     return;
   decl_declaration.Clear();
   std::string qualified_name;
@@ -3704,12 +3709,10 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
     }
   }
 
-  DWARFASTParserClang *src_dwarf_ast_parser =
-      static_cast<DWARFASTParserClang *>(
-          SymbolFileDWARF::GetDWARFParser(*src_class_die.GetCU()));
-  DWARFASTParserClang *dst_dwarf_ast_parser =
-      static_cast<DWARFASTParserClang *>(
-          SymbolFileDWARF::GetDWARFParser(*dst_class_die.GetCU()));
+  auto *src_dwarf_ast_parser = llvm::cast<DWARFASTParserClang>(
+      SymbolFileDWARF::GetDWARFParser(*src_class_die.GetCU()));
+  auto *dst_dwarf_ast_parser = llvm::cast<DWARFASTParserClang>(
+      SymbolFileDWARF::GetDWARFParser(*dst_class_die.GetCU()));
   auto link = [&](DWARFDIE src, DWARFDIE dst) {
     auto &die_to_type = dst_class_die.GetDWARF()->GetDIEToType();
     clang::DeclContext *dst_decl_ctx =

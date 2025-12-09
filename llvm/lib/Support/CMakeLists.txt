@@ -202,6 +202,7 @@ add_llvm_component_library(LLVMSupport
   FormatVariadic.cpp
   GlobPattern.cpp
   GraphWriter.cpp
+  Hash.cpp
   HexagonAttributeParser.cpp
   HexagonAttributes.cpp
   InitLLVM.cpp
@@ -311,6 +312,7 @@ add_llvm_component_library(LLVMSupport
   Threading.cpp
   Valgrind.cpp
   Watchdog.cpp
+  zOSLibFunctions.cpp
 
   ADDITIONAL_HEADER_DIRS
   Unix

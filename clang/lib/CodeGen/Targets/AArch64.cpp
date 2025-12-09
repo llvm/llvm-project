@@ -24,9 +24,16 @@ namespace {
 class AArch64ABIInfo : public ABIInfo {
   AArch64ABIKind Kind;
 
+  std::unique_ptr<TargetCodeGenInfo> WinX86_64CodegenInfo;
+
 public:
-  AArch64ABIInfo(CodeGenTypes &CGT, AArch64ABIKind Kind)
-      : ABIInfo(CGT), Kind(Kind) {}
+  AArch64ABIInfo(CodeGenModule &CGM, AArch64ABIKind Kind)
+      : ABIInfo(CGM.getTypes()), Kind(Kind) {
+    if (getTarget().getTriple().isWindowsArm64EC()) {
+      WinX86_64CodegenInfo =
+          createWinX86_64TargetCodeGenInfo(CGM, X86AVXABILevel::None);
+    }
+  }
 
   bool isSoftFloat() const { return Kind == AArch64ABIKind::AAPCSSoft; }
 
@@ -119,9 +126,9 @@ public:
 
 class AArch64TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
-  AArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIKind Kind)
-      : TargetCodeGenInfo(std::make_unique<AArch64ABIInfo>(CGT, Kind)) {
-    SwiftInfo = std::make_unique<AArch64SwiftABIInfo>(CGT);
+  AArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind Kind)
+      : TargetCodeGenInfo(std::make_unique<AArch64ABIInfo>(CGM, Kind)) {
+    SwiftInfo = std::make_unique<AArch64SwiftABIInfo>(CGM.getTypes());
   }
 
   StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
@@ -200,8 +207,8 @@ private:
 
 class WindowsAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {
 public:
-  WindowsAArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIKind K)
-      : AArch64TargetCodeGenInfo(CGT, K) {}
+  WindowsAArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind K)
+      : AArch64TargetCodeGenInfo(CGM, K) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override;
@@ -367,6 +374,12 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
                                                 unsigned &NSRN,
                                                 unsigned &NPRN) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  if (IsVariadicFn && getTarget().getTriple().isWindowsArm64EC()) {
+    // Arm64EC varargs functions use the x86_64 classification rules,
+    // not the AArch64 ABI rules.
+    return WinX86_64CodegenInfo->getABIInfo().classifyArgForArm64ECVarArg(Ty);
+  }
 
   // Handle illegal vector types here.
   if (isIllegalVectorType(Ty))
@@ -1153,9 +1166,16 @@ RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                    QualType Ty, AggValueSlot Slot) const {
   bool IsIndirect = false;
 
-  // Composites larger than 16 bytes are passed by reference.
-  if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) > 128)
-    IsIndirect = true;
+  if (getTarget().getTriple().isWindowsArm64EC()) {
+    // MS x64 ABI requirement: "Any argument that doesn't fit in 8 bytes, or is
+    // not 1, 2, 4, or 8 bytes, must be passed by reference."
+    uint64_t Width = getContext().getTypeSize(Ty);
+    IsIndirect = Width > 64 || !llvm::isPowerOf2_64(Width);
+  } else {
+    // Composites larger than 16 bytes are passed by reference.
+    if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) > 128)
+      IsIndirect = true;
+  }
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           CGF.getContext().getTypeInfoInChars(Ty),
@@ -1347,11 +1367,11 @@ void AArch64ABIInfo::appendAttributeMangling(StringRef AttrStr,
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createAArch64TargetCodeGenInfo(CodeGenModule &CGM,
                                         AArch64ABIKind Kind) {
-  return std::make_unique<AArch64TargetCodeGenInfo>(CGM.getTypes(), Kind);
+  return std::make_unique<AArch64TargetCodeGenInfo>(CGM, Kind);
 }
 
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createWindowsAArch64TargetCodeGenInfo(CodeGenModule &CGM,
                                                AArch64ABIKind K) {
-  return std::make_unique<WindowsAArch64TargetCodeGenInfo>(CGM.getTypes(), K);
+  return std::make_unique<WindowsAArch64TargetCodeGenInfo>(CGM, K);
 }

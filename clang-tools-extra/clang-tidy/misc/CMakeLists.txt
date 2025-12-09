@@ -33,6 +33,7 @@ add_clang_library(clangTidyMiscModule STATIC
   NonCopyableObjectsCheck.cpp
   NonPrivateMemberVariablesInClassesCheck.cpp
   OverrideWithDifferentVisibilityCheck.cpp
+  PredictableRandCheck.cpp
   RedundantExpressionCheck.cpp
   StaticAssertCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp

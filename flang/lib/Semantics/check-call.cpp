@@ -548,8 +548,13 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     actualLastSymbol = &ResolveAssociations(*actualLastSymbol);
   }
   int actualRank{actualType.Rank()};
-  if (dummy.type.attrs().test(
-          characteristics::TypeAndShape::Attr::AssumedShape)) {
+  if (dummyIsValue && dummyRank == 0 &&
+      dummy.ignoreTKR.test(common::IgnoreTKR::Rank) && actualRank > 0) {
+    messages.Say(
+        "Array actual argument may not be associated with IGNORE_TKR(R) scalar %s with VALUE attribute"_err_en_US,
+        dummyName);
+  } else if (dummy.type.attrs().test(
+                 characteristics::TypeAndShape::Attr::AssumedShape)) {
     // 15.5.2.4(16)
     if (actualIsAssumedRank) {
       messages.Say(
@@ -795,7 +800,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   bool dummyIsAssumedShape{dummy.type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedShape)};
   bool copyOutNeeded{
-      evaluate::MayNeedCopy(&arg, &dummyArg, foldingContext, true)};
+      evaluate::ActualArgNeedsCopy(&arg, &dummyArg, foldingContext,
+          /*forCopyOut=*/true)
+          .value_or(false)};
   if (copyOutNeeded && !dummyIsValue &&
       (dummyIsAsynchronous || dummyIsVolatile)) {
     if (actualIsAsynchronous || actualIsVolatile) {
@@ -832,8 +839,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // a unread value in the actual argument.
   // Occurences of `volatileOrAsyncNeedsTempDiagnosticIssued = true` indicate a
   // more specific error message has already been issued. We might be able to
-  // clean this up by switching the coding style of MayNeedCopy to be more like
-  // WhyNotDefinable.
+  // clean this up by switching the coding style of ActualArgNeedsCopy to be
+  // more like WhyNotDefinable.
   if (copyOutNeeded && !volatileOrAsyncNeedsTempDiagnosticIssued) {
     if ((actualIsVolatile || actualIsAsynchronous) &&
         (dummyIsVolatile || dummyIsAsynchronous)) {

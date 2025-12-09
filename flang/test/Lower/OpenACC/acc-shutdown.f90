@@ -23,9 +23,9 @@ subroutine acc_shutdown
 
   !$acc shutdown device_num(1) device_type(default, nvidia)
 !CHECK: [[DEVNUM:%.*]] = arith.constant 1 : i32
-!CHECK: acc.shutdown device_num([[DEVNUM]] : i32) attributes {device_types = [#acc.device_type<default>, #acc.device_type<nvidia>]} 
+!CHECK: acc.shutdown device_num([[DEVNUM]] : i32) attributes {device_types = [#acc.device_type<default>, #acc.device_type<nvidia>]}
 
   !$acc shutdown device_type(default) device_type(nvidia)
-!CHECK: acc.shutdown attributes {device_types = [#acc.device_type<default>, #acc.device_type<nvidia>]} 
+!CHECK: acc.shutdown attributes {device_types = [#acc.device_type<default>, #acc.device_type<nvidia>]}
 
 end subroutine acc_shutdown

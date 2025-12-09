@@ -248,6 +248,12 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       }
       break;
     }
+    if (DestType->isVoidPointerType() && SourceType->isPointerType() &&
+        !SourceType->getPointeeType()->isPointerType()) {
+      ReplaceWithNamedCast("reinterpret_cast");
+      return;
+    }
+
     [[fallthrough]];
   case clang::CK_IntegralCast:
     // Convert integral and no-op casts between builtin types and enums to
@@ -266,6 +272,12 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
         ReplaceWithNamedCast("static_cast");
       else
         ReplaceWithNamedCast("reinterpret_cast");
+      return;
+    }
+    break;
+  case CK_BaseToDerived:
+    if (!needsConstCast(SourceType, DestType)) {
+      ReplaceWithNamedCast("static_cast");
       return;
     }
     break;

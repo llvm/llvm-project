@@ -28,7 +28,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cassert>
-#include <utility>
 
 using namespace llvm;
 
@@ -1008,6 +1007,10 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   }
   if (Name == "spirv.IntegralConstant" || Name == "spirv.Literal")
     return TargetTypeInfo(Type::getVoidTy(C));
+  if (Name == "spirv.Padding")
+    return TargetTypeInfo(
+        ArrayType::get(Type::getInt8Ty(C), Ty->getIntParameter(0)),
+        TargetExtType::CanBeGlobal);
   if (Name.starts_with("spirv."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal,

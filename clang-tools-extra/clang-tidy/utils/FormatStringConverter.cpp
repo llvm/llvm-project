@@ -624,7 +624,6 @@ bool FormatStringConverter::HandlePrintfSpecifier(const PrintfSpecifier &FS,
                                                   const char *StartSpecifier,
                                                   unsigned SpecifierLen,
                                                   const TargetInfo &Target) {
-
   const size_t StartSpecifierPos = StartSpecifier - PrintfFormatString.data();
   assert(StartSpecifierPos + SpecifierLen <= PrintfFormatString.size());
 
@@ -701,6 +700,7 @@ void FormatStringConverter::finalizeFormatText() {
 /// Append literal parts of the format text, reinstating escapes as required.
 void FormatStringConverter::appendFormatText(const StringRef Text) {
   for (const char Ch : Text) {
+    const auto UCh = static_cast<unsigned char>(Ch);
     if (Ch == '\a')
       StandardFormatString += "\\a";
     else if (Ch == '\b')
@@ -725,10 +725,10 @@ void FormatStringConverter::appendFormatText(const StringRef Text) {
     } else if (Ch == '}') {
       StandardFormatString += "}}";
       FormatStringNeededRewriting = true;
-    } else if (Ch < 32) {
+    } else if (UCh < 32) {
       StandardFormatString += "\\x";
-      StandardFormatString += llvm::hexdigit(Ch >> 4, true);
-      StandardFormatString += llvm::hexdigit(Ch & 0xf, true);
+      StandardFormatString += llvm::hexdigit(UCh >> 4, true);
+      StandardFormatString += llvm::hexdigit(UCh & 0xf, true);
     } else
       StandardFormatString += Ch;
   }

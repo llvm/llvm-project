@@ -49,6 +49,7 @@ config.suffixes = [".ll", ".c", ".test", ".txt", ".s", ".mir", ".yaml", ".spv"]
 config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
 
 if config.enable_profcheck:
+    config.available_features.add("profcheck")
     # Exclude llvm-reduce tests for profcheck because we substitute the FileCheck
     # binary with a no-op command for profcheck, but llvm-reduce tests have RUN
     # commands of the form llvm-reduce --test FileCheck, which explode if we

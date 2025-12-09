@@ -229,6 +229,7 @@ class TargetInfo : public TransferrableTargetInfo,
 protected:
   // Target values set by the ctor of the actual target implementation.  Default
   // values are specified by the TargetInfo constructor.
+  bool HasMustTail;
   bool BigEndian;
   bool TLSSupported;
   bool VLASupported;
@@ -668,6 +669,8 @@ public:
     return PaddingOnUnsignedFixedPoint ? getLongFractScale()
                                        : getLongFractScale() + 1;
   }
+
+  virtual bool hasMustTail() const { return HasMustTail; }
 
   /// Determine whether the __int128 type is supported on this target.
   virtual bool hasInt128Type() const {
@@ -1844,6 +1847,9 @@ public:
       getTargetOpts().OpenCLFeaturesMap[Name] = V;
     }
   }
+
+  /// Set features that depend on other features.
+  virtual void setDependentOpenCLOpts();
 
   /// Get supported OpenCL extensions and optional core features.
   llvm::StringMap<bool> &getSupportedOpenCLOpts() {

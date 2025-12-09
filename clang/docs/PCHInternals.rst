@@ -504,7 +504,7 @@ Name lookup
   based.  This changes the lookup algorithm for the various tables, such as the
   :ref:`identifier table <pchinternals-ident-table>`: the search starts at the
   most-recent precompiled header.  If no entry is found, lookup then proceeds
-  to the identifier table in the precompiled header it depends on, and so one.
+  to the identifier table in the precompiled header it depends on, and so on.
   Once a lookup succeeds, that result is considered definitive, overriding any
   results from earlier precompiled headers.
 

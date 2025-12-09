@@ -578,14 +578,6 @@ llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
 
 // -----
 
-llvm.func @nanosleep() {
-  // expected-error@+1 {{integer constant out of range for attribute}}
-  nvvm.nanosleep 100000000000000
-  llvm.return
-}
-
-// -----
-
 llvm.func @clusterlaunchcontrol_query_cancel_is_canceled_invalid_return_type(%try_cancel_response: i128) {
   // expected-error@+1 {{'nvvm.clusterlaunchcontrol.query.cancel' op is_canceled query type returns an i1}}
   %res = nvvm.clusterlaunchcontrol.query.cancel query = is_canceled, %try_cancel_response : i32

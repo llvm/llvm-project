@@ -8,7 +8,7 @@ program nml_common
   real, pointer :: p(:)
   namelist /t/i,p
   common /c/i,p
-  
+
   allocate(p(2))
   call print_t()
 contains

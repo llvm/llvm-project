@@ -578,6 +578,13 @@ LIBC_INLINE static constexpr bool isgraph(char ch) {
   return 0x20 < ch && ch < 0x7f;
 }
 
+// An overload which provides a way to compare input with specific character
+// values, when input can be of a regular or a wide character type.
+LIBC_INLINE static constexpr bool is_char_or_wchar(char ch, char c_value,
+                                                   [[maybe_unused]] wchar_t) {
+  return (ch == c_value);
+}
+
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 

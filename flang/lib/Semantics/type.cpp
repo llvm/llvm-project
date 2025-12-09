@@ -192,6 +192,13 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
   }
 }
 
+void DerivedTypeSpec::ReevaluateParameters(SemanticsContext &context) {
+  evaluated_ = false;
+  instantiated_ = false;
+  scope_ = nullptr;
+  EvaluateParameters(context);
+}
+
 void DerivedTypeSpec::AddParamValue(SourceName name, ParamValue &&value) {
   CHECK(cooked_);
   auto pair{parameters_.insert(std::make_pair(name, std::move(value)))};
