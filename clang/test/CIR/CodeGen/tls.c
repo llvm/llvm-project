@@ -12,7 +12,7 @@ __thread int a;
 // CIR: cir.global external tls_dyn @a = #cir.int<0> : !s32i
 
 int c(void) { return *&b; }
-// CIR: cir.func dso_local @c() -> !s32i
+// CIR: cir.func no_inline dso_local @c() -> !s32i
 // CIR:   %[[TLS_ADDR:.*]] = cir.get_global thread_local @b : !cir.ptr<!s32i>
 
 // LLVM: @b = external thread_local global i32
