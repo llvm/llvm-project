@@ -367,7 +367,7 @@ Initially, we will focus on summary strings, and then describe the Python
 binding mechanism.
 
 Summary Format Matching On Pointers
-----------------------
+-----------------------------------
 
 A summary formatter for a type ``T`` might or might not be appropriate to use
 for pointers to that type. If the formatter is only appropriate for the type and
