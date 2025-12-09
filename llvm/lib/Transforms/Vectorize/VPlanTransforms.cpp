@@ -44,6 +44,7 @@
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
+using namespace SCEVPatternMatch;
 
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan,
@@ -139,14 +140,77 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
   return true;
 }
 
-// Check if a memory operation doesn't alias with memory operations in blocks
-// between FirstBB and LastBB using scoped noalias metadata.
-// For load hoisting, we only check writes in one direction.
-// For store sinking, we check both reads and writes bidirectionally.
-static bool canHoistOrSinkWithNoAliasCheck(
-    const MemoryLocation &MemLoc, VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
-    bool CheckReads,
-    const SmallPtrSetImpl<VPRecipeBase *> *ExcludeRecipes = nullptr) {
+/// Helper for extra no-alias checks via known-safe recipe and SCEV.
+class SinkStoreInfo {
+  const SmallPtrSetImpl<VPRecipeBase *> &ExcludeRecipes;
+  VPReplicateRecipe &GroupLeader;
+  ScalarEvolution &SE;
+  const Loop &L;
+  VPTypeAnalysis &TypeInfo;
+
+  // Return true if \p A and \p B are known to not alias for all VFs in the
+  // plan, checked via the distance between the accesses
+  bool isNoAliasViaDistance(VPReplicateRecipe *A, VPReplicateRecipe *B) const {
+    if (A->getOpcode() != Instruction::Store ||
+        B->getOpcode() != Instruction::Store)
+      return false;
+
+    VPValue *AddrA = A->getOperand(1);
+    const SCEV *SCEVA = vputils::getSCEVExprForVPValue(AddrA, SE, &L);
+    VPValue *AddrB = B->getOperand(1);
+    const SCEV *SCEVB = vputils::getSCEVExprForVPValue(AddrB, SE, &L);
+    if (isa<SCEVCouldNotCompute>(SCEVA) || isa<SCEVCouldNotCompute>(SCEVB))
+      return false;
+
+    const APInt *Distance;
+    if (!match(SE.getMinusSCEV(SCEVA, SCEVB), m_scev_APInt(Distance)))
+      return false;
+
+    const DataLayout &DL = SE.getDataLayout();
+    Type *TyA = TypeInfo.inferScalarType(A->getOperand(0));
+    uint64_t SizeA = DL.getTypeStoreSize(TyA);
+    Type *TyB = TypeInfo.inferScalarType(B->getOperand(0));
+    uint64_t SizeB = DL.getTypeStoreSize(TyB);
+
+    // Use the maximum store size to ensure no overlap from either direction.
+    // Currently only handles fixed sizes, as it is only used for
+    // replicating VPReplicateRecipes.
+    uint64_t MaxStoreSize = std::max(SizeA, SizeB);
+
+    auto VFs = B->getParent()->getPlan()->vectorFactors();
+    ElementCount MaxVF = *max_element(VFs, ElementCount::isKnownLT);
+    return Distance->abs().uge(
+        MaxVF.multiplyCoefficientBy(MaxStoreSize).getFixedValue());
+  }
+
+public:
+  SinkStoreInfo(const SmallPtrSetImpl<VPRecipeBase *> &ExcludeRecipes,
+                VPReplicateRecipe &GroupLeader, ScalarEvolution &SE,
+                const Loop &L, VPTypeAnalysis &TypeInfo)
+      : ExcludeRecipes(ExcludeRecipes), GroupLeader(GroupLeader), SE(SE), L(L),
+        TypeInfo(TypeInfo) {}
+
+  /// Return true if \p R should be skipped during alias checking, either
+  /// because it's in the exclude set or because no-alias can be proven via
+  /// SCEV.
+  bool shouldSkip(VPRecipeBase &R) const {
+    auto *Store = dyn_cast<VPReplicateRecipe>(&R);
+    return ExcludeRecipes.contains(&R) ||
+           (Store && isNoAliasViaDistance(Store, &GroupLeader));
+  }
+};
+
+/// Check if a memory operation doesn't alias with memory operations in blocks
+/// between \p FirstBB and \p LastBB using scoped noalias metadata. If
+/// \p SinkInfo is std::nullopt, only recipes that may write to memory are
+/// checked (for load hoisting). Otherwise recipes that both read and write
+/// memory are checked, and SCEV is used to prove no-alias between the group
+/// leader and other replicate recipes (for store sinking).
+static bool
+canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
+                               VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
+                               std::optional<SinkStoreInfo> SinkInfo = {}) {
+  bool CheckReads = SinkInfo.has_value();
   if (!MemLoc.AATags.Scope)
     return false;
 
@@ -158,7 +222,7 @@ static bool canHoistOrSinkWithNoAliasCheck(
            "Expected at most one successor in block chain");
     auto *VPBB = cast<VPBasicBlock>(Block);
     for (VPRecipeBase &R : *VPBB) {
-      if (ExcludeRecipes && ExcludeRecipes->contains(&R))
+      if (SinkInfo && SinkInfo->shouldSkip(R))
         continue;
 
       // Skip recipes that don't need checking.
@@ -4273,8 +4337,7 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
 
     // Check that the load doesn't alias with stores between first and last.
     auto LoadLoc = vputils::getMemoryLocation(*EarliestLoad);
-    if (!LoadLoc || !canHoistOrSinkWithNoAliasCheck(*LoadLoc, FirstBB, LastBB,
-                                                    /*CheckReads=*/false))
+    if (!LoadLoc || !canHoistOrSinkWithNoAliasCheck(*LoadLoc, FirstBB, LastBB))
       continue;
 
     // Collect common metadata from all loads in the group.
@@ -4301,7 +4364,9 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
 }
 
 static bool
-canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink) {
+canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink,
+                             ScalarEvolution &SE, const Loop &L,
+                             VPTypeAnalysis &TypeInfo) {
   auto StoreLoc = vputils::getMemoryLocation(*StoresToSink.front());
   if (!StoreLoc || !StoreLoc->AATags.Scope)
     return false;
@@ -4313,8 +4378,8 @@ canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink) {
 
   VPBasicBlock *FirstBB = StoresToSink.front()->getParent();
   VPBasicBlock *LastBB = StoresToSink.back()->getParent();
-  return canHoistOrSinkWithNoAliasCheck(*StoreLoc, FirstBB, LastBB,
-                                        /*CheckReads=*/true, &StoresToSinkSet);
+  SinkStoreInfo SinkInfo(StoresToSinkSet, *StoresToSink[0], SE, L, TypeInfo);
+  return canHoistOrSinkWithNoAliasCheck(*StoreLoc, FirstBB, LastBB, SinkInfo);
 }
 
 void VPlanTransforms::sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
@@ -4325,13 +4390,14 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
     return;
 
   VPDominatorTree VPDT(Plan);
+  VPTypeAnalysis TypeInfo(Plan);
 
   for (auto &Group : Groups) {
     sort(Group, [&VPDT](VPReplicateRecipe *A, VPReplicateRecipe *B) {
       return VPDT.properlyDominates(A, B);
     });
 
-    if (!canSinkStoreWithNoAliasCheck(Group))
+    if (!canSinkStoreWithNoAliasCheck(Group, SE, *L, TypeInfo))
       continue;
 
     // Use the last (most dominated) store's location for the unconditional
