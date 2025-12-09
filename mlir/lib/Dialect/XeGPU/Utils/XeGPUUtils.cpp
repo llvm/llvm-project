@@ -579,15 +579,3 @@ template int xegpu::getLargestDivisor<int>(int dim, ArrayRef<int> candidates,
 template int
 xegpu::getLargestDivisor<unsigned>(unsigned dim, ArrayRef<unsigned> candidates,
                                    ArrayRef<unsigned> candidateMultiples);
-
-/// Checks if the given MemRefType refers to shared memory.
-bool xegpu::isSharedMemRef(const MemRefType &memrefTy) {
-  Attribute attr = memrefTy.getMemorySpace();
-  if (!attr)
-    return false;
-  if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attr))
-    return intAttr.getInt() == static_cast<int>(xevm::AddrSpace::SHARED);
-  if (auto xevmSpace = llvm::dyn_cast<xevm::AddrSpaceAttr>(attr))
-    return xevmSpace.getValue() == xevm::AddrSpace::SHARED;
-  return gpu::GPUDialect::isWorkgroupMemoryAddressSpace(attr);
-}

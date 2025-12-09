@@ -175,9 +175,6 @@ template <typename T>
 int getLargestDivisor(T dim, ArrayRef<T> candidates,
                       ArrayRef<T> candidateMultiples = {});
 
-/// Checks if the given MemRefType refers to shared memory.
-bool isSharedMemRef(const MemRefType &memrefTy);
-
 } // namespace xegpu
 
 } // namespace mlir
