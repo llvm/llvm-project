@@ -46,15 +46,14 @@ void RedundantControlFlowCheck::registerMatchers(MatchFinder *Finder) {
 void RedundantControlFlowCheck::check(const MatchFinder::MatchResult &Result) {
   const auto &RedundantStmt = *Result.Nodes.getNodeAs<Stmt>("stmt");
   const SourceRange StmtRange = RedundantStmt.getSourceRange();
-  const SourceManager &SM = *Result.SourceManager;
 
   if (StmtRange.getBegin().isMacroID())
     return;
 
   const auto RemovedRange = CharSourceRange::getCharRange(
       StmtRange.getBegin(),
-      Lexer::findLocationAfterToken(StmtRange.getEnd(), tok::semi, SM,
-                                    getLangOpts(),
+      Lexer::findLocationAfterToken(StmtRange.getEnd(), tok::semi,
+                                    *Result.SourceManager, getLangOpts(),
                                     /*SkipTrailingWhitespaceAndNewLine=*/true));
 
   diag(StmtRange.getBegin(), isa<ReturnStmt>(RedundantStmt)
