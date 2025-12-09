@@ -176,10 +176,6 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
       internal_close(outfd[1]);
       return false;
     }
-
-    // We intentionally hold on to the read-end so that we don't get a SIGPIPE
-    child_stdin_fd_ = outfd[0];
-
 #  else   // SANITIZER_APPLE
     UNIMPLEMENTED();
 #  endif  // SANITIZER_APPLE
@@ -195,6 +191,8 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
 
   input_fd_ = infd[0];
   output_fd_ = outfd[1];
+  // We intentionally hold on to the read-end so that we don't get a SIGPIPE
+  child_stdin_fd_ = outfd[0];
 
   CHECK_GT(pid, 0);
 
