@@ -102,6 +102,35 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     return Diag(TheCall->getBeginLoc(), diag::err_64_bit_builtin_32_bit_tgt)
            << TheCall->getSourceRange();
 
+  // Common BCD type-validation helpers
+  // Emit diagnostics and return true on failure
+  //  - VerifyVectorType: enforces vector unsigned char
+  //  - VerifyIntType: enforces any integer type
+  // Lambdas centralize type checks for all BCD builtin handlers
+  QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
+                                           VectorKind::AltiVecVector);
+  // Lambda 1: verify vector type
+  auto VerifyVectorType = [&](QualType ArgTy, SourceLocation Loc,
+                            unsigned ArgIndex) -> bool {
+    if (!Context.hasSameType(ArgTy, VecType)) {
+      Diag(Loc, diag::err_ppc_bcd_invalid_vector_type)
+        << ArgIndex << VecType << ArgTy;
+      return true;
+    }
+    return false;
+  };
+
+  // Lambda 2: verify integer type
+  auto VerifyIntType = [&](QualType ArgTy, SourceLocation Loc,
+                          unsigned ArgIndex) -> bool {
+    if (!ArgTy->isIntegerType()) {
+      Diag(Loc, diag::err_ppc_bcd_invalid_integer_type)
+        << ArgIndex << "integer type" << ArgTy;
+      return true;
+    }
+    return false;
+  };
+
   switch (BuiltinID) {
   default:
     return false;
@@ -115,20 +144,13 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     QualType Arg0Type = TheCall->getArg(0)->getType();
     QualType Arg1Type = TheCall->getArg(1)->getType();
 
-    QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
-                                             VectorKind::AltiVecVector);
-
     // Arg0 must be vector unsigned char
-    if (!Context.hasSameType(Arg0Type, VecType))
-      return SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
-                          diag::err_ppc_bcd_invalid_vector_type)
-             << 0 << VecType << Arg0Type;
+    if (VerifyVectorType(Arg0Type, TheCall->getArg(0)->getBeginLoc(), 0))
+    return true; // error already emitted
 
     // Arg1 must be integer type
-    if (!Arg1Type->isIntegerType())
-      return SemaRef.Diag(TheCall->getArg(1)->getBeginLoc(),
-                          diag::err_ppc_bcd_invalid_integer_type)
-             << 1 << "integer type" << Arg1Type;
+    if (VerifyIntType(Arg1Type, TheCall->getArg(1)->getBeginLoc(), 1))
+      return true;
 
     // Restrict Arg1 constant range (0–1)
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
@@ -142,26 +164,17 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     QualType Arg1Type = TheCall->getArg(1)->getType();
     QualType Arg2Type = TheCall->getArg(2)->getType();
 
-    QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
-                                             VectorKind::AltiVecVector);
-
     // Arg0 must be vector unsigned char
-    if (!Context.hasSameType(Arg0Type, VecType))
-      return SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
-                          diag::err_ppc_bcd_invalid_vector_type)
-             << 0 << VecType << Arg0Type;
+    if (VerifyVectorType(Arg0Type, TheCall->getArg(0)->getBeginLoc(), 0))
+      return true;
 
     // Arg1 must be integer type
-    if (!Arg1Type->isIntegerType())
-      return SemaRef.Diag(TheCall->getArg(1)->getBeginLoc(),
-                          diag::err_ppc_bcd_invalid_integer_type)
-             << 1 << "integer type" << Arg1Type;
+    if (VerifyIntType(Arg1Type, TheCall->getArg(1)->getBeginLoc(), 1))
+      return true;
 
     // Arg2 must be integer type
-    if (!Arg2Type->isIntegerType())
-      return SemaRef.Diag(TheCall->getArg(2)->getBeginLoc(),
-                          diag::err_ppc_bcd_invalid_integer_type)
-             << 2 << "integer type" << Arg2Type;
+    if (VerifyIntType(Arg2Type, TheCall->getArg(2)->getBeginLoc(), 2))
+      return true;
 
     // Restrict Arg2 constant range (0–1)
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 1);
