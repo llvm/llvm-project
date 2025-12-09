@@ -2325,6 +2325,7 @@ bool RewriteMFMAFormStage::rewrite(
       }
     }
 
+    std::set<MachineOperand *> &DstRegSet = ReplaceMap[DstReg];
     for (MachineOperand *RU : DstReachingUseCopies) {
       MachineBasicBlock *RUBlock = RU->getParent()->getParent();
       // Just keep track of the reaching use of this register by block. After we
@@ -2350,15 +2351,16 @@ bool RewriteMFMAFormStage::rewrite(
       // use reg.
       RU->setReg(NewUseReg);
       // Track the copy source operand for replacement.
-      ReplaceMap[DstReg].insert(&VGPRCopy->getOperand(1));
+      DstRegSet.insert(&VGPRCopy->getOperand(1));
     }
 
     // Track the register for reclassification
     RewriteRegs.insert(DstReg);
+
     // Insert the dst operand for replacement. If this dst is in a chain of
     // tied-def MFMAs, and the first src2 needs to be replaced with a new reg,
     // all the correspond operands need to be replaced.
-    ReplaceMap[DstReg].insert(Dst);
+    DstRegSet.insert(Dst);
   }
 
   // Handle the copies for dst uses.
