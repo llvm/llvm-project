@@ -328,9 +328,8 @@ static llvm::Expected<uint32_t> ParseImports(DataExtractor &import_data) {
       return llvm::createStringError("failed to parse field name");
 
     uint8_t kind = data.getU8(c);
-    if (kind == llvm::wasm::WASM_EXTERNAL_FUNCTION) {
+    if (kind == llvm::wasm::WASM_EXTERNAL_FUNCTION)
       function_imports++;
-    }
 
     // For function imports, this is a type index. For others it's different.
     // We don't need it, just need to parse it to advance the cursor.
