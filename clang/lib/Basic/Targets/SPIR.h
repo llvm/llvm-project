@@ -335,8 +335,7 @@ public:
 
     // SPIR-V IDs are represented with a single 32-bit word.
     SizeType = TargetInfo::UnsignedInt;
-    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
-                    "v256:256-v512:512-v1024:1024-n8:16:32:64-G10");
+    resetDataLayout();
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -359,8 +358,7 @@ public:
     // SPIR-V has core support for atomic ops, and Int32 is always available;
     // we take the maximum because it's possible the Host supports wider types.
     MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 32);
-    resetDataLayout("e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-"
-                    "v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1");
+    resetDataLayout();
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -383,8 +381,7 @@ public:
     // SPIR-V has core support for atomic ops, and Int64 is always available;
     // we take the maximum because it's possible the Host supports wider types.
     MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
-    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
-                    "v256:256-v512:512-v1024:1024-n8:16:32:64-G1");
+    resetDataLayout();
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -428,8 +425,7 @@ public:
     PtrDiffType = IntPtrType = TargetInfo::SignedLong;
     AddrSpaceMap = &SPIRDefIsGenMap;
 
-    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
-                    "v256:256-v512:512-v1024:1024-n32:64-S32-G1-P4-A0");
+    resetDataLayout();
 
     HasFastHalfType = true;
     HasFloat16 = true;
@@ -475,8 +471,7 @@ public:
       : SPIRV64TargetInfo(Triple, Opts) {
     assert(Triple.getVendor() == llvm::Triple::VendorType::Intel &&
            "64-bit Intel SPIR-V target must use Intel vendor");
-    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
-                    "v256:256-v512:512-v1024:1024-n8:16:32:64-G1-P9-A0");
+    resetDataLayout();
   }
 };
 } // namespace targets
