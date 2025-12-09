@@ -469,8 +469,9 @@ void DirectoryBasedGlobalCompilationDatabase::Options::
   if (FallbackWorkingDirectory)
     this->FallbackWorkingDirectory = *FallbackWorkingDirectory;
   else {
-    // Fallback to current working directory if workspace path (passed as
-    // FallbackWorkingDirectory) is unset
+    // Clangd is running in strong workspace mode but the client didn't
+    // specify a workspace path in the `initialize` request.
+    // Fallback to current working directory.
     SmallString<256> CWD;
     llvm::sys::fs::current_path(CWD);
     this->FallbackWorkingDirectory = std::string(CWD);
