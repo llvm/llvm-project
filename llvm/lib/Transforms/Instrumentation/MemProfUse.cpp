@@ -509,59 +509,59 @@ struct CallSiteEntry {
   ArrayRef<Frame> Frames;
   // Potential targets for indirect calls.
   ArrayRef<GlobalValue::GUID> CalleeGuids;
-
-  // Only compare Frame contents.
-  // Use pointer-based equality instead of ArrayRef's operator== which does
-  // element-wise comparison. We want to check if it's the same slice of the
-  // underlying array, not just equivalent content.
-  bool operator==(const CallSiteEntry &Other) const {
-    return Frames.data() == Other.Frames.data() &&
-           Frames.size() == Other.Frames.size();
-  }
 };
 
-struct CallSiteEntryHash {
-  size_t operator()(const CallSiteEntry &Entry) const {
-    return computeFullStackId(Entry.Frames);
-  }
-};
-
-static void handleCallSite(
-    Instruction &I, const Function *CalledFunction,
-    ArrayRef<uint64_t> InlinedCallStack,
-    const std::unordered_set<CallSiteEntry, CallSiteEntryHash> &CallSiteEntries,
-    Module &M, std::set<std::vector<uint64_t>> &MatchedCallSites,
-    OptimizationRemarkEmitter &ORE) {
+static void handleCallSite(Instruction &I, const Function *CalledFunction,
+                           ArrayRef<uint64_t> InlinedCallStack,
+                           const std::vector<CallSiteEntry> &CallSiteEntries,
+                           Module &M,
+                           std::set<std::vector<uint64_t>> &MatchedCallSites,
+                           OptimizationRemarkEmitter &ORE) {
   auto &Ctx = M.getContext();
+  // Set of Callee GUIDs to attach to indirect calls. We accumulate all of them
+  // to support cases where the instuction's inlined frames match multiple call
+  // site entries, which can happen if the profile was collected from a binary
+  // where this instruction was eventually inlined into multiple callers.
+  SetVector<GlobalValue::GUID> CalleeGuids;
+  bool CallsiteMDAdded = false;
   for (const auto &CallSiteEntry : CallSiteEntries) {
     // If we found and thus matched all frames on the call, create and
     // attach call stack metadata.
     if (stackFrameIncludesInlinedCallStack(CallSiteEntry.Frames,
                                            InlinedCallStack)) {
       NumOfMemProfMatchedCallSites++;
-      addCallsiteMetadata(I, InlinedCallStack, Ctx);
-
-      // Try to attach indirect call metadata if possible.
-      if (!CalledFunction)
-        addVPMetadata(M, I, CallSiteEntry.CalleeGuids);
-
       // Only need to find one with a matching call stack and add a single
       // callsite metadata.
+      if (!CallsiteMDAdded) {
+        addCallsiteMetadata(I, InlinedCallStack, Ctx);
 
-      // Accumulate call site matching information upon request.
-      if (ClPrintMemProfMatchInfo) {
-        std::vector<uint64_t> CallStack;
-        append_range(CallStack, InlinedCallStack);
-        MatchedCallSites.insert(std::move(CallStack));
+        // Accumulate call site matching information upon request.
+        if (ClPrintMemProfMatchInfo) {
+          std::vector<uint64_t> CallStack;
+          append_range(CallStack, InlinedCallStack);
+          MatchedCallSites.insert(std::move(CallStack));
+        }
+        ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemProfUse", &I)
+                 << ore::NV("CallSite", &I) << " in function "
+                 << ore::NV("Caller", I.getFunction())
+                 << " matched callsite with frame count "
+                 << ore::NV("Frames", InlinedCallStack.size()));
+
+        // If this is a direct call, we're done.
+        if (CalledFunction)
+          break;
+        CallsiteMDAdded = true;
       }
-      ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemProfUse", &I)
-               << ore::NV("CallSite", &I) << " in function "
-               << ore::NV("Caller", I.getFunction())
-               << " matched callsite with frame count "
-               << ore::NV("Frames", InlinedCallStack.size()));
-      break;
+
+      assert(!CalledFunction && "Didn't expect direct call");
+
+      // Collect Callee GUIDs from all matching CallSiteEntries.
+      CalleeGuids.insert(CallSiteEntry.CalleeGuids.begin(),
+                         CallSiteEntry.CalleeGuids.end());
     }
   }
+  // Try to attach indirect call metadata if possible.
+  addVPMetadata(M, I, CalleeGuids.getArrayRef());
 }
 
 static void readMemprof(Module &M, Function &F,
@@ -639,8 +639,7 @@ static void readMemprof(Module &M, Function &F,
 
   // For the callsites we need to record slices of the frame array (see comments
   // below where the map entries are added) along with their CalleeGuids.
-  std::map<uint64_t, std::unordered_set<CallSiteEntry, CallSiteEntryHash>>
-      LocHashToCallSites;
+  std::map<uint64_t, std::vector<CallSiteEntry>> LocHashToCallSites;
   for (auto &AI : MemProfRec->AllocSites) {
     NumOfMemProfAllocContextProfiles++;
     // Associate the allocation info with the leaf frame. The later matching
@@ -659,7 +658,7 @@ static void readMemprof(Module &M, Function &F,
       uint64_t StackId = computeStackId(StackFrame);
       ArrayRef<Frame> FrameSlice = ArrayRef<Frame>(CS.Frames).drop_front(Idx++);
       ArrayRef<GlobalValue::GUID> CalleeGuids(CS.CalleeGuids);
-      LocHashToCallSites[StackId].insert({FrameSlice, CalleeGuids});
+      LocHashToCallSites[StackId].push_back({FrameSlice, CalleeGuids});
 
       ProfileHasColumns |= StackFrame.Column;
       // Once we find this function, we can stop recording.
