@@ -492,11 +492,9 @@ void HexagonGenWideningVecInstr::updateMPYConst(Intrinsic::ID IntId,
        IntId == Intrinsic::hexagon_vmpy_ss) &&
       OP->getType()->isVectorTy()) {
     // Create a vector with all elements equal to SplatVal
-    auto *VecTy = cast<VectorType>(OP->getType());
-    Value *scalar = IRB.getIntN(VecTy->getScalarSizeInBits(),
-                                static_cast<uint32_t>(SplatVal));
-    Value *splatVector = ConstantVector::getSplat(VecTy->getElementCount(),
-                                                  cast<Constant>(scalar));
+    Type *VecTy = OP->getType();
+    Value *splatVector =
+        ConstantInt::get(VecTy, static_cast<uint32_t>(SplatVal));
     OP = IsOPZExt ? IRB.CreateZExt(splatVector, VecTy)
                   : IRB.CreateSExt(splatVector, VecTy);
   } else {
