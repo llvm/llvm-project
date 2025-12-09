@@ -28,8 +28,9 @@ AST_MATCHER(Stmt, isMacroExpansion) {
 }
 
 AST_MATCHER(Stmt, isC) {
-  return !Finder->getASTContext().getLangOpts().CPlusPlus &&
-         !Finder->getASTContext().getLangOpts().ObjC;
+  const auto &LO = Finder->getASTContext().getLangOpts();
+  return !LO.CPlusPlus && !LO.ObjC && !LO.OpenCL && !LO.CUDA && !LO.HIP &&
+         !LO.HLSL;
 }
 
 // Preserve same name as AST_MATCHER(isNULLMacroExpansion)
