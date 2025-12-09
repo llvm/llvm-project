@@ -547,7 +547,7 @@ protected:
 
     // Being trusted is a strictly stronger property than being
     // safe-to-dereference.
-    assert(!Next.TrustedRegs.test(Next.SafeToDerefRegs) &&
+    assert(Next.TrustedRegs.subsetOf(Next.SafeToDerefRegs) &&
            "SafeToDerefRegs should contain all TrustedRegs");
 
     return Next;
