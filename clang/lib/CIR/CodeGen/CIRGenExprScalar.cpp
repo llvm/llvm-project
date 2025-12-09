@@ -751,6 +751,10 @@ public:
     return {};
   }
 
+  mlir::Value VisitCXXNoexceptExpr(CXXNoexceptExpr *e) {
+    return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
+  }
+
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
   /// TODO: do we need ScalarConversionOpts here? Should be done in another
