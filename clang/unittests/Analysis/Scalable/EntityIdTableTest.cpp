@@ -94,6 +94,48 @@ TEST(EntityIdTableTest, WithBuildNamespace) {
   EXPECT_NE(Id1, Id2);
 }
 
+TEST(EntityIdTableTest, ForEachEmptyTable) {
+  EntityIdTable Table;
+
+  int CallbackCount = 0;
+  Table.forEach([&CallbackCount](const EntityName&, EntityId) {
+    CallbackCount++;
+  });
+
+  EXPECT_EQ(CallbackCount, 0);
+}
+
+TEST(EntityIdTableTest, ForEachMultipleEntities) {
+  EntityIdTable Table;
+
+  EntityName Entity1("c:@F@foo", "", {});
+  EntityName Entity2("c:@F@bar", "", {});
+  EntityName Entity3("c:@V@baz", "", {});
+
+  EntityId Id1 = Table.createEntityId(Entity1);
+  EntityId Id2 = Table.createEntityId(Entity2);
+  EntityId Id3 = Table.createEntityId(Entity3);
+
+  std::set<EntityId> VisitedIds;
+  std::set<EntityName> VisitedNames;
+
+  Table.forEach([&](const EntityName& Name, EntityId Id) {
+    VisitedIds.insert(Id);
+    VisitedNames.insert(Name);
+  });
+
+  EXPECT_EQ(VisitedIds.size(), 3u);
+  EXPECT_EQ(VisitedNames.size(), 3u);
+
+  EXPECT_TRUE(VisitedIds.count(Id1));
+  EXPECT_TRUE(VisitedIds.count(Id2));
+  EXPECT_TRUE(VisitedIds.count(Id3));
+
+  EXPECT_TRUE(VisitedNames.count(Entity1));
+  EXPECT_TRUE(VisitedNames.count(Entity2));
+  EXPECT_TRUE(VisitedNames.count(Entity3));
+}
+
 } // namespace
 } // namespace ssaf
 } // namespace clang
