@@ -199,23 +199,19 @@ define i32 @test_lsb_i32(i32 %a0, i32 %a1) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    shrl %edx
-; X86-NEXT:    andl %ecx, %eax
-; X86-NEXT:    shrl %ecx
-; X86-NEXT:    addl %edx, %ecx
-; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    andl %ecx, %edx
+; X86-NEXT:    xorl %ecx, %eax
+; X86-NEXT:    shrl %eax
+; X86-NEXT:    addl %edx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_lsb_i32:
 ; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shrl %eax
-; X64-NEXT:    andl %esi, %edi
-; X64-NEXT:    shrl %esi
-; X64-NEXT:    addl %esi, %eax
-; X64-NEXT:    andl $1, %edi
-; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    addq %rcx, %rax
+; X64-NEXT:    shrq %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %s0 = lshr i32 %a0, 1
   %s1 = lshr i32 %a1, 1
