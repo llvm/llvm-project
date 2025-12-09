@@ -260,10 +260,158 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, Rethrow);
       return;
     }
+    
+    // Inference block intrinsics
+    case Intrinsic::wasm_forall_start: {
+      MachineSDNode *ForallStart = CurDAG->getMachineNode(
+          WebAssembly::INFERENCE_FORALL, DL,
+          MVT::Other, // outchain type
+          Node->getOperand(0) // inchain
+      );
+      ReplaceNode(Node, ForallStart);
+      return;
+    }
+    case Intrinsic::wasm_exists_start: {
+      MachineSDNode *ExistsStart = CurDAG->getMachineNode(
+          WebAssembly::INFERENCE_EXISTS, DL,
+          MVT::Other, // outchain type
+          Node->getOperand(0) // inchain
+      );
+      ReplaceNode(Node, ExistsStart);
+      return;
+    }
+    case Intrinsic::wasm_assume_start: {
+      MachineSDNode *AssumeStart = CurDAG->getMachineNode(
+          WebAssembly::INFERENCE_ASSUME, DL,
+          MVT::Other, // outchain type
+          Node->getOperand(0) // inchain
+      );
+      ReplaceNode(Node, AssumeStart);
+      return;
+    }
+    case Intrinsic::wasm_unique_start: {
+      MachineSDNode *UniqueStart = CurDAG->getMachineNode(
+          WebAssembly::INFERENCE_UNIQUE, DL,
+          MVT::Other, // outchain type
+          Node->getOperand(0) // inchain
+      );
+      ReplaceNode(Node, UniqueStart);
+      return;
+    }
+    case Intrinsic::wasm_forall_end: {
+      MachineSDNode *ForallEnd = CurDAG->getMachineNode(
+          WebAssembly::INFERENCE_FORALL_END, DL,
+          MVT::Other, // outchain type
+          Node->getOperand(0) // inchain
+      );
+      ReplaceNode(Node, ForallEnd);
+      return;
+    }
+    case Intrinsic::wasm_exists_end: {
+      MachineSDNode *ExistsEnd = CurDAG->getMachineNode(
+          WebAssembly::INFERENCE_EXISTS_END, DL,
+          MVT::Other, // outchain type
+          Node->getOperand(0) // inchain
+      );
+      ReplaceNode(Node, ExistsEnd);
+      return;
+    }
+    case Intrinsic::wasm_assume_end: {
+      MachineSDNode *AssumeEnd = CurDAG->getMachineNode(
+          WebAssembly::INFERENCE_ASSUME_END, DL,
+          MVT::Other, // outchain type
+          Node->getOperand(0) // inchain
+      );
+      ReplaceNode(Node, AssumeEnd);
+      return;
+    }
+    case Intrinsic::wasm_unique_end: {
+      MachineSDNode *UniqueEnd = CurDAG->getMachineNode(
+          WebAssembly::INFERENCE_UNIQUE_END, DL,
+          MVT::Other, // outchain type
+          Node->getOperand(0) // inchain
+      );
+      ReplaceNode(Node, UniqueEnd);
+      return;
+    }
     }
     break;
   }
 
+
+  // Inference block instructions
+  case WebAssemblyISD::BLOCK_FORALL: {
+    MachineSDNode *ForallStart = CurDAG->getMachineNode(
+        WebAssembly::INFERENCE_FORALL, DL,
+        MVT::Other, // outchain type
+        Node->getOperand(0) // inchain
+    );
+    ReplaceNode(Node, ForallStart);
+    return;
+  }
+  case WebAssemblyISD::BLOCK_EXISTS: {
+    MachineSDNode *ExistsStart = CurDAG->getMachineNode(
+        WebAssembly::INFERENCE_EXISTS, DL,
+        MVT::Other, // outchain type
+        Node->getOperand(0) // inchain
+    );
+    ReplaceNode(Node, ExistsStart);
+    return;
+  }
+  case WebAssemblyISD::BLOCK_ASSUME: {
+    MachineSDNode *AssumeStart = CurDAG->getMachineNode(
+        WebAssembly::INFERENCE_ASSUME, DL,
+        MVT::Other, // outchain type
+        Node->getOperand(0) // inchain
+    );
+    ReplaceNode(Node, AssumeStart);
+    return;
+  }
+  case WebAssemblyISD::BLOCK_UNIQUE: {
+    MachineSDNode *UniqueStart = CurDAG->getMachineNode(
+        WebAssembly::INFERENCE_UNIQUE, DL,
+        MVT::Other, // outchain type
+        Node->getOperand(0) // inchain
+    );
+    ReplaceNode(Node, UniqueStart);
+    return;
+  }
+  case WebAssemblyISD::BLOCK_FORALL_END: {
+    MachineSDNode *ForallEnd = CurDAG->getMachineNode(
+        WebAssembly::INFERENCE_FORALL_END, DL,
+        MVT::Other, // outchain type
+        Node->getOperand(0) // inchain
+    );
+    ReplaceNode(Node, ForallEnd);
+    return;
+  }
+  case WebAssemblyISD::BLOCK_EXISTS_END: {
+    MachineSDNode *ExistsEnd = CurDAG->getMachineNode(
+        WebAssembly::INFERENCE_EXISTS_END, DL,
+        MVT::Other, // outchain type
+        Node->getOperand(0) // inchain
+    );
+    ReplaceNode(Node, ExistsEnd);
+    return;
+  }
+  case WebAssemblyISD::BLOCK_ASSUME_END: {
+    MachineSDNode *AssumeEnd = CurDAG->getMachineNode(
+        WebAssembly::INFERENCE_ASSUME_END, DL,
+        MVT::Other, // outchain type
+        Node->getOperand(0) // inchain
+    );
+    ReplaceNode(Node, AssumeEnd);
+    return;
+  }
+  case WebAssemblyISD::BLOCK_UNIQUE_END: {
+    MachineSDNode *UniqueEnd = CurDAG->getMachineNode(
+        WebAssembly::INFERENCE_UNIQUE_END, DL,
+        MVT::Other, // outchain type
+        Node->getOperand(0) // inchain
+    );
+    ReplaceNode(Node, UniqueEnd);
+    return;
+  }
   case WebAssemblyISD::CALL:
   case WebAssemblyISD::RET_CALL: {
     // CALL has both variable operands and variable results, but ISel only

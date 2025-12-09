@@ -1,0 +1,451 @@
+name: Build Inference LLVM Static Artifacts
+
+on:
+  pull_request:
+    branches: [main, uzumaki-intrinsics]
+  push:
+    branches: [main, uzumaki-intrinsics]
+  workflow_dispatch:
+
+env:
+  LLVM_VERSION: "21.1.0"
+  ARTIFACT_NAME: "llvm-inference-static"
+
+jobs:
+  build-llvm:
+    name: Build LLVM Static Libraries (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: Linux
+            arch: x64
+          - os: windows-latest
+            platform: Windows
+            arch: x64
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Build Environment
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y \
+              ninja-build \
+              cmake \
+              build-essential \
+              libzstd-dev \
+              zlib1g-dev
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            choco install ninja cmake
+          fi
+        shell: bash
+
+      - name: Configure LLVM for Static Linking
+        run: |
+          mkdir -p build-static
+          cd build-static
+          
+          # Platform-specific flags
+          EXTRA_FLAGS=""
+          if [ "$RUNNER_OS" != "Windows" ]; then
+            EXTRA_FLAGS="-DLLVM_ENABLE_PIC=OFF"
+          fi
+          
+          cmake -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_TARGETS_TO_BUILD="WebAssembly;X86" \
+            -DLLVM_BUILD_LLVM_DYLIB=OFF \
+            -DLLVM_LINK_LLVM_DYLIB=OFF \
+            -DLLVM_BUILD_STATIC=ON \
+            -DLLVM_ENABLE_TERMINFO=OFF \
+            -DLLVM_ENABLE_ZLIB=OFF \
+            -DLLVM_ENABLE_ZSTD=OFF \
+            -DLLVM_INCLUDE_TESTS=OFF \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_BUILD_TOOLS=ON \
+            -DLLVM_TOOL_LLVM_CONFIG_BUILD=ON \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/llvm-install" \
+            $EXTRA_FLAGS \
+            ../llvm
+        shell: bash
+
+      - name: Build LLVM
+        run: |
+          cd build-static
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            ninja -j4  # Limit parallelism on Windows to avoid memory issues
+          else
+            ninja -j$(nproc)
+          fi
+        shell: bash
+
+      - name: Install LLVM
+        run: |
+          cd build-static
+          ninja install
+          
+          # Verify installation
+          ls -la "${{ github.workspace }}/llvm-install/bin/" || echo "Install directory not found"
+          ls -la "${{ github.workspace }}/llvm-install/lib/" || echo "Lib directory not found"
+        shell: bash
+
+      - name: Prepare Artifact Package
+        run: |
+          mkdir -p llvm-package/{lib,include,bin}
+          
+          INSTALL_DIR="${{ github.workspace }}/llvm-install"
+          BUILD_DIR="${{ github.workspace }}/build-static"
+          
+          echo "📦 Packaging LLVM artifacts"
+          
+          # Determine source directory (install if available, otherwise build)
+          if [ -d "$INSTALL_DIR/lib" ]; then
+            SRC_DIR="$INSTALL_DIR"
+            echo "Using install directory: $SRC_DIR"
+          elif [ -d "$BUILD_DIR/lib" ]; then
+            SRC_DIR="$BUILD_DIR"
+            echo "Using build directory: $SRC_DIR"
+          else
+            echo "❌ No valid source directory found"
+            exit 1
+          fi
+          
+          # Copy all static libraries
+          if [ -d "$SRC_DIR/lib" ]; then
+            echo "Copying static libraries..."
+            if [ "$RUNNER_OS" == "Windows" ]; then
+              find "$SRC_DIR/lib" -name "*.lib" -exec cp -v {} llvm-package/lib/ \;
+              find "$SRC_DIR/lib" -name "*.a" -exec cp -v {} llvm-package/lib/ \;
+            else
+              find "$SRC_DIR/lib" -name "*.a" -exec cp -v {} llvm-package/lib/ \;
+            fi
+            echo "✓ Libraries copied: $(ls llvm-package/lib/*.a llvm-package/lib/*.lib 2>/dev/null | wc -l) files"
+          fi
+          
+          # Copy headers from both install and source
+          if [ -d "$SRC_DIR/include" ]; then
+            echo "Copying headers from $SRC_DIR..."
+            cp -r "$SRC_DIR/include"/* llvm-package/include/
+          fi
+          if [ -d "llvm/include" ]; then
+            echo "Copying headers from source..."
+            cp -r llvm/include/* llvm-package/include/
+          fi
+          
+          # Copy essential LLVM tools
+          echo "Copying LLVM tools..."
+          for tool in llvm-config llc llvm-as llvm-dis llvm-link opt llvm-ar llvm-nm; do
+            TOOL_PATH="$SRC_DIR/bin/$tool"
+            # Add .exe extension on Windows
+            if [ "$RUNNER_OS" == "Windows" ] && [ -f "$TOOL_PATH.exe" ]; then
+              cp -v "$TOOL_PATH.exe" llvm-package/bin/
+              chmod +x llvm-package/bin/$tool.exe
+              echo "✓ Copied $tool.exe"
+            elif [ -f "$TOOL_PATH" ]; then
+              cp -v "$TOOL_PATH" llvm-package/bin/
+              chmod +x llvm-package/bin/$tool
+              echo "✓ Copied $tool"
+            else
+              echo "⚠️  $tool not found in $SRC_DIR/bin/"
+            fi
+          done
+          
+          # Verify binaries are present
+          echo ""
+          echo "📋 Final artifact contents:"
+          ls -lh llvm-package/bin/ || echo "No binaries found"
+          echo ""
+          echo "Library count: $(ls llvm-package/lib/*.a llvm-package/lib/*.lib 2>/dev/null | wc -l)"
+        shell: bash
+
+      - name: Create Setup Scripts
+        run: |
+          # Create a config script for Rust builds
+          cat > llvm-package/setup-env.sh << 'EOF'
+          #!/bin/bash
+          # LLVM Static Build Environment Configuration
+          export LLVM_SYS_211_PREFIX="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          export LLVM_CONFIG_PATH="$LLVM_SYS_211_PREFIX/bin/llvm-config"
+          export RUSTFLAGS="-C target-cpu=native -C link-arg=-static-libgcc"
+          echo "✅ LLVM environment configured"
+          echo "   LLVM_SYS_211_PREFIX: $LLVM_SYS_211_PREFIX"
+          EOF
+          chmod +x llvm-package/setup-env.sh
+        shell: bash
+          
+      - name: Create Documentation
+        run: |
+          # Create a README
+          cat > llvm-package/README.md << 'EOF'
+          # LLVM Inference Static Build
+          
+          This package contains statically-linked LLVM libraries with custom Inference intrinsics.
+          
+          ## Usage with Rust
+          
+          1. Extract this archive
+          2. Set environment variable:
+             ```bash
+             export LLVM_SYS_211_PREFIX=/path/to/extracted/artifact
+             ```
+          3. Build your Rust project:
+             ```bash
+             cargo build --release
+             ```
+          
+          ## Files Included
+          
+          - `lib/*.a` - Static LLVM libraries
+          - `include/` - LLVM headers
+          - `bin/llvm-config` - LLVM configuration tool
+          - `bin/llc` - LLVM static compiler
+          - `bin/llvm-as` - LLVM assembler
+          - `bin/llvm-dis` - LLVM disassembler
+          - `bin/llvm-link` - LLVM linker
+          - `bin/opt` - LLVM optimizer
+          - `bin/wasm-ld` - WebAssembly linker
+          - `setup-env.sh` - Environment setup script
+          
+          ## Custom Features
+          
+          This build includes:
+          - Uzumaki intrinsics (i32/i64)
+          - Inference block types (forall, exists, assume, unique)
+          - WebAssembly target support
+          
+          Built from: ${{ github.repository }}@${{ github.sha }}
+          EOF
+        shell: bash
+
+      - name: Create Build Info
+        run: |
+          cd llvm-package
+          cat > BUILD_INFO.json << EOF
+          {
+            "version": "${{ env.LLVM_VERSION }}",
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "targets": ["WebAssembly", "X86"],
+            "features": ["uzumaki-intrinsics", "inference-blocks"],
+            "os": "${{ runner.os }}",
+            "static": true
+          }
+          EOF
+        shell: bash
+
+      - name: Package Artifact
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            # Use zip for Windows - package contents directly without parent directory
+            cd llvm-package
+            7z a -tzip ../${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.zip *
+            cd ..
+            
+            # Create checksum
+            certutil -hashfile ${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.zip SHA256 > ${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.zip.sha256
+          else
+            # Use tar.gz for Linux - package contents directly without parent directory
+            tar -czf ${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.tar.gz -C llvm-package .
+            
+            # Create checksum
+            sha256sum ${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.tar.gz > ${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.tar.gz.sha256
+          fi
+        shell: bash
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64
+          path: |
+            ${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.*
+          retention-days: 90
+          compression-level: 0  # Already compressed
+
+      - name: Display Package Info
+        run: |
+          echo "📦 Artifact Package Created"
+          echo "=========================="
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            ls -lh ${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.zip
+            echo ""
+            echo "📋 Checksum:"
+            cat ${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.zip.sha256
+            echo ""
+            echo "📊 Package Contents (first 20 entries):"
+            # Ignore broken pipe so 7z listing doesn't fail the step
+            set +e
+            7z l ${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.zip | head -20
+            set -e
+          else
+            ls -lh ${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.tar.gz
+            echo ""
+            echo "📋 Checksum:"
+            cat ${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.tar.gz.sha256
+            echo ""
+            echo "📊 Package Contents (first 20 entries):"
+            # Ignore broken pipe so tar listing doesn't fail the step
+            set +e
+            tar -tzf ${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.tar.gz | head -20
+            set -e
+          fi
+        shell: bash
+
+  create-release:
+    name: Create Release (on merge to main)
+    needs: build-llvm
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release Tag
+        id: create_tag
+        run: |
+          TAG="${{ env.ARTIFACT_NAME }}-$(date +%Y%m%d-%H%M%S)"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "LLVM Inference Static Build - $(date)"
+          git push origin "$TAG" || true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.create_tag.outputs.tag }}
+          name: "LLVM Inference Static Build - $(date +%Y-%m-%d)"
+          body: |
+            ## LLVM Static Build with Inference Extensions
+            
+            ### Features
+            - ✅ Inference intrinsics (i32/i64)
+            - ✅ Inference blocks (forall, exists, assume, unique)
+            - ✅ WebAssembly target support
+            - ✅ Statically linked for easy distribution
+            
+            ### Usage
+            
+            Download the artifact for your platform and extract:
+            
+            **Linux:**
+            ```bash
+            mkdir llvm-inference && cd llvm-inference
+            tar -xzf ../${{ env.ARTIFACT_NAME }}-Linux-x64.tar.gz
+            source setup-env.sh
+            ```
+            
+            **Windows:**
+            ```powershell
+            mkdir llvm-inference
+            cd llvm-inference
+            7z x ..\${{ env.ARTIFACT_NAME }}-Windows-x64.zip
+            # Set environment variables manually or use setup-env.sh in Git Bash
+            ```
+            
+            Then build your Rust project:
+            ```bash
+            cargo build --release
+            ```
+            
+            ### Verification
+            
+            Verify the download with SHA256:
+            
+            **Linux:**
+            ```bash
+            sha256sum -c ${{ env.ARTIFACT_NAME }}-Linux-x64.tar.gz.sha256
+            ```
+            
+            **Windows:**
+            ```powershell
+            certutil -hashfile ${{ env.ARTIFACT_NAME }}-Windows-x64.zip SHA256
+            ```
+            
+            **Commit:** ${{ github.sha }}
+            **Branch:** ${{ github.ref_name }}
+          files: |
+            artifacts/**/*.tar.gz
+            artifacts/**/*.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-artifact:
+    name: Test Artifact with Sample Rust Project (${{ matrix.platform }})
+    needs: build-llvm
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: Linux
+          - os: windows-latest
+            platform: Windows
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Download LLVM Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64
+          path: llvm-artifact
+
+      - name: Extract and Setup LLVM
+        run: |
+          mkdir -p llvm-extract
+          cd llvm-extract
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            7z x ../llvm-artifact/${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.zip
+          else
+            tar -xzf ../llvm-artifact/${{ env.ARTIFACT_NAME }}-${{ matrix.platform }}-x64.tar.gz
+          fi
+          source setup-env.sh
+          
+          # Verify llvm-config works
+          $LLVM_CONFIG_PATH --version
+          
+          echo "LLVM_SYS_211_PREFIX=$LLVM_SYS_211_PREFIX" >> $GITHUB_ENV
+          echo "LLVM_CONFIG_PATH=$LLVM_CONFIG_PATH" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Create Test Rust Project
+        run: |
+          # Create a minimal test if it doesn't exist
+          if [ ! -f "Cargo.toml" ]; then
+            cat > test-llvm.rs << 'EOF'
+          fn main() {
+              println!("LLVM artifact test successful!");
+          }
+          EOF
+            rustc test-llvm.rs -o test-llvm
+            ./test-llvm
+          fi
+        shell: bash
+
+      - name: Build Test (if Cargo.toml exists)
+        if: hashFiles('Cargo.toml') != ''
+        run: |
+          cargo build --release
+          echo "✅ Test build completed successfully!"

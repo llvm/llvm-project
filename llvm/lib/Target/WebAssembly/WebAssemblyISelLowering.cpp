@@ -1654,9 +1654,13 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   case ISD::INSERT_VECTOR_ELT:
     return LowerAccessVectorElement(Op, DAG);
   case ISD::INTRINSIC_VOID:
-  case ISD::INTRINSIC_WO_CHAIN:
   case ISD::INTRINSIC_W_CHAIN:
-    return LowerIntrinsic(Op, DAG);
+  case ISD::INTRINSIC_WO_CHAIN: {
+    SDValue Res = LowerIntrinsic(Op, DAG);
+    if (Res.getNode())
+      return Res;
+    return SDValue();
+  }
   case ISD::SIGN_EXTEND_INREG:
     return LowerSIGN_EXTEND_INREG(Op, DAG);
   case ISD::ZERO_EXTEND_VECTOR_INREG:
@@ -2204,7 +2208,31 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
 
   switch (IntNo) {
   default:
-    return SDValue(); // Don't custom lower most intrinsics.
+    // Don't custom lower most intrinsics.
+    return SDValue();
+
+  case Intrinsic::wasm_uzumaki_i32:
+    return DAG.getNode(WebAssemblyISD::UZUMAKI_I32, DL, MVT::i32);
+  case Intrinsic::wasm_uzumaki_i64:
+    return DAG.getNode(WebAssemblyISD::UZUMAKI_I64, DL, MVT::i64);
+
+  // Inference block intrinsics - lower to WebAssemblyISD nodes
+  case Intrinsic::wasm_forall_start:
+    return DAG.getNode(WebAssemblyISD::BLOCK_FORALL, DL, MVT::Other, Op.getOperand(0));
+  case Intrinsic::wasm_forall_end:
+    return DAG.getNode(WebAssemblyISD::BLOCK_FORALL_END, DL, MVT::Other, Op.getOperand(0));
+  case Intrinsic::wasm_exists_start:
+    return DAG.getNode(WebAssemblyISD::BLOCK_EXISTS, DL, MVT::Other, Op.getOperand(0));
+  case Intrinsic::wasm_exists_end:
+    return DAG.getNode(WebAssemblyISD::BLOCK_EXISTS_END, DL, MVT::Other, Op.getOperand(0));
+  case Intrinsic::wasm_assume_start:
+    return DAG.getNode(WebAssemblyISD::BLOCK_ASSUME, DL, MVT::Other, Op.getOperand(0));
+  case Intrinsic::wasm_assume_end:
+    return DAG.getNode(WebAssemblyISD::BLOCK_ASSUME_END, DL, MVT::Other, Op.getOperand(0));
+  case Intrinsic::wasm_unique_start:
+    return DAG.getNode(WebAssemblyISD::BLOCK_UNIQUE, DL, MVT::Other, Op.getOperand(0));
+  case Intrinsic::wasm_unique_end:
+    return DAG.getNode(WebAssemblyISD::BLOCK_UNIQUE_END, DL, MVT::Other, Op.getOperand(0));
 
   case Intrinsic::wasm_lsda: {
     auto PtrVT = getPointerTy(MF.getDataLayout());

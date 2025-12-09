@@ -645,6 +645,42 @@ void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
                                               Subtarget->getFeatureBits());
 
   switch (MI->getOpcode()) {
+  case WebAssembly::UZUMAKI_I32: {
+    OutStreamer->emitIntValue(0xFC, 1);
+    OutStreamer->emitIntValue(0x31, 1);
+    break;
+  }
+  case WebAssembly::UZUMAKI_I64: {
+    OutStreamer->emitIntValue(0xFC, 1);
+    OutStreamer->emitIntValue(0x32, 1);
+    break;
+  }
+  // Inference block instructions
+  case WebAssembly::INFERENCE_FORALL: {
+    OutStreamer->emitIntValue(0xFC, 1);
+    OutStreamer->emitIntValue(0x3A, 1);
+    // Emit block type (0x40 for void)
+    OutStreamer->emitIntValue(0x40, 1);
+    break;
+  }
+  case WebAssembly::INFERENCE_EXISTS: {
+    OutStreamer->emitIntValue(0xFC, 1);
+    OutStreamer->emitIntValue(0x3B, 1);
+    OutStreamer->emitIntValue(0x40, 1);
+    break;
+  }
+  case WebAssembly::INFERENCE_ASSUME: {
+    OutStreamer->emitIntValue(0xFC, 1);
+    OutStreamer->emitIntValue(0x3C, 1);
+    OutStreamer->emitIntValue(0x40, 1);
+    break;
+  }
+  case WebAssembly::INFERENCE_UNIQUE: {
+    OutStreamer->emitIntValue(0xFC, 1);
+    OutStreamer->emitIntValue(0x3D, 1);
+    OutStreamer->emitIntValue(0x40, 1);
+    break;
+  }
   case WebAssembly::ARGUMENT_i32:
   case WebAssembly::ARGUMENT_i32_S:
   case WebAssembly::ARGUMENT_i64:

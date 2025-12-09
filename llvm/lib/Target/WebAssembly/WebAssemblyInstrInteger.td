@@ -86,6 +86,16 @@ defm CLZ : UnaryInt<ctlz, "clz ", 0x67, 0x79>;
 defm CTZ : UnaryInt<cttz, "ctz ", 0x68, 0x7a>;
 defm POPCNT : UnaryInt<ctpop, "popcnt", 0x69, 0x7b>;
 
+// Uzumaki custom value operations: nullary nodes producing a value.
+// These are matched directly from the custom SDNodes with no operands;
+// the actual opcode bytes are emitted in WebAssemblyAsmPrinter.
+defm UZUMAKI_I32 : I<(outs I32:$dst), (ins), (outs), (ins),
+                     [(set I32:$dst, (WebAssemblyuzumaki_i32))],
+                     "i32.uzumaki\t$dst", "i32.uzumaki", 0x00>;
+defm UZUMAKI_I64 : I<(outs I64:$dst), (ins), (outs), (ins),
+                     [(set I64:$dst, (WebAssemblyuzumaki_i64))],
+                     "i64.uzumaki\t$dst", "i64.uzumaki", 0x00>;
+
 defm EQZ_I32 : I<(outs I32:$dst), (ins I32:$src), (outs), (ins),
                  [(set I32:$dst, (setcc I32:$src, 0, SETEQ))],
                  "i32.eqz \t$dst, $src", "i32.eqz", 0x45>;

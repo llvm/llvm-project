@@ -118,6 +118,46 @@ def int_wasm_trunc_saturate_unsigned :
   DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty],
                         [IntrNoMem, IntrSpeculatable]>;
 
+// Uzumaki intrinsics
+
+def int_wasm_uzumaki_i32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
+
+def int_wasm_uzumaki_i64 :
+  DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrHasSideEffects]>;
+
+//===----------------------------------------------------------------------===//
+// Inference block intrinsics
+//===----------------------------------------------------------------------===//
+
+// These are block-like intrinsics that take a function pointer or code block
+// For simplicity in LLVM IR, we model them as markers that the backend
+// transforms into proper blocks
+
+def int_wasm_forall_start :
+  DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+
+def int_wasm_forall_end :
+  DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+
+def int_wasm_exists_start :
+  DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+
+def int_wasm_exists_end :
+  DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+
+def int_wasm_assume_start :
+  DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+
+def int_wasm_assume_end :
+  DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+
+def int_wasm_unique_start :
+  DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+
+def int_wasm_unique_end :
+  DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+
 //===----------------------------------------------------------------------===//
 // Exception handling intrinsics
 //===----------------------------------------------------------------------===//

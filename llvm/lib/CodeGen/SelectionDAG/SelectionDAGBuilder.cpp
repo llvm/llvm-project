@@ -3428,6 +3428,26 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
       break;
     }
+    // Inference block intrinsics: handle them like wasm_throw/wasm_rethrow
+    // to prevent crashes in visitTargetIntrinsic
+    case Intrinsic::wasm_forall_start:
+    case Intrinsic::wasm_forall_end:
+    case Intrinsic::wasm_exists_start:
+    case Intrinsic::wasm_exists_end:
+    case Intrinsic::wasm_assume_start:
+    case Intrinsic::wasm_assume_end:
+    case Intrinsic::wasm_unique_start:
+    case Intrinsic::wasm_unique_end: {
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      unsigned IntrID = cast<IntrinsicInst>(I).getIntrinsicID();
+      std::array<SDValue, 2> Ops = {
+          getControlRoot(), // inchain for the terminator node
+          DAG.getTargetConstant(IntrID, getCurSDLoc(),
+                                TLI.getPointerTy(DAG.getDataLayout()))};
+      SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
+      DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
+      break;
+    }
     }
   } else if (I.hasDeoptState()) {
     // Currently we do not lower any intrinsic calls with deopt operand bundles.

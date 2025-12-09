@@ -205,3 +205,54 @@ let isTerminator = 1, hasCtrlDep = 1, hasSideEffects = 1 in
 defm DELEGATE : NRI<(outs), (ins bb_op:$dst), [], "delegate \t $dst", 0x18>;
 
 } // Predicates = [HasExceptionHandling]
+
+//===----------------------------------------------------------------------===//
+// Inference block instructions
+//===----------------------------------------------------------------------===//
+
+// FORALL block - considers all execution paths
+let isTerminator = 0, isBarrier = 0, hasCtrlDep = 1, Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
+defm BLOCK_FORALL : NRI<(outs), (ins Signature:$sig),
+                         [],
+                         "block.forall\t$sig", 0x00>;
+}
+
+// EXISTS block - considers existence of execution path
+let isTerminator = 0, isBarrier = 0, hasCtrlDep = 1, Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
+defm BLOCK_EXISTS : NRI<(outs), (ins Signature:$sig),
+                         [],
+                         "block.exists\t$sig", 0x00>;
+}
+
+// ASSUME block - defines assumptions about program state
+let isTerminator = 0, isBarrier = 0, hasCtrlDep = 1, Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
+defm BLOCK_ASSUME : NRI<(outs), (ins Signature:$sig),
+                         [],
+                         "block.assume\t$sig", 0x00>;
+}
+
+// UNIQUE block - assumes unique execution path
+let isTerminator = 0, isBarrier = 0, hasCtrlDep = 1, Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
+defm BLOCK_UNIQUE : NRI<(outs), (ins Signature:$sig),
+                         [],
+                         "block.unique\t$sig", 0x00>;
+}
+
+// Inference block instructions: side-effect operations like exception handling
+let hasCtrlDep = 1, hasSideEffects = 1, Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
+defm INFERENCE_FORALL : NRI<(outs), (ins), [], "forall", 0x00>;
+defm INFERENCE_EXISTS : NRI<(outs), (ins), [], "exists", 0x00>;
+defm INFERENCE_ASSUME : NRI<(outs), (ins), [], "assume", 0x00>;
+defm INFERENCE_UNIQUE : NRI<(outs), (ins), [], "unique", 0x00>;
+
+// End markers for inference blocks (generate regular 'end' instruction)  
+defm INFERENCE_FORALL_END : NRI<(outs), (ins), [], "end", 0x0b>;
+defm INFERENCE_EXISTS_END : NRI<(outs), (ins), [], "end", 0x0b>;
+defm INFERENCE_ASSUME_END : NRI<(outs), (ins), [], "end", 0x0b>;
+defm INFERENCE_UNIQUE_END : NRI<(outs), (ins), [], "end", 0x0b>;
+}
+
+// Patterns to connect chain-based SDNodes to inference block instructions  
+// Note: These patterns expect chain inputs but our instructions have no operands
+// This approach may need a different strategy
+

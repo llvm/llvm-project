@@ -113,6 +113,9 @@ def SDT_WebAssemblyWrapper    : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                      SDTCisPtrTy<0>]>;
 def SDT_WebAssemblyGlobalGet  : SDTypeProfile<1, 1, [SDTCisPtrTy<1>]>;
 def SDT_WebAssemblyGlobalSet  : SDTypeProfile<0, 2, [SDTCisPtrTy<1>]>;
+def SDT_WebAssemblyUzumakiI32 : SDTypeProfile<1, 0, [SDTCisVT<0, i32>]>;
+def SDT_WebAssemblyUzumakiI64 : SDTypeProfile<1, 0, [SDTCisVT<0, i64>]>;
+def SDT_WebAssemblyChainVoid  : SDTypeProfile<1, 1, []>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Nodes.
@@ -142,6 +145,31 @@ def WebAssemblyglobal_get :
 def WebAssemblyglobal_set :
     SDNode<"WebAssemblyISD::GLOBAL_SET", SDT_WebAssemblyGlobalSet,
            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def WebAssemblyuzumaki_i32 : SDNode<"WebAssemblyISD::UZUMAKI_I32",
+                  SDT_WebAssemblyUzumakiI32>;
+def WebAssemblyuzumaki_i64 : SDNode<"WebAssemblyISD::UZUMAKI_I64",
+                  SDT_WebAssemblyUzumakiI64>;
+
+// Inference block SDNodes
+def WebAssemblyforall_start : SDNode<"WebAssemblyISD::BLOCK_FORALL",
+                  SDT_WebAssemblyChainVoid, [SDNPHasChain]>;
+def WebAssemblyexists_start : SDNode<"WebAssemblyISD::BLOCK_EXISTS",
+                  SDT_WebAssemblyChainVoid, [SDNPHasChain]>;
+def WebAssemblyassume_start : SDNode<"WebAssemblyISD::BLOCK_ASSUME",
+                  SDT_WebAssemblyChainVoid, [SDNPHasChain]>;
+def WebAssemblyunique_start : SDNode<"WebAssemblyISD::BLOCK_UNIQUE",
+                  SDT_WebAssemblyChainVoid, [SDNPHasChain]>;
+
+// Inference block end markers (use regular 'end' instruction)
+def WebAssemblyforall_end : SDNode<"WebAssemblyISD::BLOCK_FORALL_END",
+                  SDT_WebAssemblyChainVoid, [SDNPHasChain]>;
+def WebAssemblyexists_end : SDNode<"WebAssemblyISD::BLOCK_EXISTS_END",
+                  SDT_WebAssemblyChainVoid, [SDNPHasChain]>;
+def WebAssemblyassume_end : SDNode<"WebAssemblyISD::BLOCK_ASSUME_END",
+                  SDT_WebAssemblyChainVoid, [SDNPHasChain]>;
+def WebAssemblyunique_end : SDNode<"WebAssemblyISD::BLOCK_UNIQUE_END",
+                  SDT_WebAssemblyChainVoid, [SDNPHasChain]>;
+
 def WebAssemblylocal_get :
     SDNode<"WebAssemblyISD::LOCAL_GET", SDT_WebAssemblyLocalGet,
            [SDNPHasChain, SDNPMayLoad]>;
