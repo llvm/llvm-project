@@ -44,7 +44,8 @@ void AMDGPUInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
 void AMDGPUInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                   StringRef Annot, const MCSubtargetInfo &STI,
                                   raw_ostream &OS) {
-  printInstruction(MI, Address, STI, OS);
+  if (!PrintAliases || !printAliasInstr(MI, Address, STI, OS))
+    printInstruction(MI, Address, STI, OS);
   printAnnotation(OS, Annot);
 }
 
@@ -1944,4 +1945,5 @@ void AMDGPUInstPrinter::printScaleSel(const MCInst *MI, unsigned OpNo,
   O << " scale_sel:" << formatDec(Imm);
 }
 
+#define PRINT_ALIAS_INSTR
 #include "AMDGPUGenAsmWriter.inc"
