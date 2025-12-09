@@ -541,7 +541,7 @@ MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
   if (Source.NeedBranchValidation) {
     if (Target.CurrentState == BinaryFunction::State::Disassembled &&
         !Target.getInstructionAtOffset(Offset)) {
-      this->outs()
+      this->errs()
           << "BOLT-WARNING: corrupted control flow detected in function "
           << Source
           << ": an external branch/call targets an invalid instruction "
@@ -549,7 +549,7 @@ MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
       IsValid = false;
     }
     if (Target.isInConstantIsland(Address)) {
-      this->outs() << "BOLT-WARNING: ignoring entry point at address 0x"
+      this->errs() << "BOLT-WARNING: ignoring entry point at address 0x"
                    << Twine::utohexstr(Address)
                    << " in constant island of function " << Target << '\n';
       IsValid = false;

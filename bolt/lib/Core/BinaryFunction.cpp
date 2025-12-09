@@ -1927,7 +1927,7 @@ bool BinaryFunction::validateInternalBranches() {
 
     if (!getInstructionAtOffset(Offset) ||
         isInConstantIsland(getAddress() + Offset)) {
-      BC.outs() << "BOLT-WARNING: corrupted control flow detected in function "
+      BC.errs() << "BOLT-WARNING: corrupted control flow detected in function "
                 << *this << ": an internal branch/call targets an invalid "
                 << "instruction at address 0x"
                 << Twine::utohexstr(getAddress() + Offset) << "\n";
