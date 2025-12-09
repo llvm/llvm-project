@@ -1921,7 +1921,7 @@ void BinaryContext::preprocessDebugInfo() {
               dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_dwo_name),
                               "<missing DW_AT_dwo_name>");
           this->errs() << "BOLT-ERROR: unable to load " << DWOName
-                       << " for DWO_id " << Twine::utohexstr(*DWOID) << '\n';
+                       << " for DWO_id 0x" << Twine::utohexstr(*DWOID) << '\n';
           NumMissingDWOs++;
           continue;
         }
