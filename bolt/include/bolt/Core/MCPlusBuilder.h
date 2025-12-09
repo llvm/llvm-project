@@ -1896,7 +1896,7 @@ public:
 
   /// Checks if the indirect call / jump is accepted by the landing pad at the
   /// start of the target BasicBlock.
-  virtual bool isBTIVariantCoveringCall(MCInst &Call, MCInst &Pad) const {
+  virtual bool isCallCoveredByBTI(MCInst &Call, MCInst &Pad) const {
     llvm_unreachable("not implemented");
     return false;
   }

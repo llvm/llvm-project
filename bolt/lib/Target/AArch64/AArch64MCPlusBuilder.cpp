@@ -2808,7 +2808,7 @@ public:
     Inst.addOperand(MCOperand::createImm(HintNum));
   }
 
-  bool isBTIVariantCoveringCall(MCInst &Call, MCInst &Pad) const override {
+  bool isCallCoveredByBTI(MCInst &Call, MCInst &Pad) const override {
     assert((isIndirectCall(Call) || isIndirectBranch(Call)) &&
            "Not an indirect call or branch.");
 
@@ -2840,7 +2840,7 @@ public:
     auto II = BB.getFirstNonPseudo();
     // Only check the first instruction for non-empty BasicBlocks
     bool Empty = (II == BB.end());
-    if (!Empty && isBTIVariantCoveringCall(Call, *II))
+    if (!Empty && isCallCoveredByBTI(Call, *II))
       return;
     // A BLR can be accepted by a BTI c.
     if (isIndirectCall(Call)) {
