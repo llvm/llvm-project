@@ -137,7 +137,7 @@ public:
   ///                           arguments for dependencies.
   /// @return An instance of \c TranslationUnitDeps if the scan is successful.
   ///         Otherwise it returns an error.
-  llvm::Expected<clang::dependencies::TranslationUnitDeps>
+  llvm::Expected<dependencies::TranslationUnitDeps>
   computeDependenciesByNameWithContextOrError(
       StringRef ModuleName,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
