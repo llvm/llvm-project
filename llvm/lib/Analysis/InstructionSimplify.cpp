@@ -7306,10 +7306,9 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
     Value *EVL = Call->getArgOperand(2);
 
     Value *X;
-    // vp.reverse(vp.reverse(X)) == X (with all ones mask and matching EVL)
-    if (match(Mask, m_AllOnes()) &&
-        match(Vec, m_Intrinsic<Intrinsic::experimental_vp_reverse>(
-                       m_Value(X), m_AllOnes(), m_Specific(EVL))))
+    // vp.reverse(vp.reverse(X)) == X (mask doesn't matter)
+    if (match(Vec, m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                       m_Value(X), m_Value(), m_Specific(EVL))))
       return X;
 
     // vp.reverse(splat(X)) -> splat(X) (regardless of mask and EVL)
