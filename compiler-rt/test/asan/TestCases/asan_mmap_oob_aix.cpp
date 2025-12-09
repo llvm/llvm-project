@@ -1,5 +1,5 @@
 // RUN: %clangxx_asan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
-
+// REQUIRES: system-aix
 #include <sys/mman.h>
 
 #define ASAN_AIX_SHADOW_OFFSET 0x0a01000000000000ULL

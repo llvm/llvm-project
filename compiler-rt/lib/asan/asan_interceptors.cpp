@@ -47,10 +47,6 @@
 #    define ASAN_PTHREAD_CREATE_VERSION "GLIBC_2.2"
 #  endif
 
-#if !defined(MAP_FAILED)
-#  define MAP_FAILED ((void *)-1)
-#endif
-
 #define MAP_FIXED        0x0010 /* [MF|SHM] interpret addr exactly */
 
 namespace __asan {
@@ -193,7 +189,7 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
   if (UNLIKELY(__builtin_add_overflow(start, (uptr)length, &end_excl))) {
     GET_STACK_TRACE_FATAL_HERE;
     ReportMmapAddrOverflow(start, length, &stack);
-    return MAP_FAILED;
+    return (void *)-1;
   }
 
   if (flags & MAP_FIXED) {
@@ -204,13 +200,13 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
       if (common_flags()->abort_on_error) {
         Abort();
       }
-      return MAP_FAILED;
+      return (void *)-1;
     }
     if (!AddrIsInMem(start) || !AddrIsInMem(end_excl - 1)) {
       errno = errno_ENOMEM;
       GET_STACK_TRACE_FATAL_HERE;
       ReportMmapOutsideRange(start, end_excl, &stack);
-      return MAP_FAILED;
+      return (void *)-1;
     }
   } else {
     if (addr && __asan::IntersectsShadowOrGap(start, start + 1))
@@ -218,7 +214,7 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
   }
 
   void *res = real_mmap(addr, length, prot, flags, fd, offset);
-  if (res != MAP_FAILED) {
+  if (res != (void *)-1) {
     const uptr beg = reinterpret_cast<uptr>(res);
     const uptr page = GetPageSize();
     const uptr sz = RoundUpTo(length, page);
