@@ -638,7 +638,12 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
     return child_valobj_sp;
   }
 
-  int64_t signed_child_idx = idx->GetValueAsSigned(0);
+  bool success;
+  int64_t signed_child_idx = idx->GetValueAsSigned(0, &success);
+  if (!success)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "could not get the index as an integer",
+        node->GetIndex()->GetLocation());
   return base->GetSyntheticArrayMember(signed_child_idx, true);
 }
 
@@ -663,8 +668,12 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
         m_expr, "bit index is not an integer", node->GetLocation());
   }
 
-  int64_t first_index = first_idx->GetValueAsSigned(0);
-  int64_t last_index = last_idx->GetValueAsSigned(0);
+  bool success_first, success_last;
+  int64_t first_index = first_idx->GetValueAsSigned(0, &success_first);
+  int64_t last_index = last_idx->GetValueAsSigned(0, &success_last);
+  if (!success_first || !success_last)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "could not get the index as an integer", node->GetLocation());
 
   // if the format given is [high-low], swap range
   if (first_index > last_index)
