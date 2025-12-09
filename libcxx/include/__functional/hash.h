@@ -435,7 +435,7 @@ struct hash : public __hash_impl<_Tp> {};
 
 template <>
 struct hash<nullptr_t> : public __unary_function<nullptr_t, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(nullptr_t) const _NOEXCEPT { return 662607004ull; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t operator()(nullptr_t) const _NOEXCEPT { return 662607004ull; }
 };
 
 #ifndef _LIBCPP_CXX03_LANG
