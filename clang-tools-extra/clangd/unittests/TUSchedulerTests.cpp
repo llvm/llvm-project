@@ -1329,7 +1329,6 @@ TEST_F(TUSchedulerTests, IncluderCache) {
                      OK = testPath("ok.h"),
                      NotIncluded = testPath("not_included.h");
   struct NoHeadersCDB : public GlobalCompilationDatabase {
-
     std::optional<tooling::CompileCommand>
     getCompileCommand(PathRef File) const override {
       if (File == NoCmd || File == NotIncluded || FailAll)
