@@ -1879,12 +1879,12 @@ attributes #2 = { nounwind "target-cpu"="tahiti" }
 ; HSA: [[META3]] = !{i64 128}
 ; HSA: [[META4]] = !{i64 1024}
 ; HSA: [[META5]] = !{[[META6:![0-9]+]]}
-; HSA: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]], !"kern_noalias_global_ptr: argument 0"}
+; HSA: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]], !"ptr"}
 ; HSA: [[META7]] = distinct !{[[META7]], !"kern_noalias_global_ptr"}
 ; HSA: [[META8]] = !{[[META9:![0-9]+]], [[META11:![0-9]+]]}
-; HSA: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]], !"kern_noalias_global_ptr_x2: argument 0"}
+; HSA: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]], !"ptr0"}
 ; HSA: [[META10]] = distinct !{[[META10]], !"kern_noalias_global_ptr_x2"}
-; HSA: [[META11]] = distinct !{[[META11]], [[META10]], !"kern_noalias_global_ptr_x2: argument 1"}
+; HSA: [[META11]] = distinct !{[[META11]], [[META10]], !"ptr1"}
 ;.
 ; MESA: [[META0]] = !{}
 ; MESA: [[RNG1]] = !{i32 0, i32 8}
@@ -1892,10 +1892,10 @@ attributes #2 = { nounwind "target-cpu"="tahiti" }
 ; MESA: [[META3]] = !{i64 128}
 ; MESA: [[META4]] = !{i64 1024}
 ; MESA: [[META5]] = !{[[META6:![0-9]+]]}
-; MESA: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]], !"kern_noalias_global_ptr: argument 0"}
+; MESA: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]], !"ptr"}
 ; MESA: [[META7]] = distinct !{[[META7]], !"kern_noalias_global_ptr"}
 ; MESA: [[META8]] = !{[[META9:![0-9]+]], [[META11:![0-9]+]]}
-; MESA: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]], !"kern_noalias_global_ptr_x2: argument 0"}
+; MESA: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]], !"ptr0"}
 ; MESA: [[META10]] = distinct !{[[META10]], !"kern_noalias_global_ptr_x2"}
-; MESA: [[META11]] = distinct !{[[META11]], [[META10]], !"kern_noalias_global_ptr_x2: argument 1"}
+; MESA: [[META11]] = distinct !{[[META11]], [[META10]], !"ptr1"}
 ;.
