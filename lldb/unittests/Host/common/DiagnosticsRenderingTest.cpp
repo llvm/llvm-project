@@ -10,7 +10,7 @@ class ErrorDisplayTest : public ::testing::Test {};
 
 std::string Render(std::vector<DiagnosticDetail> details) {
   StreamString stream;
-  RenderDiagnosticDetails(stream, 0, true, details);
+  RenderDiagnosticDetails(stream, 0, true, details, true);
   return stream.GetData();
 }
 } // namespace
