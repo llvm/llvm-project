@@ -6167,10 +6167,10 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       else
         Mask = Plan.getTrue();
       auto *StridedLoad = new VPWidenMemIntrinsicRecipe(
-          *cast<LoadInst>(&Ingredient), Intrinsic::experimental_vp_strided_load,
-          {NewPtr, StrideInBytes, Mask, I32VF}, *LoadR, LoadR->getDebugLoc());
+          *cast<LoadInst>(&Ingredient), {NewPtr, StrideInBytes, Mask, I32VF},
+          *LoadR, LoadR->getDebugLoc());
       StridedLoad->insertBefore(LoadR);
-      LoadR->replaceAllUsesWith(StridedLoad->getVPSingleValue());
+      LoadR->replaceAllUsesWith(StridedLoad);
 
       ToErase.push_back(LoadR);
     }

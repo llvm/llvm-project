@@ -1849,6 +1849,8 @@ void VPWidenCallRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 CallInst *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
+  assert(State.VF.isVector() && "not widening");
+
   SmallVector<Type *, 2> TysForDecl;
   // Add return type if intrinsic is overloaded on it.
   if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
@@ -1898,7 +1900,6 @@ CallInst *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
 }
 
 void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
-  assert(State.VF.isVector() && "not widening");
   CallInst *V = createVectorCall(State);
   if (!V->getType()->isVoidTy())
     State.set(this, V);
@@ -1989,60 +1990,18 @@ void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-unsigned VPWidenMemIntrinsicRecipe::getMemoryPointerParamPos() const {
-  Intrinsic::ID IID = getVectorIntrinsicID();
-  if (auto Pos = VPIntrinsic::getMemoryPointerParamPos(IID))
-    return *Pos;
-
-  switch (IID) {
-  case Intrinsic::masked_load:
-  case Intrinsic::masked_gather:
-  case Intrinsic::masked_expandload:
-    return 0;
-  case Intrinsic::masked_store:
-  case Intrinsic::masked_scatter:
-  case Intrinsic::masked_compressstore:
-    return 1;
-  default:
-    llvm_unreachable("unknown vector memory intrinsic");
-  }
-}
-
-unsigned VPWidenMemIntrinsicRecipe::getMaskParamPos() const {
-  Intrinsic::ID IID = getVectorIntrinsicID();
-  if (auto Pos = VPIntrinsic::getMaskParamPos(IID))
-    return *Pos;
-
-  switch (IID) {
-  case Intrinsic::masked_load:
-  case Intrinsic::masked_gather:
-  case Intrinsic::masked_expandload:
-    return 1;
-  case Intrinsic::masked_store:
-  case Intrinsic::masked_scatter:
-  case Intrinsic::masked_compressstore:
-    return 2;
-  default:
-    llvm_unreachable("unknown vector memory intrinsic");
-  }
-}
-
 void VPWidenMemIntrinsicRecipe::execute(VPTransformState &State) {
-  assert(State.VF.isVector() && "not widening");
   CallInst *MemI = createVectorCall(State);
   MemI->addParamAttr(
-      getMemoryPointerParamPos(),
-      Attribute::getWithAlignment(MemI->getContext(), Alignment));
-
-  if (!MemI->getType()->isVoidTy())
-    State.set(this, MemI);
+      0, Attribute::getWithAlignment(MemI->getContext(), Alignment));
+  State.set(this, MemI);
 }
 
 InstructionCost
 VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
                                        VPCostContext &Ctx) const {
+  Type *Ty = toVectorTy(getResultType(), VF);
   const Instruction *Ingredient = getUnderlyingInstr();
-  Type *Ty = toVectorTy(getLoadStoreType(Ingredient), VF);
   const Value *Ptr = getLoadStorePointerOperand(Ingredient);
   return Ctx.TTI.getMemIntrinsicInstrCost(
       MemIntrinsicCostAttributes(getVectorIntrinsicID(), Ty, Ptr,

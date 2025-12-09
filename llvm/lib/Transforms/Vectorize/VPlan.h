@@ -1945,13 +1945,12 @@ class VPWidenMemIntrinsicRecipe final : public VPWidenIntrinsicRecipe {
 
 public:
   // TODO: support StoreInst for strided store
-  VPWidenMemIntrinsicRecipe(LoadInst &LI, Intrinsic::ID VectorIntrinsicID,
-                            ArrayRef<VPValue *> CallArguments,
+  VPWidenMemIntrinsicRecipe(LoadInst &LI, ArrayRef<VPValue *> CallArguments,
                             const VPIRMetadata &MD = {},
                             DebugLoc DL = DebugLoc::getUnknown())
       : VPWidenIntrinsicRecipe(VPRecipeBase::VPWidenMemIntrinsicSC,
-                               VectorIntrinsicID, CallArguments, LI.getType(),
-                               {}, MD, DL),
+                               Intrinsic::experimental_vp_strided_load,
+                               CallArguments, LI.getType(), {}, MD, DL),
         Alignment(LI.getAlign()) {
     setUnderlyingValue(&LI);
   }
@@ -1960,8 +1959,7 @@ public:
 
   VPWidenMemIntrinsicRecipe *clone() override {
     return new VPWidenMemIntrinsicRecipe(*cast<LoadInst>(getUnderlyingInstr()),
-                                         getVectorIntrinsicID(), operands(),
-                                         *this, getDebugLoc());
+                                         operands(), *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenMemIntrinsicSC)
@@ -1973,15 +1971,9 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  /// Return the index of pointer parameter.
-  unsigned getMemoryPointerParamPos() const;
+  void setMask(VPValue *Mask) { setOperand(2, Mask); }
 
-  /// Return the index of mask parameter.
-  unsigned getMaskParamPos() const;
-
-  void setMask(VPValue *Mask) { setOperand(getMaskParamPos(), Mask); }
-
-  VPValue *getMask() const { return getOperand(getMaskParamPos()); }
+  VPValue *getMask() const { return getOperand(2); }
 };
 
 /// A recipe for widening Call instructions using library calls.
