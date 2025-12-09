@@ -869,29 +869,35 @@ class AsmPrinter;
 
 bool DefGenerator::emitDecls(StringRef selectedDialect) {
   emitSourceFileHeader((defType + "Def Declarations").str(), os);
-  llvm::IfDefEmitter scope(os, "GET_" + defType.upper() + "DEF_CLASSES");
-
-  // Output the common "header".
-  os << typeDefDeclHeader;
 
   SmallVector<AttrOrTypeDef, 16> defs;
   collectAllDefs(selectedDialect, defRecords, defs);
   if (defs.empty())
     return false;
+
   {
     DialectNamespaceEmitter nsEmitter(os, defs.front().getDialect());
-
-    // Declare all the def classes first (in case they reference each other).
+    // Declare all the def classes first (in case they reference each other and
+    // for forward declarations).
     for (const AttrOrTypeDef &def : defs) {
       tblgen::emitSummaryAndDescComments(os, def.getSummary(),
                                          def.getDescription());
       os << "class " << def.getCppClassName() << ";\n";
     }
+  }
 
+  llvm::IfDefEmitter scope(os, "GET_" + defType.upper() + "DEF_CLASSES");
+
+  // Output the common "header".
+  os << typeDefDeclHeader;
+
+  {
+    DialectNamespaceEmitter nsEmitter(os, defs.front().getDialect());
     // Emit the declarations.
     for (const AttrOrTypeDef &def : defs)
       DefGen(def).emitDecl(os);
   }
+
   // Emit the TypeID explicit specializations to have a single definition for
   // each of these.
   for (const AttrOrTypeDef &def : defs)
