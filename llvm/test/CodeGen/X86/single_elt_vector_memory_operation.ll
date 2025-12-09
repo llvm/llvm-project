@@ -87,8 +87,8 @@ define void @load_single_256bit_elt_vector(ptr %in, ptr %off, ptr %out) nounwind
 ; SSE-NEXT:    xorps %xmm2, %xmm2
 ; SSE-NEXT:    movaps %xmm2, 48(%rdx)
 ; SSE-NEXT:    movaps %xmm2, 32(%rdx)
-; SSE-NEXT:    movaps %xmm0, (%rdx)
 ; SSE-NEXT:    movaps %xmm1, 16(%rdx)
+; SSE-NEXT:    movaps %xmm0, (%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_single_256bit_elt_vector:

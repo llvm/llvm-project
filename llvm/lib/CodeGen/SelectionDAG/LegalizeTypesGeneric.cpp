@@ -479,14 +479,22 @@ SDValue DAGTypeLegalizer::ExpandOp_NormalStore(SDNode *N, unsigned OpNo) {
 
   StoreSDNode *St = cast<StoreSDNode>(N);
   assert(!St->isAtomic() && "Atomics can not be split");
-  EVT ValueVT = St->getValue().getValueType();
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), ValueVT);
   SDValue Chain = St->getChain();
+  SDValue Value = St->getValue();
   SDValue Ptr = St->getBasePtr();
+  EVT ValueVT = Value.getValueType();
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), ValueVT);
   AAMDNodes AAInfo = St->getAAInfo();
 
   assert(NVT.isByteSized() && "Expanded type not byte sized!");
   unsigned IncrementSize = NVT.getSizeInBits() / 8;
+
+  // Storing a bitcasted value, see if the original type is a legal store.
+  // TODO: Not necessary if we had proper topological sorting of nodes.
+  if (Value.getOpcode() == ISD::BITCAST &&
+      TLI.isOperationLegal(ISD::STORE, Value.getOperand(0).getValueType()))
+    return DAG.getStore(Chain, dl, Value.getOperand(0), Ptr,
+                        St->getMemOperand());
 
   SDValue Lo, Hi;
   GetExpandedOp(St->getValue(), Lo, Hi);
