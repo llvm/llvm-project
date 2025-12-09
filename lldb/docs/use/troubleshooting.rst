@@ -118,7 +118,7 @@ on Linux you can use the following command:
 
 ::
 
-   $ readelf -d ./bin/lldb | grep NEEDED
+   $ readelf -d lldb | grep NEEDED
    0x0000000000000001 (NEEDED)             Shared library: [liblldb.so.22.0git]
    0x0000000000000001 (NEEDED)             Shared library: [libxml2.so.2]
    0x0000000000000001 (NEEDED)             Shared library: [libedit.so.2]
