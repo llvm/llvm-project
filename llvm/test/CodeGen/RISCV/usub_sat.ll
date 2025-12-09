@@ -189,32 +189,26 @@ define zeroext i4 @func3(i4 zeroext %x, i4 zeroext %y) nounwind {
 define signext i32 @fun9(i32 signext %x) nounwind {
 ; RV32I-LABEL: fun9:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a1, a0, -1
-; RV32I-NEXT:    sltu a0, a0, a1
-; RV32I-NEXT:    addi a0, a0, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    snez a1, a0
+; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fun9:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a1, a0, -1
-; RV64I-NEXT:    sltu a0, a0, a1
-; RV64I-NEXT:    addi a0, a0, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    snez a1, a0
+; RV64I-NEXT:    subw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV32IZbb-LABEL: fun9:
 ; RV32IZbb:       # %bb.0:
-; RV32IZbb-NEXT:    li a1, 1
-; RV32IZbb-NEXT:    maxu a0, a0, a1
-; RV32IZbb-NEXT:    addi a0, a0, -1
+; RV32IZbb-NEXT:    snez a1, a0
+; RV32IZbb-NEXT:    sub a0, a0, a1
 ; RV32IZbb-NEXT:    ret
 ;
 ; RV64IZbb-LABEL: fun9:
 ; RV64IZbb:       # %bb.0:
-; RV64IZbb-NEXT:    li a1, 1
-; RV64IZbb-NEXT:    maxu a0, a0, a1
-; RV64IZbb-NEXT:    addiw a0, a0, -1
+; RV64IZbb-NEXT:    snez a1, a0
+; RV64IZbb-NEXT:    subw a0, a0, a1
 ; RV64IZbb-NEXT:    ret
   %tmp = call i32 @llvm.usub.sat.i32(i32 %x, i32 1)
   ret i32 %tmp
