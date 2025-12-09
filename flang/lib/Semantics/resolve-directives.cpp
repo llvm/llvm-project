@@ -2477,7 +2477,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionConstruct &x) {
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
   const parser::OmpBeginDirective &beginSpec{x.BeginDir()};
-  PushContext(beginSpec.DirName().source, beginSpec.DirName().v);
+  PushContext(beginSpec.DirName().source, beginSpec.DirId());
   GetContext().withinConstruct = true;
   return true;
 }
