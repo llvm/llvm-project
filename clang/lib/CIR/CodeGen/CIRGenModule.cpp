@@ -1464,6 +1464,26 @@ void CIRGenModule::emitExplicitCastExprType(const ExplicitCastExpr *e,
          "emitExplicitCastExprType");
 }
 
+mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
+  assert(!cir::MissingFeatures::cxxABI());
+
+  mlir::Location loc = getLoc(e->getSourceRange());
+
+  const auto *decl = cast<DeclRefExpr>(e->getSubExpr())->getDecl();
+
+  // A member function pointer.
+  if (isa<CXXMethodDecl>(decl)) {
+    errorNYI(e->getSourceRange(), "emitMemberPointerConstant: method pointer");
+    return {};
+  }
+
+  // Otherwise, a member data pointer.
+  auto ty = mlir::cast<cir::DataMemberType>(convertType(e->getType()));
+  const auto *fieldDecl = cast<FieldDecl>(decl);
+  return cir::ConstantOp::create(
+      builder, loc, builder.getDataMemberAttr(ty, fieldDecl->getFieldIndex()));
+}
+
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {
   for (Decl *decl : dc->decls()) {
     // Unlike other DeclContexts, the contents of an ObjCImplDecl at TU scope
