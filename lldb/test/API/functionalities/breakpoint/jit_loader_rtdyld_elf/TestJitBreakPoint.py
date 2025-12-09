@@ -18,11 +18,13 @@ class TestJitBreakpoint(TestBase):
         self.do_test("--jit-linker=rtdyld")
 
     def do_test(self, jit_flag: str):
-        import shutil
-
         self.runCmd("settings set plugin.jit-loader.gdb.enable on")
 
-        self.runCmd("target create lli", CURRENT_EXECUTABLE_SET)
+        clang_path = self.findBuiltClang()
+        self.assertIs(clang_path, "built clang could not be found")
+        lli_path = os.path.join(os.path.dirname(clang_path), "lli")
+        self.assertIs(lldbutil.is_exe(lli_path), f"'{lli_path}' is not an executable")
+        self.runCmd(f"target create {lli_path}", CURRENT_EXECUTABLE_SET)
 
         line = line_number("jitbp.cpp", "int jitbp()")
         lldbutil.run_break_set_by_file_and_line(
