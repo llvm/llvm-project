@@ -15,6 +15,7 @@
 #include <__compare/three_way_comparable.h>
 #include <__config>
 #include <__cstddef/size_t.h>
+#include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
@@ -46,9 +47,23 @@ private:
 
   friend _Container;
 
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __get_iter_concept() {
+    if constexpr (contiguous_iterator<_Iter>) {
+      return contiguous_iterator_tag{};
+    } else if constexpr (random_access_iterator<_Iter>) {
+      return random_access_iterator_tag{};
+    } else if constexpr (bidirectional_iterator<_Iter>) {
+      return bidirectional_iterator_tag{};
+    } else if constexpr (forward_iterator<_Iter>) {
+      return forward_iterator_tag{};
+    } else {
+      return input_iterator_tag{};
+    }
+  }
+
 public:
   using iterator_category = iterator_traits<_Iter>::iterator_category;
-  using iterator_concept  = _Iter::iterator_concept;
+  using iterator_concept  = decltype(__get_iter_concept());
   using difference_type   = iter_difference_t<_Iter>;
   using pointer           = iterator_traits<_Iter>::pointer;
   using reference         = iter_reference_t<_Iter>;
@@ -69,6 +84,9 @@ private:
 
   template <typename _Tp, class>
   friend struct __optional_iterator;
+
+  template <class _It, class _C, size_t _M>
+  friend auto __make_capacity_aware_iterator(_It __iter);
 
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr _Iter base() const noexcept { return __iter_; }
@@ -104,8 +122,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator& operator+=(difference_type __n) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         static_cast<size_t>((__n >= 0 ? __n : -__n)) <= _ContainerMaxElements,
-        "__capacity_aware_iterator::operator+=: Attempting to move iterator past its "
-        "container's possible range");
+        "__capacity_aware_iterator::operator+=: Attempting to move iterator past its container's possible range");
 
     __iter_ += __n;
     return *this;
@@ -170,6 +187,11 @@ public:
     return difference_type(__x.base() - __y.base());
   }
 };
+
+template <class _It, class _C, size_t _M>
+auto __make_capacity_aware_iterator(_It __iter) {
+  return __capacity_aware_iterator<_It, _C, _M>(__iter);
+}
 
 _LIBCPP_END_NAMESPACE_STD
 
