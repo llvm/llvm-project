@@ -109,22 +109,6 @@ LIBC_INLINE static constexpr float expf(float x) {
   return static_cast<float>(exp_hi * exp_mid * exp_lo);
 }
 
-#pragma STDC FENV_ACCESS ON
-
-// Directional rounding version of expf.
-LIBC_INLINE static float expf(float x, int rounding_mode) {
-  int current_rounding_mode = fputil::get_round();
-  if (rounding_mode == current_rounding_mode)
-    return expf(x);
-
-  fputil::set_round(rounding_mode);
-  float result = expf(x);
-  fputil::set_round(current_rounding_mode);
-  return result;
-}
-
-#pragma STDC FENV_ACCESS DEFAULT
-
 } // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
