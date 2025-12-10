@@ -3723,6 +3723,10 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
   if (!Args.hasArg(options::OPT_dxc_no_stdinc) &&
       !Args.hasArg(options::OPT_nostdinc))
     CmdArgs.push_back("-finclude-default-header");
+  if (Args.hasArg(options::OPT_dxc_col_major))
+    CmdArgs.push_back("-fmatrix-memory-layout=column-major");
+  if (Args.hasArg(options::OPT_dxc_row_major))
+    CmdArgs.push_back("-fmatrix-memory-layout=row-major");
 }
 
 static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,

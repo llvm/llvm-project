@@ -412,6 +412,10 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 
   const OptTable &Opts = getDriver().getOpts();
 
+  if (Args.hasArg(options::OPT_dxc_col_major) &&
+      Args.hasArg(options::OPT_dxc_row_major))
+    getDriver().Diag(diag::err_drv_dxc_invalid_matrix_layout);
+
   for (Arg *A : Args) {
     if (A->getOption().getID() == options::OPT_dxil_validator_version) {
       StringRef ValVerStr = A->getValue();
