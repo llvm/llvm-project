@@ -22,6 +22,21 @@ _Float16 test_mm256_reduce_add_ph(__m256h __W) {
   return _mm256_reduce_add_ph(__W);
 }
 
+_Float16 test_mm256_reduce_mul_ph(__m256h __W) {
+  // CIR-LABEL: _mm256_reduce_mul_ph
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmul.v16f16" %[[R:.*]], %[[V:.*]] : (!cir.f16, !cir.vector<16 x !cir.f16>) -> !cir.f16
+
+  // CIR-LABEL: test_mm256_reduce_mul_ph
+  // CIR: cir.call @_mm256_reduce_mul_ph(%[[VEC:.*]]) : (!cir.vector<16 x !cir.f16>) -> !cir.f16
+
+  // LLVM-LABEL: test_mm256_reduce_mul_ph
+  // LLVM: call half @llvm.vector.reduce.fmul.v16f16(half 0xH3C00, <16 x half> %{{.*}})
+
+  // OGCG-LABEL: test_mm256_reduce_mul_ph
+  // OGCG: call reassoc {{.*}}@llvm.vector.reduce.fmul.v16f16(half 0xH3C00, <16 x half> %{{.*}})
+  return _mm256_reduce_mul_ph(__W);
+}
+
 _Float16 test_mm_reduce_add_ph(__m128h __W) {
   // CIR-LABEL: _mm_reduce_add_ph
   // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd.v8f16" %[[R:.*]], %[[V:.*]] : (!cir.f16, !cir.vector<8 x !cir.f16>) -> !cir.f16
@@ -36,3 +51,19 @@ _Float16 test_mm_reduce_add_ph(__m128h __W) {
   // OGCG: call reassoc {{.*}}@llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> %{{.*}})
   return _mm_reduce_add_ph(__W);
 }
+
+_Float16 test_mm_reduce_mul_ph(__m128h __W) {
+  // CIR-LABEL: _mm_reduce_mul_ph
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmul.v8f16" %[[R:.*]], %[[V:.*]] : (!cir.f16, !cir.vector<8 x !cir.f16>) -> !cir.f16
+
+  // CIR-LABEL: test_mm_reduce_mul_ph
+  // CIR: cir.call @_mm_reduce_mul_ph(%[[VEC:.*]]) : (!cir.vector<8 x !cir.f16>) -> !cir.f16
+
+  // LLVM-LABEL: test_mm_reduce_mul_ph
+  // LLVM: call half @llvm.vector.reduce.fmul.v8f16(half 0xH3C00, <8 x half> %{{.*}})
+
+  // OGCG-LABEL: test_mm_reduce_mul_ph
+  // OGCG: call reassoc {{.*}}@llvm.vector.reduce.fmul.v8f16(half 0xH3C00, <8 x half> %{{.*}})
+  return _mm_reduce_mul_ph(__W);
+}
+
