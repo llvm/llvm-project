@@ -97,7 +97,8 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
   llvm::raw_svector_ostream outStream(typeName);
 
   PrintingPolicy policy = recordDecl->getASTContext().getPrintingPolicy();
-  policy.SuppressInlineNamespace = false;
+  policy.SuppressInlineNamespace =
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::None);
   policy.AlwaysIncludeTypeForTemplateArgument = true;
   policy.PrintAsCanonical = true;
   policy.SuppressTagKeyword = true;
@@ -478,6 +479,21 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     // type is defined (see UpdateCompletedType), but is likely to be the
     // "right" answer.
     resultType = cgm.uInt32Ty;
+    break;
+  }
+
+  case Type::MemberPointer: {
+    const auto *mpt = cast<MemberPointerType>(ty);
+
+    mlir::Type memberTy = convertType(mpt->getPointeeType());
+    auto clsTy = mlir::cast<cir::RecordType>(
+        convertType(QualType(mpt->getQualifier().getAsType(), 0)));
+    if (mpt->isMemberDataPointer()) {
+      resultType = cir::DataMemberType::get(memberTy, clsTy);
+    } else {
+      assert(!cir::MissingFeatures::methodType());
+      cgm.errorNYI(SourceLocation(), "MethodType");
+    }
     break;
   }
 

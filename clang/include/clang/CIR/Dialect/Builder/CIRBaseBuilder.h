@@ -308,14 +308,16 @@ public:
     return cir::GlobalViewAttr::get(type, symbol, indices);
   }
 
-  mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global) {
+  mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global,
+                              bool threadLocal = false) {
     assert(!cir::MissingFeatures::addressSpace());
-    return cir::GetGlobalOp::create(
-        *this, loc, getPointerTo(global.getSymType()), global.getSymName());
+    return cir::GetGlobalOp::create(*this, loc,
+                                    getPointerTo(global.getSymType()),
+                                    global.getSymNameAttr(), threadLocal);
   }
 
-  mlir::Value createGetGlobal(cir::GlobalOp global) {
-    return createGetGlobal(global.getLoc(), global);
+  mlir::Value createGetGlobal(cir::GlobalOp global, bool threadLocal = false) {
+    return createGetGlobal(global.getLoc(), global, threadLocal);
   }
 
   /// Create a copy with inferred length.
@@ -329,6 +331,14 @@ public:
                            mlir::IntegerAttr align = {},
                            cir::MemOrderAttr order = {}) {
     return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, order);
+  }
+
+  /// Emit a load from an boolean flag variable.
+  cir::LoadOp createFlagLoad(mlir::Location loc, mlir::Value addr) {
+    mlir::Type boolTy = getBoolTy();
+    if (boolTy != mlir::cast<cir::PointerType>(addr.getType()).getPointee())
+      addr = createPtrBitcast(addr, boolTy);
+    return createLoad(loc, addr, /*isVolatile=*/false, /*alignment=*/1);
   }
 
   cir::StoreOp createFlagStore(mlir::Location loc, bool val, mlir::Value dst) {
