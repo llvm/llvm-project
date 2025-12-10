@@ -113,16 +113,13 @@ def push_dynamic_library_lookup_path(config, new_path):
         config.environment[dynamic_library_lookup_var] = new_ld_library_path_64
 
 
+# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
+# See https://github.com/llvm/llvm-project/issues/106636 for more details.
+#
 # Choose between lit's internal shell pipeline runner and a real shell.  If
 # LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
 use_lit_shell = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if use_lit_shell:
-    # 0 is external, "" is default, and everything else is internal.
-    execute_external = use_lit_shell == "0"
-else:
-    # Otherwise we default to internal on Windows and external elsewhere, as
-    # bash on Windows is usually very slow.
-    execute_external = not sys.platform in ["win32"]
+execute_external = use_lit_shell == "0"
 
 # Allow expanding substitutions that are based on other substitutions
 config.recursiveExpansionLimit = 10
@@ -971,8 +968,17 @@ def target_page_size():
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
         )
+        # UNIX (except WASI) and Windows can use mmap.PAGESIZE,
+        # attempt to use os.sysconf for other targets.
         out, err = proc.communicate(
-            b'import os; print(os.sysconf("SC_PAGESIZE") if hasattr(os, "sysconf") else "")'
+            b"""
+try:
+    from mmap import PAGESIZE
+    print(PAGESIZE)
+except ImportError:
+    from os import sysconf
+    print(sysconf("SC_PAGESIZE"))
+"""
         )
         return int(out)
     except:

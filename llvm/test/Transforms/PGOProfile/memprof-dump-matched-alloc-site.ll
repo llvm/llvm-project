@@ -26,7 +26,7 @@
 ; REQUIRES: x86_64-linux
 ; RUN: split-file %s %t
 ; RUN: llvm-profdata merge %t/memprof-dump-matched-alloc-site.yaml -o %t/memprof-dump-matched-alloc-site.memprofdata
-; RUN: opt < %t/memprof-dump-matched-alloc-site.ll -passes='memprof-use<profile-filename=%t/memprof-dump-matched-alloc-site.memprofdata>' -memprof-print-match-info -S 2>&1 | FileCheck %s
+; RUN: opt < %t/memprof-dump-matched-alloc-site.ll -passes='memprof-use<profile-filename=%t/memprof-dump-matched-alloc-site.memprofdata>' -memprof-print-match-info -memprof-print-function-guids -S -pass-remarks=memprof 2>&1 | FileCheck %s
 
 ;--- memprof-dump-matched-alloc-site.yaml
 ---
@@ -77,6 +77,16 @@ HeapProfileRecords:
       # Kept empty here because this section is irrelevant for this test.
 ...
 ;--- memprof-dump-matched-alloc-site.ll
+
+;; From -pass-remarks=memprof and -memprof-print-function-guids
+; CHECK: MemProf: Function GUID 4708092051066754107 is _Z2f1v
+; CHECK: remark: memprof-dump-matched-alloc-site.cc:1:21: call in function _Z2f1v matched alloc context with alloc type notcold total size 3 full context id 5736731103568718490 frame count 1
+; CHECK: MemProf: Function GUID 14255129117669598641 is _Z2f2v
+; CHECK: remark: memprof-dump-matched-alloc-site.cc:1:21: call in function _Z2f2v matched alloc context with alloc type notcold total size 3 full context id 5736731103568718490 frame count 2
+; CHECK: MemProf: Function GUID 2771528421763978342 is _Z2f3v
+; CHECK: remark: memprof-dump-matched-alloc-site.cc:1:21: call in function _Z2f3v matched alloc context with alloc type notcold total size 3 full context id 5736731103568718490 frame count 3
+
+;; From -memprof-print-match-info
 ; CHECK: MemProf notcold context with id 5736731103568718490 has total profiled size 3 is matched with 1 frames
 ; CHECK: MemProf notcold context with id 5736731103568718490 has total profiled size 3 is matched with 2 frames
 ; CHECK: MemProf notcold context with id 5736731103568718490 has total profiled size 3 is matched with 3 frames

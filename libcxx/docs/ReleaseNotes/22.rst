@@ -82,6 +82,9 @@ Improvements and New Features
 - The ``std::{generate, generate_n}`` and ``std::ranges::generate_n`` algorithms have been optimized for segmented
   iterators, resulting in a performance improvement for ``std::deque<short>`` and
   ``std::join_view<vector<vector<short>>>`` iterators.
+- ``std::atomic::wait`` has been refactored to accept more types to use platform native wait functions directly.
+  This is guarded behind the ABI Macro ``_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE``.
+- The performance of ``vector<bool>::reserve()`` has been improved by up to 2x.
 
 - The ``num_get::do_get`` integral overloads have been optimized, resulting in a performance improvement of up to 2.8x.
 

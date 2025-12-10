@@ -2888,6 +2888,8 @@ static bool isTargetShuffle(unsigned Opcode) {
   case X86ISD::VPERMV:
   case X86ISD::VPERMV3:
   case X86ISD::VZEXT_MOVL:
+  case X86ISD::COMPRESS:
+  case X86ISD::EXPAND:
     return true;
   }
 }
@@ -5839,6 +5841,48 @@ static bool getTargetShuffleMask(SDValue N, bool AllowSentinelZero,
     }
     return false;
   }
+  case X86ISD::COMPRESS: {
+    SDValue CmpVec = N.getOperand(0);
+    SDValue PassThru = N.getOperand(1);
+    SDValue CmpMask = N.getOperand(2);
+    APInt UndefElts;
+    SmallVector<APInt> EltBits;
+    if (!getTargetConstantBitsFromNode(CmpMask, 1, UndefElts, EltBits))
+      return false;
+    assert(UndefElts.getBitWidth() == NumElems && EltBits.size() == NumElems &&
+           "Illegal compression mask");
+    for (unsigned I = 0; I != NumElems; ++I) {
+      if (!EltBits[I].isZero())
+        Mask.push_back(I);
+    }
+    while (Mask.size() != NumElems) {
+      Mask.push_back(NumElems + Mask.size());
+    }
+    Ops.push_back(CmpVec);
+    Ops.push_back(PassThru);
+    return true;
+  }
+  case X86ISD::EXPAND: {
+    SDValue ExpVec = N.getOperand(0);
+    SDValue PassThru = N.getOperand(1);
+    SDValue ExpMask = N.getOperand(2);
+    APInt UndefElts;
+    SmallVector<APInt> EltBits;
+    if (!getTargetConstantBitsFromNode(ExpMask, 1, UndefElts, EltBits))
+      return false;
+    assert(UndefElts.getBitWidth() == NumElems && EltBits.size() == NumElems &&
+           "Illegal expansion mask");
+    unsigned ExpIndex = 0;
+    for (unsigned I = 0; I != NumElems; ++I) {
+      if (EltBits[I].isZero())
+        Mask.push_back(I + NumElems);
+      else
+        Mask.push_back(ExpIndex++);
+    }
+    Ops.push_back(ExpVec);
+    Ops.push_back(PassThru);
+    return true;
+  }
   default:
     llvm_unreachable("unknown target shuffle node");
   }
@@ -7571,7 +7615,8 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 
   // REVERSE - attempt to match the loads in reverse and then shuffle back.
   // TODO: Do this for any permute or mismatching element counts.
-  if (Depth == 0 && !ZeroMask && TLI.isTypeLegal(VT) && VT.isVector() &&
+  if (Depth == 0 && ZeroMask.isZero() && UndefMask.isZero() &&
+      TLI.isTypeLegal(VT) && VT.isVector() &&
       NumElems == VT.getVectorNumElements()) {
     SmallVector<SDValue, 16> ReverseElts(Elts.rbegin(), Elts.rend());
     if (SDValue RevLd = EltsFromConsecutiveLoads(
@@ -61324,6 +61369,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VPERM2X128:
   case X86ISD::SHUF128:
   case X86ISD::VZEXT_MOVL:
+  case X86ISD::COMPRESS:
+  case X86ISD::EXPAND:
   case ISD::VECTOR_SHUFFLE: return combineShuffle(N, DAG, DCI,Subtarget);
   case X86ISD::FMADD_RND:
   case X86ISD::FMSUB:
@@ -61927,8 +61974,8 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
       if (C->getZExtValue() == 0xff || C->getZExtValue() == 0xffff ||
           (Subtarget.is64Bit() && C->getZExtValue() == 0xffffffff)) {
-        Result = DAG.getTargetConstant(C->getSExtValue(), SDLoc(Op),
-                                       Op.getValueType());
+        Result = DAG.getSignedTargetConstant(C->getSExtValue(), SDLoc(Op),
+                                             Op.getValueType());
         break;
       }
     }
@@ -61966,7 +62013,8 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
       if (ConstantInt::isValueValidForType(Type::getInt32Ty(*DAG.getContext()),
                                            C->getSExtValue())) {
         // Widen to 64 bits here to get it sign extended.
-        Result = DAG.getTargetConstant(C->getSExtValue(), SDLoc(Op), MVT::i64);
+        Result =
+            DAG.getSignedTargetConstant(C->getSExtValue(), SDLoc(Op), MVT::i64);
         break;
       }
     // FIXME gcc accepts some relocatable values here too, but only in certain
@@ -62015,9 +62063,11 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
       BooleanContent BCont = getBooleanContents(MVT::i64);
       ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)
                                     : ISD::SIGN_EXTEND;
-      int64_t ExtVal = ExtOpc == ISD::ZERO_EXTEND ? CST->getZExtValue()
-                                                  : CST->getSExtValue();
-      Result = DAG.getTargetConstant(ExtVal, SDLoc(Op), MVT::i64);
+      SDLoc DL(Op);
+      Result =
+          ExtOpc == ISD::ZERO_EXTEND
+              ? DAG.getTargetConstant(CST->getZExtValue(), DL, MVT::i64)
+              : DAG.getSignedTargetConstant(CST->getSExtValue(), DL, MVT::i64);
       break;
     }
 
