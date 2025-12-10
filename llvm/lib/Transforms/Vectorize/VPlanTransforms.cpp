@@ -1443,8 +1443,16 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  if (match(Def, m_VPInstruction<VPInstruction::InsertLastLane>(m_VPValue(),
+                                                                m_VPValue(A))))
+    if (Plan->hasScalarVFOnly())
+      return Def->replaceAllUsesWith(A);
+
   if (auto *Phi = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(Def)) {
-    if (Phi->getOperand(0) == Phi->getOperand(1))
+    if (Phi->getOperand(0) == Phi->getOperand(1) ||
+        match(Phi->getOperand(0),
+              m_VPInstruction<VPInstruction::InsertLastLane>(
+                  m_VPValue(), m_Specific(Phi->getOperand(1)))))
       Phi->replaceAllUsesWith(Phi->getOperand(0));
     return;
   }
