@@ -599,6 +599,11 @@ Changes in existing checks
   comments between the ``if`` condition and the ``then`` block are preserved
   when applying the fix.
 
+- Improved :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check by correctly recognizes 
+  const member functions returning lvalues as side-effect-free, preventing 
+  missed transformations.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
