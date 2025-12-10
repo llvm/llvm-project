@@ -21,7 +21,7 @@ cir.func @s0() {
   cir.return
 }
 
-// CHECK: cir.switch (%0 : !s32i) {
+// CHECK: cir.switch(%0 : !s32i) {
 // CHECK-NEXT: cir.case(default, [])  {
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
@@ -40,7 +40,7 @@ cir.func @s0() {
 
 // Pretends that this is lowered from a C file and was tagged with allEnumCasesCovered = true
 cir.func @s1(%1 : !s32i) {
-  cir.switch (%1 : !s32i) {
+  cir.switch (%1 : !s32i) allEnumCasesCovered {
     cir.case (default, []) {
       cir.return
     }
@@ -51,10 +51,10 @@ cir.func @s1(%1 : !s32i) {
       cir.yield
     }
     cir.yield
-  } { allEnumCasesCovered = true}
+  } { }
   cir.return
 } 
-// CHECK: cir.switch (%arg0 : !s32i) {
+// CHECK: cir.switch(%[[ARG:.*]] : !s32i) allEnumCasesCovered {
 // CHECK-NEXT: cir.case(default, []) {
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
@@ -65,4 +65,4 @@ cir.func @s1(%1 : !s32i) {
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT: }
 // CHECK-NEXT: cir.yield
-// CHECK-NEXT: } {allEnumCasesCovered = true}
+// CHECK-NEXT: }
