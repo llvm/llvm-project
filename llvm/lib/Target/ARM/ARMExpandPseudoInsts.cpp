@@ -27,6 +27,8 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 
+#include <atomic>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "arm-pseudo"
@@ -159,8 +161,8 @@ namespace {
     friend bool operator<(const NEONLdStTableEntry &TE, unsigned PseudoOpc) {
       return TE.PseudoOpc < PseudoOpc;
     }
-    friend bool LLVM_ATTRIBUTE_UNUSED operator<(unsigned PseudoOpc,
-                                                const NEONLdStTableEntry &TE) {
+    [[maybe_unused]] friend bool operator<(unsigned PseudoOpc,
+                                           const NEONLdStTableEntry &TE) {
       return PseudoOpc < TE.PseudoOpc;
     }
   };
@@ -930,6 +932,7 @@ static bool IsAnAddressOperand(const MachineOperand &MO) {
     return true;
   case MachineOperand::MO_RegisterMask:
   case MachineOperand::MO_RegisterLiveOut:
+  case MachineOperand::MO_LaneMask:
     return false;
   case MachineOperand::MO_Metadata:
   case MachineOperand::MO_MCSymbol:
@@ -2298,6 +2301,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       auto NewMI = std::prev(MBBI);
       for (unsigned i = 2, e = MBBI->getNumOperands(); i != e; ++i)
         NewMI->addOperand(MBBI->getOperand(i));
+
+      NewMI->setCFIType(*MBB.getParent(), MI.getCFIType());
 
       // Update call info and delete the pseudo instruction TCRETURN.
       if (MI.isCandidateForAdditionalCallInfo())

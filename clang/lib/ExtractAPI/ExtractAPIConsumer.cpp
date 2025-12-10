@@ -444,8 +444,7 @@ bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
     return true;
 
   if (!CI.hasFileManager())
-    if (!CI.createFileManager())
-      return false;
+    CI.createFileManager();
 
   auto Kind = Inputs[0].getKind();
 

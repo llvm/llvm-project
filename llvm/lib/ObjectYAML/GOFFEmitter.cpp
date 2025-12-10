@@ -38,8 +38,8 @@ template <typename ValueType> struct BinaryBeImpl {
 template <typename ValueType>
 raw_ostream &operator<<(raw_ostream &OS, const BinaryBeImpl<ValueType> &BBE) {
   char Buffer[sizeof(BBE.Value)];
-  support::endian::write<ValueType, llvm::endianness::big, support::unaligned>(
-      Buffer, BBE.Value);
+  support::endian::write<ValueType, support::unaligned>(Buffer, BBE.Value,
+                                                        llvm::endianness::big);
   OS.write(Buffer, sizeof(BBE.Value));
   return OS;
 }
@@ -71,7 +71,7 @@ public:
     SetBufferSize(GOFF::PayloadLength);
   }
 
-  ~GOFFOstream() { finalize(); }
+  ~GOFFOstream() override { finalize(); }
 
   void makeNewRecord(GOFF::RecordType Type, size_t Size) {
     fillRecord();

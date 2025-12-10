@@ -97,8 +97,8 @@ unsigned ARMELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case ARM::S_TLSLDM_FDPIC:
   case ARM::S_TLSLDO:
   case ARM::S_TPOFF:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

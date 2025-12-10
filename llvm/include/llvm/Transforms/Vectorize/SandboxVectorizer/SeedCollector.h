@@ -36,7 +36,7 @@ public:
   /// No need to allow copies.
   SeedBundle(const SeedBundle &) = delete;
   SeedBundle &operator=(const SeedBundle &) = delete;
-  virtual ~SeedBundle() {}
+  virtual ~SeedBundle() = default;
 
   using iterator = SmallVector<Instruction *>::iterator;
   using const_iterator = SmallVector<Instruction *>::const_iterator;
@@ -191,7 +191,8 @@ class SeedContainer {
 
   ScalarEvolution &SE;
 
-  template <typename LoadOrStoreT> KeyT getKey(LoadOrStoreT *LSI) const;
+  template <typename LoadOrStoreT>
+  KeyT getKey(LoadOrStoreT *LSI, bool AllowDiffTypes) const;
 
 public:
   SeedContainer(ScalarEvolution &SE) : SE(SE) {}
@@ -267,7 +268,8 @@ public:
     bool operator!=(const iterator &Other) const { return !(*this == Other); }
   };
   using const_iterator = BundleMapT::const_iterator;
-  template <typename LoadOrStoreT> void insert(LoadOrStoreT *LSI);
+  template <typename LoadOrStoreT>
+  void insert(LoadOrStoreT *LSI, bool AllowDiffTypes);
   // To support constant-time erase, these just mark the element used, rather
   // than actually removing them from the bundle.
   LLVM_ABI bool erase(Instruction *I);
@@ -291,9 +293,9 @@ public:
 
 // Explicit instantiations
 extern template LLVM_TEMPLATE_ABI void
-SeedContainer::insert<LoadInst>(LoadInst *);
+SeedContainer::insert<LoadInst>(LoadInst *, bool);
 extern template LLVM_TEMPLATE_ABI void
-SeedContainer::insert<StoreInst>(StoreInst *);
+SeedContainer::insert<StoreInst>(StoreInst *, bool);
 
 class SeedCollector {
   SeedContainer StoreSeeds;
@@ -308,15 +310,12 @@ class SeedCollector {
 
 public:
   LLVM_ABI SeedCollector(BasicBlock *BB, ScalarEvolution &SE,
-                         bool CollectStores, bool CollectLoads);
+                         bool CollectStores, bool CollectLoads,
+                         bool AllowDiffTypes = false);
   LLVM_ABI ~SeedCollector();
 
-  iterator_range<SeedContainer::iterator> getStoreSeeds() {
-    return {StoreSeeds.begin(), StoreSeeds.end()};
-  }
-  iterator_range<SeedContainer::iterator> getLoadSeeds() {
-    return {LoadSeeds.begin(), LoadSeeds.end()};
-  }
+  iterator_range<SeedContainer::iterator> getStoreSeeds() { return StoreSeeds; }
+  iterator_range<SeedContainer::iterator> getLoadSeeds() { return LoadSeeds; }
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;

@@ -12,6 +12,7 @@
 
 #include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/CommandLine.h"
+#include <cassert>
 #include <optional>
 
 using namespace llvm;
@@ -30,6 +31,14 @@ RemarkStreamer::RemarkStreamer(
     : RemarkSerializer(std::move(RemarkSerializer)),
       Filename(FilenameIn ? std::optional<std::string>(FilenameIn->str())
                           : std::nullopt) {}
+
+RemarkStreamer::~RemarkStreamer() {
+  // Ensure that llvm::finalizeOptimizationRemarks was called before the
+  // RemarkStreamer is destroyed.
+  assert(!RemarkSerializer &&
+         "RemarkSerializer must be released before RemarkStreamer is "
+         "destroyed. Ensure llvm::finalizeOptimizationRemarks is called.");
+}
 
 Error RemarkStreamer::setFilter(StringRef Filter) {
   Regex R = Regex(Filter);
@@ -57,16 +66,7 @@ bool RemarkStreamer::needsSection() const {
 
   assert(EnableRemarksSection == cl::BOU_UNSET);
 
-  // We only need a section if we're in separate mode.
-  if (RemarkSerializer->Mode != remarks::SerializerMode::Separate)
-    return false;
-
-  // Only some formats need a section:
-  // * bitstream
-  switch (RemarkSerializer->SerializerFormat) {
-  case remarks::Format::Bitstream:
-    return true;
-  default:
-    return false;
-  }
+  // Enable remark sections by default for bitstream remarks (so dsymutil can
+  // find all remarks for a linked binary)
+  return RemarkSerializer->SerializerFormat == Format::Bitstream;
 }

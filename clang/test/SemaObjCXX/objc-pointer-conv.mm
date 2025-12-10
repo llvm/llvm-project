@@ -42,7 +42,7 @@ void foo(const I *p, I* sel) {
 void accept_derived(DerivedFromI*);
 
 void test_base_to_derived(I* i) {
-  accept_derived(i); // expected-warning{{incompatible pointer types passing 'I *' to parameter of type 'DerivedFromI *'}}
-  DerivedFromI *di = i; // expected-warning{{incompatible pointer types initializing 'DerivedFromI *' with an expression of type 'I *'}}
+  accept_derived(i); // expected-error{{incompatible pointer types passing 'I *' to parameter of type 'DerivedFromI *'}}
+  DerivedFromI *di = i; // expected-error{{incompatible pointer types initializing 'DerivedFromI *' with an expression of type 'I *'}}
   DerivedFromI *di2 = (DerivedFromI *)i;
 }

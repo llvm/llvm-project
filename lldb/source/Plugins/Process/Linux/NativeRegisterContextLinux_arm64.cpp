@@ -8,8 +8,9 @@
 
 #if defined(__arm64__) || defined(__aarch64__)
 
-#include "NativeRegisterContextLinux_arm.h"
 #include "NativeRegisterContextLinux_arm64.h"
+#include "NativeRegisterContextLinux_arm.h"
+#include "NativeRegisterContextLinux_arm64dbreg.h"
 
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
@@ -162,10 +163,13 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 
     opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskTLS);
 
+    std::optional<uint64_t> auxv_at_hwcap3 =
+        process.GetAuxValue(AuxVector::AUXV_AT_HWCAP3);
     std::lock_guard<std::mutex> lock(g_register_flags_detector_mutex);
     if (!g_register_flags_detector.HasDetected())
       g_register_flags_detector.DetectFields(auxv_at_hwcap.value_or(0),
-                                             auxv_at_hwcap2.value_or(0));
+                                             auxv_at_hwcap2.value_or(0),
+                                             auxv_at_hwcap3.value_or(0));
 
     auto register_info_up =
         std::make_unique<RegisterInfoPOSIX_arm64>(target_arch, opt_regsets);
@@ -1143,29 +1147,11 @@ llvm::Error NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
 
   ::pid_t tid = m_thread.GetID();
 
-  int regset = NT_ARM_HW_WATCH;
-  struct iovec ioVec;
-  struct user_hwdebug_state dreg_state;
-  Status error;
-
-  ioVec.iov_base = &dreg_state;
-  ioVec.iov_len = sizeof(dreg_state);
-  error = NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET, tid, &regset,
-                                            &ioVec, ioVec.iov_len);
-
+  Status error = arm64::ReadHardwareDebugInfo(tid, m_max_hwp_supported,
+                                              m_max_hbp_supported);
   if (error.Fail())
     return error.ToError();
 
-  m_max_hwp_supported = dreg_state.dbg_info & 0xff;
-
-  regset = NT_ARM_HW_BREAK;
-  error = NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET, tid, &regset,
-                                            &ioVec, ioVec.iov_len);
-
-  if (error.Fail())
-    return error.ToError();
-
-  m_max_hbp_supported = dreg_state.dbg_info & 0xff;
   m_refresh_hwdebug_info = false;
 
   return llvm::Error::success();
@@ -1173,38 +1159,11 @@ llvm::Error NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
 
 llvm::Error
 NativeRegisterContextLinux_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
-  struct iovec ioVec;
-  struct user_hwdebug_state dreg_state;
-  int regset;
-
-  memset(&dreg_state, 0, sizeof(dreg_state));
-  ioVec.iov_base = &dreg_state;
-
-  switch (hwbType) {
-  case eDREGTypeWATCH:
-    regset = NT_ARM_HW_WATCH;
-    ioVec.iov_len = sizeof(dreg_state.dbg_info) + sizeof(dreg_state.pad) +
-                    (sizeof(dreg_state.dbg_regs[0]) * m_max_hwp_supported);
-
-    for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
-      dreg_state.dbg_regs[i].addr = m_hwp_regs[i].address;
-      dreg_state.dbg_regs[i].ctrl = m_hwp_regs[i].control;
-    }
-    break;
-  case eDREGTypeBREAK:
-    regset = NT_ARM_HW_BREAK;
-    ioVec.iov_len = sizeof(dreg_state.dbg_info) + sizeof(dreg_state.pad) +
-                    (sizeof(dreg_state.dbg_regs[0]) * m_max_hbp_supported);
-
-    for (uint32_t i = 0; i < m_max_hbp_supported; i++) {
-      dreg_state.dbg_regs[i].addr = m_hbp_regs[i].address;
-      dreg_state.dbg_regs[i].ctrl = m_hbp_regs[i].control;
-    }
-    break;
-  }
-
-  return NativeProcessLinux::PtraceWrapper(PTRACE_SETREGSET, m_thread.GetID(),
-                                           &regset, &ioVec, ioVec.iov_len)
+  uint32_t max_supported =
+      (hwbType == eDREGTypeWATCH) ? m_max_hwp_supported : m_max_hbp_supported;
+  auto &regs = (hwbType == eDREGTypeWATCH) ? m_hwp_regs : m_hbp_regs;
+  return arm64::WriteHardwareDebugRegs(hwbType, m_thread.GetID(), max_supported,
+                                       regs)
       .ToError();
 }
 

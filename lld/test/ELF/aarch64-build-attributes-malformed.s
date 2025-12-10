@@ -1,7 +1,7 @@
 # REQUIRES: aarch64
 
 # RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o %t.o
-# RUN: ld.lld %t.o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK: (.ARM.attributes): unexpected end of data at offset 0x3f while reading [0x3d, 0x41)
 

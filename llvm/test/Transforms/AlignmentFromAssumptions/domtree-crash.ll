@@ -9,10 +9,10 @@
 
 define void @fn1() {
 ; CHECK-LABEL: define void @fn1() {
-; CHECK-NEXT:    call void @llvm.assume(i1 false) [ "align"(ptr @global, i64 1) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr @global, i64 1) ]
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.assume(i1 false) [ "align"(ptr @global, i64 1) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr @global, i64 1) ]
   ret void
 }
 

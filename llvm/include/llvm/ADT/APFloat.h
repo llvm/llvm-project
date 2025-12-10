@@ -138,15 +138,21 @@ enum lostFraction { // Example of truncated bits:
 /// New operations: sqrt, IEEE remainder, C90 fmod, nexttoward.
 ///
 
+namespace detail {
+class IEEEFloat;
+class DoubleAPFloat;
+} // namespace detail
+
 // This is the common type definitions shared by APFloat and its internal
 // implementation classes. This struct should not define any non-static data
 // members.
-struct APFloatBase {
+class APFloatBase {
+public:
   typedef APInt::WordType integerPart;
   static constexpr unsigned integerPartWidth = APInt::APINT_BITS_PER_WORD;
 
   /// A signed type to represent a floating point numbers unbiased exponent.
-  typedef int32_t ExponentType;
+  using ExponentType = int32_t;
 
   /// \name Floating Point Semantics.
   /// @{
@@ -257,30 +263,64 @@ struct APFloatBase {
   LLVM_ABI static const llvm::fltSemantics &EnumToSemantics(Semantics S);
   LLVM_ABI static Semantics SemanticsToEnum(const llvm::fltSemantics &Sem);
 
-  LLVM_ABI static const fltSemantics &IEEEhalf() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &BFloat() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &IEEEsingle() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &IEEEdouble() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &IEEEquad() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &PPCDoubleDouble() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &PPCDoubleDoubleLegacy() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E5M2() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E5M2FNUZ() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E4M3() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E4M3FN() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E4M3FNUZ() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E4M3B11FNUZ() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E3M4() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &FloatTF32() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E8M0FNU() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float6E3M2FN() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float6E2M3FN() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float4E2M1FN() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &x87DoubleExtended() LLVM_READNONE;
+private:
+  LLVM_ABI static const fltSemantics semIEEEhalf;
+  LLVM_ABI static const fltSemantics semBFloat;
+  LLVM_ABI static const fltSemantics semIEEEsingle;
+  LLVM_ABI static const fltSemantics semIEEEdouble;
+  LLVM_ABI static const fltSemantics semIEEEquad;
+  LLVM_ABI static const fltSemantics semFloat8E5M2;
+  LLVM_ABI static const fltSemantics semFloat8E5M2FNUZ;
+  LLVM_ABI static const fltSemantics semFloat8E4M3;
+  LLVM_ABI static const fltSemantics semFloat8E4M3FN;
+  LLVM_ABI static const fltSemantics semFloat8E4M3FNUZ;
+  LLVM_ABI static const fltSemantics semFloat8E4M3B11FNUZ;
+  LLVM_ABI static const fltSemantics semFloat8E3M4;
+  LLVM_ABI static const fltSemantics semFloatTF32;
+  LLVM_ABI static const fltSemantics semFloat8E8M0FNU;
+  LLVM_ABI static const fltSemantics semFloat6E3M2FN;
+  LLVM_ABI static const fltSemantics semFloat6E2M3FN;
+  LLVM_ABI static const fltSemantics semFloat4E2M1FN;
+  LLVM_ABI static const fltSemantics semX87DoubleExtended;
+  LLVM_ABI static const fltSemantics semBogus;
+  LLVM_ABI static const fltSemantics semPPCDoubleDouble;
+  LLVM_ABI static const fltSemantics semPPCDoubleDoubleLegacy;
+
+  friend class detail::IEEEFloat;
+  friend class detail::DoubleAPFloat;
+  friend class APFloat;
+
+public:
+  static const fltSemantics &IEEEhalf() { return semIEEEhalf; }
+  static const fltSemantics &BFloat() { return semBFloat; }
+  static const fltSemantics &IEEEsingle() { return semIEEEsingle; }
+  static const fltSemantics &IEEEdouble() { return semIEEEdouble; }
+  static const fltSemantics &IEEEquad() { return semIEEEquad; }
+  static const fltSemantics &PPCDoubleDouble() { return semPPCDoubleDouble; }
+  static const fltSemantics &PPCDoubleDoubleLegacy() {
+    return semPPCDoubleDoubleLegacy;
+  }
+  static const fltSemantics &Float8E5M2() { return semFloat8E5M2; }
+  static const fltSemantics &Float8E5M2FNUZ() { return semFloat8E5M2FNUZ; }
+  static const fltSemantics &Float8E4M3() { return semFloat8E4M3; }
+  static const fltSemantics &Float8E4M3FN() { return semFloat8E4M3FN; }
+  static const fltSemantics &Float8E4M3FNUZ() { return semFloat8E4M3FNUZ; }
+  static const fltSemantics &Float8E4M3B11FNUZ() {
+    return semFloat8E4M3B11FNUZ;
+  }
+  static const fltSemantics &Float8E3M4() { return semFloat8E3M4; }
+  static const fltSemantics &FloatTF32() { return semFloatTF32; }
+  static const fltSemantics &Float8E8M0FNU() { return semFloat8E8M0FNU; }
+  static const fltSemantics &Float6E3M2FN() { return semFloat6E3M2FN; }
+  static const fltSemantics &Float6E2M3FN() { return semFloat6E2M3FN; }
+  static const fltSemantics &Float4E2M1FN() { return semFloat4E2M1FN; }
+  static const fltSemantics &x87DoubleExtended() {
+    return semX87DoubleExtended;
+  }
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
   /// anything real.
-  LLVM_ABI static const fltSemantics &Bogus() LLVM_READNONE;
+  static const fltSemantics &Bogus() { return semBogus; }
 
   // Returns true if any number described by this semantics can be precisely
   // represented by the specified semantics. Does not take into account
@@ -460,12 +500,6 @@ public:
   LLVM_ABI opStatus convertToInteger(MutableArrayRef<integerPart>, unsigned int,
                                      bool, roundingMode, bool *) const;
   LLVM_ABI opStatus convertFromAPInt(const APInt &, bool, roundingMode);
-  LLVM_ABI opStatus convertFromSignExtendedInteger(const integerPart *,
-                                                   unsigned int, bool,
-                                                   roundingMode);
-  LLVM_ABI opStatus convertFromZeroExtendedInteger(const integerPart *,
-                                                   unsigned int, bool,
-                                                   roundingMode);
   LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
   LLVM_ABI APInt bitcastToAPInt() const;
   LLVM_ABI double convertToDouble() const;
@@ -605,33 +639,10 @@ public:
                          unsigned FormatMaxPadding = 3,
                          bool TruncateZero = true) const;
 
-  /// If this value has an exact multiplicative inverse, store it in inv and
-  /// return true.
-  LLVM_ABI bool getExactInverse(APFloat *inv) const;
-
-  // If this is an exact power of two, return the exponent while ignoring the
-  // sign bit. If it's not an exact power of 2, return INT_MIN
   LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
 
-  // If this is an exact power of two, return the exponent. If it's not an exact
-  // power of 2, return INT_MIN
-  LLVM_READONLY
-  int getExactLog2() const {
-    return isNegative() ? INT_MIN : getExactLog2Abs();
-  }
-
-  /// Returns the exponent of the internal representation of the APFloat.
-  ///
-  /// Because the radix of APFloat is 2, this is equivalent to floor(log2(x)).
-  /// For special APFloat values, this returns special error codes:
-  ///
-  ///   NaN -> \c IEK_NaN
-  ///   0   -> \c IEK_Zero
-  ///   Inf -> \c IEK_Inf
-  ///
   LLVM_ABI friend int ilogb(const IEEEFloat &Arg);
 
-  /// Returns: X * 2^Exp for integral exponents.
   LLVM_ABI friend IEEEFloat scalbn(IEEEFloat X, int Exp, roundingMode);
 
   LLVM_ABI friend IEEEFloat frexp(const IEEEFloat &X, int &Exp, roundingMode);
@@ -824,6 +835,19 @@ class DoubleAPFloat final {
 
   opStatus addWithSpecial(const DoubleAPFloat &LHS, const DoubleAPFloat &RHS,
                           DoubleAPFloat &Out, roundingMode RM);
+  opStatus convertToSignExtendedInteger(MutableArrayRef<integerPart> Input,
+                                        unsigned int Width, bool IsSigned,
+                                        roundingMode RM, bool *IsExact) const;
+
+  // Convert an unsigned integer Src to a floating point number,
+  // rounding according to RM.  The sign of the floating point number is not
+  // modified.
+  opStatus convertFromUnsignedParts(const integerPart *Src,
+                                    unsigned int SrcCount, roundingMode RM);
+
+  // Handle overflow.  Sign is preserved.  We either become infinity or
+  // the largest finite number.
+  opStatus handleOverflow(roundingMode RM);
 
 public:
   LLVM_ABI DoubleAPFloat(const fltSemantics &S);
@@ -880,14 +904,6 @@ public:
                                      roundingMode RM, bool *IsExact) const;
   LLVM_ABI opStatus convertFromAPInt(const APInt &Input, bool IsSigned,
                                      roundingMode RM);
-  LLVM_ABI opStatus convertFromSignExtendedInteger(const integerPart *Input,
-                                                   unsigned int InputSize,
-                                                   bool IsSigned,
-                                                   roundingMode RM);
-  LLVM_ABI opStatus convertFromZeroExtendedInteger(const integerPart *Input,
-                                                   unsigned int InputSize,
-                                                   bool IsSigned,
-                                                   roundingMode RM);
   LLVM_ABI unsigned int convertToHexString(char *DST, unsigned int HexDigits,
                                            bool UpperCase,
                                            roundingMode RM) const;
@@ -902,11 +918,9 @@ public:
                          unsigned FormatMaxPadding,
                          bool TruncateZero = true) const;
 
-  LLVM_ABI bool getExactInverse(APFloat *inv) const;
-
-  LLVM_ABI LLVM_READONLY int getExactLog2() const;
   LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
 
+  LLVM_ABI friend int ilogb(const DoubleAPFloat &X);
   LLVM_ABI friend DoubleAPFloat scalbn(const DoubleAPFloat &X, int Exp,
                                        roundingMode);
   LLVM_ABI friend DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp,
@@ -924,8 +938,8 @@ LLVM_ABI DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, roundingMode);
 // This is a interface class that is currently forwarding functionalities from
 // detail::IEEEFloat.
 class APFloat : public APFloatBase {
-  typedef detail::IEEEFloat IEEEFloat;
-  typedef detail::DoubleAPFloat DoubleAPFloat;
+  using IEEEFloat = detail::IEEEFloat;
+  using DoubleAPFloat = detail::DoubleAPFloat;
 
   static_assert(std::is_standard_layout<IEEEFloat>::value);
 
@@ -953,69 +967,11 @@ class APFloat : public APFloatBase {
       llvm_unreachable("Unexpected semantics");
     }
 
-    ~Storage() {
-      if (usesLayout<IEEEFloat>(*semantics)) {
-        IEEE.~IEEEFloat();
-        return;
-      }
-      if (usesLayout<DoubleAPFloat>(*semantics)) {
-        Double.~DoubleAPFloat();
-        return;
-      }
-      llvm_unreachable("Unexpected semantics");
-    }
-
-    Storage(const Storage &RHS) {
-      if (usesLayout<IEEEFloat>(*RHS.semantics)) {
-        new (this) IEEEFloat(RHS.IEEE);
-        return;
-      }
-      if (usesLayout<DoubleAPFloat>(*RHS.semantics)) {
-        new (this) DoubleAPFloat(RHS.Double);
-        return;
-      }
-      llvm_unreachable("Unexpected semantics");
-    }
-
-    Storage(Storage &&RHS) {
-      if (usesLayout<IEEEFloat>(*RHS.semantics)) {
-        new (this) IEEEFloat(std::move(RHS.IEEE));
-        return;
-      }
-      if (usesLayout<DoubleAPFloat>(*RHS.semantics)) {
-        new (this) DoubleAPFloat(std::move(RHS.Double));
-        return;
-      }
-      llvm_unreachable("Unexpected semantics");
-    }
-
-    Storage &operator=(const Storage &RHS) {
-      if (usesLayout<IEEEFloat>(*semantics) &&
-          usesLayout<IEEEFloat>(*RHS.semantics)) {
-        IEEE = RHS.IEEE;
-      } else if (usesLayout<DoubleAPFloat>(*semantics) &&
-                 usesLayout<DoubleAPFloat>(*RHS.semantics)) {
-        Double = RHS.Double;
-      } else if (this != &RHS) {
-        this->~Storage();
-        new (this) Storage(RHS);
-      }
-      return *this;
-    }
-
-    Storage &operator=(Storage &&RHS) {
-      if (usesLayout<IEEEFloat>(*semantics) &&
-          usesLayout<IEEEFloat>(*RHS.semantics)) {
-        IEEE = std::move(RHS.IEEE);
-      } else if (usesLayout<DoubleAPFloat>(*semantics) &&
-                 usesLayout<DoubleAPFloat>(*RHS.semantics)) {
-        Double = std::move(RHS.Double);
-      } else if (this != &RHS) {
-        this->~Storage();
-        new (this) Storage(std::move(RHS));
-      }
-      return *this;
-    }
+    LLVM_ABI ~Storage();
+    LLVM_ABI Storage(const Storage &RHS);
+    LLVM_ABI Storage(Storage &&RHS);
+    LLVM_ABI Storage &operator=(const Storage &RHS);
+    LLVM_ABI Storage &operator=(Storage &&RHS);
   } U;
 
   template <typename T> static bool usesLayout(const fltSemantics &Semantics) {
@@ -1067,6 +1023,8 @@ class APFloat : public APFloatBase {
   explicit APFloat(DoubleAPFloat F, const fltSemantics &S)
       : U(std::move(F), S) {}
 
+  // Compares the absolute value of this APFloat with another.  Both operands
+  // must be finite non-zero.
   cmpResult compareAbsoluteValue(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics() &&
            "Should only compare APFloats with the same semantics");
@@ -1337,7 +1295,7 @@ public:
 
   /// Assuming this is an IEEE-754 NaN value, quiet its signaling bit.
   /// This preserves the sign and payload bits.
-  APFloat makeQuiet() const {
+  [[nodiscard]] APFloat makeQuiet() const {
     APFloat Result(*this);
     Result.getIEEE().makeQuiet();
     return Result;
@@ -1345,30 +1303,34 @@ public:
 
   LLVM_ABI opStatus convert(const fltSemantics &ToSemantics, roundingMode RM,
                             bool *losesInfo);
+  // Convert a floating point number to an integer according to the
+  // rounding mode.  We provide deterministic values in case of an invalid
+  // operation exception, namely zero for NaNs and the minimal or maximal value
+  // respectively for underflow or overflow.
+  // The *IsExact output tells whether the result is exact, in the sense that
+  // converting it back to the original floating point type produces the
+  // original value.  This is almost equivalent to result==opOK, except for
+  // negative zeroes.
   opStatus convertToInteger(MutableArrayRef<integerPart> Input,
                             unsigned int Width, bool IsSigned, roundingMode RM,
                             bool *IsExact) const {
     APFLOAT_DISPATCH_ON_SEMANTICS(
         convertToInteger(Input, Width, IsSigned, RM, IsExact));
   }
+  // Same as convertToInteger(integerPart*, ...), except the result is returned
+  // in an APSInt, whose initial bit-width and signed-ness are used to determine
+  // the precision of the conversion.
   LLVM_ABI opStatus convertToInteger(APSInt &Result, roundingMode RM,
                                      bool *IsExact) const;
+
+  // Convert a two's complement integer Input to a floating point number,
+  // rounding according to RM.  IsSigned is true if the integer is signed,
+  // in which case it must be sign-extended.
   opStatus convertFromAPInt(const APInt &Input, bool IsSigned,
                             roundingMode RM) {
     APFLOAT_DISPATCH_ON_SEMANTICS(convertFromAPInt(Input, IsSigned, RM));
   }
-  opStatus convertFromSignExtendedInteger(const integerPart *Input,
-                                          unsigned int InputSize, bool IsSigned,
-                                          roundingMode RM) {
-    APFLOAT_DISPATCH_ON_SEMANTICS(
-        convertFromSignExtendedInteger(Input, InputSize, IsSigned, RM));
-  }
-  opStatus convertFromZeroExtendedInteger(const integerPart *Input,
-                                          unsigned int InputSize, bool IsSigned,
-                                          roundingMode RM) {
-    APFLOAT_DISPATCH_ON_SEMANTICS(
-        convertFromZeroExtendedInteger(Input, InputSize, IsSigned, RM));
-  }
+
   LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(bitcastToAPInt());
@@ -1419,6 +1381,8 @@ public:
     return Res == cmpGreaterThan || Res == cmpEqual;
   }
 
+  // IEEE comparison with another floating point number (NaNs compare unordered,
+  // 0==-0).
   cmpResult compare(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics() &&
            "Should only compare APFloats with the same semantics");
@@ -1505,22 +1469,26 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  bool getExactInverse(APFloat *inv) const {
-    APFLOAT_DISPATCH_ON_SEMANTICS(getExactInverse(inv));
-  }
+  /// If this value is normal and has an exact, normal, multiplicative inverse,
+  /// store it in inv and return true.
+  LLVM_ABI bool getExactInverse(APFloat *Inv) const;
 
+  // If this is an exact power of two, return the exponent while ignoring the
+  // sign bit. If it's not an exact power of 2, return INT_MIN
   LLVM_READONLY
   int getExactLog2Abs() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(getExactLog2Abs());
   }
 
+  // If this is an exact power of two, return the exponent. If it's not an exact
+  // power of 2, return INT_MIN
   LLVM_READONLY
   int getExactLog2() const {
-    APFLOAT_DISPATCH_ON_SEMANTICS(getExactLog2());
+    return isNegative() ? INT_MIN : getExactLog2Abs();
   }
 
   LLVM_ABI friend hash_code hash_value(const APFloat &Arg);
-  friend int ilogb(const APFloat &Arg) { return ilogb(Arg.getIEEE()); }
+  friend int ilogb(const APFloat &Arg);
   friend APFloat scalbn(APFloat X, int Exp, roundingMode RM);
   friend APFloat frexp(const APFloat &X, int &Exp, roundingMode RM);
   friend IEEEFloat;
@@ -1535,6 +1503,25 @@ static_assert(sizeof(APFloat) == sizeof(detail::IEEEFloat),
 /// These additional declarations are required in order to compile LLVM with IBM
 /// xlC compiler.
 LLVM_ABI hash_code hash_value(const APFloat &Arg);
+
+/// Returns the exponent of the internal representation of the APFloat.
+///
+/// Because the radix of APFloat is 2, this is equivalent to floor(log2(x)).
+/// For special APFloat values, this returns special error codes:
+///
+///   NaN -> \c IEK_NaN
+///   0   -> \c IEK_Zero
+///   Inf -> \c IEK_Inf
+///
+inline int ilogb(const APFloat &Arg) {
+  if (APFloat::usesLayout<detail::IEEEFloat>(Arg.getSemantics()))
+    return ilogb(Arg.U.IEEE);
+  if (APFloat::usesLayout<detail::DoubleAPFloat>(Arg.getSemantics()))
+    return ilogb(Arg.U.Double);
+  llvm_unreachable("Unexpected semantics");
+}
+
+/// Returns: X * 2^Exp for integral exponents.
 inline APFloat scalbn(APFloat X, int Exp, APFloat::roundingMode RM) {
   if (APFloat::usesLayout<detail::IEEEFloat>(X.getSemantics()))
     return APFloat(scalbn(X.U.IEEE, Exp, RM), X.getSemantics());

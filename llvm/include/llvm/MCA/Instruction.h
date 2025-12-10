@@ -26,8 +26,6 @@
 #include "llvm/Support/raw_ostream.h"
 #endif
 
-#include <memory>
-
 namespace llvm {
 
 namespace mca {
@@ -382,6 +380,10 @@ public:
   bool isReadZero() const { return IsZero; }
   void setReadZero() { IsZero = true; }
   void setPRF(unsigned ID) { PRFID = ID; }
+
+#ifndef NDEBUG
+  void dump() const;
+#endif
 };
 
 /// A sequence of cycles.

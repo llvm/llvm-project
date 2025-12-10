@@ -46,7 +46,7 @@ class WebAssemblyFastISel final : public FastISel {
   // All possible address modes.
   class Address {
   public:
-    using BaseKind = enum { RegBase, FrameIndexBase };
+    enum BaseKind { RegBase, FrameIndexBase };
 
   private:
     BaseKind Kind = RegBase;
@@ -912,6 +912,8 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
 
   if (!IsVoid)
     updateValueMap(Call, ResultReg);
+
+  diagnoseDontCall(*Call);
   return true;
 }
 
@@ -986,20 +988,36 @@ bool WebAssemblyFastISel::selectSelect(const Instruction *I) {
 bool WebAssemblyFastISel::selectTrunc(const Instruction *I) {
   const auto *Trunc = cast<TruncInst>(I);
 
-  Register Reg = getRegForValue(Trunc->getOperand(0));
-  if (Reg == 0)
+  const Value *Op = Trunc->getOperand(0);
+  MVT::SimpleValueType From = getSimpleType(Op->getType());
+  MVT::SimpleValueType To = getLegalType(getSimpleType(Trunc->getType()));
+  Register In = getRegForValue(Op);
+  if (In == 0)
     return false;
 
-  unsigned FromBitWidth = Trunc->getOperand(0)->getType()->getIntegerBitWidth();
-  unsigned ToBitWidth = Trunc->getType()->getIntegerBitWidth();
+  auto Truncate = [&](Register Reg) -> unsigned {
+    if (From == MVT::i64) {
+      if (To == MVT::i64)
+        return copyValue(Reg);
 
-  if (ToBitWidth <= 32 && (32 < FromBitWidth && FromBitWidth <= 64)) {
-    Register Result = createResultReg(&WebAssembly::I32RegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(WebAssembly::I32_WRAP_I64), Result)
-        .addReg(Reg);
-    Reg = Result;
-  }
+      if (To == MVT::i1 || To == MVT::i8 || To == MVT::i16 || To == MVT::i32) {
+        Register Result = createResultReg(&WebAssembly::I32RegClass);
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                TII.get(WebAssembly::I32_WRAP_I64), Result)
+            .addReg(Reg);
+        return Result;
+      }
+    }
+
+    if (From == MVT::i32)
+      return copyValue(Reg);
+
+    return 0;
+  };
+
+  unsigned Reg = Truncate(In);
+  if (Reg == 0)
+    return false;
 
   updateValueMap(Trunc, Reg);
   return true;

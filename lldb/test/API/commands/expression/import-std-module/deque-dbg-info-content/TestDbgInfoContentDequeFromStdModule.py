@@ -11,7 +11,10 @@ class TestDbgInfoContentDeque(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler="clang", compiler_version=["<", "18.0"])
-    @skipUnlessDarwin
+    @skipIf(macos_version=["<", "15.0"])
+    @skipIf(
+        bugnumber="ASTImport of lambdas not supported: https://github.com/llvm/llvm-project/issues/149477"
+    )
     def test(self):
         self.build()
 

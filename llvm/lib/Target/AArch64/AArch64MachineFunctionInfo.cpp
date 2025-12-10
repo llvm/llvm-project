@@ -16,6 +16,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -23,12 +24,28 @@
 
 using namespace llvm;
 
+static std::optional<uint64_t>
+getSVEStackSize(const AArch64FunctionInfo &MFI,
+                uint64_t (AArch64FunctionInfo::*GetStackSize)() const) {
+  if (!MFI.hasCalculatedStackSizeSVE())
+    return std::nullopt;
+  return (MFI.*GetStackSize)();
+}
+
 yaml::AArch64FunctionInfo::AArch64FunctionInfo(
     const llvm::AArch64FunctionInfo &MFI)
     : HasRedZone(MFI.hasRedZone()),
-      StackSizeSVE(MFI.hasCalculatedStackSizeSVE()
-                       ? std::optional<uint64_t>(MFI.getStackSizeSVE())
-                       : std::nullopt) {}
+      StackSizeZPR(
+          getSVEStackSize(MFI, &llvm::AArch64FunctionInfo::getStackSizeZPR)),
+      StackSizePPR(
+          getSVEStackSize(MFI, &llvm::AArch64FunctionInfo::getStackSizePPR)),
+      HasStackFrame(MFI.hasStackFrame()
+                        ? std::optional<bool>(MFI.hasStackFrame())
+                        : std::nullopt),
+      HasStreamingModeChanges(
+          MFI.hasStreamingModeChanges()
+              ? std::optional<bool>(MFI.hasStreamingModeChanges())
+              : std::nullopt) {}
 
 void yaml::AArch64FunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<AArch64FunctionInfo>::mapping(YamlIO, *this);
@@ -38,28 +55,30 @@ void AArch64FunctionInfo::initializeBaseYamlFields(
     const yaml::AArch64FunctionInfo &YamlMFI) {
   if (YamlMFI.HasRedZone)
     HasRedZone = YamlMFI.HasRedZone;
-  if (YamlMFI.StackSizeSVE)
-    setStackSizeSVE(*YamlMFI.StackSizeSVE);
+  if (YamlMFI.StackSizeZPR || YamlMFI.StackSizePPR)
+    setStackSizeSVE(YamlMFI.StackSizeZPR.value_or(0),
+                    YamlMFI.StackSizePPR.value_or(0));
+  if (YamlMFI.HasStackFrame)
+    setHasStackFrame(*YamlMFI.HasStackFrame);
+  if (YamlMFI.HasStreamingModeChanges)
+    setHasStreamingModeChanges(*YamlMFI.HasStreamingModeChanges);
 }
 
-static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
+static SignReturnAddress GetSignReturnAddress(const Function &F) {
   if (F.hasFnAttribute("ptrauth-returns"))
-    return {true, false}; // non-leaf
+    return SignReturnAddress::NonLeaf;
+
   // The function should be signed in the following situations:
   // - sign-return-address=all
   // - sign-return-address=non-leaf and the functions spills the LR
   if (!F.hasFnAttribute("sign-return-address"))
-    return {false, false};
+    return SignReturnAddress::None;
 
   StringRef Scope = F.getFnAttribute("sign-return-address").getValueAsString();
-  if (Scope == "none")
-    return {false, false};
-
-  if (Scope == "all")
-    return {true, true};
-
-  assert(Scope == "non-leaf");
-  return {true, false};
+  return StringSwitch<SignReturnAddress>(Scope)
+      .Case("none", SignReturnAddress::None)
+      .Case("non-leaf", SignReturnAddress::NonLeaf)
+      .Case("all", SignReturnAddress::All);
 }
 
 static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
@@ -95,7 +114,7 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   // HasRedZone here.
   if (F.hasFnAttribute(Attribute::NoRedZone))
     HasRedZone = false;
-  std::tie(SignReturnAddress, SignReturnAddressAll) = GetSignReturnAddress(F);
+  SignCondition = GetSignReturnAddress(F);
   SignWithBKey = ShouldSignWithBKey(F, *STI);
   HasELFSignedGOT = hasELFSignedGOTHelper(F, STI);
   // TODO: skip functions that have no instrumented allocas for optimization
@@ -148,23 +167,28 @@ MachineFunctionInfo *AArch64FunctionInfo::clone(
   return DestMF.cloneInfo<AArch64FunctionInfo>(*this);
 }
 
-bool AArch64FunctionInfo::shouldSignReturnAddress(bool SpillsLR) const {
-  if (!SignReturnAddress)
-    return false;
-  if (SignReturnAddressAll)
-    return true;
-  return SpillsLR;
-}
-
 static bool isLRSpilled(const MachineFunction &MF) {
   return llvm::any_of(
       MF.getFrameInfo().getCalleeSavedInfo(),
       [](const auto &Info) { return Info.getReg() == AArch64::LR; });
 }
 
+bool AArch64FunctionInfo::shouldSignReturnAddress(SignReturnAddress Condition,
+                                                  bool IsLRSpilled) {
+  switch (Condition) {
+  case SignReturnAddress::None:
+    return false;
+  case SignReturnAddress::NonLeaf:
+    return IsLRSpilled;
+  case SignReturnAddress::All:
+    return true;
+  }
+  llvm_unreachable("Unknown SignReturnAddress enum");
+}
+
 bool AArch64FunctionInfo::shouldSignReturnAddress(
     const MachineFunction &MF) const {
-  return shouldSignReturnAddress(isLRSpilled(MF));
+  return shouldSignReturnAddress(SignCondition, isLRSpilled(MF));
 }
 
 bool AArch64FunctionInfo::needsShadowCallStackPrologueEpilogue(

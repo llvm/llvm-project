@@ -1,4 +1,4 @@
-//===---------- TransformerClangTidyCheck.cpp - clang-tidy ----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,6 @@
 #include "TransformerClangTidyCheck.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Lex/Preprocessor.h"
-#include "llvm/ADT/STLExtras.h"
 #include <optional>
 
 namespace clang::tidy::utils {
@@ -66,7 +65,7 @@ TransformerClangTidyCheck::TransformerClangTidyCheck(StringRef Name,
 // we would be accessing `getLangOpts` and `Options` before the underlying
 // `ClangTidyCheck` instance was properly initialized.
 TransformerClangTidyCheck::TransformerClangTidyCheck(
-    std::function<std::optional<RewriteRuleWith<std::string>>(
+    llvm::function_ref<std::optional<RewriteRuleWith<std::string>>(
         const LangOptions &, const OptionsView &)>
         MakeRule,
     StringRef Name, ClangTidyContext *Context)
@@ -105,7 +104,7 @@ void TransformerClangTidyCheck::check(
   if (Result.Context->getDiagnostics().hasErrorOccurred())
     return;
 
-  size_t I = transformer::detail::findSelectedCase(Result, Rule);
+  const size_t I = transformer::detail::findSelectedCase(Result, Rule);
   Expected<SmallVector<transformer::Edit, 1>> Edits =
       Rule.Cases[I].Edits(Result);
   if (!Edits) {
@@ -127,7 +126,7 @@ void TransformerClangTidyCheck::check(
 
   // Associate the diagnostic with the location of the first change.
   {
-    DiagnosticBuilder Diag =
+    const DiagnosticBuilder Diag =
         diag((*Edits)[0].Range.getBegin(), escapeForDiagnostic(*Explanation));
     for (const auto &T : *Edits) {
       switch (T.Kind) {

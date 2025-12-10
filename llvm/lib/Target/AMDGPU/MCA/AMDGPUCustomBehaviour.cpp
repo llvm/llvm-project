@@ -21,8 +21,8 @@
 
 namespace llvm::mca {
 
-void AMDGPUInstrPostProcess::postProcessInstruction(
-    std::unique_ptr<Instruction> &Inst, const MCInst &MCI) {
+void AMDGPUInstrPostProcess::postProcessInstruction(Instruction &Inst,
+                                                    const MCInst &MCI) {
   switch (MCI.getOpcode()) {
   case AMDGPU::S_WAITCNT:
   case AMDGPU::S_WAITCNT_soft:
@@ -44,7 +44,7 @@ void AMDGPUInstrPostProcess::postProcessInstruction(
 
 // s_waitcnt instructions encode important information as immediate operands
 // which are lost during the MCInst -> mca::Instruction lowering.
-void AMDGPUInstrPostProcess::processWaitCnt(std::unique_ptr<Instruction> &Inst,
+void AMDGPUInstrPostProcess::processWaitCnt(Instruction &Inst,
                                             const MCInst &MCI) {
   for (int Idx = 0, N = MCI.size(); Idx < N; Idx++) {
     MCAOperand Op;
@@ -55,7 +55,7 @@ void AMDGPUInstrPostProcess::processWaitCnt(std::unique_ptr<Instruction> &Inst,
       Op = MCAOperand::createImm(MCOp.getImm());
     }
     Op.setIndex(Idx);
-    Inst->addOperand(Op);
+    Inst.addOperand(Op);
   }
 }
 

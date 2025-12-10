@@ -1,4 +1,5 @@
-# REQUIRES: aarch64, shell
+# REQUIRES: aarch64
+# UNSUPPORTED: system-windows
 # RUN: rm -rf %t; split-file %s %t
 # RUN: ln -s Versions/A/Developer %t/Developer/Library/Frameworks/Developer.framework/
 # RUN: llvm-mc -filetype obj -triple arm64-apple-macos11.0 %t/test.s -o %t/test.o

@@ -1812,6 +1812,11 @@ union Union {};
 union UnionIncomplete;
 struct StructIncomplete; // #StructIncomplete
 
+#if __cplusplus >= 201402L
+template<class _Base, class _Derived>
+inline constexpr bool IsPointerInterconvertibleBaseOfV = __is_pointer_interconvertible_base_of(_Base, _Derived);
+#endif
+
 void is_pointer_interconvertible_base_of(int n)
 {
   static_assert(__is_pointer_interconvertible_base_of(Base, Derived));
@@ -1880,6 +1885,11 @@ void is_pointer_interconvertible_base_of(int n)
   static_assert(!__is_pointer_interconvertible_base_of(void(&)(int), void(&)(char)));
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(int)));
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(char)));
+
+#if __cplusplus >= 201402L
+  static_assert(IsPointerInterconvertibleBaseOfV<const Base, Base>);
+  static_assert(IsPointerInterconvertibleBaseOfV<const Base, Derived>);
+#endif
 }
 }
 
@@ -2036,6 +2046,88 @@ void is_implicit_lifetime(int n) {
   static_assert(!__builtin_is_implicit_lifetime(_Atomic int));
   // expected-error@-1 {{atomic types are not supported in '__builtin_is_implicit_lifetime'}}
   static_assert(__builtin_is_implicit_lifetime(int * __restrict));
+}
+
+namespace GH160610 {
+class NonAggregate {
+public:
+    NonAggregate() = default;
+
+    NonAggregate(const NonAggregate&)            = delete;
+    NonAggregate& operator=(const NonAggregate&) = delete;
+private:
+    int num;
+};
+
+class DataMemberInitializer {
+public:
+    DataMemberInitializer() = default;
+
+    DataMemberInitializer(const DataMemberInitializer&)            = delete;
+    DataMemberInitializer& operator=(const DataMemberInitializer&) = delete;
+private:
+    int num = 0;
+};
+
+class UserProvidedConstructor {
+public:
+    UserProvidedConstructor() {}
+
+    UserProvidedConstructor(const UserProvidedConstructor&)            = delete;
+    UserProvidedConstructor& operator=(const UserProvidedConstructor&) = delete;
+};
+struct Ctr {
+  Ctr();
+};
+struct Ctr2 {
+  Ctr2();
+private:
+  NoEligibleTrivialContructor inner;
+};
+
+struct NonCopyable{
+    NonCopyable() = default;
+    NonCopyable(const NonCopyable&) = delete;
+};
+
+class C {
+    NonCopyable nc;
+};
+
+static_assert(__builtin_is_implicit_lifetime(Ctr));
+static_assert(!__builtin_is_implicit_lifetime(Ctr2));
+static_assert(__builtin_is_implicit_lifetime(C));
+static_assert(!__builtin_is_implicit_lifetime(NoEligibleTrivialContructor));
+static_assert(__builtin_is_implicit_lifetime(NonAggregate));
+static_assert(!__builtin_is_implicit_lifetime(DataMemberInitializer));
+static_assert(!__builtin_is_implicit_lifetime(UserProvidedConstructor));
+
+#if __cplusplus >= 202002L
+template <typename T>
+class Tpl {
+    Tpl() requires false = default ;
+};
+static_assert(__builtin_is_implicit_lifetime(Tpl<int>));
+
+template <typename>
+class MultipleDefaults {
+  MultipleDefaults() {};
+  MultipleDefaults() requires true = default;
+};
+static_assert(__builtin_is_implicit_lifetime(MultipleDefaults<int>));
+template <typename>
+class MultipleDefaults2 {
+  MultipleDefaults2() requires true {};
+  MultipleDefaults2() = default;
+};
+
+static_assert(__builtin_is_implicit_lifetime(MultipleDefaults2<int>));
+
+
+#endif
+
+
+
 }
 
 void is_signed()
@@ -5086,12 +5178,12 @@ namespace GH121278 {
 #if __cplusplus >= 202002L
 template <typename B, typename D>
 concept C = __is_base_of(B, D);
-// expected-error@-1 {{incomplete type 'GH121278::S' used in type trait expression}}
+// expected-error@-1 {{incomplete type 'S' used in type trait expression}}
 // expected-note@-2 {{while substituting template arguments into constraint expression here}}
 
 struct T;
 struct S;
 bool b = C<T, S>;
-// expected-note@-1 {{while checking the satisfaction of concept 'C<GH121278::T, GH121278::S>' requested here}}
+// expected-note@-1 {{while checking the satisfaction of concept 'C<T, S>' requested here}}
 #endif
 }

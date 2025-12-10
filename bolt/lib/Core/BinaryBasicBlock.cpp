@@ -22,8 +22,6 @@
 namespace llvm {
 namespace bolt {
 
-constexpr uint32_t BinaryBasicBlock::INVALID_OFFSET;
-
 bool operator<(const BinaryBasicBlock &LHS, const BinaryBasicBlock &RHS) {
   return LHS.Index < RHS.Index;
 }
@@ -103,9 +101,18 @@ bool BinaryBasicBlock::validateSuccessorInvariants() {
         Valid &= (Sym == Function->getFunctionEndLabel() ||
                   Sym == Function->getFunctionEndLabel(getFragmentNum()));
         if (!Valid) {
-          BC.errs() << "BOLT-WARNING: Jump table contains illegal entry: "
-                    << Sym->getName() << "\n";
+          const BinaryFunction *TargetBF = BC.getFunctionForSymbol(Sym);
+          if (TargetBF) {
+            // It's possible for another function to be in the jump table entry
+            // as a result of built-in unreachable.
+            Valid = true;
+          } else {
+            BC.errs() << "BOLT-WARNING: Jump table contains illegal entry: "
+                      << Sym->getName() << "\n";
+          }
         }
+        if (!Valid)
+          break;
       }
     }
   } else {
@@ -201,7 +208,11 @@ int32_t BinaryBasicBlock::getCFIStateAtInstr(const MCInst *Instr) const {
       InstrSeen = (&Inst == Instr);
       continue;
     }
-    if (Function->getBinaryContext().MIB->isCFI(Inst)) {
+    // Ignoring OpNegateRAState CFIs here, as they dont have a "State"
+    // number associated with them.
+    if (Function->getBinaryContext().MIB->isCFI(Inst) &&
+        (Function->getCFIFor(Inst)->getOperation() !=
+         MCCFIInstruction::OpNegateRAState)) {
       LastCFI = &Inst;
       break;
     }

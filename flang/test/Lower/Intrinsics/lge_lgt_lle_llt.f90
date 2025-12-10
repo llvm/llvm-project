@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 subroutine lge_test
     character*3 :: c1(3)
@@ -30,4 +30,4 @@ subroutine lge_test
     ! CHECK: EndIoStatement
     print*, llt(c1, c2)
   end
-  
+

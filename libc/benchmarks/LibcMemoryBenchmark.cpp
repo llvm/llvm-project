@@ -53,8 +53,8 @@ MismatchOffsetDistribution::MismatchOffsetDistribution(size_t BufferSize,
     : MismatchAt(MismatchAt) {
   if (MismatchAt <= 1)
     return;
-  for (size_t I = MaxSizeValue + 1; I < BufferSize; I += MaxSizeValue)
-    MismatchIndices.push_back(I);
+  for (size_t i = MaxSizeValue + 1; i < BufferSize; i += MaxSizeValue)
+    MismatchIndices.push_back(i);
   if (MismatchIndices.empty())
     report_fatal_error("Unable to generate mismatch");
   MismatchIndexSelector =

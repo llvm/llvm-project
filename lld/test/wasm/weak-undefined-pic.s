@@ -45,7 +45,7 @@ _start:
 # CHECK-NEXT:         Mutable:         true
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           66560
+# CHECK-NEXT:           Value:           65536
 # Global 'undefined_weak:foo' representing the GOT entry for foo
 # Unlike other internal GOT entries that need to be mutable this one
 # is immutable and not updated by `__wasm_apply_global_relocs`

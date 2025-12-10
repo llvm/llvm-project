@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "src/__support/FPUtil/cast.h"
-#include "src/__support/libc_errno.h"
 #include "src/math/sinpif16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -15,12 +15,10 @@
 using LlvmLibcSinpif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcSinpif16Test, SpecialNumbers) {
-  libc_errno = 0;
-
-  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::sinpif16(sNaN), FE_INVALID);
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::sinpif16(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinpif16(aNaN));
+  EXPECT_FP_IS_NAN(LIBC_NAMESPACE::sinpif16(aNaN));
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpif16(zero));
@@ -29,10 +27,10 @@ TEST_F(LlvmLibcSinpif16Test, SpecialNumbers) {
   EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpif16(neg_zero));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinpif16(inf));
+  EXPECT_FP_IS_NAN(LIBC_NAMESPACE::sinpif16(inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinpif16(neg_inf));
+  EXPECT_FP_IS_NAN(LIBC_NAMESPACE::sinpif16(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }
 

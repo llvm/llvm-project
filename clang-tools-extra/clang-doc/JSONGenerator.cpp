@@ -12,9 +12,10 @@ class JSONGenerator : public Generator {
 public:
   static const char *Format;
 
-  Error generateDocs(StringRef RootDir,
-                     llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                     const ClangDocContext &CDCtx) override;
+  Error generateDocumentation(StringRef RootDir,
+                              llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+                              const ClangDocContext &CDCtx,
+                              std::string DirName) override;
   Error createResources(ClangDocContext &CDCtx) override;
   Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                            const ClangDocContext &CDCtx) override;
@@ -83,7 +84,72 @@ serializeLocation(const Location &Loc,
   return LocationObj;
 }
 
-static json::Value serializeComment(const CommentInfo &I) {
+/// Insert comments into a key in the Description object.
+///
+/// \param Comment Either an Object or Array, depending on the comment type
+/// \param Key     The type (Brief, Code, etc.) of comment to be inserted
+static void insertComment(Object &Description, json::Value &Comment,
+                          StringRef Key) {
+  // The comment has a Children array for the actual text, with meta attributes
+  // alongside it in the Object.
+  if (auto *Obj = Comment.getAsObject()) {
+    if (auto *Children = Obj->getArray("Children"); Children->empty())
+      return;
+  }
+  // The comment is just an array of text comments.
+  else if (auto *Array = Comment.getAsArray(); Array->empty()) {
+    return;
+  }
+
+  auto DescriptionIt = Description.find(Key);
+
+  if (DescriptionIt == Description.end()) {
+    auto CommentsArray = json::Array();
+    CommentsArray.push_back(Comment);
+    Description[Key] = std::move(CommentsArray);
+    Description["Has" + Key.str()] = true;
+  } else {
+    DescriptionIt->getSecond().getAsArray()->push_back(Comment);
+  }
+}
+
+/// Takes the nested "Children" array from a comment Object.
+///
+/// \return a json::Array of comments, possible json::Value::Kind::Null
+static json::Value extractTextComments(Object *ParagraphComment) {
+  if (!ParagraphComment)
+    return json::Value(nullptr);
+  json::Value *Children = ParagraphComment->get("Children");
+  if (!Children)
+    return json::Value(nullptr);
+  auto ChildrenArray = *Children->getAsArray();
+  auto ChildrenIt = ChildrenArray.begin();
+  while (ChildrenIt != ChildrenArray.end()) {
+    auto *ChildObj = ChildrenIt->getAsObject();
+    assert(ChildObj && "Invalid JSON object in Comment");
+    auto TextComment = ChildObj->getString("TextComment");
+    if (!TextComment || TextComment->empty()) {
+      ChildrenIt = ChildrenArray.erase(ChildrenIt);
+      continue;
+    }
+    ++ChildrenIt;
+  }
+  return ChildrenArray;
+}
+
+static json::Value extractVerbatimComments(json::Array VerbatimLines) {
+  json::Value TextArray = json::Array();
+  auto &TextArrayRef = *TextArray.getAsArray();
+  for (auto &Line : VerbatimLines)
+    TextArrayRef.push_back(*Line.getAsObject()
+                                ->get("VerbatimBlockLineComment")
+                                ->getAsObject()
+                                ->get("Text"));
+
+  return TextArray;
+}
+
+static Object serializeComment(const CommentInfo &I, Object &Description) {
   // taken from PR #142273
   Object Obj = Object();
 
@@ -94,18 +160,28 @@ static json::Value serializeComment(const CommentInfo &I) {
   auto &CARef = *ChildArr.getAsArray();
   CARef.reserve(I.Children.size());
   for (const auto &C : I.Children)
-    CARef.emplace_back(serializeComment(*C));
+    CARef.emplace_back(serializeComment(*C, Description));
 
   switch (I.Kind) {
   case CommentKind::CK_TextComment: {
-    Obj.insert({commentKindToString(I.Kind), I.Text});
+    if (!I.Text.empty())
+      Obj.insert({commentKindToString(I.Kind), I.Text});
     return Obj;
   }
 
   case CommentKind::CK_BlockCommandComment: {
-    Child.insert({"Command", I.Name});
-    Child.insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    auto TextCommentsArray = extractTextComments(CARef.front().getAsObject());
+    if (I.Name == "brief")
+      insertComment(Description, TextCommentsArray, "BriefComments");
+    else if (I.Name == "return")
+      insertComment(Description, TextCommentsArray, "ReturnComments");
+    else if (I.Name == "throws" || I.Name == "throw") {
+      json::Value ThrowsVal = Object();
+      auto &ThrowsObj = *ThrowsVal.getAsObject();
+      ThrowsObj["Exception"] = I.Args.front();
+      ThrowsObj["Children"] = TextCommentsArray;
+      insertComment(Description, ThrowsVal, "ThrowsComments");
+    }
     return Obj;
   }
 
@@ -127,17 +203,20 @@ static json::Value serializeComment(const CommentInfo &I) {
     Child.insert({"ParamName", I.ParamName});
     Child.insert({"Direction", I.Direction});
     Child.insert({"Explicit", I.Explicit});
-    Child.insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    auto TextCommentsArray = extractTextComments(CARef.front().getAsObject());
+    Child.insert({"Children", TextCommentsArray});
+    if (I.Kind == CommentKind::CK_ParamCommandComment)
+      insertComment(Description, ChildVal, "ParamComments");
     return Obj;
   }
 
   case CommentKind::CK_VerbatimBlockComment: {
-    Child.insert({"Text", I.Text});
-    if (!I.CloseName.empty())
-      Child.insert({"CloseName", I.CloseName});
-    Child.insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    if (I.CloseName == "endcode") {
+      // We don't support \code language specification
+      auto TextCommentsArray = extractVerbatimComments(CARef);
+      insertComment(Description, TextCommentsArray, "CodeComments");
+    } else if (I.CloseName == "endverbatim")
+      insertComment(Description, ChildVal, "VerbatimComments");
     return Obj;
   }
 
@@ -179,8 +258,8 @@ static json::Value serializeComment(const CommentInfo &I) {
   case CommentKind::CK_FullComment:
   case CommentKind::CK_ParagraphComment: {
     Child.insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), ChildVal});
-    return Obj;
+    Child["ParagraphComment"] = true;
+    return Child;
   }
 
   case CommentKind::CK_Unknown: {
@@ -210,12 +289,23 @@ serializeCommonAttributes(const Info &I, json::Object &Obj,
   }
 
   if (!I.Description.empty()) {
-    json::Value DescArray = json::Array();
-    auto &DescArrayRef = *DescArray.getAsArray();
-    DescArrayRef.reserve(I.Description.size());
-    for (const auto &Comment : I.Description)
-      DescArrayRef.push_back(serializeComment(Comment));
-    Obj["Description"] = DescArray;
+    Object Description = Object();
+    // Skip straight to the FullComment's children
+    auto &Comments = I.Description.at(0).Children;
+    for (const auto &CommentInfo : Comments) {
+      json::Value Comment = serializeComment(*CommentInfo, Description);
+      // if a ParagraphComment is returned, then it is a top-level comment that
+      // needs to be inserted manually.
+      if (auto *ParagraphComment = Comment.getAsObject();
+          ParagraphComment->get("ParagraphComment")) {
+        auto TextCommentsArray = extractTextComments(ParagraphComment);
+        if (TextCommentsArray.kind() == json::Value::Null ||
+            TextCommentsArray.getAsArray()->empty())
+          continue;
+        insertComment(Description, TextCommentsArray, "ParagraphComments");
+      }
+    }
+    Obj["Description"] = std::move(Description);
   }
 
   // Namespaces aren't SymbolInfos, so they dont have a DefLoc
@@ -423,7 +513,6 @@ static void insertArray(Object &Obj, json::Value &Array, StringRef Key) {
 static void serializeInfo(const RecordInfo &I, json::Object &Obj,
                           const std::optional<StringRef> &RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
-  Obj["FullName"] = I.FullName;
   Obj["TagType"] = getTagType(I.TagType);
   Obj["IsTypedef"] = I.IsTypeDef;
   Obj["MangledName"] = I.MangledName;
@@ -537,25 +626,27 @@ static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
   if (I->IT == InfoType::IT_record) {
     auto *RecordSymbolInfo = static_cast<SymbolInfo *>(I);
     FileName = RecordSymbolInfo->MangledName;
-  } else if (I->IT == InfoType::IT_namespace && I->Name != "")
-    // Serialize the global namespace as index.json
+  } else if (I->IT == InfoType::IT_namespace) {
+    FileName = "index";
+  } else
     FileName = I->Name;
-  else
-    FileName = I->getFileBaseName();
   sys::path::append(Path, FileName + ".json");
   return FileName;
 }
 
-Error JSONGenerator::generateDocs(
+Error JSONGenerator::generateDocumentation(
     StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-    const ClangDocContext &CDCtx) {
+    const ClangDocContext &CDCtx, std::string DirName) {
   StringSet<> CreatedDirs;
   StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
     Info *Info = Group.getValue().get();
 
     SmallString<128> Path;
-    sys::path::native(RootDir, Path);
+    auto RootDirStr = RootDir.str() + "/json";
+    StringRef JSONDir = StringRef(RootDirStr);
+    sys::path::native(JSONDir, Path);
+    sys::path::append(Path, Info->getRelativeFilePath(""));
     if (!CreatedDirs.contains(Path)) {
       if (std::error_code Err = sys::fs::create_directories(Path);
           Err != std::error_code())

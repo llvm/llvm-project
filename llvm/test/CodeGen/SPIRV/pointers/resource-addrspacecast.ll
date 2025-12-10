@@ -17,7 +17,7 @@
 
 define void @main() "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" {
 entry:
-  %handle = tail call target("spirv.VulkanBuffer", [0 x %struct.S], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.Ss_12_1t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
+  %handle = tail call target("spirv.VulkanBuffer", [0 x %struct.S], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.Ss_12_1t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
 ; CHECK:      %[[#resource:]] = OpVariable %[[#spirv_VulkanBuffer]] StorageBuffer
 
   %ptr = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0s_struct.Ss_12_1t(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 1) %handle, i32 0)

@@ -428,13 +428,13 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
             top_most_line_entry.line = call_site.GetLine();
             top_most_line_entry.column = call_site.GetColumn();
             FileSpec call_site_file_spec = call_site.GetFile();
-            top_most_line_entry.original_file_sp.reset(
-                new SupportFile(call_site_file_spec));
+            top_most_line_entry.original_file_sp =
+                std::make_shared<SupportFile>(call_site_file_spec);
             top_most_line_entry.range = range;
-            top_most_line_entry.file_sp.reset();
+            top_most_line_entry.file_sp = std::make_shared<SupportFile>();
             top_most_line_entry.ApplyFileMappings(
                 GetThread().CalculateTarget());
-            if (!top_most_line_entry.file_sp)
+            if (!top_most_line_entry.file_sp->GetSpecOnly())
               top_most_line_entry.file_sp =
                   top_most_line_entry.original_file_sp;
           }

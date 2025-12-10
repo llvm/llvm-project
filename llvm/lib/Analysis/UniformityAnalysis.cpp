@@ -178,6 +178,7 @@ bool UniformityInfoWrapperPass::runOnFunction(Function &F) {
 
 void UniformityInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
   OS << "UniformityInfo for function '" << m_function->getName() << "':\n";
+  m_uniformityInfo.print(OS);
 }
 
 void UniformityInfoWrapperPass::releaseMemory() {

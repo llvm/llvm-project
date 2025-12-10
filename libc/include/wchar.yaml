@@ -1,10 +1,15 @@
 header: wchar.h
 header_template: wchar.h.def
 macros:
-  - macro_name: NULL
+  - macro_name: "NULL"
     macro_header: null-macro.h
 types:
+  - type_name: FILE
   - type_name: size_t
+  # TODO: Remove this once we have a function declaration using "struct tm"
+  # (wcsftime). We're declaring it here now, since libc++ expects
+  # forward-declaration of "struct tm" in the <wchar.h> header.
+  - type_name: struct_tm
   - type_name: wint_t
   - type_name: wchar_t
   - type_name: mbstate_t
@@ -45,20 +50,52 @@ functions:
       - type: const char *__restrict
       - type: size_t
       - type: mbstate_t *__restrict
-  - name: mbtowc
+  - name: mbsnrtowcs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char **__restrict
+      - type: size_t
+      - type: size_t
+      - type: mbstate_t *__restrict
+  - name: mbsrtowcs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char **__restrict
+      - type: size_t
+      - type: mbstate_t *__restrict
+  - name: mbsinit
     standards:
       - stdc
     return_type: int
     arguments:
-      - type: wchar_t *__restrict
+      - type: mbstate_t *
+  - name: mblen
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: size_t
+  - name: mbrlen
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
       - type: const char *__restrict
       - type: size_t
+      - type: mbstate_t *__restrict
   - name: wmemset
     standards:
       - stdc
-    return_type: wchar_t*
+    return_type: wchar_t *
     arguments:
-      - type: wchar_t*
+      - type: wchar_t *
       - type: wchar_t
       - type: size_t
   - name: wcschr
@@ -139,8 +176,8 @@ functions:
     standards:
       - stdc
     return_type: wchar_t *
-    arguments: 
-      - type: wchar_t *__restrict 
+    arguments:
+      - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
       - type: size_t
   - name: wmemmove
@@ -163,7 +200,7 @@ functions:
     standards:
       - stdc
     return_type: wchar_t *
-    arguments: 
+    arguments:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
   - name: wcslcat
@@ -189,6 +226,25 @@ functions:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
       - type: size_t
+  - name: wcsnrtombs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: const wchar_t **__restrict
+      - type: size_t
+      - type: size_t
+      - type: mbstate_t *__restrict
+  - name: wcsrtombs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: const wchar_t **__restrict
+      - type: size_t
+      - type: mbstate_t *__restrict
   - name: wcrtomb
     standards:
       - stdc
@@ -197,13 +253,6 @@ functions:
       - type: char *__restrict
       - type: wchar_t
       - type: mbstate_t *__restrict
-  - name: wctomb
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: char *
-      - type: wchar_t
   - name: wcscpy
     standards:
       - stdc
@@ -211,6 +260,12 @@ functions:
     arguments:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
+  - name: wcsdup
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: const wchar_t *
   - name: wcslcpy
     standards:
       - stdc
@@ -226,7 +281,7 @@ functions:
     arguments:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
-      - type: wchar_t** __restrict
+      - type: wchar_t **__restrict
   - name: wcpcpy
     standards:
       - stdc
@@ -274,3 +329,24 @@ functions:
       - type: const wchar_t *__restrict
       - type: wchar_t **__restrict
       - type: int
+  - name: wcstof
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+  - name: wcstod
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+  - name: wcstold
+    standards:
+      - stdc
+    return_type: long double
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict

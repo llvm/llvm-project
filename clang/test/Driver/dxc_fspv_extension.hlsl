@@ -14,6 +14,14 @@
 // RUN: %clang_dxc -spirv -Tlib_6_7 -### %s -fspv-extension=SPV_TEST1 -fspv-extension=KHR -fspv-extension=SPV_TEST2 2>&1 | FileCheck %s -check-prefix=TEST3
 // TEST3: "-spirv-ext=+SPV_TEST1,KHR,+SPV_TEST2"
 
+// Merge KHR with other extensions.
+// RUN: %clang_dxc -spirv -Tlib_6_7 -### %s -fspv-extension=KHR -fspv-extension=SPV_TEST2 2>&1 | FileCheck %s -check-prefix=TEST4
+// TEST4: "-spirv-ext=KHR,+SPV_TEST2"
+
+// Convert DXC to a list of SPV extensions.
+// RUN: %clang_dxc -spirv -Tlib_6_7 -### %s -fspv-extension=DXC 2>&1 | FileCheck %s -check-prefix=TEST5
+// TEST5: "-spirv-ext={{(\+SPV_[a-zA-Z0-9_]+,?)+}}"
+
 // Check for the error message if the extension name is not properly formed.
 // RUN: not %clang_dxc -spirv -Tlib_6_7 -### %s -fspv-extension=KHR_BAD -fspv-extension=TEST1 -fspv-extension=SPV_GOOD -fspv-extension=TEST2 2>&1 | FileCheck %s -check-prefix=FAIL
 // FAIL: invalid value 'KHR_BAD' in '-fspv-extension'

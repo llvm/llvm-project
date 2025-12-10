@@ -46,7 +46,7 @@ Clang LLVM IR generation
 | rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
 
 | Eli Friedman
-| efriedma\@quicinc.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
+| efriedma\@qti.qualcomm.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
 
 | Anton Korobeynikov
 | anton\@korobeynikov.info (email), asl (Phabricator), asl (GitHub)
@@ -147,7 +147,6 @@ Clang static analyzer
 
 | Balázs Benics
 | benicsbalazs\@gmail.com (email), steakhal (Phabricator), steakhal (GitHub)
-| balazs.benics\@sonarsource.com (email), balazs-benics-sonarsource (GitHub)
 
 Compiler options
 ~~~~~~~~~~~~~~~~
@@ -242,7 +241,7 @@ ARM EABI
 Compiler-Wide Topics
 --------------------
 The following people are responsible for functionality that does not fit into
-a single part of the compiler, but instead span multiple components within the
+a single part of the compiler, but instead spans multiple components within the
 compiler.
 
 Attributes

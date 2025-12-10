@@ -26,12 +26,12 @@ static_library("Interpreter") {
   sources = [
     "CodeCompletion.cpp",
     "DeviceOffload.cpp",
+    "IncrementalAction.cpp",
     "IncrementalExecutor.cpp",
     "IncrementalParser.cpp",
     "Interpreter.cpp",
     "InterpreterUtils.cpp",
     "InterpreterValuePrinter.cpp",
-    "RemoteJITUtils.cpp",
     "Value.cpp",
   ]
 }

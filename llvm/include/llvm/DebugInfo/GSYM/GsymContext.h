@@ -12,7 +12,6 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include <cstdint>
 #include <memory>
-#include <string>
 
 namespace llvm {
 
@@ -30,6 +29,7 @@ class GsymReader;
 class GsymContext : public DIContext {
 public:
   GsymContext(std::unique_ptr<GsymReader> Reader);
+  ~GsymContext() override;
 
   GsymContext(GsymContext &) = delete;
   GsymContext &operator=(GsymContext &) = delete;

@@ -41,7 +41,7 @@ public:
         new ClangTidyDiagnosticConsumer(*Context, &Compiler.getDiagnostics());
     auto DiagOpts = std::make_unique<DiagnosticOptions>();
     auto DiagEngine = std::make_unique<DiagnosticsEngine>(
-        new DiagnosticIDs, *DiagOpts, DiagConsumer);
+        DiagnosticIDs::create(), *DiagOpts, DiagConsumer);
     Context->setDiagnosticsEngine(std::move(DiagOpts), DiagEngine.get());
 
     // Create the AST consumer.
@@ -55,13 +55,13 @@ public:
 
   bool ParseArgs(const CompilerInstance &,
                  const std::vector<std::string> &Args) override {
-    ClangTidyGlobalOptions GlobalOptions;
-    ClangTidyOptions DefaultOptions;
+    const ClangTidyGlobalOptions GlobalOptions;
+    const ClangTidyOptions DefaultOptions;
     ClangTidyOptions OverrideOptions;
 
     // Parse the extra command line args.
     // FIXME: This is very limited at the moment.
-    for (StringRef Arg : Args)
+    for (const StringRef Arg : Args)
       if (Arg.starts_with("-checks="))
         OverrideOptions.Checks = std::string(Arg.substr(strlen("-checks=")));
 

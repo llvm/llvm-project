@@ -11,6 +11,7 @@
 #include <memory>
 
 namespace mlir {
+class ConversionTarget;
 class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
@@ -19,7 +20,8 @@ class Pass;
 #define GEN_PASS_DECL_CONVERTXEVMTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 
-void populateXeVMToLLVMConversionPatterns(RewritePatternSet &patterns);
+void populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
+                                          RewritePatternSet &patterns);
 
 void registerConvertXeVMToLLVMInterface(DialectRegistry &registry);
 } // namespace mlir

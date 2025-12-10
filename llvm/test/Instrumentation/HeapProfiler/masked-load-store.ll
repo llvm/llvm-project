@@ -28,7 +28,7 @@ define void @store.v4f32.1110(<4 x float> %arg) {
 ; STORE: [[GEP2:%[0-9A-Za-z]+]] = getelementptr <4 x float>, ptr %p, i64 0, i64 2
 ; STORE: [[PGEP2:%[0-9A-Za-z]+]] = ptrtoint ptr [[GEP2]] to i64
 ; STORE: call void @__memprof_store(i64 [[PGEP2]])
-; STORE: tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr %p, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
+; STORE: tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr align 4 %p, <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
   tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr %p, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
   ret void
 }
@@ -49,7 +49,7 @@ define void @store.v8i32.10010110(<8 x i32> %arg) {
 ; STORE: [[GEP6:%[0-9A-Za-z]+]] = getelementptr <8 x i32>, ptr %p, i64 0, i64 6
 ; STORE: [[PGEP6:%[0-9A-Za-z]+]] = ptrtoint ptr [[GEP6]] to i64
 ; STORE: call void @__memprof_store(i64 [[PGEP6]])
-; STORE: tail call void @llvm.masked.store.v8i32.p0(<8 x i32> %arg, ptr %p, i32 8, <8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false>)
+; STORE: tail call void @llvm.masked.store.v8i32.p0(<8 x i32> %arg, ptr align 8 %p, <8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false>)
   tail call void @llvm.masked.store.v8i32.p0(<8 x i32> %arg, ptr %p, i32 8, <8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false>)
   ret void
 }
@@ -61,7 +61,7 @@ define void @store.v4i64.0001(<4 x ptr> %arg) {
 ; STORE: [[GEP3:%[0-9A-Za-z]+]] = getelementptr <4 x ptr>, ptr %p, i64 0, i64 3
 ; STORE: [[PGEP3:%[0-9A-Za-z]+]] = ptrtoint ptr [[GEP3]] to i64
 ; STORE: call void @__memprof_store(i64 [[PGEP3]])
-; STORE: tail call void @llvm.masked.store.v4p0.p0(<4 x ptr> %arg, ptr %p, i32 8, <4 x i1> <i1 false, i1 false, i1 false, i1 true>)
+; STORE: tail call void @llvm.masked.store.v4p0.p0(<4 x ptr> %arg, ptr align 8 %p, <4 x i1> <i1 false, i1 false, i1 false, i1 true>)
   tail call void @llvm.masked.store.v4p0.p0(<4 x ptr> %arg, ptr %p, i32 8, <4 x i1> <i1 false, i1 false, i1 false, i1 true>)
   ret void
 }
@@ -105,7 +105,7 @@ define void @store.v4f32.variable(<4 x float> %arg, <4 x i1> %mask) {
 ; STORE: br label %[[AFTER3]]
 ; STORE: [[AFTER3]]:
 
-; STORE: tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr %p, i32 4, <4 x i1> %mask)
+; STORE: tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr align 4 %p, <4 x i1> %mask)
   tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr %p, i32 4, <4 x i1> %mask)
   ret void
 }
@@ -117,12 +117,12 @@ define void @store.v4f32.1010.split(<4 x float> %arg) {
 ; STORE: [[GEP0:%[0-9A-Za-z]+]] = getelementptr <4 x float>, ptr %p, i64 0, i64 0
 ; STORE: [[PGEP0:%[0-9A-Za-z]+]] = ptrtoint ptr [[GEP0]] to i64
 ; STORE: call void @__memprof_store(i64 [[PGEP0]])
-; STORE: tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr %p, i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 false>)
+; STORE: tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr align 4 %p, <4 x i1> <i1 true, i1 false, i1 false, i1 false>)
   tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr %p, i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 false>)
 ; STORE: [[GEP1:%[0-9A-Za-z]+]] = getelementptr <4 x float>, ptr %p, i64 0, i64 2
 ; STORE: [[PGEP1:%[0-9A-Za-z]+]] = ptrtoint ptr [[GEP1]] to i64
 ; STORE: call void @__memprof_store(i64 [[PGEP1]])
-; STORE: tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr %p, i32 4, <4 x i1> <i1 false, i1 false, i1 true, i1 false>)
+; STORE: tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr align 4 %p, <4 x i1> <i1 false, i1 false, i1 true, i1 false>)
   tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr %p, i32 4, <4 x i1> <i1 false, i1 false, i1 true, i1 false>)
   ret void
 }
@@ -148,7 +148,7 @@ define <8 x i32> @load.v8i32.11100001(<8 x i32> %arg) {
 ; LOAD: [[GEP7:%[0-9A-Za-z]+]] = getelementptr <8 x i32>, ptr %p, i64 0, i64 7
 ; LOAD: [[PGEP7:%[0-9A-Za-z]+]] = ptrtoint ptr [[GEP7]] to i64
 ; LOAD: call void @__memprof_load(i64 [[PGEP7]])
-; LOAD: tail call <8 x i32> @llvm.masked.load.v8i32.p0(ptr %p, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> %arg)
+; LOAD: tail call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 8 %p, <8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> %arg)
   %res = tail call <8 x i32> @llvm.masked.load.v8i32.p0(ptr %p, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> %arg)
   ret <8 x i32> %res
 }
@@ -163,7 +163,7 @@ define <4 x float> @load.v4f32.1001(<4 x float> %arg) {
 ; LOAD: [[GEP3:%[0-9A-Za-z]+]] = getelementptr <4 x float>, ptr %p, i64 0, i64 3
 ; LOAD: [[PGEP3:%[0-9A-Za-z]+]] = ptrtoint ptr [[GEP3]] to i64
 ; LOAD: call void @__memprof_load(i64 [[PGEP3]])
-; LOAD: tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr %p, i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x float> %arg)
+; LOAD: tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 %p, <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x float> %arg)
   %res = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr %p, i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x float> %arg)
   ret <4 x float> %res
 }
@@ -175,7 +175,7 @@ define <4 x ptr> @load.v4i64.0001(<4 x ptr> %arg) {
 ; LOAD: [[GEP3:%[0-9A-Za-z]+]] = getelementptr <4 x ptr>, ptr %p, i64 0, i64 3
 ; LOAD: [[PGEP3:%[0-9A-Za-z]+]] = ptrtoint ptr [[GEP3]] to i64
 ; LOAD: call void @__memprof_load(i64 [[PGEP3]])
-; LOAD: tail call <4 x ptr> @llvm.masked.load.v4p0.p0(ptr %p, i32 8, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x ptr> %arg)
+; LOAD: tail call <4 x ptr> @llvm.masked.load.v4p0.p0(ptr align 8 %p, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x ptr> %arg)
   %res = tail call <4 x ptr> @llvm.masked.load.v4p0.p0(ptr %p, i32 8, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x ptr> %arg)
   ret <4 x ptr> %res
 }
@@ -219,7 +219,7 @@ define <4 x float> @load.v4f32.variable(<4 x float> %arg, <4 x i1> %mask) {
 ; LOAD: br label %[[AFTER3]]
 ; LOAD: [[AFTER3]]:
 
-; LOAD: tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr %p, i32 4, <4 x i1> %mask, <4 x float> %arg)
+; LOAD: tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 %p, <4 x i1> %mask, <4 x float> %arg)
   %res = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr %p, i32 4, <4 x i1> %mask, <4 x float> %arg)
   ret <4 x float> %res
 }
@@ -231,12 +231,12 @@ define <4 x float> @load.v4f32.1001.split(<4 x float> %arg) {
 ; LOAD: [[GEP0:%[0-9A-Za-z]+]] = getelementptr <4 x float>, ptr %p, i64 0, i64 0
 ; LOAD: [[PGEP0:%[0-9A-Za-z]+]] = ptrtoint ptr [[GEP0]] to i64
 ; LOAD: call void @__memprof_load(i64 [[PGEP0]])
-; LOAD: %res = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr %p, i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x float> %arg)
+; LOAD: %res = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 %p, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x float> %arg)
   %res = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr %p, i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x float> %arg)
 ; LOAD: [[GEP3:%[0-9A-Za-z]+]] = getelementptr <4 x float>, ptr %p, i64 0, i64 3
 ; LOAD: [[PGEP3:%[0-9A-Za-z]+]] = ptrtoint ptr [[GEP3]] to i64
 ; LOAD: call void @__memprof_load(i64 [[PGEP3]])
-; LOAD: tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr %p, i32 4, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> %res)
+; LOAD: tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 %p, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> %res)
   %res2 = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr %p, i32 4, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> %res)
   ret <4 x float> %res2
 }

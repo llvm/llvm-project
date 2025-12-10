@@ -35,6 +35,8 @@ enum class RecurKind {
   // clang-format off
   None,     ///< Not a recurrence.
   Add,      ///< Sum of integers.
+  Sub,      ///< Subtraction of integers
+  AddChainWithSubs, ///< A chain of adds and subs
   Mul,      ///< Product of integers.
   Or,       ///< Bitwise or logical OR of integers.
   And,      ///< Bitwise or logical AND of integers.
@@ -93,12 +95,17 @@ public:
                        RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
                        Type *RT, bool Signed, bool Ordered,
                        SmallPtrSetImpl<Instruction *> &CI,
-                       unsigned MinWidthCastToRecurTy)
+                       unsigned MinWidthCastToRecurTy,
+                       bool PhiHasUsesOutsideReductionChain = false)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
         IsSigned(Signed), IsOrdered(Ordered),
+        PhiHasUsesOutsideReductionChain(PhiHasUsesOutsideReductionChain),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
     CastInsts.insert_range(CI);
+    assert(
+        (!PhiHasUsesOutsideReductionChain || isMinMaxRecurrenceKind(K)) &&
+        "Only min/max recurrences are allowed to have multiple uses currently");
   }
 
   /// This POD struct holds information about a potential recurrence operation.
@@ -249,12 +256,18 @@ public:
            Kind == RecurKind::SMin || Kind == RecurKind::SMax;
   }
 
+  /// Returns true if the recurrence kind is a floating-point minnum/maxnum
+  /// kind.
+  static bool isFPMinMaxNumRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::FMinNum || Kind == RecurKind::FMaxNum;
+  }
+
   /// Returns true if the recurrence kind is a floating-point min/max kind.
   static bool isFPMinMaxRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::FMin || Kind == RecurKind::FMax ||
-           Kind == RecurKind::FMinNum || Kind == RecurKind::FMaxNum ||
            Kind == RecurKind::FMinimum || Kind == RecurKind::FMaximum ||
-           Kind == RecurKind::FMinimumNum || Kind == RecurKind::FMaximumNum;
+           Kind == RecurKind::FMinimumNum || Kind == RecurKind::FMaximumNum ||
+           isFPMinMaxNumRecurrenceKind(Kind);
   }
 
   /// Returns true if the recurrence kind is any min/max kind.
@@ -331,6 +344,13 @@ public:
   /// Expose an ordered FP reduction to the instance users.
   bool isOrdered() const { return IsOrdered; }
 
+  /// Returns true if the reduction PHI has any uses outside the reduction
+  /// chain. This is relevant for min/max reductions that are part of a
+  /// FindLastIV pattern.
+  bool hasUsesOutsideReductionChain() const {
+    return PhiHasUsesOutsideReductionChain;
+  }
+
   /// Attempts to find a chain of operations from Phi to LoopExitInst that can
   /// be treated as a set of reductions instructions for in-loop reductions.
   LLVM_ABI SmallVector<Instruction *, 4> getReductionOpChain(PHINode *Phi,
@@ -368,6 +388,10 @@ private:
   // Currently only a non-reassociative FAdd can be considered in-order,
   // if it is also the only FAdd in the PHI's use chain.
   bool IsOrdered = false;
+  // True if the reduction PHI has in-loop users outside the reduction chain.
+  // This is relevant for min/max reductions that are part of a FindLastIV
+  // pattern.
+  bool PhiHasUsesOutsideReductionChain = false;
   // Instructions used for type-promoting the recurrence.
   SmallPtrSet<Instruction *, 8> CastInsts;
   // The minimum width used by the recurrence.
@@ -443,12 +467,10 @@ public:
                           : Instruction::BinaryOpsEnd;
   }
 
-  /// Returns a reference to the type cast instructions in the induction
+  /// Returns an ArrayRef to the type cast instructions in the induction
   /// update chain, that are redundant when guarded with a runtime
   /// SCEV overflow check.
-  const SmallVectorImpl<Instruction *> &getCastInsts() const {
-    return RedundantCasts;
-  }
+  ArrayRef<Instruction *> getCastInsts() const { return RedundantCasts; }
 
 private:
   /// Private constructor - used by \c isInductionPHI.

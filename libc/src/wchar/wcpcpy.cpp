@@ -19,7 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(wchar_t *, wcpcpy,
                    (wchar_t *__restrict s1, const wchar_t *__restrict s2)) {
   size_t size = internal::string_length(s2);
-  __builtin_memcpy(s1, s2, (size + 1) * sizeof(wchar_t));
+  inline_memcpy(s1, s2, (size + 1) * sizeof(wchar_t));
   wchar_t *result = s1 + size;
   return result;
 }

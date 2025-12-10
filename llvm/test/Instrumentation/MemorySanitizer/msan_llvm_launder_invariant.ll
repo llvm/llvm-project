@@ -12,14 +12,14 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local ptr @_Z1fv() local_unnamed_addr #0 {
 entry:
   %p = alloca ptr, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %p)
+  call void @llvm.lifetime.start.p0(ptr nonnull %p)
   %0 = load i8, ptr @flag, align 1
   %tobool = icmp ne i8 %0, 0
   %call = call zeroext i1 @_Z2f1PPvb(ptr nonnull %p, i1 zeroext %tobool)
   %1 = load ptr, ptr %p, align 8
   %2 = call ptr @llvm.launder.invariant.group.p0(ptr %1)
   %retval.0 = select i1 %call, ptr %2, ptr null
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %p)
+  call void @llvm.lifetime.end.p0(ptr nonnull %p)
   ret ptr %retval.0
 }
 
@@ -29,8 +29,8 @@ declare dso_local zeroext i1 @_Z2f1PPvb(ptr, i1 zeroext) local_unnamed_addr
 
 declare ptr @llvm.launder.invariant.group.p0(ptr)
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 attributes #0 = { sanitize_memory uwtable }

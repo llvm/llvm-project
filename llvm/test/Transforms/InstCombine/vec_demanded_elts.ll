@@ -655,7 +655,7 @@ define ptr @zero_sized_type_extract(<4 x i64> %arg, i64 %arg1) {
 ; CHECK-LABEL: @zero_sized_type_extract(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i64> [[ARG:%.*]], i64 0
-; CHECK-NEXT:    [[T2:%.*]] = getelementptr inbounds [0 x i32], ptr @global, i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[T2:%.*]] = getelementptr inbounds i32, ptr @global, i64 [[TMP0]]
 ; CHECK-NEXT:    ret ptr [[T2]]
 ;
 bb:

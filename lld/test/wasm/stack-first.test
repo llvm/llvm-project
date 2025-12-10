@@ -5,8 +5,19 @@
 ; Also test that __heap_base is still aligned with the --stack-first option.
 
 RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/stack-first.s -o %t.o
-RUN: wasm-ld -z stack-size=512 --stack-first --export=__data_end --export=__heap_base --export=someByte -o %t.wasm %t.o
+
+; Check that the default is `--stack-first`
+RUN: wasm-ld -z stack-size=512 --export=__data_end --export=__heap_base --export=someByte -o %t.wasm %t.o
 RUN: obj2yaml %t.wasm | FileCheck %s
+
+; Check `--no-stack-first`
+RUN: wasm-ld -z stack-size=512 --no-stack-first --export=__data_end --export=__heap_base --export=someByte -o %t.wasm %t.o
+RUN: obj2yaml %t.wasm | FileCheck %s --check-prefix=NOT-FIRST
+
+; Check `--stack-first`
+RUN: wasm-ld -z stack-size=512 --no-stack-first --stack-first --export=__data_end --export=__heap_base --export=someByte -o %t.wasm %t.o
+RUN: obj2yaml %t.wasm | FileCheck %s
+
 
 CHECK:        - Type:            GLOBAL
 CHECK-NEXT:     Globals:         
@@ -51,3 +62,19 @@ CHECK-NEXT:         Index:           2
 CHECK-NEXT:       - Name:            __heap_base
 CHECK-NEXT:         Kind:            GLOBAL
 CHECK-NEXT:         Index:           3
+
+NOT-FIRST:        - Type:            GLOBAL
+NOT-FIRST-NEXT:     Globals:
+NOT-FIRST-NEXT:       - Index:           0
+NOT-FIRST-NEXT:         Type:            I32
+NOT-FIRST-NEXT:         Mutable:         true
+NOT-FIRST-NEXT:         InitExpr:
+NOT-FIRST-NEXT:           Opcode:          I32_CONST
+NOT-FIRST-NEXT:           Value:           1552
+NOT-FIRST-NEXT:       - Index:           1
+NOT-FIRST-NEXT:         Type:            I32
+NOT-FIRST-NEXT:         Mutable:         false
+NOT-FIRST-NEXT:         InitExpr:
+NOT-FIRST-NEXT:           Opcode:          I32_CONST
+NOT-FIRST-NEXT:           Value:           1024
+

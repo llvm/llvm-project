@@ -1,4 +1,4 @@
-//===--- MacroToEnumCheck.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,7 +23,7 @@ static bool hasOnlyComments(SourceLocation Loc, const LangOptions &Options,
                             StringRef Text) {
   // Use a lexer to look for tokens; if we find something other than a single
   // hash, then there were intervening tokens between macro definitions.
-  std::string Buffer{Text};
+  const std::string Buffer{Text};
   Lexer Lex(Loc, Options, Buffer.c_str(), Buffer.c_str(),
             Buffer.c_str() + Buffer.size());
   Token Tok;
@@ -47,7 +47,7 @@ static bool hasOnlyComments(SourceLocation Loc, const LangOptions &Options,
   };
 
   WhiteSpace State = WhiteSpace::Nothing;
-  for (char C : Text) {
+  for (const char C : Text) {
     switch (C) {
     case '\r':
       if (State == WhiteSpace::CR)
@@ -227,17 +227,17 @@ bool MacroToEnumCallbacks::isConsecutiveMacro(const MacroDirective *MD) const {
   if (CurrentFile->LastMacroLocation.isInvalid())
     return false;
 
-  SourceLocation Loc = MD->getLocation();
+  const SourceLocation Loc = MD->getLocation();
   if (CurrentFile->LastLine + 1 == SM.getSpellingLineNumber(Loc))
     return true;
 
-  SourceLocation Define =
+  const SourceLocation Define =
       SM.translateLineCol(SM.getFileID(Loc), SM.getSpellingLineNumber(Loc), 1);
-  CharSourceRange BetweenMacros{
+  const CharSourceRange BetweenMacros{
       SourceRange{CurrentFile->LastMacroLocation, Define}, true};
-  CharSourceRange CharRange =
+  const CharSourceRange CharRange =
       Lexer::makeFileCharRange(BetweenMacros, SM, LangOpts);
-  StringRef BetweenText = Lexer::getSourceText(CharRange, SM, LangOpts);
+  const StringRef BetweenText = Lexer::getSourceText(CharRange, SM, LangOpts);
   return hasOnlyComments(Define, LangOpts, BetweenText);
 }
 
@@ -258,7 +258,7 @@ void MacroToEnumCallbacks::conditionStart(const SourceLocation &Loc) {
 }
 
 void MacroToEnumCallbacks::checkCondition(SourceRange Range) {
-  CharSourceRange CharRange = Lexer::makeFileCharRange(
+  const CharSourceRange CharRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(Range), SM, LangOpts);
   std::string Text = Lexer::getSourceText(CharRange, SM, LangOpts).str();
   Lexer Lex(CharRange.getBegin(), LangOpts, Text.data(), Text.data(),
@@ -285,7 +285,7 @@ void MacroToEnumCallbacks::checkName(const Token &MacroNameTok) {
 }
 
 void MacroToEnumCallbacks::rememberExpressionName(const Token &Tok) {
-  std::string Id = getTokenName(Tok).str();
+  const std::string Id = getTokenName(Tok).str();
   auto Pos = llvm::lower_bound(ExpressionNames, Id);
   if (Pos == ExpressionNames.end() || *Pos != Id) {
     ExpressionNames.insert(Pos, Id);
@@ -294,7 +294,7 @@ void MacroToEnumCallbacks::rememberExpressionName(const Token &Tok) {
 
 void MacroToEnumCallbacks::rememberExpressionTokens(
     ArrayRef<Token> MacroTokens) {
-  for (Token Tok : MacroTokens) {
+  for (const Token Tok : MacroTokens) {
     if (Tok.isAnyIdentifier())
       rememberExpressionName(Tok);
   }
@@ -318,8 +318,8 @@ void MacroToEnumCallbacks::FileChanged(SourceLocation Loc,
 
 bool MacroToEnumCallbacks::isInitializer(ArrayRef<Token> MacroTokens) {
   IntegralLiteralExpressionMatcher Matcher(MacroTokens, LangOpts.C99 == 0);
-  bool Matched = Matcher.match();
-  bool IsC = !LangOpts.CPlusPlus;
+  const bool Matched = Matcher.match();
+  const bool IsC = !LangOpts.CPlusPlus;
   if (IsC && (Matcher.largestLiteralSize() != LiteralSize::Int &&
               Matcher.largestLiteralSize() != LiteralSize::UnsignedInt))
     return false;
@@ -344,7 +344,7 @@ void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
     return;
 
   const MacroInfo *Info = MD->getMacroInfo();
-  ArrayRef<Token> MacroTokens = Info->tokens();
+  const ArrayRef<Token> MacroTokens = Info->tokens();
   if (Info->isBuiltinMacro() || MacroTokens.empty())
     return;
   if (Info->isFunctionLike()) {
@@ -395,16 +395,12 @@ void MacroToEnumCallbacks::Endif(SourceLocation Loc, SourceLocation IfLoc) {
   --CurrentFile->ConditionScopes;
 }
 
-namespace {
-
 template <size_t N>
-bool textEquals(const char (&Needle)[N], const char *HayStack) {
+static bool textEquals(const char (&Needle)[N], const char *HayStack) {
   return StringRef{HayStack, N - 1} == Needle;
 }
 
-template <size_t N> size_t len(const char (&)[N]) { return N - 1; }
-
-} // namespace
+template <size_t N> static size_t len(const char (&)[N]) { return N - 1; }
 
 void MacroToEnumCallbacks::PragmaDirective(SourceLocation Loc,
                                            PragmaIntroducerKind Introducer) {
@@ -478,26 +474,26 @@ void MacroToEnumCallbacks::fixEnumMacro(const MacroList &MacroList) const {
       MacroList.front().Directive->getMacroInfo()->getDefinitionLoc();
   Begin = SM.translateLineCol(SM.getFileID(Begin),
                               SM.getSpellingLineNumber(Begin), 1);
-  DiagnosticBuilder Diagnostic =
+  const DiagnosticBuilder Diagnostic =
       Check->diag(Begin, "replace macro with enum")
       << FixItHint::CreateInsertion(Begin, "enum {\n");
 
   for (size_t I = 0U; I < MacroList.size(); ++I) {
     const EnumMacro &Macro = MacroList[I];
-    SourceLocation DefineEnd =
+    const SourceLocation DefineEnd =
         Macro.Directive->getMacroInfo()->getDefinitionLoc();
-    SourceLocation DefineBegin = SM.translateLineCol(
+    const SourceLocation DefineBegin = SM.translateLineCol(
         SM.getFileID(DefineEnd), SM.getSpellingLineNumber(DefineEnd), 1);
     CharSourceRange DefineRange;
     DefineRange.setBegin(DefineBegin);
     DefineRange.setEnd(DefineEnd);
     Diagnostic << FixItHint::CreateRemoval(DefineRange);
 
-    SourceLocation NameEnd = Lexer::getLocForEndOfToken(
+    const SourceLocation NameEnd = Lexer::getLocForEndOfToken(
         Macro.Directive->getMacroInfo()->getDefinitionLoc(), 0, SM, LangOpts);
     Diagnostic << FixItHint::CreateInsertion(NameEnd, " =");
 
-    SourceLocation ValueEnd = Lexer::getLocForEndOfToken(
+    const SourceLocation ValueEnd = Lexer::getLocForEndOfToken(
         Macro.Directive->getMacroInfo()->getDefinitionEndLoc(), 0, SM,
         LangOpts);
     if (I < MacroList.size() - 1)

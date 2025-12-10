@@ -249,3 +249,54 @@ define i128 @f8(i128 %a, i128 %b, i128 %sh) {
   ret i128 %res
 }
 
+; Funnel shift left by constant N in 121..128, in such cases fshl N == fshr (128 - N)
+define i128 @f9(i128 %a, i128 %b) {
+; CHECK-LABEL: f9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl %v1, 0(%r4), 3
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vrepib %v2, 5
+; CHECK-NEXT:    vsrl %v1, %v1, %v2
+; CHECK-NEXT:    vrepib %v2, 123
+; CHECK-NEXT:    vslb %v0, %v0, %v2
+; CHECK-NEXT:    vsl %v0, %v0, %v2
+; CHECK-NEXT:    vo %v0, %v0, %v1
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+;
+; Z15-LABEL: f9:
+; Z15:       # %bb.0:
+; Z15-NEXT:    vl %v0, 0(%r4), 3
+; Z15-NEXT:    vl %v1, 0(%r3), 3
+; Z15-NEXT:    vsrd %v0, %v1, %v0, 5
+; Z15-NEXT:    vst %v0, 0(%r2), 3
+; Z15-NEXT:    br %r14
+  %res = tail call i128 @llvm.fshl.i128(i128 %a, i128 %b, i128 123)
+  ret i128 %res
+}
+
+; Funnel shift right by constant N in 121..128, in such cases fshr N == fshl (128 - N)
+define i128 @f10(i128 %a, i128 %b) {
+; CHECK-LABEL: f10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl %v1, 0(%r3), 3
+; CHECK-NEXT:    vl %v0, 0(%r4), 3
+; CHECK-NEXT:    vrepib %v2, 5
+; CHECK-NEXT:    vsl %v1, %v1, %v2
+; CHECK-NEXT:    vrepib %v2, 123
+; CHECK-NEXT:    vsrlb %v0, %v0, %v2
+; CHECK-NEXT:    vsrl %v0, %v0, %v2
+; CHECK-NEXT:    vo %v0, %v1, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+;
+; Z15-LABEL: f10:
+; Z15:       # %bb.0:
+; Z15-NEXT:    vl %v0, 0(%r4), 3
+; Z15-NEXT:    vl %v1, 0(%r3), 3
+; Z15-NEXT:    vsld %v0, %v1, %v0, 5
+; Z15-NEXT:    vst %v0, 0(%r2), 3
+; Z15-NEXT:    br %r14
+  %res = tail call i128 @llvm.fshr.i128(i128 %a, i128 %b, i128 123)
+  ret i128 %res
+}

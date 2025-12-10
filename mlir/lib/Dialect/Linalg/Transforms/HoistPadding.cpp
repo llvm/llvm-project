@@ -591,10 +591,11 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
 
     // Create a packing loop that takes `hoistedPackedTensor` as iteration
     // argument.
-    auto clonedForOp = rewriter.create<scf::ForOp>(
-        loc, bvm.lookupOrDefault(forOp.getLowerBound()),
+    auto clonedForOp = scf::ForOp::create(
+        rewriter, loc, bvm.lookupOrDefault(forOp.getLowerBound()),
         bvm.lookupOrDefault(forOp.getUpperBound()),
-        bvm.lookupOrDefault(forOp.getStep()), hoistedPackedTensor);
+        bvm.lookupOrDefault(forOp.getStep()), hoistedPackedTensor,
+        /*bodyBuilder=*/nullptr, forOp.getUnsignedCmp());
 
     // Map the induction var, region args and results to the `clonedForOp`.
     bvm.map(forOp.getInductionVar(), clonedForOp.getInductionVar());
@@ -640,11 +641,11 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
   TransposeOp maybeTransposeOp;
   Value paddedTensor = bvm.lookup(opToHoist.getResult());
   if (!transposeVector.empty()) {
-    Value outputTensor = rewriter.create<tensor::ExtractSliceOp>(
-        loc, transposedTensorType, hoistedPackedTensor, offsets, sizes,
-        strides);
-    maybeTransposeOp = rewriter.create<linalg::TransposeOp>(
-        loc, paddedTensor, outputTensor, transposeVector);
+    Value outputTensor = tensor::ExtractSliceOp::create(
+        rewriter, loc, transposedTensorType, hoistedPackedTensor, offsets,
+        sizes, strides);
+    maybeTransposeOp = linalg::TransposeOp::create(
+        rewriter, loc, paddedTensor, outputTensor, transposeVector);
     paddedTensor = maybeTransposeOp.getResult()[0];
   }
 
@@ -652,15 +653,16 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
   if (nPackedLoops > 0) {
     // Step 4. Create InsertSliceOp at the innermost loop level, inserting an
     // optionally transposed padded slice into the packed tensor.
-    Value inserted = rewriter.create<tensor::InsertSliceOp>(
-        loc, paddedTensor, hoistedPackedTensor, offsets, sizes, strides);
+    Value inserted = tensor::InsertSliceOp::create(rewriter, loc, paddedTensor,
+                                                   hoistedPackedTensor, offsets,
+                                                   sizes, strides);
 
     // Step 5. Iteratively pop the stack and propagate the yield.
     Value valueToYield = inserted;
     for (Value iv : llvm::reverse(clonedLoopIvs)) {
       auto forOp = scf::getForInductionVarOwner(iv);
       rewriter.setInsertionPointToEnd(&forOp.getRegion().front());
-      rewriter.create<scf::YieldOp>(loc, valueToYield);
+      scf::YieldOp::create(rewriter, loc, valueToYield);
       valueToYield = forOp.getResult(0);
     }
   }
@@ -712,8 +714,8 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
   rewriter.setInsertionPoint(outerLoop);
   SmallVector<Value> dynamicTensorSizes =
       analysis.getHoistedPackedTensorSizes(rewriter, loc);
-  auto emptyOp = rewriter.create<tensor::EmptyOp>(
-      loc, hoistedPackedTensorType.getShape(),
+  auto emptyOp = tensor::EmptyOp::create(
+      rewriter, loc, hoistedPackedTensorType.getShape(),
       hoistedPackedTensorType.getElementType(), dynamicTensorSizes);
 
   return buildPackingLoopNestImpl(rewriter, bvm, opToHoist, transposeVector,
@@ -756,8 +758,7 @@ static bool tracesBackToExpectedValue(tensor::ExtractSliceOp extractSliceOp,
   Value source = extractSliceOp.getSource();
   LLVM_DEBUG(DBGS() << "--with starting source: " << source << "\n");
   while (source && source != expectedSource) {
-    auto destOp =
-        dyn_cast_or_null<DestinationStyleOpInterface>(source.getDefiningOp());
+    auto destOp = source.getDefiningOp<DestinationStyleOpInterface>();
     if (!destOp)
       break;
     LLVM_DEBUG(DBGS() << "--step dest op: " << destOp << "\n");
@@ -840,8 +841,8 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
   {
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointAfter(forOp);
-    extracted = rewriter.create<tensor::ExtractSliceOp>(
-        hoistedPackedTensor.getLoc(), hoistedPackedTensor,
+    extracted = tensor::ExtractSliceOp::create(
+        rewriter, hoistedPackedTensor.getLoc(), hoistedPackedTensor,
         outerSliceOp.getMixedOffsets(), outerSliceOp.getMixedSizes(),
         outerSliceOp.getMixedStrides());
     rewriter.replaceAllUsesWith(forOp.getResult(iterArgNumber), extracted);
@@ -912,8 +913,7 @@ static Value replaceByPackingResult(RewriterBase &rewriter,
       llvm_unreachable("loop independence prerequisite not met");
 
     // offsets = [maybe_leading_ivs = originalLoopIvs, 0 .. 0].
-    std::copy(loopIterationCounts.begin(), loopIterationCounts.end(),
-              offsets.begin());
+    llvm::copy(loopIterationCounts, offsets.begin());
     hoistedPackedTensor =
         scf::getForInductionVarOwner(packingResult.clonedLoopIvs.front())
             ->getResult(0);
@@ -934,8 +934,8 @@ static Value replaceByPackingResult(RewriterBase &rewriter,
   // offsets = [maybe_leading_ivs, 0 .. 0].
   // sizes = [1 .. 1, transposedShape] (defined above).
   // strides = [1 .. 1] (defined above)
-  return rewriter.create<tensor::ExtractSliceOp>(
-      loc, transposedTensorType, hoistedPackedTensor, offsets,
+  return tensor::ExtractSliceOp::create(
+      rewriter, loc, transposedTensorType, hoistedPackedTensor, offsets,
       packingResult.sizes, packingResult.strides);
 }
 
@@ -982,10 +982,11 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointAfter(newResult.getDefiningOp());
     // Transpose the packed tensor back to the original storage order.
-    Value emptyTensor = rewriter.create<tensor::EmptyOp>(
-        loc, paddedTensorType.getShape(), paddedTensorType.getElementType());
-    TransposeOp unTransposeOp = rewriter.create<linalg::TransposeOp>(
-        loc, newResult, emptyTensor, transposeVector);
+    Value emptyTensor =
+        tensor::EmptyOp::create(rewriter, loc, paddedTensorType.getShape(),
+                                paddedTensorType.getElementType());
+    TransposeOp unTransposeOp = linalg::TransposeOp::create(
+        rewriter, loc, newResult, emptyTensor, transposeVector);
     newResult = unTransposeOp.getResult()[0];
     transposeOps.push_back(unTransposeOp);
   }

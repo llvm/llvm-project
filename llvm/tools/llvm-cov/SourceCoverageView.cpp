@@ -21,6 +21,23 @@
 
 using namespace llvm;
 
+ExpansionView::ExpansionView(const CounterMappingRegion &Region,
+                             std::unique_ptr<SourceCoverageView> View)
+    : Region(Region), View(std::move(View)) {}
+
+ExpansionView::ExpansionView(ExpansionView &&RHS)
+    : Region(std::move(RHS.Region)), View(std::move(RHS.View)) {}
+
+ExpansionView &ExpansionView::operator=(ExpansionView &&RHS) {
+  Region = std::move(RHS.Region);
+  View = std::move(RHS.View);
+  return *this;
+}
+
+InstantiationView::InstantiationView(StringRef FunctionName, unsigned Line,
+                                     std::unique_ptr<SourceCoverageView> View)
+    : FunctionName(FunctionName), Line(Line), View(std::move(View)) {}
+
 void CoveragePrinter::StreamDestructor::operator()(raw_ostream *OS) const {
   if (OS == &outs())
     return;

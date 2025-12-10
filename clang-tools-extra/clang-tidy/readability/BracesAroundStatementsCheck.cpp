@@ -1,4 +1,4 @@
-//===--- BracesAroundStatementsCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,8 @@ namespace clang::tidy::readability {
 static tok::TokenKind getTokenKind(SourceLocation Loc, const SourceManager &SM,
                                    const LangOptions &LangOpts) {
   Token Tok;
-  SourceLocation Beginning = Lexer::GetBeginningOfToken(Loc, SM, LangOpts);
+  const SourceLocation Beginning =
+      Lexer::GetBeginningOfToken(Loc, SM, LangOpts);
   const bool Invalid = Lexer::getRawToken(Beginning, Tok, SM, LangOpts);
   assert(!Invalid && "Expected a valid token.");
 
@@ -38,7 +39,7 @@ forwardSkipWhitespaceAndComments(SourceLocation Loc, const SourceManager &SM,
     while (isWhitespace(*SM.getCharacterData(Loc)))
       Loc = Loc.getLocWithOffset(1);
 
-    tok::TokenKind TokKind = getTokenKind(Loc, SM, LangOpts);
+    const tok::TokenKind TokKind = getTokenKind(Loc, SM, LangOpts);
     if (TokKind != tok::comment)
       return Loc;
 
@@ -80,7 +81,8 @@ void BracesAroundStatementsCheck::check(
   } else if (const auto *S = Result.Nodes.getNodeAs<DoStmt>("do")) {
     checkStmt(Result, S->getBody(), S->getDoLoc(), S->getWhileLoc());
   } else if (const auto *S = Result.Nodes.getNodeAs<WhileStmt>("while")) {
-    SourceLocation StartLoc = findRParenLoc(S, SM, Context->getLangOpts());
+    const SourceLocation StartLoc =
+        findRParenLoc(S, SM, Context->getLangOpts());
     if (StartLoc.isInvalid())
       return;
     checkStmt(Result, S->getBody(), StartLoc);
@@ -89,12 +91,14 @@ void BracesAroundStatementsCheck::check(
     if (S->isConsteval())
       return;
 
-    SourceLocation StartLoc = findRParenLoc(S, SM, Context->getLangOpts());
+    const SourceLocation StartLoc =
+        findRParenLoc(S, SM, Context->getLangOpts());
     if (StartLoc.isInvalid())
       return;
     if (ForceBracesStmts.erase(S))
       ForceBracesStmts.insert(S->getThen());
-    bool BracedIf = checkStmt(Result, S->getThen(), StartLoc, S->getElseLoc());
+    const bool BracedIf =
+        checkStmt(Result, S->getThen(), StartLoc, S->getElseLoc());
     const Stmt *Else = S->getElse();
     if (Else && BracedIf)
       ForceBracesStmts.insert(Else);
@@ -125,7 +129,7 @@ BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
     return {};
   }
 
-  SourceLocation PastCondEndLoc =
+  const SourceLocation PastCondEndLoc =
       Lexer::getLocForEndOfToken(CondEndLoc, 0, SM, LangOpts);
   if (PastCondEndLoc.isInvalid())
     return {};
@@ -133,7 +137,7 @@ BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
       forwardSkipWhitespaceAndComments(PastCondEndLoc, SM, LangOpts);
   if (RParenLoc.isInvalid())
     return {};
-  tok::TokenKind TokKind = getTokenKind(RParenLoc, SM, LangOpts);
+  const tok::TokenKind TokKind = getTokenKind(RParenLoc, SM, LangOpts);
   if (TokKind != tok::r_paren)
     return {};
   return RParenLoc;

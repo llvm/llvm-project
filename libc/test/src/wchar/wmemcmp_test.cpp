@@ -67,7 +67,7 @@ TEST(LlvmLibcWMemcmpTest, LhsRhsAreTheSameLong) {
   EXPECT_EQ(LIBC_NAMESPACE::wmemcmp(lhs, rhs, 15), 0);
 }
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 TEST(LlvmLibcWMemcmpTest, NullptrCrash) {
   // Passing in a nullptr should crash the program.
   EXPECT_DEATH([] { LIBC_NAMESPACE::wmemcmp(L"aaaaaaaaaaaaaa", nullptr, 15); },
@@ -75,4 +75,4 @@ TEST(LlvmLibcWMemcmpTest, NullptrCrash) {
   EXPECT_DEATH([] { LIBC_NAMESPACE::wmemcmp(nullptr, L"aaaaaaaaaaaaaa", 15); },
                WITH_SIGNAL(-1));
 }
-#endif // LIBC_HAS_ADDRESS_SANITIZER
+#endif // LIBC_ADD_NULL_CHECKS

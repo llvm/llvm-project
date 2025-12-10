@@ -1,9 +1,13 @@
+add_subdirectory(TargetLowering)
+
 add_clang_library(MLIRCIRTransforms
   CIRCanonicalize.cpp
   CIRSimplify.cpp
   FlattenCFG.cpp
   HoistAllocas.cpp
   LoweringPrepare.cpp
+  LoweringPrepareItaniumCXXABI.cpp
+  GotoSolver.cpp
 
   DEPENDS
   MLIRCIRPassIncGen
@@ -19,4 +23,5 @@ add_clang_library(MLIRCIRTransforms
 
   MLIRCIR
   MLIRCIRInterfaces
+  MLIRCIRTargetLowering
 )

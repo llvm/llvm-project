@@ -34,8 +34,8 @@ llvm::SmallVector<MemorySlot> cir::AllocaOp::getPromotableSlots() {
 
 Value cir::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                      OpBuilder &builder) {
-  return builder.create<cir::ConstantOp>(getLoc(),
-                                         cir::UndefAttr::get(slot.elemType));
+  return cir::ConstantOp::create(builder, getLoc(),
+                                 cir::UndefAttr::get(slot.elemType));
 }
 
 void cir::AllocaOp::handleBlockArgument(const MemorySlot &slot,
@@ -116,6 +116,45 @@ DeletionKind cir::StoreOp::removeBlockingUses(
     OpBuilder &builder, Value reachingDefinition,
     const DataLayout &dataLayout) {
   return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for CopyOp
+//===----------------------------------------------------------------------===//
+
+bool cir::CopyOp::loadsFrom(const MemorySlot &slot) {
+  return getSrc() == slot.ptr;
+}
+
+bool cir::CopyOp::storesTo(const MemorySlot &slot) {
+  return getDst() == slot.ptr;
+}
+
+Value cir::CopyOp::getStored(const MemorySlot &slot, OpBuilder &builder,
+                             Value reachingDef, const DataLayout &dataLayout) {
+  return cir::LoadOp::create(builder, getLoc(), slot.elemType, getSrc());
+}
+
+DeletionKind cir::CopyOp::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, mlir::Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  if (loadsFrom(slot))
+    cir::StoreOp::create(builder, getLoc(), reachingDefinition, getDst(),
+                         /*isVolatile=*/false,
+                         /*alignment=*/mlir::IntegerAttr{},
+                         /*mem-order=*/cir::MemOrderAttr());
+  return DeletionKind::Delete;
+}
+
+bool cir::CopyOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (getDst() == getSrc())
+    return false;
+
+  return getLength(dataLayout) == dataLayout.getTypeSize(slot.elemType);
 }
 
 //===----------------------------------------------------------------------===//

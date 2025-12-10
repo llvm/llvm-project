@@ -23,7 +23,6 @@ blah:
 ; CHECK:  pushl   %eax
 ; CHECK:  subl    $20, %esp
 ; CHECK:  movl %esp, %[[beg:[^ ]*]]
-; CHECK:  leal 12(%[[beg]]), %[[end:[^ ]*]]
 
   call void @begin(ptr sret(%Iter) %temp.lvalue)
 ; CHECK:  calll _begin
@@ -32,6 +31,7 @@ blah:
           to label %invoke.cont unwind label %lpad
 
 ;  Uses end as sret param.
+; CHECK:  leal 12(%[[beg]]), %[[end:[^ ]*]]
 ; CHECK:  pushl %[[end]]
 ; CHECK:  calll _plus
 

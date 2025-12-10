@@ -22,7 +22,7 @@ body:             |
     ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV1]](<2 x s32>)
     ; CHECK-NEXT: G_STORE [[FPEXT]](<2 x s64>), [[COPY1]](p0) :: (store (<2 x s64>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
     ; CHECK-NEXT: G_STORE [[FPEXT1]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into unknown-address + 16)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(<4 x s32>) = COPY $q0
@@ -31,4 +31,134 @@ body:             |
     G_STORE %2(<4 x s64>), %1(p0) :: (store (<4 x s64>))
     RET_ReallyLR
 
+...
+
+---
+name:            fpext_f16_f64
+body:             |
+  bb.0:
+    liveins: $h0
+    ; CHECK-LABEL: name: fpext_f16_f64
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(s64) = G_FPEXT [[COPY]](s16)
+    ; CHECK-NEXT: $d0 = COPY [[FPEXT]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %0:_(s16) = COPY $h0
+    %1:_(s64) = G_FPEXT %0(s16)
+    $d0 = COPY %1(s64)
+    RET_ReallyLR implicit $d0
+...
+
+---
+name:            fpext_v2f16_v2f64
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: fpext_v2f16_v2f64
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[FPEXT]](<4 x s32>)
+    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV]](<2 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[FPEXT1]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %1:_(<4 x s16>) = COPY $d0
+    %0:_(<2 x s16>), %2:_(<2 x s16>) = G_UNMERGE_VALUES %1(<4 x s16>)
+    %3:_(<2 x s64>) = G_FPEXT %0(<2 x s16>)
+    $q0 = COPY %3(<2 x s64>)
+    RET_ReallyLR implicit $q0
+...
+
+---
+name:            fpext_v3f16_v3f64
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: fpext_v3f16_v3f64
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[FPEXT]](<4 x s32>)
+    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV]](<2 x s32>)
+    ; CHECK-NEXT: [[FPEXT2:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV1]](<2 x s32>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT1]](<2 x s64>)
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[FPEXT2]](<2 x s64>)
+    ; CHECK-NEXT: $d0 = COPY [[UV2]](s64)
+    ; CHECK-NEXT: $d1 = COPY [[UV3]](s64)
+    ; CHECK-NEXT: $d2 = COPY [[UV4]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1, implicit $d2
+    %1:_(<4 x s16>) = COPY $d0
+    %2:_(s16), %3:_(s16), %4:_(s16), %5:_(s16) = G_UNMERGE_VALUES %1(<4 x s16>)
+    %0:_(<3 x s16>) = G_BUILD_VECTOR %2(s16), %3(s16), %4(s16)
+    %6:_(<3 x s64>) = G_FPEXT %0(<3 x s16>)
+    %7:_(s64), %8:_(s64), %9:_(s64) = G_UNMERGE_VALUES %6(<3 x s64>)
+    $d0 = COPY %7(s64)
+    $d1 = COPY %8(s64)
+    $d2 = COPY %9(s64)
+    RET_ReallyLR implicit $d0, implicit $d1, implicit $d2
+...
+
+---
+name:            fpext_v4f16_v4f64
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: fpext_v4f16_v4f64
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[FPEXT]](<4 x s32>)
+    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV]](<2 x s32>)
+    ; CHECK-NEXT: [[FPEXT2:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV1]](<2 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[FPEXT1]](<2 x s64>)
+    ; CHECK-NEXT: $q1 = COPY [[FPEXT2]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(<4 x s64>) = G_FPEXT %0(<4 x s16>)
+    %2:_(<2 x s64>), %3:_(<2 x s64>) = G_UNMERGE_VALUES %1(<4 x s64>)
+    $q0 = COPY %2(<2 x s64>)
+    $q1 = COPY %3(<2 x s64>)
+    RET_ReallyLR implicit $q0, implicit $q1
+...
+
+---
+name:            fpext_v8f16_v8f64
+body:             |
+  bb.0:
+    liveins: $q0
+
+    ; CHECK-LABEL: name: fpext_v8f16_v8f64
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x s16>), [[UV1:%[0-9]+]]:_(<4 x s16>) = G_UNMERGE_VALUES [[COPY]](<8 x s16>)
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[UV]](<4 x s16>)
+    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[UV1]](<4 x s16>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(<2 x s32>), [[UV3:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[FPEXT]](<4 x s32>)
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(<2 x s32>), [[UV5:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[FPEXT1]](<4 x s32>)
+    ; CHECK-NEXT: [[FPEXT2:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV2]](<2 x s32>)
+    ; CHECK-NEXT: [[FPEXT3:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV3]](<2 x s32>)
+    ; CHECK-NEXT: [[FPEXT4:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV4]](<2 x s32>)
+    ; CHECK-NEXT: [[FPEXT5:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV5]](<2 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[FPEXT2]](<2 x s64>)
+    ; CHECK-NEXT: $q1 = COPY [[FPEXT3]](<2 x s64>)
+    ; CHECK-NEXT: $q2 = COPY [[FPEXT4]](<2 x s64>)
+    ; CHECK-NEXT: $q3 = COPY [[FPEXT5]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1, implicit $q2, implicit $q3
+    %0:_(<8 x s16>) = COPY $q0
+    %1:_(<8 x s64>) = G_FPEXT %0(<8 x s16>)
+    %2:_(<2 x s64>), %3:_(<2 x s64>), %4:_(<2 x s64>), %5:_(<2 x s64>) = G_UNMERGE_VALUES %1(<8 x s64>)
+    $q0 = COPY %2(<2 x s64>)
+    $q1 = COPY %3(<2 x s64>)
+    $q2 = COPY %4(<2 x s64>)
+    $q3 = COPY %5(<2 x s64>)
+    RET_ReallyLR implicit $q0, implicit $q1, implicit $q2, implicit $q3
 ...

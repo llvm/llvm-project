@@ -15,6 +15,7 @@
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/type-info.h"
 #include "flang/Common/type-kinds.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -26,13 +27,13 @@ RT_OFFLOAD_API_GROUP_BEGIN
 RT_API_ATTRS Descriptor::Descriptor(const Descriptor &that) { *this = that; }
 
 RT_API_ATTRS Descriptor &Descriptor::operator=(const Descriptor &that) {
-  std::memcpy(reinterpret_cast<void *>(this), &that, that.SizeInBytes());
+  runtime::memcpy(reinterpret_cast<void *>(this), &that, that.SizeInBytes());
   return *this;
 }
 
 RT_API_ATTRS void Descriptor::Establish(TypeCode t, std::size_t elementBytes,
     void *p, int rank, const SubscriptValue *extent,
-    ISO::CFI_attribute_t attribute, bool addendum) {
+    ISO::CFI_attribute_t attribute, bool addendum, int allocatorIdx) {
   Terminator terminator{__FILE__, __LINE__};
   int cfiStatus{ISO::VerifyEstablishParameters(&raw_, p, attribute, t.raw(),
       elementBytes, rank, extent, /*external=*/false)};
@@ -59,6 +60,7 @@ RT_API_ATTRS void Descriptor::Establish(TypeCode t, std::size_t elementBytes,
   if (a) {
     new (a) DescriptorAddendum{};
   }
+  SetAllocIdx(allocatorIdx);
 }
 
 RT_API_ATTRS std::size_t Descriptor::BytesFor(TypeCategory category, int kind) {
@@ -70,21 +72,22 @@ RT_API_ATTRS std::size_t Descriptor::BytesFor(TypeCategory category, int kind) {
 
 RT_API_ATTRS void Descriptor::Establish(TypeCategory c, int kind, void *p,
     int rank, const SubscriptValue *extent, ISO::CFI_attribute_t attribute,
-    bool addendum) {
+    bool addendum, int allocatorIdx) {
   Establish(TypeCode(c, kind), BytesFor(c, kind), p, rank, extent, attribute,
-      addendum);
+      addendum, allocatorIdx);
 }
 
 RT_API_ATTRS void Descriptor::Establish(int characterKind,
     std::size_t characters, void *p, int rank, const SubscriptValue *extent,
-    ISO::CFI_attribute_t attribute, bool addendum) {
+    ISO::CFI_attribute_t attribute, bool addendum, int allocatorIdx) {
   Establish(TypeCode{TypeCategory::Character, characterKind},
-      characterKind * characters, p, rank, extent, attribute, addendum);
+      characterKind * characters, p, rank, extent, attribute, addendum,
+      allocatorIdx);
 }
 
 RT_API_ATTRS void Descriptor::Establish(const typeInfo::DerivedType &dt,
     void *p, int rank, const SubscriptValue *extent,
-    ISO::CFI_attribute_t attribute) {
+    ISO::CFI_attribute_t attribute, int allocatorIdx) {
   auto elementBytes{static_cast<std::size_t>(dt.sizeInBytes())};
   ISO::EstablishDescriptor(
       &raw_, p, attribute, CFI_type_struct, elementBytes, rank, extent);
@@ -96,6 +99,16 @@ RT_API_ATTRS void Descriptor::Establish(const typeInfo::DerivedType &dt,
       GetDimension(j).SetByteStride(0);
     }
   }
+  SetHasAddendum();
+  new (Addendum()) DescriptorAddendum{&dt};
+  SetAllocIdx(allocatorIdx);
+}
+
+RT_API_ATTRS void Descriptor::UncheckedScalarEstablish(
+    const typeInfo::DerivedType &dt, void *p) {
+  auto elementBytes{static_cast<std::size_t>(dt.sizeInBytes())};
+  ISO::EstablishDescriptor(
+      &raw_, p, CFI_attribute_other, CFI_type_struct, elementBytes, 0, nullptr);
   SetHasAddendum();
   new (Addendum()) DescriptorAddendum{&dt};
 }
@@ -231,6 +244,7 @@ RT_API_ATTRS bool Descriptor::EstablishPointerSection(const Descriptor &source,
     const SubscriptValue *stride) {
   *this = source;
   raw_.attribute = CFI_attribute_pointer;
+  SetAllocIdx(source.GetAllocIdx());
   int newRank{raw_.rank};
   for (int j{0}; j < raw_.rank; ++j) {
     if (!stride || stride[j] == 0) {
@@ -242,6 +256,9 @@ RT_API_ATTRS bool Descriptor::EstablishPointerSection(const Descriptor &source,
     }
   }
   raw_.rank = newRank;
+  if (CFI_section(&raw_, &source.raw_, lower, upper, stride) != CFI_SUCCESS) {
+    return false;
+  }
   if (const auto *sourceAddendum = source.Addendum()) {
     if (auto *addendum{Addendum()}) {
       *addendum = *sourceAddendum;
@@ -249,7 +266,7 @@ RT_API_ATTRS bool Descriptor::EstablishPointerSection(const Descriptor &source,
       return false;
     }
   }
-  return CFI_section(&raw_, &source.raw_, lower, upper, stride) == CFI_SUCCESS;
+  return true;
 }
 
 RT_API_ATTRS void Descriptor::ApplyMold(
@@ -275,14 +292,161 @@ RT_API_ATTRS void Descriptor::Check() const {
   // TODO
 }
 
-void Descriptor::Dump(FILE *f) const {
+static const char *GetTypeStr(ISO::CFI_type_t type, bool dumpRawType) {
+  if (dumpRawType) {
+#define CASE(x) \
+  case (x): \
+    return #x;
+    switch (type) {
+      CASE(CFI_type_signed_char)
+      CASE(CFI_type_short)
+      CASE(CFI_type_int)
+      CASE(CFI_type_long)
+      CASE(CFI_type_long_long)
+      CASE(CFI_type_size_t)
+      CASE(CFI_type_int8_t)
+      CASE(CFI_type_int16_t)
+      CASE(CFI_type_int32_t)
+      CASE(CFI_type_int64_t)
+      CASE(CFI_type_int128_t)
+      CASE(CFI_type_int_least8_t)
+      CASE(CFI_type_int_least16_t)
+      CASE(CFI_type_int_least32_t)
+      CASE(CFI_type_int_least64_t)
+      CASE(CFI_type_int_least128_t)
+      CASE(CFI_type_int_fast8_t)
+      CASE(CFI_type_int_fast16_t)
+      CASE(CFI_type_int_fast32_t)
+      CASE(CFI_type_int_fast64_t)
+      CASE(CFI_type_int_fast128_t)
+      CASE(CFI_type_intmax_t)
+      CASE(CFI_type_intptr_t)
+      CASE(CFI_type_ptrdiff_t)
+      CASE(CFI_type_half_float)
+      CASE(CFI_type_bfloat)
+      CASE(CFI_type_float)
+      CASE(CFI_type_double)
+      CASE(CFI_type_extended_double)
+      CASE(CFI_type_long_double)
+      CASE(CFI_type_float128)
+      CASE(CFI_type_half_float_Complex)
+      CASE(CFI_type_bfloat_Complex)
+      CASE(CFI_type_float_Complex)
+      CASE(CFI_type_double_Complex)
+      CASE(CFI_type_extended_double_Complex)
+      CASE(CFI_type_long_double_Complex)
+      CASE(CFI_type_float128_Complex)
+      CASE(CFI_type_Bool)
+      CASE(CFI_type_char)
+      CASE(CFI_type_cptr)
+      CASE(CFI_type_struct)
+      CASE(CFI_type_char16_t)
+      CASE(CFI_type_char32_t)
+      CASE(CFI_type_uint8_t)
+      CASE(CFI_type_uint16_t)
+      CASE(CFI_type_uint32_t)
+      CASE(CFI_type_uint64_t)
+      CASE(CFI_type_uint128_t)
+    default:
+      return nullptr;
+    }
+#undef CASE
+  }
+  TypeCode code{type};
+  if (!code.IsValid()) {
+    return "invalid";
+  }
+  auto categoryAndKind{code.GetCategoryAndKind()};
+  if (!categoryAndKind) {
+    return nullptr;
+  }
+  TypeCategory tcat{categoryAndKind->first};
+  int kind{categoryAndKind->second};
+
+#define CASE(cat, k) \
+  case (k): \
+    return #cat "(kind=" #k ")";
+  switch (tcat) {
+  case TypeCategory::Integer:
+    switch (kind) {
+      CASE(INTEGER, 1)
+      CASE(INTEGER, 2)
+      CASE(INTEGER, 4)
+      CASE(INTEGER, 8)
+      CASE(INTEGER, 16)
+    }
+    break;
+  case TypeCategory::Unsigned:
+    switch (kind) {
+      CASE(UNSIGNED, 1)
+      CASE(UNSIGNED, 2)
+      CASE(UNSIGNED, 4)
+      CASE(UNSIGNED, 8)
+      CASE(UNSIGNED, 16)
+    }
+    break;
+  case TypeCategory::Real:
+    switch (kind) {
+      CASE(REAL, 2)
+      CASE(REAL, 3)
+      CASE(REAL, 4)
+      CASE(REAL, 8)
+      CASE(REAL, 10)
+      CASE(REAL, 16)
+    }
+    break;
+  case TypeCategory::Complex:
+    switch (kind) {
+      CASE(COMPLEX, 2)
+      CASE(COMPLEX, 3)
+      CASE(COMPLEX, 4)
+      CASE(COMPLEX, 8)
+      CASE(COMPLEX, 10)
+      CASE(COMPLEX, 16)
+    }
+    break;
+  case TypeCategory::Character:
+    switch (kind) {
+      CASE(CHARACTER, 1)
+      CASE(CHARACTER, 2)
+      CASE(CHARACTER, 4)
+    }
+    break;
+  case TypeCategory::Logical:
+    switch (kind) {
+      CASE(LOGICAL, 1)
+      CASE(LOGICAL, 2)
+      CASE(LOGICAL, 4)
+      CASE(LOGICAL, 8)
+    }
+    break;
+  case TypeCategory::Derived:
+    return "DERIVED";
+  }
+#undef CASE
+  return nullptr;
+}
+
+void Descriptor::Dump(FILE *f, bool dumpRawType) const {
   std::fprintf(f, "Descriptor @ %p:\n", reinterpret_cast<const void *>(this));
   std::fprintf(f, "  base_addr %p\n", raw_.base_addr);
-  std::fprintf(f, "  elem_len  %zd\n", static_cast<std::size_t>(raw_.elem_len));
+  std::fprintf(f, "  elem_len  %zd\n", ElementBytes());
   std::fprintf(f, "  version   %d\n", static_cast<int>(raw_.version));
-  std::fprintf(f, "  rank      %d\n", static_cast<int>(raw_.rank));
-  std::fprintf(f, "  type      %d\n", static_cast<int>(raw_.type));
-  std::fprintf(f, "  attribute %d\n", static_cast<int>(raw_.attribute));
+  std::fprintf(f, "  rank      %d%s\n", rank(), rank() ? "" : " (scalar)");
+  int ty{static_cast<int>(raw_.type)};
+  if (const char *tyStr{GetTypeStr(raw_.type, dumpRawType)}) {
+    std::fprintf(f, "  type      %d \"%s\"\n", ty, tyStr);
+  } else {
+    std::fprintf(f, "  type      %d\n", ty);
+  }
+  int attr{static_cast<int>(raw_.attribute)};
+  if (IsPointer()) {
+    std::fprintf(f, "  attribute %d (pointer) \n", attr);
+  } else if (IsAllocatable()) {
+    std::fprintf(f, "  attribute %d (allocatable)\n", attr);
+  } else {
+    std::fprintf(f, "  attribute %d\n", attr);
+  }
   std::fprintf(f, "  extra     %d\n", static_cast<int>(raw_.extra));
   std::fprintf(f, "    addendum  %d\n", static_cast<int>(HasAddendum()));
   std::fprintf(f, "    alloc_idx %d\n", static_cast<int>(GetAllocIdx()));

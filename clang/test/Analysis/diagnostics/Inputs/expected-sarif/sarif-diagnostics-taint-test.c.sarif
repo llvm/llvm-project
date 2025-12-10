@@ -4,9 +4,10 @@
     {
       "artifacts": [
         {
-          "length": 425,
+          "length": -1,
           "location": {
             "index": 0,
+            "uri": "file:///[...]/sarif-diagnostics-taint-test.c"
           },
           "mimeType": "text/plain",
           "roles": [
@@ -31,6 +32,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-diagnostics-taint-test.c"
                           },
                           "region": {
                             "endColumn": 6,
@@ -50,6 +52,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-diagnostics-taint-test.c"
                           },
                           "region": {
                             "endColumn": 18,
@@ -71,6 +74,7 @@
               "physicalLocation": {
                 "artifactLocation": {
                   "index": 0,
+                  "uri": "file:///[...]/sarif-diagnostics-taint-test.c"
                 },
                 "region": {
                   "endColumn": 18,
@@ -83,6 +87,9 @@
           ],
           "message": {
             "text": "tainted"
+          },
+          "partialFingerprints": {
+            "clang/issueHash/v1": "5c964815b8d6db3989bacdd308e657d0"
           },
           "ruleId": "debug.TaintTest",
           "ruleIndex": 0
@@ -108,8 +115,10 @@
               "name": "debug.TaintTest"
             }
           ],
+          "version": "[clang version]"
         }
       }
     }
   ],
+  "version": "[SARIF version]"
 }

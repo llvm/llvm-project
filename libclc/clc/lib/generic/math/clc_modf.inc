@@ -11,7 +11,7 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_modf(__CLC_GENTYPE x,
   return __clc_copysign(__clc_isinf(x) ? __CLC_FP_LIT(0.0) : x - *iptr, x);
 }
 
-#define CLC_MODF_DEF(addrspace)                                                \
+#define __CLC_MODF_DEF(addrspace)                                              \
   _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_modf(                             \
       __CLC_GENTYPE x, addrspace __CLC_GENTYPE *iptr) {                        \
     __CLC_GENTYPE private_iptr;                                                \
@@ -20,11 +20,11 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_modf(__CLC_GENTYPE x,
     return ret;                                                                \
   }
 
-CLC_MODF_DEF(local);
-CLC_MODF_DEF(global);
+__CLC_MODF_DEF(local);
+__CLC_MODF_DEF(global);
 
 #if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
-CLC_MODF_DEF(generic);
+__CLC_MODF_DEF(generic);
 #endif
 
-#undef CLC_MODF_DEF
+#undef __CLC_MODF_DEF

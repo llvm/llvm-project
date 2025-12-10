@@ -1,4 +1,4 @@
-//===--- MathMissingParenthesesCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -48,7 +48,7 @@ static int getPrecedence(const BinaryOperator *BinOp) {
     return 0;
   }
 }
-static void addParantheses(const BinaryOperator *BinOp,
+static void addParentheses(const BinaryOperator *BinOp,
                            const BinaryOperator *ParentBinOp,
                            ClangTidyCheck *Check,
                            const clang::SourceManager &SM,
@@ -56,8 +56,8 @@ static void addParantheses(const BinaryOperator *BinOp,
   if (!BinOp)
     return;
 
-  int Precedence1 = getPrecedence(BinOp);
-  int Precedence2 = getPrecedence(ParentBinOp);
+  const int Precedence1 = getPrecedence(BinOp);
+  const int Precedence2 = getPrecedence(ParentBinOp);
 
   if (ParentBinOp != nullptr && Precedence1 != Precedence2 && Precedence1 > 0 &&
       Precedence2 > 0) {
@@ -81,9 +81,9 @@ static void addParantheses(const BinaryOperator *BinOp,
     }
   }
 
-  addParantheses(dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreImpCasts()),
+  addParentheses(dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreImpCasts()),
                  BinOp, Check, SM, LangOpts);
-  addParantheses(dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts()),
+  addParentheses(dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts()),
                  BinOp, Check, SM, LangOpts);
 }
 
@@ -92,7 +92,7 @@ void MathMissingParenthesesCheck::check(
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
   const SourceManager &SM = *Result.SourceManager;
   const clang::LangOptions &LO = Result.Context->getLangOpts();
-  addParantheses(BinOp, nullptr, this, SM, LO);
+  addParentheses(BinOp, nullptr, this, SM, LO);
 }
 
 } // namespace clang::tidy::readability

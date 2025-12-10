@@ -15,12 +15,12 @@
 #define LLVM_TOOLS_LLVM_XRAY_STACK_TRIE_H
 
 #include <forward_list>
-#include <numeric>
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
+namespace llvm {
 /// A type to represent a trie of invocations. It is useful to construct a
 /// graph of these nodes from reading an XRay trace, such that each function
 /// call can be placed in a larger context.
@@ -87,5 +87,6 @@ mergeTrieNodes(const TrieNode<T> &Left, const TrieNode<T> &Right,
 
   return Node;
 }
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_XRAY_STACK_TRIE_H

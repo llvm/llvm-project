@@ -13,10 +13,7 @@
     ret <vscale x 2 x float> %0
   }
 
-  declare <vscale x 2 x float> @llvm.riscv.vrgather.vx.nxv2f32.i64(<vscale x 2 x float>, <vscale x 2 x float>, i64, i64) #1
-
   attributes #0 = { "target-features"="+v" }
-  attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) "target-features"="+v" }
 
 ...
 ---
@@ -63,8 +60,8 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   hasTailCall:     false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []

@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
+
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 // REQUIRES: locale.ru_RU.UTF-8
 

@@ -108,6 +108,25 @@ public:
   /// added or replaced at the inner-most level of the local symbol map.
   virtual void bindSymbol(SymbolRef sym, const fir::ExtendedValue &exval) = 0;
 
+  /// Binds the symbol's physical storage to a storage descriptor,
+  /// which is the base address of the storage and the offset
+  /// within the storage, where the symbol begins.
+  /// The symbol binding will be added or replaced at the innermost level
+  /// of the local symbol map.
+  virtual void
+  bindSymbolStorage(SymbolRef sym,
+                    Fortran::lower::SymMap::StorageDesc storage) = 0;
+
+  /// Returns the storage descriptor previously bound to this symbol.
+  /// If there is no bound storage, the descriptor will contain
+  /// nullptr base address.
+  virtual Fortran::lower::SymMap::StorageDesc
+  getSymbolStorage(SymbolRef sym) = 0;
+
+  /// Return the Symbol Map used to map semantics::Symbol to their SSA
+  /// values in the generated MLIR.
+  virtual Fortran::lower::SymMap &getSymbolMap() = 0;
+
   /// Override lowering of expression with pre-lowered values.
   /// Associate mlir::Value to evaluate::Expr. All subsequent call to
   /// genExprXXX() will replace any occurrence of an overridden
@@ -252,9 +271,18 @@ public:
   virtual bool
   isRegisteredDummySymbol(Fortran::semantics::SymbolRef symRef) const = 0;
 
+  /// Get the source-level argument position (1-based) for a dummy symbol.
+  /// Returns 0 if the symbol is not a registered dummy or position is unknown.
+  /// Can only be used reliably during the instantiation of variables.
+  virtual unsigned
+  getDummyArgPosition(const Fortran::semantics::Symbol &sym) const = 0;
+
   /// Returns the FunctionLikeUnit being lowered, if any.
   virtual const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const = 0;
+
+  /// Check support of Multi-image features if -fcoarray is provided
+  virtual void checkCoarrayEnabled() = 0;
 
   //===--------------------------------------------------------------------===//
   // Types
@@ -328,6 +356,11 @@ public:
   virtual const fir::KindMapping &getKindMap() = 0;
 
   virtual Fortran::lower::StatementContext &getFctCtx() = 0;
+
+  /// Generate STAT and ERRMSG from a list of StatOrErrmsg
+  virtual std::pair<mlir::Value, mlir::Value>
+  genStatAndErrmsg(mlir::Location loc,
+                   const std::list<Fortran::parser::StatOrErrmsg> &) = 0;
 
   AbstractConverter(const Fortran::lower::LoweringOptions &loweringOptions)
       : loweringOptions(loweringOptions) {}

@@ -48,8 +48,6 @@ struct SubsectionAndTagToTagName {
   StringRef SubsectionName;
   unsigned Tag;
   StringRef TagName;
-  SubsectionAndTagToTagName(StringRef SN, unsigned Tg, StringRef TN)
-      : SubsectionName(SN), Tag(Tg), TagName(TN) {}
 };
 
 namespace ELFAttrs {

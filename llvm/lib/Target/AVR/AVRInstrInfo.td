@@ -204,16 +204,19 @@ def memspi : Operand<iPTR> {
 def relbrtarget_7 : Operand<OtherVT> {
   let PrintMethod = "printPCRelImm";
   let EncoderMethod = "encodeRelCondBrTarget<AVR::fixup_7_pcrel>";
+  let DecoderMethod = "decodeRelCondBrTarget7";
 }
 
 def brtarget_13 : Operand<OtherVT> {
   let PrintMethod = "printPCRelImm";
   let EncoderMethod = "encodeRelCondBrTarget<AVR::fixup_13_pcrel>";
+  let DecoderMethod = "decodeRelCondBrTarget13";
 }
 
 def rcalltarget_13 : Operand<i16> {
   let PrintMethod = "printPCRelImm";
   let EncoderMethod = "encodeRelCondBrTarget<AVR::fixup_13_pcrel>";
+  let DecoderMethod = "decodeRelCondBrTarget13";
 }
 
 // The target of a 22 or 16-bit call/jmp instruction.
@@ -492,13 +495,13 @@ let isCommutable = 1, Defs = [R1, R0, SREG] in {
                         "mul\t$rd, $rr", []>,
                   Requires<[SupportsMultiplication]>;
 
-    def MULSRdRr : FMUL2RdRr<0, (outs), (ins LD8:$rd, LD8:$rr),
+    def MULSRdRr : FMULSRdRr<(outs), (ins LD8:$rd, LD8:$rr),
                              "muls\t$rd, $rr", []>,
                    Requires<[SupportsMultiplication]>;
   }
 
-  def MULSURdRr : FMUL2RdRr<1, (outs), (ins LD8lo:$rd, LD8lo:$rr),
-                            "mulsu\t$rd, $rr", []>,
+  def MULSURdRr : FMULSURdRr<(outs), (ins LD8lo:$rd, LD8lo:$rr),
+                             "mulsu\t$rd, $rr", []>,
                   Requires<[SupportsMultiplication]>;
 
   def FMUL : FFMULRdRr<0b01, (outs), (ins LD8lo:$rd, LD8lo:$rr),
@@ -1230,7 +1233,9 @@ let Uses = [R1, R0] in {
 
   let Defs = [R31R30] in 
   def SPMZPi : F16<0b1001010111111000, (outs), (ins ZREG:$z), "spm $z+", []>,
-               Requires<[HasSPMX]>;
+               Requires<[HasSPMX]> {
+    bits<0> z;
+  }
 }
 
 // Read data from IO location operations.
@@ -1499,14 +1504,26 @@ let Defs = [SREG], hasSideEffects = 0 in
 def FRMIDX : Pseudo<(outs DLDREGS:$dst), (ins DLDREGS:$src, i16imm:$src2),
                     "frmidx\t$dst, $src, $src2", []>;
 
+// The instructions STDSPQRr and STDWSPQRr are used to store to the stack
+// frame. The most accurate implementation would be to load the SP into
+// a temporary pointer variable and then STDPtrQRr. However for efficiency,
+// we assume that R29R28 contains the current call frame pointer.
+// However in the PEI pass we sometimes rewrite a ADJCALLSTACKDOWN pseudo,
+// plus one or more STDSPQRr/STDWSPQRr pseudo instructions to use Z for a
+// stack adjustment then as a base pointer. To avoid corruption, we thus
+// specify special classes of registers, like GPR8 and DREGS, but with
+// the Z register removed, as the source/input to these instructions.
 // This pseudo is either converted to a regular store or a push which clobbers
 // SP.
-def STDSPQRr : StorePseudo<(outs), (ins memspi:$dst, GPR8:$src),
+let Defs = [SP], Uses = [SP], hasSideEffects = 0 in
+def STDSPQRr : StorePseudo<(outs), (ins memspi:$dst, GPR8NOZ:$src),
                            "stdstk\t$dst, $src", [(store i8:$src, addr:$dst)]>;
 
+// See the comment on STDSPQRr.
 // This pseudo is either converted to a regular store or a push which clobbers
 // SP.
-def STDWSPQRr : StorePseudo<(outs), (ins memspi:$dt, DREGS:$src),
+let Defs = [SP], Uses = [SP], hasSideEffects = 0 in
+def STDWSPQRr : StorePseudo<(outs), (ins memspi:$dt, DREGSNOZ:$src),
                             "stdwstk\t$dt, $src", [(store i16:$src, addr:$dt)]>;
 
 // SP read/write pseudos.

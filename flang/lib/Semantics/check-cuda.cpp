@@ -131,6 +131,9 @@ struct FindHostArray
     return (*this)(x.base());
   }
   Result operator()(const Symbol &symbol) const {
+    if (symbol.IsFuncResult()) {
+      return nullptr;
+    }
     if (const auto *details{
             symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
       if (details->IsArray() &&
@@ -761,17 +764,45 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   // legal.
   if (nbLhs == 0 && nbRhs > 1) {
     context_.Say(lhsLoc,
-        "More than one reference to a CUDA object on the right hand side of the assigment"_err_en_US);
+        "More than one reference to a CUDA object on the right hand side of the assignment"_err_en_US);
   }
 
-  if (Fortran::evaluate::HasCUDADeviceAttrs(assign->lhs) &&
-      Fortran::evaluate::HasCUDAImplicitTransfer(assign->rhs)) {
+  if (evaluate::HasCUDADeviceAttrs(assign->lhs) &&
+      evaluate::HasCUDAImplicitTransfer(assign->rhs)) {
     if (GetNbOfCUDAManagedOrUnifiedSymbols(assign->lhs) == 1 &&
-        GetNbOfCUDAManagedOrUnifiedSymbols(assign->rhs) == 1 &&
-        GetNbOfCUDADeviceSymbols(assign->rhs) == 1) {
+        GetNbOfCUDAManagedOrUnifiedSymbols(assign->rhs) == 1 && nbRhs == 1) {
       return; // This is a special case handled on the host.
     }
     context_.Say(lhsLoc, "Unsupported CUDA data transfer"_err_en_US);
+  }
+}
+
+void CUDAChecker::Enter(const parser::PrintStmt &x) {
+  CHECK(context_.location());
+  const Scope &scope{context_.FindScope(*context_.location())};
+  const Scope &progUnit{GetProgramUnitContaining(scope)};
+  if (IsCUDADeviceContext(&progUnit) || deviceConstructDepth_ > 0) {
+    return;
+  }
+
+  auto &outputItemList{std::get<std::list<Fortran::parser::OutputItem>>(x.t)};
+  for (const auto &item : outputItemList) {
+    if (const auto *x{std::get_if<parser::Expr>(&item.u)}) {
+      if (const auto *expr{GetExpr(context_, *x)}) {
+        for (const Symbol &sym : CollectCudaSymbols(*expr)) {
+          if (const auto *details = sym.GetUltimate()
+                  .detailsIf<semantics::ObjectEntityDetails>()) {
+            if (details->cudaDataAttr() &&
+                (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
+                    *details->cudaDataAttr() ==
+                        common::CUDADataAttr::Constant)) {
+              context_.Say(parser::FindSourceLocation(*x),
+                  "device data not allowed in I/O statements"_err_en_US);
+            }
+          }
+        }
+      }
+    }
   }
 }
 

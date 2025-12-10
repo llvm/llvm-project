@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
-// RUN:  -fnative-half-type -emit-llvm  -o - | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF
+// RUN:  -fnative-half-type -fnative-int16-type -emit-llvm  -o - | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:  -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 

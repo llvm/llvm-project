@@ -42,7 +42,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -1193,7 +1192,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
       //   USE kill %w1   ; need to clear kill flag when moving STRWui downwards
       //   STRW %w0
       Register Reg = getLdStRegOp(*I).getReg();
-      for (MachineInstr &MI : make_range(std::next(I), Paired))
+      for (MachineInstr &MI :
+           make_range(std::next(I->getIterator()), Paired->getIterator()))
         MI.clearRegisterKills(Reg, TRI);
     }
   }
@@ -1384,6 +1384,25 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     for (const MachineOperand &MOP : phys_regs_and_masks(*I))
       if (MOP.isReg() && MOP.isKill())
         DefinedInBB.addReg(MOP.getReg());
+
+  // Copy over any implicit-def operands. This is like MI.copyImplicitOps, but
+  // only copies implicit defs and makes sure that each operand is only added
+  // once in case of duplicates.
+  auto CopyImplicitOps = [&](MachineBasicBlock::iterator MI1,
+                             MachineBasicBlock::iterator MI2) {
+    SmallSetVector<Register, 4> Ops;
+    for (const MachineOperand &MO :
+         llvm::drop_begin(MI1->operands(), MI1->getDesc().getNumOperands()))
+      if (MO.isReg() && MO.isImplicit() && MO.isDef())
+        Ops.insert(MO.getReg());
+    for (const MachineOperand &MO :
+         llvm::drop_begin(MI2->operands(), MI2->getDesc().getNumOperands()))
+      if (MO.isReg() && MO.isImplicit() && MO.isDef())
+        Ops.insert(MO.getReg());
+    for (auto Op : Ops)
+      MIB.addDef(Op, RegState::Implicit);
+  };
+  CopyImplicitOps(I, Paired);
 
   // Erase the old instructions.
   I->eraseFromParent();

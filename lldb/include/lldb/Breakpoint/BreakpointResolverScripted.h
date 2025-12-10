@@ -12,6 +12,7 @@
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/lldb-forward.h"
 
 namespace lldb_private {
@@ -44,6 +45,13 @@ public:
 
   void GetDescription(Stream *s) override;
 
+  lldb::BreakpointLocationSP WasHit(lldb::StackFrameSP frame_sp,
+                                    lldb::BreakpointLocationSP bp_loc_sp);
+
+  std::optional<std::string>
+  GetLocationDescription(lldb::BreakpointLocationSP bp_loc_sp,
+                         lldb::DescriptionLevel level);
+
   void Dump(Stream *s) const override;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -64,7 +72,8 @@ private:
   std::string m_class_name;
   lldb::SearchDepth m_depth;
   StructuredDataImpl m_args;
-  StructuredData::GenericSP m_implementation_sp;
+  Status m_error;
+  lldb::ScriptedBreakpointInterfaceSP m_interface_sp;
 
   BreakpointResolverScripted(const BreakpointResolverScripted &) = delete;
   const BreakpointResolverScripted &

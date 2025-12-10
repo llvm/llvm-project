@@ -528,7 +528,7 @@ entry:
   %a.sext = sext <vscale x 4 x i8> %a to <vscale x 4 x i32>
   %b.sext = sext <vscale x 4 x i8> %b to <vscale x 4 x i32>
   %mul = mul <vscale x 4 x i32> %a.sext, %b.sext
-  %res = call <vscale x 1 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 1 x i32> zeroinitializer, <vscale x 4 x i32> %mul)
+  %res = call <vscale x 1 x i32> @llvm.vector.partial.reduce.add(<vscale x 1 x i32> zeroinitializer, <vscale x 4 x i32> %mul)
   ret <vscale x 1 x i32> %res
 }
 
@@ -556,7 +556,7 @@ entry:
   %a.sext = sext <vscale x 8 x i8> %a to <vscale x 8 x i32>
   %b.sext = sext <vscale x 8 x i8> %b to <vscale x 8 x i32>
   %mul = mul <vscale x 8 x i32> %a.sext, %b.sext
-  %res = call <vscale x 2 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 2 x i32> zeroinitializer, <vscale x 8 x i32> %mul)
+  %res = call <vscale x 2 x i32> @llvm.vector.partial.reduce.add(<vscale x 2 x i32> zeroinitializer, <vscale x 8 x i32> %mul)
   ret <vscale x 2 x i32> %res
 }
 
@@ -584,7 +584,7 @@ entry:
   %a.sext = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
   %b.sext = sext <vscale x 16 x i8> %b to <vscale x 16 x i32>
   %mul = mul <vscale x 16 x i32> %a.sext, %b.sext
-  %res = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 4 x i32> zeroinitializer, <vscale x 16 x i32> %mul)
+  %res = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> zeroinitializer, <vscale x 16 x i32> %mul)
   ret <vscale x 4 x i32> %res
 }
 
@@ -615,7 +615,7 @@ entry:
   %a.sext = sext <vscale x 32 x i8> %a to <vscale x 32 x i32>
   %b.sext = sext <vscale x 32 x i8> %b to <vscale x 32 x i32>
   %mul = mul <vscale x 32 x i32> %a.sext, %b.sext
-  %res = call <vscale x 8 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 8 x i32> zeroinitializer, <vscale x 32 x i32> %mul)
+  %res = call <vscale x 8 x i32> @llvm.vector.partial.reduce.add(<vscale x 8 x i32> zeroinitializer, <vscale x 32 x i32> %mul)
   ret <vscale x 8 x i32> %res
 }
 
@@ -664,7 +664,7 @@ entry:
   %a.sext = sext <vscale x 64 x i8> %a to <vscale x 64 x i32>
   %b.sext = sext <vscale x 64 x i8> %b to <vscale x 64 x i32>
   %mul = mul <vscale x 64 x i32> %a.sext, %b.sext
-  %res = call <vscale x 16 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 16 x i32> zeroinitializer, <vscale x 64 x i32> %mul)
+  %res = call <vscale x 16 x i32> @llvm.vector.partial.reduce.add(<vscale x 16 x i32> zeroinitializer, <vscale x 64 x i32> %mul)
   ret <vscale x 16 x i32> %res
 }
 
@@ -828,7 +828,7 @@ entry:
   %a.sext = sext <vscale x 128 x i8> %a to <vscale x 128 x i32>
   %b.sext = sext <vscale x 128 x i8> %b to <vscale x 128 x i32>
   %mul = mul <vscale x 128 x i32> %a.sext, %b.sext
-  %res = call <vscale x 32 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 32 x i32> zeroinitializer, <vscale x 128 x i32> %mul)
+  %res = call <vscale x 32 x i32> @llvm.vector.partial.reduce.add(<vscale x 32 x i32> zeroinitializer, <vscale x 128 x i32> %mul)
   ret <vscale x 32 x i32> %res
 }
 
@@ -856,7 +856,7 @@ entry:
   %a.sext = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
   %b.sext = sext <vscale x 16 x i8> %b to <vscale x 16 x i32>
   %mul = mul <vscale x 16 x i32> %a.sext, %b.sext
-  %res = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 4 x i32> %accum, <vscale x 16 x i32> %mul)
+  %res = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %accum, <vscale x 16 x i32> %mul)
   ret <vscale x 4 x i32> %res
 }
 
@@ -872,7 +872,7 @@ entry:
   %a.sext = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
   %b.sext = sext <vscale x 16 x i8> %b to <vscale x 16 x i32>
   %mul = mul <vscale x 16 x i32> %a.sext, %b.sext
-  %res = call <vscale x 16 x i32> @llvm.experimental.vector.partial.reduce.add.nvx16i32.nvx16i32(<vscale x 16 x i32> %mul, <vscale x 16 x i32> zeroinitializer)
+  %res = call <vscale x 16 x i32> @llvm.vector.partial.reduce.add.nvx16i32.nvx16i32(<vscale x 16 x i32> %mul, <vscale x 16 x i32> zeroinitializer)
   ret <vscale x 16 x i32> %res
 }
 
@@ -905,7 +905,7 @@ entry:
   %a.sext = zext <vscale x 4 x i8> %a to <vscale x 4 x i32>
   %b.sext = zext <vscale x 4 x i8> %b to <vscale x 4 x i32>
   %mul = mul <vscale x 4 x i32> %a.sext, %b.sext
-  %res = call <vscale x 1 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 1 x i32> zeroinitializer, <vscale x 4 x i32> %mul)
+  %res = call <vscale x 1 x i32> @llvm.vector.partial.reduce.add(<vscale x 1 x i32> zeroinitializer, <vscale x 4 x i32> %mul)
   ret <vscale x 1 x i32> %res
 }
 
@@ -938,7 +938,7 @@ entry:
   %a.sext = sext <vscale x 4 x i8> %a to <vscale x 4 x i32>
   %b.sext = zext <vscale x 4 x i8> %b to <vscale x 4 x i32>
   %mul = mul <vscale x 4 x i32> %a.sext, %b.sext
-  %res = call <vscale x 1 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 1 x i32> zeroinitializer, <vscale x 4 x i32> %mul)
+  %res = call <vscale x 1 x i32> @llvm.vector.partial.reduce.add(<vscale x 1 x i32> zeroinitializer, <vscale x 4 x i32> %mul)
   ret <vscale x 1 x i32> %res
 }
 
@@ -965,7 +965,7 @@ define <vscale x 4 x i32> @partial_of_sext(<vscale x 16 x i8> %a) {
 ; DOT-NEXT:    ret
 entry:
   %a.ext = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
-  %res = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 4 x i32> zeroinitializer, <vscale x 16 x i32> %a.ext)
+  %res = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> zeroinitializer, <vscale x 16 x i32> %a.ext)
   ret <vscale x 4 x i32> %res
 }
 
@@ -991,9 +991,45 @@ define <vscale x 4 x i32> @partial_of_zext(<vscale x 16 x i8> %a) {
 ; DOT-NEXT:    ret
 entry:
   %a.ext = zext <vscale x 16 x i8> %a to <vscale x 16 x i32>
-  %res = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 4 x i32> zeroinitializer, <vscale x 16 x i32> %a.ext)
+  %res = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> zeroinitializer, <vscale x 16 x i32> %a.ext)
   ret <vscale x 4 x i32> %res
 }
+
+define <vscale x 2 x i32> @partial_reduce_select(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b, <vscale x 8 x i1> %m) {
+; NODOT-LABEL: partial_reduce_select:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; NODOT-NEXT:    vsext.vf2 v12, v8
+; NODOT-NEXT:    vsext.vf2 v14, v9
+; NODOT-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; NODOT-NEXT:    vmv.v.i v8, 0
+; NODOT-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; NODOT-NEXT:    vwmul.vv v8, v12, v14, v0.t
+; NODOT-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; NODOT-NEXT:    vadd.vv v8, v11, v8
+; NODOT-NEXT:    vadd.vv v9, v9, v10
+; NODOT-NEXT:    vadd.vv v8, v9, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: partial_reduce_select:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; DOT-NEXT:    vmv.v.i v10, 0
+; DOT-NEXT:    vmerge.vvm v10, v10, v9, v0
+; DOT-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; DOT-NEXT:    vmv.v.i v9, 0
+; DOT-NEXT:    vqdot.vv v9, v8, v10
+; DOT-NEXT:    vmv.v.v v8, v9
+; DOT-NEXT:    ret
+entry:
+  %a.sext = sext <vscale x 8 x i8> %a to <vscale x 8 x i32>
+  %b.sext = sext <vscale x 8 x i8> %b to <vscale x 8 x i32>
+  %mul = mul <vscale x 8 x i32> %a.sext, %b.sext
+  %sel = select <vscale x 8 x i1> %m, <vscale x 8 x i32> %mul, <vscale x 8 x i32> zeroinitializer
+  %res = call <vscale x 2 x i32> @llvm.vector.partial.reduce.add(<vscale x 2 x i32> zeroinitializer, <vscale x 8 x i32> %sel)
+  ret <vscale x 2 x i32> %res
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; DOT32: {{.*}}
 ; DOT64: {{.*}}

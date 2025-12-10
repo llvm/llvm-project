@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/XRay/FDRRecords.h"
 
-namespace llvm {
-namespace xray {
+using namespace llvm;
+using namespace llvm::xray;
 
 Error BufferExtents::apply(RecordVisitor &V) { return V.visit(*this); }
 Error WallclockRecord::apply(RecordVisitor &V) { return V.visit(*this); }
@@ -61,6 +61,3 @@ StringRef Record::kindToString(RecordKind K) {
   }
   return "Unknown";
 }
-
-} // namespace xray
-} // namespace llvm

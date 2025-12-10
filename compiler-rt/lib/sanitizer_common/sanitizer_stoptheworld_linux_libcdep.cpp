@@ -403,7 +403,77 @@ struct ScopedSetTracerPID {
   }
 };
 
+// This detects whether ptrace is blocked (e.g., by seccomp), by forking and
+// then attempting ptrace.
+// This separate check is necessary because StopTheWorld() creates a thread
+// with a shared virtual address space and shared TLS, and therefore
+// cannot use waitpid() due to the shared errno.
+static void TestPTrace() {
+#  if SANITIZER_SPARC
+  // internal_fork() on SPARC actually calls __fork(). We can't safely fork,
+  // because it's possible seccomp has been configured to disallow fork() but
+  // allow clone().
+  VReport(1, "WARNING: skipping TestPTrace() because this is SPARC\n");
+  VReport(1,
+          "If seccomp blocks ptrace, LeakSanitizer may hang without further "
+          "notice\n");
+  VReport(
+      1,
+      "If seccomp does not block ptrace, you can safely ignore this warning\n");
+#  else
+  // Heuristic: only check the first time this is called. This is not always
+  // correct (e.g., user manually triggers leak detection, then updates
+  // seccomp, then leak detection is triggered again).
+  static bool checked = false;
+  if (checked)
+    return;
+  checked = true;
+
+  // Hopefully internal_fork() is not too expensive, thanks to copy-on-write.
+  // Besides, this is only called the first time.
+  // Note that internal_fork() on non-SPARC Linux actually calls
+  // SYSCALL(clone); thus, it is reasonable to use it because if seccomp kills
+  // TestPTrace(), it would have killed StopTheWorld() anyway.
+  int pid = internal_fork();
+
+  if (pid < 0) {
+    int rverrno;
+    if (internal_iserror(pid, &rverrno))
+      VReport(0, "WARNING: TestPTrace() failed to fork (errno %d)\n", rverrno);
+
+    // We don't abort the sanitizer - it's still worth letting the sanitizer
+    // try.
+    return;
+  }
+
+  if (pid == 0) {
+    // Child subprocess
+
+    // TODO: consider checking return value of internal_ptrace, to handle
+    //       SCMP_ACT_ERRNO. However, be careful not to consume too many
+    //       resources performing a proper ptrace.
+    internal_ptrace(PTRACE_ATTACH, 0, nullptr, nullptr);
+    internal__exit(0);
+  } else {
+    int wstatus;
+    internal_waitpid(pid, &wstatus, 0);
+
+    // Handle SCMP_ACT_KILL
+    if (WIFSIGNALED(wstatus)) {
+      VReport(0,
+              "WARNING: ptrace appears to be blocked (is seccomp enabled?). "
+              "LeakSanitizer may hang.\n");
+      VReport(0, "Child exited with signal %d.\n", WTERMSIG(wstatus));
+      // We don't abort the sanitizer - it's still worth letting the sanitizer
+      // try.
+    }
+  }
+#  endif
+}
+
 void StopTheWorld(StopTheWorldCallback callback, void *argument) {
+  TestPTrace();
+
   StopTheWorldScope in_stoptheworld;
   // Prepare the arguments for TracerThread.
   struct TracerThreadArgument tracer_thread_argument;
@@ -457,7 +527,8 @@ void StopTheWorld(StopTheWorldCallback callback, void *argument) {
     internal_prctl(PR_SET_PTRACER, tracer_pid, 0, 0, 0);
     // Allow the tracer thread to start.
     tracer_thread_argument.mutex.Unlock();
-    // NOTE: errno is shared between this thread and the tracer thread.
+    // NOTE: errno is shared between this thread and the tracer thread
+    //       (clone was called without CLONE_SETTLS / newtls).
     // internal_waitpid() may call syscall() which can access/spoil errno,
     // so we can't call it now. Instead we for the tracer thread to finish using
     // the spin loop below. Man page for sched_yield() says "In the Linux

@@ -1,6 +1,6 @@
 ; RUN: opt -S -passes=gvn-hoist < %s
 
-define void @_Z3fn2v() #0 {
+define void @_Z3fn2v() {
 entry:
   %a = alloca ptr, align 8
   %b = alloca i32, align 4
@@ -11,7 +11,7 @@ entry:
   br i1 %tobool, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %call = call i64 @_Z3fn1v() #2
+  %call = call i64 @_Z3fn1v()
   %conv = trunc i64 %call to i32
   store i32 %conv, ptr %b, align 4
   br label %if.end
@@ -23,8 +23,4 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; Function Attrs: nounwind readonly
-declare i64 @_Z3fn1v() #1
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind readonly }
+declare i64 @_Z3fn1v()

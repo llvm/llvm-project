@@ -30,11 +30,24 @@ void func2(PRODUCT(int, SUM(float, double)) y) { // c17-warning {{declaration of
 
 struct foop { struct { int x; }; }; // c17-note {{previous definition is here}}
 struct foop { struct { int x; }; }; // c17-error {{redefinition of 'foop'}}
+// Test the field lookup compatibility isn't sufficient, the structure of types should be compatible.
+struct AnonymousStructNotMatchingFields { // c17-note {{previous definition is here}}
+  struct { // c23-note {{field has name '' here}}
+    int x;
+  };
+};
+struct AnonymousStructNotMatchingFields { // c23-error {{type 'struct AnonymousStructNotMatchingFields' has incompatible definitions}} \
+                                             c17-error {{redefinition of 'AnonymousStructNotMatchingFields'}}
+  int x; // c23-note {{field has name 'x' here}}
+};
+
 union barp { int x; float y; };     // c17-note {{previous definition is here}}
 union barp { int x; float y; };     // c17-error {{redefinition of 'barp'}}
 typedef struct q { int x; } q_t;    // c17-note 2 {{previous definition is here}}
 typedef struct q { int x; } q_t;    // c17-error {{redefinition of 'q'}} \
                                        c17-error-re {{typedef redefinition with different types ('struct (unnamed struct at {{.*}})' vs 'struct q')}}
+typedef struct { int x; } untagged_q_t; // both-note {{previous definition is here}}
+typedef struct { int x; } untagged_q_t; // both-error {{typedef redefinition with different types}}
 void func3(void) {
   struct S { int x; };       // c17-note {{previous definition is here}}
   struct T { struct S s; };  // c17-note {{previous definition is here}}
@@ -389,15 +402,116 @@ void nontag_both_in_params(struct { int i; } Arg1, struct { int i; } Arg2) {
   _Static_assert(0 == _Generic(__typeof__(Arg1), __typeof__(Arg2) : 1, default : 0)); // both-warning {{passing a type argument as the first operand to '_Generic' is a C2y extension}}
 }
 
-struct InnerAnonStruct {
+struct InnerUnnamedStruct {
   struct {
     int i;
   } untagged;
-} inner_anon_tagged;
+} inner_unnamed_tagged;
+_Static_assert(0 == _Generic(inner_unnamed_tagged.untagged, struct { int i; } : 1, default : 0));
 
-_Static_assert(0 == _Generic(inner_anon_tagged.untagged, struct { int i; } : 1, default : 0));
+struct InnerUnnamedStruct_same {
+  struct {
+    int i;
+  } untagged;
+};
+struct InnerUnnamedStruct_differentNaming {
+  struct {
+    int i;
+  } untaggedDifferent;
+};
+struct InnerUnnamedStruct_differentShape {
+  float x;
+  struct {
+    int i;
+  } untagged;
+  int y;
+};
+void compare_unnamed_struct_from_different_outer_type(
+    struct InnerUnnamedStruct sameOuterType,
+    struct InnerUnnamedStruct_same matchingType,
+    struct InnerUnnamedStruct_differentNaming differentFieldName,
+    struct InnerUnnamedStruct_differentShape differentType) {
+  inner_unnamed_tagged.untagged = sameOuterType.untagged;
+  inner_unnamed_tagged.untagged = matchingType.untagged; // both-error-re {{assigning to 'struct (unnamed struct at {{.*}})' from incompatible type 'struct (unnamed struct at {{.*}})'}}
+  inner_unnamed_tagged.untagged = differentFieldName.untaggedDifferent; // both-error-re {{assigning to 'struct (unnamed struct at {{.*}})' from incompatible type 'struct (unnamed struct at {{.*}})'}}
+  inner_unnamed_tagged.untagged = differentType.untagged; // both-error-re {{assigning to 'struct (unnamed struct at {{.*}})' from incompatible type 'struct (unnamed struct at {{.*}})'}}
+}
 
 // Test the same thing with enumerations (test for unions is omitted because
 // unions and structures are both RecordDecl objects, whereas EnumDecl is not).
 enum { E_Untagged1 } nontag_enum; // both-note {{previous definition is here}}
 _Static_assert(0 == _Generic(nontag_enum, enum { E_Untagged1 } : 1, default : 0)); // both-error {{redefinition of enumerator 'E_Untagged1'}}
+
+// Test that enumerations with mixed underlying types are properly handled.
+enum GH150594_E1 : int { GH150594_Val1 };
+enum GH150594_E2 : int { GH150594_Val2 };
+enum GH150594_E3 { GH150594_Val3 };
+enum GH150594_E4 : int { GH150594_Val4 };
+void GH150594(void) {
+  extern enum GH150594_E1 Fn1(void); // both-note {{previous declaration is here}}
+  extern enum GH150594_E2 Fn2(void); // c17-note {{previous declaration is here}}
+  extern enum GH150594_E3 Fn3(void); // both-note {{previous declaration is here}}
+  extern enum GH150594_E4 Fn4(void); // both-note {{previous declaration is here}}
+  enum GH150594_E1 { GH150594_Val1 };
+  enum GH150594_E2 : int { GH150594_Val2 };
+  enum GH150594_E3 : int { GH150594_Val3 };
+  enum GH150594_E4 : short { GH150594_Val4 };
+  extern enum GH150594_E1 Fn1(void); // both-error {{conflicting types for 'Fn1'}}
+  extern enum GH150594_E2 Fn2(void); // c17-error {{conflicting types for 'Fn2'}}
+  extern enum GH150594_E3 Fn3(void); // both-error {{conflicting types for 'Fn3'}}
+  extern enum GH150594_E4 Fn4(void); // both-error {{conflicting types for 'Fn4'}}
+
+  // Show that two declarations in the same scope give expected diagnostics.
+  enum E1 { e1 };       // both-note {{previous declaration is here}}
+  enum E1 : int { e1 }; // both-error {{enumeration previously declared with nonfixed underlying type}}
+
+  enum E2 : int { e2 }; // both-note {{previous declaration is here}}
+  enum E2 { e2 };       // both-error {{enumeration previously declared with fixed underlying type}}
+
+  enum E3 : int { e3 };   // both-note {{previous declaration is here}}
+  enum E3 : short { e3 }; // both-error {{enumeration redeclared with different underlying type 'short' (was 'int')}}
+
+  typedef short foo;
+  enum E4 : foo { e4 };   // c17-note 2 {{previous definition is here}}
+  enum E4 : short { e4 }; // c17-error {{redefinition of 'E4'}} \
+                             c17-error {{redefinition of enumerator 'e4'}}
+
+  enum E5 : foo { e5 }; // both-note {{previous declaration is here}}
+  enum E5 : int { e5 }; // both-error {{enumeration redeclared with different underlying type 'int' (was 'foo' (aka 'short'))}}
+}
+
+// Test that enumerations are compatible with their underlying type, but still
+// diagnose when "same type" is required rather than merely "compatible type".
+enum E1 : int { e1 }; // Fixed underlying type
+enum E2 { e2 };       // Unfixed underlying type, defaults to int or unsigned int
+
+struct GH149965_1 { int h; };
+// This typeof trick is used to get the underlying type of the enumeration in a
+// platform agnostic way.
+struct GH149965_2 { __typeof__(+(enum E2){}) h; };
+void gh149965(void) {
+  extern struct GH149965_1 x1; // c17-note {{previous declaration is here}}
+  extern struct GH149965_2 x2; // c17-note {{previous declaration is here}}
+
+  // Both the structure and the variable declarations are fine because only a
+  // compatible type is required, not the same type, because the structures are
+  // declared in different scopes.
+  struct GH149965_1 { enum E1 h; };
+  struct GH149965_2 { enum E2 h; };
+
+  extern struct GH149965_1 x1; // c17-error {{redeclaration of 'x1'}}
+  extern struct GH149965_2 x2; // c17-error {{redeclaration of 'x2'}}
+
+  // However, in the same scope, the same type is required, not just compatible
+  // types.
+  // FIXME: this should be an error in both C17 and C23 mode.
+  struct GH149965_3 { int h; };     // c17-note {{previous definition is here}}
+  struct GH149965_3 { enum E1 h; }; // c17-error {{redefinition of 'GH149965_3'}}
+
+  // For Clang, the composite type after declaration merging is the enumeration
+  // type rather than an integer type.
+  enum E1 *eptr;
+  [[maybe_unused]] __typeof__(x1.h) *ptr = eptr;
+  enum E2 *eptr2;
+  [[maybe_unused]] __typeof__(x2.h) *ptr2 = eptr2;
+}

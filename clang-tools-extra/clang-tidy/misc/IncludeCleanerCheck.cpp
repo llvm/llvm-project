@@ -1,4 +1,4 @@
-//===--- IncludeCleanerCheck.cpp - clang-tidy -----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -200,7 +200,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
     Unused.push_back(&I);
   }
 
-  llvm::StringRef Code = SM->getBufferData(SM->getMainFileID());
+  const llvm::StringRef Code = SM->getBufferData(SM->getMainFileID());
   auto FileStyle =
       format::getStyle(format::DefaultFormatStyle, getCurrentMainFile(),
                        format::DefaultFallbackStyle, Code,
@@ -220,14 +220,14 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (MissingIncludes) {
-    tooling::HeaderIncludes HeaderIncludes(getCurrentMainFile(), Code,
-                                           FileStyle->IncludeStyle);
+    const tooling::HeaderIncludes HeaderIncludes(getCurrentMainFile(), Code,
+                                                 FileStyle->IncludeStyle);
     // Deduplicate insertions when running in bulk fix mode.
     llvm::StringSet<> InsertedHeaders{};
     for (const auto &Inc : Missing) {
-      std::string Spelling = include_cleaner::spellHeader(
+      const std::string Spelling = include_cleaner::spellHeader(
           {Inc.Missing, PP->getHeaderSearchInfo(), MainFile});
-      bool Angled = llvm::StringRef{Spelling}.starts_with("<");
+      const bool Angled = llvm::StringRef{Spelling}.starts_with("<");
       // We might suggest insertion of an existing include in edge cases, e.g.,
       // include is present in a PP-disabled region, or spelling of the header
       // turns out to be the same as one of the unresolved includes in the
@@ -235,7 +235,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
       if (auto Replacement = HeaderIncludes.insert(
               llvm::StringRef{Spelling}.trim("\"<>"), Angled,
               tooling::IncludeDirective::Include)) {
-        DiagnosticBuilder DB =
+        const DiagnosticBuilder DB =
             diag(SM->getSpellingLoc(Inc.SymRef.RefLocation),
                  "no header providing \"%0\" is directly included")
             << Inc.SymRef.Target.name();

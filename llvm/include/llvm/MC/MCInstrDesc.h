@@ -49,7 +49,7 @@ enum OperandConstraint {
 /// private, all access should go through the MCOperandInfo accessors.
 /// See the accessors for a description of what these are.
 enum OperandFlags {
-  LookupPtrRegClass = 0,
+  LookupRegClassByHwMode = 0,
   Predicate,
   OptionalDef,
   BranchTarget
@@ -85,10 +85,10 @@ enum OperandType {
 /// indicating the register class for register operands, etc.
 class MCOperandInfo {
 public:
-  /// This specifies the register class enumeration of the operand
-  /// if the operand is a register.  If isLookupPtrRegClass is set, then this is
-  /// an index that is passed to TargetRegisterInfo::getPointerRegClass(x) to
-  /// get a dynamic register class.
+  /// This specifies the register class enumeration of the operand if the
+  /// operand is a register. If LookupRegClassByHwMode is set, then this is an
+  /// index into a table in TargetInstrInfo or MCInstrInfo which contains the
+  /// real register class ID.
   int16_t RegClass;
 
   /// These are flags from the MCOI::OperandFlags enum.
@@ -100,10 +100,10 @@ public:
   /// Operand constraints (see OperandConstraint enum).
   uint16_t Constraints;
 
-  /// Set if this operand is a pointer value and it requires a callback
-  /// to look up its register class.
-  bool isLookupPtrRegClass() const {
-    return Flags & (1 << MCOI::LookupPtrRegClass);
+  /// Set if this operand is a value that requires the current hwmode to look up
+  /// its register class.
+  bool isLookupRegClassByHwMode() const {
+    return Flags & (1 << MCOI::LookupRegClassByHwMode);
   }
 
   /// Set if this is one of the operands that made up of the predicate
@@ -211,7 +211,7 @@ public:
   unsigned char NumImplicitUses; // Num of regs implicitly used
   unsigned char NumImplicitDefs; // Num of regs implicitly defined
   unsigned short OpInfoOffset;   // Offset to info about operands
-  unsigned int ImplicitOffset;   // Offset to start of implicit op list
+  unsigned short ImplicitOffset; // Offset to start of implicit op list
   uint64_t Flags;                // Flags identifying machine instr class
   uint64_t TSFlags;              // Target Specific Flag values
 
@@ -521,7 +521,7 @@ public:
   /// Returns true if this instruction is a candidate for remat. This
   /// flag is only used in TargetInstrInfo method isTriviallyRematerializable.
   ///
-  /// If this flag is set, the isReallyTriviallyReMaterializable() method is
+  /// If this flag is set, the isReMaterializableImpl() method is
   /// called to verify the instruction is really rematerializable.
   bool isRematerializable() const {
     return Flags & (1ULL << MCID::Rematerializable);

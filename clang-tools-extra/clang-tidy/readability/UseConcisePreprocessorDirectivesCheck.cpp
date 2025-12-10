@@ -1,4 +1,4 @@
-//===--- UseConcisePreprocessorDirectivesCheck.cpp - clang-tidy -----------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -91,7 +91,10 @@ private:
     Check.diag(
         DirectiveLoc,
         "preprocessor condition can be written more concisely using '#%0'")
-        << FixItHint::CreateReplacement(DirectiveLoc, Replacements[Inverted])
+        << FixItHint::CreateReplacement(
+               CharSourceRange::getCharRange(DirectiveLoc,
+                                             ConditionRange.getBegin()),
+               (Replacements[Inverted].str() + " "))
         << FixItHint::CreateReplacement(ConditionRange, Macro)
         << Replacements[Inverted];
   }

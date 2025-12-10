@@ -148,16 +148,14 @@ flattenUnrankedTensorAroundAxis(OpBuilder &builder, Location loc, Value input,
   auto axisValue = arith::ConstantIndexOp::create(builder, loc, axis);
   auto axisNextValue = arith::ConstantIndexOp::create(builder, loc, axis + 1);
   auto shapeLeft =
-      builder
-          .create<shape::SplitAtOp>(loc, TypeRange{shapeType, shapeType},
-                                    inputShape, axisValue)
+      shape::SplitAtOp::create(builder, loc, TypeRange{shapeType, shapeType},
+                               inputShape, axisValue)
           .getResult(0);
   auto sizeLeft =
       shape::NumElementsOp::create(builder, loc, indexType, shapeLeft);
   auto shapeRight =
-      builder
-          .create<shape::SplitAtOp>(loc, TypeRange{shapeType, shapeType},
-                                    inputShape, axisNextValue)
+      shape::SplitAtOp::create(builder, loc, TypeRange{shapeType, shapeType},
+                               inputShape, axisNextValue)
           .getResult(1);
   auto sizeRight =
       shape::NumElementsOp::create(builder, loc, indexType, shapeRight);
@@ -557,25 +555,24 @@ Value convertPerChannelRanked(OpBuilder &builder, Location loc, Operation *op,
   SmallVector<AffineMap> indexingMaps{
       builder.getMultiDimIdentityMap(inputRank), channelAxisAffineMap,
       channelAxisAffineMap, builder.getMultiDimIdentityMap(inputRank)};
-  auto result = builder
-                    .create<linalg::GenericOp>(
-                        loc,
-                        init.getType(),                        // resultType
-                        ValueRange{input, scales, zeroPoints}, // inputs
-                        ValueRange{init},                      // outputs
-                        indexingMaps, iteratorTypes,
-                        [&](OpBuilder &builder, Location loc, ValueRange args) {
-                          assert(args.size() == 4);
-                          auto input = args[0];
-                          auto scale = args[1];
-                          auto zeroPoint = args[2];
+  auto result = linalg::GenericOp::create(
+                    builder, loc,
+                    init.getType(),                        // resultType
+                    ValueRange{input, scales, zeroPoints}, // inputs
+                    ValueRange{init},                      // outputs
+                    indexingMaps, iteratorTypes,
+                    [&](OpBuilder &builder, Location loc, ValueRange args) {
+                      assert(args.size() == 4);
+                      auto input = args[0];
+                      auto scale = args[1];
+                      auto zeroPoint = args[2];
 
-                          auto result =
-                              convertRanked(builder, loc, op, input, {}, scale,
-                                            zeroPoint, quantizedType);
+                      auto result =
+                          convertRanked(builder, loc, op, input, {}, scale,
+                                        zeroPoint, quantizedType);
 
-                          linalg::YieldOp::create(builder, loc, result);
-                        })
+                      linalg::YieldOp::create(builder, loc, result);
+                    })
                     .getResult(0);
 
   return result;
@@ -660,25 +657,24 @@ Value convertSubChannel(OpBuilder &builder, Location loc, Operation *op,
   SmallVector<AffineMap> indexingMaps{
       builder.getMultiDimIdentityMap(inputRank), affineMap, affineMap,
       builder.getMultiDimIdentityMap(inputRank)};
-  auto result = builder
-                    .create<linalg::GenericOp>(
-                        loc,
-                        init.getType(),                        // resultType
-                        ValueRange{input, scales, zeroPoints}, // inputs
-                        ValueRange{init},                      // outputs
-                        indexingMaps, iteratorTypes,
-                        [&](OpBuilder &builder, Location loc, ValueRange args) {
-                          assert(args.size() == 4);
-                          auto input = args[0];
-                          auto scale = args[1];
-                          auto zeroPoint = args[2];
+  auto result = linalg::GenericOp::create(
+                    builder, loc,
+                    init.getType(),                        // resultType
+                    ValueRange{input, scales, zeroPoints}, // inputs
+                    ValueRange{init},                      // outputs
+                    indexingMaps, iteratorTypes,
+                    [&](OpBuilder &builder, Location loc, ValueRange args) {
+                      assert(args.size() == 4);
+                      auto input = args[0];
+                      auto scale = args[1];
+                      auto zeroPoint = args[2];
 
-                          auto result =
-                              convertRanked(builder, loc, op, input, {}, scale,
-                                            zeroPoint, quantizedType);
+                      auto result =
+                          convertRanked(builder, loc, op, input, {}, scale,
+                                        zeroPoint, quantizedType);
 
-                          linalg::YieldOp::create(builder, loc, result);
-                        })
+                      linalg::YieldOp::create(builder, loc, result);
+                    })
                     .getResult(0);
 
   return result;

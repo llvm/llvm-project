@@ -117,7 +117,9 @@ void ASTDumper::dumpTemplateDeclSpecialization(const SpecializationDecl *D,
     // FIXME: The redecls() range sometimes has elements of a less-specific
     // type. (In particular, ClassTemplateSpecializationDecl::redecls() gives
     // us TagDecls, and should give CXXRecordDecls).
-    auto *Redecl = cast<SpecializationDecl>(RedeclWithBadType);
+    auto *Redecl = dyn_cast<SpecializationDecl>(RedeclWithBadType);
+    if (!Redecl)
+      continue;
     switch (Redecl->getTemplateSpecializationKind()) {
     case TSK_ExplicitInstantiationDeclaration:
     case TSK_ExplicitInstantiationDefinition:

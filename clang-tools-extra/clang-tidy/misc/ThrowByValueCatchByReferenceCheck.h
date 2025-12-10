@@ -1,4 +1,4 @@
-//===--- ThrowByValueCatchByReferenceCheck.h - clang-tidy--------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_THROW_BY_VALUE_CATCH_BY_REFERENCE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_THROW_BY_VALUE_CATCH_BY_REFERENCE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_THROWBYVALUECATCHBYREFERENCECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_THROWBYVALUECATCHBYREFERENCECHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -49,4 +49,4 @@ private:
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_THROW_BY_VALUE_CATCH_BY_REFERENCE_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_THROWBYVALUECATCHBYREFERENCECHECK_H

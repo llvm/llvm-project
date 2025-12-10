@@ -27,6 +27,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -369,6 +370,9 @@ struct LowerGpuOpsToNVVMOpsPass final
     {
       RewritePatternSet patterns(m.getContext());
       populateGpuRewritePatterns(patterns);
+      // Transform N-D vector.from_elements to 1-D vector.from_elements before
+      // conversion.
+      vector::populateVectorFromElementsUnrollPatterns(patterns);
       if (failed(applyPatternsGreedily(m, std::move(patterns))))
         return signalPassFailure();
     }
@@ -394,7 +398,7 @@ struct LowerGpuOpsToNVVMOpsPass final
       if (!allowedDialectsSet.empty() && !allowed)
         continue;
 
-      auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+      auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
       if (!iface) {
         // Error out if dialect was explicily specified but doesn't implement
         // conversion interface.
@@ -415,7 +419,10 @@ struct LowerGpuOpsToNVVMOpsPass final
     if (this->hasRedux)
       populateGpuSubgroupReduceOpLoweringPattern(converter, llvmPatterns);
     configureGpuToNVVMConversionLegality(target);
-    if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
+    ConversionConfig config;
+    config.allowPatternRollback = allowPatternRollback;
+    if (failed(
+            applyPartialConversion(m, target, std::move(llvmPatterns), config)))
       signalPassFailure();
   }
 };
@@ -432,7 +439,7 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
                       LLVM::FAbsOp, LLVM::FCeilOp, LLVM::FFloorOp, LLVM::FRemOp,
                       LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op, LLVM::PowOp,
                       LLVM::RoundEvenOp, LLVM::RoundOp, LLVM::SinOp,
-                      LLVM::SqrtOp>();
+                      LLVM::SincosOp, LLVM::SqrtOp>();
 
   // TODO: Remove once we support replacing non-root ops.
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp>();
@@ -447,22 +454,115 @@ void mlir::configureGpuToNVVMTypeConverter(LLVMTypeConverter &converter) {
       converter, [](gpu::AddressSpace space) -> unsigned {
         switch (space) {
         case gpu::AddressSpace::Global:
-          return static_cast<unsigned>(
-              NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
         case gpu::AddressSpace::Workgroup:
-          return static_cast<unsigned>(
-              NVVM::NVVMMemorySpace::kSharedMemorySpace);
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
         case gpu::AddressSpace::Private:
           return 0;
         }
         llvm_unreachable("unknown address space enum value");
-        return 0;
+        return static_cast<unsigned>(NVVM::NVVMMemorySpace::Generic);
       });
   // Lowering for MMAMatrixType.
   converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
     return convertMMAToLLVMType(type);
   });
 }
+
+struct SincosOpLowering : public ConvertOpToLLVMPattern<math::SincosOp> {
+  using ConvertOpToLLVMPattern<math::SincosOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(math::SincosOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Value input = adaptor.getOperand();
+    Type inputType = input.getType();
+    auto convertedInput = maybeExt(input, rewriter);
+    auto computeType = convertedInput.getType();
+
+    StringRef sincosFunc;
+    if (isa<Float32Type>(computeType)) {
+      const arith::FastMathFlags flag = op.getFastmath();
+      const bool useApprox =
+          mlir::arith::bitEnumContainsAny(flag, arith::FastMathFlags::afn);
+      sincosFunc = useApprox ? "__nv_fast_sincosf" : "__nv_sincosf";
+    } else if (isa<Float64Type>(computeType)) {
+      sincosFunc = "__nv_sincos";
+    } else {
+      return rewriter.notifyMatchFailure(op,
+                                         "unsupported operand type for sincos");
+    }
+
+    auto ptrType = LLVM::LLVMPointerType::get(rewriter.getContext());
+
+    Value sinPtr, cosPtr;
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      auto *scope =
+          op->getParentWithTrait<mlir::OpTrait::AutomaticAllocationScope>();
+      assert(scope && "Expected op to be inside automatic allocation scope");
+      rewriter.setInsertionPointToStart(&scope->getRegion(0).front());
+      auto one = LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
+                                          rewriter.getI32IntegerAttr(1));
+      sinPtr =
+          LLVM::AllocaOp::create(rewriter, loc, ptrType, computeType, one, 0);
+      cosPtr =
+          LLVM::AllocaOp::create(rewriter, loc, ptrType, computeType, one, 0);
+    }
+
+    createSincosCall(rewriter, loc, sincosFunc, convertedInput, sinPtr, cosPtr,
+                     op);
+
+    auto sinResult = LLVM::LoadOp::create(rewriter, loc, computeType, sinPtr);
+    auto cosResult = LLVM::LoadOp::create(rewriter, loc, computeType, cosPtr);
+
+    rewriter.replaceOp(op, {maybeTrunc(sinResult, inputType, rewriter),
+                            maybeTrunc(cosResult, inputType, rewriter)});
+    return success();
+  }
+
+private:
+  Value maybeExt(Value operand, PatternRewriter &rewriter) const {
+    if (isa<Float16Type, BFloat16Type>(operand.getType()))
+      return LLVM::FPExtOp::create(rewriter, operand.getLoc(),
+                                   Float32Type::get(rewriter.getContext()),
+                                   operand);
+    return operand;
+  }
+
+  Value maybeTrunc(Value operand, Type type, PatternRewriter &rewriter) const {
+    if (operand.getType() != type)
+      return LLVM::FPTruncOp::create(rewriter, operand.getLoc(), type, operand);
+    return operand;
+  }
+
+  void createSincosCall(ConversionPatternRewriter &rewriter, Location loc,
+                        StringRef funcName, Value input, Value sinPtr,
+                        Value cosPtr, Operation *op) const {
+    auto voidType = LLVM::LLVMVoidType::get(rewriter.getContext());
+    auto ptrType = sinPtr.getType();
+
+    SmallVector<Type> operandTypes = {input.getType(), ptrType, ptrType};
+    auto funcType = LLVM::LLVMFunctionType::get(voidType, operandTypes);
+
+    auto funcAttr = StringAttr::get(op->getContext(), funcName);
+    auto funcOp =
+        SymbolTable::lookupNearestSymbolFrom<LLVM::LLVMFuncOp>(op, funcAttr);
+
+    if (!funcOp) {
+      auto parentFunc = op->getParentOfType<FunctionOpInterface>();
+      assert(parentFunc && "expected there to be a parent function");
+      OpBuilder b(parentFunc);
+
+      auto globalloc = loc->findInstanceOfOrUnknown<FileLineColLoc>();
+      funcOp = LLVM::LLVMFuncOp::create(b, globalloc, funcName, funcType);
+    }
+
+    SmallVector<Value> callOperands = {input, sinPtr, cosPtr};
+    LLVM::CallOp::create(rewriter, loc, funcOp, callOperands);
+  }
+};
 
 template <typename OpTy>
 static void populateOpPatterns(const LLVMTypeConverter &converter,
@@ -587,6 +687,9 @@ void mlir::populateLibDeviceConversionPatterns(
                                   "__nv_tan", "__nv_fast_tanf");
   populateOpPatterns<math::TanhOp>(converter, patterns, benefit, "__nv_tanhf",
                                    "__nv_tanh");
+
+  // Custom pattern for sincos since it returns two values
+  patterns.add<SincosOpLowering>(converter, benefit);
 }
 
 void mlir::populateGpuToNVVMConversionPatterns(
@@ -644,7 +747,7 @@ void mlir::populateGpuToNVVMConversionPatterns(
       GPUFuncOpLoweringOptions{
           /*allocaAddrSpace=*/0,
           /*workgroupAddrSpace=*/
-          static_cast<unsigned>(NVVM::NVVMMemorySpace::kSharedMemorySpace),
+          static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared),
           StringAttr::get(&converter.getContext(),
                           NVVM::NVVMDialect::getKernelFuncAttrName()),
           StringAttr::get(&converter.getContext(),

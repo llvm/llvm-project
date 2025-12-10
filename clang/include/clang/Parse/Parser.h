@@ -2173,7 +2173,7 @@ private:
     if (Tok.is(tok::kw___attribute)) {
       ParsedAttributes Attrs(AttrFactory);
       ParseGNUAttributes(Attrs, LateAttrs, &D);
-      D.takeAttributes(Attrs);
+      D.takeAttributesAppending(Attrs);
     }
   }
 
@@ -2272,7 +2272,7 @@ private:
     if (isAllowedCXX11AttributeSpecifier()) {
       ParsedAttributes Attrs(AttrFactory);
       ParseCXX11Attributes(Attrs);
-      D.takeAttributes(Attrs);
+      D.takeAttributesAppending(Attrs);
     }
   }
 
@@ -2292,7 +2292,7 @@ private:
       ParsedAttributes AttrsWithRange(AttrFactory);
       ParseMicrosoftAttributes(AttrsWithRange);
       AttrsParsed = !AttrsWithRange.empty();
-      Attrs.takeAllFrom(AttrsWithRange);
+      Attrs.takeAllAppendingFrom(AttrsWithRange);
     }
     return AttrsParsed;
   }
@@ -5175,7 +5175,7 @@ private:
     if (Tok.is(tok::colon)) {
       ParsedAttributes Attrs(AttrFactory);
       ParseHLSLAnnotations(Attrs, EndLoc, CouldBeBitField);
-      D.takeAttributes(Attrs);
+      D.takeAttributesAppending(Attrs);
       return true;
     }
     return false;
@@ -5188,10 +5188,18 @@ private:
       ParseHLSLAnnotations(Attrs, EndLoc);
   }
 
+  struct ParsedSemantic {
+    StringRef Name = "";
+    unsigned Index = 0;
+    bool Explicit = false;
+  };
+
+  ParsedSemantic ParseHLSLSemantic();
+
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
                             SourceLocation *EndLoc = nullptr,
                             bool CouldBeBitField = false);
-  Decl *ParseHLSLBuffer(SourceLocation &DeclEnd);
+  Decl *ParseHLSLBuffer(SourceLocation &DeclEnd, ParsedAttributes &Attrs);
 
   ///@}
 
@@ -5215,11 +5223,7 @@ private:
   ///         assignment-expression
   ///         '{' ...
   /// \endverbatim
-  ExprResult ParseInitializer() {
-    if (Tok.isNot(tok::l_brace))
-      return ParseAssignmentExpression();
-    return ParseBraceInitializer();
-  }
+  ExprResult ParseInitializer(Decl *DeclForInitializer = nullptr);
 
   /// MayBeDesignationStart - Return true if the current token might be the
   /// start of a designator.  If we can tell it is impossible that it is a
@@ -6759,6 +6763,9 @@ private:
                                                 OpenMPClauseKind Kind,
                                                 bool ParseOnly);
 
+  /// Parses the 'looprange' clause of a '#pragma omp fuse' directive.
+  OMPClause *ParseOpenMPLoopRangeClause();
+
   /// Parses the 'sizes' clause of a '#pragma omp tile' directive.
   OMPClause *ParseOpenMPSizesClause();
 
@@ -7213,7 +7220,8 @@ public:
   /// 'while', or 'for').
   StmtResult
   ParseStatement(SourceLocation *TrailingElseLoc = nullptr,
-                 ParsedStmtContext StmtCtx = ParsedStmtContext::SubStmt);
+                 ParsedStmtContext StmtCtx = ParsedStmtContext::SubStmt,
+                 LabelDecl *PrecedingLabel = nullptr);
 
   /// ParseStatementOrDeclaration - Read 'statement' or 'declaration'.
   /// \verbatim
@@ -7268,12 +7276,13 @@ public:
   ///
   StmtResult
   ParseStatementOrDeclaration(StmtVector &Stmts, ParsedStmtContext StmtCtx,
-                              SourceLocation *TrailingElseLoc = nullptr);
+                              SourceLocation *TrailingElseLoc = nullptr,
+                              LabelDecl *PrecedingLabel = nullptr);
 
   StmtResult ParseStatementOrDeclarationAfterAttributes(
       StmtVector &Stmts, ParsedStmtContext StmtCtx,
       SourceLocation *TrailingElseLoc, ParsedAttributes &DeclAttrs,
-      ParsedAttributes &DeclSpecAttrs);
+      ParsedAttributes &DeclSpecAttrs, LabelDecl *PrecedingLabel);
 
   /// Parse an expression statement.
   StmtResult ParseExprStatement(ParsedStmtContext StmtCtx);
@@ -7398,7 +7407,8 @@ public:
   ///         'switch' '(' expression ')' statement
   /// [C++]   'switch' '(' condition ')' statement
   /// \endverbatim
-  StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
+  StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc,
+                                  LabelDecl *PrecedingLabel);
 
   /// ParseWhileStatement
   /// \verbatim
@@ -7406,7 +7416,8 @@ public:
   ///         'while' '(' expression ')' statement
   /// [C++]   'while' '(' condition ')' statement
   /// \endverbatim
-  StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);
+  StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc,
+                                 LabelDecl *PrecedingLabel);
 
   /// ParseDoStatement
   /// \verbatim
@@ -7414,7 +7425,7 @@ public:
   ///         'do' statement 'while' '(' expression ')' ';'
   /// \endverbatim
   /// Note: this lets the caller parse the end ';'.
-  StmtResult ParseDoStatement();
+  StmtResult ParseDoStatement(LabelDecl *PrecedingLabel);
 
   /// ParseForStatement
   /// \verbatim
@@ -7441,7 +7452,8 @@ public:
   /// [C++0x]   expression
   /// [C++0x]   braced-init-list            [TODO]
   /// \endverbatim
-  StmtResult ParseForStatement(SourceLocation *TrailingElseLoc);
+  StmtResult ParseForStatement(SourceLocation *TrailingElseLoc,
+                               LabelDecl *PrecedingLabel);
 
   /// ParseGotoStatement
   /// \verbatim
@@ -7458,6 +7470,7 @@ public:
   /// \verbatim
   ///       jump-statement:
   ///         'continue' ';'
+  /// [C2y]   'continue' identifier ';'
   /// \endverbatim
   ///
   /// Note: this lets the caller parse the end ';'.
@@ -7468,6 +7481,7 @@ public:
   /// \verbatim
   ///       jump-statement:
   ///         'break' ';'
+  /// [C2y]   'break' identifier ';'
   /// \endverbatim
   ///
   /// Note: this lets the caller parse the end ';'.
@@ -7484,9 +7498,12 @@ public:
   /// \endverbatim
   StmtResult ParseReturnStatement();
 
+  StmtResult ParseBreakOrContinueStatement(bool IsContinue);
+
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
-                                 ParsedAttributes &Attrs);
+                                 ParsedAttributes &Attrs,
+                                 LabelDecl *PrecedingLabel);
 
   void ParseMicrosoftIfExistsStatement(StmtVector &Stmts);
 
@@ -7656,7 +7673,7 @@ private:
   /// [GNU] asm-clobbers:
   ///         asm-string-literal
   ///         asm-clobbers ',' asm-string-literal
-  /// \endverbatim 
+  /// \endverbatim
   ///
   StmtResult ParseAsmStatement(bool &msAsm);
 

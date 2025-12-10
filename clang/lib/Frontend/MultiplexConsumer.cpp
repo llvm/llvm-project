@@ -107,6 +107,8 @@ public:
   void ResolvedOperatorDelete(const CXXDestructorDecl *DD,
                               const FunctionDecl *Delete,
                               Expr *ThisArg) override;
+  void ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
+                                  const FunctionDecl *GlobDelete) override;
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void InstantiationRequested(const ValueDecl *D) override;
   void VariableDefinitionInstantiated(const VarDecl *D) override;
@@ -183,6 +185,11 @@ void MultiplexASTMutationListener::ResolvedOperatorDelete(
     const CXXDestructorDecl *DD, const FunctionDecl *Delete, Expr *ThisArg) {
   for (auto *L : Listeners)
     L->ResolvedOperatorDelete(DD, Delete, ThisArg);
+}
+void MultiplexASTMutationListener::ResolvedOperatorGlobDelete(
+    const CXXDestructorDecl *DD, const FunctionDecl *GlobDelete) {
+  for (auto *L : Listeners)
+    L->ResolvedOperatorGlobDelete(DD, GlobDelete);
 }
 void MultiplexASTMutationListener::CompletedImplicitDefinition(
                                                         const FunctionDecl *D) {

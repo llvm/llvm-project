@@ -1,0 +1,8 @@
+InheritParentConfig: true
+CustomChecks:
+  - Name: function-decl
+    Query: match functionDecl().bind("func")
+    Diagnostic:
+      - BindName: func
+        Message: find function decl
+        Level: Warning

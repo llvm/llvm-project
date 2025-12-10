@@ -29,6 +29,7 @@ class MLIRContext;
 class Operation;
 class OperationName;
 class OpPrintingFlags;
+class OpWithFlags;
 class Type;
 class Value;
 
@@ -199,6 +200,7 @@ public:
 
   /// Stream in an Operation.
   Diagnostic &operator<<(Operation &op);
+  Diagnostic &operator<<(OpWithFlags op);
   Diagnostic &operator<<(Operation *op) { return *this << *op; }
   /// Append an operation with the given printing flags.
   Diagnostic &appendOp(Operation &op, const OpPrintingFlags &flags);
@@ -638,6 +640,10 @@ public:
   /// diagnostics were emitted. This return success if all diagnostics were
   /// verified correctly, failure otherwise.
   LogicalResult verify();
+
+  /// Register this handler with the given context. This is intended for use
+  /// with the splitAndProcessBuffer function.
+  void registerInContext(MLIRContext *ctx);
 
 private:
   /// Process a single diagnostic.

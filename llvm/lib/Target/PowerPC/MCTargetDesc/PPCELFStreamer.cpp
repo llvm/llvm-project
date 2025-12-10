@@ -65,7 +65,7 @@ void PPCELFStreamer::emitPrefixedInstruction(const MCInst &Inst,
   MCFragment *InstructionFragment = getCurrentFragment();
   SMLoc InstLoc = Inst.getLoc();
   // Check if there was a last label emitted.
-  if (LastLabel && !LastLabel->isUnset() && LastLabelLoc.isValid() &&
+  if (LastLabel && LastLabel->isDefined() && LastLabelLoc.isValid() &&
       InstLoc.isValid()) {
     const SourceMgr *SourceManager = getContext().getSourceManager();
     unsigned InstLine = SourceManager->FindLineNumber(InstLoc);

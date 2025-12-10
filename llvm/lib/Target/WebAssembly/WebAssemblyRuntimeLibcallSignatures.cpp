@@ -532,13 +532,19 @@ struct StaticLibcallNameMap {
     // FIXME: This is broken if there are ever different triples compiled with
     // different libcalls.
     RTLIB::RuntimeLibcallsInfo RTCI(TT);
-    for (RTLIB::Libcall LC : RTLIB::libcalls()) {
-      const char *NameLibcall = RTCI.getLibcallName(LC);
-      if (NameLibcall != nullptr &&
-          getRuntimeLibcallSignatures().Table[LC] != unsupported) {
-        assert(!Map.contains(NameLibcall) &&
-               "duplicate libcall names in name map");
-        Map[NameLibcall] = LC;
+
+    ArrayRef<RuntimeLibcallSignature> Table =
+        getRuntimeLibcallSignatures().Table;
+    for (RTLIB::LibcallImpl Impl : RTLIB::libcall_impls()) {
+      if (!RTCI.isAvailable(Impl))
+        continue;
+      RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
+      if (Table[LC] != unsupported) {
+        StringRef NameLibcall =
+            RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Impl);
+        // FIXME: Map should be to LibcallImpl
+        if (!Map.insert({NameLibcall, LC}).second)
+          llvm_unreachable("duplicate libcall names in name map");
       }
     }
   }

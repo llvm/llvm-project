@@ -826,13 +826,13 @@ def : InstRW<[CortexA320MCWrite<15, 12, CortexA320UnitVMC>], (instregex "^[SU]DI
 def : InstRW<[CortexA320MCWrite<26, 23, CortexA320UnitVMC>], (instregex "^[SU]DIVR?_(ZPmZ|ZPZZ)_D")>;
 
 // Dot product, 8 bit
-def : InstRW<[CortexA320Write<4, CortexA320UnitVMAC>], (instregex "^[SU]DOT_ZZZI?_S")>;
+def : InstRW<[CortexA320Write<4, CortexA320UnitVMAC>], (instregex "^[SU]DOT_ZZZI?_BtoS")>;
 
 // Dot product, 8 bit, using signed and unsigned integers
 def : InstRW<[CortexA320Write<4, CortexA320UnitVMAC>], (instrs SUDOT_ZZZI, USDOT_ZZZI, USDOT_ZZZ)>;
 
 // Dot product, 16 bit
-def : InstRW<[CortexA320Write<4, CortexA320UnitVMAC>], (instregex "^[SU]DOT_ZZZI?_D")>;
+def : InstRW<[CortexA320Write<4, CortexA320UnitVMAC>], (instregex "^[SU]DOT_ZZZI?_HtoD")>;
 
 // Duplicate, immediate and indexed form
 def : InstRW<[CortexA320Write<3, CortexA320UnitVALU>], (instregex "^DUP_ZI_[BHSD]",
@@ -847,7 +847,7 @@ def : InstRW<[CortexA320Write<3, CortexA320UnitVALU>], (instregex "^[SU]XTB_ZPmZ
                                             "^[SU]XTW_ZPmZ_[D]")>;
 
 // Extract
-def : InstRW<[CortexA320Write<3, CortexA320UnitVALU>], (instrs EXT_ZZI, EXT_ZZI_B)>;
+def : InstRW<[CortexA320Write<3, CortexA320UnitVALU>], (instrs EXT_ZZI, EXT_ZZI_CONSTRUCTIVE, EXT_ZZI_B)>;
 
 // Extract narrow saturating
 def : InstRW<[CortexA320Write<4, CortexA320UnitVALU>], (instregex "^[SU]QXTN[BT]_ZZ_[BHS]",
@@ -1182,7 +1182,7 @@ def : InstRW<[CortexA320Write<4, CortexA320UnitVALU>], (instrs BFCVT_ZPmZ, BFCVT
 def : InstRW<[CortexA320Write_11cyc_1VMAC_1VALU], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
 
 // Matrix multiply accumulate
-def : InstRW<[CortexA320Write_16cyc_1VMAC_1VALU], (instrs BFMMLA_ZZZ)>;
+def : InstRW<[CortexA320Write_16cyc_1VMAC_1VALU], (instrs BFMMLA_ZZZ_HtoS)>;
 
 // Multiply accumulate long
 def : InstRW<[CortexA320Write<4, CortexA320UnitVMAC>], (instregex "^BFMLAL[BT]_ZZZ(I)?")>;

@@ -15,3 +15,6 @@ REDUCE-NOT: Skipped lines:
 
 RUN: %llvm-original-di-preservation %p/Inputs/origin.json --report-html-file %t4.html | FileCheck %s
 RUN: diff -w %p/Inputs/expected-origin.html %t4.html
+
+RUN: %llvm-original-di-preservation --reduce %p/Inputs/origin.json --report-html-file %t5.html | FileCheck %s
+RUN: diff -w %p/Inputs/expected-origin-reduced.html %t5.html

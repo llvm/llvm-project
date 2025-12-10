@@ -11,6 +11,9 @@
 ; Check wildcard
 ; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf?i1 %s 2>&1 | FileCheck %s --check-prefix=SKIP
 
+; Check that no stats are reported in speculative devirtualization mode as the virtual const prop is disabled.
+; RUN: opt -S -passes=wholeprogramdevirt -devirtualize-speculatively -stats %s 2>&1 | FileCheck %s --check-prefix=CHECK-SPECULATIVE-WPD
+
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -225,3 +228,7 @@ declare ptr @llvm.load.relative.i32(ptr, i32)
 ; CHECK: 2 wholeprogramdevirt - Number of unique return value optimizations
 ; CHECK: 2 wholeprogramdevirt - Number of virtual constant propagations
 ; CHECK: 2 wholeprogramdevirt - Number of 1 bit virtual constant propagations
+
+; CHECK-SPECULATIVE-WPD-NOT: 0 wholeprogramdevirt - Number of unique return value optimizations
+; CHECK-SPECULATIVE-WPD-NOT: 0 wholeprogramdevirt - Number of virtual constant propagations
+; CHECK-SPECULATIVE-WPD-NOT: 0 wholeprogramdevirt - Number of 1 bit virtual constant propagations

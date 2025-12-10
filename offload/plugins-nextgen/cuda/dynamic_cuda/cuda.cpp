@@ -35,6 +35,7 @@ DLWRAP(cuFuncSetAttribute, 3)
 
 // Device info
 DLWRAP(cuDeviceGetName, 3)
+DLWRAP(cuDeviceGetUuid, 2)
 DLWRAP(cuDeviceTotalMem, 2)
 DLWRAP(cuDriverGetVersion, 1)
 
@@ -52,6 +53,13 @@ DLWRAP(cuMemcpyDtoH, 3)
 DLWRAP(cuMemcpyDtoHAsync, 4)
 DLWRAP(cuMemcpyHtoD, 3)
 DLWRAP(cuMemcpyHtoDAsync, 4)
+
+DLWRAP(cuMemsetD8Async, 4)
+DLWRAP(cuMemsetD16Async, 4)
+DLWRAP(cuMemsetD32Async, 4)
+DLWRAP(cuMemsetD2D8Async, 6)
+DLWRAP(cuMemsetD2D16Async, 6)
+DLWRAP(cuMemsetD2D32Async, 6)
 
 DLWRAP(cuMemFree, 1)
 DLWRAP(cuMemFreeHost, 1)
@@ -72,6 +80,7 @@ DLWRAP(cuDevicePrimaryCtxGetState, 3)
 DLWRAP(cuDevicePrimaryCtxSetFlags, 2)
 DLWRAP(cuDevicePrimaryCtxRetain, 2)
 DLWRAP(cuModuleLoadDataEx, 5)
+DLWRAP(cuOccupancyMaxPotentialBlockSize, 6)
 
 DLWRAP(cuDeviceCanAccessPeer, 3)
 DLWRAP(cuCtxEnablePeerAccess, 2)
@@ -82,6 +91,7 @@ DLWRAP(cuCtxSetLimit, 2)
 
 DLWRAP(cuEventCreate, 2)
 DLWRAP(cuEventRecord, 2)
+DLWRAP(cuEventQuery, 1)
 DLWRAP(cuStreamWaitEvent, 3)
 DLWRAP(cuEventSynchronize, 1)
 DLWRAP(cuEventDestroy, 1)

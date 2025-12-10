@@ -100,7 +100,7 @@ struct BBInfo {
 class X86PreTileConfig : public MachineFunctionPass {
   MachineRegisterInfo *MRI = nullptr;
   const MachineLoopInfo *MLI = nullptr;
-  SmallSet<MachineInstr *, 8> DefVisited;
+  SmallPtrSet<MachineInstr *, 8> DefVisited;
   DenseMap<MachineBasicBlock *, BBInfo> BBVisitedInfo;
   DenseMap<MachineBasicBlock *, SmallVector<MIRef, 8>> ShapeBBs;
 
@@ -141,15 +141,10 @@ class X86PreTileConfig : public MachineFunctionPass {
     if (!MO.isReg() || !MO.getReg().isVirtual())
       return false;
 
-    unsigned Shapes = 0;
-    if (MRI->getRegClass(MO.getReg())->getID() == X86::TILERegClassID)
-      Shapes = 1;
-    if (MRI->getRegClass(MO.getReg())->getID() == X86::TILEPAIRRegClassID)
-      Shapes = 2;
-    if (!Shapes)
+    if (MRI->getRegClass(MO.getReg())->getID() != X86::TILERegClassID)
       return false;
 
-    collectShapeInfo(MI, Shapes);
+    collectShapeInfo(MI);
     return true;
   }
 
@@ -165,7 +160,7 @@ class X86PreTileConfig : public MachineFunctionPass {
   }
 
   /// Collect the shape def information for later use.
-  void collectShapeInfo(MachineInstr &MI, unsigned Shapes);
+  void collectShapeInfo(MachineInstr &MI);
 
   /// Try to hoist shapes definded below AMX instructions.
   bool hoistShapesInBB(MachineBasicBlock *MBB, SmallVectorImpl<MIRef> &Shapes) {
@@ -231,7 +226,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(X86PreTileConfig, "tilepreconfig",
                     "Tile Register Pre-configure", false, false)
 
-void X86PreTileConfig::collectShapeInfo(MachineInstr &MI, unsigned Shapes) {
+void X86PreTileConfig::collectShapeInfo(MachineInstr &MI) {
   auto RecordShape = [&](MachineInstr *MI, MachineBasicBlock *MBB) {
     MIRef MIR(MI, MBB);
     auto &Refs = ShapeBBs[MBB];
@@ -240,10 +235,8 @@ void X86PreTileConfig::collectShapeInfo(MachineInstr &MI, unsigned Shapes) {
       Refs.insert(I, MIR);
   };
 
-  // All shapes have same row in multi-tile operand.
-  SmallVector<Register, 8> WorkList;
-  for (unsigned I = 1; I < Shapes + 2; ++I)
-    WorkList.push_back(MI.getOperand(I).getReg());
+  SmallVector<Register, 8> WorkList(
+      {MI.getOperand(1).getReg(), MI.getOperand(2).getReg()});
   while (!WorkList.empty()) {
     Register R = WorkList.pop_back_val();
     MachineInstr *DefMI = MRI->getVRegDef(R);
@@ -251,13 +244,6 @@ void X86PreTileConfig::collectShapeInfo(MachineInstr &MI, unsigned Shapes) {
     MachineBasicBlock *DefMBB = DefMI->getParent();
     if (DefMI->isMoveImmediate() || !DefVisited.insert(DefMI).second)
       continue;
-
-    // This happens when column = 0 in multi-tile operand.
-    if (DefMI->getOpcode() == X86::COPY) {
-      MachineInstr *MI = MRI->getVRegDef(DefMI->getOperand(1).getReg());
-      if (MI && MI->isMoveImmediate())
-        continue;
-    }
 
     if (DefMI->isPHI()) {
       for (unsigned I = 1; I < DefMI->getNumOperands(); I += 2)

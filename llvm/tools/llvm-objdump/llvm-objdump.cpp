@@ -50,6 +50,7 @@
 #include "llvm/Object/BuildID.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
+#include "llvm/Object/DXContainer.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/FaultMapParser.h"
@@ -386,6 +387,8 @@ static Expected<std::unique_ptr<Dumper>> createDumper(const ObjectFile &Obj) {
     return createWasmDumper(*O);
   if (const auto *O = dyn_cast<XCOFFObjectFile>(&Obj))
     return createXCOFFDumper(*O);
+  if (const auto *O = dyn_cast<DXContainerObjectFile>(&Obj))
+    return createDXContainerDumper(*O);
 
   return createStringError(errc::invalid_argument,
                            "unsupported object file format");
@@ -633,8 +636,14 @@ static bool isCSKYElf(const ObjectFile &Obj) {
   return Elf && Elf->getEMachine() == ELF::EM_CSKY;
 }
 
+static bool isRISCVElf(const ObjectFile &Obj) {
+  const auto *Elf = dyn_cast<ELFObjectFileBase>(&Obj);
+  return Elf && Elf->getEMachine() == ELF::EM_RISCV;
+}
+
 static bool hasMappingSymbols(const ObjectFile &Obj) {
-  return isArmElf(Obj) || isAArch64Elf(Obj) || isCSKYElf(Obj);
+  return isArmElf(Obj) || isAArch64Elf(Obj) || isCSKYElf(Obj) ||
+         isRISCVElf(Obj);
 }
 
 static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
@@ -679,7 +688,7 @@ public:
             LiveElementPrinter &LEP) {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LEP);
-    LEP.printStartLine(OS, Address);
+    LEP.printBoundaryLine(OS, Address, false);
     LEP.printBetweenInsts(OS, false);
 
     printRawData(Bytes, Address.Address, OS, STI);
@@ -719,11 +728,17 @@ public:
     } while (!Comments.empty());
     FOS.flush();
   }
+
+  // Hook invoked when starting to disassemble a symbol at the current position.
+  // Default is no-op.
+  virtual void onSymbolStart() {}
 };
 PrettyPrinter PrettyPrinterInst;
 
 class HexagonPrettyPrinter : public PrettyPrinter {
 public:
+  void onSymbolStart() override { reset(); }
+
   void printLead(ArrayRef<uint8_t> Bytes, uint64_t Address,
                  formatted_raw_ostream &OS) {
     if (LeadingAddr)
@@ -926,7 +941,7 @@ public:
                  LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LEP);
-    LEP.printStartLine(OS, Address);
+    LEP.printBoundaryLine(OS, Address, false);
     LEP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
@@ -981,7 +996,7 @@ public:
                  LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LEP);
-    LEP.printStartLine(OS, Address);
+    LEP.printBoundaryLine(OS, Address, false);
     LEP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
@@ -1020,7 +1035,7 @@ public:
                  LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LEP);
-    LEP.printStartLine(OS, Address);
+    LEP.printBoundaryLine(OS, Address, false);
     LEP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
@@ -1090,6 +1105,7 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
 class DisassemblerTarget {
 public:
   const Target *TheTarget;
+  const Triple TheTriple;
   std::unique_ptr<const MCSubtargetInfo> SubtargetInfo;
   std::shared_ptr<MCContext> Context;
   std::unique_ptr<MCDisassembler> DisAsm;
@@ -1113,18 +1129,19 @@ private:
 DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
                                        StringRef TripleName, StringRef MCPU,
                                        SubtargetFeatures &Features)
-    : TheTarget(TheTarget), Printer(&selectPrettyPrinter(Triple(TripleName))),
-      RegisterInfo(TheTarget->createMCRegInfo(TripleName)) {
+    : TheTarget(TheTarget), TheTriple(TripleName),
+      Printer(&selectPrettyPrinter(TheTriple)),
+      RegisterInfo(TheTarget->createMCRegInfo(TheTriple)) {
   if (!RegisterInfo)
     reportError(Obj.getFileName(), "no register info for target " + TripleName);
 
   // Set up disassembler.
-  AsmInfo.reset(TheTarget->createMCAsmInfo(*RegisterInfo, TripleName, Options));
+  AsmInfo.reset(TheTarget->createMCAsmInfo(*RegisterInfo, TheTriple, Options));
   if (!AsmInfo)
     reportError(Obj.getFileName(), "no assembly info for target " + TripleName);
 
   SubtargetInfo.reset(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, Features.getString()));
+      TheTarget->createMCSubtargetInfo(TheTriple, MCPU, Features.getString()));
   if (!SubtargetInfo)
     reportError(Obj.getFileName(),
                 "no subtarget info for target " + TripleName);
@@ -1132,9 +1149,8 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
   if (!InstrInfo)
     reportError(Obj.getFileName(),
                 "no instruction info for target " + TripleName);
-  Context =
-      std::make_shared<MCContext>(Triple(TripleName), AsmInfo.get(),
-                                  RegisterInfo.get(), SubtargetInfo.get());
+  Context = std::make_shared<MCContext>(
+      TheTriple, AsmInfo.get(), RegisterInfo.get(), SubtargetInfo.get());
 
   // FIXME: for now initialize MCObjectFileInfo with default values
   ObjectFileInfo.reset(
@@ -1151,9 +1167,8 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
   InstrAnalysis.reset(TheTarget->createMCInstrAnalysis(InstrInfo.get()));
 
   int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
-  InstPrinter.reset(TheTarget->createMCInstPrinter(Triple(TripleName),
-                                                   AsmPrinterVariant, *AsmInfo,
-                                                   *InstrInfo, *RegisterInfo));
+  InstPrinter.reset(TheTarget->createMCInstPrinter(
+      TheTriple, AsmPrinterVariant, *AsmInfo, *InstrInfo, *RegisterInfo));
   if (!InstPrinter)
     reportError(Obj.getFileName(),
                 "no instruction printer for target " + TripleName);
@@ -1178,8 +1193,8 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
 
 DisassemblerTarget::DisassemblerTarget(DisassemblerTarget &Other,
                                        SubtargetFeatures &Features)
-    : TheTarget(Other.TheTarget),
-      SubtargetInfo(TheTarget->createMCSubtargetInfo(TripleName, MCPU,
+    : TheTarget(Other.TheTarget), TheTriple(Other.TheTriple),
+      SubtargetInfo(TheTarget->createMCSubtargetInfo(TheTriple, MCPU,
                                                      Features.getString())),
       Context(Other.Context),
       DisAsm(TheTarget->createMCDisassembler(*SubtargetInfo, *Context)),
@@ -1606,17 +1621,17 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
 // This is currently only used on AMDGPU, and assumes the format of the
 // void * argument passed to AMDGPU's createMCSymbolizer.
 static void addSymbolizer(
-    MCContext &Ctx, const Target *Target, StringRef TripleName,
+    MCContext &Ctx, const Target *Target, const Triple &TheTriple,
     MCDisassembler *DisAsm, uint64_t SectionAddr, ArrayRef<uint8_t> Bytes,
     SectionSymbolsTy &Symbols,
     std::vector<std::unique_ptr<std::string>> &SynthesizedLabelNames) {
 
   std::unique_ptr<MCRelocationInfo> RelInfo(
-      Target->createMCRelocationInfo(TripleName, Ctx));
+      Target->createMCRelocationInfo(TheTriple, Ctx));
   if (!RelInfo)
     return;
   std::unique_ptr<MCSymbolizer> Symbolizer(Target->createMCSymbolizer(
-      TripleName, nullptr, nullptr, &Symbols, &Ctx, std::move(RelInfo)));
+      TheTriple, nullptr, nullptr, &Symbols, &Ctx, std::move(RelInfo)));
   MCSymbolizer *SymbolizerPtr = &*Symbolizer;
   DisAsm->setSymbolizer(std::move(Symbolizer));
 
@@ -1653,9 +1668,9 @@ static void addSymbolizer(
   }
   llvm::stable_sort(Symbols);
   // Recreate the symbolizer with the new symbols list.
-  RelInfo.reset(Target->createMCRelocationInfo(TripleName, Ctx));
+  RelInfo.reset(Target->createMCRelocationInfo(TheTriple, Ctx));
   Symbolizer.reset(Target->createMCSymbolizer(
-      TripleName, nullptr, nullptr, &Symbols, &Ctx, std::move(RelInfo)));
+      TheTriple, nullptr, nullptr, &Symbols, &Ctx, std::move(RelInfo)));
   DisAsm->setSymbolizer(std::move(Symbolizer));
 }
 
@@ -1964,8 +1979,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
     std::vector<std::unique_ptr<std::string>> SynthesizedLabelNames;
     if (Obj.isELF() && Obj.getArch() == Triple::amdgcn) {
       // AMDGPU disassembler uses symbolizer for printing labels
-      addSymbolizer(*DT->Context, DT->TheTarget, TripleName, DT->DisAsm.get(),
-                    SectionAddr, Bytes, Symbols, SynthesizedLabelNames);
+      addSymbolizer(*DT->Context, DT->TheTarget, DT->TheTriple,
+                    DT->DisAsm.get(), SectionAddr, Bytes, Symbols,
+                    SynthesizedLabelNames);
     }
 
     StringRef SegmentName = getSegmentName(MachO, Section);
@@ -2218,6 +2234,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         Start += Size;
         break;
       }
+      // Allow targets to reset any per-symbol state.
+      DT->Printer->onSymbolStart();
       formatted_raw_ostream FOS(OS);
       Index = Start;
       if (SectionAddr < StartAddress)
@@ -2583,7 +2601,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
         object::SectionedAddress NextAddr = {
             SectionAddr + Index + VMAAdjustment + Size, Section.getIndex()};
-        LEP.printEndLine(FOS, NextAddr);
+        LEP.printBoundaryLine(FOS, NextAddr, true);
 
         Index += Size;
       }
@@ -2736,7 +2754,7 @@ void Dumper::printRelocations() {
   for (const SectionRef &Section : ToolSectionFilter(O, &Ndx)) {
     if (O.isELF() && (ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC))
       continue;
-    if (Section.relocation_begin() == Section.relocation_end())
+    if (Section.relocations().empty())
       continue;
     Expected<section_iterator> SecOrErr = Section.getRelocatedSection();
     if (!SecOrErr)

@@ -14,13 +14,16 @@
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_dap;
 
-Transport::Transport(llvm::StringRef client_name, lldb_dap::Log *log,
-                     lldb::IOObjectSP input, lldb::IOObjectSP output)
-    : HTTPDelimitedJSONTransport(input, output), m_client_name(client_name),
-      m_log(log) {}
+namespace lldb_dap {
+
+Transport::Transport(lldb_dap::Log &log, lldb::IOObjectSP input,
+                     lldb::IOObjectSP output)
+    : HTTPDelimitedJSONTransport(input, output), m_log(log) {}
 
 void Transport::Log(llvm::StringRef message) {
-  DAP_LOG(m_log, "({0}) {1}", m_client_name, message);
+  // Emit the message directly, since this log was forwarded.
+  m_log.Emit(message);
 }
+
+} // namespace lldb_dap

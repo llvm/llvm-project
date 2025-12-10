@@ -73,7 +73,7 @@ define void @lifetime_for_first_arg_before_multiply(ptr noalias %B, ptr noalias 
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
 ; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -81,7 +81,7 @@ entry:
   call void @init(ptr %A)
   %a = load <4 x double>, ptr %A, align 8
   %b = load <4 x double>, ptr %B, align 8
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
+  call void @llvm.lifetime.end(ptr %A)
   %c = call <4 x double> @llvm.matrix.multiply(<4 x double> %a, <4 x double> %b, i32 2, i32 2, i32 2)
   store <4 x double> %c, ptr %C, align 8
   ret void
@@ -154,7 +154,7 @@ define void @lifetime_for_second_arg_before_multiply(ptr noalias %A, ptr noalias
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
 ; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[B]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -162,7 +162,7 @@ entry:
   call void @init(ptr %B)
   %a = load <4 x double>, ptr %A, align 8
   %b = load <4 x double>, ptr %B, align 8
-  call void @llvm.lifetime.end(i64 -1, ptr %B)
+  call void @llvm.lifetime.end(ptr %B)
   %c = call <4 x double> @llvm.matrix.multiply(<4 x double> %a, <4 x double> %b, i32 2, i32 2, i32 2)
   store <4 x double> %c, ptr %C, align 8
   ret void
@@ -236,7 +236,7 @@ define void @lifetime_for_first_arg_before_multiply_load_from_offset(ptr noalias
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
 ; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -245,7 +245,7 @@ entry:
   %gep.8 = getelementptr i8, ptr %A, i64 8
   %a = load <4 x double>, ptr %gep.8, align 8
   %b = load <4 x double>, ptr %B, align 8
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
+  call void @llvm.lifetime.end(ptr %A)
   %c = call <4 x double> @llvm.matrix.multiply(<4 x double> %a, <4 x double> %b, i32 2, i32 2, i32 2)
   store <4 x double> %c, ptr %C, align 8
   ret void
@@ -332,7 +332,7 @@ entry:
   br i1 %c.0, label %then, label %exit
 
 then:
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
+  call void @llvm.lifetime.end(ptr %A)
   br label %exit
 
 exit:
@@ -422,7 +422,7 @@ entry:
   br i1 %c.0, label %then, label %exit
 
 then:
-  call void @llvm.lifetime.end(i64 -1, ptr %B)
+  call void @llvm.lifetime.end(ptr %B)
   br label %exit
 
 exit:
@@ -442,8 +442,8 @@ define void @multiple_unrelated_lifetimes(ptr noalias %C, i1 %c.0) {
 ; CHECK-NEXT:    call void @init(ptr [[B]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[ALLOC_1]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[ALLOC_2]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ALLOC_1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ALLOC_2]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A]], i64 0
@@ -522,10 +522,10 @@ entry:
   br i1 %c.0, label %then, label %exit
 
 then:
-  call void @llvm.lifetime.end(i64 -1, ptr %B)
-  call void @llvm.lifetime.end(i64 -1, ptr %alloc.1)
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
-  call void @llvm.lifetime.end(i64 -1, ptr %alloc.2)
+  call void @llvm.lifetime.end(ptr %B)
+  call void @llvm.lifetime.end(ptr %alloc.1)
+  call void @llvm.lifetime.end(ptr %A)
+  call void @llvm.lifetime.end(ptr %alloc.2)
   br label %exit
 
 exit:
@@ -607,8 +607,8 @@ define void @lifetimes_for_args_in_different_blocks(ptr noalias %C, i1 %c.0) {
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[B]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -626,8 +626,8 @@ then:
   br label %exit
 
 exit:
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
-  call void @llvm.lifetime.end(i64 -1, ptr %B)
+  call void @llvm.lifetime.end(ptr %A)
+  call void @llvm.lifetime.end(ptr %B)
   ret void
 }
 
@@ -640,8 +640,8 @@ define void @lifetimes_for_args_in_different_blocks2(ptr noalias %C, i1 %c.0) {
 ; CHECK-NEXT:    call void @init(ptr [[B]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[B]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A]], i64 0
@@ -716,8 +716,8 @@ entry:
   br i1 %c.0, label %then, label %exit
 
 then:
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
-  call void @llvm.lifetime.end(i64 -1, ptr %B)
+  call void @llvm.lifetime.end(ptr %A)
+  call void @llvm.lifetime.end(ptr %B)
   br label %exit
 
 exit:
@@ -809,7 +809,7 @@ entry:
   call void @init(ptr %A)
   call void @init(ptr %B)
   %a = load <4 x double>, ptr %A, align 8
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
+  call void @llvm.lifetime.end(ptr %A)
   br i1 %c.0, label %then, label %exit
 
 then:
@@ -819,7 +819,7 @@ then:
   br label %exit
 
 exit:
-  call void @llvm.lifetime.end(i64 -1, ptr %B)
+  call void @llvm.lifetime.end(ptr %B)
   ret void
 }
 
@@ -904,7 +904,7 @@ entry:
   call void @init(ptr %A)
   call void @init(ptr %B)
   %b = load <4 x double>, ptr %B, align 8
-  call void @llvm.lifetime.end(i64 -1, ptr %B)
+  call void @llvm.lifetime.end(ptr %B)
   br i1 %c.0, label %then, label %exit
 
 then:
@@ -914,11 +914,11 @@ then:
   br label %exit
 
 exit:
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
+  call void @llvm.lifetime.end(ptr %A)
   ret void
 }
 
 declare void @init(ptr)
-declare void @llvm.lifetime.end(i64, ptr)
+declare void @llvm.lifetime.end(ptr)
 
 declare <4 x double> @llvm.matrix.multiply(<4 x double>, <4 x double>, i32, i32, i32)

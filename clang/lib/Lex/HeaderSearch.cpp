@@ -221,7 +221,7 @@ std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
   // file.
   for (const std::string &Dir : HSOpts.PrebuiltModulePaths) {
     SmallString<256> Result(Dir);
-    llvm::sys::fs::make_absolute(Result);
+    FileMgr.makeAbsolutePath(Result);
     if (ModuleName.contains(':'))
       // The separator of C++20 modules partitions (':') is not good for file
       // systems, here clang and gcc choose '-' by default since it is not a
@@ -246,7 +246,7 @@ std::string HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
   StringRef ModuleCacheHash = HSOpts.DisableModuleHash ? "" : getModuleHash();
   for (const std::string &Dir : HSOpts.PrebuiltModulePaths) {
     SmallString<256> CachePath(Dir);
-    llvm::sys::fs::make_absolute(CachePath);
+    FileMgr.makeAbsolutePath(CachePath);
     llvm::sys::path::append(CachePath, ModuleCacheHash);
     std::string FileName =
         getCachedModuleFileNameImpl(ModuleName, ModuleMapPath, CachePath);
@@ -672,9 +672,8 @@ OptionalFileEntryRef DirectoryLookup::DoFrameworkLookup(
     if (getDirCharacteristic() == SrcMgr::C_User) {
       SmallString<1024> SystemFrameworkMarker(FrameworkName);
       SystemFrameworkMarker += ".system_framework";
-      if (llvm::sys::fs::exists(SystemFrameworkMarker)) {
+      if (FileMgr.getOptionalFileRef(SystemFrameworkMarker))
         CacheEntry.IsUserSpecifiedSystemFramework = true;
-      }
     }
   }
 
@@ -882,6 +881,66 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
         << IncludeFilename;
 }
 
+void HeaderSearch::diagnoseHeaderShadowing(
+    StringRef Filename, OptionalFileEntryRef FE, bool &DiagnosedShadowing,
+    SourceLocation IncludeLoc, ConstSearchDirIterator FromDir,
+    ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,
+    bool isAngled, int IncluderLoopIndex, ConstSearchDirIterator MainLoopIt) {
+
+  if (Diags.isIgnored(diag::warn_header_shadowing, IncludeLoc) ||
+      DiagnosedShadowing)
+    return;
+  // Ignore diagnostics from system headers.
+  if (MainLoopIt && MainLoopIt->isSystemHeaderDirectory())
+    return;
+
+  DiagnosedShadowing = true;
+
+  // Indicates that file is first found in the includer's directory
+  if (!MainLoopIt) {
+    for (size_t i = IncluderLoopIndex + 1; i < Includers.size(); ++i) {
+      const auto &IncluderAndDir = Includers[i];
+      SmallString<1024> TmpDir = IncluderAndDir.second.getName();
+      llvm::sys::path::append(TmpDir, Filename);
+      if (auto File = getFileMgr().getFileRef(TmpDir, false, false)) {
+        if (&File->getFileEntry() == *FE)
+          continue;
+        Diags.Report(IncludeLoc, diag::warn_header_shadowing)
+            << Filename << (*FE).getDir().getName()
+            << IncluderAndDir.second.getName();
+        return;
+      } else {
+        llvm::errorToErrorCode(File.takeError());
+      }
+    }
+  }
+
+  // Continue searching in the regular search paths
+  ConstSearchDirIterator It =
+      isAngled ? angled_dir_begin() : search_dir_begin();
+  if (MainLoopIt) {
+    It = std::next(MainLoopIt);
+  } else if (FromDir) {
+    It = FromDir;
+  }
+  for (; It != search_dir_end(); ++It) {
+    // Suppress check for system headers, as duplicates are often intentional.
+    if (It->getDirCharacteristic() != SrcMgr::C_User)
+      continue;
+    SmallString<1024> TmpPath = It->getName();
+    llvm::sys::path::append(TmpPath, Filename);
+    if (auto File = getFileMgr().getFileRef(TmpPath, false, false)) {
+      if (&File->getFileEntry() == *FE)
+        continue;
+      Diags.Report(IncludeLoc, diag::warn_header_shadowing)
+          << Filename << (*FE).getDir().getName() << It->getName();
+      return;
+    } else {
+      llvm::errorToErrorCode(File.takeError());
+    }
+  }
+}
+
 /// LookupFile - Given a "foo" or \<foo> reference, look up the indicated file,
 /// return null on failure.  isAngled indicates whether the file reference is
 /// for system \#include's or not (i.e. using <> instead of ""). Includers, if
@@ -931,6 +990,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
   // This is the header that MSVC's header search would have found.
   ModuleMap::KnownHeader MSSuggestedModule;
   OptionalFileEntryRef MSFE;
+  bool DiagnosedShadowing = false;
 
   // Check to see if the file is in the #includer's directory. This cannot be
   // based on CurDir, because each includer could be a #include of a
@@ -964,6 +1024,9 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       if (OptionalFileEntryRef FE = getFileAndSuggestModule(
               TmpDir, IncludeLoc, IncluderAndDir.second, IncluderIsSystemHeader,
               RequestingModule, SuggestedModule)) {
+        diagnoseHeaderShadowing(Filename, FE, DiagnosedShadowing, IncludeLoc,
+                                FromDir, Includers, isAngled,
+                                &IncluderAndDir - Includers.begin(), nullptr);
         if (!Includer) {
           assert(First && "only first includer can have no file");
           return FE;
@@ -1097,6 +1160,9 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       *IsFrameworkFound |= (IsFrameworkFoundInDir && !CacheLookup.MappedName);
     if (!File)
       continue;
+
+    diagnoseHeaderShadowing(Filename, File, DiagnosedShadowing, IncludeLoc,
+                            FromDir, Includers, isAngled, -1, It);
 
     CurDir = It;
 
@@ -2078,7 +2144,7 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
 
   llvm::SmallString<32> FilePath = File;
   if (!WorkingDir.empty() && !path::is_absolute(FilePath))
-    fs::make_absolute(WorkingDir, FilePath);
+    path::make_absolute(WorkingDir, FilePath);
   // remove_dots switches to backslashes on windows as a side-effect!
   // We always want to suggest forward slashes for includes.
   // (not remove_dots(..., posix) as that misparses windows paths).
@@ -2092,7 +2158,7 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
   // `BestPrefixLength` accordingly.
   auto CheckDir = [&](llvm::SmallString<32> Dir) -> bool {
     if (!WorkingDir.empty() && !path::is_absolute(Dir))
-      fs::make_absolute(WorkingDir, Dir);
+      path::make_absolute(WorkingDir, Dir);
     path::remove_dots(Dir, /*remove_dot_dot=*/true);
     for (auto NI = path::begin(File), NE = path::end(File),
               DI = path::begin(Dir), DE = path::end(Dir);
@@ -2182,4 +2248,13 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
     Filename = IncludeSpelling;
   }
   return path::convert_to_slash(Filename);
+}
+
+void clang::normalizeModuleCachePath(FileManager &FileMgr, StringRef Path,
+                                     SmallVectorImpl<char> &NormalizedPath) {
+  NormalizedPath.assign(Path.begin(), Path.end());
+  if (!NormalizedPath.empty()) {
+    FileMgr.makeAbsolutePath(NormalizedPath);
+    llvm::sys::path::remove_dots(NormalizedPath);
+  }
 }

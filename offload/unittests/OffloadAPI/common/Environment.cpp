@@ -41,9 +41,9 @@ raw_ostream &operator<<(raw_ostream &Out,
 
 raw_ostream &operator<<(raw_ostream &Out, const ol_device_handle_t &Device) {
   size_t Size;
-  olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NAME, &Size);
+  olGetDeviceInfoSize(Device, OL_DEVICE_INFO_PRODUCT_NAME, &Size);
   std::vector<char> Name(Size);
-  olGetDeviceInfo(Device, OL_DEVICE_INFO_NAME, Size, Name.data());
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_PRODUCT_NAME, Size, Name.data());
   Out << Name.data();
   return Out;
 }
@@ -128,6 +128,9 @@ const std::vector<TestEnvironment::Device> &TestEnvironment::getDevices() {
           &Devices);
     }
   }
+
+  if (Devices.size() == 0)
+    errs() << "Warning: No devices found for OffloadAPI tests.\n";
 
   return Devices;
 }

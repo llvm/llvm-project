@@ -1072,7 +1072,7 @@ Major outstanding projects include:
 
 * Refactor architecture support to maximize sharing across formats.
 
-  All formats should be able to share the bulk of the architecture specific
+  All formats should be able to share the bulk of the architecture-specific
   code (especially relocations) for each supported architecture.
 
 * Refactor ELF link graph construction.

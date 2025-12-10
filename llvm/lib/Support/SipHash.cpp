@@ -35,14 +35,19 @@ void llvm::getSipHash_2_4_128(ArrayRef<uint8_t> In, const uint8_t (&K)[16],
   siphash<2, 4>(In.data(), In.size(), K, Out);
 }
 
-/// Compute an ABI-stable 16-bit hash of the given string.
-uint16_t llvm::getPointerAuthStableSipHash(StringRef Str) {
+/// Compute an ABI-stable 64-bit hash of the given string.
+uint64_t llvm::getStableSipHash(StringRef Str) {
   static const uint8_t K[16] = {0xb5, 0xd4, 0xc9, 0xeb, 0x79, 0x10, 0x4a, 0x79,
                                 0x6f, 0xec, 0x8b, 0x1b, 0x42, 0x87, 0x81, 0xd4};
 
   uint8_t RawHashBytes[8];
   getSipHash_2_4_64(arrayRefFromStringRef(Str), K, RawHashBytes);
-  uint64_t RawHash = endian::read64le(RawHashBytes);
+  return endian::read64le(RawHashBytes);
+}
+
+/// Compute an ABI-stable 16-bit hash of the given string.
+uint16_t llvm::getPointerAuthStableSipHash(StringRef Str) {
+  uint64_t RawHash = getStableSipHash(Str);
 
   // Produce a non-zero 16-bit discriminator.
   uint16_t Discriminator = (RawHash % 0xFFFF) + 1;

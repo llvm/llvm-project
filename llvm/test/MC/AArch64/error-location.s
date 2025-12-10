@@ -22,7 +22,7 @@
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 1-byte data relocations not supported
   .byte undef-.
 
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Unsupported pc-relative fixup kind
+// CHECK: :[[@LINE+1]]:16: error: expected relocatable expression
   ldr x0, [x1, :lo12:undef-.]
 
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid fixup for 8-bit load/store instruction

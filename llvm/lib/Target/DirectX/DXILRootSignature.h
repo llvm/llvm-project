@@ -21,7 +21,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Pass.h"
-#include <optional>
 
 namespace llvm {
 namespace dxil {
@@ -43,13 +42,11 @@ public:
 
   iterator end() { return FuncToRsMap.end(); }
 
-  std::optional<mcdxbc::RootSignatureDesc>
-  getDescForFunction(const Function *F) {
+  mcdxbc::RootSignatureDesc *getDescForFunction(const Function *F) {
     const auto FuncRs = find(F);
     if (FuncRs == end())
-      return std::nullopt;
-
-    return FuncRs->second;
+      return nullptr;
+    return &FuncRs->second;
   }
 };
 

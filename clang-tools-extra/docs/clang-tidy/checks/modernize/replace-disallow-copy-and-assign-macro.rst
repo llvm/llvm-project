@@ -33,13 +33,14 @@ It will be transformed to this:
     const Foo &operator=(const Foo &) = delete;
   };
 
-Known Limitations
------------------
+
+Limitations
+-----------
 
 * Notice that the migration example above leaves the ``private`` access
-  specification untouched. You might want to run the check :doc:`modernize-use-equals-delete
-  <../modernize/use-equals-delete>` to get warnings for deleted functions in
-  private sections.
+  specification untouched. You might want to run the check
+  :doc:`modernize-use-equals-delete <../modernize/use-equals-delete>`
+  to get warnings for deleted functions in private sections.
 
 Options
 -------

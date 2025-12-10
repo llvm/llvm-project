@@ -629,7 +629,7 @@ typedef unsigned long __sanitizer_sigset_t;
 #  elif SANITIZER_APPLE
 typedef unsigned __sanitizer_sigset_t;
 #  elif SANITIZER_HAIKU
-typedef unsigned long __sanitizer_sigset_t;
+typedef unsigned long long __sanitizer_sigset_t;
 #  elif SANITIZER_LINUX
 struct __sanitizer_sigset_t {
   // The size is determined by looking at sizeof of real sigset_t on linux.
@@ -1338,16 +1338,14 @@ extern unsigned IOCTL_SNDCTL_COPR_SENDMSG;
 extern unsigned IOCTL_SNDCTL_COPR_WCODE;
 extern unsigned IOCTL_SNDCTL_COPR_WDATA;
 extern unsigned IOCTL_TCFLSH;
-extern unsigned IOCTL_TCGETA;
-extern unsigned IOCTL_TCGETS;
 extern unsigned IOCTL_TCSBRK;
 extern unsigned IOCTL_TCSBRKP;
-extern unsigned IOCTL_TCSETA;
-extern unsigned IOCTL_TCSETAF;
-extern unsigned IOCTL_TCSETAW;
+#    if SANITIZER_TERMIOS_IOCTL_CONSTANTS
+extern unsigned IOCTL_TCGETS;
 extern unsigned IOCTL_TCSETS;
 extern unsigned IOCTL_TCSETSF;
 extern unsigned IOCTL_TCSETSW;
+#    endif
 extern unsigned IOCTL_TCXONC;
 extern unsigned IOCTL_TIOCGLCKTRMIOS;
 extern unsigned IOCTL_TIOCGSOFTCAR;

@@ -3889,6 +3889,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:                 "qualType": "(lambda at {{.*}}:98:7)"
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "valueCategory": "prvalue",
+// CHECK-NEXT:                "hasExplicitParameters": false,
 // CHECK-NEXT:                "inner": [
 // CHECK-NEXT:                 {
 // CHECK-NEXT:                  "id": "0x{{.*}}",
@@ -4098,6 +4099,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:                 "qualType": "(lambda at {{.*}}:99:7)"
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "valueCategory": "prvalue",
+// CHECK-NEXT:                "hasExplicitParameters": false,
 // CHECK-NEXT:                "inner": [
 // CHECK-NEXT:                 {
 // CHECK-NEXT:                  "id": "0x{{.*}}",
@@ -4413,6 +4415,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "(lambda at {{.*}}:105:3)"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "hasExplicitParameters": true,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -4615,6 +4618,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "(lambda at {{.*}}:106:3)"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "hasExplicitParameters": true,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -4871,6 +4875,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "(lambda at {{.*}}:107:3)"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "hasExplicitParameters": false,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -5088,6 +5093,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "(lambda at {{.*}}:108:3)"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "hasExplicitParameters": false,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -5234,6 +5240,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "(lambda at {{.*}}:109:3)"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "hasExplicitParameters": false,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -5476,6 +5483,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "(lambda at {{.*}}:110:3)"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "hasExplicitParameters": false,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -5622,6 +5630,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "(lambda at {{.*}}:111:3)"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "hasExplicitParameters": false,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -5864,6 +5873,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "(lambda at {{.*}}:112:3)"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "hasExplicitParameters": false,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -6425,6 +6435,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "(lambda at {{.*}}:113:3)"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "hasExplicitParameters": false,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -6688,6 +6699,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "(lambda at {{.*}}:114:3)"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "hasExplicitParameters": true,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -6892,6 +6904,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "(lambda at {{.*}}:115:3)"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "hasExplicitParameters": true,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -7094,6 +7107,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "(lambda at {{.*}}:116:3)"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "hasExplicitParameters": true,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -7296,6 +7310,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "(lambda at {{.*}}:117:3)"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "hasExplicitParameters": true,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -7962,7 +7977,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "desugaredQualType": "NS::X",
 // CHECK-NEXT:         "qualType": "X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
@@ -7988,7 +8002,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "const NS::X",
 // CHECK-NEXT:           "qualType": "const X"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -8142,7 +8155,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "const NS::X",
 // CHECK-NEXT:           "qualType": "const X"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -8395,7 +8407,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "desugaredQualType": "NS::X",
 // CHECK-NEXT:         "qualType": "X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
@@ -8421,7 +8432,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "const NS::X",
 // CHECK-NEXT:           "qualType": "const X"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -8720,7 +8730,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "desugaredQualType": "NS::X",
 // CHECK-NEXT:         "qualType": "X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
@@ -8746,7 +8755,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "const NS::X",
 // CHECK-NEXT:           "qualType": "const X"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -8900,7 +8908,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "const NS::X",
 // CHECK-NEXT:           "qualType": "const X"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -9032,7 +9039,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:        "isUsed": true,
 // CHECK-NEXT:        "name": "x",
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "desugaredQualType": "NS::X",
 // CHECK-NEXT:         "qualType": "X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "init": "call",
@@ -9053,7 +9059,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "NS::X",
 // CHECK-NEXT:           "qualType": "X"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
@@ -9155,7 +9160,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "desugaredQualType": "NS::X",
 // CHECK-NEXT:         "qualType": "X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
@@ -9181,7 +9185,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "desugaredQualType": "const NS::X",
 // CHECK-NEXT:           "qualType": "const X"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -9203,7 +9206,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "desugaredQualType": "NS::X",
 // CHECK-NEXT:             "qualType": "X"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
@@ -9212,7 +9214,6 @@ void TestNonADLCall3() {
 // CHECK-NEXT:             "kind": "VarDecl",
 // CHECK-NEXT:             "name": "x",
 // CHECK-NEXT:             "type": {
-// CHECK-NEXT:              "desugaredQualType": "NS::X",
 // CHECK-NEXT:              "qualType": "X"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }

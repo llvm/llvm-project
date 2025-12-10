@@ -221,7 +221,8 @@ static mlir::Value createAddressOfOp(mlir::ConversionPatternRewriter &rewriter,
                                      gpu::GPUModuleOp gpuMod,
                                      std::string &sharedGlobalName) {
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(
-      rewriter.getContext(), mlir::NVVM::NVVMMemorySpace::kSharedMemorySpace);
+      rewriter.getContext(),
+      static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Shared));
   if (auto g = gpuMod.lookupSymbol<fir::GlobalOp>(sharedGlobalName))
     return mlir::LLVM::AddressOfOp::create(rewriter, loc, llvmPtrTy,
                                            g.getSymName());
@@ -248,8 +249,13 @@ struct CUFSharedMemoryOpConversion
                       "cuf.shared_memory must have an offset for code gen");
 
     auto gpuMod = op->getParentOfType<gpu::GPUModuleOp>();
+
     std::string sharedGlobalName =
-        (getFuncName(op) + llvm::Twine(cudaSharedMemSuffix)).str();
+        op.getIsStatic()
+            ? (getFuncName(op) + llvm::Twine(cudaSharedMemSuffix) +
+               *op.getBindcName())
+                  .str()
+            : (getFuncName(op) + llvm::Twine(cudaSharedMemSuffix)).str();
     mlir::Value sharedGlobalAddr =
         createAddressOfOp(rewriter, loc, gpuMod, sharedGlobalName);
 

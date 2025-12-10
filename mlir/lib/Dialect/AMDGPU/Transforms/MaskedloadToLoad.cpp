@@ -33,19 +33,18 @@ using namespace mlir::amdgpu;
 
 /// This pattern supports lowering of: `vector.maskedload` to `vector.load`
 /// and `arith.select` if the memref is in buffer address space.
-static LogicalResult baseInBufferAddrSpace(PatternRewriter &rewriter,
-                                           vector::MaskedLoadOp maskedOp) {
-  auto memRefType = dyn_cast<MemRefType>(maskedOp.getBase().getType());
+static LogicalResult hasBufferAddressSpace(Type type) {
+  auto memRefType = dyn_cast<MemRefType>(type);
   if (!memRefType)
-    return rewriter.notifyMatchFailure(maskedOp, "not a memref source");
+    return failure();
 
   Attribute addrSpace = memRefType.getMemorySpace();
   if (!isa_and_nonnull<amdgpu::AddressSpaceAttr>(addrSpace))
-    return rewriter.notifyMatchFailure(maskedOp, "no address space");
+    return failure();
 
   if (dyn_cast<amdgpu::AddressSpaceAttr>(addrSpace).getValue() !=
       amdgpu::AddressSpace::FatRawBuffer)
-    return rewriter.notifyMatchFailure(maskedOp, "not in buffer address space");
+    return failure();
 
   return success();
 }
@@ -54,11 +53,11 @@ static Value createVectorLoadForMaskedLoad(OpBuilder &builder, Location loc,
                                            vector::MaskedLoadOp maskedOp,
                                            bool passthru) {
   VectorType vectorType = maskedOp.getVectorType();
-  Value load = builder.create<vector::LoadOp>(
-      loc, vectorType, maskedOp.getBase(), maskedOp.getIndices());
+  Value load = vector::LoadOp::create(
+      builder, loc, vectorType, maskedOp.getBase(), maskedOp.getIndices());
   if (passthru)
-    load = builder.create<arith::SelectOp>(loc, vectorType, maskedOp.getMask(),
-                                           load, maskedOp.getPassThru());
+    load = arith::SelectOp::create(builder, loc, vectorType, maskedOp.getMask(),
+                                   load, maskedOp.getPassThru());
   return load;
 }
 
@@ -83,10 +82,11 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
   LogicalResult matchAndRewrite(vector::MaskedLoadOp maskedOp,
                                 PatternRewriter &rewriter) const override {
     if (maskedOp->hasAttr(kMaskedloadNeedsMask))
-      return failure();
+      return rewriter.notifyMatchFailure(maskedOp, "already rewritten");
 
-    if (failed(baseInBufferAddrSpace(rewriter, maskedOp))) {
-      return failure();
+    if (failed(hasBufferAddressSpace(maskedOp.getBase().getType()))) {
+      return rewriter.notifyMatchFailure(
+          maskedOp, "isn't a load from a fat buffer resource");
     }
 
     // Check if this is either a full inbounds load or an empty, oob load. If
@@ -108,7 +108,7 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
     SmallVector<OpFoldResult> indices = maskedOp.getIndices();
 
     auto stridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(loc, src);
+        memref::ExtractStridedMetadataOp::create(rewriter, loc, src);
     SmallVector<OpFoldResult> strides =
         stridedMetadata.getConstifiedMixedStrides();
     SmallVector<OpFoldResult> sizes = stridedMetadata.getConstifiedMixedSizes();
@@ -122,47 +122,47 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
 
     // delta = bufferSize - linearizedOffset
     Value vectorSizeOffset =
-        rewriter.create<arith::ConstantIndexOp>(loc, vectorSize);
+        arith::ConstantIndexOp::create(rewriter, loc, vectorSize);
     Value linearIndex =
         getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices);
     Value totalSize = getValueOrCreateConstantIndexOp(
         rewriter, loc, linearizedInfo.linearizedSize);
-    Value delta = rewriter.create<arith::SubIOp>(loc, totalSize, linearIndex);
+    Value delta = arith::SubIOp::create(rewriter, loc, totalSize, linearIndex);
 
     // 1) check if delta < vectorSize
-    Value isOutofBounds = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::ult, delta, vectorSizeOffset);
+    Value isOutofBounds = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::ult, delta, vectorSizeOffset);
 
     // 2) check if (detla % elements_per_word != 0)
-    Value elementsPerWord = rewriter.create<arith::ConstantIndexOp>(
-        loc, llvm::divideCeil(32, elementBitWidth));
-    Value isNotWordAligned = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::ne,
-        rewriter.create<arith::RemUIOp>(loc, delta, elementsPerWord),
-        rewriter.create<arith::ConstantIndexOp>(loc, 0));
+    Value elementsPerWord = arith::ConstantIndexOp::create(
+        rewriter, loc, llvm::divideCeil(32, elementBitWidth));
+    Value isNotWordAligned = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::ne,
+        arith::RemUIOp::create(rewriter, loc, delta, elementsPerWord),
+        arith::ConstantIndexOp::create(rewriter, loc, 0));
 
     // We take the fallback of maskedload default lowering only it is both
     // out-of-bounds and not word aligned. The fallback ensures correct results
     // when loading at the boundary of the buffer since buffer load returns
     // inconsistent zeros for the whole word when boundary is crossed.
     Value ifCondition =
-        rewriter.create<arith::AndIOp>(loc, isOutofBounds, isNotWordAligned);
+        arith::AndIOp::create(rewriter, loc, isOutofBounds, isNotWordAligned);
 
     auto thenBuilder = [&](OpBuilder &builder, Location loc) {
       Operation *read = builder.clone(*maskedOp.getOperation());
       read->setAttr(kMaskedloadNeedsMask, builder.getUnitAttr());
       Value readResult = read->getResult(0);
-      builder.create<scf::YieldOp>(loc, readResult);
+      scf::YieldOp::create(builder, loc, readResult);
     };
 
     auto elseBuilder = [&](OpBuilder &builder, Location loc) {
       Value res = createVectorLoadForMaskedLoad(builder, loc, maskedOp,
                                                 /*passthru=*/true);
-      rewriter.create<scf::YieldOp>(loc, res);
+      scf::YieldOp::create(rewriter, loc, res);
     };
 
     auto ifOp =
-        rewriter.create<scf::IfOp>(loc, ifCondition, thenBuilder, elseBuilder);
+        scf::IfOp::create(rewriter, loc, ifCondition, thenBuilder, elseBuilder);
 
     rewriter.replaceOp(maskedOp, ifOp);
 
@@ -176,22 +176,27 @@ struct FullMaskedLoadToConditionalLoad
 
   LogicalResult matchAndRewrite(vector::MaskedLoadOp loadOp,
                                 PatternRewriter &rewriter) const override {
+    if (succeeded(hasBufferAddressSpace(loadOp.getBase().getType())))
+      return rewriter.notifyMatchFailure(
+          loadOp, "buffer loads are handled by a more specialized pattern");
+
     FailureOr<Value> maybeCond = matchFullMask(rewriter, loadOp.getMask());
     if (failed(maybeCond)) {
-      return failure();
+      return rewriter.notifyMatchFailure(loadOp,
+                                         "isn't loading a broadcasted scalar");
     }
 
     Value cond = maybeCond.value();
     auto trueBuilder = [&](OpBuilder &builder, Location loc) {
       Value res = createVectorLoadForMaskedLoad(builder, loc, loadOp,
                                                 /*passthru=*/false);
-      rewriter.create<scf::YieldOp>(loc, res);
+      scf::YieldOp::create(rewriter, loc, res);
     };
     auto falseBuilder = [&](OpBuilder &builder, Location loc) {
-      rewriter.create<scf::YieldOp>(loc, loadOp.getPassThru());
+      scf::YieldOp::create(rewriter, loc, loadOp.getPassThru());
     };
-    auto ifOp = rewriter.create<scf::IfOp>(loadOp.getLoc(), cond, trueBuilder,
-                                           falseBuilder);
+    auto ifOp = scf::IfOp::create(rewriter, loadOp.getLoc(), cond, trueBuilder,
+                                  falseBuilder);
     rewriter.replaceOp(loadOp, ifOp);
     return success();
   }
@@ -203,6 +208,15 @@ struct FullMaskedStoreToConditionalStore
 
   LogicalResult matchAndRewrite(vector::MaskedStoreOp storeOp,
                                 PatternRewriter &rewriter) const override {
+    // A condition-free implementation of fully masked stores requires
+    // 1) an accessor for the num_records field on buffer resources/fat pointers
+    // 2) knowledge that said field will always be set accurately - that is,
+    // that writes to x < num_records of offset wouldn't trap, which is
+    // something a pattern user would need to assert or we'd need to prove.
+    //
+    // Therefore, conditional stores to buffers still go down this path at
+    // present.
+
     FailureOr<Value> maybeCond = matchFullMask(rewriter, storeOp.getMask());
     if (failed(maybeCond)) {
       return failure();
@@ -210,11 +224,12 @@ struct FullMaskedStoreToConditionalStore
     Value cond = maybeCond.value();
 
     auto trueBuilder = [&](OpBuilder &builder, Location loc) {
-      rewriter.create<vector::StoreOp>(loc, storeOp.getValueToStore(),
-                                       storeOp.getBase(), storeOp.getIndices());
-      rewriter.create<scf::YieldOp>(loc);
+      vector::StoreOp::create(rewriter, loc, storeOp.getValueToStore(),
+                              storeOp.getBase(), storeOp.getIndices());
+      scf::YieldOp::create(rewriter, loc);
     };
-    auto ifOp = rewriter.create<scf::IfOp>(storeOp.getLoc(), cond, trueBuilder);
+    auto ifOp =
+        scf::IfOp::create(rewriter, storeOp.getLoc(), cond, trueBuilder);
     rewriter.replaceOp(storeOp, ifOp);
     return success();
   }

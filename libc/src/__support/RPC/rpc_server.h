@@ -298,7 +298,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
 
     results[lane] = static_cast<int>(
         fwrite(buffer, 1, writer.get_chars_written(), files[lane]));
-    if (results[lane] != writer.get_chars_written() || ret == -1)
+    if (size_t(results[lane]) != writer.get_chars_written() || ret == -1)
       results[lane] = -1;
   }
 
@@ -395,7 +395,9 @@ LIBC_INLINE static rpc::Status handle_port_impl(rpc::Server::Port &port) {
     port.recv([](rpc::Buffer *buffer, uint32_t) {
       int status = 0;
       __builtin_memcpy(&status, buffer->data, sizeof(int));
-      exit(status);
+      // We want a quick exit to avoid conflicts with offloading library
+      // teardowns when called from the GPU.
+      quick_exit(status);
     });
     break;
   }
@@ -515,6 +517,55 @@ LIBC_INLINE static rpc::Status handle_port_impl(rpc::Server::Port &port) {
       buffer->data[0] = static_cast<uint64_t>(
           system(reinterpret_cast<const char *>(args[id])));
     });
+    break;
+  }
+  case LIBC_TEST_INCREMENT: {
+    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
+      reinterpret_cast<uint64_t *>(buffer->data)[0] += 1;
+    });
+    break;
+  }
+  case LIBC_TEST_INTERFACE: {
+    bool end_with_recv;
+    uint64_t cnt;
+    port.recv([&](rpc::Buffer *buffer, uint32_t) {
+      end_with_recv = buffer->data[0];
+    });
+    port.recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
+    port.send([&](rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] = cnt = cnt + 1;
+    });
+    port.recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
+    port.send([&](rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] = cnt = cnt + 1;
+    });
+    port.recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
+    port.recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
+    port.send([&](rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] = cnt = cnt + 1;
+    });
+    port.send([&](rpc::Buffer *buffer, uint32_t) {
+      buffer->data[0] = cnt = cnt + 1;
+    });
+    if (end_with_recv)
+      port.recv([&](rpc::Buffer *buffer, uint32_t) { cnt = buffer->data[0]; });
+    else
+      port.send([&](rpc::Buffer *buffer, uint32_t) {
+        buffer->data[0] = cnt = cnt + 1;
+      });
+
+    break;
+  }
+  case LIBC_TEST_STREAM: {
+    uint64_t sizes[num_lanes] = {0};
+    void *dst[num_lanes] = {nullptr};
+    port.recv_n(dst, sizes,
+                [](uint64_t size) -> void * { return new char[size]; });
+    port.send_n(dst, sizes);
+    for (uint64_t i = 0; i < num_lanes; ++i) {
+      if (dst[i])
+        delete[] reinterpret_cast<uint8_t *>(dst[i]);
+    }
     break;
   }
   case LIBC_NOOP: {

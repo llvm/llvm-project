@@ -195,6 +195,36 @@ func.func @assume_alignment(%0 : memref<4x4xf16>) {
 
 // -----
 
+// ALL-LABEL: func @distinct_objects
+//  ALL-SAME:   (%[[ARG0:.*]]: memref<?xf16>, %[[ARG1:.*]]: memref<?xf32>, %[[ARG2:.*]]: memref<?xf64>)
+func.func @distinct_objects(%arg0: memref<?xf16>, %arg1: memref<?xf32>, %arg2: memref<?xf64>) -> (memref<?xf16>, memref<?xf32>, memref<?xf64>) {
+//   ALL-DAG:   %[[CAST_0:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<?xf16> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+//   ALL-DAG:   %[[CAST_1:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : memref<?xf32> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+//   ALL-DAG:   %[[CAST_2:.*]] = builtin.unrealized_conversion_cast %[[ARG2]] : memref<?xf64> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+//       ALL:   %[[PTR_0:.*]] = llvm.extractvalue %[[CAST_0]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+//       ALL:   %[[PTR_1:.*]] = llvm.extractvalue %[[CAST_1]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+//       ALL:   %[[PTR_2:.*]] = llvm.extractvalue %[[CAST_2]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+//       ALL:   %[[TRUE:.*]] = llvm.mlir.constant(true) : i1
+//       ALL:   llvm.intr.assume %[[TRUE]] ["separate_storage"(%[[PTR_0]], %[[PTR_1]] : !llvm.ptr, !llvm.ptr)] : i1
+//       ALL:   llvm.intr.assume %[[TRUE]] ["separate_storage"(%[[PTR_0]], %[[PTR_2]] : !llvm.ptr, !llvm.ptr)] : i1
+//       ALL:   llvm.intr.assume %[[TRUE]] ["separate_storage"(%[[PTR_1]], %[[PTR_2]] : !llvm.ptr, !llvm.ptr)] : i1
+  %1, %2, %3 = memref.distinct_objects %arg0, %arg1, %arg2 : memref<?xf16>, memref<?xf32>, memref<?xf64>
+  return %1, %2, %3 : memref<?xf16>, memref<?xf32>, memref<?xf64>
+}
+
+// -----
+
+// ALL-LABEL: func @distinct_objects_noop
+//  ALL-SAME:   (%[[ARG0:.*]]: memref<?xf16>)
+func.func @distinct_objects_noop(%arg0: memref<?xf16>) -> memref<?xf16> {
+// 1-operand version is noop
+//  ALL-NEXT:   return %[[ARG0]]
+  %1 = memref.distinct_objects %arg0 : memref<?xf16>
+  return %1 : memref<?xf16>
+}
+
+// -----
+
 // CHECK-LABEL: func @assume_alignment_w_offset
 // CHECK-INTERFACE-LABEL: func @assume_alignment_w_offset
 func.func @assume_alignment_w_offset(%0 : memref<4x4xf16, strided<[?, ?], offset: ?>>) {
@@ -464,7 +494,9 @@ func.func @atomic_rmw(%I : memref<10xi32>, %ival : i32, %F : memref<10xf32>, %fv
   // CHECK: llvm.atomicrmw _or %{{.*}}, %{{.*}} acq_rel
   memref.atomic_rmw andi %ival, %I[%i] : (i32, memref<10xi32>) -> i32
   // CHECK: llvm.atomicrmw _and %{{.*}}, %{{.*}} acq_rel
-  // CHECK-INTERFACE-COUNT-13: llvm.atomicrmw
+  memref.atomic_rmw xori %ival, %I[%i] : (i32, memref<10xi32>) -> i32
+  // CHECK: llvm.atomicrmw _xor %{{.*}}, %{{.*}} acq_rel
+  // CHECK-INTERFACE-COUNT-14: llvm.atomicrmw
   return
 }
 
@@ -753,6 +785,17 @@ func.func @load_non_temporal(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>>) {
 
 // -----
 
+// CHECK-LABEL: func @load_with_alignment(
+// CHECK-INTERFACE-LABEL: func @load_with_alignment(
+func.func @load_with_alignment(%arg0 : memref<32xf32>, %arg1 : index) {
+  // CHECK: llvm.load %{{.*}} {alignment = 32 : i64} : !llvm.ptr -> f32
+  // CHECK-INTERFACE: llvm.load
+  %1 = memref.load %arg0[%arg1] {alignment = 32} : memref<32xf32>
+  func.return
+}
+
+// -----
+
 // CHECK-LABEL: func @store_non_temporal(
 // CHECK-INTERFACE-LABEL: func @store_non_temporal(
 func.func @store_non_temporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>, %output : memref<32xf32, affine_map<(d0) -> (d0)>>) {
@@ -761,6 +804,17 @@ func.func @store_non_temporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>,
   // CHECK: llvm.store %{{.*}}, %{{.*}}  {nontemporal} : f32, !llvm.ptr
   // CHECK-INTERFACE: llvm.store
   memref.store %2, %output[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @store_with_alignment(
+// CHECK-INTERFACE-LABEL: func @store_with_alignment(
+func.func @store_with_alignment(%arg0 : memref<32xf32>, %arg1 : f32, %arg2 : index) {
+  // CHECK: llvm.store %{{.*}}, %{{.*}} {alignment = 32 : i64} : f32, !llvm.ptr
+  // CHECK-INTERFACE: llvm.store
+  memref.store %arg1, %arg0[%arg2] {alignment = 32} : memref<32xf32>
   func.return
 }
 

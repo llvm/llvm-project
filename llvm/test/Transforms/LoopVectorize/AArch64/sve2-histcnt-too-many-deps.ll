@@ -70,10 +70,8 @@ define void @many_deps(ptr noalias %buckets, ptr %array, ptr %indices, ptr %othe
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP4]], 2
 ; NORMAL_DEP_LIMIT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP8]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; NORMAL_DEP_LIMIT-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; NORMAL_DEP_LIMIT-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
-; NORMAL_DEP_LIMIT-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP6]] to i32
+; NORMAL_DEP_LIMIT-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i32
 ; NORMAL_DEP_LIMIT-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP9]], i64 0
 ; NORMAL_DEP_LIMIT-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; NORMAL_DEP_LIMIT-NEXT:    br label [[FOR_BODY:%.*]]
@@ -91,7 +89,7 @@ define void @many_deps(ptr noalias %buckets, ptr %array, ptr %indices, ptr %othe
 ; NORMAL_DEP_LIMIT-NEXT:    [[WIDE_LOAD10:%.*]] = load <vscale x 4 x i32>, ptr [[TMP14]], align 4, !alias.scope [[META7:![0-9]+]], !noalias [[META0]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP15:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD10]], [[VEC_IND]]
 ; NORMAL_DEP_LIMIT-NEXT:    store <vscale x 4 x i32> [[TMP15]], ptr [[TMP14]], align 4, !alias.scope [[META7]], !noalias [[META0]]
-; NORMAL_DEP_LIMIT-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], [[TMP6]]
+; NORMAL_DEP_LIMIT-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], [[TMP8]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i32> [[VEC_IND]], [[DOTSPLAT]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
 ; NORMAL_DEP_LIMIT-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
