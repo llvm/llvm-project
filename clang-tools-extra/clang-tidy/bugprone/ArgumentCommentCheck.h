@@ -53,6 +53,8 @@ private:
                      SourceLocation ArgBeginLoc,
                      llvm::ArrayRef<const Expr *> Args);
 
+  void checkInitList(ASTContext *Ctx, const InitListExpr *InitList);
+
   bool shouldAddComment(const Expr *Arg) const;
 };
 

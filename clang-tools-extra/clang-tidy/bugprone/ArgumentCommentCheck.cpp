@@ -75,6 +75,7 @@ void ArgumentCommentCheck::registerMatchers(MatchFinder *Finder) {
                                           isFromStdNamespaceOrSystemHeader())))
                          .bind("expr"),
                      this);
+  Finder->addMatcher(initListExpr().bind("expr"), this);
 }
 
 static std::vector<std::pair<SourceLocation, StringRef>>
@@ -391,6 +392,71 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
   }
 }
 
+void ArgumentCommentCheck::checkInitList(ASTContext *Ctx,
+                                         const InitListExpr *InitList) {
+  const QualType Type = InitList->getType();
+  if (!Type->isRecordType())
+    return;
+  const RecordDecl *RD = Type->getAsRecordDecl();
+  if (!RD || RD->isUnion() ||
+      (isa<CXXRecordDecl>(RD) && !cast<CXXRecordDecl>(RD)->isAggregate()))
+    return;
+
+  if (const auto *InitListSyntactic = InitList->getSyntacticForm())
+    InitList = InitListSyntactic;
+
+  if (InitList->getNumInits() == 0 ||
+      (IgnoreSingleArgument && InitList->getNumInits() == 1))
+    return;
+
+  // If any designated initializers are present, we don't try to apply
+  // positional logic for argument comments, as the structure is no longer
+  // a simple positional match.
+  for (unsigned I = 0; I < InitList->getNumInits(); ++I) {
+    if (InitList->getInit(I) && isa<DesignatedInitExpr>(InitList->getInit(I)))
+      return;
+  }
+
+  SourceLocation ArgBeginLoc = InitList->getLBraceLoc();
+  unsigned InitIndex = 0;
+  for (const FieldDecl *FD : RD->fields()) {
+    if (InitIndex >= InitList->getNumInits())
+      break;
+
+    if (FD->isUnnamedBitField())
+      continue;
+
+    const Expr *Arg = InitList->getInit(InitIndex);
+
+    const IdentifierInfo *II = FD->getIdentifier();
+    if (!II) {
+      ArgBeginLoc = Arg->getEndLoc();
+      InitIndex++;
+      continue;
+    }
+
+    llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4> Comments =
+        collectLeadingComments(Ctx, ArgBeginLoc, Arg);
+    ArgBeginLoc = Arg->getEndLoc();
+
+    for (auto Comment : Comments)
+      (void)diagnoseMismatchInComment(*this, Ctx, RD->fields(), II, StrictMode,
+                                      IdentRE, Comment, FD->getLocation());
+
+    if (Comments.empty() && shouldAddComment(Arg)) {
+      llvm::SmallString<32> ArgComment;
+      (llvm::Twine("/*") + II->getName() + "=*/").toStringRef(ArgComment);
+      const DiagnosticBuilder Diag =
+          diag(Arg->getBeginLoc(),
+               "argument comment missing for literal argument %0")
+          << II
+          << FixItHint::CreateInsertion(Arg->getBeginLoc(), ArgComment);
+    }
+
+    InitIndex++;
+  }
+}
+
 void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *E = Result.Nodes.getNodeAs<Expr>("expr");
   if (const auto *Call = dyn_cast<CallExpr>(E)) {
@@ -400,8 +466,10 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
 
     checkCallArgs(Result.Context, Callee, Call->getCallee()->getEndLoc(),
                   llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
-  } else {
-    const auto *Construct = cast<CXXConstructExpr>(E);
+    return;
+  }
+
+  if (const auto *Construct = dyn_cast<CXXConstructExpr>(E)) {
     if (Construct->getNumArgs() > 0 &&
         Construct->getArg(0)->getSourceRange() == Construct->getSourceRange()) {
       // Ignore implicit construction.
@@ -411,6 +479,12 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
         Result.Context, Construct->getConstructor(),
         Construct->getParenOrBraceRange().getBegin(),
         llvm::ArrayRef(Construct->getArgs(), Construct->getNumArgs()));
+    return;
+  }
+
+  if (const auto *InitList = dyn_cast<InitListExpr>(E)) {
+    checkInitList(Result.Context, InitList);
+    return;
   }
 }
 
