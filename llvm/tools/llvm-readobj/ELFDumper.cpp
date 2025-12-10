@@ -37,7 +37,6 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
-#include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/RelocationResolver.h"
 #include "llvm/Object/SFrameParser.h"
@@ -65,7 +64,6 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <array>
 #include <cinttypes>
