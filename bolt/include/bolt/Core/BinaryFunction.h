@@ -2582,6 +2582,10 @@ public:
   /// Return true if the function is an AArch64 linker inserted veneer
   bool isAArch64Veneer() const;
 
+  /// Return true if the function signature matches veneer or it was established
+  /// to be a veneer.
+  bool isPossibleVeneer() const;
+
   virtual ~BinaryFunction();
 };
 
