@@ -204,7 +204,6 @@ void CommandObjectMultiword::Execute(const char *args_string,
                     " Use \"help " + GetCommandName() + "\" to find out more.")
             .str());
   }
-  error_msg.append("\n");
   result.AppendError(error_msg);
 }
 
