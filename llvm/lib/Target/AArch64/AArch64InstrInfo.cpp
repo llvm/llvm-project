@@ -5811,8 +5811,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, get(AArch64::FMOVWHr), DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
     } else {
-      MCRegister DestRegS =
-          RI.getMatchingSuperReg(DestReg, AArch64::hsub, &AArch64::FPR32RegClass);
+      MCRegister DestRegS = RI.getMatchingSuperReg(DestReg, AArch64::hsub,
+                                                   &AArch64::FPR32RegClass);
       BuildMI(MBB, I, DL, get(AArch64::FMOVWSr), DestRegS)
           .addReg(SrcReg, getKillRegState(KillSrc));
     }
@@ -5824,8 +5824,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, get(AArch64::FMOVHWr), DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
     } else {
-      MCRegister SrcRegS =
-          RI.getMatchingSuperReg(SrcReg, AArch64::hsub, &AArch64::FPR32RegClass);
+      MCRegister SrcRegS = RI.getMatchingSuperReg(SrcReg, AArch64::hsub,
+                                                  &AArch64::FPR32RegClass);
       BuildMI(MBB, I, DL, get(AArch64::FMOVSWr), DestReg)
           .addReg(SrcRegS, RegState::Undef)
           .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
@@ -5840,8 +5840,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, get(AArch64::FMOVXHr), DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
     } else {
-      MCRegister DestRegD =
-          RI.getMatchingSuperReg(DestReg, AArch64::hsub, &AArch64::FPR64RegClass);
+      MCRegister DestRegD = RI.getMatchingSuperReg(DestReg, AArch64::hsub,
+                                                   &AArch64::FPR64RegClass);
       BuildMI(MBB, I, DL, get(AArch64::FMOVXDr), DestRegD)
           .addReg(SrcReg, getKillRegState(KillSrc));
     }
@@ -5853,8 +5853,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, get(AArch64::FMOVHXr), DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
     } else {
-      MCRegister SrcRegD =
-          RI.getMatchingSuperReg(SrcReg, AArch64::hsub, &AArch64::FPR64RegClass);
+      MCRegister SrcRegD = RI.getMatchingSuperReg(SrcReg, AArch64::hsub,
+                                                  &AArch64::FPR64RegClass);
       BuildMI(MBB, I, DL, get(AArch64::FMOVDXr), DestReg)
           .addReg(SrcRegD, RegState::Undef)
           .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));

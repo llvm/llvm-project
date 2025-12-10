@@ -27,12 +27,14 @@ define half @atomic_load_half(ptr %addr) {
 ; CHECK-NOFP16:       ; %bb.0:
 ; CHECK-NOFP16-NEXT:    ldarh w8, [x0]
 ; CHECK-NOFP16-NEXT:    fmov s0, w8
+; CHECK-NOFP16-NEXT:    ; kill: def $h0 killed $h0 killed $s0
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: atomic_load_half:
 ; CHECK-FP16:       ; %bb.0:
 ; CHECK-FP16-NEXT:    ldarh w8, [x0]
-; CHECK-FP16-NEXT:    fmov h0, w8
+; CHECK-FP16-NEXT:    fmov s0, w8
+; CHECK-FP16-NEXT:    ; kill: def $h0 killed $h0 killed $s0
 ; CHECK-FP16-NEXT:    ret
   %ival = load atomic i16, ptr %addr acquire, align 2
   %val = bitcast i16 %ival to half
@@ -61,12 +63,14 @@ define bfloat @atomic_load_bfloat(ptr %addr) {
 ; CHECK-NOFP16:       ; %bb.0:
 ; CHECK-NOFP16-NEXT:    ldarh w8, [x0]
 ; CHECK-NOFP16-NEXT:    fmov s0, w8
+; CHECK-NOFP16-NEXT:    ; kill: def $h0 killed $h0 killed $s0
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: atomic_load_bfloat:
 ; CHECK-FP16:       ; %bb.0:
 ; CHECK-FP16-NEXT:    ldarh w8, [x0]
-; CHECK-FP16-NEXT:    fmov h0, w8
+; CHECK-FP16-NEXT:    fmov s0, w8
+; CHECK-FP16-NEXT:    ; kill: def $h0 killed $h0 killed $s0
 ; CHECK-FP16-NEXT:    ret
   %ival = load atomic i16, ptr %addr acquire, align 2
   %val = bitcast i16 %ival to bfloat
