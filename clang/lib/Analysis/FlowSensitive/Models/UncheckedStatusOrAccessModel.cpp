@@ -324,7 +324,7 @@ static auto isPredicateFormatterFromStatusMatcherCall() {
       hasOverloadedOperatorName("()"),
       callee(cxxMethodDecl(ofClass(
           hasName("testing::internal::PredicateFormatterFromMatcher")))),
-      hasArgument(2, hasType(cxxRecordDecl(hasName("absl::Status")))));
+      hasArgument(2, hasType(statusType())));
 }
 
 static auto isPredicateFormatterFromStatusOrMatcherCall() {
@@ -1044,7 +1044,7 @@ transferAssertionResultOperatorBoolCall(const CXXMemberCallExpr *Expr,
   State.Env.setValue(*Expr, Res);
 }
 
-static void transferDerefCall(const CallExpr *Expr,
+static void transferDerefCall(const CXXOperatorCallExpr *Expr,
                               const MatchFinder::MatchResult &,
                               LatticeTransferState &State) {
   auto *StatusOrLoc = State.Env.get<RecordStorageLocation>(*Expr->getArg(0));
@@ -1054,7 +1054,7 @@ static void transferDerefCall(const CallExpr *Expr,
                                  StatusOrLoc->getSyntheticField("value"));
 }
 
-static void transferArrowCall(const CallExpr *Expr,
+static void transferArrowCall(const CXXOperatorCallExpr *Expr,
                               const MatchFinder::MatchResult &,
                               LatticeTransferState &State) {
   auto *StatusOrLoc = State.Env.get<RecordStorageLocation>(*Expr->getArg(0));
@@ -1062,6 +1062,16 @@ static void transferArrowCall(const CallExpr *Expr,
     return;
   State.Env.setValue(*Expr, State.Env.create<PointerValue>(
                                 StatusOrLoc->getSyntheticField("value")));
+}
+
+static void transferValueCall(const CXXMemberCallExpr *Expr,
+                              const MatchFinder::MatchResult &,
+                              LatticeTransferState &State) {
+  auto *StatusOrLoc = getImplicitObjectLocation(*Expr, State.Env);
+
+  if (StatusOrLoc && State.Env.getStorageLocation(*Expr) == nullptr)
+    State.Env.setStorageLocation(*Expr,
+                                 StatusOrLoc->getSyntheticField("value"));
 }
 
 static RecordStorageLocation *
@@ -1150,10 +1160,12 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                                           transferValueAssignmentCall)
       .CaseOfCFGStmt<CXXConstructExpr>(isStatusOrValueConstructor(),
                                        transferValueConstructor)
-      .CaseOfCFGStmt<CallExpr>(isStatusOrOperatorCallWithName("->"),
-                               transferArrowCall)
-      .CaseOfCFGStmt<CallExpr>(isStatusOrOperatorCallWithName("*"),
-                               transferDerefCall)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(isStatusOrOperatorCallWithName("->"),
+                                          transferArrowCall)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(isStatusOrOperatorCallWithName("*"),
+                                          transferDerefCall)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isStatusOrMemberCallWithName("value"),
+                                        transferValueCall)
       .CaseOfCFGStmt<CallExpr>(isAsStatusCallWithStatus(),
                                transferAsStatusCallWithStatus)
       .CaseOfCFGStmt<CallExpr>(isAsStatusCallWithStatusOr(),
