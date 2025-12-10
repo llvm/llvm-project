@@ -13,12 +13,10 @@ config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"
 config.flang_obj_root = "@FLANG_BINARY_DIR@"
 config.flang_tools_dir = lit_config.substitute("@FLANG_TOOLS_DIR@")
+config.flang_intrinsic_modules_dir = "@FLANG_INTRINSIC_MODULES_DIR@"
 config.flang_headers_dir = "@HEADER_BINARY_DIR@"
 config.flang_llvm_tools_dir = "@CMAKE_BINARY_DIR@/bin"
 config.flang_test_triple = "@FLANG_TEST_TARGET_TRIPLE@"
-config.flang_test_fortran_flags = "@FLANG_TEST_Fortran_FLAGS@".split()
-config.flang_test_enable_modules = @FLANG_TEST_ENABLE_MODULES@
-config.flang_test_enable_openmp = @FLANG_TEST_ENABLE_OPENMP@
 config.flang_examples = @LLVM_BUILD_EXAMPLES@
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.flang_standalone_build = @FLANG_STANDALONE_BUILD@
@@ -27,6 +25,11 @@ config.linked_bye_extension = @LLVM_BYE_LINK_INTO_TOOLS@
 config.osx_sysroot = path(r"@CMAKE_OSX_SYSROOT@")
 config.targets_to_build = "@TARGETS_TO_BUILD@"
 config.default_sysroot = "@DEFAULT_SYSROOT@"
+config.have_openmp_rtl = ("@LLVM_TOOL_OPENMP_BUILD@" == "TRUE") or ("openmp" in "@LLVM_ENABLE_RUNTIMES@".lower().split(";"))
+if "openmp" in "@LLVM_ENABLE_RUNTIMES@".lower().split(";"):
+    config.openmp_module_dir = "@CMAKE_BINARY_DIR@/runtimes/runtimes-bins/openmp/runtime/src"
+else:
+    config.openmp_module_dir = None
 config.flang_runtime_f128_math_lib = "@FLANG_RUNTIME_F128_MATH_LIB@"
 config.have_ldbl_mant_dig_113 = "@HAVE_LDBL_MANT_DIG_113@"
 

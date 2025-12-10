@@ -143,8 +143,7 @@ void HIPSPVToolChain::addClangTargetOptions(
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
-                         options::OPT_fvisibility_ms_compat) &&
-      !getDriver().IsFlangMode())
+                         options::OPT_fvisibility_ms_compat))
     CC1Args.append(
         {"-fvisibility=hidden", "-fapply-global-visibility-to-externs"});
 
