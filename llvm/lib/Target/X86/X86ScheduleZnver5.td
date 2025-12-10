@@ -685,16 +685,16 @@ def Zn5WriteCMPXCHG8rm_LCMPXCHG8 : SchedWriteRes<[Zn5AGU0123, Zn5Load, Zn5ALU0_5
 def : InstRW<[Zn5WriteCMPXCHG8rm_LCMPXCHG8], (instrs CMPXCHG8rm, LCMPXCHG8)>;
 
 def Zn5WriteCMPXCHG8B : SchedWriteRes<[Zn5ALU0_5]> {
-  let Latency = 3;
-  let ReleaseAtCycles = [24];
-  let NumMicroOps = 19;
+  let Latency = 9;
+  let ReleaseAtCycles = [20];
+  let NumMicroOps = 15;
 }
 def : InstRW<[Zn5WriteCMPXCHG8B], (instrs CMPXCHG8B)>;
 
 def Zn5WriteCMPXCHG16B_LCMPXCHG16B : SchedWriteRes<[Zn5ALU0_5]> {
-  let Latency = 4;
-  let ReleaseAtCycles = [59];
-  let NumMicroOps = 28;
+  let Latency = 19;
+  let ReleaseAtCycles = [57];
+  let NumMicroOps = 26;
 }
 def : InstRW<[Zn5WriteCMPXCHG16B_LCMPXCHG16B], (instrs CMPXCHG16B, LCMPXCHG16B)>;
 
