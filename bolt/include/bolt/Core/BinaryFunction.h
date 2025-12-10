@@ -385,6 +385,10 @@ private:
   /// True if the function should not have an associated symbol table entry.
   bool IsAnonymous{false};
 
+  /// Indicates whether branch validation has already been performed,
+  /// to avoid redundant processing.
+  bool NeedBranchValidation{true};
+
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -2320,6 +2324,11 @@ public:
   /// zero-value bytes.
   bool isZeroPaddingAt(uint64_t Offset) const;
 
+  /// Validate if the target of any internal direct branch/call is a valid
+  /// executable instruction.
+  /// Return true if all the targets are valid, false otherwise.
+  bool validateInternalBranches();
+
   /// Check that entry points have an associated instruction at their
   /// offsets after disassembly.
   void postProcessEntryPoints();
@@ -2572,6 +2581,10 @@ public:
 
   /// Return true if the function is an AArch64 linker inserted veneer
   bool isAArch64Veneer() const;
+
+  /// Return true if the function signature matches veneer or it was established
+  /// to be a veneer.
+  bool isPossibleVeneer() const;
 
   virtual ~BinaryFunction();
 };

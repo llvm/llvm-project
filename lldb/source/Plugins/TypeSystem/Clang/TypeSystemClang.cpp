@@ -3871,9 +3871,8 @@ TypeSystemClang::GetDisplayTypeName(lldb::opaque_compiler_type_t type) {
   printing_policy.SuppressTagKeyword = true;
   printing_policy.SuppressScope = false;
   printing_policy.SuppressUnwrittenScope = true;
-  // FIXME: should we suppress "All" inline namespaces?
-  printing_policy.SuppressInlineNamespace = llvm::to_underlying(
-      PrintingPolicy::SuppressInlineNamespaceMode::Redundant);
+  printing_policy.SuppressInlineNamespace =
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::All);
   return ConstString(qual_type.getAsString(printing_policy));
 }
 
