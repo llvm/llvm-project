@@ -7302,7 +7302,6 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   }
   case Intrinsic::experimental_vp_reverse: {
     Value *Vec = Call->getArgOperand(0);
-    Value *Mask = Call->getArgOperand(1);
     Value *EVL = Call->getArgOperand(2);
 
     Value *X;
