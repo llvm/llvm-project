@@ -73,12 +73,10 @@ SmallString<64> computeThinArchiveMemberPath(const StringRef ArchivePath,
 // This function uses a cache to avoid repeatedly reading the same file.
 // It reads only the header portion (magic bytes) of the file to identify
 // the archive type.
-Expected<bool> isThinArchive(const StringRef ArchivePath) {
-  static StringMap<bool> ArchiveFiles;
-
+Expected<bool> isThinArchive(lto::DTLTO *Dtlto, const StringRef ArchivePath) {
   // Return cached result if available.
-  auto Cached = ArchiveFiles.find(ArchivePath);
-  if (Cached != ArchiveFiles.end())
+  auto Cached = Dtlto->ArchiveFiles.find(ArchivePath);
+  if (Cached != Dtlto->ArchiveFiles.end())
     return Cached->second;
 
   uint64_t FileSize = -1;
@@ -112,7 +110,7 @@ Expected<bool> isThinArchive(const StringRef ArchivePath) {
   IsThin = MemBuf.starts_with(object::ThinArchiveMagic);
 
   // Cache the result
-  ArchiveFiles[ArchivePath] = IsThin;
+  Dtlto->ArchiveFiles[ArchivePath] = IsThin;
   return IsThin;
 }
 
@@ -136,10 +134,6 @@ void lto::DTLTO::removeTempFiles() {
 Expected<std::shared_ptr<lto::InputFile>>
 lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
 
-  // Skip processing if not in DTLTO mode.
-  if (!Dtlto)
-    return std::shared_ptr<lto::InputFile>(InputPtr.release());
-
   // Add the input file to the LTO object.
   InputFiles.emplace_back(InputPtr.release());
   std::shared_ptr<lto::InputFile> &Input = InputFiles.back();
@@ -155,7 +149,7 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
   BitcodeModule &BM = Input->getSingleBitcodeModule();
 
   // Check if the archive is a thin archive.
-  Expected<bool> IsThin = dtlto::isThinArchive(ArchivePath);
+  Expected<bool> IsThin = dtlto::isThinArchive(this, ArchivePath);
   if (!IsThin)
     return IsThin.takeError();
 
@@ -213,7 +207,7 @@ Error saveInputArchiveMembers(lto::DTLTO &LtoObj) {
 //
 // Sets up the temporary file remover and processes archive members.
 // Must be called after all inputs are added but before optimization begins.
-llvm::Error lto::DTLTO::dtlto_process() {
+llvm::Error lto::DTLTO::handleArchiveInputs() {
 
   // Process and save archive members to separate files if needed.
   if (Error EC = dtlto::saveInputArchiveMembers(*this))

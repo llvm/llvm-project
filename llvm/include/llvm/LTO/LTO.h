@@ -613,15 +613,12 @@ private:
   LLVMRemarkFileHandle DiagnosticOutputFile;
 
 public:
-  // DTLTO mode.
-  bool Dtlto = false;
-
   virtual Expected<std::shared_ptr<lto::InputFile>>
   addInput(std::unique_ptr<lto::InputFile> InputPtr) {
     return std::shared_ptr<lto::InputFile>(InputPtr.release());
   }
 
-  virtual llvm::Error dtlto_process() { return llvm::Error::success(); }
+  virtual llvm::Error handleArchiveInputs() { return llvm::Error::success(); }
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

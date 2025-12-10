@@ -33,7 +33,9 @@ public:
   LLVM_ABI virtual Expected<std::shared_ptr<lto::InputFile>>
   addInput(std::unique_ptr<lto::InputFile> InputPtr) override;
 
-  LLVM_ABI virtual llvm::Error dtlto_process() override;
+  LLVM_ABI virtual llvm::Error handleArchiveInputs() override;
+
+  StringMap<bool> ArchiveFiles;
 };
 } // namespace lto
 } // namespace llvm

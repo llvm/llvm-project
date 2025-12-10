@@ -1213,10 +1213,9 @@ Error LTO::checkPartiallySplit() {
 }
 
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
-  if (Dtlto) {
-    if (Error EC = dtlto_process())
-      return EC;
-  }
+  if (Error EC = handleArchiveInputs())
+    return EC;
+
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
   DenseMap<GlobalValue::GUID, PrevailingType> GUIDPrevailingResolutions;

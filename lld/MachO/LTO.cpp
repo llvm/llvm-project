@@ -102,7 +102,7 @@ BitcodeCompiler::BitcodeCompiler() {
         config->thinLTOEmitImportsFiles);
   }
 
-  ltoObj = std::make_unique<lto::DTLTO>(createConfig(), backend);
+  ltoObj = std::make_unique<lto::LTO>(createConfig(), backend);
 }
 
 void BitcodeCompiler::add(BitcodeFile &f) {

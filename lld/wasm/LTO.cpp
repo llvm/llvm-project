@@ -94,8 +94,8 @@ BitcodeCompiler::BitcodeCompiler() {
         onIndexWrite, ctx.arg.thinLTOEmitIndexFiles,
         ctx.arg.thinLTOEmitImportsFiles);
   }
-  ltoObj = std::make_unique<lto::DTLTO>(createConfig(), backend,
-                                        ctx.arg.ltoPartitions);
+  ltoObj = std::make_unique<lto::LTO>(createConfig(), backend,
+                                      ctx.arg.ltoPartitions);
 }
 
 BitcodeCompiler::~BitcodeCompiler() = default;

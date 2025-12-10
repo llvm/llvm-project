@@ -199,13 +199,14 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
       llvm::lto::LTO::LTOKind::LTOK_UnifiedThin,
       llvm::lto::LTO::LTOKind::LTOK_UnifiedRegular,
       llvm::lto::LTO::LTOKind::LTOK_Default};
-  ltoObj = std::make_unique<lto::DTLTO>(createConfig(ctx), backend,
+  if (ctx.arg.dtltoDistributor.empty())
+    ltoObj = std::make_unique<lto::LTO>(createConfig(ctx), backend,
                                         ctx.arg.ltoPartitions,
                                         ltoModes[ctx.arg.ltoKind]);
-
-  if (!ctx.arg.dtltoDistributor.empty())
-    ltoObj->Dtlto = true;
-
+  else
+    ltoObj = std::make_unique<lto::DTLTO>(createConfig(ctx), backend,
+                                          ctx.arg.ltoPartitions,
+                                          ltoModes[ctx.arg.ltoKind]);
   // Initialize usedStartStop.
   if (ctx.bitcodeFiles.empty())
     return;
