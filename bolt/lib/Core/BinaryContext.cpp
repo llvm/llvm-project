@@ -2598,6 +2598,10 @@ BinaryContext::createInstructionPatch(uint64_t Address,
   PBF->addBasicBlock()->addInstructions(Instructions);
   PBF->setIsPatch(true);
 
+  // Patch functions have to be emitted each into their unique section.
+  PBF->setCodeSectionName(
+      BinaryFunction::buildCodeSectionName(PBF->getOneName(), *this));
+
   // Don't create symbol table entry if the name wasn't specified.
   if (Name.str().empty())
     PBF->setAnonymous(true);
