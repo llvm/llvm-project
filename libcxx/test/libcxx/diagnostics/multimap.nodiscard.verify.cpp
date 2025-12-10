@@ -67,8 +67,8 @@ void test() {
   m.find(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cm.find(key); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #if TEST_STD_VER >= 14
-  std::map<int, int, TransparentCompare> tm;
-  const std::map<int, int, TransparentCompare> ctm{};
+  std::multimap<int, int, TransparentCompare> tm;
+  const std::multimap<int, int, TransparentCompare> ctm{};
 
   TransparentKey tkey;
 
