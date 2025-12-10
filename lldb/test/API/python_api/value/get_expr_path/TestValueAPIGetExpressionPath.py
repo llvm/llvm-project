@@ -39,7 +39,7 @@ class ValueAPIGetExpressionPath(TestBase):
         for j in range(3):
             self.assertEqual(
                 frame.FindVariable("bar").GetChildAtIndex(j).get_expr_path(),
-                f"(*bar)[{j}]",
+                f"bar[0][{j}]",
             )
             for k in range(4):
                 self.assertEqual(
@@ -47,5 +47,5 @@ class ValueAPIGetExpressionPath(TestBase):
                     .GetChildAtIndex(j)
                     .GetChildAtIndex(k)
                     .get_expr_path(),
-                    f"(*bar)[{j}][{k}]",
+                    f"bar[0][{j}][{k}]",
                 )

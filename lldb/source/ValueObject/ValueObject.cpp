@@ -2144,9 +2144,8 @@ void ValueObject::GetExpressionPath(Stream &s,
     const bool pointeeOfParentTypeIsArray =
         parentType.GetPointeeType().IsArrayType(nullptr, nullptr, nullptr);
     if (parentTypeIsPointer && pointeeOfParentTypeIsArray) {
-      s.PutCString("(*");
       parent->GetExpressionPath(s, epformat);
-      s.PutCString(")");
+      s.PutCString("[0]");
       s.PutCString(GetName().GetCString());
       return;
     }
