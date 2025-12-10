@@ -443,6 +443,8 @@ def AllowMisalignedMemAccesses
 
 def UseWzrToVecMove : Predicate<"Subtarget->useWzrToVecMove()">;
 
+def AllowUnpredicatedLdStLower
+                    : Predicate<"!Subtarget->disableUnpredicatedLdStLower()">;
 
 //===----------------------------------------------------------------------===//
 // AArch64-specific DAG Nodes.

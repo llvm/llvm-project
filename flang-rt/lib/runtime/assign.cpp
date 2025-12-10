@@ -366,7 +366,7 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
                                    "assignment to unallocated allocatable",
           to_.rank(), from_->rank());
     }
-  } else if (!to_.IsAllocated()) {
+  } else if (!to_.IsAllocated() && to_.Elements()) {
     workQueue.terminator().Crash(
         "Assign: left-hand side variable is neither allocated nor allocatable");
   }
