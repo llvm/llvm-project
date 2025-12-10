@@ -98,8 +98,6 @@ void LspServer::handleRequestGetReferences(
   const auto &Doc = OpenDocuments[Filepath.str()];
   if (Instruction *MaybeI = Doc->getInstructionAtLocation(Line, Character)) {
     auto TryAddReference = [&Result, &Params, &Doc](Instruction *I) {
-      // FIXME: very hacky way to remove the newline from the reference...
-      //   we need to have the parser set the proper end
       auto MaybeInstLocation = Doc->ParserContext.getInstructionLocation(I);
       if (!MaybeInstLocation)
         return;
