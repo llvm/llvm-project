@@ -131,9 +131,9 @@ public:
     return false;
   }
 
-  virtual bool isSourceOfDivergence(const Value *V) const { return false; }
-
-  virtual bool isAlwaysUniform(const Value *V) const { return false; }
+  virtual InstructionUniformity getInstructionUniformity(const Value *V) const {
+    return InstructionUniformity::Default;
+  }
 
   virtual bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
     return false;
