@@ -1572,17 +1572,18 @@ struct MMAOperandFragment {
   explicit MMAOperandFragment(StringRef name, StringRef ptxTypeName)
       : operandName(name), ptxTypeAttr(ptxTypeName) {}
 };
+} // namespace
 
 // Helper to print operand list in the format: name[operands]
-void printOperandList(OpAsmPrinter &p, StringRef name,
-                      ArrayRef<Value> operands) {
+static void printOperandList(OpAsmPrinter &p, StringRef name,
+                             ArrayRef<Value> operands) {
   p << " " << name << "[";
   p.printOperands(operands);
   p << "]";
 }
 
 // Helper to parse operand list in the format: name[operands]
-LogicalResult
+static LogicalResult
 parseMmaOperand(OpAsmParser &parser, StringRef operandName,
                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &regs) {
   if (parser.parseKeyword(operandName).failed())
@@ -1596,9 +1597,10 @@ parseMmaOperand(OpAsmParser &parser, StringRef operandName,
 // Helper to process operand fragments and determine which attributes can be
 // inferred
 template <typename Op>
-void processOperandFragments(Op &op, std::array<MMAOperandFragment, 3> &frags,
-                             SmallVectorImpl<Type> &regTypes,
-                             SmallVectorImpl<StringRef> &ignoreAttrNames) {
+static void
+processOperandFragments(Op &op, std::array<MMAOperandFragment, 3> &frags,
+                        SmallVectorImpl<Type> &regTypes,
+                        SmallVectorImpl<StringRef> &ignoreAttrNames) {
   for (unsigned fragIdx = 0; fragIdx < frags.size(); fragIdx++) {
     auto &frag = frags[fragIdx];
     auto varOperandSpec = op.getODSOperandIndexAndLength(fragIdx);
@@ -1622,8 +1624,9 @@ void processOperandFragments(Op &op, std::array<MMAOperandFragment, 3> &frags,
 }
 
 // Helper to parse type signature: (A_type, B_type, C_type)
-LogicalResult parseMmaTypeSignature(OpAsmParser &parser,
-                                    SmallVectorImpl<Type> &operandTypes) {
+static LogicalResult
+parseMmaTypeSignature(OpAsmParser &parser,
+                      SmallVectorImpl<Type> &operandTypes) {
   if (parser.parseColon().failed() || parser.parseLParen().failed())
     return failure();
 
@@ -1645,8 +1648,9 @@ LogicalResult parseMmaTypeSignature(OpAsmParser &parser,
 }
 
 // Helper to infer and set multiplicand PTX type attributes
-void inferAndSetMultiplicandTypes(MLIRContext *ctx, NamedAttrList &attrs,
-                                  const SmallVectorImpl<Type> &operandTypes) {
+static void
+inferAndSetMultiplicandTypes(MLIRContext *ctx, NamedAttrList &attrs,
+                             const SmallVectorImpl<Type> &operandTypes) {
   if (!attrs.get("multiplicandAPtxType")) {
     if (auto inferredType =
             MmaOp::inferOperandMMAType(operandTypes[0], false)) {
@@ -1663,10 +1667,11 @@ void inferAndSetMultiplicandTypes(MLIRContext *ctx, NamedAttrList &attrs,
 
 // Helper to add common block scale properties
 template <typename OpType>
-void addBlockScaleProperties(OpBuilder &builder, OperationState &result,
-                             ArrayRef<int64_t> shape, ScaleVecSize scaleVecSize,
-                             BlockScaleFormat blockScaleFormat,
-                             MMABlockScaleKind kind) {
+static void addBlockScaleProperties(OpBuilder &builder, OperationState &result,
+                                    ArrayRef<int64_t> shape,
+                                    ScaleVecSize scaleVecSize,
+                                    BlockScaleFormat blockScaleFormat,
+                                    MMABlockScaleKind kind) {
   MLIRContext *ctx = builder.getContext();
   auto &properties = result.getOrAddProperties<typename OpType::Properties>();
   properties.setShape(
@@ -1678,7 +1683,7 @@ void addBlockScaleProperties(OpBuilder &builder, OperationState &result,
 }
 
 // Helper to infer and add multiplicand PTX types to builder
-void addInferredMultiplicandTypes(
+static void addInferredMultiplicandTypes(
     MLIRContext *ctx, OperationState &result, ValueRange operandA,
     ValueRange operandB,
     std::optional<std::array<MMATypes, 2>> multiplicandPtxTypes) {
@@ -1697,12 +1702,11 @@ void addInferredMultiplicandTypes(
 
 // Template helper for common accumPtxType/resultPtxType implementation
 template <typename OpTy>
-MMATypes inferPtxTypeFromResult(OpTy op) {
+static MMATypes inferPtxTypeFromResult(OpTy op) {
   return *MmaOp::inferOperandMMAType(
       cast<LLVM::LLVMStructType>(op.getRes().getType()).getBody()[0],
       /*isAccumulator=*/true);
 }
-} // namespace
 
 //===----------------------------------------------------------------------===//
 // MmaBlockScaleOp
