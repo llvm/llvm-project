@@ -101,6 +101,14 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 
   std::pair<InstructionCost, MVT> getTypeLegalizationCost(Type *Ty) const;
 
+  /// \returns true if the result of the value could potentially be
+  /// different across workitems in a wavefront.
+  bool isSourceOfDivergence(const Value *V) const;
+
+  /// Returns true for the target specific set of operations which produce
+  /// uniform result even taking non-uniform arguments.
+  bool isAlwaysUniform(const Value *V) const;
+
 public:
   explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
@@ -174,8 +182,6 @@ public:
                                      const Value *Op1) const override;
 
   bool isReadRegisterSourceOfDivergence(const IntrinsicInst *ReadReg) const;
-  bool isSourceOfDivergence(const Value *V) const override;
-  bool isAlwaysUniform(const Value *V) const override;
 
   bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
     // Address space casts must cast between different address spaces.

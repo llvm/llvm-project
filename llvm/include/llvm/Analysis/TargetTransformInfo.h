@@ -458,17 +458,6 @@ public:
   /// uniformity analysis and assume all values are uniform.
   LLVM_ABI bool hasBranchDivergence(const Function *F = nullptr) const;
 
-  /// Returns whether V is a source of divergence.
-  ///
-  /// This function provides the target-dependent information for
-  /// the target-independent UniformityAnalysis.
-  LLVM_ABI bool isSourceOfDivergence(const Value *V) const;
-
-  // Returns true for the target specific
-  // set of operations which produce uniform result
-  // even taking non-uniform arguments
-  LLVM_ABI bool isAlwaysUniform(const Value *V) const;
-
   /// Get target-specific uniformity information for an instruction.
   /// This allows targets to provide more fine-grained control over
   /// uniformity analysis by specifying whether specific instructions

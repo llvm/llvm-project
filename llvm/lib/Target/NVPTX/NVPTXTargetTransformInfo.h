@@ -37,6 +37,10 @@ class NVPTXTTIImpl final : public BasicTTIImplBase<NVPTXTTIImpl> {
   const NVPTXSubtarget *getST() const { return ST; };
   const NVPTXTargetLowering *getTLI() const { return TLI; };
 
+  /// \returns true if the result of the value could potentially be
+  /// different across threads in a warp.
+  bool isSourceOfDivergence(const Value *V) const;
+
 public:
   explicit NVPTXTTIImpl(const NVPTXTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl()),
@@ -45,8 +49,6 @@ public:
   bool hasBranchDivergence(const Function *F = nullptr) const override {
     return true;
   }
-
-  bool isSourceOfDivergence(const Value *V) const override;
 
   unsigned getFlatAddressSpace() const override {
     return AddressSpace::ADDRESS_SPACE_GENERIC;
