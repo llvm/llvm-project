@@ -1019,10 +1019,8 @@ static bool IsSwiftReferenceType(ValueObject &object) {
   return false;
 }
 
-static bool PrintObjectViaPointer(Stream &strm, ValueObject &object,
-                                  Process &process) {
-  Log *log = GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions);
-
+static llvm::Error PrintObjectViaPointer(Stream &strm, ValueObject &object,
+                                         Process &process) {
   Flags flags(object.GetCompilerType().GetTypeInfo());
   addr_t addr = LLDB_INVALID_ADDRESS;
   if (flags.Test(eTypeInstanceIsPointer)) {
@@ -1032,15 +1030,13 @@ static bool PrintObjectViaPointer(Stream &strm, ValueObject &object,
     // Get the address of non-object values (structs, enums).
     auto addr_and_type = object.GetAddressOf(false);
     if (addr_and_type.type != eAddressTypeLoad) {
-      LLDB_LOG(log, "address-of value object failed, preventing use of "
-                    "stringForPrintObject(_:mangledTypeName:)");
-      return false;
+      return llvm::createStringError("address-of value object failed");
     }
     addr = addr_and_type.address;
   }
 
   if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
-    return false;
+    return llvm::createStringError("invalid address 0x%x", addr);
 
   StringRef mangled_type_name = object.GetMangledTypeName();
   // Swift APIs that receive mangled names require the prefix removed.
@@ -1055,37 +1051,29 @@ static bool PrintObjectViaPointer(Stream &strm, ValueObject &object,
           .str();
 
   auto result_or_err = RunObjectDescription(object, expr_string, process, true);
-  if (!result_or_err) {
-    LLDB_LOG_ERROR(log, result_or_err.takeError(),
-                   "stringForPrintObject(_:mangledTypeName:) failed: {0}");
-    return false;
-  }
+  if (!result_or_err)
+    return result_or_err.takeError();
 
   // A `(Bool, String)` tuple, where the bool indicates success/failure.
   auto result_sp = *result_or_err;
   auto success_sp = result_sp->GetChildAtIndex(0);
   auto description_sp = result_sp->GetChildAtIndex(1);
 
-  StreamString dump_stream;
-  auto err = DumpString(description_sp, dump_stream);
+  StreamString string_result;
+  auto err = DumpString(description_sp, string_result);
   if (err) {
-    LLDB_LOG_ERROR(log, std::move(err),
-                   "decoding result of "
-                   "stringForPrintObject(_:mangledTypeName:) failed: {0}");
-    return false;
+    return llvm::joinErrors(
+        std::move(err),
+        llvm::createStringError("decoding of description String failed"));
   }
 
   Status status;
-  if (!success_sp->IsLogicalTrue(status)) {
-    LLDB_LOGF(log,
-              "stringForPrintObject(_:mangledTypeName:) produced error: %s",
-              dump_stream.GetData());
-    return false;
-  }
+  if (!success_sp->IsLogicalTrue(status))
+    // The Bool is false, which means the String is an error message.
+    return llvm::createStringError(string_result.GetData());
 
-  LLDB_LOG(log, "stringForPrintObject(_:mangledTypeName:) succeeded");
-  strm.PutCString(dump_stream.GetString());
-  return true;
+  strm.PutCString(string_result.GetString());
+  return llvm::Error::success();
 }
 
 llvm::Error SwiftLanguageRuntime::GetObjectDescription(Stream &str,
@@ -1093,9 +1081,16 @@ llvm::Error SwiftLanguageRuntime::GetObjectDescription(Stream &str,
   if (object.IsUninitializedReference())
     return llvm::createStringError("<uninitialized>");
 
-  if (GetProcess().GetTarget().GetSwiftUseContextFreePrintObject())
-    if (PrintObjectViaPointer(str, object, GetProcess()))
+  Log *log = GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions);
+  if (GetProcess().GetTarget().GetSwiftUseContextFreePrintObject()) {
+    if (auto err = PrintObjectViaPointer(str, object, GetProcess())) {
+      LLDB_LOG_ERROR(log, std::move(err),
+                     "stringForPrintObject(_:mangledTypeName) failed: {0}");
+    } else {
+      LLDB_LOG(log, "stringForPrintObject(_:mangledTypeName:) succeeded");
       return llvm::Error::success();
+    }
+  }
 
   std::string expr_string;
 
