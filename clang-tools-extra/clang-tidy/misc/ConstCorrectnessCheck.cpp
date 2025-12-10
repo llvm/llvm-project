@@ -130,9 +130,8 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   // Match local variables which could be 'const' if not modified later.
   // Example: `int i = 10` would match `int i`.
   const auto LocalValDecl =
-      varDecl(isLocal(), hasInitializer(anything()),
-              unless(anyOf(CommonExcludeTypes,
-                           hasInitializer(isInstantiationDependent()))));
+      varDecl(isLocal(), hasInitializer(unless(isInstantiationDependent())),
+              unless(CommonExcludeTypes));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
@@ -140,7 +139,7 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       functionDecl(
           hasBody(stmt(forEachDescendant(
                            declStmt(containsAnyDeclaration(
-                                        LocalValDecl.bind("local-value")),
+                                        LocalValDecl.bind("value")),
                                     unless(has(decompositionDecl())))
                                .bind("decl-stmt")))
                       .bind("scope")))
@@ -152,16 +151,16 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
     const auto ParamMatcher =
         parmVarDecl(unless(CommonExcludeTypes),
                     anyOf(hasType(referenceType()), hasType(pointerType())))
-            .bind("param-var");
+            .bind("value");
 
     // Match function parameters which could be 'const' if not modified later.
     // Example: `void foo(int* ptr)` would match `int* ptr`.
     const auto FunctionWithParams =
         functionDecl(
-            hasBody(stmt().bind("scope-params")),
+            hasBody(stmt().bind("scope")),
             has(typeLoc(forEach(ParamMatcher))), unless(cxxMethodDecl()),
             unless(isFunctionTemplateSpecialization()), unless(isTemplate()))
-            .bind("function-params");
+            .bind("function-decl");
 
     Finder->addMatcher(FunctionWithParams, this);
   }
@@ -200,32 +199,17 @@ enum class VariableCategory { Value, Reference, Pointer };
 } // namespace
 
 void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
-  const Stmt *LocalScope = nullptr;
-  const VarDecl *Variable = nullptr;
-  const FunctionDecl *Function = nullptr;
-  const DeclStmt *VarDeclStmt = nullptr;
-
-  if (const auto *LocalVariable =
-          Result.Nodes.getNodeAs<VarDecl>("local-value")) {
-    Variable = LocalVariable;
-    LocalScope = Result.Nodes.getNodeAs<Stmt>("scope");
-    Function = Result.Nodes.getNodeAs<FunctionDecl>("function-decl");
-    VarDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("decl-stmt");
-  } else if (const auto *Parameter =
-                 Result.Nodes.getNodeAs<ParmVarDecl>("param-var")) {
-    Variable = Parameter;
-    LocalScope = Result.Nodes.getNodeAs<Stmt>("scope-params");
-    Function = Result.Nodes.getNodeAs<FunctionDecl>("function-params");
-  } else {
-    llvm_unreachable("didn't match local-value or param-var");
-  }
+  const auto* Variable = Result.Nodes.getNodeAs<VarDecl>("value");
+  const auto* LocalScope = Result.Nodes.getNodeAs<Stmt>("scope");
+  const auto* Function = Result.Nodes.getNodeAs<FunctionDecl>("function-decl");
+  const auto* VarDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("decl-stmt");
 
   assert(Variable && LocalScope && Function);
 
   // It can not be guaranteed that the variable is declared isolated,
   // therefore a transformation might effect the other variables as well and
   // be incorrect. Parameters don't need this check - they receive values from
-  // callers
+  // callers.
   const bool CanBeFixIt = isa<ParmVarDecl>(Variable) ||
                           (VarDeclStmt && VarDeclStmt->isSingleDecl());
 
