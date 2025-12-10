@@ -657,16 +657,12 @@ SDValue LoongArchTargetLowering::lowerVectorSRL(SDValue Op,
   unsigned EltSize = VT.getScalarSizeInBits();
   MVT GRLenVT = Subtarget.getGRLenVT();
 
-  if (Op.getOpcode() == ISD::SRL) {
-    if (getVShiftAmt(Op.getOperand(1), EltSize, Amt) && Amt >= 0 &&
-        Amt < EltSize)
-      return DAG.getNode(LoongArchISD::VSRLI, DL, VT, Op.getOperand(0),
-                         DAG.getConstant(Amt, DL, GRLenVT));
-    return DAG.getNode(LoongArchISD::VSRL, DL, VT, Op.getOperand(0),
-                       Op.getOperand(1));
-  }
-
-  llvm_unreachable("unexpected shift opcode");
+  assert(Op.getOpcode() == ISD::SRL && "unexpected shift opcode");
+  if (getVShiftAmt(Op.getOperand(1), EltSize, Amt) && Amt >= 0 && Amt < EltSize)
+    return DAG.getNode(LoongArchISD::VSRLI, DL, VT, Op.getOperand(0),
+                       DAG.getConstant(Amt, DL, GRLenVT));
+  return DAG.getNode(LoongArchISD::VSRL, DL, VT, Op.getOperand(0),
+                     Op.getOperand(1));
 }
 
 // Helper to attempt to return a cheaper, bit-inverted version of \p V.
