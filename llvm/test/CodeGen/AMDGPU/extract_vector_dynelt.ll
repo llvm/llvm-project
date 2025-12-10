@@ -1167,3 +1167,367 @@ entry:
   %ext = extractelement <16 x double> <double 1.1, double 2.1, double 3.1, double 4.1, double 5.1, double 6.1, double 7.1, double 8.1, double 9.1, double 10.1, double 11.1, double 12.1, double 13.1, double 14.1, double 15.1, double 16.1>, i32 %sel
   ret double %ext
 }
+
+define i32 @extract_dyn_i32_3(<3 x i32> inreg %arg, i32 %idx) {
+; GCN-LABEL: extract_dyn_i32_3:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s16
+; GCN-NEXT:    v_mov_b32_e32 v2, s17
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s18
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <3 x i32> %arg, i32 %idx
+  ret i32 %x
+}
+
+define i32 @extract_dyn_inreg_i32_3(<3 x i32> inreg %arg, i32 inreg %idx) {
+; GCN-LABEL: extract_dyn_inreg_i32_3:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_cmp_eq_u32 s19, 1
+; GCN-NEXT:    s_cselect_b32 s4, s17, s16
+; GCN-NEXT:    s_cmp_eq_u32 s19, 2
+; GCN-NEXT:    s_cselect_b32 s4, s18, s4
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <3 x i32> %arg, i32 %idx
+  ret i32 %x
+}
+
+define float @extract_dyn_float_3(<3 x float> inreg %arg, i32 %idx) {
+; GCN-LABEL: extract_dyn_float_3:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s16
+; GCN-NEXT:    v_mov_b32_e32 v2, s17
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s18
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <3 x float> %arg, i32 %idx
+  ret float %x
+}
+
+define float @extract_dyn_inreg_float_3(<3 x float> inreg %arg, i32 inreg %idx) {
+; GCN-LABEL: extract_dyn_inreg_float_3:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_cmp_eq_u32 s19, 1
+; GCN-NEXT:    v_mov_b32_e32 v0, s16
+; GCN-NEXT:    v_mov_b32_e32 v1, s17
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s19, 2
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s18
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <3 x float> %arg, i32 %idx
+  ret float %x
+}
+
+define i32 @extract_dyn_i32_5(<5 x i32> inreg %arg, i32 %idx) {
+; GCN-LABEL: extract_dyn_i32_5:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s16
+; GCN-NEXT:    v_mov_b32_e32 v2, s17
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s18
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s19
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s20
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <5 x i32> %arg, i32 %idx
+  ret i32 %x
+}
+
+define i32 @extract_dyn_inreg_i32_5(<5 x i32> inreg %arg, i32 inreg %idx) {
+; GCN-LABEL: extract_dyn_inreg_i32_5:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_cmp_eq_u32 s21, 1
+; GCN-NEXT:    s_cselect_b32 s4, s17, s16
+; GCN-NEXT:    s_cmp_eq_u32 s21, 2
+; GCN-NEXT:    s_cselect_b32 s4, s18, s4
+; GCN-NEXT:    s_cmp_eq_u32 s21, 3
+; GCN-NEXT:    s_cselect_b32 s4, s19, s4
+; GCN-NEXT:    s_cmp_eq_u32 s21, 4
+; GCN-NEXT:    s_cselect_b32 s4, s20, s4
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <5 x i32> %arg, i32 %idx
+  ret i32 %x
+}
+
+define float @extract_dyn_float_5(<5 x float> inreg %arg, i32 %idx) {
+; GCN-LABEL: extract_dyn_float_5:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s16
+; GCN-NEXT:    v_mov_b32_e32 v2, s17
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s18
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s19
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s20
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <5 x float> %arg, i32 %idx
+  ret float %x
+}
+
+define float @extract_dyn_inreg_float_5(<5 x float> inreg %arg, i32 inreg %idx) {
+; GCN-LABEL: extract_dyn_inreg_float_5:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_cmp_eq_u32 s21, 1
+; GCN-NEXT:    v_mov_b32_e32 v0, s16
+; GCN-NEXT:    v_mov_b32_e32 v1, s17
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s21, 2
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s18
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s21, 3
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s19
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s21, 4
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s20
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <5 x float> %arg, i32 %idx
+  ret float %x
+}
+
+define i32 @extract_dyn_i32_6(<6 x i32> inreg %arg, i32 %idx) {
+; GCN-LABEL: extract_dyn_i32_6:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s16
+; GCN-NEXT:    v_mov_b32_e32 v2, s17
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s18
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s19
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s20
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s21
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <6 x i32> %arg, i32 %idx
+  ret i32 %x
+}
+
+define i32 @extract_dyn_inreg_i32_6(<6 x i32> inreg %arg, i32 inreg %idx) {
+; GCN-LABEL: extract_dyn_inreg_i32_6:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_cmp_eq_u32 s22, 1
+; GCN-NEXT:    s_cselect_b32 s4, s17, s16
+; GCN-NEXT:    s_cmp_eq_u32 s22, 2
+; GCN-NEXT:    s_cselect_b32 s4, s18, s4
+; GCN-NEXT:    s_cmp_eq_u32 s22, 3
+; GCN-NEXT:    s_cselect_b32 s4, s19, s4
+; GCN-NEXT:    s_cmp_eq_u32 s22, 4
+; GCN-NEXT:    s_cselect_b32 s4, s20, s4
+; GCN-NEXT:    s_cmp_eq_u32 s22, 5
+; GCN-NEXT:    s_cselect_b32 s4, s21, s4
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <6 x i32> %arg, i32 %idx
+  ret i32 %x
+}
+
+define float @extract_dyn_float_6(<6 x float> inreg %arg, i32 %idx) {
+; GCN-LABEL: extract_dyn_float_6:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s16
+; GCN-NEXT:    v_mov_b32_e32 v2, s17
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s18
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s19
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s20
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s21
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <6 x float> %arg, i32 %idx
+  ret float %x
+}
+
+define float @extract_dyn_inreg_float_6(<6 x float> inreg %arg, i32 inreg %idx) {
+; GCN-LABEL: extract_dyn_inreg_float_6:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_cmp_eq_u32 s22, 1
+; GCN-NEXT:    v_mov_b32_e32 v0, s16
+; GCN-NEXT:    v_mov_b32_e32 v1, s17
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s22, 2
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s18
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s22, 3
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s19
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s22, 4
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s20
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s22, 5
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s21
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <6 x float> %arg, i32 %idx
+  ret float %x
+}
+
+define i32 @extract_dyn_i32_7(<7 x i32> inreg %arg, i32 %idx) {
+; GCN-LABEL: extract_dyn_i32_7:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s16
+; GCN-NEXT:    v_mov_b32_e32 v2, s17
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s18
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s19
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s20
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s21
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s22
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <7 x i32> %arg, i32 %idx
+  ret i32 %x
+}
+
+define i32 @extract_dyn_inreg_i32_7(<7 x i32> inreg %arg, i32 inreg %idx) {
+; GCN-LABEL: extract_dyn_inreg_i32_7:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_cmp_eq_u32 s23, 1
+; GCN-NEXT:    s_cselect_b32 s4, s17, s16
+; GCN-NEXT:    s_cmp_eq_u32 s23, 2
+; GCN-NEXT:    s_cselect_b32 s4, s18, s4
+; GCN-NEXT:    s_cmp_eq_u32 s23, 3
+; GCN-NEXT:    s_cselect_b32 s4, s19, s4
+; GCN-NEXT:    s_cmp_eq_u32 s23, 4
+; GCN-NEXT:    s_cselect_b32 s4, s20, s4
+; GCN-NEXT:    s_cmp_eq_u32 s23, 5
+; GCN-NEXT:    s_cselect_b32 s4, s21, s4
+; GCN-NEXT:    s_cmp_eq_u32 s23, 6
+; GCN-NEXT:    s_cselect_b32 s4, s22, s4
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <7 x i32> %arg, i32 %idx
+  ret i32 %x
+}
+
+define float @extract_dyn_float_7(<7 x float> inreg %arg, i32 %idx) {
+; GCN-LABEL: extract_dyn_float_7:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s16
+; GCN-NEXT:    v_mov_b32_e32 v2, s17
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s18
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s19
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s20
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s21
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s22
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <7 x float> %arg, i32 %idx
+  ret float %x
+}
+
+define float @extract_dyn_inreg_float_7(<7 x float> inreg %arg, i32 inreg %idx) {
+; GCN-LABEL: extract_dyn_inreg_float_7:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_cmp_eq_u32 s23, 1
+; GCN-NEXT:    v_mov_b32_e32 v0, s16
+; GCN-NEXT:    v_mov_b32_e32 v1, s17
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s23, 2
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s18
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s23, 3
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s19
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s23, 4
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s20
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s23, 5
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s21
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s23, 6
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s22
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %x = extractelement <7 x float> %arg, i32 %idx
+  ret float %x
+}
