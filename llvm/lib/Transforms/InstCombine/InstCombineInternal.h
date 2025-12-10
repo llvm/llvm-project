@@ -758,6 +758,8 @@ public:
                                    const APInt &C);
   Instruction *foldICmpSRemConstant(ICmpInst &Cmp, BinaryOperator *UDiv,
                                     const APInt &C);
+  Instruction *foldICmpRemConstant(ICmpInst &Cmp, BinaryOperator *Rem,
+                                   const APInt &C);
   Instruction *foldICmpUDivConstant(ICmpInst &Cmp, BinaryOperator *UDiv,
                                     const APInt &C);
   Instruction *foldICmpDivConstant(ICmpInst &Cmp, BinaryOperator *Div,

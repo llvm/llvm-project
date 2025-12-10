@@ -2735,6 +2735,61 @@ Instruction *InstCombinerImpl::foldICmpSRemConstant(ICmpInst &Cmp,
   return new ICmpInst(ICmpInst::ICMP_UGT, And, ConstantInt::get(Ty, SignMask));
 }
 
+/// Fold icmp {eq, ne} ({us}rem (mul n{us}w XZ, YZ)), 0 ->
+/// icmp {eq, ne} ({us}rem (mul n{us}w X, Y)), 0
+Instruction *InstCombinerImpl::foldICmpRemConstant(ICmpInst &Cmp,
+                                                   BinaryOperator *Rem,
+                                                   const APInt &C) {
+  assert((Rem->getOpcode() == Instruction::SRem ||
+          Rem->getOpcode() == Instruction::URem) &&
+         "foldICmpRemConstant is only for srem/urem.");
+
+  if (!C.isZero() || !Rem->hasOneUse())
+    return nullptr;
+
+  const ICmpInst::Predicate Pred = Cmp.getPredicate();
+  if (Pred != ICmpInst::ICMP_EQ && Pred != ICmpInst::ICMP_NE)
+    return nullptr;
+
+  Value *Dividend = Rem->getOperand(0);
+  Value *Divisor = Rem->getOperand(1);
+
+  Value *X, *Y, *Z;
+  Value *NewRem;
+  if (Rem->getOpcode() == Instruction::SRem) {
+    if (!match(Dividend, m_NSWMul(m_Value(X), m_Value(Z))))
+      return nullptr;
+
+    // m_c_NSWMul does not exist
+    if (!match(Divisor, m_NSWMul(m_Value(Y), m_Specific(Z))) &&
+        !match(Divisor, m_NSWMul(m_Specific(Z), m_Value(Y)))) {
+      std::swap(X, Z);
+      if (!match(Divisor, m_NSWMul(m_Value(Y), m_Specific(Z))) &&
+          !match(Divisor, m_NSWMul(m_Specific(Z), m_Value(Y))))
+        return nullptr;
+    }
+
+    NewRem = Builder.CreateSRem(X, Y);
+  } else if (Rem->getOpcode() == Instruction::URem) {
+    if (!match(Dividend, m_NUWMul(m_Value(X), m_Value(Z))))
+      return nullptr;
+
+    // m_c_NUWMul does not exist
+    if (!match(Divisor, m_NUWMul(m_Value(Y), m_Specific(Z))) &&
+        !match(Divisor, m_NUWMul(m_Specific(Z), m_Value(Y)))) {
+      std::swap(X, Z);
+      if (!match(Divisor, m_NUWMul(m_Value(Y), m_Specific(Z))) &&
+          !match(Divisor, m_NUWMul(m_Specific(Z), m_Value(Y))))
+        return nullptr;
+    }
+
+    NewRem = Builder.CreateURem(X, Y);
+  }
+
+  Type *Ty = Rem->getType();
+  return new ICmpInst(Pred, NewRem, ConstantInt::getNullValue(Ty));
+}
+
 /// Fold icmp (udiv X, Y), C.
 Instruction *InstCombinerImpl::foldICmpUDivConstant(ICmpInst &Cmp,
                                                     BinaryOperator *UDiv,
@@ -4008,6 +4063,10 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
     break;
   case Instruction::SRem:
     if (Instruction *I = foldICmpSRemConstant(Cmp, BO, C))
+      return I;
+    [[fallthrough]];
+  case Instruction::URem:
+    if (Instruction *I = foldICmpRemConstant(Cmp, BO, C))
       return I;
     break;
   case Instruction::UDiv:

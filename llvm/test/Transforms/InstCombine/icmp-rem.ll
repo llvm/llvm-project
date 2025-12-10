@@ -6,9 +6,7 @@ declare void @use(i8)
 define i1 @icmp_eq_srem_mul(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i1 @icmp_eq_srem_mul(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[B:%.*]] = mul nsw i8 [[Y]], [[Z]]
-; CHECK-NEXT:    [[TMP1:%.*]] = srem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = srem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -22,9 +20,7 @@ define i1 @icmp_eq_srem_mul(i8 %x, i8 %y, i8 %z) {
 define i1 @icmp_eq_srem_mul_commuted1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i1 @icmp_eq_srem_mul_commuted1(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[Z]], [[X]]
-; CHECK-NEXT:    [[B:%.*]] = mul nsw i8 [[Y]], [[Z]]
-; CHECK-NEXT:    [[TMP1:%.*]] = srem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = srem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -38,9 +34,7 @@ define i1 @icmp_eq_srem_mul_commuted1(i8 %x, i8 %y, i8 %z) {
 define i1 @icmp_eq_srem_mul_commuted2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i1 @icmp_eq_srem_mul_commuted2(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[B:%.*]] = mul nsw i8 [[Z]], [[Y]]
-; CHECK-NEXT:    [[TMP1:%.*]] = srem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = srem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -54,9 +48,7 @@ define i1 @icmp_eq_srem_mul_commuted2(i8 %x, i8 %y, i8 %z) {
 define i1 @icmp_eq_srem_mul_commuted3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i1 @icmp_eq_srem_mul_commuted3(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[Z]], [[X]]
-; CHECK-NEXT:    [[B:%.*]] = mul nsw i8 [[Z]], [[Y]]
-; CHECK-NEXT:    [[TMP1:%.*]] = srem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = srem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -74,7 +66,7 @@ define i1 @icmp_eq_srem_mul_multi_use(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    call void @use(i8 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = mul nsw i8 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i8 [[B]])
-; CHECK-NEXT:    [[R:%.*]] = srem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = srem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -90,9 +82,7 @@ define i1 @icmp_eq_srem_mul_multi_use(i8 %x, i8 %y, i8 %z) {
 define i1 @icmp_ne_srem_mul(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i1 @icmp_ne_srem_mul(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[B:%.*]] = mul nsw i8 [[Y]], [[Z]]
-; CHECK-NEXT:    [[TMP1:%.*]] = srem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = srem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -106,9 +96,7 @@ define i1 @icmp_ne_srem_mul(i8 %x, i8 %y, i8 %z) {
 define i1 @icmp_eq_srem_mul_const1(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @icmp_eq_srem_mul_const1(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X]], -2
-; CHECK-NEXT:    [[B:%.*]] = mul nsw i8 [[Y]], -2
-; CHECK-NEXT:    [[R:%.*]] = srem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = srem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -122,9 +110,7 @@ define i1 @icmp_eq_srem_mul_const1(i8 %x, i8 %y) {
 define i1 @icmp_eq_srem_mul_const2(i8 %x, i8 %z) {
 ; CHECK-LABEL: define i1 @icmp_eq_srem_mul_const2(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[B:%.*]] = mul nsw i8 [[Z]], -3
-; CHECK-NEXT:    [[R:%.*]] = srem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = srem i8 [[X]], 3
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -138,9 +124,7 @@ define i1 @icmp_eq_srem_mul_const2(i8 %x, i8 %z) {
 define i1 @icmp_eq_srem_mul_const3(i8 %y, i8 %z) {
 ; CHECK-LABEL: define i1 @icmp_eq_srem_mul_const3(
 ; CHECK-SAME: i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[Z]], -3
-; CHECK-NEXT:    [[B:%.*]] = mul nsw i8 [[Y]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = srem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = srem i8 -3, [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -154,9 +138,7 @@ define i1 @icmp_eq_srem_mul_const3(i8 %y, i8 %z) {
 define <2 x i1> @icmp_eq_srem_mul_vec_splat(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_srem_mul_vec_splat(
 ; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <2 x i8> [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nsw <2 x i8> [[X]], [[Z]]
-; CHECK-NEXT:    [[B:%.*]] = mul nsw <2 x i8> [[Y]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = srem <2 x i8> [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = srem <2 x i8> [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[R]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
@@ -284,9 +266,7 @@ define i1 @icmp_eq_srem_mul_negative_wrong_constant(i8 %x, i8 %y, i8 %z) {
 define i1 @icmp_eq_urem_mul(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i1 @icmp_eq_urem_mul(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Y]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -300,9 +280,7 @@ define i1 @icmp_eq_urem_mul(i8 %x, i8 %y, i8 %z) {
 define i1 @icmp_eq_urem_mul_commuted1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i1 @icmp_eq_urem_mul_commuted1(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[Z]], [[X]]
-; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Y]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -316,9 +294,7 @@ define i1 @icmp_eq_urem_mul_commuted1(i8 %x, i8 %y, i8 %z) {
 define i1 @icmp_eq_urem_mul_commuted2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i1 @icmp_eq_urem_mul_commuted2(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Z]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -332,9 +308,7 @@ define i1 @icmp_eq_urem_mul_commuted2(i8 %x, i8 %y, i8 %z) {
 define i1 @icmp_eq_urem_mul_commuted3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i1 @icmp_eq_urem_mul_commuted3(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[Z]], [[X]]
-; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Z]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -352,7 +326,7 @@ define i1 @icmp_eq_urem_mul_multi_use(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    call void @use(i8 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i8 [[B]])
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -368,9 +342,7 @@ define i1 @icmp_eq_urem_mul_multi_use(i8 %x, i8 %y, i8 %z) {
 define i1 @icmp_ne_urem_mul(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define i1 @icmp_ne_urem_mul(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Y]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[R]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -384,9 +356,7 @@ define i1 @icmp_ne_urem_mul(i8 %x, i8 %y, i8 %z) {
 define i1 @icmp_eq_urem_mul_const1(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @icmp_eq_urem_mul_const1(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X]], 3
-; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Y]], 3
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -400,9 +370,7 @@ define i1 @icmp_eq_urem_mul_const1(i8 %x, i8 %y) {
 define i1 @icmp_eq_urem_mul_const2(i8 %x, i8 %z) {
 ; CHECK-LABEL: define i1 @icmp_eq_urem_mul_const2(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Z]], 3
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X]], 3
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -416,9 +384,7 @@ define i1 @icmp_eq_urem_mul_const2(i8 %x, i8 %z) {
 define i1 @icmp_eq_urem_mul_const3(i8 %y, i8 %z) {
 ; CHECK-LABEL: define i1 @icmp_eq_urem_mul_const3(
 ; CHECK-SAME: i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[Z]], 3
-; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Y]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = urem i8 3, [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -432,9 +398,7 @@ define i1 @icmp_eq_urem_mul_const3(i8 %y, i8 %z) {
 define <2 x i1> @icmp_eq_urem_mul_vec_splat(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_urem_mul_vec_splat(
 ; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <2 x i8> [[Z:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = mul nuw <2 x i8> [[X]], [[Z]]
-; CHECK-NEXT:    [[B:%.*]] = mul nuw <2 x i8> [[Y]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = urem <2 x i8> [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = urem <2 x i8> [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[R]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
