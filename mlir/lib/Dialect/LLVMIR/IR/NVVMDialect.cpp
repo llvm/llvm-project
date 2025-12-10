@@ -1832,8 +1832,8 @@ void MmaBlockScaleOp::build(
     MMABlockScaleKind kind) {
   assert(shape.size() == 3 && "expected shape to have size 3 (m, n, k)");
 
-  addBlockScaleProperties<MmaBlockScaleOp>(
-      builder, result, shape, scaleVecSize, blockScaleFormat, kind);
+  addBlockScaleProperties<MmaBlockScaleOp>(builder, result, shape, scaleVecSize,
+                                           blockScaleFormat, kind);
 
   result.addOperands(operandA);
   result.addOperands(operandB);
@@ -2088,8 +2088,8 @@ void MmaSpBlockScaleOp::build(
     MMABlockScaleKind kind) {
   assert(shape.size() == 3 && "expected shape to have size 3 (m, n, k)");
 
-  addBlockScaleProperties<MmaSpBlockScaleOp>(builder, result, shape, scaleVecSize,
-                                             blockScaleFormat, kind);
+  addBlockScaleProperties<MmaSpBlockScaleOp>(
+      builder, result, shape, scaleVecSize, blockScaleFormat, kind);
   result.addAttribute("orderedMetadata", builder.getUnitAttr());
 
   result.addOperands(operandA);
