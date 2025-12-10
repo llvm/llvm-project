@@ -29,7 +29,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -1817,10 +1816,9 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   SDValue SourceValue = N->getOperand(0);
   SDValue SinkValue = N->getOperand(1);
   SDValue EltSizeInBytes = N->getOperand(2);
-  const Function &F = DAG.getMachineFunction().getFunction();
 
   // Note: The lane offset is scalable if the mask is scalable.
-  ElementCount LaneOffset =
+  ElementCount LaneOffsetEC =
       ElementCount::get(N->getConstantOperandVal(3), VT.isScalableVT());
 
   EVT PtrVT = SourceValue->getValueType(0);
@@ -1836,62 +1834,19 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   // The pointers do not alias if:
   //  * Diff <= 0 (WAR_MASK)
   //  * Diff == 0 (RAW_MASK)
-  EVT CmpVT = VT.getVectorElementType();
+  EVT CmpVT =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), PtrVT);
   SDValue Zero = DAG.getConstant(0, DL, PtrVT);
   SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
                              IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
 
-  // The pointers do not alias within the mask if Diff >= MaxMaskLane. As:
-  //  * `(ptrB - ptrA) >= elementSize * lane` (WAR_MASK)
-  //  * `(ptrB - ptrA) >= elementSize * lane` (RAW_MASK)
-  // Would both be all true.
-  ElementCount MaxMaskLaneEC = LaneOffset + VT.getVectorElementCount();
-  SDValue MaxMaskLane = DAG.getElementCount(DL, PtrVT, MaxMaskLaneEC);
-  Cmp = DAG.getNode(ISD::OR, DL, CmpVT, Cmp,
-                    DAG.getSetCC(DL, CmpVT, Diff, MaxMaskLane, ISD::SETUGE));
+  // The pointers do not alias if:
+  // Lane + LaneOffset < Diff (WAR/RAW_MASK)
+  SDValue LaneOffset = DAG.getElementCount(DL, PtrVT, LaneOffsetEC);
+  SDValue MaskN =
+      DAG.getSelect(DL, PtrVT, Cmp, DAG.getConstant(-1, DL, PtrVT), Diff);
 
-  // Attempt to determine the max "meaningful" value of Diff for the comparison
-  // with the lane step_vector. We do not have to consider values that would
-  // result in an "all-true" mask due to any of the above cases. This puts a
-  // fairly low upper bound on the element bitwidth needed for the comparison,
-  // which results in efficient codegen (since fewer vectors are needed). Note:
-  // If the upper bound is scalable, we must know the vscale range (otherwise,
-  // we fall back to a very conservative bound).
-  unsigned MaxMeaningfulDiff = 0;
-  if (MaxMaskLaneEC.isScalable()) {
-    ConstantRange VScaleRange = getVScaleRange(&F, /*BitWidth*/ 64);
-    if (!VScaleRange.isFullSet())
-      MaxMeaningfulDiff = MaxMaskLaneEC.getKnownMinValue() *
-                          VScaleRange.getUpper().getZExtValue();
-  } else {
-    MaxMeaningfulDiff = MaxMaskLaneEC.getFixedValue();
-  }
-
-  // Note: MaxMeaningfulDiff is zero if the upper bound is unknown.
-  unsigned SplatBitWidth =
-      !MaxMeaningfulDiff
-          ? 32 // Surely 2**32 lanes is enough.
-          : std::max<unsigned>(PowerOf2Ceil(Log2_32(MaxMeaningfulDiff) + 1), 8);
-  EVT SplatEltVT = MVT::getIntegerVT(SplatBitWidth);
-  EVT SplatVT = VT.changeElementType(SplatEltVT);
-
-  // Truncate and splat the diff. If this ends up being an unsafe truncate (i.e,
-  // it does not fit within SplatBitWidth bits), the mask is already all-true.
-  SDValue DiffTrunc =
-      DAG.getExtOrTrunc(!IsReadAfterWrite, Diff, DL, SplatEltVT);
-  SDValue DiffSplat = DAG.getSplat(SplatVT, DL, DiffTrunc);
-
-  SDValue VectorStep = DAG.getStepVector(DL, SplatVT);
-  // Add the lane offset. A non-zero lane offset often comes from a
-  // larger-than-legal vector length being split in two.
-  SDValue LaneIndices = DAG.getNode(
-      ISD::ADD, DL, SplatVT, VectorStep,
-      DAG.getSplat(SplatVT, DL,
-                   DAG.getElementCount(DL, SplatEltVT, LaneOffset)));
-  SDValue DiffMask = DAG.getSetCC(DL, VT, LaneIndices, DiffSplat, ISD::SETULT);
-
-  SDValue Splat = DAG.getSplat(VT, DL, Cmp);
-  return DAG.getNode(ISD::OR, DL, VT, DiffMask, Splat);
+  return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT, LaneOffset, MaskN);
 }
 
 void VectorLegalizer::ExpandFP_TO_UINT(SDNode *Node,

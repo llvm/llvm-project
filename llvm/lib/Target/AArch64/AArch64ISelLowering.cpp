@@ -5461,7 +5461,6 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
     return SDValue();
   }
 
-  // TODO: Support split masks
   unsigned LaneOffset = Op.getConstantOperandVal(3);
   if (LaneOffset != 0)
     return SDValue();

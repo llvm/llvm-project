@@ -84,20 +84,12 @@ entry:
 define <vscale x 32 x i1> @whilewr_8_split(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: whilewr_8_split:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    sub x9, x1, x0
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    index z0.b, w8, #1
-; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    cmp x9, #1
-; CHECK-NEXT:    mov z1.b, w9
-; CHECK-NEXT:    ccmp x9, x8, #2, ge
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
-; CHECK-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-NEXT:    mov p1.b, p0/m, p0.b
+; CHECK-NEXT:    csinv x9, x9, xzr, ge
 ; CHECK-NEXT:    whilewr p0.b, x0, x1
+; CHECK-NEXT:    whilelo p1.b, x8, x9
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 32 x i1> @llvm.loop.dependence.war.mask.nxv32i1(ptr %a, ptr %b, i64 1)
@@ -107,51 +99,16 @@ entry:
 define <vscale x 64 x i1> @whilewr_8_split2(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: whilewr_8_split2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Spill
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    sub x9, x1, x0
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    index z0.b, #0, #1
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mov z1.b, w8
-; CHECK-NEXT:    sub x8, x1, x0
-; CHECK-NEXT:    rdvl x9, #2
-; CHECK-NEXT:    mov z2.b, w8
-; CHECK-NEXT:    rdvl x11, #3
-; CHECK-NEXT:    mov z3.b, w11
-; CHECK-NEXT:    add z1.b, z0.b, z1.b
-; CHECK-NEXT:    cmphi p1.b, p0/z, z2.b, z1.b
-; CHECK-NEXT:    mov z1.b, w9
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    cset w10, lt
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    csinc w9, w10, wzr, lo
-; CHECK-NEXT:    add z1.b, z0.b, z1.b
-; CHECK-NEXT:    add z0.b, z0.b, z3.b
-; CHECK-NEXT:    sbfx x9, x9, #0, #1
-; CHECK-NEXT:    cmphi p2.b, p0/z, z2.b, z1.b
-; CHECK-NEXT:    whilelo p3.b, xzr, x9
-; CHECK-NEXT:    cmp x8, x11
-; CHECK-NEXT:    csinc w9, w10, wzr, lo
-; CHECK-NEXT:    cmphi p5.b, p0/z, z2.b, z0.b
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p3.b
-; CHECK-NEXT:    sbfx x9, x9, #0, #1
-; CHECK-NEXT:    whilelo p4.b, xzr, x9
-; CHECK-NEXT:    rdvl x9, #4
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    csinc w8, w10, wzr, lo
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    rdvl x10, #2
+; CHECK-NEXT:    cmp x9, #1
+; CHECK-NEXT:    csinv x9, x9, xzr, ge
 ; CHECK-NEXT:    whilewr p0.b, x0, x1
-; CHECK-NEXT:    whilelo p3.b, xzr, x8
-; CHECK-NEXT:    mov p3.b, p5/m, p5.b
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    whilelo p1.b, x8, x9
+; CHECK-NEXT:    rdvl x8, #3
+; CHECK-NEXT:    whilelo p2.b, x10, x9
+; CHECK-NEXT:    whilelo p3.b, x8, x9
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 64 x i1> @llvm.loop.dependence.war.mask.nxv64i1(ptr %a, ptr %b, i64 1)
@@ -162,19 +119,11 @@ define <vscale x 16 x i1> @whilewr_16_expand(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: whilewr_16_expand:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub x8, x1, x0
-; CHECK-NEXT:    index z0.b, #0, #1
-; CHECK-NEXT:    rdvl x9, #1
 ; CHECK-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    asr x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    mov z1.b, w8
-; CHECK-NEXT:    ccmp x8, x9, #2, ge
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
-; CHECK-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %a, ptr %b, i64 2)
@@ -184,30 +133,14 @@ entry:
 define <vscale x 32 x i1> @whilewr_16_expand2(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: whilewr_16_expand2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub x8, x1, x0
-; CHECK-NEXT:    rdvl x9, #1
-; CHECK-NEXT:    index z0.b, #0, #1
-; CHECK-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-NEXT:    mov z1.b, w9
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    rdvl x10, #2
-; CHECK-NEXT:    asr x8, x8, #1
-; CHECK-NEXT:    add z1.b, z0.b, z1.b
-; CHECK-NEXT:    mov z2.b, w8
-; CHECK-NEXT:    cmphi p1.b, p0/z, z2.b, z1.b
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    cset w11, lt
-; CHECK-NEXT:    cmp x8, x10
-; CHECK-NEXT:    csinc w10, w11, wzr, lo
-; CHECK-NEXT:    sbfx x10, x10, #0, #1
-; CHECK-NEXT:    whilelo p2.b, xzr, x10
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    csinc w8, w11, wzr, lo
-; CHECK-NEXT:    cmphi p0.b, p0/z, z2.b, z0.b
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    whilelo p3.b, xzr, x8
-; CHECK-NEXT:    sel p0.b, p0, p0.b, p3.b
+; CHECK-NEXT:    sub x9, x1, x0
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    add x9, x9, x9, lsr #63
+; CHECK-NEXT:    asr x9, x9, #1
+; CHECK-NEXT:    cmp x9, #1
+; CHECK-NEXT:    csinv x9, x9, xzr, ge
+; CHECK-NEXT:    whilelo p0.b, xzr, x9
+; CHECK-NEXT:    whilelo p1.b, x8, x9
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 32 x i1> @llvm.loop.dependence.war.mask.nxv32i1(ptr %a, ptr %b, i64 2)
@@ -218,21 +151,12 @@ define <vscale x 8 x i1> @whilewr_32_expand(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: whilewr_32_expand:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    subs x8, x1, x0
-; CHECK-NEXT:    index z1.h, #0, #1
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    add x9, x8, #3
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    cnth x9
 ; CHECK-NEXT:    asr x8, x8, #2
-; CHECK-NEXT:    mov z0.h, w8
 ; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    ccmp x8, x9, #2, ge
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    and z0.h, z0.h, #0xff
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    whilelo p1.h, xzr, x8
-; CHECK-NEXT:    cmphi p0.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 8 x i1> @llvm.loop.dependence.war.mask.nxv8i1(ptr %a, ptr %b, i64 4)
@@ -243,20 +167,12 @@ define <vscale x 16 x i1> @whilewr_32_expand2(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: whilewr_32_expand2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    subs x8, x1, x0
-; CHECK-NEXT:    index z0.b, #0, #1
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    add x9, x8, #3
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    rdvl x9, #1
 ; CHECK-NEXT:    asr x8, x8, #2
 ; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    mov z1.b, w8
-; CHECK-NEXT:    ccmp x8, x9, #2, ge
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
-; CHECK-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %a, ptr %b, i64 4)
@@ -266,39 +182,15 @@ entry:
 define <vscale x 32 x i1> @whilewr_32_expand3(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: whilewr_32_expand3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    subs x9, x1, x0
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    index z0.b, #0, #1
 ; CHECK-NEXT:    add x10, x9, #3
-; CHECK-NEXT:    mov z1.b, w8
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    csel x9, x10, x9, mi
 ; CHECK-NEXT:    asr x9, x9, #2
 ; CHECK-NEXT:    cmp x9, #1
-; CHECK-NEXT:    mov z2.b, w9
-; CHECK-NEXT:    cset w10, lt
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    csinc w11, w10, wzr, lo
-; CHECK-NEXT:    sbfx x8, x11, #0, #1
-; CHECK-NEXT:    cmphi p2.b, p0/z, z2.b, z0.b
-; CHECK-NEXT:    add z0.b, z0.b, z1.b
-; CHECK-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-NEXT:    rdvl x8, #2
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    csinc w8, w10, wzr, lo
-; CHECK-NEXT:    cmphi p3.b, p0/z, z2.b, z0.b
-; CHECK-NEXT:    sel p0.b, p2, p2.b, p1.b
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    whilelo p4.b, xzr, x8
-; CHECK-NEXT:    sel p1.b, p3, p3.b, p4.b
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    csinv x9, x9, xzr, ge
+; CHECK-NEXT:    whilelo p0.b, xzr, x9
+; CHECK-NEXT:    whilelo p1.b, x8, x9
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 32 x i1> @llvm.loop.dependence.war.mask.nxv32i1(ptr %a, ptr %b, i64 4)
@@ -309,21 +201,12 @@ define <vscale x 4 x i1> @whilewr_64_expand(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: whilewr_64_expand:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    subs x8, x1, x0
-; CHECK-NEXT:    index z0.s, #0, #1
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    add x9, x8, #7
 ; CHECK-NEXT:    csel x8, x9, x8, mi
 ; CHECK-NEXT:    asr x8, x8, #3
-; CHECK-NEXT:    and w9, w8, #0xff
 ; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    mov z1.s, w9
-; CHECK-NEXT:    cntw x9
-; CHECK-NEXT:    ccmp x8, x9, #2, ge
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    cmphi p0.s, p0/z, z1.s, z0.s
-; CHECK-NEXT:    whilelo p1.s, xzr, x8
-; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv4i1(ptr %a, ptr %b, i64 8)
@@ -334,21 +217,12 @@ define <vscale x 8 x i1> @whilewr_64_expand2(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: whilewr_64_expand2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    subs x8, x1, x0
-; CHECK-NEXT:    index z1.h, #0, #1
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    add x9, x8, #7
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    cnth x9
 ; CHECK-NEXT:    asr x8, x8, #3
-; CHECK-NEXT:    mov z0.h, w8
 ; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    ccmp x8, x9, #2, ge
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    and z0.h, z0.h, #0xff
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    whilelo p1.h, xzr, x8
-; CHECK-NEXT:    cmphi p0.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 8 x i1> @llvm.loop.dependence.war.mask.nxv8i1(ptr %a, ptr %b, i64 8)
@@ -359,20 +233,12 @@ define <vscale x 16 x i1> @whilewr_64_expand3(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: whilewr_64_expand3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    subs x8, x1, x0
-; CHECK-NEXT:    index z0.b, #0, #1
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    add x9, x8, #7
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    rdvl x9, #1
 ; CHECK-NEXT:    asr x8, x8, #3
 ; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    mov z1.b, w8
-; CHECK-NEXT:    ccmp x8, x9, #2, ge
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
-; CHECK-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %a, ptr %b, i64 8)
@@ -382,39 +248,15 @@ entry:
 define <vscale x 32 x i1> @whilewr_64_expand4(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: whilewr_64_expand4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    subs x9, x1, x0
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    index z0.b, #0, #1
 ; CHECK-NEXT:    add x10, x9, #7
-; CHECK-NEXT:    mov z1.b, w8
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    csel x9, x10, x9, mi
 ; CHECK-NEXT:    asr x9, x9, #3
 ; CHECK-NEXT:    cmp x9, #1
-; CHECK-NEXT:    mov z2.b, w9
-; CHECK-NEXT:    cset w10, lt
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    csinc w11, w10, wzr, lo
-; CHECK-NEXT:    sbfx x8, x11, #0, #1
-; CHECK-NEXT:    cmphi p2.b, p0/z, z2.b, z0.b
-; CHECK-NEXT:    add z0.b, z0.b, z1.b
-; CHECK-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-NEXT:    rdvl x8, #2
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    csinc w8, w10, wzr, lo
-; CHECK-NEXT:    cmphi p3.b, p0/z, z2.b, z0.b
-; CHECK-NEXT:    sel p0.b, p2, p2.b, p1.b
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    whilelo p4.b, xzr, x8
-; CHECK-NEXT:    sel p1.b, p3, p3.b, p4.b
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    csinv x9, x9, xzr, ge
+; CHECK-NEXT:    whilelo p0.b, xzr, x9
+; CHECK-NEXT:    whilelo p1.b, x8, x9
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 32 x i1> @llvm.loop.dependence.war.mask.nxv32i1(ptr %a, ptr %b, i64 8)
@@ -456,20 +298,12 @@ define <vscale x 16 x i1> @whilewr_badimm(ptr %a, ptr %b) #0 {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x8, #6148914691236517205 // =0x5555555555555555
 ; CHECK-NEXT:    sub x9, x1, x0
-; CHECK-NEXT:    index z0.b, #0, #1
 ; CHECK-NEXT:    movk x8, #21846
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    smulh x8, x9, x8
-; CHECK-NEXT:    rdvl x9, #1
 ; CHECK-NEXT:    add x8, x8, x8, lsr #63
 ; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    mov z1.b, w8
-; CHECK-NEXT:    ccmp x8, x9, #2, ge
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
-; CHECK-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %a, ptr %b, i64 3)

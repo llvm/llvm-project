@@ -4,18 +4,10 @@
 define <vscale x 16 x i1> @whilewr_8(ptr %a, ptr %b) vscale_range(1, 4) {
 ; CHECK-LABEL: whilewr_8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    index z0.b, #0, #1
 ; CHECK-NEXT:    sub x8, x1, x0
-; CHECK-NEXT:    rdvl x9, #1
 ; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    mov z1.b, w8
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    ccmp x8, x9, #2, ge
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
-; CHECK-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %a, ptr %b, i64 1)
