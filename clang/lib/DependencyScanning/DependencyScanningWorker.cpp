@@ -101,11 +101,12 @@ bool DependencyScanningWorker::scanDependencies(
     FS = std::move(OverlayFS);
   }
 
-  DignosticsEngineWithDiagOpts DiagEngineWithCmdAndOpts(CommandLine, FS, DC);
+  DiagnosticsEngineWithDiagOpts DiagEngineWithCmdAndOpts(CommandLine, FS, DC);
   DependencyScanningAction Action(
       Service, WorkingDirectory, Consumer, Controller, DepFS,
       /*EmitDependencyFile=*/false,
       /*DiagGenerationAsCompilation=*/false, getCASOpts());
+
   bool Success = false;
   if (CommandLine[1] == "-cc1") {
     Success =
