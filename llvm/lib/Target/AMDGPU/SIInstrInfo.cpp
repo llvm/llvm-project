@@ -2027,6 +2027,11 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
   switch (MI.getOpcode()) {
   default: return TargetInstrInfo::expandPostRAPseudo(MI);
+
+  case AMDGPU::SI_COND_BARRIER:
+    // SI_COND_BARRIER is handled by the dedicated ExpandCondBarrier pass
+    return false;
+
   case AMDGPU::S_MOV_B64_term:
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
@@ -2104,6 +2109,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case AMDGPU::SI_RESTORE_S32_FROM_VGPR:
     MI.setDesc(get(AMDGPU::V_READLANE_B32));
     break;
+
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO: {
     Register Dst = MI.getOperand(0).getReg();
     bool IsAGPR = SIRegisterInfo::isAGPRClass(RI.getPhysRegBaseClass(Dst));

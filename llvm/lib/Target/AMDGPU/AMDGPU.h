@@ -53,6 +53,9 @@ FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
 FunctionPass *createSIFormMemoryClausesLegacyPass();
 
 FunctionPass *createSIPostRABundlerPass();
+FunctionPass *createAMDGPUExpandCondBarrierPass();
+extern char &AMDGPUExpandCondBarrierID;
+void initializeAMDGPUExpandCondBarrierPass(PassRegistry &);
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();

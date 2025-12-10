@@ -596,6 +596,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURewriteAGPRCopyMFMALegacyPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
+  initializeAMDGPUExpandCondBarrierPass(*PR);
   initializeSIAnnotateControlFlowLegacyPass(*PR);
   initializeAMDGPUInsertDelayAluLegacyPass(*PR);
   initializeAMDGPULowerVGPREncodingLegacyPass(*PR);
@@ -1761,6 +1762,10 @@ void GCNPassConfig::addPostRegAlloc() {
   addPass(&SIFixVGPRCopiesID);
   if (getOptLevel() > CodeGenOptLevel::None)
     addPass(&SIOptimizeExecMaskingLegacyID);
+
+  // Add ExpandCondBarrier pass before post-RA pseudo expansion
+  addPass(&AMDGPUExpandCondBarrierID);
+
   TargetPassConfig::addPostRegAlloc();
 }
 

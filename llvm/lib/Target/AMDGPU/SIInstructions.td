@@ -117,6 +117,14 @@ def ATOMIC_FENCE : SPseudoInstSI<
   let hasSideEffects = 1;
 }
 
+// Conditional barrier pseudo-instruction, abstracting complex control flow.
+def SI_COND_BARRIER : SPseudoInstSI<(outs), (ins i32imm:$variant), [],
+                                    "SI_COND_BARRIER $variant"> {
+  let Uses = [SCC];
+  let hasSideEffects = 1;
+  let Size = 8; // Expands to ~4 instructions
+}
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
 
 // For use in patterns
