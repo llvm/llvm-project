@@ -2742,7 +2742,6 @@ struct ConvertAMDGPUToROCDLPass
             return 5;
           }
           llvm_unreachable("unknown address space enum value");
-          return 0;
         });
     LLVMConversionTarget target(getContext());
     target.addIllegalDialect<::mlir::amdgpu::AMDGPUDialect>();
