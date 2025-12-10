@@ -319,10 +319,13 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpValOffset:
         break;
       }
+      assert((bool)CSRReg + (bool)CSROffset <= 1 &&
+             "A register can only be at an offset from CFA or in another "
+             "register, but not both!");
       CSRSavedLocation CSRLoc;
       if (CSRReg)
         CSRLoc = CSRSavedLocation::createRegister(*CSRReg);
-      if (CSROffset)
+      else if (CSROffset)
         CSRLoc = CSRSavedLocation::createCFAOffset(*CSROffset);
       if (CSRLoc.isValid()) {
         auto It = CSRLocMap.find(CFI.getRegister());
