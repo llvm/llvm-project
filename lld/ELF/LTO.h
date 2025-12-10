@@ -52,7 +52,7 @@ protected:
 
 public:
   IRCompiler(Ctx &ctx) : ctx(ctx) {}
-  virtual ~IRCompiler() {};
+  virtual ~IRCompiler() {}
   void add(IRFile &f);
   virtual SmallVector<std::unique_ptr<InputFile>, 0> compile() = 0;
 };
@@ -64,7 +64,7 @@ protected:
 
 public:
   BitcodeCompiler(Ctx &ctx);
-  ~BitcodeCompiler() {};
+  ~BitcodeCompiler() {}
 
   void add(BinaryFile &f);
   SmallVector<std::unique_ptr<InputFile>, 0> compile() override;
