@@ -1483,7 +1483,8 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
        AttrSizedOperandSegments,
        OffsetSizeAndStrideOpInterface,
        DeclareOpInterfaceMethods<ParallelCombiningOpInterface,
-          ["getUpdatedDestinations", "getIteratingParent"]>,
+          ["getUpdatedDestinations", "getIteratingParent",
+           "promoteInParallelLoop", "canPromoteInParallelLoop"]>,
        // TODO: Cannot use an interface here atm, verify this manually for now.
        // HasParent<"InParallelOpInterface">
   ]> {

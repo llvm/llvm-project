@@ -777,8 +777,7 @@ LogicalResult scf::ForallOp::promoteIfSingleIteration(RewriterBase &rewriter) {
       return failure();
   }
 
-  promote(rewriter, *this);
-  return success();
+  return promote(rewriter, *this);
 }
 
 Block::BlockArgListType ForallOp::getRegionIterArgs() {
@@ -790,9 +789,27 @@ MutableArrayRef<OpOperand> ForallOp::getInitsMutable() {
 }
 
 /// Promotes the loop body of a scf::ForallOp to its containing block.
-void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
+LogicalResult mlir::scf::promote(RewriterBase &rewriter,
+                                 scf::ForallOp forallOp) {
   OpBuilder::InsertionGuard g(rewriter);
   scf::InParallelOp terminator = forallOp.getTerminator();
+
+  // Make sure we can promote all parallel combining ops in terminator:
+  unsigned numParallelCombiningOps = 0;
+  for (auto &yieldingOp : terminator.getYieldingOps()) {
+    auto parallelCombiningOp =
+        dyn_cast<ParallelCombiningOpInterface>(&yieldingOp);
+    if (!parallelCombiningOp)
+      continue;
+    ++numParallelCombiningOps;
+    if (!parallelCombiningOp.canPromoteInParallelLoop(rewriter))
+      return rewriter.notifyMatchFailure(
+          forallOp, "parallel combining op cannot be promoted");
+  }
+  if (numParallelCombiningOps != forallOp.getResults().size())
+    return rewriter.notifyMatchFailure(
+        forallOp,
+        "number of parallel combining ops does not match number of results");
 
   // Replace block arguments with lower bounds (replacements for IVs) and
   // outputs.
@@ -809,30 +826,26 @@ void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
   SmallVector<Value> results;
   results.reserve(forallOp.getResults().size());
   for (auto &yieldingOp : terminator.getYieldingOps()) {
-    auto parallelInsertSliceOp =
-        dyn_cast<tensor::ParallelInsertSliceOp>(yieldingOp);
-    if (!parallelInsertSliceOp)
+    auto parallelCombiningOp =
+        dyn_cast<ParallelCombiningOpInterface>(&yieldingOp);
+    if (!parallelCombiningOp)
       continue;
 
-    Value dst = parallelInsertSliceOp.getDest();
-    Value src = parallelInsertSliceOp.getSource();
-    if (llvm::isa<TensorType>(src.getType())) {
-      results.push_back(tensor::InsertSliceOp::create(
-          rewriter, forallOp.getLoc(), dst.getType(), src, dst,
-          parallelInsertSliceOp.getOffsets(), parallelInsertSliceOp.getSizes(),
-          parallelInsertSliceOp.getStrides(),
-          parallelInsertSliceOp.getStaticOffsets(),
-          parallelInsertSliceOp.getStaticSizes(),
-          parallelInsertSliceOp.getStaticStrides()));
-    } else {
-      llvm_unreachable("unsupported terminator");
-    }
+    assert(parallelCombiningOp.canPromoteInParallelLoop(rewriter));
+
+    FailureOr<Value> promotedValue =
+        parallelCombiningOp.promoteInParallelLoop(rewriter);
+    if (failed(promotedValue))
+      return failure();
+
+    results.push_back(*promotedValue);
   }
   rewriter.replaceAllUsesWith(forallOp.getResults(), results);
 
   // Erase the old terminator and the loop.
   rewriter.eraseOp(terminator);
   rewriter.eraseOp(forallOp);
+  return success();
 }
 
 LoopNest mlir::scf::buildLoopNest(
@@ -1890,7 +1903,8 @@ struct ForallOpSingleOrZeroIterationDimsFolder
 
     // All of the loop dimensions perform a single iteration. Inline loop body.
     if (newMixedLowerBounds.empty()) {
-      promote(rewriter, op);
+      if (failed(promote(rewriter, op)))
+        return failure();
       return success();
     }
 

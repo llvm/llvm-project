@@ -2171,3 +2171,28 @@ func.func @scf_for_all_step_size_0()  {
   }
   return
 }
+
+// -----
+
+// Test single-iteration forall with multiple parallel_insert_slice ops.
+func.func @inline_forall_loop_multiple_results(
+    %arg0: tensor<8x8xf32>, %arg1: tensor<4x4xf32>,
+    %s0: tensor<2x3xf32>, %s1: tensor<2x2xf32>) -> (tensor<8x8xf32>, tensor<4x4xf32>) {
+  %0:2 = scf.forall (%i) in (1) shared_outs (%out0 = %arg0, %out1 = %arg1)
+      -> (tensor<8x8xf32>, tensor<4x4xf32>) {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %s0 into %out0[0, 0] [2, 3] [1, 1]
+        : tensor<2x3xf32> into tensor<8x8xf32>
+      tensor.parallel_insert_slice %s1 into %out1[0, 0] [2, 2] [1, 1]
+        : tensor<2x2xf32> into tensor<4x4xf32>
+    }
+  }
+  return %0#0, %0#1 : tensor<8x8xf32>, tensor<4x4xf32>
+}
+// CHECK-LABEL: @inline_forall_loop_multiple_results
+// CHECK-SAME:    %[[ARG0:.*]]: tensor<8x8xf32>, %[[ARG1:.*]]: tensor<4x4xf32>,
+// CHECK-SAME:    %[[S0:.*]]: tensor<2x3xf32>, %[[S1:.*]]: tensor<2x2xf32>
+// CHECK-NOT:     scf.forall
+// CHECK-DAG:     %[[R0:.*]] = tensor.insert_slice %[[S0]] into %[[ARG0]]
+// CHECK-DAG:     %[[R1:.*]] = tensor.insert_slice %[[S1]] into %[[ARG1]]
+// CHECK:         return %[[R0]], %[[R1]]

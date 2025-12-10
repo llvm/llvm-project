@@ -3962,6 +3962,25 @@ Operation *ParallelInsertSliceOp::getIteratingParent() {
   return nullptr;
 }
 
+FailureOr<Value>
+ParallelInsertSliceOp::promoteInParallelLoop(RewriterBase &rewriter) {
+  Value dst = getDest();
+  Value src = getSource();
+  if (!isa<TensorType>(src.getType()))
+    return failure();
+
+  Value inserted = tensor::InsertSliceOp::create(
+      rewriter, getLoc(), dst.getType(), src, dst, getOffsets(), getSizes(),
+      getStrides(), getStaticOffsets(), getStaticSizes(), getStaticStrides());
+
+  return inserted;
+}
+
+bool ParallelInsertSliceOp::canPromoteInParallelLoop(RewriterBase &) {
+  return isa<TensorType>(getSource().getType()) &&
+         isa<TensorType>(getDest().getType());
+}
+
 //===----------------------------------------------------------------------===//
 // ScatterOp
 //===----------------------------------------------------------------------===//
