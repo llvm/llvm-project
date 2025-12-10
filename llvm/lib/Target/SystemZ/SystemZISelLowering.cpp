@@ -8887,7 +8887,12 @@ SDValue SystemZTargetLowering::combineBR_CCMASK(SDNode *N,
   int CCMaskVal = CCMask->getZExtValue();
   SDValue Chain = N->getOperand(0);
   SDValue CCReg = N->getOperand(4);
-  if (combineCCMask(CCReg, CCValidVal, CCMaskVal, DAG))
+  // If combineCMask was able to merge or simplify ccvalid or ccmask, re-emit
+  // the modified BR_CCMASK with the new values.
+  // In order to avoid conditional branches with full or empty cc masks, do not
+  // do this if ccmask is 0 or equal to ccvalid.
+  if (combineCCMask(CCReg, CCValidVal, CCMaskVal, DAG) && CCMaskVal != 0 &&
+      CCMaskVal != CCValidVal)
     return DAG.getNode(SystemZISD::BR_CCMASK, SDLoc(N), N->getValueType(0),
                        Chain,
                        DAG.getTargetConstant(CCValidVal, SDLoc(N), MVT::i32),
@@ -8974,6 +8979,13 @@ SDValue SystemZTargetLowering::combineSELECT_CCMASK(
       IsCombinedCCReg = true;
     }
   }
+  // If the condition is trivially false or trivially true after
+  // combineCCMask, just collapse this SELECT_CCMASK to the indicated value
+  // (possibly modified by constructCCSDValsFromSELECT).
+  if (CCMaskVal == 0)
+    return FalseVal;
+  if (CCMaskVal == CCValidVal)
+    return TrueVal;
 
   if (IsCombinedCCReg)
     return DAG.getNode(

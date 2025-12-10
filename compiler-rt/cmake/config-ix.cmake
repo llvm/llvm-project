@@ -507,23 +507,8 @@ if(APPLE)
   set(CMAKE_OSX_DEPLOYMENT_TARGET "")
 
   set(DARWIN_COMMON_CFLAGS -stdlib=libc++)
-
-  # This is tricky: We want to link against libc++, however the libc++ for the
-  # architecture we're currently building may not have been built yet, since
-  # compiler-rt on Darwin builds for all targets at once while libc++ builds for
-  # a single target. Hence, we pass -nostdlib++ to disable the default mechanism
-  # for finding libc++, and we pass -lc++ which will end up finding libc++ in the
-  # SDK currently in use. That libc++ is the wrong libc++ to use if we're using
-  # headers from a just-built libc++, but at least it contains all the architectures
-  # we should be interested in.
-  #
-  # Fixing this properly would require removing the impedence mismatch between
-  # the compiler-rt build on Darwin (which wants to build all architectures at
-  # once) and the libc++ build, which produces a single architecture per CMake
-  # invocation.
   set(DARWIN_COMMON_LINK_FLAGS
     -stdlib=libc++
-    -nostdlib++
     -lc++
     -lc++abi)
 
@@ -857,7 +842,7 @@ else()
 endif()
 
 if (PROFILE_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
-    OS_NAME MATCHES "Darwin|Linux|FreeBSD|Windows|Android|Fuchsia|SunOS|NetBSD|AIX|WASI|Haiku")
+    (OS_NAME MATCHES "Darwin|Linux|FreeBSD|Windows|Android|Fuchsia|SunOS|NetBSD|AIX|WASI|Haiku" OR COMPILER_RT_PROFILE_BAREMETAL))
   set(COMPILER_RT_HAS_PROFILE TRUE)
 else()
   set(COMPILER_RT_HAS_PROFILE FALSE)
