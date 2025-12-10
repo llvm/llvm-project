@@ -152,11 +152,6 @@ FunctionPass *createX86InsertPrefetchPass();
 /// fp exceptions when strict-fp enabled.
 FunctionPass *createX86InsertX87waitPass();
 
-/// This pass fixes post-isel constraints, such as register constraints for
-/// Sub registers. Ideally Tablgen GISel would handle most of constraints, since
-/// some parts of X86 are handled manually/imported from DAG, we need pass to fix.
-FunctionPass * createX86PostIselFixupPass();
-
 /// This pass optimizes arithmetic based on knowledge that is only used by
 /// a reduction sequence and is therefore safe to reassociate in interesting
 /// ways.
@@ -212,7 +207,7 @@ void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
 void initializeX86TileConfigPass(PassRegistry &);
 void initializeX86SuppressAPXForRelocationPassPass(PassRegistry &);
 void initializeX86WinEHUnwindV2Pass(PassRegistry &);
-void initializeX86PostIselFixupPass(PassRegistry &);
+
 namespace X86AS {
 enum : unsigned {
   GS = 256,
