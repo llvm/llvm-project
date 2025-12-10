@@ -431,27 +431,18 @@ static inline raw_ostream &operator<<(raw_ostream &Os,
   static_cast<llvm::offload::debug::odbg_ostream::IfLevel>(0)
 
 // helper templates to support lambdas with different number of arguments
-
-template <typename LambdaTy> struct lambdaHelper {
-  template <typename FuncTy, typename RetTy, typename... Args>
-  static constexpr size_t CountArgs(RetTy (FuncTy::*)(Args...)) {
-    return sizeof...(Args);
-  }
-
-  template <typename FuncTy, typename RetTy, typename... Args>
-  static constexpr size_t CountArgs(RetTy (FuncTy::*)(Args...) const) {
-    return sizeof...(Args);
-  }
-
-  static constexpr size_t NArgs = CountArgs(&LambdaTy::operator());
+template <typename LambdaTy> struct LambdaHelper {
+  template <typename T, typename = std::void_t<>>
+  struct has_two_args : std::false_type {};
+  template <typename T>
+  struct has_two_args<T, std::void_t<decltype(std::declval<T>().operator()(1,2))>>
+      : std::true_type {};
 
   static void dispatch(LambdaTy func, llvm::raw_ostream &Os, uint32_t Level) {
-    if constexpr (NArgs == 1)
-      func(Os);
-    else if constexpr (NArgs == 2)
+    if constexpr (has_two_args<LambdaTy>::value)
       func(Os, Level);
     else
-      static_assert(true, "Unsupported number of arguments in debug callback");
+      func(Os);
   }
 };
 
@@ -465,7 +456,7 @@ template <typename LambdaTy> struct lambdaHelper {
           RealLevel, /*ShouldPrefixNextString=*/true,                          \
           /*ShouldEmitNewLineOnDestruction=*/true};                            \
       auto F = Callback;                                                       \
-      ::llvm::offload::debug::lambdaHelper<decltype(F)>::dispatch(F, OS,       \
+      ::llvm::offload::debug::LambdaHelper<decltype(F)>::dispatch(F, OS,       \
                                                                   RealLevel);  \
     }                                                                          \
   }
