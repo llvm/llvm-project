@@ -274,6 +274,8 @@ defvar Zn5FPCLM1 = Zn5FP1;
 // Execution pipeline grouping
 //===----------------------------------------------------------------------===//
 
+// AMD SOG, 2.11.1 Floating Point Execution Resources
+
 // FLD use pipes 1 and 2.
 def Zn5FPU12 : ProcResGroup<[Zn5FP1, Zn5FP2]>;
 
@@ -305,7 +307,9 @@ def Zn5FPFMisc123 : ProcResGroup<[Zn5FPFMisc1,Zn5FPFMisc2, Zn5FPFMisc3]>;
 // have 2 dedicated pipelines (pipe 5 and 6).
 defvar Zn5FPLd01 = Zn5FP45;
 
-// Note that FP stores are supported on two pipelines,
+// AMD SOG, 2.11 Floating-Point Unit
+
+// FP stores are supported on two pipelines,
 // but throughput is limited to one per cycle.
 let Super = Zn5FP45 in
 def Zn5FPSt : ProcResource<1>;
