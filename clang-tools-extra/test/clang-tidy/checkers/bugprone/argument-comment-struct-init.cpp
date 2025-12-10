@@ -29,7 +29,7 @@ struct B {
 
 void testB() {
   B b1 = {/*x=*/1, /*y=*/2}; // Partial init
-  B b2 = {/*z=*/1, /*y=*/2}; // Typo x->z
+  B b2 = {/*z=*/1, /*y=*/2};
   // CHECK-MESSAGES: [[@LINE-1]]:11: warning: argument name 'z' in comment does not match parameter name 'x' [bugprone-argument-comment]
 }
 
@@ -53,6 +53,7 @@ struct CorrectFix {
 void testFix() {
   CorrectFix c = {/*long_feild_name=*/1, 2};
   // CHECK-MESSAGES: [[@LINE-1]]:19: warning: argument name 'long_feild_name' in comment does not match parameter name 'long_field_name' [bugprone-argument-comment]
+  // CHECK-FIXES: CorrectFix c = {/*long_field_name=*/1, 2};
 }
 
 struct Base {
@@ -69,4 +70,63 @@ void testInheritance() {
   // CHECK-MESSAGES: [[@LINE-1]]:17: warning: argument name 'x' in comment does not match parameter name 'b' [bugprone-argument-comment]
   Derived d3 = {/*b=*/ 1, /*x=*/ 2};
   // CHECK-MESSAGES: [[@LINE-1]]:27: warning: argument name 'x' in comment does not match parameter name 'd' [bugprone-argument-comment]
+}
+
+
+struct DerivedExplicit : Base {
+  int d;
+};
+
+void testInheritanceExplicit() {
+  DerivedExplicit d1 = {{/*b=*/ 1}, /*d=*/ 2};
+  DerivedExplicit d2 = {{/*x=*/ 1}, /*d=*/ 2};
+  // CHECK-MESSAGES: [[@LINE-1]]:26: warning: argument name 'x' in comment does not match parameter name 'b' [bugprone-argument-comment]
+}
+
+struct DeepBase {
+  int db;
+};
+
+struct Middle : DeepBase {
+  int m;
+};
+
+struct DerivedDeep : Middle {
+  int d;
+};
+
+void testDeepInheritance() {
+  DerivedDeep d1 = {/*db=*/ 1, /*m=*/ 2, /*d=*/ 3};
+  DerivedDeep d2 = {/*x=*/ 1, /*m=*/ 2, /*d=*/ 3};
+  // CHECK-MESSAGES: [[@LINE-1]]:21: warning: argument name 'x' in comment does not match parameter name 'db' [bugprone-argument-comment]
+}
+
+struct Inner {
+  int i;
+};
+
+struct Outer {
+  Inner in;
+};
+
+void testNestedStruct() {
+  Outer o = {/*i=*/1};
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: argument name 'i' in comment does not match parameter name 'in' [bugprone-argument-comment]
+}
+
+#define MACRO_VAL 1
+void testMacroVal() {
+  A a = {/*x=*/ MACRO_VAL, /*y=*/ 2};
+  A a2 = {/*y=*/ MACRO_VAL, /*x=*/ 2};
+  // CHECK-MESSAGES: [[@LINE-1]]:11: warning: argument name 'y' in comment does not match parameter name 'x' [bugprone-argument-comment]
+  // CHECK-MESSAGES: [[@LINE-2]]:29: warning: argument name 'x' in comment does not match parameter name 'y' [bugprone-argument-comment]
+}
+
+#define MACRO_INIT { /*x=*/ 1, /*y=*/ 2 }
+#define MACRO_INIT_BAD { /*y=*/ 1, /*x=*/ 2 }
+
+void testMacroInit() {
+  A a = MACRO_INIT;
+  A a2 = MACRO_INIT_BAD;
+  // Won't flag warnings.
 }

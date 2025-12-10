@@ -396,20 +396,68 @@ static void checkRecordInitializer(ArgumentCommentCheck &Self, ASTContext *Ctx,
                                    const InitListExpr *InitList,
                                    unsigned &InitIndex,
                                    SourceLocation &ArgBeginLoc) {
+  // If the record is not an aggregate (e.g. a base class with a user-declared
+  // constructor), we treat it as a single opaque element initialization.
+  bool IsAggregate = false;
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    IsAggregate = CXXRD->isAggregate();
+  else
+    IsAggregate = true; // C struct
+
+  if (!IsAggregate) {
+    if (InitIndex < InitList->getNumInits()) {
+      const Expr *Arg = InitList->getInit(InitIndex);
+      ArgBeginLoc = Arg->getEndLoc();
+      InitIndex++;
+    }
+    return;
+  }
+
   if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
     for (const auto &Base : CXXRD->bases()) {
       if (InitIndex >= InitList->getNumInits())
         return;
+
       const RecordDecl *BaseRD = Base.getType()->getAsRecordDecl();
-      if (BaseRD) {
+      if (!BaseRD) {
+        if (InitIndex < InitList->getNumInits()) {
+          const Expr *Arg = InitList->getInit(InitIndex);
+          ArgBeginLoc = Arg->getEndLoc();
+          InitIndex++;
+        }
+        continue;
+      }
+
+      const Expr *NextInit = InitList->getInit(InitIndex);
+      QualType InitType = NextInit->getType();
+      QualType BaseType = Base.getType();
+
+      // Check if this is an explicit initializer for the base.
+      const Expr *Stripped = NextInit->IgnoreParenImpCasts();
+      const auto *SubInitList = dyn_cast<InitListExpr>(Stripped);
+      bool IsExplicitSubInit =
+          SubInitList &&
+          Ctx->hasSameUnqualifiedType(SubInitList->getType(), BaseType);
+
+      if (IsExplicitSubInit) {
+        unsigned SubIndex = 0;
+        SourceLocation SubLoc = SubInitList->getLBraceLoc();
+        checkRecordInitializer(Self, Ctx, BaseRD, SubInitList, SubIndex,
+                               SubLoc);
+        ArgBeginLoc = NextInit->getEndLoc();
+        InitIndex++;
+      } else if (Ctx->hasSameUnqualifiedType(InitType, BaseType) ||
+                 (InitType->isRecordType() && BaseType->isRecordType() &&
+                  cast<CXXRecordDecl>(InitType->getAsRecordDecl())
+                      ->isDerivedFrom(cast<CXXRecordDecl>(BaseRD)))) {
+        // Copy/move construction or conversion from derived class.
+        // Treat as a single scalar initializer for the base.
+        ArgBeginLoc = NextInit->getEndLoc();
+        InitIndex++;
+      } else {
+        // Recursing into the current list.
         checkRecordInitializer(Self, Ctx, BaseRD, InitList, InitIndex,
                                ArgBeginLoc);
-      } else {
-        // If we can't resolve the base record (e.g. template), skip the
-        // initializer.
-        if (const Expr *Arg = InitList->getInit(InitIndex))
-          ArgBeginLoc = Arg->getEndLoc();
-        InitIndex++;
       }
     }
   }
@@ -473,7 +521,7 @@ void ArgumentCommentCheck::checkInitList(ASTContext *Ctx,
   // positional logic for argument comments, as the structure is no longer
   // a simple positional match.
   for (unsigned I = 0; I < InitList->getNumInits(); ++I) {
-    if (InitList->getInit(I) && isa<DesignatedInitExpr>(InitList->getInit(I)))
+    if (dyn_cast_or_null<DesignatedInitExpr>(InitList->getInit(I)))
       return;
   }
 
