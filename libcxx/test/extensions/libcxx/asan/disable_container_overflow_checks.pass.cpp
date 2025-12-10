@@ -18,8 +18,8 @@
 // MSAN, TSAN and ASAN are mutually exclusive
 // UNSUPPORTED: msan, tsan
 
-// std::basic_string::data is const in C++03
-// UNSUPPORTED: c++03
+// std::basic_string::data is const util C++17
+// UNSUPPORTED: c++03, c++11, c++14
 
 // The protocol checked by this test is specific to Clang and compiler-rt
 // UNSUPPORTED: gcc
