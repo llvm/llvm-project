@@ -771,8 +771,8 @@ def : InstRW<[Zn5WriteTZCNT16rr], (instrs TZCNT16rr, TZCNT32rr, TZCNT64rr)>;
 // cmovbe, cmovl, cmovle and cmovnbe, cmovnl, cmovnle
 // Agner Fog Znver5 instruction table
 defm : Zn5WriteResIntPair<WriteCMOV, [Zn5ALU0_5], 1, [1], 1>; // Conditional move.
-defm : Zn5WriteResInt<WriteFCMOV, [Zn5ALU0_5], 7, [28], 7>; // FIXME: Microcoded!
-defm : Zn5WriteResInt<WriteSETCC, [Zn5ALU0_5], 1, [2], 1>; // Set register based on condition code.
+defm : Zn5WriteResInt<WriteFCMOV, [Zn5ALU0_5], 7, [3], 3>;
+defm : Zn5WriteResInt<WriteSETCC, [Zn5ALU0_5], 1, [1], 1>; // Set register based on condition code.
 defm : Zn5WriteResInt<WriteSETCCStore, [Zn5ALU0_5, Zn5AGU0123, Zn5Store], 2, [2, 1, 1], 2>; // FIXME: Microcoded!
 defm : Zn5WriteResInt<WriteLAHFSAHF, [Zn5ALU3], 1, [1], 1>; // Load/Store flags in AH.
 
