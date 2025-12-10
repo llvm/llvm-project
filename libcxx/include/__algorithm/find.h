@@ -17,12 +17,14 @@
 #include <__bit/countr.h>
 #include <__bit/invert_if.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/identity.h>
 #include <__fwd/bit_reference.h>
 #include <__iterator/segmented_iterator.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_signed.h>
@@ -69,7 +71,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find_vectorized(_Tp* __first, _Tp* __last, 
 
     auto __orig_first = __first;
 
-    auto __values = static_cast<__simd_vector<_Up, __vec_size>>(__value); // broadcast the value
+    auto __values = static_cast<__simd_vector<_Tp, __vec_size>>(__value); // broadcast the value
     while (static_cast<size_t>(__last - __first) >= __unroll_count * __vec_size) [[__unlikely__]] {
       __vec __lhs[__unroll_count];
 
@@ -228,7 +230,8 @@ struct __find_segment {
   template <class _InputIterator, class _Proj>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _InputIterator
   operator()(_InputIterator __first, _InputIterator __last, _Proj& __proj) const {
-    return std::__find(__first, __last, __value_, __proj);
+    return std::__rewrap_iter(
+        __first, std::__find(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __value_, __proj));
   }
 };
 

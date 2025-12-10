@@ -162,6 +162,8 @@ public:
 
   lldb_private::Section *GetMachHeaderSection();
 
+  bool IsGOTSection(const lldb_private::Section &section) const override;
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 

@@ -9,7 +9,7 @@
 // Make sure that FILE_DEPENDENCIES work with relative AND absolute paths.
 
 // FILE_DEPENDENCIES: %S/a.txt
-// RUN: test -e %T/a.txt
+// RUN: test -e %{temp}/a.txt
 
 // FILE_DEPENDENCIES: dir/b.txt
-// RUN: test -e %T/b.txt
+// RUN: test -e %{temp}/b.txt

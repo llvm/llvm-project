@@ -265,7 +265,7 @@ public:
     for (auto &element : array)
       ElementTy::assertValid(element);
 #endif
-    buffer.reserve(buffer.size() + std::distance(array.begin(), array.end()));
+    buffer.reserve(buffer.size() + llvm::size(array));
     llvm::append_range(buffer, array);
     Stream.EmitRecordWithAbbrev(code, buffer);
   }

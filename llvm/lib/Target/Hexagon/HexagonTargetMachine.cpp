@@ -48,6 +48,14 @@ static cl::opt<bool>
                          cl::desc("Disable Hardware Loops for Hexagon target"));
 
 static cl::opt<bool>
+    EnableGenWideningVec("hexagon-widening-vectors", cl::init(true), cl::Hidden,
+                         cl::desc("Generate widening vector instructions"));
+
+static cl::opt<bool>
+    EnableOptShuffleVec("hexagon-opt-shuffvec", cl::init(true), cl::Hidden,
+                        cl::desc("Enable optimization of shuffle vectors"));
+
+static cl::opt<bool>
     DisableAModeOpt("disable-hexagon-amodeopt", cl::Hidden,
                     cl::desc("Disable Hexagon Addressing Mode Optimization"));
 
@@ -220,6 +228,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonPeepholePass(PR);
   initializeHexagonSplitConst32AndConst64Pass(PR);
   initializeHexagonVectorPrintPass(PR);
+  initializeHexagonQFPOptimizerPass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
@@ -250,13 +259,6 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
-  // Append the preexisting target features last, so that +mattr overrides
-  // the "unsafe-fp-math" function attribute.
-  // Creating a separate target feature is not strictly necessary, it only
-  // exists to make "unsafe-fp-math" force creating a new subtarget.
-
-  if (F.getFnAttribute("unsafe-fp-math").getValueAsBool())
-    FS = FS.empty() ? "+unsafe-fp" : "+unsafe-fp," + FS;
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I) {
@@ -327,6 +329,8 @@ TargetPassConfig *HexagonTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void HexagonPassConfig::addIRPasses() {
+  HexagonTargetMachine &HTM = getHexagonTargetMachine();
+
   TargetPassConfig::addIRPasses();
   bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
 
@@ -356,6 +360,13 @@ void HexagonPassConfig::addIRPasses() {
     // Replace certain combinations of shifts and ands with extracts.
     if (EnableGenExtract)
       addPass(createHexagonGenExtract());
+    if (EnableGenWideningVec) {
+      addPass(createHexagonGenWideningVecInstr(HTM));
+      addPass(createHexagonGenWideningVecFloatInstr(HTM));
+      addPass(createDeadCodeEliminationPass());
+    }
+    if (EnableOptShuffleVec)
+      addPass(createHexagonOptShuffleVector(HTM));
   }
 }
 
@@ -393,6 +404,7 @@ bool HexagonPassConfig::addInstSelector() {
       addPass(createHexagonGenInsert());
     if (EnableEarlyIf)
       addPass(createHexagonEarlyIfConversion());
+    addPass(createHexagonQFPOptimizer());
   }
 
   return false;

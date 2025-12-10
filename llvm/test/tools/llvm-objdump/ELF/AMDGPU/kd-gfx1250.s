@@ -20,7 +20,7 @@
 ; CHECK-NEXT: ; IMAGE_OP 0
 ; CHECK-NEXT: .amdhsa_next_free_vgpr 32
 ; CHECK-NEXT: .amdhsa_reserve_vcc 0
-; CHECK-NEXT: .amdhsa_reserve_xnack_mask 0
+; CHECK-NEXT: .amdhsa_reserve_xnack_mask 1
 ; CHECK-NEXT: .amdhsa_next_free_sgpr 8
 ; CHECK-NEXT: .amdhsa_float_round_mode_32 0
 ; CHECK-NEXT: .amdhsa_float_round_mode_16_64 0
@@ -76,7 +76,7 @@
 ; CHECK-NEXT: ; IMAGE_OP 0
 ; CHECK-NEXT: .amdhsa_next_free_vgpr 32
 ; CHECK-NEXT: .amdhsa_reserve_vcc 0
-; CHECK-NEXT: .amdhsa_reserve_xnack_mask 0
+; CHECK-NEXT: .amdhsa_reserve_xnack_mask 1
 ; CHECK-NEXT: .amdhsa_next_free_sgpr 8
 ; CHECK-NEXT: .amdhsa_float_round_mode_32 0
 ; CHECK-NEXT: .amdhsa_float_round_mode_16_64 0

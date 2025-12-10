@@ -913,11 +913,26 @@ llvm::getLoopEstimatedTripCount(Loop *L,
 
   // Return the estimated trip count from metadata unless the metadata is
   // missing or has no value.
+  //
+  // Some passes set llvm.loop.estimated_trip_count to 0.  For example, after
+  // peeling 10 or more iterations from a loop with an estimated trip count of
+  // 10, llvm.loop.estimated_trip_count becomes 0 on the remaining loop.  It
+  // indicates that, each time execution reaches the peeled iterations,
+  // execution is estimated to exit them without reaching the remaining loop's
+  // header.
+  //
+  // Even if the probability of reaching a loop's header is low, if it is
+  // reached, it is the start of an iteration.  Consequently, some passes
+  // historically assume that llvm::getLoopEstimatedTripCount always returns a
+  // positive count or std::nullopt.  Thus, return std::nullopt when
+  // llvm.loop.estimated_trip_count is 0.
   if (auto TC = getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)) {
     LLVM_DEBUG(dbgs() << "getLoopEstimatedTripCount: "
                       << LLVMLoopEstimatedTripCount << " metadata has trip "
-                      << "count of " << *TC << " for " << DbgLoop(L) << "\n");
-    return TC;
+                      << "count of " << *TC
+                      << (*TC == 0 ? " (returning std::nullopt)" : "")
+                      << " for " << DbgLoop(L) << "\n");
+    return *TC == 0 ? std::nullopt : std::optional(*TC);
   }
 
   // Estimate the trip count from latch branch weights.
@@ -962,13 +977,54 @@ bool llvm::setLoopEstimatedTripCount(
   if (LatchBranch->getSuccessor(0) != L->getHeader())
     std::swap(BackedgeTakenWeight, LatchExitWeight);
 
-  MDBuilder MDB(LatchBranch->getContext());
-
   // Set/Update profile metadata.
-  LatchBranch->setMetadata(
-      LLVMContext::MD_prof,
-      MDB.createBranchWeights(BackedgeTakenWeight, LatchExitWeight));
+  setBranchWeights(*LatchBranch, {BackedgeTakenWeight, LatchExitWeight},
+                   /*IsExpected=*/false);
 
+  return true;
+}
+
+BranchProbability llvm::getLoopProbability(Loop *L) {
+  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  if (!LatchBranch)
+    return BranchProbability::getUnknown();
+  bool FirstTargetIsLoop = LatchBranch->getSuccessor(0) == L->getHeader();
+  return getBranchProbability(LatchBranch, FirstTargetIsLoop);
+}
+
+bool llvm::setLoopProbability(Loop *L, BranchProbability P) {
+  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  if (!LatchBranch)
+    return false;
+  bool FirstTargetIsLoop = LatchBranch->getSuccessor(0) == L->getHeader();
+  return setBranchProbability(LatchBranch, P, FirstTargetIsLoop);
+}
+
+BranchProbability llvm::getBranchProbability(BranchInst *B,
+                                             bool ForFirstTarget) {
+  if (B->getNumSuccessors() != 2)
+    return BranchProbability::getUnknown();
+  uint64_t Weight0, Weight1;
+  if (!extractBranchWeights(*B, Weight0, Weight1))
+    return BranchProbability::getUnknown();
+  uint64_t Denominator = Weight0 + Weight1;
+  if (Denominator == 0)
+    return BranchProbability::getUnknown();
+  if (!ForFirstTarget)
+    std::swap(Weight0, Weight1);
+  return BranchProbability::getBranchProbability(Weight0, Denominator);
+}
+
+bool llvm::setBranchProbability(BranchInst *B, BranchProbability P,
+                                bool ForFirstTarget) {
+  if (B->getNumSuccessors() != 2)
+    return false;
+  BranchProbability Prob0 = P;
+  BranchProbability Prob1 = P.getCompl();
+  if (!ForFirstTarget)
+    std::swap(Prob0, Prob1);
+  setBranchWeights(*B, {Prob0.getNumerator(), Prob1.getNumerator()},
+                   /*IsExpected=*/false);
   return true;
 }
 

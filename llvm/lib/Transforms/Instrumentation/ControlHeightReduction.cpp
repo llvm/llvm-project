@@ -359,7 +359,7 @@ class CHR {
     unsigned Count = 0;
     // Find out how many times region R is cloned. Note that if the parent
     // of R is cloned, R is also cloned, but R's clone count is not updated
-    // from the clone of the parent. We need to accumlate all the counts
+    // from the clone of the parent. We need to accumulate all the counts
     // from the ancestors to get the clone count.
     while (R) {
       Count += DuplicationCount[R];
@@ -396,9 +396,8 @@ class CHR {
 
 } // end anonymous namespace
 
-static inline
-raw_ostream LLVM_ATTRIBUTE_UNUSED &operator<<(raw_ostream &OS,
-                                              const CHRStats &Stats) {
+[[maybe_unused]] static inline raw_ostream &operator<<(raw_ostream &OS,
+                                                       const CHRStats &Stats) {
   Stats.print(OS);
   return OS;
 }
@@ -425,8 +424,8 @@ static bool shouldApply(Function &F, ProfileSummaryInfo &PSI) {
   return PSI.isFunctionEntryHot(&F);
 }
 
-static void LLVM_ATTRIBUTE_UNUSED dumpIR(Function &F, const char *Label,
-                                         CHRStats *Stats) {
+[[maybe_unused]] static void dumpIR(Function &F, const char *Label,
+                                    CHRStats *Stats) {
   StringRef FuncName = F.getName();
   StringRef ModuleName = F.getParent()->getName();
   (void)(FuncName); // Unused in release build.
@@ -1514,7 +1513,7 @@ static bool negateICmpIfUsedByBranchOrSelectOnly(ICmpInst *ICmp,
       BI->swapSuccessors();
       // Don't need to swap this in terms of
       // TrueBiasedRegions/FalseBiasedRegions because true-based/false-based
-      // mean whehter the branch is likely go into the if-then rather than
+      // mean whether the branch is likely go into the if-then rather than
       // successor0/successor1 and because we can tell which edge is the then or
       // the else one by comparing the destination to the region exit block.
       continue;
@@ -1622,7 +1621,7 @@ static void insertTrivialPHIs(CHRScope *Scope,
 }
 
 // Assert that all the CHR regions of the scope have a biased branch or select.
-static void LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]] static void
 assertCHRRegionsHaveBiasedBranchOrSelect(CHRScope *Scope) {
 #ifndef NDEBUG
   auto HasBiasedBranchOrSelect = [](RegInfo &RI, CHRScope *Scope) {
@@ -1644,8 +1643,9 @@ assertCHRRegionsHaveBiasedBranchOrSelect(CHRScope *Scope) {
 
 // Assert that all the condition values of the biased branches and selects have
 // been hoisted to the pre-entry block or outside of the scope.
-static void LLVM_ATTRIBUTE_UNUSED assertBranchOrSelectConditionHoisted(
-    CHRScope *Scope, BasicBlock *PreEntryBlock) {
+[[maybe_unused]] static void
+assertBranchOrSelectConditionHoisted(CHRScope *Scope,
+                                     BasicBlock *PreEntryBlock) {
   CHR_DEBUG(dbgs() << "Biased regions condition values \n");
   for (RegInfo &RI : Scope->CHRRegions) {
     Region *R = RI.R;
@@ -1992,6 +1992,8 @@ void CHR::addToMergedCondition(bool IsTrueBiased, Value *Cond,
 
   // Use logical and to avoid propagating poison from later conditions.
   MergedCondition = IRB.CreateLogicalAnd(MergedCondition, Cond);
+  setExplicitlyUnknownBranchWeightsIfProfiled(
+      *cast<Instruction>(MergedCondition), DEBUG_TYPE);
 }
 
 void CHR::transformScopes(SmallVectorImpl<CHRScope *> &CHRScopes) {
@@ -2007,8 +2009,8 @@ void CHR::transformScopes(SmallVectorImpl<CHRScope *> &CHRScopes) {
   }
 }
 
-static void LLVM_ATTRIBUTE_UNUSED
-dumpScopes(SmallVectorImpl<CHRScope *> &Scopes, const char *Label) {
+[[maybe_unused]] static void dumpScopes(SmallVectorImpl<CHRScope *> &Scopes,
+                                        const char *Label) {
   dbgs() << Label << " " << Scopes.size() << "\n";
   for (CHRScope *Scope : Scopes) {
     dbgs() << *Scope << "\n";
@@ -2092,8 +2094,6 @@ bool CHR::run() {
   return Changed;
 }
 
-namespace llvm {
-
 ControlHeightReductionPass::ControlHeightReductionPass() {
   parseCHRFilterFiles();
 }
@@ -2116,5 +2116,3 @@ PreservedAnalyses ControlHeightReductionPass::run(
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
-
-} // namespace llvm

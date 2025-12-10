@@ -2630,6 +2630,17 @@ TEST(TripleTest, isMacOSVersionLT) {
   EXPECT_FALSE(T.isMacOSXVersionLT(10, 15, 0));
 }
 
+TEST(TripleTest, isMacOSVersionGE) {
+  Triple T = Triple("x86_64-apple-macos11");
+  EXPECT_FALSE(T.isMacOSXVersionGE(11, 1, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(10, 15, 0));
+
+  T = Triple("x86_64-apple-darwin20");
+  EXPECT_FALSE(T.isMacOSXVersionGE(11, 1, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(11, 0, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(10, 15, 0));
+}
+
 TEST(TripleTest, CanonicalizeOSVersion) {
   EXPECT_EQ(VersionTuple(10, 15, 4),
             Triple::getCanonicalVersionForOS(Triple::MacOSX,

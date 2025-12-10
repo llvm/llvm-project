@@ -10,6 +10,8 @@
 // RUN: %clang_cc1 -x c++ -triple arm64ec-windows -target-cpu cortex-a53 -fsyntax-only -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=19.11 %s
 // expected-no-diagnostics
 
+#include "system_reserved_names.h"
+
 #include <arm_acle.h>
 #ifdef _MSC_VER
 #include <intrin.h>

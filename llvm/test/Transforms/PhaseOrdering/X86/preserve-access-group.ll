@@ -30,11 +30,11 @@ define void @test(i32 noundef %nface, i32 noundef %ncell, ptr noalias noundef %f
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[Y]], <4 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i32> [[WIDE_LOAD12]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[X]], <4 x i64> [[TMP5]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = tail call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> [[TMP4]], i32 8, <4 x i1> splat (i1 true), <4 x double> poison), !tbaa [[DOUBLE_TBAA5:![0-9]+]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER13:%.*]] = tail call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> [[TMP6]], i32 8, <4 x i1> splat (i1 true), <4 x double> poison), !tbaa [[DOUBLE_TBAA5]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = tail call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 [[TMP4]], <4 x i1> splat (i1 true), <4 x double> poison), !tbaa [[DOUBLE_TBAA5:![0-9]+]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER13:%.*]] = tail call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 [[TMP6]], <4 x i1> splat (i1 true), <4 x double> poison), !tbaa [[DOUBLE_TBAA5]], !llvm.access.group [[ACC_GRP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp fast olt <4 x double> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER13]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP7]], <4 x double> [[WIDE_MASKED_GATHER13]], <4 x double> [[WIDE_MASKED_GATHER]]
-; CHECK-NEXT:    tail call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP8]], <4 x ptr> [[TMP4]], i32 8, <4 x i1> splat (i1 true)), !tbaa [[DOUBLE_TBAA5]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    tail call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP8]], <4 x ptr> align 8 [[TMP4]], <4 x i1> splat (i1 true)), !tbaa [[DOUBLE_TBAA5]], !llvm.access.group [[ACC_GRP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV_EPIL]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]

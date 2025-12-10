@@ -70,6 +70,9 @@ int u;
 #ifdef __BPF_FEATURE_LOAD_ACQ_STORE_REL
 int v;
 #endif
+#ifdef __BPF_FEATURE_GOTOX
+int w;
+#endif
 
 // CHECK: int b;
 // CHECK: int c;
@@ -110,6 +113,7 @@ int v;
 // CPU_V4: int u;
 
 // CPU_V4: int v;
+// CPU_V4: int w;
 
 // CPU_GENERIC: int g;
 

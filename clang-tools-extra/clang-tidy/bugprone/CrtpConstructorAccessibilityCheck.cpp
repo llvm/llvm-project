@@ -116,9 +116,10 @@ void CrtpConstructorAccessibilityCheck::check(
   assert(DerivedTemplateParameter &&
          "No template parameter corresponds to the derived class of the CRTP.");
 
-  bool NeedsFriend = !isDerivedParameterBefriended(CRTPDeclaration,
-                                                   DerivedTemplateParameter) &&
-                     !isDerivedClassBefriended(CRTPDeclaration, DerivedRecord);
+  const bool NeedsFriend =
+      !isDerivedParameterBefriended(CRTPDeclaration,
+                                    DerivedTemplateParameter) &&
+      !isDerivedClassBefriended(CRTPDeclaration, DerivedRecord);
 
   const FixItHint HintFriend = FixItHint::CreateInsertion(
       CRTPDeclaration->getBraceRange().getEnd(),

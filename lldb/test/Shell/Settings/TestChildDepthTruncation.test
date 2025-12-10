@@ -2,7 +2,7 @@
 # when target.max-children-depth wasn't explicitly set.
 
 # RUN: split-file %s %t
-# RUN: %clang_host -g %t/main.cpp -o %t.out
+# RUN: %clangxx_host -g %t/main.cpp -o %t.out
 # RUN: %lldb -x -b -s %t/dwim-commands.input %t.out -o exit 2>&1 \
 # RUN:       | FileCheck %s --check-prefix=DWIM
 #

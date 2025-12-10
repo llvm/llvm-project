@@ -25,7 +25,7 @@ class LayoutTest {
   bool Verified = false;
 
 public:
-  LayoutTest() {}
+  LayoutTest() = default;
   LayoutTest(const LayoutTest &) = delete;
   LayoutTest &operator=(const LayoutTest &) = delete;
   ~LayoutTest() { assert(Verified); }

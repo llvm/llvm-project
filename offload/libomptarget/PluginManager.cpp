@@ -36,7 +36,7 @@ void PluginManager::init() {
     return;
   }
 
-  DP("Loading RTLs...\n");
+  ODBG("Init") << "Loading RTLs";
 
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
@@ -437,20 +437,22 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
 
         llvm::offloading::EntryTy DeviceEntry = Entry;
         if (Entry.Size) {
-          if (Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName,
-                                     &DeviceEntry.Address) != OFFLOAD_SUCCESS)
-            REPORT("Failed to load symbol %s\n", Entry.SymbolName);
+          if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE))
+            if (Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName,
+                                       &DeviceEntry.Address) != OFFLOAD_SUCCESS)
+              REPORT("Failed to load symbol %s\n", Entry.SymbolName);
 
           // If unified memory is active, the corresponding global is a device
           // reference to the host global. We need to initialize the pointer on
           // the device to point to the memory on the host.
-          if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
-              (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
+          if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE) &&
+              !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT) &&
+              ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
+               (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)))
             if (Device.RTL->data_submit(DeviceId, DeviceEntry.Address,
                                         Entry.Address,
                                         Entry.Size) != OFFLOAD_SUCCESS)
               REPORT("Failed to write symbol for USM %s\n", Entry.SymbolName);
-          }
         } else if (Entry.Address) {
           if (Device.RTL->get_function(Binary, Entry.SymbolName,
                                        &DeviceEntry.Address) != OFFLOAD_SUCCESS)

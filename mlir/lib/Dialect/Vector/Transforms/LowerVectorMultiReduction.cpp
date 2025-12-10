@@ -39,7 +39,7 @@ namespace {
 class InnerOuterDimReductionConversion
     : public OpRewritePattern<vector::MultiDimReductionOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   explicit InnerOuterDimReductionConversion(
       MLIRContext *context, vector::VectorMultiReductionLowering options,
@@ -136,7 +136,7 @@ private:
 class ReduceMultiDimReductionRank
     : public OpRewritePattern<vector::MultiDimReductionOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   explicit ReduceMultiDimReductionRank(
       MLIRContext *context, vector::VectorMultiReductionLowering options,
@@ -304,7 +304,7 @@ private:
 /// and combines results
 struct TwoDimMultiReductionToElementWise
     : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
                                 PatternRewriter &rewriter) const override {
@@ -359,7 +359,7 @@ struct TwoDimMultiReductionToElementWise
 /// a sequence of vector.reduction ops.
 struct TwoDimMultiReductionToReduction
     : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
                                 PatternRewriter &rewriter) const override {
@@ -420,7 +420,7 @@ struct TwoDimMultiReductionToReduction
 /// separately.
 struct OneDimMultiReductionToTwoDim
     : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
                                 PatternRewriter &rewriter) const override {

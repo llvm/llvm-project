@@ -814,7 +814,7 @@ static unsigned CountNumOperands(StringRef AsmString, unsigned Variant) {
 namespace {
 
 struct AliasPriorityComparator {
-  typedef std::pair<CodeGenInstAlias, int> ValueType;
+  using ValueType = std::pair<CodeGenInstAlias, int>;
   bool operator()(const ValueType &LHS, const ValueType &RHS) const {
     if (LHS.second == RHS.second) {
       // We don't actually care about the order, but for consistency it
@@ -845,8 +845,8 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   bool PassSubtarget = AsmWriter->getValueAsInt("PassSubtarget");
 
   // Create a map from the qualified name to a list of potential matches.
-  typedef std::set<std::pair<CodeGenInstAlias, int>, AliasPriorityComparator>
-      AliasWithPriority;
+  using AliasWithPriority =
+      std::set<std::pair<CodeGenInstAlias, int>, AliasPriorityComparator>;
   std::map<std::string, AliasWithPriority> AliasMap;
   for (const Record *R : Records.getAllDerivedDefinitions("InstAlias")) {
     int Priority = R->getValueAsInt("EmitPriority");

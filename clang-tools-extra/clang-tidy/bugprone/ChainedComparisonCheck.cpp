@@ -11,7 +11,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 
@@ -50,6 +49,8 @@ private:
   void extract(const BinaryOperator *Op);
   void extract(const CXXOperatorCallExpr *Op);
 };
+
+} // namespace
 
 void ChainedComparisonData::add(const Expr *Operand) {
   if (!Name.empty())
@@ -110,8 +111,6 @@ void ChainedComparisonData::extract(const Expr *Op) {
       extract(OverloadedOp);
   }
 }
-
-} // namespace
 
 void ChainedComparisonCheck::registerMatchers(MatchFinder *Finder) {
   const auto OperatorMatcher = expr(anyOf(

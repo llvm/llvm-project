@@ -14,30 +14,6 @@
 //===----------------------------------------------------------------------===//
 // 64-bit operands.
 //
-def s16imm64 : Operand<i64> {
-  let PrintMethod = "printS16ImmOperand";
-  let EncoderMethod = "getImm16Encoding";
-  let ParserMatchClass = PPCS16ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def u16imm64 : Operand<i64> {
-  let PrintMethod = "printU16ImmOperand";
-  let EncoderMethod = "getImm16Encoding";
-  let ParserMatchClass = PPCU16ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def s17imm64 : Operand<i64> {
-  // This operand type is used for addis/lis to allow the assembler parser
-  // to accept immediates in the range -65536..65535 for compatibility with
-  // the GNU assembler.  The operand is treated as 16-bit otherwise.
-  let PrintMethod = "printS16ImmOperand";
-  let EncoderMethod = "getImm16Encoding";
-  let ParserMatchClass = PPCS17ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
 def tocentry : Operand<iPTR> {
   let MIOperandInfo = (ops i64imm:$imm);
 }
@@ -351,11 +327,18 @@ def LQARXL : XForm_1<31, 276, (outs g8prc:$RST), (ins (memrr $RA, $RB):$addr),
                      "lqarx $RST, $addr, 1", IIC_LdStLQARX, []>,
                      isPPC64, isRecordForm;
 
-let hasExtraDefRegAllocReq = 1 in
-def LDAT : X_RD5_RS5_IM5<31, 614, (outs g8rc:$RST), (ins g8rc:$RA, u5imm:$RB),
+let hasExtraDefRegAllocReq = 1, mayStore = 1 in
+def LDAT : X_RD5_RS5_IM5<31, 614, (outs g8prc:$RST), (ins g8prc:$RSTi, ptr_rc_nor0:$RA, u5imm:$RB),
                          "ldat $RST, $RA, $RB", IIC_LdStLoad>, isPPC64,
-           Requires<[IsISA3_0]>;
+           Requires<[IsISA3_0]>,
+           RegConstraint<"$RSTi = $RST">;
 }
+
+def LDAT_PSEUDO : PPCCustomInserterPseudo<
+    (outs g8rc:$dst),
+    (ins ptr_rc_nor0:$ptr, g8rc:$val, u5imm:$fc),
+    "#LDAT_PSEUDO",
+    [(set i64:$dst, (int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val, timm:$fc))]>;
 
 let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
 def STDCX : XForm_1_memOp<31, 214, (outs), (ins g8rc:$RST, (memrr $RA, $RB):$addr),

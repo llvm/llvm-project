@@ -96,7 +96,7 @@ AVRMCCodeEmitter::loadStorePostEncoder(const MCInst &MI, unsigned EncodedValue,
     EncodedValue |= (1 << 12);
 
   // Encode the pointer register.
-  switch (MI.getOperand(Idx).getReg()) {
+  switch (MI.getOperand(Idx).getReg().id()) {
   case AVR::R27R26:
     EncodedValue |= 0xc;
     break;

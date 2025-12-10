@@ -9,6 +9,7 @@
 @Four.str = private unnamed_addr constant [5 x i8] c"Four\00", align 1
 @Array.str = private unnamed_addr constant [6 x i8] c"Array\00", align 1
 @Five.str = private unnamed_addr constant [5 x i8] c"Five\00", align 1
+@Six.str = private unnamed_addr constant [4 x i8] c"Six\00", align 1
 @CB.str = private unnamed_addr constant [3 x i8] c"CB\00", align 1
 @Constants.str = private unnamed_addr constant [10 x i8] c"Constants\00", align 1
 
@@ -137,6 +138,23 @@ define void @test_typedbuffer() {
   ; CHECK:   Element Type: f32
   ; CHECK:   Element Count: 4
 
+  %uav4 = call target("dx.TypedBuffer", double, 1, 0, 0) 
+    @llvm.dx.resource.handlefrombinding(i32 5, i32 0, i32 1, i32 0, ptr @Six.str)
+  ; CHECK: Resource [[UAV4:[0-9]+]]:
+  ; CHECK:   Name: Six
+  ; CHECK:   Binding:
+  ; CHECK:     Record ID: 4
+  ; CHECK:     Space: 5
+  ; CHECK:     Lower Bound: 0
+  ; CHECK:     Size: 1
+  ; CHECK:   Globally Coherent: 0
+  ; CHECK:   Counter Direction: Unknown
+  ; CHECK:   Class: UAV
+  ; CHECK:   Kind: Buffer
+  ; CHECK:   IsROV: 0
+  ; CHECK:   Element Type: f64 (stored as u32)
+  ; CHECK:   Element Count: 1
+
   %cb0 = call target("dx.CBuffer", {float})
      @llvm.dx.resource.handlefrombinding(i32 1, i32 0, i32 1, i32 0, ptr @CB.str)
   ; CHECK: Resource [[CB0:[0-9]+]]:
@@ -150,7 +168,7 @@ define void @test_typedbuffer() {
   ; CHECK:   Kind: CBuffer
   ; CHECK:   CBuffer size: 4
 
-  %cb1 = call target("dx.CBuffer", target("dx.Layout", {float}, 4, 0))
+  %cb1 = call target("dx.CBuffer", <{ [2 x <{ float, target("dx.Padding", 12) }>], float }>)
      @llvm.dx.resource.handlefrombinding(i32 1, i32 8, i32 1, i32 0, ptr @Constants.str)
   ; CHECK: Resource [[CB1:[0-9]+]]:
   ; CHECK:   Name: Constants
@@ -161,7 +179,7 @@ define void @test_typedbuffer() {
   ; CHECK:     Size: 1
   ; CHECK:   Class: CBV
   ; CHECK:   Kind: CBuffer
-  ; CHECK:   CBuffer size: 4
+  ; CHECK:   CBuffer size: 36
 
   ; CHECK-NOT: Resource {{[0-9]+}}:
 
@@ -175,6 +193,7 @@ define void @test_typedbuffer() {
 ; CHECK-DAG: Call bound to [[UAV1]]: %uav1 =
 ; CHECK-DAG: Call bound to [[UAV2]]: %uav2_1 =
 ; CHECK-DAG: Call bound to [[UAV2]]: %uav2_2 =
+; CHECK-DAG: Call bound to [[UAV4]]: %uav4 =
 ; CHECK-DAG: Call bound to [[CB0]]: %cb0 =
 ; CHECK-DAG: Call bound to [[CB1]]: %cb1 =
 

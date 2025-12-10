@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
 
 struct NoCopyConstruct {};
 
@@ -43,7 +43,7 @@ struct HasDtor {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_NoCopyConstruct> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_NoCopyConstruct> {{.*}}):
-// CHECK-NEXT: cir.call @_ZN15NoCopyConstructC1ERKS_(%[[ARG_TO]], %[[ARG_FROM]]) nothrow : (!cir.ptr<!rec_NoCopyConstruct>, !cir.ptr<!rec_NoCopyConstruct>) -> ()
+// CHECK-NEXT: cir.copy %[[ARG_FROM]] to %[[ARG_TO]] : !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
@@ -63,7 +63,7 @@ struct HasDtor {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}):
-// CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1ERKS_(%[[ARG_TO]], %[[ARG_FROM]]) nothrow : (!cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!rec_NonDefaultCtor>) -> ()
+// CHECK-NEXT: cir.copy %[[ARG_FROM]] to %[[ARG_TO]] : !cir.ptr<!rec_NonDefaultCtor>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
@@ -73,7 +73,7 @@ struct HasDtor {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}):
-// CHECK-NEXT: cir.call @_ZN7HasDtorC1ERKS_(%[[ARG_TO]], %[[ARG_FROM]]) nothrow : (!cir.ptr<!rec_HasDtor>, !cir.ptr<!rec_HasDtor>) -> ()
+// CHECK-NEXT: cir.copy %[[ARG_FROM]] to %[[ARG_TO]] : !cir.ptr<!rec_HasDtor>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}):
@@ -81,295 +81,250 @@ struct HasDtor {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
-// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}):
+// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__Bcnt1__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
 // CHECK-NEXT: cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.firstprivate.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
-// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}):
-// CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
-// CHECK-NEXT: %[[FROM_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[FROM_DECAY]] : !cir.ptr<!s32i>, %[[ZERO]] : !u64i), !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!s32i>, !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_DECAY]] : !s32i, !cir.ptr<!s32i>
-//
-// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!s32i>, %[[ONE]] : !s64i), !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ONE_2:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!s32i>, %[[ONE_2]] : !u64i), !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!s32i>, !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !s32i, !cir.ptr<!s32i>
-//
-// CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!s32i>, %[[TWO]] : !s64i), !cir.ptr<!s32i>
-// CHECK-NEXT: %[[TWO_2:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!s32i>, %[[TWO_2]] : !u64i), !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!s32i>, !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !s32i, !cir.ptr<!s32i>
-//
-// CHECK-NEXT: %[[THREE:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!s32i>, %[[THREE]] : !s64i), !cir.ptr<!s32i>
-// CHECK-NEXT: %[[THREE_2:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!s32i>, %[[THREE_2]] : !u64i), !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!s32i>, !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !s32i, !cir.ptr<!s32i>
-//
-// CHECK-NEXT: %[[FOUR:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!s32i>, %[[FOUR]] : !s64i), !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FOUR_2:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!s32i>, %[[FOUR_2]] : !u64i), !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!s32i>, !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
+// CHECK-NEXT: cir.scope {
+// CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[COND]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
+// CHECK-NEXT: %[[STRIDE_FROM:.*]] = cir.ptr_stride %[[DECAY_FROM]], %[[ITR_LOAD]] : (!cir.ptr<!s32i>, !u64i) -> !cir.ptr<!s32i>
+// CHECK-NEXT: %[[DECAY_TO:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
+// CHECK-NEXT: %[[STRIDE_TO:.*]] = cir.ptr_stride %[[DECAY_TO]], %[[ITR_LOAD]] : (!cir.ptr<!s32i>, !u64i) -> !cir.ptr<!s32i>
+// CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load{{.*}} %[[STRIDE_FROM]] : !cir.ptr<!s32i>, !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[FROM_LOAD]], %[[STRIDE_TO]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
-// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTSA5_f : !cir.ptr<!cir.array<!cir.float x 5>> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}):
+// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__Bcnt1__ZTSA5_f : !cir.ptr<!cir.array<!cir.float x 5>> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
 // CHECK-NEXT: cir.alloca !cir.array<!cir.float x 5>, !cir.ptr<!cir.array<!cir.float x 5>>, ["openacc.firstprivate.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
-// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}):
-// CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
-// CHECK-NEXT: %[[FROM_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[FROM_DECAY]] : !cir.ptr<!cir.float>, %[[ZERO]] : !u64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_DECAY]] : !cir.float, !cir.ptr<!cir.float>
-//
-// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!cir.float>, %[[ONE]] : !s64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ONE_2:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!cir.float>, %[[ONE_2]] : !u64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !cir.float, !cir.ptr<!cir.float>
-//
-// CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!cir.float>, %[[TWO]] : !s64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[TWO_2:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!cir.float>, %[[TWO_2]] : !u64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !cir.float, !cir.ptr<!cir.float>
-//
-// CHECK-NEXT: %[[THREE:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!cir.float>, %[[THREE]] : !s64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[THREE_2:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!cir.float>, %[[THREE_2]] : !u64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !cir.float, !cir.ptr<!cir.float>
-//
-// CHECK-NEXT: %[[FOUR:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!cir.float>, %[[FOUR]] : !s64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[FOUR_2:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!cir.float>, %[[FOUR_2]] : !u64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load {{.*}}%[[FROM_OFFSET]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[FROM_LOAD]], %[[TO_OFFSET]] : !cir.float, !cir.ptr<!cir.float>
+// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
+// CHECK-NEXT: cir.scope {
+// CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[COND]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[STRIDE_FROM:.*]] = cir.ptr_stride %[[DECAY_FROM]], %[[ITR_LOAD]] : (!cir.ptr<!cir.float>, !u64i) -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[DECAY_TO:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!cir.float x 5>> -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[STRIDE_TO:.*]] = cir.ptr_stride %[[DECAY_TO]], %[[ITR_LOAD]] : (!cir.ptr<!cir.float>, !u64i) -> !cir.ptr<!cir.float>
+// CHECK-NEXT: %[[FROM_LOAD:.*]] = cir.load{{.*}} %[[STRIDE_FROM]] : !cir.ptr<!cir.float>, !cir.float
+// CHECK-NEXT: cir.store{{.*}} %[[FROM_LOAD]], %[[STRIDE_TO]] : !cir.float, !cir.ptr<!cir.float>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
-// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTSA5_15NoCopyConstruct : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}):
+// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__Bcnt1__ZTSA5_15NoCopyConstruct : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
 // CHECK-NEXT: cir.alloca !cir.array<!rec_NoCopyConstruct x 5>, !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>, ["openacc.firstprivate.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
-// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}):
-// CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
-// CHECK-NEXT: %[[FROM_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[FROM_DECAY]] : !cir.ptr<!rec_NoCopyConstruct>, %[[ZERO]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: cir.call @_ZN15NoCopyConstructC1ERKS_(%[[TO_DECAY]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_NoCopyConstruct>, !cir.ptr<!rec_NoCopyConstruct>) -> ()
-//
-// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_NoCopyConstruct>, %[[ONE]] : !s64i), !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: %[[ONE_2:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NoCopyConstruct>, %[[ONE_2]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: cir.call @_ZN15NoCopyConstructC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_NoCopyConstruct>, !cir.ptr<!rec_NoCopyConstruct>) -> ()
-//
-// CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_NoCopyConstruct>, %[[TWO]] : !s64i), !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: %[[TWO_2:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NoCopyConstruct>, %[[TWO_2]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: cir.call @_ZN15NoCopyConstructC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_NoCopyConstruct>, !cir.ptr<!rec_NoCopyConstruct>) -> ()
-//
-// CHECK-NEXT: %[[THREE:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_NoCopyConstruct>, %[[THREE]] : !s64i), !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: %[[THREE_2:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NoCopyConstruct>, %[[THREE_2]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: cir.call @_ZN15NoCopyConstructC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_NoCopyConstruct>, !cir.ptr<!rec_NoCopyConstruct>) -> ()
-//
-// CHECK-NEXT: %[[FOUR:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_NoCopyConstruct>, %[[FOUR]] : !s64i), !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: %[[FOUR_2:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NoCopyConstruct>, %[[FOUR_2]] : !u64i), !cir.ptr<!rec_NoCopyConstruct>
-// CHECK-NEXT: cir.call @_ZN15NoCopyConstructC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_NoCopyConstruct>, !cir.ptr<!rec_NoCopyConstruct>) -> ()
-//
+// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
+// CHECK-NEXT: cir.scope {
+// CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[COND]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[STRIDE_FROM:.*]] = cir.ptr_stride %[[DECAY_FROM]], %[[ITR_LOAD]] : (!cir.ptr<!rec_NoCopyConstruct>, !u64i) -> !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[DECAY_TO:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> -> !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: %[[STRIDE_TO:.*]] = cir.ptr_stride %[[DECAY_TO]], %[[ITR_LOAD]] : (!cir.ptr<!rec_NoCopyConstruct>, !u64i) -> !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: cir.copy %[[STRIDE_FROM]] to %[[STRIDE_TO]] : !cir.ptr<!rec_NoCopyConstruct>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
-// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTSA5_13CopyConstruct : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {{.*}}):
+// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__Bcnt1__ZTSA5_13CopyConstruct : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
 // CHECK-NEXT: cir.alloca !cir.array<!rec_CopyConstruct x 5>, !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>, ["openacc.firstprivate.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
-// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {{.*}}):
-// CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> -> !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
-// CHECK-NEXT: %[[FROM_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> -> !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[FROM_DECAY]] : !cir.ptr<!rec_CopyConstruct>, %[[ZERO]] : !u64i), !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: cir.call @_ZN13CopyConstructC1ERKS_(%[[TO_DECAY]], %[[FROM_OFFSET]]) : (!cir.ptr<!rec_CopyConstruct>, !cir.ptr<!rec_CopyConstruct>) -> ()
-//
-// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_CopyConstruct>, %[[ONE]] : !s64i), !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: %[[ONE_2:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> -> !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_CopyConstruct>, %[[ONE_2]] : !u64i), !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: cir.call @_ZN13CopyConstructC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) : (!cir.ptr<!rec_CopyConstruct>, !cir.ptr<!rec_CopyConstruct>) -> ()
-//
-// CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_CopyConstruct>, %[[TWO]] : !s64i), !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: %[[TWO_2:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> -> !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_CopyConstruct>, %[[TWO_2]] : !u64i), !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: cir.call @_ZN13CopyConstructC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) : (!cir.ptr<!rec_CopyConstruct>, !cir.ptr<!rec_CopyConstruct>) -> ()
-//
-// CHECK-NEXT: %[[THREE:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_CopyConstruct>, %[[THREE]] : !s64i), !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: %[[THREE_2:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> -> !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_CopyConstruct>, %[[THREE_2]] : !u64i), !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: cir.call @_ZN13CopyConstructC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) : (!cir.ptr<!rec_CopyConstruct>, !cir.ptr<!rec_CopyConstruct>) -> ()
-//
-// CHECK-NEXT: %[[FOUR:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_CopyConstruct>, %[[FOUR]] : !s64i), !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: %[[FOUR_2:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> -> !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_CopyConstruct>, %[[FOUR_2]] : !u64i), !cir.ptr<!rec_CopyConstruct>
-// CHECK-NEXT: cir.call @_ZN13CopyConstructC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) : (!cir.ptr<!rec_CopyConstruct>, !cir.ptr<!rec_CopyConstruct>) -> ()
-//
+// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
+// CHECK-NEXT: cir.scope {
+// CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[COND]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> -> !cir.ptr<!rec_CopyConstruct>
+// CHECK-NEXT: %[[STRIDE_FROM:.*]] = cir.ptr_stride %[[DECAY_FROM]], %[[ITR_LOAD]] : (!cir.ptr<!rec_CopyConstruct>, !u64i) -> !cir.ptr<!rec_CopyConstruct>
+// CHECK-NEXT: %[[DECAY_TO:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> -> !cir.ptr<!rec_CopyConstruct>
+// CHECK-NEXT: %[[STRIDE_TO:.*]] = cir.ptr_stride %[[DECAY_TO]], %[[ITR_LOAD]] : (!cir.ptr<!rec_CopyConstruct>, !u64i) -> !cir.ptr<!rec_CopyConstruct>
+// CHECK-NEXT: cir.call @_ZN13CopyConstructC1ERKS_(%[[STRIDE_TO]], %[[STRIDE_FROM]]) : (!cir.ptr<!rec_CopyConstruct>, !cir.ptr<!rec_CopyConstruct>) -> ()
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
-// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTSA5_14NonDefaultCtor : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {{.*}}):
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_NonDefaultCtor x 5>, !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__Bcnt1__ZTSA5_14NonDefaultCtor : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
+// CHECK-NEXT: cir.alloca !cir.array<!rec_NonDefaultCtor x 5>, !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>, ["openacc.firstprivate.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
-// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {{.*}}):
-// CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> -> !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
-// CHECK-NEXT: %[[FROM_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> -> !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[FROM_DECAY]] : !cir.ptr<!rec_NonDefaultCtor>, %[[ZERO]] : !u64i), !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1ERKS_(%[[TO_DECAY]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!rec_NonDefaultCtor>) -> ()
-//
-// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_NonDefaultCtor>, %[[ONE]] : !s64i), !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: %[[ONE_2:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> -> !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NonDefaultCtor>, %[[ONE_2]] : !u64i), !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!rec_NonDefaultCtor>) -> ()
-//
-// CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_NonDefaultCtor>, %[[TWO]] : !s64i), !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: %[[TWO_2:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> -> !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NonDefaultCtor>, %[[TWO_2]] : !u64i), !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!rec_NonDefaultCtor>) -> ()
-//
-// CHECK-NEXT: %[[THREE:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_NonDefaultCtor>, %[[THREE]] : !s64i), !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: %[[THREE_2:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> -> !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NonDefaultCtor>, %[[THREE_2]] : !u64i), !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!rec_NonDefaultCtor>) -> ()
-//
-// CHECK-NEXT: %[[FOUR:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_NonDefaultCtor>, %[[FOUR]] : !s64i), !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: %[[FOUR_2:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> -> !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_NonDefaultCtor>, %[[FOUR_2]] : !u64i), !cir.ptr<!rec_NonDefaultCtor>
-// CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!rec_NonDefaultCtor>) -> ()
-//
+// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
+// CHECK-NEXT: cir.scope {
+// CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[COND]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> -> !cir.ptr<!rec_NonDefaultCtor>
+// CHECK-NEXT: %[[STRIDE_FROM:.*]] = cir.ptr_stride %[[DECAY_FROM]], %[[ITR_LOAD]] : (!cir.ptr<!rec_NonDefaultCtor>, !u64i) -> !cir.ptr<!rec_NonDefaultCtor>
+// CHECK-NEXT: %[[DECAY_TO:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> -> !cir.ptr<!rec_NonDefaultCtor>
+// CHECK-NEXT: %[[STRIDE_TO:.*]] = cir.ptr_stride %[[DECAY_TO]], %[[ITR_LOAD]] : (!cir.ptr<!rec_NonDefaultCtor>, !u64i) -> !cir.ptr<!rec_NonDefaultCtor>
+// CHECK-NEXT: cir.copy %[[STRIDE_FROM]] to %[[STRIDE_TO]] : !cir.ptr<!rec_NonDefaultCtor>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
-// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTSA5_7HasDtor : !cir.ptr<!cir.array<!rec_HasDtor x 5>> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}):
+// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__Bcnt1__ZTSA5_7HasDtor : !cir.ptr<!cir.array<!rec_HasDtor x 5>> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
 // CHECK-NEXT: cir.alloca !cir.array<!rec_HasDtor x 5>, !cir.ptr<!cir.array<!rec_HasDtor x 5>>, ["openacc.firstprivate.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
-// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}):
-// CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>> -> !cir.ptr<!rec_HasDtor> 
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>> -> !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_HasDtor>, %[[ZERO]] : !u64i), !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: cir.call @_ZN7HasDtorC1ERKS_(%[[TO_DECAY]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_HasDtor>, !cir.ptr<!rec_HasDtor>) -> ()
-//
-// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_HasDtor>, %[[ONE]] : !s64i), !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: %[[ONE_2:.*]] = cir.const #cir.int<1>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>> -> !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_HasDtor>, %[[ONE_2]] : !u64i), !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: cir.call @_ZN7HasDtorC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_HasDtor>, !cir.ptr<!rec_HasDtor>) -> ()
-//
-// CHECK-NEXT: %[[TWO:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_HasDtor>, %[[TWO]] : !s64i), !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: %[[TWO_2:.*]] = cir.const #cir.int<2>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>> -> !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_HasDtor>, %[[TWO_2]] : !u64i), !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: cir.call @_ZN7HasDtorC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_HasDtor>, !cir.ptr<!rec_HasDtor>) -> ()
-//
-// CHECK-NEXT: %[[THREE:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_HasDtor>, %[[THREE]] : !s64i), !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: %[[THREE_2:.*]] = cir.const #cir.int<3>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>> -> !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_HasDtor>, %[[THREE_2]] : !u64i), !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: cir.call @_ZN7HasDtorC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_HasDtor>, !cir.ptr<!rec_HasDtor>) -> ()
-//
-// CHECK-NEXT: %[[FOUR:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[TO_OFFSET:.*]] = cir.ptr_stride(%[[TO_DECAY]] : !cir.ptr<!rec_HasDtor>, %[[FOUR]] : !s64i), !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: %[[FOUR_2:.*]] = cir.const #cir.int<4>
-// CHECK-NEXT: %[[DECAY_FROM:.*]] =  cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>> -> !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: %[[FROM_OFFSET:.*]] = cir.ptr_stride(%[[DECAY_FROM]] : !cir.ptr<!rec_HasDtor>, %[[FOUR_2]] : !u64i), !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: cir.call @_ZN7HasDtorC1ERKS_(%[[TO_OFFSET]], %[[FROM_OFFSET]]) nothrow : (!cir.ptr<!rec_HasDtor>, !cir.ptr<!rec_HasDtor>) -> ()
-//
-// CHECK-NEXT: acc.yield
-//
-// CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}):
-// CHECK-NEXT: %[[LAST_IDX:.*]] = cir.const #cir.int<4> : !u64i
-// CHECK-NEXT: %[[ARRPTR:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>> -> !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: %[[ELEM:.*]] = cir.ptr_stride(%[[ARRPTR]] : !cir.ptr<!rec_HasDtor>, %[[LAST_IDX]] : !u64i), !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !cir.ptr<!rec_HasDtor>, !cir.ptr<!cir.ptr<!rec_HasDtor>>, ["__array_idx"]
-// CHECK-NEXT: cir.store %[[ELEM]], %[[ITR]] : !cir.ptr<!rec_HasDtor>, !cir.ptr<!cir.ptr<!rec_HasDtor>>
-// CHECK-NEXT: cir.do {
-// CHECK-NEXT: %[[ELEM_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!cir.ptr<!rec_HasDtor>>, !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: cir.call @_ZN7HasDtorD1Ev(%[[ELEM_LOAD]]) nothrow : (!cir.ptr<!rec_HasDtor>) -> ()
-// CHECK-NEXT: %[[NEG_ONE:.*]] =  cir.const #cir.int<-1> : !s64i
-// CHECK-NEXT: %[[PREVELEM:.*]] = cir.ptr_stride(%[[ELEM_LOAD]] : !cir.ptr<!rec_HasDtor>, %[[NEG_ONE]] : !s64i), !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: cir.store %[[PREVELEM]], %[[ITR]] : !cir.ptr<!rec_HasDtor>, !cir.ptr<!cir.ptr<!rec_HasDtor>>
+// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
+// CHECK-NEXT: cir.scope {
+// CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[COND]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[DECAY_FROM:.*]] = cir.cast array_to_ptrdecay %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>> -> !cir.ptr<!rec_HasDtor>
+// CHECK-NEXT: %[[STRIDE_FROM:.*]] = cir.ptr_stride %[[DECAY_FROM]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasDtor>, !u64i) -> !cir.ptr<!rec_HasDtor>
+// CHECK-NEXT: %[[DECAY_TO:.*]] = cir.cast array_to_ptrdecay %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>> -> !cir.ptr<!rec_HasDtor>
+// CHECK-NEXT: %[[STRIDE_TO:.*]] = cir.ptr_stride %[[DECAY_TO]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasDtor>, !u64i) -> !cir.ptr<!rec_HasDtor>
+// CHECK-NEXT: cir.copy %[[STRIDE_FROM]] to %[[STRIDE_TO]] : !cir.ptr<!rec_HasDtor>
 // CHECK-NEXT: cir.yield
-// CHECK-NEXT: } while {
-// CHECK-NEXT: %[[ELEM_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!cir.ptr<!rec_HasDtor>>, !cir.ptr<!rec_HasDtor>
-// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[ELEM_LOAD]], %[[ARRPTR]]) : !cir.ptr<!rec_HasDtor>, !cir.bool
-// CHECK-NEXT: cir.condition(%[[CMP]])
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.yield
+// CHECK-NEXT: } destroy {
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasDtor x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
+// CHECK-NEXT: cir.scope {
+// CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !u64i
+// CHECK-NEXT: %[[LAST_SUB_ONE:.*]] = cir.binop(sub, %[[UB_CAST]], %[[ONE]]) : !u64i
+// CHECK-NEXT: cir.store %[[LAST_SUB_ONE]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp(ge, %[[ITR_LOAD]], %[[LB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[COND]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>> -> !cir.ptr<!rec_HasDtor>
+// CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasDtor>, !u64i) -> !cir.ptr<!rec_HasDtor>
+// CHECK-NEXT: cir.call @_ZN7HasDtorD1Ev(%[[STRIDE]]) nothrow : (!cir.ptr<!rec_HasDtor>) -> ()
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[DEC:.*]] = cir.unary(dec, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: cir.store %[[DEC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
+//
 
 extern "C" void acc_combined() {
-  // CHECK: cir.func{{.*}} @acc_combined() {
+  // CHECK: cir.func{{.*}} @acc_combined()
 
   int someInt;
   // CHECK-NEXT: %[[SOMEINT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["someInt"]
@@ -399,8 +354,8 @@ extern "C" void acc_combined() {
 
 #pragma acc parallel loop firstprivate(someInt)
   for(int i = 0; i < 5; ++i);
-  // CHECK: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[SOMEINT]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "someInt"}
-  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(@firstprivatization__ZTSi -> %[[PRIVATE]] : !cir.ptr<!s32i>) {
+  // CHECK: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[SOMEINT]] : !cir.ptr<!s32i>) recipe(@firstprivatization__ZTSi) -> !cir.ptr<!s32i> {name = "someInt"}
+  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.loop combined(parallel)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -408,8 +363,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: } loc
 #pragma acc serial loop firstprivate(someFloat)
   for(int i = 0; i < 5; ++i);
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[SOMEFLOAT]] : !cir.ptr<!cir.float>) -> !cir.ptr<!cir.float> {name = "someFloat"}
-  // CHECK-NEXT: acc.serial combined(loop) firstprivate(@firstprivatization__ZTSf -> %[[PRIVATE]] : !cir.ptr<!cir.float>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[SOMEFLOAT]] : !cir.ptr<!cir.float>) recipe(@firstprivatization__ZTSf) -> !cir.ptr<!cir.float> {name = "someFloat"}
+  // CHECK-NEXT: acc.serial combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.float>) {
   // CHECK-NEXT: acc.loop combined(serial)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -418,8 +373,8 @@ extern "C" void acc_combined() {
 
 #pragma acc parallel loop firstprivate(noCopy)
   for(int i = 0; i < 5; ++i);
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOCOPY]] : !cir.ptr<!rec_NoCopyConstruct>) -> !cir.ptr<!rec_NoCopyConstruct> {name = "noCopy"}
-  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(@firstprivatization__ZTS15NoCopyConstruct -> %[[PRIVATE]] : !cir.ptr<!rec_NoCopyConstruct>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOCOPY]] : !cir.ptr<!rec_NoCopyConstruct>) recipe(@firstprivatization__ZTS15NoCopyConstruct) -> !cir.ptr<!rec_NoCopyConstruct> {name = "noCopy"}
+  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!rec_NoCopyConstruct>) {
   // CHECK-NEXT: acc.loop combined(parallel)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -427,8 +382,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: } loc
 #pragma acc serial loop firstprivate(hasCopy)
   for(int i = 0; i < 5; ++i);
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[HASCOPY]] : !cir.ptr<!rec_CopyConstruct>) -> !cir.ptr<!rec_CopyConstruct> {name = "hasCopy"}
-  // CHECK-NEXT: acc.serial combined(loop) firstprivate(@firstprivatization__ZTS13CopyConstruct -> %[[PRIVATE]] : !cir.ptr<!rec_CopyConstruct>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[HASCOPY]] : !cir.ptr<!rec_CopyConstruct>) recipe(@firstprivatization__ZTS13CopyConstruct) -> !cir.ptr<!rec_CopyConstruct> {name = "hasCopy"}
+  // CHECK-NEXT: acc.serial combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!rec_CopyConstruct>) {
   // CHECK-NEXT: acc.loop combined(serial)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -436,8 +391,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: } loc
 #pragma acc serial loop firstprivate(notDefCtor)
   for(int i = 0; i < 5; ++i);
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTOR]] : !cir.ptr<!rec_NonDefaultCtor>) -> !cir.ptr<!rec_NonDefaultCtor> {name = "notDefCtor"}
-  // CHECK-NEXT: acc.serial combined(loop) firstprivate(@firstprivatization__ZTS14NonDefaultCtor -> %[[PRIVATE]] : !cir.ptr<!rec_NonDefaultCtor>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTOR]] : !cir.ptr<!rec_NonDefaultCtor>) recipe(@firstprivatization__ZTS14NonDefaultCtor) -> !cir.ptr<!rec_NonDefaultCtor> {name = "notDefCtor"}
+  // CHECK-NEXT: acc.serial combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!rec_NonDefaultCtor>) {
   // CHECK-NEXT: acc.loop combined(serial)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -445,8 +400,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: } loc
 #pragma acc serial loop firstprivate(dtor)
   for(int i = 0; i < 5; ++i);
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[DTOR]] : !cir.ptr<!rec_HasDtor>) -> !cir.ptr<!rec_HasDtor> {name = "dtor"}
-  // CHECK-NEXT: acc.serial combined(loop) firstprivate(@firstprivatization__ZTS7HasDtor -> %[[PRIVATE]] : !cir.ptr<!rec_HasDtor>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[DTOR]] : !cir.ptr<!rec_HasDtor>) recipe(@firstprivatization__ZTS7HasDtor) -> !cir.ptr<!rec_HasDtor> {name = "dtor"}
+  // CHECK-NEXT: acc.serial combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!rec_HasDtor>) {
   // CHECK-NEXT: acc.loop combined(serial)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -455,18 +410,18 @@ extern "C" void acc_combined() {
 
 #pragma acc parallel loop firstprivate(someInt, someFloat, noCopy, hasCopy, notDefCtor, dtor)
   for(int i = 0; i < 5; ++i);
-  // CHECK: %[[PRIVATE1:.*]] = acc.firstprivate varPtr(%[[SOMEINT]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "someInt"}
-  // CHECK-NEXT: %[[PRIVATE2:.*]] = acc.firstprivate varPtr(%[[SOMEFLOAT]] : !cir.ptr<!cir.float>) -> !cir.ptr<!cir.float> {name = "someFloat"}
-  // CHECK-NEXT: %[[PRIVATE3:.*]] = acc.firstprivate varPtr(%[[NOCOPY]] : !cir.ptr<!rec_NoCopyConstruct>) -> !cir.ptr<!rec_NoCopyConstruct> {name = "noCopy"}
-  // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.firstprivate varPtr(%[[HASCOPY]] : !cir.ptr<!rec_CopyConstruct>) -> !cir.ptr<!rec_CopyConstruct> {name = "hasCopy"}
-  // CHECK-NEXT: %[[PRIVATE5:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTOR]] : !cir.ptr<!rec_NonDefaultCtor>) -> !cir.ptr<!rec_NonDefaultCtor> {name = "notDefCtor"}
-  // CHECK-NEXT: %[[PRIVATE6:.*]] = acc.firstprivate varPtr(%[[DTOR]] : !cir.ptr<!rec_HasDtor>) -> !cir.ptr<!rec_HasDtor> {name = "dtor"}
-  // CHECK: acc.parallel combined(loop) firstprivate(@firstprivatization__ZTSi -> %[[PRIVATE1]] : !cir.ptr<!s32i>,
-  // CHECK-SAME: @firstprivatization__ZTSf -> %[[PRIVATE2]] : !cir.ptr<!cir.float>,
-  // CHECK-SAME: @firstprivatization__ZTS15NoCopyConstruct -> %[[PRIVATE3]] : !cir.ptr<!rec_NoCopyConstruct>,
-  // CHECK-SAME: @firstprivatization__ZTS13CopyConstruct -> %[[PRIVATE4]] : !cir.ptr<!rec_CopyConstruct>,
-  // CHECK-SAME: @firstprivatization__ZTS14NonDefaultCtor -> %[[PRIVATE5]] : !cir.ptr<!rec_NonDefaultCtor>,
-  // CHECK-SAME: @firstprivatization__ZTS7HasDtor -> %[[PRIVATE6]] : !cir.ptr<!rec_HasDtor>)
+  // CHECK: %[[PRIVATE1:.*]] = acc.firstprivate varPtr(%[[SOMEINT]] : !cir.ptr<!s32i>) recipe(@firstprivatization__ZTSi) -> !cir.ptr<!s32i> {name = "someInt"}
+  // CHECK-NEXT: %[[PRIVATE2:.*]] = acc.firstprivate varPtr(%[[SOMEFLOAT]] : !cir.ptr<!cir.float>) recipe(@firstprivatization__ZTSf) -> !cir.ptr<!cir.float> {name = "someFloat"}
+  // CHECK-NEXT: %[[PRIVATE3:.*]] = acc.firstprivate varPtr(%[[NOCOPY]] : !cir.ptr<!rec_NoCopyConstruct>) recipe(@firstprivatization__ZTS15NoCopyConstruct) -> !cir.ptr<!rec_NoCopyConstruct> {name = "noCopy"}
+  // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.firstprivate varPtr(%[[HASCOPY]] : !cir.ptr<!rec_CopyConstruct>) recipe(@firstprivatization__ZTS13CopyConstruct) -> !cir.ptr<!rec_CopyConstruct> {name = "hasCopy"}
+  // CHECK-NEXT: %[[PRIVATE5:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTOR]] : !cir.ptr<!rec_NonDefaultCtor>) recipe(@firstprivatization__ZTS14NonDefaultCtor) -> !cir.ptr<!rec_NonDefaultCtor> {name = "notDefCtor"}
+  // CHECK-NEXT: %[[PRIVATE6:.*]] = acc.firstprivate varPtr(%[[DTOR]] : !cir.ptr<!rec_HasDtor>) recipe(@firstprivatization__ZTS7HasDtor) -> !cir.ptr<!rec_HasDtor> {name = "dtor"}
+  // CHECK: acc.parallel combined(loop) firstprivate(%[[PRIVATE1]], %[[PRIVATE2]], %[[PRIVATE3]], %[[PRIVATE4]], %[[PRIVATE5]], %[[PRIVATE6]] : !cir.ptr<!s32i>,
+  // CHECK-SAME: !cir.ptr<!cir.float>,
+  // CHECK-SAME: !cir.ptr<!rec_NoCopyConstruct>,
+  // CHECK-SAME: !cir.ptr<!rec_CopyConstruct>,
+  // CHECK-SAME: !cir.ptr<!rec_NonDefaultCtor>,
+  // CHECK-SAME: !cir.ptr<!rec_HasDtor>)
   // CHECK-NEXT: acc.loop combined(parallel)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -481,8 +436,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!s32i x 5>> {name = "someIntArr[1]"}
-  // CHECK-NEXT: acc.serial combined(loop) firstprivate(@firstprivatization__ZTSA5_i -> %[[PRIVATE]] : !cir.ptr<!cir.array<!s32i x 5>>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_i) -> !cir.ptr<!cir.array<!s32i x 5>> {name = "someIntArr[1]"}
+  // CHECK-NEXT: acc.serial combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!s32i x 5>>) {
   // CHECK-NEXT: acc.loop combined(serial)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -496,8 +451,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!cir.float x 5>> {name = "someFloatArr[1]"}
-  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(@firstprivatization__ZTSA5_f -> %[[PRIVATE]] : !cir.ptr<!cir.array<!cir.float x 5>>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_f) -> !cir.ptr<!cir.array<!cir.float x 5>> {name = "someFloatArr[1]"}
+  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!cir.float x 5>>) {
   // CHECK-NEXT: acc.loop combined(parallel)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -511,8 +466,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {name = "noCopyArr[1]"}
-  // CHECK-NEXT: acc.serial combined(loop) firstprivate(@firstprivatization__ZTSA5_15NoCopyConstruct -> %[[PRIVATE]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_15NoCopyConstruct) -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {name = "noCopyArr[1]"}
+  // CHECK-NEXT: acc.serial combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) {
   // CHECK-NEXT: acc.loop combined(serial)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -526,8 +481,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {name = "hasCopyArr[1]"}
-  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(@firstprivatization__ZTSA5_13CopyConstruct -> %[[PRIVATE]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_13CopyConstruct) -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {name = "hasCopyArr[1]"}
+  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) {
   // CHECK-NEXT: acc.loop combined(parallel)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -541,8 +496,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {name = "notDefCtorArr[1]"}
-  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(@firstprivatization__ZTSA5_14NonDefaultCtor -> %[[PRIVATE]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_14NonDefaultCtor) -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {name = "notDefCtorArr[1]"}
+  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) {
   // CHECK-NEXT: acc.loop combined(parallel)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -556,8 +511,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasDtor x 5>> {name = "dtorArr[1]"}
-  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(@firstprivatization__ZTSA5_7HasDtor -> %[[PRIVATE]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_7HasDtor) -> !cir.ptr<!cir.array<!rec_HasDtor x 5>> {name = "dtorArr[1]"}
+  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) {
   // CHECK-NEXT: acc.loop combined(parallel)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -571,48 +526,48 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE1:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!s32i x 5>> {name = "someIntArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE1:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_i) -> !cir.ptr<!cir.array<!s32i x 5>> {name = "someIntArr[1]"}
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE2:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!cir.float x 5>> {name = "someFloatArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE2:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_f) -> !cir.ptr<!cir.array<!cir.float x 5>> {name = "someFloatArr[1]"}
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE3:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {name = "noCopyArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE3:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_15NoCopyConstruct) -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {name = "noCopyArr[1]"}
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {name = "hasCopyArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_13CopyConstruct) -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {name = "hasCopyArr[1]"}
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE5:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {name = "notDefCtorArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE5:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_14NonDefaultCtor) -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {name = "notDefCtorArr[1]"}
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE6:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasDtor x 5>> {name = "dtorArr[1]"}
-  // CHECK-NEXT: acc.serial combined(loop) firstprivate(@firstprivatization__ZTSA5_i -> %[[PRIVATE1]] : !cir.ptr<!cir.array<!s32i x 5>>,
-  // CHECK-SAME: @firstprivatization__ZTSA5_f -> %[[PRIVATE2]] : !cir.ptr<!cir.array<!cir.float x 5>>,
-  // CHECK-SAME: @firstprivatization__ZTSA5_15NoCopyConstruct -> %[[PRIVATE3]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>,
-  // CHECK-SAME: @firstprivatization__ZTSA5_13CopyConstruct -> %[[PRIVATE4]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>,
-  // CHECK-SAME: @firstprivatization__ZTSA5_14NonDefaultCtor -> %[[PRIVATE5]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>,
-  // CHECK-SAME: @firstprivatization__ZTSA5_7HasDtor -> %[[PRIVATE6]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>)
+  // CHECK-NEXT: %[[PRIVATE6:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_7HasDtor) -> !cir.ptr<!cir.array<!rec_HasDtor x 5>> {name = "dtorArr[1]"}
+  // CHECK-NEXT: acc.serial combined(loop) firstprivate(%[[PRIVATE1]], %[[PRIVATE2]], %[[PRIVATE3]], %[[PRIVATE4]], %[[PRIVATE5]], %[[PRIVATE6]] : !cir.ptr<!cir.array<!s32i x 5>>,
+  // CHECK-SAME: !cir.ptr<!cir.array<!cir.float x 5>>,
+  // CHECK-SAME: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>,
+  // CHECK-SAME: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>,
+  // CHECK-SAME: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>,
+  // CHECK-SAME: !cir.ptr<!cir.array<!rec_HasDtor x 5>>)
   // CHECK-NEXT: acc.loop combined(serial)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -628,8 +583,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!s32i x 5>> {name = "someIntArr[1:1]"}
-  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(@firstprivatization__ZTSA5_i -> %[[PRIVATE]] : !cir.ptr<!cir.array<!s32i x 5>>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_i) -> !cir.ptr<!cir.array<!s32i x 5>> {name = "someIntArr[1:1]"}
+  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!s32i x 5>>) {
   // CHECK-NEXT: acc.loop combined(parallel)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -644,8 +599,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!cir.float x 5>> {name = "someFloatArr[1:1]"}
-  // CHECK-NEXT: acc.serial combined(loop) firstprivate(@firstprivatization__ZTSA5_f -> %[[PRIVATE]] : !cir.ptr<!cir.array<!cir.float x 5>>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_f) -> !cir.ptr<!cir.array<!cir.float x 5>> {name = "someFloatArr[1:1]"}
+  // CHECK-NEXT: acc.serial combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!cir.float x 5>>) {
   // CHECK-NEXT: acc.loop combined(serial)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -660,8 +615,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {name = "noCopyArr[1:1]"}
-  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(@firstprivatization__ZTSA5_15NoCopyConstruct -> %[[PRIVATE]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_15NoCopyConstruct) -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {name = "noCopyArr[1:1]"}
+  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) {
   // CHECK-NEXT: acc.loop combined(parallel)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -676,8 +631,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {name = "hasCopyArr[1:1]"}
-  // CHECK-NEXT: acc.serial combined(loop) firstprivate(@firstprivatization__ZTSA5_13CopyConstruct -> %[[PRIVATE]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_13CopyConstruct) -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {name = "hasCopyArr[1:1]"}
+  // CHECK-NEXT: acc.serial combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) {
   // CHECK-NEXT: acc.loop combined(serial)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -692,8 +647,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {name = "notDefCtorArr[1:1]"}
-  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(@firstprivatization__ZTSA5_14NonDefaultCtor -> %[[PRIVATE]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_14NonDefaultCtor) -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {name = "notDefCtorArr[1:1]"}
+  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) {
   // CHECK-NEXT: acc.loop combined(parallel)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -708,8 +663,8 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasDtor x 5>> {name = "dtorArr[1:1]"}
-  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(@firstprivatization__ZTSA5_7HasDtor -> %[[PRIVATE]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) {
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_7HasDtor) -> !cir.ptr<!cir.array<!rec_HasDtor x 5>> {name = "dtorArr[1:1]"}
+  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) {
   // CHECK-NEXT: acc.loop combined(parallel)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
@@ -724,7 +679,7 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE1:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!s32i x 5>> {name = "someIntArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE1:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_i) -> !cir.ptr<!cir.array<!s32i x 5>> {name = "someIntArr[1:1]"}
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -732,7 +687,7 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE2:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!cir.float x 5>> {name = "someFloatArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE2:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_f) -> !cir.ptr<!cir.array<!cir.float x 5>> {name = "someFloatArr[1:1]"}
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -740,7 +695,7 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE3:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {name = "noCopyArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE3:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_15NoCopyConstruct) -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {name = "noCopyArr[1:1]"}
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -748,7 +703,7 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {name = "hasCopyArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_13CopyConstruct) -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {name = "hasCopyArr[1:1]"}
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -756,7 +711,7 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE5:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {name = "notDefCtorArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE5:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_14NonDefaultCtor) -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {name = "notDefCtorArr[1:1]"}
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -764,13 +719,13 @@ extern "C" void acc_combined() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE6:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!rec_HasDtor x 5>> {name = "dtorArr[1:1]"}
-  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(@firstprivatization__ZTSA5_i -> %[[PRIVATE1]] : !cir.ptr<!cir.array<!s32i x 5>>,
-  // CHECK-SAME: @firstprivatization__ZTSA5_f -> %[[PRIVATE2]] : !cir.ptr<!cir.array<!cir.float x 5>>,
-  // CHECK-SAME: @firstprivatization__ZTSA5_15NoCopyConstruct -> %[[PRIVATE3]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>,
-  // CHECK-SAME: @firstprivatization__ZTSA5_13CopyConstruct -> %[[PRIVATE4]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>,
-  // CHECK-SAME: @firstprivatization__ZTSA5_14NonDefaultCtor -> %[[PRIVATE5]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>,
-  // CHECK-SAME: @firstprivatization__ZTSA5_7HasDtor -> %[[PRIVATE6]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>)
+  // CHECK-NEXT: %[[PRIVATE6:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_7HasDtor) -> !cir.ptr<!cir.array<!rec_HasDtor x 5>> {name = "dtorArr[1:1]"}
+  // CHECK-NEXT: acc.parallel combined(loop) firstprivate(%[[PRIVATE1]], %[[PRIVATE2]], %[[PRIVATE3]], %[[PRIVATE4]], %[[PRIVATE5]], %[[PRIVATE6]] : !cir.ptr<!cir.array<!s32i x 5>>,
+  // CHECK-SAME: !cir.ptr<!cir.array<!cir.float x 5>>,
+  // CHECK-SAME: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>,
+  // CHECK-SAME: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>,
+  // CHECK-SAME: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>,
+  // CHECK-SAME: !cir.ptr<!cir.array<!rec_HasDtor x 5>>)
   // CHECK-NEXT: acc.loop combined(parallel)
   // CHECK: acc.yield
   // CHECK-NEXT: } loc

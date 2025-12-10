@@ -3782,21 +3782,21 @@ namespace {
       if (CheckReferenceOnly && !ReferenceField)
         return true;
 
-      llvm::SmallVector<unsigned, 4> UsedFieldIndex;
       // Discard the first field since it is the field decl that is being
       // initialized.
-      for (const FieldDecl *FD : llvm::drop_begin(llvm::reverse(Fields)))
-        UsedFieldIndex.push_back(FD->getFieldIndex());
+      auto UsedFields = llvm::drop_begin(llvm::reverse(Fields));
+      auto UsedIter = UsedFields.begin();
+      const auto UsedEnd = UsedFields.end();
 
-      for (auto UsedIter = UsedFieldIndex.begin(),
-                UsedEnd = UsedFieldIndex.end(),
-                OrigIter = InitFieldIndex.begin(),
-                OrigEnd = InitFieldIndex.end();
-           UsedIter != UsedEnd && OrigIter != OrigEnd; ++UsedIter, ++OrigIter) {
-        if (*UsedIter < *OrigIter)
-          return true;
-        if (*UsedIter > *OrigIter)
+      for (const unsigned Orig : InitFieldIndex) {
+        if (UsedIter == UsedEnd)
           break;
+        const unsigned UsedIndex = (*UsedIter)->getFieldIndex();
+        if (UsedIndex < Orig)
+          return true;
+        if (UsedIndex > Orig)
+          break;
+        ++UsedIter;
       }
 
       return false;
@@ -5630,7 +5630,7 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
 
 static void PopulateKeysForFields(FieldDecl *Field, SmallVectorImpl<const void*> &IdealInits) {
   if (const RecordType *RT = Field->getType()->getAsCanonical<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl();
+    const RecordDecl *RD = RT->getDecl();
     if (RD->isAnonymousStructOrUnion()) {
       for (auto *Field : RD->getDefinitionOrSelf()->fields())
         PopulateKeysForFields(Field, IdealInits);
@@ -6627,6 +6627,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
         auto *Ctor = dyn_cast<CXXConstructorDecl>(MD);
         if ((MD->isMoveAssignmentOperator() ||
              (Ctor && Ctor->isMoveConstructor())) &&
+            getLangOpts().isCompatibleWithMSVC() &&
             !getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015))
           continue;
 
@@ -7630,9 +7631,8 @@ static bool defaultedSpecialMemberIsConstexpr(
         continue;
       QualType BaseType = S.Context.getBaseElementType(F->getType());
       if (const RecordType *RecordTy = BaseType->getAsCanonical<RecordType>()) {
-        CXXRecordDecl *FieldRecDecl =
-            cast<CXXRecordDecl>(RecordTy->getOriginalDecl())
-                ->getDefinitionOrSelf();
+        auto *FieldRecDecl =
+            cast<CXXRecordDecl>(RecordTy->getDecl())->getDefinitionOrSelf();
         if (!specialMemberIsConstexpr(S, FieldRecDecl, CSM,
                                       BaseType.getCVRQualifiers(),
                                       ConstArg && !F->isMutable()))
@@ -8036,7 +8036,7 @@ public:
   DefaultedComparisonVisitor(Sema &S, CXXRecordDecl *RD, FunctionDecl *FD,
                              DefaultedComparisonKind DCK)
       : S(S), RD(RD), FD(FD), DCK(DCK) {
-    if (auto *Info = FD->getDefalutedOrDeletedInfo()) {
+    if (auto *Info = FD->getDefaultedOrDeletedInfo()) {
       // FIXME: Change CreateOverloadedBinOp to take an ArrayRef instead of an
       // UnresolvedSet to avoid this copy.
       Fns.assign(Info->getUnqualifiedLookups().begin(),
@@ -9546,14 +9546,32 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
   CXXMethodDecl *Decl = SMOR.getMethod();
   FieldDecl *Field = Subobj.dyn_cast<FieldDecl*>();
 
-  int DiagKind = -1;
+  enum {
+    NotSet = -1,
+    NoDecl,
+    DeletedDecl,
+    MultipleDecl,
+    InaccessibleDecl,
+    NonTrivialDecl
+  } DiagKind = NotSet;
 
-  if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::NoMemberOrDeleted)
-    DiagKind = !Decl ? 0 : 1;
-  else if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::Ambiguous)
-    DiagKind = 2;
+  if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::NoMemberOrDeleted) {
+    if (CSM == CXXSpecialMemberKind::DefaultConstructor && Field &&
+        Field->getParent()->isUnion()) {
+      // [class.default.ctor]p2:
+      //   A defaulted default constructor for class X is defined as deleted if
+      //   - X is a union that has a variant member with a non-trivial default
+      //     constructor and no variant member of X has a default member
+      //     initializer
+      const auto *RD = cast<CXXRecordDecl>(Field->getParent());
+      if (RD->hasInClassInitializer())
+        return false;
+    }
+    DiagKind = !Decl ? NoDecl : DeletedDecl;
+  } else if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::Ambiguous)
+    DiagKind = MultipleDecl;
   else if (!isAccessible(Subobj, Decl))
-    DiagKind = 3;
+    DiagKind = InaccessibleDecl;
   else if (!IsDtorCallInCtor && Field && Field->getParent()->isUnion() &&
            !Decl->isTrivial()) {
     // A member of a union must have a trivial corresponding special member.
@@ -9569,13 +9587,13 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
       //     initializer
       const auto *RD = cast<CXXRecordDecl>(Field->getParent());
       if (!RD->hasInClassInitializer())
-        DiagKind = 4;
+        DiagKind = NonTrivialDecl;
     } else {
-      DiagKind = 4;
+      DiagKind = NonTrivialDecl;
     }
   }
 
-  if (DiagKind == -1)
+  if (DiagKind == NotSet)
     return false;
 
   if (Diagnose) {
@@ -9593,9 +9611,9 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
           << /*IsObjCPtr*/ false;
     }
 
-    if (DiagKind == 1)
+    if (DiagKind == DeletedDecl)
       S.NoteDeletedFunction(Decl);
-    // FIXME: Explain inaccessibility if DiagKind == 3.
+    // FIXME: Explain inaccessibility if DiagKind == InaccessibleDecl.
   }
 
   return true;
@@ -10627,7 +10645,7 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
     if (const auto *RT =
             FT->getBaseElementTypeUnsafe()->getAsCanonical<RecordType>())
       if (!RT->isDependentType() &&
-          !cast<CXXRecordDecl>(RT->getOriginalDecl()->getDefinitionOrSelf())
+          !cast<CXXRecordDecl>(RT->getDecl()->getDefinitionOrSelf())
                ->canPassInRegisters()) {
         PrintDiagAndRemoveAttr(5);
         return;
@@ -13660,7 +13678,7 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
 
     if (Cxx20Enumerator) {
       Diag(NameLoc, diag::warn_cxx17_compat_using_decl_non_member_enumerator)
-          << SS.getRange();
+          << SS.getScopeRep() << SS.getRange();
       return false;
     }
 
@@ -17876,13 +17894,15 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
         findFailedBooleanCondition(Converted.get());
       if (const auto *ConceptIDExpr =
               dyn_cast_or_null<ConceptSpecializationExpr>(InnerCond)) {
-        // Drill down into concept specialization expressions to see why they
-        // weren't satisfied.
-        Diag(AssertExpr->getBeginLoc(), diag::err_static_assert_failed)
-            << !HasMessage << Msg.str() << AssertExpr->getSourceRange();
-        ConstraintSatisfaction Satisfaction;
-        if (!CheckConstraintSatisfaction(ConceptIDExpr, Satisfaction))
-          DiagnoseUnsatisfiedConstraint(Satisfaction);
+        const ASTConstraintSatisfaction &Satisfaction =
+            ConceptIDExpr->getSatisfaction();
+        if (!Satisfaction.ContainsErrors || Satisfaction.NumRecords) {
+          Diag(AssertExpr->getBeginLoc(), diag::err_static_assert_failed)
+              << !HasMessage << Msg.str() << AssertExpr->getSourceRange();
+          // Drill down into concept specialization expressions to see why they
+          // weren't satisfied.
+          DiagnoseUnsatisfiedConstraint(ConceptIDExpr);
+        }
       } else if (InnerCond && !isa<CXXBoolLiteralExpr>(InnerCond) &&
                  !isa<IntegerLiteral>(InnerCond)) {
         Diag(InnerCond->getBeginLoc(),

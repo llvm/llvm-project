@@ -74,12 +74,12 @@ struct __bounded_iter {
   _LIBCPP_HIDE_FROM_ABI __bounded_iter(__bounded_iter const&) = default;
   _LIBCPP_HIDE_FROM_ABI __bounded_iter(__bounded_iter&&)      = default;
 
-  template < class _OtherIterator,
-             __enable_if_t<
-                 _And< is_convertible<const _OtherIterator&, _Iterator>,
-                       _Or<is_same<reference, __iter_reference<_OtherIterator> >,
-                           is_same<reference, __make_const_lvalue_ref<__iter_reference<_OtherIterator> > > > >::value,
-                 int> = 0>
+  template <class _OtherIterator,
+            __enable_if_t<
+                _And<is_convertible<const _OtherIterator&, _Iterator>,
+                     _Or<is_same<reference, __iterator_reference<_OtherIterator> >,
+                         is_same<reference, __make_const_lvalue_ref<__iterator_reference<_OtherIterator> > > > >::value,
+                int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __bounded_iter(__bounded_iter<_OtherIterator> const& __other) _NOEXCEPT
       : __current_(__other.__current_),
         __begin_(__other.__begin_),

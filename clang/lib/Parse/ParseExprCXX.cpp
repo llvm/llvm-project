@@ -772,9 +772,11 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
 
   // Produce a diagnostic if we're not tentatively parsing; otherwise track
   // that our parse has failed.
-  auto Invalid = [&](llvm::function_ref<void()> Action) {
+  auto Result = [&](llvm::function_ref<void()> Action,
+                    LambdaIntroducerTentativeParse State =
+                        LambdaIntroducerTentativeParse::Invalid) {
     if (Tentative) {
-      *Tentative = LambdaIntroducerTentativeParse::Invalid;
+      *Tentative = State;
       return false;
     }
     Action();
@@ -824,7 +826,7 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
           break;
         }
 
-        return Invalid([&] {
+        return Result([&] {
           Diag(Tok.getLocation(), diag::err_expected_comma_or_rsquare);
         });
       }
@@ -861,7 +863,7 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         ConsumeToken();
         Kind = LCK_StarThis;
       } else {
-        return Invalid([&] {
+        return Result([&] {
           Diag(Tok.getLocation(), diag::err_expected_star_this_capture);
         });
       }
@@ -875,8 +877,9 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
       // or the start of a capture (in the "&" case) with the rest of the
       // capture missing. Both are an error but a misplaced capture-default
       // is more likely if we don't already have a capture default.
-      return Invalid(
-          [&] { Diag(Tok.getLocation(), diag::err_capture_default_first); });
+      return Result(
+          [&] { Diag(Tok.getLocation(), diag::err_capture_default_first); },
+          LambdaIntroducerTentativeParse::Incomplete);
     } else {
       TryConsumeToken(tok::ellipsis, EllipsisLocs[0]);
 
@@ -899,14 +902,13 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         Id = Tok.getIdentifierInfo();
         Loc = ConsumeToken();
       } else if (Tok.is(tok::kw_this)) {
-        return Invalid([&] {
+        return Result([&] {
           // FIXME: Suggest a fixit here.
           Diag(Tok.getLocation(), diag::err_this_captured_by_reference);
         });
       } else {
-        return Invalid([&] {
-          Diag(Tok.getLocation(), diag::err_expected_capture);
-        });
+        return Result(
+            [&] { Diag(Tok.getLocation(), diag::err_expected_capture); });
       }
 
       TryConsumeToken(tok::ellipsis, EllipsisLocs[2]);
@@ -1244,7 +1246,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
         break;
     }
 
-    D.takeAttributes(Attributes);
+    D.takeAttributesAppending(Attributes);
   }
 
   MultiParseScope TemplateParamScope(*this);
@@ -3200,6 +3202,8 @@ ExprResult Parser::ParseRequiresExpression() {
         BalancedDelimiterTracker ExprBraces(*this, tok::l_brace);
         ExprBraces.consumeOpen();
         ExprResult Expression = ParseExpression();
+        if (Expression.isUsable())
+          Expression = Actions.CheckPlaceholderExpr(Expression.get());
         if (!Expression.isUsable()) {
           ExprBraces.skipToEnd();
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
@@ -3369,6 +3373,8 @@ ExprResult Parser::ParseRequiresExpression() {
         //         expression ';'
         SourceLocation StartLoc = Tok.getLocation();
         ExprResult Expression = ParseExpression();
+        if (Expression.isUsable())
+          Expression = Actions.CheckPlaceholderExpr(Expression.get());
         if (!Expression.isUsable()) {
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
           break;

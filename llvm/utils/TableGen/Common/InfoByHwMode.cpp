@@ -174,7 +174,7 @@ bool RegSizeInfoByHwMode::hasStricterSpillThan(
 }
 
 void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
-  typedef typename decltype(Map)::value_type PairType;
+  using PairType = decltype(Map)::value_type;
   std::vector<const PairType *> Pairs;
   for (const auto &P : Map)
     Pairs.push_back(&P);
@@ -227,19 +227,17 @@ EncodingInfoByHwMode::EncodingInfoByHwMode(const Record *R,
   }
 }
 
-namespace llvm {
-raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {
   T.writeToStream(OS);
   return OS;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const RegSizeInfo &T) {
   T.writeToStream(OS);
   return OS;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T) {
   T.writeToStream(OS);
   return OS;
 }
-} // namespace llvm

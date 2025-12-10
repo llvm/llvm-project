@@ -617,7 +617,7 @@ public:
 };
 
 /// Function to print a loop's contents as LLVM's text IR assembly.
-LLVM_ABI void printLoop(Loop &L, raw_ostream &OS,
+LLVM_ABI void printLoop(const Loop &L, raw_ostream &OS,
                         const std::string &Banner = "");
 
 /// Find and return the loop attribute node for the attribute @p Name in

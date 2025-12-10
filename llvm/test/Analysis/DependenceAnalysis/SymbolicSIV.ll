@@ -332,8 +332,7 @@ define void @weaktest(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx2, align 4
-; CHECK-NEXT:    da analyze - flow [*|<] splitable!
-; CHECK-NEXT:    da analyze - split level = 1, iteration = ((0 smax (-4 + (-4 * %n))) /u 8)!
+; CHECK-NEXT:    da analyze - flow [*|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx2, align 4 --> Dst: %0 = load i32, ptr %arrayidx2, align 4
@@ -382,13 +381,17 @@ for.end:                                          ; preds = %for.end.loopexit, %
 define void @symbolicsiv6(ptr %A, ptr %B, i64 %n, i64 %N, i64 %M) nounwind uwtable ssp {
 ; CHECK-LABEL: 'symbolicsiv6'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: (16 * %N) ne) 0
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [*|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: (16 * %N) ne) 0
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
@@ -438,13 +441,17 @@ for.end:                                          ; preds = %for.end.loopexit, %
 define void @symbolicsiv7(ptr %A, ptr %B, i64 %n, i64 %N, i64 %M) nounwind uwtable ssp {
 ; CHECK-LABEL: 'symbolicsiv7'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: (8 * %N) ne) 0
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %1 = load i32, ptr %arrayidx6, align 4
-; CHECK-NEXT:    da analyze - flow [<>]!
+; CHECK-NEXT:    da analyze - flow [*|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %1, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %1 = load i32, ptr %arrayidx6, align 4 --> Dst: %1 = load i32, ptr %arrayidx6, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Compare predicate: (8 * %N) ne) 0
 ; CHECK-NEXT:  Src: %1 = load i32, ptr %arrayidx6, align 4 --> Dst: store i32 %1, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %1, ptr %B.addr.02, align 4 --> Dst: store i32 %1, ptr %B.addr.02, align 4

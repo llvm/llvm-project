@@ -14,12 +14,12 @@ define void @struct_return_1xi64_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[INDEX]]
 ; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
 ; VF4-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i32 0
-; VF4-NEXT:    [[TMP3:%.*]] = tail call { i64 } @fn1(float [[TMP2]]) #[[ATTR0:[0-9]+]]
 ; VF4-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i32 1
-; VF4-NEXT:    [[TMP5:%.*]] = tail call { i64 } @fn1(float [[TMP4]]) #[[ATTR0]]
 ; VF4-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i32 2
-; VF4-NEXT:    [[TMP7:%.*]] = tail call { i64 } @fn1(float [[TMP6]]) #[[ATTR0]]
 ; VF4-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i32 3
+; VF4-NEXT:    [[TMP3:%.*]] = tail call { i64 } @fn1(float [[TMP2]]) #[[ATTR0:[0-9]+]]
+; VF4-NEXT:    [[TMP5:%.*]] = tail call { i64 } @fn1(float [[TMP4]]) #[[ATTR0]]
+; VF4-NEXT:    [[TMP7:%.*]] = tail call { i64 } @fn1(float [[TMP6]]) #[[ATTR0]]
 ; VF4-NEXT:    [[TMP9:%.*]] = tail call { i64 } @fn1(float [[TMP8]]) #[[ATTR0]]
 ; VF4-NEXT:    [[TMP10:%.*]] = extractvalue { i64 } [[TMP3]], 0
 ; VF4-NEXT:    [[TMP11:%.*]] = insertelement <4 x i64> poison, i64 [[TMP10]], i64 0
@@ -53,13 +53,15 @@ define void @struct_return_1xi64_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i32 2
+; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 2
 ; VF2IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP0]], align 4
+; VF2IC2-NEXT:    [[TMP14:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 0
+; VF2IC2-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 1
 ; VF2IC2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x float>, ptr [[TMP2]], align 4
-; VF2IC2-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 0
-; VF2IC2-NEXT:    [[TMP4:%.*]] = tail call { i64 } @fn1(float [[TMP3]]) #[[ATTR0:[0-9]+]]
-; VF2IC2-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 1
-; VF2IC2-NEXT:    [[TMP6:%.*]] = tail call { i64 } @fn1(float [[TMP5]]) #[[ATTR0]]
+; VF2IC2-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[WIDE_LOAD1]], i32 0
+; VF2IC2-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[WIDE_LOAD1]], i32 1
+; VF2IC2-NEXT:    [[TMP4:%.*]] = tail call { i64 } @fn1(float [[TMP14]]) #[[ATTR0:[0-9]+]]
+; VF2IC2-NEXT:    [[TMP6:%.*]] = tail call { i64 } @fn1(float [[TMP3]]) #[[ATTR0]]
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = extractvalue { i64 } [[TMP4]], 0
 ; VF2IC2-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i64 0
 ; VF2IC2-NEXT:    [[TMP9:%.*]] = insertvalue { <2 x i64> } poison, <2 x i64> [[TMP8]], 0
@@ -67,10 +69,8 @@ define void @struct_return_1xi64_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2-NEXT:    [[TMP11:%.*]] = extractvalue { <2 x i64> } [[TMP9]], 0
 ; VF2IC2-NEXT:    [[TMP12:%.*]] = insertelement <2 x i64> [[TMP11]], i64 [[TMP10]], i64 1
 ; VF2IC2-NEXT:    [[TMP13:%.*]] = insertvalue { <2 x i64> } [[TMP9]], <2 x i64> [[TMP12]], 0
-; VF2IC2-NEXT:    [[TMP14:%.*]] = extractelement <2 x float> [[WIDE_LOAD1]], i32 0
-; VF2IC2-NEXT:    [[TMP15:%.*]] = tail call { i64 } @fn1(float [[TMP14]]) #[[ATTR0]]
-; VF2IC2-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[WIDE_LOAD1]], i32 1
-; VF2IC2-NEXT:    [[TMP17:%.*]] = tail call { i64 } @fn1(float [[TMP16]]) #[[ATTR0]]
+; VF2IC2-NEXT:    [[TMP15:%.*]] = tail call { i64 } @fn1(float [[TMP16]]) #[[ATTR0]]
+; VF2IC2-NEXT:    [[TMP17:%.*]] = tail call { i64 } @fn1(float [[TMP5]]) #[[ATTR0]]
 ; VF2IC2-NEXT:    [[TMP18:%.*]] = extractvalue { i64 } [[TMP15]], 0
 ; VF2IC2-NEXT:    [[TMP19:%.*]] = insertelement <2 x i64> poison, i64 [[TMP18]], i64 0
 ; VF2IC2-NEXT:    [[TMP20:%.*]] = insertvalue { <2 x i64> } poison, <2 x i64> [[TMP19]], 0
@@ -81,7 +81,7 @@ define void @struct_return_1xi64_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2-NEXT:    [[TMP25:%.*]] = extractvalue { <2 x i64> } [[TMP13]], 0
 ; VF2IC2-NEXT:    [[TMP26:%.*]] = extractvalue { <2 x i64> } [[TMP24]], 0
 ; VF2IC2-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i64, ptr [[OUT_A]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i64, ptr [[TMP27]], i32 2
+; VF2IC2-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i64, ptr [[TMP27]], i64 2
 ; VF2IC2-NEXT:    store <2 x i64> [[TMP25]], ptr [[TMP27]], align 4
 ; VF2IC2-NEXT:    store <2 x i64> [[TMP26]], ptr [[TMP29]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -120,12 +120,12 @@ define void @struct_return_2xf32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[INDEX]]
 ; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
 ; VF4-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i32 0
-; VF4-NEXT:    [[TMP3:%.*]] = tail call { float, float } @fn2(float [[TMP2]]) #[[ATTR1:[0-9]+]]
 ; VF4-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i32 1
-; VF4-NEXT:    [[TMP5:%.*]] = tail call { float, float } @fn2(float [[TMP4]]) #[[ATTR1]]
 ; VF4-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i32 2
-; VF4-NEXT:    [[TMP7:%.*]] = tail call { float, float } @fn2(float [[TMP6]]) #[[ATTR1]]
 ; VF4-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i32 3
+; VF4-NEXT:    [[TMP3:%.*]] = tail call { float, float } @fn2(float [[TMP2]]) #[[ATTR1:[0-9]+]]
+; VF4-NEXT:    [[TMP5:%.*]] = tail call { float, float } @fn2(float [[TMP4]]) #[[ATTR1]]
+; VF4-NEXT:    [[TMP7:%.*]] = tail call { float, float } @fn2(float [[TMP6]]) #[[ATTR1]]
 ; VF4-NEXT:    [[TMP9:%.*]] = tail call { float, float } @fn2(float [[TMP8]]) #[[ATTR1]]
 ; VF4-NEXT:    [[TMP10:%.*]] = extractvalue { float, float } [[TMP3]], 0
 ; VF4-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> poison, float [[TMP10]], i64 0
@@ -166,7 +166,7 @@ define void @struct_return_2xf32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF4-NEXT:    store <4 x float> [[TMP42]], ptr [[TMP45]], align 4
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP47:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VF4-NEXT:    br i1 [[TMP47]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF4-NEXT:    br i1 [[TMP47]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ;
 ; VF2IC2-LABEL: define void @struct_return_2xf32_replicate(
@@ -178,13 +178,15 @@ define void @struct_return_2xf32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i32 2
+; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 2
 ; VF2IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP0]], align 4
+; VF2IC2-NEXT:    [[TMP22:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 0
+; VF2IC2-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 1
 ; VF2IC2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x float>, ptr [[TMP2]], align 4
-; VF2IC2-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 0
-; VF2IC2-NEXT:    [[TMP4:%.*]] = tail call { float, float } @fn2(float [[TMP3]]) #[[ATTR1:[0-9]+]]
-; VF2IC2-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 1
-; VF2IC2-NEXT:    [[TMP6:%.*]] = tail call { float, float } @fn2(float [[TMP5]]) #[[ATTR1]]
+; VF2IC2-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[WIDE_LOAD1]], i32 0
+; VF2IC2-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[WIDE_LOAD1]], i32 1
+; VF2IC2-NEXT:    [[TMP4:%.*]] = tail call { float, float } @fn2(float [[TMP22]]) #[[ATTR1:[0-9]+]]
+; VF2IC2-NEXT:    [[TMP6:%.*]] = tail call { float, float } @fn2(float [[TMP3]]) #[[ATTR1]]
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = extractvalue { float, float } [[TMP4]], 0
 ; VF2IC2-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i64 0
 ; VF2IC2-NEXT:    [[TMP9:%.*]] = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> [[TMP8]], 0
@@ -200,10 +202,8 @@ define void @struct_return_2xf32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2-NEXT:    [[TMP19:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP17]], 1
 ; VF2IC2-NEXT:    [[TMP20:%.*]] = insertelement <2 x float> [[TMP19]], float [[TMP18]], i64 1
 ; VF2IC2-NEXT:    [[TMP21:%.*]] = insertvalue { <2 x float>, <2 x float> } [[TMP17]], <2 x float> [[TMP20]], 1
-; VF2IC2-NEXT:    [[TMP22:%.*]] = extractelement <2 x float> [[WIDE_LOAD1]], i32 0
-; VF2IC2-NEXT:    [[TMP23:%.*]] = tail call { float, float } @fn2(float [[TMP22]]) #[[ATTR1]]
-; VF2IC2-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[WIDE_LOAD1]], i32 1
-; VF2IC2-NEXT:    [[TMP25:%.*]] = tail call { float, float } @fn2(float [[TMP24]]) #[[ATTR1]]
+; VF2IC2-NEXT:    [[TMP23:%.*]] = tail call { float, float } @fn2(float [[TMP24]]) #[[ATTR1]]
+; VF2IC2-NEXT:    [[TMP25:%.*]] = tail call { float, float } @fn2(float [[TMP5]]) #[[ATTR1]]
 ; VF2IC2-NEXT:    [[TMP26:%.*]] = extractvalue { float, float } [[TMP23]], 0
 ; VF2IC2-NEXT:    [[TMP27:%.*]] = insertelement <2 x float> poison, float [[TMP26]], i64 0
 ; VF2IC2-NEXT:    [[TMP28:%.*]] = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> [[TMP27]], 0
@@ -224,16 +224,16 @@ define void @struct_return_2xf32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2-NEXT:    [[TMP43:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP21]], 1
 ; VF2IC2-NEXT:    [[TMP44:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP40]], 1
 ; VF2IC2-NEXT:    [[TMP45:%.*]] = getelementptr inbounds float, ptr [[OUT_A]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP47:%.*]] = getelementptr inbounds float, ptr [[TMP45]], i32 2
+; VF2IC2-NEXT:    [[TMP47:%.*]] = getelementptr inbounds float, ptr [[TMP45]], i64 2
 ; VF2IC2-NEXT:    store <2 x float> [[TMP41]], ptr [[TMP45]], align 4
 ; VF2IC2-NEXT:    store <2 x float> [[TMP42]], ptr [[TMP47]], align 4
 ; VF2IC2-NEXT:    [[TMP48:%.*]] = getelementptr inbounds float, ptr [[OUT_B]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP50:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i32 2
+; VF2IC2-NEXT:    [[TMP50:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 2
 ; VF2IC2-NEXT:    store <2 x float> [[TMP43]], ptr [[TMP48]], align 4
 ; VF2IC2-NEXT:    store <2 x float> [[TMP44]], ptr [[TMP50]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF2IC2-NEXT:    [[TMP51:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VF2IC2-NEXT:    br i1 [[TMP51]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF2IC2-NEXT:    br i1 [[TMP51]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -271,12 +271,12 @@ define void @struct_return_3xi32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[IN]], i64 [[INDEX]]
 ; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; VF4-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 0
-; VF4-NEXT:    [[TMP3:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP2]]) #[[ATTR2:[0-9]+]]
 ; VF4-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 1
-; VF4-NEXT:    [[TMP5:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP4]]) #[[ATTR2]]
 ; VF4-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 2
-; VF4-NEXT:    [[TMP7:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP6]]) #[[ATTR2]]
 ; VF4-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 3
+; VF4-NEXT:    [[TMP3:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP2]]) #[[ATTR2:[0-9]+]]
+; VF4-NEXT:    [[TMP5:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP4]]) #[[ATTR2]]
+; VF4-NEXT:    [[TMP7:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP6]]) #[[ATTR2]]
 ; VF4-NEXT:    [[TMP9:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP8]]) #[[ATTR2]]
 ; VF4-NEXT:    [[TMP10:%.*]] = extractvalue { i32, i32, i32 } [[TMP3]], 0
 ; VF4-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> poison, i32 [[TMP10]], i64 0
@@ -336,7 +336,7 @@ define void @struct_return_3xi32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF4-NEXT:    store <4 x i32> [[TMP63]], ptr [[TMP64]], align 4
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP66:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VF4-NEXT:    br i1 [[TMP66]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF4-NEXT:    br i1 [[TMP66]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ;
 ; VF2IC2-LABEL: define void @struct_return_3xi32_replicate(
@@ -348,13 +348,15 @@ define void @struct_return_3xi32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[IN]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
+; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 2
 ; VF2IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
+; VF2IC2-NEXT:    [[TMP30:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 0
+; VF2IC2-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
 ; VF2IC2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
-; VF2IC2-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 0
-; VF2IC2-NEXT:    [[TMP4:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP3]]) #[[ATTR2:[0-9]+]]
-; VF2IC2-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
-; VF2IC2-NEXT:    [[TMP6:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP5]]) #[[ATTR2]]
+; VF2IC2-NEXT:    [[TMP32:%.*]] = extractelement <2 x i32> [[WIDE_LOAD1]], i32 0
+; VF2IC2-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[WIDE_LOAD1]], i32 1
+; VF2IC2-NEXT:    [[TMP4:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP30]]) #[[ATTR2:[0-9]+]]
+; VF2IC2-NEXT:    [[TMP6:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP3]]) #[[ATTR2]]
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = extractvalue { i32, i32, i32 } [[TMP4]], 0
 ; VF2IC2-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i64 0
 ; VF2IC2-NEXT:    [[TMP9:%.*]] = insertvalue { <2 x i32>, <2 x i32>, <2 x i32> } poison, <2 x i32> [[TMP8]], 0
@@ -378,10 +380,8 @@ define void @struct_return_3xi32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2-NEXT:    [[TMP27:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[TMP25]], 2
 ; VF2IC2-NEXT:    [[TMP28:%.*]] = insertelement <2 x i32> [[TMP27]], i32 [[TMP26]], i64 1
 ; VF2IC2-NEXT:    [[TMP29:%.*]] = insertvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[TMP25]], <2 x i32> [[TMP28]], 2
-; VF2IC2-NEXT:    [[TMP30:%.*]] = extractelement <2 x i32> [[WIDE_LOAD1]], i32 0
-; VF2IC2-NEXT:    [[TMP31:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP30]]) #[[ATTR2]]
-; VF2IC2-NEXT:    [[TMP32:%.*]] = extractelement <2 x i32> [[WIDE_LOAD1]], i32 1
-; VF2IC2-NEXT:    [[TMP33:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP32]]) #[[ATTR2]]
+; VF2IC2-NEXT:    [[TMP31:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP32]]) #[[ATTR2]]
+; VF2IC2-NEXT:    [[TMP33:%.*]] = tail call { i32, i32, i32 } @fn3(i32 [[TMP5]]) #[[ATTR2]]
 ; VF2IC2-NEXT:    [[TMP34:%.*]] = extractvalue { i32, i32, i32 } [[TMP31]], 0
 ; VF2IC2-NEXT:    [[TMP35:%.*]] = insertelement <2 x i32> poison, i32 [[TMP34]], i64 0
 ; VF2IC2-NEXT:    [[TMP36:%.*]] = insertvalue { <2 x i32>, <2 x i32>, <2 x i32> } poison, <2 x i32> [[TMP35]], 0
@@ -408,24 +408,24 @@ define void @struct_return_3xi32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2-NEXT:    [[TMP57:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[TMP29]], 0
 ; VF2IC2-NEXT:    [[TMP58:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[TMP56]], 0
 ; VF2IC2-NEXT:    [[TMP59:%.*]] = getelementptr inbounds i32, ptr [[DST_A]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP61:%.*]] = getelementptr inbounds i32, ptr [[TMP59]], i32 2
+; VF2IC2-NEXT:    [[TMP61:%.*]] = getelementptr inbounds i32, ptr [[TMP59]], i64 2
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP57]], ptr [[TMP59]], align 4
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP58]], ptr [[TMP61]], align 4
 ; VF2IC2-NEXT:    [[TMP62:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[TMP29]], 1
 ; VF2IC2-NEXT:    [[TMP63:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[TMP56]], 1
 ; VF2IC2-NEXT:    [[TMP64:%.*]] = getelementptr inbounds i32, ptr [[DST_B]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP66:%.*]] = getelementptr inbounds i32, ptr [[TMP64]], i32 2
+; VF2IC2-NEXT:    [[TMP66:%.*]] = getelementptr inbounds i32, ptr [[TMP64]], i64 2
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP62]], ptr [[TMP64]], align 4
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP63]], ptr [[TMP66]], align 4
 ; VF2IC2-NEXT:    [[TMP67:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[TMP29]], 2
 ; VF2IC2-NEXT:    [[TMP68:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[TMP56]], 2
 ; VF2IC2-NEXT:    [[TMP69:%.*]] = getelementptr inbounds i32, ptr [[DST_C]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i32, ptr [[TMP69]], i32 2
+; VF2IC2-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i32, ptr [[TMP69]], i64 2
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP67]], ptr [[TMP69]], align 4
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP68]], ptr [[TMP71]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF2IC2-NEXT:    [[TMP72:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VF2IC2-NEXT:    br i1 [[TMP72]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF2IC2-NEXT:    br i1 [[TMP72]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -580,7 +580,7 @@ define void @struct_return_2xf32_replicate_predicated(ptr %a) {
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE7:.*]] ]
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i32 2
+; VF2IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 2
 ; VF2IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP0]], align 8
 ; VF2IC2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x float>, ptr [[TMP1]], align 8
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = fcmp ogt <2 x float> [[WIDE_LOAD]], zeroinitializer

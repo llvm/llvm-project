@@ -14,8 +14,8 @@ define i32 @preserve_inbounds(i64 %start, ptr %ptr) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[START]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 -3
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP4]] = add <4 x i32> [[REVERSE]], [[VEC_PHI]]
@@ -25,22 +25,8 @@ define i32 @preserve_inbounds(i64 %start, ptr %ptr) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    br label %[[END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[REV_IND:%.*]] = phi i64 [ [[START]], %[[SCALAR_PH]] ], [ [[REV_IND_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[REDUX:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[REDUX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[REV_IND_NEXT]] = add i64 [[REV_IND]], -1
-; CHECK-NEXT:    [[GEP_PTR_IND:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 [[REV_IND_NEXT]]
-; CHECK-NEXT:    [[LD_PTR:%.*]] = load i32, ptr [[GEP_PTR_IND]], align 4
-; CHECK-NEXT:    [[REDUX_NEXT]] = add i32 [[LD_PTR]], [[REDUX]]
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ne i32 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[END]]
 ; CHECK:       [[END]]:
-; CHECK-NEXT:    [[REDUX_NEXT_LCSSA:%.*]] = phi i32 [ [[REDUX_NEXT]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[REDUX_NEXT_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 entry:
   br label %loop
@@ -74,8 +60,8 @@ define i32 @preserve_nusw(i64 %start, ptr %ptr) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[START]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i32, ptr [[PTR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nusw i32, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr nusw i32, ptr [[TMP2]], i32 -3
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nusw i32, ptr [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr nusw i32, ptr [[TMP2]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP4]] = add <4 x i32> [[REVERSE]], [[VEC_PHI]]
@@ -85,22 +71,8 @@ define i32 @preserve_nusw(i64 %start, ptr %ptr) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    br label %[[END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[REV_IND:%.*]] = phi i64 [ [[START]], %[[SCALAR_PH]] ], [ [[REV_IND_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[REDUX:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[REDUX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[REV_IND_NEXT]] = add i64 [[REV_IND]], -1
-; CHECK-NEXT:    [[GEP_PTR_IND:%.*]] = getelementptr nusw i32, ptr [[PTR]], i64 [[REV_IND_NEXT]]
-; CHECK-NEXT:    [[LD_PTR:%.*]] = load i32, ptr [[GEP_PTR_IND]], align 4
-; CHECK-NEXT:    [[REDUX_NEXT]] = add i32 [[LD_PTR]], [[REDUX]]
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ne i32 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[END]]
 ; CHECK:       [[END]]:
-; CHECK-NEXT:    [[REDUX_NEXT_LCSSA:%.*]] = phi i32 [ [[REDUX_NEXT]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[REDUX_NEXT_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 entry:
   br label %loop
@@ -134,8 +106,8 @@ define i32 @drop_nuw(i64 %start, ptr %ptr) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[START]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i32, ptr [[PTR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[TMP2]], i32 -3
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[TMP2]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP4]] = add <4 x i32> [[REVERSE]], [[VEC_PHI]]
@@ -145,22 +117,8 @@ define i32 @drop_nuw(i64 %start, ptr %ptr) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    br label %[[END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[REV_IND:%.*]] = phi i64 [ [[START]], %[[SCALAR_PH]] ], [ [[REV_IND_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[REDUX:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[REDUX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[REV_IND_NEXT]] = add i64 [[REV_IND]], -1
-; CHECK-NEXT:    [[GEP_PTR_IND:%.*]] = getelementptr nuw i32, ptr [[PTR]], i64 [[REV_IND_NEXT]]
-; CHECK-NEXT:    [[LD_PTR:%.*]] = load i32, ptr [[GEP_PTR_IND]], align 4
-; CHECK-NEXT:    [[REDUX_NEXT]] = add i32 [[LD_PTR]], [[REDUX]]
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ne i32 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[END]]
 ; CHECK:       [[END]]:
-; CHECK-NEXT:    [[REDUX_NEXT_LCSSA:%.*]] = phi i32 [ [[REDUX_NEXT]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[REDUX_NEXT_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 entry:
   br label %loop

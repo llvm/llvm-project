@@ -97,7 +97,9 @@ LLVM_ABI bool UnrollRuntimeLoopRemainder(
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
     const TargetTransformInfo *TTI, bool PreserveLCSSA,
     unsigned SCEVExpansionBudget, bool RuntimeUnrollMultiExit,
-    Loop **ResultLoop = nullptr);
+    Loop **ResultLoop = nullptr,
+    std::optional<unsigned> OriginalTripCount = std::nullopt,
+    BranchProbability OriginalLoopProb = BranchProbability::getUnknown());
 
 LLVM_ABI LoopUnrollResult UnrollAndJamLoop(
     Loop *L, unsigned Count, unsigned TripCount, unsigned TripMultiple,

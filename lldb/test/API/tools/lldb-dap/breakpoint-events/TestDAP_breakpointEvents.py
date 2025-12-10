@@ -82,14 +82,14 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
             )
 
         # Flush the breakpoint events.
-        self.dap_server.wait_for_breakpoint_events(timeout=5)
+        self.dap_server.wait_for_breakpoint_events()
 
         # Continue to the breakpoint
         self.continue_to_breakpoints(dap_breakpoint_ids)
 
         verified_breakpoint_ids = []
         unverified_breakpoint_ids = []
-        for breakpoint_event in self.dap_server.wait_for_breakpoint_events(timeout=5):
+        for breakpoint_event in self.dap_server.wait_for_breakpoint_events():
             breakpoint = breakpoint_event["body"]["breakpoint"]
             id = breakpoint["id"]
             if breakpoint["verified"]:

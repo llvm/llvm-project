@@ -10,7 +10,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cctype>
-#include <optional>
 #include <sstream>
 
 #define DEBUG_TYPE "mustache"
@@ -20,7 +19,7 @@ using namespace llvm::mustache;
 
 namespace {
 
-using Accessor = SmallVector<std::string>;
+using Accessor = ArrayRef<StringRef>;
 
 static bool isFalsey(const json::Value &V) {
   return V.getAsNull() || (V.getAsBoolean() && !V.getAsBoolean().value()) ||
@@ -34,23 +33,51 @@ static bool isContextFalsey(const json::Value *V) {
   return isFalsey(*V);
 }
 
-static Accessor splitMustacheString(StringRef Str) {
+static void splitAndTrim(StringRef Str, SmallVectorImpl<StringRef> &Tokens) {
+  size_t CurrentPos = 0;
+  while (CurrentPos < Str.size()) {
+    // Find the next delimiter.
+    size_t DelimiterPos = Str.find('.', CurrentPos);
+
+    // If no delimiter is found, process the rest of the string.
+    if (DelimiterPos == StringRef::npos)
+      DelimiterPos = Str.size();
+
+    // Get the current part, which may have whitespace.
+    StringRef Part = Str.slice(CurrentPos, DelimiterPos);
+
+    // Manually trim the part without creating a new string object.
+    size_t Start = Part.find_first_not_of(" \t\r\n");
+    if (Start != StringRef::npos) {
+      size_t End = Part.find_last_not_of(" \t\r\n");
+      Tokens.push_back(Part.slice(Start, End + 1));
+    }
+
+    // Move past the delimiter for the next iteration.
+    CurrentPos = DelimiterPos + 1;
+  }
+}
+
+static Accessor splitMustacheString(StringRef Str, MustacheContext &Ctx) {
   // We split the mustache string into an accessor.
   // For example:
   //    "a.b.c" would be split into {"a", "b", "c"}
   // We make an exception for a single dot which
   // refers to the current context.
-  Accessor Tokens;
+  SmallVector<StringRef> Tokens;
   if (Str == ".") {
-    Tokens.emplace_back(Str);
-    return Tokens;
+    // "." is a special accessor that refers to the current context.
+    // It's a literal, so it doesn't need to be saved.
+    Tokens.push_back(".");
+  } else {
+    splitAndTrim(Str, Tokens);
   }
-  while (!Str.empty()) {
-    StringRef Part;
-    std::tie(Part, Str) = Str.split(".");
-    Tokens.emplace_back(Part.trim());
-  }
-  return Tokens;
+  // Now, allocate memory for the array of StringRefs in the arena.
+  StringRef *ArenaTokens = Ctx.Allocator.Allocate<StringRef>(Tokens.size());
+  // Copy the StringRefs from the stack vector to the arena.
+  llvm::copy(Tokens, ArenaTokens);
+  // Return an ArrayRef pointing to the stable arena memory.
+  return ArrayRef<StringRef>(ArenaTokens, Tokens.size());
 }
 } // namespace
 
@@ -97,23 +124,23 @@ public:
     SetDelimiter,
   };
 
-  Token(std::string Str)
-      : TokenType(Type::Text), RawBody(std::move(Str)), TokenBody(RawBody),
+  Token(StringRef Str)
+      : TokenType(Type::Text), RawBody(Str), TokenBody(RawBody),
         AccessorValue({}), Indentation(0) {};
 
-  Token(std::string RawBody, std::string TokenBody, char Identifier)
-      : RawBody(std::move(RawBody)), TokenBody(std::move(TokenBody)),
-        Indentation(0) {
+  Token(StringRef RawBody, StringRef TokenBody, char Identifier,
+        MustacheContext &Ctx)
+      : RawBody(RawBody), TokenBody(TokenBody), Indentation(0) {
     TokenType = getTokenType(Identifier);
     if (TokenType == Type::Comment)
       return;
     StringRef AccessorStr(this->TokenBody);
     if (TokenType != Type::Variable)
       AccessorStr = AccessorStr.substr(1);
-    AccessorValue = splitMustacheString(StringRef(AccessorStr).trim());
+    AccessorValue = splitMustacheString(StringRef(AccessorStr).trim(), Ctx);
   }
 
-  Accessor getAccessor() const { return AccessorValue; }
+  ArrayRef<StringRef> getAccessor() const { return AccessorValue; }
 
   Type getType() const { return TokenType; }
 
@@ -144,16 +171,16 @@ public:
 
   Type TokenType;
   // RawBody is the original string that was tokenized.
-  std::string RawBody;
+  StringRef RawBody;
   // TokenBody is the original string with the identifier removed.
-  std::string TokenBody;
-  Accessor AccessorValue;
+  StringRef TokenBody;
+  ArrayRef<StringRef> AccessorValue;
   size_t Indentation;
 };
 
 using EscapeMap = DenseMap<char, std::string>;
 
-class ASTNode {
+class ASTNode : public ilist_node<ASTNode> {
 public:
   enum Type {
     Root,
@@ -168,18 +195,19 @@ public:
   ASTNode(MustacheContext &Ctx)
       : Ctx(Ctx), Ty(Type::Root), Parent(nullptr), ParentContext(nullptr) {}
 
-  ASTNode(MustacheContext &Ctx, std::string Body, ASTNode *Parent)
-      : Ctx(Ctx), Ty(Type::Text), Body(std::move(Body)), Parent(Parent),
+  ASTNode(MustacheContext &Ctx, StringRef Body, ASTNode *Parent)
+      : Ctx(Ctx), Ty(Type::Text), Body(Body), Parent(Parent),
         ParentContext(nullptr) {}
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable Nodes
-  ASTNode(MustacheContext &Ctx, Type Ty, Accessor Accessor, ASTNode *Parent)
-      : Ctx(Ctx), Ty(Ty), Parent(Parent), AccessorValue(std::move(Accessor)),
+  ASTNode(MustacheContext &Ctx, Type Ty, ArrayRef<StringRef> Accessor,
+          ASTNode *Parent)
+      : Ctx(Ctx), Ty(Ty), Parent(Parent), AccessorValue(Accessor),
         ParentContext(nullptr) {}
 
-  void addChild(AstPtr Child) { Children.emplace_back(std::move(Child)); };
+  void addChild(AstPtr Child) { Children.push_back(Child); };
 
-  void setRawBody(std::string NewBody) { RawBody = std::move(NewBody); };
+  void setRawBody(StringRef NewBody) { RawBody = NewBody; };
 
   void setIndentation(size_t NewIndentation) { Indentation = NewIndentation; };
 
@@ -212,28 +240,27 @@ private:
   MustacheContext &Ctx;
   Type Ty;
   size_t Indentation = 0;
-  std::string RawBody;
-  std::string Body;
+  StringRef RawBody;
+  StringRef Body;
   ASTNode *Parent;
-  // TODO: switch implementation to SmallVector<T>
-  std::vector<AstPtr> Children;
-  const Accessor AccessorValue;
+  ASTNodeList Children;
+  const ArrayRef<StringRef> AccessorValue;
   const llvm::json::Value *ParentContext;
 };
 
 // A wrapper for arena allocator for ASTNodes
 static AstPtr createRootNode(MustacheContext &Ctx) {
-  return std::make_unique<ASTNode>(Ctx);
+  return new (Ctx.Allocator.Allocate<ASTNode>()) ASTNode(Ctx);
 }
 
-static AstPtr createNode(MustacheContext &Ctx, ASTNode::Type T, Accessor A,
-                         ASTNode *Parent) {
-  return std::make_unique<ASTNode>(Ctx, T, std::move(A), Parent);
+static AstPtr createNode(MustacheContext &Ctx, ASTNode::Type T,
+                         ArrayRef<StringRef> A, ASTNode *Parent) {
+  return new (Ctx.Allocator.Allocate<ASTNode>()) ASTNode(Ctx, T, A, Parent);
 }
 
-static AstPtr createTextNode(MustacheContext &Ctx, std::string Body,
+static AstPtr createTextNode(MustacheContext &Ctx, StringRef Body,
                              ASTNode *Parent) {
-  return std::make_unique<ASTNode>(Ctx, std::move(Body), Parent);
+  return new (Ctx.Allocator.Allocate<ASTNode>()) ASTNode(Ctx, Body, Parent);
 }
 
 // Function to check if there is meaningful text behind.
@@ -295,9 +322,9 @@ static void stripTokenAhead(SmallVectorImpl<Token> &Tokens, size_t Idx) {
   StringRef NextTokenBody = NextToken.TokenBody;
   // Cut off the leading newline which could be \n or \r\n.
   if (NextTokenBody.starts_with("\r\n"))
-    NextToken.TokenBody = NextTokenBody.substr(2).str();
+    NextToken.TokenBody = NextTokenBody.substr(2);
   else if (NextTokenBody.starts_with("\n"))
-    NextToken.TokenBody = NextTokenBody.substr(1).str();
+    NextToken.TokenBody = NextTokenBody.substr(1);
 }
 
 // Adjust previous token body if there no text behind.
@@ -312,7 +339,7 @@ void stripTokenBefore(SmallVectorImpl<Token> &Tokens, size_t Idx,
   StringRef PrevTokenBody = PrevToken.TokenBody;
   StringRef Unindented = PrevTokenBody.rtrim(" \r\t\v");
   size_t Indentation = PrevTokenBody.size() - Unindented.size();
-  PrevToken.TokenBody = Unindented.str();
+  PrevToken.TokenBody = Unindented;
   CurrentToken.setIndentation(Indentation);
 }
 
@@ -359,144 +386,99 @@ struct Tag {
   llvm_unreachable("Unknown json::Value::Kind");
 }
 
-static Tag findNextTag(StringRef Template, size_t StartPos, StringRef Open,
-                       StringRef Close) {
-  const StringLiteral TripleOpen("{{{");
-  const StringLiteral TripleClose("}}}");
-
-  size_t NormalOpenPos = Template.find(Open, StartPos);
-  size_t TripleOpenPos = Template.find(TripleOpen, StartPos);
-
-  Tag Result;
-
-  // Determine which tag comes first.
-  if (TripleOpenPos != StringRef::npos &&
-      (NormalOpenPos == StringRef::npos || TripleOpenPos <= NormalOpenPos)) {
-    // Found a triple mustache tag.
-    size_t EndPos =
-        Template.find(TripleClose, TripleOpenPos + TripleOpen.size());
-    if (EndPos == StringRef::npos)
-      return Result; // No closing tag found.
-
-    Result.TagKind = Tag::Kind::Triple;
-    Result.StartPosition = TripleOpenPos;
-    size_t ContentStart = TripleOpenPos + TripleOpen.size();
-    Result.Content = Template.substr(ContentStart, EndPos - ContentStart);
-    Result.FullMatch = Template.substr(
-        TripleOpenPos, (EndPos + TripleClose.size()) - TripleOpenPos);
-  } else if (NormalOpenPos != StringRef::npos) {
-    // Found a normal mustache tag.
-    size_t EndPos = Template.find(Close, NormalOpenPos + Open.size());
-    if (EndPos == StringRef::npos)
-      return Result; // No closing tag found.
-
-    Result.TagKind = Tag::Kind::Normal;
-    Result.StartPosition = NormalOpenPos;
-    size_t ContentStart = NormalOpenPos + Open.size();
-    Result.Content = Template.substr(ContentStart, EndPos - ContentStart);
-    Result.FullMatch =
-        Template.substr(NormalOpenPos, (EndPos + Close.size()) - NormalOpenPos);
-  }
-
-  return Result;
-}
-
-static std::optional<std::pair<StringRef, StringRef>>
-processTag(const Tag &T, SmallVectorImpl<Token> &Tokens) {
-  LLVM_DEBUG(dbgs() << "[Tag] " << T.FullMatch << ", Content: " << T.Content
-                    << ", Kind: " << tagKindToString(T.TagKind) << "\n");
-  if (T.TagKind == Tag::Kind::Triple) {
-    Tokens.emplace_back(T.FullMatch.str(), "&" + T.Content.str(), '&');
-    return std::nullopt;
-  }
-  StringRef Interpolated = T.Content;
-  std::string RawBody = T.FullMatch.str();
-  if (!Interpolated.trim().starts_with("=")) {
-    char Front = Interpolated.empty() ? ' ' : Interpolated.trim().front();
-    Tokens.emplace_back(RawBody, Interpolated.str(), Front);
-    return std::nullopt;
-  }
-  Tokens.emplace_back(RawBody, Interpolated.str(), '=');
-  StringRef DelimSpec = Interpolated.trim();
-  DelimSpec = DelimSpec.drop_front(1);
-  DelimSpec = DelimSpec.take_until([](char C) { return C == '='; });
-  DelimSpec = DelimSpec.trim();
-
-  std::pair<StringRef, StringRef> Ret = DelimSpec.split(' ');
-  LLVM_DEBUG(dbgs() << "[Set Delimiter] NewOpen: " << Ret.first
-                    << ", NewClose: " << Ret.second << "\n");
-  return Ret;
-}
-
 // Simple tokenizer that splits the template into tokens.
-// The mustache spec allows {{{ }}} to unescape variables,
-// but we don't support that here. An unescape variable
-// is represented only by {{& variable}}.
-static SmallVector<Token> tokenize(StringRef Template) {
+static SmallVector<Token> tokenize(StringRef Template, MustacheContext &Ctx) {
   LLVM_DEBUG(dbgs() << "[Tokenize Template] \"" << Template << "\"\n");
   SmallVector<Token> Tokens;
   SmallString<8> Open("{{");
   SmallString<8> Close("}}");
-  size_t Start = 0;
+  size_t Cursor = 0;
+  size_t TextStart = 0;
 
-  while (Start < Template.size()) {
-    LLVM_DEBUG(dbgs() << "[Tokenize Loop] Start:" << Start << ", Open:'" << Open
-                      << "', Close:'" << Close << "'\n");
-    Tag T = findNextTag(Template, Start, Open, Close);
+  const StringLiteral TripleOpen("{{{");
+  const StringLiteral TripleClose("}}}");
 
-    if (T.TagKind == Tag::Kind::None) {
-      // No more tags, the rest is text.
-      Tokens.emplace_back(Template.substr(Start).str());
-      LLVM_DEBUG(dbgs() << "  No more tags. Created final Text token: \""
-                        << Template.substr(Start) << "\"\n");
+  while (Cursor < Template.size()) {
+    StringRef TemplateSuffix = Template.substr(Cursor);
+    StringRef TagOpen, TagClose;
+    Tag::Kind Kind;
+
+    // Determine which tag we've encountered.
+    if (TemplateSuffix.starts_with(TripleOpen)) {
+      Kind = Tag::Kind::Triple;
+      TagOpen = TripleOpen;
+      TagClose = TripleClose;
+    } else if (TemplateSuffix.starts_with(Open)) {
+      Kind = Tag::Kind::Normal;
+      TagOpen = Open;
+      TagClose = Close;
+    } else {
+      // Not at a tag, continue scanning.
+      ++Cursor;
+      continue;
+    }
+
+    // Found a tag, first add the preceding text.
+    if (Cursor > TextStart)
+      Tokens.emplace_back(Template.slice(TextStart, Cursor));
+
+    // Find the closing tag.
+    size_t EndPos = Template.find(TagClose, Cursor + TagOpen.size());
+    if (EndPos == StringRef::npos) {
+      // No closing tag, the rest is text.
+      Tokens.emplace_back(Template.substr(Cursor));
+      TextStart = Cursor = Template.size();
       break;
     }
 
-    // Add the text before the tag.
-    if (T.StartPosition > Start) {
-      StringRef Text = Template.substr(Start, T.StartPosition - Start);
-      Tokens.emplace_back(Text.str());
+    // Extract tag content and full match.
+    size_t ContentStart = Cursor + TagOpen.size();
+    StringRef Content = Template.substr(ContentStart, EndPos - ContentStart);
+    StringRef FullMatch =
+        Template.substr(Cursor, (EndPos + TagClose.size()) - Cursor);
+
+    // Process the tag (inlined logic from processTag).
+    LLVM_DEBUG(dbgs() << "[Tag] " << FullMatch << ", Content: " << Content
+                      << ", Kind: " << tagKindToString(Kind) << "\n");
+    if (Kind == Tag::Kind::Triple) {
+      Tokens.emplace_back(FullMatch, Ctx.Saver.save("&" + Content), '&', Ctx);
+    } else { // Normal Tag
+      StringRef Interpolated = Content;
+      if (!Interpolated.trim().starts_with("=")) {
+        char Front = Interpolated.empty() ? ' ' : Interpolated.trim().front();
+        Tokens.emplace_back(FullMatch, Interpolated, Front, Ctx);
+      } else { // Set Delimiter
+        Tokens.emplace_back(FullMatch, Interpolated, '=', Ctx);
+        StringRef DelimSpec = Interpolated.trim();
+        DelimSpec = DelimSpec.drop_front(1);
+        DelimSpec = DelimSpec.take_until([](char C) { return C == '='; });
+        DelimSpec = DelimSpec.trim();
+
+        auto [NewOpen, NewClose] = DelimSpec.split(' ');
+        LLVM_DEBUG(dbgs() << "[Set Delimiter] NewOpen: " << NewOpen
+                          << ", NewClose: " << NewClose << "\n");
+        Open = NewOpen;
+        Close = NewClose;
+      }
     }
 
-    if (auto NewDelims = processTag(T, Tokens)) {
-      std::tie(Open, Close) = *NewDelims;
-    }
-
-    // Move past the tag.
-    Start = T.StartPosition + T.FullMatch.size();
+    // Move past the tag for the next iteration.
+    Cursor += FullMatch.size();
+    TextStart = Cursor;
   }
 
-  // Fix up white spaces for:
-  //   - open sections
-  //   - inverted sections
-  //   - close sections
-  //   - comments
-  //
-  // This loop attempts to find standalone tokens and tries to trim out
-  // the surrounding whitespace.
-  // For example:
-  // if you have the template string
-  //  {{#section}} \n Example \n{{/section}}
-  // The output should would be
-  // For example:
-  //  \n Example \n
+  // Add any remaining text after the last tag.
+  if (TextStart < Template.size())
+    Tokens.emplace_back(Template.substr(TextStart));
+
+  // Fix up white spaces for standalone tags.
   size_t LastIdx = Tokens.size() - 1;
   for (size_t Idx = 0, End = Tokens.size(); Idx < End; ++Idx) {
     Token &CurrentToken = Tokens[Idx];
     Token::Type CurrentType = CurrentToken.getType();
-    // Check if token type requires cleanup.
-    bool RequiresCleanUp = requiresCleanUp(CurrentType);
-
-    if (!RequiresCleanUp)
+    if (!requiresCleanUp(CurrentType))
       continue;
 
-    // We adjust the token body if there's no text behind or ahead.
-    // A token is considered to have no text ahead if the right of the previous
-    // token is a newline followed by spaces.
-    // A token is considered to have no text behind if the left of the next
-    // token is spaces followed by a newline.
-    // eg.
-    //  "Line 1\n {{#section}} \n Line 2 \n {{/section}} \n Line 3"
     bool HasTextBehind = hasTextBehind(Idx, Tokens);
     bool HasTextAhead = hasTextAhead(Idx, Tokens);
 
@@ -614,20 +596,27 @@ void Parser::parseSection(ASTNode *Parent, ASTNode::Type Ty,
                           const Accessor &A) {
   AstPtr CurrentNode = createNode(Ctx, Ty, A, Parent);
   size_t Start = CurrentPtr;
-  parseMustache(CurrentNode.get());
+  parseMustache(CurrentNode);
   const size_t End = CurrentPtr - 1;
-  std::string RawBody;
-  for (std::size_t I = Start; I < End; I++)
+
+  size_t RawBodySize = 0;
+  for (size_t I = Start; I < End; ++I)
+    RawBodySize += Tokens[I].RawBody.size();
+
+  SmallString<128> RawBody;
+  RawBody.reserve(RawBodySize);
+  for (std::size_t I = Start; I < End; ++I)
     RawBody += Tokens[I].RawBody;
-  CurrentNode->setRawBody(std::move(RawBody));
-  Parent->addChild(std::move(CurrentNode));
+
+  CurrentNode->setRawBody(Ctx.Saver.save(StringRef(RawBody)));
+  Parent->addChild(CurrentNode);
 }
 
 AstPtr Parser::parse() {
-  Tokens = tokenize(TemplateStr);
+  Tokens = tokenize(TemplateStr, Ctx);
   CurrentPtr = 0;
   AstPtr RootNode = createRootNode(Ctx);
-  parseMustache(RootNode.get());
+  parseMustache(RootNode);
   return RootNode;
 }
 
@@ -636,31 +625,29 @@ void Parser::parseMustache(ASTNode *Parent) {
   while (CurrentPtr < Tokens.size()) {
     Token CurrentToken = Tokens[CurrentPtr];
     CurrentPtr++;
-    Accessor A = CurrentToken.getAccessor();
+    ArrayRef<StringRef> A = CurrentToken.getAccessor();
     AstPtr CurrentNode;
 
     switch (CurrentToken.getType()) {
     case Token::Type::Text: {
-      CurrentNode =
-          createTextNode(Ctx, std::move(CurrentToken.TokenBody), Parent);
-      Parent->addChild(std::move(CurrentNode));
+      CurrentNode = createTextNode(Ctx, CurrentToken.TokenBody, Parent);
+      Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::Variable: {
-      CurrentNode = createNode(Ctx, ASTNode::Variable, std::move(A), Parent);
-      Parent->addChild(std::move(CurrentNode));
+      CurrentNode = createNode(Ctx, ASTNode::Variable, A, Parent);
+      Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::UnescapeVariable: {
-      CurrentNode =
-          createNode(Ctx, ASTNode::UnescapeVariable, std::move(A), Parent);
-      Parent->addChild(std::move(CurrentNode));
+      CurrentNode = createNode(Ctx, ASTNode::UnescapeVariable, A, Parent);
+      Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::Partial: {
-      CurrentNode = createNode(Ctx, ASTNode::Partial, std::move(A), Parent);
+      CurrentNode = createNode(Ctx, ASTNode::Partial, A, Parent);
       CurrentNode->setIndentation(CurrentToken.getIndentation());
-      Parent->addChild(std::move(CurrentNode));
+      Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::SectionOpen: {
@@ -694,8 +681,7 @@ static void toMustacheString(const json::Value &Data, raw_ostream &OS) {
     return;
   }
   case json::Value::String: {
-    auto Str = *Data.getAsString();
-    OS << Str.str();
+    OS << *Data.getAsString();
     return;
   }
 
@@ -727,7 +713,7 @@ void ASTNode::renderPartial(const json::Value &CurrentCtx,
                     << ", Indentation:" << Indentation << "\n");
   auto Partial = Ctx.Partials.find(AccessorValue[0]);
   if (Partial != Ctx.Partials.end())
-    renderPartial(CurrentCtx, OS, Partial->getValue().get());
+    renderPartial(CurrentCtx, OS, Partial->getValue());
 }
 
 void ASTNode::renderVariable(const json::Value &CurrentCtx,
@@ -858,8 +844,8 @@ const json::Value *ASTNode::findContext() {
 
 void ASTNode::renderChild(const json::Value &Contexts,
                           MustacheOutputStream &OS) {
-  for (AstPtr &Child : Children)
-    Child->render(Contexts, OS);
+  for (ASTNode &Child : Children)
+    Child.render(Contexts, OS);
 }
 
 void ASTNode::renderPartial(const json::Value &Contexts,
@@ -869,7 +855,7 @@ void ASTNode::renderPartial(const json::Value &Contexts,
   Partial->render(Contexts, IS);
 }
 
-void ASTNode::renderLambdas(const json::Value &Contexts,
+void ASTNode::renderLambdas(const llvm::json::Value &Contexts,
                             MustacheOutputStream &OS, Lambda &L) {
   json::Value LambdaResult = L();
   std::string LambdaStr;
@@ -886,9 +872,9 @@ void ASTNode::renderLambdas(const json::Value &Contexts,
   LambdaNode->render(Contexts, OS);
 }
 
-void ASTNode::renderSectionLambdas(const json::Value &Contexts,
+void ASTNode::renderSectionLambdas(const llvm::json::Value &Contexts,
                                    MustacheOutputStream &OS, SectionLambda &L) {
-  json::Value Return = L(RawBody);
+  json::Value Return = L(RawBody.str());
   if (isFalsey(Return))
     return;
   std::string LambdaStr;
@@ -899,15 +885,16 @@ void ASTNode::renderSectionLambdas(const json::Value &Contexts,
   LambdaNode->render(Contexts, OS);
 }
 
-void Template::render(const json::Value &Data, llvm::raw_ostream &OS) {
+void Template::render(const llvm::json::Value &Data, llvm::raw_ostream &OS) {
   RawMustacheOutputStream MOS(OS);
   Tree->render(Data, MOS);
 }
 
 void Template::registerPartial(std::string Name, std::string Partial) {
-  Parser P(Partial, Ctx);
+  StringRef SavedPartial = Ctx.Saver.save(Partial);
+  Parser P(SavedPartial, Ctx);
   AstPtr PartialTree = P.parse();
-  Ctx.Partials.insert(std::make_pair(Name, std::move(PartialTree)));
+  Ctx.Partials.insert(std::make_pair(Name, PartialTree));
 }
 
 void Template::registerLambda(std::string Name, Lambda L) {
@@ -922,7 +909,7 @@ void Template::overrideEscapeCharacters(EscapeMap E) {
   Ctx.Escapes = std::move(E);
 }
 
-Template::Template(StringRef TemplateStr) {
+Template::Template(StringRef TemplateStr, MustacheContext &Ctx) : Ctx(Ctx) {
   Parser P(TemplateStr, Ctx);
   Tree = P.parse();
   // The default behavior is to escape html entities.
@@ -935,18 +922,12 @@ Template::Template(StringRef TemplateStr) {
 }
 
 Template::Template(Template &&Other) noexcept
-    : Ctx(std::move(Other.Ctx)), Tree(std::move(Other.Tree)) {}
+    : Ctx(Other.Ctx), Tree(Other.Tree) {
+  Other.Tree = nullptr;
+}
 
 Template::~Template() = default;
 
-Template &Template::operator=(Template &&Other) noexcept {
-  if (this != &Other) {
-    Ctx = std::move(Other.Ctx);
-    Tree = std::move(Other.Tree);
-    Other.Tree = nullptr;
-  }
-  return *this;
-}
 } // namespace llvm::mustache
 
 #undef DEBUG_TYPE

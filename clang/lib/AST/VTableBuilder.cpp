@@ -312,13 +312,12 @@ ComputeReturnAdjustmentBaseOffset(ASTContext &Context,
     return BaseOffset();
   }
 
-  const CXXRecordDecl *DerivedRD =
-      cast<CXXRecordDecl>(
-          cast<RecordType>(CanDerivedReturnType)->getOriginalDecl())
+  const auto *DerivedRD =
+      cast<CXXRecordDecl>(cast<RecordType>(CanDerivedReturnType)->getDecl())
           ->getDefinitionOrSelf();
 
-  const CXXRecordDecl *BaseRD = cast<CXXRecordDecl>(
-      cast<RecordType>(CanBaseReturnType)->getOriginalDecl());
+  const auto *BaseRD =
+      cast<CXXRecordDecl>(cast<RecordType>(CanBaseReturnType)->getDecl());
 
   return ComputeBaseOffset(Context, BaseRD, DerivedRD);
 }

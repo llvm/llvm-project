@@ -1,15 +1,5 @@
 add_subdirectory(memory_utils)
 
-if(LIBC_CONF_STRING_UNSAFE_WIDE_READ)
-  list(APPEND string_config_options "-DLIBC_COPT_STRING_UNSAFE_WIDE_READ")
-endif()
-if(LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING)
-  list(APPEND string_config_options "-DLIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING")
-endif()
-if(string_config_options)
-  list(PREPEND string_config_options "COMPILE_OPTIONS")
-endif()
-
 add_header_library(
   string_utils
   HDRS
@@ -22,8 +12,8 @@ add_header_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.simd
     libc.src.__support.common
+    libc.src.__support.macros.attributes
     libc.src.string.memory_utils.inline_memcpy
-  ${string_config_options}
 )
 
 add_header_library(

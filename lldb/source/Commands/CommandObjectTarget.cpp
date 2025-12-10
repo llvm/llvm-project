@@ -51,6 +51,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
@@ -60,6 +61,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -418,7 +420,11 @@ protected:
         if (process_sp) {
           // Seems weird that we Launch a core file, but that is what we
           // do!
-          error = process_sp->LoadCore();
+          {
+            ElapsedTime load_core_time(
+                target_sp->GetStatistics().GetLoadCoreTime());
+            error = process_sp->LoadCore();
+          }
 
           if (error.Fail()) {
             result.AppendError(error.AsCString("unknown core file format"));
@@ -5117,6 +5123,15 @@ public:
       : CommandObjectParsed(interpreter, "target stop-hook delete",
                             "Delete a stop-hook.",
                             "target stop-hook delete [<idx>]") {
+    SetHelpLong(
+        R"(
+Deletes the stop hook by index.
+
+At any given stop, all enabled stop hooks that pass the stop filter will
+get a chance to run.  That means if one stop-hook deletes another stop hook 
+while executing, the deleted stop hook will still fire for the stop at which 
+it was deleted.
+        )");
     AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatStar);
   }
 
@@ -5219,33 +5234,72 @@ private:
 #pragma mark CommandObjectTargetStopHookList
 
 // CommandObjectTargetStopHookList
+#define LLDB_OPTIONS_target_stop_hook_list
+#include "CommandOptions.inc"
 
 class CommandObjectTargetStopHookList : public CommandObjectParsed {
 public:
   CommandObjectTargetStopHookList(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "target stop-hook list",
-                            "List all stop-hooks.", "target stop-hook list") {}
+                            "List all stop-hooks.") {}
 
   ~CommandObjectTargetStopHookList() override = default;
+
+  Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() = default;
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'i':
+        m_internal = true;
+        break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_internal = false;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_target_stop_hook_list_options);
+    }
+
+    // Instance variables to hold the values for command options.
+    bool m_internal = false;
+  };
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
 
-    size_t num_hooks = target.GetNumStopHooks();
-    if (num_hooks == 0) {
-      result.GetOutputStream().PutCString("No stop hooks.\n");
-    } else {
-      for (size_t i = 0; i < num_hooks; i++) {
-        Target::StopHookSP this_hook = target.GetStopHookAtIndex(i);
-        if (i > 0)
-          result.GetOutputStream().PutCString("\n");
-        this_hook->GetDescription(result.GetOutputStream(),
-                                  eDescriptionLevelFull);
-      }
+    bool printed_hook = false;
+    for (auto &hook : target.GetStopHooks(m_options.m_internal)) {
+      if (printed_hook)
+        result.GetOutputStream().PutCString("\n");
+      hook->GetDescription(result.GetOutputStream(), eDescriptionLevelFull);
+      printed_hook = true;
     }
+
+    if (!printed_hook)
+      result.GetOutputStream().PutCString("No stop hooks.\n");
+
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
+
+private:
+  CommandOptions m_options;
 };
 
 #pragma mark CommandObjectMultiwordTargetStopHooks
@@ -5349,6 +5403,200 @@ public:
   ~CommandObjectTargetDump() override = default;
 };
 
+#pragma mark CommandObjectTargetFrameProvider
+
+#define LLDB_OPTIONS_target_frame_provider_register
+#include "CommandOptions.inc"
+
+class CommandObjectTargetFrameProviderRegister : public CommandObjectParsed {
+public:
+  CommandObjectTargetFrameProviderRegister(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target frame-provider register",
+            "Register frame provider for all threads in this target.", nullptr,
+            eCommandRequiresTarget),
+
+        m_class_options("target frame-provider", true, 'C', 'k', 'v', 0) {
+    m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                         LLDB_OPT_SET_ALL);
+    m_all_options.Finalize();
+  }
+
+  ~CommandObjectTargetFrameProviderRegister() override = default;
+
+  Options *GetOptions() override { return &m_all_options; }
+
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
+    return std::string("");
+  }
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
+        m_class_options.GetName(), m_class_options.GetStructuredData());
+
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target)
+      target = &GetDebugger().GetDummyTarget();
+
+    // Create the interface for calling static methods.
+    ScriptedFrameProviderInterfaceSP interface_sp =
+        GetDebugger()
+            .GetScriptInterpreter()
+            ->CreateScriptedFrameProviderInterface();
+
+    // Create a descriptor from the metadata (applies to all threads by
+    // default).
+    ScriptedFrameProviderDescriptor descriptor(metadata_sp);
+    descriptor.interface_sp = interface_sp;
+
+    auto id_or_err = target->AddScriptedFrameProviderDescriptor(descriptor);
+    if (!id_or_err) {
+      result.SetError(id_or_err.takeError());
+      return;
+    }
+
+    result.AppendMessageWithFormat(
+        "successfully registered scripted frame provider '%s' for target\n",
+        m_class_options.GetName().c_str());
+  }
+
+  OptionGroupPythonClassWithDict m_class_options;
+  OptionGroupOptions m_all_options;
+};
+
+class CommandObjectTargetFrameProviderClear : public CommandObjectParsed {
+public:
+  CommandObjectTargetFrameProviderClear(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target frame-provider clear",
+            "Clear all registered frame providers from this target.", nullptr,
+            eCommandRequiresTarget) {}
+
+  ~CommandObjectTargetFrameProviderClear() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target) {
+      result.AppendError("invalid target");
+      return;
+    }
+
+    target->ClearScriptedFrameProviderDescriptors();
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+class CommandObjectTargetFrameProviderList : public CommandObjectParsed {
+public:
+  CommandObjectTargetFrameProviderList(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target frame-provider list",
+            "List all registered frame providers for the target.", nullptr,
+            eCommandRequiresTarget) {}
+
+  ~CommandObjectTargetFrameProviderList() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target)
+      target = &GetDebugger().GetDummyTarget();
+
+    const auto &descriptors = target->GetScriptedFrameProviderDescriptors();
+    if (descriptors.empty()) {
+      result.AppendMessage("no frame providers registered for this target.");
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return;
+    }
+
+    result.AppendMessageWithFormat("%u frame provider(s) registered:\n\n",
+                                   descriptors.size());
+
+    for (const auto &entry : descriptors) {
+      const ScriptedFrameProviderDescriptor &descriptor = entry.second;
+      descriptor.Dump(&result.GetOutputStream());
+      result.GetOutputStream().PutChar('\n');
+    }
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+class CommandObjectTargetFrameProviderRemove : public CommandObjectParsed {
+public:
+  CommandObjectTargetFrameProviderRemove(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target frame-provider remove",
+            "Remove a registered frame provider from the target by id.",
+            "target frame-provider remove <provider-id>",
+            eCommandRequiresTarget) {
+    AddSimpleArgumentList(eArgTypeUnsignedInteger, eArgRepeatPlus);
+  }
+
+  ~CommandObjectTargetFrameProviderRemove() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target)
+      target = &GetDebugger().GetDummyTarget();
+
+    std::vector<uint32_t> removed_provider_ids;
+    for (size_t i = 0; i < command.GetArgumentCount(); i++) {
+      uint32_t provider_id = 0;
+      if (!llvm::to_integer(command[i].ref(), provider_id)) {
+        result.AppendError("target frame-provider remove requires integer "
+                           "provider id argument");
+        return;
+      }
+
+      if (!target->RemoveScriptedFrameProviderDescriptor(provider_id)) {
+        result.AppendErrorWithFormat(
+            "no frame provider named '%u' found in target\n", provider_id);
+        return;
+      }
+      removed_provider_ids.push_back(provider_id);
+    }
+
+    if (size_t num_removed_providers = removed_provider_ids.size()) {
+      result.AppendMessageWithFormat(
+          "Successfully removed %zu frame-providers.\n", num_removed_providers);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    } else {
+      result.AppendError("0 frame providers removed.\n");
+    }
+  }
+};
+
+class CommandObjectTargetFrameProvider : public CommandObjectMultiword {
+public:
+  CommandObjectTargetFrameProvider(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "target frame-provider",
+            "Commands for registering and viewing frame providers for the "
+            "target.",
+            "target frame-provider [<sub-command-options>] ") {
+    LoadSubCommand("register",
+                   CommandObjectSP(new CommandObjectTargetFrameProviderRegister(
+                       interpreter)));
+    LoadSubCommand("clear",
+                   CommandObjectSP(
+                       new CommandObjectTargetFrameProviderClear(interpreter)));
+    LoadSubCommand(
+        "list",
+        CommandObjectSP(new CommandObjectTargetFrameProviderList(interpreter)));
+    LoadSubCommand(
+        "remove", CommandObjectSP(
+                      new CommandObjectTargetFrameProviderRemove(interpreter)));
+  }
+
+  ~CommandObjectTargetFrameProvider() override = default;
+};
+
 #pragma mark CommandObjectMultiwordTarget
 
 // CommandObjectMultiwordTarget
@@ -5364,6 +5612,9 @@ CommandObjectMultiwordTarget::CommandObjectMultiwordTarget(
                  CommandObjectSP(new CommandObjectTargetDelete(interpreter)));
   LoadSubCommand("dump",
                  CommandObjectSP(new CommandObjectTargetDump(interpreter)));
+  LoadSubCommand(
+      "frame-provider",
+      CommandObjectSP(new CommandObjectTargetFrameProvider(interpreter)));
   LoadSubCommand("list",
                  CommandObjectSP(new CommandObjectTargetList(interpreter)));
   LoadSubCommand("select",

@@ -20,23 +20,22 @@ namespace {
 AST_MATCHER_P(IntegerLiteral, isBiggerThan, unsigned, N) {
   return Node.getValue().getZExtValue() > N;
 }
+} // namespace
 
-const char DefaultStringNames[] =
+static const char DefaultStringNames[] =
     "::std::basic_string;::std::basic_string_view";
 
 static std::vector<StringRef>
 removeNamespaces(const std::vector<StringRef> &Names) {
   std::vector<StringRef> Result;
   Result.reserve(Names.size());
-  for (StringRef Name : Names) {
-    std::string::size_type ColonPos = Name.rfind(':');
+  for (const StringRef Name : Names) {
+    const std::string::size_type ColonPos = Name.rfind(':');
     Result.push_back(
         Name.substr(ColonPos == std::string::npos ? 0 : ColonPos + 1));
   }
   return Result;
 }
-
-} // namespace
 
 StringConstructorCheck::StringConstructorCheck(StringRef Name,
                                                ClangTidyContext *Context)
@@ -169,7 +168,7 @@ void StringConstructorCheck::check(const MatchFinder::MatchResult &Result) {
   const ASTContext &Ctx = *Result.Context;
   const auto *E = Result.Nodes.getNodeAs<CXXConstructExpr>("constructor");
   assert(E && "missing constructor expression");
-  SourceLocation Loc = E->getBeginLoc();
+  const SourceLocation Loc = E->getBeginLoc();
 
   if (Result.Nodes.getNodeAs<Expr>("swapped-parameter")) {
     const Expr *P0 = E->getArg(0);

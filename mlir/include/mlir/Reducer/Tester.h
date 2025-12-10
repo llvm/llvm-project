@@ -36,6 +36,9 @@ public:
     Untested,
   };
 
+  Tester() = default;
+  Tester(const Tester &) = default;
+
   Tester(StringRef testScript, ArrayRef<std::string> testScriptArgs);
 
   /// Runs the interestingness testing script on a MLIR test case file. Returns
@@ -45,6 +48,9 @@ public:
 
   /// Return whether the file in the given path is interesting.
   Interestingness isInteresting(StringRef testCase) const;
+
+  void setTestScript(StringRef script) { testScript = script; }
+  void setTestScriptArgs(ArrayRef<std::string> args) { testScriptArgs = args; }
 
 private:
   StringRef testScript;

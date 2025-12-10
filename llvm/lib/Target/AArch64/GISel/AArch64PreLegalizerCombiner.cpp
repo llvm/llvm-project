@@ -44,31 +44,6 @@ namespace {
 #include "AArch64GenPreLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_TYPES
 
-/// Return true if a G_FCONSTANT instruction is known to be better-represented
-/// as a G_CONSTANT.
-bool matchFConstantToConstant(MachineInstr &MI, MachineRegisterInfo &MRI) {
-  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
-  Register DstReg = MI.getOperand(0).getReg();
-  const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
-  if (DstSize != 32 && DstSize != 64)
-    return false;
-
-  // When we're storing a value, it doesn't matter what register bank it's on.
-  // Since not all floating point constants can be materialized using a fmov,
-  // it makes more sense to just use a GPR.
-  return all_of(MRI.use_nodbg_instructions(DstReg),
-                [](const MachineInstr &Use) { return Use.mayStore(); });
-}
-
-/// Change a G_FCONSTANT into a G_CONSTANT.
-void applyFConstantToConstant(MachineInstr &MI) {
-  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
-  MachineIRBuilder MIB(MI);
-  const APFloat &ImmValAPF = MI.getOperand(1).getFPImm()->getValueAPF();
-  MIB.buildConstant(MI.getOperand(0).getReg(), ImmValAPF.bitcastToAPInt());
-  MI.eraseFromParent();
-}
-
 /// Try to match a G_ICMP of a G_TRUNC with zero, in which the truncated bits
 /// are sign bits. In this case, we can transform the G_ICMP to directly compare
 /// the wide value with a zero.
@@ -460,6 +435,8 @@ bool matchExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register ExtSrcReg = ExtMI->getOperand(1).getReg();
   LLT ExtSrcTy = MRI.getType(ExtSrcReg);
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  if (ExtSrcTy.getScalarSizeInBits() * 2 > DstTy.getScalarSizeInBits())
+    return false;
   if ((DstTy.getScalarSizeInBits() == 16 &&
        ExtSrcTy.getNumElements() % 8 == 0 && ExtSrcTy.getNumElements() < 256) ||
       (DstTy.getScalarSizeInBits() == 32 &&
@@ -517,7 +494,7 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   unsigned MidScalarSize = MainTy.getScalarSizeInBits() * 2;
   LLT MidScalarLLT = LLT::scalar(MidScalarSize);
-  Register zeroReg = B.buildConstant(LLT::scalar(64), 0).getReg(0);
+  Register ZeroReg = B.buildConstant(LLT::scalar(64), 0).getReg(0);
   for (unsigned I = 0; I < WorkingRegisters.size(); I++) {
     // If the number of elements is too small to build an instruction, extend
     // its size before applying addlv
@@ -533,10 +510,10 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
 
     // Generate the {U/S}ADDLV instruction, whose output is always double of the
     // Src's Scalar size
-    LLT addlvTy = MidScalarSize <= 32 ? LLT::fixed_vector(4, 32)
+    LLT AddlvTy = MidScalarSize <= 32 ? LLT::fixed_vector(4, 32)
                                       : LLT::fixed_vector(2, 64);
-    Register addlvReg =
-        B.buildInstr(Opc, {addlvTy}, {WorkingRegisters[I]}).getReg(0);
+    Register AddlvReg =
+        B.buildInstr(Opc, {AddlvTy}, {WorkingRegisters[I]}).getReg(0);
 
     // The output from {U/S}ADDLV gets placed in the lowest lane of a v4i32 or
     // v2i64 register.
@@ -545,26 +522,26 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
     // Therefore we have to extract/truncate the the value to the right type
     if (MidScalarSize == 32 || MidScalarSize == 64) {
       WorkingRegisters[I] = B.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT,
-                                         {MidScalarLLT}, {addlvReg, zeroReg})
+                                         {MidScalarLLT}, {AddlvReg, ZeroReg})
                                 .getReg(0);
     } else {
-      Register extractReg = B.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT,
-                                         {LLT::scalar(32)}, {addlvReg, zeroReg})
+      Register ExtractReg = B.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT,
+                                         {LLT::scalar(32)}, {AddlvReg, ZeroReg})
                                 .getReg(0);
       WorkingRegisters[I] =
-          B.buildTrunc({MidScalarLLT}, {extractReg}).getReg(0);
+          B.buildTrunc({MidScalarLLT}, {ExtractReg}).getReg(0);
     }
   }
 
-  Register outReg;
+  Register OutReg;
   if (WorkingRegisters.size() > 1) {
-    outReg = B.buildAdd(MidScalarLLT, WorkingRegisters[0], WorkingRegisters[1])
+    OutReg = B.buildAdd(MidScalarLLT, WorkingRegisters[0], WorkingRegisters[1])
                  .getReg(0);
     for (unsigned I = 2; I < WorkingRegisters.size(); I++) {
-      outReg = B.buildAdd(MidScalarLLT, outReg, WorkingRegisters[I]).getReg(0);
+      OutReg = B.buildAdd(MidScalarLLT, OutReg, WorkingRegisters[I]).getReg(0);
     }
   } else {
-    outReg = WorkingRegisters[0];
+    OutReg = WorkingRegisters[0];
   }
 
   if (DstTy.getScalarSizeInBits() > MidScalarSize) {
@@ -572,9 +549,9 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
     // Src's ScalarType
     B.buildInstr(std::get<1>(MatchInfo) ? TargetOpcode::G_SEXT
                                         : TargetOpcode::G_ZEXT,
-                 {DstReg}, {outReg});
+                 {DstReg}, {OutReg});
   } else {
-    B.buildCopy(DstReg, outReg);
+    B.buildCopy(DstReg, OutReg);
   }
 
   MI.eraseFromParent();
