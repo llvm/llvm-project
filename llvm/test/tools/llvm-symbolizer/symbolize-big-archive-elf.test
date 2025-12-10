@@ -1,32 +1,32 @@
-# Test archive member recognition by name (ELF format).
+## Test archive member recognition by name (ELF format).
 
-# RUN: yaml2obj -DSYMBOL=foo1 %s -o %t-1.o
-# RUN: yaml2obj -DSYMBOL=foo2 %s -o %t-2.o
+# RUN: rm -rf %t.dir && mkdir %t.dir && cd %t.dir
 
-# RUN: rm -f %t.a
-# RUN: llvm-ar crv %t.a %t-1.o %t-2.o
+# RUN: yaml2obj -DSYMBOL=foo1 %s -o 1.o
+# RUN: yaml2obj -DSYMBOL=foo2 %s -o 2.o
+
+# RUN: llvm-ar crv archive.a 1.o 2.o
 
 ## Test symbolization by member name with architecture via --default-arch flag.
-# RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a(%{t:stem}.tmp-1.o)" 0x0 | FileCheck %s --check-prefix=CHECK-1
-# RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a(%{t:stem}.tmp-2.o)" 0x0 | FileCheck %s --check-prefix=CHECK-2
+# RUN: llvm-symbolizer --default-arch=ppc64le --obj="archive.a(1.o)" 0x0 | FileCheck %s --check-prefix=CHECK-1
+# RUN: llvm-symbolizer --default-arch=ppc64le --obj="archive.a(2.o)" 0x0 | FileCheck %s --check-prefix=CHECK-2
 
 ## Test architecture specified via :arch suffix notation.
-# RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp-1.o):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-1
-# RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp-2.o):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-2
+# RUN: llvm-symbolizer --obj="archive.a(1.o):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-1
+# RUN: llvm-symbolizer --obj="archive.a(2.o):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-2
 
 # CHECK-1: foo1
 # CHECK-2: foo2
 
 ## Test error cases.
+# RUN: not llvm-symbolizer --obj="archive.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+# CHECK-ERROR: error: no matching member 'nonexistent.o' with arch {{.*}} in 'archive.a'
 
-# RUN: not llvm-symbolizer --obj="%t.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-# CHECK-ERROR: error: {{.*}}no matching member{{.*}}
+# RUN: not llvm-symbolizer --obj="1.o(1.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOTARCHIVE
+# CHECK-NOTARCHIVE: error: '1.o' is not a valid archive
 
-# RUN: not llvm-symbolizer --obj="%t-1.o(%{t:stem}.tmp-1.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOTARCHIVE
-# CHECK-NOTARCHIVE: error: '{{.*}}' is not a valid archive
-
-# RUN: not llvm-symbolizer --obj="%t.a()" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOSYMBOL
-# CHECK-NOSYMBOL: {{.*}}no matching member{{.*}}
+# RUN: not llvm-symbolizer --obj="archive.a()" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOSYMBOL
+# CHECK-NOSYMBOL: error: no matching member '' with arch {{.*}} in 'archive.a'
 
 --- !ELF
 FileHeader:

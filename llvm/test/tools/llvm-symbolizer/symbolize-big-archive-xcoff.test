@@ -1,45 +1,42 @@
-# Test big archive recognition with same-named members (XCOFF format).
+## Test big archive recognition with same-named members (XCOFF format).
 ## Big archives can contain multiple members with the same name but different
 ## architectures. This test verifies llvm-symbolizer can disambiguate using
 ## architecture specification.
 
-# RUN: yaml2obj --docnum=1 %s -o %t-32.o
-# RUN: yaml2obj --docnum=2 %s -o %t-64.o
+# RUN: rm -rf %t.dir && mkdir %t.dir && cd %t.dir
 
-# RUN: rm -f %t.a
-# RUN: cp %t-32.o %t.o
-# RUN: llvm-ar %if system-aix %{-X32%} crv %t.a %t.o
-# RUN: cp %t-64.o %t.o
-# RUN: llvm-ar %if system-aix %{-X64 rv%} %else %{qv%} %t.a %t.o
+# RUN: yaml2obj --docnum=1 %s -o 32.o
+# RUN: yaml2obj --docnum=2 %s -o 64.o
 
-## Verify archive contains two members with same name.
-# RUN: llvm-ar tv %if system-aix %{-X32_64%} %t.a | FileCheck %s --check-prefix=CHECK-ARCHIVE
-# CHECK-ARCHIVE: {{.*}}symbolize-big-archive-xcoff.test.tmp.o{{$}}
-# CHECK-ARCHIVE: {{.*}}symbolize-big-archive-xcoff.test.tmp.o{{$}}
+## Create archive with same-named members using different modes.
+# RUN: cp 32.o test.o
+# RUN: llvm-ar %if system-aix %{-X32%} crv archive.a test.o
+# RUN: cp 64.o test.o
+# RUN: llvm-ar %if system-aix %{-X64 rv%} %else %{qv%} archive.a test.o
 
 ## Test symbolization disambiguates between 32-bit and 64-bit members
 ## using architecture specified via --default-arch flag.
-# RUN: llvm-symbolizer --default-arch=ppc --obj="%t.a(%{t:stem}.tmp.o)" 0x0 | FileCheck %s --check-prefix=CHECK-32
-# RUN: llvm-symbolizer --default-arch=ppc64 --obj="%t.a(%{t:stem}.tmp.o)" 0x0 | FileCheck %s --check-prefix=CHECK-64
+# RUN: llvm-symbolizer --default-arch=ppc --obj="archive.a(test.o)" 0x0 | FileCheck %s --check-prefix=CHECK-32
+# RUN: llvm-symbolizer --default-arch=ppc64 --obj="archive.a(test.o)" 0x0 | FileCheck %s --check-prefix=CHECK-64
 
 ## Test architecture specified via :arch suffix notation.
-# RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp.o):ppc" 0x0 | FileCheck %s --check-prefix=CHECK-32
-# RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp.o):ppc64" 0x0 | FileCheck %s --check-prefix=CHECK-64
+# RUN: llvm-symbolizer --obj="archive.a(test.o):ppc" 0x0 | FileCheck %s --check-prefix=CHECK-32
+# RUN: llvm-symbolizer --obj="archive.a(test.o):ppc64" 0x0 | FileCheck %s --check-prefix=CHECK-64
 
 # CHECK-32: foo32
 # CHECK-64: foo64
 
 ## Test error cases.
-# RUN: not llvm-symbolizer --obj="%t.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-# CHECK-ERROR: error: {{.*}}no matching member{{.*}}
+# RUN: not llvm-symbolizer --obj="archive.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+# CHECK-ERROR: error: no matching member 'nonexistent.o' with arch {{.*}} in 'archive.a'
 
-# RUN: not llvm-symbolizer --obj="%t.o(%{t:stem}.tmp.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOTARCHIVE
-# CHECK-NOTARCHIVE: error: '{{.*}}' is not a valid archive
+# RUN: not llvm-symbolizer --obj="test.o(test.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOTARCHIVE
+# CHECK-NOTARCHIVE: error: 'test.o' is not a valid archive
 
-# RUN: not llvm-symbolizer --obj="%t.a()" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOSYMBOL
-# CHECK-NOSYMBOL: {{.*}}no matching member{{.*}}
+# RUN: not llvm-symbolizer --obj="archive.a()" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOSYMBOL
+# CHECK-NOSYMBOL: error: no matching member '' with arch {{.*}} in 'archive.a'
 
-## 32-bit XCOFF object
+## 32-bit XCOFF object.
 --- !XCOFF
 FileHeader:
   MagicNumber: 0x1DF
@@ -73,7 +70,7 @@ Symbols:
         SymbolType:              XTY_SD
         StorageMappingClass:     XMC_PR
 
-## 64-bit XCOFF object
+## 64-bit XCOFF object.
 --- !XCOFF
 FileHeader:
   MagicNumber: 0x1F7
