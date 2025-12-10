@@ -81,6 +81,9 @@ public:
   void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override;
   void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) override;
 
+  void emitBeginCatch(CIRGenFunction &cgf,
+                      const CXXCatchStmt *catchStmt) override;
+
   bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
                               CXXDtorType dt) const override {
     // Itanium does not emit any destructor variant as an inline thunk.
@@ -2265,4 +2268,92 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
       cgf.getBuilder().createPtrBitcast(dataPtr, newPtr.getElementType());
   CharUnits finalAlignment = baseAlignment.alignmentAtOffset(cookieSize);
   return Address(finalPtr, newPtr.getElementType(), finalAlignment);
+}
+
+namespace {
+/// From traditional LLVM, useful info for LLVM lowering support:
+/// A cleanup to call __cxa_end_catch.  In many cases, the caught
+/// exception type lets us state definitively that the thrown exception
+/// type does not have a destructor.  In particular:
+///   - Catch-alls tell us nothing, so we have to conservatively
+///     assume that the thrown exception might have a destructor.
+///   - Catches by reference behave according to their base types.
+///   - Catches of non-record types will only trigger for exceptions
+///     of non-record types, which never have destructors.
+///   - Catches of record types can trigger for arbitrary subclasses
+///     of the caught type, so we have to assume the actual thrown
+///     exception type might have a throwing destructor, even if the
+///     caught type's destructor is trivial or nothrow.
+struct CallEndCatch final : EHScopeStack::Cleanup {
+  CallEndCatch(bool mightThrow) : mightThrow(mightThrow) {}
+  bool mightThrow;
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    if (!mightThrow) {
+      // Traditional LLVM codegen would emit a call to __cxa_end_catch
+      // here. For CIR, just let it pass since the cleanup is going
+      // to be emitted on a later pass when lowering the catch region.
+      // CGF.EmitNounwindRuntimeCall(getEndCatchFn(CGF.CGM));
+      cir::YieldOp::create(cgf.getBuilder(), *cgf.currSrcLoc);
+      return;
+    }
+
+    // Traditional LLVM codegen would emit a call to __cxa_end_catch
+    // here. For CIR, just let it pass since the cleanup is going
+    // to be emitted on a later pass when lowering the catch region.
+    // CGF.EmitRuntimeCallOrTryCall(getEndCatchFn(CGF.CGM));
+    if (!cgf.getBuilder().getBlock()->mightHaveTerminator())
+      cir::YieldOp::create(cgf.getBuilder(), *cgf.currSrcLoc);
+  }
+};
+} // namespace
+
+static mlir::Value callBeginCatch(CIRGenFunction &cgf, mlir::Type paramTy,
+                                  bool endMightThrow) {
+
+  auto catchParam = cir::CatchParamOp::create(
+      cgf.getBuilder(), cgf.getBuilder().getUnknownLoc(), paramTy);
+
+  cgf.ehStack.pushCleanup<CallEndCatch>(
+      NormalAndEHCleanup,
+      endMightThrow && !cgf.cgm.getLangOpts().AssumeNothrowExceptionDtor);
+
+  return catchParam.getParam();
+}
+
+/// Begins a catch statement by initializing the catch variable and
+/// calling __cxa_begin_catch.
+void CIRGenItaniumCXXABI::emitBeginCatch(CIRGenFunction &cgf,
+                                         const CXXCatchStmt *catchStmt) {
+  // We have to be very careful with the ordering of cleanups here:
+  //   C++ [except.throw]p4:
+  //     The destruction [of the exception temporary] occurs
+  //     immediately after the destruction of the object declared in
+  //     the exception-declaration in the handler.
+  //
+  // So the precise ordering is:
+  //   1.  Construct catch variable.
+  //   2.  __cxa_begin_catch
+  //   3.  Enter __cxa_end_catch cleanup
+  //   4.  Enter dtor cleanup
+  //
+  // We do this by using a slightly abnormal initialization process.
+  // Delegation sequence:
+  //   - ExitCXXTryStmt opens a RunCleanupsScope
+  //     - EmitAutoVarAlloca creates the variable and debug info
+  //       - InitCatchParam initializes the variable from the exception
+  //       - CallBeginCatch calls __cxa_begin_catch
+  //       - CallBeginCatch enters the __cxa_end_catch cleanup
+  //     - EmitAutoVarCleanups enters the variable destructor cleanup
+  //   - EmitCXXTryStmt emits the code for the catch body
+  //   - EmitCXXTryStmt close the RunCleanupsScope
+
+  VarDecl *catchParam = catchStmt->getExceptionDecl();
+  if (!catchParam) {
+    callBeginCatch(cgf, cgf.getBuilder().getVoidPtrTy(),
+                   /*endMightThrow=*/true);
+    return;
+  }
+
+  cgf.cgm.errorNYI("emitBeginCatch: catch with exception decl");
 }

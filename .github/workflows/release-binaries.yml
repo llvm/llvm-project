@@ -71,7 +71,7 @@ jobs:
         python-version: '3.14'
 
     - name: Checkout LLVM
-      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
     - name: Install Dependencies
       shell: bash
@@ -181,10 +181,13 @@ jobs:
     needs: prepare
     if: github.repository_owner == 'llvm'
     runs-on: ${{ needs.prepare.outputs.build-runs-on }}
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+      artifact-id: ${{ steps.artifact-upload.outputs.artifact-id }}
     steps:
 
     - name: Checkout LLVM
-      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       with:
         ref: ${{ needs.prepare.outputs.ref }}
 
@@ -215,8 +218,17 @@ jobs:
         ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
         mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
-    
+
+    - name: Generate sha256 digest for binaries
+      id: digest
+      shell: bash
+      env:
+        RELEASE_BINARY_FILENAME: ${{ needs.prepare.outputs.release-binary-filename }}
+      run: |
+          echo "digest=$(cat $RELEASE_BINARY_FILENAME | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+
     - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      id: artifact-upload
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary
         # Due to path differences on Windows when running in bash vs running on node,
@@ -236,8 +248,7 @@ jobs:
       - prepare
       - build-release-package
     if: >-
-      github.event_name != 'pull_request' &&
-      needs.prepare.outputs.upload == 'true'
+      github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     permissions:
       contents: write # For release uploads
@@ -245,45 +256,19 @@ jobs:
       attestations: write # For artifact attestations
 
     steps:
-    - name: Checkout Release Scripts
-      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-      with:
-        sparse-checkout: |
-          llvm/utils/release/github-upload-release.py
-          llvm/utils/git/requirements.txt
-        sparse-checkout-cone-mode: false
+      - name: Checkout Release Scripts
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          sparse-checkout: |
+            .github/workflows/upload-release-artifact
+            llvm/utils/release/github-upload-release.py
+            llvm/utils/git/requirements.txt
+          sparse-checkout-cone-mode: false
 
-    - name: 'Download artifact'
-      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
-      with:
-        pattern: '*-release-binary'
-        merge-multiple: true
-
-    - name: Attest Build Provenance
-      id: provenance
-      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
-      with:
-        subject-path: ${{ needs.prepare.outputs.release-binary-filename }}
-
-    - name: Rename attestation file
-      run:
-        mv ${{ steps.provenance.outputs.bundle-path }} ${{ needs.prepare.outputs.release-binary-filename }}.jsonl
-
-    - name: Upload Build Provenance
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-      with:
-        name: ${{ needs.prepare.outputs.release-binary-filename }}-attestation
-        path: ${{ needs.prepare.outputs.release-binary-filename }}.jsonl
-
-    - name: Install Python Requirements
-      run: |
-        pip install --require-hashes -r ./llvm/utils/git/requirements.txt
-
-    - name: Upload Release
-      shell: bash
-      run: |
-        ./llvm/utils/release/github-upload-release.py \
-        --token ${{ github.token }} \
-        --release ${{ needs.prepare.outputs.release-version }} \
-        upload \
-        --files ${{ needs.prepare.outputs.release-binary-filename }}*
+      - name: Upload Artifacts
+        uses: ./.github/workflows/upload-release-artifact
+        with:
+          artifact-id: ${{ needs.build-release-package.outputs.artifact-id }}
+          attestation-name: ${{ runner.os }}-${{ runner.arch }}-release-binary-attestation
+          digest: ${{ needs.build-release-package.outputs.digest }}
+          upload: ${{ needs.prepare.outputs.upload }}
