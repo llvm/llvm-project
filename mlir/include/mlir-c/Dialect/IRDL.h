@@ -22,6 +22,20 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(IRDL, irdl);
 /// the module's associated context.
 MLIR_CAPI_EXPORTED MlirLogicalResult mlirLoadIRDLDialects(MlirModule module);
 
+//===----------------------------------------------------------------------===//
+// VariadicityAttr
+//===----------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirIRDLVariadicityAttrGet(MlirContext ctx, MlirStringRef value);
+
+//===----------------------------------------------------------------------===//
+// VariadicityArrayAttr
+//===----------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED MlirAttribute mlirIRDLVariadicityArrayAttrGet(
+    MlirContext ctx, intptr_t nValues, MlirAttribute const *values);
+
 #ifdef __cplusplus
 }
 #endif
