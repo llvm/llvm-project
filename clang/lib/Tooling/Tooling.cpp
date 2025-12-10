@@ -622,15 +622,14 @@ int ClangTool::run(ToolAction *Action) {
       // FIXME: We need a callback mechanism for the tool writer to output a
       // customized message for each file.
       if (NumOfTotalFiles > 1 || CompileCommandsForFile.size() > 1) {
-        llvm::errs() << "[" + std::to_string(CurrentFileIndex) + "/" +
-                            std::to_string(NumOfTotalFiles) + "]";
+        llvm::errs() << "[" << std::to_string(CurrentFileIndex) << "/"
+                     << std::to_string(NumOfTotalFiles) << "]";
         if (CompileCommandsForFile.size() > 1) {
-          llvm::errs() << " (" + std::to_string(CurrentCommandIndexForFile) +
-                              "/" +
-                              std::to_string(CompileCommandsForFile.size()) +
-                              ")";
+          llvm::errs() << " (" << std::to_string(CurrentCommandIndexForFile)
+                       << "/" << std::to_string(CompileCommandsForFile.size())
+                       << ")";
         }
-        llvm::errs() << " Processing file " + File << ".\n";
+        llvm::errs() << " Processing file " << File << ".\n";
       }
       ToolInvocation Invocation(std::move(CommandLine), Action, Files.get(),
                                 PCHContainerOps);
