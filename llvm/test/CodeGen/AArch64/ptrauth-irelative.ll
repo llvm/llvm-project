@@ -93,3 +93,9 @@
 ; CHECK-NEXT: .section .rodata
 ; CHECK-NEXT: .xword [[FUNC]]@FUNCINIT
 @globalref8 = constant ptr ptrauth (ptr getelementptr (i8, ptr @global, i64 8), i32 2, i64 5, ptr null), align 8
+
+$comdat = comdat any
+@comdat = constant ptr ptrauth (ptr null, i32 2, i64 1, ptr null), align 8, comdat
+; CHECK: comdat:
+; CHECK-NEXT: [[PLACE:.*]]:
+; CHECK-NEXT: .section	.text.startup,"axG",@progbits,comdat,comdat
