@@ -721,6 +721,7 @@ def Zn5WriteXCHG32rm_XCHG64rm : SchedWriteRes<[Zn5AGU0123, Zn5Load, Zn5ALU0_5]> 
 def : InstRW<[Zn5WriteXCHG32rm_XCHG64rm], (instrs XCHG32rm, XCHG64rm)>;
 
 // Integer division.
+// Agner Fog Znver5 instruction table
 defm : Zn5WriteResIntPair<WriteDiv8, [Zn5Divider], 10, [10], 2>;
 defm : Zn5WriteResIntPair<WriteDiv16, [Zn5Divider], 11, [11], 2>;
 defm : Zn5WriteResIntPair<WriteDiv32, [Zn5Divider], 13, [13], 2>;
@@ -749,6 +750,7 @@ def : InstRW<[Zn5WritePOPCNT16rr], (instrs POPCNT16rr)>;
 
 defm : Zn5WriteResIntPair<WriteLZCNT, [Zn5ALU0_5], 1, [1], 1>; // Leading zero count.
 
+// Agner Fog Znver5 instruction table
 def Zn5WriteLZCNT16rr : SchedWriteRes<[Zn5ALU0_5]> {
   let Latency = 1;
   let ReleaseAtCycles = [1];
@@ -767,6 +769,7 @@ def : InstRW<[Zn5WriteTZCNT16rr], (instrs TZCNT16rr, TZCNT32rr, TZCNT64rr)>;
 
 // FIXME: Seeing varying throughput for l,le,b variants
 // cmovbe, cmovl, cmovle and cmovnbe, cmovnl, cmovnle
+// Agner Fog Znver5 instruction table
 defm : Zn5WriteResIntPair<WriteCMOV, [Zn5ALU0_5], 1, [1], 1>; // Conditional move.
 defm : Zn5WriteResInt<WriteFCMOV, [Zn5ALU0_5], 7, [28], 7>; // FIXME: Microcoded!
 defm : Zn5WriteResInt<WriteSETCC, [Zn5ALU0_5], 1, [2], 1>; // Set register based on condition code.
