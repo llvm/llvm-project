@@ -262,7 +262,7 @@ class PseudoMaskedAMO
 
 class PseudoMaskedAMOMinMax
     : Pseudo<(outs GPR:$res, GPR:$scratch1, GPR:$scratch2),
-             (ins GPR:$addr, GPR:$incr, GPR:$mask, ixlenimm:$sextshamt,
+             (ins GPR:$addr, GPR:$incr, GPR:$mask, GPR:$sextshamt,
               ixlenimm:$ordering), []> {
   let Constraints = "@earlyclobber $res,@earlyclobber $scratch1,"
                     "@earlyclobber $scratch2";
