@@ -2521,11 +2521,9 @@ struct AMDGPUMakeDmaDescriptorLowering
     OpFoldResult tensorDimXOpFoldResult = *(mixedGlobalSizes.rbegin() + dimX);
     // pre-condition: tensorDimX is less than 2^32-1
     // TODO: Validation if the value breaks the pre-condition.
-    // If the pre-condition fails, there is a possibility of
-    // affecting the higher bits. In a following PR implement
-    // RuntimeVerifiableOpInterface that instruments conditions that need to be
-    // checked at runtime. This could also be fixed by saying that
-    // mixedGlobalSizes is a DynamicI32List.
+    // In a following PR implement RuntimeVerifiableOpInterface that instruments
+    // conditions that need to be checked at runtime. This could also be fixed
+    // by saying that mixedGlobalSizes is a DynamicI32List.
     Value tensorDimX;
     if (auto attr = dyn_cast<Attribute>(tensorDimXOpFoldResult))
       tensorDimX =
