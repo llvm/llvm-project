@@ -42,8 +42,8 @@ int metadirective1() {
 // CHECK: entry:
 // CHECK: %{{[0-9]}} = call i32 @__kmpc_target_init
 // CHECK: user_code.entry:
-// CHECK: call void @[[METADIRECTIVE]]_omp_outlined
-// CHECK-NOT: call void @__kmpc_parallel_51
+// CHECK: call{{.*}} void @[[METADIRECTIVE]]_omp_outlined
+// CHECK-NOT: call{{.*}} void @__kmpc_parallel_60
 // CHECK: ret void
 
 

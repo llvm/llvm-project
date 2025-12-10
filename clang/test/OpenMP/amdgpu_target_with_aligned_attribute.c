@@ -92,7 +92,7 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-AMD-NEXT:    [[TMP20:%.*]] = add i32 [[TMP18]], [[TMP19]]
 // CHECK-AMD-NEXT:    store i32 [[TMP20]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-AMD-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
+// CHECK-AMD-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP6:![0-9]+]]
 // CHECK-AMD:       for.end:
 // CHECK-AMD-NEXT:    ret void
 //

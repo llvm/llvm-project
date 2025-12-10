@@ -133,7 +133,7 @@ void foo(int N) {
 // CHECK-NEXT:    store ptr [[TMP22]], ptr [[TMP21]], align 4, !llvm.access.group [[ACC_GRP17]]
 // CHECK-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4, !llvm.access.group [[ACC_GRP17]]
 // CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4, !llvm.access.group [[ACC_GRP17]]
-// CHECK-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP24]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l10_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3), !llvm.access.group [[ACC_GRP17]]
+// CHECK-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP24]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l10_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3, i32 0), !llvm.access.group [[ACC_GRP17]]
 // CHECK-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK:       omp.inner.for.inc:
 // CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP17]]
@@ -387,7 +387,7 @@ void foo(int N) {
 // CHECK-NEXT:    store ptr [[TMP22]], ptr [[TMP21]], align 4, !llvm.access.group [[ACC_GRP24]]
 // CHECK-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4, !llvm.access.group [[ACC_GRP24]]
 // CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4, !llvm.access.group [[ACC_GRP24]]
-// CHECK-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP24]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l13_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3), !llvm.access.group [[ACC_GRP24]]
+// CHECK-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP24]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l13_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3, i32 0), !llvm.access.group [[ACC_GRP24]]
 // CHECK-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK:       omp.inner.for.inc:
 // CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP24]]
@@ -641,7 +641,7 @@ void foo(int N) {
 // CHECK-NEXT:    store ptr [[TMP22]], ptr [[TMP21]], align 4, !llvm.access.group [[ACC_GRP30]]
 // CHECK-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4, !llvm.access.group [[ACC_GRP30]]
 // CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4, !llvm.access.group [[ACC_GRP30]]
-// CHECK-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP24]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l17_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3), !llvm.access.group [[ACC_GRP30]]
+// CHECK-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP24]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l17_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3, i32 0), !llvm.access.group [[ACC_GRP30]]
 // CHECK-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK:       omp.inner.for.inc:
 // CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP30]]
@@ -895,7 +895,7 @@ void foo(int N) {
 // CHECK-NEXT:    store ptr [[TMP22]], ptr [[TMP21]], align 4, !llvm.access.group [[ACC_GRP36]]
 // CHECK-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4, !llvm.access.group [[ACC_GRP36]]
 // CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4, !llvm.access.group [[ACC_GRP36]]
-// CHECK-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP24]], i32 1, i32 22, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l21_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3), !llvm.access.group [[ACC_GRP36]]
+// CHECK-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP24]], i32 1, i32 22, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l21_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 3, i32 0), !llvm.access.group [[ACC_GRP36]]
 // CHECK-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK:       omp.inner.for.inc:
 // CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP36]]
