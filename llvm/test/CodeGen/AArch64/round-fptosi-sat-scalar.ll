@@ -94,7 +94,7 @@ define i32 @testmsws(float %a) {
 ; CHECK-NEXT:    fcvtms w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @floorf(float %a) nounwind readnone
+  %r = call float @llvm.floor.f32(float %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
   ret i32 %i
 }
@@ -105,7 +105,7 @@ define i64 @testmsxs(float %a) {
 ; CHECK-NEXT:    fcvtms x0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @floorf(float %a) nounwind readnone
+  %r = call float @llvm.floor.f32(float %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
   ret i64 %i
 }
@@ -116,7 +116,7 @@ define i32 @testmswd(double %a) {
 ; CHECK-NEXT:    fcvtms w0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @floor(double %a) nounwind readnone
+  %r = call double @llvm.floor.f64(double %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f64(double %r)
   ret i32 %i
 }
@@ -127,7 +127,7 @@ define i64 @testmsxd(double %a) {
 ; CHECK-NEXT:    fcvtms x0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @floor(double %a) nounwind readnone
+  %r = call double @llvm.floor.f64(double %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
   ret i64 %i
 }
@@ -224,7 +224,7 @@ define i32 @testpsws(float %a) {
 ; CHECK-NEXT:    fcvtps w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @ceilf(float %a) nounwind readnone
+  %r = call float @llvm.ceil.f32(float %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
   ret i32 %i
 }
@@ -235,7 +235,7 @@ define i64 @testpsxs(float %a) {
 ; CHECK-NEXT:    fcvtps x0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @ceilf(float %a) nounwind readnone
+  %r = call float @llvm.ceil.f32(float %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
   ret i64 %i
 }
@@ -246,7 +246,7 @@ define i32 @testpswd(double %a) {
 ; CHECK-NEXT:    fcvtps w0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @ceil(double %a) nounwind readnone
+  %r = call double @llvm.ceil.f64(double %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f64(double %r)
   ret i32 %i
 }
@@ -257,7 +257,7 @@ define i64 @testpsxd(double %a) {
 ; CHECK-NEXT:    fcvtps x0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @ceil(double %a) nounwind readnone
+  %r = call double @llvm.ceil.f64(double %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
   ret i64 %i
 }
@@ -310,7 +310,7 @@ define i32 @testzsws(float %a) {
 ; CHECK-NEXT:    fcvtzs w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @truncf(float %a) nounwind readnone
+  %r = call float @llvm.trunc.f32(float %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
   ret i32 %i
 }
@@ -321,7 +321,7 @@ define i64 @testzsxs(float %a) {
 ; CHECK-NEXT:    fcvtzs x0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @truncf(float %a) nounwind readnone
+  %r = call float @llvm.trunc.f32(float %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
   ret i64 %i
 }
@@ -332,7 +332,7 @@ define i32 @testzswd(double %a) {
 ; CHECK-NEXT:    fcvtzs w0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @trunc(double %a) nounwind readnone
+  %r = call double @llvm.trunc.f64(double %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f64(double %r)
   ret i32 %i
 }
@@ -343,7 +343,7 @@ define i64 @testzsxd(double %a) {
 ; CHECK-NEXT:    fcvtzs x0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @trunc(double %a) nounwind readnone
+  %r = call double @llvm.trunc.f64(double %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
   ret i64 %i
 }
@@ -396,7 +396,7 @@ define i32 @testasws(float %a) {
 ; CHECK-NEXT:    fcvtas w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @roundf(float %a) nounwind readnone
+  %r = call float @llvm.round.f32(float %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
   ret i32 %i
 }
@@ -407,7 +407,7 @@ define i64 @testasxs(float %a) {
 ; CHECK-NEXT:    fcvtas x0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call float @roundf(float %a) nounwind readnone
+  %r = call float @llvm.round.f32(float %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
   ret i64 %i
 }
@@ -418,7 +418,7 @@ define i32 @testaswd(double %a) {
 ; CHECK-NEXT:    fcvtas w0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @round(double %a) nounwind readnone
+  %r = call double @llvm.round.f64(double %a) nounwind readnone
   %i = call i32 @llvm.fptosi.sat.i32.f64(double %r)
   ret i32 %i
 }
@@ -429,7 +429,7 @@ define i64 @testasxd(double %a) {
 ; CHECK-NEXT:    fcvtas x0, d0
 ; CHECK-NEXT:    ret
 entry:
-  %r = call double @round(double %a) nounwind readnone
+  %r = call double @llvm.round.f64(double %a) nounwind readnone
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
   ret i64 %i
 }
@@ -451,11 +451,11 @@ declare half @llvm.floor.f16(half) nounwind readnone
 declare half @llvm.ceil.f16(half) nounwind readnone
 declare half @llvm.trunc.f16(half) nounwind readnone
 declare half @llvm.round.f16(half) nounwind readnone
-declare float @floorf(float) nounwind readnone
-declare float @ceilf(float) nounwind readnone
-declare float @truncf(float) nounwind readnone
-declare float @roundf(float) nounwind readnone
-declare double @floor(double) nounwind readnone
-declare double @ceil(double) nounwind readnone
-declare double @trunc(double) nounwind readnone
-declare double @round(double) nounwind readnone
+declare float @llvm.floor.f32(float) nounwind readnone
+declare float @llvm.ceil.f32(float) nounwind readnone
+declare float @llvm.trunc.f32(float) nounwind readnone
+declare float @llvm.round.f32(float) nounwind readnone
+declare double @llvm.floor.f64(double) nounwind readnone
+declare double @llvm.ceil.f64(double) nounwind readnone
+declare double @llvm.trunc.f64(double) nounwind readnone
+declare double @llvm.round.f64(double) nounwind readnone
