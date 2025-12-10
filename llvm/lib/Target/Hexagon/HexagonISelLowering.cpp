@@ -1661,14 +1661,13 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     for (MVT VT : MVT::integer_valuetypes())
       setOperationAction(IntExpOp, VT, Expand);
   }
-  for (MVT VT : MVT::fp_valuetypes())
+  for (MVT VT : MVT::fp_valuetypes()) {
     for (unsigned FPExpOp : {ISD::FDIV, ISD::FSQRT, ISD::FSIN, ISD::FCOS,
-                             ISD::FSINCOS, ISD::FPOW, ISD::FCOPYSIGN}) {
-
+                             ISD::FSINCOS, ISD::FPOW, ISD::FCOPYSIGN})
       setOperationAction(FPExpOp, VT, Expand);
-      for (MVT VT : MVT::fp_valuetypes())
-        setOperationAction(ISD::FREM, VT, LibCall);
-    }
+
+    setOperationAction(ISD::FREM, VT, LibCall);
+  }
 
   // No extending loads from i32.
   for (MVT VT : MVT::integer_valuetypes()) {
