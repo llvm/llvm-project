@@ -23,7 +23,7 @@ class Pass;
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Note: This function will also add conversions for the AMDGPU-specific
-/// address spaces, but those can be added separately using
+/// address spaces and types, but those can be added separately using
 /// populateAMDGPUTypeAndAttributeConversions().
 void populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                              RewritePatternSet &patterns,
