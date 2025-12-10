@@ -4,7 +4,7 @@ Formatter Bytecode
 Background
 ----------
 
-LLDB provides rich customization options to display data types (see :doc`/use/variable/`). To use custom data formatters, developers need to edit the global ``~/.lldbinit`` file to make sure they are found and loaded. In addition to this rather manual workflow, developers or library authors can ship ship data formatters with their code in a format that allows LLDB automatically find them and run them securely.
+LLDB provides rich customization options to display data types (see :doc:`/use/variable/`). To use custom data formatters, developers need to edit the global ``~/.lldbinit`` file to make sure they are found and loaded. In addition to this rather manual workflow, developers or library authors can ship ship data formatters with their code in a format that allows LLDB automatically find them and run them securely.
 
 An end-to-end example of such a workflow is the Swift ``DebugDescription`` macro (see https://www.swift.org/blog/announcing-swift-6/#debugging ) that translates Swift string interpolation into LLDB summary strings, and puts them into a ``.lldbsummaries`` section, where LLDB can find them.
 

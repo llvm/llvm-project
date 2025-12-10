@@ -467,6 +467,7 @@ public:
     mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
     return cir::LoadOp::create(*this, loc, addr.getPointer(), /*isDeref=*/false,
                                isVolatile, /*alignment=*/align,
+                               /*sync_scope=*/cir::SyncScopeKindAttr{},
                                /*mem_order=*/cir::MemOrderAttr{});
   }
 
@@ -478,6 +479,7 @@ public:
     mlir::IntegerAttr alignAttr = getAlignmentAttr(alignment);
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
                                /*isVolatile=*/false, alignAttr,
+                               /*sync_scope=*/cir::SyncScopeKindAttr{},
                                /*mem_order=*/cir::MemOrderAttr{});
   }
 
