@@ -378,3 +378,269 @@ exit:
   %ext = zext i8 %iv to i32
   ret i32 %ext
 }
+
+define i16 @zext_from_illegal_to_illegal_type_dest_desirable(i32 %x) {
+; CHECK-LABEL: @zext_from_illegal_to_illegal_type_dest_desirable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 42
+; CHECK-NEXT:    [[Y:%.*]] = call i3 @get_i3()
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[THEN:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[X]], 41
+; CHECK-NEXT:    br i1 [[CMP2]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       f:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P1:%.*]] = phi i3 [ [[Y]], [[T]] ], [ 3, [[F]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[P:%.*]] = zext i3 [[P1]] to i16
+; CHECK-NEXT:    ret i16 [[P]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 42
+  %y = call i3 @get_i3()
+  br i1 %cmp, label %exit, label %then
+
+then:
+  %cmp2 = icmp eq i32 %x, 41
+  br i1 %cmp2, label %t, label %f
+
+t:
+  br label %exit
+
+f:
+  call void @bar()
+  br label %exit
+
+exit:
+  %p = phi i3 [ %y, %t ], [ 3, %f ], [ 1, %entry ]
+  %r = zext i3 %p to i16
+  ret i16 %r
+}
+
+; Conditional branch as terminator for a PN incoming block, cannot foldOpIntoPhi.
+define i16 @zext_from_illegal_to_illegal_type_dest_desirable_2(i32 %x) {
+; CHECK-LABEL: @zext_from_illegal_to_illegal_type_dest_desirable_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 42
+; CHECK-NEXT:    [[Y:%.*]] = call i3 @get_i3()
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[THEN:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[X]], 41
+; CHECK-NEXT:    br i1 [[CMP2]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       f:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i3 [ [[Y]], [[T]] ], [ [[Y]], [[F]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[R:%.*]] = zext i3 [[P]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 42
+  %y = call i3 @get_i3()
+  br i1 %cmp, label %exit, label %then
+
+then:
+  %cmp2 = icmp eq i32 %x, 41
+  br i1 %cmp2, label %t, label %f
+
+t:
+  br label %exit
+
+f:
+  call void @bar()
+  br label %exit
+
+exit:
+  %p = phi i3 [ %y, %t ], [ %y, %f ], [ 1, %entry ]
+  %r = zext i3 %p to i16
+  ret i16 %r
+}
+
+; SeenNonSimplifiedInVal false, cannot foldOpIntoPhi.
+define i16 @zext_from_illegal_to_illegal_type_dest_desirable_3(i32 %x) {
+; CHECK-LABEL: @zext_from_illegal_to_illegal_type_dest_desirable_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 42
+; CHECK-NEXT:    [[Y:%.*]] = call i3 @get_i3()
+; CHECK-NEXT:    br i1 [[CMP]], label [[Z:%.*]], label [[THEN:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[X]], 41
+; CHECK-NEXT:    br i1 [[CMP2]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       f:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       z:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i3 [ [[Y]], [[T]] ], [ [[Y]], [[F]] ], [ 1, [[Z]] ]
+; CHECK-NEXT:    [[R:%.*]] = zext i3 [[P]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 42
+  %y = call i3 @get_i3()
+  br i1 %cmp, label %z, label %then
+
+then:
+  %cmp2 = icmp eq i32 %x, 41
+  br i1 %cmp2, label %t, label %f
+
+t:
+  br label %exit
+
+f:
+  call void @bar()
+  br label %exit
+
+z:
+  br label %exit
+
+exit:
+  %p = phi i3 [ %y, %t ], [ %y, %f ], [ 1, %z ]
+  %r = zext i3 %p to i16
+  ret i16 %r
+}
+
+; Reverse of zext_from_illegal_to_illegal_type_dest_desirable.
+define i16 @reverse_zext_from_illegal_to_illegal_type_dest_desirable(i32 %x) {
+; CHECK-LABEL: @reverse_zext_from_illegal_to_illegal_type_dest_desirable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[Y:%.*]] = call i3 @get_i3()
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i3 [[Y]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 42
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[THEN:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[X]], 41
+; CHECK-NEXT:    br i1 [[CMP2]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       f:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i16 [ [[TMP0]], [[T]] ], [ 3, [[F]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i16 [[P]]
+;
+entry:
+  %y = call i3 @get_i3()
+  %z = zext i3 %y to i16
+  %cmp = icmp eq i32 %x, 42
+  br i1 %cmp, label %exit, label %then
+
+then:                                             ; preds = %entry
+  %cmp2 = icmp eq i32 %x, 41
+  br i1 %cmp2, label %t, label %f
+
+t:                                                ; preds = %then
+  br label %exit
+
+f:                                                ; preds = %then
+  call void @bar()
+  br label %exit
+
+exit:                                             ; preds = %f, %t, %entry
+  %p = phi i16 [ %z, %t ], [ 3, %f ], [ 1, %entry ]
+  ret i16 %p
+}
+
+; Inverse test. Cast does not get folded into the PN, despite types illegal and destination
+; type desirable, yet foldPHIArgZextsIntoPHI occurs on its reverse.
+define i16 @zext_from_illegal_to_illegal_type_dest_desirable_4(i64 %num, ptr %p) {
+; CHECK-LABEL: @zext_from_illegal_to_illegal_type_dest_desirable_4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[NUM:%.*]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[IDX]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[NUM]], 3
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[OTHER:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[RETURN:%.*]]
+; CHECK:       other:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[NUM]], 12
+; CHECK-NEXT:    br i1 [[CMP1]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       f:
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[PN:%.*]] = phi i8 [ [[VAL]], [[THEN]] ], [ [[VAL]], [[T]] ], [ 1, [[F]] ]
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[PN]] to i16
+; CHECK-NEXT:    ret i16 [[Z]]
+;
+entry:
+  %idx = getelementptr inbounds i8, ptr %p, i64 %num
+  %val = load i8, ptr %idx, align 1
+  %cmp = icmp ult i64 %num, 3
+  br i1 %cmp, label %then, label %other
+
+then:
+  br label %return
+
+other:
+  %cmp1 = icmp eq i64 %num, 12
+  br i1 %cmp1, label %t, label %f
+
+t:
+  br label %return
+
+f:
+  br label %return
+
+return:
+  %pn = phi i8 [ %val, %then ], [ %val, %t ], [ 1, %f ]
+  %z = zext i8 %pn to i16
+  ret i16 %z
+}
+
+define i16 @reverse_zext_from_illegal_to_illegal_type_dest_desirable_4(i64 %num, ptr %p) {
+; CHECK-LABEL: @reverse_zext_from_illegal_to_illegal_type_dest_desirable_4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[NUM:%.*]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[IDX]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[NUM]], 3
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[OTHER:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[RETURN:%.*]]
+; CHECK:       other:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[NUM]], 12
+; CHECK-NEXT:    br i1 [[CMP1]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       f:
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[PN_SHRUNK:%.*]] = phi i8 [ [[VAL]], [[THEN]] ], [ [[VAL]], [[T]] ], [ 1, [[F]] ]
+; CHECK-NEXT:    [[PN:%.*]] = zext i8 [[PN_SHRUNK]] to i16
+; CHECK-NEXT:    ret i16 [[PN]]
+;
+entry:
+  %idx = getelementptr inbounds i8, ptr %p, i64 %num
+  %val = load i8, ptr %idx, align 1
+  %z = zext i8 %val to i16
+  %cmp = icmp ult i64 %num, 3
+  br i1 %cmp, label %then, label %other
+
+then:
+  br label %return
+
+other:
+  %cmp1 = icmp eq i64 %num, 12
+  br i1 %cmp1, label %t, label %f
+
+t:
+  br label %return
+
+f:
+  br label %return
+
+return:
+  %pn = phi i16 [ %z, %then ], [ %z, %t ], [ 1, %f ]
+  ret i16 %pn
+}
