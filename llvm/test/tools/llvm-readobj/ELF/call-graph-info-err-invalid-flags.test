@@ -1,0 +1,65 @@
+## Tests that --call-graph-info fails if .llvm.callgraph section has invalid
+## value for flags field.
+
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
+
+# WARN: warning: 'while reading call graph info's Flags': Unexpected value. Expected [0-7] but found [8]
+
+## YAML content was generated from this assembly using obj2yaml.
+##    .text
+##    .globl _Z3foov
+##    .type _Z3foov,@function
+##    _Z3foov:
+##     callq _Z3foov@PLT
+##
+##    .section	.llvm.callgraph,"o",@llvm_call_graph,.text
+##    .byte	0   #< Format version number.
+##    .byte	8   #< Only valid values are 0 to 7
+##    # Missing direct callees info
+##    .text
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+    Content:         E800000000
+  - Name:            .llvm.callgraph
+    Type:            SHT_LLVM_CALL_GRAPH
+    Flags:           [ SHF_LINK_ORDER ]
+    Link:            .text
+    AddressAlign:    0x1
+    Content:         '0008'
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x1
+        Symbol:          _Z3foov
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .llvm.callgraph
+      - Name:            .symtab
+Symbols:
+  - Name:            _Z3foov
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+...
