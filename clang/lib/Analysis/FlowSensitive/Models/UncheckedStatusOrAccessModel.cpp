@@ -138,11 +138,6 @@ static auto valueOperatorCall() {
                     isStatusOrOperatorCallWithName("->")));
 }
 
-static clang::ast_matchers::TypeMatcher statusType() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
-  return hasCanonicalType(qualType(hasDeclaration(statusClass())));
-}
-
 static auto isComparisonOperatorCall(llvm::StringRef operator_name) {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
   return cxxOperatorCallExpr(
@@ -444,6 +439,11 @@ clang::ast_matchers::DeclarationMatcher statusOrOperatorBaseClass() {
 clang::ast_matchers::TypeMatcher statusOrType() {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
   return hasCanonicalType(qualType(hasDeclaration(statusOrClass())));
+}
+
+clang::ast_matchers::TypeMatcher statusType() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return hasCanonicalType(qualType(hasDeclaration(statusClass())));
 }
 
 bool isStatusOrType(QualType Type) {
