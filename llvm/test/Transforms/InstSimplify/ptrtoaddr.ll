@@ -392,9 +392,9 @@ define i1 @icmp_relational_ptrtoaddr_ptrtoaddr_addrsize() {
 ; the same, as GEP does not modify them.
 define i1 @icmp_relational_ptrtoint_ptrtoint_addrsize() {
 ; CHECK-LABEL: define i1 @icmp_relational_ptrtoint_ptrtoint_addrsize() {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 ptrtoaddr (ptr addrspace(1) @g.as1 to i64), ptrtoaddr (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @g.as1, i64 1) to i64)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 ptrtoint (ptr addrspace(1) @g.as1 to i64), ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @g.as1, i64 1) to i64)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %cmp = icmp ult i64 ptrtoaddr (ptr addrspace(1) @g.as1 to i64), ptrtoaddr (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @g.as1, i64 1) to i64)
+  %cmp = icmp ult i64 ptrtoint (ptr addrspace(1) @g.as1 to i64), ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @g.as1, i64 1) to i64)
   ret i1 %cmp
 }
