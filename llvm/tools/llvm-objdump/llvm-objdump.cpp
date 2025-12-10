@@ -3882,7 +3882,6 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
 
   DisasmSymbolSet.insert_range(DisassembleSymbols);
 
-
   llvm::for_each(InputFilenames, dumpInput);
 
   warnOnNoMatchForSections();
