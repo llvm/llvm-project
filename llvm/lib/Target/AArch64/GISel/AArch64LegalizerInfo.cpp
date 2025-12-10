@@ -1951,7 +1951,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_neon_vsli: {
     MIB.buildInstr(
-        AArch64::G_VSLI, {MI.getOperand(0)},
+        AArch64::G_SLI, {MI.getOperand(0)},
         {MI.getOperand(2), MI.getOperand(3), MI.getOperand(4).getImm()});
     MI.eraseFromParent();
     break;
