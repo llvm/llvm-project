@@ -401,18 +401,19 @@ llvm::Error Terminal::SetHardwareFlowControl(bool enabled) {
 }
 
 bool Terminal::SupportsUnicode() {
-  static std::optional<bool> result;
-  if (result)
-    return result.value();
+  static std::optional<bool> g_result;
+  if (g_result)
+    return g_result.value();
 #ifdef _WIN32
   return true;
 #else
   const char *lang_var = std::getenv("LANG");
   if (!lang_var)
     return false;
-  result = llvm::StringRef(lang_var).lower().find("utf-8") != std::string::npos;
+  g_result =
+      llvm::StringRef(lang_var).lower().find("utf-8") != std::string::npos;
 #endif
-  return result.value();
+  return g_result.value();
 }
 
 TerminalState::TerminalState(Terminal term, bool save_process_group)
