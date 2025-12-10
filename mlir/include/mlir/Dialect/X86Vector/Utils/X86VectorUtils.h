@@ -16,21 +16,10 @@
 #include <string>
 
 namespace mlir {
-class Type;
-class ShapedType;
-class OpOperand;
-class AffineDimExpr;
 class AffineMap;
-class VectorType;
 class Operation;
 
 namespace x86vector {
-enum class VnniOperandRank {
-  TRANSPOSE = 3,
-  GEMM = 3,
-  BRGEMM_INS = 4,
-  BRGEMM_OUTS = 3
-};
 
 // Return true if the operation is in VNNI layout.
 // Optionally, the check can be constrained to a specific VNNI blocking factor.

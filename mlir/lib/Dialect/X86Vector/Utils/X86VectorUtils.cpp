@@ -5,10 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements utility methods for working with the Vector dialect.
-//
-//===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/X86Vector/Utils/X86VectorUtils.h"
 
@@ -19,9 +15,8 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
 
-#define DEBUG_TYPE "x86vector-utils"
-
 using namespace mlir;
+using namespace mlir::x86vector;
 
 static FailureOr<SmallVector<mlir::utils::IteratorType>>
 inferIteratorsFromOutMap(AffineMap map) {
