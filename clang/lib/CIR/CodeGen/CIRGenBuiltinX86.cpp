@@ -1556,7 +1556,31 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_reduce_fmax_ps512:
   case X86::BI__builtin_ia32_reduce_fmax_ph512:
   case X86::BI__builtin_ia32_reduce_fmax_ph256:
-  case X86::BI__builtin_ia32_reduce_fmax_ph128:
+  case X86::BI__builtin_ia32_reduce_fmax_ph128: {
+    StringRef intrinsicName = "";
+    switch (builtinID) {
+    case X86::BI__builtin_ia32_reduce_fmax_pd512:
+      intrinsicName = "vector.reduce.fmax.v8f64";
+      break;
+    case X86::BI__builtin_ia32_reduce_fmax_ps512:
+      intrinsicName = "vector.reduce.fmax.v16f32";
+      break;
+    case X86::BI__builtin_ia32_reduce_fmax_ph512:
+      intrinsicName = "vector.reduce.fmax.v32f16";
+      break;
+    case X86::BI__builtin_ia32_reduce_fmax_ph256:
+      intrinsicName = "vector.reduce.fmax.v16f16";
+      break;
+    case X86::BI__builtin_ia32_reduce_fmax_ph128:
+      intrinsicName = "vector.reduce.fmax.v8f16";
+      break;
+    }
+    assert(!cir::MissingFeatures::fastMathFlags());
+    cir::VectorType vecTy = cast<cir::VectorType>(ops[0].getType());
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
+                               intrinsicName, vecTy.getElementType(),
+                               mlir::ValueRange{ops[0]});
+  }
   case X86::BI__builtin_ia32_reduce_fmin_pd512:
   case X86::BI__builtin_ia32_reduce_fmin_ps512:
   case X86::BI__builtin_ia32_reduce_fmin_ph512:
