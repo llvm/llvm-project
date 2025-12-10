@@ -2400,8 +2400,7 @@ void AArch64AsmPrinter::emitAddress(MCRegister Reg, const MCExpr *Expr,
                        .addReg(Reg)
                        .addExpr(MCSpecifierExpr::create(
                            Expr, AArch64::S_LO12, OutStreamer->getContext()))
-                       .addImm(0)
-                   );
+                       .addImm(0));
   } else {
     auto *SymRef =
         MCSymbolRefExpr::create(Val.getAddSym(), OutStreamer->getContext());
