@@ -8,76 +8,58 @@
 
 #include "RedundantControlFlowCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-static const char *const RedundantReturnDiag =
+namespace {
+
+AST_MATCHER_P(CompoundStmt, hasFinalStmt, StatementMatcher, InnerMatcher) {
+  return !Node.body_empty() &&
+         InnerMatcher.matches(*Node.body_back(), Finder, Builder);
+}
+
+} // namespace
+
+static constexpr StringRef RedundantReturnDiag =
     "redundant return statement at the end "
     "of a function with a void return type";
-static const char *const RedundantContinueDiag =
+static constexpr StringRef RedundantContinueDiag =
     "redundant continue statement at the "
     "end of loop statement";
 
-static bool isLocationInMacroExpansion(const SourceManager &SM,
-                                       SourceLocation Loc) {
-  return SM.isMacroBodyExpansion(Loc) || SM.isMacroArgExpansion(Loc);
-}
-
 void RedundantControlFlowCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      functionDecl(isDefinition(), returns(voidType()),
-                   hasBody(compoundStmt(hasAnySubstatement(
-                                            returnStmt(unless(has(expr())))))
-                               .bind("return"))),
+      functionDecl(returns(voidType()),
+                   hasBody(compoundStmt(hasFinalStmt(
+                       returnStmt(unless(has(expr()))).bind("stmt"))))),
       this);
-  Finder->addMatcher(
-      mapAnyOf(forStmt, cxxForRangeStmt, whileStmt, doStmt)
-          .with(hasBody(compoundStmt(hasAnySubstatement(continueStmt()))
-                            .bind("continue"))),
-      this);
+  Finder->addMatcher(mapAnyOf(forStmt, cxxForRangeStmt, whileStmt, doStmt)
+                         .with(hasBody(compoundStmt(
+                             hasFinalStmt(continueStmt().bind("stmt"))))),
+                     this);
 }
 
 void RedundantControlFlowCheck::check(const MatchFinder::MatchResult &Result) {
-  if (const auto *Return = Result.Nodes.getNodeAs<CompoundStmt>("return"))
-    checkRedundantReturn(Result, Return);
-  else if (const auto *Continue =
-               Result.Nodes.getNodeAs<CompoundStmt>("continue"))
-    checkRedundantContinue(Result, Continue);
-}
+  const auto &RedundantStmt = *Result.Nodes.getNodeAs<Stmt>("stmt");
+  const SourceRange StmtRange = RedundantStmt.getSourceRange();
 
-void RedundantControlFlowCheck::checkRedundantReturn(
-    const MatchFinder::MatchResult &Result, const CompoundStmt *Block) {
-  const CompoundStmt::const_reverse_body_iterator Last = Block->body_rbegin();
-  if (const auto *Return = dyn_cast<ReturnStmt>(*Last))
-    issueDiagnostic(Result, Block, Return->getSourceRange(),
-                    RedundantReturnDiag);
-}
-
-void RedundantControlFlowCheck::checkRedundantContinue(
-    const MatchFinder::MatchResult &Result, const CompoundStmt *Block) {
-  const CompoundStmt::const_reverse_body_iterator Last = Block->body_rbegin();
-  if (const auto *Continue = dyn_cast<ContinueStmt>(*Last))
-    issueDiagnostic(Result, Block, Continue->getSourceRange(),
-                    RedundantContinueDiag);
-}
-
-void RedundantControlFlowCheck::issueDiagnostic(
-    const MatchFinder::MatchResult &Result, const CompoundStmt *const Block,
-    const SourceRange &StmtRange, const char *const Diag) {
-  const SourceManager &SM = *Result.SourceManager;
-  if (isLocationInMacroExpansion(SM, StmtRange.getBegin()))
+  if (StmtRange.getBegin().isMacroID())
     return;
 
   const auto RemovedRange = CharSourceRange::getCharRange(
       StmtRange.getBegin(),
-      Lexer::findLocationAfterToken(StmtRange.getEnd(), tok::semi, SM,
-                                    getLangOpts(),
+      Lexer::findLocationAfterToken(StmtRange.getEnd(), tok::semi,
+                                    *Result.SourceManager, getLangOpts(),
                                     /*SkipTrailingWhitespaceAndNewLine=*/true));
 
-  diag(StmtRange.getBegin(), Diag) << FixItHint::CreateRemoval(RemovedRange);
+  diag(StmtRange.getBegin(), isa<ReturnStmt>(RedundantStmt)
+                                 ? RedundantReturnDiag
+                                 : RedundantContinueDiag)
+      << FixItHint::CreateRemoval(RemovedRange);
 }
 
 } // namespace clang::tidy::readability
