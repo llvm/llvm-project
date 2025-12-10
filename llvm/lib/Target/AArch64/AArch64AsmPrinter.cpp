@@ -220,7 +220,7 @@ public:
   void LowerLOADgotAUTH(const MachineInstr &MI);
 
   const MCExpr *emitPAuthRelocationAsIRelative(
-      const MCExpr *Target, uint16_t Disc, AArch64PACKey::ID KeyID,
+      const MCExpr *Target, uint64_t Disc, AArch64PACKey::ID KeyID,
       bool HasAddressDiversity, bool IsDSOLocal, const MCExpr *DSExpr);
 
   /// tblgen'erated driver function for lowering simple MI->MC
@@ -2461,7 +2461,7 @@ static bool targetSupportsIRelativeRelocation(const Triple &TT) {
 // ret
 // .popsection
 const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
-    const MCExpr *Target, uint16_t Disc, AArch64PACKey::ID KeyID,
+    const MCExpr *Target, uint64_t Disc, AArch64PACKey::ID KeyID,
     bool HasAddressDiversity, bool IsDSOLocal, const MCExpr *DSExpr) {
   const Triple &TT = TM.getTargetTriple();
 
@@ -2509,12 +2509,16 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
   if (HasAddressDiversity) {
     auto *PlacePlusDisc = MCBinaryExpr::createAdd(
         MCSymbolRefExpr::create(Place, OutStreamer->getContext()),
-        MCConstantExpr::create(static_cast<int16_t>(Disc),
-                               OutStreamer->getContext()),
+        MCConstantExpr::create(Disc, OutStreamer->getContext()),
         OutStreamer->getContext());
     emitAddress(*OutStreamer, AArch64::X1, PlacePlusDisc, /*IsDSOLocal=*/true,
                 *STI);
   } else {
+    if (!isUInt<16>(Disc)) {
+      OutContext.reportError(SMLoc(), "AArch64 PAC Discriminator '" +
+                                          Twine(Disc) +
+                                          "' out of range [0, 0xFFFF]");
+    }
     emitMOVZ(AArch64::X1, Disc, 0);
   }
 
@@ -2593,17 +2597,18 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   }
 
   uint64_t Disc = CPA.getDiscriminator()->getZExtValue();
-  if (!isUInt<16>(Disc)) {
-    CPA.getContext().emitError("AArch64 PAC Discriminator '" + Twine(Disc) +
-                               "' out of range [0, 0xFFFF]");
-    Disc = 0;
-  }
 
   // Check if we need to represent this with an IRELATIVE and emit it if so.
   if (auto *IFuncSym = emitPAuthRelocationAsIRelative(
           Sym, Disc, AArch64PACKey::ID(KeyID), CPA.hasAddressDiscriminator(),
           BaseGVB && BaseGVB->isDSOLocal(), DSExpr))
     return IFuncSym;
+
+  if (!isUInt<16>(Disc)) {
+    CPA.getContext().emitError("AArch64 PAC Discriminator '" + Twine(Disc) +
+                               "' out of range [0, 0xFFFF]");
+    Disc = 0;
+  }
 
   if (DSExpr)
     report_fatal_error("deactivation symbols unsupported in constant "
