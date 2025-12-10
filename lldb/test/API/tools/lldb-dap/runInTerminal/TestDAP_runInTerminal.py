@@ -192,7 +192,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("FOO=BAR", stdout)
 
     @skipIfWindows
-    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_NonAttachedRunInTerminalLauncher(self):
         comm_file = os.path.join(self.getBuildDir(), "comm-file")
         os.mkfifo(comm_file)
