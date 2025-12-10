@@ -46,9 +46,6 @@ extern const char *TestMainArgv0;
 
 namespace {
 
-// Unique anchor whose address helps locate the current test binary.
-static int JobserverTestAnchor = 0;
-
 // RAII helper to set an environment variable for the duration of a test.
 class ScopedEnvironment {
   std::string Name;
@@ -225,6 +222,9 @@ TEST_F(JobserverClientTest, UnixClientFifo) {
 }
 
 #if LLVM_ENABLE_THREADS
+// Unique anchor whose address helps locate the current test binary.
+static int JobserverTestAnchor = 0;
+
 // Test fixture for tests that use the jobserver strategy. It creates a
 // temporary FIFO, sets MAKEFLAGS, and provides a helper to pre-load the FIFO
 // with job tokens, simulating `make -jN`.

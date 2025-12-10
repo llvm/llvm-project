@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+v < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v < %s | FileCheck %s
 
-declare <4 x i16> @llvm.vp.sext.v4i16.v4i8(<4 x i8>, <4 x i1>, i32)
-
 define <4 x i16> @vsext_v4i16_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i16_v4i8:
 ; CHECK:       # %bb.0:
@@ -25,8 +23,6 @@ define <4 x i16> @vsext_v4i16_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
   %v = call <4 x i16> @llvm.vp.sext.v4i16.v4i8(<4 x i8> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i16> %v
 }
-
-declare <4 x i32> @llvm.vp.sext.v4i32.v4i8(<4 x i8>, <4 x i1>, i32)
 
 define <4 x i32> @vsext_v4i32_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i32_v4i8:
@@ -50,8 +46,6 @@ define <4 x i32> @vsext_v4i32_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
   ret <4 x i32> %v
 }
 
-declare <4 x i64> @llvm.vp.sext.v4i64.v4i8(<4 x i8>, <4 x i1>, i32)
-
 define <4 x i64> @vsext_v4i64_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i64_v4i8:
 ; CHECK:       # %bb.0:
@@ -73,8 +67,6 @@ define <4 x i64> @vsext_v4i64_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
   %v = call <4 x i64> @llvm.vp.sext.v4i64.v4i8(<4 x i8> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i64> %v
 }
-
-declare <4 x i32> @llvm.vp.sext.v4i32.v4i16(<4 x i16>, <4 x i1>, i32)
 
 define <4 x i32> @vsext_v4i32_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i32_v4i16:
@@ -98,8 +90,6 @@ define <4 x i32> @vsext_v4i32_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) {
   ret <4 x i32> %v
 }
 
-declare <4 x i64> @llvm.vp.sext.v4i64.v4i16(<4 x i16>, <4 x i1>, i32)
-
 define <4 x i64> @vsext_v4i64_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i64_v4i16:
 ; CHECK:       # %bb.0:
@@ -122,8 +112,6 @@ define <4 x i64> @vsext_v4i64_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) {
   ret <4 x i64> %v
 }
 
-declare <4 x i64> @llvm.vp.sext.v4i64.v4i32(<4 x i32>, <4 x i1>, i32)
-
 define <4 x i64> @vsext_v4i64_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i64_v4i32:
 ; CHECK:       # %bb.0:
@@ -145,8 +133,6 @@ define <4 x i64> @vsext_v4i64_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl) {
   %v = call <4 x i64> @llvm.vp.sext.v4i64.v4i32(<4 x i32> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i64> %v
 }
-
-declare <32 x i64> @llvm.vp.sext.v32i64.v32i32(<32 x i32>, <32 x i1>, i32)
 
 define <32 x i64> @vsext_v32i64_v32i32(<32 x i32> %va, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v32i64_v32i32:
@@ -202,8 +188,6 @@ define <32 x i64> @vsext_v32i64_v32i32_unmasked(<32 x i32> %va, i32 zeroext %evl
   ret <32 x i64> %v
 }
 
-declare <4 x i16> @llvm.vp.sext.v4i16.v4i7(<4 x i7>, <4 x i1>, i32)
-
 define <4 x i16> @vsext_v4i16_v4i7(<4 x i7> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i16_v4i7:
 ; CHECK:       # %bb.0:
@@ -216,8 +200,6 @@ define <4 x i16> @vsext_v4i16_v4i7(<4 x i7> %va, <4 x i1> %m, i32 zeroext %evl) 
   ret <4 x i16> %v
 }
 
-declare <4 x i8> @llvm.vp.sext.v4i8.v4i7(<4 x i7>, <4 x i1>, i32)
-
 define <4 x i8> @vsext_v4i8_v4i7(<4 x i7> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i8_v4i7:
 ; CHECK:       # %bb.0:
@@ -229,8 +211,6 @@ define <4 x i8> @vsext_v4i8_v4i7(<4 x i7> %va, <4 x i1> %m, i32 zeroext %evl) {
   ret <4 x i8> %v
 }
 
-declare <4 x i15> @llvm.vp.sext.v4i15.v4i8(<4 x i8>, <4 x i1>, i32)
-
 define <4 x i15> @vsext_v4i15_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i15_v4i8:
 ; CHECK:       # %bb.0:
@@ -241,8 +221,6 @@ define <4 x i15> @vsext_v4i15_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) 
   %v = call <4 x i15> @llvm.vp.sext.v4i15.v4i8(<4 x i8> %va, <4 x i1> %m, i32 %evl)
   ret <4 x i15> %v
 }
-
-declare <4 x i15> @llvm.vp.sext.v4i15.v4i9(<4 x i9>, <4 x i1>, i32)
 
 define <4 x i15> @vsext_v4i15_v4i9(<4 x i9> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i15_v4i9:

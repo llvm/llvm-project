@@ -88,7 +88,7 @@ define i32 @multi_user_cmp(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-VF4-IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 4
+; CHECK-VF4-IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 4
 ; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-VF4-IC2-NEXT:    [[TMP6:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD]], zeroinitializer
@@ -307,7 +307,7 @@ define i32 @multi_user_cmp_int(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-VF4-IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 4
+; CHECK-VF4-IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 4
 ; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
 ; CHECK-VF4-IC2-NEXT:    [[TMP6:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], zeroinitializer
@@ -593,9 +593,9 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[PRED_STORE_CONTINUE19]] ]
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[PRED_STORE_CONTINUE19]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-VF4-IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 4
+; CHECK-VF4-IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i64 4
 ; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP3]], align 4, !alias.scope [[META6:![0-9]+]]
-; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP6]], align 4, !alias.scope [[META6]]
+; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP4]], align 4, !alias.scope [[META6]]
 ; CHECK-VF4-IC2-NEXT:    [[TMP7:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-VF4-IC2-NEXT:    [[TMP8:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD5]], zeroinitializer
 ; CHECK-VF4-IC2-NEXT:    [[TMP9]] = or <4 x i1> [[VEC_PHI3]], [[TMP7]]
@@ -947,7 +947,7 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-VF4-IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 4
+; CHECK-VF4-IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 4
 ; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-VF4-IC2-NEXT:    [[TMP6:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD]], zeroinitializer

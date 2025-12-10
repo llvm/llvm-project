@@ -32,7 +32,7 @@ end
 !PARSE-TREE: | | | OmpBeginLoopDirective
 !PARSE-TREE: | | | | OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE: | | | | OmpClauseList ->
-!PARSE-TREE: | | | | Flags = None
+!PARSE-TREE: | | | | Flags = {CrossesLabelDo}
 !PARSE-TREE: | | | Block
 !PARSE-TREE: | | | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 !PARSE-TREE: | | | | | NonLabelDoStmt

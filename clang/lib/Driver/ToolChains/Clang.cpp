@@ -4443,6 +4443,10 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                          DebuggerTuning != llvm::DebuggerKind::DBX)))
     CmdArgs.push_back("-gno-column-info");
 
+  if (!Args.hasFlag(options::OPT_gcall_site_info,
+                    options::OPT_gno_call_site_info, true))
+    CmdArgs.push_back("-gno-call-site-info");
+
   // FIXME: Move backend command line options to the module.
   if (Args.hasFlag(options::OPT_gmodules, options::OPT_gno_modules, false)) {
     // If -gline-tables-only or -gline-directives-only is the last option it
@@ -5058,6 +5062,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.ClaimAllArgs(options::OPT_femit_dwarf_unwind_EQ);
   }
 
+  bool IsAMDSPIRVForHIPDevice =
+      IsHIPDevice && getToolChain().getTriple().isSPIRV() &&
+      getToolChain().getTriple().getVendor() == llvm::Triple::AMD;
+
   if (isa<AnalyzeJobAction>(JA)) {
     assert(JA.getType() == types::TY_Plist && "Invalid output type.");
     CmdArgs.push_back("-analyze");
@@ -5155,6 +5163,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       rewriteKind = RK_Fragile;
     } else if (JA.getType() == types::TY_CIR) {
       CmdArgs.push_back("-emit-cir");
+    } else if (JA.getType() == types::TY_Image && IsAMDSPIRVForHIPDevice) {
+      CmdArgs.push_back("-emit-obj");
     } else {
       assert(JA.getType() == types::TY_PP_Asm && "Unexpected output type!");
     }
@@ -5693,6 +5703,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fenable-matrix");
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-enable-matrix");
+    // Only handle default layout if matrix is enabled
+    if (const Arg *A = Args.getLastArg(options::OPT_fmatrix_memory_layout_EQ)) {
+      StringRef Val = A->getValue();
+      if (Val == "row-major" || Val == "column-major") {
+        CmdArgs.push_back(Args.MakeArgString("-fmatrix-memory-layout=" + Val));
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back(Args.MakeArgString("-matrix-default-layout=" + Val));
+
+      } else {
+        D.Diag(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
+      }
+    }
   }
 
   CodeGenOptions::FramePointerKind FPKeepKind =
@@ -7735,6 +7757,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   addOpenMPHostOffloadingArgs(C, JA, Args, CmdArgs);
 
+  if (Args.hasFlag(options::OPT_fdevirtualize_speculatively,
+                   options::OPT_fno_devirtualize_speculatively,
+                   /*Default value*/ false))
+    CmdArgs.push_back("-fdevirtualize-speculatively");
+
   bool VirtualFunctionElimination =
       Args.hasFlag(options::OPT_fvirtual_function_elimination,
                    options::OPT_fno_virtual_function_elimination, false);
@@ -9085,7 +9112,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fno_lto,
       OPT_flto,
       OPT_flto_partitions_EQ,
-      OPT_flto_EQ};
+      OPT_flto_EQ,
+      OPT_use_spirv_backend};
+
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC) {
     // Don't forward -mllvm to toolchains that don't support LLVM.

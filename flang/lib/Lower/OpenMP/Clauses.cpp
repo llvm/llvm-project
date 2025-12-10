@@ -981,7 +981,22 @@ Init make(const parser::OmpClause::Init &inp,
 
 Initializer make(const parser::OmpClause::Initializer &inp,
                  semantics::SemanticsContext &semaCtx) {
-  llvm_unreachable("Empty: initializer");
+  const parser::OmpInitializerExpression &iexpr = inp.v.v;
+  const parser::OmpStylizedInstance &styleInstance = iexpr.v.front();
+  const parser::OmpStylizedInstance::Instance &instance =
+      std::get<parser::OmpStylizedInstance::Instance>(styleInstance.t);
+  if (const auto *as = std::get_if<parser::AssignmentStmt>(&instance.u)) {
+    auto &expr = std::get<parser::Expr>(as->t);
+    return Initializer{makeExpr(expr, semaCtx)};
+  } else if (const auto *call = std::get_if<parser::CallStmt>(&instance.u)) {
+    if (call->typedCall) {
+      const auto &procRef = *call->typedCall;
+      semantics::SomeExpr evalProcRef{procRef};
+      return Initializer{evalProcRef};
+    }
+  }
+
+  llvm_unreachable("Unexpected initializer");
 }
 
 InReduction make(const parser::OmpClause::InReduction &inp,
@@ -1061,7 +1076,7 @@ Link make(const parser::OmpClause::Link &inp,
   return Link{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
-LoopRange make(const parser::OmpClause::Looprange &inp,
+Looprange make(const parser::OmpClause::Looprange &inp,
                semantics::SemanticsContext &semaCtx) {
   llvm_unreachable("Unimplemented: looprange");
 }

@@ -36,10 +36,22 @@ exit:
 ; RUN: echo '!1 = !{!"llvm.loop.estimated_trip_count", i16 5}' >> %t
 ; RUN: %{RUN} GOOD
 
-; i32 value.
+; i32 arbitrary value.
 ; RUN: cp %s %t
 ; RUN: chmod u+w %t
 ; RUN: echo '!1 = !{!"llvm.loop.estimated_trip_count", i32 5}' >> %t
+; RUN: %{RUN} GOOD
+
+; i32 boundary value of 1.
+; RUN: cp %s %t
+; RUN: chmod u+w %t
+; RUN: echo '!1 = !{!"llvm.loop.estimated_trip_count", i32 1}' >> %t
+; RUN: %{RUN} GOOD
+
+; i32 boundary value of 0.
+; RUN: cp %s %t
+; RUN: chmod u+w %t
+; RUN: echo '!1 = !{!"llvm.loop.estimated_trip_count", i32 0}' >> %t
 ; RUN: %{RUN} GOOD
 
 ; i64 value.

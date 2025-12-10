@@ -186,3 +186,11 @@ cir.func @Foo_move_assign() special_member<#cir.cxx_assign<!rec_Foo, move>> {
 // CHECK: cir.func @Foo_move_assign() special_member<#cir.cxx_assign<!rec_Foo, move>> {
 // CHECK:   cir.return
 // CHECK: }
+
+cir.func @has_attrs() attributes {foo, baz = 5, floof = "flop"} {
+  cir.return
+}
+
+// CHECK: cir.func @has_attrs() attributes {baz = 5 : i64{{.*}}, floof = "flop", foo} {
+// CHECK:   cir.return
+// CHECK: }

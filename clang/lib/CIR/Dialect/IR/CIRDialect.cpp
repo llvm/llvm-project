@@ -221,6 +221,41 @@ void parseVisibilityAttr(OpAsmParser &parser, cir::VisibilityAttr &visibility) {
 }
 
 //===----------------------------------------------------------------------===//
+// InlineKindAttr (FIXME: remove once FuncOp uses assembly format)
+//===----------------------------------------------------------------------===//
+
+ParseResult parseInlineKindAttr(OpAsmParser &parser,
+                                cir::InlineKindAttr &inlineKindAttr) {
+  // Static list of possible inline kind keywords
+  static constexpr llvm::StringRef keywords[] = {"no_inline", "always_inline",
+                                                 "inline_hint"};
+
+  // Parse the inline kind keyword (optional)
+  llvm::StringRef keyword;
+  if (parser.parseOptionalKeyword(&keyword, keywords).failed()) {
+    // Not an inline kind keyword, leave inlineKindAttr empty
+    return success();
+  }
+
+  // Parse the enum value from the keyword
+  auto inlineKindResult = ::cir::symbolizeEnum<::cir::InlineKind>(keyword);
+  if (!inlineKindResult) {
+    return parser.emitError(parser.getCurrentLocation(), "expected one of [")
+           << llvm::join(llvm::ArrayRef(keywords), ", ")
+           << "] for inlineKind, got: " << keyword;
+  }
+
+  inlineKindAttr =
+      ::cir::InlineKindAttr::get(parser.getContext(), *inlineKindResult);
+  return success();
+}
+
+void printInlineKindAttr(OpAsmPrinter &p, cir::InlineKindAttr inlineKindAttr) {
+  if (inlineKindAttr) {
+    p << " " << stringifyInlineKind(inlineKindAttr.getValue());
+  }
+}
+//===----------------------------------------------------------------------===//
 // CIR Custom Parsers/Printers
 //===----------------------------------------------------------------------===//
 
@@ -322,12 +357,24 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
+  if (isa<cir::DataMemberAttr>(attrType)) {
+    // More detailed type verifications are already done in
+    // DataMemberAttr::verify. Don't need to repeat here.
+    return success();
+  }
+
   if (isa<cir::ZeroAttr>(attrType)) {
     if (isa<cir::RecordType, cir::ArrayType, cir::VectorType, cir::ComplexType>(
             opType))
       return success();
     return op->emitOpError(
         "zero expects struct, array, vector, or complex type");
+  }
+
+  if (mlir::isa<cir::UndefAttr>(attrType)) {
+    if (!mlir::isa<cir::VoidType>(opType))
+      return success();
+    return op->emitOpError("undef expects non-void type");
   }
 
   if (mlir::isa<cir::BoolAttr>(attrType)) {
@@ -715,8 +762,28 @@ unsigned cir::CallOp::getNumArgOperands() {
   return this->getOperation()->getNumOperands();
 }
 
+static mlir::ParseResult
+parseTryCallDestinations(mlir::OpAsmParser &parser,
+                         mlir::OperationState &result) {
+  mlir::Block *normalDestSuccessor;
+  if (parser.parseSuccessor(normalDestSuccessor))
+    return mlir::failure();
+
+  if (parser.parseComma())
+    return mlir::failure();
+
+  mlir::Block *unwindDestSuccessor;
+  if (parser.parseSuccessor(unwindDestSuccessor))
+    return mlir::failure();
+
+  result.addSuccessors(normalDestSuccessor);
+  result.addSuccessors(unwindDestSuccessor);
+  return mlir::success();
+}
+
 static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
-                                         mlir::OperationState &result) {
+                                         mlir::OperationState &result,
+                                         bool hasDestinationBlocks = false) {
   llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> ops;
   llvm::SMLoc opsLoc;
   mlir::FlatSymbolRefAttr calleeAttr;
@@ -742,6 +809,11 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
     return mlir::failure();
   if (parser.parseRParen())
     return mlir::failure();
+
+  if (hasDestinationBlocks &&
+      parseTryCallDestinations(parser, result).failed()) {
+    return ::mlir::failure();
+  }
 
   if (parser.parseOptionalKeyword("nothrow").succeeded())
     result.addAttribute(CIRDialect::getNoThrowAttrName(),
@@ -782,7 +854,9 @@ static void printCallCommon(mlir::Operation *op,
                             mlir::FlatSymbolRefAttr calleeSym,
                             mlir::Value indirectCallee,
                             mlir::OpAsmPrinter &printer, bool isNothrow,
-                            cir::SideEffect sideEffect) {
+                            cir::SideEffect sideEffect,
+                            mlir::Block *normalDest = nullptr,
+                            mlir::Block *unwindDest = nullptr) {
   printer << ' ';
 
   auto callLikeOp = mlir::cast<cir::CIRCallOpInterface>(op);
@@ -796,7 +870,17 @@ static void printCallCommon(mlir::Operation *op,
     assert(indirectCallee);
     printer << indirectCallee;
   }
+
   printer << "(" << ops << ")";
+
+  if (normalDest) {
+    assert(unwindDest && "expected two successors");
+    auto tryCall = cast<cir::TryCallOp>(op);
+    printer << ' ' << tryCall.getNormalDest();
+    printer << ",";
+    printer << ' ';
+    printer << tryCall.getUnwindDest();
+  }
 
   if (isNothrow)
     printer << " nothrow";
@@ -807,11 +891,11 @@ static void printCallCommon(mlir::Operation *op,
     printer << ")";
   }
 
-  printer.printOptionalAttrDict(op->getAttrs(),
-                                {CIRDialect::getCalleeAttrName(),
-                                 CIRDialect::getNoThrowAttrName(),
-                                 CIRDialect::getSideEffectAttrName()});
-
+  llvm::SmallVector<::llvm::StringRef> elidedAttrs = {
+      CIRDialect::getCalleeAttrName(), CIRDialect::getNoThrowAttrName(),
+      CIRDialect::getSideEffectAttrName(),
+      CIRDialect::getOperandSegmentSizesAttrName()};
+  printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
   printer << " : ";
   printer.printFunctionalType(op->getOperands().getTypes(),
                               op->getResultTypes());
@@ -890,6 +974,59 @@ verifyCallCommInSymbolUses(mlir::Operation *op,
 LogicalResult
 cir::CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   return verifyCallCommInSymbolUses(*this, symbolTable);
+}
+
+//===----------------------------------------------------------------------===//
+// TryCallOp
+//===----------------------------------------------------------------------===//
+
+mlir::OperandRange cir::TryCallOp::getArgOperands() {
+  if (isIndirect())
+    return getArgs().drop_front(1);
+  return getArgs();
+}
+
+mlir::MutableOperandRange cir::TryCallOp::getArgOperandsMutable() {
+  mlir::MutableOperandRange args = getArgsMutable();
+  if (isIndirect())
+    return args.slice(1, args.size() - 1);
+  return args;
+}
+
+mlir::Value cir::TryCallOp::getIndirectCall() {
+  assert(isIndirect());
+  return getOperand(0);
+}
+
+/// Return the operand at index 'i'.
+Value cir::TryCallOp::getArgOperand(unsigned i) {
+  if (isIndirect())
+    ++i;
+  return getOperand(i);
+}
+
+/// Return the number of operands.
+unsigned cir::TryCallOp::getNumArgOperands() {
+  if (isIndirect())
+    return this->getOperation()->getNumOperands() - 1;
+  return this->getOperation()->getNumOperands();
+}
+
+LogicalResult
+cir::TryCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return verifyCallCommInSymbolUses(*this, symbolTable);
+}
+
+mlir::ParseResult cir::TryCallOp::parse(mlir::OpAsmParser &parser,
+                                        mlir::OperationState &result) {
+  return parseCallCommon(parser, result, /*hasDestinationBlocks=*/true);
+}
+
+void cir::TryCallOp::print(::mlir::OpAsmPrinter &p) {
+  mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
+  cir::SideEffect sideEffect = getSideEffect();
+  printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
+                  sideEffect, getNormalDest(), getUnwindDest());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1114,6 +1251,65 @@ mlir::SuccessorOperands cir::BrOp::getSuccessorOperands(unsigned index) {
 
 Block *cir::BrOp::getSuccessorForOperands(ArrayRef<Attribute>) {
   return getDest();
+}
+
+//===----------------------------------------------------------------------===//
+// IndirectBrCondOp
+//===----------------------------------------------------------------------===//
+
+mlir::SuccessorOperands
+cir::IndirectBrOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return mlir::SuccessorOperands(getSuccOperandsMutable()[index]);
+}
+
+ParseResult parseIndirectBrOpSucessors(
+    OpAsmParser &parser, Type &flagType,
+    SmallVectorImpl<Block *> &succOperandBlocks,
+    SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &succOperands,
+    SmallVectorImpl<SmallVector<Type>> &succOperandsTypes) {
+  if (failed(parser.parseCommaSeparatedList(
+          OpAsmParser::Delimiter::Square,
+          [&]() {
+            Block *destination = nullptr;
+            SmallVector<OpAsmParser::UnresolvedOperand> operands;
+            SmallVector<Type> operandTypes;
+
+            if (parser.parseSuccessor(destination).failed())
+              return failure();
+
+            if (succeeded(parser.parseOptionalLParen())) {
+              if (failed(parser.parseOperandList(
+                      operands, OpAsmParser::Delimiter::None)) ||
+                  failed(parser.parseColonTypeList(operandTypes)) ||
+                  failed(parser.parseRParen()))
+                return failure();
+            }
+            succOperandBlocks.push_back(destination);
+            succOperands.emplace_back(operands);
+            succOperandsTypes.emplace_back(operandTypes);
+            return success();
+          },
+          "successor blocks")))
+    return failure();
+  return success();
+}
+
+void printIndirectBrOpSucessors(OpAsmPrinter &p, cir::IndirectBrOp op,
+                                Type flagType, SuccessorRange succs,
+                                OperandRangeRange succOperands,
+                                const TypeRangeRange &succOperandsTypes) {
+  p << "[";
+  llvm::interleave(
+      llvm::zip(succs, succOperands),
+      [&](auto i) {
+        p.printNewline();
+        p.printSuccessorAndUseList(std::get<0>(i), std::get<1>(i));
+      },
+      [&] { p << ','; });
+  if (!succOperands.empty())
+    p.printNewline();
+  p << "]";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1541,7 +1737,10 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (auto g = dyn_cast<GlobalOp>(op)) {
     symTy = g.getSymType();
     assert(!cir::MissingFeatures::addressSpace());
-    assert(!cir::MissingFeatures::opGlobalThreadLocal());
+    // Verify that for thread local global access, the global needs to
+    // be marked with tls bits.
+    if (getTls() && !g.getTlsModel())
+      return emitOpError("access to global not marked thread local");
   } else if (auto f = dyn_cast<FuncOp>(op)) {
     symTy = f.getFunctionType();
   } else {
@@ -1657,6 +1856,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   mlir::StringAttr builtinNameAttr = getBuiltinAttrName(state.name);
   mlir::StringAttr coroutineNameAttr = getCoroutineAttrName(state.name);
+  mlir::StringAttr inlineKindNameAttr = getInlineKindAttrName(state.name);
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
@@ -1669,6 +1869,14 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   if (::mlir::succeeded(
           parser.parseOptionalKeyword(coroutineNameAttr.strref())))
     state.addAttribute(coroutineNameAttr, parser.getBuilder().getUnitAttr());
+
+  // Parse optional inline kind attribute
+  cir::InlineKindAttr inlineKindAttr;
+  if (failed(parseInlineKindAttr(parser, inlineKindAttr)))
+    return failure();
+  if (inlineKindAttr)
+    state.addAttribute(inlineKindNameAttr, inlineKindAttr);
+
   if (::mlir::succeeded(parser.parseOptionalKeyword(lambdaNameAttr.strref())))
     state.addAttribute(lambdaNameAttr, parser.getBuilder().getUnitAttr());
   if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
@@ -1794,35 +2002,19 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       }).failed())
     return failure();
 
-  // Parse optional inline kind: inline(never|always|hint)
-  if (parser.parseOptionalKeyword("inline").succeeded()) {
-    if (parser.parseLParen().failed())
-      return failure();
+  // Parse the rest of the attributes.
+  NamedAttrList parsedAttrs;
+  if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
+    return failure();
 
-    llvm::StringRef inlineKindStr;
-    const std::array<llvm::StringRef, cir::getMaxEnumValForInlineKind()>
-        allowedInlineKindStrs{
-            cir::stringifyInlineKind(cir::InlineKind::NoInline),
-            cir::stringifyInlineKind(cir::InlineKind::AlwaysInline),
-            cir::stringifyInlineKind(cir::InlineKind::InlineHint),
-        };
-    if (parser.parseOptionalKeyword(&inlineKindStr, allowedInlineKindStrs)
-            .failed())
-      return parser.emitError(parser.getCurrentLocation(),
-                              "expected 'never', 'always', or 'hint'");
-
-    std::optional<InlineKind> inlineKind =
-        cir::symbolizeInlineKind(inlineKindStr);
-    if (!inlineKind)
-      return parser.emitError(parser.getCurrentLocation(),
-                              "invalid inline kind");
-
-    state.addAttribute(getInlineKindAttrName(state.name),
-                       cir::InlineAttr::get(builder.getContext(), *inlineKind));
-
-    if (parser.parseRParen().failed())
-      return failure();
+  for (StringRef disallowed : cir::FuncOp::getAttributeNames()) {
+    if (parsedAttrs.get(disallowed))
+      return parser.emitError(loc, "attribute '")
+             << disallowed
+             << "' should not be specified in the explicit attribute list";
   }
+
+  state.attributes.append(parsedAttrs);
 
   // Parse the optional function body.
   auto *body = state.addRegion();
@@ -1918,6 +2110,8 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getCoroutine())
     p << " coroutine";
 
+  printInlineKindAttr(p, getInlineKindAttr());
+
   if (getLambda())
     p << " lambda";
 
@@ -1973,9 +2167,8 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
       p << "(" << globalDtorPriority.value() << ")";
   }
 
-  if (cir::InlineAttr inlineAttr = getInlineKindAttr()) {
-    p << " inline(" << cir::stringifyInlineKind(inlineAttr.getValue()) << ")";
-  }
+  function_interface_impl::printFunctionAttributes(
+      p, *this, cir::FuncOp::getAttributeNames());
 
   // Print the body if this is not an external function.
   Region &body = getOperation()->getRegion(0);
