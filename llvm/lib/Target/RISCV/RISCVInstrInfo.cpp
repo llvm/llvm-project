@@ -932,8 +932,12 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     return nullptr;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  bool Invert = MRI.getVRegDef(MI.getOperand(4).getReg()) == &LoadMI;
-  const MachineOperand &FalseReg = MI.getOperand(Invert ? 5 : 4);
+
+  if (Ops.size() != 1)
+    return nullptr;
+
+  bool Invert = MRI.getVRegDef(MI.getOperand(Ops[0]).getReg()) == &LoadMI;
+  const MachineOperand &FalseReg = MI.getOperand(!Invert ? 5 : 4);
   Register DestReg = MI.getOperand(0).getReg();
   const TargetRegisterClass *PreviousClass = MRI.getRegClass(FalseReg.getReg());
   if (!MRI.constrainRegClass(DestReg, PreviousClass))
@@ -946,7 +950,7 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
 
   // Add condition code, inverting if necessary.
   auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
-  if (Invert)
+  if (!Invert)
     CC = RISCVCC::getInverseBranchCondition(CC);
   NewMI.addImm(CC);
 
