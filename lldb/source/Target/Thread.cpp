@@ -1887,16 +1887,16 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
 
     const bool show_frame_info = true;
     const bool show_frame_unique = only_stacks;
-    const char *selected_frame_marker = nullptr;
+    bool show_selected_frame = false;
     if (num_frames == 1 || only_stacks ||
         (GetID() != GetProcess()->GetThreadList().GetSelectedThread()->GetID()))
       strm.IndentMore();
     else
-      selected_frame_marker = "* ";
+      show_selected_frame = true;
 
     num_frames_shown = GetStackFrameList()->GetStatus(
         strm, start_frame, num_frames, show_frame_info, num_frames_with_source,
-        show_frame_unique, show_hidden, selected_frame_marker);
+        show_frame_unique, show_hidden, show_selected_frame);
     if (num_frames == 1)
       strm.IndentLess();
     strm.IndentLess();
