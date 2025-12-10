@@ -15211,14 +15211,18 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case RISCVISD::PASUB:
   case RISCVISD::PASUBU:
-  case RISCVISD::PMULHSU: {
+  case RISCVISD::PMULHSU:
+  case RISCVISD::PMULHR:
+  case RISCVISD::PMULHRU:
+  case RISCVISD::PMULHRSU: {
     MVT VT = N->getSimpleValueType(0);
     SDValue Op0 = N->getOperand(0);
     SDValue Op1 = N->getOperand(1);
     unsigned Opcode = N->getOpcode();
-    // PMULHSU doesn't support i8 variants
-    assert(VT == MVT::v2i16 ||
-           (Opcode != RISCVISD::PMULHSU && VT == MVT::v4i8));
+    // PMULH* variants don't support i8
+    bool IsMulH = Opcode == RISCVISD::PMULHSU || Opcode == RISCVISD::PMULHR ||
+                  Opcode == RISCVISD::PMULHRU || Opcode == RISCVISD::PMULHRSU;
+    assert(VT == MVT::v2i16 || (!IsMulH && VT == MVT::v4i8));
     MVT NewVT = MVT::v4i16;
     if (VT == MVT::v4i8)
       NewVT = MVT::v8i8;
@@ -16338,6 +16342,7 @@ static SDValue combineTruncSelectToSMaxUSat(SDNode *N, SelectionDAG &DAG) {
 // Handle P extension truncate patterns:
 // PASUB/PASUBU: (trunc (srl (sub ([s|z]ext a), ([s|z]ext b)), 1))
 // PMULHSU: (trunc (srl (mul (sext a), (zext b)), EltBits))
+// PMULHR*: (trunc (srl (add (mul (sext a), (zext b)), round_const), EltBits))
 static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
@@ -16367,6 +16372,26 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
 
   SDValue Op = N0.getOperand(0);
   unsigned ShAmtVal = C->getZExtValue();
+  unsigned EltBits = VecVT.getScalarSizeInBits();
+
+  // Check for rounding pattern: (add (mul ...), round_const)
+  bool IsRounding = false;
+  if (Op.getOpcode() == ISD::ADD && (EltBits == 16 || EltBits == 32)) {
+    SDValue AddRHS = Op.getOperand(1);
+    if (AddRHS.getOpcode() == ISD::BUILD_VECTOR) {
+      if (auto *RndBV = dyn_cast<BuildVectorSDNode>(AddRHS.getNode())) {
+        if (auto *RndC =
+                dyn_cast_or_null<ConstantSDNode>(RndBV->getSplatValue())) {
+          uint64_t ExpectedRnd = 1ULL << (EltBits - 1);
+          if (RndC->getZExtValue() == ExpectedRnd &&
+              Op.getOperand(0).getOpcode() == ISD::MUL) {
+            Op = Op.getOperand(0);
+            IsRounding = true;
+          }
+        }
+      }
+    }
+  }
 
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
@@ -16401,14 +16426,24 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
       return SDValue();
     break;
   case ISD::MUL:
-    // PMULHSU: shift amount must be element size, only for i16/i32
-    unsigned EltBits = VecVT.getScalarSizeInBits();
+    // PMULH*/PMULHR*: shift amount must be element size, only for i16/i32
     if (ShAmtVal != EltBits || (EltBits != 16 && EltBits != 32))
       return SDValue();
-    if (LHSIsSExt && RHSIsZExt)
-      Opc = RISCVISD::PMULHSU;
-    else
-      return SDValue();
+    if (IsRounding) {
+      if (LHSIsSExt && RHSIsSExt)
+        Opc = RISCVISD::PMULHR;
+      else if (LHSIsZExt && RHSIsZExt)
+        Opc = RISCVISD::PMULHRU;
+      else if (LHSIsSExt && RHSIsZExt)
+        Opc = RISCVISD::PMULHRSU;
+      else
+        return SDValue();
+    } else {
+      if (LHSIsSExt && RHSIsZExt)
+        Opc = RISCVISD::PMULHSU;
+      else
+        return SDValue();
+    }
     break;
   }
 
