@@ -2307,6 +2307,54 @@ TEST_P(UncheckedStatusOrAccessModelTest, AssertThatMacro) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, AssertTrueMacro) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_TRUE(sor.ok());
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_TRUE(sor.status().ok());
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_TRUE(!sor.ok());
+      sor.value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      bool flag = true;
+
+      ASSERT_TRUE(flag);
+      "nop";
+    }
+  )cc");
+
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_BOOL flag = true;
+
+      ASSERT_TRUE(flag.value());
+      "nop";
+    }
+  )cc");
+}
+
 TEST_P(UncheckedStatusOrAccessModelTest, AssertOkMacro) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"
