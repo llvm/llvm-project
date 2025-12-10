@@ -717,7 +717,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
   RTLIB::Libcall LC = IsPowI ? RTLIB::getPOWI(N->getValueType(0))
                              : RTLIB::getLDEXP(N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
-  if (!TLI.getLibcallName(LC)) {
+  if (TLI.getLibcallImpl(LC) == RTLIB::Unsupported) {
     // Some targets don't have a powi libcall; use pow instead.
     // FIXME: Implement this if some target needs it.
     DAG.getContext()->emitError("do not know how to soften fpowi to fpow");
@@ -802,7 +802,8 @@ bool DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
   assert(VT == N->getValueType(1) &&
          "expected both return values to have the same type");
 
-  if (!TLI.getLibcallName(LC))
+  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
     return false;
 
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
@@ -831,8 +832,9 @@ bool DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
   CallOptions.setTypeListBeforeSoften({OpsVT}, VT)
       .setOpsTypeOverrides(CallOpsTypeOverrides);
 
-  auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT, Ops, CallOptions, DL,
-                                            /*Chain=*/SDValue());
+  auto [ReturnVal, Chain] =
+      TLI.makeLibCall(DAG, LCImpl, NVT, Ops, CallOptions, DL,
+                      /*Chain=*/SDValue());
 
   auto CreateStackLoad = [&, Chain = Chain](SDValue StackSlot) {
     int FrameIdx = cast<FrameIndexSDNode>(StackSlot)->getIndex();
@@ -862,7 +864,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FSINCOS(SDNode *N) {
   RTLIB::Libcall CosLC = RTLIB::getCOS(VT);
 
   SDValue SoftSin, SoftCos;
-  if (!TLI.getLibcallName(SinLC) || !TLI.getLibcallName(CosLC)) {
+  if (TLI.getLibcallImpl(SinLC) == RTLIB::Unsupported ||
+      TLI.getLibcallImpl(CosLC) == RTLIB::Unsupported) {
     DAG.getContext()->emitError("do not know how to soften fsincos");
 
     EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
@@ -1726,7 +1729,7 @@ void DAGTypeLegalizer::ExpandFloatRes_UnaryWithTwoFPResults(
     SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo) {
   assert(!N->isStrictFPOpcode() && "strictfp not implemented");
   SmallVector<SDValue> Results;
-  DAG.expandMultipleResultFPLibCall(LC, N, Results, CallRetResNo);
+  TLI.expandMultipleResultFPLibCall(DAG, LC, N, Results, CallRetResNo);
   for (auto [ResNo, Res] : enumerate(Results)) {
     SDValue Lo, Hi;
     GetPairElements(Res, Lo, Hi);

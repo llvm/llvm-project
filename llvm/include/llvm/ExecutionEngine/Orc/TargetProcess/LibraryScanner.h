@@ -27,8 +27,6 @@
 #include <queue>
 #include <shared_mutex>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
 
 namespace llvm {
 namespace orc {

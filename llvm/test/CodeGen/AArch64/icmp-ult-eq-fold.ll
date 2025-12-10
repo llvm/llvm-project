@@ -161,6 +161,338 @@ define i1 @lt64_u16_and_23(i64 %0) {
   ret i1 %3
 }
 
+define i1 @test_disjoint(i1 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: test_disjoint:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr w9, w2, #0x800000
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    tst w9, w8
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i32 %2, 8388608
+  %4 = shl nuw i32 1, %1
+  %5 = and i32 %3, %4
+  %6 = icmp eq i32 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint2(i1 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: test_disjoint2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr w9, w2, #0x800000
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    tst w9, w8
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i32 %2, 8388608
+  %4 = shl nuw i32 1, %1
+  %5 = and i32 %3, %4
+  %6 = icmp sgt i32 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint3(i1 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: test_disjoint3:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr w9, w2, #0x800000
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    tst w9, w8
+; CHECK-NEXT:    cset w8, mi
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i32 %2, 8388608
+  %4 = shl nuw i32 1, %1
+  %5 = and i32 %3, %4
+  %6 = icmp slt i32 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint4(i1 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: test_disjoint4:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr w9, w2, #0x800000
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    cset w8, lt
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i32 %2, 8388608
+  %4 = shl nuw i32 1, %1
+  %5 = and i32 %3, %4
+  %6 = icmp sle i32 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint_inverse_4(i1 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: test_disjoint_inverse_4:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr w9, w2, #0x800000
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    bic w8, w9, w8
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    cset w8, lt
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i32 %2, 8388608
+  %4 = shl nuw i32 1, %1
+  %not = xor i32 %4, -1
+  %5 = and i32 %3, %not
+  %6 = icmp sle i32 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint_inverse(i1 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: test_disjoint_inverse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr w9, w2, #0x800000
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    bics wzr, w9, w8
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i32 %2, 8388608
+  %4 = shl nuw i32 1, %1
+  %not = xor i32 %4, -1
+  %5 = and i32 %3, %not
+  %6 = icmp eq i32 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint2_inverse(i1 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: test_disjoint2_inverse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr w9, w2, #0x800000
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    bics wzr, w9, w8
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i32 %2, 8388608
+  %4 = shl nuw i32 1, %1
+  %not = xor i32 %4, -1
+  %5 = and i32 %3, %not
+  %6 = icmp sgt i32 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint3_inverse(i1 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: test_disjoint3_inverse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr w9, w2, #0x800000
+; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    bics wzr, w9, w8
+; CHECK-NEXT:    cset w8, mi
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i32 %2, 8388608
+  %4 = shl nuw i32 1, %1
+  %not = xor i32 %4, -1
+  %5 = and i32 %3, %not
+  %6 = icmp slt i32 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint_64(i1 %0, i64 %1, i64 %2) {
+; CHECK-LABEL: test_disjoint_64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr x9, x2, #0x80000000000000
+; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    tst x9, x8
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i64 %2, 36028797018963968
+  %4 = shl nuw i64 1, %1
+  %5 = and i64 %3, %4
+  %6 = icmp eq i64 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint2_64(i1 %0, i64 %1, i64 %2) {
+; CHECK-LABEL: test_disjoint2_64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr x9, x2, #0x80000000000000
+; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    tst x9, x8
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i64 %2, 36028797018963968
+  %4 = shl nuw i64 1, %1
+  %5 = and i64 %3, %4
+  %6 = icmp sgt i64 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint3_64(i1 %0, i64 %1, i64 %2) {
+; CHECK-LABEL: test_disjoint3_64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr x9, x2, #0x80000000000000
+; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    tst x9, x8
+; CHECK-NEXT:    cset w8, mi
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i64 %2, 36028797018963968
+  %4 = shl nuw i64 1, %1
+  %5 = and i64 %3, %4
+  %6 = icmp slt i64 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint4_64(i1 %0, i64 %1, i64 %2) {
+; CHECK-LABEL: test_disjoint4_64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr x9, x2, #0x80000000000000
+; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    and x8, x9, x8
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    cset w8, lt
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i64 %2, 36028797018963968
+  %4 = shl nuw i64 1, %1
+  %5 = and i64 %3, %4
+  %6 = icmp sle i64 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint_inverse_4_64(i1 %0, i64 %1, i64 %2) {
+; CHECK-LABEL: test_disjoint_inverse_4_64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr x9, x2, #0x80000000000000
+; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    bic x8, x9, x8
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    cset w8, lt
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i64 %2, 36028797018963968
+  %4 = shl nuw i64 1, %1
+  %not = xor i64 %4, -1
+  %5 = and i64 %3, %not
+  %6 = icmp sle i64 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint_inverse_64(i1 %0, i64 %1, i64 %2) {
+; CHECK-LABEL: test_disjoint_inverse_64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr x9, x2, #0x80000000000000
+; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    bics xzr, x9, x8
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i64 %2, 36028797018963968
+  %4 = shl nuw i64 1, %1
+  %not = xor i64 %4, -1
+  %5 = and i64 %3, %not
+  %6 = icmp eq i64 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint2_inverse_64(i1 %0, i64 %1, i64 %2) {
+; CHECK-LABEL: test_disjoint2_inverse_64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr x9, x2, #0x80000000000000
+; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    bics xzr, x9, x8
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i64 %2, 36028797018963968
+  %4 = shl nuw i64 1, %1
+  %not = xor i64 %4, -1
+  %5 = and i64 %3, %not
+  %6 = icmp sgt i64 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
+define i1 @test_disjoint3_inverse_64(i1 %0, i64 %1, i64 %2) {
+; CHECK-LABEL: test_disjoint3_inverse_64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    orr x9, x2, #0x80000000000000
+; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    bics xzr, x9, x8
+; CHECK-NEXT:    cset w8, mi
+; CHECK-NEXT:    orr w8, w0, w8
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %3 = or disjoint i64 %2, 36028797018963968
+  %4 = shl nuw i64 1, %1
+  %not = xor i64 %4, -1
+  %5 = and i64 %3, %not
+  %6 = icmp slt i64 %5, 0
+  %7 = select i1 %0, i1 true, i1 %6
+  ret i1 %7
+}
+
 ; negative test
 define i1 @lt3_u8(i8 %0) {
 ; CHECK-LABEL: lt3_u8:

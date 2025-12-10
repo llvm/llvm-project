@@ -73,6 +73,7 @@ struct ExecutionEnvironment {
   bool noStopMessage{false}; // NO_STOP_MESSAGE=1 inhibits "Fortran STOP"
   bool defaultUTF8{false}; // DEFAULT_UTF8
   bool checkPointerDeallocation{true}; // FORT_CHECK_POINTER_DEALLOCATION
+  bool truncateStream{true}; // FORT_TRUNCATE_STREAM
 
   enum InternalDebugging { WorkQueue = 1 };
   int internalDebugging{0}; // FLANG_RT_DEBUG

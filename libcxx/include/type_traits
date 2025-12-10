@@ -550,9 +550,7 @@ namespace std
 
 #  if _LIBCPP_STD_VER >= 20
 #    include <__type_traits/common_reference.h>
-#    include <__type_traits/is_bounded_array.h>
 #    include <__type_traits/is_constant_evaluated.h>
-#    include <__type_traits/is_unbounded_array.h>
 #    include <__type_traits/type_identity.h>
 #    include <__type_traits/unwrap_ref.h>
 #  endif

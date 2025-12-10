@@ -63,7 +63,7 @@ private:
 
   size_t getNumRefs(ObjectHandle Node) const final {
     auto RefsRange = DB->getObjectRefs(convertHandle(Node));
-    return std::distance(RefsRange.begin(), RefsRange.end());
+    return llvm::size(RefsRange);
   }
 
   ObjectRef readRef(ObjectHandle Node, size_t I) const final {

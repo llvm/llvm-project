@@ -807,6 +807,8 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_exp(T x)               returns the base-e exponential, e^x, of the specified value            floating point types
  T __builtin_elementwise_exp2(T x)              returns the base-2 exponential, 2^x, of the specified value            floating point types
  T __builtin_elementwise_exp10(T x)             returns the base-10 exponential, 10^x, of the specified value          floating point types
+ T __builtin_elementwise_ldexp(T x, IntT y)     returns the product of x and 2 raised to the power y.                  T: floating point types,
+                                                y must be an integer type matching the shape of x.                     IntT: integer types
 
  T __builtin_elementwise_sqrt(T x)              return the square root of a floating-point number                      floating point types
  T __builtin_elementwise_roundeven(T x)         round x to the nearest integer value in floating point format,         floating point types
@@ -4311,9 +4313,9 @@ as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 ``__builtin_counted_by_ref`` returns a pointer to the count field from the
 ``counted_by`` attribute.
 
-The argument must be a flexible array member. If the argument isn't a flexible
-array member or doesn't have the ``counted_by`` attribute, the builtin returns
-``(void *)0``.
+The argument must be a flexible array member or a pointer with the ``counted_by``
+attribute. If the argument doesn't have the ``counted_by`` attribute, the builtin
+returns ``(void *)0``.
 
 **Syntax**:
 
@@ -4344,9 +4346,9 @@ array member or doesn't have the ``counted_by`` attribute, the builtin returns
 The ``__builtin_counted_by_ref`` builtin allows the programmer to prevent a
 common error associated with the ``counted_by`` attribute. When using the
 ``counted_by`` attribute, the ``count`` field **must** be set before the
-flexible array member can be accessed. Otherwise, the sanitizers may view such
-accesses as false positives. For instance, it's not uncommon for programmers to
-initialize the flexible array before setting the ``count`` field:
+flexible array member or pointer can be accessed. Otherwise, the sanitizers may
+view such accesses as false positives. For instance, it's not uncommon for
+programmers to initialize the flexible array before setting the ``count`` field:
 
 .. code-block:: c
 
@@ -4364,10 +4366,9 @@ initialize the flexible array before setting the ``count`` field:
   ptr->count = COUNT;
 
 Enforcing the rule that ``ptr->count = COUNT;`` must occur after every
-allocation of a struct with a flexible array member with the ``counted_by``
-attribute is prone to failure in large code bases. This builtin mitigates this
-for allocators (like in Linux) that are implemented in a way where the counter
-assignment can happen automatically.
+allocation of a struct with a ``counted_by`` member is prone to failure in large
+code bases. This builtin mitigates this for allocators (like in Linux) that are
+implemented in a way where the counter assignment can happen automatically.
 
 **Note:** The value returned by ``__builtin_counted_by_ref`` cannot be assigned
 to a variable, have its address taken, or passed into or returned from a
@@ -4851,6 +4852,14 @@ are identical to the standard GNU / GCC atomic builtins but taking an extra
 memory scope argument. These are designed to be a generic alternative to the
 ``__opencl_atomic_*`` builtin functions for targets that support atomic memory
 scopes.
+
+Clang provides two additional __scoped_atomic builtins:
+
+* ``__scoped_atomic_uinc_wrap``
+* ``__scoped_atomic_udec_wrap``
+
+See LLVM IR `atomicrmw <https://llvm.org/docs/LangRef.html#atomicrmw-instruction>`_
+instruction for the semantics of uinc_wrap and udec_wrap.
 
 Atomic memory scopes are designed to assist optimizations for systems with
 several levels of memory hierarchy like GPUs. The following memory scopes are

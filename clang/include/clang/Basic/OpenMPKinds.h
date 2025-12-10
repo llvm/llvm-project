@@ -211,6 +211,13 @@ enum OpenMPAdjustArgsOpKind {
   OMPC_ADJUST_ARGS_unknown,
 };
 
+/// OpenMP 6.1 need_device modifier
+enum OpenMPNeedDevicePtrModifier {
+#define OPENMP_NEED_DEVICE_PTR_KIND(Name) OMPC_NEED_DEVICE_PTR_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_NEED_DEVICE_PTR_unknown,
+};
+
 /// OpenMP bindings for the 'bind' clause.
 enum OpenMPBindClauseKind {
 #define OPENMP_BIND_KIND(Name) OMPC_BIND_##Name,
@@ -222,6 +229,20 @@ enum OpenMPGrainsizeClauseModifier {
 #define OPENMP_GRAINSIZE_MODIFIER(Name) OMPC_GRAINSIZE_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_GRAINSIZE_unknown
+};
+
+enum OpenMPDynGroupprivateClauseModifier {
+#define OPENMP_DYN_GROUPPRIVATE_MODIFIER(Name) OMPC_DYN_GROUPPRIVATE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DYN_GROUPPRIVATE_unknown
+};
+
+enum OpenMPDynGroupprivateClauseFallbackModifier {
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown = OMPC_DYN_GROUPPRIVATE_unknown,
+#define OPENMP_DYN_GROUPPRIVATE_FALLBACK_MODIFIER(Name)                        \
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_last
 };
 
 enum OpenMPNumTasksClauseModifier {

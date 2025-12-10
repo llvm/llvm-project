@@ -24,11 +24,9 @@ static bool hasDeletedCopyConstructor(QualType Type) {
   auto *Record = Type->getAsCXXRecordDecl();
   if (!Record || !Record->hasDefinition())
     return false;
-  for (const auto *Constructor : Record->ctors()) {
-    if (Constructor->isCopyConstructor() && Constructor->isDeleted())
-      return true;
-  }
-  return false;
+  return llvm::any_of(Record->ctors(), [](const auto *Constructor) {
+    return Constructor->isCopyConstructor() && Constructor->isDeleted();
+  });
 }
 
 std::optional<bool> isExpensiveToCopy(QualType Type,
@@ -70,14 +68,10 @@ bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,
       return false;
   }
   // If all its direct bases are trivially constructible.
-  for (const CXXBaseSpecifier &Base : ClassDecl->bases()) {
-    if (!isTriviallyDefaultConstructible(Base.getType(), Context))
-      return false;
-    if (Base.isVirtual())
-      return false;
-  }
-
-  return true;
+  return llvm::all_of(ClassDecl->bases(), [&](const CXXBaseSpecifier &Base) {
+    return isTriviallyDefaultConstructible(Base.getType(), Context) &&
+           !Base.isVirtual();
+  });
 }
 
 // Based on QualType::isTrivial.
@@ -111,7 +105,7 @@ bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context) {
     }
   }
 
-  QualType CanonicalType = Type.getCanonicalType();
+  const QualType CanonicalType = Type.getCanonicalType();
   if (CanonicalType->isDependentType())
     return false;
 

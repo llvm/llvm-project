@@ -5,16 +5,16 @@
 
 # RUN: split-file %s %t
 
-# RUN: %clang_host %t/main.cpp -g -o %t/cpp.out
+# RUN: %clangxx_host %t/main.cpp -g -o %t/cpp.out
 # RUN: %lldb -b -s %t/commands.input %t/cpp.out | FileCheck %s
 
-# RUN: %clang_host -x objective-c++ %t/main.mm -g -o %t/objcxx.out
+# RUN: %clangxx_host %t/main.mm -g -o %t/objcxx.out
 # RUN: %lldb -b -s %t/commands.input %t/objcxx.out | FileCheck %s
 
 # RUN: %clang_host %t/main.c -g -o %t/c.out
 # RUN: %lldb -b -s %t/commands.input %t/c.out | FileCheck %s
 
-# RUN: %clang_host -x objective-c %t/main.m -g -o %t/objc.out
+# RUN: %clang_host %t/main.m -g -o %t/objc.out
 # RUN: %lldb -b -s %t/commands.input %t/objc.out | FileCheck %s
 
 #--- main.m

@@ -159,8 +159,6 @@ std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
 }
 }
 
-constexpr uint64_t DataAggregator::KernelBaseAddr;
-
 DataAggregator::~DataAggregator() { deleteTempFiles(); }
 
 namespace {
@@ -2399,10 +2397,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
             PseudoProbeDecoder->getAddress2ProbesMap();
         BinaryFunction::FragmentsSetTy Fragments(BF->Fragments);
         Fragments.insert(BF);
-        DenseMap<
-            uint32_t,
-            std::vector<std::reference_wrapper<const MCDecodedPseudoProbe>>>
-            BlockProbes;
+        DenseMap<uint32_t, YAMLProfileWriter::BlockProbeCtx> BlockCtx;
         for (const BinaryFunction *F : Fragments) {
           const uint64_t FuncAddr = F->getAddress();
           for (const MCDecodedPseudoProbe &Probe :
@@ -2410,15 +2405,14 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
             const uint32_t OutputAddress = Probe.getAddress();
             const uint32_t InputOffset = BAT->translate(
                 FuncAddr, OutputAddress - FuncAddr, /*IsBranchSrc=*/true);
-            const unsigned BlockIndex = getBlock(InputOffset).second;
-            BlockProbes[BlockIndex].emplace_back(Probe);
+            const auto &[BlockOffset, BlockIndex] = getBlock(InputOffset);
+            BlockCtx[BlockIndex].addBlockProbe(InlineTreeNodeId, Probe,
+                                               InputOffset - BlockOffset);
           }
         }
 
-        for (auto &[Block, Probes] : BlockProbes) {
-          YamlBF.Blocks[Block].PseudoProbes =
-              YAMLProfileWriter::writeBlockProbes(Probes, InlineTreeNodeId);
-        }
+        for (auto &[Block, Ctx] : BlockCtx)
+          Ctx.finalize(YamlBF.Blocks[Block]);
       }
       // Skip printing if there's no profile data
       llvm::erase_if(

@@ -31,7 +31,6 @@
 #include <cinttypes>
 #include <cstdint>
 #include <string>
-#include <utility>
 
 using namespace llvm;
 using namespace dwarf;

@@ -20,7 +20,7 @@ namespace clang::tidy::fuchsia {
 namespace {
 
 AST_MATCHER_P(CXXRecordDecl, matchesAnyName, ArrayRef<StringRef>, Names) {
-  std::string QualifiedName = Node.getQualifiedNameAsString();
+  const std::string QualifiedName = Node.getQualifiedNameAsString();
   return llvm::is_contained(Names, QualifiedName);
 }
 

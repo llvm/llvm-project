@@ -262,8 +262,18 @@ multiclass FLAT_Flat_Load_Pseudo<string opName, RegisterOperand regClass = AVLdS
 
 multiclass FLAT_Flat_Load_Pseudo_t16<string opName> {
   defm "" : FLAT_Flat_Load_Pseudo<opName, AVLdSt_32, 1>;
-  let True16Predicate = UseRealTrue16Insts in
-    defm _t16 : FLAT_Flat_Load_Pseudo<opName#"_t16", VGPROp_16>, True16D16Table<NAME#"_HI", NAME>;
+
+  defvar Name16 = opName#"_t16";
+  let True16Predicate = UseRealTrue16Insts in {
+    def _t16 : FLAT_Load_Pseudo<Name16, VGPROp_16>,
+      GlobalSaddrTable<0, Name16>,
+      True16D16Table<NAME#"_HI", NAME>;
+
+    let OtherPredicates = [HasFlatGVSMode] in
+    def _t16_SADDR : FLAT_Load_Pseudo<Name16, VGPROp_16, 0, 1, 1>,
+      GlobalSaddrTable<1, Name16>,
+      True16D16Table<NAME#"_HI_SADDR", NAME#"_SADDR">;
+  }
 }
 
 class FLAT_Store_Pseudo <string opName, RegisterOperand vdataClass,
@@ -2169,6 +2179,11 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_MIN_F64", "atomic_load_fmin_"#as, f64>;
 defm : FlatAtomicPat <"FLAT_ATOMIC_MAX_F64", "atomic_load_fmax_"#as, f64>;
 }
 
+let SubtargetPredicate = HasAtomicCondSubClampFlatInsts in {
+  defm : FlatAtomicRtnPat<"FLAT_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_"  #as, i32 >;
+
+  defm : FlatAtomicNoRtnPat<"FLAT_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_"#as, i32>;
+}
 } // end foreach as
 
 defm : FlatStorePats <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
@@ -2340,10 +2355,10 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_OR", "atomic_load_or_global", i32>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_SWAP", "atomic_swap_global", i32>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_CMPSWAP", "AMDGPUatomic_cmp_swap_global", i32, v2i32>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_XOR", "atomic_load_xor_global", i32>;
-defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_CSUB", "int_amdgcn_global_atomic_csub", i32, i32, /* isIntr */ 1>;
+defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_CSUB", "atomic_load_usub_sat_global", i32>;
 
 let SubtargetPredicate = HasAtomicCSubNoRtnInsts in
-defm : GlobalFLATAtomicPatsNoRtn <"GLOBAL_ATOMIC_CSUB", "int_amdgcn_global_atomic_csub", i32, i32, /* isIntr */ 1>;
+defm : GlobalFLATAtomicPatsNoRtn <"GLOBAL_ATOMIC_CSUB", "atomic_load_usub_sat_global", i32>;
 
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_ADD_X2", "atomic_load_add_global", i64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_SUB_X2", "atomic_load_sub_global", i64>;
@@ -2360,10 +2375,8 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_CMPSWAP_X2", "AMDGPUatomic_cmp_swap_
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_XOR_X2", "atomic_load_xor_global", i64>;
 
 let SubtargetPredicate = isGFX12Plus in {
-  defm : GlobalFLATAtomicPatsRtnWithAddrSpace <"GLOBAL_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "global_addrspace", i32>;
-
-  let SubtargetPredicate = HasAtomicCSubNoRtnInsts in
-    defm : GlobalFLATAtomicPatsNoRtnWithAddrSpace  <"GLOBAL_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "global_addrspace",  i32>;
+  defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_global", i32>;
+  defm : GlobalFLATAtomicPatsNoRtn <"GLOBAL_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_global", i32>;
 }
 
 let OtherPredicates = [isGFX12PlusNot12_50] in

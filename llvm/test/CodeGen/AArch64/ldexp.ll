@@ -134,7 +134,7 @@ define <2 x float> @test_ldexp_v2f32_v2i32(<2 x float> %Val, <2 x i32> %Exp) {
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    sub sp, sp, #48
 ; GISEL-NEXT:    stp d9, d8, [sp, #16] // 16-byte Folded Spill
-; GISEL-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; GISEL-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; GISEL-NEXT:    .cfi_def_cfa_offset 48
 ; GISEL-NEXT:    .cfi_offset w30, -16
 ; GISEL-NEXT:    .cfi_offset b8, -24
@@ -147,14 +147,14 @@ define <2 x float> @test_ldexp_v2f32_v2i32(<2 x float> %Val, <2 x i32> %Exp) {
 ; GISEL-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; GISEL-NEXT:    bl ldexpf
 ; GISEL-NEXT:    // kill: def $s0 killed $s0 def $q0
-; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; GISEL-NEXT:    str q0, [sp] // 16-byte Spill
 ; GISEL-NEXT:    fmov w0, s9
 ; GISEL-NEXT:    fmov s0, s8
 ; GISEL-NEXT:    bl ldexpf
-; GISEL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; GISEL-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; GISEL-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; GISEL-NEXT:    ldp d9, d8, [sp, #16] // 16-byte Folded Reload
-; GISEL-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; GISEL-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; GISEL-NEXT:    mov v1.s[1], v0.s[0]
 ; GISEL-NEXT:    fmov d0, d1
 ; GISEL-NEXT:    add sp, sp, #48
@@ -165,7 +165,7 @@ define <2 x float> @test_ldexp_v2f32_v2i32(<2 x float> %Val, <2 x i32> %Exp) {
 ; WINDOWS-NEXT:  // %bb.0:
 ; WINDOWS-NEXT:    sub sp, sp, #48
 ; WINDOWS-NEXT:    .seh_stackalloc 48
-; WINDOWS-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; WINDOWS-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; WINDOWS-NEXT:    .seh_save_reg x30, 32
 ; WINDOWS-NEXT:    .seh_endprologue
 ; WINDOWS-NEXT:    // kill: def $d0 killed $d0 def $q0
@@ -175,20 +175,20 @@ define <2 x float> @test_ldexp_v2f32_v2i32(<2 x float> %Val, <2 x i32> %Exp) {
 ; WINDOWS-NEXT:    mov w0, v1.s[1]
 ; WINDOWS-NEXT:    fcvt d0, s2
 ; WINDOWS-NEXT:    bl ldexp
-; WINDOWS-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; WINDOWS-NEXT:    fcvt s0, d0
 ; WINDOWS-NEXT:    fcvt d1, s1
-; WINDOWS-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; WINDOWS-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; WINDOWS-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; WINDOWS-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; WINDOWS-NEXT:    fmov w0, s0
 ; WINDOWS-NEXT:    fmov d0, d1
 ; WINDOWS-NEXT:    bl ldexp
 ; WINDOWS-NEXT:    fcvt s0, d0
-; WINDOWS-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; WINDOWS-NEXT:    mov v0.s[1], v1.s[0]
 ; WINDOWS-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; WINDOWS-NEXT:    .seh_startepilogue
-; WINDOWS-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; WINDOWS-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; WINDOWS-NEXT:    .seh_save_reg x30, 32
 ; WINDOWS-NEXT:    add sp, sp, #48
 ; WINDOWS-NEXT:    .seh_stackalloc 48

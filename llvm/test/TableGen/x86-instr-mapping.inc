@@ -158,6 +158,7 @@ static const X86TableEntry X86CompressEVEXTable[] = {
   { X86::SARX32rr_EVEX, X86::SARX32rr },
   { X86::SARX64rm_EVEX, X86::SARX64rm },
   { X86::SARX64rr_EVEX, X86::SARX64rr },
+  { X86::SETZUCCm, X86::SETCCm },
   { X86::SHLX32rm_EVEX, X86::SHLX32rm },
   { X86::SHLX32rr_EVEX, X86::SHLX32rr },
   { X86::SHLX64rm_EVEX, X86::SHLX64rm },

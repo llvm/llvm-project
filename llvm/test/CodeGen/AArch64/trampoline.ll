@@ -72,7 +72,7 @@ define i64 @func1() {
 ; CHECK-LINUX-LABEL: func1:
 ; CHECK-LINUX:       // %bb.0:
 ; CHECK-LINUX-NEXT:    sub sp, sp, #64
-; CHECK-LINUX-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-LINUX-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-LINUX-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-LINUX-NEXT:    .cfi_offset w30, -16
 ; CHECK-LINUX-NEXT:    adrp x8, :got:f
@@ -91,7 +91,7 @@ define i64 @func1() {
 ; CHECK-LINUX-NEXT:    add x8, sp, #8
 ; CHECK-LINUX-NEXT:    add x1, x8, #12
 ; CHECK-LINUX-NEXT:    bl __clear_cache
-; CHECK-LINUX-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-LINUX-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; CHECK-LINUX-NEXT:    mov x0, xzr
 ; CHECK-LINUX-NEXT:    add sp, sp, #64
 ; CHECK-LINUX-NEXT:    ret
@@ -101,7 +101,7 @@ define i64 @func1() {
 ; CHECK-PC-NEXT:  // %bb.0:
 ; CHECK-PC-NEXT:    sub sp, sp, #64
 ; CHECK-PC-NEXT:    .seh_stackalloc 64
-; CHECK-PC-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-PC-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-PC-NEXT:    .seh_save_reg x30, 48
 ; CHECK-PC-NEXT:    .seh_endprologue
 ; CHECK-PC-NEXT:    adrp x8, f
@@ -122,7 +122,7 @@ define i64 @func1() {
 ; CHECK-PC-NEXT:    bl __clear_cache
 ; CHECK-PC-NEXT:    mov x0, xzr
 ; CHECK-PC-NEXT:    .seh_startepilogue
-; CHECK-PC-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-PC-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; CHECK-PC-NEXT:    .seh_save_reg x30, 48
 ; CHECK-PC-NEXT:    add sp, sp, #64
 ; CHECK-PC-NEXT:    .seh_stackalloc 64

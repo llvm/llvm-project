@@ -196,6 +196,16 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
       return OMPC_GRAINSIZE_unknown;
     return Type;
   }
+  case OMPC_dyn_groupprivate: {
+    return llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_DYN_GROUPPRIVATE_MODIFIER(Name)                                 \
+  .Case(#Name, OMPC_DYN_GROUPPRIVATE_##Name)
+#define OPENMP_DYN_GROUPPRIVATE_FALLBACK_MODIFIER(Name)                        \
+  .Case(#Name, OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name)                          \
+      .Case("fallback(" #Name ")", OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_DYN_GROUPPRIVATE_unknown);
+  }
   case OMPC_num_tasks: {
     unsigned Type = llvm::StringSwitch<unsigned>(Str)
 #define OPENMP_NUMTASKS_MODIFIER(Name) .Case(#Name, OMPC_NUMTASKS_##Name)
@@ -544,6 +554,20 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'grainsize' clause modifier");
+  case OMPC_dyn_groupprivate:
+    switch (Type) {
+    case OMPC_DYN_GROUPPRIVATE_unknown:
+    case OMPC_DYN_GROUPPRIVATE_FALLBACK_last:
+      return "unknown";
+#define OPENMP_DYN_GROUPPRIVATE_MODIFIER(Name)                                 \
+  case OMPC_DYN_GROUPPRIVATE_##Name:                                           \
+    return #Name;
+#define OPENMP_DYN_GROUPPRIVATE_FALLBACK_MODIFIER(Name)                        \
+  case OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name:                                  \
+    return "fallback(" #Name ")";
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'dyn_groupprivate' clause modifier");
   case OMPC_num_tasks:
     switch (Type) {
     case OMPC_NUMTASKS_unknown:
@@ -656,7 +680,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 }
 
 bool clang::isOpenMPLoopDirective(OpenMPDirectiveKind DKind) {
-  return getDirectiveAssociation(DKind) == Association::Loop;
+  return getDirectiveAssociation(DKind) == Association::LoopNest;
 }
 
 bool clang::isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind) {
@@ -717,7 +741,7 @@ bool clang::isOpenMPTeamsDirective(OpenMPDirectiveKind DKind) {
 
 bool clang::isOpenMPSimdDirective(OpenMPDirectiveKind DKind) {
   // Avoid OMPD_declare_simd
-  if (getDirectiveAssociation(DKind) != Association::Loop)
+  if (getDirectiveAssociation(DKind) != Association::LoopNest)
     return false;
   // Formally, OMPD_end_do_simd also has a loop association, but
   // it's a Fortran-specific directive.

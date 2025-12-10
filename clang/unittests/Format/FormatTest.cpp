@@ -19851,6 +19851,14 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "  Test &operator=(const Test &) = default;\n"
                "};",
                Alignment);
+
+  // The comment to the right should still align right.
+  verifyFormat("void foo(int   name, // name\n"
+               "         float name, // name\n"
+               "         int   name) // name\n"
+               "{}",
+               Alignment);
+
   unsigned OldColumnLimit = Alignment.ColumnLimit;
   // We need to set ColumnLimit to zero, in order to stress nested alignments,
   // otherwise the function parameters will be re-flowed onto a single line.
@@ -20681,6 +20689,16 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                "}",
                Style);
 
+  verifyFormat("auto someLongName = 3;\n"
+               "auto x            = someLongExpression //\n"
+               "                    | ranges::views::values;",
+               Style);
+  verifyFormat(
+      "veryverylongvariablename = somethingelse;\n"
+      "shortervariablename      = anotherverylonglonglongvariablename + //\n"
+      "                           somevariablethatwastoolongtofitonthesamerow;",
+      Style);
+
   // clang-format off
   verifyFormat("void foo() {\n"
                "  const int capacityBefore = Entries.capacity();\n"
@@ -20754,6 +20772,42 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                Style);
   // clang-format on
 
+  // The start of the closure is indented from the start of the line. It should
+  // not move with the equal sign.
+  Style.ContinuationIndentWidth = 6;
+  Style.IndentWidth = 8;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.BeforeLambdaBody = true;
+  Style.BraceWrapping.IndentBraces = true;
+  Style.ColumnLimit = 32;
+  verifyFormat("auto aaaaaaaaaaa = {};\n"
+               "b = []() constexpr\n"
+               "      -> aaaaaaaaaaaaaaaaaaaaaaa\n"
+               "        {\n"
+               "                return {}; //\n"
+               "        };",
+               Style);
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
+               "b = []()\n"
+               "        {\n"
+               "                return; //\n"
+               "        };",
+               Style);
+  Style.ColumnLimit = 33;
+  verifyFormat("auto aaaaaaaaaaa = {};\n"
+               "b                = []() constexpr\n"
+               "      -> aaaaaaaaaaaaaaaaaaaaaaa\n"
+               "        {\n"
+               "                return {}; //\n"
+               "        };",
+               Style);
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
+               "b                          = []()\n"
+               "        {\n"
+               "                return; //\n"
+               "        };",
+               Style);
+
   Style = getLLVMStyleWithColumns(20);
   Style.AlignConsecutiveAssignments.Enabled = true;
   Style.IndentWidth = 4;
@@ -20818,6 +20872,13 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
       Style);
 
   Style.AlignConsecutiveAssignments.Enabled = true;
+  verifyFormat("float i2 = 0;\n"
+               "auto  v  = false ? type{}\n"
+               "                 : type{\n"
+               "                       1,\n"
+               "                   };",
+               Style);
+
   Style.ColumnLimit = 15;
   verifyFormat("int i1 = 1;\n"
                "k      = bar(\n"
@@ -20876,6 +20937,12 @@ TEST_F(FormatTest, AlignWithInitializerPeriods) {
                "       .two_fooooooooooooo    = 3, //\n"
                "       .three_fooooooooooooo  = 4};\n"
                "});",
+               Style);
+
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
+               "auto b                     = {.a = {\n"
+               "                                  .a = 0,\n"
+               "                              }};",
                Style);
 
   Style.AlignConsecutiveAssignments.Enabled = false;
@@ -22271,6 +22338,19 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
                "{\"dy\", \"sign\"}},\n"
                "});",
                Style);
+
+  verifyNoCrash(
+      "PANEL_Ic PANEL_ic[PANEL_IC_NUMBER] =\n"
+      "    {\n"
+      "        {PIC(0),   PIC(0),   PIC(99),  PIC(81),  0}, // Backbox\n"
+      "        {PIC(1),   PIC(83),  PIC(191), PIC(137), 0}, // AK47\n"
+      "\n"
+      "#define PICALL1(a, b, c, d) \\\n"
+      "    { PIC(a), PIC(b), PIC(c), PIC(d), 1 }\n"
+      "\n"
+      "        PICALL1(1, 1, 75, 50),\n"
+      "};",
+      Style);
 
   Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
   verifyFormat("#define FOO \\\n"
@@ -27307,6 +27387,7 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   verifyFormat("export", Style);
 
   verifyFormat("import /* not keyword */ = val ? 2 : 1;");
+  verifyFormat("_world->import<engine_module>();");
 }
 
 TEST_F(FormatTest, CoroutineForCoawait) {

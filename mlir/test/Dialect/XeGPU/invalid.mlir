@@ -836,7 +836,7 @@ func.func @slice_attr_repeat_dim() {
 // -----
 func.func @create_mem_desc_non_slm() {
   %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 1>
-  // expected-error@+1 {{operand #0 must be statically shaped memref of 8-bit signless integer values for shared memory}}
+  // expected-error@+1 {{operand #0 must be reside in share memory and statically 1d shaped memref }}
   %mem_desc = xegpu.create_mem_desc %m : memref<2048xi8, 1> -> !xegpu.mem_desc<16x64xf16>
   return
 }

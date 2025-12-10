@@ -713,7 +713,8 @@ Fortran::lower::genCallOpAndResult(
           builder.getContext(), fir::FortranInlineEnum::always_inline);
     auto call = fir::CallOp::create(
         builder, loc, funcType.getResults(), funcSymbolAttr, operands,
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, inlineAttr);
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, inlineAttr,
+        /*accessGroups=*/mlir::ArrayAttr{});
 
     callNumResults = call.getNumResults();
     if (callNumResults != 0)
@@ -1296,10 +1297,14 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     Fortran::evaluate::FoldingContext &foldingContext{
         callContext.converter.getFoldingContext()};
 
-    bool suggestCopyIn = Fortran::evaluate::MayNeedCopy(
-        arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/false);
-    bool suggestCopyOut = Fortran::evaluate::MayNeedCopy(
-        arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/true);
+    bool suggestCopyIn = Fortran::evaluate::ActualArgNeedsCopy(
+                             arg.entity, arg.characteristics, foldingContext,
+                             /*forCopyOut=*/false)
+                             .value_or(true);
+    bool suggestCopyOut = Fortran::evaluate::ActualArgNeedsCopy(
+                              arg.entity, arg.characteristics, foldingContext,
+                              /*forCopyOut=*/true)
+                              .value_or(true);
     mustDoCopyIn = actual.isArray() && suggestCopyIn;
     mustDoCopyOut = actual.isArray() && suggestCopyOut;
   }

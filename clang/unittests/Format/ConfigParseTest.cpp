@@ -589,20 +589,20 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 
   CHECK_PARSE("AlignTrailingComments: Leave", AlignTrailingComments,
               FormatStyle::TrailingCommentsAlignmentStyle(
-                  {FormatStyle::TCAS_Leave, 0}));
+                  {FormatStyle::TCAS_Leave, 0, true}));
   CHECK_PARSE("AlignTrailingComments: Always", AlignTrailingComments,
               FormatStyle::TrailingCommentsAlignmentStyle(
-                  {FormatStyle::TCAS_Always, 0}));
+                  {FormatStyle::TCAS_Always, 0, true}));
   CHECK_PARSE("AlignTrailingComments: Never", AlignTrailingComments,
               FormatStyle::TrailingCommentsAlignmentStyle(
-                  {FormatStyle::TCAS_Never, 0}));
+                  {FormatStyle::TCAS_Never, 0, true}));
   // For backwards compatibility
   CHECK_PARSE("AlignTrailingComments: true", AlignTrailingComments,
               FormatStyle::TrailingCommentsAlignmentStyle(
-                  {FormatStyle::TCAS_Always, 0}));
+                  {FormatStyle::TCAS_Always, 0, true}));
   CHECK_PARSE("AlignTrailingComments: false", AlignTrailingComments,
               FormatStyle::TrailingCommentsAlignmentStyle(
-                  {FormatStyle::TCAS_Never, 0}));
+                  {FormatStyle::TCAS_Never, 0, true}));
   CHECK_PARSE_NESTED_VALUE("Kind: Always", AlignTrailingComments, Kind,
                            FormatStyle::TCAS_Always);
   CHECK_PARSE_NESTED_VALUE("Kind: Never", AlignTrailingComments, Kind,
@@ -611,6 +611,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
                            FormatStyle::TCAS_Leave);
   CHECK_PARSE_NESTED_VALUE("OverEmptyLines: 1234", AlignTrailingComments,
                            OverEmptyLines, 1234u);
+  CHECK_PARSE_NESTED_BOOL(AlignTrailingComments, AlignPPAndNotPP);
 
   Style.UseTab = FormatStyle::UT_ForIndentation;
   CHECK_PARSE("UseTab: Never", UseTab, FormatStyle::UT_Never);
@@ -1163,6 +1164,36 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::BLS_Block);
   CHECK_PARSE("Cpp11BracedListStyle: true", Cpp11BracedListStyle,
               FormatStyle::BLS_AlignFirstComment);
+
+  constexpr FormatStyle::IntegerLiteralSeparatorStyle
+      ExpectedIntegerLiteralSeparatorStyle{/*Binary=*/2,
+                                           /*BinaryMinDigitInsert=*/5,
+                                           /*BinaryMaxDigitRemove=*/2,
+                                           /*Decimal=*/6,
+                                           /*DecimalMinDigitInsert=*/6,
+                                           /*DecimalMaxDigitRemove=*/3,
+                                           /*Hex=*/4,
+                                           /*HexMinDigitInsert=*/2,
+                                           /*HexMaxDigitRemove=*/1};
+  CHECK_PARSE("IntegerLiteralSeparator:\n"
+              "  Binary: 2\n"
+              "  BinaryMinDigitsInsert: 5\n"
+              "  BinaryMaxDigitsRemove: 2\n"
+              "  Decimal: 6\n"
+              "  DecimalMinDigitsInsert: 6\n"
+              "  DecimalMaxDigitsRemove: 3\n"
+              "  Hex: 4\n"
+              "  HexMinDigitsInsert: 2\n"
+              "  HexMaxDigitsRemove: 1",
+              IntegerLiteralSeparator, ExpectedIntegerLiteralSeparatorStyle);
+
+  // Backward compatibility:
+  CHECK_PARSE_NESTED_VALUE("BinaryMinDigits: 6", IntegerLiteralSeparator,
+                           BinaryMinDigitsInsert, 6);
+  CHECK_PARSE_NESTED_VALUE("DecimalMinDigits: 5", IntegerLiteralSeparator,
+                           DecimalMinDigitsInsert, 5);
+  CHECK_PARSE_NESTED_VALUE("HexMinDigits: 5", IntegerLiteralSeparator,
+                           HexMinDigitsInsert, 5);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {

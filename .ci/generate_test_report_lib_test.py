@@ -181,6 +181,7 @@ class TestReports(unittest.TestCase):
                 "tools/check-langley",
                 dedent(
                     """\
+                    ModuleNotFoundError: No module named 'mount_langley'
                     FAILED: tools/check-langley
                     Wow! This system is really broken!"""
                 ),
@@ -194,7 +195,7 @@ class TestReports(unittest.TestCase):
                 """\
                 # Foo
 
-                The build succeeded and no tests ran. This is expected in some build configurations."""
+                :white_check_mark: The build succeeded and no tests ran. This is expected in some build configurations."""
             ),
         )
 
@@ -308,7 +309,9 @@ class TestReports(unittest.TestCase):
                     """\
               # Foo
 
-              * 1 test passed"""
+              * 1 test passed
+              
+              :white_check_mark: The build succeeded and all tests passed."""
                 )
             ),
         )
@@ -340,7 +343,7 @@ class TestReports(unittest.TestCase):
 
               * 1 test passed
 
-              All tests passed but another part of the build **failed**. Information about the build failure could not be automatically obtained.
+              All executed tests passed, but another part of the build **failed**. Information about the build failure could not be automatically obtained.
 
               Download the build's log file to see the details.
               
@@ -387,7 +390,7 @@ class TestReports(unittest.TestCase):
 
                     * 1 test passed
 
-                    All tests passed but another part of the build **failed**. Click on a failure below to see the details.
+                    All executed tests passed, but another part of the build **failed**. Click on a failure below to see the details.
 
                     <details>
                     <summary>test/4.stamp</summary>
@@ -473,7 +476,7 @@ class TestReports(unittest.TestCase):
 
                     * 1 test passed
 
-                    All tests passed but another part of the build **failed**. Click on a failure below to see the details.
+                    All executed tests passed, but another part of the build **failed**. Click on a failure below to see the details.
 
                     <details>
                     <summary>touch test/2.stamp</summary>
@@ -781,6 +784,160 @@ class TestReports(unittest.TestCase):
             ),
         )
 
+    def test_report_ninja_explanation(self):
+        self.assertEqual(
+            generate_test_report_lib.generate_report(
+                "Foo",
+                1,
+                [],
+                [
+                    [
+                        "[1/5] test/1.stamp",
+                        "[2/5] test/2.stamp",
+                        "[3/5] test/3.stamp",
+                        "[4/5] test/4.stamp",
+                        "FAILED: test/4.stamp",
+                        "touch test/4.stamp",
+                        "Half Moon Bay.",
+                        "[5/5] test/5.stamp",
+                    ]
+                ],
+                failure_explanations_list=[
+                    {
+                        "name": "test/4.stamp",
+                        "explained": True,
+                        "reason": "Failing at head",
+                    }
+                ],
+            ),
+            dedent(
+                """\
+            # Foo
+
+            The build failed before running any tests. Click on a failure below to see the details.
+
+            <details>
+            <summary>test/4.stamp (Likely Already Failing)</summary>
+            Failing at head
+
+            ```
+            FAILED: test/4.stamp
+            touch test/4.stamp
+            Half Moon Bay.
+            ```
+            </details>
+            
+            If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+            ),
+        )
+
+    def test_report_test_failure_explanation(self):
+        self.assertEqual(
+            generate_test_report_lib.generate_report(
+                "Foo",
+                1,
+                [
+                    junit_from_xml(
+                        dedent(
+                            """\
+          <?xml version="1.0" encoding="UTF-8"?>
+          <testsuites time="8.89">
+          <testsuite name="Bar" tests="1" failures="1" skipped="0" time="410.63">
+          <testcase classname="Bar/test_3" name="test_3" time="0.02">
+            <failure><![CDATA[Error! Expected Big Sur to be next to the ocean.]]></failure>
+          </testcase>
+          </testsuite>
+          </testsuites>"""
+                        )
+                    )
+                ],
+                [],
+                failure_explanations_list=[
+                    {
+                        "name": "Bar/test_3/test_3",
+                        "explained": True,
+                        "reason": "Big Sur is next to the Pacific.",
+                    }
+                ],
+            ),
+            (
+                dedent(
+                    """\
+          # Foo
+
+          * 1 test failed
+
+          ## Failed Tests
+          (click on a test name to see its output)
+
+          ### Bar
+          <details>
+          <summary>Bar/test_3/test_3 (Likely Already Failing)</summary>
+          Big Sur is next to the Pacific.
+          
+          ```
+          Error! Expected Big Sur to be next to the ocean.
+          ```
+          </details>
+
+          If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                )
+            ),
+        )
+
+    def test_report_test_failure_have_explanation_explained_false(self):
+        self.assertEqual(
+            generate_test_report_lib.generate_report(
+                "Foo",
+                1,
+                [
+                    junit_from_xml(
+                        dedent(
+                            """\
+          <?xml version="1.0" encoding="UTF-8"?>
+          <testsuites time="8.89">
+          <testsuite name="Bar" tests="1" failures="1" skipped="0" time="410.63">
+          <testcase classname="Bar/test_3" name="test_3" time="0.02">
+            <failure><![CDATA[Error! Expected Mt. Shasta to be next in the Eastern Sierras.]]></failure>
+          </testcase>
+          </testsuite>
+          </testsuites>"""
+                        )
+                    )
+                ],
+                [],
+                failure_explanations_list=[
+                    {
+                        "name": "Bar/test_3/test_3",
+                        "explained": False,
+                        "reason": "Mt. Shasta is in the Cascades",
+                    }
+                ],
+            ),
+            (
+                dedent(
+                    """\
+          # Foo
+
+          * 1 test failed
+
+          ## Failed Tests
+          (click on a test name to see its output)
+
+          ### Bar
+          <details>
+          <summary>Bar/test_3/test_3</summary>
+          
+          ```
+          Error! Expected Mt. Shasta to be next in the Eastern Sierras.
+          ```
+          </details>
+
+          If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                )
+            ),
+        )
+
     def test_generate_report_end_to_end(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             junit_xml_file = os.path.join(temp_dir, "junit.xml")
@@ -821,7 +978,7 @@ class TestReports(unittest.TestCase):
 
                     * 1 test passed
 
-                    All tests passed but another part of the build **failed**. Click on a failure below to see the details.
+                    All executed tests passed, but another part of the build **failed**. Click on a failure below to see the details.
 
                     <details>
                     <summary>test/4.stamp</summary>

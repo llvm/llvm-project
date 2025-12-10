@@ -17,6 +17,7 @@
 #include "NVPTX.h"
 #include "NVPTXISelLowering.h"
 #include "NVPTXRegisterInfo.h"
+#include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXTargetMachine.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
