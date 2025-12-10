@@ -437,6 +437,14 @@ struct RefCountableWithLambdaCapturingThis {
       });
     });
   }
+
+  void method_nested_lambda4() {
+    callAsync([this, protectedThis = RefPtr { this }] {
+      callAsync([this, protectedThis = WTF::move(*protectedThis)] {
+        nonTrivial();
+      });
+    });
+  }
 };
 
 struct NonRefCountableWithLambdaCapturingThis {

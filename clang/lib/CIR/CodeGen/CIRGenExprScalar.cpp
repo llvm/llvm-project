@@ -859,9 +859,7 @@ public:
     return {};
   }
   mlir::Value VisitExpressionTraitExpr(const ExpressionTraitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: expression trait");
-    return {};
+    return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
   }
   mlir::Value VisitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
