@@ -457,12 +457,12 @@ void GccIRCompiler::loadPlugin() {
   plugin = llvm::sys::DynamicLibrary::getPermanentLibrary(ctx.arg.plugin.data(),
                                                           &Error);
   if (!plugin.isValid()) {
-    error(Error);
+    Err(ctx) << Error;
     return;
   }
   void *tmp = plugin.getAddressOfSymbol("onload");
   if (!tmp) {
-    error("Plugin does not provide onload()");
+    Err(ctx) << "Plugin does not provide onload()";
     return;
   }
 
@@ -584,14 +584,14 @@ void GccIRCompiler::add(ELFFileBase &f) {
 
   std::error_code ec = sys::fs::openFileForRead(name, file.fd);
   if (ec) {
-    error("Cannot open file " + name + ": " + ec.message());
+    Err(ctx) << "Cannot open file " + name + ": " + ec.message();
     return;
   }
   file.offset = 0;
   uint64_t size;
   ec = sys::fs::file_size(name, size);
   if (ec) {
-    error("Cannot get the size of file " + name + ": " + ec.message());
+    Err(ctx) << "Cannot get the size of file " + name + ": " + ec.message();
     sys::fs::closeFile(file.fd);
     return;
   }
@@ -606,11 +606,11 @@ void GccIRCompiler::add(ELFFileBase &f) {
 #endif
 
   if (status != LDPS_OK)
-    error("liblto returned " + std::to_string(status));
+    Err(ctx) << "liblto returned " + std::to_string(status);
 
   ec = sys::fs::closeFile(file.fd);
   if (ec) {
-    error(ec.message());
+    Err(ctx) << ec.message();
   }
 }
 
@@ -618,7 +618,7 @@ SmallVector<std::unique_ptr<InputFile>, 0> GccIRCompiler::compile() {
   SmallVector<std::unique_ptr<InputFile>, 0> ret;
   ld_plugin_status status = allSymbolsReadHandler();
   if (status != LDPS_OK)
-    error("The plugin returned an error after all symbols were read.");
+    Err(ctx) << "The plugin returned an error after all symbols were read.";
 
   for (auto &m : files) {
     ret.push_back(createObjFile(ctx, m->getMemBufferRef()));
