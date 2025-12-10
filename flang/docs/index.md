@@ -22,14 +22,14 @@ on how to get in touch with us and to learn more about the current status.
 .. toctree::
    :titlesonly:
 
-   Directives
-   Extensions
+   GettingStarted
    FlangCommandLineReference
    FortranStandardsSupport
-   GettingStarted
+   Extensions
+   Directives
    OpenMPSupport
-   OptionComparison
    Real16MathSupport
+   OptionComparison
 ```
 
 # Contributing to Flang
