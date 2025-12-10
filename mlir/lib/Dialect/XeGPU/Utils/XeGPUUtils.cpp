@@ -248,8 +248,7 @@ maybePickPermanentLayout(xegpu::DistributeLayoutAttr layout,
 
 template <typename T, typename>
 void xegpu::setDistributeLayoutAttr(const T &operandOrResult,
-                                    const DistributeLayoutAttr layout,
-                                    bool respectPermLayout) {
+                                    const DistributeLayoutAttr layout) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getLayoutName(operandOrResult);
 
@@ -257,8 +256,9 @@ void xegpu::setDistributeLayoutAttr(const T &operandOrResult,
     return;
 
   DistributeLayoutAttr candidate = layout;
-  if (respectPermLayout)
-    candidate = maybePickPermanentLayout(layout, operandOrResult, owner, name);
+  // if (respectPermLayout)
+  //   candidate = maybePickPermanentLayout(layout, operandOrResult, owner,
+  //   name);
 
   if (candidate)
     owner->setAttr(name, candidate);
@@ -267,12 +267,12 @@ void xegpu::setDistributeLayoutAttr(const T &operandOrResult,
 // Explicit instantiation for OpResult
 template void xegpu::setDistributeLayoutAttr<mlir::OpResult>(
     const mlir::OpResult &result,
-    const mlir::xegpu::DistributeLayoutAttr layout, bool respectPermLayout);
+    const mlir::xegpu::DistributeLayoutAttr layout);
 
 // Explicit instantiation for OpOperand
 template void xegpu::setDistributeLayoutAttr<mlir::OpOperand>(
     const mlir::OpOperand &operand,
-    const mlir::xegpu::DistributeLayoutAttr layout, bool respectPermLayout);
+    const mlir::xegpu::DistributeLayoutAttr layout);
 
 void xegpu::setDistributeLayoutAttrs(
     Operation *op, function_ref<DistributeLayoutAttr(Value)> getLayoutImpl) {
