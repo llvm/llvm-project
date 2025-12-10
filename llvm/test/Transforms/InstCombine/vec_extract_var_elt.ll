@@ -40,8 +40,8 @@ define i32 @test_bitcast(i32 %i) {
 
 declare void @use(i32)
 
-define void @test_poison_branch(<4 x float> %in, i32 %a, i1 %cond) {
-; CHECK-LABEL: define void @test_poison_branch(
+define void @test_branch(<4 x float> %in, i32 %a, i1 %cond) {
+; CHECK-LABEL: define void @test_branch(
 ; CHECK-SAME: <4 x float> [[IN:%.*]], i32 [[A:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[I:%.*]] = add i32 [[A]], -2
