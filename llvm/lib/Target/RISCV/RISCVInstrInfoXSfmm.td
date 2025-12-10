@@ -342,7 +342,7 @@ class VPseudoSF_MatMul<RegisterClass mtd_class>
 
 class VPseudoSF_MatMul_FRM<RegisterClass mtd_class>
     : RISCVVPseudo<(outs),
-                   (ins mtd_class:$rd, VRM8:$vs2, VRM8:$vs1, ixlenimm:$frm,
+                   (ins mtd_class:$rd, VRM8:$vs2, VRM8:$vs1, vec_rm:$rm,
                         GPRNoX0:$atm, GPRNoX0:$atn, GPRNoX0:$atk, sew:$sew,
                         twiden:$twiden), []> {
   let mayLoad = 0;
