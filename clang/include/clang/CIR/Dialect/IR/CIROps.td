@@ -425,6 +425,7 @@ def CIR_ConstantOp : CIR_Op<"const", [
         return boolAttr.getValue();
       llvm_unreachable("Expected a BoolAttr in ConstantOp");
     }
+
     bool isAllOnesValue() {
       // Check for -1 integers
       if (auto intAttr = getValueAttr<cir::IntAttr>())

@@ -2330,27 +2330,24 @@ OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
 
   return {};
 }
+
 LogicalResult cir::SelectOp::verify() {
-  // INFO: No need to check if trueTy == falseTy here, it's verified by
-  // the AllTypesMatch trait already.
-  // We can go straight into getting the vector type.
+  // AllTypesMatch already guarantees trueVal and falseVal have matching types.
+  auto condTy = dyn_cast<cir::VectorType>(getCondition().getType());
 
-  auto condVecTy =
-      mlir::dyn_cast<cir::VectorType>(this->getCondition().getType());
-  auto trueVecTy =
-      mlir::dyn_cast<cir::VectorType>(this->getTrueValue().getType());
-  auto falseVecTy =
-      mlir::dyn_cast<cir::VectorType>(this->getFalseValue().getType());
+  // If condition is not a vector, no further checks are needed.
+  if (!condTy)
+    return success();
 
-  if (condVecTy && (!trueVecTy || !falseVecTy)) {
-    // INFO: No need to check for size of vector here, it's verified by
-    // the AllTypesMatch trait already
+  // When condition is a vector, both other operands must also be vectors.
+  if (!isa<cir::VectorType>(getTrueValue().getType()) ||
+      !isa<cir::VectorType>(getFalseValue().getType())) {
     return emitOpError()
-           << "second and third operand must both be of the same "
-              "vector type when"
-              " the conditional operand is of vector boolean type";
+           << "expected both true and false operands to be vector types "
+              "when the condition is a vector boolean type";
   }
-  return mlir::success();
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
