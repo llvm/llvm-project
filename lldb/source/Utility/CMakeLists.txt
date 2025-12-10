@@ -77,6 +77,7 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   UserIDResolver.cpp
   VASprintf.cpp
   VMRange.cpp
+  VirtualDataExtractor.cpp
   XcodeSDK.cpp
   ZipFile.cpp
 

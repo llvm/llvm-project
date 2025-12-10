@@ -2982,21 +2982,21 @@ multiclass VPseudoVFWALU_WV_WF_RM {
 multiclass VPseudoVMRG_VM_XM_IM {
   foreach m = MxList in {
     defvar mx = m.MX;
-    def "_VVM" # "_" # m.MX:
-      VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, m.vrclass, m>,
-      SchedBinary<"WriteVIMergeV", "ReadVIMergeV", "ReadVIMergeV", mx,
-                          forcePassthruRead=true>;
-    def "_VXM" # "_" # m.MX:
-      VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, GPR, m>,
-      SchedBinary<"WriteVIMergeX", "ReadVIMergeV", "ReadVIMergeX", mx,
-                          forcePassthruRead=true>;
-    def "_VIM" # "_" # m.MX:
-      VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, simm5, m>,
-      SchedUnary<"WriteVIMergeI", "ReadVIMergeV", mx,
-                          forcePassthruRead=true>;
+    def "_VVM"#"_"#m.MX : VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
+                                                   GetVRegNoV0<m.vrclass>.R,
+                                                   GetVRegNoV0<m.vrclass>.R, m>,
+        SchedBinary<"WriteVIMergeV", "ReadVIMergeV", "ReadVIMergeV", mx,
+                    forcePassthruRead = true>;
+    def "_VXM"#"_"#m.MX
+        : VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
+                                   GetVRegNoV0<m.vrclass>.R, GPR, m>,
+        SchedBinary<"WriteVIMergeX", "ReadVIMergeV", "ReadVIMergeX", mx,
+                    forcePassthruRead = true>;
+    def "_VIM"#"_"#m.MX
+        : VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
+                                   GetVRegNoV0<m.vrclass>.R, simm5, m>,
+        SchedUnary<"WriteVIMergeI", "ReadVIMergeV", mx,
+                   forcePassthruRead = true>;
   }
 }
 

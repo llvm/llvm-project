@@ -19,7 +19,7 @@ void test_sized_delete(SizedDelete *x) {
 // CIR:  cir.func private @_ZN11SizedDeletedlEPvm(!cir.ptr<!void>, !u64i)
 // LLVM: declare void @_ZN11SizedDeletedlEPvm(ptr, i64)
 
-// CIR: cir.func dso_local @_Z17test_sized_deleteP11SizedDelete
+// CIR: cir.func {{.*}} @_Z17test_sized_deleteP11SizedDelete
 // CIR:   %[[X:.*]] = cir.load{{.*}} %{{.*}}
 // CIR:   %[[X_CAST:.*]] = cir.cast bitcast %[[X]] : !cir.ptr<!rec_SizedDelete> -> !cir.ptr<!void>
 // CIR:   %[[OBJ_SIZE:.*]] = cir.const #cir.int<4> : !u64i
@@ -49,15 +49,15 @@ struct Container {
 Container::~Container() { delete contents; }
 
 // Contents::~Contents()
-// CIR: cir.func comdat linkonce_odr @_ZN8ContentsD2Ev
+// CIR: cir.func {{.*}} @_ZN8ContentsD2Ev
 // LLVM: define linkonce_odr void @_ZN8ContentsD2Ev
 
 // operator delete(void*, unsigned long)
-// CIR: cir.func private @_ZdlPvm(!cir.ptr<!void>, !u64i)
+// CIR: cir.func {{.*}} @_ZdlPvm(!cir.ptr<!void>, !u64i)
 // LLVM: declare void @_ZdlPvm(ptr, i64)
 
 // Container::~Container()
-// CIR: cir.func dso_local @_ZN9ContainerD2Ev
+// CIR: cir.func {{.*}} @_ZN9ContainerD2Ev
 // CIR:   %[[THIS:.*]] = cir.load %{{.*}}
 // CIR:   %[[CONTENTS_PTR_ADDR:.*]] = cir.get_member %[[THIS]][0] {name = "contents"} : !cir.ptr<!rec_Container> -> !cir.ptr<!cir.ptr<!rec_Contents>>
 // CIR:   %[[CONTENTS_PTR:.*]] = cir.load{{.*}} %[[CONTENTS_PTR_ADDR]]

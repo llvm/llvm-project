@@ -1543,12 +1543,39 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_MAX_TASK_PRIORITY)(void) {
 #endif
 }
 
-// This function will be defined in libomptarget. When libomptarget is not
-// loaded, we assume we are on the host and return KMP_HOST_DEVICE.
+// These functions will be defined in libomptarget. When libomptarget is not
+// loaded, we assume we are on the host.
 // Compiler/libomptarget will handle this if called inside target.
 int FTN_STDCALL FTN_GET_DEVICE_NUM(void) KMP_WEAK_ATTRIBUTE_EXTERNAL;
 int FTN_STDCALL FTN_GET_DEVICE_NUM(void) {
   return KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)();
+}
+const char *FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_UID_FROM_DEVICE)(int device_num)
+    KMP_WEAK_ATTRIBUTE_EXTERNAL;
+const char *FTN_STDCALL
+KMP_EXPAND_NAME(FTN_GET_UID_FROM_DEVICE)(int device_num) {
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
+  return nullptr;
+#else
+  const char *(*fptr)(int);
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_uid_from_device")))
+    return (*fptr)(device_num);
+  // Returns the same string as used by libomptarget
+  return "HOST";
+#endif
+}
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_DEVICE_FROM_UID)(const char *device_uid)
+    KMP_WEAK_ATTRIBUTE_EXTERNAL;
+int FTN_STDCALL
+KMP_EXPAND_NAME(FTN_GET_DEVICE_FROM_UID)(const char *device_uid) {
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
+  return -2; // omp_invalid_device, see definition in omp.h
+#else
+  int (*fptr)(const char *);
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_device_from_uid")))
+    return (*fptr)(device_uid);
+  return KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)();
+#endif
 }
 
 // Compiler will ensure that this is only called from host in sequential region
@@ -1905,6 +1932,10 @@ KMP_VERSION_SYMBOL(FTN_SET_AFFINITY_FORMAT, 50, "OMP_5.0");
 #endif
 // KMP_VERSION_SYMBOL(FTN_GET_SUPPORTED_ACTIVE_LEVELS, 50, "OMP_5.0");
 // KMP_VERSION_SYMBOL(FTN_FULFILL_EVENT, 50, "OMP_5.0");
+
+// OMP_6.0 versioned symbols
+KMP_VERSION_SYMBOL(FTN_GET_UID_FROM_DEVICE, 60, "OMP_6.0");
+KMP_VERSION_SYMBOL(FTN_GET_DEVICE_FROM_UID, 60, "OMP_6.0");
 
 #endif // KMP_USE_VERSION_SYMBOLS
 

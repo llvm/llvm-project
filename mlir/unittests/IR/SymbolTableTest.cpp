@@ -77,7 +77,7 @@ namespace {
 
 TEST_F(ReplaceAllSymbolUsesTest, OperationInModuleOp) {
   // Symbol as `Operation *`, rename within module.
-  testReplaceAllSymbolUses([&](auto symbolTable, auto module, auto fooOp,
+  testReplaceAllSymbolUses([&](const auto &symbolTable, auto module, auto fooOp,
                                auto barOp) -> LogicalResult {
     return symbolTable.replaceAllSymbolUses(
         barOp, StringAttr::get(context.get(), "baz"), module);
@@ -86,7 +86,7 @@ TEST_F(ReplaceAllSymbolUsesTest, OperationInModuleOp) {
 
 TEST_F(ReplaceAllSymbolUsesTest, StringAttrInModuleOp) {
   // Symbol as `StringAttr`, rename within module.
-  testReplaceAllSymbolUses([&](auto symbolTable, auto module, auto fooOp,
+  testReplaceAllSymbolUses([&](const auto &symbolTable, auto module, auto fooOp,
                                auto barOp) -> LogicalResult {
     return symbolTable.replaceAllSymbolUses(
         StringAttr::get(context.get(), "bar"),
@@ -96,7 +96,7 @@ TEST_F(ReplaceAllSymbolUsesTest, StringAttrInModuleOp) {
 
 TEST_F(ReplaceAllSymbolUsesTest, OperationInModuleBody) {
   // Symbol as `Operation *`, rename within module body.
-  testReplaceAllSymbolUses([&](auto symbolTable, auto module, auto fooOp,
+  testReplaceAllSymbolUses([&](const auto &symbolTable, auto module, auto fooOp,
                                auto barOp) -> LogicalResult {
     return symbolTable.replaceAllSymbolUses(
         barOp, StringAttr::get(context.get(), "baz"), &module->getRegion(0));
@@ -105,7 +105,7 @@ TEST_F(ReplaceAllSymbolUsesTest, OperationInModuleBody) {
 
 TEST_F(ReplaceAllSymbolUsesTest, StringAttrInModuleBody) {
   // Symbol as `StringAttr`, rename within module body.
-  testReplaceAllSymbolUses([&](auto symbolTable, auto module, auto fooOp,
+  testReplaceAllSymbolUses([&](const auto &symbolTable, auto module, auto fooOp,
                                auto barOp) -> LogicalResult {
     return symbolTable.replaceAllSymbolUses(
         StringAttr::get(context.get(), "bar"),
@@ -115,7 +115,7 @@ TEST_F(ReplaceAllSymbolUsesTest, StringAttrInModuleBody) {
 
 TEST_F(ReplaceAllSymbolUsesTest, OperationInFuncOp) {
   // Symbol as `Operation *`, rename within function.
-  testReplaceAllSymbolUses([&](auto symbolTable, auto module, auto fooOp,
+  testReplaceAllSymbolUses([&](const auto &symbolTable, auto module, auto fooOp,
                                auto barOp) -> LogicalResult {
     return symbolTable.replaceAllSymbolUses(
         barOp, StringAttr::get(context.get(), "baz"), fooOp);
@@ -124,7 +124,7 @@ TEST_F(ReplaceAllSymbolUsesTest, OperationInFuncOp) {
 
 TEST_F(ReplaceAllSymbolUsesTest, StringAttrInFuncOp) {
   // Symbol as `StringAttr`, rename within function.
-  testReplaceAllSymbolUses([&](auto symbolTable, auto module, auto fooOp,
+  testReplaceAllSymbolUses([&](const auto &symbolTable, auto module, auto fooOp,
                                auto barOp) -> LogicalResult {
     return symbolTable.replaceAllSymbolUses(
         StringAttr::get(context.get(), "bar"),

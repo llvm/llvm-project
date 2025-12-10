@@ -21,15 +21,23 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-24.04
     steps:
-      - name: Create Test File
+      - name: Create Test Files
         run: |
-          echo "test" > comment
-      - name: Upload Test File
+          echo "foo" > comment1
+          echo "bar" > comment2
+      - name: Upload Test File 1
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
-          name: workflow-args
+          name: artifact-name-1
           path: |
-            comment
+            comment1
+      - name: Upload Test File 2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: artifact-name-2
+          path: |
+            comment2
+        
 
   test-download:
     name: Test Unprivileged Download Artifact
@@ -37,8 +45,8 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [ upload-test-artifact ]
     steps:
-      - name: Chekcout LLVM
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           sparse-checkout: |
             .github/workflows/unprivileged-download-artifact/action.yml
@@ -47,8 +55,10 @@ jobs:
         id: download-artifact
         with:
           run-id: ${{ github.run_id }}
-          artifact-name: workflow-args
+          artifact-name: artifact-name-
       - name: Assert That Contents are the Same
         run: |
-          cat comment
-          [[ "$(cat comment)" == "test" ]]
+          cat comment1
+          [[ "$(cat comment1)" == "foo" ]]
+          cat comment2
+          [[ "$(cat comment2)" == "bar" ]]
