@@ -2888,6 +2888,12 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     assert(!cir::MissingFeatures::addressSpace());
     return mlir::LLVM::LLVMPointerType::get(type.getContext());
   });
+  converter.addConversion([&, lowerModule](cir::MethodType type) -> mlir::Type {
+    assert(lowerModule && "CXXABI is not available");
+    mlir::Type abiType =
+        lowerModule->getCXXABI().lowerMethodType(type, converter);
+    return converter.convertType(abiType);
+  });
   converter.addConversion([&](cir::ArrayType type) -> mlir::Type {
     mlir::Type ty =
         convertTypeForMemory(converter, dataLayout, type.getElementType());
