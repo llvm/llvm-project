@@ -3709,6 +3709,7 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
       options::OPT_disable_llvm_passes,
       options::OPT_fnative_half_type,
       options::OPT_fnative_int16_type,
+      options::OPT_fmatrix_memory_layout_EQ,
       options::OPT_hlsl_entrypoint,
       options::OPT_fdx_rootsignature_define,
       options::OPT_fdx_rootsignature_version,
@@ -3723,10 +3724,6 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
   if (!Args.hasArg(options::OPT_dxc_no_stdinc) &&
       !Args.hasArg(options::OPT_nostdinc))
     CmdArgs.push_back("-finclude-default-header");
-  if (Args.hasArg(options::OPT_dxc_col_major))
-    CmdArgs.push_back("-fmatrix-memory-layout=column-major");
-  if (Args.hasArg(options::OPT_dxc_row_major))
-    CmdArgs.push_back("-fmatrix-memory-layout=row-major");
 }
 
 static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
