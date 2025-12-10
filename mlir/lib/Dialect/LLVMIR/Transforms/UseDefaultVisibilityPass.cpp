@@ -1,4 +1,4 @@
-//===- UseDefaultVisibilityPass.cpp - Update default visibility ---------===//
+//===- UseDefaultVisibilityPass.cpp - Update default visibility -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,9 +23,8 @@ using namespace mlir;
 template <typename OpT>
 static void updateVisibility(OpT op, LLVM::Visibility useDefaultVisibility) {
   LLVM::Visibility vis = op.getVisibility_();
-  if (vis == LLVM::Visibility::Default) {
+  if (vis == LLVM::Visibility::Default)
     op.setVisibility_(useDefaultVisibility);
-  }
 }
 
 namespace {
@@ -38,11 +37,10 @@ public:
   void runOnOperation() override {
     LLVM::Visibility useDefaultVisibility = useVisibility.getValue();
     getOperation()->walk([&](Operation *op) {
-      if (auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(op)) {
+      if (auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(op))
         updateVisibility(funcOp, useDefaultVisibility);
-      } else if (auto globalOp = dyn_cast<LLVM::GlobalOp>(op)) {
+      else if (auto globalOp = dyn_cast<LLVM::GlobalOp>(op))
         updateVisibility(globalOp, useDefaultVisibility);
-      }
     });
   }
 };
