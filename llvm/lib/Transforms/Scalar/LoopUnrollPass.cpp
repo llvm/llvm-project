@@ -1033,17 +1033,15 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
 // FIXME: This function is used by LoopUnroll and LoopUnrollAndJam, but consumes
 // many LoopUnroll-specific options. The shared functionality should be
 // refactored into it own function.
-void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
-                              DominatorTree &DT, LoopInfo *LI,
-                              AssumptionCache *AC, ScalarEvolution &SE,
-                              const SmallPtrSetImpl<const Value *> &EphValues,
-                              OptimizationRemarkEmitter *ORE,
-                              const unsigned TripCount,
-                              const unsigned MaxTripCount, const bool MaxOrZero,
-                              const unsigned TripMultiple,
-                              const UnrollCostEstimator &UCE,
-                              TargetTransformInfo::UnrollingPreferences &UP,
-                              TargetTransformInfo::PeelingPreferences &PP) {
+void llvm::computeUnrollCount(
+    Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT, LoopInfo *LI,
+    AssumptionCache *AC, ScalarEvolution &SE,
+    const SmallPtrSetImpl<const Value *> &EphValues,
+    OptimizationRemarkEmitter *ORE, const unsigned TripCount,
+    const unsigned MaxTripCount, const bool MaxOrZero,
+    const unsigned TripMultiple, const UnrollCostEstimator &UCE,
+    TargetTransformInfo::UnrollingPreferences &UP,
+    TargetTransformInfo::PeelingPreferences &PP, bool AllowLoadWideningPeel) {
 
   unsigned LoopSize = UCE.getRolledLoopSize();
 
@@ -1149,7 +1147,8 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
 
   // 5th priority is loop peeling.
   LLVM_DEBUG(dbgs().indent(1) << "Trying loop peeling...\n");
-  computePeelCount(L, LoopSize, PP, TripCount, DT, SE, TTI, AC, UP.Threshold);
+  computePeelCount(L, LoopSize, PP, TripCount, DT, SE, TTI, AC, UP.Threshold,
+                   AllowLoadWideningPeel);
   if (PP.PeelCount) {
     LLVM_DEBUG(dbgs().indent(2)
                << "Peeling with count: " << PP.PeelCount << ".\n");
@@ -1417,8 +1416,10 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
 
   // computeUnrollCount() decides whether it is beneficial to use upper bound to
   // fully unroll the loop.
+  bool AllowLoadWideningPeel = !OnlyFullUnroll;
   computeUnrollCount(L, TTI, DT, LI, &AC, SE, EphValues, &ORE, TripCount,
-                     MaxTripCount, MaxOrZero, TripMultiple, UCE, UP, PP);
+                     MaxTripCount, MaxOrZero, TripMultiple, UCE, UP, PP,
+                     AllowLoadWideningPeel);
   if (!UP.Count) {
     LLVM_DEBUG(dbgs().indent(1)
                << "Not unrolling: no viable strategy found.\n");
@@ -1450,6 +1451,11 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
              VMap);
     simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI, L->getBlocks(),
                             nullptr);
+    // Widen consecutive loads after last-iteration peeling
+    if (PP.PeelLast) {
+      const DataLayout &DL = L->getHeader()->getDataLayout();
+      widenLoadsAfterPeel(*L, SE, DL, TTI, DT);
+    }
     // If the loop was peeled, we already "used up" the profile information
     // we had, so we don't want to unroll or peel again.
     if (PP.PeelProfiledIterations)

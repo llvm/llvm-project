@@ -42,13 +42,18 @@ gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
                          std::optional<bool> UserAllowProfileBasedPeeling,
                          bool UnrollingSpecficValues = false);
 
-LLVM_ABI void computePeelCount(Loop *L, unsigned LoopSize,
-                               TargetTransformInfo::PeelingPreferences &PP,
-                               unsigned TripCount, DominatorTree &DT,
-                               ScalarEvolution &SE,
-                               const TargetTransformInfo &TTI,
-                               AssumptionCache *AC = nullptr,
-                               unsigned Threshold = UINT_MAX);
+LLVM_ABI void computePeelCount(
+    Loop *L, unsigned LoopSize, TargetTransformInfo::PeelingPreferences &PP,
+    unsigned TripCount, DominatorTree &DT, ScalarEvolution &SE,
+    const TargetTransformInfo &TTI, AssumptionCache *AC = nullptr,
+    unsigned Threshold = UINT_MAX, bool AllowLoadWideningPeel = true);
+
+/// Combine load instructions in a loop into a wider one, given that we peeled
+/// the last iteration and can assume the bytes are dereferenceable.
+LLVM_ABI bool widenLoadsAfterPeel(Loop &L, ScalarEvolution &SE,
+                                  const DataLayout &DL,
+                                  const TargetTransformInfo &TTI,
+                                  DominatorTree &DT);
 
 } // end namespace llvm
 
