@@ -231,6 +231,113 @@ static mlir::Value emitX86MaskTest(CIRGenBuilderTy &builder, mlir::Location loc,
   return emitIntrinsicCallOp(builder, loc, intrinsicName, resTy,
                              mlir::ValueRange{lhsVec, rhsVec});
 }
+static mlir::Value emitX86MaskedCompareResult(CIRGenFunction &cgf,
+                                              mlir::Value cmp, unsigned numElts,
+                                              mlir::Value maskIn,
+                                              mlir::Location loc) {
+  if (maskIn) {
+    llvm_unreachable("NYI");
+  }
+  if (numElts < 8) {
+    int64_t indices[8];
+    for (unsigned i = 0; i != numElts; ++i)
+      indices[i] = i;
+    for (unsigned i = numElts; i != 8; ++i)
+      indices[i] = i % numElts + numElts;
+
+    // This should shuffle between cmp (first vector) and null (second vector)
+    mlir::Value nullVec = cgf.getBuilder().getNullValue(cmp.getType(), loc);
+    cmp = cgf.getBuilder().createVecShuffle(loc, cmp, nullVec, indices);
+  }
+  return cgf.getBuilder().createBitcast(
+      cmp, cgf.getBuilder().getUIntNTy(std::max(numElts, 8U)));
+}
+
+static mlir::Value emitX86MaskedCompare(CIRGenFunction &cgf, unsigned cc,
+                                        bool isSigned,
+                                        ArrayRef<mlir::Value> ops,
+                                        mlir::Location loc) {
+  assert((ops.size() == 2 || ops.size() == 4) &&
+         "Unexpected number of arguments");
+  unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
+  mlir::Value cmp;
+
+  if (cc == 3) {
+    llvm_unreachable("NYI");
+  } else if (cc == 7) {
+    llvm_unreachable("NYI");
+  } else {
+    cir::CmpOpKind pred;
+    switch (cc) {
+    default:
+      llvm_unreachable("Unknown condition code");
+    case 0:
+      pred = cir::CmpOpKind::eq;
+      break;
+    case 1:
+      pred = cir::CmpOpKind::lt;
+      break;
+    case 2:
+      pred = cir::CmpOpKind::le;
+      break;
+    case 4:
+      pred = cir::CmpOpKind::ne;
+      break;
+    case 5:
+      pred = cir::CmpOpKind::ge;
+      break;
+    case 6:
+      pred = cir::CmpOpKind::gt;
+      break;
+    }
+
+    auto resultTy = cgf.getBuilder().getType<cir::VectorType>(
+        cgf.getBuilder().getUIntNTy(1), numElts);
+    cmp = cir::VecCmpOp::create(cgf.getBuilder(), loc, resultTy, pred, ops[0],
+                                ops[1]);
+  }
+
+  mlir::Value maskIn;
+  if (ops.size() == 4)
+    maskIn = ops[3];
+
+  return emitX86MaskedCompareResult(cgf, cmp, numElts, maskIn, loc);
+}
+
+static mlir::Value emitX86ConvertToMask(CIRGenFunction &cgf, mlir::Value in,
+                                        mlir::Location loc) {
+  cir::ConstantOp zero = cgf.getBuilder().getNullValue(in.getType(), loc);
+  return emitX86MaskedCompare(cgf, 1, true, {in, zero}, loc);
+}
+
+// Convert the mask from an integer type to a vector of i1.
+static mlir::Value getMaskVecValue(CIRGenFunction &cgf, mlir::Value mask,
+                                   unsigned numElts, mlir::Location loc) {
+  cir::VectorType maskTy =
+      cir::VectorType::get(cgf.getBuilder().getSIntNTy(1),
+                           cast<cir::IntType>(mask.getType()).getWidth());
+
+  mlir::Value maskVec = cgf.getBuilder().createBitcast(mask, maskTy);
+
+  // If we have less than 8 elements, then the starting mask was an i8 and
+  // we need to extract down to the right number of elements.
+  if (numElts < 8) {
+    llvm::SmallVector<int64_t, 4> indices;
+    for (unsigned i = 0; i != numElts; ++i)
+      indices.push_back(i);
+    maskVec = cgf.getBuilder().createVecShuffle(loc, maskVec, maskVec, indices);
+  }
+
+  return maskVec;
+}
+
+static mlir::Value emitX86SExtMask(CIRGenFunction &cgf, mlir::Value op,
+                                   mlir::Type dstTy, mlir::Location loc) {
+  unsigned numberOfElements = cast<cir::VectorType>(dstTy).getSize();
+  mlir::Value mask = getMaskVecValue(cgf, op, numberOfElements, loc);
+
+  return cgf.getBuilder().createCast(loc, cir::CastKind::integral, mask, dstTy);
+}
 
 static mlir::Value emitVecInsert(CIRGenBuilderTy &builder, mlir::Location loc,
                                  mlir::Value vec, mlir::Value value,
@@ -558,6 +665,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_storesh128_mask:
   case X86::BI__builtin_ia32_storess128_mask:
   case X86::BI__builtin_ia32_storesd128_mask:
+
   case X86::BI__builtin_ia32_cvtmask2b128:
   case X86::BI__builtin_ia32_cvtmask2b256:
   case X86::BI__builtin_ia32_cvtmask2b512:
@@ -570,6 +678,8 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_cvtmask2q128:
   case X86::BI__builtin_ia32_cvtmask2q256:
   case X86::BI__builtin_ia32_cvtmask2q512:
+    return emitX86SExtMask(*this, ops[0], convertType(expr->getType()),
+                           getLoc(expr->getExprLoc()));
   case X86::BI__builtin_ia32_cvtb2mask128:
   case X86::BI__builtin_ia32_cvtb2mask256:
   case X86::BI__builtin_ia32_cvtb2mask512:
@@ -582,18 +692,22 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_cvtq2mask128:
   case X86::BI__builtin_ia32_cvtq2mask256:
   case X86::BI__builtin_ia32_cvtq2mask512:
+    return emitX86ConvertToMask(*this, ops[0], getLoc(expr->getExprLoc()));
   case X86::BI__builtin_ia32_cvtdq2ps512_mask:
   case X86::BI__builtin_ia32_cvtqq2ps512_mask:
   case X86::BI__builtin_ia32_cvtqq2pd512_mask:
   case X86::BI__builtin_ia32_vcvtw2ph512_mask:
   case X86::BI__builtin_ia32_vcvtdq2ph512_mask:
   case X86::BI__builtin_ia32_vcvtqq2ph512_mask:
+    llvm_unreachable("vcvtw2ph256_round_mask NYI");
   case X86::BI__builtin_ia32_cvtudq2ps512_mask:
   case X86::BI__builtin_ia32_cvtuqq2ps512_mask:
   case X86::BI__builtin_ia32_cvtuqq2pd512_mask:
   case X86::BI__builtin_ia32_vcvtuw2ph512_mask:
   case X86::BI__builtin_ia32_vcvtudq2ph512_mask:
   case X86::BI__builtin_ia32_vcvtuqq2ph512_mask:
+    llvm_unreachable("vcvtuw2ph256_round_mask NYI");
+
   case X86::BI__builtin_ia32_vfmaddsh3_mask:
   case X86::BI__builtin_ia32_vfmaddss3_mask:
   case X86::BI__builtin_ia32_vfmaddsd3_mask:
