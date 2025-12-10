@@ -1414,7 +1414,11 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
     // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
     // we need to do that explicitly.
     std::string uniqueName = getUniqueGlobalName(name.str());
-    mlir::Location loc = getLoc(s->getSourceRange());
+    // Synthetic string literals (e.g., from SourceLocExpr) may not have valid
+    // source locations. Use unknown location in those cases.
+    mlir::Location loc = s->getBeginLoc().isValid()
+                             ? getLoc(s->getSourceRange())
+                             : builder.getUnknownLoc();
     auto typedC = llvm::cast<mlir::TypedAttr>(c);
     gv = generateStringLiteral(loc, typedC,
                                cir::GlobalLinkageKind::PrivateLinkage, *this,
