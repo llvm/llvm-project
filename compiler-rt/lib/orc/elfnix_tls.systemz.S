@@ -1,4 +1,3 @@
-
 //===-- orc_rt_elfnix_tls_systemz.s -------------------------------*- ASM -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -23,21 +22,21 @@
 
 #if defined(__s390x__)
 
-        .text
-	// returns offset of TLV from TP in %r2, all other registers preserved
-	.globl ___orc_rt_elfnix_tls_get_offset
+	.text
+	// returns offset of TLV from TP in %r2.
+	.globl	___orc_rt_elfnix_tls_get_offset
 ___orc_rt_elfnix_tls_get_offset:
-	stmg %r14, %r15, 48(%r15)
-	aghi %r15, -240
-        // Pass pointer to tls_index.
-        la %r2,0(%r2,%r12)
-	brasl %r14, __orc_rt_elfnix_tls_get_addr_impl
+	stmg	%r14, %r15, 112(%r15)
+	aghi	%r15, -160
+	// Pass pointer to tls_index.
+	la 	%r2, 0(%r2, %r12)
+	brasl	%r14, __orc_rt_elfnix_tls_get_addr_impl
 	// Return offset from TP.
-	ear %r0, %a0
-	sllg %r0, %r0, 32
-	ear %r0, %a1
-	sgr %r2, %r0
-	lmg %r14, %r15, 288(%r15)
-        br %r14
+	ear 	%r0, %a0
+	sllg	%r0, %r0, 32
+	ear 	%r0, %a1
+	sgr 	%r2, %r0
+	lmg 	%r14, %r15, 272(%r15)
+	br	%r14
 
 #endif // defined(__s390x__)
