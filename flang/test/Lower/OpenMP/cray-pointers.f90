@@ -13,8 +13,8 @@ contains
   subroutine set_cray_pointer
     ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf64>>>
     ! CHECK: %[[IVAR_ADDR:.*]] = fir.address_of(@_QMtest_host_assoc_cray_pointerEivar) : !fir.ref<i64>
-    ! CHECK: %[[IVAR_DECL:.*]]:2 = hlfir.declare %[[IVAR_ADDR]] {uniq_name = "_QMtest_host_assoc_cray_pointerEivar"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-    ! CHECK: %[[VAR_DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMtest_host_assoc_cray_pointerEvar"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
+    ! CHECK: %[[IVAR_DECL:.*]]:2 = hlfir.declare %[[IVAR_ADDR]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QMtest_host_assoc_cray_pointerEivar"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+    ! CHECK: %[[VAR_DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QMtest_host_assoc_cray_pointerEvar"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
     real*8 pointee(2)
     pointee(1) = 42.0
 
