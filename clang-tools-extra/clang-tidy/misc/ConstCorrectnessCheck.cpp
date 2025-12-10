@@ -136,13 +136,12 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   // Match the function scope for which the analysis of all local variables
   // shall be run.
   const auto FunctionScope =
-      functionDecl(
-          hasBody(stmt(forEachDescendant(
-                           declStmt(containsAnyDeclaration(
-                                        LocalValDecl.bind("value")),
-                                    unless(has(decompositionDecl())))
-                               .bind("decl-stmt")))
-                      .bind("scope")))
+      functionDecl(hasBody(stmt(forEachDescendant(
+                                    declStmt(containsAnyDeclaration(
+                                                 LocalValDecl.bind("value")),
+                                             unless(has(decompositionDecl())))
+                                        .bind("decl-stmt")))
+                               .bind("scope")))
           .bind("function-decl");
 
   Finder->addMatcher(FunctionScope, this);
@@ -157,9 +156,9 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
     // Example: `void foo(int* ptr)` would match `int* ptr`.
     const auto FunctionWithParams =
         functionDecl(
-            hasBody(stmt().bind("scope")),
-            has(typeLoc(forEach(ParamMatcher))), unless(cxxMethodDecl()),
-            unless(isFunctionTemplateSpecialization()), unless(isTemplate()))
+            hasBody(stmt().bind("scope")), has(typeLoc(forEach(ParamMatcher))),
+            unless(cxxMethodDecl()), unless(isFunctionTemplateSpecialization()),
+            unless(isTemplate()))
             .bind("function-decl");
 
     Finder->addMatcher(FunctionWithParams, this);
@@ -199,10 +198,10 @@ enum class VariableCategory { Value, Reference, Pointer };
 } // namespace
 
 void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto* Variable = Result.Nodes.getNodeAs<VarDecl>("value");
-  const auto* LocalScope = Result.Nodes.getNodeAs<Stmt>("scope");
-  const auto* Function = Result.Nodes.getNodeAs<FunctionDecl>("function-decl");
-  const auto* VarDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("decl-stmt");
+  const auto *LocalScope = Result.Nodes.getNodeAs<Stmt>("scope");
+  const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("value");
+  const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("function-decl");
+  const auto *VarDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("decl-stmt");
 
   assert(Variable && LocalScope && Function);
 
