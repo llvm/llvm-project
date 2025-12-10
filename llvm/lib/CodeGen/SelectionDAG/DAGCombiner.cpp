@@ -631,6 +631,7 @@ namespace {
 
     SDValue foldAddToAvg(SDNode *N, const SDLoc &DL);
     SDValue foldSubToAvg(SDNode *N, const SDLoc &DL);
+    SDValue foldLogicSetCCToMul(SDNode *N, const SDLoc &DL);
 
     SDValue SimplifyNodeWithTwoResults(SDNode *N, unsigned LoOp,
                                          unsigned HiOp);
@@ -6648,6 +6649,59 @@ static unsigned getMinMaxOpcodeForFP(SDValue Operand1, SDValue Operand2,
   return ISD::DELETED_NODE;
 }
 
+// Fold the following patterns for small integers in -Oz mode.
+// (X == 0) || (Y == 0) --> (X * Y) == 0
+// (X != 0) && (Y != 0) --> (X * Y) != 0
+SDValue DAGCombiner::foldLogicSetCCToMul(SDNode *N, const SDLoc &DL) {
+  if (OptLevel == CodeGenOptLevel::None ||
+      !DAG.getMachineFunction().getFunction().hasMinSize())
+    return SDValue();
+
+  unsigned Opcode = N->getOpcode();
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  ISD::CondCode ExpectedCC;
+  if (Opcode == ISD::OR) {
+    ExpectedCC = ISD::SETEQ;
+  } else if (Opcode == ISD::AND) {
+    ExpectedCC = ISD::SETNE;
+  } else {
+    return SDValue();
+  }
+
+  if (N0.getOpcode() != ISD::SETCC || N1.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  SDValue A = N0.getOperand(0);
+  SDValue B = N1.getOperand(0);
+  SDValue C0 = N0.getOperand(1);
+  SDValue C1 = N1.getOperand(1);
+  ISD::CondCode CC0 = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+  ISD::CondCode CC1 = cast<CondCodeSDNode>(N1.getOperand(2))->get();
+
+  if (CC0 != ExpectedCC || CC1 != ExpectedCC || !isNullConstant(C0) ||
+      !isNullConstant(C1) || A.getValueType() != B.getValueType() ||
+      !A.getValueType().isScalarInteger())
+    return SDValue();
+
+  unsigned BitWidth = A.getValueSizeInBits();
+  KnownBits KnownA = DAG.computeKnownBits(A);
+  KnownBits KnownB = DAG.computeKnownBits(B);
+
+  if (KnownA.countMaxActiveBits() + KnownB.countMaxActiveBits() > BitWidth)
+    return SDValue();
+
+  SDNodeFlags Flags;
+  Flags.setNoUnsignedWrap(true);
+  Flags.setNoSignedWrap(true);
+
+  SDValue Mul = DAG.getNode(ISD::MUL, DL, A.getValueType(), A, B, Flags);
+
+  return DAG.getSetCC(DL, N->getValueType(0), Mul,
+                      DAG.getConstant(0, DL, A.getValueType()), ExpectedCC);
+}
+
 static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
   using AndOrSETCCFoldKind = TargetLowering::AndOrSETCCFoldKind;
   assert(
@@ -7554,6 +7608,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   ConstantSDNode *N1C = isConstOrConstSplat(N1);
   if (N1C && DAG.MaskedValueIsZero(SDValue(N, 0), APInt::getAllOnes(BitWidth)))
     return DAG.getConstant(0, DL, VT);
+
+  if (SDValue R = foldLogicSetCCToMul(N, DL))
+    return R;
 
   if (SDValue R = foldAndOrOfSETCC(N, DAG))
     return R;
@@ -8519,6 +8576,9 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
   ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
   if (N1C && DAG.MaskedValueIsZero(N0, ~N1C->getAPIntValue()))
     return N1;
+
+  if (SDValue R = foldLogicSetCCToMul(N, DL))
+    return R;
 
   if (SDValue R = foldAndOrOfSETCC(N, DAG))
     return R;
