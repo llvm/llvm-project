@@ -1,0 +1,37 @@
+; RUN: rm -rf %t
+; RUN: mkdir -p %t
+; RUN: cd %t
+
+; RUN: echo -e "1\n401120-40113b:1\n1\n40112f->401110:1" > %t.prof
+
+; Test --load-function-from-symbol=0
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t.prof --binary=%S/Inputs/missing-dwarf.exe --output=%t1 --fill-zero-for-all-funcs --show-detailed-warning --use-offset=0 --load-function-from-symbol=0 2>&1 | FileCheck %s --check-prefix=CHECK-NO-LOAD-SYMTAB
+
+; CHECK-NO-LOAD-SYMTAB:      warning: Loading of DWARF info completed, but no binary functions have been retrieved.
+
+; Test --load-function-from-symbol=1
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t.prof --binary=%S/Inputs/missing-dwarf.exe --output=%t2 --fill-zero-for-all-funcs --show-detailed-warning --use-offset=0 --load-function-from-symbol=1
+; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-LOAD-SYMTAB
+
+; CHECK-LOAD-SYMTAB:      main:2:1
+; CHECK-LOAD-SYMTAB-NEXT:  1: 1
+; CHECK-LOAD-SYMTAB-NEXT:  2: 1 foo:1
+; CHECK-LOAD-SYMTAB-NEXT:  !CFGChecksum: 281479271677951
+; CHECK-LOAD-SYMTAB-NEXT: foo:0:0
+; CHECK-LOAD-SYMTAB-NEXT:  1: 0
+; CHECK-LOAD-SYMTAB-NEXT:  !CFGChecksum: 4294967295
+
+; Build instructions:
+; missing-dwarf.o:       clang -gsplit-dwarf=split -fdebug-compilation-dir=.  test.c   -fdebug-info-for-profiling  -fpseudo-probe-for-profiling  -O0 -g -o missing-dwarf.o -c
+; missing-dwarf.exe:     clang -fdebug-compilation-dir=.  missing-dwarf.o -o missing-dwarf.exe  -fdebug-info-for-profiling  -fpseudo-probe-for-profiling  -O0 -g
+
+; Source code:
+
+int foo() {
+  return 1;
+}
+
+int main() {
+  foo();
+  return 0;
+}

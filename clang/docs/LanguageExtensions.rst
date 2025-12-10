@@ -1073,6 +1073,12 @@ The matrix type extension supports explicit casts. Implicit type conversion betw
     i = static_cast<matrix_5_5<int>>(d);
   }
 
+The matrix type extension supports column and row major memory layouts, but not
+all builtins are supported with row-major layout. The layout defaults to column
+major and can be specified using `-fmatrix-memory-layout`. To enable column 
+major layout, use `-fmatrix-memory-layout=column-major`, and for row major
+layout use `-fmatrix-memory-layout=row-major`
+
 Half-Precision Floating Point
 =============================
 
@@ -1832,23 +1838,6 @@ Builtin type aliases
 ====================
 
 Clang provides a few builtin aliases to improve the throughput of certain metaprogramming facilities.
-
-__builtin_common_reference
---------------------------
-
-.. code-block:: c++
-
-  template <template <class, class, template <class> class, template <class> class> class BasicCommonReferenceT,
-            template <class... Args> CommonTypeT,
-            template <class> HasTypeMember,
-            class HasNoTypeMember,
-            class... Ts>
-  using __builtin_common_reference = ...;
-
-This alias is used for implementing ``std::common_reference``. If ``std::common_reference`` should contain a ``type``
-member, it is an alias to ``HasTypeMember<TheCommonReference>``. Otherwse it is an alias to ``HasNoTypeMember``. The
-``CommonTypeT`` is usually ``std::common_type_t``. ``BasicCommonReferenceT`` is usually an alias template to
-``basic_common_reference<T, U, TX, UX>::type``.
 
 __builtin_common_type
 ---------------------
@@ -4330,9 +4319,9 @@ as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 ``__builtin_counted_by_ref`` returns a pointer to the count field from the
 ``counted_by`` attribute.
 
-The argument must be a flexible array member. If the argument isn't a flexible
-array member or doesn't have the ``counted_by`` attribute, the builtin returns
-``(void *)0``.
+The argument must be a flexible array member or a pointer with the ``counted_by``
+attribute. If the argument doesn't have the ``counted_by`` attribute, the builtin
+returns ``(void *)0``.
 
 **Syntax**:
 
@@ -4363,9 +4352,9 @@ array member or doesn't have the ``counted_by`` attribute, the builtin returns
 The ``__builtin_counted_by_ref`` builtin allows the programmer to prevent a
 common error associated with the ``counted_by`` attribute. When using the
 ``counted_by`` attribute, the ``count`` field **must** be set before the
-flexible array member can be accessed. Otherwise, the sanitizers may view such
-accesses as false positives. For instance, it's not uncommon for programmers to
-initialize the flexible array before setting the ``count`` field:
+flexible array member or pointer can be accessed. Otherwise, the sanitizers may
+view such accesses as false positives. For instance, it's not uncommon for
+programmers to initialize the flexible array before setting the ``count`` field:
 
 .. code-block:: c
 
@@ -4383,10 +4372,9 @@ initialize the flexible array before setting the ``count`` field:
   ptr->count = COUNT;
 
 Enforcing the rule that ``ptr->count = COUNT;`` must occur after every
-allocation of a struct with a flexible array member with the ``counted_by``
-attribute is prone to failure in large code bases. This builtin mitigates this
-for allocators (like in Linux) that are implemented in a way where the counter
-assignment can happen automatically.
+allocation of a struct with a ``counted_by`` member is prone to failure in large
+code bases. This builtin mitigates this for allocators (like in Linux) that are
+implemented in a way where the counter assignment can happen automatically.
 
 **Note:** The value returned by ``__builtin_counted_by_ref`` cannot be assigned
 to a variable, have its address taken, or passed into or returned from a

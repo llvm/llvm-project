@@ -60,6 +60,30 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
   return RValue::get(result);
 }
 
+static void emitAtomicFenceOp(CIRGenFunction &cgf, const CallExpr *expr,
+                              cir::SyncScopeKind syncScope) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Value orderingVal = cgf.emitScalarExpr(expr->getArg(0));
+
+  auto constOrdering = orderingVal.getDefiningOp<cir::ConstantOp>();
+
+  if (!constOrdering) {
+    // TODO(cir): Emit code to switch on `orderingVal`,
+    //            and creating the fence op for valid values.
+    cgf.cgm.errorNYI("Variable atomic fence ordering");
+    return;
+  }
+
+  auto constOrderingAttr = constOrdering.getValueAttr<cir::IntAttr>();
+  assert(constOrderingAttr && "Expected integer constant for ordering");
+
+  auto ordering = static_cast<cir::MemOrder>(constOrderingAttr.getUInt());
+
+  cir::AtomicFenceOp::create(
+      builder, cgf.getLoc(expr->getSourceRange()), ordering,
+      cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
+}
+
 namespace {
 struct WidthAndSignedness {
   unsigned width;
@@ -542,6 +566,45 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitCall(e->getCallee()->getType(), CIRGenCallee::forDirect(fnOp), e,
                     returnValue);
   }
+
+  case Builtin::BI__builtin_constant_p: {
+    mlir::Type resultType = convertType(e->getType());
+
+    const Expr *arg = e->getArg(0);
+    QualType argType = arg->getType();
+    // FIXME: The allowance for Obj-C pointers and block pointers is historical
+    // and likely a mistake.
+    if (!argType->isIntegralOrEnumerationType() && !argType->isFloatingType() &&
+        !argType->isObjCObjectPointerType() && !argType->isBlockPointerType()) {
+      // Per the GCC documentation, only numeric constants are recognized after
+      // inlining.
+      return RValue::get(
+          builder.getConstInt(getLoc(e->getSourceRange()),
+                              mlir::cast<cir::IntType>(resultType), 0));
+    }
+
+    if (arg->HasSideEffects(getContext())) {
+      // The argument is unevaluated, so be conservative if it might have
+      // side-effects.
+      return RValue::get(
+          builder.getConstInt(getLoc(e->getSourceRange()),
+                              mlir::cast<cir::IntType>(resultType), 0));
+    }
+
+    mlir::Value argValue = emitScalarExpr(arg);
+    if (argType->isObjCObjectPointerType()) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "__builtin_constant_p: Obj-C object pointer");
+      return {};
+    }
+    argValue = builder.createBitcast(argValue, convertType(argType));
+
+    mlir::Value result = cir::IsConstantOp::create(
+        builder, getLoc(e->getSourceRange()), argValue);
+    // IsConstantOp returns a bool, but __builtin_constant_p returns an int.
+    result = builder.createBoolToInt(result, resultType);
+    return RValue::get(result);
+  }
   case Builtin::BI__builtin_dynamic_object_size:
   case Builtin::BI__builtin_object_size: {
     unsigned type =
@@ -943,8 +1006,15 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__atomic_is_lock_free:
   case Builtin::BI__atomic_test_and_set:
   case Builtin::BI__atomic_clear:
-  case Builtin::BI__atomic_thread_fence:
-  case Builtin::BI__atomic_signal_fence:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__atomic_thread_fence: {
+    emitAtomicFenceOp(*this, e, cir::SyncScopeKind::System);
+    return RValue::get(nullptr);
+  }
+  case Builtin::BI__atomic_signal_fence: {
+    emitAtomicFenceOp(*this, e, cir::SyncScopeKind::SingleThread);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__c11_atomic_thread_fence:
   case Builtin::BI__c11_atomic_signal_fence:
   case Builtin::BI__scoped_atomic_thread_fence:
@@ -1322,9 +1392,13 @@ static mlir::Value emitTargetArchBuiltinExpr(CIRGenFunction *cgf,
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
+    // These are actually NYI, but that will be reported by emitBuiltinExpr.
+    // At this point, we don't even know that the builtin is target-specific.
+    return nullptr;
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64_be:
+    return cgf->emitAArch64BuiltinExpr(builtinID, e, returnValue, arch);
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
     // These are actually NYI, but that will be reported by emitBuiltinExpr.

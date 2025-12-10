@@ -3100,70 +3100,54 @@ void llvm::combineAAMetadata(Instruction *K, const Instruction *J) {
   combineMetadata(K, J, /*DoesKMove=*/true, /*AAOnly=*/true);
 }
 
-void llvm::copyMetadataForAccess(Instruction &DestI, Instruction &SourceI) {
+void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
   SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
-  SourceI.getAllMetadata(MD);
-  MDBuilder MDB(DestI.getContext());
-  Type *NewType = DestI.getType();
-
-  // Only needed for range metadata on loads.
-  const DataLayout *DL = nullptr;
-  const LoadInst *LSource = dyn_cast<LoadInst>(&SourceI);
-  if (LSource)
-    DL = &LSource->getDataLayout();
-
+  Source.getAllMetadata(MD);
+  MDBuilder MDB(Dest.getContext());
+  Type *NewType = Dest.getType();
+  const DataLayout &DL = Source.getDataLayout();
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
     MDNode *N = MDPair.second;
-
+    // Note, essentially every kind of metadata should be preserved here! This
+    // routine is supposed to clone a load instruction changing *only its type*.
+    // The only metadata it makes sense to drop is metadata which is invalidated
+    // when the pointer type changes. This should essentially never be the case
+    // in LLVM, but we explicitly switch over only known metadata to be
+    // conservatively correct. If you are adding metadata to LLVM which pertains
+    // to loads, you almost certainly want to add it here.
     switch (ID) {
-    // Applies to both loads and stores as-is.
     case LLVMContext::MD_dbg:
+    case LLVMContext::MD_tbaa:
     case LLVMContext::MD_prof:
+    case LLVMContext::MD_fpmath:
     case LLVMContext::MD_tbaa_struct:
+    case LLVMContext::MD_invariant_load:
     case LLVMContext::MD_alias_scope:
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_nontemporal:
+    case LLVMContext::MD_mem_parallel_loop_access:
     case LLVMContext::MD_access_group:
     case LLVMContext::MD_noundef:
     case LLVMContext::MD_noalias_addrspace:
-    case LLVMContext::MD_mem_parallel_loop_access:
-      DestI.setMetadata(ID, N);
-      break;
-
-    // Load-only metadata.
-    case LLVMContext::MD_fpmath:
-    case LLVMContext::MD_invariant_load:
-      if (isa<LoadInst>(DestI))
-        DestI.setMetadata(ID, N);
+      // All of these directly apply.
+      Dest.setMetadata(ID, N);
       break;
 
     case LLVMContext::MD_nonnull:
-      if (auto *LDest = dyn_cast<LoadInst>(&DestI)) {
-        if (LSource)
-          copyNonnullMetadata(*LSource, N, *LDest);
-      }
+      copyNonnullMetadata(Source, N, Dest);
       break;
 
     case LLVMContext::MD_align:
     case LLVMContext::MD_dereferenceable:
     case LLVMContext::MD_dereferenceable_or_null:
-      // Applies to both loads and stores only if the new type is also a
-      // pointer.
+      // These only directly apply if the new type is also a pointer.
       if (NewType->isPointerTy())
-        DestI.setMetadata(ID, N);
+        Dest.setMetadata(ID, N);
       break;
 
     case LLVMContext::MD_range:
-      if (auto *LDest = dyn_cast<LoadInst>(&DestI)) {
-        if (LSource && DL)
-          copyRangeMetadata(*DL, *LSource, N, *LDest);
-      }
-      break;
-
-    case LLVMContext::MD_tbaa:
-      if (isa<LoadInst>(DestI))
-        DestI.setMetadata(ID, N);
+      copyRangeMetadata(DL, Source, N, Dest);
       break;
     }
   }
@@ -3899,6 +3883,12 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   // instructions.
   if (Op->isSwiftError())
     return false;
+
+  // Protected pointer field loads/stores should be paired with the intrinsic
+  // to avoid unnecessary address escapes.
+  if (auto *II = dyn_cast<IntrinsicInst>(Op))
+    if (II->getIntrinsicID() == Intrinsic::protected_field_ptr)
+      return false;
 
   // Cannot replace alloca argument with phi/select.
   if (I->isLifetimeStartOrEnd())
