@@ -2445,8 +2445,9 @@ struct AMDGPUMakeDmaDescriptorLowering
     // pre-condition: padInterval can be a power of two between 2 and 256.
     // TODO: Validation if the value breaks the pre-condition.
     // If the pre-condition fails, there is a possibility of
-    // affecting the higher bits. In a following PR add a flag
-    // that instruments conditions that need to be checked at runtime.
+    // affecting the higher bits. In a following PR implement
+    // RuntimeVerifiableOpInterface that instruments conditions that need to be
+    // checked at runtime.
     IntegerType i32 = rewriter.getI32Type();
     Value padInterval = adaptor.getPadInterval();
     padInterval = LLVM::CountTrailingZerosOp::create(rewriter, loc, i32,
@@ -2465,8 +2466,9 @@ struct AMDGPUMakeDmaDescriptorLowering
     // pre-condition: padAmount is a value between 1-128.
     // TODO: Validation if the value breaks the pre-condition.
     // If the pre-condition fails, there is a possibility of
-    // affecting the higher bits. In a following PR add a flag
-    // that instruments conditions that need to be checked at runtime.
+    // affecting the higher bits. In a following PR implement
+    // RuntimeVerifiableOpInterface that instruments conditions that need to be
+    // checked at runtime.
     Value padAmount = adaptor.getPadAmount();
     padAmount = LLVM::SubOp::create(rewriter, loc, padAmount, consts[1]);
     // post-condition: padAmount is a value between 0-127.
@@ -2491,8 +2493,8 @@ struct AMDGPUMakeDmaDescriptorLowering
     // pre-condition: atomicBarrierAddress is aligned to 8 bytes which implies
     // that the 3 LSBs are zero.
     // TODO: Validation if the value breaks the pre-condition.
-    // In a following PR add a flag that instruments conditions that need to be
-    // checked at runtime.
+    // In a following PR implement RuntimeVerifiableOpInterface
+    // that instruments conditions that need to be checked at runtime.
     atomicBarrierAddress =
         LLVM::PtrToIntOp::create(rewriter, loc, i32, atomicBarrierAddress);
     atomicBarrierAddress =
@@ -2520,10 +2522,10 @@ struct AMDGPUMakeDmaDescriptorLowering
     // pre-condition: tensorDimX is less than 2^48-1
     // TODO: Validation if the value breaks the pre-condition.
     // If the pre-condition fails, there is a possibility of
-    // affecting the higher bits. In a following PR add a flag
-    // that instruments conditions that need to be checked at runtime.
-    // This could also be fixed by saying that mixedGlobalSizes is a
-    // DynamicI48List.
+    // affecting the higher bits. In a following PR implement
+    // RuntimeVerifiableOpInterface that instruments conditions that need to be
+    // checked at runtime. This could also be fixed by saying that
+    // mixedGlobalSizes is a DynamicI48List.
     Value tensorDimX;
     if (auto attr = dyn_cast<Attribute>(tensorDimXOpFoldResult))
       tensorDimX =
@@ -2575,10 +2577,10 @@ struct AMDGPUMakeDmaDescriptorLowering
     // pre-condition: tileDimX is less than 2^16-1
     // TODO: Validation if the value breaks the pre-condition.
     // If the pre-condition fails, there is a possibility of
-    // affecting the higher bits. In a following PR add a flag
-    // that instruments conditions that need to be checked at runtime.
-    // This could also be fixed by saying that mixedSharedSizes is a
-    // DynamicI16List.
+    // affecting the higher bits. In a following PR implement
+    // RuntimeVerifiableOpInterface that instruments conditions that need to be
+    // checked at runtime. This could also be fixed by saying that
+    // mixedSharedSizes is a DynamicI16List.
     Value tileDimX;
     if (auto attr = dyn_cast<Attribute>(tileDimXOpFoldResult))
       tileDimX =
@@ -2627,8 +2629,8 @@ struct AMDGPUMakeDmaDescriptorLowering
         *(mixedGlobalStrides.rbegin() + dimX);
     // pre-condition: tensorDimXStride is less than 2^48-1
     // TODO: Validation if the value breaks the pre-condition.
-    // In a following PR add a flag that instruments conditions that need to be
-    // checked at runtime.
+    // In a following PR implement RuntimeVerifiableOpInterface that instruments
+    // conditions that need to be checked at runtime.
     Value tensorDimXStride;
     if (auto attr = dyn_cast<Attribute>(tensorDimXStrideOpFoldResult))
       tensorDimXStride =
@@ -2822,8 +2824,9 @@ struct AMDGPUMakeDmaDescriptorLowering
     // pre-condition: iterationCount is in the inclusive interval [1, 256].
     // TODO: validation if the value breaks the pre-condition.
     // If the pre-condition fails, there is a possibility of
-    // affecting the higher bits. In a following PR add a flag that instruments
-    // conditions that need to be checked at runtime.
+    // affecting the higher bits. In a following PR implement
+    // RuntimeVerifiableOpInterface that instruments conditions that need to be
+    // checked at runtime.
     iterationCount = LLVM::TruncOp::create(rewriter, loc, i32, iterationCount);
     iterationCount =
         LLVM::SubOp::create(rewriter, loc, iterationCount, consts[1]);
@@ -2851,7 +2854,8 @@ struct AMDGPUMakeDmaDescriptorLowering
     Type v4i32 = this->typeConverter->convertType(VectorType::get(4, i32));
     assert(v4i32 && "expected type conversion to succeed.");
 
-    if (!op.getLdsIncrement() && op.getRank() == 2)
+    bool onlyNeedsTwoDescriptors = !op.getLdsIncrement() && op.getRank() <= 2;
+    if (onlyNeedsTwoDescriptors)
       return LLVM::PoisonOp::create(rewriter, loc, v4i32);
 
     constexpr int64_t sgprlen = 4;
@@ -2910,7 +2914,8 @@ struct AMDGPUMakeDmaDescriptorLowering
     IntegerType i32 = rewriter.getI32Type();
     Type v4i32 = this->typeConverter->convertType(VectorType::get(4, i32));
     assert(v4i32 && "expected type conversion to succeed.");
-    if (!op.getLdsIncrement() && op.getRank() == 2)
+    bool onlyNeedsTwoDescriptors = !op.getLdsIncrement() && op.getRank() <= 2;
+    if (onlyNeedsTwoDescriptors)
       return LLVM::PoisonOp::create(rewriter, loc, v4i32);
 
     constexpr int32_t sgprlen = 4;
