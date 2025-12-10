@@ -11,3 +11,6 @@ complicated build, deferring
 needs more work to land
 [Flang] Move builtin .mod generation into runtimes (Reapply #137828)
 ---
+olcf fails smoke-fort
+[flang][OpenMP] Fix firstprivate not working with lastprivate in DO SIMD (#170163)
+---

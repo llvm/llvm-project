@@ -3338,13 +3338,18 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
                  simdReductionSyms);
 
-
-  DataSharingProcessor wsloopItemDSP(converter, semaCtx, doItem->clauses, eval,
-                                     /*shouldCollectPreDeterminedSymbols=*/true,
-                                     /*useDelayedPrivatization=*/true,
-                                     symTable);
+  DataSharingProcessor wsloopItemDSP(
+      converter, semaCtx, doItem->clauses, eval,
+      /*shouldCollectPreDeterminedSymbols=*/false,
+      /*useDelayedPrivatization=*/true, symTable);
   wsloopItemDSP.processStep1();
   wsloopItemDSP.processStep2(&wsloopClauseOps);
+
+  DataSharingProcessor simdItemDSP(converter, semaCtx, simdItem->clauses, eval,
+                                   /*shouldCollectPreDeterminedSymbols=*/true,
+                                   /*useDelayedPrivatization=*/true, symTable);
+  simdItemDSP.processStep1();
+  simdItemDSP.processStep2(&simdClauseOps, simdItem->id);
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
   // is placed by construct decomposition.
@@ -3364,9 +3369,8 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   wsloopOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // For composite 'do simd', privatization is handled by the wsloop.
-  // The simd does not create separate private storage for variables already
-  // privatized by the worksharing construct.
+  simdArgs.priv.syms = simdItemDSP.getDelayedPrivSymbols();
+  simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.syms = simdReductionSyms;
   simdArgs.reduction.vars = simdClauseOps.reductionVars;
   auto simdOp =
@@ -3376,7 +3380,7 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, simdItem,
                 loopNestClauseOps, iv,
                 {{wsloopOp, wsloopArgs}, {simdOp, simdArgs}},
-                llvm::omp::Directive::OMPD_do_simd, wsloopItemDSP);
+                llvm::omp::Directive::OMPD_do_simd, simdItemDSP);
   return wsloopOp;
 }
 
