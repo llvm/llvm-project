@@ -592,7 +592,6 @@ private:
   SDValue WidenHvxLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxSetCC(SDValue Op, SelectionDAG &DAG) const;
-  SDValue WidenHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const;
   SDValue LegalizeHvxResize(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxResizeIntoSteps(SDValue Op, SelectionDAG &DAG) const;
   SDValue EqualizeFpIntConversion(SDValue Op, SelectionDAG &DAG) const;
