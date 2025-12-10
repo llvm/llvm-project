@@ -150,6 +150,14 @@ translateStoreXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
   }
 }
 
+//
+// Note:
+// Block operations for tile of sub byte element types are handled by
+// emulating with larger element types.
+// Tensor descriptor are keep intact and only ops consuming them are
+// emulated
+//
+
 class CreateNdDescToXeVMPattern
     : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -262,9 +270,57 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
           op, "Expected offset rank to match descriptor rank.");
     auto elemType = tdescTy.getElementType();
     auto elemBitSize = elemType.getIntOrFloatBitWidth();
-    if (elemBitSize % 8 != 0)
+    bool isSubByte = elemBitSize < 8;
+    uint64_t wScaleFactor = 1;
+
+    if (!isSubByte && (elemBitSize % 8 != 0))
       return rewriter.notifyMatchFailure(
           op, "Expected element type bit width to be multiple of 8.");
+    auto tileW = tdescTy.getDimSize(tileRank - 1);
+    // For sub byte types, only 4bits are currently supported.
+    if (isSubByte) {
+      if (elemBitSize != 4)
+        return rewriter.notifyMatchFailure(
+            op, "Only sub byte types of 4bits are supported.");
+      if (tileRank != 2)
+        return rewriter.notifyMatchFailure(
+            op, "Sub byte types are only supported for 2D tensor descriptors.");
+      auto subByteFactor = 8 / elemBitSize;
+      auto tileH = tdescTy.getDimSize(0);
+      // Handle special case for packed load.
+      if constexpr (std::is_same_v<OpType, xegpu::LoadNdOp>) {
+        if (op.getPacked().value_or(false)) {
+          // packed load is implemented as packed loads of 8bit elements.
+          if (tileH == systolicDepth * 4 &&
+              tileW == executionSize * subByteFactor) {
+            // Usage case for loading as Matrix B with pack request.
+            // source is assumed to pre-packed into 8bit elements
+            // Emulate with 8bit loads with pack request.
+            //   scaled_tileW = executionSize
+            elemType = rewriter.getIntegerType(8);
+            tileW = executionSize;
+            wScaleFactor = subByteFactor;
+          }
+        }
+      }
+      // If not handled by packed load case above, handle other cases.
+      if (wScaleFactor == 1) {
+        auto sub16BitFactor = subByteFactor * 2;
+        if (tileW == executionSize * sub16BitFactor) {
+          // Usage case for loading as Matrix A operand
+          // Emulate with 16bit loads/stores.
+          //   scaled_tileW = executionSize
+          elemType = rewriter.getIntegerType(16);
+          tileW = executionSize;
+          wScaleFactor = sub16BitFactor;
+        } else {
+          return rewriter.notifyMatchFailure(
+              op, "Unsupported tile shape for sub byte types.");
+        }
+      }
+      // recompute element bit size for emulation.
+      elemBitSize = elemType.getIntOrFloatBitWidth();
+    }
 
     // Get address space from tensor descriptor memory space.
     auto ptrTypeLLVM = LLVM::LLVMPointerType::get(
@@ -298,15 +354,27 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
       // Convert base pointer (i64) to LLVM pointer type.
       Value basePtrLLVM =
           LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtr);
+      // FIXME: width or pitch is not the same as baseShapeW it should be the
+      // stride of the second to last dimension in row major layout.
       // Compute width in bytes.
-      Value baseWidthByte =
+      Value baseShapeWInBytes =
           arith::MulIOp::create(rewriter, loc, baseShapeW, elemByteSize);
       // Compute pitch in bytes.
-      Value basePitchByte =
+      Value basePitchBytes =
           arith::MulIOp::create(rewriter, loc, basePitch, elemByteSize);
 
-      // Get tile width from the tensor descriptor type.
-      auto tileW = tdescTy.getDimSize(tileRank - 1);
+      if (wScaleFactor > 1) {
+        // Scale offsetW, baseShapeWInBytes for sub byte emulation.
+        // Note: tileW is already scaled above.
+        Value wScaleFactorValLog2 = arith::ConstantIntOp::create(
+            rewriter, loc, rewriter.getI32Type(), llvm::Log2_64(wScaleFactor));
+        baseShapeWInBytes = arith::ShRSIOp::create(
+            rewriter, loc, baseShapeWInBytes, wScaleFactorValLog2);
+        basePitchBytes = arith::ShRSIOp::create(rewriter, loc, basePitchBytes,
+                                                wScaleFactorValLog2);
+        offsetW =
+            arith::ShRSIOp::create(rewriter, loc, offsetW, wScaleFactorValLog2);
+      }
       // Get tile height from the tensor descriptor type.
       auto tileH = tdescTy.getDimSize(0);
       // Get vblocks from the tensor descriptor type.
@@ -330,8 +398,8 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
         auto storeCacheControl =
             translateStoreXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
         xevm::BlockStore2dOp::create(
-            rewriter, loc, basePtrLLVM, baseWidthByte, baseShapeH,
-            basePitchByte, offsetW, offsetH, elemBitSize, tileW, tileH, src,
+            rewriter, loc, basePtrLLVM, baseShapeWInBytes, baseShapeH,
+            basePitchBytes, offsetW, offsetH, elemBitSize, tileW, tileH, src,
             xevm::StoreCacheControlAttr::get(ctxt, storeCacheControl));
         rewriter.eraseOp(op);
       } else {
@@ -339,8 +407,8 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
             translateLoadXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
         if constexpr (std::is_same_v<OpType, xegpu::PrefetchNdOp>) {
           xevm::BlockPrefetch2dOp::create(
-              rewriter, loc, basePtrLLVM, baseWidthByte, baseShapeH,
-              basePitchByte, offsetW, offsetH, elemBitSize, tileW, tileH,
+              rewriter, loc, basePtrLLVM, baseShapeWInBytes, baseShapeH,
+              basePitchBytes, offsetW, offsetH, elemBitSize, tileW, tileH,
               vblocks, xevm::LoadCacheControlAttr::get(ctxt, loadCacheControl));
           rewriter.eraseOp(op);
         } else {
@@ -354,9 +422,9 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
                              : rewriter.getIntegerType(elemBitSize));
 
           Value resultFlatVec = xevm::BlockLoad2dOp::create(
-              rewriter, loc, loadedTy, basePtrLLVM, baseWidthByte, baseShapeH,
-              basePitchByte, offsetW, offsetH, elemBitSize, tileW, tileH,
-              vblocks, transpose, vnni,
+              rewriter, loc, loadedTy, basePtrLLVM, baseShapeWInBytes,
+              baseShapeH, basePitchBytes, offsetW, offsetH, elemBitSize, tileW,
+              tileH, vblocks, transpose, vnni,
               xevm::LoadCacheControlAttr::get(ctxt, loadCacheControl));
           resultFlatVec = vector::BitCastOp::create(
               rewriter, loc,
@@ -608,16 +676,24 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
     Value baseAddr32 = adaptor.getMemDesc();
     Value mdescVal = op.getMemDesc();
     // Load result or Store value Type can be vector or scalar.
-    Value data;
-    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>)
-      data = op.getResult();
-    else
-      data = adaptor.getData();
-    VectorType valOrResVecTy = dyn_cast<VectorType>(data.getType());
+    Type dataTy;
+    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
+      Type resType = op.getResult().getType();
+      // Some transforms may leave unit dimension in the 2D vector, adaptors do
+      // not catch it for results.
+      if (auto vecType = dyn_cast<VectorType>(resType)) {
+        assert(llvm::count_if(vecType.getShape(),
+                              [](int64_t d) { return d != 1; }) <= 1 &&
+               "Expected either 1D vector or nD with unit dimensions");
+        resType = VectorType::get({vecType.getNumElements()},
+                                  vecType.getElementType());
+      }
+      dataTy = resType;
+    } else
+      dataTy = adaptor.getData().getType();
+    VectorType valOrResVecTy = dyn_cast<VectorType>(dataTy);
     if (!valOrResVecTy)
-      valOrResVecTy = VectorType::get(1, data.getType());
-    if (valOrResVecTy.getShape().size() != 1)
-      return rewriter.notifyMatchFailure(op, "Expected 1D data vector.");
+      valOrResVecTy = VectorType::get(1, dataTy);
 
     int64_t elemBitWidth =
         valOrResVecTy.getElementType().getIntOrFloatBitWidth();
@@ -1108,6 +1184,7 @@ struct ConvertXeGPUToXeVMPass
     };
     typeConverter.addSourceMaterialization(
         singleElementVectorMaterializationCast);
+    typeConverter.addSourceMaterialization(vectorMaterializationCast);
     typeConverter.addTargetMaterialization(memrefMaterializationCast);
     typeConverter.addTargetMaterialization(ui32MaterializationCast);
     typeConverter.addTargetMaterialization(ui64MaterializationCast);
