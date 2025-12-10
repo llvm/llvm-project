@@ -5,6 +5,7 @@ Test that pending breakpoints resolve for JITted code with mcjit and rtdyld.
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import configuration
 
 
 class TestJitBreakpoint(TestBase):
@@ -20,9 +21,11 @@ class TestJitBreakpoint(TestBase):
     def do_test(self, jit_flag: str):
         self.runCmd("settings set plugin.jit-loader.gdb.enable on")
 
-        clang_path = self.findBuiltClang()
-        self.assertTrue(clang_path, "built clang could not be found")
-        lli_path = os.path.join(os.path.dirname(clang_path), "lli")
+        self.assertIsNotNone(
+            configuration.llvm_tools_dir,
+            "llvm_tools_dir must be set to find lli",
+        )
+        lli_path = os.path.join(os.path.join(configuration.llvm_tools_dir, "lli"))
         self.assertTrue(lldbutil.is_exe(lli_path), f"'{lli_path}' is not an executable")
         self.runCmd(f"target create {lli_path}", CURRENT_EXECUTABLE_SET)
 
