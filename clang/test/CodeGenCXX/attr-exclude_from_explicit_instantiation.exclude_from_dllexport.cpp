@@ -19,51 +19,51 @@ template <class T>
 struct C {
   // This will be instantiated explicitly as an exported function because it
   // inherits dllexport from the class instantiation.
-  void to_be_exported() noexcept;
+  void to_be_exported();
 
   // This will be instantiated implicitly as an exported function because it is
   // marked as dllexport explicitly.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllexport) void to_be_exported_explicitly() noexcept;
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllexport) void to_be_exported_explicitly();
 
   // This will be instantiated implicitly but won't be exported.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void not_to_be_exported() noexcept;
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void not_to_be_exported();
 
   // This won't be instantiated.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void not_to_be_instantiated() noexcept;
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void not_to_be_instantiated();
 };
 
-template <class T> void C<T>::to_be_exported() noexcept {}
-template <class T> void C<T>::to_be_exported_explicitly() noexcept {}
-template <class T> void C<T>::not_to_be_exported() noexcept {}
-template <class T> void C<T>::not_to_be_instantiated() noexcept {}
+template <class T> void C<T>::to_be_exported() {}
+template <class T> void C<T>::to_be_exported_explicitly() {}
+template <class T> void C<T>::not_to_be_exported() {}
+template <class T> void C<T>::not_to_be_instantiated() {}
 
 // Attach the attribute to class template declaration instead of instantiation declaration.
 template <class T>
 struct __declspec(dllexport) D {
   // This will be exported if and only if no explicit instantiations are provided.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void to_be_exported_iff_no_explicit_instantiation() noexcept;
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void to_be_exported_iff_no_explicit_instantiation();
 };
 
-template <class T> void D<T>::to_be_exported_iff_no_explicit_instantiation() noexcept {}
+template <class T> void D<T>::to_be_exported_iff_no_explicit_instantiation() {}
 
 // Interaction with VTables.
 template <class T>
 struct E {
   // This will be instanciated by the explicit template instantiation definition.
-  virtual void to_be_exported() noexcept;
+  virtual void to_be_exported();
 
   // This will be instantiated by the VTable definition, regardless of
   // `exclude_from_explicit_instantiation`.
   // The dllexport attribute won't be inherited.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION virtual void to_be_instantiated() noexcept;
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION virtual void to_be_instantiated();
 
   // This too, but will be exported by the member attribute.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllexport) virtual void to_be_exported_explicitly() noexcept;
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllexport) virtual void to_be_exported_explicitly();
 };
 
-template <class T> void E<T>::to_be_exported() noexcept {}
-template <class T> void E<T>::to_be_instantiated() noexcept {}
-template <class T> void E<T>::to_be_exported_explicitly() noexcept {}
+template <class T> void E<T>::to_be_exported() {}
+template <class T> void E<T>::to_be_instantiated() {}
+template <class T> void E<T>::to_be_exported_explicitly() {}
 
 // MSC: $"?to_be_exported@?$C@H@@QEAAXXZ" = comdat any
 // MSC: $"?to_be_exported@?$E@H@@UEAAXXZ" = comdat any

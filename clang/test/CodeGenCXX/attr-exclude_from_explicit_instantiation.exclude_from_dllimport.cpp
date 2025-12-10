@@ -19,31 +19,31 @@ template <class T>
 struct C {
   // This will be instantiated explicitly as an imported function because it
   // inherits dllimport from the class instantiation.
-  void to_be_imported() noexcept;
+  void to_be_imported();
 
   // This will be instantiated implicitly as an imported function because it is
   // marked as dllimport explicitly.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllimport) void to_be_imported_explicitly() noexcept;
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllimport) void to_be_imported_explicitly();
 
   // This will be instantiated implicitly but won't be imported.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void not_to_be_imported() noexcept;
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void not_to_be_imported();
 
   // This won't be instantiated.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void not_to_be_instantiated() noexcept;
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void not_to_be_instantiated();
 };
 
-template <class T> void C<T>::to_be_imported() noexcept {}
-template <class T> void C<T>::not_to_be_imported() noexcept {}
-template <class T> void C<T>::not_to_be_instantiated() noexcept {}
+template <class T> void C<T>::to_be_imported() {}
+template <class T> void C<T>::not_to_be_imported() {}
+template <class T> void C<T>::not_to_be_instantiated() {}
 
 // Attach the attribute to class template declaration instead of instantiation declaration.
 template <class T>
 struct __declspec(dllimport) D {
   // This will be imported if and only if no explicit instantiations are provided.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void to_be_imported_iff_no_explicit_instantiation() noexcept;
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void to_be_imported_iff_no_explicit_instantiation();
 };
 
-template <class T> void D<T>::to_be_imported_iff_no_explicit_instantiation() noexcept {}
+template <class T> void D<T>::to_be_imported_iff_no_explicit_instantiation() {}
 
 // Interaction with VTables.
 template <class T>
@@ -61,21 +61,21 @@ struct E {
 
   // The body of this shouldn't be emitted since instantiation is suppressed
   // by the explicit instantiation declaration.
-  virtual void to_be_imported() noexcept;
+  virtual void to_be_imported();
 
   // The body of this should be emitted if the VTable is instantiated, even if
   // the instantiation of this class template is declared with dllimport.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION virtual void to_be_instantiated() noexcept;
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION virtual void to_be_instantiated();
 
   // The body of this shouldn't be emitted since that comes from an external DLL.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllimport) virtual void to_be_imported_explicitly() noexcept;
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllimport) virtual void to_be_imported_explicitly();
 
 };
 
 template <class T> E<T>::E(int) {}
 template <class T> E<T>::E(long) {}
-template <class T> void E<T>::to_be_imported() noexcept {}
-template <class T> void E<T>::to_be_instantiated() noexcept {}
+template <class T> void E<T>::to_be_imported() {}
+template <class T> void E<T>::to_be_instantiated() {}
 
 // MSC: $"?not_to_be_imported@?$C@H@@QEAAXXZ" = comdat any
 // MSC: $"?to_be_imported_iff_no_explicit_instantiation@?$D@H@@QEAAXXZ" = comdat any
