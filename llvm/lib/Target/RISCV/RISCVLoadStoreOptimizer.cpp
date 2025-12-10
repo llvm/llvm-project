@@ -181,10 +181,10 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
   if ((Opc != RISCV::LW && Opc != RISCV::SW) || Second->getOpcode() != Opc)
     return false;
 
-  auto FirstOp1 = First->getOperand(1);
-  auto SecondOp1 = Second->getOperand(1);
-  auto FirstOp2 = First->getOperand(2);
-  auto SecondOp2 = Second->getOperand(2);
+  const auto &FirstOp1 = First->getOperand(1);
+  const auto &SecondOp1 = Second->getOperand(1);
+  const auto &FirstOp2 = First->getOperand(2);
+  const auto &SecondOp2 = Second->getOperand(2);
 
   // Require simple reg+imm addressing for both.
   if (!FirstOp1.isReg() || !SecondOp1.isReg() || !FirstOp2.isImm() ||
@@ -203,8 +203,8 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
   if (MMOAlign < Align(4))
     return false;
 
-  auto FirstOp0 = First->getOperand(0);
-  auto SecondOp0 = Second->getOperand(0);
+  auto &FirstOp0 = First->getOperand(0);
+  auto &SecondOp0 = Second->getOperand(0);
 
   int64_t Off1 = FirstOp2.getImm();
   int64_t Off2 = SecondOp2.getImm();
@@ -322,9 +322,8 @@ bool RISCVLoadStoreOpt::tryConvertToLdStPair(
   const RISCVSubtarget &STI = MF->getSubtarget<RISCVSubtarget>();
 
   // Try converting to QC_LWMI/QC_SWMI if the XQCILSM extension is enabled.
-  if (!STI.is64Bit() && STI.hasVendorXqcilsm()) {
+  if (!STI.is64Bit() && STI.hasVendorXqcilsm())
     return tryConvertToXqcilsmLdStPair(MF, First, Second);
-  }
 
   // Else try to convert them into MIPS Paired Loads/Stores.
   return tryConvertToMIPSLdStPair(MF, First, Second);
