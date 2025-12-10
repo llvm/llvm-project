@@ -10,4 +10,5 @@ add_llvm_unittest(RippleTests
   TensorShapeTests.cpp
   PropagateShapeTests.cpp
   LinearSeriesTests.cpp
+  PropagateLinearSeriesTests.cpp
   )
