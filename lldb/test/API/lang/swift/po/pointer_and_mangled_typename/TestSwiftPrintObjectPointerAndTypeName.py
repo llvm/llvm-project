@@ -8,7 +8,6 @@ class TestCase(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        self.build()
         self.runCmd("settings set target.experimental.swift-use-context-free-po true")
 
         self.log = self.getBuildArtifact("expr.log")
@@ -19,6 +18,7 @@ class TestCase(TestBase):
 
     @swiftTest
     def test_int(self):
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break int", lldb.SBFileSpec("main.swift")
         )
@@ -28,6 +28,7 @@ class TestCase(TestBase):
 
     @swiftTest
     def test_string(self):
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break string", lldb.SBFileSpec("main.swift")
         )
@@ -37,6 +38,7 @@ class TestCase(TestBase):
 
     @swiftTest
     def test_struct(self):
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break struct", lldb.SBFileSpec("main.swift")
         )
@@ -46,6 +48,7 @@ class TestCase(TestBase):
 
     @swiftTest
     def test_class(self):
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break class", lldb.SBFileSpec("main.swift")
         )
@@ -55,6 +58,7 @@ class TestCase(TestBase):
 
     @swiftTest
     def test_enum(self):
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break enum", lldb.SBFileSpec("main.swift")
         )
@@ -64,6 +68,7 @@ class TestCase(TestBase):
 
     @swiftTest
     def test_generic_struct(self):
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break generic struct", lldb.SBFileSpec("main.swift")
         )
@@ -73,6 +78,7 @@ class TestCase(TestBase):
 
     @swiftTest
     def test_generic_class(self):
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break generic class", lldb.SBFileSpec("main.swift")
         )
@@ -82,6 +88,7 @@ class TestCase(TestBase):
 
     @swiftTest
     def test_generic_enum(self):
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break generic enum", lldb.SBFileSpec("main.swift")
         )
@@ -91,6 +98,7 @@ class TestCase(TestBase):
 
     @swiftTest
     def test_described_struct(self):
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break described struct", lldb.SBFileSpec("main.swift")
         )
@@ -100,6 +108,7 @@ class TestCase(TestBase):
 
     @swiftTest
     def test_described_class(self):
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break described class", lldb.SBFileSpec("main.swift")
         )
@@ -109,6 +118,7 @@ class TestCase(TestBase):
 
     @swiftTest
     def test_described_enum(self):
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break described enum", lldb.SBFileSpec("main.swift")
         )
