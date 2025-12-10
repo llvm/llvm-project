@@ -2139,7 +2139,7 @@ void ValueObject::GetExpressionPath(Stream &s,
   ValueObject *parent = GetParent();
 
   if (parent) {
-    lldb_private::CompilerType parentType = parent->GetCompilerType();
+    const lldb_private::CompilerType parentType = parent->GetCompilerType();
     const bool parentTypeIsPointer = parentType.IsPointerType();
     const bool pointeeOfParentTypeIsArray =
         parentType.GetPointeeType().IsArrayType(nullptr, nullptr, nullptr);
