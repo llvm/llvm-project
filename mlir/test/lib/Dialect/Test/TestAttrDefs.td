@@ -22,6 +22,7 @@ include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpAsmInterface.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/IR/TensorEncoding.td"
 
 // All of the attributes will extend this class.
@@ -454,6 +455,19 @@ def TestMemRefLayoutAttr : Test_Attr<"TestMemRefLayout",
 
   let parameters = (ins "mlir::StringAttr":$dummy);
   let assemblyFormat = "`<` $dummy `>`";
+}
+
+// Test attribute that implements SymbolUserAttrInterface.
+def TestSymbolRefAttr : Test_Attr<"TestSymbolRef",
+    [DeclareAttrInterfaceMethods<SymbolUserAttrInterface>]> {
+  let mnemonic = "symbol_ref_attr";
+  let summary = "Test attribute that references a symbol";
+  let description = [{
+    This attribute holds a reference to a symbol and implements
+    SymbolUserAttrInterface to verify that the referenced symbol exists.
+  }];
+  let parameters = (ins "::mlir::FlatSymbolRefAttr":$symbol);
+  let assemblyFormat = "`<` $symbol `>`";
 }
 
 #endif // TEST_ATTRDEFS
