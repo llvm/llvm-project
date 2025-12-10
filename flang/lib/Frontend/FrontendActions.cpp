@@ -46,7 +46,6 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
-#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -1021,7 +1020,6 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
         targetMachine->Options.MCOptions.ABIName,
         targetMachine->Options.VecLib);
   });
-  mam.registerPass([&] { return llvm::LibcallLoweringModuleAnalysis(); });
 
   // Register all the basic analyses with the managers.
   pb.registerModuleAnalyses(mam);
