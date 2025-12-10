@@ -3550,6 +3550,8 @@ static void mcpuHelp() {
     Binary *Bin = OBinary->getBinary();
     if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin))
       TheTriple = Obj->makeTriple();
+    else
+      reportError(InputFilenames[0], "file format not recognized");
   }
 
   std::string Error;
