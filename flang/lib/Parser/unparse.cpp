@@ -2225,6 +2225,12 @@ public:
     unsigned ompVersion{langOpts_.OpenMPVersion};
     Word(llvm::omp::getOpenMPDirectiveName(x.v, ompVersion));
   }
+  void Unparse(const OmpDimsModifier &x) {
+    Word("DIMS");
+    Put("(");
+    Walk(x.v);
+    Put(")");
+  }
   void Unparse(const OmpStylizedDeclaration &x) {
     // empty
   }
@@ -2447,6 +2453,21 @@ public:
     using Modifier = OmpNumTasksClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<ScalarIntExpr>(x.t));
+  }
+  void Unparse(const OmpNumTeamsClause &x) {
+    using Modifier = OmpNumTeamsClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ":");
+    Walk(std::get<std::list<ScalarIntExpr>>(x.t));
+  }
+  void Unparse(const OmpNumThreadsClause &x) {
+    using Modifier = OmpNumThreadsClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ":");
+    Walk(std::get<std::list<ScalarIntExpr>>(x.t));
+  }
+  void Unparse(const OmpThreadLimitClause &x) {
+    using Modifier = OmpThreadLimitClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ":");
+    Walk(std::get<std::list<ScalarIntExpr>>(x.t));
   }
   void Unparse(const OmpDoacross::Sink &x) {
     Word("SINK: ");
