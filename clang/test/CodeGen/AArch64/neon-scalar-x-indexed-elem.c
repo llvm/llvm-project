@@ -210,9 +210,7 @@ float32_t test_vfmss_lane_f32(float32_t a, float32_t b, float32x2_t c) {
 // CHECK-NEXT:    [[FMLA:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x double>
 // CHECK-NEXT:    [[FMLA1:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x double>
 // CHECK-NEXT:    [[FMLA2:%.*]] = call <1 x double> @llvm.fma.v1f64(<1 x double> [[FMLA]], <1 x double> [[LANE]], <1 x double> [[FMLA1]])
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast <1 x double> [[FMLA2]] to double
-// CHECK-NEXT:    [[TMP8:%.*]] = bitcast double [[TMP7]] to <1 x double>
-// CHECK-NEXT:    ret <1 x double> [[TMP8]]
+// CHECK-NEXT:    ret <1 x double> [[FMLA2]]
 //
 float64x1_t test_vfma_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
   return vfma_lane_f64(a, b, v, 0);
@@ -236,9 +234,7 @@ float64x1_t test_vfma_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 // CHECK-NEXT:    [[FMLA:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x double>
 // CHECK-NEXT:    [[FMLA1:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x double>
 // CHECK-NEXT:    [[FMLA2:%.*]] = call <1 x double> @llvm.fma.v1f64(<1 x double> [[FMLA]], <1 x double> [[LANE]], <1 x double> [[FMLA1]])
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast <1 x double> [[FMLA2]] to double
-// CHECK-NEXT:    [[TMP8:%.*]] = bitcast double [[TMP7]] to <1 x double>
-// CHECK-NEXT:    ret <1 x double> [[TMP8]]
+// CHECK-NEXT:    ret <1 x double> [[FMLA2]]
 //
 float64x1_t test_vfms_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
   return vfms_lane_f64(a, b, v, 0);
@@ -261,9 +257,7 @@ float64x1_t test_vfms_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 // CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x double> [[TMP8]], i32 0
 // CHECK-NEXT:    [[TMP9:%.*]] = call double @llvm.fma.f64(double [[TMP7]], double [[EXTRACT]], double [[TMP6]])
 // CHECK-NEXT:    [[TMP10:%.*]] = bitcast double [[TMP9]] to <1 x double>
-// CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x double> [[TMP10]] to double
-// CHECK-NEXT:    [[TMP12:%.*]] = bitcast double [[TMP11]] to <1 x double>
-// CHECK-NEXT:    ret <1 x double> [[TMP12]]
+// CHECK-NEXT:    ret <1 x double> [[TMP10]]
 //
 float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
   return vfma_laneq_f64(a, b, v, 0);
@@ -287,9 +281,7 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
 // CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x double> [[TMP8]], i32 0
 // CHECK-NEXT:    [[TMP9:%.*]] = call double @llvm.fma.f64(double [[TMP7]], double [[EXTRACT]], double [[TMP6]])
 // CHECK-NEXT:    [[TMP10:%.*]] = bitcast double [[TMP9]] to <1 x double>
-// CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x double> [[TMP10]] to double
-// CHECK-NEXT:    [[TMP12:%.*]] = bitcast double [[TMP11]] to <1 x double>
-// CHECK-NEXT:    ret <1 x double> [[TMP12]]
+// CHECK-NEXT:    ret <1 x double> [[TMP10]]
 //
 float64x1_t test_vfms_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
   return vfms_laneq_f64(a, b, v, 0);
@@ -560,8 +552,8 @@ int64_t test_vqdmlsls_laneq_s32(int64_t a, int32_t b, int32x4_t c) {
 // CHECK-LABEL: define dso_local <1 x double> @test_vmulx_lane_f64_0(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast double 0x3FD6304BC43AB5C2 to <1 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast double 0x3FEE211E215AEEF3 to <1 x double>
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 4599917171378402754 to <1 x double>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 4606655882138939123 to <1 x double>
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x double> [[TMP0]], i32 0
 // CHECK-NEXT:    [[VGET_LANE9:%.*]] = extractelement <1 x double> [[TMP1]], i32 0
 // CHECK-NEXT:    [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGET_LANE9]])
@@ -582,8 +574,8 @@ float64x1_t test_vmulx_lane_f64_0() {
 // CHECK-LABEL: define dso_local <1 x double> @test_vmulx_laneq_f64_2(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast double 0x3FD6304BC43AB5C2 to <1 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast double 0x3FEE211E215AEEF3 to <1 x double>
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 4599917171378402754 to <1 x double>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 4606655882138939123 to <1 x double>
 // CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <1 x double> [[TMP0]], <1 x double> [[TMP1]], <2 x i32> <i32 0, i32 1>
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x double> [[TMP0]], i32 0
 // CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <2 x double> [[SHUFFLE_I]], i32 1
