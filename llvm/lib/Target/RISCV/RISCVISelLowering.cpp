@@ -24323,7 +24323,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       break;
     }
   } else if (Constraint == "vr") {
-    // Check VM first so that mask types will use that instead of VR.
+    // Check VM and fractional LMUL first so that mask types will use that
+    // instead of VR.
     for (const auto *RC :
          {&RISCV::VMRegClass, &RISCV::VRMF8RegClass, &RISCV::VRMF4RegClass,
           &RISCV::VRMF2RegClass, &RISCV::VRRegClass, &RISCV::VRM2RegClass,
@@ -24343,7 +24344,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       }
     }
   } else if (Constraint == "vd") {
-    // Check VMNoV0 first so that mask types will use that instead of VRNoV0.
+    // Check VMNoV0 and fractional LMUL first so that mask types will use that
+    // instead of VR.
     for (const auto *RC :
          {&RISCV::VMNoV0RegClass, &RISCV::VRMF8NoV0RegClass,
           &RISCV::VRMF4NoV0RegClass, &RISCV::VRMF2NoV0RegClass,
