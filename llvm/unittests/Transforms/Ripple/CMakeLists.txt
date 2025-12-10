@@ -9,4 +9,5 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(RippleTests
   TensorShapeTests.cpp
   PropagateShapeTests.cpp
+  LinearSeriesTests.cpp
   )
