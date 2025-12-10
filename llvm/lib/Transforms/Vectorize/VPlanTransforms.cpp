@@ -1385,12 +1385,16 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // Look through ExtractLastLane (BuildVector ....).
-  if (match(Def, m_ExtractLastLane(m_BuildVector()))) {
-    auto *BuildVector = cast<VPInstruction>(Def->getOperand(0));
-    Def->replaceAllUsesWith(
-        BuildVector->getOperand(BuildVector->getNumOperands() - 1));
-    return;
+  // Look through ExtractLastLane.
+  if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
+    if (match(A, m_BuildVector())) {
+      auto *BuildVector = cast<VPInstruction>(A);
+      Def->replaceAllUsesWith(
+          BuildVector->getOperand(BuildVector->getNumOperands() - 1));
+      return;
+    }
+    if (Plan->hasScalarVFOnly())
+      return Def->replaceAllUsesWith(A);
   }
 
   // Look through ExtractPenultimateElement (BuildVector ....).

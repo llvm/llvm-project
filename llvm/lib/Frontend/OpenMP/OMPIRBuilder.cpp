@@ -5315,7 +5315,7 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
     bool NeedsBarrier, Value *ChunkSize, OMPScheduleType SchedType,
     Value *DistScheduleChunkSize, OMPScheduleType DistScheduleSchedType) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
-  assert(ChunkSize || DistScheduleChunkSize && "Chunk size is required");
+  assert((ChunkSize || DistScheduleChunkSize) && "Chunk size is required");
 
   LLVMContext &Ctx = CLI->getFunction()->getContext();
   Value *IV = CLI->getIndVar();
