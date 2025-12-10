@@ -278,9 +278,9 @@ Error initPlugins(OffloadContext &Context) {
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-      Context.Platforms.emplace_back(std::make_unique<ol_platform_impl_t>(     \
-          std::unique_ptr<GenericPluginTy>(createPlugin_##Name()),             \
-          pluginNameToBackend(#Name)));                                        \
+    Context.Platforms.emplace_back(std::make_unique<ol_platform_impl_t>(       \
+        std::unique_ptr<GenericPluginTy>(createPlugin_##Name()),               \
+        pluginNameToBackend(#Name)));                                          \
   } while (false);
 #include "Shared/Targets.def"
 
