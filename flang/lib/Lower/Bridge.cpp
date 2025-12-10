@@ -3288,8 +3288,8 @@ private:
                                        .getBase()};
                 if (mlir::isa<fir::BaseBoxType>(
                         fir::unwrapRefType(memRef.getType()))) {
-                  memRef = fir::LoadOp::create(*builder, loc, memRef);
-                  memRef = fir::BoxAddrOp::create(*builder, loc, memRef);
+                  memRef = fir::BoxAddrOp::create(
+                      *builder, loc, builder->loadIfRef(loc, memRef));
                 }
 
                 // TODO: Don't use default value, instead get the following

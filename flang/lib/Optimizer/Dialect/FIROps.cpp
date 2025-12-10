@@ -4320,7 +4320,7 @@ mlir::ParseResult fir::PrefetchOp::parse(mlir::OpAsmParser &parser,
 
   if (parser.resolveOperand(memref, type, result.operands))
     return mlir::failure();
-  return ::mlir::success();
+  return mlir::success();
 }
 
 void fir::PrefetchOp::print(mlir::OpAsmPrinter &p) {

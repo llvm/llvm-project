@@ -63,3 +63,11 @@ subroutine test_prefetch_02(t1)
     end do
   end do
 end subroutine test_prefetch_02
+
+subroutine test_prefetch_03(a)
+  integer :: a(:)
+  ! HLFIR: %[[BOX:.*]] = fir.box_addr {{.*}} : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+  ! HLFIR: fir.prefetch %[[BOX]] {read, data, localityHint = 3 : i32} : !fir.ref<!fir.array<?xi32>>
+  !dir$ prefetch a
+  a = sum(a)
+end subroutine test_prefetch_03

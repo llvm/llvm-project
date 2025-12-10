@@ -376,7 +376,7 @@ def fir_PrefetchOp : fir_Op<"prefetch", []> {
   /// NOTE: The numerical values used here is in reference to the LLVM LangRef
   let arguments =
       (ins Arg<AnyReferenceLike,
-               "prefetch memory address", [MemWrite]> : $memref,
+               "prefetch memory address", [MemRead]> : $memref,
        UnitAttr : $rw,
        ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<3>]> : $localityHint,
        UnitAttr : $cacheType);
