@@ -109,3 +109,18 @@ _Float16 test_mm512_reduce_max_ph(__m512h __W) {
   // OGCG: call nnan {{.*}}half @llvm.vector.reduce.fmax.v32f16(<32 x half> %{{.*}})
   return _mm512_reduce_max_ph(__W);
 }
+
+_Float16 test_mm512_reduce_min_ph(__m512h __W) {
+  // CIR-LABEL: _mm512_reduce_min_ph
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmin.v32f16" %[[V:.*]] (!cir.vector<32 x !cir.f16>) -> !cir.f16 
+
+  // CIR-LABEL: test_mm512_reduce_min_ph
+  // CIR: cir.call @_mm512_reduce_min_ph(%[[VEC:.*]]) : (!cir.vector<32 x !cir.f16>) -> !cir.f16
+
+  // LLVM-LABEL: test_mm512_reduce_min_ph
+  // LLVM: call half @llvm.vector.reduce.fmin.v32f16(<32 x half> %{{.*}})
+
+  // OGCG-LABEL: test_mm512_reduce_min_ph
+  // OGCG: call nnan {{.*}}half @llvm.vector.reduce.fmin.v32f16(<32 x half> %{{.*}})
+  return _mm512_reduce_min_ph(__W);
+}
