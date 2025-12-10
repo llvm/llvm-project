@@ -640,3 +640,61 @@ func.func @vector_shape_cast_1d_to_2d_dim0_broadcasted(%arg0: !xegpu.tensor_desc
   return
 }
 }
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @vector_broadcast_1d_to_2d_broadcast_along_row(
+// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>,
+// CHECK-SAME:    %[[ARG1:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>) {
+// CHECK:         %[[LOAD:.*]] = xegpu.load_nd %[[ARG0]] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+// CHECK-SAME:      !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<16x16xf16>
+// CHECK-NEXT:    %[[REDUCE:.*]] = vector.multi_reduction <add>, %[[LOAD]], %{{[0-9a-zA-Z]+}}
+// CHECK-SAME:       {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>} [0] : vector<16x16xf16> to vector<16xf16>
+// CHECK-NEXT:    %[[BROADCAST:.*]] = vector.broadcast %[[REDUCE]]
+// CHECK-SAME:       {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16xf16> to vector<16x16xf16>
+func.func @vector_broadcast_1d_to_2d_broadcast_along_row(%arg0: !xegpu.tensor_desc<16x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant dense<0.0000> : vector<16xf16>
+  %3 = xegpu.load_nd %arg0  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+  %4 = vector.multi_reduction <add>, %3, %cst [0] : vector<16x16xf16> to vector<16xf16>
+  %5 = vector.broadcast %4 : vector<16xf16> to vector<16x16xf16>
+  xegpu.store_nd %5, %arg1  : vector<16x16xf16>, !xegpu.tensor_desc<16x16xf16>
+  return
+}
+}
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @vector_broadcast_2d_to_2d_along_column(
+// CHECK:            %[[REDUCE:.*]] = vector.multi_reduction <add>
+// CHECK-SAME:       {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>} [1] : vector<16x16xf16> to vector<16xf16>
+// CHECK-NEXT:    %[[SHAPECAST:.*]] = vector.shape_cast %[[REDUCE]]
+// CHECK-SAME:       {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16xf16> to vector<16x1xf16>
+// CHECK-NEXT:    vector.broadcast %[[SHAPECAST]]
+// CHECK-SAME:       {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x1xf16> to vector<16x16xf16>
+
+func.func @vector_broadcast_2d_to_2d_along_column(%arg0: !xegpu.tensor_desc<16x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant dense<0.0000> : vector<16xf16>
+  %3 = xegpu.load_nd %arg0  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+  %4 = vector.multi_reduction <add>, %3, %cst [1] : vector<16x16xf16> to vector<16xf16>
+  %5 = vector.shape_cast %4 : vector<16xf16> to vector<16x1xf16>
+  %6 = vector.broadcast %5 : vector<16x1xf16> to vector<16x16xf16>
+  xegpu.store_nd %6, %arg1  : vector<16x16xf16>, !xegpu.tensor_desc<16x16xf16>
+  return
+}
+}
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @vector_broadcast_scalar_to_vector(
+// CHECK:         %[[CST:.*]] = arith.constant 0.{{.*}} : f16
+// CHECK-NEXT:    %[[BROADCAST:.*]] = vector.broadcast %[[CST]]
+// CHECK-SAME:       {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : f16 to vector<16x16xf16>
+
+func.func @vector_broadcast_scalar_to_vector(%arg0: !xegpu.tensor_desc<16x16xf16>) {
+  %cst = arith.constant 0.0000 : f16
+  %6 = vector.broadcast %cst : f16 to vector<16x16xf16>
+  xegpu.store_nd %6, %arg0  : vector<16x16xf16>, !xegpu.tensor_desc<16x16xf16>
+  return
+}
+}

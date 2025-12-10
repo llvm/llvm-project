@@ -5805,7 +5805,7 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
       // negated immediate.
       if (!ICmpScaledV)
         ICmpScaledV =
-            ConstantInt::get(IntTy, -(uint64_t)Offset.getFixedValue());
+            ConstantInt::getSigned(IntTy, -(uint64_t)Offset.getFixedValue());
       else {
         Ops.push_back(SE.getUnknown(ICmpScaledV));
         ICmpScaledV = ConstantInt::get(IntTy, Offset.getFixedValue());
