@@ -34,7 +34,7 @@ retq
 # CHECK-NEXT:  1      4     1.00    *                   andl	-4(%rsp), %eax
 # CHECK-NEXT:  1      1     1.00           *            movl	%eax, -8(%rsp)
 # CHECK-NEXT:  1      3     1.00    *      *      U     ldmxcsr	-8(%rsp)
-# CHECK-NEXT:  1      4     1.00                  U     retq
+# CHECK-NEXT:  1      4     1.00                        retq
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0
