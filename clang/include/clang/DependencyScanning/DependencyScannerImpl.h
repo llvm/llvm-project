@@ -70,8 +70,8 @@ struct DiagnosticsEngineWithDiagOpts {
   IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine;
 
   DiagnosticsEngineWithDiagOpts(ArrayRef<std::string> CommandLine,
-                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                               DiagnosticConsumer &DC);
+                                IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                                DiagnosticConsumer &DC);
 };
 
 struct TextDiagnosticsPrinterWithOutput {
