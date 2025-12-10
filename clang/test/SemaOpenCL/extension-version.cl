@@ -250,6 +250,18 @@
 #pragma OPENCL EXTENSION cl_khr_subgroup_extended_types : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#ifndef cl_khr_subgroup_named_barrier
+#error "Missing cl_khr_subgroup_named_barrier define"
+#endif
+#else
+#ifdef cl_khr_subgroup_named_barrier
+#error "Incorrect cl_khr_subgroup_named_barrier define"
+#endif
+#endif
+// expected-warning@+1{{OpenCL extension 'cl_khr_subgroup_named_barrier' unknown or does not require pragma - ignoring}}
+#pragma OPENCL EXTENSION cl_khr_subgroup_named_barrier : enable
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 #ifndef cl_khr_subgroup_non_uniform_arithmetic
 #error "Missing cl_khr_subgroup_non_uniform_arithmetic define"
 #endif
@@ -332,16 +344,37 @@
 #pragma OPENCL EXTENSION cl_khr_depth_images : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 100)
-#ifndef cl_intel_bfloat16_conversion
-#error "Missing cl_intel_bfloat16_conversion define"
+#ifndef cl_intel_bfloat16_conversions
+#error "Missing cl_intel_bfloat16_conversions define"
+#endif
+#else
+#ifdef cl_intel_bfloat16_conversions
+#error "Incorrect cl_intel_bfloat16_conversions define"
 #endif
 #endif
+// expected-warning@+1{{OpenCL extension 'cl_intel_bfloat16_conversions' unknown or does not require pragma - ignoring}}
+#pragma OPENCL EXTENSION cl_intel_bfloat16_conversions : enable
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#ifndef cl_intel_required_subgroup_size
+#error "Missing cl_intel_required_subgroup_size define"
+#endif
+#else
+#ifdef cl_intel_required_subgroup_size
+#error "Incorrect cl_intel_required_subgroup_size define"
+#endif
+#endif
+// expected-warning@+1{{OpenCL extension 'cl_intel_required_subgroup_size' unknown or does not require pragma - ignoring}}
+#pragma OPENCL EXTENSION cl_intel_required_subgroup_size : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
 #ifndef cl_intel_subgroups
 #error "Missing cl_intel_subgroups define"
 #endif
 #else
+#ifdef cl_intel_subgroups
+#error "Incorrect cl_intel_subgroups define"
+#endif
 // expected-warning@+2{{unsupported OpenCL extension 'cl_intel_subgroups' - ignoring}}
 #endif
 #pragma OPENCL EXTENSION cl_intel_subgroups : enable
@@ -351,6 +384,9 @@
 #error "Missing cl_intel_subgroups_char define"
 #endif
 #else
+#ifdef cl_intel_subgroups_char
+#error "Incorrect cl_intel_subgroups_char define"
+#endif
 // expected-warning@+2{{unsupported OpenCL extension 'cl_intel_subgroups_char' - ignoring}}
 #endif
 #pragma OPENCL EXTENSION cl_intel_subgroups_char : enable
@@ -360,6 +396,9 @@
 #error "Missing cl_intel_subgroups_long define"
 #endif
 #else
+#ifdef cl_intel_subgroups_long
+#error "Incorrect cl_intel_subgroups_long define"
+#endif
 // expected-warning@+2{{unsupported OpenCL extension 'cl_intel_subgroups_long' - ignoring}}
 #endif
 #pragma OPENCL EXTENSION cl_intel_subgroups_long : enable
@@ -369,6 +408,9 @@
 #error "Missing cl_intel_subgroups_short define"
 #endif
 #else
+#ifdef cl_intel_subgroups_short
+#error "Incorrect cl_intel_subgroups_short define"
+#endif
 // expected-warning@+2{{unsupported OpenCL extension 'cl_intel_subgroups_short' - ignoring}}
 #endif
 #pragma OPENCL EXTENSION cl_intel_subgroups_short : enable
@@ -377,13 +419,25 @@
 #ifndef cl_intel_subgroup_buffer_prefetch
 #error "Missing cl_intel_subgroup_buffer_prefetch define"
 #endif
+#else
+#ifdef cl_intel_subgroup_buffer_prefetch
+#error "Incorrect cl_intel_subgroup_buffer_prefetch define"
 #endif
+#endif
+// expected-warning@+1{{OpenCL extension 'cl_intel_subgroup_buffer_prefetch' unknown or does not require pragma - ignoring}}
+#pragma OPENCL EXTENSION cl_intel_subgroup_buffer_prefetch : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
 #ifndef cl_intel_subgroup_local_block_io
 #error "Missing cl_intel_subgroup_local_block_io define"
 #endif
+#else
+#ifdef cl_intel_subgroup_local_block_io
+#error "Incorrect cl_intel_subgroup_local_block_io define"
 #endif
+#endif
+// expected-warning@+1{{OpenCL extension 'cl_intel_subgroup_local_block_io' unknown or does not require pragma - ignoring}}
+#pragma OPENCL EXTENSION cl_intel_subgroup_local_block_io : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
 #ifndef cl_intel_device_side_avc_motion_estimation
