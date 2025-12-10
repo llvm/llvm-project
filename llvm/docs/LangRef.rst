@@ -16290,6 +16290,13 @@ Semantics:
 This function returns the first value raised to the second power with an
 unspecified sequence of rounding operations.
 
+Note that the `powi` function is unusual in that NaN inputs can lead to non-NaN
+results, and this depends on the kind of NaN (quiet vs signaling). Due to how
+:ref:`LLVM treats NaN values <floatnan>` in non-constrained functions, the
+function may non-deterministically treat signaling NaNs as quiet NaNs. For
+example, `powi(QNaN, 0)` returns `1.0`, and `powi(SNaN, 0)` may
+non-deterministically return `1.0` or a NaN.
+
 .. _t_llvm_sin:
 
 '``llvm.sin.*``' Intrinsic
@@ -16851,6 +16858,13 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+Note that the `pow` function is unusual in that NaN inputs can lead to non-NaN
+results, and this depends on the kind of NaN (quiet vs signaling). Due to how
+:ref:`LLVM treats NaN values <floatnan>` in non-constrained functions, the
+function may non-deterministically treat signaling NaNs as quiet NaNs. For
+example, `pow(QNaN, 0.0)` returns `1.0`, and `pow(SNaN, 0.0)` may
+non-deterministically return `1.0` or a NaN.
 
 .. _int_exp:
 
