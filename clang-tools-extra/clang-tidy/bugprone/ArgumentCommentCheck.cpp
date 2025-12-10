@@ -258,6 +258,38 @@ static const FunctionDecl *resolveMocks(const FunctionDecl *Func) {
   return Func;
 }
 
+// Create a file character range between two locations, or return an invalid
+// range if they are from different files or otherwise not representable.
+static CharSourceRange makeFileCharRange(ASTContext *Ctx, SourceLocation Begin,
+                                         SourceLocation End) {
+  return Lexer::makeFileCharRange(CharSourceRange::getCharRange(Begin, End),
+                                  Ctx->getSourceManager(),
+                                  Ctx->getLangOpts());
+}
+
+// Collects consecutive comments immediately preceding an argument expression.
+static llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4>
+collectLeadingComments(ASTContext *Ctx, SourceLocation SearchBegin,
+                       const Expr *Arg) {
+  const CharSourceRange BeforeArgument =
+      makeFileCharRange(Ctx, SearchBegin, Arg->getBeginLoc());
+
+  if (BeforeArgument.isValid()) {
+    auto Vec = getCommentsInRange(Ctx, BeforeArgument);
+    llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4> Result;
+    Result.append(Vec.begin(), Vec.end());
+    return Result;
+  }
+
+  // Fall back to parsing back from the start of the argument.
+  const CharSourceRange ArgsRange =
+      makeFileCharRange(Ctx, Arg->getBeginLoc(), Arg->getEndLoc());
+  auto Vec = getCommentsBeforeLoc(Ctx, ArgsRange.getBegin());
+  llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4> Result;
+  Result.append(Vec.begin(), Vec.end());
+  return Result;
+}
+
 // Given the argument type and the options determine if we should
 // be adding an argument comment.
 bool ArgumentCommentCheck::shouldAddComment(const Expr *Arg) const {
@@ -289,12 +321,6 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
   if ((NumArgs == 0) || (IgnoreSingleArgument && NumArgs == 1))
     return;
 
-  auto MakeFileCharRange = [Ctx](SourceLocation Begin, SourceLocation End) {
-    return Lexer::makeFileCharRange(CharSourceRange::getCharRange(Begin, End),
-                                    Ctx->getSourceManager(),
-                                    Ctx->getLangOpts());
-  };
-
   for (unsigned I = 0; I < NumArgs; ++I) {
     const ParmVarDecl *PVD = Callee->getParamDecl(I);
     const IdentifierInfo *II = PVD->getIdentifier();
@@ -311,19 +337,9 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
       }
     }
 
-    const CharSourceRange BeforeArgument =
-        MakeFileCharRange(ArgBeginLoc, Args[I]->getBeginLoc());
+    llvm::SmallVector<std::pair<SourceLocation, StringRef>, 4> Comments =
+        collectLeadingComments(Ctx, ArgBeginLoc, Args[I]);
     ArgBeginLoc = Args[I]->getEndLoc();
-
-    std::vector<std::pair<SourceLocation, StringRef>> Comments;
-    if (BeforeArgument.isValid()) {
-      Comments = getCommentsInRange(Ctx, BeforeArgument);
-    } else {
-      // Fall back to parsing back from the start of the argument.
-      const CharSourceRange ArgsRange =
-          MakeFileCharRange(Args[I]->getBeginLoc(), Args[I]->getEndLoc());
-      Comments = getCommentsBeforeLoc(Ctx, ArgsRange.getBegin());
-    }
 
     for (auto Comment : Comments) {
       llvm::SmallVector<StringRef, 2> Matches;
