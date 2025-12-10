@@ -1669,9 +1669,11 @@ void addBlockScaleProperties(OpBuilder &builder, OperationState &result,
                              MMABlockScaleKind kind) {
   MLIRContext *ctx = builder.getContext();
   auto &properties = result.getOrAddProperties<typename OpType::Properties>();
-  properties.setShape(builder.getAttr<MMAShapeAttr>(shape[0], shape[1], shape[2]));
+  properties.setShape(
+      builder.getAttr<MMAShapeAttr>(shape[0], shape[1], shape[2]));
   properties.setScaleVecSize(ScaleVecSizeAttr::get(ctx, scaleVecSize));
-  properties.setBlockScaleFormat(BlockScaleFormatAttr::get(ctx, blockScaleFormat));
+  properties.setBlockScaleFormat(
+      BlockScaleFormatAttr::get(ctx, blockScaleFormat));
   properties.setKind(MMABlockScaleKindAttr::get(ctx, kind));
 }
 
@@ -1830,8 +1832,8 @@ void MmaBlockScaleOp::build(
     MMABlockScaleKind kind) {
   assert(shape.size() == 3 && "expected shape to have size 3 (m, n, k)");
 
-  addBlockScaleProperties<MmaBlockScaleOp>(builder, result, shape, scaleVecSize,
-                                           blockScaleFormat, kind);
+  addBlockScaleProperties<MmaBlockScaleOp>(
+      builder, result, shape, scaleVecSize, blockScaleFormat, kind);
 
   result.addOperands(operandA);
   result.addOperands(operandB);
