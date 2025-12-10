@@ -24,7 +24,7 @@ include "Common/RegClassByHwModeCommon.td"
 // INSTRINFO-NEXT: } // namespace llvm::MyTarget
 
 
-// INSTRINFO: { [[LOAD_STACK_GUARD_OPCODE]],	1,	1,	0,	0,	0,	0,	[[LOAD_STACK_GUARD_OP_INDEX:[0-9]+]],	MyTargetImpOpBase + 0,	0|(1ULL<<MCID::Pseudo)|(1ULL<<MCID::MayLoad)|(1ULL<<MCID::Rematerializable)|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // anonymous_
+// INSTRINFO: { [[LOAD_STACK_GUARD_OPCODE]],	1,	1,	0,	0,	0,	0,	MyTargetOpInfoBase + [[LOAD_STACK_GUARD_OP_INDEX:[0-9]+]],	0,	0|(1ULL<<MCID::Pseudo)|(1ULL<<MCID::MayLoad)|(1ULL<<MCID::Rematerializable)|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // anonymous_
 
 // INSTRINFO: /* [[LOAD_STACK_GUARD_OP_INDEX]] */ { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
 // INSTRINFO: { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { -1, 0, MCOI::OPERAND_IMMEDIATE, 0 }, { -1, 0, MCOI::OPERAND_IMMEDIATE, 0 },

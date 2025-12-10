@@ -447,6 +447,15 @@ def CIR_MemOrder : CIR_I32EnumAttr<
 ]>;
 
 //===----------------------------------------------------------------------===//
+// C/C++ sync scope definitions
+//===----------------------------------------------------------------------===//
+
+def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
+  I32EnumAttrCase<"SingleThread", 0, "single_thread">,
+  I32EnumAttrCase<"System", 1, "system">
+]>;
+
+//===----------------------------------------------------------------------===//
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
@@ -586,6 +595,7 @@ def CIR_LoadOp : CIR_Op<"load", [
                        UnitAttr:$isDeref,
                        UnitAttr:$is_volatile,
                        OptionalAttr<I64Attr>:$alignment,
+                       OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
   let results = (outs CIR_AnyType:$result);
 
@@ -593,6 +603,7 @@ def CIR_LoadOp : CIR_Op<"load", [
     (`deref` $isDeref^)?
     (`volatile` $is_volatile^)?
     (`align` `(` $alignment^ `)`)?
+    (`syncscope` `(` $sync_scope^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
@@ -2078,6 +2089,13 @@ def CIR_GlobalLinkageKind : CIR_I32EnumAttr<
 // properties of a global variable will be added over time as more of ClangIR
 // is upstreamed.
 
+def CIR_TLSModel : CIR_I32EnumAttr<"TLS_Model", "TLS model", [
+  I32EnumAttrCase<"GeneralDynamic", 0, "tls_dyn">,
+  I32EnumAttrCase<"LocalDynamic", 1, "tls_local_dyn">,
+  I32EnumAttrCase<"InitialExec", 2, "tls_init_exec">,
+  I32EnumAttrCase<"LocalExec", 3, "tls_local_exec">
+]>;
+
 def CIR_GlobalOp : CIR_Op<"global", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
@@ -2106,6 +2124,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
                        CIR_GlobalLinkageKind:$linkage,
+                       OptionalAttr<CIR_TLSModel>:$tls_model,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$comdat,
                        UnitAttr:$constant,
@@ -2121,6 +2140,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`constant` $constant^)?
     $linkage
     (`comdat` $comdat^)?
+    ($tls_model^)?
     (`dso_local` $dso_local^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
@@ -2184,16 +2204,22 @@ def CIR_GetGlobalOp : CIR_Op<"get_global", [
     undefined. The resulting type must always be a `!cir.ptr<...>` type with the
     same address space as the global variable.
 
+    Addresses of thread local globals can only be retrieved if this operation
+    is marked `thread_local`, which indicates the address isn't constant.
+
     Example:
     ```mlir
     %x = cir.get_global @gv : !cir.ptr<i32>
+    ...
+    %y = cir.get_global thread_local @tls_gv : !cir.ptr<i32>
     ```
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$name);
+  let arguments = (ins FlatSymbolRefAttr:$name, UnitAttr:$tls);
   let results = (outs Res<CIR_PointerType, "", []>:$addr);
 
   let assemblyFormat = [{
+    (`thread_local` $tls^)?
     $name `:` qualified(type($addr)) attr-dict
   }];
 }
@@ -5284,11 +5310,6 @@ def CIR_AtomicFetchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Nand", 5, "nand">,
     I32EnumAttrCase<"Max", 6, "max">,
     I32EnumAttrCase<"Min", 7, "min">
-]>;
-
-def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
-  I32EnumAttrCase<"SingleThread", 0, "single_thread">,
-  I32EnumAttrCase<"System", 1, "system">
 ]>;
 
 def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
