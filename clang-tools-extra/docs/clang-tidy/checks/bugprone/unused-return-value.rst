@@ -63,7 +63,11 @@ Options
 
 .. option:: AllowCastToVoid
 
-   Controls whether casting return values to ``void`` is permitted. Default: `false`.
+   Controls whether casting return values to ``void`` is permitted. Default:
+   ``true`` for pre-C++26 language modes and ``false`` when the language standard
+   is C++26 or newer.
+   With C++26, the ``_`` placeholder should be used to mark unused return
+   values.
 
 :doc:`cert-err33-c <../cert/err33-c>` is an alias of this check that checks a
 fixed and large set of standard library functions.

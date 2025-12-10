@@ -11,6 +11,7 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Basic/OperatorKinds.h"
 
 using namespace clang::ast_matchers;
@@ -145,7 +146,9 @@ UnusedReturnValueCheck::UnusedReturnValueCheck(llvm::StringRef Name,
                                             "^::std::errc$;"
                                             "^::std::expected$;"
                                             "^::boost::system::error_code$"))),
-      AllowCastToVoid(Options.get("AllowCastToVoid", false)) {}
+      AllowCastToVoid(
+          Options.get("AllowCastToVoid", Context->getLangOpts().LangStd <
+                                             LangStandard::lang_cxx26)) {}
 
 UnusedReturnValueCheck::UnusedReturnValueCheck(
     llvm::StringRef Name, ClangTidyContext *Context,

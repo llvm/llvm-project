@@ -153,6 +153,12 @@ Improvements to clang-tidy
   `-header-filter='.*'`. To disable warnings from non-system, set `-header-filter`
   to an empty string.
 
+- :doc:`bugprone-unused-return-value <clang-tidy/checks/bugprone/unused-return-value>`
+  now defaults ``AllowCastToVoid`` to ``false`` when running with C++26 or newer
+  language modes, while older standards keep the previous ``true`` default.
+  With C++26, the ``_`` placeholder should be used to mark unused return
+  values.
+
 - :program:`clang-tidy` no longer attempts to analyze code from system headers
   by default, greatly improving performance. This behavior is disabled if the
   `SystemHeaders` option is enabled.
