@@ -2,10 +2,10 @@
 ## an expected value, e.g., not as much call sites as the given count.
 
 # RUN: yaml2obj --docnum=1 %s -o %t
-# RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
-# RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
 
-# ERR: error: 'while reading call graph info's [indirect type ID] for function at [0x2]': unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
+# WARN: warning: 'while reading call graph info's [indirect type ID] for function at [0x2]': unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
 
 ## YAML content was generated from this assembly using obj2yaml.
 ##    .text

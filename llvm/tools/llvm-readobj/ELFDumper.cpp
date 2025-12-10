@@ -5318,15 +5318,17 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
 
   Expected<ArrayRef<uint8_t>> SectionBytesOrErr =
       Obj.getSectionContents(*CGSection);
-  if (!SectionBytesOrErr)
-    reportError(SectionBytesOrErr.takeError(),
-                "unable to read the .llvm.callgraph section");
+  if (!SectionBytesOrErr) {
+    reportWarning(SectionBytesOrErr.takeError(),
+                  "unable to read the .llvm.callgraph section");
+    return false;
+  }
 
-  auto PrintMalformedError = [&](Error &E, Twine FuncPC, StringRef Component) {
-    reportError(std::move(E),
-                Twine("while reading call graph info's [" + Component +
-                      "] for function at [0x" + FuncPC + "]")
-                    .str());
+  auto WarnMalformed = [&](Error &E, Twine FuncPC, StringRef Component) {
+    reportWarning(std::move(E),
+                  Twine("while reading call graph info's [" + Component +
+                        "] for function at [0x" + FuncPC + "]")
+                      .str());
   };
 
   DataExtractor Data(SectionBytesOrErr.get(), Obj.isLE(),
@@ -5379,10 +5381,11 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
         (CGFlags & callgraph::IsIndirectTarget) != callgraph::None;
     CGInfo.IsIndirectTarget = IsIndirectTarget;
     uint64_t TypeId = Data.getU64(&Offset, &CGSectionErr);
-    if (CGSectionErr)
-      PrintMalformedError(CGSectionErr,
-                          Twine::utohexstr(CGInfo.FunctionAddress),
-                          "indirect type id");
+    if (CGSectionErr) {
+      WarnMalformed(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
+                    "indirect type id");
+      return false;
+    }
     CGInfo.FunctionTypeId = TypeId;
     if (IsIndirectTarget && TypeId == 0)
       UnknownCount++;
@@ -5392,19 +5395,21 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     if (HasDirectCallees) {
       // Read number of direct call sites for this function.
       uint64_t NumDirectCallees = Data.getULEB128(&Offset, &CGSectionErr);
-      if (CGSectionErr)
-        PrintMalformedError(CGSectionErr,
-                            Twine::utohexstr(CGInfo.FunctionAddress),
-                            "number of direct callsites");
-      // Read uniqeu direct callees and populate FuncCGInfos.
+      if (CGSectionErr) {
+        WarnMalformed(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
+                      "number of direct callsites");
+        return false;
+      }
+      // Read unique direct callees and populate FuncCGInfos.
       for (uint64_t I = 0; I < NumDirectCallees; ++I) {
         uint64_t CalleeOffset = Offset;
         typename ELFT::uint Callee =
             Data.getUnsigned(&Offset, sizeof(Callee), &CGSectionErr);
-        if (CGSectionErr)
-          PrintMalformedError(CGSectionErr,
-                              Twine::utohexstr(CGInfo.FunctionAddress),
-                              "direct callee PC");
+        if (CGSectionErr) {
+          WarnMalformed(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
+                        "direct callee PC");
+          return false;
+        }
         CGInfo.DirectCallees.insert((IsETREL ? CalleeOffset : Callee));
       }
     }
@@ -5414,18 +5419,20 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     if (HasIndirectTypeIds) {
       uint64_t NumIndirectTargetTypeIDs =
           Data.getULEB128(&Offset, &CGSectionErr);
-      if (CGSectionErr)
-        PrintMalformedError(CGSectionErr,
-                            Twine::utohexstr(CGInfo.FunctionAddress),
-                            "number of indirect target type IDs");
+      if (CGSectionErr) {
+        WarnMalformed(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
+                      "number of indirect target type IDs");
+        return false;
+      }
 
       // Read unique indirect target type IDs and populate FuncCGInfos.
       for (uint64_t I = 0; I < NumIndirectTargetTypeIDs; ++I) {
         uint64_t TargetType = Data.getU64(&Offset, &CGSectionErr);
-        if (CGSectionErr)
-          PrintMalformedError(CGSectionErr,
-                              Twine::utohexstr(CGInfo.FunctionAddress),
-                              "indirect type ID");
+        if (CGSectionErr) {
+          WarnMalformed(CGSectionErr, Twine::utohexstr(CGInfo.FunctionAddress),
+                        "indirect type ID");
+          return false;
+        }
         CGInfo.IndirectTypeIDs.insert(TargetType);
       }
     }

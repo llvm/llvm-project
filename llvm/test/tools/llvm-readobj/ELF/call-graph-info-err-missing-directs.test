@@ -2,10 +2,10 @@
 ## that indicate there are direct calls but the direct call info is missing.
 
 # RUN: yaml2obj --docnum=1 %s -o %t
-# RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
-# RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
 
-# ERR: error: 'while reading call graph info's [number of direct callsites] for function at [0x2]': unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
+# WARN: warning: 'while reading call graph info's [number of direct callsites] for function at [0x2]': unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
 
 ## YAML content was generated from this assembly using obj2yaml.
 ##    .section	.llvm.callgraph,"o",@llvm_call_graph,.text
