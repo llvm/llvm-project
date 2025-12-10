@@ -110,6 +110,56 @@ struct IsOpToAPFloatConversion final : OpRewritePattern<OpTy> {
   const char *APFloatName;
 };
 
+struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
+  FmaOpToAPFloatConversion(MLIRContext *context, SymbolOpInterface symTable,
+                           PatternBenefit benefit = 1)
+      : OpRewritePattern<math::FmaOp>(context, benefit), symTable(symTable) {};
+
+  LogicalResult matchAndRewrite(math::FmaOp op,
+                                PatternRewriter &rewriter) const override {
+
+    auto i32Type = IntegerType::get(symTable->getContext(), 32);
+    auto i64Type = IntegerType::get(symTable->getContext(), 64);
+    FailureOr<FuncOp> fn = lookupOrCreateFnDecl(
+        rewriter, symTable, "_mlir_apfloat_fused_multiply_add",
+        {i32Type, i64Type, i64Type, i64Type});
+    if (failed(fn))
+      return fn;
+    Location loc = op.getLoc();
+    rewriter.setInsertionPoint(op);
+
+    // Cast operands to 64-bit integers.
+    auto floatTy = cast<FloatType>(op.getResult().getType());
+    auto intWType = rewriter.getIntegerType(floatTy.getWidth());
+    auto int64Type = rewriter.getI64Type();
+    Value operand = arith::ExtUIOp::create(
+        rewriter, loc, int64Type,
+        arith::BitcastOp::create(rewriter, loc, intWType, op.getA()));
+    Value multiplicand = arith::ExtUIOp::create(
+        rewriter, loc, int64Type,
+        arith::BitcastOp::create(rewriter, loc, intWType, op.getB()));
+    Value addend = arith::ExtUIOp::create(
+        rewriter, loc, int64Type,
+        arith::BitcastOp::create(rewriter, loc, intWType, op.getC()));
+
+    // Call APFloat function.
+    Value semValue = getAPFloatSemanticsValue(rewriter, loc, floatTy);
+    SmallVector<Value> params = {semValue, operand, multiplicand, addend};
+    auto resultOp =
+        func::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
+                             SymbolRefAttr::get(*fn), params);
+
+    // Truncate result to the original width.
+    Value truncatedBits = arith::TruncIOp::create(rewriter, loc, intWType,
+                                                  resultOp->getResult(0));
+    rewriter.replaceOpWithNewOp<arith::BitcastOp>(op, floatTy, truncatedBits);
+    return success();
+  }
+
+  SymbolOpInterface symTable;
+  const char *APFloatName;
+};
+
 namespace {
 struct MathToAPFloatConversionPass final
     : impl::MathToAPFloatConversionPassBase<MathToAPFloatConversionPass> {
@@ -131,6 +181,7 @@ void MathToAPFloatConversionPass::runOnOperation() {
                                                        getOperation());
   patterns.add<IsOpToAPFloatConversion<math::IsNormalOp>>(context, "normal",
                                                           getOperation());
+  patterns.add<FmaOpToAPFloatConversion>(context, getOperation());
 
   LogicalResult result = success();
   ScopedDiagnosticHandler scopedHandler(context, [&result](Diagnostic &diag) {

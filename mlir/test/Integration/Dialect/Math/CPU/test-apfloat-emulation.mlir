@@ -28,5 +28,14 @@ func.func @entry() {
   %c3 = math.absf %neg14fp32 : f32
   vector.print %c3 : f32
 
+  // see llvm/unittests/ADT/APFloatTest::TEST(APFloatTest, Float8E8M0FNUFMA)
+  %twof8E8M0FNU = arith.constant 2.0 : f8E8M0FNU
+  %fourf8E8M0FNU = arith.constant 4.0 : f8E8M0FNU
+  %eightf8E8M0FNU = arith.constant 8.0 : f8E8M0FNU
+
+  // CHECK: 16
+  %c4 = math.fma %fourf8E8M0FNU, %twof8E8M0FNU, %eightf8E8M0FNU : f8E8M0FNU
+  // vector.print %c4 : f8E8M0FNU
+
   return
 }
