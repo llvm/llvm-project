@@ -64,3 +64,18 @@ __m512h test_mm512_undefined_ph(void) {
   // OGCG: ret <32 x half> zeroinitializer
   return _mm512_undefined_ph();
 }
+
+_Float16 test_mm512_reduce_add_ph(__m512h __W) {
+  // CIR-LABEL: _mm512_reduce_add_ph
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd.v32f16" %[[R:.*]], %[[V:.*]] : (!cir.f16, !cir.vector<32 x !cir.f16>) -> !cir.f16
+
+  // CIR-LABEL: test_mm512_reduce_add_ph
+  // CIR: cir.call @_mm512_reduce_add_ph(%[[VEC:.*]]) : (!cir.vector<32 x !cir.f16>) -> !cir.f16
+
+  // LLVM-LABEL: test_mm512_reduce_add_ph
+  // LLVM: call half @llvm.vector.reduce.fadd.v32f16(half 0xH8000, <32 x half> %{{.*}})
+
+  // OGCG-LABEL: test_mm512_reduce_add_ph
+  // OGCG: call reassoc {{.*}}half @llvm.vector.reduce.fadd.v32f16(half 0xH8000, <32 x half> %{{.*}})
+  return _mm512_reduce_add_ph(__W);
+}
