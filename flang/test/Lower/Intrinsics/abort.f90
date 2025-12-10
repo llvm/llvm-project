@@ -2,8 +2,8 @@
 
 ! CHECK-LABEL: func.func @_QPabort_test() {
 ! CHECK:         fir.call @_FortranAAbort() {{.*}}: () -> ()
-! CHECK:         return
-! CHECK:       }
+! CHECK-NEXT:    fir.unreachable
+
 
 subroutine abort_test()
   call abort
