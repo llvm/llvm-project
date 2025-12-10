@@ -299,6 +299,9 @@ Error initPlugins(OffloadContext &Context) {
                            .emplace_back(std::make_unique<ol_device_impl_t>(
                                -1, nullptr, *HostPlatform, InfoTreeNode{}))
                            .get();
+  if (!Context.HostDevice)
+    return createOffloadError(ErrorCode::INVALID_NULL_HANDLE,
+                              "Host Device is invalid");
 
   Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
   Context.ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
