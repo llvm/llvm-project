@@ -2223,12 +2223,8 @@ static bool interp__builtin_assume_dereferenceable(InterpState &S, CodePtr OpPC,
     return false;
   }
   if (!Ptr.isBlockPointer()) {
-    if (Ptr.isIntegralPointer()) {
-      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
-          << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
-          << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+    if (Ptr.isIntegralPointer())
       return false;
-    }
     return false;
   }
   if (!Ptr.isLive())
