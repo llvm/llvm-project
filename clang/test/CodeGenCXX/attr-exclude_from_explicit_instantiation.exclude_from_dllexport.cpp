@@ -96,26 +96,34 @@ template <class T> void E<T>::to_be_exported_explicitly() noexcept {}
 // GNU:@_ZTV1EIjE = weak_odr dso_local unnamed_addr constant {{.*}}, comdat
 
 // MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$C@H@@QEAAAEAU0@AEBU0@@Z"
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$C@H@@QEAAAEAU0@$$QEAU0@@Z"
 // MSC: define weak_odr dso_local dllexport{{.*}} void @"?to_be_exported@?$C@H@@QEAAXXZ"
 // GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN1CIiEaSERKS0_
+// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN1CIiEaSEOS0_
 // GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN1CIiE14to_be_exportedEv
 template struct __declspec(dllexport) C<int>;
 
 // MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$D@H@@QEAAAEAU0@AEBU0@@Z"
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$D@H@@QEAAAEAU0@$$QEAU0@@Z"
 // GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN1DIiEaSERKS0_
+// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN1DIiEaSEOS0_
 template struct D<int>; // No dllexport here.
 // Don't provide explicit instantiation for D<unsigned>.
 
-
 // MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$E@H@@QEAAAEAU0@AEBU0@@Z"
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$E@H@@QEAAAEAU0@$$QEAU0@@Z"
 // MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??0?$E@H@@QEAA@XZ"
 // MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??0?$E@H@@QEAA@AEBU0@@Z"
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??0?$E@H@@QEAA@$$QEAU0@@Z"
 // MSC: define weak_odr dso_local dllexport{{.*}} void @"?to_be_exported@?$E@H@@UEAAXXZ"
 // GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN1EIiEaSERKS0_
+// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN1EIiEaSEOS0_
 // GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN1EIiEC2Ev
 // GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN1EIiEC1Ev
 // GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN1EIiEC2ERKS0_
 // GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN1EIiEC1ERKS0_
+// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN1EIiEC2EOS0_
+// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN1EIiEC1EOS0_
 // GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN1EIiE14to_be_exportedEv
 template struct __declspec(dllexport) E<int>;
 
@@ -124,6 +132,7 @@ template struct __declspec(dllexport) E<int>;
 template struct E<unsigned int>;
 
 // MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$D@I@@QEAAAEAU0@AEBU0@@Z"
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$D@I@@QEAAAEAU0@$$QEAU0@@Z"
 
 void use() {
   C<int> c;
