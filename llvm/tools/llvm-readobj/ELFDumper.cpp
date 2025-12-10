@@ -5311,17 +5311,16 @@ enum Flags : uint8_t {
 template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
   const Elf_Shdr *CGSection = findSectionByName(".llvm.callgraph");
   if (!CGSection) {
-    reportWarning(createError("No .llvm.callgraph section found."),
+    reportWarning(createError("no .llvm.callgraph section found."),
                   "missing section");
     return false;
   }
 
   Expected<ArrayRef<uint8_t>> SectionBytesOrErr =
       Obj.getSectionContents(*CGSection);
-  if (!SectionBytesOrErr) {
+  if (!SectionBytesOrErr)
     reportError(SectionBytesOrErr.takeError(),
                 "unable to read the .llvm.callgraph section");
-  }
 
   auto PrintMalformedError = [&](Error &E, Twine FuncPC, StringRef Component) {
     reportError(std::move(E),
@@ -5343,12 +5342,11 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
                     "while reading call graph info FormatVersionNumber");
       return false;
     }
-    if (FormatVersionNumber != 0) {
-      reportError(createError("Unknown format version value [" +
-                              std::to_string(FormatVersionNumber) +
-                              "] in .llvm.callgraph section."),
-                  "unknown value");
-    }
+    if (FormatVersionNumber != 0)
+      reportWarning(createError("unknown format version value [" +
+                                std::to_string(FormatVersionNumber) +
+                                "] in .llvm.callgraph section."),
+                    "unknown value");
 
     uint8_t FlagsVal = Data.getU8(&Offset, &CGSectionErr);
     if (CGSectionErr) {
@@ -5358,7 +5356,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     }
     callgraph::Flags CGFlags = static_cast<callgraph::Flags>(FlagsVal);
     if (FlagsVal > 7) {
-      reportWarning(createError("Unexpected value. Expected [0-7] but found [" +
+      reportWarning(createError("unexpected value. Expected [0-7] but found [" +
                                 std::to_string(FlagsVal) + "]"),
                     "while reading call graph info's Flags");
       return false;
@@ -8304,9 +8302,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
-  if (!this->processCallGraphSection() || this->FuncCGInfos.empty()) {
+  if (!this->processCallGraphSection() || this->FuncCGInfos.empty())
     return;
-  }
 
   auto PrintNonRelocatableFuncSymbol = [&](uint64_t FuncEntryPC) {
     SmallVector<std::string> FuncSymNames = this->getFunctionNames(FuncEntryPC);
@@ -8335,9 +8332,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       this->reportUniqueWarning(RelSymOrErr.takeError());
       return;
     }
-    if (!RelSymOrErr->Name.empty()) {
+    if (!RelSymOrErr->Name.empty())
       W.printString("Name", RelSymOrErr->Name);
-    }
   };
 
   auto PrintFunc = [&](uint64_t FuncPC) {

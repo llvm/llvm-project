@@ -2,10 +2,10 @@
 ## version number.
 
 # RUN: yaml2obj --docnum=1 %s -o %t
-# RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
-# RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=WARN
 
-# ERR: error: 'unknown value': Unknown format version value [1] in .llvm.callgraph section.
+# WARN: warning: 'unknown value': unknown format version value [1] in .llvm.callgraph section.
 
 ## YAML content was generated from this assembly using obj2yaml.
 ##    .text
