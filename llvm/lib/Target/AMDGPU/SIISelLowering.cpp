@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -1059,6 +1060,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::ATOMIC_LOAD_FMAX,
                        ISD::ATOMIC_LOAD_UINC_WRAP,
                        ISD::ATOMIC_LOAD_UDEC_WRAP,
+                       ISD::ATOMIC_LOAD_USUB_COND,
+                       ISD::ATOMIC_LOAD_USUB_SAT,
                        ISD::INTRINSIC_VOID,
                        ISD::INTRINSIC_W_CHAIN});
 
@@ -1519,15 +1522,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
-  case Intrinsic::amdgcn_global_atomic_csub: {
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::getVT(CI.getType());
-    Info.ptrVal = CI.getOperand(0);
-    Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
-                  MachineMemOperand::MOVolatile;
-    return true;
-  }
   case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
   case Intrinsic::amdgcn_image_bvh8_intersect_ray: {
@@ -1548,8 +1542,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
-  case Intrinsic::amdgcn_flat_atomic_fmax_num:
-  case Intrinsic::amdgcn_atomic_cond_sub_u32: {
+  case Intrinsic::amdgcn_flat_atomic_fmax_num: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
@@ -1724,7 +1717,6 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
                                             Type *&AccessTy) const {
   Value *Ptr = nullptr;
   switch (II->getIntrinsicID()) {
-  case Intrinsic::amdgcn_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_cluster_load_b128:
   case Intrinsic::amdgcn_cluster_load_b64:
   case Intrinsic::amdgcn_cluster_load_b32:
@@ -1747,7 +1739,6 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_flat_load_monitor_b128:
   case Intrinsic::amdgcn_flat_load_monitor_b32:
   case Intrinsic::amdgcn_flat_load_monitor_b64:
-  case Intrinsic::amdgcn_global_atomic_csub:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
@@ -3585,11 +3576,17 @@ SDValue SITargetLowering::LowerFormalArguments(
   if (IsEntryFunc)
     allocateSystemSGPRs(CCInfo, MF, *Info, CallConv, IsGraphics);
 
-  // DAG.getPass() returns nullptr when using new pass manager.
-  // TODO: Use DAG.getMFAM() to access analysis result.
   if (DAG.getPass()) {
-    auto &ArgUsageInfo = DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfo>();
-    ArgUsageInfo.setFuncArgInfo(Fn, Info->getArgInfo());
+    auto &ArgUsageInfo =
+        DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfoWrapperLegacy>();
+    ArgUsageInfo.getArgUsageInfo().setFuncArgInfo(Fn, Info->getArgInfo());
+  } else if (auto *MFAM = DAG.getMFAM()) {
+    Module &M = *MF.getFunction().getParent();
+    auto *ArgUsageInfo =
+        MFAM->getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+            .getCachedResult<AMDGPUArgumentUsageAnalysis>(M);
+    if (ArgUsageInfo)
+      ArgUsageInfo->setFuncArgInfo(Fn, Info->getArgInfo());
   }
 
   unsigned StackArgSize = CCInfo.getStackSize();
@@ -3804,12 +3801,19 @@ void SITargetLowering::passSpecialInputs(
   const AMDGPUFunctionArgInfo *CalleeArgInfo =
       &AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
   if (const Function *CalleeFunc = CLI.CB->getCalledFunction()) {
-    // DAG.getPass() returns nullptr when using new pass manager.
-    // TODO: Use DAG.getMFAM() to access analysis result.
     if (DAG.getPass()) {
       auto &ArgUsageInfo =
-          DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfo>();
-      CalleeArgInfo = &ArgUsageInfo.lookupFuncArgInfo(*CalleeFunc);
+          DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfoWrapperLegacy>();
+      CalleeArgInfo =
+          &ArgUsageInfo.getArgUsageInfo().lookupFuncArgInfo(*CalleeFunc);
+    } else if (auto *MFAM = DAG.getMFAM()) {
+      Module &M = *DAG.getMachineFunction().getFunction().getParent();
+      auto *ArgUsageInfo =
+          MFAM->getResult<ModuleAnalysisManagerMachineFunctionProxy>(
+                  DAG.getMachineFunction())
+              .getCachedResult<AMDGPUArgumentUsageAnalysis>(M);
+      if (ArgUsageInfo)
+        CalleeArgInfo = &ArgUsageInfo->lookupFuncArgInfo(*CalleeFunc);
     }
   }
 
@@ -10579,9 +10583,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_raw_buffer_atomic_dec:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_dec:
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_DEC);
-  case Intrinsic::amdgcn_raw_buffer_atomic_cond_sub_u32:
-    return lowerRawBufferAtomicIntrin(Op, DAG,
-                                      AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
   case Intrinsic::amdgcn_struct_buffer_atomic_swap:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_swap:
     return lowerStructBufferAtomicIntrin(Op, DAG,
@@ -10623,10 +10624,21 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_struct_buffer_atomic_dec:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_dec:
     return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_DEC);
+  case Intrinsic::amdgcn_raw_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32:
+    return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_CSUB);
+  case Intrinsic::amdgcn_struct_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub_clamp_u32:
+    return lowerStructBufferAtomicIntrin(Op, DAG,
+                                         AMDGPUISD::BUFFER_ATOMIC_CSUB);
+  case Intrinsic::amdgcn_raw_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32:
+    return lowerRawBufferAtomicIntrin(Op, DAG,
+                                      AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
   case Intrinsic::amdgcn_struct_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cond_sub_u32:
     return lowerStructBufferAtomicIntrin(Op, DAG,
                                          AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
-
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap: {
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(4), DAG);
@@ -14031,6 +14043,12 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     OtherOp = getDWordFromOffset(DAG, DL, OtherOp, SecondSrc->second);
     assert(OtherOp.getValueSizeInBits() == 32);
   }
+
+  // Check that we haven't just recreated the same FSHR node.
+  if (N->getOpcode() == ISD::FSHR &&
+      (N->getOperand(0) == Op || N->getOperand(0) == OtherOp) &&
+      (N->getOperand(1) == Op || N->getOperand(1) == OtherOp))
+    return SDValue();
 
   if (hasNon16BitAccesses(PermMask, Op, OtherOp)) {
 
@@ -17654,6 +17672,8 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       break;
     case 'v':
       switch (BitWidth) {
+      case 1:
+        return std::pair(0U, nullptr);
       case 16:
         RC = Subtarget->useRealTrue16Insts() ? &AMDGPU::VGPR_16RegClass
                                              : &AMDGPU::VGPR_32_Lo256RegClass;
@@ -17671,6 +17691,8 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       if (!Subtarget->hasMAIInsts())
         break;
       switch (BitWidth) {
+      case 1:
+        return std::pair(0U, nullptr);
       case 16:
         RC = &AMDGPU::AGPR_32RegClass;
         break;
@@ -18356,7 +18378,6 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
   case AMDGPUISD::BUFFER_ATOMIC_INC:
   case AMDGPUISD::BUFFER_ATOMIC_DEC:
   case AMDGPUISD::BUFFER_ATOMIC_CMPSWAP:
-  case AMDGPUISD::BUFFER_ATOMIC_CSUB:
   case AMDGPUISD::BUFFER_ATOMIC_FADD:
   case AMDGPUISD::BUFFER_ATOMIC_FMIN:
   case AMDGPUISD::BUFFER_ATOMIC_FMAX:
@@ -18591,7 +18612,19 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::UMax:
   case AtomicRMWInst::UMin:
   case AtomicRMWInst::UIncWrap:
-  case AtomicRMWInst::UDecWrap: {
+  case AtomicRMWInst::UDecWrap:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat: {
+    if (Op == AtomicRMWInst::USubCond && !Subtarget->hasCondSubInsts())
+      return AtomicExpansionKind::CmpXChg;
+    if (Op == AtomicRMWInst::USubSat && !Subtarget->hasSubClampInsts())
+      return AtomicExpansionKind::CmpXChg;
+    if (Op == AtomicRMWInst::USubCond || Op == AtomicRMWInst::USubSat) {
+      auto *IT = dyn_cast<IntegerType>(RMW->getType());
+      if (!IT || IT->getBitWidth() != 32)
+        return AtomicExpansionKind::CmpXChg;
+    }
+
     if (AMDGPU::isFlatGlobalAddrSpace(AS) ||
         AS == AMDGPUAS::BUFFER_FAT_POINTER) {
       if (Subtarget->hasEmulatedSystemScopeAtomics())

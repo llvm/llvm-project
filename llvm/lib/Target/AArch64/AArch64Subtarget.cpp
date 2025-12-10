@@ -222,17 +222,8 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
     MaxPrefetchIterationsAhead = 3;
-    switch (ARMProcFamily) {
-    case AppleA14:
-    case AppleA15:
-    case AppleA16:
-    case AppleA17:
-    case AppleM4:
+    if (isAppleMLike())
       MaxInterleaveFactor = 4;
-      break;
-    default:
-      break;
-    }
     break;
   case ExynosM3:
     MaxInterleaveFactor = 4;

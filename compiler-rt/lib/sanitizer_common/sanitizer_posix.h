@@ -67,7 +67,8 @@ uptr internal_ptrace(int request, int pid, void *addr, void *data);
 uptr internal_waitpid(int pid, int *status, int options);
 
 int internal_fork();
-fd_t internal_spawn(const char *argv[], const char *envp[], pid_t *pid);
+bool internal_spawn(const char* argv[], const char* envp[], pid_t* pid,
+                    fd_t stdin, fd_t stdout);
 
 int internal_sysctl(const int *name, unsigned int namelen, void *oldp,
                     uptr *oldlenp, const void *newp, uptr newlen);
