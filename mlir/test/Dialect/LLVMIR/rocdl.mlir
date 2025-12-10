@@ -49,6 +49,59 @@ func.func @rocdl.fmed3.vector(%a: vector<4xf16>, %b: vector<4xf16>, %c: vector<4
   llvm.return %0 : vector<4xf16>
 }
 
+func.func @rocdl.math.ops(%a: f32, %b: f16, %c: bf16) {
+  // CHECK-LABEL: rocdl.math.ops
+  // CHECK: %{{.*}} = rocdl.tanh %{{.*}} f32 -> f32
+  // CHECK: %{{.*}} = rocdl.tanh %{{.*}} f16 -> f16
+  // CHECK: %{{.*}} = rocdl.tanh %{{.*}} bf16 -> bf16
+  %tanh0 = rocdl.tanh %a f32 -> f32
+  %tanh1 = rocdl.tanh %b f16 -> f16
+  %tanh2 = rocdl.tanh %c bf16 -> bf16
+
+  // CHECK: %{{.*}} = rocdl.sin %{{.*}} f32 -> f32
+  // CHECK: %{{.*}} = rocdl.sin %{{.*}} f16 -> f16
+  // CHECK: %{{.*}} = rocdl.sin %{{.*}} bf16 -> bf16
+  %sin0 = rocdl.sin %a f32 -> f32
+  %sin1 = rocdl.sin %b f16 -> f16
+  %sin2 = rocdl.sin %c bf16 -> bf16
+
+  // CHECK: %{{.*}} = rocdl.cos %{{.*}} f32 -> f32
+  // CHECK: %{{.*}} = rocdl.cos %{{.*}} f16 -> f16
+  // CHECK: %{{.*}} = rocdl.cos %{{.*}} bf16 -> bf16
+  %cos0 = rocdl.cos %a f32 -> f32
+  %cos1 = rocdl.cos %b f16 -> f16
+  %cos2 = rocdl.cos %c bf16 -> bf16
+
+  // CHECK: %{{.*}} = rocdl.rcp %{{.*}} f32 -> f32
+  // CHECK: %{{.*}} = rocdl.rcp %{{.*}} f16 -> f16
+  // CHECK: %{{.*}} = rocdl.rcp %{{.*}} bf16 -> bf16
+  %rcp0 = rocdl.rcp %a f32 -> f32
+  %rcp1 = rocdl.rcp %b f16 -> f16
+  %rcp2 = rocdl.rcp %c bf16 -> bf16
+
+  // CHECK: %{{.*}} = rocdl.exp2 %{{.*}} f32 -> f32
+  // CHECK: %{{.*}} = rocdl.exp2 %{{.*}} f16 -> f16
+  // CHECK: %{{.*}} = rocdl.exp2 %{{.*}} bf16 -> bf16
+  %exp2_0 = rocdl.exp2 %a f32 -> f32
+  %exp2_1 = rocdl.exp2 %b f16 -> f16
+  %exp2_2 = rocdl.exp2 %c bf16 -> bf16
+
+  // CHECK: %{{.*}} = rocdl.log %{{.*}} f32 -> f32
+  // CHECK: %{{.*}} = rocdl.log %{{.*}} f16 -> f16
+  // CHECK: %{{.*}} = rocdl.log %{{.*}} bf16 -> bf16
+  %log0 = rocdl.log %a f32 -> f32
+  %log1 = rocdl.log %b f16 -> f16
+  %log2 = rocdl.log %c bf16 -> bf16
+
+  // CHECK: %{{.*}} = rocdl.sqrt %{{.*}} f32 -> f32
+  // CHECK: %{{.*}} = rocdl.sqrt %{{.*}} f16 -> f16
+  // CHECK: %{{.*}} = rocdl.sqrt %{{.*}} bf16 -> bf16
+  %sqrt0 = rocdl.sqrt %a f32 -> f32
+  %sqrt1 = rocdl.sqrt %b f16 -> f16
+  %sqrt2 = rocdl.sqrt %c bf16 -> bf16
+  llvm.return
+}
+
 func.func @rocdl.barrier() {
   // CHECK: rocdl.barrier
   rocdl.barrier
@@ -822,6 +875,20 @@ llvm.func @rocdl.raw.ptr.buffer.i32(%rsrc : !llvm.ptr<8>,
   rocdl.raw.ptr.buffer.atomic.smax %vdata1, %rsrc, %offset, %soffset, %aux : i32
   rocdl.raw.ptr.buffer.atomic.umin %vdata1, %rsrc, %offset, %soffset, %aux : i32
   %val = rocdl.raw.ptr.buffer.atomic.cmpswap %vdata1, %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  llvm.return
+}
+
+llvm.func @rocdl.global.prefetch(%ptr : !llvm.ptr<1>) {
+  // CHECK-LABEL: rocdl.global.prefetch
+  // CHECK: rocdl.global.prefetch %{{.*}}, scope 0 : !llvm.ptr<1>
+  rocdl.global.prefetch %ptr, scope 0 : !llvm.ptr<1>
+  llvm.return
+}
+
+llvm.func @rocdl.flat.prefetch(%ptr : !llvm.ptr) {
+  // CHECK-LABEL: rocdl.flat.prefetch
+  // CHECK: rocdl.flat.prefetch %{{.*}}, scope 0 : !llvm.ptr 
+  rocdl.flat.prefetch %ptr, scope 0 : !llvm.ptr
   llvm.return
 }
 

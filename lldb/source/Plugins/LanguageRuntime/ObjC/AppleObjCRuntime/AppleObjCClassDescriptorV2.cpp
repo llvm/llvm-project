@@ -111,7 +111,6 @@ bool ClassDescriptorV2::class_rw_t::Read(Process *process, lldb::addr_t addr) {
                           process->GetAddressByteSize());
 
   lldb::offset_t cursor = 0;
-
   m_flags = extractor.GetU32_unchecked(&cursor);
   m_version = extractor.GetU32_unchecked(&cursor);
   m_ro_ptr = extractor.GetAddress_unchecked(&cursor);
@@ -119,18 +118,16 @@ bool ClassDescriptorV2::class_rw_t::Read(Process *process, lldb::addr_t addr) {
     m_ro_ptr = abi_sp->FixCodeAddress(m_ro_ptr);
   m_method_list_ptr = extractor.GetAddress_unchecked(&cursor);
   m_properties_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_firstSubclass = extractor.GetAddress_unchecked(&cursor);
-  m_nextSiblingClass = extractor.GetAddress_unchecked(&cursor);
 
   if (m_ro_ptr & 1) {
     DataBufferHeap buffer(ptr_size, '\0');
     process->ReadMemory(m_ro_ptr ^ 1, buffer.GetBytes(), ptr_size, error);
     if (error.Fail())
       return false;
-    cursor = 0;
     DataExtractor extractor(buffer.GetBytes(), ptr_size,
                             process->GetByteOrder(),
                             process->GetAddressByteSize());
+    lldb::offset_t cursor = 0;
     m_ro_ptr = extractor.GetAddress_unchecked(&cursor);
     if (ABISP abi_sp = process->GetABI())
       m_ro_ptr = abi_sp->FixCodeAddress(m_ro_ptr);

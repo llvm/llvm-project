@@ -385,7 +385,7 @@ TEST_F(VPIRVerifierTest, testVerifyIRPhiInExitVPIRBB) {
   auto *HeaderBlock =
       cast<VPBasicBlock>(Plan->getVectorLoopRegion()->getEntry());
   VPInstruction *DefI =
-      new VPInstruction(VPInstruction::ExtractLastElement,
+      new VPInstruction(VPInstruction::ExtractLastLane,
                         {HeaderBlock->front().getVPSingleValue()});
   DefI->insertBefore(Plan->getMiddleBlock()->getTerminator());
   Plan->getExitBlocks()[0]->front().addOperand(DefI);
