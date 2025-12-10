@@ -840,13 +840,13 @@ fdefault-integer-8
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www.pgroup.com/doc/pgi15fortref.pdf#page=86">default</a>
+   <td>default
    </td>
    <td>N/A
    </td>
   </tr>
   <tr>
-   <td>Enable <a href="https://support.hpe.com/hpesc/public/docDisplay?docId=a00113911en_us&docLocale=en_US&page=Types.html">Cray pointers</a>
+   <td>Enable Cray pointers
    </td>
    <td>default
    </td>
@@ -854,7 +854,7 @@ fdefault-integer-8
    </td>
    <td>Default (near equivalent)
    </td>
-   <td><a href="https://www.intel.com/content/www/us/en/develop/documentation/fortran-compiler-oneapi-dev-guide-and-reference/top/language-reference/a-to-z-reference/o-to-p/pointer-integer.html">Default (near equivalent)</a>
+   <td>Default (near equivalent)
    </td>
    <td>Mcray
    </td>
@@ -888,7 +888,7 @@ fdefault-integer-8
    </td>
    <td>Default, see AUTOMATIC and STATIC
    </td>
-   <td><a href="https://www.pgroup.com/doc/pgi15fortref.pdf#page=86">Default</a>
+   <td>Default
    </td>
    <td>N/A
    </td>
@@ -1033,7 +1033,7 @@ recursive
   <tr>
    <td>Enable OpenACC
    </td>
-   <td> <a href="https://pubs.cray.com/content/S-3901/8.7/cray-fortran-reference-manual/program-model-specific-options">h acc</a>
+   <td>h acc
    </td>
    <td>fopenacc
    </td>
@@ -1041,7 +1041,7 @@ recursive
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www.pgroup.com/resources/docs/19.1/x86/pgi-ref-guide/index.htm#acc">acc</a>
+   <td>acc
    </td>
    <td>N/A
    </td>
@@ -1049,7 +1049,7 @@ recursive
   <tr>
    <td>Enable OpenMP
    </td>
-   <td> <a href="https://pubs.cray.com/content/S-3901/8.7/cray-fortran-reference-manual/program-model-specific-options">h omp</a>
+   <td>h omp
    </td>
    <td>fopenmp
    </td>
@@ -1069,7 +1069,7 @@ qopenmp-stubs,
 <p>
 qopenmp-threadprivate
    </td>
-   <td><a href="https://www.pgroup.com/resources/docs/19.1/x86/pgi-ref-guide/index.htm#mp">mp</a>,
+   <td>mp,
 <p>
 Mcuda
    </td>
@@ -1322,7 +1322,7 @@ Here's the list of compilers surveyed, hot linked to the source of data on it.  
 
 
 *   [Cray Fortran Reference Manual version 8.7](https://pubs.cray.com/content/S-3901/8.7/cray-fortran-reference-manual/compiler-command-line-options)
-*   IBM  (XLF) version 14.1 -- [Compiler Referenc](https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=93)e, [Language Reference](https://www-01.ibm.com/support/docview.wss?uid=swg27024776&aid=1)
+*   IBM  (XLF) version 14.1 -- [Compiler Reference](https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=93), [Compiler Reference direct PDF](https://www.ibm.com/support/pages/system/files/support/swg/swgdocs.nsf/0/94c58d010e922f6d852579de00261d61/$FILE/compiler.pdf) [Language Reference](https://www-01.ibm.com/support/docview.wss?uid=swg27024776&aid=1), [Language Reference PDF](https://www.ibm.com/support/pages/system/files/support/swg/swgdocs.nsf/0/7e46ea600b6646d0852579dc00331978/$FILE/langref.pdf)
 *   [Intel Fortran version 19.0](https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-alphabetical-list-of-compiler-options)
 *   [GNU Fortran Compiler version 8.3.0](https://gcc.gnu.org/onlinedocs/gcc-8.3.0/gfortran/Option-Summary.html)
 *   [NAG Fortran Release 6.2](https://www.nag.co.uk/nagware/np/r62_doc/manual/compiler_2_4.html)
@@ -1330,7 +1330,7 @@ Here's the list of compilers surveyed, hot linked to the source of data on it.  
 *   PGI -- [Compiler Reference version 19.1](https://www.pgroup.com/resources/docs/19.1/x86/pgi-ref-guide/index.htm#cmdln-options-ref), [Fortran Reference Guide version 17](https://www.pgroup.com/doc/pgi17fortref.pdf)
 *   [Flang](https://github.com/flang-compiler/flang/wiki/Using-Flang) -- information from GitHub
 
-This document has been kept relatively small by providing links to much of the information about options rather than duplicating that information.  For some PGI options, there are direct links.  But direct links were not possible for Cray, GNU and some PGI options.
+This document has been kept relatively small by providing links to much of the information about options rather than duplicating that information.  However, many inline links to specific compiler options have been removed as they have become stale.  The Data sources section below provides links to the main documentation pages for each compiler.
 
 Many compilers have options that can either be enabled or disabled.  Some compilers indicate this by the presence or absence of the letters "no" in the option name (IBM, Intel, and PGI) while Cray precedes many options with either "e" for enabled or "d" for disabled.  This document only includes the enabled version of the option specification.
 
