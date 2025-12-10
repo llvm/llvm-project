@@ -897,7 +897,7 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
       .addImm(0);
 }
 
-unsigned getLoadPredicatedOpcode(unsigned Opcode) {
+static unsigned getLoadPredicatedOpcode(unsigned Opcode) {
   switch (Opcode) {
   case RISCV::LB:
     return RISCV::PseudoCCLB;
@@ -941,11 +941,8 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
 
   // Create a new predicated version of DefMI.
   MachineInstrBuilder NewMI = BuildMI(*MI.getParent(), InsertPt,
-                                      MI.getDebugLoc(), get(PredOpc), DestReg);
-
-  // Copy the condition portion.
-  NewMI.add(MI.getOperand(1));
-  NewMI.add(MI.getOperand(2));
+                                      MI.getDebugLoc(), get(PredOpc), DestReg)
+                                  .add({MI.getOperand(1), MI.getOperand(2)});
 
   // Add condition code, inverting if necessary.
   auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
