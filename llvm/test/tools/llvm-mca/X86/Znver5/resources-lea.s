@@ -148,310 +148,305 @@ lea 1024(%rax, %rbx, 2), %rcx
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      2     0.67                        leaw	0, %cx
-# CHECK-NEXT:  1      1     0.17                        leal	0, %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	0, %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	(%eax), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	(%eax), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	(%eax), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	(%rax), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	(%rax), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	(%rax), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	(,%ebx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	(,%ebx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	(,%ebx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	(,%rbx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	(,%rbx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	(,%rbx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	(,%ebx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	(,%ebx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	(,%ebx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	(,%rbx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	(,%rbx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	(,%rbx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	(,%ebx,2), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	0, %cx
+# CHECK-NEXT:  1      1     0.33                        leal	0, %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	0, %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	(%eax), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	(%eax), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	(%eax), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	(%rax), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	(%rax), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	(%rax), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	(,%ebx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	(,%ebx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	(,%ebx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	(,%rbx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	(,%rbx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	(,%rbx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	(,%ebx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	(,%ebx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	(,%ebx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	(,%rbx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	(,%rbx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	(,%rbx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	(,%ebx,2), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	(,%ebx,2), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	(,%ebx,2), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	(,%rbx,2), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	(,%rbx,2), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	(,%rbx,2), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	(,%rbx,2), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	(%eax,%ebx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	(%eax,%ebx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	(%eax,%ebx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	(%rax,%rbx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	(%rax,%rbx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	(%rax,%rbx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	(%eax,%ebx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	(%eax,%ebx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	(%eax,%ebx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	(%rax,%rbx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	(%rax,%rbx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	(%rax,%rbx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	(%eax,%ebx,2), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	(%eax,%ebx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	(%eax,%ebx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	(%eax,%ebx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	(%rax,%rbx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	(%rax,%rbx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	(%rax,%rbx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	(%eax,%ebx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	(%eax,%ebx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	(%eax,%ebx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	(%rax,%rbx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	(%rax,%rbx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	(%rax,%rbx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	(%eax,%ebx,2), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	(%eax,%ebx,2), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	(%eax,%ebx,2), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	(%rax,%rbx,2), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	(%rax,%rbx,2), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	(%rax,%rbx,2), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	(%rax,%rbx,2), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16, %cx
-# CHECK-NEXT:  1      1     0.17                        leal	-16, %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	-16, %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16(%eax), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	-16(%eax), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	-16(%eax), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16(%rax), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	-16(%rax), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	-16(%rax), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16(,%ebx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	-16(,%ebx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	-16(,%ebx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16(,%rbx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	-16(,%rbx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	-16(,%rbx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16(,%ebx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	-16(,%ebx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	-16(,%ebx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16(,%rbx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	-16(,%rbx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	-16(,%rbx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16(,%ebx,2), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16, %cx
+# CHECK-NEXT:  1      1     0.33                        leal	-16, %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	-16, %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16(%eax), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	-16(%eax), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	-16(%eax), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16(%rax), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	-16(%rax), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	-16(%rax), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16(,%ebx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	-16(,%ebx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	-16(,%ebx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16(,%rbx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	-16(,%rbx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	-16(,%rbx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16(,%ebx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	-16(,%ebx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	-16(,%ebx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16(,%rbx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	-16(,%rbx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	-16(,%rbx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16(,%ebx,2), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	-16(,%ebx,2), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	-16(,%ebx,2), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16(,%rbx,2), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16(,%rbx,2), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	-16(,%rbx,2), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	-16(,%rbx,2), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16(%eax,%ebx), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16(%eax,%ebx), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	-16(%eax,%ebx), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	-16(%eax,%ebx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16(%rax,%rbx), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16(%rax,%rbx), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	-16(%rax,%rbx), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	-16(%rax,%rbx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16(%eax,%ebx), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16(%eax,%ebx), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	-16(%eax,%ebx), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	-16(%eax,%ebx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16(%rax,%rbx), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16(%rax,%rbx), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	-16(%rax,%rbx), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	-16(%rax,%rbx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16(%eax,%ebx,2), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16(%eax,%ebx,2), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	-16(%eax,%ebx,2), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	-16(%eax,%ebx,2), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	-16(%rax,%rbx,2), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	-16(%rax,%rbx,2), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	-16(%rax,%rbx,2), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	-16(%rax,%rbx,2), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024, %cx
-# CHECK-NEXT:  1      1     0.17                        leal	1024, %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	1024, %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024(%eax), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	1024(%eax), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	1024(%eax), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024(%rax), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	1024(%rax), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	1024(%rax), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024(,%ebx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	1024(,%ebx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	1024(,%ebx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024(,%rbx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	1024(,%rbx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	1024(,%rbx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024(,%ebx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	1024(,%ebx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	1024(,%ebx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024(,%rbx), %cx
-# CHECK-NEXT:  1      1     0.17                        leal	1024(,%rbx), %ecx
-# CHECK-NEXT:  1      1     0.17                        leaq	1024(,%rbx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024(,%ebx,2), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024, %cx
+# CHECK-NEXT:  1      1     0.33                        leal	1024, %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	1024, %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024(%eax), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	1024(%eax), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	1024(%eax), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024(%rax), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	1024(%rax), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	1024(%rax), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024(,%ebx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	1024(,%ebx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	1024(,%ebx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024(,%rbx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	1024(,%rbx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	1024(,%rbx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024(,%ebx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	1024(,%ebx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	1024(,%ebx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024(,%rbx), %cx
+# CHECK-NEXT:  1      1     0.33                        leal	1024(,%rbx), %ecx
+# CHECK-NEXT:  1      1     0.33                        leaq	1024(,%rbx), %rcx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024(,%ebx,2), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	1024(,%ebx,2), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	1024(,%ebx,2), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024(,%rbx,2), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024(,%rbx,2), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	1024(,%rbx,2), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	1024(,%rbx,2), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024(%eax,%ebx), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024(%eax,%ebx), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	1024(%eax,%ebx), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	1024(%eax,%ebx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024(%rax,%rbx), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024(%rax,%rbx), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	1024(%rax,%rbx), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	1024(%rax,%rbx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024(%eax,%ebx), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024(%eax,%ebx), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	1024(%eax,%ebx), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	1024(%eax,%ebx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024(%rax,%rbx), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024(%rax,%rbx), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	1024(%rax,%rbx), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	1024(%rax,%rbx), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024(%eax,%ebx,2), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024(%eax,%ebx,2), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	1024(%eax,%ebx,2), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	1024(%eax,%ebx,2), %rcx
-# CHECK-NEXT:  2      2     0.67                        leaw	1024(%rax,%rbx,2), %cx
+# CHECK-NEXT:  2      2     1.00                        leaw	1024(%rax,%rbx,2), %cx
 # CHECK-NEXT:  2      2     0.25                        leal	1024(%rax,%rbx,2), %ecx
 # CHECK-NEXT:  2      2     0.25                        leaq	1024(%rax,%rbx,2), %rcx
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0]   - Zn5AGU0
-# CHECK-NEXT: [1]   - Zn5AGU1
-# CHECK-NEXT: [2]   - Zn5AGU2
-# CHECK-NEXT: [3]   - Zn5AGU3
-# CHECK-NEXT: [4]   - Zn5ALU0
-# CHECK-NEXT: [5]   - Zn5ALU1
-# CHECK-NEXT: [6]   - Zn5ALU2
-# CHECK-NEXT: [7]   - Zn5ALU3
-# CHECK-NEXT: [8]   - Zn5ALU4
-# CHECK-NEXT: [9]   - Zn5ALU5
-# CHECK-NEXT: [10]  - Zn5BRU1
-# CHECK-NEXT: [11]  - Zn5FP0
-# CHECK-NEXT: [12]  - Zn5FP1
-# CHECK-NEXT: [13]  - Zn5FP2
-# CHECK-NEXT: [14]  - Zn5FP3
-# CHECK-NEXT: [15.0] - Zn5FP45
-# CHECK-NEXT: [15.1] - Zn5FP45
-# CHECK-NEXT: [16]  - Zn5FPSt
-# CHECK-NEXT: [17.0] - Zn5LSU
-# CHECK-NEXT: [17.1] - Zn5LSU
-# CHECK-NEXT: [17.2] - Zn5LSU
-# CHECK-NEXT: [17.3] - Zn5LSU
-# CHECK-NEXT: [18.0] - Zn5Load
-# CHECK-NEXT: [18.1] - Zn5Load
-# CHECK-NEXT: [18.2] - Zn5Load
-# CHECK-NEXT: [18.3] - Zn5Load
-# CHECK-NEXT: [19.0] - Zn5Store
-# CHECK-NEXT: [19.1] - Zn5Store
+# CHECK-NEXT: [0]   - Zn4AGU0
+# CHECK-NEXT: [1]   - Zn4AGU1
+# CHECK-NEXT: [2]   - Zn4AGU2
+# CHECK-NEXT: [3]   - Zn4ALU0
+# CHECK-NEXT: [4]   - Zn4ALU1
+# CHECK-NEXT: [5]   - Zn4ALU2
+# CHECK-NEXT: [6]   - Zn4ALU3
+# CHECK-NEXT: [7]   - Zn4BRU1
+# CHECK-NEXT: [8]   - Zn4FP0
+# CHECK-NEXT: [9]   - Zn4FP1
+# CHECK-NEXT: [10]  - Zn4FP2
+# CHECK-NEXT: [11]  - Zn4FP3
+# CHECK-NEXT: [12.0] - Zn4FP45
+# CHECK-NEXT: [12.1] - Zn4FP45
+# CHECK-NEXT: [13]  - Zn4FPSt
+# CHECK-NEXT: [14.0] - Zn4LSU
+# CHECK-NEXT: [14.1] - Zn4LSU
+# CHECK-NEXT: [14.2] - Zn4LSU
+# CHECK-NEXT: [15.0] - Zn4Load
+# CHECK-NEXT: [15.1] - Zn4Load
+# CHECK-NEXT: [15.2] - Zn4Load
+# CHECK-NEXT: [16.0] - Zn4Store
+# CHECK-NEXT: [16.1] - Zn4Store
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15.0] [15.1] [16]   [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1]
-# CHECK-NEXT: 10.00  10.00  10.00  10.00  45.00  45.00  45.00  45.00  45.00  45.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
+# CHECK-NEXT: 16.67  16.67  16.67  55.00  55.00  55.00  55.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15.0] [15.1] [16]   [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1] Instructions:
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	0, %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	0, %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	0, %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%eax), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%eax), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%eax), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%rax), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%rax), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%rax), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(,%ebx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(,%ebx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(,%ebx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(,%rbx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(,%rbx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(,%rbx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(,%ebx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(,%ebx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(,%ebx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(,%rbx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(,%rbx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(,%rbx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(,%ebx,2), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(,%ebx,2), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(,%ebx,2), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(,%rbx,2), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(,%rbx,2), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(,%rbx,2), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%eax,%ebx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%eax,%ebx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%eax,%ebx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%rax,%rbx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%rax,%rbx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%rax,%rbx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%eax,%ebx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%eax,%ebx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%eax,%ebx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%rax,%rbx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%rax,%rbx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%rax,%rbx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%eax,%ebx,2), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%eax,%ebx,2), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%eax,%ebx,2), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%rax,%rbx,2), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%rax,%rbx,2), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%rax,%rbx,2), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16, %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16, %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16, %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%eax), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%eax), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%eax), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%rax), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%rax), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%rax), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(,%ebx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(,%ebx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(,%ebx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(,%rbx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(,%rbx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(,%rbx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(,%ebx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(,%ebx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(,%ebx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(,%rbx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(,%rbx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(,%rbx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(,%ebx,2), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(,%ebx,2), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(,%ebx,2), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(,%rbx,2), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(,%rbx,2), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(,%rbx,2), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%eax,%ebx), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%eax,%ebx), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%eax,%ebx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%rax,%rbx), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%rax,%rbx), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%rax,%rbx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%eax,%ebx), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%eax,%ebx), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%eax,%ebx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%rax,%rbx), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%rax,%rbx), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%rax,%rbx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%eax,%ebx,2), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%eax,%ebx,2), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%eax,%ebx,2), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%rax,%rbx,2), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%rax,%rbx,2), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%rax,%rbx,2), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024, %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024, %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024, %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%eax), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%eax), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%eax), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%rax), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%rax), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%rax), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(,%ebx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(,%ebx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(,%ebx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(,%rbx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(,%rbx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(,%rbx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(,%ebx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(,%ebx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(,%ebx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(,%rbx), %cx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(,%rbx), %ecx
-# CHECK-NEXT:  -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(,%rbx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(,%ebx,2), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(,%ebx,2), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(,%ebx,2), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(,%rbx,2), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(,%rbx,2), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(,%rbx,2), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%eax,%ebx), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%eax,%ebx), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%eax,%ebx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%rax,%rbx), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%rax,%rbx), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%rax,%rbx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%eax,%ebx), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%eax,%ebx), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%eax,%ebx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%rax,%rbx), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%rax,%rbx), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%rax,%rbx), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%eax,%ebx,2), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%eax,%ebx,2), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%eax,%ebx,2), %rcx
-# CHECK-NEXT:  -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%rax,%rbx,2), %cx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%rax,%rbx,2), %ecx
-# CHECK-NEXT: 0.25   0.25   0.25   0.25   0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%rax,%rbx,2), %rcx
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	0, %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	0, %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	0, %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%eax), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%eax), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%eax), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%rax), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%rax), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%rax), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(,%ebx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(,%ebx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(,%ebx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(,%rbx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(,%rbx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(,%rbx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(,%ebx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(,%ebx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(,%ebx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(,%rbx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(,%rbx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(,%rbx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(,%ebx,2), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(,%ebx,2), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(,%ebx,2), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(,%rbx,2), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(,%rbx,2), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(,%rbx,2), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%eax,%ebx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%eax,%ebx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%eax,%ebx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%rax,%rbx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%rax,%rbx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%rax,%rbx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%eax,%ebx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%eax,%ebx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%eax,%ebx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%rax,%rbx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%rax,%rbx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%rax,%rbx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%eax,%ebx,2), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%eax,%ebx,2), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%eax,%ebx,2), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	(%rax,%rbx,2), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	(%rax,%rbx,2), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	(%rax,%rbx,2), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16, %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16, %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16, %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%eax), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%eax), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%eax), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%rax), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%rax), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%rax), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(,%ebx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(,%ebx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(,%ebx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(,%rbx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(,%rbx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(,%rbx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(,%ebx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(,%ebx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(,%ebx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(,%rbx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(,%rbx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(,%rbx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(,%ebx,2), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(,%ebx,2), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(,%ebx,2), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(,%rbx,2), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(,%rbx,2), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(,%rbx,2), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%eax,%ebx), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%eax,%ebx), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%eax,%ebx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%rax,%rbx), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%rax,%rbx), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%rax,%rbx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%eax,%ebx), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%eax,%ebx), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%eax,%ebx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%rax,%rbx), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%rax,%rbx), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%rax,%rbx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%eax,%ebx,2), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%eax,%ebx,2), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%eax,%ebx,2), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	-16(%rax,%rbx,2), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	-16(%rax,%rbx,2), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	-16(%rax,%rbx,2), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024, %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024, %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024, %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%eax), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%eax), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%eax), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%rax), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%rax), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%rax), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(,%ebx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(,%ebx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(,%ebx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(,%rbx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(,%rbx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(,%rbx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(,%ebx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(,%ebx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(,%ebx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(,%rbx), %cx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(,%rbx), %ecx
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(,%rbx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(,%ebx,2), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(,%ebx,2), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(,%ebx,2), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(,%rbx,2), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(,%rbx,2), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(,%rbx,2), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%eax,%ebx), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%eax,%ebx), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%eax,%ebx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%rax,%rbx), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%rax,%rbx), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%rax,%rbx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%eax,%ebx), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%eax,%ebx), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%eax,%ebx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%rax,%rbx), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%rax,%rbx), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%rax,%rbx), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%eax,%ebx,2), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%eax,%ebx,2), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%eax,%ebx,2), %rcx
+# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaw	1024(%rax,%rbx,2), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leal	1024(%rax,%rbx,2), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	1024(%rax,%rbx,2), %rcx

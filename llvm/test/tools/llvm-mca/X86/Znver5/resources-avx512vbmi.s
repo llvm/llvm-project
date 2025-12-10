@@ -59,76 +59,71 @@ vpmultishiftqb    (%rax){1to8}, %zmm17, %zmm19 {k1}{z}
 # CHECK-NEXT:  2      8     0.50    *                   vpermt2b	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  1      5     1.00                        vpermt2b	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vpermt2b	(%rax), %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      3     0.50                        vpmultishiftqb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  1      9     0.50    *                   vpmultishiftqb	(%rax), %zmm17, %zmm19
-# CHECK-NEXT:  1      9     0.50    *                   vpmultishiftqb	(%rax){1to8}, %zmm17, %zmm19
-# CHECK-NEXT:  1      3     0.50                        vpmultishiftqb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  1      9     0.50    *                   vpmultishiftqb	(%rax), %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  1      9     0.50    *                   vpmultishiftqb	(%rax){1to8}, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  1      3     0.50                        vpmultishiftqb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      9     0.50    *                   vpmultishiftqb	(%rax), %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      9     0.50    *                   vpmultishiftqb	(%rax){1to8}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.50                        vpmultishiftqb	%zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  1      8     0.50    *                   vpmultishiftqb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  1      8     0.50    *                   vpmultishiftqb	(%rax){1to8}, %zmm17, %zmm19
+# CHECK-NEXT:  1      1     0.50                        vpmultishiftqb	%zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  1      8     0.50    *                   vpmultishiftqb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  1      8     0.50    *                   vpmultishiftqb	(%rax){1to8}, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  1      1     0.50                        vpmultishiftqb	%zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      8     0.50    *                   vpmultishiftqb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      8     0.50    *                   vpmultishiftqb	(%rax){1to8}, %zmm17, %zmm19 {%k1} {z}
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0]   - Zn5AGU0
-# CHECK-NEXT: [1]   - Zn5AGU1
-# CHECK-NEXT: [2]   - Zn5AGU2
-# CHECK-NEXT: [3]   - Zn5AGU3
-# CHECK-NEXT: [4]   - Zn5ALU0
-# CHECK-NEXT: [5]   - Zn5ALU1
-# CHECK-NEXT: [6]   - Zn5ALU2
-# CHECK-NEXT: [7]   - Zn5ALU3
-# CHECK-NEXT: [8]   - Zn5ALU4
-# CHECK-NEXT: [9]   - Zn5ALU5
-# CHECK-NEXT: [10]  - Zn5BRU1
-# CHECK-NEXT: [11]  - Zn5FP0
-# CHECK-NEXT: [12]  - Zn5FP1
-# CHECK-NEXT: [13]  - Zn5FP2
-# CHECK-NEXT: [14]  - Zn5FP3
-# CHECK-NEXT: [15.0] - Zn5FP45
-# CHECK-NEXT: [15.1] - Zn5FP45
-# CHECK-NEXT: [16]  - Zn5FPSt
-# CHECK-NEXT: [17.0] - Zn5LSU
-# CHECK-NEXT: [17.1] - Zn5LSU
-# CHECK-NEXT: [17.2] - Zn5LSU
-# CHECK-NEXT: [17.3] - Zn5LSU
-# CHECK-NEXT: [18.0] - Zn5Load
-# CHECK-NEXT: [18.1] - Zn5Load
-# CHECK-NEXT: [18.2] - Zn5Load
-# CHECK-NEXT: [18.3] - Zn5Load
-# CHECK-NEXT: [19.0] - Zn5Store
-# CHECK-NEXT: [19.1] - Zn5Store
+# CHECK-NEXT: [0]   - Zn4AGU0
+# CHECK-NEXT: [1]   - Zn4AGU1
+# CHECK-NEXT: [2]   - Zn4AGU2
+# CHECK-NEXT: [3]   - Zn4ALU0
+# CHECK-NEXT: [4]   - Zn4ALU1
+# CHECK-NEXT: [5]   - Zn4ALU2
+# CHECK-NEXT: [6]   - Zn4ALU3
+# CHECK-NEXT: [7]   - Zn4BRU1
+# CHECK-NEXT: [8]   - Zn4FP0
+# CHECK-NEXT: [9]   - Zn4FP1
+# CHECK-NEXT: [10]  - Zn4FP2
+# CHECK-NEXT: [11]  - Zn4FP3
+# CHECK-NEXT: [12.0] - Zn4FP45
+# CHECK-NEXT: [12.1] - Zn4FP45
+# CHECK-NEXT: [13]  - Zn4FPSt
+# CHECK-NEXT: [14.0] - Zn4LSU
+# CHECK-NEXT: [14.1] - Zn4LSU
+# CHECK-NEXT: [14.2] - Zn4LSU
+# CHECK-NEXT: [15.0] - Zn4Load
+# CHECK-NEXT: [15.1] - Zn4Load
+# CHECK-NEXT: [15.2] - Zn4Load
+# CHECK-NEXT: [16.0] - Zn4Store
+# CHECK-NEXT: [16.1] - Zn4Store
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15.0] [15.1] [16]   [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.50   18.00  16.50  3.00   7.50   7.50    -     3.75   3.75   3.75   3.75   3.75   3.75   3.75   3.75    -      -
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.50   18.00  18.00  4.50   7.50   7.50    -     5.00   5.00   5.00   5.00   5.00   5.00    -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15.0] [15.1] [16]   [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpermb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpermb	(%rax), %zmm17, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpermb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpermb	(%rax), %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpermb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpermb	(%rax), %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpermi2b	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpermi2b	(%rax), %zmm17, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpermi2b	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpermi2b	(%rax), %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpermi2b	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpermi2b	(%rax), %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpermt2b	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpermt2b	(%rax), %zmm17, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpermt2b	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpermt2b	(%rax), %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpermt2b	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpermt2b	(%rax), %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpmultishiftqb	%zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpmultishiftqb	(%rax), %zmm17, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpmultishiftqb	(%rax){1to8}, %zmm17, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpmultishiftqb	%zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpmultishiftqb	(%rax), %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpmultishiftqb	(%rax){1to8}, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpmultishiftqb	%zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpmultishiftqb	(%rax), %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -     vpmultishiftqb	(%rax){1to8}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpermb	%zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpermb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpermb	%zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpermb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpermb	%zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpermb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpermi2b	%zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpermi2b	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpermi2b	%zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpermi2b	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpermi2b	%zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpermi2b	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpermt2b	%zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpermt2b	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpermt2b	%zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpermt2b	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     vpermt2b	%zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpermt2b	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmultishiftqb	%zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpmultishiftqb	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpmultishiftqb	(%rax){1to8}, %zmm17, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmultishiftqb	%zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpmultishiftqb	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpmultishiftqb	(%rax){1to8}, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpmultishiftqb	%zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpmultishiftqb	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpmultishiftqb	(%rax){1to8}, %zmm17, %zmm19 {%k1} {z}
