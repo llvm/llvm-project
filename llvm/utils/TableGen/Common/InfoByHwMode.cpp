@@ -18,6 +18,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <string>
 
@@ -35,7 +36,7 @@ ValueTypeByHwMode::ValueTypeByHwMode(const Record *R, const CodeGenHwModes &CGH)
   for (auto [ModeID, VT] : MS.Items) {
     assert(VT && VT->isSubClassOf("ValueType"));
     if (!Map.try_emplace(ModeID, MVT(llvm::getValueType(VT))).second)
-      PrintFatalError(R->getLoc(), "duplicate RegInfo entry for HwMode " +
+      PrintFatalError(R->getLoc(), "duplicate ValueType entry for HwMode " +
                                        CGH.getModeName(ModeID, true) + ": " +
                                        VT->getName());
   }
