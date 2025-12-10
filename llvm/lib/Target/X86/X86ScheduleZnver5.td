@@ -742,7 +742,7 @@ defm : Zn5WriteResIntPair<WritePOPCNT, [Zn5ALU0_5], 1, [1], 1>; // Bit populatio
 
 def Zn5WritePOPCNT16rr : SchedWriteRes<[Zn5ALU0_5]> {
   let Latency = 1;
-  let ReleaseAtCycles = [4];
+  let ReleaseAtCycles = [1];
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn5WritePOPCNT16rr], (instrs POPCNT16rr)>;
