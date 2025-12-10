@@ -200,6 +200,11 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>
   // CHECK-DAG: %[[MEMREF_DESC_MEM:.+]] = builtin.unrealized_conversion_cast %[[MEM]] : memref<8xi32, 1>
   // CHECK-DAG: %[[MEMREF_DESC_SMEM:.+]] = builtin.unrealized_conversion_cast %[[SMEM]] : memref<8xi32, 3>
 
+  // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(3 : i32) : i32
+
   // CHECK-DAG: %[[MEM_BASE_PTR:.+]] = llvm.extractvalue %[[MEMREF_DESC_MEM]][1] : !llvm.struct<(ptr<1>
   // CHECK-DAG: %[[SMEM_BASE_PTR:.+]] = llvm.extractvalue %[[MEMREF_DESC_SMEM]][1] : !llvm.struct<(ptr<3>
 
@@ -216,13 +221,9 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>
   // CHECK-DAG: %[[MASK:.+]] = llvm.mlir.constant(33554431 : i32)
   // CHECK: %[[VALID_MEM_INT_HIGH:.+]] = llvm.and %[[MEM_INT_HIGH]], %[[MASK]]
 
-  // CHECK-DAG: %[[TYPE_FIELD:.+]] = llvm.mlir.constant(-2147483648 : i32)
+  // CHECK: %[[SHIFT:.+]] = llvm.mlir.constant(30 : i32)
+  // CHECK: %[[TYPE_FIELD:.+]] = llvm.shl %[[C2]], %[[SHIFT]]
   // CHECK: %[[MEM_INT_HIGH_TYPE:.+]] = llvm.or %[[VALID_MEM_INT_HIGH]], %[[TYPE_FIELD]]
-
-  // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32) : i32
-  // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(2 : i32) : i32
-  // CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(3 : i32) : i32
 
   // CHECK: %[[V4I32_0_0:.+]] = llvm.mlir.poison : vector<4xi32>
   // CHECK: %[[V4I32_0_1:.+]] = llvm.insertelement %[[C1]], %[[V4I32_0_0]][%[[C0]] : i32]

@@ -94,6 +94,9 @@ def AMDGPU_TDMBaseType : AMDGPU_Type<"TDMBase", "tdm_base"> {
   let description = [{
     This type is opaque and it is used to represent a struct of two addresses.
     One address is in LDS while the other is in global memory.
+
+    The value defined by this operation is only intended to be used by
+    amdgpu.tdm_make_descriptor.
   }];
   let parameters = (ins "Type":$elementType);
   let builders = [
@@ -102,6 +105,27 @@ def AMDGPU_TDMBaseType : AMDGPU_Type<"TDMBase", "tdm_base"> {
     }]>
   ];
   let assemblyFormat = "`<` $elementType `>`";
+}
+
+def AMDGPU_TDMGatherBaseType : AMDGPU_Type<"TDMGatherBase", "tdm_gather_base"> {
+  let summary = "Pair of base addresses that move data between LDS and global storage.";
+  let description = [{
+    This type is opaque and it is used to represent a struct of two addresses.
+    One address is in LDS while the other is in global memory.
+
+    This operation is similar to amdgpu.tdm_make_base but intended to be
+    used in gather mode.
+
+    The value defined by this operation is only intended to be used by
+    amdgpu.tdm_make_gather_descriptor.
+  }];
+  let parameters = (ins "Type":$elementType, "unsigned":$indexSize);
+  let builders = [
+    TypeBuilderWithInferredContext<(ins "Type":$elementType, "unsigned": $indexSize), [{
+      return $_get(elementType.getContext(), elementType, indexSize);
+    }]>
+  ];
+  let assemblyFormat = "`<` $elementType `,` $indexSize `>`";
 }
 
 def AMDGPU_TDMDescriptorType : AMDGPU_Type<"TDMDescriptor", "tdm_descriptor"> {
@@ -1229,16 +1253,36 @@ def AMDGPU_ScaledMFMAOp :
   let hasCanonicalizer = 1;
 }
 
-def AMDGPU_MakeDmaBaseOp :
-    AMDGPU_Op<"make_dma_base", [Pure, AttrSizedOperandSegments, AllElementTypesMatch<["global", "lds"]>]>,
+
+class AMDGPU_DmaBaseOp<string mnemonic, Type outType> :
+    AMDGPU_Op<mnemonic, [Pure, AttrSizedOperandSegments, AllElementTypesMatch<["global", "lds"]>]>,
     Arguments<(ins Arg<AnyMemRef>:$global,
                    Variadic<Index>:$global_indices,
                    Arg<AnyMemRef>:$lds,
                    Variadic<Index>:$lds_indices)>,
-    Results<(outs AMDGPU_TDMBaseType: $base)> {
+    Results<(outs outType: $base)> {
 
   // TODO:
   // * Add verifiers to make sure that the number of indices do not exceed the number of dimensions.
+
+  let assemblyFormat = [{
+    $global `[` $global_indices `]` `,` $lds `[` $lds_indices `]` attr-dict `:` type($global) `,` type($lds) `->` type(results)
+  }];
+}
+
+def AMDGPU_MakeGatherDmaBaseOp : AMDGPU_DmaBaseOp<"make_gather_dma_base", AMDGPU_TDMGatherBaseType> {
+  let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
+  let description = "TODO";
+
+  let extraClassDeclaration = [{
+    constexpr int64_t isGather() {
+      return true;
+    }
+  }];
+}
+
+
+def AMDGPU_MakeDmaBaseOp : AMDGPU_DmaBaseOp<"make_dma_base", AMDGPU_TDMBaseType> {
 
   let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
   let description = [{
@@ -1279,11 +1323,13 @@ def AMDGPU_MakeDmaBaseOp :
     These tensor DMA operations were introduced in gfx1250.
   }];
 
-  let assemblyFormat = [{
-    $global `[` $global_indices `]` `,` $lds `[` $lds_indices `]` attr-dict `:` type($global) `,` type($lds) `->` type(results)
-  }];
-
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    constexpr int64_t isGather() {
+      return false;
+    }
+  }];
 }
 
 def AMDGPU_MakeDmaDescriptorOp :
