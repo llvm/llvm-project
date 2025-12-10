@@ -36,15 +36,15 @@ end subroutine do_order
 
 !CHECK-LABEL:   func.func @_QPdo_simd_order() {
 subroutine do_simd_order
-   !CHECK: omp.wsloop order(reproducible:concurrent)
+   !CHECK: omp.wsloop order(reproducible:concurrent) {
    !$omp do simd order(concurrent)
    do i = 1, 10
    end do
-   !CHECK: omp.wsloop order(reproducible:concurrent)
+   !CHECK: omp.wsloop order(reproducible:concurrent) {
    !$omp do simd order(reproducible:concurrent)
    do i = 1, 10
    end do
-   !CHECK: omp.wsloop order(unconstrained:concurrent)
+   !CHECK: omp.wsloop order(unconstrained:concurrent) {
    !$omp do simd order(unconstrained:concurrent)
    do i = 1, 10
    end do
@@ -53,7 +53,7 @@ end subroutine do_simd_order
 !CHECK-LABEL:   func.func @_QPdo_simd_order_parallel() {
 subroutine do_simd_order_parallel
    !CHECK: omp.parallel {
-   !CHECK: omp.wsloop order(reproducible:concurrent)
+   !CHECK: omp.wsloop order(reproducible:concurrent) {
    !$omp parallel do simd order(reproducible:concurrent)
    do i = 1, 10
    end do
