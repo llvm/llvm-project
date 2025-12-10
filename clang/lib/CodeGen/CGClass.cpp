@@ -1526,6 +1526,13 @@ static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
       CGF.EmitDeleteCall(Dtor->getGlobalArrayOperatorDelete(), allocatedPtr,
                          CGF.getContext().getCanonicalTagType(ClassDecl));
     }
+  } else {
+    // No operators delete[] were found, so emit a trap.
+    llvm::CallInst *TrapCall = CGF.EmitTrapCall(llvm::Intrinsic::trap);
+    TrapCall->setDoesNotReturn();
+    TrapCall->setDoesNotThrow();
+    CGF.Builder.CreateUnreachable();
+    CGF.Builder.ClearInsertionPoint();
   }
 
   CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
