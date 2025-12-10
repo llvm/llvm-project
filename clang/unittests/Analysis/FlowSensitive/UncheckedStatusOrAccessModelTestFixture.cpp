@@ -3910,6 +3910,56 @@ TEST_P(UncheckedStatusOrAccessModelTest, NestedStatusOrInStatusOrStruct) {
       )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, StatusOrPtrReference) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    const STATUSOR_INT* foo();
+
+    void target() {
+      const auto& sor = foo();
+      if (sor->ok()) sor->value();
+    }
+  )cc");
+
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    using StatusOrPtr = const STATUSOR_INT*;
+    StatusOrPtr foo();
+
+    void target() {
+      const auto& sor = foo();
+      if (sor->ok()) sor->value();
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, StatusPtrReference) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    const STATUS* foo();
+
+    void target(STATUSOR_INT sor) {
+      const auto& s = foo();
+      if (s->ok() && *s == sor.status()) sor.value();
+    }
+  )cc");
+
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    using StatusPtr = const STATUS*;
+    StatusPtr foo();
+
+    void target(STATUSOR_INT sor) {
+      const auto& s = foo();
+      if (s->ok() && *s == sor.status()) sor.value();
+    }
+  )cc");
+}
+
 } // namespace
 
 std::string
