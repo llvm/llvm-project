@@ -1198,15 +1198,16 @@ int test12_a, test12_b;
 // SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
 // SANITIZE-WITH-ATTR-NEXT:    [[BAZ:%.*]] = alloca [[STRUCT_HANG:%.*]], align 4
 // SANITIZE-WITH-ATTR-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BAZ]]) #[[ATTR9:[0-9]+]]
-// SANITIZE-WITH-ATTR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) [[BAZ]], ptr noundef nonnull align 4 dereferenceable(24) @test12_bar, i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT10:![0-9]+]]
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[INDEX]], 6
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = zext i32 [[INDEX]] to i64
 // SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[HANDLER_OUT_OF_BOUNDS:.*]], !prof [[PROF7]], !nosanitize [[META6]]
 // SANITIZE-WITH-ATTR:       [[HANDLER_OUT_OF_BOUNDS]]:
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = zext i32 [[INDEX]] to i64
 // SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB22:[0-9]+]], i64 [[TMP1]]) #[[ATTR8]], !nosanitize [[META6]]
 // SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
 // SANITIZE-WITH-ATTR:       [[CONT]]:
-// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[BAZ]], i64 [[TMP1]]
+// SANITIZE-WITH-ATTR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) [[BAZ]], ptr noundef nonnull align 4 dereferenceable(24) @test12_bar, i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT10:![0-9]+]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[INDEX]] to i64
+// SANITIZE-WITH-ATTR-NEXT: [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[BAZ]], i64 [[TMP2:%.*]]
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA2]]
 // SANITIZE-WITH-ATTR-NEXT:    store i32 [[TMP2]], ptr @test12_b, align 4, !tbaa [[INT_TBAA2]]
 // SANITIZE-WITH-ATTR-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr @test12_foo, align 4
@@ -1240,15 +1241,16 @@ int test12_a, test12_b;
 // SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[BAZ:%.*]] = alloca [[STRUCT_HANG:%.*]], align 4
 // SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BAZ]]) #[[ATTR7:[0-9]+]]
-// SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) [[BAZ]], ptr noundef nonnull align 4 dereferenceable(24) @test12_bar, i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT7:![0-9]+]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[INDEX]], 6
-// SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP1:%.*]] = zext i32 [[INDEX]] to i64
 // SANITIZE-WITHOUT-ATTR-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[HANDLER_OUT_OF_BOUNDS:.*]], !prof [[PROF8:![0-9]+]], !nosanitize [[META9:![0-9]+]]
 // SANITIZE-WITHOUT-ATTR:       [[HANDLER_OUT_OF_BOUNDS]]:
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP1:%.*]] = zext i32 [[INDEX]] to i64
 // SANITIZE-WITHOUT-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB2:[0-9]+]], i64 [[TMP1]]) #[[ATTR8:[0-9]+]], !nosanitize [[META9]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    unreachable, !nosanitize [[META9]]
 // SANITIZE-WITHOUT-ATTR:       [[CONT]]:
-// SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[BAZ]], i64 [[TMP1]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) [[BAZ]], ptr noundef nonnull align 4 dereferenceable(24) @test12_bar, i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT10:![0-9]+]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[INDEX]] to i64
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[BAZ]], i64 [[TMP2]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA2]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    store i32 [[TMP2]], ptr @test12_b, align 4, !tbaa [[INT_TBAA2]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[DOTCOUNTED_BY_LOAD:%.*]] = load i32, ptr @test12_foo, align 4
@@ -2524,7 +2526,6 @@ size_t test37(struct annotated *ptr) {
 // SANITIZE-WITHOUT-ATTR: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // SANITIZE-WITHOUT-ATTR: [[META5]] = !{!"Simple C/C++ TBAA"}
 // SANITIZE-WITHOUT-ATTR: [[CHAR_TBAA6]] = !{[[META4]], [[META4]], i64 0}
-// SANITIZE-WITHOUT-ATTR: [[TBAA_STRUCT7]] = !{i64 0, i64 24, [[CHAR_TBAA6]]}
 // SANITIZE-WITHOUT-ATTR: [[PROF8]] = !{!"branch_weights", i32 1048575, i32 1}
 // SANITIZE-WITHOUT-ATTR: [[META9]] = !{}
 // SANITIZE-WITHOUT-ATTR: [[PROF10]] = !{!"branch_weights", i32 1, i32 1048575}

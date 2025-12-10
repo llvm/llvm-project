@@ -34,12 +34,6 @@ static cl::opt<unsigned> MoveAutoInitThreshold(
     "move-auto-init-threshold", cl::Hidden, cl::init(128),
     cl::desc("Maximum instructions to analyze per moved initialization"));
 
-static bool hasAutoInitMetadata(const Instruction &I) {
-  return I.hasMetadata(LLVMContext::MD_annotation) &&
-         any_of(I.getMetadata(LLVMContext::MD_annotation)->operands(),
-                [](const MDOperand &Op) { return Op.equalsStr("auto-init"); });
-}
-
 static std::optional<MemoryLocation> writeToAlloca(const Instruction &I) {
   MemoryLocation ML;
   if (auto *MI = dyn_cast<MemIntrinsic>(&I))
@@ -109,8 +103,6 @@ static bool runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA) {
   // Compute movable instructions.
   //
   for (Instruction &I : EntryBB) {
-    if (!hasAutoInitMetadata(I))
-      continue;
 
     std::optional<MemoryLocation> ML = writeToAlloca(I);
     if (!ML)
