@@ -36,13 +36,17 @@ def FIRvolatile     : I32BitEnumAttrCaseBit<"fortran_volatile", 12, "volatile">;
 def FIRHostAssoc    : I32BitEnumAttrCaseBit<"host_assoc", 13>;
 // Used inside parent procedure to flag variables host associated in internal procedure.
 def FIRInternalAssoc    : I32BitEnumAttrCaseBit<"internal_assoc", 14>;
+// Used by alias analysis
+def FIRcray_pointer : I32BitEnumAttrCaseBit<"cray_pointer", 15>;
+def FIRcray_pointee : I32BitEnumAttrCaseBit<"cray_pointee", 16>;
 
 def fir_FortranVariableFlagsEnum : I32BitEnumAttr<
     "FortranVariableFlagsEnum",
     "Fortran variable attributes",
     [FIRnoAttributes, FIRallocatable, FIRasynchronous, FIRbind_c, FIRcontiguous,
      FIRintent_in, FIRintent_inout, FIRintent_out, FIRoptional, FIRparameter,
-     FIRpointer, FIRtarget, FIRvalue, FIRvolatile, FIRHostAssoc, FIRInternalAssoc]> {
+     FIRpointer, FIRtarget, FIRvalue, FIRvolatile, FIRHostAssoc, FIRInternalAssoc,
+     FIRcray_pointer, FIRcray_pointee]> {
   let separator = ", ";
   let cppNamespace = "::fir";
   let printBitEnumPrimaryGroups = 1;
