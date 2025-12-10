@@ -37,10 +37,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
-  bool shouldAddComment(const Expr *Arg) const;
-  bool isStrictMode() const { return StrictMode; }
-  llvm::Regex &getIdentRE() { return IdentRE; }
-
 private:
   const unsigned StrictMode : 1;
   const unsigned IgnoreSingleArgument : 1;
@@ -58,6 +54,11 @@ private:
                      llvm::ArrayRef<const Expr *> Args);
 
   void checkInitList(ASTContext *Ctx, const InitListExpr *InitList);
+  void checkRecordInitializer(ASTContext *Ctx, const RecordDecl *RD,
+                              const InitListExpr *InitList, unsigned &InitIndex,
+                              SourceLocation &ArgBeginLoc);
+
+  bool shouldAddComment(const Expr *Arg) const;
 };
 
 } // namespace clang::tidy::bugprone

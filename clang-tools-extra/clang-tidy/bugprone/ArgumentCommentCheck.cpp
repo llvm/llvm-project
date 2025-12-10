@@ -391,11 +391,11 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
   }
 }
 
-static void checkRecordInitializer(ArgumentCommentCheck &Self, ASTContext *Ctx,
-                                   const RecordDecl *RD,
-                                   const InitListExpr *InitList,
-                                   unsigned &InitIndex,
-                                   SourceLocation &ArgBeginLoc) {
+void ArgumentCommentCheck::checkRecordInitializer(ASTContext *Ctx,
+                                                  const RecordDecl *RD,
+                                                  const InitListExpr *InitList,
+                                                  unsigned &InitIndex,
+                                                  SourceLocation &ArgBeginLoc) {
   // If the record is not an aggregate (e.g. a base class with a user-declared
   // constructor), we treat it as a single opaque element initialization.
   bool IsAggregate = false;
@@ -442,8 +442,7 @@ static void checkRecordInitializer(ArgumentCommentCheck &Self, ASTContext *Ctx,
       if (IsExplicitSubInit) {
         unsigned SubIndex = 0;
         SourceLocation SubLoc = SubInitList->getLBraceLoc();
-        checkRecordInitializer(Self, Ctx, BaseRD, SubInitList, SubIndex,
-                               SubLoc);
+        checkRecordInitializer(Ctx, BaseRD, SubInitList, SubIndex, SubLoc);
         ArgBeginLoc = NextInit->getEndLoc();
         InitIndex++;
       } else if (Ctx->hasSameUnqualifiedType(InitType, BaseType) ||
@@ -456,8 +455,7 @@ static void checkRecordInitializer(ArgumentCommentCheck &Self, ASTContext *Ctx,
         InitIndex++;
       } else {
         // Recursing into the current list.
-        checkRecordInitializer(Self, Ctx, BaseRD, InitList, InitIndex,
-                               ArgBeginLoc);
+        checkRecordInitializer(Ctx, BaseRD, InitList, InitIndex, ArgBeginLoc);
       }
     }
   }
@@ -483,16 +481,15 @@ static void checkRecordInitializer(ArgumentCommentCheck &Self, ASTContext *Ctx,
     ArgBeginLoc = Arg->getEndLoc();
 
     for (auto Comment : Comments)
-      (void)diagnoseMismatchInComment(Self, Ctx, RD->fields(), II,
-                                      Self.isStrictMode(), Self.getIdentRE(),
-                                      Comment, FD->getLocation());
+      (void)diagnoseMismatchInComment(*this, Ctx, RD->fields(), II, StrictMode,
+                                      IdentRE, Comment, FD->getLocation());
 
-    if (Comments.empty() && Self.shouldAddComment(Arg)) {
+    if (Comments.empty() && shouldAddComment(Arg)) {
       llvm::SmallString<32> ArgComment;
       (llvm::Twine("/*") + II->getName() + "=*/").toStringRef(ArgComment);
       const DiagnosticBuilder Diag =
-          Self.diag(Arg->getBeginLoc(),
-                    "argument comment missing for literal argument %0")
+          diag(Arg->getBeginLoc(),
+               "argument comment missing for literal argument %0")
           << II << FixItHint::CreateInsertion(Arg->getBeginLoc(), ArgComment);
     }
 
@@ -527,7 +524,7 @@ void ArgumentCommentCheck::checkInitList(ASTContext *Ctx,
 
   SourceLocation ArgBeginLoc = InitList->getLBraceLoc();
   unsigned InitIndex = 0;
-  checkRecordInitializer(*this, Ctx, RD, InitList, InitIndex, ArgBeginLoc);
+  checkRecordInitializer(Ctx, RD, InitList, InitIndex, ArgBeginLoc);
 }
 
 void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
