@@ -474,6 +474,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM", Opts.ShortEnums ? "1" : "4");
 
+  // Clang supports range prefetch intrinsics
+  Builder.defineMacro("__ARM_PREFETCH_RANGE", "1");
+
   if (FPU & NeonMode) {
     Builder.defineMacro("__ARM_NEON", "1");
     // 64-bit NEON supports half, single and double precision operations.
@@ -611,9 +614,6 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasLSE)
     Builder.defineMacro("__ARM_FEATURE_ATOMICS", "1");
-
-  if (HasRPRFM)
-    Builder.defineMacro("__ARM_FEATURE_RPRFM", "1");
 
   if (HasBFloat16) {
     Builder.defineMacro("__ARM_FEATURE_BF16", "1");
@@ -873,7 +873,6 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("ssve-fp8fma", HasSSVE_FP8FMA)
       .Case("sme-f8f32", HasSME_F8F32)
       .Case("sme-f8f16", HasSME_F8F16)
-      .Case("rprfm", HasRPRFM)
       .Default(false);
 }
 
@@ -1103,9 +1102,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     }
     if (Feature == "+strict-align")
       HasUnalignedAccess = false;
-
-    if (Feature == "+rprfm")
-      HasRPRFM = true;
 
     // All predecessor archs are added but select the latest one for ArchKind.
     if (Feature == "+v8a" && ArchInfo->Version < llvm::AArch64::ARMV8A.Version)

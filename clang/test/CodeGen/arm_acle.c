@@ -164,15 +164,24 @@ void test_pld() {
   __pld(0);
 }
 
-#if defined(__ARM_64BIT_STATE)
+#if defined(__ARM_64BIT_STATE) && defined(__ARM_PREFETCH_RANGE)
 
-// AArch64-LABEL: @test_rpld(
+// AArch64-LABEL: @test_pld_range(
 // AArch64-NEXT:  entry:
-// AArch64-NEXT:    call void @llvm.aarch64.range.prefetch(ptr null, i32 1, i32 1, i32 15, i32 -2048, i32 65536, i32 2040)
+// AArch64-NEXT:    call void @llvm.aarch64.range.prefetch.reg(ptr null, i32 0, i32 1, i64 [[MD:%.*]])
 // AArch64-NEXT:    ret void
 //
-void test_rpld() {
-  __rpld(1, 1, 15, -2048, 65536, 2040, 0);
+void test_pld_range(unsigned long md) {
+  __pld_range(0, 1, md, 0);
+}
+
+// AArch64-LABEL: @test_pldx_range(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    call void @llvm.aarch64.range.prefetch.imm(ptr null, i32 0, i32 1, i32 2040, i32 65536, i32 -2048, i64 15)
+// AArch64-NEXT:    ret void
+//
+void test_pldx_range() {
+  __pldx_range(0, 1, 2040, 65536, -2048, 15, 0);
 }
 
 #endif

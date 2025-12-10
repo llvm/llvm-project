@@ -63,17 +63,29 @@ void prefetch(void) {
 }
 
 void range_prefetch(void) {
-  __builtin_arm_range_prefetch(0, 0, 0, 15, 1024, 24, 2); // pldkeep
-  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i32 15, i32 1024, i32 24, i32 2)
+  __builtin_arm_range_prefetch(0, 0, 0, 0); // pldkeep
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch.reg(ptr null, i32 0, i32 0, i64 0)
 
-  __builtin_arm_range_prefetch(0, 0, 1, 15, 1024, 24, 2); // pldstrm
-  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 1, i32 15, i32 1024, i32 24, i32 2)
+  __builtin_arm_range_prefetch(0, 0, 1, 0); // pldstrm
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch.reg(ptr null, i32 0, i32 1, i64 0)
 
-  __builtin_arm_range_prefetch(0, 1, 0, 15, 1024, 24, 2); // pstkeep
-  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 1, i32 0, i32 15, i32 1024, i32 24, i32 2)
+  __builtin_arm_range_prefetch(0, 1, 0, 0); // pstkeep
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch.reg(ptr null, i32 1, i32 0, i64 0)
 
-  __builtin_arm_range_prefetch(0, 1, 1, 15, 1024, 24, 2); // pststrm
-  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 1, i32 1, i32 15, i32 1024, i32 24, i32 2)
+  __builtin_arm_range_prefetch(0, 1, 1, 0); // pststrm
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch.reg(ptr null, i32 1, i32 1, i64 0)
+
+  __builtin_arm_range_prefetch_x(0, 0, 0, 2, 24, 1024, 15); // pldkeep
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch.imm(ptr null, i32 0, i32 0, i32 2, i32 24, i32 1024, i64 15)
+
+  __builtin_arm_range_prefetch_x(0, 0, 1, 2, 24, 1024, 15); // pldstrm
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch.imm(ptr null, i32 0, i32 1, i32 2, i32 24, i32 1024, i64 15)
+
+  __builtin_arm_range_prefetch_x(0, 1, 0, 2, 24, 1024, 15); // pstkeep
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch.imm(ptr null, i32 1, i32 0, i32 2, i32 24, i32 1024, i64 15)
+
+  __builtin_arm_range_prefetch_x(0, 1, 1, 2, 24, 1024, 15); // pststrm
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch.imm(ptr null, i32 1, i32 1, i32 2, i32 24, i32 1024, i64 15)
 }
 
 __attribute__((target("v8.5a")))

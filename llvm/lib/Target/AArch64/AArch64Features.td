@@ -101,9 +101,6 @@ def FeaturePerfMon : ExtensionWithMArch<"perfmon", "PerfMon", "FEAT_PMUv3",
 def FeatureSpecRestrict : Extension<"specrestrict", "SpecRestrict", "FEAT_CSV2_2",
   "Enable architectural speculation restriction">;
 
-def FeatureRPRFM : ExtensionWithMArch<"rprfm", "RPRFM", "FEAT_RPRFM",
-  "Enable Armv8.0-A Range Prefetch Memory instruction">;
-
 //===----------------------------------------------------------------------===//
 //  Armv8.1 Architecture Extensions
 //===----------------------------------------------------------------------===//

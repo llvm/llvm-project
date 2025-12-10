@@ -97,7 +97,8 @@ TARGET_BUILTIN(__builtin_arm_jcvt, "Zid", "nc", "v8.3a")
 BUILTIN(__builtin_arm_prefetch, "vvC*UiUiUiUi", "nc")
 
 // Range Prefetch
-BUILTIN(__builtin_arm_range_prefetch, "vvC*UiUiUiiUii", "nc")
+TARGET_HEADER_BUILTIN(__builtin_arm_range_prefetch_x, "vvC*UiUiiUiiz", "n", ARMACLE_H, ALL_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__builtin_arm_range_prefetch, "vvC*UiUiULLi", "n", ARMACLE_H, ALL_LANGUAGES, "")
 
 // System Registers
 BUILTIN(__builtin_arm_rsr, "UicC*", "nc")

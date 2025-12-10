@@ -411,8 +411,6 @@ def HasS1POE2        : Predicate<"Subtarget->hasS1POE2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureS1POE2), "poe2">;
 def HasTEV           : Predicate<"Subtarget->hasTEV()">,
                                  AssemblerPredicateWithAll<(all_of FeatureTEV), "tev">;
-def HasRPRFM         : Predicate<"Subtarget->hasRPRFM()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureRPRFM), "rprfm">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;

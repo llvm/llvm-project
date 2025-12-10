@@ -5415,6 +5415,16 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::aarch64_mops_memset_tag), {Dst, Val, Size});
   }
 
+  if (BuiltinID == AArch64::BI__builtin_arm_range_prefetch_x) {
+    SmallVector<llvm::Value *, 16> Ops;
+    for (unsigned I = 0; I < 6; ++I)
+      Ops.push_back(EmitScalarExpr(E->getArg(I)));
+    Ops.push_back(
+        Builder.CreateIntCast(EmitScalarExpr(E->getArg(6)), Int64Ty, false));
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::aarch64_range_prefetch_imm), Ops);
+  }
+
   // Memory Tagging Extensions (MTE) Intrinsics
   Intrinsic::ID MTEIntrinsicID = Intrinsic::not_intrinsic;
   switch (BuiltinID) {
