@@ -18,7 +18,7 @@ class UnknownCommandTestCase(TestBase):
         command_interpreter.HandleCommand("g", result)
         self.assertFalse(result.Succeeded())
         self.assertRegex(
-            result.GetError(), "error: Ambiguous command 'g'. Possible matches:"
+            result.GetError(), "error: ambiguous command 'g'. Possible matches:"
         )
         self.assertRegex(result.GetError(), "gui")
         self.assertRegex(result.GetError(), "gdb-remote")

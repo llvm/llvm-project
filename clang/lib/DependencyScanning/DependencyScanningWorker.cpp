@@ -100,7 +100,7 @@ bool DependencyScanningWorker::scanDependencies(
     FS = std::move(OverlayFS);
   }
 
-  DignosticsEngineWithDiagOpts DiagEngineWithCmdAndOpts(CommandLine, FS, DC);
+  DiagnosticsEngineWithDiagOpts DiagEngineWithCmdAndOpts(CommandLine, FS, DC);
   DependencyScanningAction Action(Service, WorkingDirectory, Consumer,
                                   Controller, DepFS);
 
