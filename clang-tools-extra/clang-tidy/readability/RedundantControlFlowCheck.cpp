@@ -71,19 +71,11 @@ void RedundantControlFlowCheck::issueDiagnostic(
   if (isLocationInMacroExpansion(SM, StmtRange.getBegin()))
     return;
 
-  const CompoundStmt::const_reverse_body_iterator Previous =
-      ++Block->body_rbegin();
-  SourceLocation Start;
-  if (Previous != Block->body_rend())
-    Start = Lexer::findLocationAfterToken(
-        cast<Stmt>(*Previous)->getEndLoc(), tok::semi, SM, getLangOpts(),
-        /*SkipTrailingWhitespaceAndNewLine=*/true);
-  if (!Start.isValid())
-    Start = StmtRange.getBegin();
-  auto RemovedRange = CharSourceRange::getCharRange(
-      Start, Lexer::findLocationAfterToken(
-                 StmtRange.getEnd(), tok::semi, SM, getLangOpts(),
-                 /*SkipTrailingWhitespaceAndNewLine=*/true));
+  const auto RemovedRange = CharSourceRange::getCharRange(
+      StmtRange.getBegin(),
+      Lexer::findLocationAfterToken(StmtRange.getEnd(), tok::semi, SM,
+                                    getLangOpts(),
+                                    /*SkipTrailingWhitespaceAndNewLine=*/true));
 
   diag(StmtRange.getBegin(), Diag) << FixItHint::CreateRemoval(RemovedRange);
 }
