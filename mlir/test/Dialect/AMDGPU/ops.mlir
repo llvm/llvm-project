@@ -697,8 +697,8 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32>, %smem: memref<8xi32, 
 }
 
 // CHECK-LABEL: func @make_dma_descriptor
-// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[WG_MASK:.+]]: i16, %[[TIMEOUT:.+]]: i1, %[[BARRIER:.+]]: memref<8xi32, #gpu.address_space<workgroup>>, %[[IDX:.+]]: index, %[[I32:.+]]: i32)
-func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: i16, %timeout: i1, %barrier: memref<8xi32, #gpu.address_space<workgroup>>, %idx: index, %i32: i32) {
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[WG_MASK:.+]]: vector<16xi1>, %[[TIMEOUT:.+]]: i1, %[[BARRIER:.+]]: memref<8xi32, #gpu.address_space<workgroup>>, %[[IDX:.+]]: index, %[[I32:.+]]: i32)
+func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: vector<16xi1>, %timeout: i1, %barrier: memref<8xi32, #gpu.address_space<workgroup>>, %idx: index, %i32: i32) {
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base

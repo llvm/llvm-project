@@ -642,8 +642,8 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
 // -----
 
 // CHECK-LABEL: func @make_dma_descriptor_workgroup_mask
-// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[WG_MASK:.+]]: i16, %[[TIMEOUT:.+]]: i1)
-func.func @make_dma_descriptor_workgroup_mask(%base: !amdgpu.tdm_base<i32>, %wg_mask: i16, %timeout: i1) -> !amdgpu.tdm_descriptor {
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[WG_MASK:.+]]: vector<16xi1>, %[[TIMEOUT:.+]]: i1)
+func.func @make_dma_descriptor_workgroup_mask(%base: !amdgpu.tdm_base<i32>, %wg_mask: vector<16xi1>, %timeout: i1) -> !amdgpu.tdm_descriptor {
   // CHECK-DAG: %[[DGROUP0:.+]] = builtin.unrealized_conversion_cast %[[BASE]]
 
   // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32)
@@ -655,7 +655,8 @@ func.func @make_dma_descriptor_workgroup_mask(%base: !amdgpu.tdm_base<i32>, %wg_
   // CHECK-DAG: %[[C6:.+]] = llvm.mlir.constant(6 : i32)
   // CHECK-DAG: %[[C7:.+]] = llvm.mlir.constant(7 : i32)
 
-  // CHECK-DAG: %[[WG_MASK_EXT:.+]] = llvm.zext %[[WG_MASK]]
+  // CHECK: %[[WG_MASK_CAST:.+]] = llvm.bitcast %[[WG_MASK]] : vector<16xi1> to i16
+  // CHECK-DAG: %[[WG_MASK_EXT:.+]] = llvm.zext %[[WG_MASK_CAST]]
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)
   // CHECK: %[[DATA_SIZE_SHIFTED:.+]] = llvm.shl %[[C2]], %[[C16]]
   // CHECK: %[[SGPR0_BASE:.+]] = llvm.or %[[WG_MASK_EXT]], %[[DATA_SIZE_SHIFTED]]

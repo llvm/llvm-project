@@ -2381,6 +2381,8 @@ struct AMDGPUMakeDmaDescriptorLowering
     if (!mask)
       return sgpr0;
 
+    Type i16 = rewriter.getI16Type();
+    mask = LLVM::BitcastOp::create(rewriter, loc, i16, mask);
     Type i32 = rewriter.getI32Type();
     Value extendedMask = LLVM::ZExtOp::create(rewriter, loc, i32, mask);
     return setValueAtOffset(rewriter, loc, sgpr0, extendedMask, 0);

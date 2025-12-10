@@ -110,8 +110,13 @@ def AMDGPU_TDMDescriptorType : AMDGPU_Type<"TDMDescriptor", "tdm_descriptor"> {
     This type is opaque and corresponds to the two or four descriptor groups
     used in tensor_load_to_lds or tensor_store_from_lds.
   }];
-
 }
+
+class AMDGPU_ConcreteVector<Type elem, int length> :
+  FixedVectorOfLengthAndType<[length], [elem]>,
+  BuildableType<
+    "::mlir::VectorType::get({" # length # "} ,"
+      # elem.builderCall # ")">;
 
 //===----------------------------------------------------------------------===//
 // AMDGPU Op definitions
@@ -1296,7 +1301,7 @@ def AMDGPU_MakeDmaDescriptorOp :
     DenseI64ArrayAttr: $global_static_strides,
     Variadic<Index>: $shared_dynamic_sizes,
     DenseI64ArrayAttr: $shared_static_sizes,
-    Optional<I16>: $workgroup_mask,
+    Optional<AMDGPU_ConcreteVector<I1, 16>>: $workgroup_mask,
     Optional<I1>: $early_timeout,
     Optional<I32>: $pad_amount,
     Optional<I32>: $pad_interval,
