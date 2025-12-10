@@ -3,6 +3,7 @@
 modernize-avoid-c-style-cast
 ============================
 
+Finds usages of C-style casts.
 
 C-style casts can perform a variety of different conversions (``const_cast``,
 ``static_cast``, ``reinterpret_cast``, or a combination). This makes them

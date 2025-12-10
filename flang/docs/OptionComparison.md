@@ -8,7 +8,7 @@
 
 # Compiler options comparison
 
-This document catalogs the options processed by Flang's peers/competitors.  Much of the document is taken up by a set of tables that list the options categorized into different topics.  Some of the table headings link to more information about the contents of the tables.  For example, the table on **Standards conformance** options links to <a href=#standards">notes on Standards conformance</a>.
+This document catalogs the options processed by Flang's peers/competitors.  Much of the document is taken up by a set of tables that list the options categorized into different topics.  Some of the table headings link to more information about the contents of the tables.  For example, the table on **Standards conformance** options links to <a href="#standards">notes on Standards conformance</a>.
 
 **There's also important information in the ___[Appendix section](#appendix)___ near the end of the document on how this data was gathered and what ___is___ and ___is not___ included in this document.**  
 
@@ -28,7 +28,7 @@ Note that compilers may support language features without having an option for t
    <td><strong>IBM</strong> </td>
    <td><strong>Intel</strong> </td>
    <td><strong>PGI</strong> </td>
-   <td><strong>Flang</strong> </td>
+   <td><strong>Classic Flang</strong> </td>
   </tr>
   <tr>
    <td>Overall conformance </td>
@@ -112,7 +112,7 @@ fall-intrinsics
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -241,7 +241,7 @@ fd-lines-as-comments
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -410,7 +410,7 @@ fd-lines-as-comments
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -471,7 +471,7 @@ fd-lines-as-comments
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -604,7 +604,7 @@ Mr8intrinsics
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -739,7 +739,7 @@ fdefault-integer-8
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -810,7 +810,7 @@ fdefault-integer-8
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -952,7 +952,7 @@ Msave
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -1027,7 +1027,7 @@ Msave
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -1098,7 +1098,7 @@ Mcuda
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -1220,7 +1220,7 @@ IBM Fortran's options allow the source line length to be specified with the opti
 *   **GNU:** For both "ffixed-line-length-_n_" and "ffree-line-length-_n_" options, characters are ignored after the specified length.  The default for fixed is 72.  The default for free is 132.  For free, you can specify 'none' as the length, which means that all characters in the line are meaningful.
 *   **IBM:** For **fixed**, the default is 72.  For **free**, there's no default, but the maximum length for either form is 132.
 *   **Intel:** The default is 72 for **fixed** and 132 for **free**.
-*   **PGI, Flang:** 
+*   **PGI, Classic Flang:** 
     * in free form, it is an error if the line is longer than 1000 characters
     * in fixed form by default, characters after column 72 are ignored
     * in fixed form with -Mextend, characters after column 132 are ignored
@@ -1233,7 +1233,7 @@ IBM Fortran's options allow the source line length to be specified with the opti
 *   **GNU:** The "-fbackslash" option the interpretation of backslashes in string literals from a single backslash character to "C-style" escape characters. The following combinations are expanded \a, \b, \f, \n, \r, \t, \v, \\, and \0 to the ASCII characters alert, backspace, form feed, newline, carriage return, horizontal tab, vertical tab, backslash, and NUL, respectively. Additionally, \xnn, \unnnn and \Unnnnnnnn (where each n is a hexadecimal digit) are translated into the Unicode characters corresponding to the specified code points. All other combinations of a character preceded by \ are unexpanded.
 *   **Intel:** The option "-assume bscc" tells the compiler to treat the backslash character (\) as a C-style control (escape) character syntax in character literals. "nobscc" specifies that the backslash character is treated as a normal character in character literals.  This is the default.
 
-**"$" in symbol names:** Allowing "$" in names is controlled by an option in GNU and is the default behavior in IBM and Intel.  Presumably, these compilers issue warnings when standard conformance options are enabled.  Dollar signs in names don't seem to be allowed in Cray, PGI, or Flang.
+**"$" in symbol names:** Allowing "$" in names is controlled by an option in GNU and is the default behavior in IBM and Intel.  Presumably, these compilers issue warnings when standard conformance options are enabled.  Dollar signs in names don't seem to be allowed in Cray, PGI, or Classic Flang.
 
 **<a name="do"></a>DO loop handling**
 
@@ -1328,7 +1328,7 @@ Here's the list of compilers surveyed, hot linked to the source of data on it.  
 *   [NAG Fortran Release 6.2](https://www.nag.co.uk/nagware/np/r62_doc/manual/compiler_2_4.html)
 *   [Oracle Fortran version 819-0492-10](https://docs.oracle.com/cd/E19059-01/stud.10/819-0492/3_options.html)
 *   PGI -- [Compiler Reference version 19.1](https://www.pgroup.com/resources/docs/19.1/x86/pgi-ref-guide/index.htm#cmdln-options-ref), [Fortran Reference Guide version 17](https://www.pgroup.com/doc/pgi17fortref.pdf)
-*   [Flang](https://github.com/flang-compiler/flang/wiki/Using-Flang) -- information from GitHub
+*   [Classic Flang](https://github.com/flang-compiler/flang/wiki/Using-Flang) -- information from GitHub
 
 This document has been kept relatively small by providing links to much of the information about options rather than duplicating that information.  For IBM, Intel, and some PGI options, there are direct links.  But direct links were not possible for Cray, GNU and some PGI options.
 

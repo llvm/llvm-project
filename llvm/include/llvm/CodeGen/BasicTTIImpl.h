@@ -410,10 +410,6 @@ public:
     return false;
   }
 
-  bool isSourceOfDivergence(const Value *V) const override { return false; }
-
-  bool isAlwaysUniform(const Value *V) const override { return false; }
-
   bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
     return false;
   }
