@@ -2481,8 +2481,7 @@ bool LLParser::parseOptionalCodeModel(CodeModel::Model &model) {
 ///
 /// where AttrKind is either 'dereferenceable', 'dereferenceable_or_null', or
 /// 'dead_on_return'
-bool LLParser::parseOptionalAttrBytes(lltok::Kind AttrKind,
-                                           uint64_t &Bytes) {
+bool LLParser::parseOptionalAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes) {
   assert((AttrKind == lltok::kw_dereferenceable ||
           AttrKind == lltok::kw_dereferenceable_or_null ||
           AttrKind == lltok::kw_dead_on_return) &&
