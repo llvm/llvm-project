@@ -178,6 +178,7 @@ public:
     case AppleA16:
     case AppleA17:
     case AppleM4:
+    case AppleM5:
       return true;
     default:
       return false;

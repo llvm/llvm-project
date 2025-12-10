@@ -865,9 +865,9 @@ public:
     cgf.emitCXXThrowExpr(e);
     return {};
   }
+
   mlir::Value VisitCXXNoexceptExpr(CXXNoexceptExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: cxx noexcept");
-    return {};
+    return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
   }
 
   /// Emit a conversion from the specified type to the specified destination
