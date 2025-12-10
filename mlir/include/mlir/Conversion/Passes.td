@@ -618,6 +618,7 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
     "cf::ControlFlowDialect",
     "memref::MemRefDialect",
     "NVVM::NVVMDialect",
+    "index::IndexDialect"
   ];
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
@@ -647,6 +648,7 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
     "amdgpu::AMDGPUDialect",
     "cf::ControlFlowDialect",
     "memref::MemRefDialect",
+    "index::IndexDialect"
   ];
   let options = [
     Option<"chipset", "chipset", "std::string",
