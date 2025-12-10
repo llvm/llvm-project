@@ -389,13 +389,13 @@ define i16 @zext_from_illegal_to_illegal_type_dest_desirable(i32 %x) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[X]], 41
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i3 [[Y]] to i16
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       f:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P1:%.*]] = phi i3 [ [[Y]], [[T]] ], [ 3, [[F]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P:%.*]] = zext i3 [[P1]] to i16
+; CHECK-NEXT:    [[P:%.*]] = phi i16 [ [[TMP0]], [[T]] ], [ 3, [[F]] ], [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i16 [[P]]
 ;
 entry:
