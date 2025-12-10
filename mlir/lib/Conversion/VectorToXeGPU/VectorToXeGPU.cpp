@@ -107,15 +107,14 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
   bool isStatic = true;
 
   // Memref is dynamic if any of its shape, offset or strides is dynamic.
-  if (!srcTy.hasStaticShape()) {
+  if (!srcTy.hasStaticShape())
     isStatic = false;
-  }
 
-  if (offset == ShapedType::kDynamic)
+  if (!ShapedType::isStatic(offset))
     isStatic = false;
 
   for (auto stride : strides) {
-    if (stride == ShapedType::kDynamic) {
+    if (!ShapedType::isStatic(stride)) {
       isStatic = false;
       break;
     }
