@@ -233,14 +233,12 @@ def TosaInputShape : Pass<"tosa-experimental-input-shape", "func::FuncOp"> {
 
   let constructor = "tosa::createTosaInputShapePass()";
   let dependentDialects = [
-    "func::FuncDialect",
-    "tensor::TensorDialect",
-    "tosa::TosaDialect",
+    "tensor::TensorDialect"
   ];
   let options = [
     ListOption<"args", "args", "std::string",
           "Comma-separated list of shape descriptions. Each description contains the "
-          "argument name, a colon, and a shape with dimensions separated by x "
+          "argument name, a colon, and a shape with dimensions separated by x ">
   ];
 }
 
