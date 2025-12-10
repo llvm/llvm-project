@@ -68,6 +68,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "support/Logger.h"
 #include <algorithm>
 #include <optional>
 #include <string>
@@ -1749,6 +1750,130 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
+// This would require a visitor pattern:
+class ParamUsageVisitor : public RecursiveASTVisitor<ParamUsageVisitor> {
+public:
+  bool HasWrite = false;
+  bool HasRead = false;
+  const ParmVarDecl *TargetParam;
+  
+  ParamUsageVisitor(const ParmVarDecl *P) : TargetParam(P) {}
+  
+  bool VisitUnaryOperator(UnaryOperator *UO) {
+    // Check for increment/decrement on parameter
+    if (UO->isIncrementDecrementOp()) {
+      if (auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
+        if (DRE->getDecl() == TargetParam) {
+          HasWrite = true;
+        }
+      }
+    }
+    return true;
+  }
+  
+  bool VisitBinaryOperator(BinaryOperator *BO) {
+    // Check for assignment to parameter
+    if (BO->isAssignmentOp()) {
+      if (auto *DRE = dyn_cast<DeclRefExpr>(BO->getLHS())) {
+        if (DRE->getDecl() == TargetParam) {
+          HasWrite = true;
+        }
+      }
+    }
+    // Any other use is at least a read
+    if (auto *DRE = dyn_cast<DeclRefExpr>(BO->getRHS())) {
+      if (DRE->getDecl() == TargetParam) {
+        HasRead = true;
+      }
+    }
+    return true;
+  }
+};
+
+static std::vector<ReferenceTag> analyseParameterUsage(const FunctionDecl *FD) {
+  std::vector<ReferenceTag> Result;
+  // This requires more sophisticated analysis - checking if param is modified
+  const Stmt *Body = FD->getBody();
+  if (!Body)
+    return Result; // No definition available
+
+  for (unsigned I = 0; I < FD->getNumParams(); ++I) {
+    const ParmVarDecl *Param = FD->getParamDecl(I);
+
+    // Check const qualifier
+    // QualType ParamType = Param->getType();
+    // bool IsReadOnly = ParamType.isConstQualified();
+
+    // For deeper analysis, you'd need to:
+    // 1. Walk the AST of the function body
+    // 2. Find all references to the parameter
+    // 3. Check if they appear on the left side of assignments (write)
+    //    or only on the right side (read)
+
+    ParamUsageVisitor Visitor(Param);
+    Visitor.TraverseStmt(const_cast<Stmt *>(Body));
+    if (Visitor.HasWrite)
+      Result.push_back(ReferenceTag::Write);
+    if (Visitor.HasRead)
+      Result.push_back(ReferenceTag::Read);
+  }
+  return Result;
+}
+
+template <typename HierarchyItem>
+static void determineParameterUsage(const NamedDecl &ND, HierarchyItem &HI) {
+  // Get parent context and check if it's a function parameter
+  const DeclContext *DC = ND.getDeclContext();
+  elog("determineParameterUsage: called for ND={0}", ND.getNameAsString());
+  if (const auto *TD = llvm::dyn_cast<TagDecl>(DC)) {
+    elog("determineParameterUsage: ND is inside a TagDecl: {0}", TD->getNameAsString());
+    // No parameter analysis for TagDecl parent contexts.
+  } else if (const auto *FD = llvm::dyn_cast<FunctionDecl>(DC)) {
+    elog("determineParameterUsage: ND is inside a FunctionDecl");
+    for (unsigned I = 0; I < FD->getNumParams(); ++I) {
+      if (FD->getParamDecl(I) == &ND) {
+        elog("determineParameterUsage: ND is the {0}-th parameter of function {1}", I, FD->getNameAsString());
+
+        const ParmVarDecl *Param = FD->getParamDecl(I);
+        QualType ParamType = Param->getType();
+
+        bool IsConst = false;
+        bool IsConstRef = false;
+        bool IsConstPtr = false;
+
+        // Check if const (read-only)
+        IsConst = ParamType.isConstQualified();
+        elog("determineParameterUsage: ParamType.isConstQualified() = {0}", IsConst);
+
+        // Check if it's a const reference
+        if (const auto *RT = ParamType->getAs<ReferenceType>()) {
+          IsConstRef = RT->getPointeeType().isConstQualified();
+          elog("determineParameterUsage: ParamType is ReferenceType, isConstQualified = {0}", IsConstRef);
+        }
+
+        // Check if it's a const pointer
+        if (const auto *PT = ParamType->getAs<PointerType>()) {
+          IsConstPtr = PT->getPointeeType().isConstQualified();
+          elog("determineParameterUsage: ParamType is PointerType, isConstQualified = {0}", IsConstPtr);
+        }
+
+        if (IsConst && IsConstRef && IsConstPtr) {
+          elog("determineParameterUsage: All const checks passed, marking as Read");
+          HI.referenceTags.push_back(ReferenceTag::Read);
+        } else {
+          elog("determineParameterUsage: Performing analyseParameterUsage");
+          HI.referenceTags = analyseParameterUsage(FD);
+        }
+
+        break;
+      }
+      elog("determineParameterUsage: ND is not parameter {0} of function {1}", I, FD->getNameAsString());
+    }
+  } else {
+    elog("determineParameterUsage: ND is not inside a FunctionDecl or TagDecl");
+  }
+}
+
 template <typename HierarchyItem>
 static std::optional<HierarchyItem>
 declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
@@ -1789,6 +1914,8 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
     // reports unrelated ranges we need to reconcile somehow.
     HI.range = HI.selectionRange;
   }
+
+  determineParameterUsage(ND, HI);
 
   HI.uri = URIForFile::canonicalize(*FilePath, TUPath);
 
@@ -2097,15 +2224,15 @@ static QualType typeForNode(const ASTContext &Ctx, const HeuristicResolver *H,
   return QualType();
 }
 
-// Given a type targeted by the cursor, return one or more types that are more interesting
-// to target.
-static void unwrapFindType(
-    QualType T, const HeuristicResolver* H, llvm::SmallVector<QualType>& Out) {
+// Given a type targeted by the cursor, return one or more types that are more
+// interesting to target.
+static void unwrapFindType(QualType T, const HeuristicResolver *H,
+                           llvm::SmallVector<QualType> &Out) {
   if (T.isNull())
     return;
 
   // If there's a specific type alias, point at that rather than unwrapping.
-  if (const auto* TDT = T->getAs<TypedefType>())
+  if (const auto *TDT = T->getAs<TypedefType>())
     return Out.push_back(QualType(TDT, 0));
 
   // Pointers etc => pointee type.
@@ -2139,8 +2266,8 @@ static void unwrapFindType(
 }
 
 // Convenience overload, to allow calling this without the out-parameter
-static llvm::SmallVector<QualType> unwrapFindType(
-    QualType T, const HeuristicResolver* H) {
+static llvm::SmallVector<QualType> unwrapFindType(QualType T,
+                                                  const HeuristicResolver *H) {
   llvm::SmallVector<QualType> Result;
   unwrapFindType(T, H, Result);
   return Result;
@@ -2162,9 +2289,9 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
     std::vector<LocatedSymbol> LocatedSymbols;
 
     // NOTE: unwrapFindType might return duplicates for something like
-    // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you some
-    // information about the type you may have not known before
-    // (since unique_ptr<unique_ptr<T>> != unique_ptr<T>).
+    // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you
+    // some information about the type you may have not known before (since
+    // unique_ptr<unique_ptr<T>> != unique_ptr<T>).
     for (const QualType &Type : unwrapFindType(
              typeForNode(AST.getASTContext(), AST.getHeuristicResolver(), N),
              AST.getHeuristicResolver()))

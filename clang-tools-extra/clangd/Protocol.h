@@ -405,6 +405,13 @@ enum class SymbolKind {
   Operator = 25,
   TypeParameter = 26
 };
+
+/// Tags describing the reference kind.
+enum class ReferenceTag {
+  Read = 1,
+  Write = 2,
+};
+
 bool fromJSON(const llvm::json::Value &, SymbolKind &, llvm::json::Path);
 constexpr auto SymbolKindMin = static_cast<size_t>(SymbolKind::File);
 constexpr auto SymbolKindMax = static_cast<size_t>(SymbolKind::TypeParameter);
@@ -1513,6 +1520,9 @@ struct TypeHierarchyItem {
   /// The kind of this item.
   SymbolKind kind;
 
+  /// The symbol tags for this item.
+  std::vector<ReferenceTag> referenceTags;
+
   /// More detail for this item, e.g. the signature of a function.
   std::optional<std::string> detail;
 
@@ -1589,6 +1599,9 @@ struct CallHierarchyItem {
 
   /// Tags for this item.
   std::vector<SymbolTag> tags;
+
+  /// The tags describing reference kinds of this item.
+  std::vector<ReferenceTag> referenceTags;
 
   /// More detaill for this item, e.g. the signature of a function.
   std::string detail;

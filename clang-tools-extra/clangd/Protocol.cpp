@@ -209,7 +209,7 @@ bool fromJSON(const llvm::json::Value &Params, ChangeAnnotation &R,
          O.map("needsConfirmation", R.needsConfirmation) &&
          O.mapOptional("description", R.description);
 }
-llvm::json::Value toJSON(const ChangeAnnotation & CA) {
+llvm::json::Value toJSON(const ChangeAnnotation &CA) {
   llvm::json::Object Result{{"label", CA.label}};
   if (CA.needsConfirmation)
     Result["needsConfirmation"] = *CA.needsConfirmation;
@@ -1478,6 +1478,10 @@ llvm::json::Value toJSON(SymbolTag Tag) {
   return llvm::json::Value(static_cast<int>(Tag));
 }
 
+llvm::json::Value toJSON(ReferenceTag Tag) {
+  return llvm::json::Value(static_cast<int>(Tag));
+}
+
 llvm::json::Value toJSON(const CallHierarchyItem &I) {
   llvm::json::Object Result{{"name", I.name},
                             {"kind", static_cast<int>(I.kind)},
@@ -1490,6 +1494,9 @@ llvm::json::Value toJSON(const CallHierarchyItem &I) {
     Result["detail"] = I.detail;
   if (!I.data.empty())
     Result["data"] = I.data;
+  if (!I.referenceTags.empty())
+    Result["referenceTags"] = I.referenceTags;
+  
   return std::move(Result);
 }
 
