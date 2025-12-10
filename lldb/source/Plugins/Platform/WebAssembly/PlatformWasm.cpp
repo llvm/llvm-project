@@ -158,15 +158,23 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
   launch_info.SetArguments(args, true);
   launch_info.SetLaunchInSeparateProcessGroup(true);
   launch_info.GetFlags().Clear(eLaunchFlagDebug);
-  launch_info.SetMonitorProcessCallback(ProcessLaunchInfo::NoOpMonitorCallback);
 
-  LLDB_LOG(log, "{0}", get_arg_range(launch_info.GetArguments()));
+  auto exit_code = std::make_shared<std::optional<int>>();
+  launch_info.SetMonitorProcessCallback(
+      [=](lldb::pid_t pid, int signal, int status) {
+        LLDB_LOG(
+            log,
+            "WebAssembly runtime exited: pid = {0}, signal = {1}, status = {2}",
+            pid, signal, status);
+        exit_code->emplace(status);
+      });
 
   // This is automatically done for host platform in
   // Target::FinalizeFileActions, but we're not a host platform.
   llvm::Error Err = launch_info.SetUpPtyRedirection();
   LLDB_LOG_ERROR(log, std::move(Err), "SetUpPtyRedirection failed: {0}");
 
+  LLDB_LOG(log, "{0}", get_arg_range(launch_info.GetArguments()));
   error = Host::LaunchProcess(launch_info);
   if (error.Fail())
     return nullptr;
@@ -183,8 +191,15 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
 
   error = process_sp->ConnectRemote(
       llvm::formatv("connect://localhost:{0}", port).str());
-  if (error.Fail())
+  if (error.Fail()) {
+    // If we know the runtime has exited, that's a better error message than
+    // failing to connect.
+    if (*exit_code)
+      error = Status::FromErrorStringWithFormatv(
+          "WebAssembly runtime exited with exit code {0}", **exit_code);
+
     return nullptr;
+  }
 
   if (launch_info.GetPTY().GetPrimaryFileDescriptor() !=
       PseudoTerminal::invalid_fd)
@@ -192,6 +207,4 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
         launch_info.GetPTY().ReleasePrimaryFileDescriptor());
 
   return process_sp;
-
-  return {};
 }
