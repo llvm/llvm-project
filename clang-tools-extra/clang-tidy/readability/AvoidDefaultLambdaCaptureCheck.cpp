@@ -27,8 +27,29 @@ static std::string generateCaptureText(const LambdaCapture &Capture) {
   return Result;
 }
 
+AvoidDefaultLambdaCaptureCheck::AvoidDefaultLambdaCaptureCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreImplicitCapturesInSTL(
+          Options.get("IgnoreImplicitCapturesInSTL", false)) {}
+
+void AvoidDefaultLambdaCaptureCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreImplicitCapturesInSTL",
+                IgnoreImplicitCapturesInSTL);
+}
+
 void AvoidDefaultLambdaCaptureCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(lambdaExpr(hasDefaultCapture()).bind("lambda"), this);
+  if (IgnoreImplicitCapturesInSTL) {
+    Finder->addMatcher(
+        lambdaExpr(hasDefaultCapture(),
+                   unless(hasAncestor(
+                       callExpr(callee(functionDecl(isInStdNamespace()))))))
+            .bind("lambda"),
+        this);
+  } else {
+    Finder->addMatcher(lambdaExpr(hasDefaultCapture()).bind("lambda"), this);
+  }
 }
 
 void AvoidDefaultLambdaCaptureCheck::check(
@@ -60,8 +81,14 @@ void AvoidDefaultLambdaCaptureCheck::check(
 
   const std::string ReplacementText = llvm::join(ImplicitCaptures, ", ");
 
-  Diag << FixItHint::CreateReplacement(Lambda->getCaptureDefaultLoc(),
-                                       ReplacementText);
+  // Don't suggest a fix-it if the default capture is within a macro expansion,
+  // as the replacement may not be correct for all uses of the macro
+  const SourceManager &SM = *Result.SourceManager;
+  if (!SM.isMacroBodyExpansion(DefaultCaptureLoc) &&
+      !SM.isMacroArgExpansion(DefaultCaptureLoc)) {
+    Diag << FixItHint::CreateReplacement(Lambda->getCaptureDefaultLoc(),
+                                         ReplacementText);
+  }
 }
 
 } // namespace clang::tidy::readability

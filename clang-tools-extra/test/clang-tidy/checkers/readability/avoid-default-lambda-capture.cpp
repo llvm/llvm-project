@@ -1,5 +1,7 @@
-// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s readability-avoid-default-lambda-capture %t -- -- -Wno-vla-extension
-// RUN: %check_clang_tidy -std=c++20-or-later -check-suffixes=,20 %s readability-avoid-default-lambda-capture %t -- -- -Wno-vla-extension
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17 -check-suffixes=,DEFAULT %s readability-avoid-default-lambda-capture %t -- -- -Wno-vla-extension
+// RUN: %check_clang_tidy -std=c++20-or-later -check-suffixes=,DEFAULT,20 %s readability-avoid-default-lambda-capture %t -- -- -Wno-vla-extension
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17 -check-suffix= %s readability-avoid-default-lambda-capture %t -- -config="{CheckOptions: {readability-avoid-default-lambda-capture.IgnoreImplicitCapturesInSTL: true}}" -- -Wno-vla-extension
+// RUN: %check_clang_tidy -std=c++20-or-later -check-suffixes=,20 %s readability-avoid-default-lambda-capture %t -- -config="{CheckOptions: {readability-avoid-default-lambda-capture.IgnoreImplicitCapturesInSTL: true}}" -- -Wno-vla-extension
 
 void test_default_captures() {
   int value = 42;
@@ -176,4 +178,55 @@ void test_vla() {
   int vla[n];
 
   auto lambda = [&]() { return vla[0]; };
+}
+
+// Mock the STL
+namespace std {
+  template<class InputIt, class UnaryFunction>
+  UnaryFunction for_each(InputIt first, InputIt last, UnaryFunction f) {
+    return f;
+  }
+  
+  template<class InputIt, class T>
+  T accumulate(InputIt first, InputIt last, T init) {
+    return init;
+  }
+
+  template<class InputIt, class T, class BinaryOperation>
+  T accumulate(InputIt first, InputIt last, T init, BinaryOperation op) {
+    return init;
+  }
+}
+
+void test_stl_captures() {
+  int x = 10;
+  int arr[] = {1, 2, 3};
+
+  std::for_each(arr, arr + 3, [=](int i) { });
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:32: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES-DEFAULT: std::for_each(arr, arr + 3, [](int i) { });
+
+  std::accumulate(arr, arr + 3, 0, [&](int a, int b) { return a + b + x; });
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:37: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES-DEFAULT: std::accumulate(arr, arr + 3, 0, [&x](int a, int b) { return a + b + x; });
+}
+
+// Lambdas in macros should warn but not provide fix-its
+#define MACRO_WITH_LAMBDA(x) [=]() { return x; }
+#define BY_VALUE =
+#define BY_REF &
+
+void test_macros() {
+  int value = 42;
+
+  // Lambda defined in macro body - warn but no fix-it
+  auto lambda1 = MACRO_WITH_LAMBDA(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+
+  // Default capture from macro - warn but no fix-it
+  auto lambda2 = [BY_VALUE]() { return value; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+
+  auto lambda3 = [BY_REF]() { return value; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
 }
