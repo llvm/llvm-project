@@ -6,7 +6,6 @@ import * as vscode from 'vscode';
 
 import { LITTaskProvider } from './litTaskProvider';
 import { LLVMContext } from './llvmContext';
-import { LLVMGetCfgCommand } from './llvmCfg';
 
 /**
  *  This method is called when the extension is activated. The extension is
@@ -28,8 +27,6 @@ export function activate(context: vscode.ExtensionContext) {
       llvmContext.dispose();
       await llvmContext.activate();
     }));
-
-  new LLVMGetCfgCommand(llvmContext);
 
   llvmContext.activate();
   outputChannel.appendLine("LLVM: extension activated!");

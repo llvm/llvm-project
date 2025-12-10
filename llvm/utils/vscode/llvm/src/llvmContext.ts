@@ -19,20 +19,9 @@ class WorkspaceFolderContext implements vscode.Disposable {
     // Close all clients for this workspace
     this.clients.forEach(async client => await client.stop());
     this.clients.clear();
-
-    // Close all open CFG views
-    this.cfgWebViews.forEach((value, key) => {
-      const webviews = Array.from(value.values());
-      for (const webview of webviews) {
-        webview.dispose();
-      }
-    })
-    this.cfgWebViews.clear();
   }
 
   clients: Map<string, vscodelc.LanguageClient> = new Map();
-  // Map of IR files and functions to tabs with their CFG
-  cfgWebViews = new Map<string, Map<string, vscode.WebviewPanel>>;
 }
 
 /**

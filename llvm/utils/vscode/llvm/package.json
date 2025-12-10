@@ -158,10 +158,6 @@
       {
         "command": "llvm.restart",
         "title": "llvm: Restart language server"
-      },
-      {
-        "command": "llvm.cfg",
-        "title": "llvm: Open CFG preview"
       }
     ],
     "menus": {
