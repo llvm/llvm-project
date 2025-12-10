@@ -1109,8 +1109,8 @@ func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
     omp.terminator
   }
 
-  // CHECK: omp.teams num_teams_multi_dim(dims(3): %{{.*}}, %{{.*}}, %{{.*}} : i32, i32, i32)
-  omp.teams num_teams_multi_dim(dims(3): %lb, %ub, %ub : i32, i32, i32) {
+  // CHECK: omp.teams num_teams(dims(3): %{{.*}}, %{{.*}}, %{{.*}} : i32)
+  omp.teams num_teams(dims(3): %lb, %ub, %ub : i32) {
     // CHECK: omp.terminator
     omp.terminator
   }

@@ -974,22 +974,62 @@ class OpenMP_NumTeamsClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$num_teams_dims,
+    Variadic<AnyInteger>:$num_teams_values,
     Optional<AnyInteger>:$num_teams_lower,
     Optional<AnyInteger>:$num_teams_upper
   );
 
   let optAssemblyFormat = [{
-    `num_teams` `(` ( $num_teams_lower^ `:` type($num_teams_lower) )? `to`
-                      $num_teams_upper `:` type($num_teams_upper) `)`
+    `num_teams` `(` custom<NumTeamsClause>(
+      $num_teams_dims, $num_teams_values, type($num_teams_values),
+      $num_teams_lower, type($num_teams_lower),
+      $num_teams_upper, type($num_teams_upper)
+    ) `)`
   }];
 
   let description = [{
-    The optional `num_teams_upper` and `num_teams_lower` arguments specify the
-    limit on the number of teams to be created. If only the upper bound is
-    specified, it acts as if the lower bound was set to the same value. It is
-    not allowed to set `num_teams_lower` if `num_teams_upper` is not specified.
-    They define a closed range, where both the lower and upper bounds are
-    included.
+    The `num_teams` clause specifies the bounds on the league space formed by the
+    construct on which it appears.
+
+    With dims modifier: (OpenMP 6.1 requirement)
+    - Uses `num_teams_dims` (dimension count) and `num_teams_values` (upper bounds list)
+    - Specifies upper bounds for each dimension (all must have same type)
+    - Format: `num_teams(dims(N): upper_bound_0, ..., upper_bound_N-1 : type)`
+    - Example: `num_teams(dims(3): %ub0, %ub1, %ub2 : i32)`
+
+    Without dims modifier:
+    - Uses `num_teams_upper` and optional `num_teams_lower`
+    - If lower bound not specified, it defaults to upper bound value
+    - Format: `num_teams(lower : type to upper : type)` or `num_teams(to upper : type)`
+    - Example: `num_teams(%lb : i32 to %ub : i32)` or `num_teams(to %ub : i32)`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns true if the dims modifier is explicitly present
+    bool hasDimsModifier() {
+      return getNumTeamsDims().has_value();
+    }
+
+    /// Returns the number of dimensions specified by dims modifier
+    unsigned getNumDimensions() {
+      if (!hasDimsModifier())
+        return 1;
+      return static_cast<unsigned>(*getNumTeamsDims());
+    }
+
+    /// Returns all dimension values as an operand range
+    ::mlir::OperandRange getDimensionValues() {
+      return getNumTeamsValues();
+    }
+
+    /// Returns the value for a specific dimension index
+    /// Index must be less than getNumDimensions()
+    ::mlir::Value getDimensionValue(unsigned index) {
+      assert(index < getDimensionValues().size() &&
+             "Dimension index out of bounds");
+      return getDimensionValues()[index];
+    }
   }];
 }
 
@@ -1531,77 +1571,5 @@ class OpenMP_UseDevicePtrClauseSkip<
 }
 
 def OpenMP_UseDevicePtrClause : OpenMP_UseDevicePtrClauseSkip<>;
-
-//===----------------------------------------------------------------------===//
-// V6.1: `num_teams` clause with dims modifier
-//===----------------------------------------------------------------------===//
-
-class OpenMP_NumTeamsMultiDimClauseSkip<
-    bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
-            extraClassDeclaration> {
-  let arguments = (ins
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$num_teams_dims,
-    Variadic<AnyInteger>:$num_teams_values
-  );
-
-  let optAssemblyFormat = [{
-    `num_teams_multi_dim` `(` custom<DimsModifier>($num_teams_dims,
-                                                    $num_teams_values,
-                                                    type($num_teams_values)) `)`
-  }];
-
-  let description = [{
-    The `num_teams_multi_dim` clause with dims modifier support specifies the limit on
-    the number of teams to be created in a multidimensional team space.
-
-    The dims modifier for the num_teams_multi_dim clause specifies the number of
-    dimensions for the league space (team space) that the clause arranges.
-    The dimensions argument in the dims modifier specifies the number of
-    dimensions and determines the length of the list argument. The list items
-    are specified in ascending order according to the ordinal number of the
-    dimensions (dimension 0, 1, 2, ..., N-1).
-
-    - If `dims` is not specified: The space is unidimensional (1D) with a single value
-    - If `dims(1)` is specified: The space is explicitly unidimensional (1D)
-    - If `dims(N)` where N > 1: The space is strictly multidimensional (N-D)
-
-    **Examples:**
-    - `num_teams_multi_dim(dims(3): %nt0, %nt1, %nt2 : i32, i32, i32)` creates a
-      3-dimensional team space with limits nt0, nt1, nt2 for dimensions 0, 1, 2.
-    - `num_teams_multi_dim(%nt : i32)` creates a unidimensional team space with limit nt.
-  }];
-
-  let extraClassDeclaration = [{
-    /// Returns true if the dims modifier is explicitly present
-    bool hasDimsModifier() {
-      return getNumTeamsDims().has_value();
-    }
-
-    /// Returns the number of dimensions specified by dims modifier
-    /// Returns 1 if dims modifier is not present (unidimensional by default)
-    unsigned getNumDimensions() {
-      if (!hasDimsModifier())
-        return 1;
-      return static_cast<unsigned>(*getNumTeamsDims());
-    }
-
-    /// Returns all dimension values as an operand range
-    ::mlir::OperandRange getDimensionValues() {
-      return getNumTeamsValues();
-    }
-
-    /// Returns the value for a specific dimension index
-    /// Index must be less than getNumDimensions()
-    ::mlir::Value getDimensionValue(unsigned index) {
-    assert(index < getDimensionValues().size() &&
-        "Dimension index out of bounds");
-      return getDimensionValues()[index];
-    }
-  }];
-}
-
-def OpenMP_NumTeamsMultiDimClause : OpenMP_NumTeamsMultiDimClauseSkip<>;
 
 #endif // OPENMP_CLAUSES
