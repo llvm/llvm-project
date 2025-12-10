@@ -128,6 +128,8 @@ class RISCVAsmParser : public MCTargetAsmParser {
   // Helper to actually emit an instruction to the MCStreamer. Also, when
   // possible, compression of the instruction is performed.
   void emitToStreamer(MCStreamer &S, const MCInst &Inst);
+  void validateInstructionPreEmit(const MCInst &Inst,
+                                  const MCSubtargetInfo &STI);
 
   // Helper to emit a combination of LUI, ADDI(W), and SLLI instructions that
   // synthesize the desired immediate value into the destination register.
@@ -3471,6 +3473,34 @@ bool RISCVAsmParser::parseDirectiveVariantCC() {
   return false;
 }
 
+void RISCVAsmParser::validateInstructionPreEmit(const MCInst &Inst, const MCSubtargetInfo &STI) {
+  // Ensure that we don't emit instructions with missing predicates or invalid
+  // register classes.
+  // TODO: ideally this code should be shared between targets.
+  RISCV_MC::verifyInstructionPredicates(Inst.getOpcode(), STI.getFeatureBits());
+  const MCRegisterInfo *MRI = getContext().getRegisterInfo();
+  unsigned HwMode = STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);
+  const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
+  for (auto [I, Op] : enumerate(Inst.getOperands())) {
+    if (Op.isReg() && Op.getReg().isValid()) {
+      auto RCID = MII.getOpRegClassID(Desc.operands()[I], HwMode);
+      // Some instructions don't have a valid regclass, e.g. .insn_*
+      if (RCID == -1)
+        continue;
+      const MCRegisterClass &RegClass = MRI->getRegClass(RCID);
+      if (!RegClass.contains(Op.getReg())) {
+        getParser().printError(getLoc(), MII.getName(Inst.getOpcode()) + " operand " +
+                            Twine(I + 1) + " register " +
+                            MRI->getName(Op.getReg()) +
+                            " is not a member of register class " +
+                            MRI->getRegClassName(&RegClass));
+        reportFatalInternalError("Attempting to emit invalid instruction. "
+                                 "Incorrect pseudo expansion?");
+      }
+    }
+  }
+}
+
 void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
   bool Res = false;
@@ -3479,6 +3509,7 @@ void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
     Res = RISCVRVC::compress(CInst, Inst, STI);
   if (Res)
     ++RISCVNumInstrsCompressed;
+  validateInstructionPreEmit((Res ? CInst : Inst), STI);
   S.emitInstruction((Res ? CInst : Inst), STI);
 }
 
