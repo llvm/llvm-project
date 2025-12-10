@@ -131,17 +131,17 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
     auto meta = memref::ExtractStridedMetadataOp::create(rewriter, loc, src);
     auto baseAddrIndex = memref::ExtractAlignedPointerAsIndexOp::create(
         rewriter, loc, meta.getBaseBuffer());
-    auto baseAddrI64 = arith::IndexCastOp::create(
-        rewriter, loc, rewriter.getI64Type(), baseAddrIndex.getResult());
-    // Strided metadata only provides 1D offset but create_nd_desc op expect
-    // offset match the rank of source memref. Add leading zeros if rank > 1.
-    SmallVector<OpFoldResult> fullOffsets;
-    for (unsigned i = 0; i < srcTy.getRank() - 1; ++i) {
-      fullOffsets.push_back(rewriter.getI64IntegerAttr(0));
-    }
-    fullOffsets.push_back(meta.getConstifiedMixedOffset());
+    auto offset = meta.getOffset();
+    auto elemByteSize = srcTy.getElementTypeBitWidth() / 8;
+    auto offsetInBytes = arith::MulIOp::create(
+        rewriter, loc, offset,
+        arith::ConstantIndexOp::create(rewriter, loc, elemByteSize));
+    auto adjustedBaseAddr = arith::AddIOp::create(
+        rewriter, loc, baseAddrIndex.getResult(), offsetInBytes);
+    auto adjustedAddrI64 = arith::IndexCastOp::create(
+        rewriter, loc, rewriter.getI64Type(), adjustedBaseAddr);
     ndDesc = xegpu::CreateNdDescOp::create(
-        rewriter, loc, descType, baseAddrI64, fullOffsets,
+        rewriter, loc, descType, adjustedAddrI64,
         meta.getConstifiedMixedSizes(), meta.getConstifiedMixedStrides());
   }
 
