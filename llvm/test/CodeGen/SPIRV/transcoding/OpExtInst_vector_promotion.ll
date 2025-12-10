@@ -4,8 +4,8 @@
 ; Some OpenCL builtins have mixed vector-scalar variants, but OpExtInt only supports
 ; versions where all the arguments have the same type.
 ;
-; We generate code, but it is invalid
-; We should generate vector versions for these cases
+; We generate code, but it is invalid.
+; We should generate vector versions for these cases.
 
 define spir_kernel void @S_MIN() {
 ; CHECK-LABEL:   OpFunction %{{[0-9]+}} None %{{[0-9]+}} ; -- Begin function S_MIN
