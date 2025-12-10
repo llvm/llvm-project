@@ -401,3 +401,58 @@ entry:
   %clzg = select i1 %iszero, i32 -9, i32 %cast
   ret i32 %clzg
 }
+
+define i32 @addi_addi(i1 %a, i16 %b) {
+; RV32ZICOND-LABEL: addi_addi:
+; RV32ZICOND:       # %bb.0:
+; RV32ZICOND-NEXT:    andi a0, a0, 1
+; RV32ZICOND-NEXT:    bset a1, zero, a1
+; RV32ZICOND-NEXT:    addi a1, a1, -2
+; RV32ZICOND-NEXT:    czero.nez a0, a1, a0
+; RV32ZICOND-NEXT:    addi a0, a0, 1
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: addi_addi:
+; RV64ZICOND:       # %bb.0:
+; RV64ZICOND-NEXT:    andi a0, a0, 1
+; RV64ZICOND-NEXT:    bset a1, zero, a1
+; RV64ZICOND-NEXT:    addi a1, a1, -2
+; RV64ZICOND-NEXT:    czero.nez a0, a1, a0
+; RV64ZICOND-NEXT:    addi a0, a0, 1
+; RV64ZICOND-NEXT:    ret
+  %zext = zext nneg i16 %b to i32
+  %shl = shl nsw i32 -1, %zext
+  %xor = xor i32 %shl, -1
+  %select = select i1 %a, i32 1, i32 %xor
+  ret i32 %select
+}
+
+define i64 @addiw_addi(i32 %x) {
+; RV32ZICOND-LABEL: addiw_addi:
+; RV32ZICOND:       # %bb.0:
+; RV32ZICOND-NEXT:    addi a1, a0, -64
+; RV32ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV32ZICOND-NEXT:    addi a1, a0, 63
+; RV32ZICOND-NEXT:    addi a0, a0, 31
+; RV32ZICOND-NEXT:    srli a2, a0, 31
+; RV32ZICOND-NEXT:    bset a1, zero, a1
+; RV32ZICOND-NEXT:    bset a3, zero, a0
+; RV32ZICOND-NEXT:    czero.eqz a0, a1, a2
+; RV32ZICOND-NEXT:    czero.nez a1, a3, a2
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: addiw_addi:
+; RV64ZICOND:       # %bb.0:
+; RV64ZICOND-NEXT:    sext.w a1, a0
+; RV64ZICOND-NEXT:    addi a0, a0, -64
+; RV64ZICOND-NEXT:    czero.eqz a0, a0, a1
+; RV64ZICOND-NEXT:    addi a0, a0, 63
+; RV64ZICOND-NEXT:    bset a0, zero, a0
+; RV64ZICOND-NEXT:    ret
+  %add = add i32 %x, -1
+  %icmp = icmp eq i32 %x, 0
+  %select = select i1 %icmp, i32 63, i32 %add
+  %zext= zext nneg i32 %select to i64
+  %shl = shl nuw i64 1, %zext
+  ret i64 %shl
+}

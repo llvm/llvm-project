@@ -76,6 +76,7 @@ enum RISCVMachineCombinerPattern : unsigned {
   FNMSUB,
   SHXADD_ADD_SLLI_OP1,
   SHXADD_ADD_SLLI_OP2,
+  ADDI_ADDI,
 };
 
 class RISCVInstrInfo : public RISCVGenInstrInfo {
@@ -355,6 +356,18 @@ private:
                                const MachineInstr &MI2) const;
   bool hasReassociableVectorSibling(const MachineInstr &Inst,
                                     bool &Commuted) const;
+  void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
+                              unsigned Pattern,
+                              SmallVectorImpl<MachineInstr *> &InsInstrs,
+                              SmallVectorImpl<MachineInstr *> &DelInstrs) const;
+  void
+  genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
+                    SmallVectorImpl<MachineInstr *> &InsInstrs,
+                    SmallVectorImpl<MachineInstr *> &DelInstrs,
+                    DenseMap<Register, unsigned> &InstrIdxForVirtReg) const;
+  void combineADDIADDI(MachineInstr &Root,
+                       SmallVectorImpl<MachineInstr *> &InsInstrs,
+                       SmallVectorImpl<MachineInstr *> &DelInstrs) const;
 };
 
 namespace RISCV {

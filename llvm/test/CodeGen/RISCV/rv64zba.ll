@@ -4609,8 +4609,7 @@ define i64 @add_u32simm32_zextw(i64 %x) nounwind {
 ; RV64XANDESPERF-NEXT:    nds.lea.b.ze a0, a0, a1
 ; RV64XANDESPERF-NEXT:    li a1, 1
 ; RV64XANDESPERF-NEXT:    slli a1, a1, 32
-; RV64XANDESPERF-NEXT:    addi a1, a1, -2
-; RV64XANDESPERF-NEXT:    addi a1, a1, 1
+; RV64XANDESPERF-NEXT:    addi a1, a1, -1
 ; RV64XANDESPERF-NEXT:    and a0, a0, a1
 ; RV64XANDESPERF-NEXT:    ret
 entry:
@@ -5086,4 +5085,34 @@ define i64 @exactashr1mul36(i64 %a) {
   %c = ashr exact i64 %a, 1
   %d = mul i64 %c, 36
   ret i64 %d
+}
+
+define i32 @shl_add_shl_add(i32 %a, i32 %b, i32 %c) {
+; RV64I-LABEL: shl_add_shl_add:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a2, a2, 5
+; RV64I-NEXT:    add a1, a1, a2
+; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: shl_add_shl_add:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh2add a0, a2, a0
+; RV64ZBA-NEXT:    sh3add a0, a0, a1
+; RV64ZBA-NEXT:    sext.w a0, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: shl_add_shl_add:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    slli a2, a2, 5
+; RV64XANDESPERF-NEXT:    add a1, a1, a2
+; RV64XANDESPERF-NEXT:    nds.lea.d a0, a1, a0
+; RV64XANDESPERF-NEXT:    sext.w a0, a0
+; RV64XANDESPERF-NEXT:    ret
+  %shl = shl nsw i32 %c, 5
+  %add = add i32 %b, %shl
+  %shl2 = shl nuw nsw i32 %a, 3
+  %add2= add i32 %shl2, %add
+  ret i32 %add2
 }

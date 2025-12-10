@@ -2654,6 +2654,22 @@ static bool getSHXADDPatterns(const MachineInstr &Root,
   return Found;
 }
 
+// Check (addi (addi X, C1), C2) -> (addi X, C1+C2) pattern.
+static bool getADDIADDIPatterns(const MachineInstr &Root,
+                                SmallVectorImpl<unsigned> &Patterns) {
+  if (Root.getOpcode() != RISCV::ADDI)
+    return false;
+  const MachineBasicBlock &MBB = *Root.getParent();
+  const MachineInstr *Inner = canCombine(MBB, Root.getOperand(1), RISCV::ADDI);
+  if (!Inner || !Inner->getOperand(1).isReg())
+    return false;
+  int64_t Sum = Inner->getOperand(2).getImm() + Root.getOperand(2).getImm();
+  if (!isInt<12>(Sum))
+    return false;
+  Patterns.push_back(RISCVMachineCombinerPattern::ADDI_ADDI);
+  return true;
+}
+
 CombinerObjective RISCVInstrInfo::getCombinerObjective(unsigned Pattern) const {
   switch (Pattern) {
   case RISCVMachineCombinerPattern::FMADD_AX:
@@ -2674,6 +2690,9 @@ bool RISCVInstrInfo::getMachineCombinerPatterns(
     return true;
 
   if (getSHXADDPatterns(Root, Patterns))
+    return true;
+
+  if (getADDIADDIPatterns(Root, Patterns))
     return true;
 
   return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
@@ -2715,13 +2734,12 @@ static unsigned getAddendOperandIdx(unsigned Pattern) {
   }
 }
 
-static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
-                                   unsigned Pattern,
-                                   SmallVectorImpl<MachineInstr *> &InsInstrs,
-                                   SmallVectorImpl<MachineInstr *> &DelInstrs) {
+void RISCVInstrInfo::combineFPFusedMultiply(
+    MachineInstr &Root, MachineInstr &Prev, unsigned Pattern,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
+    SmallVectorImpl<MachineInstr *> &DelInstrs) const {
   MachineFunction *MF = Root.getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
   MachineOperand &Mul1 = Prev.getOperand(1);
   MachineOperand &Mul2 = Prev.getOperand(2);
@@ -2745,7 +2763,7 @@ static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
   MRI.clearKillFlags(Mul2.getReg());
 
   MachineInstrBuilder MIB =
-      BuildMI(*MF, MergedLoc, TII->get(FusedOpc), DstReg)
+      BuildMI(*MF, MergedLoc, get(FusedOpc), DstReg)
           .addReg(Mul1.getReg(), getKillRegState(Mul1IsKill))
           .addReg(Mul2.getReg(), getKillRegState(Mul2IsKill))
           .addReg(Addend.getReg(), getKillRegState(AddendIsKill))
@@ -2760,14 +2778,13 @@ static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
 // Combine patterns like (sh3add Z, (add X, (slli Y, 5))) to
 // (sh3add (sh2add Y, Z), X) if the shift amount can be split across two
 // shXadd instructions. The outer shXadd keeps its original opcode.
-static void
-genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
-                  SmallVectorImpl<MachineInstr *> &InsInstrs,
-                  SmallVectorImpl<MachineInstr *> &DelInstrs,
-                  DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
+void RISCVInstrInfo::genShXAddAddShift(
+    MachineInstr &Root, unsigned AddOpIdx,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
+    SmallVectorImpl<MachineInstr *> &DelInstrs,
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg) const {
   MachineFunction *MF = Root.getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
   unsigned OuterShiftAmt = getSHXADDShiftAmount(Root.getOpcode());
   assert(OuterShiftAmt != 0 && "Unexpected opcode");
@@ -2803,10 +2820,10 @@ genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
 
   Register NewVR = MRI.createVirtualRegister(&RISCV::GPRRegClass);
 
-  auto MIB1 = BuildMI(*MF, MIMetadata(Root), TII->get(InnerOpc), NewVR)
+  auto MIB1 = BuildMI(*MF, MIMetadata(Root), get(InnerOpc), NewVR)
                   .addReg(Y.getReg(), getKillRegState(Y.isKill()))
                   .addReg(Z.getReg(), getKillRegState(Z.isKill()));
-  auto MIB2 = BuildMI(*MF, MIMetadata(Root), TII->get(Root.getOpcode()),
+  auto MIB2 = BuildMI(*MF, MIMetadata(Root), get(Root.getOpcode()),
                       Root.getOperand(0).getReg())
                   .addReg(NewVR, RegState::Kill)
                   .addReg(X.getReg(), getKillRegState(X.isKill()));
@@ -2816,6 +2833,26 @@ genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
   InsInstrs.push_back(MIB2);
   DelInstrs.push_back(ShiftMI);
   DelInstrs.push_back(AddMI);
+  DelInstrs.push_back(&Root);
+}
+
+// Fold (addi (addi X, C1), C2) -> (addi X, C1+C2)
+void RISCVInstrInfo::combineADDIADDI(
+    MachineInstr &Root, SmallVectorImpl<MachineInstr *> &InsInstrs,
+    SmallVectorImpl<MachineInstr *> &DelInstrs) const {
+  MachineFunction *MF = Root.getMF();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  MachineInstr *Inner = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
+  const MachineOperand &X = Inner->getOperand(1);
+  int64_t Sum = Inner->getOperand(2).getImm() + Root.getOperand(2).getImm();
+
+  auto MIB = BuildMI(*MF, MIMetadata(Root), get(RISCV::ADDI),
+                     Root.getOperand(0).getReg())
+                 .addReg(X.getReg(), getKillRegState(X.isKill()))
+                 .addImm(Sum);
+  InsInstrs.push_back(MIB);
+  DelInstrs.push_back(Inner);
   DelInstrs.push_back(&Root);
 }
 
@@ -2847,6 +2884,9 @@ void RISCVInstrInfo::genAlternativeCodeSequence(
     return;
   case RISCVMachineCombinerPattern::SHXADD_ADD_SLLI_OP2:
     genShXAddAddShift(Root, 2, InsInstrs, DelInstrs, InstrIdxForVirtReg);
+    return;
+  case RISCVMachineCombinerPattern::ADDI_ADDI:
+    combineADDIADDI(Root, InsInstrs, DelInstrs);
     return;
   }
 }

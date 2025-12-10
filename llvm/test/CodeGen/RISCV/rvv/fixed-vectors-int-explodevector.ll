@@ -384,8 +384,8 @@ define i32 @explode_4xi32(<4 x i32> %v) {
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vredxor.vs v8, v8, v9
 ; RV64-NEXT:    vmv.x.s a2, v8
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    addw a0, a2, a0
+; RV64-NEXT:    add a0, a2, a0
+; RV64-NEXT:    addw a0, a0, a1
 ; RV64-NEXT:    ret
   %e0 = extractelement <4 x i32> %v, i32 0
   %e1 = extractelement <4 x i32> %v, i32 1
@@ -587,10 +587,10 @@ define i32 @explode_16xi32(<16 x i32> %v) {
 ; RV64-NEXT:    add t2, t2, t3
 ; RV64-NEXT:    add a0, a0, a3
 ; RV64-NEXT:    add a7, a7, t1
-; RV64-NEXT:    add t2, t2, t4
 ; RV64-NEXT:    add a0, a0, a7
-; RV64-NEXT:    add t2, t2, t5
-; RV64-NEXT:    addw a0, a0, t2
+; RV64-NEXT:    add t2, t2, t4
+; RV64-NEXT:    add a0, a0, t2
+; RV64-NEXT:    addw a0, a0, t5
 ; RV64-NEXT:    addi sp, s0, -128
 ; RV64-NEXT:    .cfi_def_cfa sp, 128
 ; RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
@@ -1212,10 +1212,10 @@ define i32 @explode_16xi32_exact_vlen(<16 x i32> %v) vscale_range(2, 2) {
 ; RV64-NEXT:    add t1, t1, t3
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a5, a5, t0
-; RV64-NEXT:    add t1, t1, t4
 ; RV64-NEXT:    add a0, a0, a5
-; RV64-NEXT:    add t1, t1, t5
-; RV64-NEXT:    addw a0, a0, t1
+; RV64-NEXT:    add t1, t1, t4
+; RV64-NEXT:    add a0, a0, t1
+; RV64-NEXT:    addw a0, a0, t5
 ; RV64-NEXT:    ret
   %e0 = extractelement <16 x i32> %v, i32 0
   %e1 = extractelement <16 x i32> %v, i32 1
