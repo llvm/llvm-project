@@ -1855,7 +1855,7 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   addAnnotationRemarksPass(MPM);
 
   addRequiredLTOPreLinkPasses(MPM);
-  
+
   return MPM;
 }
 
