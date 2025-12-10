@@ -483,8 +483,11 @@ bool X86PassConfig::addRegBankSelect() {
 bool X86PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
   // Add GlobalBaseReg in case there is no SelectionDAG passes afterwards
-  if (isGlobalISelAbortEnabled())
+  if (isGlobalISelAbortEnabled()) {
     addPass(createX86GlobalBaseRegPass());
+    // Fixup must run before verifier after isel.
+    addPass(createX86PostIselFixupPass());
+  }
   return false;
 }
 

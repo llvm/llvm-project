@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=i686-linux -fast-isel -fast-isel-abort=1  | FileCheck %s -check-prefixes=X86-FASTISEL
 ; RUN: llc < %s -mtriple=x86_64-linux -fast-isel -fast-isel-abort=1  | FileCheck %s -check-prefixes=X64,X64-FASTISEL
 ; RUN: llc < %s -mtriple=i686-linux -global-isel -global-isel-abort=1  | FileCheck %s -check-prefixes=X86,X86-GISEL
-; RUN: llc < %s -mtriple=x86_64-linux -global-isel -global-isel-abort=1  | FileCheck %s -check-prefixes=X64-GISEL
+; RUN: llc < %s -mtriple=x86_64-linux -global-isel -global-isel-abort=1  | FileCheck %s -check-prefixes=X64,X64-GISEL
 define i1 @isnone_f(float %x) nounwind {
 ; X86-LABEL: isnone_f:
 ; X86:       # %bb.0: # %entry
@@ -50,6 +50,17 @@ entry:
 }
 
 define i1 @issignaling_f(float %x) nounwind {
+; X86-SDAGISEL-LABEL: issignaling_f:
+; X86-SDAGISEL:       # %bb.0:
+; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-SDAGISEL-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-SDAGISEL-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X86-SDAGISEL-NEXT:    setl %cl
+; X86-SDAGISEL-NEXT:    cmpl $2139095041, %eax # imm = 0x7F800001
+; X86-SDAGISEL-NEXT:    setge %al
+; X86-SDAGISEL-NEXT:    andb %cl, %al
+; X86-SDAGISEL-NEXT:    retl
+;
 ; X64-SDAGISEL-LABEL: issignaling_f:
 ; X64-SDAGISEL:       # %bb.0:
 ; X64-SDAGISEL-NEXT:    movd %xmm0, %eax
@@ -87,6 +98,19 @@ define i1 @issignaling_f(float %x) nounwind {
 ; X64-FASTISEL-NEXT:    andb %cl, %al
 ; X64-FASTISEL-NEXT:    retq
 ;
+; X86-GISEL-LABEL: issignaling_f:
+; X86-GISEL:       # %bb.0:
+; X86-GISEL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-GISEL-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-GISEL-NEXT:    xorl %ecx, %ecx
+; X86-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-GISEL-NEXT:    seta %dl
+; X86-GISEL-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X86-GISEL-NEXT:    setb %al
+; X86-GISEL-NEXT:    andb %dl, %al
+; X86-GISEL-NEXT:    orb %cl, %al
+; X86-GISEL-NEXT:    retl
+;
 ; X64-GISEL-LABEL: issignaling_f:
 ; X64-GISEL:       # %bb.0:
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
@@ -104,6 +128,14 @@ define i1 @issignaling_f(float %x) nounwind {
 }
 
  define i1 @isquiet_f(float %x) nounwind {
+; X86-SDAGISEL-LABEL: isquiet_f:
+; X86-SDAGISEL:       # %bb.0: # %entry
+; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-SDAGISEL-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-SDAGISEL-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X86-SDAGISEL-NEXT:    setge %al
+; X86-SDAGISEL-NEXT:    retl
+;
 ; X64-SDAGISEL-LABEL: isquiet_f:
 ; X64-SDAGISEL:       # %bb.0: # %entry
 ; X64-SDAGISEL-NEXT:    movd %xmm0, %eax
@@ -132,6 +164,16 @@ define i1 @issignaling_f(float %x) nounwind {
 ; X64-FASTISEL-NEXT:    setge %al
 ; X64-FASTISEL-NEXT:    retq
 ;
+; X86-GISEL-LABEL: isquiet_f:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-GISEL-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-GISEL-NEXT:    xorl %ecx, %ecx
+; X86-GISEL-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X86-GISEL-NEXT:    setae %al
+; X86-GISEL-NEXT:    orb %cl, %al
+; X86-GISEL-NEXT:    retl
+;
 ; X64-GISEL-LABEL: isquiet_f:
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
@@ -147,6 +189,14 @@ define i1 @issignaling_f(float %x) nounwind {
 }
 
 define i1 @not_isquiet_f(float %x) nounwind {
+; X86-SDAGISEL-LABEL: not_isquiet_f:
+; X86-SDAGISEL:       # %bb.0: # %entry
+; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-SDAGISEL-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-SDAGISEL-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X86-SDAGISEL-NEXT:    setl %al
+; X86-SDAGISEL-NEXT:    retl
+;
 ; X64-SDAGISEL-LABEL: not_isquiet_f:
 ; X64-SDAGISEL:       # %bb.0: # %entry
 ; X64-SDAGISEL-NEXT:    movd %xmm0, %eax
@@ -175,6 +225,25 @@ define i1 @not_isquiet_f(float %x) nounwind {
 ; X64-FASTISEL-NEXT:    setl %al
 ; X64-FASTISEL-NEXT:    retq
 ;
+; X86-GISEL-LABEL: not_isquiet_f:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-GISEL-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-GISEL-NEXT:    xorl %ecx, %ecx
+; X86-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-GISEL-NEXT:    setb %dl
+; X86-GISEL-NEXT:    orb %cl, %dl
+; X86-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-GISEL-NEXT:    sete %cl
+; X86-GISEL-NEXT:    orb %dl, %cl
+; X86-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-GISEL-NEXT:    seta %dl
+; X86-GISEL-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
+; X86-GISEL-NEXT:    setb %al
+; X86-GISEL-NEXT:    andb %dl, %al
+; X86-GISEL-NEXT:    orb %cl, %al
+; X86-GISEL-NEXT:    retl
+;
 ; X64-GISEL-LABEL: not_isquiet_f:
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
@@ -199,6 +268,14 @@ entry:
 }
 
 define i1 @isinf_f(float %x) nounwind {
+; X86-SDAGISEL-LABEL: isinf_f:
+; X86-SDAGISEL:       # %bb.0: # %entry
+; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-SDAGISEL-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-SDAGISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-SDAGISEL-NEXT:    sete %al
+; X86-SDAGISEL-NEXT:    retl
+;
 ; X64-SDAGISEL-LABEL: isinf_f:
 ; X64-SDAGISEL:       # %bb.0: # %entry
 ; X64-SDAGISEL-NEXT:    movd %xmm0, %eax
@@ -227,6 +304,16 @@ define i1 @isinf_f(float %x) nounwind {
 ; X64-FASTISEL-NEXT:    sete %al
 ; X64-FASTISEL-NEXT:    retq
 ;
+; X86-GISEL-LABEL: isinf_f:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-GISEL-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-GISEL-NEXT:    xorl %ecx, %ecx
+; X86-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-GISEL-NEXT:    sete %al
+; X86-GISEL-NEXT:    orb %cl, %al
+; X86-GISEL-NEXT:    retl
+;
 ; X64-GISEL-LABEL: isinf_f:
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
@@ -242,6 +329,14 @@ entry:
 }
 
 define i1 @not_isinf_f(float %x) nounwind {
+; X86-SDAGISEL-LABEL: not_isinf_f:
+; X86-SDAGISEL:       # %bb.0: # %entry
+; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-SDAGISEL-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-SDAGISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-SDAGISEL-NEXT:    setne %al
+; X86-SDAGISEL-NEXT:    retl
+;
 ; X64-SDAGISEL-LABEL: not_isinf_f:
 ; X64-SDAGISEL:       # %bb.0: # %entry
 ; X64-SDAGISEL-NEXT:    movd %xmm0, %eax
@@ -270,6 +365,19 @@ define i1 @not_isinf_f(float %x) nounwind {
 ; X64-FASTISEL-NEXT:    setne %al
 ; X64-FASTISEL-NEXT:    retq
 ;
+; X86-GISEL-LABEL: not_isinf_f:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-GISEL-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-GISEL-NEXT:    xorl %ecx, %ecx
+; X86-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-GISEL-NEXT:    setb %dl
+; X86-GISEL-NEXT:    orb %cl, %dl
+; X86-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-GISEL-NEXT:    seta %al
+; X86-GISEL-NEXT:    orb %dl, %al
+; X86-GISEL-NEXT:    retl
+;
 ; X64-GISEL-LABEL: not_isinf_f:
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
@@ -288,6 +396,12 @@ entry:
 }
 
 define i1 @is_plus_inf_f(float %x) nounwind {
+; X86-SDAGISEL-LABEL: is_plus_inf_f:
+; X86-SDAGISEL:       # %bb.0: # %entry
+; X86-SDAGISEL-NEXT:    cmpl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; X86-SDAGISEL-NEXT:    sete %al
+; X86-SDAGISEL-NEXT:    retl
+;
 ; X64-SDAGISEL-LABEL: is_plus_inf_f:
 ; X64-SDAGISEL:       # %bb.0: # %entry
 ; X64-SDAGISEL-NEXT:    movd %xmm0, %eax
@@ -312,6 +426,14 @@ define i1 @is_plus_inf_f(float %x) nounwind {
 ; X64-FASTISEL-NEXT:    sete %al
 ; X64-FASTISEL-NEXT:    retq
 ;
+; X86-GISEL-LABEL: is_plus_inf_f:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    xorl %ecx, %ecx
+; X86-GISEL-NEXT:    cmpl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; X86-GISEL-NEXT:    sete %al
+; X86-GISEL-NEXT:    orb %cl, %al
+; X86-GISEL-NEXT:    retl
+;
 ; X64-GISEL-LABEL: is_plus_inf_f:
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    xorl %ecx, %ecx
@@ -326,6 +448,12 @@ entry:
 }
 
 define i1 @is_minus_inf_f(float %x) nounwind {
+; X86-SDAGISEL-LABEL: is_minus_inf_f:
+; X86-SDAGISEL:       # %bb.0: # %entry
+; X86-SDAGISEL-NEXT:    cmpl $-8388608, {{[0-9]+}}(%esp) # imm = 0xFF800000
+; X86-SDAGISEL-NEXT:    sete %al
+; X86-SDAGISEL-NEXT:    retl
+;
 ; X64-SDAGISEL-LABEL: is_minus_inf_f:
 ; X64-SDAGISEL:       # %bb.0: # %entry
 ; X64-SDAGISEL-NEXT:    movd %xmm0, %eax
@@ -350,6 +478,14 @@ define i1 @is_minus_inf_f(float %x) nounwind {
 ; X64-FASTISEL-NEXT:    sete %al
 ; X64-FASTISEL-NEXT:    retq
 ;
+; X86-GISEL-LABEL: is_minus_inf_f:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    xorl %ecx, %ecx
+; X86-GISEL-NEXT:    cmpl $-8388608, {{[0-9]+}}(%esp) # imm = 0xFF800000
+; X86-GISEL-NEXT:    sete %al
+; X86-GISEL-NEXT:    orb %cl, %al
+; X86-GISEL-NEXT:    retl
+;
 ; X64-GISEL-LABEL: is_minus_inf_f:
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    xorl %ecx, %ecx
@@ -364,6 +500,12 @@ entry:
 }
 
 define i1 @not_is_minus_inf_f(float %x) nounwind {
+; X86-SDAGISEL-LABEL: not_is_minus_inf_f:
+; X86-SDAGISEL:       # %bb.0: # %entry
+; X86-SDAGISEL-NEXT:    cmpl $-8388608, {{[0-9]+}}(%esp) # imm = 0xFF800000
+; X86-SDAGISEL-NEXT:    setne %al
+; X86-SDAGISEL-NEXT:    retl
+;
 ; X64-SDAGISEL-LABEL: not_is_minus_inf_f:
 ; X64-SDAGISEL:       # %bb.0: # %entry
 ; X64-SDAGISEL-NEXT:    movd %xmm0, %eax
@@ -388,6 +530,25 @@ define i1 @not_is_minus_inf_f(float %x) nounwind {
 ; X64-FASTISEL-NEXT:    setne %al
 ; X64-FASTISEL-NEXT:    retq
 ;
+; X86-GISEL-LABEL: not_is_minus_inf_f:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    pushl %ebx
+; X86-GISEL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-GISEL-NEXT:    movl %eax, %ecx
+; X86-GISEL-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
+; X86-GISEL-NEXT:    xorl %edx, %edx
+; X86-GISEL-NEXT:    cmpl $2139095040, %ecx # imm = 0x7F800000
+; X86-GISEL-NEXT:    setb %bl
+; X86-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-GISEL-NEXT:    sete %ah
+; X86-GISEL-NEXT:    orb %dl, %ah
+; X86-GISEL-NEXT:    orb %bl, %ah
+; X86-GISEL-NEXT:    cmpl $2139095040, %ecx # imm = 0x7F800000
+; X86-GISEL-NEXT:    seta %al
+; X86-GISEL-NEXT:    orb %ah, %al
+; X86-GISEL-NEXT:    popl %ebx
+; X86-GISEL-NEXT:    retl
+;
 ; X64-GISEL-LABEL: not_is_minus_inf_f:
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
@@ -410,6 +571,14 @@ entry:
 }
 
 define i1 @isfinite_f(float %x) nounwind {
+; X86-SDAGISEL-LABEL: isfinite_f:
+; X86-SDAGISEL:       # %bb.0: # %entry
+; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-SDAGISEL-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-SDAGISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-SDAGISEL-NEXT:    setl %al
+; X86-SDAGISEL-NEXT:    retl
+;
 ; X64-SDAGISEL-LABEL: isfinite_f:
 ; X64-SDAGISEL:       # %bb.0: # %entry
 ; X64-SDAGISEL-NEXT:    movd %xmm0, %eax
@@ -438,6 +607,16 @@ define i1 @isfinite_f(float %x) nounwind {
 ; X64-FASTISEL-NEXT:    setl %al
 ; X64-FASTISEL-NEXT:    retq
 ;
+; X86-GISEL-LABEL: isfinite_f:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-GISEL-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-GISEL-NEXT:    xorl %ecx, %ecx
+; X86-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-GISEL-NEXT:    setb %al
+; X86-GISEL-NEXT:    orb %cl, %al
+; X86-GISEL-NEXT:    retl
+;
 ; X64-GISEL-LABEL: isfinite_f:
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
@@ -453,6 +632,14 @@ entry:
 }
 
 define i1 @not_isfinite_f(float %x) nounwind {
+; X86-SDAGISEL-LABEL: not_isfinite_f:
+; X86-SDAGISEL:       # %bb.0: # %entry
+; X86-SDAGISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-SDAGISEL-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-SDAGISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-SDAGISEL-NEXT:    setge %al
+; X86-SDAGISEL-NEXT:    retl
+;
 ; X64-SDAGISEL-LABEL: not_isfinite_f:
 ; X64-SDAGISEL:       # %bb.0: # %entry
 ; X64-SDAGISEL-NEXT:    movd %xmm0, %eax
@@ -481,6 +668,19 @@ define i1 @not_isfinite_f(float %x) nounwind {
 ; X64-FASTISEL-NEXT:    setge %al
 ; X64-FASTISEL-NEXT:    retq
 ;
+; X86-GISEL-LABEL: not_isfinite_f:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-GISEL-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-GISEL-NEXT:    xorl %ecx, %ecx
+; X86-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-GISEL-NEXT:    sete %dl
+; X86-GISEL-NEXT:    orb %cl, %dl
+; X86-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X86-GISEL-NEXT:    seta %al
+; X86-GISEL-NEXT:    orb %dl, %al
+; X86-GISEL-NEXT:    retl
+;
 ; X64-GISEL-LABEL: not_isfinite_f:
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
@@ -499,6 +699,12 @@ entry:
 }
 
 define i1 @is_plus_finite_f(float %x) nounwind {
+; X86-SDAGISEL-LABEL: is_plus_finite_f:
+; X86-SDAGISEL:       # %bb.0: # %entry
+; X86-SDAGISEL-NEXT:    cmpl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; X86-SDAGISEL-NEXT:    setb %al
+; X86-SDAGISEL-NEXT:    retl
+;
 ; X64-SDAGISEL-LABEL: is_plus_finite_f:
 ; X64-SDAGISEL:       # %bb.0: # %entry
 ; X64-SDAGISEL-NEXT:    movd %xmm0, %eax
@@ -522,6 +728,14 @@ define i1 @is_plus_finite_f(float %x) nounwind {
 ; X64-FASTISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-FASTISEL-NEXT:    setb %al
 ; X64-FASTISEL-NEXT:    retq
+;
+; X86-GISEL-LABEL: is_plus_finite_f:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    xorl %ecx, %ecx
+; X86-GISEL-NEXT:    cmpl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; X86-GISEL-NEXT:    setb %al
+; X86-GISEL-NEXT:    orb %cl, %al
+; X86-GISEL-NEXT:    retl
 ;
 ; X64-GISEL-LABEL: is_plus_finite_f:
 ; X64-GISEL:       # %bb.0: # %entry

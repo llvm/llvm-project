@@ -88,6 +88,7 @@ set(sources
   X86InsertWait.cpp
   GISel/X86CallLowering.cpp
   GISel/X86InstructionSelector.cpp
+  GISel/X86PostIselFixup.cpp
   GISel/X86LegalizerInfo.cpp
   GISel/X86RegisterBankInfo.cpp
   )
