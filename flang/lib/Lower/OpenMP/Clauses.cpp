@@ -982,21 +982,23 @@ Init make(const parser::OmpClause::Init &inp,
 Initializer make(const parser::OmpClause::Initializer &inp,
                  semantics::SemanticsContext &semaCtx) {
   const parser::OmpInitializerExpression &iexpr = inp.v.v;
-  const parser::OmpStylizedInstance &styleInstance = iexpr.v.front();
-  const parser::OmpStylizedInstance::Instance &instance =
-      std::get<parser::OmpStylizedInstance::Instance>(styleInstance.t);
-  if (const auto *as = std::get_if<parser::AssignmentStmt>(&instance.u)) {
-    auto &expr = std::get<parser::Expr>(as->t);
-    return Initializer{makeExpr(expr, semaCtx)};
-  } else if (const auto *call = std::get_if<parser::CallStmt>(&instance.u)) {
-    if (call->typedCall) {
+  Initializer initializer;
+  for (const parser::OmpStylizedInstance &styleInstance : iexpr.v) {
+    auto &instance =
+        std::get<parser::OmpStylizedInstance::Instance>(styleInstance.t);
+    if (const auto *as = std::get_if<parser::AssignmentStmt>(&instance.u)) {
+      auto &expr = std::get<parser::Expr>(as->t);
+      initializer.v.push_back(makeExpr(expr, semaCtx));
+    } else if (const auto *call = std::get_if<parser::CallStmt>(&instance.u)) {
+      assert(call->typedCall && "Expecting typedCall");
       const auto &procRef = *call->typedCall;
-      semantics::SomeExpr evalProcRef{procRef};
-      return Initializer{evalProcRef};
+      initializer.v.push_back(semantics::SomeExpr(procRef));
+    } else {
+      llvm_unreachable("Unexpected initializer");
     }
   }
 
-  llvm_unreachable("Unexpected initializer");
+  return initializer;
 }
 
 InReduction make(const parser::OmpClause::InReduction &inp,
