@@ -705,9 +705,9 @@ createOrGetRecipe(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 namespace {
-// Helper class to keep track how the Designator that appear in the
-// data clauses of structured constructs so that they can be remapped
-// to the data operation result inside the scope of the construct.
+// Helper class to keep track of designators that appear in data clauses of
+// structured constructs so that they can be remapped to the data operation
+// result inside the scope of the constructs.
 class AccDataMap {
 public:
   struct DataComponent {
