@@ -157,14 +157,16 @@ public:
                       unsigned CountOverwrite = 0) const;
 };
 
-LLVM_ABI bool computeUnrollCount(
-    Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT, LoopInfo *LI,
-    AssumptionCache *AC, ScalarEvolution &SE,
-    const SmallPtrSetImpl<const Value *> &EphValues,
-    OptimizationRemarkEmitter *ORE, unsigned TripCount, unsigned MaxTripCount,
-    bool MaxOrZero, unsigned TripMultiple, const UnrollCostEstimator &UCE,
-    TargetTransformInfo::UnrollingPreferences &UP,
-    TargetTransformInfo::PeelingPreferences &PP, bool &UseUpperBound);
+LLVM_ABI bool
+computeUnrollCount(Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT,
+                   LoopInfo *LI, AssumptionCache *AC, ScalarEvolution &SE,
+                   const SmallPtrSetImpl<const Value *> &EphValues,
+                   OptimizationRemarkEmitter *ORE, unsigned TripCount,
+                   unsigned MaxTripCount, bool MaxOrZero, unsigned TripMultiple,
+                   const UnrollCostEstimator &UCE,
+                   TargetTransformInfo::UnrollingPreferences &UP,
+                   TargetTransformInfo::PeelingPreferences &PP,
+                   bool &UseUpperBound, bool AllowLoadWideningPeel = true);
 
 LLVM_ABI std::optional<RecurrenceDescriptor>
 canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
