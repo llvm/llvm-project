@@ -46,6 +46,7 @@ class FunctionPass;
 class GetElementPtrInst;
 class ImplicitControlFlowTracking;
 class LoadInst;
+class Loop;
 class SelectInst;
 class LoopInfo;
 class MemDepResult;
