@@ -435,7 +435,8 @@ template <typename LambdaTy> struct LambdaHelper {
   template <typename T, typename = std::void_t<>>
   struct has_two_args : std::false_type {};
   template <typename T>
-  struct has_two_args<T, std::void_t<decltype(std::declval<T>().operator()(1,2))>>
+  struct has_two_args<T,
+                      std::void_t<decltype(std::declval<T>().operator()(1, 2))>>
       : std::true_type {};
 
   static void dispatch(LambdaTy func, llvm::raw_ostream &Os, uint32_t Level) {
