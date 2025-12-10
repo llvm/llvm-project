@@ -85,6 +85,15 @@ static cl::opt<bool> EnableMemProfIndirectCallSupport(
     cl::desc(
         "Enable MemProf support for summarizing and cloning indirect calls"));
 
+// This can be used to override the number of callees created from VP metadata
+// normally taken from the -icp-max-prom option with a larger amount, if useful
+// for analysis.
+cl::opt<unsigned>
+    MaxSummaryIndirectEdges("module-summary-max-indirect-edges", cl::init(0),
+                            cl::Hidden,
+                            cl::desc("Max number of summary edges added from "
+                                     "indirect call profile metadata"));
+
 LLVM_ABI extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
@@ -494,8 +503,8 @@ static void computeFunctionSummary(
         }
 
         CandidateProfileData =
-            ICallAnalysis.getPromotionCandidatesForInstruction(&I, TotalCount,
-                                                               NumCandidates);
+            ICallAnalysis.getPromotionCandidatesForInstruction(
+                &I, TotalCount, NumCandidates, MaxSummaryIndirectEdges);
         for (const auto &Candidate : CandidateProfileData)
           CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)]
               .updateHotness(getHotness(Candidate.Count, PSI));
