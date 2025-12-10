@@ -1044,7 +1044,7 @@ transferAssertionResultOperatorBoolCall(const CXXMemberCallExpr *Expr,
   State.Env.setValue(*Expr, Res);
 }
 
-static void transferDerefCall(const CallExpr *Expr,
+static void transferDerefCall(const CXXOperatorCallExpr *Expr,
                               const MatchFinder::MatchResult &,
                               LatticeTransferState &State) {
   auto *StatusOrLoc = State.Env.get<RecordStorageLocation>(*Expr->getArg(0));
@@ -1054,7 +1054,7 @@ static void transferDerefCall(const CallExpr *Expr,
                                  StatusOrLoc->getSyntheticField("value"));
 }
 
-static void transferArrowCall(const CallExpr *Expr,
+static void transferArrowCall(const CXXOperatorCallExpr *Expr,
                               const MatchFinder::MatchResult &,
                               LatticeTransferState &State) {
   auto *StatusOrLoc = State.Env.get<RecordStorageLocation>(*Expr->getArg(0));
@@ -1160,10 +1160,10 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                                           transferValueAssignmentCall)
       .CaseOfCFGStmt<CXXConstructExpr>(isStatusOrValueConstructor(),
                                        transferValueConstructor)
-      .CaseOfCFGStmt<CallExpr>(isStatusOrOperatorCallWithName("->"),
-                               transferArrowCall)
-      .CaseOfCFGStmt<CallExpr>(isStatusOrOperatorCallWithName("*"),
-                               transferDerefCall)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(isStatusOrOperatorCallWithName("->"),
+                                          transferArrowCall)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(isStatusOrOperatorCallWithName("*"),
+                                          transferDerefCall)
       .CaseOfCFGStmt<CXXMemberCallExpr>(isStatusOrMemberCallWithName("value"),
                                         transferValueCall)
       .CaseOfCFGStmt<CallExpr>(isAsStatusCallWithStatus(),
