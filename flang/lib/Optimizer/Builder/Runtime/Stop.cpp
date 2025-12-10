@@ -20,6 +20,10 @@ using namespace Fortran::runtime;
 static void genUnreachable(fir::FirOpBuilder &builder, mlir::Location loc) {
   mlir::Block *curBlock = builder.getBlock();
 #if 0
+  // TODO: using FortranLower functionality from from FIRBuilder
+  // results in linking issues with multiple tools. It seems that
+  // FIRBuilder is a dependency of FortranLower, not the other way
+  // around.
   mlir::Operation *parentOp = curBlock->getParentOp();
   if (parentOp->getDialect()->getNamespace() ==
       mlir::omp::OpenMPDialect::getDialectNamespace())
@@ -46,6 +50,7 @@ void fir::runtime::genExit(fir::FirOpBuilder &builder, mlir::Location loc,
 void fir::runtime::genAbort(fir::FirOpBuilder &builder, mlir::Location loc) {
   mlir::func::FuncOp abortFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Abort)>(loc, builder);
+  abortFunc->setAttr("noreturn", builder.getUnitAttr());
   fir::CallOp::create(builder, loc, abortFunc, mlir::ValueRange{});
   genUnreachable(builder, loc);
 }
