@@ -10,6 +10,7 @@
 ; CHECK-DAG: %[[#v6i32:]] = OpTypeArray %[[#int]] %[[#c6]]
 ; CHECK-DAG: %[[#ptr_ssbo_v6i32:]] = OpTypePointer Private %[[#v6i32]]
 ; CHECK-DAG: %[[#v4i32:]] = OpTypeVector %[[#int]] 4
+; CHECK-DAG: %[[#UNDEF:]] = OpUndef %[[#int]]
 
 @f1 = internal addrspace(10) global [4 x [6 x float] ] zeroinitializer
 @f2 = internal addrspace(10) global [4 x [6 x float] ] zeroinitializer
@@ -80,33 +81,61 @@ entry:
   ; CHECK: %[[#Mul2:]] = OpIMul %[[#v4i32]] %[[#Sub2]]
   %8 = mul <6 x i32> %7, splat (i32 2)
 
-  ; CHECK: %[[#SDiv1:]] = OpSDiv %[[#v4i32]] %[[#Mul1]]
-  ; CHECK: %[[#SDiv2:]] = OpSDiv %[[#v4i32]] %[[#Mul2]]
+  ; CHECK-DAG: %[[#E1:]] = OpCompositeExtract %[[#int]] %[[#Mul1]] 0
+  ; CHECK-DAG: %[[#E2:]] = OpCompositeExtract %[[#int]] %[[#Mul1]] 1
+  ; CHECK-DAG: %[[#E3:]] = OpCompositeExtract %[[#int]] %[[#Mul1]] 2
+  ; CHECK-DAG: %[[#E4:]] = OpCompositeExtract %[[#int]] %[[#Mul1]] 3
+  ; CHECK-DAG: %[[#E5:]] = OpCompositeExtract %[[#int]] %[[#Mul2]] 0
+  ; CHECK-DAG: %[[#E6:]] = OpCompositeExtract %[[#int]] %[[#Mul2]] 1
+  ; CHECK: %[[#SDiv1:]] = OpSDiv %[[#int]] %[[#E1]]
+  ; CHECK: %[[#SDiv2:]] = OpSDiv %[[#int]] %[[#E2]]
+  ; CHECK: %[[#SDiv3:]] = OpSDiv %[[#int]] %[[#E3]]
+  ; CHECK: %[[#SDiv4:]] = OpSDiv %[[#int]] %[[#E4]]
+  ; CHECK: %[[#SDiv5:]] = OpSDiv %[[#int]] %[[#E5]]
+  ; CHECK: %[[#SDiv6:]] = OpSDiv %[[#int]] %[[#E6]]
   %9 = sdiv <6 x i32> %8, splat (i32 2)
 
-  ; CHECK: %[[#UDiv1:]] = OpUDiv %[[#v4i32]] %[[#SDiv1]]
-  ; CHECK: %[[#UDiv2:]] = OpUDiv %[[#v4i32]] %[[#SDiv2]]
+  ; CHECK: %[[#UDiv1:]] = OpUDiv %[[#int]] %[[#SDiv1]]
+  ; CHECK: %[[#UDiv2:]] = OpUDiv %[[#int]] %[[#SDiv2]]
+  ; CHECK: %[[#UDiv3:]] = OpUDiv %[[#int]] %[[#SDiv3]]
+  ; CHECK: %[[#UDiv4:]] = OpUDiv %[[#int]] %[[#SDiv4]]
+  ; CHECK: %[[#UDiv5:]] = OpUDiv %[[#int]] %[[#SDiv5]]
+  ; CHECK: %[[#UDiv6:]] = OpUDiv %[[#int]] %[[#SDiv6]]
   %10 = udiv <6 x i32> %9, splat (i32 1)
 
-  ; CHECK: %[[#SRem1:]] = OpSRem %[[#v4i32]] %[[#UDiv1]]
-  ; CHECK: %[[#SRem2:]] = OpSRem %[[#v4i32]] %[[#UDiv2]]
+  ; CHECK: %[[#SRem1:]] = OpSRem %[[#int]] %[[#UDiv1]]
+  ; CHECK: %[[#SRem2:]] = OpSRem %[[#int]] %[[#UDiv2]]
+  ; CHECK: %[[#SRem3:]] = OpSRem %[[#int]] %[[#UDiv3]]
+  ; CHECK: %[[#SRem4:]] = OpSRem %[[#int]] %[[#UDiv4]]
+  ; CHECK: %[[#SRem5:]] = OpSRem %[[#int]] %[[#UDiv5]]
+  ; CHECK: %[[#SRem6:]] = OpSRem %[[#int]] %[[#UDiv6]]
   %11 = srem <6 x i32> %10, splat (i32 3)
 
-  ; CHECK: %[[#UMod1:]] = OpUMod %[[#v4i32]] %[[#SRem1]]
-  ; CHECK: %[[#UMod2:]] = OpUMod %[[#v4i32]] %[[#SRem2]]
+  ; CHECK: %[[#UMod1:]] = OpUMod %[[#int]] %[[#SRem1]]
+  ; CHECK: %[[#UMod2:]] = OpUMod %[[#int]] %[[#SRem2]]
+  ; CHECK: %[[#UMod3:]] = OpUMod %[[#int]] %[[#SRem3]]
+  ; CHECK: %[[#UMod4:]] = OpUMod %[[#int]] %[[#SRem4]]
+  ; CHECK: %[[#UMod5:]] = OpUMod %[[#int]] %[[#SRem5]]
+  ; CHECK: %[[#UMod6:]] = OpUMod %[[#int]] %[[#SRem6]]
   %12 = urem <6 x i32> %11, splat (i32 3)
 
-  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod1]] 0
+  ; CHECK: %[[#Construct1:]] = OpCompositeConstruct %[[#v4i32]] %[[#UMod1]] %[[#UMod2]] %[[#UMod3]] %[[#UMod4]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#Construct1]] 0
   ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
-  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod1]] 1
+  ; CHECK: %[[#Construct2:]] = OpCompositeConstruct %[[#v4i32]] %[[#UMod1]] %[[#UMod2]] %[[#UMod3]] %[[#UMod4]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#Construct2]] 1
   ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
-  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod1]] 2
+  ; CHECK: %[[#Construct3:]] = OpCompositeConstruct %[[#v4i32]] %[[#UMod1]] %[[#UMod2]] %[[#UMod3]] %[[#UMod4]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#Construct3]] 2
   ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
-  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod1]] 3
+  ; CHECK: %[[#Construct4:]] = OpCompositeConstruct %[[#v4i32]] %[[#UMod1]] %[[#UMod2]] %[[#UMod3]] %[[#UMod4]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#Construct4]] 3
   ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
-  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod2]] 0
+  ; CHECK: %[[#Construct5:]] = OpCompositeConstruct %[[#v4i32]] %[[#UMod5]] %[[#UMod6]] %[[#UNDEF]] %[[#UNDEF]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#Construct5]] 0
   ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
-  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#UMod2]] 1
+  ; CHECK: %[[#Construct6:]] = OpCompositeConstruct %[[#v4i32]] %[[#UMod5]] %[[#UMod6]] %[[#UNDEF]] %[[#UNDEF]]
+  ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#int]] %[[#Construct6]] 1
   ; CHECK: OpStore {{.*}} %[[#EXTRACT]]
 
   %13 = getelementptr [4 x [6 x i32] ], ptr addrspace(10) @i2, i32 0, i32 0
@@ -127,12 +156,16 @@ entry:
   ; CHECK: %[[#FDiv2:]] = OpFDiv %[[#v4f32]]
   %6 = fdiv reassoc nnan ninf nsz arcp afn <6 x float> %3, splat (float 2.000000e+00)
 
-  ; CHECK: %[[#FRem1:]] = OpFRem %[[#v4f32]] %[[#FDiv1]]
-  ; CHECK: %[[#FRem2:]] = OpFRem %[[#v4f32]] %[[#FDiv2]]
+  ; CHECK: OpFRem %[[#float]]
+  ; CHECK: OpFRem %[[#float]]
+  ; CHECK: OpFRem %[[#float]]
+  ; CHECK: OpFRem %[[#float]]
+  ; CHECK: OpFRem %[[#float]]
+  ; CHECK: OpFRem %[[#float]]
   %7 = frem reassoc nnan ninf nsz arcp afn <6 x float> %6, splat (float 3.000000e+00)
 
-  ; CHECK: %[[#Fma1:]] = OpExtInst %[[#v4f32]] {{.*}} Fma {{.*}} %[[#FDiv1]] %[[#FRem1]]
-  ; CHECK: %[[#Fma2:]] = OpExtInst %[[#v4f32]] {{.*}} Fma {{.*}} %[[#FDiv2]] %[[#FRem2]]
+  ; CHECK: %[[#Fma1:]] = OpExtInst %[[#v4f32]] {{.*}} Fma
+  ; CHECK: %[[#Fma2:]] = OpExtInst %[[#v4f32]] {{.*}} Fma
   %8 = call reassoc nnan ninf nsz arcp afn <6 x float> @llvm.fma.v6f32(<6 x float> %5, <6 x float> %6, <6 x float> %7)
 
   ; CHECK: %[[#EXTRACT:]] = OpCompositeExtract %[[#float]] %[[#Fma1]] 0

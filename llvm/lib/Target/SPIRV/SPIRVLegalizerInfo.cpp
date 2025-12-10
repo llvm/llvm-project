@@ -173,7 +173,15 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   uint32_t MaxVectorSize = ST.isShader() ? 4 : 16;
 
   for (auto Opc : getTypeFoldingSupportedOpcodes()) {
-    if (Opc != G_EXTRACT_VECTOR_ELT)
+    switch (Opc) {
+    case G_EXTRACT_VECTOR_ELT:
+    case G_UREM:
+    case G_SREM:
+    case G_UDIV:
+    case G_SDIV:
+    case G_FREM:
+      break;
+    default:
       getActionDefinitionsBuilder(Opc)
           .customFor(allScalars)
           .customFor(allowedVectorTypes)
@@ -182,7 +190,18 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                            LegalizeMutations::changeElementCountTo(
                                0, ElementCount::getFixed(MaxVectorSize)))
           .custom();
+      break;
+    }
   }
+
+  getActionDefinitionsBuilder({G_UREM, G_SREM, G_SDIV, G_UDIV, G_FREM})
+      .customFor(allScalars)
+      .customFor(allowedVectorTypes)
+      .scalarizeIf(numElementsNotPow2(0), 0)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)))
+      .custom();
 
   getActionDefinitionsBuilder({G_FMA, G_STRICT_FMA})
       .legalFor(allScalars)
