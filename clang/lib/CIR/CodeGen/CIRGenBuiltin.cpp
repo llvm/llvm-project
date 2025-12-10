@@ -82,8 +82,6 @@ static void emitAtomicFenceOp(CIRGenFunction &cgf, const CallExpr *expr,
   cir::AtomicFenceOp::create(
       builder, cgf.getLoc(expr->getSourceRange()), ordering,
       cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
-
-  return;
 }
 
 namespace {
