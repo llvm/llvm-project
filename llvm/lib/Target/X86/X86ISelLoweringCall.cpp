@@ -553,7 +553,7 @@ static bool hasStackGuardSlotTLS(const Triple &TargetTriple) {
 static Constant* SegmentOffset(IRBuilderBase &IRB,
                                int Offset, unsigned AddressSpace) {
   return ConstantExpr::getIntToPtr(
-      ConstantInt::get(Type::getInt32Ty(IRB.getContext()), Offset),
+      ConstantInt::getSigned(Type::getInt32Ty(IRB.getContext()), Offset),
       IRB.getPtrTy(AddressSpace));
 }
 

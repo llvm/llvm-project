@@ -220,7 +220,7 @@ public:
   void LowerLOADgotAUTH(const MachineInstr &MI);
 
   const MCExpr *emitPAuthRelocationAsIRelative(
-      const MCExpr *Target, uint16_t Disc, AArch64PACKey::ID KeyID,
+      const MCExpr *Target, uint64_t Disc, AArch64PACKey::ID KeyID,
       bool HasAddressDiversity, bool IsDSOLocal, const MCExpr *DSExpr);
 
   /// tblgen'erated driver function for lowering simple MI->MC
@@ -472,7 +472,7 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
   EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::B).addImm(8));
 
   for (int8_t I = 0; I < NoopsInSledCount; I++)
-    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::NOP));
 
   OutStreamer->emitLabel(Target);
   recordSled(CurSled, MI, Kind, 2);
@@ -1697,7 +1697,7 @@ void AArch64AsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
 
   // Emit nops.
   for (unsigned i = 0; i < NumNOPBytes; i += 4)
-    EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
+    EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::NOP));
 }
 
 // Lower a patchpoint of the form:
@@ -1731,7 +1731,7 @@ void AArch64AsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
   assert((NumBytes - EncodedBytes) % 4 == 0 &&
          "Invalid number of NOP bytes requested!");
   for (unsigned i = EncodedBytes; i < NumBytes; i += 4)
-    EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
+    EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::NOP));
 }
 
 void AArch64AsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
@@ -1740,7 +1740,7 @@ void AArch64AsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
   if (unsigned PatchBytes = SOpers.getNumPatchBytes()) {
     assert(PatchBytes % 4 == 0 && "Invalid number of NOP bytes requested!");
     for (unsigned i = 0; i < PatchBytes; i += 4)
-      EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
+      EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::NOP));
   } else {
     // Lower call target and choose correct opcode
     const MachineOperand &CallTarget = SOpers.getCallTarget();
@@ -2122,7 +2122,7 @@ bool AArch64AsmPrinter::emitDeactivationSymbolRelocation(Value *DS) {
 
   if (isa<GlobalAlias>(DS)) {
     // Just emit the nop directly.
-    EmitToStreamer(MCInstBuilder(AArch64::HINT).addImm(0));
+    EmitToStreamer(MCInstBuilder(AArch64::NOP));
     return true;
   }
   MCSymbol *Dot = OutContext.createTempSymbol();
@@ -2461,7 +2461,7 @@ static bool targetSupportsIRelativeRelocation(const Triple &TT) {
 // ret
 // .popsection
 const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
-    const MCExpr *Target, uint16_t Disc, AArch64PACKey::ID KeyID,
+    const MCExpr *Target, uint64_t Disc, AArch64PACKey::ID KeyID,
     bool HasAddressDiversity, bool IsDSOLocal, const MCExpr *DSExpr) {
   const Triple &TT = TM.getTargetTriple();
 
@@ -2484,9 +2484,15 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
   OutStreamer->emitLabel(Place);
   OutStreamer->pushSection();
 
+  const MCSymbolELF *Group =
+      static_cast<MCSectionELF *>(OutStreamer->getCurrentSectionOnly())
+          ->getGroup();
+  auto Flags = ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
+  if (Group)
+    Flags |= ELF::SHF_GROUP;
   OutStreamer->switchSection(OutStreamer->getContext().getELFSection(
-      ".text.startup", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_EXECINSTR,
-      0, "", true, PAuthIFuncNextUniqueID++, nullptr));
+      ".text.startup", ELF::SHT_PROGBITS, Flags, 0, Group, true,
+      Group ? MCSection::NonUniqueID : PAuthIFuncNextUniqueID++, nullptr));
 
   MCSymbol *IRelativeSym =
       OutStreamer->getContext().createLinkerPrivateSymbol("pauth_ifunc");
@@ -2503,12 +2509,16 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
   if (HasAddressDiversity) {
     auto *PlacePlusDisc = MCBinaryExpr::createAdd(
         MCSymbolRefExpr::create(Place, OutStreamer->getContext()),
-        MCConstantExpr::create(static_cast<int16_t>(Disc),
-                               OutStreamer->getContext()),
+        MCConstantExpr::create(Disc, OutStreamer->getContext()),
         OutStreamer->getContext());
     emitAddress(*OutStreamer, AArch64::X1, PlacePlusDisc, /*IsDSOLocal=*/true,
                 *STI);
   } else {
+    if (!isUInt<16>(Disc)) {
+      OutContext.reportError(SMLoc(), "AArch64 PAC Discriminator '" +
+                                          Twine(Disc) +
+                                          "' out of range [0, 0xFFFF]");
+    }
     emitMOVZ(AArch64::X1, Disc, 0);
   }
 
@@ -2587,17 +2597,18 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   }
 
   uint64_t Disc = CPA.getDiscriminator()->getZExtValue();
-  if (!isUInt<16>(Disc)) {
-    CPA.getContext().emitError("AArch64 PAC Discriminator '" + Twine(Disc) +
-                               "' out of range [0, 0xFFFF]");
-    Disc = 0;
-  }
 
   // Check if we need to represent this with an IRELATIVE and emit it if so.
   if (auto *IFuncSym = emitPAuthRelocationAsIRelative(
           Sym, Disc, AArch64PACKey::ID(KeyID), CPA.hasAddressDiscriminator(),
           BaseGVB && BaseGVB->isDSOLocal(), DSExpr))
     return IFuncSym;
+
+  if (!isUInt<16>(Disc)) {
+    CPA.getContext().emitError("AArch64 PAC Discriminator '" + Twine(Disc) +
+                               "' out of range [0, 0xFFFF]");
+    Disc = 0;
+  }
 
   if (DSExpr)
     report_fatal_error("deactivation symbols unsupported in constant "
