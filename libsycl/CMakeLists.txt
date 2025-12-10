@@ -133,5 +133,14 @@ add_custom_target(libsycl-runtime-libraries
 )
 
 add_subdirectory(src)
-
 add_subdirectory(tools)
+
+if(LLVM_INCLUDE_TESTS)
+  add_subdirectory(test_e2e)
+endif()
+
+add_custom_target(libsycl-toolchain ALL
+  DEPENDS libsycl-runtime-libraries
+          sycl-ls
+  COMMENT "Building SYCL compiler toolchain..."
+)
