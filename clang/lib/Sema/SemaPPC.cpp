@@ -108,7 +108,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   // Emit diagnostics and return true on failure
   //  - VerifyVectorType: enforces vector unsigned char
   //  - VerifyIntType: enforces any integer type
-  // Lambdas centralize type checks for all BCD builtin handlers
+  // Lambdas centralize type checks for BCD builtin handlers
   QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
                                            VectorKind::AltiVecVector);
   // Lambda 1: verify vector type
@@ -136,26 +136,11 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default:
     return false;
+  case PPC::BI__builtin_ppc_bcdsetsign:
   case PPC::BI__builtin_ppc_national2packed:
   case PPC::BI__builtin_ppc_packed2zoned:
   case PPC::BI__builtin_ppc_zoned2packed:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
-  case PPC::BI__builtin_ppc_bcdsetsign: {
-
-    QualType Arg0Type = TheCall->getArg(0)->getType();
-    QualType Arg1Type = TheCall->getArg(1)->getType();
-
-    // Arg0 must be vector unsigned char
-    if (VerifyVectorType(Arg0Type, TheCall->getArg(0)->getBeginLoc(), 0))
-      return true;
-
-    // Arg1 must be integer type
-    if (VerifyIntType(Arg1Type, TheCall->getArg(1)->getBeginLoc(), 1))
-      return true;
-
-    // Restrict Arg1 constant range (0–1)
-    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
-  }
   case PPC::BI__builtin_ppc_bcdshift:
   case PPC::BI__builtin_ppc_bcdshiftround:
   case PPC::BI__builtin_ppc_bcdtruncate: {

@@ -6,7 +6,7 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr9 -mtriple=powerpc64-ibm-aix-xcoff \
 ; RUN:   -ppc-asm-full-reg-names  < %s | FileCheck %s
 
-define dso_local <16 x i8> @test_bcdcopysign(<16 x i8> noundef %a, <16 x i8> noundef %b) {
+define <16 x i8> @test_bcdcopysign(<16 x i8> %a, <16 x i8>  %b) {
 ; CHECK-LABEL: test_bcdcopysign:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    bcdcpsgn. v2, v2, v3
@@ -16,7 +16,7 @@ entry:
   ret <16 x i8> %0
 }
 
-define dso_local <16 x i8> @test_bcdsetsign_imm0(<16 x i8> noundef %a) {
+define <16 x i8> @test_bcdsetsign_imm0(<16 x i8> %a) {
 ; CHECK-LABEL: test_bcdsetsign_imm0:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    bcdsetsgn. v2, v2, 0
@@ -26,7 +26,7 @@ entry:
   ret <16 x i8> %0
 }
 
-define dso_local <16 x i8> @test_bcdsetsign_imm1(<16 x i8> noundef %a) {
+define <16 x i8> @test_bcdsetsign_imm1(<16 x i8> %a) {
 ; CHECK-LABEL: test_bcdsetsign_imm1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    bcdsetsgn. v2, v2, 1
@@ -36,7 +36,7 @@ entry:
   ret <16 x i8> %0
 }
 
-define dso_local <16 x i8> @test_bcdshift_imm0(<16 x i8> noundef %a, i32 %b) {
+define <16 x i8> @test_bcdshift_imm0(<16 x i8> %a, i32 %b) {
 ; CHECK-LABEL: test_bcdshift_imm0:
 ; CHECK:         # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
@@ -48,7 +48,7 @@ entry:
   ret <16 x i8> %0
 }
 
-define dso_local <16 x i8> @test_bcdshift_imm1(<16 x i8> noundef %a, i32 %b) {
+define <16 x i8> @test_bcdshift_imm1(<16 x i8> %a, i32 %b) {
 ; CHECK-LABEL: test_bcdshift_imm1:
 ; CHECK:         # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
@@ -60,7 +60,7 @@ entry:
   ret <16 x i8> %0
 }
 
-define dso_local <16 x i8> @test_bcdshiftround_imm0(<16 x i8> noundef %a, i32 %b) {
+define <16 x i8> @test_bcdshiftround_imm0(<16 x i8> %a, i32 %b) {
 ; CHECK-LABEL: test_bcdshiftround_imm0:
 ; CHECK:         # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
@@ -72,7 +72,7 @@ entry:
   ret <16 x i8> %0
 }
 
-define dso_local <16 x i8> @test_bcdshiftround_imm1(<16 x i8> noundef %a, i32 %b) {
+define <16 x i8> @test_bcdshiftround_imm1(<16 x i8> %a, i32 %b) {
 ; CHECK-LABEL: test_bcdshiftround_imm1:
 ; CHECK:         # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
@@ -84,7 +84,7 @@ entry:
   ret <16 x i8> %0
 }
 
-define dso_local <16 x i8> @test_bcdtruncate_imm0(<16 x i8> noundef %a, i32 %b) {
+define <16 x i8> @test_bcdtruncate_imm0(<16 x i8> %a, i32 %b) {
 ; CHECK-LABEL: test_bcdtruncate_imm0:
 ; CHECK:         # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
@@ -96,7 +96,7 @@ entry:
   ret <16 x i8> %0
 }
 
-define dso_local <16 x i8> @test_bcdtruncate_imm1(<16 x i8> noundef %a, i32 %b) {
+define <16 x i8> @test_bcdtruncate_imm1(<16 x i8> %a, i32 %b) {
 ; CHECK-LABEL: test_bcdtruncate_imm1:
 ; CHECK:         # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
@@ -108,7 +108,7 @@ entry:
   ret <16 x i8> %0
 }
 
-define dso_local <16 x i8> @test_bcdunsignedtruncate(<16 x i8> noundef %a, i32 %b) {
+define <16 x i8> @test_bcdunsignedtruncate(<16 x i8> %a, i32 %b) {
 ; CHECK-LABEL: test_bcdunsignedtruncate:
 ; CHECK:         # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
@@ -120,7 +120,7 @@ entry:
   ret <16 x i8> %0
 }
 
-define dso_local <16 x i8> @test_bcdunsignedshift(<16 x i8> noundef %a, i32 %b) {
+define  <16 x i8> @test_bcdunsignedshift(<16 x i8> %a, i32 %b) {
 ; CHECK-LABEL: test_bcdunsignedshift:
 ; CHECK:         # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrws vs35, [[REG:r[0-9]+]]
