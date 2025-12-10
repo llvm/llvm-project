@@ -636,9 +636,9 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
 
     auto dpasOp = operand->get().getDefiningOp<xegpu::DpasOp>();
     unsigned operandIdx = operand->getOperandNumber();
-    std::string layoutAName = xegpu::getLayoutName(dpasOp->getOpOperand(0));
-    std::string layoutBName = xegpu::getLayoutName(dpasOp->getOpOperand(1));
-    std::string layoutCName = xegpu::getLayoutName(dpasOp->getOpResult(0));
+    std::string layoutAName = xegpu::getTempLayoutName(dpasOp->getOpOperand(0));
+    std::string layoutBName = xegpu::getTempLayoutName(dpasOp->getOpOperand(1));
+    std::string layoutCName = xegpu::getTempLayoutName(dpasOp->getOpResult(0));
 
     xegpu::LayoutAttr layoutA =
         dpasOp->getAttrOfType<xegpu::LayoutAttr>(layoutAName);
@@ -869,11 +869,11 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
           storeScatterOp, "Expected at most 2D result at SG level");
 
     std::string layoutPayloadName =
-        xegpu::getLayoutName(storeScatterOp->getOpOperand(0));
+        xegpu::getTempLayoutName(storeScatterOp->getOpOperand(0));
     std::string layoutOffsetsName =
-        xegpu::getLayoutName(storeScatterOp->getOpOperand(2));
+        xegpu::getTempLayoutName(storeScatterOp->getOpOperand(2));
     std::string layoutMaskName =
-        xegpu::getLayoutName(storeScatterOp->getOpOperand(3));
+        xegpu::getTempLayoutName(storeScatterOp->getOpOperand(3));
 
     xegpu::LayoutAttr layoutPayload =
         storeScatterOp->getAttrOfType<xegpu::LayoutAttr>(layoutPayloadName);
@@ -1152,9 +1152,9 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
                                          "Expected 1D offsets and mask vector");
     // Assume offset and mask producers will be distributed as well.
     std::string layoutOffsetsName =
-        xegpu::getLayoutName(loadGatherOp->getOpOperand(1));
+        xegpu::getTempLayoutName(loadGatherOp->getOpOperand(1));
     std::string layoutMaskName =
-        xegpu::getLayoutName(loadGatherOp->getOpOperand(2));
+        xegpu::getTempLayoutName(loadGatherOp->getOpOperand(2));
 
     xegpu::LayoutAttr layoutOffsets =
         loadGatherOp->getAttrOfType<xegpu::LayoutAttr>(layoutOffsetsName);

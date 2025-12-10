@@ -101,13 +101,13 @@ mlir::xegpu::getDistributedVectorType(VectorType originalType,
   return xegpu::getDistributedVectorType(helperTdescTy);
 }
 
-std::string xegpu::getLayoutName(const OpOperand &operand) {
+std::string xegpu::getTempLayoutName(const OpOperand &operand) {
   const StringRef prefix("layout_operand_");
   unsigned idx = const_cast<OpOperand &>(operand).getOperandNumber();
   return llvm::formatv("{0}{1}", prefix, idx).str();
 }
 
-std::string xegpu::getLayoutName(const OpResult result) {
+std::string xegpu::getTempLayoutName(const OpResult result) {
   const StringRef prefix = "layout_result_";
   return llvm::formatv("{0}{1}", prefix, result.getResultNumber()).str();
 }
@@ -149,7 +149,7 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
       return anchorOp.getAnchorLayout();
     }
 
-    std::string layoutName = getLayoutName(result);
+    std::string layoutName = getTempLayoutName(result);
     if (defOp->hasAttr(layoutName))
       return defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
   }
@@ -176,7 +176,7 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
 //   if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(op))
 //     return storeOp.getLayoutAttr();
 
-//   std::string layoutName = xegpu::getLayoutName(opr);
+//   std::string layoutName = xegpu::getTempLayoutName(opr);
 //   if (op->hasAttr(layoutName))
 //     return op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
 
@@ -192,18 +192,11 @@ xegpu::DistributeLayoutAttr
 xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   Operation *op = opr.getOwner();
 
-  // if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(op))
-  //   return loadOp.getLayoutAttr();
+  if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(op)) {
+    return anchorOp.getAnchorLayout();
+  }
 
-  if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(op))
-    return storeOp.getLayoutAttr();
-
-  // check for "permament" layout only after "temporary" layout name lookup
-  if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
-    if (auto layout = storeScatterOp.getLayoutAttr())
-      return layout;
-
-  std::string layoutName = xegpu::getLayoutName(opr);
+  std::string layoutName = xegpu::getTempLayoutName(opr);
   if (op->hasAttr(layoutName))
     return op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
 
@@ -250,7 +243,7 @@ template <typename T, typename>
 void xegpu::setDistributeLayoutAttr(const T &operandOrResult,
                                     const DistributeLayoutAttr layout) {
   Operation *owner = operandOrResult.getOwner();
-  std::string name = xegpu::getLayoutName(operandOrResult);
+  std::string name = xegpu::getTempLayoutName(operandOrResult);
 
   if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
     return;
@@ -294,7 +287,7 @@ void xegpu::setDistributeLayoutAttrs(
 template <typename T, typename>
 void xegpu::removeLayoutAttr(const T &operandOrResult) {
   Operation *owner = operandOrResult.getOwner();
-  std::string name = xegpu::getLayoutName(operandOrResult);
+  std::string name = xegpu::getTempLayoutName(operandOrResult);
   if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
     owner->removeAttr(name);
 }

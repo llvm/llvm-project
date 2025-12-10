@@ -1575,7 +1575,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   // Layout propagation pass will activated.
   getOperation()->walk([](Operation *op) {
     for (OpResult result : op->getOpResults()) {
-      std::string name = xegpu::getLayoutName(result);
+      std::string name = xegpu::getTempLayoutName(result);
       if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
         op->removeAttr(name);
         if (!isa<scf::IfOp, scf::ForOp, scf::WhileOp, scf::ConditionOp>(op)) {

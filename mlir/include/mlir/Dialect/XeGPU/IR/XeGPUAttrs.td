@@ -775,7 +775,7 @@ def AnchorLayoutInterface : OpInterface<"AnchorLayoutInterface"> {
 
   let description = [{
     An attribute interface for accessing anchor layout information.
-    This interface provides a method to retrieve the anchor layout
+    This interface provides a method to set and retrieve the anchor layout
     from attributes that implement it.
   }];
 
@@ -785,6 +785,12 @@ def AnchorLayoutInterface : OpInterface<"AnchorLayoutInterface"> {
       /*retTy=*/"xegpu::DistributeLayoutAttr", 
       /*methodName=*/"getAnchorLayout",
       /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/"Set the anchor layout attribute.",
+      /*retTy=*/"void", 
+      /*methodName=*/"setAnchorLayout",
+      /*args=*/(ins "xegpu::DistributeLayoutAttr":$layout)
     >,
   ];
 

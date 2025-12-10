@@ -301,6 +301,10 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
       return getLayout().value_or(nullptr);
     }
 
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      getProperties().layout = anchorLayout;
+    }
+
    SmallVector<OpFoldResult> getMixedOffsets() {
       auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
       auto dynamics = getOffsets();
@@ -428,6 +432,10 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
       return getLayout().value_or(nullptr);
     }
 
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      getProperties().layout = anchorLayout;
+    }
+
     SmallVector<OpFoldResult> getMixedOffsets() {
       auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
       auto dynamics = getOffsets();
@@ -543,6 +551,10 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
 
     xegpu::DistributeLayoutAttr getAnchorLayout() {
       return getLayout().value_or(nullptr);
+    }
+
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      getProperties().layout = anchorLayout;
     }
 
     SmallVector<OpFoldResult> getMixedOffsets() {
@@ -830,6 +842,10 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
       return getLayout().value_or(nullptr);
     }
 
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      getProperties().layout = anchorLayout;
+    }
+
     TypedValue<xegpu::TensorDescType> getTensorDesc() {
       if (auto tdescType = getTensorDescType()) {
         return llvm::cast<TypedValue<xegpu::TensorDescType>>(getSource());
@@ -968,6 +984,10 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
 
     xegpu::DistributeLayoutAttr getAnchorLayout() {
       return getLayout().value_or(nullptr);
+    }
+
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      getProperties().layout = anchorLayout;
     }
 
     TypedValue<xegpu::TensorDescType> getTensorDesc() {
@@ -1130,6 +1150,10 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
 
     xegpu::DistributeLayoutAttr getAnchorLayout() {
       return getLayout().value_or(nullptr);
+    }
+
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      getProperties().layout = anchorLayout;
     }
 
     TypedValue<xegpu::TensorDescType> getTensorDesc() {
@@ -1308,6 +1332,10 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
       return getLayoutCd().value_or(nullptr);
     }
 
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      getProperties().layout_cd = anchorLayout;
+    }
+
     VectorType getLhsType() {
       return getLhs().getType();
     }
@@ -1386,6 +1414,11 @@ def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
     xegpu::DistributeLayoutAttr getAnchorLayout() {
       return getLayout().value_or(nullptr);
     }
+
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      getProperties().layout = anchorLayout;
+    }
+
   }];
 
   let results = (outs XeGPU_ValueType:$result);
@@ -1499,6 +1532,11 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
       xegpu::DistributeLayoutAttr getAnchorLayout() {
         return getTargetLayout();
       }
+
+      void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+        getProperties().target_layout = anchorLayout;
+      }
+
     }];
 
     let hasFolder = 1;
@@ -1605,6 +1643,10 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
       return getLayout().value_or(nullptr);
     }
 
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      getProperties().layout = anchorLayout;
+    }
+
   }];
 
   let hasVerifier = 1;
@@ -1666,6 +1708,10 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
 
     xegpu::DistributeLayoutAttr getAnchorLayout() {
       return getLayout().value_or(nullptr);
+    }
+
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      getProperties().layout = anchorLayout;
     }
 
   }];

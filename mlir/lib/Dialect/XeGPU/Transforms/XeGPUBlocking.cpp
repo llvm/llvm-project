@@ -166,8 +166,8 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
       return instData;
     }
 
-    // if (auto type = dyn_cast<ShapedType>(value.getType()))
-    //   return llvm::to_vector(type.getShape());
+    if (auto type = dyn_cast<ShapedType>(value.getType()))
+      return llvm::to_vector(type.getShape());
   }
   LDBG() << "failed to getTileShape for: " << value;
   return std::nullopt;
@@ -175,68 +175,33 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
 
 std::optional<SmallVector<int64_t>>
 XeGPUBlockingPass::getTileShape(Operation *op) const {
-
-  auto getShapeSkipLeadingUnitDim = [](xegpu::DistributeLayoutAttr layout)
-      -> std::optional<SmallVector<int64_t>> {
-    SmallVector<int64_t> instData = layout.getEffectiveInstDataAsInt();
-    if (!instData.empty()) {
-      // Remove leading unit dimensions from inst_data
-      // For example, if the inst_data is [1, 1, 32]
-      // it will pass [32] as the unroll/blocking size.
-      auto it = llvm::find_if(instData, [](auto val) { return val != 1; });
-      instData.erase(instData.begin(), it);
-      return instData;
-    }
-    return std::nullopt;
-  };
-
-  xegpu::DistributeLayoutAttr layout = nullptr;
-
-  if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp>(op))
-    layout = xegpu::getDistributeLayoutAttr(op->getOpResult(0));
-  if (isa<xegpu::LoadMatrixOp>(op))
-    layout = dyn_cast<xegpu::LoadMatrixOp>(op).getLayoutAttr();
-  if (isa<xegpu::StoreMatrixOp>(op))
-    layout = dyn_cast<xegpu::StoreMatrixOp>(op).getLayoutAttr();
-  if (isa<xegpu::LoadNdOp>(op))
-    layout = dyn_cast<xegpu::LoadNdOp>(op).getLayoutAttr();
+  if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp, xegpu::CreateDescOp,
+          xegpu::UpdateOffsetOp, xegpu::LoadMatrixOp>(op))
+    return getTileShape(op->getOpResult(0));
+  if (isa<xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::PrefetchOp,
+          xegpu::StoreMatrixOp>(op))
+    return getTileShape(op->getOpOperand(0));
   if (isa<xegpu::StoreNdOp>(op))
-    layout = dyn_cast<xegpu::StoreNdOp>(op).getLayoutAttr();
-  if (isa<xegpu::PrefetchNdOp>(op))
-    layout = dyn_cast<xegpu::PrefetchNdOp>(op).getLayoutAttr();
+    return getTileShape(op->getOpOperand(1));
 
-  if (layout != nullptr) {
-    assert(layout.isForSubgroup() &&
-           "Matrix load/store should have subgroup level layout");
-    return layout.getEffectiveInstDataAsInt();
+  // Handle LoadGatherOp and StoreScatterOp (with and without offset)
+  if (auto loadGatherOp = dyn_cast<xegpu::LoadGatherOp>(op)) {
+    if (loadGatherOp.getOffsets())
+      return getTileShape(loadGatherOp->getOpResult(0));
+    else
+      return getTileShape(loadGatherOp->getOpOperand(0));
   }
-  if (isa<xegpu::CreateDescOp, xegpu::UpdateOffsetOp>(op))
-    layout = xegpu::getDistributeLayoutAttr(op->getOpResult(0));
-  if (isa<xegpu::LoadGatherOp>(op))
-    layout = dyn_cast<xegpu::LoadGatherOp>(op).getLayoutAttr();
-  if (isa<xegpu::StoreScatterOp>(op))
-    layout = dyn_cast<xegpu::StoreScatterOp>(op).getLayoutAttr();
-  if (isa<xegpu::PrefetchOp>(op))
-    layout = dyn_cast<xegpu::PrefetchOp>(op).getLayoutAttr();
-  if (layout != nullptr) {
-    assert(
-        layout.isForSubgroup() &&
-        "LoadGather/StoreScatter/Prefetch should have subgroup level layout");
-    return getShapeSkipLeadingUnitDim(layout);
-  }
+
+  if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
+    return getTileShape(storeScatterOp.getOffsets()
+                            ? storeScatterOp->getOpOperand(0)
+                            : storeScatterOp->getOpOperand(1));
 
   if (isa<xegpu::DpasOp>(op)) {
-
-    auto layoutA = dyn_cast<xegpu::DpasOp>(op).getLayoutAAttr();
-    auto layoutB = dyn_cast<xegpu::DpasOp>(op).getLayoutBAttr();
-    auto layoutCD = dyn_cast<xegpu::DpasOp>(op).getLayoutCdAttr();
-
     std::optional<SmallVector<int64_t>> aTile =
-        layoutA.getEffectiveInstDataAsInt();
+        getTileShape(op->getOpOperand(0));
     std::optional<SmallVector<int64_t>> bTile =
-        layoutB.getEffectiveInstDataAsInt();
-    std::optional<SmallVector<int64_t>> cdTile =
-        layoutCD.getEffectiveInstDataAsInt();
+        getTileShape(op->getOpOperand(1));
 
     if (!aTile || aTile->size() != 2 || !bTile || bTile->size() != 2)
       return std::nullopt;
@@ -245,42 +210,45 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     if ((*aTile)[1] != (*bTile)[0])
       return std::nullopt;
 
-    int64_t expectedCDTile[2] = {(*aTile)[0], (*bTile)[1]};
-    if (!cdTile || !llvm::equal(*cdTile, expectedCDTile))
-      return std::nullopt;
+    // semantic check for C
+    if (op->getNumOperands() == 3) {
+      std::optional<SmallVector<int64_t>> cTile =
+          getTileShape(op->getOpOperand(2));
+      int64_t expectedCTile[2] = {(*aTile)[0], (*bTile)[1]};
+      if (!cTile || !llvm::equal(*cTile, expectedCTile))
+        return std::nullopt;
+    }
 
     return SmallVector<int64_t>({(*aTile)[0], (*aTile)[1], (*bTile)[1]});
   }
 
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)
-    layout = xegpu::getDistributeLayoutAttr(op->getOpResult(0));
+    return getTileShape(op->getOpResult(0));
+
   if (isa<vector::MultiDimReductionOp>(op))
-    layout = xegpu::getDistributeLayoutAttr(op->getOpOperand(0));
+    return getTileShape(op->getOpOperand(0));
+
   if (isa<vector::TransposeOp, vector::BroadcastOp>(op))
-    layout = xegpu::getDistributeLayoutAttr(op->getOpResult(0));
-  if (layout != nullptr) {
-    assert(layout.isForSubgroup() &&
-           "Other ops (Vector/Math/Arith) should have subgroup level layout");
-    return getShapeSkipLeadingUnitDim(layout);
-  }
+    return getTileShape(op->getOpResult(0));
+
   return std::nullopt;
 }
 
 bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
   // skip the op if any of its operands or results has workgroup level layouts
-  /* bool hasWgLayoutOperands =
+  bool hasWgLayoutOperands =
       llvm::any_of(op->getOpOperands(), [](OpOperand &opr) {
         xegpu::DistributeLayoutAttr layout =
             xegpu::getDistributeLayoutAttr(opr);
         return layout && layout.isForWorkgroup();
-      }); */
+      });
   bool hasWgLayoutResults =
       llvm::any_of(op->getOpResults(), [](OpResult result) {
         xegpu::DistributeLayoutAttr layout =
             xegpu::getDistributeLayoutAttr(result);
         return layout && layout.isForWorkgroup();
       });
-  if (hasWgLayoutResults) {
+  if (hasWgLayoutOperands || hasWgLayoutResults) {
     LDBG() << "skip unrolling for op with workgroup level layout: " << *op;
     return false;
   }
@@ -415,12 +383,9 @@ void XeGPUBlockingPass::runOnOperation() {
         }
       }
 
-      xegpu::LayoutAttr newLayout = nullptr;
-      if (tdescTy.getLayoutAttr())
-        newLayout = tdescTy.getLayoutAttr().dropInstData();
-
-      newTy = xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding,
-                                         newLayout);
+      newTy =
+          xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding,
+                                     tdescTy.getLayoutAttr().dropInstData());
     } else {
       newTy = VectorType::get(tileShape, elemTy);
     }
@@ -447,14 +412,14 @@ void XeGPUBlockingPass::runOnOperation() {
   op->walk([](Operation *op) {
     // Remove the layout attributes cached per operands.
     for (OpOperand &opr : op->getOpOperands()) {
-      std::string name = xegpu::getLayoutName(opr);
+      std::string name = xegpu::getTempLayoutName(opr);
       if (op->hasAttrOfType<xegpu::LayoutAttr>(name))
         op->removeAttr(name);
     }
 
     // Update the layout attributes per result.
     for (OpResult result : op->getOpResults()) {
-      std::string name = xegpu::getLayoutName(result);
+      std::string name = xegpu::getTempLayoutName(result);
       if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
         op->removeAttr(name);
         if (!isa<LoopLikeOpInterface>(op))
