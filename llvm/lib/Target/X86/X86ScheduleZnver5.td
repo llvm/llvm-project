@@ -44,7 +44,9 @@ def Znver5Model : SchedMachineModel {
   // Latency of a simple store operation.
   int StoreLatency = 1;
 
-  let HighLatency = 25; // FIXME: any better choice?
+  // Mean and median value for all instructions with latencies >6
+  // Source: Zen5 Instruction Latencies spreadsheet (included with SOG)
+  let HighLatency = 11;
 
   // The branch misprediction penalty is in the range from 12 to 18 cycles,
   // <...>. The common case penalty is 15 cycles.
