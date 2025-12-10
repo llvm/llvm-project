@@ -5972,6 +5972,7 @@ cc_library(
         ":AMDGPUDialect",
         ":AMDGPUUtils",
         ":ConversionPassIncGen",
+        ":GPUToGPURuntimeTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
