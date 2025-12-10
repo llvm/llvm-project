@@ -165,8 +165,8 @@ public:
                         TTI::MaskKind::VariableOrConstantMask) const override;
 
   InstructionCost
-  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                        TTI::TargetCostKind CostKind) const override;
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const override;
 
 private:
   // The following constant is used for estimating costs on power9.

@@ -905,19 +905,20 @@ InstructionCost PPCTTIImpl::getInterleavedMemoryOpCost(
 InstructionCost
 PPCTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                   TTI::TargetCostKind CostKind) const {
+
   if (!VPIntrinsic::isVPIntrinsic(ICA.getID()))
     return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 
   if (ICA.getID() == Intrinsic::vp_load) {
     MemIntrinsicCostAttributes MICA(Intrinsic::masked_load, ICA.getReturnType(),
                                     Align(1), 0);
-    return getMaskedMemoryOpCost(MICA, CostKind);
+    return getMemIntrinsicInstrCost(MICA, CostKind);
   }
 
   if (ICA.getID() == Intrinsic::vp_store) {
     MemIntrinsicCostAttributes MICA(Intrinsic::masked_store,
                                     ICA.getArgTypes()[0], Align(1), 0);
-    return getMaskedMemoryOpCost(MICA, CostKind);
+    return getMemIntrinsicInstrCost(MICA, CostKind);
   }
 
   return InstructionCost::getInvalid();
@@ -1128,15 +1129,26 @@ bool PPCTTIImpl::isLegalMaskedStore(Type *DataType, Align Alignment,
 }
 
 InstructionCost
-PPCTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                                  TTI::TargetCostKind CostKind) const {
+PPCTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                                     TTI::TargetCostKind CostKind) const {
+
+  InstructionCost BaseCost = BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
+
+  unsigned Opcode;
+  switch (MICA.getID()) {
+  case Intrinsic::masked_load:
+    Opcode = Instruction::Load;
+    break;
+  case Intrinsic::masked_store:
+    Opcode = Instruction::Store;
+    break;
+  default:
+    return BaseCost;
+  }
+
   Type *DataTy = MICA.getDataType();
   Align Alignment = MICA.getAlignment();
-  unsigned Opcode = MICA.getID() == Intrinsic::masked_load ? Instruction::Load
-                                                           : Instruction::Store;
   unsigned AddressSpace = MICA.getAddressSpace();
-
-  InstructionCost BaseCost = BaseT::getMaskedMemoryOpCost(MICA, CostKind);
 
   auto VecTy = dyn_cast<FixedVectorType>(DataTy);
   if (!VecTy)
