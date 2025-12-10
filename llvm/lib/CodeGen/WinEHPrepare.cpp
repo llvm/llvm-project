@@ -1014,9 +1014,10 @@ bool WinEHPrepareImpl::cloneCommonBlocks(Function &F) {
     }
 
     auto UpdatePHIOnClonedBlock = [&](PHINode *PN, bool IsForOldBlock) {
-      unsigned NumPreds = PN->getNumIncomingValues();
-      for (unsigned PredIdx = 0, PredEnd = NumPreds; PredIdx != PredEnd;
-           ++PredIdx) {
+      // Remove incoming values in the reverse order to prevent invalidating
+      // index for the incoming values.
+      for (int64_t PredIdx = PN->getNumIncomingValues() - 1; PredIdx >= 0;
+           --PredIdx) {
         BasicBlock *IncomingBlock = PN->getIncomingBlock(PredIdx);
         bool EdgeTargetsFunclet;
         if (auto *CRI =
@@ -1032,10 +1033,7 @@ bool WinEHPrepareImpl::cloneCommonBlocks(Function &F) {
         }
         if (IsForOldBlock != EdgeTargetsFunclet)
           continue;
-        PN->removeIncomingValue(IncomingBlock, /*DeletePHIIfEmpty=*/false);
-        // Revisit the next entry.
-        --PredIdx;
-        --PredEnd;
+        PN->removeIncomingValue(PredIdx, /*DeletePHIIfEmpty=*/false);
       }
     };
 
