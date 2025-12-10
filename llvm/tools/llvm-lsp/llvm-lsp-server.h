@@ -12,7 +12,6 @@
 #include <sstream>
 
 #include "IRDocument.h"
-#include "Protocol.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LSP/Transport.h"
 
@@ -93,18 +92,6 @@ private:
   void handleRequestTextDocumentDocumentSymbol(
       const lsp::DocumentSymbolParams &Params,
       lsp::Callback<std::vector<lsp::DocumentSymbol>> Reply);
-
-  // textDocument/codeAction
-  void handleRequestCodeAction(const lsp::CodeActionParams &Params,
-                               lsp::Callback<json::Value> Reply);
-
-  // llvm/getCfg
-  void handleRequestGetCFG(const lsp::GetCfgParams &Params,
-                           lsp::Callback<lsp::CFG> Reply);
-
-  // llvm/bbLocation
-  void handleRequestBBLocation(const lsp::BbLocationParams &Params,
-                               lsp::Callback<lsp::BbLocation> Reply);
 
   // Identifies RPC Call and dispatches the handling to other methods
   bool registerMessageHandlers();

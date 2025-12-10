@@ -14,7 +14,6 @@
 #include "llvm/Support/Program.h"
 
 #include "IRDocument.h"
-#include "Protocol.h"
 #include "llvm-lsp-server.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
@@ -67,7 +66,6 @@ void LspServer::handleRequestInitialize(
           }
         },
         {"referencesProvider", true},
-        {"codeActionProvider", true},
         {"documentSymbolProvider", true},
       }
     }
@@ -177,76 +175,6 @@ void LspServer::handleRequestTextDocumentDocumentSymbol(
   Reply(std::move(Result));
 }
 
-void LspServer::handleRequestCodeAction(const lsp::CodeActionParams &Params,
-                                        lsp::Callback<json::Value> Reply) {
-  Reply(json::Array{
-      json::Object{{"title", "Open CFG Preview"}, {"command", "llvm.cfg"}}});
-}
-
-void LspServer::handleRequestGetCFG(const lsp::GetCfgParams &Params,
-                                    lsp::Callback<lsp::CFG> Reply) {
-  // TODO: have a flag to force regenerating the artifacts
-  std::string Filepath = Params.uri.file().str();
-  auto Line = Params.position.line;
-  auto Character = Params.position.character;
-
-  for (const auto &[K, _] : OpenDocuments) {
-    lsp::Logger::debug("OpenDocuments: {}", K);
-  }
-  if (OpenDocuments.find(Filepath) == OpenDocuments.end()) {
-    lsp::Logger::error("Did not open file previously {}", Filepath);
-    return Reply(make_error<lsp::LSPError>(
-        formatv("Did not open file previously {}", Filepath),
-        lsp::ErrorCode::InvalidParams));
-  }
-  IRDocument &Doc = *OpenDocuments[Filepath];
-
-  Function *F = nullptr;
-  BasicBlock *BB = nullptr;
-  if (BasicBlock *MaybeBB = Doc.getBlockAtLocation(Line, Character)) {
-    BB = MaybeBB;
-    F = BB->getParent();
-  } else {
-    F = Doc.getFirstFunction();
-    BB = &F->getEntryBlock();
-  }
-
-  auto PathOpt = Doc.getPathForSVGFile(F);
-  if (!PathOpt)
-    lsp::Logger::info("Did not find Path for SVG file for {}", Filepath);
-
-  lsp::CFG Result;
-  auto MaybeURI = lsp::URIForFile::fromFile(*PathOpt);
-  if (!MaybeURI) {
-    Reply(MaybeURI.takeError());
-    return;
-  }
-  Result.uri = *MaybeURI;
-  Result.node_id = Doc.getNodeId(Doc.getBlockAtLocation(Line, Character));
-  Result.function = F->getName();
-
-  Reply(Result);
-
-  SVGToIRMap[*PathOpt] = Filepath;
-}
-
-void LspServer::handleRequestBBLocation(const lsp::BbLocationParams &Params,
-                                        lsp::Callback<lsp::BbLocation> Reply) {
-  auto Filepath = Params.uri.file();
-  auto NodeIDStr = Params.node_id;
-
-  // We assume the query to SVGToIRMap would not fail.
-  auto IR = SVGToIRMap[Filepath.str()];
-  IRDocument &Doc = *OpenDocuments[IR];
-  lsp::BbLocation Result;
-  Result.range = llvmFileLocRangeToLspRange(Doc.parseNodeId(NodeIDStr));
-  auto MaybeURI = lsp::URIForFile::fromFile(IR);
-  if (!MaybeURI)
-    return Reply(MaybeURI.takeError());
-  Result.uri = *MaybeURI;
-  return Reply(Result);
-}
-
 bool LspServer::registerMessageHandlers() {
   MessageHandler.method("initialize", this,
                         &LspServer::handleRequestInitialize);
@@ -258,12 +186,6 @@ bool LspServer::registerMessageHandlers() {
                         &LspServer::handleRequestGetReferences);
   MessageHandler.method("textDocument/documentSymbol", this,
                         &LspServer::handleRequestTextDocumentDocumentSymbol);
-  MessageHandler.method("textDocument/codeAction", this,
-                        &LspServer::handleRequestCodeAction);
-  // Custom messages
-  MessageHandler.method("llvm/getCfg", this, &LspServer::handleRequestGetCFG);
-  MessageHandler.method("llvm/bbLocation", this,
-                        &LspServer::handleRequestBBLocation);
 
   ShowMessageSender =
       MessageHandler.outgoingNotification<lsp::ShowMessageParams>(
