@@ -16289,6 +16289,13 @@ Semantics:
 This function returns the first value raised to the second power with an
 unspecified sequence of rounding operations.
 
+Note that the `powi` function is unusual in that NaN inputs can lead to non-NaN
+results, and this depends on the kind of NaN (quiet vs signaling). Due to how
+:ref:`LLVM treats NaN values <floatnan>` in non-constrained functions, the
+function may non-deterministically treat signaling NaNs as quiet NaNs. For
+example, `powi(QNaN, 0)` returns `1.0`, and `powi(SNaN, 0)` may
+non-deterministically return `1.0` or a NaN.
+
 .. _t_llvm_sin:
 
 '``llvm.sin.*``' Intrinsic
@@ -16850,6 +16857,13 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+Note that the `pow` function is unusual in that NaN inputs can lead to non-NaN
+results, and this depends on the kind of NaN (quiet vs signaling). Due to how
+:ref:`LLVM treats NaN values <floatnan>` in non-constrained functions, the
+function may non-deterministically treat signaling NaNs as quiet NaNs. For
+example, `pow(QNaN, 0.0)` returns `1.0`, and `pow(SNaN, 0.0)` may
+non-deterministically return `1.0` or a NaN.
 
 .. _int_exp:
 
@@ -24607,54 +24621,6 @@ Examples:
 
  llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, 1, 2, 3);  ==> <B, E, F, poison> index
  llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, -2, 3, 2); ==> <B, C, poison, poison> trailing elements
-
-
-.. _int_experimental_vp_splat:
-
-
-'``llvm.experimental.vp.splat``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare <2 x double> @llvm.experimental.vp.splat.v2f64(double %scalar, <2 x i1> %mask, i32 %evl)
-      declare <vscale x 4 x i32> @llvm.experimental.vp.splat.nxv4i32(i32 %scalar, <vscale x 4 x i1> %mask, i32 %evl)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.vp.splat.*``' intrinsic is to create a predicated splat
-with specific effective vector length.
-
-Arguments:
-""""""""""
-
-The result is a vector and it is a splat of the first scalar argument. The
-second argument ``mask`` is a vector mask and has the same number of elements as
-the result. The third argument is the explicit vector length of the operation.
-
-Semantics:
-""""""""""
-
-This intrinsic splats a vector with ``evl`` elements of a scalar argument.
-The lanes in the result vector disabled by ``mask`` are ``poison``. The
-elements past ``evl`` are poison.
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %r = call <4 x float> @llvm.vp.splat.v4f32(float %a, <4 x i1> %mask, i32 %evl)
-      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
-      %e = insertelement <4 x float> poison, float %a, i32 0
-      %s = shufflevector <4 x float> %e, <4 x float> poison, <4 x i32> zeroinitializer
-      %also.r = select <4 x i1> %mask, <4 x float> %s, <4 x float> poison
-
 
 .. _int_experimental_vp_reverse:
 
