@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/workitem/get_global_offset.h>
+#include <clc/opencl/opencl-base.h>
 
 _CLC_DEF _CLC_OVERLOAD uint get_global_offset(uint dim) {
   __attribute__((address_space(7))) uint *ptr =
