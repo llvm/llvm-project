@@ -1627,14 +1627,19 @@ LogicalResult parseMmaTypeSignature(OpAsmParser &parser,
   if (parser.parseColon().failed() || parser.parseLParen().failed())
     return failure();
 
-  for (int i = 0; i < 3; i++) {
-    if (i > 0 && parser.parseComma().failed())
-      return failure();
+  auto typeParser = [&]() {
     Type ty;
     if (parser.parseType(ty).failed())
       return failure();
     operandTypes.push_back(ty);
-  }
+    return success();
+  };
+  if (parser.parseCommaSeparatedList(typeParser))
+    return failure();
+
+  if (operandTypes.size() != 3)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected exactly 3 types");
 
   return parser.parseRParen();
 }
@@ -1656,18 +1661,18 @@ void inferAndSetMultiplicandTypes(MLIRContext *ctx, NamedAttrList &attrs,
   }
 }
 
-// Helper to add common block scale attributes
-void addBlockScaleAttributes(OpBuilder &builder, OperationState &result,
+// Helper to add common block scale properties
+template <typename OpType>
+void addBlockScaleProperties(OpBuilder &builder, OperationState &result,
                              ArrayRef<int64_t> shape, ScaleVecSize scaleVecSize,
                              BlockScaleFormat blockScaleFormat,
                              MMABlockScaleKind kind) {
   MLIRContext *ctx = builder.getContext();
-  result.addAttribute(
-      "shape", builder.getAttr<MMAShapeAttr>(shape[0], shape[1], shape[2]));
-  result.addAttribute("scaleVecSize", ScaleVecSizeAttr::get(ctx, scaleVecSize));
-  result.addAttribute("blockScaleFormat",
-                      BlockScaleFormatAttr::get(ctx, blockScaleFormat));
-  result.addAttribute("kind", MMABlockScaleKindAttr::get(ctx, kind));
+  auto &properties = result.getOrAddProperties<typename OpType::Properties>();
+  properties.setShape(builder.getAttr<MMAShapeAttr>(shape[0], shape[1], shape[2]));
+  properties.setScaleVecSize(ScaleVecSizeAttr::get(ctx, scaleVecSize));
+  properties.setBlockScaleFormat(BlockScaleFormatAttr::get(ctx, blockScaleFormat));
+  properties.setKind(MMABlockScaleKindAttr::get(ctx, kind));
 }
 
 // Helper to infer and add multiplicand PTX types to builder
@@ -1825,8 +1830,8 @@ void MmaBlockScaleOp::build(
     MMABlockScaleKind kind) {
   assert(shape.size() == 3 && "expected shape to have size 3 (m, n, k)");
 
-  addBlockScaleAttributes(builder, result, shape, scaleVecSize,
-                          blockScaleFormat, kind);
+  addBlockScaleProperties<MmaBlockScaleOp>(builder, result, shape, scaleVecSize,
+                                           blockScaleFormat, kind);
 
   result.addOperands(operandA);
   result.addOperands(operandB);
@@ -2081,8 +2086,8 @@ void MmaSpBlockScaleOp::build(
     MMABlockScaleKind kind) {
   assert(shape.size() == 3 && "expected shape to have size 3 (m, n, k)");
 
-  addBlockScaleAttributes(builder, result, shape, scaleVecSize,
-                          blockScaleFormat, kind);
+  addBlockScaleProperties<MmaSpBlockScaleOp>(builder, result, shape, scaleVecSize,
+                                             blockScaleFormat, kind);
   result.addAttribute("orderedMetadata", builder.getUnitAttr());
 
   result.addOperands(operandA);
