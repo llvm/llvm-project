@@ -17,8 +17,7 @@ using namespace Fortran::runtime;
 
 /// Runtime calls that do not return to the caller indicate this condition by
 /// terminating the current basic block with an unreachable op.
-static void genUnreachable(fir::FirOpBuilder &builder,
-                           mlir::Location loc) {
+static void genUnreachable(fir::FirOpBuilder &builder, mlir::Location loc) {
   mlir::Block *curBlock = builder.getBlock();
 #if 0
   mlir::Operation *parentOp = curBlock->getParentOp();
@@ -29,7 +28,7 @@ static void genUnreachable(fir::FirOpBuilder &builder,
     Fortran::lower::genOpenACCTerminator(builder, parentOp, loc);
   else
 #endif
-    fir::UnreachableOp::create(builder, loc);
+  fir::UnreachableOp::create(builder, loc);
   mlir::Block *newBlock = curBlock->splitBlock(builder.getInsertionPoint());
   builder.setInsertionPointToStart(newBlock);
 }
