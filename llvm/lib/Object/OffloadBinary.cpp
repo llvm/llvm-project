@@ -33,48 +33,37 @@ namespace {
 /// binary format.
 Error extractOffloadFiles(MemoryBufferRef Contents,
                           SmallVectorImpl<OffloadFile> &Binaries) {
-  if (Contents.getBuffer().size() == 0)
-    return Error::success();
-
-  std::unique_ptr<MemoryBuffer> Buffer =
-      MemoryBuffer::getMemBuffer(Contents.getBuffer(), "",
-                                 /*RequiresNullTerminator*/ false);
-  auto HeaderOrErr = OffloadBinary::extractHeader(*Buffer);
-  if (!HeaderOrErr)
-    return HeaderOrErr.takeError();
-  const OffloadBinary::Header *Header = *HeaderOrErr;
-  // THINKING IS IN PROGRESS BELOW. NOT READY FOR COMMENTS/REVIEW.
   uint64_t Offset = 0;
   // There could be multiple offloading binaries stored at this section.
   while (Offset < Contents.getBuffer().size()) {
-    Buffer =
+    std::unique_ptr<MemoryBuffer> Buffer =
         MemoryBuffer::getMemBuffer(Contents.getBuffer().drop_front(Offset), "",
                                    /*RequiresNullTerminator*/ false);
     if (!isAddrAligned(Align(OffloadBinary::getAlignment()),
                        Buffer->getBufferStart()))
       Buffer = MemoryBuffer::getMemBufferCopy(Buffer->getBuffer(),
                                               Buffer->getBufferIdentifier());
-    if (Header->Version == 1) {
-      auto BinaryOrErr = OffloadBinary::create(*Buffer);
-      if (!BinaryOrErr)
-        return BinaryOrErr.takeError();
-      OffloadBinary &Binary = **BinaryOrErr;
 
-      // Create a new binary with a buffer containing only the current binary.
-      Buffer = MemoryBuffer::getMemBuffer(
-          Binary.getData().take_front(Binary.getSize()),
-          Contents.getBufferIdentifier());
-      auto NewBinaryOrErr = OffloadBinary::create(*Buffer);
-      if (!NewBinaryOrErr)
-        return NewBinaryOrErr.takeError();
-      Binaries.emplace_back(std::move(*NewBinaryOrErr), std::move(Buffer));
+    auto HeaderOrErr = OffloadBinary::extractHeader(*Buffer);
+    if (!HeaderOrErr)
+      return HeaderOrErr.takeError();
+    const OffloadBinary::Header *Header = *HeaderOrErr;
 
-      Offset += Binary.getSize();
-      continue;
+    // Create a copy of original memory containing only the current binary.
+    std::unique_ptr<MemoryBuffer> BufferCopy = MemoryBuffer::getMemBufferCopy(
+        Buffer->getBuffer().take_front(Header->Size),
+        Contents.getBufferIdentifier());
+
+    auto BinariesOrErr = OffloadBinary::create(*BufferCopy);
+    if (!BinariesOrErr)
+      return BinariesOrErr.takeError();
+    for (auto &Binary : *BinariesOrErr) {
+      std::unique_ptr<MemoryBuffer> BufferClone = MemoryBuffer::getMemBuffer(
+          BufferCopy->getBuffer(), BufferCopy->getBufferIdentifier());
+      Binaries.emplace_back(std::move(Binary), std::move(BufferClone));
     }
-    // Create new memory buffer containing only the current binary
-    Buffer = MemoryBuffer::getMemBuffer(Buffer->getBuffer().take_front(Header->Size),
-                                        Contents.getBufferIdentifier());
+
+    Offset += Header->Size;
   }
 
   return Error::success();
@@ -206,7 +195,9 @@ OffloadBinary::extractHeader(MemoryBufferRef Buf) {
       TheHeader->Size < sizeof(Entry) || TheHeader->Size < sizeof(Header))
     return errorCodeToError(object_error::unexpected_eof);
 
-  uint64_t EntriesSize = sizeof(Entry) * TheHeader->EntriesCount;
+  uint64_t EntriesCount =
+      (TheHeader->Version == 1) ? 1 : TheHeader->EntriesCount;
+  uint64_t EntriesSize = sizeof(Entry) * EntriesCount;
   if (TheHeader->EntriesOffset > TheHeader->Size - EntriesSize ||
       EntriesSize > TheHeader->Size - sizeof(Header))
     return errorCodeToError(object_error::unexpected_eof);
@@ -214,46 +205,42 @@ OffloadBinary::extractHeader(MemoryBufferRef Buf) {
   return TheHeader;
 }
 
-Expected<std::unique_ptr<OffloadBinary>>
-OffloadBinary::createV1(MemoryBufferRef Buf) {
-  auto HeaderOrErr = extractHeader(Buf);
+Expected<SmallVector<std::unique_ptr<OffloadBinary>>>
+OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
+  auto HeaderOrErr = OffloadBinary::extractHeader(Buf);
   if (!HeaderOrErr)
     return HeaderOrErr.takeError();
   const Header *TheHeader = *HeaderOrErr;
 
   const char *Start = Buf.getBufferStart();
-  const Entry *TheEntry =
-      reinterpret_cast<const Entry *>(&Start[TheHeader->EntriesOffset]);
-
-  if (TheEntry->ImageOffset > Buf.getBufferSize() ||
-      TheEntry->StringOffset > Buf.getBufferSize())
-    return errorCodeToError(object_error::unexpected_eof);
-
-  return std::unique_ptr<OffloadBinary>(
-      new OffloadBinary(Buf, TheHeader, TheEntry));
-}
-
-Expected<std::unique_ptr<OffloadBinary>>
-OffloadBinary::createV2(MemoryBufferRef Buf) {
-  auto HeaderOrErr = extractHeader(Buf);
-  if (!HeaderOrErr)
-    return HeaderOrErr.takeError();
-  const Header *TheHeader = *HeaderOrErr;
-
-  const char *Start = Buf.getBufferStart();
-
   const Entry *Entries =
       reinterpret_cast<const Entry *>(&Start[TheHeader->EntriesOffset]);
-  for (uint32_t I = 0; I < TheHeader->EntriesCount; ++I) {
-    const Entry *TheEntry = &Entries[I];
 
+  SmallVector<std::unique_ptr<OffloadBinary>> Binaries;
+  if (TheHeader->Version > 1 && Index.has_value()) {
+    if (*Index >= TheHeader->EntriesCount)
+      return errorCodeToError(object_error::parse_failed);
+    const Entry *TheEntry = &Entries[*Index];
     if (TheEntry->ImageOffset > Buf.getBufferSize() ||
         TheEntry->StringOffset > Buf.getBufferSize())
       return errorCodeToError(object_error::unexpected_eof);
+
+    Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, *Index));
+    return Binaries;
   }
 
-  return std::unique_ptr<OffloadBinary>(
-      new OffloadBinary(Buf, TheHeader, Entries));
+  uint64_t EntriesCount =
+      (TheHeader->Version == 1) ? 1 : TheHeader->EntriesCount;
+  for (uint64_t I = 0; I < EntriesCount; ++I) {
+    const Entry *TheEntry = &Entries[I];
+    if (TheEntry->ImageOffset > Buf.getBufferSize() ||
+        TheEntry->StringOffset > Buf.getBufferSize())
+      return errorCodeToError(object_error::unexpected_eof);
+
+    Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, I));
+  }
+
+  return Binaries;
 }
 
 SmallString<0> OffloadBinary::write(ArrayRef<OffloadingImage> OffloadingData) {

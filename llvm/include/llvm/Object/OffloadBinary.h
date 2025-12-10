@@ -120,17 +120,17 @@ public:
   static Expected<const Header *> extractHeader(MemoryBufferRef Buf);
 
   /// Attempt to parse the offloading binary stored in \p Buf.
-  /// \p Index is used to create specific Entry/Image, when
-  /// offload binary contains multiple images
-  LLVM_ABI static Expected<std::unique_ptr<OffloadBinary>>
-      create(MemoryBufferRef Buf, const uint64_t Index = 0);
-
-  /// Attempt to parse the offloading binary stored in \p Buf.
-  /// This function is used for version 2 of offload binary format
-  /// to parse multiple images serialized in the file with a single
-  /// header.
-  LLVM_ABI static Expected<ArrayRef<std::unique_ptr<OffloadBinary>>>
-      createMultiple(MemoryBufferRef Buf);
+  /// For version 1 binaries, always returns a single OffloadBinary.
+  /// For version 2+ binaries:
+  ///   - If \p Index is provided, returns the OffloadBinary at that index.
+  ///   - If \p Index is std::nullopt, returns all OffloadBinary entries.
+  /// \param Buf The memory buffer containing the offload binary.
+  /// \param Index Optional index to select a specific entry. If not provided,
+  ///              all entries are returned (version 2+ only).
+  /// \returns An array of unique pointers to OffloadBinary objects, or an
+  /// error.
+  LLVM_ABI static Expected<SmallVector<std::unique_ptr<OffloadBinary>>>
+  create(MemoryBufferRef Buf, std::optional<uint64_t> Index = std::nullopt);
 
   /// Serialize the contents of \p OffloadingData to a binary buffer to be read
   /// later.
@@ -219,7 +219,7 @@ public:
     assert(NewBinaryOrErr && "Failed to parse a copy of the binary?");
     if (!NewBinaryOrErr)
       llvm::consumeError(NewBinaryOrErr.takeError());
-    return OffloadFile(std::move(*NewBinaryOrErr), std::move(Buffer));
+    return OffloadFile(std::move(NewBinaryOrErr.get()[0]), std::move(Buffer));
   }
 
   /// We use the Triple and Architecture pair to group linker inputs together.
