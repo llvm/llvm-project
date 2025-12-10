@@ -21,6 +21,7 @@
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InlineAdvisor.h"
+#include "llvm/Analysis/InstCount.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -1701,6 +1702,11 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
+
+  // Count the types of instructions used
+  if (AreStatisticsEnabled())
+    MPM.addPass(createModuleToFunctionPassAdaptor(InstCountPass()));
+
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
   return MPM;
@@ -1813,7 +1819,6 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   addAnnotationRemarksPass(MPM);
 
   addRequiredLTOPreLinkPasses(MPM);
-
   return MPM;
 }
 
