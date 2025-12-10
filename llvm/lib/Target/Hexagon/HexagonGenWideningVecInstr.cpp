@@ -117,9 +117,9 @@ private:
                              bool IsResSigned);
   bool genVAvg(Instruction *Inst);
   bool checkConstantVector(Value *OP, int64_t &SplatVal, bool IsOPZExt);
-  void updateMPYConst(Intrinsic::ID IntId, int64_t &SplatVal, bool IsOPZExt,
+  void updateMPYConst(Intrinsic::ID IntId, int64_t SplatVal, bool IsOPZExt,
                       Value *&OP, IRBuilder<> &IRB);
-  void packConstant(Intrinsic::ID IntId, int64_t &SplatVal, Value *&OP,
+  void packConstant(Intrinsic::ID IntId, int64_t SplatVal, Value *&OP,
                     IRBuilder<> &IRB);
 };
 
@@ -349,7 +349,7 @@ Intrinsic::ID HexagonGenWideningVecInstr::getIntrinsic(
     llvm_unreachable("Incorrect input and output operand sizes");
 
   case OP_Mul:
-    assert(ResEltSize = 2 * InEltSize);
+    assert(ResEltSize == 2 * InEltSize);
     // Enter inside 'if' block when one of the operand is constant vector
     if (IsConstScalar) {
       // When inputs are of 8bit type and output is 16bit type, enter 'if' block
@@ -484,20 +484,17 @@ bool HexagonGenWideningVecInstr::checkConstantVector(Value *OP,
 }
 
 void HexagonGenWideningVecInstr::updateMPYConst(Intrinsic::ID IntId,
-                                                int64_t &SplatVal,
-                                                bool IsOPZExt, Value *&OP,
-                                                IRBuilder<> &IRB) {
+                                                int64_t SplatVal, bool IsOPZExt,
+                                                Value *&OP, IRBuilder<> &IRB) {
   if ((IntId == Intrinsic::hexagon_vmpy_uu ||
        IntId == Intrinsic::hexagon_vmpy_us ||
        IntId == Intrinsic::hexagon_vmpy_su ||
        IntId == Intrinsic::hexagon_vmpy_ss) &&
       OP->getType()->isVectorTy()) {
     // Create a vector with all elements equal to SplatVal
-    auto *VecTy = cast<VectorType>(OP->getType());
-    Value *scalar = IRB.getIntN(VecTy->getScalarSizeInBits(),
-                                static_cast<uint32_t>(SplatVal));
-    Value *splatVector = ConstantVector::getSplat(VecTy->getElementCount(),
-                                                  cast<Constant>(scalar));
+    Type *VecTy = OP->getType();
+    Value *splatVector =
+        ConstantInt::get(VecTy, static_cast<uint32_t>(SplatVal));
     OP = IsOPZExt ? IRB.CreateZExt(splatVector, VecTy)
                   : IRB.CreateSExt(splatVector, VecTy);
   } else {
@@ -506,7 +503,7 @@ void HexagonGenWideningVecInstr::updateMPYConst(Intrinsic::ID IntId,
 }
 
 void HexagonGenWideningVecInstr::packConstant(Intrinsic::ID IntId,
-                                              int64_t &SplatVal, Value *&OP,
+                                              int64_t SplatVal, Value *&OP,
                                               IRBuilder<> &IRB) {
   uint32_t Val32 = static_cast<uint32_t>(SplatVal);
   if (IntId == Intrinsic::hexagon_vmpy_ub_ub) {
@@ -596,7 +593,7 @@ bool HexagonGenWideningVecInstr::replaceWithIntrinsic(Instruction *Inst,
   if (IsConstScalar && OPK == OP_Shl) {
     if (((NewOpEltSize == 8) && (SplatVal > 0) && (SplatVal < 8)) ||
         ((NewOpEltSize == 16) && (SplatVal > 0) && (SplatVal < 16))) {
-      SplatVal = 1 << SplatVal;
+      SplatVal = 1LL << SplatVal;
       OPK = OP_Mul;
     } else {
       return false;
@@ -839,9 +836,9 @@ bool HexagonGenWideningVecInstr::replaceWithVmpaIntrinsic(Instruction *Inst,
   NewVOP2 = IRB.CreateBitCast(NewVOP2, InType);
   Value *VecOP = IRB.CreateCall(ExtF, {NewVOP1, NewVOP2});
 
-  Intrinsic::ID VmpaIntID =
-      (NewResEltSize == 16) ? VmpaIntID = Intrinsic::hexagon_V6_vmpabus_128B
-                            : VmpaIntID = Intrinsic::hexagon_V6_vmpauhb_128B;
+  Intrinsic::ID VmpaIntID = (NewResEltSize == 16)
+                                ? Intrinsic::hexagon_V6_vmpabus_128B
+                                : Intrinsic::hexagon_V6_vmpauhb_128B;
   ExtF = Intrinsic::getOrInsertDeclaration(M, VmpaIntID);
   auto *ResType =
       FixedVectorType::get(getElementTy(NewResEltSize, IRB), NumElts);

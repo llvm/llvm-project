@@ -252,12 +252,23 @@ static bool hasPossibleIncompatibleOps(const Function *F,
   return false;
 }
 
-APInt AArch64TTIImpl::getFeatureMask(const Function &F) const {
+static void extractAttrFeatures(const Function &F, const AArch64TTIImpl *TTI,
+                                SmallVectorImpl<StringRef> &Features) {
   StringRef AttributeStr =
-      isMultiversionedFunction(F) ? "fmv-features" : "target-features";
+      TTI->isMultiversionedFunction(F) ? "fmv-features" : "target-features";
   StringRef FeatureStr = F.getFnAttribute(AttributeStr).getValueAsString();
-  SmallVector<StringRef, 8> Features;
   FeatureStr.split(Features, ",");
+}
+
+APInt AArch64TTIImpl::getFeatureMask(const Function &F) const {
+  SmallVector<StringRef, 8> Features;
+  extractAttrFeatures(F, this, Features);
+  return AArch64::getCpuSupportsMask(Features);
+}
+
+APInt AArch64TTIImpl::getPriorityMask(const Function &F) const {
+  SmallVector<StringRef, 8> Features;
+  extractAttrFeatures(F, this, Features);
   return AArch64::getFMVPriority(Features);
 }
 
@@ -1446,10 +1457,22 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_orr:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_orr_u)
         .setMatchingIROpcode(Instruction::Or);
+  case Intrinsic::aarch64_sve_sqrshl:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sqrshl_u);
+  case Intrinsic::aarch64_sve_sqshl:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sqshl_u);
   case Intrinsic::aarch64_sve_sqsub:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sqsub_u);
+  case Intrinsic::aarch64_sve_srshl:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_srshl_u);
+  case Intrinsic::aarch64_sve_uqrshl:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_uqrshl_u);
+  case Intrinsic::aarch64_sve_uqshl:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_uqshl_u);
   case Intrinsic::aarch64_sve_uqsub:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_uqsub_u);
+  case Intrinsic::aarch64_sve_urshl:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_urshl_u);
 
   case Intrinsic::aarch64_sve_add_u:
     return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
@@ -1891,25 +1914,23 @@ static std::optional<Instruction *> instCombineSVESel(InstCombiner &IC,
 
 static std::optional<Instruction *> instCombineSVEDup(InstCombiner &IC,
                                                       IntrinsicInst &II) {
-  IntrinsicInst *Pg = dyn_cast<IntrinsicInst>(II.getArgOperand(1));
-  if (!Pg)
+  Value *Pg = II.getOperand(1);
+
+  // sve.dup(V, all_active, X) ==> splat(X)
+  if (isAllActivePredicate(Pg)) {
+    auto *RetTy = cast<ScalableVectorType>(II.getType());
+    Value *Splat = IC.Builder.CreateVectorSplat(RetTy->getElementCount(),
+                                                II.getArgOperand(2));
+    return IC.replaceInstUsesWith(II, Splat);
+  }
+
+  if (!match(Pg, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
+                     m_SpecificInt(AArch64SVEPredPattern::vl1))))
     return std::nullopt;
 
-  if (Pg->getIntrinsicID() != Intrinsic::aarch64_sve_ptrue)
-    return std::nullopt;
-
-  const auto PTruePattern =
-      cast<ConstantInt>(Pg->getOperand(0))->getZExtValue();
-  if (PTruePattern != AArch64SVEPredPattern::vl1)
-    return std::nullopt;
-
-  // The intrinsic is inserting into lane zero so use an insert instead.
-  auto *IdxTy = Type::getInt64Ty(II.getContext());
-  auto *Insert = InsertElementInst::Create(
-      II.getArgOperand(0), II.getArgOperand(2), ConstantInt::get(IdxTy, 0));
-  Insert->insertBefore(II.getIterator());
-  Insert->takeName(&II);
-
+  // sve.dup(V, sve.ptrue(vl1), X) ==> insertelement V, X, 0
+  Value *Insert = IC.Builder.CreateInsertElement(
+      II.getArgOperand(0), II.getArgOperand(2), uint64_t(0));
   return IC.replaceInstUsesWith(II, Insert);
 }
 
@@ -5323,20 +5344,11 @@ void AArch64TTIImpl::getUnrollingPreferences(
   }
 
   // Apply subtarget-specific unrolling preferences.
-  switch (ST->getProcFamily()) {
-  case AArch64Subtarget::AppleA14:
-  case AArch64Subtarget::AppleA15:
-  case AArch64Subtarget::AppleA16:
-  case AArch64Subtarget::AppleM4:
+  if (ST->isAppleMLike())
     getAppleRuntimeUnrollPreferences(L, SE, UP, *this);
-    break;
-  case AArch64Subtarget::Falkor:
-    if (EnableFalkorHWPFUnrollFix)
-      getFalkorUnrollingPreferences(L, SE, UP);
-    break;
-  default:
-    break;
-  }
+  else if (ST->getProcFamily() == AArch64Subtarget::Falkor &&
+           EnableFalkorHWPFUnrollFix)
+    getFalkorUnrollingPreferences(L, SE, UP);
 
   // If this is a small, multi-exit loop similar to something like std::find,
   // then there is typically a performance improvement achieved by unrolling.

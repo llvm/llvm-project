@@ -3446,11 +3446,34 @@ void Verifier::visitIndirectBrInst(IndirectBrInst &BI) {
 }
 
 void Verifier::visitCallBrInst(CallBrInst &CBI) {
-  Check(CBI.isInlineAsm(), "Callbr is currently only used for asm-goto!", &CBI);
-  const InlineAsm *IA = cast<InlineAsm>(CBI.getCalledOperand());
-  Check(!IA->canThrow(), "Unwinding from Callbr is not allowed");
+  if (!CBI.isInlineAsm()) {
+    Check(CBI.getCalledFunction(),
+          "Callbr: indirect function / invalid signature");
+    Check(!CBI.hasOperandBundles(),
+          "Callbr for intrinsics currently doesn't support operand bundles");
 
-  verifyInlineAsmCall(CBI);
+    switch (CBI.getIntrinsicID()) {
+    case Intrinsic::amdgcn_kill: {
+      Check(CBI.getNumIndirectDests() == 1,
+            "Callbr amdgcn_kill only supports one indirect dest");
+      bool Unreachable = isa<UnreachableInst>(CBI.getIndirectDest(0)->begin());
+      CallInst *Call = dyn_cast<CallInst>(CBI.getIndirectDest(0)->begin());
+      Check(Unreachable || (Call && Call->getIntrinsicID() ==
+                                        Intrinsic::amdgcn_unreachable),
+            "Callbr amdgcn_kill indirect dest needs to be unreachable");
+      break;
+    }
+    default:
+      CheckFailed(
+          "Callbr currently only supports asm-goto and selected intrinsics");
+    }
+    visitIntrinsicCall(CBI.getIntrinsicID(), CBI);
+  } else {
+    const InlineAsm *IA = cast<InlineAsm>(CBI.getCalledOperand());
+    Check(!IA->canThrow(), "Unwinding from Callbr is not allowed");
+
+    verifyInlineAsmCall(CBI);
+  }
   visitTerminator(CBI);
 }
 
@@ -5546,7 +5569,7 @@ void Verifier::visitInstruction(Instruction &I) {
              (CBI && &CBI->getCalledOperandUse() == &I.getOperandUse(i)) ||
              IsAttachedCallOperand(F, CBI, i)),
             "Cannot take the address of an intrinsic!", &I);
-      Check(!F->isIntrinsic() || isa<CallInst>(I) ||
+      Check(!F->isIntrinsic() || isa<CallInst>(I) || isa<CallBrInst>(I) ||
                 F->getIntrinsicID() == Intrinsic::donothing ||
                 F->getIntrinsicID() == Intrinsic::seh_try_begin ||
                 F->getIntrinsicID() == Intrinsic::seh_try_end ||
@@ -6547,7 +6570,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     VectorType *VecTy = cast<VectorType>(Call.getType());
     int64_t Idx = cast<ConstantInt>(Call.getArgOperand(2))->getSExtValue();
     int64_t KnownMinNumElements = VecTy->getElementCount().getKnownMinValue();
-    if (Call.getParent() && Call.getParent()->getParent()) {
+    if (VecTy->isScalableTy() && Call.getParent() &&
+        Call.getParent()->getParent()) {
       AttributeList Attrs = Call.getParent()->getParent()->getAttributes();
       if (Attrs.hasFnAttr(Attribute::VScaleRange))
         KnownMinNumElements *= Attrs.getFnAttrs().getVScaleRangeMin();
@@ -6737,11 +6761,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     case CallingConv::AMDGPU_CS:
     case CallingConv::AMDGPU_CS_Chain:
     case CallingConv::AMDGPU_CS_ChainPreserve:
+    case CallingConv::AMDGPU_ES:
+    case CallingConv::AMDGPU_GS:
+    case CallingConv::AMDGPU_HS:
+    case CallingConv::AMDGPU_LS:
+    case CallingConv::AMDGPU_VS:
       break;
     default:
-      CheckFailed("Intrinsic can only be used from functions with the "
-                  "amdgpu_cs, amdgpu_cs_chain or amdgpu_cs_chain_preserve "
-                  "calling conventions",
+      CheckFailed("Intrinsic cannot be called from functions with this "
+                  "calling convention",
                   &Call);
       break;
     }
