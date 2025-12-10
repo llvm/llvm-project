@@ -570,8 +570,13 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
     }
   }
 
-  if (registers.empty())
+  if (registers.empty()) {
     registers = GetFallbackRegisters(arch_to_use);
+    if (!registers.empty())
+      LLDB_LOG(
+          log,
+          "All other methods failed, using fallback register information.");
+  }
 
   AddRemoteRegisters(registers, arch_to_use);
 }

@@ -1651,3 +1651,14 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
   }
   return BaseT::getNumberOfParts(Tp);
 }
+
+InstructionUniformity
+GCNTTIImpl::getInstructionUniformity(const Value *V) const {
+  if (isAlwaysUniform(V))
+    return InstructionUniformity::AlwaysUniform;
+
+  if (isSourceOfDivergence(V))
+    return InstructionUniformity::NeverUniform;
+
+  return InstructionUniformity::Default;
+}

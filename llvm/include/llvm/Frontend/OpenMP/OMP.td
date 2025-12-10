@@ -379,13 +379,13 @@ def OMPC_NumTasks : Clause<[Spelling<"num_tasks">]> {
 }
 def OMPC_NumTeams : Clause<[Spelling<"num_teams">]> {
   let clangClass = "OMPNumTeamsClause";
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "OmpNumTeamsClause";
 }
 def OMP_NUMTHREADS_Strict : EnumVal<"strict", 1, 1> {}
 def OMP_NUMTHREADS_Unknown : EnumVal<"unknown", 2, 0> { let isDefault = 1; }
 def OMPC_NumThreads : Clause<[Spelling<"num_threads">]> {
   let clangClass = "OMPNumThreadsClause";
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "OmpNumThreadsClause";
   let enumClauseValue = "NumThreadsType";
   let allowedClauseValues = [
     OMP_NUMTHREADS_Strict,
@@ -535,7 +535,7 @@ def OMPC_TaskReduction : Clause<[Spelling<"task_reduction">]> {
 }
 def OMPC_ThreadLimit : Clause<[Spelling<"thread_limit">]> {
   let clangClass = "OMPThreadLimitClause";
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "OmpThreadLimitClause";
 }
 def OMPC_ThreadPrivate : Clause<[Spelling<"threadprivate">]> {
   let isImplicit = true;

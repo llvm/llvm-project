@@ -241,6 +241,8 @@ private:
   void CheckDependArraySection(
       const common::Indirection<parser::ArrayElement> &, const parser::Name &);
   void CheckDoacross(const parser::OmpDoacross &doa);
+  void CheckDimsModifier(parser::CharBlock source, size_t numValues,
+      const parser::OmpDimsModifier &x);
   bool IsDataRefTypeParamInquiry(const parser::DataRef *dataRef);
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObject &obj, llvm::StringRef clause = "");
