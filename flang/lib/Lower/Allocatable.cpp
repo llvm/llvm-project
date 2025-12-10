@@ -803,7 +803,8 @@ private:
                builder, loc, retTy, box.getAddr(), errmsg, stream, pinned,
                source, cudaAttr,
                errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr,
-               doubleDescriptors ? builder.getUnitAttr() : nullptr)
+               doubleDescriptors ? builder.getUnitAttr() : nullptr,
+               box.isPointer() ? builder.getUnitAttr() : nullptr)
         .getResult();
   }
 
@@ -873,7 +874,8 @@ static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
   return cuf::DeallocateOp::create(
              builder, loc, retTy, box.getAddr(), errmsg, cudaAttr,
              errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr,
-             doubleDescriptors ? builder.getUnitAttr() : nullptr)
+             doubleDescriptors ? builder.getUnitAttr() : nullptr,
+             box.isPointer() ? builder.getUnitAttr() : nullptr)
       .getResult();
 }
 
