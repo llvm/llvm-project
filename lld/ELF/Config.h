@@ -191,6 +191,7 @@ private:
   void createFiles(llvm::opt::InputArgList &args);
   void inferMachineType();
   template <class ELFT> void link(llvm::opt::InputArgList &args);
+  template <class ELFT> void compileFiles();
   template <class ELFT> void compileBitcodeFiles(bool skipLinkedOutput);
   template <class ELFT> void compileGccIRFiles(bool skipLinkedOutput);
   bool tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,

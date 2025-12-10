@@ -2715,24 +2715,8 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
       mb.dontNeedIfMmap();
 }
 
-// This function is where all the optimizations of link-time
-// optimization takes place. When LLVM LTO is in use, some input files are
-// not in native object file format but in the LLVM bitcode format.
-// This function compiles bitcode files into a few big native files
-// using LLVM functions and replaces bitcode symbols with the results.
-// Because all bitcode files that the program consists of are passed to
-// the compiler at once, it can do a whole-program optimization.
 template <class ELFT>
-void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
-  llvm::TimeTraceScope timeScope("LTO");
-  // Compile bitcode files and replace bitcode symbols.
-  lto.reset(new BitcodeCompiler(ctx));
-  for (BitcodeFile *file : ctx.bitcodeFiles)
-    lto->add(*file);
-
-  if (!ctx.bitcodeFiles.empty())
-    markBuffersAsDontNeed(ctx, skipLinkedOutput);
-
+void LinkerDriver::compileFiles() {
   ltoObjectFiles = lto->compile();
   for (auto &file : ltoObjectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
@@ -2765,6 +2749,28 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   }
 }
 
+
+// This function is where all the optimizations of link-time
+// optimization takes place. When LLVM LTO is in use, some input files are
+// not in native object file format but in the LLVM bitcode format.
+// This function compiles bitcode files into a few big native files
+// using LLVM functions and replaces bitcode symbols with the results.
+// Because all bitcode files that the program consists of are passed to
+// the compiler at once, it can do a whole-program optimization.
+template <class ELFT>
+void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
+  llvm::TimeTraceScope timeScope("LTO");
+  // Compile bitcode files and replace bitcode symbols.
+  lto.reset(new BitcodeCompiler(ctx));
+  for (BitcodeFile *file : ctx.bitcodeFiles)
+    lto->add(*file);
+
+  if (!ctx.bitcodeFiles.empty())
+    markBuffersAsDontNeed(ctx, skipLinkedOutput);
+
+  compileFiles<ELFT>();
+}
+
 #if LLD_ENABLE_GNU_LTO
 template <class ELFT>
 void LinkerDriver::compileGccIRFiles(bool skipLinkedOutput) {
@@ -2776,25 +2782,7 @@ void LinkerDriver::compileGccIRFiles(bool skipLinkedOutput) {
   for (ELFFileBase *file : ctx.objectFiles)
     c->add(*file);
 
-  ltoObjectFiles = c->compile();
-  for (auto &file : ltoObjectFiles) {
-    auto *obj = cast<ObjFile<ELFT>>(file.get());
-    obj->parse(/*ignoreComdats=*/true);
-
-    // For defined symbols in non-relocatable output,
-    // compute isExported and parse '@'.
-    if (!ctx.arg.relocatable)
-      for (Symbol *sym : obj->getGlobalSymbols()) {
-        if (!sym->isDefined())
-          continue;
-        if (ctx.arg.exportDynamic && sym->computeBinding(ctx) != STB_LOCAL)
-          sym->isExported = true;
-        if (sym->hasVersionSuffix)
-          sym->parseSymbolVersion(ctx);
-      }
-    ctx.objectFiles.push_back(obj);
-  }
-  return;
+  compileFiles<ELFT>();
 }
 #endif
 
