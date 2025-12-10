@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++14 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++14 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
 
 namespace test_constexpr_stdc_rotate {
 
