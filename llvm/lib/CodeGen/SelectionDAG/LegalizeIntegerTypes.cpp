@@ -145,7 +145,6 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::SPLAT_VECTOR:
   case ISD::SCALAR_TO_VECTOR:
-  case ISD::EXPERIMENTAL_VP_SPLAT:
     Res = PromoteIntRes_ScalarOp(N);
     break;
   case ISD::STEP_VECTOR: Res = PromoteIntRes_STEP_VECTOR(N); break;
@@ -2008,7 +2007,6 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::SPLAT_VECTOR:
   case ISD::SCALAR_TO_VECTOR:
-  case ISD::EXPERIMENTAL_VP_SPLAT:
     Res = PromoteIntOp_ScalarOp(N);
     break;
   case ISD::VSELECT:
@@ -2363,9 +2361,6 @@ SDValue DAGTypeLegalizer::PromoteIntOp_INSERT_VECTOR_ELT(SDNode *N,
 
 SDValue DAGTypeLegalizer::PromoteIntOp_ScalarOp(SDNode *N) {
   SDValue Op = GetPromotedInteger(N->getOperand(0));
-  if (N->getOpcode() == ISD::EXPERIMENTAL_VP_SPLAT)
-    return SDValue(
-        DAG.UpdateNodeOperands(N, Op, N->getOperand(1), N->getOperand(2)), 0);
 
   // Integer SPLAT_VECTOR/SCALAR_TO_VECTOR operands are implicitly truncated,
   // so just promote the operand in place.
@@ -5213,8 +5208,7 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
   Entry.IsZExt = false;
   Args.push_back(Entry);
 
-  SDValue Func =
-      DAG.getExternalSymbol(TLI.getLibcallImplName(LCImpl).data(), PtrVT);
+  SDValue Func = DAG.getExternalSymbol(LCImpl, PtrVT);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
@@ -5457,7 +5451,6 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::INSERT_VECTOR_ELT: Res = ExpandOp_INSERT_VECTOR_ELT(N); break;
   case ISD::SCALAR_TO_VECTOR:  Res = ExpandOp_SCALAR_TO_VECTOR(N); break;
-  case ISD::EXPERIMENTAL_VP_SPLAT:
   case ISD::SPLAT_VECTOR:      Res = ExpandIntOp_SPLAT_VECTOR(N); break;
   case ISD::SELECT_CC:         Res = ExpandIntOp_SELECT_CC(N); break;
   case ISD::SETCC:             Res = ExpandIntOp_SETCC(N); break;
@@ -6101,10 +6094,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ScalarOp(SDNode *N) {
   EVT NOutElemVT = NOutVT.getVectorElementType();
 
   SDValue Op = DAG.getNode(ISD::ANY_EXTEND, dl, NOutElemVT, N->getOperand(0));
-  if (N->isVPOpcode())
-    return DAG.getNode(N->getOpcode(), dl, NOutVT, Op, N->getOperand(1),
-                       N->getOperand(2));
-
   return DAG.getNode(N->getOpcode(), dl, NOutVT, Op);
 }
 

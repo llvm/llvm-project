@@ -106,7 +106,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
           cir::ConstantOp falseNVRO = builder.getFalse(loc);
           Address nrvoFlag = createTempAlloca(falseNVRO.getType(),
                                               CharUnits::One(), loc, "nrvo",
-                                              /*arraySize=*/nullptr, &address);
+                                              /*arraySize=*/nullptr);
           assert(builder.getInsertionBlock());
           builder.createStore(loc, falseNVRO, nrvoFlag);
 
@@ -454,7 +454,8 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   if (supportsCOMDAT() && gv.isWeakForLinker())
     gv.setComdat(true);
 
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  if (d.getTLSKind())
+    errorNYI(d.getSourceRange(), "getOrCreateStaticVarDecl: TLS");
 
   setGVProperties(gv, &d);
 
@@ -835,7 +836,24 @@ template <class Derived> struct DestroyNRVOVariable : EHScopeStack::Cleanup {
   QualType ty;
 
   void emit(CIRGenFunction &cgf, Flags flags) override {
-    assert(!cir::MissingFeatures::cleanupDestroyNRVOVariable());
+    // Along the exceptions path we always execute the dtor.
+    bool nrvo = flags.isForNormalCleanup() && nrvoFlag;
+
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    if (nrvo) {
+      // If we exited via NRVO, we skip the destructor call.
+      mlir::Location loc = addr.getPointer().getLoc();
+      mlir::Value didNRVO = builder.createFlagLoad(loc, nrvoFlag);
+      mlir::Value notNRVO = builder.createNot(didNRVO);
+      cir::IfOp::create(builder, loc, notNRVO, /*withElseRegion=*/false,
+                        [&](mlir::OpBuilder &b, mlir::Location) {
+                          static_cast<Derived *>(this)->emitDestructorCall(cgf);
+                          builder.createYield(loc);
+                        });
+    } else {
+      static_cast<Derived *>(this)->emitDestructorCall(cgf);
+    }
   }
 
   virtual ~DestroyNRVOVariable() = default;
@@ -851,7 +869,9 @@ struct DestroyNRVOVariableCXX final
   const CXXDestructorDecl *dtor;
 
   void emitDestructorCall(CIRGenFunction &cgf) {
-    assert(!cir::MissingFeatures::cleanupDestroyNRVOVariable());
+    cgf.emitCXXDestructorCall(dtor, Dtor_Complete,
+                              /*forVirtualBase=*/false,
+                              /*delegating=*/false, addr, ty);
   }
 };
 

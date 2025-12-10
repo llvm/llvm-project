@@ -682,8 +682,11 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
 
     setLinkageForGV(gv, d);
 
-    if (d->getTLSKind())
-      errorNYI(d->getSourceRange(), "thread local global variable");
+    if (d->getTLSKind()) {
+      if (d->getTLSKind() == VarDecl::TLS_Dynamic)
+        errorNYI(d->getSourceRange(), "TLS dynamic");
+      setTLSMode(gv, *d);
+    }
 
     setGVProperties(gv, d);
 
@@ -738,12 +741,11 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
   if (!ty)
     ty = getTypes().convertTypeForMem(astTy);
 
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
-
+  bool tlsAccess = d->getTLSKind() != VarDecl::TLS_None;
   cir::GlobalOp g = getOrCreateCIRGlobal(d, ty, isForDefinition);
   mlir::Type ptrTy = builder.getPointerTo(g.getSymType());
   return cir::GetGlobalOp::create(builder, getLoc(d->getSourceRange()), ptrTy,
-                                  g.getSymName());
+                                  g.getSymNameAttr(), tlsAccess);
 }
 
 cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
@@ -1412,7 +1414,11 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
     // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
     // we need to do that explicitly.
     std::string uniqueName = getUniqueGlobalName(name.str());
-    mlir::Location loc = getLoc(s->getSourceRange());
+    // Synthetic string literals (e.g., from SourceLocExpr) may not have valid
+    // source locations. Use unknown location in those cases.
+    mlir::Location loc = s->getBeginLoc().isValid()
+                             ? getLoc(s->getSourceRange())
+                             : builder.getUnknownLoc();
     auto typedC = llvm::cast<mlir::TypedAttr>(c);
     gv = generateStringLiteral(loc, typedC,
                                cir::GlobalLinkageKind::PrivateLinkage, *this,
@@ -1462,6 +1468,26 @@ void CIRGenModule::emitExplicitCastExprType(const ExplicitCastExpr *e,
 
   assert(!cir::MissingFeatures::generateDebugInfo() &&
          "emitExplicitCastExprType");
+}
+
+mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
+  assert(!cir::MissingFeatures::cxxABI());
+
+  mlir::Location loc = getLoc(e->getSourceRange());
+
+  const auto *decl = cast<DeclRefExpr>(e->getSubExpr())->getDecl();
+
+  // A member function pointer.
+  if (isa<CXXMethodDecl>(decl)) {
+    errorNYI(e->getSourceRange(), "emitMemberPointerConstant: method pointer");
+    return {};
+  }
+
+  // Otherwise, a member data pointer.
+  auto ty = mlir::cast<cir::DataMemberType>(convertType(e->getType()));
+  const auto *fieldDecl = cast<FieldDecl>(decl);
+  return cir::ConstantOp::create(
+      builder, loc, builder.getDataMemberAttr(ty, fieldDecl->getFieldIndex()));
 }
 
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {
@@ -1931,6 +1957,33 @@ void CIRGenModule::setGVPropertiesAux(mlir::Operation *op,
   setGlobalVisibility(op, d);
   setDSOLocal(op);
   assert(!cir::MissingFeatures::opGlobalPartition());
+}
+
+cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
+  switch (getCodeGenOpts().getDefaultTLSModel()) {
+  case CodeGenOptions::GeneralDynamicTLSModel:
+    return cir::TLS_Model::GeneralDynamic;
+  case CodeGenOptions::LocalDynamicTLSModel:
+    return cir::TLS_Model::LocalDynamic;
+  case CodeGenOptions::InitialExecTLSModel:
+    return cir::TLS_Model::InitialExec;
+  case CodeGenOptions::LocalExecTLSModel:
+    return cir::TLS_Model::LocalExec;
+  }
+  llvm_unreachable("Invalid TLS model!");
+}
+
+void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) {
+  assert(d.getTLSKind() && "setting TLS mode on non-TLS var!");
+
+  cir::TLS_Model tlm = getDefaultCIRTLSModel();
+
+  // Override the TLS model if it is explicitly specified.
+  if (d.getAttr<TLSModelAttr>())
+    errorNYI(d.getSourceRange(), "TLS model attribute");
+
+  auto global = cast<cir::GlobalOp>(op);
+  global.setTlsModel(tlm);
 }
 
 void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
@@ -2497,4 +2550,40 @@ DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
 DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
                                          llvm::StringRef feature) {
   return errorNYI(loc.getBegin(), feature) << loc;
+}
+
+void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
+                                   cir::LabelOp label) {
+  [[maybe_unused]] auto result =
+      blockAddressInfoToLabel.try_emplace(blockInfo, label);
+  assert(result.second &&
+         "attempting to map a blockaddress info that is already mapped");
+}
+
+void CIRGenModule::mapUnresolvedBlockAddress(cir::BlockAddressOp op) {
+  [[maybe_unused]] auto result = unresolvedBlockAddressToLabel.insert(op);
+  assert(result.second &&
+         "attempting to map a blockaddress operation that is already mapped");
+}
+
+void CIRGenModule::mapResolvedBlockAddress(cir::BlockAddressOp op,
+                                           cir::LabelOp label) {
+  [[maybe_unused]] auto result = blockAddressToLabel.try_emplace(op, label);
+  assert(result.second &&
+         "attempting to map a blockaddress operation that is already mapped");
+}
+
+void CIRGenModule::updateResolvedBlockAddress(cir::BlockAddressOp op,
+                                              cir::LabelOp newLabel) {
+  auto *it = blockAddressToLabel.find(op);
+  assert(it != blockAddressToLabel.end() &&
+         "trying to update a blockaddress not previously mapped");
+  assert(!it->second && "blockaddress already has a resolved label");
+
+  it->second = newLabel;
+}
+
+cir::LabelOp
+CIRGenModule::lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo) {
+  return blockAddressInfoToLabel.lookup(blockInfo);
 }
