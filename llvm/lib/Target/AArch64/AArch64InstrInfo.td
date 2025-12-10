@@ -639,12 +639,6 @@ def non_temporal_load :
           cast<MaskedLoadSDNode>(N)->isNonTemporal();
 }]>;
 
-def temporal_load :
-   PatFrag<(ops node:$ptr),
-           (load node:$ptr), [{
-   return !cast<LoadSDNode>(N)->isNonTemporal();
-}]>;
-
 // non-truncating masked store fragment.
 def nontrunc_masked_store :
   PatFrag<(ops node:$val, node:$ptr, node:$pred),
@@ -688,12 +682,6 @@ def non_temporal_store :
          cast<MaskedStoreSDNode>(N)->isUnindexed() &&
          cast<MaskedStoreSDNode>(N)->isNonTemporal() &&
          !cast<MaskedStoreSDNode>(N)->isCompressingStore();
-}]>;
-
-def temporal_store :
-  PatFrag<(ops node:$val, node:$ptr),
-          (store node:$val, node:$ptr), [{
-  return !cast<StoreSDNode>(N)->isNonTemporal();
 }]>;
 
 multiclass masked_gather_scatter<PatFrags GatherScatterOp> {

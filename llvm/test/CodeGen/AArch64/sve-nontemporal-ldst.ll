@@ -81,6 +81,50 @@ define <vscale x 2 x double> @load_nxv2f64(ptr %a) nounwind {
   ret <vscale x 2 x double> %load
 }
 
+define <vscale x 16 x i8> @load_nxv16i8_reg(ptr %a, i64 %off) nounwind {
+; CHECK-LABEL: load_nxv16i8_reg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ldnt1b { z0.b }, p0/z, [x0, x1]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr i8, ptr %a, i64 %off
+  %load = load <vscale x 16 x i8>, ptr %ptr, !nontemporal !0
+  ret <vscale x 16 x i8> %load
+}
+
+define <vscale x 16 x i8> @load_nxv16i8_imm(ptr %a) nounwind {
+; CHECK-LABEL: load_nxv16i8_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ldnt1b { z0.b }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr <vscale x 16 x i8>, ptr %a, i64 1
+  %load = load <vscale x 16 x i8>, ptr %ptr, !nontemporal !0
+  ret <vscale x 16 x i8> %load
+}
+
+define <vscale x 2 x double> @load_nxv2f64_reg(ptr %a, i64 %off) nounwind {
+; CHECK-LABEL: load_nxv2f64_reg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ldnt1d { z0.d }, p0/z, [x0, x1, lsl #3]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr double, ptr %a, i64 %off
+  %load = load <vscale x 2 x double>, ptr %ptr, !nontemporal !0
+  ret <vscale x 2 x double> %load
+}
+
+define <vscale x 2 x double> @load_nxv2f64_imm(ptr %a) nounwind {
+; CHECK-LABEL: load_nxv2f64_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ldnt1d { z0.d }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr <vscale x 2 x double>, ptr %a, i64 1
+  %load = load <vscale x 2 x double>, ptr %ptr, !nontemporal !0
+  ret <vscale x 2 x double> %load
+}
+
 define void @store_nxv16i8(<vscale x 16 x i8> %x, ptr %a) nounwind {
 ; CHECK-LABEL: store_nxv16i8:
 ; CHECK:       // %bb.0:
@@ -161,4 +205,47 @@ define void @store_nxv2f64(<vscale x 2 x double> %x, ptr %a) nounwind {
   ret void
 }
 
+define void @store_nxv16i8_reg(<vscale x 16 x i8> %x, ptr %a, i64 %off) nounwind {
+; CHECK-LABEL: store_nxv16i8_reg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    stnt1b { z0.b }, p0, [x0, x1]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr i8, ptr %a, i64 %off
+  store <vscale x 16 x i8> %x, ptr %ptr, !nontemporal !0
+  ret void
+}
+
+define void @store_nxv16i8_imm(<vscale x 16 x i8> %x, ptr %a) nounwind {
+; CHECK-LABEL: store_nxv16i8_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    stnt1b { z0.b }, p0, [x0, #1, mul vl]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr <vscale x 16 x i8>, ptr %a, i64 1
+  store <vscale x 16 x i8> %x, ptr %ptr, !nontemporal !0
+  ret void
+}
+
+define void @store_nxv2f64_reg(<vscale x 2 x double> %x, ptr %a, i64 %off) nounwind {
+; CHECK-LABEL: store_nxv2f64_reg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    stnt1d { z0.d }, p0, [x0, x1, lsl #3]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr double, ptr %a, i64 %off
+  store <vscale x 2 x double> %x, ptr %ptr, !nontemporal !0
+  ret void
+}
+
+define void @store_nxv2f64_imm(<vscale x 2 x double> %x, ptr %a) nounwind {
+; CHECK-LABEL: store_nxv2f64_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    stnt1d { z0.d }, p0, [x0, #1, mul vl]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr <vscale x 2 x double>, ptr %a, i64 1
+  store <vscale x 2 x double> %x, ptr %ptr, !nontemporal !0
+  ret void
+}
 !0 = !{i32 1}
