@@ -419,7 +419,8 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock) {
     RunCleanupsScope catchScope(*this);
 
     // Initialize the catch variable and set up the cleanups.
-    assert(!cir::MissingFeatures::catchParamOp());
+    assert(!cir::MissingFeatures::currentFuncletPad());
+    cgm.getCXXABI().emitBeginCatch(*this, catchStmt);
 
     // Emit the PGO counter increment.
     assert(!cir::MissingFeatures::incrementProfileCounter());
