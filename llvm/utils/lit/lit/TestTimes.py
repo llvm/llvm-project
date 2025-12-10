@@ -22,7 +22,7 @@ def record_test_times(tests, lit_config):
             continue
         if not t.suite.exec_root in times_by_suite:
             times_by_suite[t.suite.exec_root] = read_test_times(t.suite)
-        time = -t.result.elapsed if t.isFailure() else t.result.elapsed
+        time = min(-t.result.elapsed, -1.0e-6) if t.isFailure() else t.result.elapsed
         # The "path" here is only used as a key into a dictionary. It is never
         # used as an actual path to a filesystem API, therefore we use '/' as
         # the canonical separator so that Unix and Windows machines can share
