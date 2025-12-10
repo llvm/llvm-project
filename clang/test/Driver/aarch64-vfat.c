@@ -13,7 +13,3 @@
 // RUN: %clang -target aarch64 -march=armv9.7a+tev -### -c %s 2>&1 | FileCheck -check-prefix=VFAT-TEV %s
 // RUN: %clang -target aarch64 -march=armv9.7-a+tev -### -c %s 2>&1 | FileCheck -check-prefix=VFAT-TEV %s
 // VFAT-TEV: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+tev"
-
-// RUN: %clang -target aarch64 -march=armv9.7a+btie -### -c %s 2>&1 | FileCheck -check-prefix=VFAT-BTIE %s
-// RUN: %clang -target aarch64 -march=armv9.7-a+btie -### -c %s 2>&1 | FileCheck -check-prefix=VFAT-BTIE %s
-// VFAT-BTIE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+btie"

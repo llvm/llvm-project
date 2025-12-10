@@ -346,8 +346,6 @@ def HasCCDP          : Predicate<"Subtarget->hasCCDP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCacheDeepPersist), "ccdp">;
 def HasBTI           : Predicate<"Subtarget->hasBTI()">,
                                  AssemblerPredicateWithAll<(all_of FeatureBranchTargetId), "bti">;
-def HasBTIE          : Predicate<"Subtarget->hasBTIE()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureBTIE), "btie">;
 def HasMTE           : Predicate<"Subtarget->hasMTE()">,
                                  AssemblerPredicateWithAll<(all_of FeatureMTE), "mte">;
 def HasETE           : Predicate<"Subtarget->hasETE()">,
@@ -1570,8 +1568,7 @@ let Predicates = [HasPCDPHINT] in {
 // should not emit these mnemonics unless BTI is enabled.
 def : InstAlias<"bti",  (HINT 32), 0>;
 def : InstAlias<"bti $op", (HINT btihint_op:$op), 0>;
-def : InstAlias<"bti r", (HINT 32)>, Requires<[HasBTIE]>;
-def : InstAlias<"bti",  (HINT 32)>, Requires<[HasBTI]>;
+def : InstAlias<"bti r",  (HINT 32)>, Requires<[HasBTI]>;
 def : InstAlias<"bti $op", (HINT btihint_op:$op)>, Requires<[HasBTI]>;
 
 // v8.2a Statistical Profiling extension
